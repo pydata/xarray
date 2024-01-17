@@ -3,33 +3,24 @@ from __future__ import annotations
 import functools
 import itertools
 import warnings
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Hashable,
-    Iterable,
-    Literal,
-    TypeVar,
-    cast,
-)
+from collections.abc import Hashable, Iterable, MutableMapping
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, cast
 
 import numpy as np
 
 from xarray.core.formatting import format_item
-from xarray.core.types import HueStyleOptions, T_Xarray
+from xarray.core.types import HueStyleOptions, T_DataArrayOrSet
 from xarray.plot.utils import (
     _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
     _add_legend,
     _determine_guide,
     _get_nice_quiver_magnitude,
+    _guess_coords_to_plot,
     _infer_xy_labels,
     _Normalize,
     _parse_size,
     _process_cmap_cbar_kwargs,
-    import_matplotlib_pyplot,
     label_from_attrs,
 )
 
@@ -68,7 +59,7 @@ def _nicetitle(coord, value, maxchar, template):
 T_FacetGrid = TypeVar("T_FacetGrid", bound="FacetGrid")
 
 
-class FacetGrid(Generic[T_Xarray]):
+class FacetGrid(Generic[T_DataArrayOrSet]):
     """
     Initialize the Matplotlib figure and FacetGrid object.
 
@@ -84,7 +75,7 @@ class FacetGrid(Generic[T_Xarray]):
     The general approach to plotting here is called "small multiples",
     where the same kind of plot is repeated multiple times, and the
     specific use of small multiples to display the same relationship
-    conditioned on one ore more other variables is often called a "trellis
+    conditioned on one or more other variables is often called a "trellis
     plot".
 
     The basic workflow is to initialize the :class:`FacetGrid` object with
@@ -109,7 +100,7 @@ class FacetGrid(Generic[T_Xarray]):
         sometimes the rightmost grid positions in the bottom row.
     """
 
-    data: T_Xarray
+    data: T_DataArrayOrSet
     name_dicts: np.ndarray
     fig: Figure
     axs: np.ndarray
@@ -134,7 +125,7 @@ class FacetGrid(Generic[T_Xarray]):
 
     def __init__(
         self,
-        data: T_Xarray,
+        data: T_DataArrayOrSet,
         col: Hashable | None = None,
         row: Hashable | None = None,
         col_wrap: int | None = None,
@@ -174,7 +165,7 @@ class FacetGrid(Generic[T_Xarray]):
 
         """
 
-        plt = import_matplotlib_pyplot()
+        import matplotlib.pyplot as plt
 
         # Handle corner case of nonunique coordinates
         rep_col = col is not None and not data[col].to_index().is_unique
@@ -392,6 +383,11 @@ class FacetGrid(Generic[T_Xarray]):
         func: Callable,
         x: Hashable | None,
         y: Hashable | None,
+        *,
+        z: Hashable | None = None,
+        hue: Hashable | None = None,
+        markersize: Hashable | None = None,
+        linewidth: Hashable | None = None,
         **kwargs: Any,
     ) -> T_FacetGrid:
         """
@@ -424,13 +420,25 @@ class FacetGrid(Generic[T_Xarray]):
         if kwargs.get("cbar_ax", None) is not None:
             raise ValueError("cbar_ax not supported by FacetGrid.")
 
+        if func.__name__ == "scatter":
+            size_ = kwargs.pop("_size", markersize)
+            size_r = _MARKERSIZE_RANGE
+        else:
+            size_ = kwargs.pop("_size", linewidth)
+            size_r = _LINEWIDTH_RANGE
+
+        # Guess what coords to use if some of the values in coords_to_plot are None:
+        coords_to_plot: MutableMapping[str, Hashable | None] = dict(
+            x=x, z=z, hue=hue, size=size_
+        )
+        coords_to_plot = _guess_coords_to_plot(self.data, coords_to_plot, kwargs)
+
         # Handle hues:
-        hue = kwargs.get("hue", None)
-        hueplt = self.data[hue] if hue else self.data
+        hue = coords_to_plot["hue"]
+        hueplt = self.data.coords[hue] if hue else None  # TODO: _infer_line_data2 ?
         hueplt_norm = _Normalize(hueplt)
         self._hue_var = hueplt
         cbar_kwargs = kwargs.pop("cbar_kwargs", {})
-
         if hueplt_norm.data is not None:
             if not hueplt_norm.data_is_numeric:
                 # TODO: Ticks seems a little too hardcoded, since it will always
@@ -450,16 +458,11 @@ class FacetGrid(Generic[T_Xarray]):
             cmap_params = {}
 
         # Handle sizes:
-        _size_r = _MARKERSIZE_RANGE if func.__name__ == "scatter" else _LINEWIDTH_RANGE
-        for _size in ("markersize", "linewidth"):
-            size = kwargs.get(_size, None)
-
-            sizeplt = self.data[size] if size else None
-            sizeplt_norm = _Normalize(data=sizeplt, width=_size_r)
-            if size:
-                self.data[size] = sizeplt_norm.values
-                kwargs.update(**{_size: size})
-                break
+        size_ = coords_to_plot["size"]
+        sizeplt = self.data.coords[size_] if size_ else None
+        sizeplt_norm = _Normalize(data=sizeplt, width=size_r)
+        if sizeplt_norm.data is not None:
+            self.data[size_] = sizeplt_norm.values
 
         # Add kwargs that are sent to the plotting function, # order is important ???
         func_kwargs = {
@@ -513,6 +516,8 @@ class FacetGrid(Generic[T_Xarray]):
                     x=x,
                     y=y,
                     ax=ax,
+                    hue=hue,
+                    _size=size_,
                     **func_kwargs,
                     _is_facetgrid=True,
                 )
@@ -675,7 +680,10 @@ class FacetGrid(Generic[T_Xarray]):
 
     def _adjust_fig_for_guide(self, guide) -> None:
         # Draw the plot to set the bounding boxes correctly
-        renderer = self.fig.canvas.get_renderer()
+        if hasattr(self.fig.canvas, "get_renderer"):
+            renderer = self.fig.canvas.get_renderer()
+        else:
+            raise RuntimeError("MPL backend has no renderer")
         self.fig.draw(renderer)
 
         # Calculate and set the new width of the figure so the legend fits
@@ -725,6 +733,9 @@ class FacetGrid(Generic[T_Xarray]):
         if hasattr(self._mappables[-1], "extend"):
             kwargs.pop("extend", None)
         if "label" not in kwargs:
+            from xarray import DataArray
+
+            assert isinstance(self.data, DataArray)
             kwargs.setdefault("label", label_from_attrs(self.data))
         self.cbar = self.fig.colorbar(
             self._mappables[-1], ax=list(self.axs.flat), **kwargs
@@ -979,7 +990,7 @@ class FacetGrid(Generic[T_Xarray]):
         self : FacetGrid object
 
         """
-        plt = import_matplotlib_pyplot()
+        import matplotlib.pyplot as plt
 
         for ax, namedict in zip(self.axs.flat, self.name_dicts.flat):
             if namedict is not None:
@@ -998,7 +1009,7 @@ class FacetGrid(Generic[T_Xarray]):
 
 
 def _easy_facetgrid(
-    data: T_Xarray,
+    data: T_DataArrayOrSet,
     plotfunc: Callable,
     kind: Literal["line", "dataarray", "dataset", "plot1d"],
     x: Hashable | None = None,
@@ -1014,7 +1025,7 @@ def _easy_facetgrid(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_Xarray]:
+) -> FacetGrid[T_DataArrayOrSet]:
     """
     Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
 

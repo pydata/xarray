@@ -29,7 +29,6 @@ except ImportError:
 
 
 def get_example_data(case: int) -> xr.DataArray:
-
     if case == 0:
         # 2D
         x = np.linspace(0, 1, 100)
@@ -606,6 +605,7 @@ def test_interp_like() -> None:
         pytest.param("2000-01-01T12:00", 0.5, marks=pytest.mark.xfail),
     ],
 )
+@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 def test_datetime(x_new, expected) -> None:
     da = xr.DataArray(
         np.arange(24),
@@ -739,7 +739,7 @@ def test_datetime_interp_noerror() -> None:
     xi = xr.DataArray(
         np.linspace(1, 3, 50),
         dims=["time"],
-        coords={"time": pd.date_range("01-01-2001", periods=50, freq="H")},
+        coords={"time": pd.date_range("01-01-2001", periods=50, freq="h")},
     )
     a.interp(x=xi, time=xi.time)  # should not raise an error
 
@@ -809,7 +809,6 @@ def test_interpolate_chunk_1d(
 
     # choose the data dimensions
     for data_dims in permutations(da.dims, data_ndim):
-
         # select only data_ndim dim
         da = da.isel(  # take the middle line
             {dim: len(da.coords[dim]) // 2 for dim in da.dims if dim not in data_dims}
@@ -839,8 +838,8 @@ def test_interpolate_chunk_1d(
                         if chunked:
                             dest[dim] = xr.DataArray(data=dest[dim], dims=[dim])
                             dest[dim] = dest[dim].chunk(2)
-                actual = da.interp(method=method, **dest, kwargs=kwargs)  # type: ignore
-                expected = da.compute().interp(method=method, **dest, kwargs=kwargs)  # type: ignore
+                actual = da.interp(method=method, **dest, kwargs=kwargs)
+                expected = da.compute().interp(method=method, **dest, kwargs=kwargs)
 
                 assert_identical(actual, expected)
 

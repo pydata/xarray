@@ -2,10 +2,10 @@ name: CI
 on:
   push:
     branches:
-      - "*"
+      - "main"
   pull_request:
     branches:
-      - "*"
+      - "main"
   workflow_dispatch: # allows you to trigger manually
 
 concurrency:
@@ -22,7 +22,7 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 2
       - uses: xarray-contrib/ci-trigger@v1
@@ -34,6 +34,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: detect-ci-trigger
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    env:
+      ZARR_V3_EXPERIMENTAL_API: 1
     defaults:
       run:
         shell: bash -l {0}
@@ -42,15 +44,15 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.8", "3.10"]
+        python-version: ["3.9", "3.11"]
         env: [""]
         include:
           # Minimum python version:
           - env: "bare-minimum"
-            python-version: "3.8"
+            python-version: "3.9"
             os: ubuntu-latest
           - env: "min-all-deps"
-            python-version: "3.8"
+            python-version: "3.9"
             os: ubuntu-latest
           # Latest python version:
           - env: "all-but-dask"
@@ -60,7 +62,7 @@ jobs:
             python-version: "3.10"
             os: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Set environment variables
@@ -86,13 +88,13 @@ jobs:
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
 
       - name: Setup micromamba
-        uses: mamba-org/provision-with-micromamba@v14
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: ${{ env.CONDA_ENV_FILE }}
           environment-name: xarray-tests
-          cache-env: true
-          cache-env-key: "${{runner.os}}-${{runner.arch}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
-          extra-specs: |
+          cache-environment: true
+          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
+          create-args: >-
             python=${{matrix.python-version}}
             conda
 
@@ -119,6 +121,7 @@ jobs:
 
       - name: Run tests
         run: python -m pytest -n 4
+          --timeout 180
           --cov=xarray
           --cov-report=xml
           --junitxml=pytest.xml
@@ -126,13 +129,13 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Test results for ${{ runner.os }}-${{ matrix.python-version }}
+          name: Test results for ${{ runner.os }}-${{ matrix.python-version }} ${{ matrix.env }}
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v3.1.1
+        uses: codecov/codecov-action@v3.1.4
         with:
           file: ./coverage.xml
           flags: unittests
@@ -146,7 +149,7 @@ jobs:
     if: github.repository == 'pydata/xarray'
     steps:
       - name: Upload
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Event File
           path: ${{ github.event_path }}

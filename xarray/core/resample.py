@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Sequence
-
-import numpy as np
+from collections.abc import Hashable, Iterable, Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
@@ -40,7 +39,6 @@ class Resample(GroupBy[T_Xarray]):
         resample_dim: Hashable | None = None,
         **kwargs,
     ) -> None:
-
         if dim == resample_dim:
             raise ValueError(
                 f"Proxy resampling dimension ('{resample_dim}') "
@@ -56,28 +54,7 @@ class Resample(GroupBy[T_Xarray]):
         keep_attrs: bool | None = None,
         **kwargs,
     ) -> T_Xarray:
-
-        from xarray.core.dataarray import DataArray
-
-        kwargs.setdefault("method", "cohorts")
-
-        # now create a label DataArray since resample doesn't do that somehow
-        repeats = []
-        for slicer in self._group_indices:
-            assert isinstance(slicer, slice)
-            stop = (
-                slicer.stop
-                if slicer.stop is not None
-                else self._obj.sizes[self._group_dim]
-            )
-            repeats.append(stop - slicer.start)
-        labels = np.repeat(self._unique_coord.data, repeats)
-        group = DataArray(labels, dims=(self._group_dim,), name=self._unique_coord.name)
-
-        result = super()._flox_reduce(
-            dim=dim, group=group, keep_attrs=keep_attrs, **kwargs
-        )
-        result = self._maybe_restore_empty_groups(result)
+        result = super()._flox_reduce(dim=dim, keep_attrs=keep_attrs, **kwargs)
         result = result.rename({RESAMPLE_DIM: self._group_dim})
         return result
 
@@ -86,7 +63,7 @@ class Resample(GroupBy[T_Xarray]):
         obj = self._obj
         for k, v in obj.coords.items():
             if k != self._dim and self._dim in v.dims:
-                obj = obj.drop_vars(k)
+                obj = obj.drop_vars([k])
         return obj
 
     def pad(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
@@ -107,8 +84,9 @@ class Resample(GroupBy[T_Xarray]):
         padded : DataArray or Dataset
         """
         obj = self._drop_coords()
+        (grouper,) = self.groupers
         return obj.reindex(
-            {self._dim: self._full_index}, method="pad", tolerance=tolerance
+            {self._dim: grouper.full_index}, method="pad", tolerance=tolerance
         )
 
     ffill = pad
@@ -131,8 +109,9 @@ class Resample(GroupBy[T_Xarray]):
         backfilled : DataArray or Dataset
         """
         obj = self._drop_coords()
+        (grouper,) = self.groupers
         return obj.reindex(
-            {self._dim: self._full_index}, method="backfill", tolerance=tolerance
+            {self._dim: grouper.full_index}, method="backfill", tolerance=tolerance
         )
 
     bfill = backfill
@@ -156,8 +135,9 @@ class Resample(GroupBy[T_Xarray]):
         upsampled : DataArray or Dataset
         """
         obj = self._drop_coords()
+        (grouper,) = self.groupers
         return obj.reindex(
-            {self._dim: self._full_index}, method="nearest", tolerance=tolerance
+            {self._dim: grouper.full_index}, method="nearest", tolerance=tolerance
         )
 
     def interpolate(self, kind: InterpOptions = "linear") -> T_Xarray:
@@ -193,8 +173,9 @@ class Resample(GroupBy[T_Xarray]):
     def _interpolate(self, kind="linear") -> T_Xarray:
         """Apply scipy.interpolate.interp1d along resampling dimension."""
         obj = self._drop_coords()
+        (grouper,) = self.groupers
         return obj.interp(
-            coords={self._dim: self._full_index},
+            coords={self._dim: grouper.full_index},
             assume_sorted=True,
             method=kind,
             kwargs={"bounds_error": False},
@@ -206,6 +187,51 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
+    ) -> DataArray:
+        """Reduce the items in this group by applying `func` along the
+        pre-defined resampling dimension.
+
+        Parameters
+        ----------
+        func : callable
+            Function which can be called in the form
+            `func(x, axis=axis, **kwargs)` to return the result of collapsing
+            an np.ndarray over an integer valued axis.
+        dim : "...", str, Iterable of Hashable or None, optional
+            Dimension(s) over which to apply `func`.
+        keep_attrs : bool, optional
+            If True, the datasets's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        reduced : DataArray
+            Array with summarized data and the indicated dimension(s)
+            removed.
+        """
+        return super().reduce(
+            func=func,
+            dim=dim,
+            axis=axis,
+            keep_attrs=keep_attrs,
+            keepdims=keepdims,
+            shortcut=shortcut,
+            **kwargs,
+        )
 
     def map(
         self,
@@ -255,15 +281,27 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
         applied : DataArray
             The result of splitting, applying and combining this array.
         """
+        return self._map_maybe_warn(func, args, shortcut, warn_squeeze=True, **kwargs)
+
+    def _map_maybe_warn(
+        self,
+        func: Callable[..., Any],
+        args: tuple[Any, ...] = (),
+        shortcut: bool | None = False,
+        warn_squeeze: bool = True,
+        **kwargs: Any,
+    ) -> DataArray:
         # TODO: the argument order for Resample doesn't match that for its parent,
         # GroupBy
-        combined = super().map(func, shortcut=shortcut, args=args, **kwargs)
+        combined = super()._map_maybe_warn(
+            func, shortcut=shortcut, args=args, warn_squeeze=warn_squeeze, **kwargs
+        )
 
         # If the aggregation function didn't drop the original resampling
         # dimension, then we need to do so before we can rename the proxy
         # dimension we used.
         if self._dim in combined.coords:
-            combined = combined.drop_vars(self._dim)
+            combined = combined.drop_vars([self._dim])
 
         if RESAMPLE_DIM in combined.dims:
             combined = combined.rename({RESAMPLE_DIM: self._dim})
@@ -337,8 +375,18 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAg
         applied : Dataset
             The result of splitting, applying and combining this dataset.
         """
+        return self._map_maybe_warn(func, args, shortcut, warn_squeeze=True, **kwargs)
+
+    def _map_maybe_warn(
+        self,
+        func: Callable[..., Any],
+        args: tuple[Any, ...] = (),
+        shortcut: bool | None = None,
+        warn_squeeze: bool = True,
+        **kwargs: Any,
+    ) -> Dataset:
         # ignore shortcut if set (for now)
-        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
+        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped(warn_squeeze))
         combined = self._combine(applied)
 
         # If the aggregation function didn't drop the original resampling
@@ -404,6 +452,27 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAg
             removed.
         """
         return super().reduce(
+            func=func,
+            dim=dim,
+            axis=axis,
+            keep_attrs=keep_attrs,
+            keepdims=keepdims,
+            shortcut=shortcut,
+            **kwargs,
+        )
+
+    def _reduce_without_squeeze_warn(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
+    ) -> Dataset:
+        return super()._reduce_without_squeeze_warn(
             func=func,
             dim=dim,
             axis=axis,

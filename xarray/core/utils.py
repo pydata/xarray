@@ -46,22 +46,26 @@ import os
 import re
 import sys
 import warnings
+from collections.abc import (
+    Collection,
+    Container,
+    Hashable,
+    ItemsView,
+    Iterable,
+    Iterator,
+    KeysView,
+    Mapping,
+    MutableMapping,
+    MutableSet,
+    ValuesView,
+)
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Collection,
-    Container,
     Generic,
-    Hashable,
-    Iterable,
-    Iterator,
     Literal,
-    Mapping,
-    MutableMapping,
-    MutableSet,
-    Sequence,
     TypeVar,
     cast,
     overload,
@@ -71,7 +75,7 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    from xarray.core.types import Dims, ErrorOptionsWithWarn, OrderedDims
+    from xarray.core.types import Dims, ErrorOptionsWithWarn, T_DuckArray
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -111,7 +115,9 @@ def get_valid_numpy_dtype(array: np.ndarray | pd.Index):
         dtype = np.dtype("O")
     elif hasattr(array, "categories"):
         # category isn't a real numpy dtype
-        dtype = array.categories.dtype  # type: ignore[union-attr]
+        dtype = array.categories.dtype
+        if not is_valid_numpy_dtype(dtype):
+            dtype = np.dtype("O")
     elif not is_valid_numpy_dtype(array.dtype):
         dtype = np.dtype("O")
     else:
@@ -251,7 +257,7 @@ def is_list_like(value: Any) -> TypeGuard[list | tuple]:
     return isinstance(value, (list, tuple))
 
 
-def is_duck_array(value: Any) -> bool:
+def is_duck_array(value: Any) -> TypeGuard[T_DuckArray]:
     if isinstance(value, np.ndarray):
         return True
     return (
@@ -469,6 +475,57 @@ def FrozenDict(*args, **kwargs) -> Frozen:
     return Frozen(dict(*args, **kwargs))
 
 
+class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
+    """
+    Class which behaves like a Mapping but warns if the values are accessed.
+
+    Temporary object to aid in deprecation cycle of `Dataset.dims` (see GH issue #8496).
+    `Dataset.dims` is being changed from returning a mapping of dimension names to lengths to just
+    returning a frozen set of dimension names (to increase consistency with `DataArray.dims`).
+    This class retains backwards compatibility but raises a warning only if the return value
+    of ds.dims is used like a dictionary (i.e. it doesn't raise a warning if used in a way that
+    would also be valid for a FrozenSet, e.g. iteration).
+    """
+
+    __slots__ = ("mapping",)
+
+    def _warn(self) -> None:
+        emit_user_level_warning(
+            "The return type of `Dataset.dims` will be changed to return a set of dimension names in future, "
+            "in order to be more consistent with `DataArray.dims`. To access a mapping from dimension names to lengths, "
+            "please use `Dataset.sizes`.",
+            FutureWarning,
+        )
+
+    def __getitem__(self, key: K) -> V:
+        self._warn()
+        return super().__getitem__(key)
+
+    @overload
+    def get(self, key: K, /) -> V | None:
+        ...
+
+    @overload
+    def get(self, key: K, /, default: V | T) -> V | T:
+        ...
+
+    def get(self, key: K, default: T | None = None) -> V | T | None:
+        self._warn()
+        return super().get(key, default)
+
+    def keys(self) -> KeysView[K]:
+        self._warn()
+        return super().keys()
+
+    def items(self) -> ItemsView[K, V]:
+        self._warn()
+        return super().items()
+
+    def values(self) -> ValuesView[V]:
+        self._warn()
+        return super().values()
+
+
 class HybridMappingProxy(Mapping[K, V]):
     """Implements the Mapping interface. Uses the wrapped mapping for item lookup
     and a separate wrapped keys collection for iteration.
@@ -534,8 +591,7 @@ class OrderedSet(MutableSet[T]):
     # Additional methods
 
     def update(self, values: Iterable[T]) -> None:
-        for v in values:
-            self._d[v] = None
+        self._d.update(dict.fromkeys(values))
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({list(self)!r})"
@@ -861,7 +917,6 @@ def drop_dims_from_indexers(
         return indexers
 
     elif missing_dims == "warn":
-
         # don't modify input
         indexers = dict(indexers)
 
@@ -910,7 +965,6 @@ def drop_missing_dims(
         return supplied_dims
 
     elif missing_dims == "warn":
-
         invalid = set(supplied_dims) - set(dims)
         if invalid:
             warnings.warn(
@@ -928,12 +982,9 @@ def drop_missing_dims(
         )
 
 
-T_None = TypeVar("T_None", None, "ellipsis")
-
-
 @overload
 def parse_dims(
-    dim: str | Iterable[Hashable] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
@@ -944,12 +995,12 @@ def parse_dims(
 
 @overload
 def parse_dims(
-    dim: str | Iterable[Hashable] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | T_None:
+) -> tuple[Hashable, ...] | None | ellipsis:
     ...
 
 
@@ -996,7 +1047,7 @@ def parse_dims(
 
 @overload
 def parse_ordered_dims(
-    dim: str | Sequence[Hashable | ellipsis] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
@@ -1007,17 +1058,17 @@ def parse_ordered_dims(
 
 @overload
 def parse_ordered_dims(
-    dim: str | Sequence[Hashable | ellipsis] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | T_None:
+) -> tuple[Hashable, ...] | None | ellipsis:
     ...
 
 
 def parse_ordered_dims(
-    dim: OrderedDims,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
@@ -1071,9 +1122,9 @@ def parse_ordered_dims(
         )
 
 
-def _check_dims(dim: set[Hashable | ellipsis], all_dims: set[Hashable]) -> None:
-    wrong_dims = dim - all_dims
-    if wrong_dims and wrong_dims != {...}:
+def _check_dims(dim: set[Hashable], all_dims: set[Hashable]) -> None:
+    wrong_dims = (dim - all_dims) - {...}
+    if wrong_dims:
         wrong_dims_str = ", ".join(f"'{d!s}'" for d in wrong_dims)
         raise ValueError(
             f"Dimension(s) {wrong_dims_str} do not exist. Expected one or more of {all_dims}"
@@ -1125,19 +1176,19 @@ def iterate_nested(nested_list):
             yield item
 
 
-def contains_only_dask_or_numpy(obj) -> bool:
-    """Returns True if xarray object contains only numpy or dask arrays.
+def contains_only_chunked_or_numpy(obj) -> bool:
+    """Returns True if xarray object contains only numpy arrays or chunked arrays (i.e. pure dask or cubed).
 
     Expects obj to be Dataset or DataArray"""
     from xarray.core.dataarray import DataArray
-    from xarray.core.pycompat import is_duck_dask_array
+    from xarray.core.pycompat import is_chunked_array
 
     if isinstance(obj, DataArray):
         obj = obj._to_temp_dataset()
 
     return all(
         [
-            isinstance(var.data, np.ndarray) or is_duck_dask_array(var.data)
+            isinstance(var.data, np.ndarray) or is_chunked_array(var.data)
             for var in obj.variables.values()
         ]
     )
@@ -1202,3 +1253,66 @@ def emit_user_level_warning(message, category=None):
     """Emit a warning at the user level by inspecting the stack trace."""
     stacklevel = find_stack_level()
     warnings.warn(message, category=category, stacklevel=stacklevel)
+
+
+def consolidate_dask_from_array_kwargs(
+    from_array_kwargs: dict,
+    name: str | None = None,
+    lock: bool | None = None,
+    inline_array: bool | None = None,
+) -> dict:
+    """
+    Merge dask-specific kwargs with arbitrary from_array_kwargs dict.
+
+    Temporary function, to be deleted once explicitly passing dask-specific kwargs to .chunk() is deprecated.
+    """
+
+    from_array_kwargs = _resolve_doubly_passed_kwarg(
+        from_array_kwargs,
+        kwarg_name="name",
+        passed_kwarg_value=name,
+        default=None,
+        err_msg_dict_name="from_array_kwargs",
+    )
+    from_array_kwargs = _resolve_doubly_passed_kwarg(
+        from_array_kwargs,
+        kwarg_name="lock",
+        passed_kwarg_value=lock,
+        default=False,
+        err_msg_dict_name="from_array_kwargs",
+    )
+    from_array_kwargs = _resolve_doubly_passed_kwarg(
+        from_array_kwargs,
+        kwarg_name="inline_array",
+        passed_kwarg_value=inline_array,
+        default=False,
+        err_msg_dict_name="from_array_kwargs",
+    )
+
+    return from_array_kwargs
+
+
+def _resolve_doubly_passed_kwarg(
+    kwargs_dict: dict,
+    kwarg_name: str,
+    passed_kwarg_value: str | bool | None,
+    default: bool | None,
+    err_msg_dict_name: str,
+) -> dict:
+    # if in kwargs_dict but not passed explicitly then just pass kwargs_dict through unaltered
+    if kwarg_name in kwargs_dict and passed_kwarg_value is None:
+        pass
+    # if passed explicitly but not in kwargs_dict then use that
+    elif kwarg_name not in kwargs_dict and passed_kwarg_value is not None:
+        kwargs_dict[kwarg_name] = passed_kwarg_value
+    # if in neither then use default
+    elif kwarg_name not in kwargs_dict and passed_kwarg_value is None:
+        kwargs_dict[kwarg_name] = default
+    # if in both then raise
+    else:
+        raise ValueError(
+            f"argument {kwarg_name} cannot be passed both as a keyword argument and within "
+            f"the {err_msg_dict_name} dictionary"
+        )
+
+    return kwargs_dict

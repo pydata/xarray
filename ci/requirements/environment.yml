@@ -7,8 +7,6 @@ dependencies:
   - boto3
   - bottleneck
   - cartopy
-  - cdms2
-  - cfgrib
   - cftime
   - dask-core
   - distributed
@@ -24,20 +22,22 @@ dependencies:
   - nc-time-axis
   - netcdf4
   - numba
+  - numbagg
   - numexpr
   - numpy
+  - opt_einsum
   - packaging
   - pandas
-  - pint
+  - pint>=0.22
   - pip
   - pooch
   - pre-commit
-  - pseudonetcdf
   - pydap
   - pytest
   - pytest-cov
   - pytest-env
   - pytest-xdist
+  - pytest-timeout
   - rasterio
   - scipy
   - seaborn
@@ -45,5 +45,3 @@ dependencies:
   - toolz
   - typing_extensions
   - zarr
-  - pip:
-      - numbagg

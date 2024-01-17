@@ -10,7 +10,7 @@ from numpy.core import defchararray
 
 import xarray as xr
 from xarray.core import formatting
-from xarray.tests import requires_dask, requires_netCDF4
+from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
 
 
 class TestFormatting:
@@ -218,7 +218,46 @@ class TestFormatting:
         assert "\n" not in newlines
         assert "\t" not in tabs
 
-    def test_index_repr(self):
+    def test_index_repr(self) -> None:
+        from xarray.core.indexes import Index
+
+        class CustomIndex(Index):
+            names: tuple[str, ...]
+
+            def __init__(self, names: tuple[str, ...]):
+                self.names = names
+
+            def __repr__(self):
+                return f"CustomIndex(coords={self.names})"
+
+        coord_names = ("x", "y")
+        index = CustomIndex(coord_names)
+        names = ("x",)
+
+        normal = formatting.summarize_index(names, index, col_width=20)
+        assert names[0] in normal
+        assert len(normal.splitlines()) == len(names)
+        assert "CustomIndex" in normal
+
+        class IndexWithInlineRepr(CustomIndex):
+            def _repr_inline_(self, max_width: int):
+                return f"CustomIndex[{', '.join(self.names)}]"
+
+        index = IndexWithInlineRepr(coord_names)
+        inline = formatting.summarize_index(names, index, col_width=20)
+        assert names[0] in inline
+        assert index._repr_inline_(max_width=40) in inline
+
+    @pytest.mark.parametrize(
+        "names",
+        (
+            ("x",),
+            ("x", "y"),
+            ("x", "y", "z"),
+            ("x", "y", "z", "a"),
+        ),
+    )
+    def test_index_repr_grouping(self, names) -> None:
         from xarray.core.indexes import Index
 
         class CustomIndex(Index):
@@ -228,20 +267,20 @@ class TestFormatting:
             def __repr__(self):
                 return f"CustomIndex(coords={self.names})"
 
-        coord_names = ["x", "y"]
-        index = CustomIndex(coord_names)
-        name = "x"
+        index = CustomIndex(names)
 
-        normal = formatting.summarize_index(name, index, col_width=20)
-        assert name in normal
+        normal = formatting.summarize_index(names, index, col_width=20)
+        assert all(name in normal for name in names)
+        assert len(normal.splitlines()) == len(names)
         assert "CustomIndex" in normal
 
-        CustomIndex._repr_inline_ = (
-            lambda self, max_width: f"CustomIndex[{', '.join(self.names)}]"
-        )
-        inline = formatting.summarize_index(name, index, col_width=20)
-        assert name in inline
-        assert index._repr_inline_(max_width=40) in inline
+        hint_chars = [line[2] for line in normal.splitlines()]
+
+        if len(names) <= 1:
+            assert hint_chars == [" "]
+        else:
+            assert hint_chars[0] == "┌" and hint_chars[-1] == "└"
+            assert len(names) == 2 or hint_chars[1:-1] == ["│"] * (len(names) - 2)
 
     def test_diff_array_repr(self) -> None:
         da_a = xr.DataArray(
@@ -367,19 +406,27 @@ class TestFormatting:
                 "var2": ("x", np.array([3, 4], dtype="int64")),
             },
             coords={
-                "x": np.array(["a", "b"], dtype="U1"),
+                "x": (
+                    "x",
+                    np.array(["a", "b"], dtype="U1"),
+                    {"foo": "bar", "same": "same"},
+                ),
                 "y": np.array([1, 2, 3], dtype="int64"),
             },
-            attrs={"units": "m", "description": "desc"},
+            attrs={"title": "mytitle", "description": "desc"},
         )
 
         ds_b = xr.Dataset(
             data_vars={"var1": ("x", np.array([1, 2], dtype="int64"))},
             coords={
-                "x": ("x", np.array(["a", "c"], dtype="U1"), {"source": 0}),
+                "x": (
+                    "x",
+                    np.array(["a", "c"], dtype="U1"),
+                    {"source": 0, "foo": "baz", "same": "same"},
+                ),
                 "label": ("x", np.array([1, 2], dtype="int64")),
             },
-            attrs={"units": "kg"},
+            attrs={"title": "newtitle"},
         )
 
         byteorder = "<" if sys.byteorder == "little" else ">"
@@ -390,8 +437,12 @@ class TestFormatting:
             (x: 2, y: 3) != (x: 2)
         Differing coordinates:
         L * x        (x) %cU1 'a' 'b'
+            Differing variable attributes:
+                foo: bar
         R * x        (x) %cU1 'a' 'c'
-            source: 0
+            Differing variable attributes:
+                source: 0
+                foo: baz
         Coordinates only on the left object:
           * y        (y) int64 1 2 3
         Coordinates only on the right object:
@@ -402,8 +453,8 @@ class TestFormatting:
         Data variables only on the left object:
             var2     (x) int64 3 4
         Differing attributes:
-        L   units: m
-        R   units: kg
+        L   title: mytitle
+        R   title: newtitle
         Attributes only on the left object:
             description: desc"""
             % (byteorder, byteorder)
@@ -458,7 +509,7 @@ class TestFormatting:
     def test_array_repr_recursive(self) -> None:
         # GH:issue:7111
 
-        # direct recurion
+        # direct recursion
         var = xr.Variable("x", [0, 1])
         var.attrs["x"] = var
         formatting.array_repr(var)
@@ -510,7 +561,7 @@ def test_inline_variable_array_repr_custom_repr() -> None:
 
             return formatted
 
-        def __array_function__(self, *args, **kwargs):
+        def __array_namespace__(self, *args, **kwargs):
             return NotImplemented
 
         @property
@@ -542,7 +593,7 @@ def test_set_numpy_options() -> None:
     assert np.get_printoptions() == original_options
 
 
-def test_short_numpy_repr() -> None:
+def test_short_array_repr() -> None:
     cases = [
         np.random.randn(500),
         np.random.randn(20, 20),
@@ -552,20 +603,19 @@ def test_short_numpy_repr() -> None:
     ]
     # number of lines:
     # for default numpy repr: 167, 140, 254, 248, 599
-    # for short_numpy_repr: 1, 7, 24, 19, 25
+    # for short_array_repr: 1, 7, 24, 19, 25
     for array in cases:
-        num_lines = formatting.short_numpy_repr(array).count("\n") + 1
+        num_lines = formatting.short_array_repr(array).count("\n") + 1
         assert num_lines < 30
 
     # threshold option (default: 200)
     array2 = np.arange(100)
-    assert "..." not in formatting.short_numpy_repr(array2)
+    assert "..." not in formatting.short_array_repr(array2)
     with xr.set_options(display_values_threshold=10):
-        assert "..." in formatting.short_numpy_repr(array2)
+        assert "..." in formatting.short_array_repr(array2)
 
 
 def test_large_array_repr_length() -> None:
-
     da = xr.DataArray(np.random.randn(100, 5, 1))
 
     result = repr(da).splitlines()
@@ -614,7 +664,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     attrs = {k: 2 for k in b}
     coords = {_c: np.array([0, 1]) for _c in c}
     data_vars = dict()
-    for (v, _c) in zip(a, coords.items()):
+    for v, _c in zip(a, coords.items()):
         data_vars[v] = xr.DataArray(
             name=v,
             data=np.array([3, 4]),
@@ -625,7 +675,6 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     ds.attrs = attrs
 
     with xr.set_options(display_max_rows=display_max_rows):
-
         # Parse the data_vars print and show only data_vars rows:
         summary = formatting.dataset_repr(ds).split("\n")
         summary = [v for v in summary if long_name in v]
@@ -724,3 +773,48 @@ def test_lazy_array_wont_compute() -> None:
     # These will crash if var.data are converted to numpy arrays:
     var.__repr__()
     var._repr_html_()
+
+
+@pytest.mark.parametrize("as_dataset", (False, True))
+def test_format_xindexes_none(as_dataset: bool) -> None:
+    # ensure repr for empty xindexes can be displayed #8367
+
+    expected = """\
+    Indexes:
+        *empty*"""
+    expected = dedent(expected)
+
+    obj: xr.DataArray | xr.Dataset = xr.DataArray()
+    obj = obj._to_temp_dataset() if as_dataset else obj
+
+    actual = repr(obj.xindexes)
+    assert actual == expected
+
+
+@pytest.mark.parametrize("as_dataset", (False, True))
+def test_format_xindexes(as_dataset: bool) -> None:
+    expected = """\
+    Indexes:
+        x        PandasIndex"""
+    expected = dedent(expected)
+
+    obj: xr.DataArray | xr.Dataset = xr.DataArray([1], coords={"x": [1]})
+    obj = obj._to_temp_dataset() if as_dataset else obj
+
+    actual = repr(obj.xindexes)
+    assert actual == expected
+
+
+@requires_cftime
+def test_empty_cftimeindex_repr() -> None:
+    index = xr.coding.cftimeindex.CFTimeIndex([])
+
+    expected = """\
+    Indexes:
+        time     CFTimeIndex([], dtype='object', length=0, calendar=None, freq=None)"""
+    expected = dedent(expected)
+
+    da = xr.DataArray([], coords={"time": index})
+
+    actual = repr(da.indexes)
+    assert actual == expected

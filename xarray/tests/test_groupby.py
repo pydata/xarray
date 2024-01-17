@@ -1,21 +1,26 @@
 from __future__ import annotations
 
+import datetime
+import operator
 import warnings
 
 import numpy as np
 import pandas as pd
 import pytest
-from pandas.tseries.frequencies import to_offset
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core.groupby import _consolidate_slices
 from xarray.tests import (
+    InaccessibleArray,
     assert_allclose,
     assert_array_equal,
     assert_equal,
     assert_identical,
     create_test_data,
+    has_cftime,
+    has_flox,
+    has_pandas_version_two,
     requires_dask,
     requires_flox,
     requires_scipy,
@@ -42,7 +47,6 @@ def array(dataset):
 
 
 def test_consolidate_slices() -> None:
-
     assert _consolidate_slices([slice(3), slice(3, 5)]) == [slice(5)]
     assert _consolidate_slices([slice(2, 3), slice(3, 6)]) == [slice(2, 6)]
     assert _consolidate_slices([slice(2, 3, 1), slice(3, 6, 1)]) == [slice(2, 6, 1)]
@@ -50,28 +54,57 @@ def test_consolidate_slices() -> None:
     slices = [slice(2, 3), slice(5, 6)]
     assert _consolidate_slices(slices) == slices
 
+    # ignore type because we're checking for an error anyway
     with pytest.raises(ValueError):
-        _consolidate_slices([slice(3), 4])
+        _consolidate_slices([slice(3), 4])  # type: ignore[list-item]
 
 
-def test_groupby_dims_property(dataset) -> None:
-    assert dataset.groupby("x").dims == dataset.isel(x=1).dims
-    assert dataset.groupby("y").dims == dataset.isel(y=1).dims
+@pytest.mark.filterwarnings("ignore:return type")
+def test_groupby_dims_property(dataset, recwarn) -> None:
+    # dims is sensitive to squeeze, always warn
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert dataset.groupby("x").dims == dataset.isel(x=1).dims
+        assert dataset.groupby("y").dims == dataset.isel(y=1).dims
+
+    # when squeeze=False, no warning should be raised
+    assert tuple(dataset.groupby("x", squeeze=False).dims) == tuple(
+        dataset.isel(x=slice(1, 2)).dims
+    )
+    assert tuple(dataset.groupby("y", squeeze=False).dims) == tuple(
+        dataset.isel(y=slice(1, 2)).dims
+    )
+    assert len(recwarn) == 0
 
     stacked = dataset.stack({"xy": ("x", "y")})
-    assert stacked.groupby("xy").dims == stacked.isel(xy=0).dims
+    assert tuple(stacked.groupby("xy", squeeze=False).dims) == tuple(
+        stacked.isel(xy=[0]).dims
+    )
+    assert len(recwarn) == 0
+
+
+def test_groupby_sizes_property(dataset) -> None:
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert dataset.groupby("x").sizes == dataset.isel(x=1).sizes
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert dataset.groupby("y").sizes == dataset.isel(y=1).sizes
+
+    stacked = dataset.stack({"xy": ("x", "y")})
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert stacked.groupby("xy").sizes == stacked.isel(xy=0).sizes
 
 
 def test_multi_index_groupby_map(dataset) -> None:
     # regression test for GH873
     ds = dataset.isel(z=1, drop=True)[["foo"]]
     expected = 2 * ds
-    actual = (
-        ds.stack(space=["x", "y"])
-        .groupby("space")
-        .map(lambda x: 2 * x)
-        .unstack("space")
-    )
+    # The function in `map` may be sensitive to squeeze, always warn
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        actual = (
+            ds.stack(space=["x", "y"])
+            .groupby("space")
+            .map(lambda x: 2 * x)
+            .unstack("space")
+        )
     assert_equal(expected, actual)
 
 
@@ -133,6 +166,18 @@ def test_groupby_input_mutation() -> None:
     assert_identical(array, array_copy)  # should not modify inputs
 
 
+@pytest.mark.parametrize("use_flox", [True, False])
+def test_groupby_indexvariable(use_flox: bool) -> None:
+    # regression test for GH7919
+    array = xr.DataArray([1, 2, 3], [("x", [2, 2, 1])])
+    iv = xr.IndexVariable(dims="x", data=pd.Index(array.x.values))
+    with xr.set_options(use_flox=use_flox):
+        actual = array.groupby(iv).sum()
+    actual = array.groupby(iv).sum()
+    expected = xr.DataArray([3, 3], [("x", [1, 2])])
+    assert_identical(expected, actual)
+
+
 @pytest.mark.parametrize(
     "obj",
     [
@@ -172,7 +217,8 @@ def test_da_groupby_map_func_args() -> None:
 
     array = xr.DataArray([1, 1, 1], [("x", [1, 2, 3])])
     expected = xr.DataArray([3, 3, 3], [("x", [1, 2, 3])])
-    actual = array.groupby("x").map(func, args=(1,), arg3=1)
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        actual = array.groupby("x").map(func, args=(1,), arg3=1)
     assert_identical(expected, actual)
 
 
@@ -182,12 +228,13 @@ def test_ds_groupby_map_func_args() -> None:
 
     dataset = xr.Dataset({"foo": ("x", [1, 1, 1])}, {"x": [1, 2, 3]})
     expected = xr.Dataset({"foo": ("x", [3, 3, 3])}, {"x": [1, 2, 3]})
-    actual = dataset.groupby("x").map(func, args=(1,), arg3=1)
+    # The function in `map` may be sensitive to squeeze, always warn
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        actual = dataset.groupby("x").map(func, args=(1,), arg3=1)
     assert_identical(expected, actual)
 
 
 def test_da_groupby_empty() -> None:
-
     empty_array = xr.DataArray([], dims="dim")
 
     with pytest.raises(ValueError):
@@ -195,7 +242,6 @@ def test_da_groupby_empty() -> None:
 
 
 def test_da_groupby_quantile() -> None:
-
     array = xr.DataArray(
         data=[1, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
     )
@@ -217,11 +263,11 @@ def test_da_groupby_quantile() -> None:
     assert_identical(expected, actual)
 
     array = xr.DataArray(
-        data=[np.NaN, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
+        data=[np.nan, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
     )
 
     for skipna in (True, False, None):
-        e = [np.NaN, 5] if skipna is False else [2.5, 5]
+        e = [np.nan, 5] if skipna is False else [2.5, 5]
 
         expected = xr.DataArray(data=e, coords={"x": [1, 2], "quantile": 0.5}, dims="x")
         actual = array.groupby("x").quantile(0.5, skipna=skipna)
@@ -331,12 +377,12 @@ def test_ds_groupby_quantile() -> None:
     assert_identical(expected, actual)
 
     ds = xr.Dataset(
-        data_vars={"a": ("x", [np.NaN, 2, 3, 4, 5, 6])},
+        data_vars={"a": ("x", [np.nan, 2, 3, 4, 5, 6])},
         coords={"x": [1, 1, 1, 2, 2, 2]},
     )
 
     for skipna in (True, False, None):
-        e = [np.NaN, 5] if skipna is False else [2.5, 5]
+        e = [np.nan, 5] if skipna is False else [2.5, 5]
 
         expected = xr.Dataset(
             data_vars={"a": ("x", e)}, coords={"quantile": 0.5, "x": [1, 2]}
@@ -429,7 +475,6 @@ def test_ds_groupby_quantile() -> None:
 
 @pytest.mark.parametrize("as_dataset", [False, True])
 def test_groupby_quantile_interpolation_deprecated(as_dataset) -> None:
-
     array = xr.DataArray(data=[1, 2, 3, 4], coords={"x": [1, 1, 2, 2]}, dims="x")
 
     arr: xr.DataArray | xr.Dataset
@@ -454,8 +499,10 @@ def test_da_groupby_assign_coords() -> None:
     actual = xr.DataArray(
         [[3, 4, 5], [6, 7, 8]], dims=["y", "x"], coords={"y": range(2), "x": range(3)}
     )
-    actual1 = actual.groupby("x").assign_coords({"y": [-1, -2]})
-    actual2 = actual.groupby("x").assign_coords(y=[-1, -2])
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        actual1 = actual.groupby("x").assign_coords({"y": [-1, -2]})
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        actual2 = actual.groupby("x").assign_coords(y=[-1, -2])
     expected = xr.DataArray(
         [[3, 4, 5], [6, 7, 8]], dims=["y", "x"], coords={"y": [-1, -2], "x": range(3)}
     )
@@ -503,6 +550,7 @@ def test_groupby_repr_datetime(obj) -> None:
     assert actual == expected
 
 
+@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
 def test_groupby_drops_nans() -> None:
     # GH2383
@@ -539,7 +587,7 @@ def test_groupby_drops_nans() -> None:
         .reset_index("id", drop=True)
         .assign(id=stacked.id.values)
         .dropna("id")
-        .transpose(*actual2.dims)
+        .transpose(*actual2.variable.dims)
     )
     assert_identical(actual2, expected2)
 
@@ -585,31 +633,34 @@ def test_groupby_grouping_errors() -> None:
     with pytest.raises(
         ValueError, match=r"None of the data falls within bins with edges"
     ):
-        dataset.to_array().groupby_bins("x", bins=[0.1, 0.2, 0.3])
+        dataset.to_dataarray().groupby_bins("x", bins=[0.1, 0.2, 0.3])
 
     with pytest.raises(ValueError, match=r"All bin edges are NaN."):
         dataset.groupby_bins("x", bins=[np.nan, np.nan, np.nan])
 
     with pytest.raises(ValueError, match=r"All bin edges are NaN."):
-        dataset.to_array().groupby_bins("x", bins=[np.nan, np.nan, np.nan])
+        dataset.to_dataarray().groupby_bins("x", bins=[np.nan, np.nan, np.nan])
 
     with pytest.raises(ValueError, match=r"Failed to group data."):
         dataset.groupby(dataset.foo * np.nan)
 
     with pytest.raises(ValueError, match=r"Failed to group data."):
-        dataset.to_array().groupby(dataset.foo * np.nan)
+        dataset.to_dataarray().groupby(dataset.foo * np.nan)
 
 
 def test_groupby_reduce_dimension_error(array) -> None:
     grouped = array.groupby("y")
-    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
-        grouped.mean()
+    # assert_identical(array, grouped.mean())
 
     with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean("huh")
 
     with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean(("x", "y", "asd"))
+
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert_identical(array.mean("x"), grouped.reduce(np.mean, "x"))
+        assert_allclose(array.mean(["x", "z"]), grouped.reduce(np.mean, ["x", "z"]))
 
     grouped = array.groupby("y", squeeze=False)
     assert_identical(array, grouped.mean())
@@ -629,7 +680,7 @@ def test_groupby_bins_timeseries() -> None:
         pd.date_range("2010-08-01", "2010-08-15", freq="15min"), dims="time"
     )
     ds["val"] = xr.DataArray(np.ones(ds["time"].shape), dims="time")
-    time_bins = pd.date_range(start="2010-08-01", end="2010-08-15", freq="24H")
+    time_bins = pd.date_range(start="2010-08-01", end="2010-08-15", freq="24h")
     actual = ds.groupby_bins("time", time_bins).sum()
     expected = xr.DataArray(
         96 * np.ones((14,)),
@@ -652,14 +703,26 @@ def test_groupby_none_group_name() -> None:
 
 
 def test_groupby_getitem(dataset) -> None:
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert_identical(dataset.sel(x="a"), dataset.groupby("x")["a"])
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert_identical(dataset.sel(z=1), dataset.groupby("z")[1])
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert_identical(dataset.foo.sel(x="a"), dataset.foo.groupby("x")["a"])
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert_identical(dataset.foo.sel(z=1), dataset.foo.groupby("z")[1])
 
-    assert_identical(dataset.sel(x="a"), dataset.groupby("x")["a"])
-    assert_identical(dataset.sel(z=1), dataset.groupby("z")[1])
+    assert_identical(dataset.sel(x=["a"]), dataset.groupby("x", squeeze=False)["a"])
+    assert_identical(dataset.sel(z=[1]), dataset.groupby("z", squeeze=False)[1])
 
-    assert_identical(dataset.foo.sel(x="a"), dataset.foo.groupby("x")["a"])
-    assert_identical(dataset.foo.sel(z=1), dataset.foo.groupby("z")[1])
+    assert_identical(
+        dataset.foo.sel(x=["a"]), dataset.foo.groupby("x", squeeze=False)["a"]
+    )
+    assert_identical(dataset.foo.sel(z=[1]), dataset.foo.groupby("z", squeeze=False)[1])
 
-    actual = dataset.groupby("boo")["f"].unstack().transpose("x", "y", "z")
+    actual = (
+        dataset.groupby("boo", squeeze=False)["f"].unstack().transpose("x", "y", "z")
+    )
     expected = dataset.sel(y=[1], z=[1, 2]).transpose("x", "y", "z")
     assert_identical(expected, actual)
 
@@ -669,14 +732,14 @@ def test_groupby_dataset() -> None:
         {"z": (["x", "y"], np.random.randn(3, 5))},
         {"x": ("x", list("abc")), "c": ("x", [0, 1, 0]), "y": range(5)},
     )
-    groupby = data.groupby("x")
+    groupby = data.groupby("x", squeeze=False)
     assert len(groupby) == 3
-    expected_groups = {"a": 0, "b": 1, "c": 2}
+    expected_groups = {"a": slice(0, 1), "b": slice(1, 2), "c": slice(2, 3)}
     assert groupby.groups == expected_groups
     expected_items = [
-        ("a", data.isel(x=0)),
-        ("b", data.isel(x=1)),
-        ("c", data.isel(x=2)),
+        ("a", data.isel(x=[0])),
+        ("b", data.isel(x=[1])),
+        ("c", data.isel(x=[2])),
     ]
     for actual1, expected1 in zip(groupby, expected_items):
         assert actual1[0] == expected1[0]
@@ -690,31 +753,61 @@ def test_groupby_dataset() -> None:
         assert_equal(data, actual2)
 
 
+def test_groupby_dataset_squeeze_None() -> None:
+    """Delete when removing squeeze."""
+    data = Dataset(
+        {"z": (["x", "y"], np.random.randn(3, 5))},
+        {"x": ("x", list("abc")), "c": ("x", [0, 1, 0]), "y": range(5)},
+    )
+    groupby = data.groupby("x")
+    assert len(groupby) == 3
+    expected_groups = {"a": 0, "b": 1, "c": 2}
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert groupby.groups == expected_groups
+    expected_items = [
+        ("a", data.isel(x=0)),
+        ("b", data.isel(x=1)),
+        ("c", data.isel(x=2)),
+    ]
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        for actual1, expected1 in zip(groupby, expected_items):
+            assert actual1[0] == expected1[0]
+            assert_equal(actual1[1], expected1[1])
+
+    def identity(x):
+        return x
+
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        for k in ["x", "c"]:
+            actual2 = data.groupby(k).map(identity)
+            assert_equal(data, actual2)
+
+
 def test_groupby_dataset_returns_new_type() -> None:
     data = Dataset({"z": (["x", "y"], np.random.randn(3, 5))})
 
-    actual1 = data.groupby("x").map(lambda ds: ds["z"])
+    actual1 = data.groupby("x", squeeze=False).map(lambda ds: ds["z"])
     expected1 = data["z"]
     assert_identical(expected1, actual1)
 
-    actual2 = data["z"].groupby("x").map(lambda x: x.to_dataset())
+    actual2 = data["z"].groupby("x", squeeze=False).map(lambda x: x.to_dataset())
     expected2 = data
     assert_identical(expected2, actual2)
 
 
 def test_groupby_dataset_iter() -> None:
     data = create_test_data()
-    for n, (t, sub) in enumerate(list(data.groupby("dim1"))[:3]):
+    for n, (t, sub) in enumerate(list(data.groupby("dim1", squeeze=False))[:3]):
         assert data["dim1"][n] == t
-        assert_equal(data["var1"][n], sub["var1"])
-        assert_equal(data["var2"][n], sub["var2"])
-        assert_equal(data["var3"][:, n], sub["var3"])
+        assert_equal(data["var1"][[n]], sub["var1"])
+        assert_equal(data["var2"][[n]], sub["var2"])
+        assert_equal(data["var3"][:, [n]], sub["var3"])
 
 
 def test_groupby_dataset_errors() -> None:
     data = create_test_data()
     with pytest.raises(TypeError, match=r"`group` must be"):
-        data.groupby(np.arange(10))
+        data.groupby(np.arange(10))  # type: ignore[arg-type,unused-ignore]
     with pytest.raises(ValueError, match=r"length does not match"):
         data.groupby(data["dim1"][:3])
     with pytest.raises(TypeError, match=r"`group` must be"):
@@ -796,9 +889,9 @@ def test_groupby_math_more() -> None:
     with pytest.raises(TypeError, match=r"only support binary ops"):
         grouped + 1  # type: ignore[operator]
     with pytest.raises(TypeError, match=r"only support binary ops"):
-        grouped + grouped
+        grouped + grouped  # type: ignore[operator]
     with pytest.raises(TypeError, match=r"in-place operations"):
-        ds += grouped
+        ds += grouped  # type: ignore[arg-type]
 
     ds = Dataset(
         {
@@ -808,6 +901,75 @@ def test_groupby_math_more() -> None:
     )
     with pytest.raises(ValueError, match=r"incompat.* grouped binary"):
         ds + ds.groupby("time.month")
+
+
+def test_groupby_math_bitshift() -> None:
+    # create new dataset of int's only
+    ds = Dataset(
+        {
+            "x": ("index", np.ones(4, dtype=int)),
+            "y": ("index", np.ones(4, dtype=int) * -1),
+            "level": ("index", [1, 1, 2, 2]),
+            "index": [0, 1, 2, 3],
+        }
+    )
+    shift = DataArray([1, 2, 1], [("level", [1, 2, 8])])
+
+    left_expected = Dataset(
+        {
+            "x": ("index", [2, 2, 4, 4]),
+            "y": ("index", [-2, -2, -4, -4]),
+            "level": ("index", [2, 2, 8, 8]),
+            "index": [0, 1, 2, 3],
+        }
+    )
+
+    left_manual = []
+    for lev, group in ds.groupby("level"):
+        shifter = shift.sel(level=lev)
+        left_manual.append(group << shifter)
+    left_actual = xr.concat(left_manual, dim="index").reset_coords(names="level")
+    assert_equal(left_expected, left_actual)
+
+    left_actual = (ds.groupby("level") << shift).reset_coords(names="level")
+    assert_equal(left_expected, left_actual)
+
+    right_expected = Dataset(
+        {
+            "x": ("index", [0, 0, 2, 2]),
+            "y": ("index", [-1, -1, -2, -2]),
+            "level": ("index", [0, 0, 4, 4]),
+            "index": [0, 1, 2, 3],
+        }
+    )
+    right_manual = []
+    for lev, group in left_expected.groupby("level"):
+        shifter = shift.sel(level=lev)
+        right_manual.append(group >> shifter)
+    right_actual = xr.concat(right_manual, dim="index").reset_coords(names="level")
+    assert_equal(right_expected, right_actual)
+
+    right_actual = (left_expected.groupby("level") >> shift).reset_coords(names="level")
+    assert_equal(right_expected, right_actual)
+
+
+@pytest.mark.parametrize("use_flox", [True, False])
+def test_groupby_bins_cut_kwargs(use_flox: bool) -> None:
+    da = xr.DataArray(np.arange(12).reshape(6, 2), dims=("x", "y"))
+    x_bins = (0, 2, 4, 6)
+
+    with xr.set_options(use_flox=use_flox):
+        actual = da.groupby_bins(
+            "x", bins=x_bins, include_lowest=True, right=False, squeeze=False
+        ).mean()
+    expected = xr.DataArray(
+        np.array([[1.0, 2.0], [5.0, 6.0], [9.0, 10.0]]),
+        dims=("x_bins", "y"),
+        coords={
+            "x_bins": ("x_bins", pd.IntervalIndex.from_breaks(x_bins, closed="left"))
+        },
+    )
+    assert_identical(expected, actual)
 
 
 @pytest.mark.parametrize("indexed_coord", [True, False])
@@ -874,7 +1036,7 @@ def test_groupby_math_dim_order() -> None:
     da = DataArray(
         np.ones((10, 10, 12)),
         dims=("x", "y", "time"),
-        coords={"time": pd.date_range("2001-01-01", periods=12, freq="6H")},
+        coords={"time": pd.date_range("2001-01-01", periods=12, freq="6h")},
     )
     grouped = da.groupby("time.day")
     result = grouped - grouped.mean()
@@ -905,7 +1067,6 @@ def test_groupby_dataset_order() -> None:
 
 
 def test_groupby_dataset_fillna():
-
     ds = Dataset({"a": ("x", [np.nan, 1, np.nan, 3])}, {"x": [0, 1, 2, 3]})
     expected = Dataset({"a": ("x", range(4))}, {"x": [0, 1, 2, 3]})
     for target in [ds, expected]:
@@ -1024,13 +1185,16 @@ class TestDataArrayGroupBy:
         assert_equal(actual2, expected2)
 
     def test_groupby_iter(self):
-        for ((act_x, act_dv), (exp_x, exp_ds)) in zip(
-            self.dv.groupby("y"), self.ds.groupby("y")
+        for (act_x, act_dv), (exp_x, exp_ds) in zip(
+            self.dv.groupby("y", squeeze=False), self.ds.groupby("y", squeeze=False)
         ):
             assert exp_x == act_x
             assert_identical(exp_ds["foo"], act_dv)
-        for ((_, exp_dv), act_dv) in zip(self.dv.groupby("x"), self.dv):
-            assert_identical(exp_dv, act_dv)
+        with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+            for (_, exp_dv), (_, act_dv) in zip(
+                self.dv.groupby("x"), self.dv.groupby("x")
+            ):
+                assert_identical(exp_dv, act_dv)
 
     def test_groupby_properties(self):
         grouped = self.da.groupby("abc")
@@ -1044,8 +1208,8 @@ class TestDataArrayGroupBy:
         "by, use_da", [("x", False), ("y", False), ("y", True), ("abc", False)]
     )
     @pytest.mark.parametrize("shortcut", [True, False])
-    @pytest.mark.parametrize("squeeze", [True, False])
-    def test_groupby_map_identity(self, by, use_da, shortcut, squeeze) -> None:
+    @pytest.mark.parametrize("squeeze", [None, True, False])
+    def test_groupby_map_identity(self, by, use_da, shortcut, squeeze, recwarn) -> None:
         expected = self.da
         if use_da:
             by = expected.coords[by]
@@ -1056,6 +1220,10 @@ class TestDataArrayGroupBy:
         grouped = expected.groupby(by, squeeze=squeeze)
         actual = grouped.map(identity, shortcut=shortcut)
         assert_identical(expected, actual)
+
+        # abc is not a dim coordinate so no warnings expected!
+        if (by.name if use_da else by) != "abc":
+            assert len(recwarn) == (1 if squeeze in [None, True] else 0)
 
     def test_groupby_sum(self):
         array = self.da
@@ -1258,8 +1426,15 @@ class TestDataArrayGroupBy:
         expected = DataArray([10, 11, np.nan, np.nan], array.coords)
         assert_identical(expected, actual)
 
+        # regression test for #7797
+        other = array.groupby("b").sum()
+        actual = array.sel(x=[0, 1]).groupby("b") - other
+        expected = DataArray([-1, 0], {"b": ("x", [0, 0]), "x": [0, 1]}, dims="x")
+        assert_identical(expected, actual)
+
         other = DataArray([10], coords={"c": 123, "b": [0]}, dims="b")
         actual = array.groupby("b") + other
+        expected = DataArray([10, 11, np.nan, np.nan], array.coords)
         expected.coords["c"] = (["x"], [123] * 2 + [np.nan] * 2)
         assert_identical(expected, actual)
 
@@ -1280,7 +1455,7 @@ class TestDataArrayGroupBy:
             ("a", ("a", "y")),
             ("b", ("x", "b")),
         ]:
-            result = array.groupby(by).map(lambda x: x.squeeze())
+            result = array.groupby(by, squeeze=False).map(lambda x: x.squeeze())
             assert result.dims == expected_dims
 
     def test_groupby_restore_coord_dims(self):
@@ -1300,7 +1475,7 @@ class TestDataArrayGroupBy:
             ("a", ("a", "y")),
             ("b", ("x", "b")),
         ]:
-            result = array.groupby(by, restore_coord_dims=True).map(
+            result = array.groupby(by, squeeze=False, restore_coord_dims=True).map(
                 lambda x: x.squeeze()
             )["c"]
             assert result.dims == expected_dims
@@ -1355,29 +1530,58 @@ class TestDataArrayGroupBy:
         )
         assert_identical(expected, actual)
 
-    def test_groupby_bins(self):
-        array = DataArray(np.arange(4), dims="dim_0")
+    @pytest.mark.parametrize("use_flox", [True, False])
+    @pytest.mark.parametrize("coords", [np.arange(4), np.arange(4)[::-1], [2, 0, 3, 1]])
+    @pytest.mark.parametrize(
+        "cut_kwargs",
+        (
+            {"labels": None, "include_lowest": True},
+            {"labels": None, "include_lowest": False},
+            {"labels": ["a", "b"]},
+            {"labels": [1.2, 3.5]},
+            {"labels": ["b", "a"]},
+        ),
+    )
+    def test_groupby_bins(
+        self,
+        coords: np.typing.ArrayLike,
+        use_flox: bool,
+        cut_kwargs: dict,
+    ) -> None:
+        array = DataArray(
+            np.arange(4), dims="dim_0", coords={"dim_0": coords}, name="a"
+        )
         # the first value should not be part of any group ("right" binning)
         array[0] = 99
         # bins follow conventions for pandas.cut
         # http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         bins = [0, 1.5, 5]
-        bin_coords = pd.cut(array["dim_0"], bins).categories
-        expected = DataArray(
-            [1, 5], dims="dim_0_bins", coords={"dim_0_bins": bin_coords}
+
+        df = array.to_dataframe()
+        df["dim_0_bins"] = pd.cut(array["dim_0"], bins, **cut_kwargs)
+
+        expected_df = df.groupby("dim_0_bins", observed=True).sum()
+        # TODO: can't convert df with IntervalIndex to Xarray
+        expected = (
+            expected_df.reset_index(drop=True)
+            .to_xarray()
+            .assign_coords(index=np.array(expected_df.index))
+            .rename({"index": "dim_0_bins"})["a"]
         )
-        actual = array.groupby_bins("dim_0", bins=bins).sum()
-        assert_identical(expected, actual)
 
-        actual = array.groupby_bins("dim_0", bins=bins, labels=[1.2, 3.5]).sum()
-        assert_identical(expected.assign_coords(dim_0_bins=[1.2, 3.5]), actual)
+        with xr.set_options(use_flox=use_flox):
+            actual = array.groupby_bins("dim_0", bins=bins, **cut_kwargs).sum()
+            assert_identical(expected, actual)
 
-        actual = array.groupby_bins("dim_0", bins=bins).map(lambda x: x.sum())
-        assert_identical(expected, actual)
+            actual = array.groupby_bins("dim_0", bins=bins, **cut_kwargs).map(
+                lambda x: x.sum()
+            )
+            assert_identical(expected, actual)
 
-        # make sure original array dims are unchanged
-        assert len(array.dim_0) == 4
+            # make sure original array dims are unchanged
+            assert len(array.dim_0) == 4
 
+    def test_groupby_bins_ellipsis(self):
         da = xr.DataArray(np.ones((2, 3, 4)))
         bins = [-1, 0, 1, 2]
         with xr.set_options(use_flox=False):
@@ -1385,6 +1589,36 @@ class TestDataArrayGroupBy:
         with xr.set_options(use_flox=True):
             expected = da.groupby_bins("dim_0", bins).mean(...)
         assert_allclose(actual, expected)
+
+    @pytest.mark.parametrize("use_flox", [True, False])
+    def test_groupby_bins_gives_correct_subset(self, use_flox: bool) -> None:
+        # GH7766
+        rng = np.random.default_rng(42)
+        coords = rng.normal(5, 5, 1000)
+        bins = np.logspace(-4, 1, 10)
+        labels = [
+            "one",
+            "two",
+            "three",
+            "four",
+            "five",
+            "six",
+            "seven",
+            "eight",
+            "nine",
+        ]
+        # xArray
+        # Make a mock dataarray
+        darr = xr.DataArray(coords, coords=[coords], dims=["coords"])
+        expected = xr.DataArray(
+            [np.nan, np.nan, 1, 1, 1, 8, 31, 104, 542],
+            dims="coords_bins",
+            coords={"coords_bins": labels},
+        )
+        gb = darr.groupby_bins("coords", bins, labels=labels)
+        with xr.set_options(use_flox=use_flox):
+            actual = gb.count()
+        assert_identical(actual, expected)
 
     def test_groupby_bins_empty(self):
         array = DataArray(np.arange(4), [("x", range(4))])
@@ -1446,7 +1680,6 @@ class TestDataArrayGroupBy:
         assert_identical(actual, expected)
 
     def test_groupby_assign_coords(self):
-
         array = DataArray([1, 2, 3, 4], {"c": ("x", [0, 0, 1, 1])}, dims="x")
         actual = array.groupby("c").assign_coords(d=lambda a: a.mean())
         expected = array.copy()
@@ -1471,27 +1704,73 @@ class TestDataArrayGroupBy:
 
 
 class TestDataArrayResample:
-    def test_resample(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+    @pytest.mark.parametrize("use_cftime", [True, False])
+    def test_resample(self, use_cftime: bool) -> None:
+        if use_cftime and not has_cftime:
+            pytest.skip()
+        times = xr.date_range(
+            "2000-01-01", freq="6h", periods=10, use_cftime=use_cftime
+        )
+
+        def resample_as_pandas(array, *args, **kwargs):
+            array_ = array.copy(deep=True)
+            if use_cftime:
+                array_["time"] = times.to_datetimeindex()
+            result = DataArray.from_series(
+                array_.to_series().resample(*args, **kwargs).mean()
+            )
+            if use_cftime:
+                result = result.convert_calendar(
+                    calendar="standard", use_cftime=use_cftime
+                )
+            return result
+
         array = DataArray(np.arange(10), [("time", times)])
 
-        actual = array.resample(time="24H").mean()
-        expected = DataArray(array.to_series().resample("24H").mean())
+        actual = array.resample(time="24h").mean()
+        expected = resample_as_pandas(array, "24h")
         assert_identical(expected, actual)
 
-        actual = array.resample(time="24H").reduce(np.mean)
+        actual = array.resample(time="24h").reduce(np.mean)
         assert_identical(expected, actual)
 
-        # Our use of `loffset` may change if we align our API with pandas' changes.
-        # ref https://github.com/pydata/xarray/pull/4537
-        actual = array.resample(time="24H", loffset="-12H").mean()
-        expected_ = array.to_series().resample("24H").mean()
-        expected_.index += to_offset("-12H")
-        expected = DataArray.from_series(expected_)
-        assert_identical(actual, expected)
+        actual = array.resample(time="24h", closed="right").mean()
+        expected = resample_as_pandas(array, "24h", closed="right")
+        assert_identical(expected, actual)
 
         with pytest.raises(ValueError, match=r"index must be monotonic"):
             array[[2, 0, 1]].resample(time="1D")
+
+    @pytest.mark.parametrize("use_cftime", [True, False])
+    def test_resample_doctest(self, use_cftime: bool) -> None:
+        # run the doctest example here so we are not surprised
+        if use_cftime and not has_cftime:
+            pytest.skip()
+
+        da = xr.DataArray(
+            np.array([1, 2, 3, 1, 2, np.nan]),
+            dims="time",
+            coords=dict(
+                time=(
+                    "time",
+                    xr.date_range(
+                        "2001-01-01", freq="M", periods=6, use_cftime=use_cftime
+                    ),
+                ),
+                labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+            ),
+        )
+        actual = da.resample(time="3M").count()
+        expected = DataArray(
+            [1, 3, 1],
+            dims="time",
+            coords={
+                "time": xr.date_range(
+                    "2001-01-01", freq="3M", periods=3, use_cftime=use_cftime
+                )
+            },
+        )
+        assert_identical(actual, expected)
 
     def test_da_resample_func_args(self):
         def func(arg1, arg2, arg3=0.0):
@@ -1504,16 +1783,20 @@ class TestDataArrayResample:
         assert_identical(actual, expected)
 
     def test_resample_first(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
+
+        # resample to same frequency
+        actual = array.resample(time="6h").first()
+        assert_identical(array, actual)
 
         actual = array.resample(time="1D").first()
         expected = DataArray([0, 4, 8], [("time", times[::4])])
         assert_identical(expected, actual)
 
         # verify that labels don't use the first value
-        actual = array.resample(time="24H").first()
-        expected = DataArray(array.to_series().resample("24H").first())
+        actual = array.resample(time="24h").first()
+        expected = DataArray(array.to_series().resample("24h").first())
         assert_identical(expected, actual)
 
         # missing values
@@ -1537,7 +1820,7 @@ class TestDataArrayResample:
         assert_identical(expected, actual)
 
     def test_resample_bad_resample_dim(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("__resample_dim__", times)])
         with pytest.raises(ValueError, match=r"Proxy resampling dimension"):
             array.resample(**{"__resample_dim__": "1D"}).first()
@@ -1546,7 +1829,7 @@ class TestDataArrayResample:
     def test_resample_drop_nondim_coords(self):
         xs = np.arange(6)
         ys = np.arange(3)
-        times = pd.date_range("2000-01-01", freq="6H", periods=5)
+        times = pd.date_range("2000-01-01", freq="6h", periods=5)
         data = np.tile(np.arange(5), (6, 3, 1))
         xx, yy = np.meshgrid(xs * 5, ys * 2.5)
         tt = np.arange(len(times), dtype=int)
@@ -1561,21 +1844,21 @@ class TestDataArrayResample:
         array = ds["data"]
 
         # Re-sample
-        actual = array.resample(time="12H", restore_coord_dims=True).mean("time")
+        actual = array.resample(time="12h", restore_coord_dims=True).mean("time")
         assert "tc" not in actual.coords
 
         # Up-sample - filling
-        actual = array.resample(time="1H", restore_coord_dims=True).ffill()
+        actual = array.resample(time="1h", restore_coord_dims=True).ffill()
         assert "tc" not in actual.coords
 
         # Up-sample - interpolation
-        actual = array.resample(time="1H", restore_coord_dims=True).interpolate(
+        actual = array.resample(time="1h", restore_coord_dims=True).interpolate(
             "linear"
         )
         assert "tc" not in actual.coords
 
     def test_resample_keep_attrs(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         array = DataArray(np.ones(10), [("time", times)])
         array.attrs["meta"] = "data"
 
@@ -1583,13 +1866,8 @@ class TestDataArrayResample:
         expected = DataArray([1, 1, 1], [("time", times[::4])], attrs=array.attrs)
         assert_identical(result, expected)
 
-        with pytest.warns(
-            UserWarning, match="Passing ``keep_attrs`` to ``resample`` has no effect."
-        ):
-            array.resample(time="1D", keep_attrs=True)
-
     def test_resample_skipna(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         array = DataArray(np.ones(10), [("time", times)])
         array[1] = np.nan
 
@@ -1598,33 +1876,33 @@ class TestDataArrayResample:
         assert_identical(result, expected)
 
     def test_upsample(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=5)
+        times = pd.date_range("2000-01-01", freq="6h", periods=5)
         array = DataArray(np.arange(5), [("time", times)])
 
         # Forward-fill
-        actual = array.resample(time="3H").ffill()
-        expected = DataArray(array.to_series().resample("3H").ffill())
+        actual = array.resample(time="3h").ffill()
+        expected = DataArray(array.to_series().resample("3h").ffill())
         assert_identical(expected, actual)
 
         # Backward-fill
-        actual = array.resample(time="3H").bfill()
-        expected = DataArray(array.to_series().resample("3H").bfill())
+        actual = array.resample(time="3h").bfill()
+        expected = DataArray(array.to_series().resample("3h").bfill())
         assert_identical(expected, actual)
 
         # As frequency
-        actual = array.resample(time="3H").asfreq()
-        expected = DataArray(array.to_series().resample("3H").asfreq())
+        actual = array.resample(time="3h").asfreq()
+        expected = DataArray(array.to_series().resample("3h").asfreq())
         assert_identical(expected, actual)
 
         # Pad
-        actual = array.resample(time="3H").pad()
-        expected = DataArray(array.to_series().resample("3H").ffill())
+        actual = array.resample(time="3h").pad()
+        expected = DataArray(array.to_series().resample("3h").ffill())
         assert_identical(expected, actual)
 
         # Nearest
-        rs = array.resample(time="3H")
+        rs = array.resample(time="3h")
         actual = rs.nearest()
-        new_times = rs._full_index
+        new_times = rs.groupers[0].full_index
         expected = DataArray(array.reindex(time=new_times, method="nearest"))
         assert_identical(expected, actual)
 
@@ -1632,14 +1910,14 @@ class TestDataArrayResample:
         # Same as before, but now we try on multi-dimensional DataArrays.
         xs = np.arange(6)
         ys = np.arange(3)
-        times = pd.date_range("2000-01-01", freq="6H", periods=5)
+        times = pd.date_range("2000-01-01", freq="6h", periods=5)
         data = np.tile(np.arange(5), (6, 3, 1))
         array = DataArray(data, {"time": times, "x": xs, "y": ys}, ("x", "y", "time"))
 
         # Forward-fill
-        actual = array.resample(time="3H").ffill()
+        actual = array.resample(time="3h").ffill()
         expected_data = np.repeat(data, 2, axis=-1)
-        expected_times = times.to_series().resample("3H").asfreq().index
+        expected_times = times.to_series().resample("3h").asfreq().index
         expected_data = expected_data[..., : len(expected_times)]
         expected = DataArray(
             expected_data,
@@ -1649,10 +1927,10 @@ class TestDataArrayResample:
         assert_identical(expected, actual)
 
         # Backward-fill
-        actual = array.resample(time="3H").ffill()
+        actual = array.resample(time="3h").ffill()
         expected_data = np.repeat(np.flipud(data.T).T, 2, axis=-1)
         expected_data = np.flipud(expected_data.T).T
-        expected_times = times.to_series().resample("3H").asfreq().index
+        expected_times = times.to_series().resample("3h").asfreq().index
         expected_data = expected_data[..., : len(expected_times)]
         expected = DataArray(
             expected_data,
@@ -1662,10 +1940,10 @@ class TestDataArrayResample:
         assert_identical(expected, actual)
 
         # As frequency
-        actual = array.resample(time="3H").asfreq()
+        actual = array.resample(time="3h").asfreq()
         expected_data = np.repeat(data, 2, axis=-1).astype(float)[..., :-1]
         expected_data[..., 1::2] = np.nan
-        expected_times = times.to_series().resample("3H").asfreq().index
+        expected_times = times.to_series().resample("3h").asfreq().index
         expected = DataArray(
             expected_data,
             {"time": expected_times, "x": xs, "y": ys},
@@ -1674,11 +1952,11 @@ class TestDataArrayResample:
         assert_identical(expected, actual)
 
         # Pad
-        actual = array.resample(time="3H").pad()
+        actual = array.resample(time="3h").pad()
         expected_data = np.repeat(data, 2, axis=-1)
         expected_data[..., 1::2] = expected_data[..., ::2]
         expected_data = expected_data[..., :-1]
-        expected_times = times.to_series().resample("3H").asfreq().index
+        expected_times = times.to_series().resample("3h").asfreq().index
         expected = DataArray(
             expected_data,
             {"time": expected_times, "x": xs, "y": ys},
@@ -1689,21 +1967,21 @@ class TestDataArrayResample:
     def test_upsample_tolerance(self):
         # Test tolerance keyword for upsample methods bfill, pad, nearest
         times = pd.date_range("2000-01-01", freq="1D", periods=2)
-        times_upsampled = pd.date_range("2000-01-01", freq="6H", periods=5)
+        times_upsampled = pd.date_range("2000-01-01", freq="6h", periods=5)
         array = DataArray(np.arange(2), [("time", times)])
 
         # Forward fill
-        actual = array.resample(time="6H").ffill(tolerance="12H")
+        actual = array.resample(time="6h").ffill(tolerance="12h")
         expected = DataArray([0.0, 0.0, 0.0, np.nan, 1.0], [("time", times_upsampled)])
         assert_identical(expected, actual)
 
         # Backward fill
-        actual = array.resample(time="6H").bfill(tolerance="12H")
+        actual = array.resample(time="6h").bfill(tolerance="12h")
         expected = DataArray([0.0, np.nan, 1.0, 1.0, 1.0], [("time", times_upsampled)])
         assert_identical(expected, actual)
 
         # Nearest
-        actual = array.resample(time="6H").nearest(tolerance="6H")
+        actual = array.resample(time="6h").nearest(tolerance="6h")
         expected = DataArray([0, 0, np.nan, 1, 1], [("time", times_upsampled)])
         assert_identical(expected, actual)
 
@@ -1713,18 +1991,18 @@ class TestDataArrayResample:
 
         xs = np.arange(6)
         ys = np.arange(3)
-        times = pd.date_range("2000-01-01", freq="6H", periods=5)
+        times = pd.date_range("2000-01-01", freq="6h", periods=5)
 
         z = np.arange(5) ** 2
         data = np.tile(z, (6, 3, 1))
         array = DataArray(data, {"time": times, "x": xs, "y": ys}, ("x", "y", "time"))
 
-        expected_times = times.to_series().resample("1H").asfreq().index
+        expected_times = times.to_series().resample("1h").asfreq().index
         # Split the times into equal sub-intervals to simulate the 6 hour
         # to 1 hour up-sampling
         new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
         for kind in ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]:
-            actual = array.resample(time="1H").interpolate(kind)
+            actual = array.resample(time="1h").interpolate(kind)
             f = interp1d(
                 np.arange(len(times)),
                 data,
@@ -1745,6 +2023,7 @@ class TestDataArrayResample:
             assert_allclose(expected, actual, rtol=1e-16)
 
     @requires_scipy
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_upsample_interpolate_bug_2197(self):
         dates = pd.date_range("2007-02-01", "2007-03-01", freq="D")
         da = xr.DataArray(np.arange(len(dates)), [("time", dates)])
@@ -1774,7 +2053,7 @@ class TestDataArrayResample:
 
         xs = np.arange(6)
         ys = np.arange(3)
-        times = pd.date_range("2000-01-01", freq="6H", periods=5)
+        times = pd.date_range("2000-01-01", freq="6h", periods=5)
 
         z = np.arange(5) ** 2
         data = np.tile(z, (6, 3, 1))
@@ -1783,12 +2062,12 @@ class TestDataArrayResample:
         if chunked_time:
             chunks["time"] = 3
 
-        expected_times = times.to_series().resample("1H").asfreq().index
+        expected_times = times.to_series().resample("1h").asfreq().index
         # Split the times into equal sub-intervals to simulate the 6 hour
         # to 1 hour up-sampling
         new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
         for kind in ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]:
-            actual = array.chunk(chunks).resample(time="1H").interpolate(kind)
+            actual = array.chunk(chunks).resample(time="1h").interpolate(kind)
             actual = actual.compute()
             f = interp1d(
                 np.arange(len(times)),
@@ -1809,37 +2088,75 @@ class TestDataArrayResample:
             # done here due to floating point arithmetic
             assert_allclose(expected, actual, rtol=1e-16)
 
+    @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
     def test_resample_base(self) -> None:
-        times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01T02:03:01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
         base = 11
-        actual = array.resample(time="24H", base=base).mean()
-        expected = DataArray(array.to_series().resample("24H", base=base).mean())
+
+        with pytest.warns(FutureWarning, match="the `base` parameter to resample"):
+            actual = array.resample(time="24h", base=base).mean()
+        expected = DataArray(
+            array.to_series().resample("24h", offset=f"{base}h").mean()
+        )
         assert_identical(expected, actual)
 
     def test_resample_offset(self) -> None:
-        times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01T02:03:01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
-        offset = pd.Timedelta("11H")
-        actual = array.resample(time="24H", offset=offset).mean()
-        expected = DataArray(array.to_series().resample("24H", offset=offset).mean())
+        offset = pd.Timedelta("11h")
+        actual = array.resample(time="24h", offset=offset).mean()
+        expected = DataArray(array.to_series().resample("24h", offset=offset).mean())
         assert_identical(expected, actual)
 
     def test_resample_origin(self) -> None:
-        times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01T02:03:01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
         origin = "start"
-        actual = array.resample(time="24H", origin=origin).mean()
-        expected = DataArray(array.to_series().resample("24H", origin=origin).mean())
+        actual = array.resample(time="24h", origin=origin).mean()
+        expected = DataArray(array.to_series().resample("24h", origin=origin).mean())
         assert_identical(expected, actual)
+
+    @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
+    @pytest.mark.parametrize(
+        "loffset",
+        [
+            "-12H",
+            datetime.timedelta(hours=-12),
+            pd.Timedelta(hours=-12),
+            pd.DateOffset(hours=-12),
+        ],
+    )
+    def test_resample_loffset(self, loffset) -> None:
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        with pytest.warns(FutureWarning, match="`loffset` parameter"):
+            actual = array.resample(time="24h", loffset=loffset).mean()
+        series = array.to_series().resample("24h").mean()
+        if not isinstance(loffset, pd.DateOffset):
+            loffset = pd.Timedelta(loffset)
+        series.index = series.index + loffset
+        expected = DataArray(series)
+        assert_identical(actual, expected)
+
+    def test_resample_invalid_loffset(self) -> None:
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        with pytest.warns(
+            FutureWarning, match="Following pandas, the `loffset` parameter"
+        ):
+            with pytest.raises(ValueError, match="`loffset` must be"):
+                array.resample(time="24h", loffset=1).mean()  # type: ignore
 
 
 class TestDatasetResample:
     def test_resample_and_first(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         ds = Dataset(
             {
                 "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
@@ -1853,9 +2170,9 @@ class TestDatasetResample:
         assert_identical(expected, actual)
 
         # upsampling
-        expected_time = pd.date_range("2000-01-01", freq="3H", periods=19)
+        expected_time = pd.date_range("2000-01-01", freq="3h", periods=19)
         expected = ds.reindex(time=expected_time)
-        actual = ds.resample(time="3H")
+        actual = ds.resample(time="3h")
         for how in ["mean", "sum", "first", "last"]:
             method = getattr(actual, how)
             result = method()
@@ -1865,7 +2182,7 @@ class TestDatasetResample:
             assert_equal(expected, result)
 
     def test_resample_min_count(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         ds = Dataset(
             {
                 "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
@@ -1887,7 +2204,7 @@ class TestDatasetResample:
         assert_allclose(expected, actual)
 
     def test_resample_by_mean_with_keep_attrs(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         ds = Dataset(
             {
                 "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
@@ -1906,13 +2223,8 @@ class TestDatasetResample:
         expected = ds.attrs
         assert expected == actual
 
-        with pytest.warns(
-            UserWarning, match="Passing ``keep_attrs`` to ``resample`` has no effect."
-        ):
-            ds.resample(time="1D", keep_attrs=True)
-
     def test_resample_loffset(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         ds = Dataset(
             {
                 "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
@@ -1922,16 +2234,8 @@ class TestDatasetResample:
         )
         ds.attrs["dsmeta"] = "dsdata"
 
-        # Our use of `loffset` may change if we align our API with pandas' changes.
-        # ref https://github.com/pydata/xarray/pull/4537
-        actual = ds.resample(time="24H", loffset="-12H").mean().bar
-        expected_ = ds.bar.to_series().resample("24H").mean()
-        expected_.index += to_offset("-12H")
-        expected = DataArray.from_series(expected_)
-        assert_allclose(actual, expected)
-
     def test_resample_by_mean_discarding_attrs(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         ds = Dataset(
             {
                 "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
@@ -1947,7 +2251,7 @@ class TestDatasetResample:
         assert resampled_ds.attrs == {}
 
     def test_resample_by_last_discarding_attrs(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         ds = Dataset(
             {
                 "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
@@ -1966,7 +2270,7 @@ class TestDatasetResample:
     def test_resample_drop_nondim_coords(self):
         xs = np.arange(6)
         ys = np.arange(3)
-        times = pd.date_range("2000-01-01", freq="6H", periods=5)
+        times = pd.date_range("2000-01-01", freq="6h", periods=5)
         data = np.tile(np.arange(5), (6, 3, 1))
         xx, yy = np.meshgrid(xs * 5, ys * 2.5)
         tt = np.arange(len(times), dtype=int)
@@ -1978,20 +2282,19 @@ class TestDatasetResample:
         ds = ds.set_coords(["xc", "yc", "tc"])
 
         # Re-sample
-        actual = ds.resample(time="12H").mean("time")
+        actual = ds.resample(time="12h").mean("time")
         assert "tc" not in actual.coords
 
         # Up-sample - filling
-        actual = ds.resample(time="1H").ffill()
+        actual = ds.resample(time="1h").ffill()
         assert "tc" not in actual.coords
 
         # Up-sample - interpolation
-        actual = ds.resample(time="1H").interpolate("linear")
+        actual = ds.resample(time="1h").interpolate("linear")
         assert "tc" not in actual.coords
 
     def test_resample_old_api(self):
-
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         ds = Dataset(
             {
                 "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
@@ -2010,7 +2313,7 @@ class TestDatasetResample:
             ds.resample("1D", dim="time")
 
     def test_resample_ds_da_are_the_same(self):
-        time = pd.date_range("2000-01-01", freq="6H", periods=365 * 4)
+        time = pd.date_range("2000-01-01", freq="6h", periods=365 * 4)
         ds = xr.Dataset(
             {
                 "foo": (("time", "x"), np.random.randn(365 * 4, 5)),
@@ -2113,4 +2416,86 @@ def test_resample_cumsum(method: str, expected_array: list[float]) -> None:
     assert_identical(expected.drop_vars(["time"]).foo, actual)
 
 
-# TODO: move other groupby tests from test_dataset and test_dataarray over here
+def test_groupby_binary_op_regression() -> None:
+    # regression test for #7797
+    # monthly timeseries that should return "zero anomalies" everywhere
+    time = xr.date_range("2023-01-01", "2023-12-31", freq="MS")
+    data = np.linspace(-1, 1, 12)
+    x = xr.DataArray(data, coords={"time": time})
+    clim = xr.DataArray(data, coords={"month": np.arange(1, 13, 1)})
+
+    # seems to give the correct result if we use the full x, but not with a slice
+    x_slice = x.sel(time=["2023-04-01"])
+
+    # two typical ways of computing anomalies
+    anom_gb = x_slice.groupby("time.month") - clim
+
+    assert_identical(xr.zeros_like(anom_gb), anom_gb)
+
+
+def test_groupby_multiindex_level() -> None:
+    # GH6836
+    midx = pd.MultiIndex.from_product([list("abc"), [0, 1]], names=("one", "two"))
+    mda = xr.DataArray(np.random.rand(6, 3), [("x", midx), ("y", range(3))])
+    groups = mda.groupby("one").groups
+    assert groups == {"a": [0, 1], "b": [2, 3], "c": [4, 5]}
+
+
+@requires_flox
+@pytest.mark.parametrize("func", ["sum", "prod"])
+@pytest.mark.parametrize("skipna", [True, False])
+@pytest.mark.parametrize("min_count", [None, 1])
+def test_min_count_vs_flox(func: str, min_count: int | None, skipna: bool) -> None:
+    da = DataArray(
+        data=np.array([np.nan, 1, 1, np.nan, 1, 1]),
+        dims="x",
+        coords={"labels": ("x", np.array([1, 2, 3, 1, 2, 3]))},
+    )
+
+    gb = da.groupby("labels")
+    method = operator.methodcaller(func, min_count=min_count, skipna=skipna)
+    with xr.set_options(use_flox=True):
+        actual = method(gb)
+    with xr.set_options(use_flox=False):
+        expected = method(gb)
+    assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize("use_flox", [True, False])
+def test_min_count_error(use_flox: bool) -> None:
+    if use_flox and not has_flox:
+        pytest.skip()
+    da = DataArray(
+        data=np.array([np.nan, 1, 1, np.nan, 1, 1]),
+        dims="x",
+        coords={"labels": ("x", np.array([1, 2, 3, 1, 2, 3]))},
+    )
+    with xr.set_options(use_flox=use_flox):
+        with pytest.raises(TypeError):
+            da.groupby("labels").mean(min_count=1)
+
+
+@requires_dask
+def test_groupby_math_auto_chunk():
+    da = xr.DataArray(
+        [[1, 2, 3], [1, 2, 3], [1, 2, 3]],
+        dims=("y", "x"),
+        coords={"label": ("x", [2, 2, 1])},
+    )
+    sub = xr.DataArray(
+        InaccessibleArray(np.array([1, 2])), dims="label", coords={"label": [1, 2]}
+    )
+    actual = da.chunk(x=1, y=2).groupby("label") - sub
+    assert actual.chunksizes == {"x": (1, 1, 1), "y": (2, 1)}
+
+
+@pytest.mark.parametrize("use_flox", [True, False])
+def test_groupby_dim_no_dim_equal(use_flox):
+    # https://github.com/pydata/xarray/issues/8263
+    da = DataArray(
+        data=[1, 2, 3, 4], dims="lat", coords={"lat": np.linspace(0, 1.01, 4)}
+    )
+    with xr.set_options(use_flox=use_flox):
+        actual1 = da.drop_vars("lat").groupby("lat", squeeze=False).sum()
+        actual2 = da.groupby("lat", squeeze=False).sum()
+    assert_identical(actual1, actual2.drop_vars("lat"))

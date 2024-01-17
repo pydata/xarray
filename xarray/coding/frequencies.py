@@ -79,11 +79,12 @@ def infer_freq(index):
         If there are fewer than three values or the index is not 1D.
     """
     from xarray.core.dataarray import DataArray
+    from xarray.core.variable import Variable
 
     if isinstance(index, (DataArray, pd.Series)):
         if index.ndim != 1:
             raise ValueError("'index' must be 1D")
-        elif not _contains_datetime_like_objects(DataArray(index)):
+        elif not _contains_datetime_like_objects(Variable("dim", index)):
             raise ValueError("'index' must contain datetime-like objects")
         dtype = np.asarray(index).dtype
         if dtype == "datetime64[ns]":
@@ -137,15 +138,15 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
             return None
 
         if _is_multiple(delta, _ONE_HOUR):
-            return _maybe_add_count("H", delta / _ONE_HOUR)
+            return _maybe_add_count("h", delta / _ONE_HOUR)
         elif _is_multiple(delta, _ONE_MINUTE):
-            return _maybe_add_count("T", delta / _ONE_MINUTE)
+            return _maybe_add_count("min", delta / _ONE_MINUTE)
         elif _is_multiple(delta, _ONE_SECOND):
-            return _maybe_add_count("S", delta / _ONE_SECOND)
+            return _maybe_add_count("s", delta / _ONE_SECOND)
         elif _is_multiple(delta, _ONE_MILLI):
-            return _maybe_add_count("L", delta / _ONE_MILLI)
+            return _maybe_add_count("ms", delta / _ONE_MILLI)
         else:
-            return _maybe_add_count("U", delta / _ONE_MICRO)
+            return _maybe_add_count("us", delta / _ONE_MICRO)
 
     def _infer_daily_rule(self):
         annual_rule = self._get_annual_rule()
@@ -182,7 +183,7 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
         if len(np.unique(self.index.month)) > 1:
             return None
 
-        return {"cs": "AS", "ce": "A"}.get(month_anchor_check(self.index))
+        return {"cs": "YS", "ce": "Y"}.get(month_anchor_check(self.index))
 
     def _get_quartely_rule(self):
         if len(self.month_deltas) > 1:
@@ -191,13 +192,13 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
         if self.month_deltas[0] % 3 != 0:
             return None
 
-        return {"cs": "QS", "ce": "Q"}.get(month_anchor_check(self.index))
+        return {"cs": "QS", "ce": "QE"}.get(month_anchor_check(self.index))
 
     def _get_monthly_rule(self):
         if len(self.month_deltas) > 1:
             return None
 
-        return {"cs": "MS", "ce": "M"}.get(month_anchor_check(self.index))
+        return {"cs": "MS", "ce": "ME"}.get(month_anchor_check(self.index))
 
     @property
     def deltas(self):

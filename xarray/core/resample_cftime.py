@@ -45,7 +45,6 @@ import pandas as pd
 
 from xarray.coding.cftime_offsets import (
     BaseCFTimeOffset,
-    Day,
     MonthEnd,
     QuarterEnd,
     Tick,
@@ -71,7 +70,6 @@ class CFTimeGrouper:
         freq: str | BaseCFTimeOffset,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
-        base: int | None = None,
         loffset: str | datetime.timedelta | BaseCFTimeOffset | None = None,
         origin: str | CFTimeDatetime = "start_day",
         offset: str | datetime.timedelta | None = None,
@@ -79,10 +77,6 @@ class CFTimeGrouper:
         self.offset: datetime.timedelta | None
         self.closed: SideOptions
         self.label: SideOptions
-
-        if base is not None and offset is not None:
-            raise ValueError("base and offset cannot be provided at the same time")
-
         self.freq = to_offset(freq)
         self.loffset = loffset
         self.origin = origin
@@ -122,9 +116,6 @@ class CFTimeGrouper:
                 else:
                     self.label = label
 
-        if base is not None and isinstance(self.freq, Tick):
-            offset = type(self.freq)(n=base % self.freq.n).as_timedelta()
-
         if offset is not None:
             try:
                 self.offset = _convert_offset_to_timedelta(offset)
@@ -150,6 +141,16 @@ class CFTimeGrouper:
             index, self.freq, self.closed, self.label, self.origin, self.offset
         )
         if self.loffset is not None:
+            if not isinstance(
+                self.loffset, (str, datetime.timedelta, BaseCFTimeOffset)
+            ):
+                # BaseCFTimeOffset is not public API so we do not include it in
+                # the error message for now.
+                raise ValueError(
+                    f"`loffset` must be a str or datetime.timedelta object. "
+                    f"Got {self.loffset}."
+                )
+
             if isinstance(self.loffset, datetime.timedelta):
                 labels = labels + self.loffset
             else:
@@ -161,12 +162,14 @@ class CFTimeGrouper:
         if index[-1] > datetime_bins[-1]:
             raise ValueError("Value falls after last bin")
 
-        integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)[:-1]
-        first_items = pd.Series(integer_bins, labels)
+        integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)
+        counts = np.diff(integer_bins)
+        codes = np.repeat(np.arange(len(labels)), counts)
+        first_items = pd.Series(integer_bins[:-1], labels, copy=False)
 
         # Mask duplicate values with NaNs, preserving the last values
         non_duplicate = ~first_items.duplicated("last")
-        return first_items.where(non_duplicate)
+        return first_items.where(non_duplicate), codes
 
 
 def _get_time_bins(
@@ -253,8 +256,7 @@ def _adjust_bin_edges(
     labels: np.ndarray,
 ):
     """This is required for determining the bin edges resampling with
-    daily frequencies greater than one day, month end, and year end
-    frequencies.
+    month end, quarter end, and year end frequencies.
 
     Consider the following example.  Let's say you want to downsample the
     time series with the following coordinates to month end frequency:
@@ -282,14 +284,8 @@ def _adjust_bin_edges(
     The labels are still:
 
     CFTimeIndex([2000-01-31 00:00:00, 2000-02-29 00:00:00], dtype='object')
-
-    This is also required for daily frequencies longer than one day and
-    year-end frequencies.
     """
-    is_super_daily = isinstance(freq, (MonthEnd, QuarterEnd, YearEnd)) or (
-        isinstance(freq, Day) and freq.n > 1
-    )
-    if is_super_daily:
+    if isinstance(freq, (MonthEnd, QuarterEnd, YearEnd)):
         if closed == "right":
             datetime_bins = datetime_bins + datetime.timedelta(days=1, microseconds=-1)
         if datetime_bins[-2] > index.max():

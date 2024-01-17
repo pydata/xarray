@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 import warnings
+from abc import ABC
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
+from typing import Generic
 
 import numpy as np
 import pandas as pd
 import pytest
 import pytz
-from packaging.version import Version
 
-from xarray import Coordinate, DataArray, Dataset, IndexVariable, Variable, set_options
+from xarray import DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
@@ -26,6 +27,7 @@ from xarray.core.indexing import (
     VectorizedIndexer,
 )
 from xarray.core.pycompat import array_type
+from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import (
@@ -44,6 +46,7 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
+from xarray.tests.test_namedarray import NamedArraySubclassobjects
 
 dask_array_type = array_type("dask")
 
@@ -61,32 +64,11 @@ def var():
     return Variable(dims=list("xyz"), data=np.random.rand(3, 4, 5))
 
 
-class VariableSubclassobjects:
-    cls: staticmethod[Variable]
-
-    def test_properties(self):
-        data = 0.5 * np.arange(10)
-        v = self.cls(["time"], data, {"foo": "bar"})
-        assert v.dims == ("time",)
-        assert_array_equal(v.values, data)
-        assert v.dtype == float
-        assert v.shape == (10,)
-        assert v.size == 10
-        assert v.sizes == {"time": 10}
-        assert v.nbytes == 80
-        assert v.ndim == 1
-        assert len(v) == 10
-        assert v.attrs == {"foo": "bar"}
-
-    def test_attrs(self):
-        v = self.cls(["time"], 0.5 * np.arange(10))
-        assert v.attrs == {}
-        attrs = {"foo": "bar"}
-        v.attrs = attrs
-        assert v.attrs == attrs
-        assert isinstance(v.attrs, dict)
-        v.attrs["foo"] = "baz"
-        assert v.attrs["foo"] == "baz"
+class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
+    @pytest.fixture
+    def target(self, data):
+        data = 0.5 * np.arange(10).reshape(2, 5)
+        return Variable(["x", "y"], data)
 
     def test_getitem_dict(self):
         v = self.cls(["x"], np.random.randn(5))
@@ -194,7 +176,7 @@ class VariableSubclassobjects:
             self._assertIndexedLikeNDArray(x, value, dtype)
 
     def test_index_0d_float(self):
-        for value, dtype in [(0.5, np.float_), (np.float32(0.5), np.float32)]:
+        for value, dtype in [(0.5, float), (np.float32(0.5), np.float32)]:
             x = self.cls(["x"], [value])
             self._assertIndexedLikeNDArray(x, value, dtype)
 
@@ -204,6 +186,7 @@ class VariableSubclassobjects:
         x = self.cls(["x"], [value])
         self._assertIndexedLikeNDArray(x, value, dtype)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_index_0d_datetime(self):
         d = datetime(2000, 1, 1)
         x = self.cls(["x"], [d])
@@ -215,6 +198,7 @@ class VariableSubclassobjects:
         x = self.cls(["x"], pd.DatetimeIndex([d]))
         self._assertIndexedLikeNDArray(x, np.datetime64(d), "datetime64[ns]")
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_index_0d_timedelta64(self):
         td = timedelta(hours=1)
 
@@ -275,6 +259,7 @@ class VariableSubclassobjects:
         expected = np.datetime64("2000-01-01", "ns")
         assert x[0].values == expected
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime64_conversion(self):
         times = pd.date_range("2000-01-01", periods=3)
         for values, preserve_source in [
@@ -290,6 +275,7 @@ class VariableSubclassobjects:
             same_source = source_ndarray(v.values) is source_ndarray(values)
             assert preserve_source == same_source
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_timedelta64_conversion(self):
         times = pd.timedelta_range(start=0, periods=3)
         for values, preserve_source in [
@@ -310,6 +296,7 @@ class VariableSubclassobjects:
         actual = self.cls("x", data)
         assert actual.dtype == data.dtype
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime64_valid_range(self):
         data = np.datetime64("1250-01-01", "us")
         pderror = pd.errors.OutOfBoundsDatetime
@@ -317,6 +304,7 @@ class VariableSubclassobjects:
             self.cls(["t"], [data])
 
     @pytest.mark.xfail(reason="pandas issue 36615")
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_timedelta64_valid_range(self):
         data = np.timedelta64("200000", "D")
         pderror = pd.errors.OutOfBoundsTimedelta
@@ -330,14 +318,15 @@ class VariableSubclassobjects:
         assert v[0].values == v.values[0]
 
     def test_pandas_period_index(self):
-        v = self.cls(["x"], pd.period_range(start="2000", periods=20, freq="B"))
+        v = self.cls(["x"], pd.period_range(start="2000", periods=20, freq="D"))
         v = v.load()  # for dask-based Variable
-        assert v[0] == pd.Period("2000", freq="B")
-        assert "Period('2000-01-03', 'B')" in repr(v)
+        assert v[0] == pd.Period("2000", freq="D")
+        assert "Period('2000-01-01', 'D')" in repr(v)
 
-    def test_1d_math(self):
-        x = 1.0 * np.arange(5)
-        y = np.ones(5)
+    @pytest.mark.parametrize("dtype", [float, int])
+    def test_1d_math(self, dtype: np.typing.DTypeLike) -> None:
+        x = np.arange(5, dtype=dtype)
+        y = np.ones(5, dtype=dtype)
 
         # should we need `.to_base_variable()`?
         # probably a break that `+v` changes type?
@@ -351,11 +340,18 @@ class VariableSubclassobjects:
         assert_identical(base_v, v + 0)
         assert_identical(base_v, 0 + v)
         assert_identical(base_v, v * 1)
+        if dtype is int:
+            assert_identical(base_v, v << 0)
+            assert_array_equal(v << 3, x << 3)
+            assert_array_equal(v >> 2, x >> 2)
         # binary ops with numpy arrays
         assert_array_equal((v * x).values, x**2)
         assert_array_equal((x * v).values, x**2)
         assert_array_equal(v - y, v - 1)
         assert_array_equal(y - v, 1 - v)
+        if dtype is int:
+            assert_array_equal(v << x, x << x)
+            assert_array_equal(v >> x, x >> x)
         # verify attributes are dropped
         v2 = self.cls(["x"], x, {"units": "meters"})
         with set_options(keep_attrs=False):
@@ -369,10 +365,10 @@ class VariableSubclassobjects:
         # something complicated
         assert_array_equal((v**2 * w - 1 + x).values, x**2 * y - 1 + x)
         # make sure dtype is preserved (for Index objects)
-        assert float == (+v).dtype
-        assert float == (+v).values.dtype
-        assert float == (0 + v).dtype
-        assert float == (0 + v).values.dtype
+        assert dtype == (+v).dtype
+        assert dtype == (+v).values.dtype
+        assert dtype == (0 + v).dtype
+        assert dtype == (0 + v).values.dtype
         # check types of returned data
         assert isinstance(+v, Variable)
         assert not isinstance(+v, IndexVariable)
@@ -452,9 +448,25 @@ class VariableSubclassobjects:
             expected.copy(deep=True),
             expected.copy(deep=False),
         ]:
-
             assert_identical(expected.to_base_variable(), actual.to_base_variable())
             assert expected.encoding == actual.encoding
+
+    def test_drop_encoding(self) -> None:
+        encoding1 = {"scale_factor": 1}
+        # encoding set via cls constructor
+        v1 = self.cls(["a"], [0, 1, 2], encoding=encoding1)
+        assert v1.encoding == encoding1
+        v2 = v1.drop_encoding()
+        assert v1.encoding == encoding1
+        assert v2.encoding == {}
+
+        # encoding set via setter
+        encoding3 = {"scale_factor": 10}
+        v3 = self.cls(["a"], [0, 1, 2], encoding=encoding3)
+        assert v3.encoding == encoding3
+        v4 = v3.drop_encoding()
+        assert v3.encoding == encoding3
+        assert v4.encoding == {}
 
     def test_concat(self):
         x = np.arange(5)
@@ -583,7 +595,7 @@ class VariableSubclassobjects:
         orig = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
         new_data = [2.5, 5.0]
         with pytest.raises(ValueError, match=r"must match shape of object"):
-            orig.copy(data=new_data)
+            orig.copy(data=new_data)  # type: ignore[arg-type]
 
     def test_copy_index_with_data(self) -> None:
         orig = IndexVariable("x", np.arange(5))
@@ -851,20 +863,10 @@ class VariableSubclassobjects:
         "mode",
         [
             "mean",
-            pytest.param(
-                "median",
-                marks=pytest.mark.xfail(reason="median is not implemented by Dask"),
-            ),
-            pytest.param(
-                "reflect", marks=pytest.mark.xfail(reason="dask.array.pad bug")
-            ),
+            "median",
+            "reflect",
             "edge",
-            pytest.param(
-                "linear_ramp",
-                marks=pytest.mark.xfail(
-                    reason="pint bug: https://github.com/hgrecco/pint/issues/1026"
-                ),
-            ),
+            "linear_ramp",
             "maximum",
             "minimum",
             "symmetric",
@@ -892,7 +894,7 @@ class VariableSubclassobjects:
 
         actual = v.pad(**xr_arg)
         expected = np.pad(
-            np.array(v.data.astype(float)),
+            np.array(duck_array_ops.astype(v.data, float)),
             np_arg,
             mode="constant",
             constant_values=np.nan,
@@ -1034,15 +1036,15 @@ class VariableSubclassobjects:
 
 
 class TestVariable(VariableSubclassobjects):
-    cls = staticmethod(Variable)
+    def cls(self, *args, **kwargs) -> Variable:
+        return Variable(*args, **kwargs)
 
     @pytest.fixture(autouse=True)
     def setup(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
 
-    def test_data_and_values(self):
+    def test_values(self):
         v = Variable(["time", "x"], self.d)
-        assert_array_equal(v.data, self.d)
         assert_array_equal(v.values, self.d)
         assert source_ndarray(v.values) is self.d
         with pytest.raises(ValueError):
@@ -1051,18 +1053,16 @@ class TestVariable(VariableSubclassobjects):
         d2 = np.random.random((10, 3))
         v.values = d2
         assert source_ndarray(v.values) is d2
-        d3 = np.random.random((10, 3))
-        v.data = d3
-        assert source_ndarray(v.data) is d3
 
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
         assert v.item() == 0
-        assert type(v.item()) is float
+        assert type(v.item()) is float  # noqa: E721
 
         v = IndexVariable("x", np.arange(5))
         assert 2 == v.searchsorted(2)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime64_conversion_scalar(self):
         expected = np.datetime64("2000-01-01", "ns")
         for values in [
@@ -1075,6 +1075,7 @@ class TestVariable(VariableSubclassobjects):
             assert v.values == expected
             assert v.values.dtype == np.dtype("datetime64[ns]")
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_timedelta64_conversion_scalar(self):
         expected = np.timedelta64(24 * 60 * 60 * 10**9, "ns")
         for values in [
@@ -1092,15 +1093,16 @@ class TestVariable(VariableSubclassobjects):
         assert v.dtype == np.dtype("U3")
         assert v.values == "foo"
 
-        v = Variable([], np.string_("foo"))
+        v = Variable([], np.bytes_("foo"))
         assert v.dtype == np.dtype("S3")
-        assert v.values == bytes("foo", "ascii")
+        assert v.values == "foo".encode("ascii")
 
     def test_0d_datetime(self):
         v = Variable([], pd.Timestamp("2000-01-01"))
         assert v.dtype == np.dtype("datetime64[ns]")
         assert v.values == np.datetime64("2000-01-01", "ns")
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_0d_timedelta(self):
         for td in [pd.to_timedelta("1s"), np.timedelta64(1, "s")]:
             v = Variable([], td)
@@ -1210,8 +1212,10 @@ class TestVariable(VariableSubclassobjects):
         expected = Variable(("x", "y"), data)
         with pytest.raises(ValueError, match=r"without explicit dimension names"):
             as_variable(data, name="x")
-        with pytest.raises(ValueError, match=r"has more than 1-dimension"):
-            as_variable(expected, name="x")
+
+        # name of nD variable matches dimension name
+        actual = as_variable(expected, name="x")
+        assert_identical(expected, actual)
 
         # test datetime, timedelta conversion
         dt = np.array([datetime(1999, 1, 1) + timedelta(days=x) for x in range(10)])
@@ -1428,10 +1432,10 @@ class TestVariable(VariableSubclassobjects):
 
     def test_index_0d_numpy_string(self):
         # regression test to verify our work around for indexing 0d strings
-        v = Variable([], np.string_("asdf"))
+        v = Variable([], np.bytes_("asdf"))
         assert_identical(v[()], v)
 
-        v = Variable([], np.unicode_("asdf"))
+        v = Variable([], np.str_("asdf"))
         assert_identical(v[()], v)
 
     def test_indexing_0d_unicode(self):
@@ -1539,6 +1543,7 @@ class TestVariable(VariableSubclassobjects):
             v.transpose(..., "not_a_dim", missing_dims="warn")
             assert_identical(expected_ell, actual)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_transpose_0d(self):
         for value in [
             3.5,
@@ -1668,6 +1673,15 @@ class TestVariable(VariableSubclassobjects):
         actual = v.stack(z=("x", "y")).unstack(z={"x": 2, "y": 2})
         assert_identical(actual, v)
 
+    @pytest.mark.filterwarnings("error::RuntimeWarning")
+    def test_unstack_without_missing(self):
+        v = Variable(["z"], [0, 1, 2, 3])
+        expected = Variable(["x", "y"], [[0, 1], [2, 3]])
+
+        actual = v.unstack(z={"x": 2, "y": 2})
+
+        assert_identical(actual, expected)
+
     def test_broadcasting_math(self):
         x = np.random.randn(2, 3)
         v = Variable(["a", "b"], x)
@@ -1691,6 +1705,7 @@ class TestVariable(VariableSubclassobjects):
             v * w[0], Variable(["a", "b", "c", "d"], np.einsum("ab,cd->abcd", x, y[0]))
         )
 
+    @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_broadcasting_failures(self):
         a = Variable(["x"], np.arange(10))
         b = Variable(["x"], np.arange(5))
@@ -1761,9 +1776,8 @@ class TestVariable(VariableSubclassobjects):
         "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
     )
     def test_quantile(self, q, axis, dim, skipna):
-
         d = self.d.copy()
-        d[0, 0] = np.NaN
+        d[0, 0] = np.nan
 
         v = Variable(["x", "y"], d)
         actual = v.quantile(q, dim=dim, skipna=skipna)
@@ -1786,7 +1800,6 @@ class TestVariable(VariableSubclassobjects):
         "use_dask", [pytest.param(True, marks=requires_dask), False]
     )
     def test_quantile_method(self, method, use_dask) -> None:
-
         v = Variable(["x", "y"], self.d)
         if use_dask:
             v = v.chunk({"x": 2})
@@ -1794,10 +1807,7 @@ class TestVariable(VariableSubclassobjects):
         q = np.array([0.25, 0.5, 0.75])
         actual = v.quantile(q, dim="y", method=method)
 
-        if Version(np.__version__) >= Version("1.22"):
-            expected = np.nanquantile(self.d, q, axis=1, method=method)
-        else:
-            expected = np.nanquantile(self.d, q, axis=1, interpolation=method)
+        expected = np.nanquantile(self.d, q, axis=1, method=method)
 
         if use_dask:
             assert isinstance(actual.data, dask_array_type)
@@ -1806,7 +1816,6 @@ class TestVariable(VariableSubclassobjects):
 
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecation(self, method) -> None:
-
         v = Variable(["x", "y"], self.d)
         q = np.array([0.25, 0.5, 0.75])
 
@@ -1844,9 +1853,20 @@ class TestVariable(VariableSubclassobjects):
 
     @requires_dask
     @requires_bottleneck
-    def test_rank_dask_raises(self):
-        v = Variable(["x"], [3.0, 1.0, np.nan, 2.0, 4.0]).chunk(2)
-        with pytest.raises(TypeError, match=r"arrays stored as dask"):
+    def test_rank_dask(self):
+        # Instead of a single test here, we could parameterize the other tests for both
+        # arrays. But this is sufficient.
+        v = Variable(
+            ["x", "y"], [[30.0, 1.0, np.nan, 20.0, 4.0], [30.0, 1.0, np.nan, 20.0, 4.0]]
+        ).chunk(x=1)
+        expected = Variable(
+            ["x", "y"], [[4.0, 1.0, np.nan, 3.0, 2.0], [4.0, 1.0, np.nan, 3.0, 2.0]]
+        )
+        assert_equal(v.rank("y").compute(), expected)
+
+        with pytest.raises(
+            ValueError, match=r" with dask='parallelized' consists of multiple chunks"
+        ):
             v.rank("x")
 
     def test_rank_use_bottleneck(self):
@@ -1878,7 +1898,8 @@ class TestVariable(VariableSubclassobjects):
         v_expect = Variable(["x"], [0.75, 0.25, np.nan, 0.5, 1.0])
         assert_equal(v.rank("x", pct=True), v_expect)
         # invalid dim
-        with pytest.raises(ValueError, match=r"not found"):
+        with pytest.raises(ValueError):
+            # apply_ufunc error message isn't great here — `ValueError: tuple.index(x): x not in tuple`
             v.rank("y")
 
     def test_big_endian_reduce(self):
@@ -2207,7 +2228,8 @@ class TestVariable(VariableSubclassobjects):
 
 @requires_dask
 class TestVariableWithDask(VariableSubclassobjects):
-    cls = staticmethod(lambda *args: Variable(*args).chunk())
+    def cls(self, *args, **kwargs) -> Variable:
+        return Variable(*args, **kwargs).chunk()
 
     def test_chunk(self):
         unblocked = Variable(["dim_0", "dim_1"], np.ones((3, 4)))
@@ -2300,11 +2322,34 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert actual.shape == expected.shape
         assert_equal(actual, expected)
 
-    @pytest.mark.xfail(
-        reason="https://github.com/pydata/xarray/issues/6209#issuecomment-1025116203"
-    )
     def test_multiindex(self):
         super().test_multiindex()
+
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            "mean",
+            pytest.param(
+                "median",
+                marks=pytest.mark.xfail(reason="median is not implemented by Dask"),
+            ),
+            pytest.param(
+                "reflect", marks=pytest.mark.xfail(reason="dask.array.pad bug")
+            ),
+            "edge",
+            "linear_ramp",
+            "maximum",
+            "minimum",
+            "symmetric",
+            "wrap",
+        ],
+    )
+    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
+    @pytest.mark.filterwarnings(
+        r"ignore:dask.array.pad.+? converts integers to floats."
+    )
+    def test_pad(self, mode, xr_arg, np_arg):
+        super().test_pad(mode, xr_arg, np_arg)
 
 
 @requires_sparse
@@ -2319,7 +2364,8 @@ class TestVariableWithSparse:
 
 
 class TestIndexVariable(VariableSubclassobjects):
-    cls = staticmethod(IndexVariable)
+    def cls(self, *args, **kwargs) -> IndexVariable:
+        return IndexVariable(*args, **kwargs)
 
     def test_init(self):
         with pytest.raises(ValueError, match=r"must be 1-dimensional"):
@@ -2400,7 +2446,6 @@ class TestIndexVariable(VariableSubclassobjects):
 
     @pytest.mark.parametrize("dtype", [str, bytes])
     def test_concat_str_dtype(self, dtype):
-
         a = IndexVariable("x", np.array(["a"], dtype=dtype))
         b = IndexVariable("x", np.array(["b"], dtype=dtype))
         expected = IndexVariable("x", np.array(["a", "b"], dtype=dtype))
@@ -2408,11 +2453,6 @@ class TestIndexVariable(VariableSubclassobjects):
         actual = IndexVariable.concat([a, b])
         assert actual.identical(expected)
         assert np.issubdtype(actual.dtype, dtype)
-
-    def test_coordinate_alias(self):
-        with pytest.warns(Warning, match="deprecated"):
-            x = Coordinate("x", [1, 2, 3])
-        assert isinstance(x, IndexVariable)
 
     def test_datetime64(self):
         # GH:1932  Make sure indexing keeps precision
@@ -2491,7 +2531,7 @@ class TestIndexVariable(VariableSubclassobjects):
         assert a.dims == ("x",)
 
 
-class TestAsCompatibleData:
+class TestAsCompatibleData(Generic[T_DuckArray]):
     def test_unchanged_types(self):
         types = (np.asarray, PandasIndexingAdapter, LazilyIndexedArray)
         for t in types:
@@ -2524,6 +2564,20 @@ class TestAsCompatibleData:
         assert_array_equal(expected, actual)
         assert np.dtype(float) == actual.dtype
 
+        original = np.ma.MaskedArray([1.0, 2.0], mask=[True, False])
+        original.flags.writeable = False
+        expected = [np.nan, 2.0]
+        actual = as_compatible_data(original)
+        assert_array_equal(expected, actual)
+        assert np.dtype(float) == actual.dtype
+
+        # GH2377
+        actual = Variable(dims=tuple(), data=np.ma.masked)
+        expected = Variable(dims=tuple(), data=np.nan)
+        assert_array_equal(expected, actual)
+        assert actual.dtype == expected.dtype
+
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime(self):
         expected = np.datetime64("2000-01-01")
         actual = as_compatible_data(expected)
@@ -2552,23 +2606,23 @@ class TestAsCompatibleData:
 
     @requires_pandas_version_two
     def test_tz_datetime(self) -> None:
-        tz = pytz.timezone("US/Eastern")
+        tz = pytz.timezone("America/New_York")
         times_ns = pd.date_range("2000", periods=1, tz=tz)
 
         times_s = times_ns.astype(pd.DatetimeTZDtype("s", tz))
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            actual = as_compatible_data(times_s)
+            actual: T_DuckArray = as_compatible_data(times_s)
         assert actual.array == times_s
         assert actual.array.dtype == pd.DatetimeTZDtype("ns", tz)
 
         series = pd.Series(times_s)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            actual = as_compatible_data(series)
+            actual2: T_DuckArray = as_compatible_data(series)
 
-        np.testing.assert_array_equal(actual, series.values)
-        assert actual.dtype == np.dtype("datetime64[ns]")
+        np.testing.assert_array_equal(actual2, series.values)
+        assert actual2.dtype == np.dtype("datetime64[ns]")
 
     def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py
@@ -2596,7 +2650,7 @@ class TestAsCompatibleData:
     def test_full_like_dask(self) -> None:
         orig = Variable(
             dims=("x", "y"), data=[[1.5, 2.0], [3.1, 4.3]], attrs={"foo": "bar"}
-        ).chunk(((1, 1), (2,)))
+        ).chunk(dict(x=(1, 1), y=(2,)))
 
         def check(actual, expect_dtype, expect_values):
             assert actual.dtype == expect_dtype
@@ -2667,7 +2721,7 @@ class TestAsCompatibleData:
 
 def test_raise_no_warning_for_nan_in_binary_ops():
     with assert_no_warnings():
-        Variable("x", [1, 2, np.NaN]) > 0
+        Variable("x", [1, 2, np.nan]) > 0
 
 
 class TestBackendIndexing:
@@ -2852,9 +2906,11 @@ class TestNumpyCoercion:
         (pd.date_range("2000", periods=1), False),
         (datetime(2000, 1, 1), False),
         (np.array([datetime(2000, 1, 1)]), False),
-        (pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern")), False),
+        (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), False),
         (
-            pd.Series(pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern"))),
+            pd.Series(
+                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
+            ),
             False,
         ),
     ],
@@ -2876,8 +2932,9 @@ def test_datetime_conversion_warning(values, warns_under_pandas_version_two) -> 
         # The only case where a non-datetime64 dtype can occur currently is in
         # the case that the variable is backed by a timezone-aware
         # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
+        assert isinstance(var._data, PandasIndexingAdapter)
         assert var._data.array.dtype == pd.DatetimeTZDtype(
-            "ns", pytz.timezone("US/Eastern")
+            "ns", pytz.timezone("America/New_York")
         )
 
 
@@ -2889,12 +2946,14 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
         (pd.date_range("2000", periods=1), "datetime64[s]"),
         (pd.Series(pd.date_range("2000", periods=1)), "datetime64[s]"),
         (
-            pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern")),
-            pd.DatetimeTZDtype("s", pytz.timezone("US/Eastern")),
+            pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")),
+            pd.DatetimeTZDtype("s", pytz.timezone("America/New_York")),
         ),
         (
-            pd.Series(pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern"))),
-            pd.DatetimeTZDtype("s", pytz.timezone("US/Eastern")),
+            pd.Series(
+                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
+            ),
+            pd.DatetimeTZDtype("s", pytz.timezone("America/New_York")),
         ),
     ]
     for data, dtype in cases:
@@ -2907,8 +2966,9 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
         # The only case where a non-datetime64 dtype can occur currently is in
         # the case that the variable is backed by a timezone-aware
         # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
+        assert isinstance(var._data, PandasIndexingAdapter)
         assert var._data.array.dtype == pd.DatetimeTZDtype(
-            "ns", pytz.timezone("US/Eastern")
+            "ns", pytz.timezone("America/New_York")
         )
 
 

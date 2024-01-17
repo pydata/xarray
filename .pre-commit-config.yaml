@@ -1,7 +1,9 @@
 # https://pre-commit.com/
+ci:
+    autoupdate_schedule: monthly
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.5.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -14,46 +16,26 @@ repos:
       - id: absolufy-imports
         name: absolufy-imports
         files: ^xarray/
-    # This wants to go before isort & flake8
-  - repo: https://github.com/PyCQA/autoflake
-    rev: "v2.0.0"
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: 'v0.1.9'
     hooks:
-      - id: autoflake # isort should run before black as black sometimes tweaks the isort output
-        args: ["--in-place", "--ignore-init-module-imports"]
-  - repo: https://github.com/PyCQA/isort
-    rev: v5.11.3
-    hooks:
-      - id: isort
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.3.1
-    hooks:
-      - id: pyupgrade
-        args:
-          - "--py38-plus"
+      - id: ruff
+        args: ["--fix", "--show-fixes"]
   # https://github.com/python/black#version-control-integration
-  - repo: https://github.com/psf/black
-    rev: 22.12.0
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 23.12.1
     hooks:
-      - id: black
       - id: black-jupyter
   - repo: https://github.com/keewis/blackdoc
-    rev: v0.3.8
+    rev: v0.3.9
     hooks:
       - id: blackdoc
         exclude: "generate_aggregations.py"
-        additional_dependencies: ["black==22.12.0"]
+        additional_dependencies: ["black==23.12.1"]
       - id: blackdoc-autoupdate-black
-  - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
-    hooks:
-      - id: flake8
-  # - repo: https://github.com/Carreau/velin
-  #   rev: 0.0.8
-  #   hooks:
-  #     - id: velin
-  #       args: ["--write", "--compact"]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.991
+    rev: v1.8.0
     hooks:
       - id: mypy
         # Copied from setup.cfg
@@ -67,7 +49,7 @@ repos:
             types-pkg_resources,
             types-PyYAML,
             types-pytz,
-            typing-extensions==3.10.0.0,
+            typing-extensions>=4.1.0,
             numpy,
           ]
   - repo: https://github.com/citation-file-format/cff-converter-python

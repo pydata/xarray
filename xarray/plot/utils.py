@@ -3,18 +3,10 @@ from __future__ import annotations
 import itertools
 import textwrap
 import warnings
+from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from datetime import datetime
 from inspect import getfullargspec
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Hashable,
-    Iterable,
-    Mapping,
-    Sequence,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -53,14 +45,6 @@ ROBUST_PERCENTILE = 2.0
 # copied from seaborn
 _MARKERSIZE_RANGE = (18.0, 36.0, 72.0)
 _LINEWIDTH_RANGE = (1.5, 1.5, 6.0)
-
-
-def import_matplotlib_pyplot():
-    """import pyplot"""
-    # TODO: This function doesn't do anything (after #6109), remove it?
-    import matplotlib.pyplot as plt
-
-    return plt
 
 
 def _determine_extend(calc_data, vmin, vmax):
@@ -312,7 +296,7 @@ def _determine_cmap_params(
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
 
-    if levels is not None or isinstance(norm, mpl.colors.BoundaryNorm):
+    if (levels is not None) and (not isinstance(norm, mpl.colors.BoundaryNorm)):
         cmap, newnorm = _build_discrete_cmap(cmap, levels, extend, filled)
         norm = newnorm if norm is None else norm
 
@@ -500,7 +484,6 @@ def get_axis(
 
 
 def _maybe_gca(**subplot_kws: Any) -> Axes:
-
     import matplotlib.pyplot as plt
 
     # can call gcf unconditionally: either it exists or would be created by plt.axes
@@ -514,28 +497,29 @@ def _maybe_gca(**subplot_kws: Any) -> Axes:
     return plt.axes(**subplot_kws)
 
 
-def _get_units_from_attrs(da) -> str:
+def _get_units_from_attrs(da: DataArray) -> str:
     """Extracts and formats the unit/units from a attributes."""
     pint_array_type = DuckArrayModule("pint").type
     units = " [{}]"
     if isinstance(da.data, pint_array_type):
-        units = units.format(str(da.data.units))
-    elif da.attrs.get("units"):
-        units = units.format(da.attrs["units"])
-    elif da.attrs.get("unit"):
-        units = units.format(da.attrs["unit"])
-    else:
-        units = ""
-    return units
+        return units.format(str(da.data.units))
+    if "units" in da.attrs:
+        return units.format(da.attrs["units"])
+    if "unit" in da.attrs:
+        return units.format(da.attrs["unit"])
+    return ""
 
 
-def label_from_attrs(da, extra: str = "") -> str:
+def label_from_attrs(da: DataArray | None, extra: str = "") -> str:
     """Makes informative labels if variable metadata (attrs) follows
     CF conventions."""
+    if da is None:
+        return ""
+
     name: str = "{}"
-    if da.attrs.get("long_name"):
+    if "long_name" in da.attrs:
         name = name.format(da.attrs["long_name"])
-    elif da.attrs.get("standard_name"):
+    elif "standard_name" in da.attrs:
         name = name.format(da.attrs["standard_name"])
     elif da.name is not None:
         name = name.format(da.name)
@@ -605,7 +589,6 @@ def _resolve_intervals_1dplot(
 
     # Is it a step plot? (see matplotlib.Axes.step)
     if kwargs.get("drawstyle", "").startswith("steps-"):
-
         remove_drawstyle = False
 
         # Convert intervals to double points
@@ -626,7 +609,6 @@ def _resolve_intervals_1dplot(
 
     # Is it another kind of plot?
     else:
-
         # Convert intervals to mid points and adjust labels
         if _valid_other_type(xval, pd.Interval):
             xval = _interval_to_mid_points(xval)
@@ -728,7 +710,6 @@ def _is_numeric(arr):
 
 
 def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
-
     cbar_kwargs.setdefault("extend", cmap_params["extend"])
     if cbar_ax is None:
         cbar_kwargs.setdefault("ax", ax)
@@ -786,8 +767,8 @@ def _update_axes(
     yscale: ScaleOptions = None,
     xticks: ArrayLike | None = None,
     yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
+    xlim: tuple[float, float] | None = None,
+    ylim: tuple[float, float] | None = None,
 ) -> None:
     """
     Update axes with provided parameters
@@ -1143,7 +1124,7 @@ def legend_elements(
         # Labels are not numerical so modifying label_values is not
         # possible, instead filter the array with nicely distributed
         # indexes:
-        if type(num) == int:
+        if type(num) == int:  # noqa: E721
             loc = mpl.ticker.LinearLocator(num)
         else:
             raise ValueError("`num` only supports integers for non-numeric labels.")
@@ -1178,7 +1159,7 @@ def legend_elements(
 
 def _legend_add_subtitle(handles, labels, text):
     """Add a subtitle to legend handles."""
-    plt = import_matplotlib_pyplot()
+    import matplotlib.pyplot as plt
 
     if text and len(handles) > 1:
         # Create a blank handle that's not visible, the
@@ -1196,7 +1177,7 @@ def _legend_add_subtitle(handles, labels, text):
 
 def _adjust_legend_subtitles(legend):
     """Make invisible-handle "subtitles" entries look more like titles."""
-    plt = import_matplotlib_pyplot()
+    import matplotlib.pyplot as plt
 
     # Legend title not in rcParams until 3.0
     font_size = plt.rcParams.get("legend.title_fontsize", None)
@@ -1327,7 +1308,6 @@ def _parse_size(
     data: DataArray | None,
     norm: tuple[float | None, float | None, bool] | Normalize | None,
 ) -> None | pd.Series:
-
     import matplotlib as mpl
 
     if data is None:
@@ -1451,6 +1431,16 @@ class _Normalize(Sequence):
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
         >>> _Normalize(a).data_is_numeric
         True
+
+        >>> # TODO: Datetime should be numeric right?
+        >>> a = xr.DataArray(pd.date_range("2000-1-1", periods=4))
+        >>> _Normalize(a).data_is_numeric
+        False
+
+        # TODO: Timedelta should be numeric right?
+        >>> a = xr.DataArray(pd.timedelta_range("-1D", periods=4, freq="D"))
+        >>> _Normalize(a).data_is_numeric
+        True
         """
         return self._data_is_numeric
 
@@ -1464,7 +1454,7 @@ class _Normalize(Sequence):
 
     def _calc_widths(self, y: np.ndarray | DataArray) -> np.ndarray | DataArray:
         """
-        Normalize the values so they're inbetween self._width.
+        Normalize the values so they're in between self._width.
         """
         if self._width is None:
             return y
@@ -1476,7 +1466,7 @@ class _Normalize(Sequence):
             # Use default with if y is constant:
             widths = xdefault + 0 * y
         else:
-            # Normalize inbetween xmin and xmax:
+            # Normalize in between xmin and xmax:
             k = (y - np.min(y)) / diff_maxy_miny
             widths = xmin + k * (xmax - xmin)
         return widths
@@ -1643,7 +1633,7 @@ class _Normalize(Sequence):
         >>> aa.format(1)
         '3.0'
         """
-        plt = import_matplotlib_pyplot()
+        import matplotlib.pyplot as plt
 
         def _func(x: Any, pos: None | Any = None):
             return f"{self._lookup_arr([x])[0]}"
@@ -1716,7 +1706,6 @@ def _add_legend(
     legend_ax,
     plotfunc: str,
 ):
-
     primitive = primitive if isinstance(primitive, list) else [primitive]
 
     handles, labels = [], []
@@ -1749,3 +1738,116 @@ def _add_legend(
     _adjust_legend_subtitles(legend)
 
     return legend
+
+
+def _guess_coords_to_plot(
+    darray: DataArray,
+    coords_to_plot: MutableMapping[str, Hashable | None],
+    kwargs: dict,
+    default_guess: tuple[str, ...] = ("x",),
+    # TODO: Can this be normalized, plt.cbook.normalize_kwargs?
+    ignore_guess_kwargs: tuple[tuple[str, ...], ...] = ((),),
+) -> MutableMapping[str, Hashable]:
+    """
+    Guess what coords to plot if some of the values in coords_to_plot are None which
+    happens when the user has not defined all available ways of visualizing
+    the data.
+
+    Parameters
+    ----------
+    darray : DataArray
+        The DataArray to check for available coords.
+    coords_to_plot : MutableMapping[str, Hashable]
+        Coords defined by the user to plot.
+    kwargs : dict
+        Extra kwargs that will be sent to matplotlib.
+    default_guess : Iterable[str], optional
+        Default values and order to retrieve dims if values in dims_plot is
+        missing, default: ("x", "hue", "size").
+    ignore_guess_kwargs : tuple[tuple[str, ...], ...]
+        Matplotlib arguments to ignore.
+
+    Examples
+    --------
+    >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
+    >>> # Only guess x by default:
+    >>> xr.plot.utils._guess_coords_to_plot(
+    ...     ds.A,
+    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
+    ...     kwargs={},
+    ... )
+    {'x': 'x', 'z': None, 'hue': None, 'size': None}
+
+    >>> # Guess all plot dims with other default values:
+    >>> xr.plot.utils._guess_coords_to_plot(
+    ...     ds.A,
+    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
+    ...     kwargs={},
+    ...     default_guess=("x", "hue", "size"),
+    ...     ignore_guess_kwargs=((), ("c", "color"), ("s",)),
+    ... )
+    {'x': 'x', 'z': None, 'hue': 'y', 'size': 'z'}
+
+    >>> # Don't guess ´size´, since the matplotlib kwarg ´s´ has been defined:
+    >>> xr.plot.utils._guess_coords_to_plot(
+    ...     ds.A,
+    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
+    ...     kwargs={"s": 5},
+    ...     default_guess=("x", "hue", "size"),
+    ...     ignore_guess_kwargs=((), ("c", "color"), ("s",)),
+    ... )
+    {'x': 'x', 'z': None, 'hue': 'y', 'size': None}
+
+    >>> # Prioritize ´size´ over ´s´:
+    >>> xr.plot.utils._guess_coords_to_plot(
+    ...     ds.A,
+    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": "x"},
+    ...     kwargs={"s": 5},
+    ...     default_guess=("x", "hue", "size"),
+    ...     ignore_guess_kwargs=((), ("c", "color"), ("s",)),
+    ... )
+    {'x': 'y', 'z': None, 'hue': 'z', 'size': 'x'}
+    """
+    coords_to_plot_exist = {k: v for k, v in coords_to_plot.items() if v is not None}
+    available_coords = tuple(
+        k for k in darray.coords.keys() if k not in coords_to_plot_exist.values()
+    )
+
+    # If dims_plot[k] isn't defined then fill with one of the available dims, unless
+    # one of related mpl kwargs has been used. This should have similar behaviour as
+    # * plt.plot(x, y) -> Multiple lines with different colors if y is 2d.
+    # * plt.plot(x, y, color="red") -> Multiple red lines if y is 2d.
+    for k, dim, ign_kws in zip(default_guess, available_coords, ignore_guess_kwargs):
+        if coords_to_plot.get(k, None) is None and all(
+            kwargs.get(ign_kw, None) is None for ign_kw in ign_kws
+        ):
+            coords_to_plot[k] = dim
+
+    for k, dim in coords_to_plot.items():
+        _assert_valid_xy(darray, dim, k)
+
+    return coords_to_plot
+
+
+def _set_concise_date(ax: Axes, axis: Literal["x", "y", "z"] = "x") -> None:
+    """
+    Use ConciseDateFormatter which is meant to improve the
+    strings chosen for the ticklabels, and to minimize the
+    strings used in those tick labels as much as possible.
+
+    https://matplotlib.org/stable/gallery/ticks/date_concise_formatter.html
+
+    Parameters
+    ----------
+    ax : Axes
+        Figure axes.
+    axis : Literal["x", "y", "z"], optional
+        Which axis to make concise. The default is "x".
+    """
+    import matplotlib.dates as mdates
+
+    locator = mdates.AutoDateLocator()
+    formatter = mdates.ConciseDateFormatter(locator)
+    _axis = getattr(ax, f"{axis}axis")
+    _axis.set_major_locator(locator)
+    _axis.set_major_formatter(formatter)

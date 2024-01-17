@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Hashable, Iterable, Sequence
+from collections.abc import Hashable
 
 import numpy as np
 import pandas as pd
@@ -23,12 +23,13 @@ class TestAlias:
 
 
 @pytest.mark.parametrize(
-    "a, b, expected", [["a", "b", np.array(["a", "b"])], [1, 2, pd.Index([1, 2])]]
+    ["a", "b", "expected"],
+    [
+        [np.array(["a"]), np.array(["b"]), np.array(["a", "b"])],
+        [np.array([1], dtype="int64"), np.array([2], dtype="int64"), pd.Index([1, 2])],
+    ],
 )
 def test_maybe_coerce_to_str(a, b, expected):
-
-    a = np.array([a])
-    b = np.array([b])
     index = pd.Index(a).append(pd.Index(b))
 
     actual = utils.maybe_coerce_to_str(index, [a, b])
@@ -38,7 +39,6 @@ def test_maybe_coerce_to_str(a, b, expected):
 
 
 def test_maybe_coerce_to_str_minimal_str_dtype():
-
     a = np.array(["a", "a_long_string"])
     index = pd.Index(["a"])
 
@@ -215,7 +215,6 @@ def test_hidden_key_dict():
 
 
 def test_either_dict_or_kwargs():
-
     result = either_dict_or_kwargs(dict(a=1), None, "foo")
     expected = dict(a=1)
     assert result == expected
@@ -258,17 +257,18 @@ def test_infix_dims_errors(supplied, all_):
         pytest.param("a", ("a",), id="str"),
         pytest.param(["a", "b"], ("a", "b"), id="list_of_str"),
         pytest.param(["a", 1], ("a", 1), id="list_mixed"),
+        pytest.param(["a", ...], ("a", ...), id="list_with_ellipsis"),
         pytest.param(("a", "b"), ("a", "b"), id="tuple_of_str"),
         pytest.param(["a", ("b", "c")], ("a", ("b", "c")), id="list_with_tuple"),
         pytest.param((("b", "c"),), (("b", "c"),), id="tuple_of_tuple"),
+        pytest.param({"a", 1}, tuple({"a", 1}), id="non_sequence_collection"),
+        pytest.param((), (), id="empty_tuple"),
+        pytest.param(set(), (), id="empty_collection"),
         pytest.param(None, None, id="None"),
         pytest.param(..., ..., id="ellipsis"),
     ],
 )
-def test_parse_dims(
-    dim: str | Iterable[Hashable] | None,
-    expected: tuple[Hashable, ...],
-) -> None:
+def test_parse_dims(dim, expected):
     all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
     actual = utils.parse_dims(dim, all_dims, replace_none=False)
     assert actual == expected
@@ -298,7 +298,7 @@ def test_parse_dims_replace_none(dim: None | ellipsis) -> None:
         pytest.param(["x", 2], id="list_missing_all"),
     ],
 )
-def test_parse_dims_raises(dim: str | Iterable[Hashable]) -> None:
+def test_parse_dims_raises(dim):
     all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
     with pytest.raises(ValueError, match="'x'"):
         utils.parse_dims(dim, all_dims, check_exists=True)
@@ -314,10 +314,7 @@ def test_parse_dims_raises(dim: str | Iterable[Hashable]) -> None:
         pytest.param(["a", ..., "b"], ("a", "c", "b"), id="list_with_middle_ellipsis"),
     ],
 )
-def test_parse_ordered_dims(
-    dim: str | Sequence[Hashable | ellipsis],
-    expected: tuple[Hashable, ...],
-) -> None:
+def test_parse_ordered_dims(dim, expected):
     all_dims = ("a", "b", "c")
     actual = utils.parse_ordered_dims(dim, all_dims)
     assert actual == expected

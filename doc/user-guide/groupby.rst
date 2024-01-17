@@ -22,6 +22,13 @@ over a multi-dimensional variable has recently been implemented. Note that for
 one-dimensional data, it is usually faster to rely on pandas' implementation of
 the same pipeline.
 
+.. tip::
+
+   To substantially improve the performance of GroupBy operations, particularly
+   with dask `install the flox package <https://flox.readthedocs.io>`_. flox
+   `extends Xarray's in-built GroupBy capabilities <https://flox.readthedocs.io/en/latest/xarray.html>`_
+   by allowing grouping by multiple variables, and lazy grouping by dask arrays. If installed, Xarray will automatically use flox by default.
+
 Split
 ~~~~~
 
@@ -170,28 +177,18 @@ This last line is roughly equivalent to the following::
         results.append(group - alt.sel(letters=label))
     xr.concat(results, dim='x')
 
-Squeezing
-~~~~~~~~~
+Iterating and Squeezing
+~~~~~~~~~~~~~~~~~~~~~~~
 
-When grouping over a dimension, you can control whether the dimension is
-squeezed out or if it should remain with length one on each group by using
-the ``squeeze`` parameter:
-
-.. ipython:: python
-
-    next(iter(arr.groupby("x")))
+Previously, Xarray defaulted to squeezing out dimensions of size one when iterating over
+a GroupBy object. This behaviour is being removed.
+You can always squeeze explicitly later with the Dataset or DataArray
+:py:meth:`~xarray.DataArray.squeeze` methods.
 
 .. ipython:: python
 
     next(iter(arr.groupby("x", squeeze=False)))
 
-Although xarray will attempt to automatically
-:py:attr:`~xarray.DataArray.transpose` dimensions back into their original order
-when you use apply, it is sometimes useful to set ``squeeze=False`` to
-guarantee that all original dimensions remain unchanged.
-
-You can always squeeze explicitly later with the Dataset or DataArray
-:py:meth:`~xarray.DataArray.squeeze` methods.
 
 .. _groupby.multidim:
 

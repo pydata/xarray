@@ -50,24 +50,15 @@ with suppress(ImportError):
     matplotlib.use("Agg")
 
 try:
-    import rasterio  # noqa: F401
-except ImportError:
-    allowed_failures.update(
-        ["gallery/plot_rasterio_rgb.py", "gallery/plot_rasterio.py"]
-    )
-
-try:
     import cartopy  # noqa: F401
 except ImportError:
     allowed_failures.update(
         [
             "gallery/plot_cartopy_facetgrid.py",
-            "gallery/plot_rasterio_rgb.py",
-            "gallery/plot_rasterio.py",
         ]
     )
 
-nbsphinx_allow_errors = True
+nbsphinx_allow_errors = False
 
 # -- General configuration ------------------------------------------------
 
@@ -93,12 +84,13 @@ extensions = [
     "sphinx_copybutton",
     "sphinxext.rediraffe",
     "sphinx_design",
+    "sphinx_inline_tabs",
 ]
 
 
 extlinks = {
-    "issue": ("https://github.com/pydata/xarray/issues/%s", "GH"),
-    "pull": ("https://github.com/pydata/xarray/pull/%s", "PR"),
+    "issue": ("https://github.com/pydata/xarray/issues/%s", "GH%s"),
+    "pull": ("https://github.com/pydata/xarray/pull/%s", "PR%s"),
 }
 
 # sphinx-copybutton configurations
@@ -239,28 +231,29 @@ html_theme_options = dict(
     # canonical_url="",
     repository_url="https://github.com/pydata/xarray",
     repository_branch="main",
+    navigation_with_keys=False,  # pydata/pydata-sphinx-theme#1492
     path_to_docs="doc",
     use_edit_page_button=True,
     use_repository_button=True,
     use_issues_button=True,
     home_page_in_toc=False,
-    extra_navbar="",
-    navbar_footer_text="",
     extra_footer="""<p>Xarray is a fiscally sponsored project of <a href="https://numfocus.org">NumFOCUS</a>,
     a nonprofit dedicated to supporting the open-source scientific computing community.<br>
     Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
-    twitter_url="https://twitter.com/xarray_devs",
+    twitter_url="https://twitter.com/xarray_dev",
+    icon_links=[],  # workaround for pydata/pydata-sphinx-theme#1220
+    announcement="🍾 <a href='https://github.com/pydata/xarray/discussions/8462'>Xarray is now 10 years old!</a> 🎉",
 )
 
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = "_static/dataset-diagram-logo.png"
+html_logo = "_static/logos/Xarray_Logo_RGB_Final.svg"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-html_favicon = "_static/favicon.ico"
+html_favicon = "_static/logos/Xarray_Icon_Final.svg"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -271,11 +264,11 @@ html_css_files = ["style.css"]
 
 # configuration for sphinxext.opengraph
 ogp_site_url = "https://docs.xarray.dev/en/latest/"
-ogp_image = "https://docs.xarray.dev/en/stable/_static/dataset-diagram-logo.png"
+ogp_image = "https://docs.xarray.dev/en/stable/_static/logos/Xarray_Logo_RGB_Final.png"
 ogp_custom_meta_tags = [
     '<meta name="twitter:card" content="summary_large_image" />',
     '<meta property="twitter:site" content="@xarray_dev" />',
-    '<meta name="image" property="og:image" content="https://docs.xarray.dev/en/stable/_static/dataset-diagram-logo.png" />',
+    '<meta name="image" property="og:image" content="https://docs.xarray.dev/en/stable/_static/logos/Xarray_Logo_RGB_Final.png" />',
 ]
 
 # Redirects for pages that were moved to new locations
@@ -332,8 +325,12 @@ intersphinx_mapping = {
     "matplotlib": ("https://matplotlib.org/stable/", None),
     "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
-    "rasterio": ("https://rasterio.readthedocs.io/en/latest", None),
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
+    "hypothesis": ("https://hypothesis.readthedocs.io/en/latest/", None),
+    "cubed": ("https://tom-e-white.com/cubed/", None),
+    "datatree": ("https://xarray-datatree.readthedocs.io/en/latest/", None),
+    "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
+    # "opt_einsum": ("https://dgasmith.github.io/opt_einsum/", None),
 }
 
 
@@ -436,7 +433,6 @@ def update_videos(app: Sphinx):
 
     items = []
     for video in videos:
-
         authors = " | ".join(video["authors"])
         item = f"""
 .. grid-item-card:: {" ".join(video["title"].split())}

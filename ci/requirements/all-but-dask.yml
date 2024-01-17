@@ -3,14 +3,11 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.10
   - black
   - aiobotocore
   - boto3
   - bottleneck
   - cartopy
-  - cdms2
-  - cfgrib
   - cftime
   - coveralls
   - flox
@@ -23,17 +20,18 @@ dependencies:
   - nc-time-axis
   - netcdf4
   - numba
+  - numbagg
   - numpy
   - packaging
   - pandas
-  - pint
+  - pint>=0.22
   - pip
-  - pseudonetcdf
   - pydap
   - pytest
   - pytest-cov
   - pytest-env
   - pytest-xdist
+  - pytest-timeout
   - rasterio
   - scipy
   - seaborn
@@ -41,5 +39,3 @@ dependencies:
   - toolz
   - typing_extensions
   - zarr
-  - pip:
-      - numbagg
