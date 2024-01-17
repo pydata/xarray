@@ -1704,6 +1704,126 @@ class NetCDF4Base(NetCDFBase):
                 with self.roundtrip(ds):
                     pass
 
+    @requires_netCDF4
+    def test_encoding_enum__no_fill_value(self):
+        with create_tmp_file() as tmp_file:
+            cloud_type_dict = {"clear": 0, "cloudy": 1}
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("time", size=2)
+                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                v = nc.createVariable(
+                    "clouds",
+                    cloud_type,
+                    "time",
+                    fill_value=None,
+                )
+                v[:] = 1
+            with open_dataset(tmp_file) as original:
+                save_kwargs = {}
+                if self.engine == "h5netcdf":
+                    save_kwargs["invalid_netcdf"] = True
+                with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
+                    assert_equal(original, actual)
+                    assert (
+                        actual.clouds.encoding["dtype"].metadata["enum"]
+                        == cloud_type_dict
+                    )
+                    if self.engine != "h5netcdf":
+                        # not implemented in h5netcdf yet
+                        assert (
+                            actual.clouds.encoding["dtype"].metadata["enum_name"]
+                            == "cloud_type"
+                        )
+
+    @requires_netCDF4
+    def test_encoding_enum__multiple_variable_with_enum(self):
+        with create_tmp_file() as tmp_file:
+            cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("time", size=2)
+                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                nc.createVariable(
+                    "clouds",
+                    cloud_type,
+                    "time",
+                    fill_value=255,
+                )
+                nc.createVariable(
+                    "tifa",
+                    cloud_type,
+                    "time",
+                    fill_value=255,
+                )
+            with open_dataset(tmp_file) as original:
+                save_kwargs = {}
+                if self.engine == "h5netcdf":
+                    save_kwargs["invalid_netcdf"] = True
+                with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
+                    assert_equal(original, actual)
+                    assert (
+                        actual.clouds.encoding["dtype"] == actual.tifa.encoding["dtype"]
+                    )
+                    assert (
+                        actual.clouds.encoding["dtype"].metadata
+                        == actual.tifa.encoding["dtype"].metadata
+                    )
+                    assert (
+                        actual.clouds.encoding["dtype"].metadata["enum"]
+                        == cloud_type_dict
+                    )
+                    if self.engine != "h5netcdf":
+                        # not implemented in h5netcdf yet
+                        assert (
+                            actual.clouds.encoding["dtype"].metadata["enum_name"]
+                            == "cloud_type"
+                        )
+
+    @requires_netCDF4
+    def test_encoding_enum__error_multiple_variable_with_changing_enum(self):
+        """
+        Given 2 variables, if they share the same enum type,
+        the 2 enum definition should be identical.
+        """
+        with create_tmp_file() as tmp_file:
+            cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("time", size=2)
+                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                nc.createVariable(
+                    "clouds",
+                    cloud_type,
+                    "time",
+                    fill_value=255,
+                )
+                nc.createVariable(
+                    "tifa",
+                    cloud_type,
+                    "time",
+                    fill_value=255,
+                )
+            with open_dataset(tmp_file) as original:
+                assert (
+                    original.clouds.encoding["dtype"].metadata
+                    == original.tifa.encoding["dtype"].metadata
+                )
+                modified_enum = original.clouds.encoding["dtype"].metadata["enum"]
+                modified_enum.update({"neblig": 2})
+                original.clouds.encoding["dtype"] = np.dtype(
+                    "u1",
+                    metadata={"enum": modified_enum, "enum_name": "cloud_type"},
+                )
+                if self.engine != "h5netcdf":
+                    # not implemented yet in h5netcdf
+                    with pytest.raises(
+                        ValueError,
+                        match=(
+                            "Cannot save variable .*"
+                            " because an enum `cloud_type` already exists in the Dataset .*"
+                        ),
+                    ):
+                        with self.roundtrip(original):
+                            pass
+
 
 @requires_netCDF4
 class TestNetCDF4Data(NetCDF4Base):
