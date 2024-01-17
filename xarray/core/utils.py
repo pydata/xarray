@@ -57,7 +57,6 @@ from collections.abc import (
     Mapping,
     MutableMapping,
     MutableSet,
-    Sequence,
     ValuesView,
 )
 from enum import Enum
@@ -76,7 +75,7 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    from xarray.core.types import Dims, ErrorOptionsWithWarn, OrderedDims, T_DuckArray
+    from xarray.core.types import Dims, ErrorOptionsWithWarn, T_DuckArray
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -983,12 +982,9 @@ def drop_missing_dims(
         )
 
 
-T_None = TypeVar("T_None", None, "ellipsis")
-
-
 @overload
 def parse_dims(
-    dim: str | Iterable[Hashable] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
@@ -999,12 +995,12 @@ def parse_dims(
 
 @overload
 def parse_dims(
-    dim: str | Iterable[Hashable] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | T_None:
+) -> tuple[Hashable, ...] | None | ellipsis:
     ...
 
 
@@ -1051,7 +1047,7 @@ def parse_dims(
 
 @overload
 def parse_ordered_dims(
-    dim: str | Sequence[Hashable | ellipsis] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
@@ -1062,17 +1058,17 @@ def parse_ordered_dims(
 
 @overload
 def parse_ordered_dims(
-    dim: str | Sequence[Hashable | ellipsis] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | T_None:
+) -> tuple[Hashable, ...] | None | ellipsis:
     ...
 
 
 def parse_ordered_dims(
-    dim: OrderedDims,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
@@ -1126,9 +1122,9 @@ def parse_ordered_dims(
         )
 
 
-def _check_dims(dim: set[Hashable | ellipsis], all_dims: set[Hashable]) -> None:
-    wrong_dims = dim - all_dims
-    if wrong_dims and wrong_dims != {...}:
+def _check_dims(dim: set[Hashable], all_dims: set[Hashable]) -> None:
+    wrong_dims = (dim - all_dims) - {...}
+    if wrong_dims:
         wrong_dims_str = ", ".join(f"'{d!s}'" for d in wrong_dims)
         raise ValueError(
             f"Dimension(s) {wrong_dims_str} do not exist. Expected one or more of {all_dims}"
