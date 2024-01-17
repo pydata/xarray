@@ -47,7 +47,7 @@ New Features
 - Decode/Encode netCDF4 enums and store the enum definition in dataarrays' dtype metadata.
   If multiple variables share the same enum in netCDF4, each dataarray will have its own
   enum definition in their respective dtype metadata.
-  By `Abel Aoun <https://github.com/bzah>_`(:issue:`8144`, :pull:`8147`)
+  By `Abel Aoun <https://github.com/bzah>`_. (:issue:`8144`, :pull:`8147`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
