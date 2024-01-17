@@ -23,6 +23,12 @@ This release brings support for weights in correlation and covariance functions,
 a new `DataArray.cumulative` aggregation, improvements to `xr.map_blocks`, 
 an update to our minimum dependencies, and various bugfixes. 
 
+Thanks to our 17 contributors to this release:
+
+Abel Aoun, Deepak Cherian, Illviljan, Johan Mathe, Justus Magin, Kai Mühlbauer, 
+Llorenç Lledó, Mark Harfouche, Markel, Mathias Hauser, Maximilian Roos, Michael Niklas, 
+Niclas Rieger, Sébastien Celles, Tom Nicholas, Trinh Quoc Anh, and crusaderky.
+
 New Features
 ~~~~~~~~~~~~
 
