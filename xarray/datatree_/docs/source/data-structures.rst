@@ -75,7 +75,7 @@ Again these are not normally used unless explicitly accessed by the user.
 Creating a DataTree
 ~~~~~~~~~~~~~~~~~~~
 
-One way to create a create a ``DataTree`` from scratch is to create each node individually,
+One way to create a ``DataTree`` from scratch is to create each node individually,
 specifying the nodes' relationship to one another as you create each one.
 
 The ``DataTree`` constructor takes:
