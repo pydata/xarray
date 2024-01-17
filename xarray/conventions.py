@@ -48,10 +48,6 @@ if TYPE_CHECKING:
     T_DatasetOrAbstractstore = Union[Dataset, AbstractDataStore]
 
 
-def _var_as_tuple(var: Variable) -> T_VarTuple:
-    return var.dims, var.data, var.attrs.copy(), var.encoding.copy()
-
-
 def _infer_dtype(array, name=None):
     """Given an object array with no missing values, infer its dtype from all elements."""
     if array.dtype.kind != "O":
@@ -111,7 +107,7 @@ def _copy_with_dtype(data, dtype: np.typing.DTypeLike):
 def ensure_dtype_not_object(var: Variable, name: T_Name = None) -> Variable:
     # TODO: move this from conventions to backends? (it's not CF related)
     if var.dtype.kind == "O":
-        dims, data, attrs, encoding = _var_as_tuple(var)
+        dims, data, attrs, encoding = variables.unpack_for_encoding(var)
 
         # leave vlen dtypes unchanged
         if strings.check_vlen_dtype(data.dtype) is not None:
@@ -162,7 +158,7 @@ def encode_cf_variable(
     var: Variable, needs_copy: bool = True, name: T_Name = None
 ) -> Variable:
     """
-    Converts an Variable into an Variable which follows some
+    Converts a Variable into a Variable which follows some
     of the CF conventions:
 
         - Nans are masked using _FillValue (or the deprecated missing_value)
@@ -188,6 +184,7 @@ def encode_cf_variable(
         variables.CFScaleOffsetCoder(),
         variables.CFMaskCoder(),
         variables.UnsignedIntegerCoder(),
+        variables.NativeEnumCoder(),
         variables.NonStringCoder(),
         variables.DefaultFillvalueCoder(),
         variables.BooleanCoder(),
@@ -447,7 +444,7 @@ def decode_cf_variables(
                 decode_timedelta=decode_timedelta,
             )
         except Exception as e:
-            raise type(e)(f"Failed to decode variable {k!r}: {e}")
+            raise type(e)(f"Failed to decode variable {k!r}: {e}") from e
         if decode_coords in [True, "coordinates", "all"]:
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:
@@ -633,7 +630,11 @@ def cf_decoder(
     decode_cf_variable
     """
     variables, attributes, _ = decode_cf_variables(
-        variables, attributes, concat_characters, mask_and_scale, decode_times
+        variables,
+        attributes,
+        concat_characters,
+        mask_and_scale,
+        decode_times,
     )
     return variables, attributes
 

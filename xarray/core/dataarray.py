@@ -4062,6 +4062,9 @@ class DataArray(
         name is the same as a coordinate name, then it is given the name
         ``"__xarray_dataarray_variable__"``.
 
+        [netCDF4 backend only] netCDF4 enums are decoded into the
+        dataarray dtype metadata.
+
         See Also
         --------
         Dataset.to_netcdf
