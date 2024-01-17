@@ -14,12 +14,13 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2024.01.0:
 
+v2024.01.0 (17 Jan, 2024)
+-------------------------
 
-.. _whats-new.2023.12.1:
-
-v2023.12.1 (unreleased)
------------------------
+This release brings support for weights in correlation and covariance functions, improvements to `xr.map_blocks`,
+an update to our minimum dependencies, and various bugfixes. 
 
 New Features
 ~~~~~~~~~~~~
@@ -54,9 +55,9 @@ Breaking changes
    zarr                      2.12     2.13
   ===================== =========  ========
 
-
 Deprecations
 ~~~~~~~~~~~~
+
 - The `squeeze` kwarg to GroupBy is now deprecated. (:issue:`2157`, :pull:`8507`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
@@ -72,12 +73,9 @@ Bug fixes
 - Add tests and fixes for empty :py:class:`CFTimeIndex`, including broken html repr (:issue:`7298`, :pull:`8600`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 
-Documentation
-~~~~~~~~~~~~~
-
-
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
 - The implementation of :py:func:`map_blocks` has changed to minimize graph size and duplication of data.
   This should be a strict improvement even though the graphs are not always embarassingly parallel any more.
   Please open an issue if you spot a regression. (:pull:`8412`, :issue:`8409`).
