@@ -27,7 +27,6 @@ from numpy import (  # noqa
     tensordot,
     transpose,
     unravel_index,
-    zeros_like,  # noqa
 )
 from numpy import concatenate as _concatenate
 from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
