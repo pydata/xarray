@@ -63,11 +63,14 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Support non-string hashable dimensions in :py:class:`xarray.DataArray` (:issue:`8546`, :pull:`8559`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Reverse index output of bottleneck's rolling move_argmax/move_argmin functions (:issue:`8541`, :pull:`8552`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Vendor `SerializableLock` from dask and use as default lock for netcdf4 backends (:issue:`8442`, :pull:`8571`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-
+- Add tests and fixes for empty :py:class:`CFTimeIndex`, including broken html repr (:issue:`7298`, :pull:`8600`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -221,6 +224,10 @@ New Features
 
 - Use `opt_einsum <https://optimized-einsum.readthedocs.io/en/stable/>`_ for :py:func:`xarray.dot` by default if installed.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
+- Decode/Encode netCDF4 enums and store the enum definition in dataarrays' dtype metadata.
+  If multiple variables share the same enum in netCDF4, each dataarray will have its own
+  enum definition in their respective dtype metadata.
+  By `Abel Aoun <https://github.com/bzah>_`(:issue:`8144`, :pull:`8147`)
 - Add ``DataArray.dt.total_seconds()`` method to match the Pandas API. (:pull:`8435`).
   By `Ben Mares <https://github.com/maresb>`_.
 - Allow passing ``region="auto"`` in  :py:meth:`Dataset.to_zarr` to automatically infer the
