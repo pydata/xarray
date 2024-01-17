@@ -19,7 +19,8 @@ What's New
 v2024.01.0 (17 Jan, 2024)
 -------------------------
 
-This release brings support for weights in correlation and covariance functions, improvements to `xr.map_blocks`,
+This release brings support for weights in correlation and covariance functions, 
+a new `DataArray.cumulative` aggregation, improvements to `xr.map_blocks`, 
 an update to our minimum dependencies, and various bugfixes. 
 
 New Features
