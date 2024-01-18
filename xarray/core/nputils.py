@@ -12,9 +12,13 @@ from xarray.core.utils import module_available
 
 # remove once numpy 2.0 is the oldest supported version
 if module_available("numpy", minversion="2.0.0.dev0"):
-    from numpy.lib.array_utils import normalize_axis_index
+    from numpy.lib.array_utils import (
+        normalize_axis_index,  # type: ignore[import-not-found]
+    )
 else:
-    from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
+    from numpy.core.multiarray import (
+        normalize_axis_index,  # type: ignore[attr-defined,no-redef]
+    )
 
 # remove once numpy 2.0 is the oldest supported version
 try:
