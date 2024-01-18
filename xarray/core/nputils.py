@@ -12,7 +12,7 @@ from xarray.core.utils import module_available
 
 # remove once numpy 2.0 is the oldest supported version
 if module_available("numpy", minversion="2.0.0.dev0"):
-    from numpy.lib.array_utils import (  # type: ignore[import-not-found]
+    from numpy.lib.array_utils import (  # type: ignore[import-not-found,unused-ignore]
         normalize_axis_index,
     )
 else:
@@ -24,7 +24,7 @@ else:
 try:
     from numpy.exceptions import RankWarning  # type: ignore[attr-defined,unused-ignore]
 except ImportError:
-    from numpy import RankWarning  # type: ignore[no-redef,unused-ignore]
+    from numpy import RankWarning  # type: ignore[attr-defined,no-redef,unused-ignore]
 
 from xarray.core.options import OPTIONS
 from xarray.core.pycompat import is_duck_array

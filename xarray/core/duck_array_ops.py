@@ -40,7 +40,7 @@ from xarray.core.utils import is_duck_array, module_available
 
 # remove once numpy 2.0 is the oldest supported version
 if module_available("numpy", minversion="2.0.0.dev0"):
-    from numpy.lib.array_utils import (  # type: ignore[import-not-found]
+    from numpy.lib.array_utils import (  # type: ignore[import-not-found,unused-ignore]
         normalize_axis_index,
     )
 else:
