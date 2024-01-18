@@ -44,7 +44,7 @@ if module_available("numpy", minversion="2.0.0.dev0"):
         normalize_axis_index,
     )
 else:
-    from numpy.core.multiarray import (  # type: ignore[attr-defined,no-redef]
+    from numpy.core.multiarray import (  # type: ignore[attr-defined,no-redef,unused-ignore]
         normalize_axis_index,
     )
 

@@ -16,7 +16,7 @@ if module_available("numpy", minversion="2.0.0.dev0"):
         normalize_axis_index,
     )
 else:
-    from numpy.core.multiarray import (  # type: ignore[attr-defined,no-redef]
+    from numpy.core.multiarray import (  # type: ignore[attr-defined,no-redef,unused-ignore]
         normalize_axis_index,
     )
 
@@ -24,7 +24,7 @@ else:
 try:
     from numpy.exceptions import RankWarning  # type: ignore[attr-defined,unused-ignore]
 except ImportError:
-    from numpy import RankWarning
+    from numpy import RankWarning  # type: ignore[no-redef,unused-ignore]
 
 from xarray.core.options import OPTIONS
 from xarray.core.pycompat import is_duck_array
