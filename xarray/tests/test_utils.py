@@ -268,7 +268,7 @@ def test_infix_dims_errors(supplied, all_):
         pytest.param(..., ..., id="ellipsis"),
     ],
 )
-def test_parse_dims(dim, expected):
+def test_parse_dims(dim, expected) -> None:
     all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
     actual = utils.parse_dims(dim, all_dims, replace_none=False)
     assert actual == expected
@@ -298,7 +298,7 @@ def test_parse_dims_replace_none(dim: None | ellipsis) -> None:
         pytest.param(["x", 2], id="list_missing_all"),
     ],
 )
-def test_parse_dims_raises(dim):
+def test_parse_dims_raises(dim) -> None:
     all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
     with pytest.raises(ValueError, match="'x'"):
         utils.parse_dims(dim, all_dims, check_exists=True)
@@ -314,7 +314,7 @@ def test_parse_dims_raises(dim):
         pytest.param(["a", ..., "b"], ("a", "c", "b"), id="list_with_middle_ellipsis"),
     ],
 )
-def test_parse_ordered_dims(dim, expected):
+def test_parse_ordered_dims(dim, expected) -> None:
     all_dims = ("a", "b", "c")
     actual = utils.parse_ordered_dims(dim, all_dims)
     assert actual == expected
