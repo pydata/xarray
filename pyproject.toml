@@ -255,7 +255,8 @@ select = [
 known-first-party = ["xarray"]
 
 [tool.pytest.ini_options]
-addopts = ["--strict-config", "--strict-markers"]
+addopts = ["-ra", "--strict-config", "--strict-markers"]
+xfail_strict = true
 filterwarnings = [
   "ignore:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
 ]
