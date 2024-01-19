@@ -10,10 +10,13 @@ DataTree
 Creating a DataTree
 -------------------
 
+Methods of creating a datatree.
+
 .. autosummary::
    :toctree: generated/
 
    DataTree
+   DataTree.from_dict
 
 Tree Attributes
 ---------------
@@ -66,7 +69,7 @@ This interface echoes that of ``xarray.Dataset``.
    DataTree.is_empty
    DataTree.is_hollow
 
-Dictionary interface
+Dictionary Interface
 --------------------
 
 ``DataTree`` objects also have a dict-like interface mapping keys to either ``xarray.DataArray``s or to child ``DataTree`` nodes.
@@ -101,6 +104,30 @@ For manipulating, traversing, navigating, or mapping over the tree structure.
    DataTree.pipe
    DataTree.match
    DataTree.filter
+
+Pathlib-like Interface
+----------------------
+
+``DataTree`` objects deliberately echo some of the API of `pathlib.PurePath`.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.name
+   DataTree.parent
+   DataTree.parents
+   DataTree.relative_to
+
+Missing:
+
+..
+
+   ``DataTree.glob``
+   ``DataTree.joinpath``
+   ``DataTree.with_name``
+   ``DataTree.walk``
+   ``DataTree.rename``
+   ``DataTree.replace``
 
 DataTree Contents
 -----------------
@@ -276,13 +303,12 @@ Plotting
 I/O
 ===
 
-Create or
+Open a datatree from an on-disk store or serialize the tree.
 
 .. autosummary::
    :toctree: generated/
 
    open_datatree
-   DataTree.from_dict
    DataTree.to_dict
    DataTree.to_netcdf
    DataTree.to_zarr
