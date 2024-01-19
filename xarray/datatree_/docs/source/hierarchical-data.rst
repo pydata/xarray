@@ -369,25 +369,6 @@ You can see this tree is similar to the ``dt`` object above, except that it is m
 
 (If you want to keep the name of the root node, you will need to add the ``name`` kwarg to :py:class:`from_dict`, i.e. ``DataTree.from_dict(non_empty_nodes, name=dt.root.name)``.)
 
-.. _Tree Contents:
-
-Tree Contents
--------------
-
-Hollow Trees
-~~~~~~~~~~~~
-
-A concept that can sometimes be useful is that of a "Hollow Tree", which means a tree with data stored only at the leaf nodes.
-This is useful because certain useful tree manipulation operations only make sense for hollow trees.
-
-You can check if a tree is a hollow tree by using the :py:meth:`~DataTree.is_hollow` property.
-We can see that the Simpson's family is not hollow because the data variable ``"age"`` is present at some nodes which
-have children (i.e. Abe and Homer).
-
-.. ipython:: python
-
-    simpsons.is_hollow
-
 .. _manipulating trees:
 
 Manipulating Trees
@@ -412,6 +393,7 @@ We can use :py:meth:`DataTree.match` for this:
         }
     )
     result = dt.match("*/B")
+    result
 
 We can also subset trees by the contents of the nodes.
 :py:meth:`DataTree.filter` retains only the nodes of a tree that meet a certain condition.
@@ -442,6 +424,25 @@ Now let's filter out the minors:
 The result is a new tree, containing only the nodes matching the condition.
 
 (Yes, under the hood :py:meth:`~DataTree.filter` is just syntactic sugar for the pattern we showed you in :ref:`iterating over trees` !)
+
+.. _Tree Contents:
+
+Tree Contents
+-------------
+
+Hollow Trees
+~~~~~~~~~~~~
+
+A concept that can sometimes be useful is that of a "Hollow Tree", which means a tree with data stored only at the leaf nodes.
+This is useful because certain useful tree manipulation operations only make sense for hollow trees.
+
+You can check if a tree is a hollow tree by using the :py:class:`~DataTree.is_hollow` property.
+We can see that the Simpson's family is not hollow because the data variable ``"age"`` is present at some nodes which
+have children (i.e. Abe and Homer).
+
+.. ipython:: python
+
+    simpsons.is_hollow
 
 .. _tree computation:
 
@@ -599,7 +600,7 @@ Notice that corresponding tree nodes do not need to have the same name or contai
 Arithmetic Between Multiple Trees
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Arithmetic operations like multiplication are binary operations, so as long as we have wo isomorphic trees,
+Arithmetic operations like multiplication are binary operations, so as long as we have two isomorphic trees,
 we can do arithmetic between them.
 
 .. ipython:: python
