@@ -271,3 +271,8 @@ testpaths = ["xarray/tests", "properties"]
 
 [tool.aliases]
 test = "pytest"
+
+[tool.repo-review]
+ignore = [
+  "PP308" # This option creates a large amount of log lines.
+]
