@@ -746,7 +746,7 @@ def _emit_freq_deprecation_warning(deprecated_freq):
     emit_user_level_warning(message, FutureWarning)
 
 
-def to_offset(freq):
+def to_offset(freq, warn=True):
     """Convert a frequency string to the appropriate subclass of
     BaseCFTimeOffset."""
     if isinstance(freq, BaseCFTimeOffset):
@@ -758,7 +758,7 @@ def to_offset(freq):
             raise ValueError("Invalid frequency string provided")
 
     freq = freq_data["freq"]
-    if freq in _DEPRECATED_FREQUENICES:
+    if warn and freq in _DEPRECATED_FREQUENICES:
         _emit_freq_deprecation_warning(freq)
     multiples = freq_data["multiple"]
     multiples = 1 if multiples is None else int(multiples)
@@ -1226,7 +1226,8 @@ def date_range(
                 start=start,
                 end=end,
                 periods=periods,
-                freq=freq,
+                # TODO remove translation once requiring pandas >= 2.2
+                freq=_new_to_legacy_freq(freq),
                 tz=tz,
                 normalize=normalize,
                 name=name,
@@ -1252,6 +1253,54 @@ def date_range(
         inclusive=inclusive,
         calendar=calendar,
     )
+
+
+def _new_to_legacy_freq(freq):
+    # xarray will now always return "ME" and "QE" for MonthEnd and QuarterEnd
+    # frequencies, but older versions of pandas do not support these as
+    # frequency strings.  Until xarray's minimum pandas version is 2.2 or above,
+    # we add logic to continue using the deprecated "M" and "Q" frequency
+    # strings in these circumstances.
+
+    # TODO: remove once requiring pandas >= 2.2
+
+    if Version(pd.__version__) < Version("2.2"):
+        freq_as_offset = to_offset(freq)
+        if isinstance(freq_as_offset, MonthEnd) and "ME" in freq:
+            freq = freq.replace("ME", "M")
+        elif isinstance(freq_as_offset, QuarterEnd) and "QE" in freq:
+            freq = freq.replace("QE", "Q")
+        elif isinstance(freq_as_offset, YearBegin) and "YS" in freq:
+            freq = freq.replace("YS", "AS")
+        elif isinstance(freq_as_offset, YearEnd) and "Y-" in freq:
+            # Check for and replace "Y-" instead of just "Y" to prevent
+            # corrupting anchored offsets that contain "Y" in the month
+            # abbreviation, e.g. "Y-MAY" -> "A-MAY".
+            freq = freq.replace("Y-", "A-")
+
+    return freq
+
+
+def _legacy_to_new_freq(freq):
+    # to avoid internal deprecation warnings when freq is determined using pandas < 2.2
+
+    # TODO: remove once requiring pandas >= 2.2
+
+    if Version(pd.__version__) < Version("2.2"):
+        freq_as_offset = to_offset(freq, warn=False)
+        if isinstance(freq_as_offset, MonthEnd) and "ME" not in freq:
+            freq = freq.replace("M", "ME")
+        elif isinstance(freq_as_offset, QuarterEnd) and "QE" not in freq:
+            freq = freq.replace("Q", "QE")
+        elif isinstance(freq_as_offset, YearBegin) and "YS" not in freq:
+            freq = freq.replace("AS", "YS")
+        elif isinstance(freq_as_offset, YearEnd) and "Y-" not in freq:
+            # Check for and replace "Y-" instead of just "Y" to prevent
+            # corrupting anchored offsets that contain "Y" in the month
+            # abbreviation, e.g. "Y-MAY" -> "A-MAY".
+            freq = freq.replace("A-", "Y-")
+
+    return freq
 
 
 def date_range_like(source, calendar, use_cftime=None):
@@ -1298,24 +1347,8 @@ def date_range_like(source, calendar, use_cftime=None):
             "`date_range_like` was unable to generate a range as the source frequency was not inferable."
         )
 
-    # xarray will now always return "ME" and "QE" for MonthEnd and QuarterEnd
-    # frequencies, but older versions of pandas do not support these as
-    # frequency strings.  Until xarray's minimum pandas version is 2.2 or above,
-    # we add logic to continue using the deprecated "M" and "Q" frequency
-    # strings in these circumstances.
-    if Version(pd.__version__) < Version("2.2"):
-        freq_as_offset = to_offset(freq)
-        if isinstance(freq_as_offset, MonthEnd) and "ME" in freq:
-            freq = freq.replace("ME", "M")
-        elif isinstance(freq_as_offset, QuarterEnd) and "QE" in freq:
-            freq = freq.replace("QE", "Q")
-        elif isinstance(freq_as_offset, YearBegin) and "YS" in freq:
-            freq = freq.replace("YS", "AS")
-        elif isinstance(freq_as_offset, YearEnd) and "Y-" in freq:
-            # Check for and replace "Y-" instead of just "Y" to prevent
-            # corrupting anchored offsets that contain "Y" in the month
-            # abbreviation, e.g. "Y-MAY" -> "A-MAY".
-            freq = freq.replace("Y-", "A-")
+    # TODO remove once requiring pandas >= 2.2
+    freq = _legacy_to_new_freq(freq)
 
     use_cftime = _should_cftime_be_used(source, calendar, use_cftime)
 

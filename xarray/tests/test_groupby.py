@@ -1754,19 +1754,19 @@ class TestDataArrayResample:
                 time=(
                     "time",
                     xr.date_range(
-                        "2001-01-01", freq="M", periods=6, use_cftime=use_cftime
+                        "2001-01-01", freq="ME", periods=6, use_cftime=use_cftime
                     ),
                 ),
                 labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
             ),
         )
-        actual = da.resample(time="3M").count()
+        actual = da.resample(time="3ME").count()
         expected = DataArray(
             [1, 3, 1],
             dims="time",
             coords={
                 "time": xr.date_range(
-                    "2001-01-01", freq="3M", periods=3, use_cftime=use_cftime
+                    "2001-01-01", freq="3ME", periods=3, use_cftime=use_cftime
                 )
             },
         )

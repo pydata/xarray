@@ -1313,7 +1313,7 @@ def test_calendar_year_length(
     assert len(result) == expected_number_of_days
 
 
-@pytest.mark.parametrize("freq", ["Y", "M", "D"])
+@pytest.mark.parametrize("freq", ["Y", "ME", "D"])
 def test_dayofweek_after_cftime_range(freq: str) -> None:
     result = cftime_range("2000-02-01", periods=3, freq=freq).dayofweek
     expected = pd.date_range("2000-02-01", periods=3, freq=freq).dayofweek
@@ -1392,29 +1392,24 @@ def test_date_range_errors() -> None:
 )
 def test_date_range_like(start, freq, cal_src, cal_tgt, use_cftime, exp0, exp_pd):
     expected_xarray_freq = freq
+    expected_pandas_freq = freq
 
     # pandas changed what is returned for infer_freq in version 2.2.  The
     # development version of xarray follows this, but we need to adapt this test
     # to still handle older versions of pandas.
     if Version(pd.__version__) < Version("2.2"):
         if "ME" in freq:
-            freq = freq.replace("ME", "M")
-            expected_pandas_freq = freq
+            expected_pandas_freq = expected_pandas_freq.replace("ME", "M")
         elif "QE" in freq:
-            freq = freq.replace("QE", "Q")
-            expected_pandas_freq = freq
+            expected_pandas_freq = expected_pandas_freq.replace("QE", "Q")
         elif "YS" in freq:
-            freq = freq.replace("YS", "AS")
-            expected_pandas_freq = freq
+            expected_pandas_freq = expected_pandas_freq.replace("YS", "AS")
         elif "Y-" in freq:
-            freq = freq.replace("Y-", "A-")
-            expected_pandas_freq = freq
+            expected_pandas_freq = expected_pandas_freq.replace("Y-", "A-")
         elif "h" in freq:
             expected_pandas_freq = freq.replace("h", "H")
         else:
             raise ValueError(f"Test not implemented for freq {freq!r}")
-    else:
-        expected_pandas_freq = freq
 
     source = date_range(start, periods=12, freq=freq, calendar=cal_src)
 

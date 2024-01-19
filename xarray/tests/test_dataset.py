@@ -6945,7 +6945,7 @@ def test_differentiate_datetime(dask) -> None:
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_cftime(dask) -> None:
     rs = np.random.RandomState(42)
-    coord = xr.cftime_range("2000", periods=8, freq="2M")
+    coord = xr.cftime_range("2000", periods=8, freq="2ME")
 
     da = xr.DataArray(
         rs.randn(8, 6),
