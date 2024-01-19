@@ -26,6 +26,8 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Renamed `DataTree.lineage` to `DataTree.parents` to match `pathlib` vocabulary
+  (:issue:`283`, :pull:`286`)
 - Minimum required version of xarray is now 2023.12.0, i.e. the latest version.
   This is required to prevent recent changes to xarray's internals from breaking datatree.
   (:issue:`293`, :pull:`294`)
@@ -36,6 +38,10 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+
+- Renamed `DataTree.lineage` to `DataTree.parents` to match `pathlib` vocabulary
+  (:issue:`283`, :pull:`286`). `lineage` is now deprecated and use of `parents` is encouraged.
+  By `Etienne Schalk <https://github.com/etienneschalk>`_.
 
 Bug fixes
 ~~~~~~~~~

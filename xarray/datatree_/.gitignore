@@ -132,4 +132,5 @@ dmypy.json
 # version
 _version.py
 
-.vscode
+# Ignore vscode specific settings
+.vscode/

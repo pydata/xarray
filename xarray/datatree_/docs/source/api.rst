@@ -38,6 +38,7 @@ Attributes relating to the recursive tree-like structure of a ``DataTree``.
    DataTree.descendants
    DataTree.siblings
    DataTree.lineage
+   DataTree.parents
    DataTree.ancestors
    DataTree.groups
 

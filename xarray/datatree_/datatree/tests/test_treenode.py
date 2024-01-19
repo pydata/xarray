@@ -95,7 +95,7 @@ class TestFamilyTree:
         michael = TreeNode(children={"Tony": tony})
         vito = TreeNode(children={"Michael": michael})
         assert tony.root is vito
-        assert tony.lineage == (tony, michael, vito)
+        assert tony.parents == (michael, vito)
         assert tony.ancestors == (vito, michael, tony)
 
 
@@ -279,12 +279,15 @@ class TestIterators:
 
 
 class TestAncestry:
+    def test_parents(self):
+        _, leaf = create_test_tree()
+        expected = ["e", "b", "a"]
+        assert [node.name for node in leaf.parents] == expected
+
     def test_lineage(self):
         _, leaf = create_test_tree()
-        lineage = leaf.lineage
         expected = ["f", "e", "b", "a"]
-        for node, expected_name in zip(lineage, expected):
-            assert node.name == expected_name
+        assert [node.name for node in leaf.lineage] == expected
 
     def test_ancestors(self):
         _, leaf = create_test_tree()
