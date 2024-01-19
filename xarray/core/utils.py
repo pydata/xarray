@@ -60,6 +60,7 @@ from collections.abc import (
     ValuesView,
 )
 from enum import Enum
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1224,12 +1225,12 @@ def module_available(module: str, minversion: str | None = None) -> bool:
 
 
 def find_stack_level(test_mode=False) -> int:
-    """Find the first place in the stack that is not inside xarray.
+    """Find the first place in the stack that is not inside xarray or the Python standard library.
 
     This is unless the code emanates from a test, in which case we would prefer
     to see the xarray source.
 
-    This function is taken from pandas.
+    This function is taken from pandas and modified to exclude standard library paths.
 
     Parameters
     ----------
@@ -1240,19 +1241,27 @@ def find_stack_level(test_mode=False) -> int:
     Returns
     -------
     stacklevel : int
-        First level in the stack that is not part of xarray.
+        First level in the stack that is not part of xarray or the Python standard library.
     """
     import xarray as xr
 
-    pkg_dir = os.path.dirname(xr.__file__)
-    test_dir = os.path.join(pkg_dir, "tests")
+    pkg_dir = Path(xr.__file__).parent
+    test_dir = pkg_dir / "tests"
 
-    # https://stackoverflow.com/questions/17407119/python-inspect-stack-is-slow
+    std_lib_dir = Path(sys.modules["os"].__file__).parent  # Standard library path
+
     frame = inspect.currentframe()
     n = 0
     while frame:
         fname = inspect.getfile(frame)
-        if fname.startswith(pkg_dir) and (not fname.startswith(test_dir) or test_mode):
+        if (
+            fname.startswith(str(pkg_dir))
+            and (not fname.startswith(str(test_dir)) or test_mode)
+        ) or (
+            fname.startswith(str(std_lib_dir))
+            and "site-packages" not in fname
+            and "dist-packages" not in fname
+        ):
             frame = frame.f_back
             n += 1
         else:
