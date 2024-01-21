@@ -813,7 +813,7 @@ class TestToDaskDataFrame:
         assert_frame_equal(actual.compute(), expected.compute())
 
     @pytest.mark.xfail(
-        message="Currently pandas with pyarrow installed will return a `string[pyarrow]` type"
+        reason="Currently pandas with pyarrow installed will return a `string[pyarrow]` type"
     )
     def test_to_dask_dataframe_2D(self):
         # Test if 2-D dataset is supplied
