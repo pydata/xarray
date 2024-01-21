@@ -1248,12 +1248,12 @@ def find_stack_level(test_mode=False) -> int:
     pkg_dir = Path(xr.__file__).parent
     test_dir = pkg_dir / "tests"
 
-    std_lib_path = sys.modules["os"].__file__
+    std_lib_init = sys.modules["os"].__file__
     # Mostly to appease mypy; I don't think this can happen...
-    if std_lib_path is None:
+    if std_lib_init is None:
         return 0
 
-    std_lib_dir = Path(std_lib_path).parent  # Standard library path
+    std_lib_dir = Path(std_lib_init).parent
 
     frame = inspect.currentframe()
     n = 0
