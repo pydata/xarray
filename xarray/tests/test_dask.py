@@ -867,6 +867,10 @@ class TestToDaskDataFrame:
         assert isinstance(actual, dd.DataFrame)
         assert_frame_equal(expected.compute(), actual.compute())
 
+    @pytest.mark.xfail(
+        reason="Currently pandas with pyarrow installed will return a `string[pyarrow]` type, "
+        "which causes the index to have a different type depending on whether pyarrow is installed"
+    )
     def test_to_dask_dataframe_not_daskarray(self):
         # Test if DataArray is not a dask array
         x = np.random.randn(10)
