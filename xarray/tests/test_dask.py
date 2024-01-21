@@ -812,6 +812,10 @@ class TestToDaskDataFrame:
         assert isinstance(actual, dd.DataFrame)
         assert_frame_equal(actual.compute(), expected.compute())
 
+    @pytest.mark.xfail(
+        reason="Currently pandas with pyarrow installed will return a `string[pyarrow]` type, "
+        "which causes the `y` column to have a different type depending on whether pyarrow is installed"
+    )
     def test_to_dask_dataframe_2D(self):
         # Test if 2-D dataset is supplied
         w = np.random.randn(2, 3)
@@ -830,10 +834,6 @@ class TestToDaskDataFrame:
         actual = ds.to_dask_dataframe(set_index=False)
 
         assert isinstance(actual, dd.DataFrame)
-        # TOOD: not sure if this is the correct behavior, but currently pandas with
-        # pyarrow installed will return a `string[pyarrow]` type, so matching that until
-        # we can fix the underlying issue
-        expected["y"] = expected["y"].astype("string[pyarrow]")
         assert_frame_equal(actual.compute(), expected)
 
     @pytest.mark.xfail(raises=NotImplementedError)
