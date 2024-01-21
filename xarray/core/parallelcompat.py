@@ -22,7 +22,7 @@ import numpy as np
 
 from xarray.core.pycompat import is_chunked_array
 
-T_ChunkedArray = TypeVar("T_ChunkedArray")
+T_ChunkedArray = TypeVar("T_ChunkedArray", bound=Any)
 
 if TYPE_CHECKING:
     from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
