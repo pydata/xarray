@@ -151,9 +151,9 @@ class Weighted(Generic[T_Xarray]):
 
         Parameters
         ----------
-        obj : T_DataArray or Dataset
+        obj : DataArray or Dataset
             Object over which the weighted reduction operation is applied.
-        weights : T_DataArray
+        weights : DataArray
             An array of weights associated with the values in the obj.
             Each value in the obj contributes to the reduction operation
             according to its associated weight.
