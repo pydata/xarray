@@ -1316,7 +1316,8 @@ def test_calendar_year_length(
 @pytest.mark.parametrize("freq", ["Y", "ME", "D"])
 def test_dayofweek_after_cftime_range(freq: str) -> None:
     result = cftime_range("2000-02-01", periods=3, freq=freq).dayofweek
-    expected = pd.date_range("2000-02-01", periods=3, freq=freq).dayofweek
+    # NOTE: uses pd.date_range under the hood
+    expected = date_range("2000-02-01", periods=3, freq=freq).dayofweek
     np.testing.assert_array_equal(result, expected)
 
 
