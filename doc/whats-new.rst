@@ -28,7 +28,7 @@ Breaking changes
 
 - Following pandas, :py:meth:`infer_freq` will return ``"YE"``, instead of ``"Y"`` (formerly ``"A"``).
   This is to be consistent with the deprecation of the latter frequency string in pandas 2.2.
-  This is a follow up to :pull:`8415` (:issue:`8612`, :pull:`8629`).
+  This is a follow up to :pull:`8415` (:issue:`8612`, :pull:`8642`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 
 Deprecations
