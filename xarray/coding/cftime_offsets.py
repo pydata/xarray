@@ -1315,11 +1315,6 @@ def date_range_like(source, calendar, use_cftime=None):
             freq = freq.replace("QE", "Q")
         elif isinstance(freq_as_offset, YearBegin) and "YS" in freq:
             freq = freq.replace("YS", "AS")
-        elif isinstance(freq_as_offset, YearEnd) and "Y-" in freq:
-            # Check for and replace "Y-" instead of just "Y" to prevent
-            # corrupting anchored offsets that contain "Y" in the month
-            # abbreviation, e.g. "Y-MAY" -> "A-MAY".
-            freq = freq.replace("Y-", "A-")
         elif isinstance(freq_as_offset, YearEnd) and "YE" in freq:
             freq = freq.replace("YE", "A")
 
