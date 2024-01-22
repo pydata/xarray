@@ -1406,8 +1406,8 @@ def test_date_range_like(start, freq, cal_src, cal_tgt, use_cftime, exp0, exp_pd
         elif "YS" in freq:
             freq = freq.replace("YS", "AS")
             expected_pandas_freq = freq
-        elif "YE-" in freq:
-            freq = freq.replace("YE-", "A-")
+        elif "Y-" in freq:
+            freq = freq.replace("Y-", "A-")
             expected_pandas_freq = freq
         elif "h" in freq:
             expected_pandas_freq = freq.replace("h", "H")
