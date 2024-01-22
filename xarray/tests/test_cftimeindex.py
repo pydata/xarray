@@ -1353,7 +1353,7 @@ def test_infer_freq_invalid_inputs():
     "freq",
     [
         "300YS-JAN",
-        "Y-DEC",
+        "YE-DEC",
         "YS-JUL",
         "2YS-FEB",
         "QE-NOV",
