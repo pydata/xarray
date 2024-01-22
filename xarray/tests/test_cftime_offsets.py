@@ -157,7 +157,7 @@ def test_year_offset_constructor_invalid_month(offset, invalid_month, exception)
         (MonthBegin(), "MS"),
         (MonthEnd(), "ME"),
         (YearBegin(), "YS-JAN"),
-        (YearEnd(), "Y-DEC"),
+        (YearEnd(), "YE-DEC"),
         (QuarterBegin(), "QS-MAR"),
         (QuarterEnd(), "QE-MAR"),
         (Day(), "D"),
@@ -1377,6 +1377,9 @@ def test_date_range_errors() -> None:
 
 
 @requires_cftime
+@pytest.mark.xfail(
+    reason="https://github.com/pydata/xarray/pull/8636#issuecomment-1902775153"
+)
 @pytest.mark.parametrize(
     "start,freq,cal_src,cal_tgt,use_cftime,exp0,exp_pd",
     [
@@ -1384,7 +1387,7 @@ def test_date_range_errors() -> None:
         ("2020-02-01", "ME", "noleap", "gregorian", True, "2020-02-29", True),
         ("2020-02-01", "QE-DEC", "noleap", "gregorian", True, "2020-03-31", True),
         ("2020-02-01", "YS-FEB", "noleap", "gregorian", True, "2020-02-01", True),
-        ("2020-02-01", "Y-FEB", "noleap", "gregorian", True, "2020-02-29", True),
+        ("2020-02-01", "YE-FEB", "noleap", "gregorian", True, "2020-02-29", True),
         ("2020-02-28", "3h", "all_leap", "gregorian", False, "2020-02-28", True),
         ("2020-03-30", "ME", "360_day", "gregorian", False, "2020-03-31", True),
         ("2020-03-31", "ME", "gregorian", "360_day", None, "2020-03-30", False),
@@ -1406,8 +1409,8 @@ def test_date_range_like(start, freq, cal_src, cal_tgt, use_cftime, exp0, exp_pd
         elif "YS" in freq:
             freq = freq.replace("YS", "AS")
             expected_pandas_freq = freq
-        elif "Y-" in freq:
-            freq = freq.replace("Y-", "A-")
+        elif "YE-" in freq:
+            freq = freq.replace("YE-", "A-")
             expected_pandas_freq = freq
         elif "h" in freq:
             expected_pandas_freq = freq.replace("h", "H")
@@ -1531,7 +1534,9 @@ def test_cftime_or_date_range_inclusive_None(function) -> None:
     np.testing.assert_equal(result_None.values, result_both.values)
 
 
-@pytest.mark.parametrize("freq", ["A", "AS", "Q", "M", "H", "T", "S", "L", "U"])
+@pytest.mark.parametrize(
+    "freq", ["A", "AS", "Q", "M", "H", "T", "S", "L", "U", "Y", "A-MAY"]
+)
 def test_to_offset_deprecation_warning(freq):
     # Test for deprecations outlined in GitHub issue #8394
     with pytest.warns(FutureWarning, match="is deprecated"):
