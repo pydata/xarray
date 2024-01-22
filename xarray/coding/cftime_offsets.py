@@ -1013,29 +1013,29 @@ def cftime_range(
     +------------+--------------------------------------------------------------------+
     | Alias      | Description                                                        |
     +============+====================================================================+
-    | Y(E,S)-JAN | Annual frequency, anchored at the (end, beginning) of January    |
+    | Y(E,S)-JAN | Annual frequency, anchored at the (end, beginning) of January      |
     +------------+--------------------------------------------------------------------+
-    | Y(E,S)-FEB | Annual frequency, anchored at the (end, beginning) of February   |
+    | Y(E,S)-FEB | Annual frequency, anchored at the (end, beginning) of February     |
     +------------+--------------------------------------------------------------------+
-    | Y(E,S)-MAR | Annual frequency, anchored at the (end, beginning) of March      |
+    | Y(E,S)-MAR | Annual frequency, anchored at the (end, beginning) of March        |
     +------------+--------------------------------------------------------------------+
-    | Y(E,S)-APR | Annual frequency, anchored at the (end, beginning) of April      |
+    | Y(E,S)-APR | Annual frequency, anchored at the (end, beginning) of April        |
     +------------+--------------------------------------------------------------------+
-    | Y(E,S)-MAY | Annual frequency, anchored at the (end, beginning) of May        |
+    | Y(E,S)-MAY | Annual frequency, anchored at the (end, beginning) of May          |
     +------------+--------------------------------------------------------------------+
-    | Y(E,S)-JUN | Annual frequency, anchored at the (end, beginning) of June       |
+    | Y(E,S)-JUN | Annual frequency, anchored at the (end, beginning) of June         |
     +------------+--------------------------------------------------------------------+
-    | Y(E,S)-JUL | Annual frequency, anchored at the (end, beginning) of July       |
+    | Y(E,S)-JUL | Annual frequency, anchored at the (end, beginning) of July         |
     +------------+--------------------------------------------------------------------+
-    | Y(E,S)-AUG | Annual frequency, anchored at the (end, beginning) of August     |
+    | Y(E,S)-AUG | Annual frequency, anchored at the (end, beginning) of August       |
     +------------+--------------------------------------------------------------------+
-    | Y(E,S)-SEP | Annual frequency, anchored at the (end, beginning) of September  |
+    | Y(E,S)-SEP | Annual frequency, anchored at the (end, beginning) of September    |
     +------------+--------------------------------------------------------------------+
-    | Y(E,S)-OCT | Annual frequency, anchored at the (end, beginning) of October    |
+    | Y(E,S)-OCT | Annual frequency, anchored at the (end, beginning) of October      |
     +------------+--------------------------------------------------------------------+
-    | Y(E,S)-NOV | Annual frequency, anchored at the (end, beginning) of November   |
+    | Y(E,S)-NOV | Annual frequency, anchored at the (end, beginning) of November     |
     +------------+--------------------------------------------------------------------+
-    | Y(E,S)-DEC | Annual frequency, anchored at the (end, beginning) of December   |
+    | Y(E,S)-DEC | Annual frequency, anchored at the (end, beginning) of December     |
     +------------+--------------------------------------------------------------------+
     | Q(E,S)-JAN | Quarter frequency, anchored at the (end, beginning) of January     |
     +------------+--------------------------------------------------------------------+
