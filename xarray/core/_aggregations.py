@@ -77,7 +77,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -149,7 +149,7 @@ class DatasetAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -221,7 +221,7 @@ class DatasetAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -299,7 +299,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -386,7 +386,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -477,7 +477,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -575,7 +575,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -682,7 +682,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -786,7 +786,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -890,7 +890,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -990,7 +990,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1081,7 +1081,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1174,7 +1174,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1273,7 +1273,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1339,7 +1339,7 @@ class DataArrayAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1405,7 +1405,7 @@ class DataArrayAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1477,7 +1477,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1556,7 +1556,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1639,7 +1639,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1729,7 +1729,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1826,7 +1826,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1920,7 +1920,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2014,7 +2014,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2104,7 +2104,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2187,7 +2187,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2276,7 +2276,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2401,7 +2401,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2499,7 +2499,7 @@ class DatasetGroupByAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2597,7 +2597,7 @@ class DatasetGroupByAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2701,7 +2701,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2817,7 +2817,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2935,7 +2935,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3060,7 +3060,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3197,7 +3197,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3331,7 +3331,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3465,7 +3465,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3595,7 +3595,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3698,7 +3698,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3799,7 +3799,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3928,7 +3928,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3942,7 +3942,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
 
-        >>> ds.resample(time="3ME").count()
+        >>> ds.resample(time="3M").count()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4026,7 +4026,7 @@ class DatasetResampleAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4040,7 +4040,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) bool True True True True True False
 
-        >>> ds.resample(time="3ME").all()
+        >>> ds.resample(time="3M").all()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4124,7 +4124,7 @@ class DatasetResampleAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4138,7 +4138,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) bool True True True True True False
 
-        >>> ds.resample(time="3ME").any()
+        >>> ds.resample(time="3M").any()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4228,7 +4228,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4242,7 +4242,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
 
-        >>> ds.resample(time="3ME").max()
+        >>> ds.resample(time="3M").max()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4252,7 +4252,7 @@ class DatasetResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> ds.resample(time="3ME").max(skipna=False)
+        >>> ds.resample(time="3M").max(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4344,7 +4344,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4358,7 +4358,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
 
-        >>> ds.resample(time="3ME").min()
+        >>> ds.resample(time="3M").min()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4368,7 +4368,7 @@ class DatasetResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> ds.resample(time="3ME").min(skipna=False)
+        >>> ds.resample(time="3M").min(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4462,7 +4462,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4476,7 +4476,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
 
-        >>> ds.resample(time="3ME").mean()
+        >>> ds.resample(time="3M").mean()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4486,7 +4486,7 @@ class DatasetResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> ds.resample(time="3ME").mean(skipna=False)
+        >>> ds.resample(time="3M").mean(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4587,7 +4587,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4601,7 +4601,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
 
-        >>> ds.resample(time="3ME").prod()
+        >>> ds.resample(time="3M").prod()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4611,7 +4611,7 @@ class DatasetResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> ds.resample(time="3ME").prod(skipna=False)
+        >>> ds.resample(time="3M").prod(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4621,7 +4621,7 @@ class DatasetResampleAggregations:
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
-        >>> ds.resample(time="3ME").prod(skipna=True, min_count=2)
+        >>> ds.resample(time="3M").prod(skipna=True, min_count=2)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4724,7 +4724,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4738,7 +4738,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
 
-        >>> ds.resample(time="3ME").sum()
+        >>> ds.resample(time="3M").sum()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4748,7 +4748,7 @@ class DatasetResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> ds.resample(time="3ME").sum(skipna=False)
+        >>> ds.resample(time="3M").sum(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4758,7 +4758,7 @@ class DatasetResampleAggregations:
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
-        >>> ds.resample(time="3ME").sum(skipna=True, min_count=2)
+        >>> ds.resample(time="3M").sum(skipna=True, min_count=2)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4858,7 +4858,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4872,7 +4872,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
 
-        >>> ds.resample(time="3ME").std()
+        >>> ds.resample(time="3M").std()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4882,7 +4882,7 @@ class DatasetResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> ds.resample(time="3ME").std(skipna=False)
+        >>> ds.resample(time="3M").std(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4892,7 +4892,7 @@ class DatasetResampleAggregations:
 
         Specify ``ddof=1`` for an unbiased estimate.
 
-        >>> ds.resample(time="3ME").std(skipna=True, ddof=1)
+        >>> ds.resample(time="3M").std(skipna=True, ddof=1)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -4992,7 +4992,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5006,7 +5006,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
 
-        >>> ds.resample(time="3ME").var()
+        >>> ds.resample(time="3M").var()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -5016,7 +5016,7 @@ class DatasetResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> ds.resample(time="3ME").var(skipna=False)
+        >>> ds.resample(time="3M").var(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -5026,7 +5026,7 @@ class DatasetResampleAggregations:
 
         Specify ``ddof=1`` for an unbiased estimate.
 
-        >>> ds.resample(time="3ME").var(skipna=True, ddof=1)
+        >>> ds.resample(time="3M").var(skipna=True, ddof=1)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -5122,7 +5122,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5136,7 +5136,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
 
-        >>> ds.resample(time="3ME").median()
+        >>> ds.resample(time="3M").median()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -5146,7 +5146,7 @@ class DatasetResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> ds.resample(time="3ME").median(skipna=False)
+        >>> ds.resample(time="3M").median(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
@@ -5225,7 +5225,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5239,7 +5239,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
 
-        >>> ds.resample(time="3ME").cumsum()
+        >>> ds.resample(time="3M").cumsum()
         <xarray.Dataset>
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
@@ -5248,7 +5248,7 @@ class DatasetResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> ds.resample(time="3ME").cumsum(skipna=False)
+        >>> ds.resample(time="3M").cumsum(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
@@ -5326,7 +5326,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5340,7 +5340,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 3.0 0.0 2.0 nan
 
-        >>> ds.resample(time="3ME").cumprod()
+        >>> ds.resample(time="3M").cumprod()
         <xarray.Dataset>
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
@@ -5349,7 +5349,7 @@ class DatasetResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> ds.resample(time="3ME").cumprod(skipna=False)
+        >>> ds.resample(time="3M").cumprod(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
@@ -5455,7 +5455,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5546,7 +5546,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5637,7 +5637,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5734,7 +5734,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5841,7 +5841,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5950,7 +5950,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6066,7 +6066,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6192,7 +6192,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6315,7 +6315,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6438,7 +6438,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6557,7 +6557,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6652,7 +6652,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6749,7 +6749,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6874,7 +6874,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6885,7 +6885,7 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
-        >>> da.resample(time="3ME").count()
+        >>> da.resample(time="3M").count()
         <xarray.DataArray (time: 3)>
         array([1, 3, 1])
         Coordinates:
@@ -6965,7 +6965,7 @@ class DataArrayResampleAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6976,7 +6976,7 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
-        >>> da.resample(time="3ME").all()
+        >>> da.resample(time="3M").all()
         <xarray.DataArray (time: 3)>
         array([ True,  True, False])
         Coordinates:
@@ -7056,7 +7056,7 @@ class DataArrayResampleAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7067,7 +7067,7 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
-        >>> da.resample(time="3ME").any()
+        >>> da.resample(time="3M").any()
         <xarray.DataArray (time: 3)>
         array([ True,  True,  True])
         Coordinates:
@@ -7153,7 +7153,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7164,7 +7164,7 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
-        >>> da.resample(time="3ME").max()
+        >>> da.resample(time="3M").max()
         <xarray.DataArray (time: 3)>
         array([1., 3., 2.])
         Coordinates:
@@ -7172,7 +7172,7 @@ class DataArrayResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> da.resample(time="3ME").max(skipna=False)
+        >>> da.resample(time="3M").max(skipna=False)
         <xarray.DataArray (time: 3)>
         array([ 1.,  3., nan])
         Coordinates:
@@ -7260,7 +7260,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7271,7 +7271,7 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
-        >>> da.resample(time="3ME").min()
+        >>> da.resample(time="3M").min()
         <xarray.DataArray (time: 3)>
         array([1., 0., 2.])
         Coordinates:
@@ -7279,7 +7279,7 @@ class DataArrayResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> da.resample(time="3ME").min(skipna=False)
+        >>> da.resample(time="3M").min(skipna=False)
         <xarray.DataArray (time: 3)>
         array([ 1.,  0., nan])
         Coordinates:
@@ -7369,7 +7369,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7380,7 +7380,7 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
-        >>> da.resample(time="3ME").mean()
+        >>> da.resample(time="3M").mean()
         <xarray.DataArray (time: 3)>
         array([1.        , 1.66666667, 2.        ])
         Coordinates:
@@ -7388,7 +7388,7 @@ class DataArrayResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> da.resample(time="3ME").mean(skipna=False)
+        >>> da.resample(time="3M").mean(skipna=False)
         <xarray.DataArray (time: 3)>
         array([1.        , 1.66666667,        nan])
         Coordinates:
@@ -7485,7 +7485,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7496,7 +7496,7 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
-        >>> da.resample(time="3ME").prod()
+        >>> da.resample(time="3M").prod()
         <xarray.DataArray (time: 3)>
         array([1., 0., 2.])
         Coordinates:
@@ -7504,7 +7504,7 @@ class DataArrayResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> da.resample(time="3ME").prod(skipna=False)
+        >>> da.resample(time="3M").prod(skipna=False)
         <xarray.DataArray (time: 3)>
         array([ 1.,  0., nan])
         Coordinates:
@@ -7512,7 +7512,7 @@ class DataArrayResampleAggregations:
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
-        >>> da.resample(time="3ME").prod(skipna=True, min_count=2)
+        >>> da.resample(time="3M").prod(skipna=True, min_count=2)
         <xarray.DataArray (time: 3)>
         array([nan,  0., nan])
         Coordinates:
@@ -7611,7 +7611,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7622,7 +7622,7 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
-        >>> da.resample(time="3ME").sum()
+        >>> da.resample(time="3M").sum()
         <xarray.DataArray (time: 3)>
         array([1., 5., 2.])
         Coordinates:
@@ -7630,7 +7630,7 @@ class DataArrayResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> da.resample(time="3ME").sum(skipna=False)
+        >>> da.resample(time="3M").sum(skipna=False)
         <xarray.DataArray (time: 3)>
         array([ 1.,  5., nan])
         Coordinates:
@@ -7638,7 +7638,7 @@ class DataArrayResampleAggregations:
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
-        >>> da.resample(time="3ME").sum(skipna=True, min_count=2)
+        >>> da.resample(time="3M").sum(skipna=True, min_count=2)
         <xarray.DataArray (time: 3)>
         array([nan,  5., nan])
         Coordinates:
@@ -7734,7 +7734,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7745,7 +7745,7 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
-        >>> da.resample(time="3ME").std()
+        >>> da.resample(time="3M").std()
         <xarray.DataArray (time: 3)>
         array([0.        , 1.24721913, 0.        ])
         Coordinates:
@@ -7753,7 +7753,7 @@ class DataArrayResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> da.resample(time="3ME").std(skipna=False)
+        >>> da.resample(time="3M").std(skipna=False)
         <xarray.DataArray (time: 3)>
         array([0.        , 1.24721913,        nan])
         Coordinates:
@@ -7761,7 +7761,7 @@ class DataArrayResampleAggregations:
 
         Specify ``ddof=1`` for an unbiased estimate.
 
-        >>> da.resample(time="3ME").std(skipna=True, ddof=1)
+        >>> da.resample(time="3M").std(skipna=True, ddof=1)
         <xarray.DataArray (time: 3)>
         array([       nan, 1.52752523,        nan])
         Coordinates:
@@ -7857,7 +7857,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7868,7 +7868,7 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
-        >>> da.resample(time="3ME").var()
+        >>> da.resample(time="3M").var()
         <xarray.DataArray (time: 3)>
         array([0.        , 1.55555556, 0.        ])
         Coordinates:
@@ -7876,7 +7876,7 @@ class DataArrayResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> da.resample(time="3ME").var(skipna=False)
+        >>> da.resample(time="3M").var(skipna=False)
         <xarray.DataArray (time: 3)>
         array([0.        , 1.55555556,        nan])
         Coordinates:
@@ -7884,7 +7884,7 @@ class DataArrayResampleAggregations:
 
         Specify ``ddof=1`` for an unbiased estimate.
 
-        >>> da.resample(time="3ME").var(skipna=True, ddof=1)
+        >>> da.resample(time="3M").var(skipna=True, ddof=1)
         <xarray.DataArray (time: 3)>
         array([       nan, 2.33333333,        nan])
         Coordinates:
@@ -7976,7 +7976,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7987,7 +7987,7 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
-        >>> da.resample(time="3ME").median()
+        >>> da.resample(time="3M").median()
         <xarray.DataArray (time: 3)>
         array([1., 2., 2.])
         Coordinates:
@@ -7995,7 +7995,7 @@ class DataArrayResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> da.resample(time="3ME").median(skipna=False)
+        >>> da.resample(time="3M").median(skipna=False)
         <xarray.DataArray (time: 3)>
         array([ 1.,  2., nan])
         Coordinates:
@@ -8071,7 +8071,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -8082,7 +8082,7 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
-        >>> da.resample(time="3ME").cumsum()
+        >>> da.resample(time="3M").cumsum()
         <xarray.DataArray (time: 6)>
         array([1., 2., 5., 5., 2., 2.])
         Coordinates:
@@ -8091,7 +8091,7 @@ class DataArrayResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> da.resample(time="3ME").cumsum(skipna=False)
+        >>> da.resample(time="3M").cumsum(skipna=False)
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  5.,  5.,  2., nan])
         Coordinates:
@@ -8168,7 +8168,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 0, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -8179,7 +8179,7 @@ class DataArrayResampleAggregations:
           * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
-        >>> da.resample(time="3ME").cumprod()
+        >>> da.resample(time="3M").cumprod()
         <xarray.DataArray (time: 6)>
         array([1., 2., 6., 0., 2., 2.])
         Coordinates:
@@ -8188,7 +8188,7 @@ class DataArrayResampleAggregations:
 
         Use ``skipna`` to control whether NaNs are ignored.
 
-        >>> da.resample(time="3ME").cumprod(skipna=False)
+        >>> da.resample(time="3M").cumprod(skipna=False)
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  6.,  0.,  2., nan])
         Coordinates:
