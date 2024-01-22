@@ -248,7 +248,7 @@ class TestDatetimeAccessor:
         assert_equal(actual.compute(), expected.compute())
 
     def test_seasons(self) -> None:
-        dates = pd.date_range(start="2000/01/01", freq="ME", periods=12)
+        dates = pd.date_range(start="2000/01/01", freq="M", periods=12)
         dates = dates.append(pd.Index([np.datetime64("NaT")]))
         dates = xr.DataArray(dates)
         seasons = xr.DataArray(
