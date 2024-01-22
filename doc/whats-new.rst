@@ -7272,11 +7272,11 @@ Breaking changes
 
   .. ipython:: python
       :okwarning:
-      
+
       In[92]: ds = xray.Dataset({"t": pd.date_range("2000-01-01", periods=12, freq="M")})
 
       In[93]: ds["t.season"]
-      Out[93]: 
+      Out[93]:
       <xarray.DataArray 'season' (t: 12)>
       array(['DJF', 'DJF', 'MAM', ..., 'SON', 'SON', 'DJF'], dtype='<U3')
       Coordinates:
