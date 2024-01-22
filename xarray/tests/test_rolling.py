@@ -23,7 +23,6 @@ pytestmark = [
 ]
 
 
-
 @pytest.mark.parametrize("func", ["mean", "sum"])
 @pytest.mark.parametrize("min_periods", [1, 10])
 def test_cumulative(d, func, min_periods) -> None:
