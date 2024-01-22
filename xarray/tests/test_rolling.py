@@ -23,18 +23,6 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(params=["numbagg", "bottleneck"])
-def compute_backend(request):
-    if request.param == "bottleneck":
-        options = dict(use_bottleneck=True, use_numbagg=False)
-    elif request.param == "numbagg":
-        options = dict(use_bottleneck=False, use_numbagg=True)
-    else:
-        raise ValueError
-
-    with xr.set_options(**options):
-        yield request.param
-
 
 @pytest.mark.parametrize("func", ["mean", "sum"])
 @pytest.mark.parametrize("min_periods", [1, 10])
