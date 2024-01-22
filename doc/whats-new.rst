@@ -7271,7 +7271,6 @@ Breaking changes
   such `'DJF'`:
 
   .. ipython:: python
-      :okwarning:
 
       In[92]: ds = xray.Dataset({"t": pd.date_range("2000-01-01", periods=12, freq="M")})
 
