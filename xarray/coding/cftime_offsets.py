@@ -1320,9 +1320,8 @@ def date_range_like(source, calendar, use_cftime=None):
             # corrupting anchored offsets that contain "Y" in the month
             # abbreviation, e.g. "Y-MAY" -> "A-MAY".
             freq = freq.replace("Y-", "A-")
-        elif isinstance(freq_as_offset, YearEnd) and "YE-" in freq:
-            # dito
-            freq = freq.replace("YE-", "A-")
+        elif isinstance(freq_as_offset, YearEnd) and "YE" in freq:
+            freq = freq.replace("YE", "A")
 
     use_cftime = _should_cftime_be_used(source, calendar, use_cftime)
 
