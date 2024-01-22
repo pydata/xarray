@@ -545,7 +545,7 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
 
     Examples
     --------
-    >>> dates = pd.timedelta_range(start="1 day", freq="6H", periods=20)
+    >>> dates = pd.timedelta_range(start="1 day", freq="6h", periods=20)
     >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
     <xarray.DataArray (time: 20)>
