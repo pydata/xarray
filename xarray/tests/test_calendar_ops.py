@@ -89,17 +89,17 @@ def test_convert_calendar_360_days(source, target, freq, align_on):
 
     if align_on == "date":
         np.testing.assert_array_equal(
-            conv.time.resample(time="M").last().dt.day,
+            conv.time.resample(time="ME").last().dt.day,
             [30, 29, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
         )
     elif target == "360_day":
         np.testing.assert_array_equal(
-            conv.time.resample(time="M").last().dt.day,
+            conv.time.resample(time="ME").last().dt.day,
             [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 29],
         )
     else:
         np.testing.assert_array_equal(
-            conv.time.resample(time="M").last().dt.day,
+            conv.time.resample(time="ME").last().dt.day,
             [30, 29, 30, 30, 31, 30, 30, 31, 30, 31, 29, 31],
         )
     if source == "360_day" and align_on == "year":

@@ -1268,7 +1268,7 @@ def _new_to_legacy_freq(freq):
 
     # TODO: remove once requiring pandas >= 2.2
 
-    if Version(pd.__version__) < Version("2.2"):
+    if freq and Version(pd.__version__) < Version("2.2"):
         freq_as_offset = to_offset(freq)
         if isinstance(freq_as_offset, MonthEnd) and "ME" in freq:
             freq = freq.replace("ME", "M")
@@ -1276,11 +1276,19 @@ def _new_to_legacy_freq(freq):
             freq = freq.replace("QE", "Q")
         elif isinstance(freq_as_offset, YearBegin) and "YS" in freq:
             freq = freq.replace("YS", "AS")
-        elif isinstance(freq_as_offset, YearEnd) and "Y-" in freq:
-            # Check for and replace "Y-" instead of just "Y" to prevent
-            # corrupting anchored offsets that contain "Y" in the month
-            # abbreviation, e.g. "Y-MAY" -> "A-MAY".
-            freq = freq.replace("Y-", "A-")
+        elif isinstance(freq_as_offset, YearEnd):
+            # testing for "Y" is required as this was valid in xarray 2023.11 - 2024.01
+            if "Y-" in freq:
+                # Check for and replace "Y-" instead of just "Y" to prevent
+                # corrupting anchored offsets that contain "Y" in the month
+                # abbreviation, e.g. "Y-MAY" -> "A-MAY".
+                freq = freq.replace("Y-", "A-")
+            elif "YE-" in freq:
+                freq = freq.replace("YE-", "A-")
+            elif "A-" not in freq and freq.endswith("Y"):
+                freq = freq.replace("Y", "A")
+            elif freq.endswith("YE"):
+                freq = freq.replace("YE", "A")
 
     return freq
 
@@ -1290,7 +1298,7 @@ def _legacy_to_new_freq(freq):
 
     # TODO: remove once requiring pandas >= 2.2
 
-    if Version(pd.__version__) < Version("2.2"):
+    if freq and Version(pd.__version__) < Version("2.2"):
         freq_as_offset = to_offset(freq, warn=False)
         if isinstance(freq_as_offset, MonthEnd) and "ME" not in freq:
             freq = freq.replace("M", "ME")
@@ -1298,14 +1306,20 @@ def _legacy_to_new_freq(freq):
             freq = freq.replace("Q", "QE")
         elif isinstance(freq_as_offset, YearBegin) and "YS" not in freq:
             freq = freq.replace("AS", "YS")
-        elif isinstance(freq_as_offset, YearEnd) and "Y-" not in freq:
-            # Check for and replace "Y-" instead of just "Y" to prevent
-            # corrupting anchored offsets that contain "Y" in the month
-            # abbreviation, e.g. "Y-MAY" -> "A-MAY".
-            freq = freq.replace("A-", "Y-")
-        elif isinstance(freq_as_offset, YearEnd) and "YE" in freq:
-            freq = freq.replace("YE", "A")
-
+        elif isinstance(freq_as_offset, YearEnd):
+            if "A-" in freq:
+                # Check for and replace "A-" instead of just "A" to prevent
+                # corrupting anchored offsets that contain "Y" in the month
+                # abbreviation, e.g. "A-MAY" -> "YE-MAY".
+                freq = freq.replace("A-", "YE-")
+            elif "Y-" in freq:
+                freq = freq.replace("Y-", "YE-")
+            elif freq.endswith("A"):
+                # the "A-MAY" case is already handled above
+                freq = freq.replace("A", "YE")
+            elif "YE" not in freq and freq.endswith("Y"):
+                # the "Y-MAY" case is already handled above
+                freq = freq.replace("Y", "YE")
     return freq
 
 

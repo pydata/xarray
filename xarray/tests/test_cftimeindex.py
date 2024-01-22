@@ -795,7 +795,7 @@ def test_cftimeindex_shift_float_us() -> None:
 
 
 @requires_cftime
-@pytest.mark.parametrize("freq", ["YS", "Y", "QS", "QE", "MS", "ME"])
+@pytest.mark.parametrize("freq", ["YS", "YE", "QS", "QE", "MS", "ME"])
 def test_cftimeindex_shift_float_fails_for_non_tick_freqs(freq) -> None:
     a = xr.cftime_range("2000", periods=3, freq="D")
     with pytest.raises(TypeError, match="unsupported operand type"):
@@ -1353,7 +1353,7 @@ def test_infer_freq_invalid_inputs():
     "freq",
     [
         "300YS-JAN",
-        "Y-DEC",
+        "YE-DEC",
         "YS-JUL",
         "2YS-FEB",
         "QE-NOV",
