@@ -14,12 +14,57 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2024.01.1:
 
-
-.. _whats-new.2023.12.1:
-
-v2023.12.1 (unreleased)
+v2024.01.1 (unreleased)
 -----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Following pandas, :py:meth:`infer_freq` will return ``"YE"``, instead of ``"Y"`` (formerly ``"A"``).
+  This is to be consistent with the deprecation of the latter frequency string in pandas 2.2.
+  This is a follow up to :pull:`8415` (:issue:`8612`, :pull:`8629`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+- Following pandas, the frequency string ``"Y"`` (formerly ``"A"``) is deprecated in
+  favor of ``"YE"``. These strings are used, for example, in :py:func:`date_range`,
+  :py:func:`cftime_range`, :py:meth:`DataArray.resample`, and :py:meth:`Dataset.resample`
+  among others (:issue:`8612`, :pull:`8629`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+.. _whats-new.2024.01.0:
+
+v2024.01.0 (17 Jan, 2024)
+-------------------------
+
+This release brings support for weights in correlation and covariance functions,
+a new `DataArray.cumulative` aggregation, improvements to `xr.map_blocks`,
+an update to our minimum dependencies, and various bugfixes.
+
+Thanks to our 17 contributors to this release:
+
+Abel Aoun, Deepak Cherian, Illviljan, Johan Mathe, Justus Magin, Kai Mühlbauer,
+Llorenç Lledó, Mark Harfouche, Markel, Mathias Hauser, Maximilian Roos, Michael Niklas,
+Niclas Rieger, Sébastien Celles, Tom Nicholas, Trinh Quoc Anh, and crusaderky.
 
 New Features
 ~~~~~~~~~~~~
@@ -28,8 +73,18 @@ New Features
   By `Llorenç Lledó <https://github.com/lluritu>`_.
 - Accept the compression arguments new in netCDF 1.6.0 in the netCDF4 backend.
   See `netCDF4 documentation <https://unidata.github.io/netcdf4-python/#efficient-compression-of-netcdf-variables>`_ for details.
-  By `Markel García-Díez <https://github.com/markelg>`_. (:issue:`6929`, :pull:`7551`) Note that some
-  new compression filters needs plugins to be installed which may not be available in all netCDF distributions.
+  Note that some new compression filters needs plugins to be installed which may not be available in all netCDF distributions.
+  By `Markel García-Díez <https://github.com/markelg>`_. (:issue:`6929`, :pull:`7551`)
+- Add :py:meth:`DataArray.cumulative` & :py:meth:`Dataset.cumulative` to compute
+  cumulative aggregations, such as ``sum``, along a dimension — for example
+  ``da.cumulative('time').sum()``. This is similar to pandas' ``.expanding``,
+  and mostly equivalent to ``.cumsum`` methods, or to
+  :py:meth:`DataArray.rolling` with a window length equal to the dimension size.
+  By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8512`)
+- Decode/Encode netCDF4 enums and store the enum definition in dataarrays' dtype metadata.
+  If multiple variables share the same enum in netCDF4, each dataarray will have its own
+  enum definition in their respective dtype metadata.
+  By `Abel Aoun <https://github.com/bzah>`_. (:issue:`8144`, :pull:`8147`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -54,9 +109,9 @@ Breaking changes
    zarr                      2.12     2.13
   ===================== =========  ========
 
-
 Deprecations
 ~~~~~~~~~~~~
+
 - The `squeeze` kwarg to GroupBy is now deprecated. (:issue:`2157`, :pull:`8507`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
@@ -69,20 +124,22 @@ Bug fixes
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Vendor `SerializableLock` from dask and use as default lock for netcdf4 backends (:issue:`8442`, :pull:`8571`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-
-
-Documentation
-~~~~~~~~~~~~~
-
+- Add tests and fixes for empty :py:class:`CFTimeIndex`, including broken html repr (:issue:`7298`, :pull:`8600`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
 - The implementation of :py:func:`map_blocks` has changed to minimize graph size and duplication of data.
   This should be a strict improvement even though the graphs are not always embarassingly parallel any more.
   Please open an issue if you spot a regression. (:pull:`8412`, :issue:`8409`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Remove null values before plotting. (:pull:`8535`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Redirect cumulative reduction functions internally through the :py:class:`ChunkManagerEntryPoint`,
+  potentially allowing :py:meth:`~xarray.DataArray.ffill` and :py:meth:`~xarray.DataArray.bfill` to
+  use non-dask chunked array types.
+  (:pull:`8019`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 .. _whats-new.2023.12.0:
 
@@ -110,13 +167,6 @@ New Features
   example a 1D array — it's about the same speed as bottleneck, and 2-5x faster
   than pandas' default functions. (:pull:`8493`). numbagg is an optional
   dependency, so requires installing separately.
-- Add :py:meth:`DataArray.cumulative` & :py:meth:`Dataset.cumulative` to compute
-  cumulative aggregations, such as ``sum``, along a dimension — for example
-  ``da.cumulative('time').sum()``. This is similar to pandas' ``.expanding``,
-  and mostly equivalent to ``.cumsum`` methods, or to
-  :py:meth:`DataArray.rolling` with a window length equal to the dimension size.
-  (:pull:`8512`).
-  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Use a concise format when plotting datetime arrays. (:pull:`8449`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Avoid overwriting unchanged existing coordinate variables when appending with :py:meth:`Dataset.to_zarr` by setting ``mode='a-'``.
@@ -623,10 +673,6 @@ Internal Changes
 
 - :py:func:`as_variable` now consistently includes the variable name in any exceptions
   raised. (:pull:`7995`). By `Peter Hill <https://github.com/ZedThree>`_
-- Redirect cumulative reduction functions internally through the :py:class:`ChunkManagerEntryPoint`,
-  potentially allowing :py:meth:`~xarray.DataArray.ffill` and :py:meth:`~xarray.DataArray.bfill` to
-  use non-dask chunked array types.
-  (:pull:`8019`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - :py:func:`encode_dataset_coordinates` now sorts coordinates automatically assigned to
   `coordinates` attributes during serialization (:issue:`8026`, :pull:`8034`).
   `By Ian Carroll <https://github.com/itcarroll>`_.
@@ -7225,6 +7271,7 @@ Breaking changes
   such `'DJF'`:
 
   .. ipython:: python
+      :okwarning:
 
       ds = xray.Dataset({"t": pd.date_range("2000-01-01", periods=12, freq="M")})
       ds["t.season"]

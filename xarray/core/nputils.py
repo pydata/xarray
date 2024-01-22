@@ -5,17 +5,26 @@ from typing import Callable
 
 import numpy as np
 import pandas as pd
-from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
 from packaging.version import Version
 
 from xarray.core import pycompat
 from xarray.core.utils import module_available
 
 # remove once numpy 2.0 is the oldest supported version
+if module_available("numpy", minversion="2.0.0.dev0"):
+    from numpy.lib.array_utils import (  # type: ignore[import-not-found,unused-ignore]
+        normalize_axis_index,
+    )
+else:
+    from numpy.core.multiarray import (  # type: ignore[attr-defined,no-redef,unused-ignore]
+        normalize_axis_index,
+    )
+
+# remove once numpy 2.0 is the oldest supported version
 try:
     from numpy.exceptions import RankWarning  # type: ignore[attr-defined,unused-ignore]
 except ImportError:
-    from numpy import RankWarning
+    from numpy import RankWarning  # type: ignore[attr-defined,no-redef,unused-ignore]
 
 from xarray.core.options import OPTIONS
 from xarray.core.pycompat import is_duck_array

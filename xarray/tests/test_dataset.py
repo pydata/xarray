@@ -698,7 +698,11 @@ class TestDataset:
         # TODO change after deprecation cycle in GH #8500 is complete
         assert isinstance(ds.dims.mapping, dict)
         assert type(ds.dims.mapping) is dict  # noqa: E721
-        assert ds.dims == ds.sizes
+        with pytest.warns(
+            FutureWarning,
+            match=" To access a mapping from dimension names to lengths, please use `Dataset.sizes`",
+        ):
+            assert ds.dims == ds.sizes
         assert ds.sizes == {"dim1": 8, "dim2": 9, "dim3": 10, "time": 20}
 
         # dtypes
