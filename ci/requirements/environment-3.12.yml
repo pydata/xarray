@@ -17,22 +17,21 @@ dependencies:
   - hdf5
   - hypothesis
   - iris
-  - lxml # Optional dep of pydap
+  - lxml  # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
-  - numba
-  - numbagg
+  # - numba
+  # - numbagg
   - numexpr
   - numpy
   - opt_einsum
   - packaging
   - pandas
-  - pint>=0.22
+  # - pint>=0.22
   - pip
   - pooch
   - pre-commit
-  - pyarrow # pandas makes a deprecation warning without this, breaking doctests
   - pydap
   - pytest
   - pytest-cov
@@ -42,7 +41,7 @@ dependencies:
   - rasterio
   - scipy
   - seaborn
-  - sparse
+  # - sparse
   - toolz
   - typing_extensions
   - zarr

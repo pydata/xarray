@@ -72,6 +72,7 @@ from xarray.tests import (
     requires_h5netcdf_ros3,
     requires_iris,
     requires_netCDF4,
+    requires_netCDF4_1_6_2_or_above,
     requires_pydap,
     requires_pynio,
     requires_scipy,
@@ -431,8 +432,6 @@ class DatasetIOBase:
             assert_identical(expected, computed)
 
     def test_pickle(self) -> None:
-        if not has_dask:
-            pytest.xfail("pickling requires dask for SerializableLock")
         expected = Dataset({"foo": ("x", [42])})
         with self.roundtrip(expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
             with roundtripped:
@@ -443,8 +442,6 @@ class DatasetIOBase:
 
     @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
     def test_pickle_dataarray(self) -> None:
-        if not has_dask:
-            pytest.xfail("pickling requires dask for SerializableLock")
         expected = Dataset({"foo": ("x", [42])})
         with self.roundtrip(expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
             with roundtripped:
@@ -1486,7 +1483,7 @@ class NetCDF4Base(NetCDFBase):
                         assert ds.variables["time"].getncattr("units") == units
                         assert_array_equal(ds.variables["time"], np.arange(10) + 4)
 
-    def test_compression_encoding(self) -> None:
+    def test_compression_encoding_legacy(self) -> None:
         data = create_test_data()
         data["var2"].encoding.update(
             {
@@ -1707,6 +1704,126 @@ class NetCDF4Base(NetCDFBase):
                 with self.roundtrip(ds):
                     pass
 
+    @requires_netCDF4
+    def test_encoding_enum__no_fill_value(self):
+        with create_tmp_file() as tmp_file:
+            cloud_type_dict = {"clear": 0, "cloudy": 1}
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("time", size=2)
+                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                v = nc.createVariable(
+                    "clouds",
+                    cloud_type,
+                    "time",
+                    fill_value=None,
+                )
+                v[:] = 1
+            with open_dataset(tmp_file) as original:
+                save_kwargs = {}
+                if self.engine == "h5netcdf":
+                    save_kwargs["invalid_netcdf"] = True
+                with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
+                    assert_equal(original, actual)
+                    assert (
+                        actual.clouds.encoding["dtype"].metadata["enum"]
+                        == cloud_type_dict
+                    )
+                    if self.engine != "h5netcdf":
+                        # not implemented in h5netcdf yet
+                        assert (
+                            actual.clouds.encoding["dtype"].metadata["enum_name"]
+                            == "cloud_type"
+                        )
+
+    @requires_netCDF4
+    def test_encoding_enum__multiple_variable_with_enum(self):
+        with create_tmp_file() as tmp_file:
+            cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("time", size=2)
+                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                nc.createVariable(
+                    "clouds",
+                    cloud_type,
+                    "time",
+                    fill_value=255,
+                )
+                nc.createVariable(
+                    "tifa",
+                    cloud_type,
+                    "time",
+                    fill_value=255,
+                )
+            with open_dataset(tmp_file) as original:
+                save_kwargs = {}
+                if self.engine == "h5netcdf":
+                    save_kwargs["invalid_netcdf"] = True
+                with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
+                    assert_equal(original, actual)
+                    assert (
+                        actual.clouds.encoding["dtype"] == actual.tifa.encoding["dtype"]
+                    )
+                    assert (
+                        actual.clouds.encoding["dtype"].metadata
+                        == actual.tifa.encoding["dtype"].metadata
+                    )
+                    assert (
+                        actual.clouds.encoding["dtype"].metadata["enum"]
+                        == cloud_type_dict
+                    )
+                    if self.engine != "h5netcdf":
+                        # not implemented in h5netcdf yet
+                        assert (
+                            actual.clouds.encoding["dtype"].metadata["enum_name"]
+                            == "cloud_type"
+                        )
+
+    @requires_netCDF4
+    def test_encoding_enum__error_multiple_variable_with_changing_enum(self):
+        """
+        Given 2 variables, if they share the same enum type,
+        the 2 enum definition should be identical.
+        """
+        with create_tmp_file() as tmp_file:
+            cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("time", size=2)
+                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                nc.createVariable(
+                    "clouds",
+                    cloud_type,
+                    "time",
+                    fill_value=255,
+                )
+                nc.createVariable(
+                    "tifa",
+                    cloud_type,
+                    "time",
+                    fill_value=255,
+                )
+            with open_dataset(tmp_file) as original:
+                assert (
+                    original.clouds.encoding["dtype"].metadata
+                    == original.tifa.encoding["dtype"].metadata
+                )
+                modified_enum = original.clouds.encoding["dtype"].metadata["enum"]
+                modified_enum.update({"neblig": 2})
+                original.clouds.encoding["dtype"] = np.dtype(
+                    "u1",
+                    metadata={"enum": modified_enum, "enum_name": "cloud_type"},
+                )
+                if self.engine != "h5netcdf":
+                    # not implemented yet in h5netcdf
+                    with pytest.raises(
+                        ValueError,
+                        match=(
+                            "Cannot save variable .*"
+                            " because an enum `cloud_type` already exists in the Dataset .*"
+                        ),
+                    ):
+                        with self.roundtrip(original):
+                            pass
+
 
 @requires_netCDF4
 class TestNetCDF4Data(NetCDF4Base):
@@ -1766,6 +1883,74 @@ class TestNetCDF4Data(NetCDF4Base):
                 assert_array_equal(list_of_strings, totest.attrs["foo"])
                 assert_array_equal(one_element_list_of_strings, totest.attrs["bar"])
                 assert one_string == totest.attrs["baz"]
+
+    @pytest.mark.parametrize(
+        "compression",
+        [
+            None,
+            "zlib",
+            "szip",
+            "zstd",
+            "blosc_lz",
+            "blosc_lz4",
+            "blosc_lz4hc",
+            "blosc_zlib",
+            "blosc_zstd",
+        ],
+    )
+    @requires_netCDF4_1_6_2_or_above
+    @pytest.mark.xfail(ON_WINDOWS, reason="new compression not yet implemented")
+    def test_compression_encoding(self, compression: str | None) -> None:
+        data = create_test_data(dim_sizes=(20, 80, 10))
+        encoding_params: dict[str, Any] = dict(compression=compression, blosc_shuffle=1)
+        data["var2"].encoding.update(encoding_params)
+        data["var2"].encoding.update(
+            {
+                "chunksizes": (20, 40),
+                "original_shape": data.var2.shape,
+                "blosc_shuffle": 1,
+                "fletcher32": False,
+            }
+        )
+        with self.roundtrip(data) as actual:
+            expected_encoding = data["var2"].encoding.copy()
+            # compression does not appear in the retrieved encoding, that differs
+            # from the input encoding. shuffle also chantges. Here we modify the
+            # expected encoding to account for this
+            compression = expected_encoding.pop("compression")
+            blosc_shuffle = expected_encoding.pop("blosc_shuffle")
+            if compression is not None:
+                if "blosc" in compression and blosc_shuffle:
+                    expected_encoding["blosc"] = {
+                        "compressor": compression,
+                        "shuffle": blosc_shuffle,
+                    }
+                    expected_encoding["shuffle"] = False
+                elif compression == "szip":
+                    expected_encoding["szip"] = {
+                        "coding": "nn",
+                        "pixels_per_block": 8,
+                    }
+                    expected_encoding["shuffle"] = False
+                else:
+                    # This will set a key like zlib=true which is what appears in
+                    # the encoding when we read it.
+                    expected_encoding[compression] = True
+                    if compression == "zstd":
+                        expected_encoding["shuffle"] = False
+            else:
+                expected_encoding["shuffle"] = False
+
+            actual_encoding = actual["var2"].encoding
+            assert expected_encoding.items() <= actual_encoding.items()
+        if (
+            encoding_params["compression"] is not None
+            and "blosc" not in encoding_params["compression"]
+        ):
+            # regression test for #156
+            expected = data.isel(dim1=0)
+            with self.roundtrip(expected) as actual:
+                assert_equal(expected, actual)
 
     @pytest.mark.skip(reason="https://github.com/Unidata/netcdf4-python/issues/1195")
     def test_refresh_from_disk(self) -> None:
@@ -2163,10 +2348,10 @@ class ZarrBase(CFEncodedBase):
             pass
 
     def test_drop_encoding(self):
-        ds = open_example_dataset("example_1.nc")
-        encodings = {v: {**ds[v].encoding} for v in ds.data_vars}
-        with self.create_zarr_target() as store:
-            ds.to_zarr(store, encoding=encodings)
+        with open_example_dataset("example_1.nc") as ds:
+            encodings = {v: {**ds[v].encoding} for v in ds.data_vars}
+            with self.create_zarr_target() as store:
+                ds.to_zarr(store, encoding=encodings)
 
     def test_hidden_zarr_keys(self) -> None:
         expected = create_test_data()
@@ -2760,6 +2945,10 @@ class TestZarrDictStore(ZarrBase):
 
 
 @requires_zarr
+@pytest.mark.skipif(
+    ON_WINDOWS,
+    reason="Very flaky on Windows CI. Can re-enable assuming it starts consistently passing.",
+)
 class TestZarrDirectoryStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
@@ -4348,13 +4537,19 @@ class TestDask(DatasetIOBase):
             def num_graph_nodes(obj):
                 return len(obj.__dask_graph__())
 
-            not_inlined_ds = open_dataset(tmp, inline_array=False, chunks=chunks)
-            inlined_ds = open_dataset(tmp, inline_array=True, chunks=chunks)
-            assert num_graph_nodes(inlined_ds) < num_graph_nodes(not_inlined_ds)
+            with open_dataset(
+                tmp, inline_array=False, chunks=chunks
+            ) as not_inlined_ds, open_dataset(
+                tmp, inline_array=True, chunks=chunks
+            ) as inlined_ds:
+                assert num_graph_nodes(inlined_ds) < num_graph_nodes(not_inlined_ds)
 
-            not_inlined_da = open_dataarray(tmp, inline_array=False, chunks=chunks)
-            inlined_da = open_dataarray(tmp, inline_array=True, chunks=chunks)
-            assert num_graph_nodes(inlined_da) < num_graph_nodes(not_inlined_da)
+            with open_dataarray(
+                tmp, inline_array=False, chunks=chunks
+            ) as not_inlined_da, open_dataarray(
+                tmp, inline_array=True, chunks=chunks
+            ) as inlined_da:
+                assert num_graph_nodes(inlined_da) < num_graph_nodes(not_inlined_da)
 
 
 @requires_scipy_or_netCDF4
@@ -4518,7 +4713,7 @@ class TestEncodingInvalid:
         assert {} == encoding
 
     @requires_netCDF4
-    def test_extract_nc4_variable_encoding_netcdf4(self, monkeypatch):
+    def test_extract_nc4_variable_encoding_netcdf4(self):
         # New netCDF4 1.6.0 compression argument.
         var = xr.Variable(("x",), [1, 2, 3], {}, {"compression": "szlib"})
         _extract_nc4_variable_encoding(var, backend="netCDF4", raise_on_invalid=True)
@@ -5266,8 +5461,8 @@ class TestNCZarr:
 @requires_netCDF4
 @requires_dask
 def test_pickle_open_mfdataset_dataset():
-    ds = open_example_mfdataset(["bears.nc"])
-    assert_identical(ds, pickle.loads(pickle.dumps(ds)))
+    with open_example_mfdataset(["bears.nc"]) as ds:
+        assert_identical(ds, pickle.loads(pickle.dumps(ds)))
 
 
 @requires_zarr

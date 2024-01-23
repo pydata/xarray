@@ -129,6 +129,8 @@ from xarray.plot.accessor import DatasetPlotAccessor
 from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 if TYPE_CHECKING:
+    from dask.dataframe import DataFrame as DaskDataFrame
+    from dask.delayed import Delayed
     from numpy.typing import ArrayLike
 
     from xarray.backends import AbstractDataStore, ZarrStore
@@ -162,15 +164,6 @@ if TYPE_CHECKING:
         T_Xarray,
     )
     from xarray.core.weighted import DatasetWeighted
-
-    try:
-        from dask.delayed import Delayed
-    except ImportError:
-        Delayed = None  # type: ignore
-    try:
-        from dask.dataframe import DataFrame as DaskDataFrame
-    except ImportError:
-        DaskDataFrame = None  # type: ignore
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -2658,7 +2651,7 @@ class Dataset(
             already as dask array.
         chunked_array_type: str, optional
             Which chunked array type to coerce this datasets' arrays to.
-            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
             Experimental API that should not be relied upon.
         from_array_kwargs: dict, optional
             Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
@@ -7158,9 +7151,9 @@ class Dataset(
         if len(self.dims) == 1:
             return self.to_dataframe()
         raise ValueError(
-            "cannot convert Datasets with %s dimensions into "
+            f"cannot convert Datasets with {len(self.dims)} dimensions into "
             "pandas objects without changing the number of dimensions. "
-            "Please use Dataset.to_dataframe() instead." % len(self.dims)
+            "Please use Dataset.to_dataframe() instead."
         )
 
     def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
@@ -7563,9 +7556,7 @@ class Dataset(
                 for k, v in variables
             }
         except KeyError as e:
-            raise ValueError(
-                "cannot convert dict without the key " f"'{str(e.args[0])}'"
-            )
+            raise ValueError(f"cannot convert dict without the key '{str(e.args[0])}'")
         obj = cls(variable_dict)
 
         # what if coords aren't dims?
@@ -10148,7 +10139,7 @@ class Dataset(
     def groupby(
         self,
         group: Hashable | DataArray | IndexVariable,
-        squeeze: bool = True,
+        squeeze: bool | None = None,
         restore_coord_dims: bool = False,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
@@ -10216,7 +10207,7 @@ class Dataset(
         labels: ArrayLike | None = None,
         precision: int = 3,
         include_lowest: bool = False,
-        squeeze: bool = True,
+        squeeze: bool | None = None,
         restore_coord_dims: bool = False,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
@@ -10368,13 +10359,59 @@ class Dataset(
 
         See Also
         --------
-        core.rolling.DatasetRolling
+        Dataset.cumulative
         DataArray.rolling
+        core.rolling.DatasetRolling
         """
         from xarray.core.rolling import DatasetRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DatasetRolling(self, dim, min_periods=min_periods, center=center)
+
+    def cumulative(
+        self,
+        dim: str | Iterable[Hashable],
+        min_periods: int = 1,
+    ) -> DatasetRolling:
+        """
+        Accumulating object for Datasets
+
+        Parameters
+        ----------
+        dims : iterable of hashable
+            The name(s) of the dimensions to create the cumulative window along
+        min_periods : int, default: 1
+            Minimum number of observations in window required to have a value
+            (otherwise result is NA). The default is 1 (note this is different
+            from ``Rolling``, whose default is the size of the window).
+
+        Returns
+        -------
+        core.rolling.DatasetRolling
+
+        See Also
+        --------
+        Dataset.rolling
+        DataArray.cumulative
+        core.rolling.DatasetRolling
+        """
+        from xarray.core.rolling import DatasetRolling
+
+        if isinstance(dim, str):
+            if dim not in self.dims:
+                raise ValueError(
+                    f"Dimension {dim} not found in data dimensions: {self.dims}"
+                )
+            dim = {dim: self.sizes[dim]}
+        else:
+            missing_dims = set(dim) - set(self.dims)
+            if missing_dims:
+                raise ValueError(
+                    f"Dimensions {missing_dims} not found in data dimensions: {self.dims}"
+                )
+            dim = {d: self.sizes[d] for d in dim}
+
+        return DatasetRolling(self, dim, min_periods=min_periods, center=False)
 
     def coarsen(
         self,

@@ -76,6 +76,9 @@ jobs:
           # Raise an error if there are warnings in the doctests, with `-Werror`.
           # This is a trial; if it presents an problem, feel free to remove.
           # See https://github.com/pydata/xarray/issues/7164 for more info.
+          #
+          # If dependencies emit warnings we can't do anything about, add ignores to
+          # `xarray/tests/__init__.py`.
           python -m pytest --doctest-modules xarray --ignore xarray/tests -Werror
 
   mypy:
@@ -117,7 +120,7 @@ jobs:
           python xarray/util/print_versions.py
       - name: Install mypy
         run: |
-          python -m pip install "mypy<1.8" --force-reinstall
+          python -m pip install "mypy<1.9" --force-reinstall
 
       - name: Run mypy
         run: |
@@ -171,7 +174,7 @@ jobs:
           python xarray/util/print_versions.py
       - name: Install mypy
         run: |
-          python -m pip install "mypy<1.8" --force-reinstall
+          python -m pip install "mypy<1.9" --force-reinstall
 
       - name: Run mypy
         run: |
@@ -317,11 +320,6 @@ jobs:
       run:
         shell: bash -l {0}
 
-    strategy:
-      matrix:
-        environment-file: ["bare-minimum", "min-all-deps"]
-      fail-fast: false
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -337,6 +335,10 @@ jobs:
             conda
             python-dateutil
 
-      - name: minimum versions policy
+      - name: All-deps minimum versions policy
         run: |
-          python ci/min_deps_check.py ci/requirements/${{ matrix.environment-file }}.yml
+          python ci/min_deps_check.py ci/requirements/min-all-deps.yml
+
+      - name: Bare minimum versions policy
+        run: |
+          python ci/min_deps_check.py ci/requirements/bare-minimum.yml

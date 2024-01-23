@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 import pytest
 
+import xarray as xr
 from xarray import DataArray, Dataset
 from xarray.tests import create_test_data, requires_dask
 
@@ -9,6 +12,19 @@ from xarray.tests import create_test_data, requires_dask
 @pytest.fixture(params=["numpy", pytest.param("dask", marks=requires_dask)])
 def backend(request):
     return request.param
+
+
+@pytest.fixture(params=["numbagg", "bottleneck"])
+def compute_backend(request):
+    if request.param == "bottleneck":
+        options = dict(use_bottleneck=True, use_numbagg=False)
+    elif request.param == "numbagg":
+        options = dict(use_bottleneck=False, use_numbagg=True)
+    else:
+        raise ValueError
+
+    with xr.set_options(**options):
+        yield request.param
 
 
 @pytest.fixture(params=[1])
@@ -75,5 +91,46 @@ def da(request, backend):
         return da.chunk()
     elif backend == "numpy":
         return da
+    else:
+        raise ValueError
+
+
+@pytest.fixture(params=[Dataset, DataArray])
+def type(request):
+    return request.param
+
+
+@pytest.fixture(params=[1])
+def d(request, backend, type) -> DataArray | Dataset:
+    """
+    For tests which can test either a DataArray or a Dataset.
+    """
+    result: DataArray | Dataset
+    if request.param == 1:
+        ds = Dataset(
+            dict(
+                a=(["x", "z"], np.arange(24).reshape(2, 12)),
+                b=(["y", "z"], np.arange(100, 136).reshape(3, 12).astype(np.float64)),
+            ),
+            dict(
+                x=("x", np.linspace(0, 1.0, 2)),
+                y=range(3),
+                z=("z", pd.date_range("2000-01-01", periods=12)),
+                w=("x", ["a", "b"]),
+            ),
+        )
+        if type == DataArray:
+            result = ds["a"].assign_coords(w=ds.coords["w"])
+        elif type == Dataset:
+            result = ds
+        else:
+            raise ValueError
+    else:
+        raise ValueError
+
+    if backend == "dask":
+        return result.chunk()
+    elif backend == "numpy":
+        return result
     else:
         raise ValueError

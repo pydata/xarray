@@ -5,6 +5,17 @@ import warnings
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from os import PathLike
 from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, NoReturn, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    NoReturn,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -53,6 +64,7 @@ from xarray.core.utils import (
     ReprObject,
     _default,
     either_dict_or_kwargs,
+    hashable,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -66,22 +78,10 @@ from xarray.plot.utils import _get_units_from_attrs
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
-    from typing import TypeVar, Union
-
+    from dask.dataframe import DataFrame as DaskDataFrame
+    from dask.delayed import Delayed
+    from iris.cube import Cube as iris_Cube
     from numpy.typing import ArrayLike
-
-    try:
-        from dask.dataframe import DataFrame as DaskDataFrame
-    except ImportError:
-        DaskDataFrame = None  # type: ignore
-    try:
-        from dask.delayed import Delayed
-    except ImportError:
-        Delayed = None  # type: ignore
-    try:
-        from iris.cube import Cube as iris_Cube
-    except ImportError:
-        iris_Cube = None
 
     from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
@@ -133,7 +133,9 @@ def _check_coords_dims(shape, coords, dim):
 
 
 def _infer_coords_and_dims(
-    shape, coords, dims
+    shape: tuple[int, ...],
+    coords: Sequence[Sequence | pd.Index | DataArray] | Mapping | None,
+    dims: str | Iterable[Hashable] | None,
 ) -> tuple[Mapping[Hashable, Any], tuple[Hashable, ...]]:
     """All the logic for creating a new DataArray"""
 
@@ -150,8 +152,7 @@ def _infer_coords_and_dims(
 
     if isinstance(dims, str):
         dims = (dims,)
-
-    if dims is None:
+    elif dims is None:
         dims = [f"dim_{n}" for n in range(len(shape))]
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
@@ -161,16 +162,15 @@ def _infer_coords_and_dims(
                 for n, (dim, coord) in enumerate(zip(dims, coords)):
                     coord = as_variable(coord, name=dims[n]).to_index_variable()
                     dims[n] = coord.name
-        dims = tuple(dims)
-    elif len(dims) != len(shape):
+    dims_tuple = tuple(dims)
+    if len(dims_tuple) != len(shape):
         raise ValueError(
             "different number of dimensions on data "
-            f"and dims: {len(shape)} vs {len(dims)}"
+            f"and dims: {len(shape)} vs {len(dims_tuple)}"
         )
-    else:
-        for d in dims:
-            if not isinstance(d, str):
-                raise TypeError(f"dimension {d} is not a string")
+    for d in dims_tuple:
+        if not hashable(d):
+            raise TypeError(f"Dimension {d} is not hashable")
 
     new_coords: Mapping[Hashable, Any]
 
@@ -182,17 +182,21 @@ def _infer_coords_and_dims(
             for k, v in coords.items():
                 new_coords[k] = as_variable(v, name=k)
         elif coords is not None:
-            for dim, coord in zip(dims, coords):
+            for dim, coord in zip(dims_tuple, coords):
                 var = as_variable(coord, name=dim)
                 var.dims = (dim,)
                 new_coords[dim] = var.to_index_variable()
 
-    _check_coords_dims(shape, new_coords, dims)
+    _check_coords_dims(shape, new_coords, dims_tuple)
 
-    return new_coords, dims
+    return new_coords, dims_tuple
 
 
-def _check_data_shape(data, coords, dims):
+def _check_data_shape(
+    data: Any,
+    coords: Sequence[Sequence | pd.Index | DataArray] | Mapping | None,
+    dims: str | Iterable[Hashable] | None,
+) -> Any:
     if data is dtypes.NA:
         data = np.nan
     if coords is not None and utils.is_scalar(data, include_0d=False):
@@ -398,10 +402,8 @@ class DataArray(
     def __init__(
         self,
         data: Any = dtypes.NA,
-        coords: Sequence[Sequence[Any] | pd.Index | DataArray]
-        | Mapping[Any, Any]
-        | None = None,
-        dims: Hashable | Sequence[Hashable] | None = None,
+        coords: Sequence[Sequence | pd.Index | DataArray] | Mapping | None = None,
+        dims: str | Iterable[Hashable] | None = None,
         name: Hashable | None = None,
         attrs: Mapping | None = None,
         # internal parameters
@@ -2289,7 +2291,7 @@ class DataArray(
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
-                "interp only works for a numeric type array. " f"Given {self.dtype}."
+                f"interp only works for a numeric type array. Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp(
             coords,
@@ -2416,7 +2418,7 @@ class DataArray(
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
-                "interp only works for a numeric type array. " f"Given {self.dtype}."
+                f"interp only works for a numeric type array. Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp_like(
             other, method=method, kwargs=kwargs, assume_sorted=assume_sorted
@@ -4061,6 +4063,9 @@ class DataArray(
         containing a single variable. If the DataArray has no name, or if the
         name is the same as a coordinate name, then it is given the name
         ``"__xarray_dataarray_variable__"``.
+
+        [netCDF4 backend only] netCDF4 enums are decoded into the
+        dataarray dtype metadata.
 
         See Also
         --------
@@ -6349,7 +6354,7 @@ class DataArray(
         ...     param="time_constant"
         ... )  # doctest: +NUMBER
         <xarray.DataArray 'curvefit_coefficients' (x: 3)>
-        array([1.0569203, 1.7354963, 2.9421577])
+        array([1.05692036, 1.73549638, 2.94215771])
         Coordinates:
           * x        (x) int64 0 1 2
             param    <U13 'time_constant'
@@ -6641,7 +6646,7 @@ class DataArray(
     def groupby(
         self,
         group: Hashable | DataArray | IndexVariable,
-        squeeze: bool = True,
+        squeeze: bool | None = None,
         restore_coord_dims: bool = False,
     ) -> DataArrayGroupBy:
         """Returns a DataArrayGroupBy object for performing grouped operations.
@@ -6730,7 +6735,7 @@ class DataArray(
         labels: ArrayLike | Literal[False] | None = None,
         precision: int = 3,
         include_lowest: bool = False,
-        squeeze: bool = True,
+        squeeze: bool | None = None,
         restore_coord_dims: bool = False,
     ) -> DataArrayGroupBy:
         """Returns a DataArrayGroupBy object for performing grouped operations.
@@ -6916,13 +6921,89 @@ class DataArray(
 
         See Also
         --------
-        core.rolling.DataArrayRolling
+        DataArray.cumulative
         Dataset.rolling
+        core.rolling.DataArrayRolling
         """
         from xarray.core.rolling import DataArrayRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DataArrayRolling(self, dim, min_periods=min_periods, center=center)
+
+    def cumulative(
+        self,
+        dim: str | Iterable[Hashable],
+        min_periods: int = 1,
+    ) -> DataArrayRolling:
+        """
+        Accumulating object for DataArrays.
+
+        Parameters
+        ----------
+        dims : iterable of hashable
+            The name(s) of the dimensions to create the cumulative window along
+        min_periods : int, default: 1
+            Minimum number of observations in window required to have a value
+            (otherwise result is NA). The default is 1 (note this is different
+            from ``Rolling``, whose default is the size of the window).
+
+        Returns
+        -------
+        core.rolling.DataArrayRolling
+
+        Examples
+        --------
+        Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON:
+
+        >>> da = xr.DataArray(
+        ...     np.linspace(0, 11, num=12),
+        ...     coords=[
+        ...         pd.date_range(
+        ...             "1999-12-15",
+        ...             periods=12,
+        ...             freq=pd.DateOffset(months=1),
+        ...         )
+        ...     ],
+        ...     dims="time",
+        ... )
+
+        >>> da
+        <xarray.DataArray (time: 12)>
+        array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
+
+        >>> da.cumulative("time").sum()
+        <xarray.DataArray (time: 12)>
+        array([ 0.,  1.,  3.,  6., 10., 15., 21., 28., 36., 45., 55., 66.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
+
+        See Also
+        --------
+        DataArray.rolling
+        Dataset.cumulative
+        core.rolling.DataArrayRolling
+        """
+        from xarray.core.rolling import DataArrayRolling
+
+        # Could we abstract this "normalize and check 'dim'" logic? It's currently shared
+        # with the same method in Dataset.
+        if isinstance(dim, str):
+            if dim not in self.dims:
+                raise ValueError(
+                    f"Dimension {dim} not found in data dimensions: {self.dims}"
+                )
+            dim = {dim: self.sizes[dim]}
+        else:
+            missing_dims = set(dim) - set(self.dims)
+            if missing_dims:
+                raise ValueError(
+                    f"Dimensions {missing_dims} not found in data dimensions: {self.dims}"
+                )
+            dim = {d: self.sizes[d] for d in dim}
+
+        return DataArrayRolling(self, dim, min_periods=min_periods, center=False)
 
     def coarsen(
         self,
