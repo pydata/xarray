@@ -137,12 +137,11 @@ def test_resample(freqs, closed, label, base, offset) -> None:
     start = "2000-01-01T12:07:01"
     loffset = "12h"
     origin = "start"
-    index_kwargs = dict(start=start, periods=5)
-    # TODO: move `freq` back to `index_kwargs`
+
     datetime_index = pd.date_range(
-        **index_kwargs, freq=_new_to_legacy_freq(initial_freq)
+        start=start, periods=5, freq=_new_to_legacy_freq(initial_freq)
     )
-    cftime_index = xr.cftime_range(**index_kwargs, freq=initial_freq)
+    cftime_index = xr.cftime_range(start=start, periods=5, freq=initial_freq)
     da_datetimeindex = da(datetime_index)
     da_cftimeindex = da(cftime_index)
 
