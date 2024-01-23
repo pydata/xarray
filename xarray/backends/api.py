@@ -1433,7 +1433,7 @@ def save_mfdataset(
 
     >>> ds = xr.Dataset(
     ...     {"a": ("time", np.linspace(0, 1, 48))},
-    ...     coords={"time": pd.date_range("2010-01-01", freq="M", periods=48)},
+    ...     coords={"time": pd.date_range("2010-01-01", freq="ME", periods=48)},
     ... )
     >>> ds
     <xarray.Dataset>
