@@ -16,12 +16,10 @@ What's New
 
 .. _whats-new.2024.01.1:
 
-v2024.01.1 (unreleased)
------------------------
+v2024.01.1 (23 Jan, 2024)
+-------------------------
 
-New Features
-~~~~~~~~~~~~
-
+This release is to fix a bug with the rendering of the documentation, but it also includes changes to the handling of pandas frequency strings.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -40,16 +38,11 @@ Deprecations
   among others (:issue:`8612`, :pull:`8629`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 
-Bug fixes
-~~~~~~~~~
-
-
 Documentation
 ~~~~~~~~~~~~~
 
-
-Internal Changes
-~~~~~~~~~~~~~~~~
+- Pin ``sphinx-book-theme`` to ``1.0.1`` to fix a rendering issue with the sidebar in the docs. (:issue:`8619`, :pull:`8632`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 .. _whats-new.2024.01.0:
 
