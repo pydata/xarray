@@ -1754,7 +1754,8 @@ class TestVariable(VariableSubclassobjects):
             v.mean(dim="x", axis=0)
 
     @requires_bottleneck
-    def test_reduce_use_bottleneck(self, monkeypatch):
+    @pytest.mark.parametrize("compute_backend", ["bottleneck"], indirect=True)
+    def test_reduce_use_bottleneck(self, monkeypatch, compute_backend):
         def raise_if_called(*args, **kwargs):
             raise RuntimeError("should not have been called")
 

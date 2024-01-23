@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import xarray as xr
 from xarray import DataArray, Dataset
 from xarray.tests import create_test_data, requires_dask
 
@@ -11,6 +12,19 @@ from xarray.tests import create_test_data, requires_dask
 @pytest.fixture(params=["numpy", pytest.param("dask", marks=requires_dask)])
 def backend(request):
     return request.param
+
+
+@pytest.fixture(params=["numbagg", "bottleneck"])
+def compute_backend(request):
+    if request.param == "bottleneck":
+        options = dict(use_bottleneck=True, use_numbagg=False)
+    elif request.param == "numbagg":
+        options = dict(use_bottleneck=False, use_numbagg=True)
+    else:
+        raise ValueError
+
+    with xr.set_options(**options):
+        yield request.param
 
 
 @pytest.fixture(params=[1])
