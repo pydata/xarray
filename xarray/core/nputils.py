@@ -185,8 +185,12 @@ def _create_method(name, npmodule=np) -> Callable:
             and pycompat.mod_version("numbagg") >= Version("0.5.0")
             and OPTIONS["use_numbagg"]
             and isinstance(values, np.ndarray)
-            # numbagg uses ddof=1 only, but numpy uses ddof=0 by default
-            and (("var" in name or "std" in name) and kwargs.get("ddof", 0) == 1)
+            # numbagg<0.7.0 uses ddof=1 only, but numpy uses ddof=0 by default
+            and (
+                pycompat.mod_version("numbagg") >= Version("0.7.0")
+                or ("var" not in name and "std" not in name)
+                or kwargs.get("ddof", 0) == 1
+            )
             # TODO: bool?
             and values.dtype.kind in "uifc"
             # and values.dtype.isnative
@@ -196,9 +200,12 @@ def _create_method(name, npmodule=np) -> Callable:
 
             nba_func = getattr(numbagg, name, None)
             if nba_func is not None:
-                # numbagg does not take care dtype, ddof
+                # numbagg does not use dtype
                 kwargs.pop("dtype", None)
-                kwargs.pop("ddof", None)
+                # prior to 0.7.0, numbagg did not support ddof; we ensure it's limited
+                # to ddof=1 above.
+                if pycompat.mod_version("numbagg") < Version("0.7.0"):
+                    kwargs.pop("ddof", None)
                 return nba_func(values, axis=axis, **kwargs)
         if (
             _BOTTLENECK_AVAILABLE
