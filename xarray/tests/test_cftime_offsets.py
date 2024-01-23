@@ -1394,9 +1394,6 @@ def test_date_range_errors() -> None:
 
 
 @requires_cftime
-@pytest.mark.xfail(
-    reason="https://github.com/pydata/xarray/pull/8636#issuecomment-1902775153"
-)
 @pytest.mark.parametrize(
     "start,freq,cal_src,cal_tgt,use_cftime,exp0,exp_pd",
     [
