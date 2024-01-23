@@ -28,7 +28,7 @@ Breaking changes
 
 - Following pandas, :py:meth:`infer_freq` will return ``"YE"``, instead of ``"Y"`` (formerly ``"A"``).
   This is to be consistent with the deprecation of the latter frequency string in pandas 2.2.
-  This is a follow up to :pull:`8415` (:issue:`8612`, :pull:`8629`).
+  This is a follow up to :pull:`8415` (:issue:`8612`, :pull:`8642`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 
 Deprecations
@@ -7270,11 +7270,16 @@ Breaking changes
 - The ``season`` datetime shortcut now returns an array of string labels
   such `'DJF'`:
 
-  .. ipython:: python
-      :okwarning:
+  .. code-block:: ipython
 
-      ds = xray.Dataset({"t": pd.date_range("2000-01-01", periods=12, freq="M")})
-      ds["t.season"]
+      In[92]: ds = xray.Dataset({"t": pd.date_range("2000-01-01", periods=12, freq="M")})
+
+      In[93]: ds["t.season"]
+      Out[93]:
+      <xarray.DataArray 'season' (t: 12)>
+      array(['DJF', 'DJF', 'MAM', ..., 'SON', 'SON', 'DJF'], dtype='<U3')
+      Coordinates:
+        * t        (t) datetime64[ns] 2000-01-31 2000-02-29 ... 2000-11-30 2000-12-31
 
   Previously, it returned numbered seasons 1 through 4.
 - We have updated our use of the terms of "coordinates" and "variables". What
