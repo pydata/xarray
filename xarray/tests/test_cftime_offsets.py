@@ -240,7 +240,13 @@ def test_to_offset_sub_annual(freq, expected):
     assert to_offset(freq) == expected
 
 
-_ANNUAL_OFFSET_TYPES = {"A": YearEnd, "AS": YearBegin, "Y": YearEnd, "YS": YearBegin}
+_ANNUAL_OFFSET_TYPES = {
+    "A": YearEnd,
+    "AS": YearBegin,
+    "Y": YearEnd,
+    "YS": YearBegin,
+    "YE": YearEnd,
+}
 
 
 @pytest.mark.parametrize(
