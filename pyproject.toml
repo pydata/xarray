@@ -227,8 +227,7 @@ reportMissingTypeStubs = false
 
 [tool.ruff]
 builtins = ["ellipsis"]
-exclude = [
-  ".eggs",
+extend-exclude = [
   "doc",
   "_typed_ops.pyi",
 ]
