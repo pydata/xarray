@@ -30,6 +30,8 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- The `dt.weekday_name` parameter is now depreciated and has been removed. (:issue:`8610`, :pull:`8664`)
+  By `Sam Coleman <https://github.com/nameloCmaS>`_.
 
 
 Bug fixes
@@ -73,6 +75,9 @@ Documentation
 
 - Pin ``sphinx-book-theme`` to ``1.0.1`` to fix a rendering issue with the sidebar in the docs. (:issue:`8619`, :pull:`8632`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fixed documentation where the use of the depreciated pandas frequency string
+  prevented the documentation from being built. (:pull:`8638`)
+  By `Sam Coleman <https://github.com/nameloCmaS>`_.
 
 .. _whats-new.2024.01.0:
 
