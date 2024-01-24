@@ -700,7 +700,7 @@ _FREQUENCIES = {
 
 
 _FREQUENCY_CONDITION = "|".join(_FREQUENCIES.keys())
-_PATTERN = rf"^((?P<multiple>\d+)|())(?P<freq>({_FREQUENCY_CONDITION}))$"
+_PATTERN = rf"^((?P<multiple>[+-]?\d+)|())(?P<freq>({_FREQUENCY_CONDITION}))$"
 
 
 # pandas defines these offsets as "Tick" objects, which for instance have
@@ -825,7 +825,8 @@ def _generate_range(start, end, periods, offset):
     """Generate a regular range of cftime.datetime objects with a
     given time offset.
 
-    Adapted from pandas.tseries.offsets.generate_range.
+    Adapted from pandas.tseries.offsets.generate_range (now at
+    pandas.core.arrays.datetimes._generate_range).
 
     Parameters
     ----------
@@ -845,10 +846,7 @@ def _generate_range(start, end, periods, offset):
     if start:
         start = offset.rollforward(start)
 
-    if end:
-        end = offset.rollback(end)
-
-    if periods is None and end < start:
+    if periods is None and end < start and offset.n >= 0:
         end = None
         periods = 0
 
