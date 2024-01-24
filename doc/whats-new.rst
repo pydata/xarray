@@ -14,9 +14,10 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2024.01.1:
 
-v2024.01.1 (unreleased)
+.. _whats-new.2024.02.0:
+
+v2024.02.0 (unreleased)
 -----------------------
 
 New Features
@@ -26,19 +27,10 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- Following pandas, :py:meth:`infer_freq` will return ``"YE"``, instead of ``"Y"`` (formerly ``"A"``).
-  This is to be consistent with the deprecation of the latter frequency string in pandas 2.2.
-  This is a follow up to :pull:`8415` (:issue:`8612`, :pull:`8629`).
-  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Deprecations
 ~~~~~~~~~~~~
 
-- Following pandas, the frequency string ``"Y"`` (formerly ``"A"``) is deprecated in
-  favor of ``"YE"``. These strings are used, for example, in :py:func:`date_range`,
-  :py:func:`cftime_range`, :py:meth:`DataArray.resample`, and :py:meth:`Dataset.resample`
-  among others (:issue:`8612`, :pull:`8629`).
-  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -50,6 +42,37 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2024.01.1:
+
+v2024.01.1 (23 Jan, 2024)
+-------------------------
+
+This release is to fix a bug with the rendering of the documentation, but it also includes changes to the handling of pandas frequency strings.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Following pandas, :py:meth:`infer_freq` will return ``"YE"``, instead of ``"Y"`` (formerly ``"A"``).
+  This is to be consistent with the deprecation of the latter frequency string in pandas 2.2.
+  This is a follow up to :pull:`8415` (:issue:`8612`, :pull:`8642`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+- Following pandas, the frequency string ``"Y"`` (formerly ``"A"``) is deprecated in
+  favor of ``"YE"``. These strings are used, for example, in :py:func:`date_range`,
+  :py:func:`cftime_range`, :py:meth:`DataArray.resample`, and :py:meth:`Dataset.resample`
+  among others (:issue:`8612`, :pull:`8629`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Pin ``sphinx-book-theme`` to ``1.0.1`` to fix a rendering issue with the sidebar in the docs. (:issue:`8619`, :pull:`8632`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 .. _whats-new.2024.01.0:
 

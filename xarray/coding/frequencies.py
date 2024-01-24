@@ -183,7 +183,7 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
         if len(np.unique(self.index.month)) > 1:
             return None
 
-        return {"cs": "YS", "ce": "Y"}.get(month_anchor_check(self.index))
+        return {"cs": "YS", "ce": "YE"}.get(month_anchor_check(self.index))
 
     def _get_quartely_rule(self):
         if len(self.month_deltas) > 1:
