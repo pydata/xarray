@@ -39,6 +39,7 @@ dev = [
   "pytest-env",
   "pytest-xdist",
   "pytest-timeout",
+  "ruff",
   "xarray[accel,io,parallel,viz]",
 ]
 io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
