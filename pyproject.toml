@@ -12,6 +12,7 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering",
 ]
 description = "N-D labeled arrays and datasets in Python"
@@ -226,12 +227,13 @@ reportMissingTypeStubs = false
 
 [tool.ruff]
 builtins = ["ellipsis"]
-exclude = [
-  ".eggs",
+extend-exclude = [
   "doc",
   "_typed_ops.pyi",
 ]
 target-version = "py39"
+
+[tool.ruff.lint]
 # E402: module level import not at top of file
 # E501: line too long - let black worry about that
 # E731: do not assign a lambda expression, use a def
@@ -248,7 +250,7 @@ select = [
   "UP", # Pyupgrade
 ]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["xarray"]
 
 [tool.pytest.ini_options]
@@ -268,3 +270,8 @@ testpaths = ["xarray/tests", "properties"]
 
 [tool.aliases]
 test = "pytest"
+
+[tool.repo-review]
+ignore = [
+  "PP308" # This option creates a large amount of log lines.
+]
