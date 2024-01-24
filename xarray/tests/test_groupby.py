@@ -2513,7 +2513,8 @@ def test_default_flox_method():
     with mock.patch("flox.xarray.xarray_reduce", return_value=result) as mocked_reduce:
         da.groupby("label").sum()
 
+    kwargs = mocked_reduce.call_args.kwargs
     if Version(flox.__version__) < Version("0.9.0"):
-        mocked_reduce.assert_called_once_with(method="cohorts")
+        assert kwargs["method"] == "cohorts"
     else:
-        assert "method" not in mocked_reduce.call_args
+        assert "method" not in kwargs
