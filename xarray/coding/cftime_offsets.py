@@ -931,7 +931,7 @@ def cftime_range(
     periods : int, optional
         Number of periods to generate.
     freq : str or None, default: "D"
-        Frequency strings can have multiples, e.g. "5h".
+        Frequency strings can have multiples, e.g. "5h" and negative values, e.g. "-1D".
     normalize : bool, default: False
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
@@ -1174,7 +1174,7 @@ def date_range(
     periods : int, optional
         Number of periods to generate.
     freq : str or None, default: "D"
-        Frequency strings can have multiples, e.g. "5h".
+        Frequency strings can have multiples, e.g. "5h" and negative values, e.g. "-1D".
     tz : str or tzinfo, optional
         Time zone name for returning localized DatetimeIndex, for example
         'Asia/Hong_Kong'. By default, the resulting DatetimeIndex is
