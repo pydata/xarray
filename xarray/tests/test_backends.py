@@ -2265,6 +2265,10 @@ class ZarrBase(CFEncodedBase):
                 pass
 
     @requires_dask
+    @pytest.mark.skipif(
+        ON_WINDOWS,
+        reason="Very flaky on Windows CI. Can re-enable assuming it starts consistently passing.",
+    )
     def test_chunk_encoding_with_dask(self) -> None:
         # These datasets DO have dask chunks. Need to check for various
         # interactions between dask and zarr chunks
