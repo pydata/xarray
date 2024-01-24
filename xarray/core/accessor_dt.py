@@ -59,8 +59,8 @@ def _access_through_cftimeindex(values, name):
         field_values = _season_from_months(months)
     elif name == "date":
         raise AttributeError(
-            "'CFTimeIndex' object has no attribute `date`. Consider using the floor method " +
-            "instead, for instance: `.time.dt.floor('D')`."
+            "'CFTimeIndex' object has no attribute `date`. Consider using the floor method "
+            + "instead, for instance: `.time.dt.floor('D')`."
         )
     else:
         field_values = getattr(values_as_cftimeindex, name)
@@ -439,8 +439,8 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         "The week ordinal of the year"
 
         warnings.warn(
-            "dt.weekofyear and dt.week have been deprecated. Please use " +
-            "dt.isocalendar().week instead.",
+            "dt.weekofyear and dt.week have been deprecated. Please use "
+            + "dt.isocalendar().week instead.",
             FutureWarning,
         )
 
