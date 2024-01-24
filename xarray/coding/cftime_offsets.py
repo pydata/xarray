@@ -1320,6 +1320,11 @@ def date_range_like(source, calendar, use_cftime=None):
 
     source_start = source.values.min()
     source_end = source.values.max()
+
+    freq_as_offset = to_offset(freq)
+    if freq_as_offset.n < 0:
+        source_start, source_end = source_end, source_start
+
     if is_np_datetime_like(source.dtype):
         # We want to use datetime fields (datetime64 object don't have them)
         source_calendar = "standard"
@@ -1342,7 +1347,7 @@ def date_range_like(source, calendar, use_cftime=None):
 
     # For the cases where the source ends on the end of the month, we expect the same in the new calendar.
     if source_end.day == source_end.daysinmonth and isinstance(
-        to_offset(freq), (YearEnd, QuarterEnd, MonthEnd, Day)
+        freq_as_offset, (YearEnd, QuarterEnd, MonthEnd, Day)
     ):
         end = end.replace(day=end.daysinmonth)
 

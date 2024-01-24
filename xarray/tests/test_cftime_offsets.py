@@ -1448,6 +1448,7 @@ def test_date_range_errors() -> None:
         ("2020-02-01", "QE-DEC", "noleap", "gregorian", True, "2020-03-31", True),
         ("2020-02-01", "YS-FEB", "noleap", "gregorian", True, "2020-02-01", True),
         ("2020-02-01", "YE-FEB", "noleap", "gregorian", True, "2020-02-29", True),
+        ("2020-02-01", "-1YE-FEB", "noleap", "gregorian", True, "2020-02-29", True),
         ("2020-02-28", "3h", "all_leap", "gregorian", False, "2020-02-28", True),
         ("2020-03-30", "ME", "360_day", "gregorian", False, "2020-03-31", True),
         ("2020-03-31", "ME", "gregorian", "360_day", None, "2020-03-30", False),
