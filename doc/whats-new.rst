@@ -37,6 +37,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix bug with broadcasting when wrapping array API-compliant classes. (:issue:`8665`, :pull:`8669`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
