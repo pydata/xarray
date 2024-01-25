@@ -30,7 +30,7 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-- The `dt.weekday_name` parameter is now depreciated and has been removed. (:issue:`8610`, :pull:`8664`)
+- The `dt.weekday_name` parameter wasn't functional on modern pandas versions and has been removed. (:issue:`8610`, :pull:`8664`)
   By `Sam Coleman <https://github.com/nameloCmaS>`_.
 
 
