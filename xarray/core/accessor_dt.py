@@ -59,7 +59,8 @@ def _access_through_cftimeindex(values, name):
         field_values = _season_from_months(months)
     elif name == "date":
         raise AttributeError(
-            "'CFTimeIndex' object has no attribute `date`. Consider using the floor method instead, for instance: `.time.dt.floor('D')`."
+            "'CFTimeIndex' object has no attribute `date`. Consider using the floor method "
+            "instead, for instance: `.time.dt.floor('D')`."
         )
     else:
         field_values = getattr(values_as_cftimeindex, name)
@@ -455,11 +456,6 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         return self._date_field("dayofweek", np.int64)
 
     weekday = dayofweek
-
-    @property
-    def weekday_name(self) -> T_DataArray:
-        """The name of day in a week"""
-        return self._date_field("weekday_name", object)
 
     @property
     def dayofyear(self) -> T_DataArray:

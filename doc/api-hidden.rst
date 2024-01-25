@@ -134,7 +134,6 @@
    core.accessor_dt.DatetimeAccessor.time
    core.accessor_dt.DatetimeAccessor.week
    core.accessor_dt.DatetimeAccessor.weekday
-   core.accessor_dt.DatetimeAccessor.weekday_name
    core.accessor_dt.DatetimeAccessor.weekofyear
    core.accessor_dt.DatetimeAccessor.year
 
