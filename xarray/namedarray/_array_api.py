@@ -9,6 +9,7 @@ import numpy as np
 from xarray.namedarray._typing import (
     Default,
     _arrayapi,
+    _Axes,
     _Axis,
     _default,
     _Dim,
@@ -195,4 +196,28 @@ def expand_dims(
     d = list(dims)
     d.insert(axis, dim)
     out = x._new(dims=tuple(d), data=xp.expand_dims(x._data, axis=axis))
+    return out
+
+
+def permute_dims(x: NamedArray[Any, _DType], axes: _Axes) -> NamedArray[Any, _DType]:
+    """
+    Permutes the dimensions of an array.
+
+    Parameters
+    ----------
+    x :
+        Array to permute.
+    axes :
+        Permutation of the dimensions of x.
+
+    Returns
+    -------
+    out :
+        An array with permuted dimensions. The returned array must have the same
+        data type as x.
+
+    """
+    xp = _get_data_namespace(x)
+    dims = x.dims
+    out = x._new(dims=tuple(dims[i] for i in axes), data=xp.permute_dims(x._data, axes))
     return out

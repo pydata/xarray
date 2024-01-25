@@ -863,7 +863,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def permute_dims(
         self,
-        *dim: _DimsLike | ellipsis,
+        *dim: Iterable[_Dim] | ellipsis,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> NamedArray[Any, _DType_co]:
         """Return a new object with transposed dimensions.
@@ -892,21 +892,29 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         numpy.transpose
         """
 
+        from xarray.namedarray._array_api import permute_dims
+
         if not dim:
             dims = self.dims[::-1]
         else:
-            dims = tuple(infix_dims(dim, self.dims, missing_dims))
+            # Flatten the tuple and handle ellipsis
+            flattened_dims: list[_Dim] = []
+            for item in dim:
+                if item is ...:
+                    flattened_dims.extend(self.dims)
+                else:
+                    flattened_dims.extend(item)
+        dims = tuple(infix_dims(flattened_dims, self.dims, missing_dims))
 
         if len(dims) < 2 or dims == self.dims:
             # no need to transpose if only one dimension
             # or dims are in same order
             return self.copy(deep=False)
 
-        axes = self.get_axis_num(dims)
-        data = self._data.transpose(
-            axes
-        )  # TODO: replace this with use array-api-compat function
-        return self._replace(dims=dims, data=data)
+        axes_result = self.get_axis_num(dims)
+        axes = (axes_result,) if isinstance(axes_result, int) else axes_result
+
+        return permute_dims(self, axes)
 
     @property
     def T(self) -> NamedArray[Any, _DType_co]:
@@ -916,20 +924,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 f"x.T requires x to have 2 dimensions, got {self.ndim}. Use x.permute_dims() to permute dimensions."
             )
 
-        data = self._data.T
-        dims = self.dims[::-1]
-        return self._replace(dims=dims, data=data)
-
-    def _check_dims(self, dims: _DimsLike | Mapping[_Dim, int]) -> None:
-        if isinstance(dims, dict):
-            dims_keys = dims
-        else:
-            dims_keys = dims if isinstance(dims, str) else list(dims)
-        if missing_dims := set(self.dims) - set(dims_keys):
-            raise ValueError(
-                f"new dimensions {dims!r} must be a superset of "
-                f"existing dimensions {self.dims!r}. missing dims: {missing_dims}"
-            )
+        return self.permute_dims()
 
     def broadcast_to(
         self, dim: _DimsLike | Mapping[_Dim, int] | None = None, **dim_kwargs: Any
@@ -971,7 +966,16 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         combined_dims = either_dict_or_kwargs(dim, dim_kwargs, "broadcast_to")
 
         # check that the dimensions are valid
-        self._check_dims(list(combined_dims.keys()))
+        dims = list(combined_dims.keys())
+        if isinstance(dims, dict):
+            dims_keys = dims
+        else:
+            dims_keys = dims if isinstance(dims, str) else list(dims)
+        if missing_dims := set(self.dims) - set(dims_keys):
+            raise ValueError(
+                f"new dimensions {dims!r} must be a superset of "
+                f"existing dimensions {self.dims!r}. missing dims: {missing_dims}"
+            )
 
         # create a dictionary of the current dimensions and their sizes
         current_shape = self.sizes

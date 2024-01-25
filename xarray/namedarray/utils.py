@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 import warnings
-from collections.abc import Hashable, Iterator, Mapping
+from collections.abc import Hashable, Iterable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import numpy as np
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from xarray.namedarray._typing import duckarray
+    from xarray.namedarray._typing import _Dim, duckarray
 
     try:
         from dask.array.core import Array as DaskArray
@@ -78,8 +78,8 @@ def is_dict_like(value: Any) -> TypeGuard[Mapping[Any, Any]]:
 
 
 def drop_missing_dims(
-    supplied_dims: _DimsLike,
-    dims: _DimsLike,
+    supplied_dims: Iterable[_Dim],
+    dims: Iterable[_Dim],
     missing_dims: ErrorOptionsWithWarn,
 ) -> _DimsLike:
     """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
@@ -119,16 +119,17 @@ def drop_missing_dims(
 
 
 def infix_dims(
-    dims_supplied: _DimsLike,
-    dims_all: _DimsLike,
+    dims_supplied: Iterable[_Dim],
+    dims_all: Iterable[_Dim],
     missing_dims: ErrorOptionsWithWarn = "raise",
-) -> Iterator[_DimsLike]:
+) -> Iterator[_Dim]:
     """
     Resolves a supplied list containing an ellipsis representing other items, to
     a generator with the 'realized' list of all items
     """
     if ... in dims_supplied:
-        if len(set(dims_all)) != len(dims_all):
+        dims_all_list = list(dims_all)
+        if len(set(dims_all)) != len(dims_all_list):
             raise ValueError("Cannot use ellipsis with repeated dims")
         if list(dims_supplied).count(...) > 1:
             raise ValueError("More than one ellipsis supplied")
