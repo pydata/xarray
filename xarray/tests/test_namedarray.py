@@ -504,7 +504,7 @@ class TestNamedArray(NamedArraySubclassobjects):
     def test_expand_dims(
         self,
         target: NamedArray[Any, np.dtype[np.float32]],
-        dim: _Dim | _default,
+        dim: _Dim | Default,
         expected_ndim: int,
         expected_shape: _ShapeLike,
         expected_dims: _DimsLike,
