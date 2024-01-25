@@ -92,6 +92,7 @@ def test_broadcast_during_arithmetic(arrays: tuple[xr.DataArray, xr.DataArray]) 
     assert isinstance(actual.data, Array)
     assert_equal(actual, expected)
 
+
 def test_concat(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     np_arr, xp_arr = arrays
     expected = xr.concat((np_arr, np_arr), dim="x")
