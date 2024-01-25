@@ -41,7 +41,7 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 - Fix `variables` arg typo in `Dataset.sortby()` docstring
- (:issue:`8663`, :pull:`8670`)
+  (:issue:`8663`, :pull:`8670`)
   By `Tom Vo <https://github.com/tomvothecoder>`_.
 
 Internal Changes
