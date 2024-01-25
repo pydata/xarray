@@ -440,7 +440,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
 
         warnings.warn(
             "dt.weekofyear and dt.week have been deprecated. Please use "
-            + "dt.isocalendar().week instead.",
+            "dt.isocalendar().week instead.",
             FutureWarning,
         )
 
