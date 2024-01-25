@@ -989,34 +989,24 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self._new(data=data, dims=ordered_dims)
 
     def expand_dims(
-        self, dim: _DimsLike | Mapping[_Dim, int] | None = None, **dim_kwargs: Any
+        self,
+        dim: _Dim | Default = _default,
     ) -> NamedArray[Any, _DType_co]:
         """
         Expand the dimensions of the NamedArray.
 
-        This method adds new dimensions to the object. New dimensions can be added
-        at specific positions with a given size, which defaults to 1 if not specified.
-        The method handles both positional and keyword arguments for specifying new dimensions.
+        This method adds new dimensions to the object. The new dimensions are added at the beginning of the array.
 
         Parameters
         ----------
-        dim : str, sequence of str, or dict, optional
-            Dimensions to include on the new object. It must be a superset of the existing dimensions.
-            If a dict, values are used to provide the axis position of dimensions; otherwise, new dimensions are inserted with length 1.
-            If not provided, a new dimension named 'dim_0', 'dim_1', etc., is added at the start, ensuring no name conflict with existing dimensions.
-
-        **dim_kwargs : Any
-            Additional dimensions specified as keyword arguments. Each keyword argument specifies the name of the new dimension and its position.
+        dim : Hashable, optional
+            Dimension name to expand the array to. This dimension will be added at the beginning of the array.
 
         Returns
         -------
         NamedArray
             A new NamedArray with expanded dimensions.
 
-        Raises
-        ------
-        ValueError
-            If any of the specified new dimensions already exist in the NamedArray.
 
         Examples
         --------
@@ -1030,64 +1020,11 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         >>> expanded.dims
         ('z', 'x', 'y')
 
-        # expand dimensions with multiple new dimensions
-        >>> expanded = array.expand_dims(dim={"z": 0, "a": 2})
-        >>> expanded.dims
-        ('z', 'x', 'a', 'y')
-
-        # using keyword arguments to specify new dimensions
-        >>> expanded = array.expand_dims(z=0, a=2)
-        >>> expanded.dims
-        ('z', 'x', 'a', 'y')
         """
 
-        if isinstance(dim, str):
-            dim = {dim: 0}
+        from xarray.namedarray._array_api import expand_dims
 
-        elif isinstance(dim, (list, tuple)):
-            # if dim is a list/tuple, convert to a dict with default positions
-            dim = {d: idx for idx, d in (enumerate(dim))}
-
-        combined_dims = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
-
-        # check for duplicate positions
-        positions = list(combined_dims.values())
-        if len(positions) != len(set(positions)):
-            raise ValueError(
-                f"Cannot assign multiple new dimensions to the same position: {positions}"
-            )
-
-        if conflicts := set(self.dims) & set(combined_dims):
-            raise ValueError(
-                f"Dimensions {conflicts!r} already exists. Please remove it from the specified dimensions: {combined_dims}"
-            )
-
-        # create a list of all dimensions, placing new ones at their specified positions
-        all_dims_with_pos = [(d, i) for i, d in enumerate(self.dims)]
-
-        # adjust positions of existing dimensions based on new dimensions' positions
-        for new_dim, new_pos in combined_dims.items():
-            for i, (existing_dim, existing_pos) in enumerate(all_dims_with_pos):
-                if existing_pos >= new_pos:
-                    all_dims_with_pos[i] = (existing_dim, existing_pos + 1)
-
-        # add new dimensions to the list
-        all_dims_with_pos.extend(combined_dims.items())
-
-        # sort by position to get the final order
-        all_dims_with_pos.sort(key=lambda x: x[1])
-
-        # extract the ordered list of dimensions
-        new_dims = [dim[0] for dim in all_dims_with_pos]
-
-        # use slicing to expand dimensions
-        slicing_tuple = tuple(
-            None if d in combined_dims else slice(None) for d in new_dims
-        )
-
-        expanded_data: duckarray[Any, _DType_co] = self._data[slicing_tuple]
-
-        return self._new(dims=new_dims, data=expanded_data)
+        return expand_dims(self, dim=dim)
 
 
 _NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]

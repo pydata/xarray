@@ -332,7 +332,7 @@ class TestNamedArray(NamedArraySubclassobjects):
         self,
     ) -> None:
         def test_duck_array_typevar(
-            a: duckarray[Any, _DType]
+            a: duckarray[Any, _DType],
         ) -> duckarray[Any, _DType]:
             # Mypy checks a is valid:
             b: duckarray[Any, _DType] = a
@@ -496,16 +496,15 @@ class TestNamedArray(NamedArraySubclassobjects):
     @pytest.mark.parametrize(
         "dim,expected_ndim,expected_shape,expected_dims",
         [
-            (None, 3, (1, 2, 5), ("dim_0", "x", "y")),
+            (None, 3, (1, 2, 5), (None, "x", "y")),
+            (_default, 3, (1, 2, 5), ("dim_2", "x", "y")),
             ("z", 3, (1, 2, 5), ("z", "x", "y")),
-            (["z", "a"], 4, (1, 1, 2, 5), ("z", "a", "x", "y")),
-            ({"z": 0, "a": 2}, 4, (1, 2, 1, 5), ("z", "x", "a", "y")),
         ],
     )
     def test_expand_dims(
         self,
         target: NamedArray[Any, np.dtype[np.float32]],
-        dim: _DimsLike | Mapping[_Dim, int] | None,
+        dim: _Dim | _default,
         expected_ndim: int,
         expected_shape: _ShapeLike,
         expected_dims: _DimsLike,
@@ -514,19 +513,6 @@ class TestNamedArray(NamedArraySubclassobjects):
         assert result.ndim == expected_ndim
         assert result.shape == expected_shape
         assert result.dims == expected_dims
-
-    def test_expand_dims_errors(
-        self, target: NamedArray[Any, np.dtype[np.float32]]
-    ) -> None:
-        with pytest.raises(ValueError, match=r"Dimension.*already exists"):
-            dim = {"x": 0}
-            target.expand_dims(dim=dim)
-
-        with pytest.raises(
-            ValueError, match=r"Cannot assign multiple new dimensions.*"
-        ):
-            dim = {"z": 0, "a": 0}
-            target.expand_dims(dim=dim)
 
     @pytest.mark.parametrize(
         "dims, expected_sizes",
@@ -568,7 +554,10 @@ class TestNamedArray(NamedArraySubclassobjects):
         expected_ndim: int,
     ) -> None:
         expand_dims = set(broadcast_dims.keys()) - set(target.dims)
-        result = target.expand_dims(list(expand_dims)).broadcast_to(broadcast_dims)
+        # loop over expand_dims and call .expand_dims(dim=dim) in a loop
+        for dim in expand_dims:
+            target = target.expand_dims(dim=dim)
+        result = target.broadcast_to(broadcast_dims)
         assert result.ndim == expected_ndim
         assert result.sizes == broadcast_dims
 
