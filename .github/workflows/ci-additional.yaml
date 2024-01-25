@@ -79,7 +79,8 @@ jobs:
           #
           # If dependencies emit warnings we can't do anything about, add ignores to
           # `xarray/tests/__init__.py`.
-          python -m pytest --doctest-modules xarray --ignore xarray/tests -Werror
+          # [MHS, 01/25/2024] Skip datatree_ documentation remove after #8572
+          python -m pytest --doctest-modules xarray --ignore xarray/tests --ignore xarray/datatree_ -Werror
 
   mypy:
     name: Mypy
