@@ -60,7 +60,7 @@ def _access_through_cftimeindex(values, name):
     elif name == "date":
         raise AttributeError(
             "'CFTimeIndex' object has no attribute `date`. Consider using the floor method "
-            + "instead, for instance: `.time.dt.floor('D')`."
+            "instead, for instance: `.time.dt.floor('D')`."
         )
     else:
         field_values = getattr(values_as_cftimeindex, name)
