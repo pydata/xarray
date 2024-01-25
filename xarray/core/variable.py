@@ -1476,7 +1476,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             tmp_shape = tuple(dims_map[d] for d in expanded_dims)
             expanded_data = duck_array_ops.broadcast_to(self.data, tmp_shape)
         else:
-            expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]
+            indexer = (None,) * (len(expanded_dims) - self.ndim) + (...,)
+            expanded_data = self.data[indexer]
 
         expanded_var = Variable(
             expanded_dims, expanded_data, self._attrs, self._encoding, fastpath=True
