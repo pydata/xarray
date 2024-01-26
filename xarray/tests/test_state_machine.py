@@ -76,13 +76,19 @@ class DatasetStateMachine(RuleBasedStateMachine):
         note(f"> renaming {oldname} to {newname}")
 
     @rule()
-    @precondition(lambda self: len(self.dataset._variables) >= 2)
+    @precondition(
+        lambda self: (
+            len(self.dataset._variables) >= 2
+            and (set(self.dataset.dims) & set(self.dataset._variables))
+        )
+    )
     def swap_dims(self):
         ds = self.dataset
-        dim = random.choice(tuple(ds.dims))
-
-        to = dim + "_" if "_" not in dim else dim[:-1]
-        assert to in ds._variables
+        # need a dimension coordinate for swapping
+        dim = random.choice(tuple(set(ds.dims) & set(ds._variables)))
+        to = random.choice(
+            [name for name, var in ds._variables.items() if var.size == ds.sizes[dim]]
+        )
         self.dataset = ds.swap_dims({dim: to})
         note(f"> swapping {dim} to {to}")
 
