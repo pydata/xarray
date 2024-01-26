@@ -21,6 +21,18 @@ def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
     )
 
 
+# https://stackoverflow.com/a/73810689
+# TODO: Consider building this into `dimension_names` and `names` strategies.
+@st.composite
+def unique(draw: st.DrawFn, strategy):
+    seen = draw(st.shared(st.builds(set), key="key-for-unique-elems"))
+    return draw(
+        strategy.map(lambda x: tuple(x))
+        .filter(lambda x: x not in seen)
+        .map(lambda x: seen.add(x) or x)
+    )
+
+
 class DatasetStateMachine(RuleBasedStateMachine):
     def __init__(self):
         super().__init__()
@@ -29,7 +41,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
 
     @rule(
         var=xrst.variables(
-            dims=xrst.dimension_names(min_dims=1, max_dims=1),
+            dims=unique(xrst.dimension_names(min_dims=1, max_dims=1)),
             dtype=pandas_index_dtypes(),
         )
     )
@@ -39,14 +51,13 @@ class DatasetStateMachine(RuleBasedStateMachine):
         self.dataset[name] = var
         # non-dim coord of same size; this allows renaming
         self.dataset[name + "_"] = var
-        note(f"> vars: {tuple(self.dataset._variables)}")
 
     @precondition(lambda self: len(self.dataset.dims) >= 1)
     def reset_index(self):
         dim = random.choice(tuple(self.dataset.dims))
         self.dataset = self.dataset.reset_index(dim)
 
-    @rule(newname=xrst.names())
+    @rule(newname=unique(xrst.names()))
     @precondition(lambda self: len(self.dataset.dims) >= 1)
     def stack(self, newname):
         # benbovy: "skip the default indexes invariant test when the name of an
@@ -61,7 +72,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
     def unstack(self):
         self.dataset = self.dataset.unstack()
 
-    @rule(newname=xrst.names())
+    @rule(newname=unique(xrst.names()))
     @precondition(lambda self: len(self.dataset.dims) >= 1)
     def rename_vars(self, newname):
         # benbovy: "skip the default indexes invariant test when the name of an
