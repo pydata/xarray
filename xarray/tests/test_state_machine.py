@@ -51,9 +51,6 @@ class DatasetStateMachine(RuleBasedStateMachine):
     @rule(newname=NAMES)
     @precondition(lambda self: len(self.dataset.dims) >= 2)
     def stack(self, newname):
-        # benbovy: "skip the default indexes invariant test when the name of an
-        # existing dimension coordinate is passed as input kwarg or dict key
-        # to .rename_vars()."
         oldnames = random.choices(tuple(self.dataset.dims), k=2)
         self.dataset = self.dataset.stack({newname: oldnames})
 
