@@ -6,12 +6,9 @@ import numpy as np
 from hypothesis import note, settings
 from hypothesis.stateful import RuleBasedStateMachine, invariant, precondition, rule
 
-import xarray as xr
 import xarray.testing.strategies as xrst
 from xarray import Dataset
-from xarray.testing import _assert_internal_invariants, assert_identical
-from xarray.tests import has_zarr
-from xarray.tests.test_backends import ON_WINDOWS, create_tmp_file
+from xarray.testing import _assert_internal_invariants
 
 random.seed(123456)
 
@@ -88,15 +85,16 @@ class DatasetStateMachine(RuleBasedStateMachine):
         self.dataset = ds.swap_dims({dim: to})
         note(f"> swapping {dim} to {to}")
 
-    @rule()
-    def roundtrip_zarr(self):
-        if not has_zarr:
-            return
-        expected = self.dataset
-        with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as path:
-            self.dataset.to_zarr(path + ".zarr")
-            with xr.open_dataset(path + ".zarr", engine="zarr") as ds:
-                assert_identical(expected, ds)
+    # TODO: enable when we have serializable attrs only
+    # @rule()
+    # def roundtrip_zarr(self):
+    #     if not has_zarr:
+    #         return
+    #     expected = self.dataset
+    #     with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as path:
+    #         self.dataset.to_zarr(path + ".zarr")
+    #         with xr.open_dataset(path + ".zarr", engine="zarr") as ds:
+    #             assert_identical(expected, ds)
 
     @invariant()
     def assert_invariants(self):
