@@ -217,7 +217,12 @@ def permute_dims(x: NamedArray[Any, _DType], axes: _Axes) -> NamedArray[Any, _DT
         data type as x.
 
     """
-    xp = _get_data_namespace(x)
+
     dims = x.dims
-    out = x._new(dims=tuple(dims[i] for i in axes), data=xp.permute_dims(x._data, axes))
+    new_dims = tuple(dims[i] for i in axes)
+    if isinstance(x._data, _arrayapi):
+        xp = _get_data_namespace(x)
+        out = x._new(dims=new_dims, data=xp.permute_dims(x._data, axes))
+    else:
+        out = x._new(dims=new_dims, data=x._data.transpose(axes))  # type: ignore[attr-defined]
     return out

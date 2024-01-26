@@ -904,7 +904,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                     flattened_dims.extend(self.dims)
                 else:
                     flattened_dims.extend(item)
-        dims = tuple(infix_dims(flattened_dims, self.dims, missing_dims))
+            dims = tuple(infix_dims(flattened_dims, self.dims, missing_dims))
 
         if len(dims) < 2 or dims == self.dims:
             # no need to transpose if only one dimension
