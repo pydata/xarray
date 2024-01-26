@@ -23,6 +23,9 @@ v2024.02.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add :py:meth:`NamedArray.expand_dims`, :py:meth:`NamedArray.permute_dims` and :py:meth:`NamedArray.broadcast_to`
+  (:pull:`8380`) By `Anderson Banihirwe <https://github.com/andersy005>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -211,9 +214,6 @@ New Features
   callable, similar to :py:meth:`Dataset.where` & :py:meth:`Dataset.sortby` & others.
   (:pull:`8511`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-
-- Add :py:meth:`NamedArray.expand_dims` and :py:meth:`NamedArray.broadcast_to`
-  (:pull:`8380`) By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
