@@ -44,6 +44,8 @@ Bug fixes
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Ensure :py:meth:`DataArray.unstack` works when wrapping array API-compliant classes. (:issue:`8666`, :pull:`8668`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fix negative slicing of Zarr arrays without dask installed. (:issue:`8252`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~

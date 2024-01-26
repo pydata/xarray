@@ -86,10 +86,17 @@ class ZarrArrayWrapper(BackendArray):
     def _oindex(self, key):
         return self._array.oindex[key]
 
+    def _getitem(self, key):
+        return self._array[key]
+
     def __getitem__(self, key):
         array = self._array
         if isinstance(key, indexing.BasicIndexer):
-            return array[key.tuple]
+            # this will convert negative slices to positive slices
+            # The latter are all that Zarr supports
+            return indexing.explicit_indexing_adapter(
+                key, array.shape, indexing.IndexingSupport.VECTORIZED, self._getitem
+            )
         elif isinstance(key, indexing.VectorizedIndexer):
             return array.vindex[
                 indexing._arrayize_vectorized_indexer(key, self.shape).tuple

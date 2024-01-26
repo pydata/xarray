@@ -2929,14 +2929,6 @@ class ZarrBase(CFEncodedBase):
             with pytest.raises(TypeError, match=r"Invalid attribute in Dataset.attrs."):
                 ds.to_zarr(store_target, **self.version_kwargs)
 
-    def test_vectorized_indexing_negative_step(self) -> None:
-        if not has_dask:
-            pytest.xfail(
-                reason="zarr without dask handles negative steps in slices incorrectly"
-            )
-
-        super().test_vectorized_indexing_negative_step()
-
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):
