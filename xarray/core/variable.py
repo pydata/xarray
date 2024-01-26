@@ -1571,7 +1571,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         reordered = self.transpose(*dim_order)
 
         new_shape = reordered.shape[: len(other_dims)] + new_dim_sizes
-        new_data = reordered.data.reshape(new_shape)
+        new_data = duck_array_ops.reshape(reordered.data, new_shape)
         new_dims = reordered.dims[: len(other_dims)] + new_dim_names
 
         return type(self)(
