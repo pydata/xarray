@@ -897,14 +897,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if not dim:
             dims = self.dims[::-1]
         else:
-            # Flatten the tuple and handle ellipsis
-            flattened_dims: list[_Dim] = []
-            for item in dim:
-                if item is ...:
-                    flattened_dims.extend(self.dims)
-                else:
-                    flattened_dims.extend(item)
-            dims = tuple(infix_dims(flattened_dims, self.dims, missing_dims))
+            dims = tuple(infix_dims(dim, self.dims, missing_dims))  # type: ignore
 
         if len(dims) < 2 or dims == self.dims:
             # no need to transpose if only one dimension
