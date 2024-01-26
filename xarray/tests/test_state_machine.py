@@ -40,7 +40,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
         (name,) = var.dims
         # dim coord
         self.dataset[name] = var
-        # non-dim coord of same size
+        # non-dim coord of same size; this allows renaming
         self.dataset[name + "_"] = var
         note(f"> vars: {tuple(self.dataset._variables)}")
 
@@ -50,6 +50,8 @@ class DatasetStateMachine(RuleBasedStateMachine):
         # benbovy: "skip the default indexes invariant test when the name of an
         # existing dimension coordinate is passed as input kwarg or dict key
         # to .rename_vars()."
+        if newname in self.dataset._variables:
+            newname += "_"
         oldname = random.choice(tuple(self.dataset.dims))
         self.check_default_indexes = False
         self.dataset = self.dataset.rename_vars({oldname: newname})
