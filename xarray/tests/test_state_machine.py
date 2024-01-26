@@ -1,3 +1,5 @@
+import random
+
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
@@ -10,6 +12,8 @@ from xarray import Dataset
 from xarray.testing import _assert_internal_invariants, assert_identical
 from xarray.tests import has_zarr
 from xarray.tests.test_backends import ON_WINDOWS, create_tmp_file
+
+random.seed(123456)
 
 
 def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
@@ -43,11 +47,10 @@ class DatasetStateMachine(RuleBasedStateMachine):
     @rule(newname=xrst.names())
     @precondition(lambda self: len(self.dataset.dims) >= 1)
     def rename_vars(self, newname):
-        # TODO: randomize this
         # benbovy: "skip the default indexes invariant test when the name of an
         # existing dimension coordinate is passed as input kwarg or dict key
         # to .rename_vars()."
-        oldname = tuple(self.dataset.dims)[0]
+        oldname = random.choice(tuple(self.dataset.dims))
         self.check_default_indexes = False
         self.dataset = self.dataset.rename_vars({oldname: newname})
         note(f"> renaming {oldname} to {newname}")
@@ -56,8 +59,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
     @precondition(lambda self: len(self.dataset._variables) >= 2)
     def swap_dims(self):
         ds = self.dataset
-        # TODO: randomize?
-        dim = tuple(ds.dims)[0]
+        dim = random.choice(tuple(ds.dims))
 
         to = dim + "_" if "_" not in dim else dim[:-1]
         assert to in ds._variables
@@ -76,8 +78,6 @@ class DatasetStateMachine(RuleBasedStateMachine):
 
     @invariant()
     def assert_invariants(self):
-        # ndims = len(self.dataset.dims)
-
         note(f"> ===\n\n {self.dataset!r} \n===\n\n")
         _assert_internal_invariants(self.dataset, self.check_default_indexes)
 
