@@ -44,6 +44,11 @@ class DatasetStateMachine(RuleBasedStateMachine):
         self.dataset[name + "_"] = var
         note(f"> vars: {tuple(self.dataset._variables)}")
 
+    @precondition(lambda self: len(self.dataset.dims) >= 1)
+    def reset_index(self):
+        dim = random.choice(tuple(self.dataset.dims))
+        self.dataset = self.dataset.reset_index(dim)
+
     @rule(newname=xrst.names())
     @precondition(lambda self: len(self.dataset.dims) >= 1)
     def rename_vars(self, newname):
