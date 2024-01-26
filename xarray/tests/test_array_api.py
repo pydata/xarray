@@ -115,6 +115,14 @@ def test_stack(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     assert_equal(actual, expected)
 
 
+def test_unstack(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
+    np_arr, xp_arr = arrays
+    expected = np_arr.stack(z=("x", "y")).unstack()
+    actual = xp_arr.stack(z=("x", "y")).unstack()
+    assert isinstance(actual.data, Array)
+    assert_equal(actual, expected)
+
+
 def test_where() -> None:
     np_arr = xr.DataArray(np.array([1, 0]), dims="x")
     xp_arr = xr.DataArray(xp.asarray([1, 0]), dims="x")
