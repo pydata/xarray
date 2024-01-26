@@ -37,6 +37,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fixed a regression that prevented multi-index level coordinates being
+  serialized after resetting or dropping the multi-index (:issue:`8628`, :pull:`8672`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Documentation
 ~~~~~~~~~~~~~
