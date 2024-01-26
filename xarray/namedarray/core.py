@@ -927,7 +927,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self.permute_dims()
 
     def broadcast_to(
-        self, dim: _DimsLike | Mapping[_Dim, int] | None = None, **dim_kwargs: Any
+        self, dim: Mapping[_Dim, int] | None = None, **dim_kwargs: Any
     ) -> NamedArray[Any, _DType_co]:
         """
         Broadcast the NamedArray to a new shape by extending its dimensions.
@@ -987,9 +987,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         # ensure the dimensions are in the correct order
         ordered_dims = list(broadcast_shape.keys())
         ordered_shape = tuple(broadcast_shape[d] for d in ordered_dims)
-        data = duck_array_ops.broadcast_to(
-            self._data, ordered_shape
-        )  # TODO: use array-api-compat function
+        data = duck_array_ops.broadcast_to(self._data, ordered_shape)  # type: ignore  # TODO: use array-api-compat function
         return self._new(data=data, dims=ordered_dims)
 
     def expand_dims(
