@@ -51,12 +51,27 @@ class DatasetStateMachine(RuleBasedStateMachine):
 
     @rule(newname=xrst.names())
     @precondition(lambda self: len(self.dataset.dims) >= 1)
+    def stack(self, newname):
+        # benbovy: "skip the default indexes invariant test when the name of an
+        # existing dimension coordinate is passed as input kwarg or dict key
+        # to .rename_vars()."
+        while newname in self.dataset._variables:
+            newname += "_foo"
+        oldnames = random.choices(tuple(self.dataset.dims), k=2)
+        self.dataset = self.dataset.stack({newname: oldnames})
+
+    @rule()
+    def unstack(self):
+        self.dataset = self.dataset.unstack()
+
+    @rule(newname=xrst.names())
+    @precondition(lambda self: len(self.dataset.dims) >= 1)
     def rename_vars(self, newname):
         # benbovy: "skip the default indexes invariant test when the name of an
         # existing dimension coordinate is passed as input kwarg or dict key
         # to .rename_vars()."
-        if newname in self.dataset._variables:
-            newname += "_"
+        while newname in self.dataset._variables:
+            newname += "_foo"
         oldname = random.choice(tuple(self.dataset.dims))
         self.check_default_indexes = False
         self.dataset = self.dataset.rename_vars({oldname: newname})
