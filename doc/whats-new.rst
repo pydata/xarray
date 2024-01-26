@@ -23,6 +23,9 @@ v2024.02.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Xarray now defers to flox's `heuristics <https://flox.readthedocs.io/en/latest/implementation.html#heuristics>`_
+  to set default `method` for groupby problems. This only applies to ``flox>=0.9``.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -40,10 +43,16 @@ Bug fixes
 - Fixed a regression that prevented multi-index level coordinates being
   serialized after resetting or dropping the multi-index (:issue:`8628`, :pull:`8672`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Fix bug with broadcasting when wrapping array API-compliant classes. (:issue:`8665`, :pull:`8669`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Ensure :py:meth:`DataArray.unstack` works when wrapping array API-compliant classes. (:issue:`8666`, :pull:`8668`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
-
+- Fix `variables` arg typo in `Dataset.sortby()` docstring
+  (:issue:`8663`, :pull:`8670`)
+  By `Tom Vo <https://github.com/tomvothecoder>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
