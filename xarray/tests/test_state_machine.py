@@ -29,9 +29,9 @@ DIM_NAME = xrst.dimension_names(name_strategy=UNIQUE_NAME, min_dims=1, max_dims=
 
 def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
     return (
-        npst.integer_dtypes(sizes=(32, 64))
-        | npst.unsigned_integer_dtypes(sizes=(32, 64))
-        | npst.floating_dtypes(sizes=(32, 64))
+        npst.integer_dtypes(endianness="<", sizes=(32, 64))
+        | npst.unsigned_integer_dtypes(endianness="<", sizes=(32, 64))
+        | npst.floating_dtypes(endianness="<", sizes=(32, 64))
     )
 
 
