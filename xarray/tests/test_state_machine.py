@@ -21,6 +21,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
     def __init__(self):
         super().__init__()
         self.dataset = Dataset()
+        self.check_default_indexes = True
 
     @rule(
         var=xrst.variables(
@@ -40,7 +41,11 @@ class DatasetStateMachine(RuleBasedStateMachine):
     @precondition(lambda self: len(self.dataset.dims) >= 1)
     def rename_vars(self, newname):
         # TODO: randomize this
+        # benbovy: "skip the default indexes invariant test when the name of an
+        # existing dimension coordinate is passed as input kwarg or dict key
+        # to .rename_vars()."
         oldname = tuple(self.dataset.dims)[0]
+        self.check_default_indexes = False
         self.dataset = self.dataset.rename_vars({oldname: newname})
         note(f"> renaming {oldname} to {newname}")
 
@@ -61,7 +66,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
         # ndims = len(self.dataset.dims)
 
         note(f"> ===\n\n {self.dataset!r} \n===\n\n")
-        _assert_internal_invariants(self.dataset, check_default_indexes=True)
+        _assert_internal_invariants(self.dataset, self.check_default_indexes)
 
 
 DatasetStateMachine.TestCase.settings = settings(max_examples=1000)
