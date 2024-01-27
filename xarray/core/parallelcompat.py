@@ -310,7 +310,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         dask.array.Array.rechunk
         cubed.Array.rechunk
         """
-        return data.rechunk(chunks, **kwargs)  # type: ignore[attr-defined]
+        return data.rechunk(chunks, **kwargs)
 
     @abstractmethod
     def compute(self, *data: T_ChunkedArray | Any, **kwargs) -> tuple[np.ndarray, ...]:
