@@ -177,11 +177,6 @@ Bug fixes
 - Add tests and fixes for empty :py:class:`CFTimeIndex`, including broken html repr (:issue:`7298`, :pull:`8600`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 
-
-Documentation
-~~~~~~~~~~~~~
-
-
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
