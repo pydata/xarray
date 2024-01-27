@@ -54,8 +54,8 @@ COERCION_VALUE_ERROR = (
     "manually specify the encoding['units'] and encoding['dtype'] (e.g. "
     "'seconds since 1970-01-01' and np.dtype('int32')) on the time "
     "variable(s) such that the times can be serialized in a netCDF3 file "
-    "(note that depending on the situation, however, that this latter option "
-    "may result in an inaccurate round trip)."
+    "(note that depending on the situation, however, this latter option may "
+    "result in an inaccurate round trip)."
 )
 
 
