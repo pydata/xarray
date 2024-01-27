@@ -706,7 +706,7 @@ def _cast_to_dtype_if_safe(num: np.ndarray, dtype: np.dtype) -> np.ndarray:
 
 
 def encode_cf_datetime(
-    dates: T_DuckArray,
+    dates: T_DuckArray,  # type: ignore
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
@@ -728,7 +728,7 @@ def encode_cf_datetime(
 
 
 def _eagerly_encode_cf_datetime(
-    dates: T_DuckArray,
+    dates: T_DuckArray,  # type: ignore
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
@@ -811,7 +811,7 @@ def _eagerly_encode_cf_datetime(
 
 
 def _encode_cf_datetime_within_map_blocks(
-    dates: T_DuckArray,
+    dates: T_DuckArray,  # type: ignore
     units: str,
     calendar: str,
     dtype: np.dtype,
@@ -861,7 +861,7 @@ def _lazily_encode_cf_datetime(
 
 
 def encode_cf_timedelta(
-    timedeltas: T_DuckArray,
+    timedeltas: T_DuckArray,  # type: ignore
     units: str | None = None,
     dtype: np.dtype | None = None,
 ) -> tuple[T_DuckArray, str]:
@@ -873,7 +873,7 @@ def encode_cf_timedelta(
 
 
 def _eagerly_encode_cf_timedelta(
-    timedeltas: T_DuckArray,
+    timedeltas: T_DuckArray,  # type: ignore
     units: str | None = None,
     dtype: np.dtype | None = None,
     allow_units_modification: bool = True,
@@ -925,7 +925,7 @@ def _eagerly_encode_cf_timedelta(
 
 
 def _encode_cf_timedelta_within_map_blocks(
-    timedeltas: T_DuckArray,
+    timedeltas: T_DuckArray,  # type:ignore
     units: str,
     dtype: np.dtype,
 ) -> T_DuckArray:
