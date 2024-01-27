@@ -44,6 +44,19 @@ Bug fixes
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Ensure :py:meth:`DataArray.unstack` works when wrapping array API-compliant classes. (:issue:`8666`, :pull:`8668`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Preserve chunks when writing time-like variables to zarr by enabling lazy CF
+  encoding of time-like variables (:issue:`7132`, :issue:`8230`, :issue:`8432`,
+  :pull:`8575`). By `Spencer Clark <https://github.com/spencerkclark>`_ and
+  `Mattia Almansi <https://github.com/malmans2>`_.
+- Preserve chunks when writing time-like variables to zarr by enabling their
+  lazy encoding (:issue:`7132`, :issue:`8230`, :issue:`8432`, :pull:`8253`,
+  :pull:`8575`; see also discussion in :pull:`8253`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_ and `Mattia Almansi
+  <https://github.com/malmans2>`_.
+- Raise an informative error if dtype encoding of time-like variables would
+  lead to integer overflow or unsafe conversion from floating point to integer
+  values (:issue:`8542`, :pull:`8575`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -163,19 +176,6 @@ Bug fixes
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Add tests and fixes for empty :py:class:`CFTimeIndex`, including broken html repr (:issue:`7298`, :pull:`8600`).
   By `Mathias Hauser <https://github.com/mathause>`_.
-- Preserve chunks when writing time-like variables to zarr by enabling lazy CF
-  encoding of time-like variables (:issue:`7132`, :issue:`8230`, :issue:`8432`,
-  :pull:`8575`). By `Spencer Clark <https://github.com/spencerkclark>`_ and
-  `Mattia Almansi <https://github.com/malmans2>`_.
-- Preserve chunks when writing time-like variables to zarr by enabling their
-  lazy encoding (:issue:`7132`, :issue:`8230`, :issue:`8432`, :pull:`8253`,
-  :pull:`8575`; see also discussion in :pull:`8253`). By `Spencer Clark
-  <https://github.com/spencerkclark>`_ and `Mattia Almansi
-  <https://github.com/malmans2>`_.
-- Raise an informative error if dtype encoding of time-like variables would
-  lead to integer overflow or unsafe conversion from floating point to integer
-  values (:issue:`8542`, :pull:`8575`).  By `Spencer Clark
-  <https://github.com/spencerkclark>`_.
 
 
 Documentation
