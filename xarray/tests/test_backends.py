@@ -5416,7 +5416,7 @@ def test_write_file_from_np_str(str_type, tmpdir) -> None:
 class TestNCZarr:
     @property
     def netcdfc_version(self):
-        return Version(nc4.getlibversion().split()[0])
+        return Version(nc4.getlibversion().split()[0].split("-development")[0])
 
     def _create_nczarr(self, filename):
         if self.netcdfc_version < Version("4.8.1"):
