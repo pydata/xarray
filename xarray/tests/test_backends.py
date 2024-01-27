@@ -2266,6 +2266,10 @@ class ZarrBase(CFEncodedBase):
                 pass
 
     @requires_dask
+    @pytest.mark.skipif(
+        ON_WINDOWS,
+        reason="Very flaky on Windows CI. Can re-enable assuming it starts consistently passing.",
+    )
     def test_chunk_encoding_with_dask(self) -> None:
         # These datasets DO have dask chunks. Need to check for various
         # interactions between dask and zarr chunks
@@ -2968,6 +2972,10 @@ class TestZarrDictStore(ZarrBase):
 
 
 @requires_zarr
+@pytest.mark.skipif(
+    ON_WINDOWS,
+    reason="Very flaky on Windows CI. Can re-enable assuming it starts consistently passing.",
+)
 class TestZarrDirectoryStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
@@ -5431,7 +5439,7 @@ def test_write_file_from_np_str(str_type, tmpdir) -> None:
 class TestNCZarr:
     @property
     def netcdfc_version(self):
-        return Version(nc4.getlibversion().split()[0])
+        return Version(nc4.getlibversion().split()[0].split("-development")[0])
 
     def _create_nczarr(self, filename):
         if self.netcdfc_version < Version("4.8.1"):

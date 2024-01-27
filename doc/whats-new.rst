@@ -14,14 +14,18 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2024.01.1:
 
-v2024.01.1 (unreleased)
+.. _whats-new.2024.02.0:
+
+v2024.02.0 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
 
+- Xarray now defers to flox's `heuristics <https://flox.readthedocs.io/en/latest/implementation.html#heuristics>`_
+  to set default `method` for groupby problems. This only applies to ``flox>=0.9``.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -29,18 +33,60 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- The `dt.weekday_name` parameter wasn't functional on modern pandas versions and has been removed. (:issue:`8610`, :pull:`8664`)
+  By `Sam Coleman <https://github.com/nameloCmaS>`_.
 
 
 Bug fixes
 ~~~~~~~~~
 
+- Fix bug with broadcasting when wrapping array API-compliant classes. (:issue:`8665`, :pull:`8669`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Ensure :py:meth:`DataArray.unstack` works when wrapping array API-compliant classes. (:issue:`8666`, :pull:`8668`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+Documentation
+~~~~~~~~~~~~~
+- Fix `variables` arg typo in `Dataset.sortby()` docstring
+  (:issue:`8663`, :pull:`8670`)
+  By `Tom Vo <https://github.com/tomvothecoder>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2024.01.1:
+
+v2024.01.1 (23 Jan, 2024)
+-------------------------
+
+This release is to fix a bug with the rendering of the documentation, but it also includes changes to the handling of pandas frequency strings.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Following pandas, :py:meth:`infer_freq` will return ``"YE"``, instead of ``"Y"`` (formerly ``"A"``).
+  This is to be consistent with the deprecation of the latter frequency string in pandas 2.2.
+  This is a follow up to :pull:`8415` (:issue:`8612`, :pull:`8642`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+- Following pandas, the frequency string ``"Y"`` (formerly ``"A"``) is deprecated in
+  favor of ``"YE"``. These strings are used, for example, in :py:func:`date_range`,
+  :py:func:`cftime_range`, :py:meth:`DataArray.resample`, and :py:meth:`Dataset.resample`
+  among others (:issue:`8612`, :pull:`8629`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
-
-Internal Changes
-~~~~~~~~~~~~~~~~
+- Pin ``sphinx-book-theme`` to ``1.0.1`` to fix a rendering issue with the sidebar in the docs. (:issue:`8619`, :pull:`8632`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fixed documentation where the use of the depreciated pandas frequency string
+  prevented the documentation from being built. (:pull:`8638`)
+  By `Sam Coleman <https://github.com/nameloCmaS>`_.
 
 .. _whats-new.2024.01.0:
 
@@ -7279,10 +7325,16 @@ Breaking changes
 - The ``season`` datetime shortcut now returns an array of string labels
   such `'DJF'`:
 
-  .. ipython:: python
+  .. code-block:: ipython
 
-      ds = xray.Dataset({"t": pd.date_range("2000-01-01", periods=12, freq="M")})
-      ds["t.season"]
+      In[92]: ds = xray.Dataset({"t": pd.date_range("2000-01-01", periods=12, freq="M")})
+
+      In[93]: ds["t.season"]
+      Out[93]:
+      <xarray.DataArray 'season' (t: 12)>
+      array(['DJF', 'DJF', 'MAM', ..., 'SON', 'SON', 'DJF'], dtype='<U3')
+      Coordinates:
+        * t        (t) datetime64[ns] 2000-01-31 2000-02-29 ... 2000-11-30 2000-12-31
 
   Previously, it returned numbered seasons 1 through 4.
 - We have updated our use of the terms of "coordinates" and "variables". What
