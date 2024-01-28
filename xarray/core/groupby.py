@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Union
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 from xarray.core import dtypes, duck_array_ops, nputils, ops
 from xarray.core._aggregations import (
@@ -996,6 +997,7 @@ class GroupBy(Generic[T_Xarray]):
         **kwargs: Any,
     ):
         """Adaptor function that translates our groupby API to that of flox."""
+        import flox
         from flox.xarray import xarray_reduce
 
         from xarray.core.dataset import Dataset
@@ -1007,10 +1009,11 @@ class GroupBy(Generic[T_Xarray]):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
 
-        # preserve current strategy (approximately) for dask groupby.
-        # We want to control the default anyway to prevent surprises
-        # if flox decides to change its default
-        kwargs.setdefault("method", "cohorts")
+        if Version(flox.__version__) < Version("0.9"):
+            # preserve current strategy (approximately) for dask groupby
+            # on older flox versions to prevent surprises.
+            # flox >=0.9 will choose this on its own.
+            kwargs.setdefault("method", "cohorts")
 
         numeric_only = kwargs.pop("numeric_only", None)
         if numeric_only:
