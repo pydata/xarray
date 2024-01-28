@@ -923,19 +923,20 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self, dim: Mapping[_Dim, int] | None = None, **dim_kwargs: Any
     ) -> NamedArray[Any, _DType_co]:
         """
-        Broadcast the NamedArray to a new shape by extending its dimensions.
+        Broadcast the NamedArray to a new shape. New dimensions are not allowed.
 
         This method allows for the expansion of the array's dimensions to a specified shape.
         It handles both positional and keyword arguments for specifying the dimensions to broadcast.
+        An error is raised if new dimensions are attempted to be added.
 
         Parameters
         ----------
         dim : dict, str, sequence of str, optional
             Dimensions to broadcast the array to. If a dict, keys are dimension names and values are the new sizes.
-            If a string or sequence of strings, new dimensions are added with a size of 1.
+            If a string or sequence of strings, existing dimensions are matched with a size of 1.
 
         **dim_kwargs : Any
-            Additional dimensions specified as keyword arguments. Each keyword argument specifies the name of the new dimension and its size.
+            Additional dimensions specified as keyword arguments. Each keyword argument specifies the name of an existing dimension and its size.
 
         Returns
         -------
@@ -949,35 +950,30 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         >>> array.sizes
         {'x': 2, 'y': 2}
 
-        >>> broadcasted = array.expand_dims("lat").broadcast_to(x=2, y=2, lat=6)
+        >>> broadcasted = array.broadcast_to(x=2, y=2)
         >>> broadcasted.sizes
-        {'lat': 6, 'x': 2, 'y': 2}
+        {'x': 2, 'y': 2}
         """
 
         from xarray.core import duck_array_ops
 
         combined_dims = either_dict_or_kwargs(dim, dim_kwargs, "broadcast_to")
 
-        # check that the dimensions are valid
-        dims = list(combined_dims.keys())
-        if isinstance(dims, dict):
-            dims_keys = dims
-        else:
-            dims_keys = dims if isinstance(dims, str) else list(dims)
-        if missing_dims := set(self.dims) - set(dims_keys):
+        # Check that no new dimensions are added
+        if new_dims := set(combined_dims) - set(self.dims):
             raise ValueError(
-                f"new dimensions {dims!r} must be a superset of "
-                f"existing dimensions {self.dims!r}. missing dims: {missing_dims}"
+                f"Cannot add new dimensions: {new_dims}. Only existing dimensions are allowed. "
+                "Use `expand_dims` method to add new dimensions."
             )
 
-        # create a dictionary of the current dimensions and their sizes
+        # Create a dictionary of the current dimensions and their sizes
         current_shape = self.sizes
 
-        # update the current shape with the new dimensions, keeping the order of the original dimensions
+        # Update the current shape with the new dimensions, keeping the order of the original dimensions
         broadcast_shape = {d: current_shape.get(d, 1) for d in self.dims}
         broadcast_shape |= combined_dims
 
-        # ensure the dimensions are in the correct order
+        # Ensure the dimensions are in the correct order
         ordered_dims = list(broadcast_shape.keys())
         ordered_shape = tuple(broadcast_shape[d] for d in ordered_dims)
         data = duck_array_ops.broadcast_to(self._data, ordered_shape)  # type: ignore  # TODO: use array-api-compat function

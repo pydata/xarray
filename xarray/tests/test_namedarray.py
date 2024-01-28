@@ -570,6 +570,9 @@ class TestNamedArray(NamedArraySubclassobjects):
         ):
             target.broadcast_to({"x": 2, "y": 2})
 
+        with pytest.raises(ValueError, match=r"Cannot add new dimensions"):
+            target.broadcast_to({"x": 2, "y": 2, "z": 2})
+
     def test_warn_on_repeated_dimension_names(self) -> None:
         with pytest.warns(UserWarning, match="Duplicate dimension names"):
             NamedArray(("x", "x"), np.arange(4).reshape(2, 2))
