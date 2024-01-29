@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
     from xarray.core.dataset import Dataset
     from xarray.core.types import NestedSequence
+    from xarray.datatree_.datatree import DataTree
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -458,6 +459,11 @@ class BackendEntrypoint:
     - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
       ``filename_or_obj``, ``False`` otherwise. The implementation of this
       method is not mandatory.
+    - ``open_datatree`` method: it shall implement reading from file, variables
+      decoding and it returns an instance of :py:class:`~datatree.DataTree`.
+      It shall take in input at least ``filename_or_obj`` argument. The
+      implementation of this method is not mandatory.  For more details see
+      :ref:`RST open_datatree`.
 
     Attributes
     ----------
@@ -508,6 +514,16 @@ class BackendEntrypoint:
 
         return False
 
+    def open_datatree(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        **kwargs: Any,
+    ) -> DataTree:
+        """
+        Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
+        """
+
+        raise NotImplementedError
 
 # mapping of engine name to (module name, BackendEntrypoint Class)
 BACKEND_ENTRYPOINTS: dict[str, tuple[str | None, type[BackendEntrypoint]]] = {}
