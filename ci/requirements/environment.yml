@@ -34,7 +34,7 @@ dependencies:
   - pre-commit
   - pyarrow # pandas makes a deprecation warning without this, breaking doctests
   - pydap
-  - pytest
+  - pytest==7.4.*
   - pytest-cov
   - pytest-env
   - pytest-xdist
