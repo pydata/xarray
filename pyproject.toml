@@ -232,6 +232,7 @@ reportMissingTypeStubs = false
 builtins = ["ellipsis"]
 exclude = [
   ".eggs",
+  "datatree_",
   "doc",
   "_typed_ops.pyi",
 ]
