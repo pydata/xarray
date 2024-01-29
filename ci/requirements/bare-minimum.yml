@@ -6,7 +6,7 @@ dependencies:
   - python=3.9
   - coveralls
   - pip
-  - pytest
+  - pytest==7.4.*
   - pytest-cov
   - pytest-env
   - pytest-xdist

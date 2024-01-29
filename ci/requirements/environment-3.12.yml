@@ -33,7 +33,7 @@ dependencies:
   - pooch
   - pre-commit
   - pydap
-  - pytest
+  - pytest==7.4.*
   - pytest-cov
   - pytest-env
   - pytest-xdist
