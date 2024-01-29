@@ -1342,7 +1342,6 @@ def test_calendar_specific_month_end_negative_freq(
 ) -> None:
     year = 2000  # Use a leap-year to highlight calendar differences
     result = cftime_range(
-        # start="2000-12", end="1999", freq=f"-{freq}", calendar=calendar
         start="2000-12",
         end="2000",
         freq="-2ME",
