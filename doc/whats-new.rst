@@ -27,6 +27,9 @@ New Features
   in :py:func:`date_range`,  and :py:func:`cftime_range` (:pull:`8651`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 
+- Xarray now defers to flox's `heuristics <https://flox.readthedocs.io/en/latest/implementation.html#heuristics>`_
+  to set default `method` for groupby problems. This only applies to ``flox>=0.9``.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -41,10 +44,16 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix bug with broadcasting when wrapping array API-compliant classes. (:issue:`8665`, :pull:`8669`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Ensure :py:meth:`DataArray.unstack` works when wrapping array API-compliant classes. (:issue:`8666`, :pull:`8668`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
-
+- Fix `variables` arg typo in `Dataset.sortby()` docstring
+  (:issue:`8663`, :pull:`8670`)
+  By `Tom Vo <https://github.com/tomvothecoder>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
