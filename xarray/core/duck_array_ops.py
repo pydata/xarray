@@ -18,6 +18,7 @@ from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
 from numpy import (  # noqa
     around,  # noqa
+    full_like,
     gradient,
     isclose,
     isin,
@@ -26,10 +27,8 @@ from numpy import (  # noqa
     tensordot,
     transpose,
     unravel_index,
-    zeros_like,  # noqa
 )
 from numpy import concatenate as _concatenate
-from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 from packaging.version import Version
 
@@ -38,6 +37,17 @@ from xarray.core.options import OPTIONS
 from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.core.pycompat import array_type, is_duck_dask_array
 from xarray.core.utils import is_duck_array, module_available
+
+# remove once numpy 2.0 is the oldest supported version
+if module_available("numpy", minversion="2.0.0.dev0"):
+    from numpy.lib.array_utils import (  # type: ignore[import-not-found,unused-ignore]
+        normalize_axis_index,
+    )
+else:
+    from numpy.core.multiarray import (  # type: ignore[attr-defined,no-redef,unused-ignore]
+        normalize_axis_index,
+    )
+
 
 dask_available = module_available("dask")
 
@@ -141,7 +151,7 @@ def isnull(data):
         return xp.isnan(data)
     elif issubclass(scalar_type, (np.bool_, np.integer, np.character, np.void)):
         # these types cannot represent missing values
-        return zeros_like(data, dtype=bool)
+        return full_like(data, dtype=bool, fill_value=False)
     else:
         # at this point, array should have dtype=object
         if isinstance(data, np.ndarray):

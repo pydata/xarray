@@ -24,7 +24,7 @@ from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.parallelcompat import get_chunked_array_type
 from xarray.core.pycompat import is_chunked_array, is_duck_dask_array
 from xarray.core.types import Dims, T_DataArray
-from xarray.core.utils import is_dict_like, is_scalar
+from xarray.core.utils import is_dict_like, is_scalar, parse_dims
 from xarray.core.variable import Variable
 from xarray.util.deprecation_helpers import deprecate_dims
 
@@ -811,7 +811,7 @@ def apply_variable_ufunc(
             pass
         else:
             raise ValueError(
-                "unknown setting for chunked array handling in " f"apply_ufunc: {dask}"
+                f"unknown setting for chunked array handling in apply_ufunc: {dask}"
             )
     else:
         if vectorize:
@@ -1383,7 +1383,7 @@ def cov(
         )
     if weights is not None:
         if not isinstance(weights, DataArray):
-            raise TypeError("Only xr.DataArray is supported." f"Given {type(weights)}.")
+            raise TypeError(f"Only xr.DataArray is supported. Given {type(weights)}.")
     return _cov_corr(da_a, da_b, weights=weights, dim=dim, ddof=ddof, method="cov")
 
 
@@ -1487,7 +1487,7 @@ def corr(
         )
     if weights is not None:
         if not isinstance(weights, DataArray):
-            raise TypeError("Only xr.DataArray is supported." f"Given {type(weights)}.")
+            raise TypeError(f"Only xr.DataArray is supported. Given {type(weights)}.")
     return _cov_corr(da_a, da_b, weights=weights, dim=dim, method="corr")
 
 
@@ -1875,16 +1875,14 @@ def dot(
     einsum_axes = "abcdefghijklmnopqrstuvwxyz"
     dim_map = {d: einsum_axes[i] for i, d in enumerate(all_dims)}
 
-    if dim is ...:
-        dim = all_dims
-    elif isinstance(dim, str):
-        dim = (dim,)
-    elif dim is None:
-        # find dimensions that occur more than one times
+    if dim is None:
+        # find dimensions that occur more than once
         dim_counts: Counter = Counter()
         for arr in arrays:
             dim_counts.update(arr.dims)
         dim = tuple(d for d, c in dim_counts.items() if c > 1)
+    else:
+        dim = parse_dims(dim, all_dims=tuple(all_dims))
 
     dot_dims: set[Hashable] = set(dim)
 

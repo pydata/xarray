@@ -12,6 +12,7 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering",
 ]
 description = "N-D labeled arrays and datasets in Python"
@@ -22,10 +23,28 @@ readme = "README.md"
 requires-python = ">=3.9"
 
 dependencies = [
-  "numpy>=1.22",
-  "packaging>=21.3",
-  "pandas>=1.4",
+  "numpy>=1.23",
+  "packaging>=22",
+  "pandas>=1.5",
 ]
+
+[project.optional-dependencies]
+accel = ["scipy", "bottleneck", "numbagg", "flox", "opt_einsum"]
+complete = ["xarray[accel,io,parallel,viz,dev]"]
+dev = [
+  "hypothesis",
+  "pre-commit",
+  "pytest",
+  "pytest-cov",
+  "pytest-env",
+  "pytest-xdist",
+  "pytest-timeout",
+  "ruff",
+  "xarray[complete]",
+]
+io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
+parallel = ["dask[complete]"]
+viz = ["matplotlib", "seaborn", "nc-time-axis"]
 
 [project.urls]
 Documentation = "https://docs.xarray.dev"
@@ -36,13 +55,6 @@ source-code = "https://github.com/pydata/xarray"
 
 [project.entry-points."xarray.chunkmanagers"]
 dask = "xarray.core.daskmanager:DaskManager"
-
-[project.optional-dependencies]
-accel = ["scipy", "bottleneck", "numbagg", "flox", "opt_einsum"]
-complete = ["xarray[accel,io,parallel,viz]"]
-io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
-parallel = ["dask[complete]"]
-viz = ["matplotlib", "seaborn", "nc-time-axis"]
 
 [build-system]
 build-backend = "setuptools.build_meta"
@@ -91,6 +103,7 @@ module = [
   "cf_units.*",
   "cfgrib.*",
   "cftime.*",
+  "cloudpickle.*",
   "cubed.*",
   "cupy.*",
   "dask.types.*",
@@ -225,12 +238,13 @@ reportMissingTypeStubs = false
 
 [tool.ruff]
 builtins = ["ellipsis"]
-exclude = [
-  ".eggs",
+extend-exclude = [
   "doc",
   "_typed_ops.pyi",
 ]
 target-version = "py39"
+
+[tool.ruff.lint]
 # E402: module level import not at top of file
 # E501: line too long - let black worry about that
 # E731: do not assign a lambda expression, use a def
@@ -247,7 +261,7 @@ select = [
   "UP", # Pyupgrade
 ]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["xarray"]
 
 [tool.pytest.ini_options]
@@ -267,3 +281,8 @@ testpaths = ["xarray/tests", "properties"]
 
 [tool.aliases]
 test = "pytest"
+
+[tool.repo-review]
+ignore = [
+  "PP308", # This option creates a large amount of log lines.
+]

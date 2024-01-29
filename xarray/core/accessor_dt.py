@@ -59,7 +59,8 @@ def _access_through_cftimeindex(values, name):
         field_values = _season_from_months(months)
     elif name == "date":
         raise AttributeError(
-            "'CFTimeIndex' object has no attribute `date`. Consider using the floor method instead, for instance: `.time.dt.floor('D')`."
+            "'CFTimeIndex' object has no attribute `date`. Consider using the floor method "
+            "instead, for instance: `.time.dt.floor('D')`."
         )
     else:
         field_values = getattr(values_as_cftimeindex, name)
@@ -457,11 +458,6 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     weekday = dayofweek
 
     @property
-    def weekday_name(self) -> T_DataArray:
-        """The name of day in a week"""
-        return self._date_field("weekday_name", object)
-
-    @property
     def dayofyear(self) -> T_DataArray:
         """The ordinal day of the year"""
         return self._date_field("dayofyear", np.int64)
@@ -545,7 +541,7 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
 
     Examples
     --------
-    >>> dates = pd.timedelta_range(start="1 day", freq="6H", periods=20)
+    >>> dates = pd.timedelta_range(start="1 day", freq="6h", periods=20)
     >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
     <xarray.DataArray (time: 20)>
