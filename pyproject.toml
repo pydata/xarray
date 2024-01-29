@@ -247,6 +247,10 @@ extend-safe-fixes = [
 ]
 target-version = "py39"
 
+[tool.ruff.per-file-ignores]
+# don't enforce absolute imports
+"asv_bench/**" = ["TID252"]
+
 [tool.ruff.lint]
 # E402: module level import not at top of file
 # E501: line too long - let black worry about that
