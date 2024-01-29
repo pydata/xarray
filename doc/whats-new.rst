@@ -23,6 +23,9 @@ v2024.02.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add :py:meth:`NamedArray.expand_dims`, :py:meth:`NamedArray.permute_dims` and :py:meth:`NamedArray.broadcast_to`
+  (:pull:`8380`) By `Anderson Banihirwe <https://github.com/andersy005>`_.
+
 - Xarray now defers to flox's `heuristics <https://flox.readthedocs.io/en/latest/implementation.html#heuristics>`_
   to set default `method` for groupby problems. This only applies to ``flox>=0.9``.
   By `Deepak Cherian <https://github.com/dcherian>`_.
@@ -44,6 +47,19 @@ Bug fixes
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Ensure :py:meth:`DataArray.unstack` works when wrapping array API-compliant classes. (:issue:`8666`, :pull:`8668`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Preserve chunks when writing time-like variables to zarr by enabling lazy CF
+  encoding of time-like variables (:issue:`7132`, :issue:`8230`, :issue:`8432`,
+  :pull:`8575`). By `Spencer Clark <https://github.com/spencerkclark>`_ and
+  `Mattia Almansi <https://github.com/malmans2>`_.
+- Preserve chunks when writing time-like variables to zarr by enabling their
+  lazy encoding (:issue:`7132`, :issue:`8230`, :issue:`8432`, :pull:`8253`,
+  :pull:`8575`; see also discussion in :pull:`8253`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_ and `Mattia Almansi
+  <https://github.com/malmans2>`_.
+- Raise an informative error if dtype encoding of time-like variables would
+  lead to integer overflow or unsafe conversion from floating point to integer
+  values (:issue:`8542`, :pull:`8575`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
