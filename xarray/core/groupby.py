@@ -5,14 +5,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Hashable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Literal,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Union
 
 import numpy as np
 import pandas as pd
