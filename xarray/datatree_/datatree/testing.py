@@ -1,7 +1,7 @@
 from xarray.testing.assertions import ensure_warnings
 
-from .datatree import DataTree
-from .formatting import diff_tree_repr
+from xarray.datatree_.datatree.datatree import DataTree
+from xarray.datatree_.datatree.formatting import diff_tree_repr
 
 
 @ensure_warnings

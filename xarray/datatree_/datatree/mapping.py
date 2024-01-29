@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING, Callable, Tuple
 
 from xarray import DataArray, Dataset
 
-from .iterators import LevelOrderIter
-from .treenode import NodePath, TreeNode
+from xarray.datatree_.datatree.iterators import LevelOrderIter
+from xarray.datatree_.datatree.treenode import NodePath, TreeNode
 
 if TYPE_CHECKING:
-    from .datatree import DataTree
+    from xarray.datatree_.datatree.datatree import DataTree
 
 
 class TreeIsomorphismError(ValueError):
@@ -156,7 +156,7 @@ def map_over_subtree(func: Callable) -> Callable:
     @functools.wraps(func)
     def _map_over_subtree(*args, **kwargs) -> DataTree | Tuple[DataTree, ...]:
         """Internal function which maps func over every node in tree, returning a tree of the results."""
-        from .datatree import DataTree
+        from xarray.datatree_.datatree.datatree import DataTree
 
         all_tree_inputs = [a for a in args if isinstance(a, DataTree)] + [
             a for a in kwargs.values() if isinstance(a, DataTree)

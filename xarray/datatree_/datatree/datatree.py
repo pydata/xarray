@@ -40,16 +40,20 @@ from xarray.core.utils import (
 )
 from xarray.core.variable import Variable
 
-from . import formatting, formatting_html
-from .common import TreeAttrAccessMixin
-from .mapping import TreeIsomorphismError, check_isomorphic, map_over_subtree
-from .ops import (
+from xarray.datatree_.datatree import formatting, formatting_html
+from xarray.datatree_.datatree.common import TreeAttrAccessMixin
+from xarray.datatree_.datatree.mapping import (
+    TreeIsomorphismError,
+    check_isomorphic,
+    map_over_subtree,
+)
+from xarray.datatree_.datatree.ops import (
     DataTreeArithmeticMixin,
     MappedDatasetMethodsMixin,
     MappedDataWithCoords,
 )
-from .render import RenderTree
-from .treenode import NamedNode, NodePath, Tree
+from xarray.datatree_.datatree.render import RenderTree
+from xarray.datatree_.datatree.treenode import NamedNode, NodePath, Tree
 
 try:
     from xarray.core.variable import calculate_dimensions
@@ -1484,7 +1488,7 @@ class DataTree(
         kwargs :
             Addional keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
         """
-        from .io import _datatree_to_netcdf
+        from xarray.datatree_.datatree.io import _datatree_to_netcdf
 
         _datatree_to_netcdf(
             self,
@@ -1526,7 +1530,7 @@ class DataTree(
         kwargs :
             Additional keyword arguments to be passed to ``xarray.Dataset.to_zarr``
         """
-        from .io import _datatree_to_zarr
+        from xarray.datatree_.datatree.io import _datatree_to_zarr
 
         _datatree_to_zarr(
             self,

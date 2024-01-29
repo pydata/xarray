@@ -341,7 +341,7 @@ class TreeNode(Generic[Tree]):
         --------
         DataTree.descendants
         """
-        from . import iterators
+        from xarray.datatree_.datatree import iterators
 
         return iterators.PreOrderIter(self)
 

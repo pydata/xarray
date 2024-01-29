@@ -1,6 +1,6 @@
 from xarray.core.extensions import _register_accessor
 
-from .datatree import DataTree
+from xarray.datatree_.datatree.datatree import DataTree
 
 
 def register_datatree_accessor(name):

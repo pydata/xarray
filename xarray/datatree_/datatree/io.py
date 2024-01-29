@@ -1,6 +1,6 @@
 from xarray import Dataset, open_dataset
 
-from .datatree import DataTree, NodePath
+from xarray.datatree_.datatree.datatree import DataTree, NodePath
 
 
 def _iter_zarr_groups(root, parent="/"):

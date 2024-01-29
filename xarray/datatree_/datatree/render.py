@@ -6,7 +6,7 @@ import collections
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .datatree import DataTree
+    from xarray.datatree_.datatree.datatree import DataTree
 
 Row = collections.namedtuple("Row", ("pre", "fill", "node"))
 

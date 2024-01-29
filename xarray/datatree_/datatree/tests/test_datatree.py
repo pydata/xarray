@@ -212,7 +212,9 @@ class TestGetItem:
         results = DataTree(name="results", data=data)
         xrt.assert_identical(results[["temp", "p"]], data[["temp", "p"]])
 
-    @pytest.mark.xfail(reason="Indexing needs to return whole tree (GH https://github.com/xarray-contrib/datatree/issues/77)")
+    @pytest.mark.xfail(
+        reason="Indexing needs to return whole tree (GH https://github.com/xarray-contrib/datatree/issues/77)"
+    )
     def test_getitem_dict_like_selection_access_to_dataset(self):
         data = xr.Dataset({"temp": [0, 50]})
         results = DataTree(name="results", data=data)
