@@ -23,6 +23,9 @@ v2024.02.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add :py:meth:`NamedArray.expand_dims`, :py:meth:`NamedArray.permute_dims` and :py:meth:`NamedArray.broadcast_to`
+  (:pull:`8380`) By `Anderson Banihirwe <https://github.com/andersy005>`_.
+
 - Xarray now defers to flox's `heuristics <https://flox.readthedocs.io/en/latest/implementation.html#heuristics>`_
   to set default `method` for groupby problems. This only applies to ``flox>=0.9``.
   By `Deepak Cherian <https://github.com/dcherian>`_.

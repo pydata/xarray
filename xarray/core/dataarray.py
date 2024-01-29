@@ -71,6 +71,7 @@ from xarray.core.variable import (
     as_compatible_data,
     as_variable,
 )
+from xarray.namedarray.utils import infix_dims
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
@@ -3017,7 +3018,7 @@ class DataArray(
         Dataset.transpose
         """
         if dims:
-            dims = tuple(utils.infix_dims(dims, self.dims, missing_dims))
+            dims = tuple(infix_dims(dims, self.dims, missing_dims))
         variable = self.variable.transpose(*dims)
         if transpose_coords:
             coords: dict[Hashable, Variable] = {}
