@@ -242,7 +242,6 @@ reportMissingTypeStubs = false
 [tool.ruff]
 builtins = ["ellipsis"]
 extend-exclude = [
-  "datatree_",
   "doc",
   "_typed_ops.pyi",
 ]
