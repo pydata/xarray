@@ -242,6 +242,9 @@ extend-exclude = [
   "doc",
   "_typed_ops.pyi",
 ]
+extend-safe-fixes = [
+  "TID252", # absolute imports
+]
 target-version = "py39"
 
 [tool.ruff.lint]
@@ -257,12 +260,17 @@ select = [
   "F", # Pyflakes
   "E", # Pycodestyle
   "W",
+  "TID", # flake8-tidy-imports (absolute imports)
   "I", # isort
   "UP", # Pyupgrade
 ]
 
 [tool.ruff.lint.isort]
 known-first-party = ["xarray"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+# Disallow all relative imports.
+ban-relative-imports = "all"
 
 [tool.pytest.ini_options]
 addopts = ["--strict-config", "--strict-markers"]
