@@ -22,7 +22,7 @@ import numpy as np
 
 from xarray.core.pycompat import is_chunked_array
 
-T_ChunkedArray = TypeVar("T_ChunkedArray")
+T_ChunkedArray = TypeVar("T_ChunkedArray", bound=Any)
 
 if TYPE_CHECKING:
     from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
@@ -310,7 +310,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         dask.array.Array.rechunk
         cubed.Array.rechunk
         """
-        return data.rechunk(chunks, **kwargs)  # type: ignore[attr-defined]
+        return data.rechunk(chunks, **kwargs)
 
     @abstractmethod
     def compute(self, *data: T_ChunkedArray | Any, **kwargs) -> tuple[np.ndarray, ...]:
