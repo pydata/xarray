@@ -23,6 +23,9 @@ v2024.02.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Xarray now defers to flox's `heuristics <https://flox.readthedocs.io/en/latest/implementation.html#heuristics>`_
+  to set default `method` for groupby problems. This only applies to ``flox>=0.9``.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -30,15 +33,23 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- The `dt.weekday_name` parameter wasn't functional on modern pandas versions and has been removed. (:issue:`8610`, :pull:`8664`)
+  By `Sam Coleman <https://github.com/nameloCmaS>`_.
 
 
 Bug fixes
 ~~~~~~~~~
 
+- Fix bug with broadcasting when wrapping array API-compliant classes. (:issue:`8665`, :pull:`8669`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Ensure :py:meth:`DataArray.unstack` works when wrapping array API-compliant classes. (:issue:`8666`, :pull:`8668`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
-
+- Fix `variables` arg typo in `Dataset.sortby()` docstring
+  (:issue:`8663`, :pull:`8670`)
+  By `Tom Vo <https://github.com/tomvothecoder>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -73,6 +84,9 @@ Documentation
 
 - Pin ``sphinx-book-theme`` to ``1.0.1`` to fix a rendering issue with the sidebar in the docs. (:issue:`8619`, :pull:`8632`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fixed documentation where the use of the depreciated pandas frequency string
+  prevented the documentation from being built. (:pull:`8638`)
+  By `Sam Coleman <https://github.com/nameloCmaS>`_.
 
 .. _whats-new.2024.01.0:
 
