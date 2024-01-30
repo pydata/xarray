@@ -1539,7 +1539,7 @@ class Dataset(
         """
         from xarray.core.formatting import shorten_list_repr
 
-        if utils.is_dict_like(key):
+        if is_dict_like(key):
             return self.isel(**key)
         if utils.hashable(key):
             try:

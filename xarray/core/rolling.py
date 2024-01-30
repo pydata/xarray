@@ -10,10 +10,11 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 import numpy as np
 from packaging.version import Version
 
-from xarray.core import dtypes, duck_array_ops, pycompat, utils
+from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.arithmetic import CoarsenArithmetic
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
+from xarray.namedarray import pycompat
 from xarray.namedarray.utils import (
     either_dict_or_kwargs,
     is_dict_like,
