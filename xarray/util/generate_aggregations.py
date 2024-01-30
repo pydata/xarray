@@ -28,7 +28,8 @@ from typing import TYPE_CHECKING, Any, Callable
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
 from xarray.core.types import Dims, Self
-from xarray.core.utils import contains_only_chunked_or_numpy, module_available
+from xarray.core.utils import contains_only_chunked_or_numpy
+from xarray.namedarray.utils import module_available
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray

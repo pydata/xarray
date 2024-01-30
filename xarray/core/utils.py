@@ -37,7 +37,6 @@ from __future__ import annotations
 
 import contextlib
 import functools
-import importlib
 import inspect
 import io
 import itertools
@@ -73,7 +72,6 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 
 if TYPE_CHECKING:
     from xarray.core.types import Dims, ErrorOptionsWithWarn
@@ -1125,34 +1123,6 @@ def contains_only_chunked_or_numpy(obj) -> bool:
             for var in obj.variables.values()
         ]
     )
-
-
-def module_available(module: str, minversion: str | None = None) -> bool:
-    """Checks whether a module is installed without importing it.
-
-    Use this for a lightweight check and lazy imports.
-
-    Parameters
-    ----------
-    module : str
-        Name of the module.
-    minversion : str, optional
-        Minimum version of the module
-
-    Returns
-    -------
-    available : bool
-        Whether the module is installed.
-    """
-    if importlib.util.find_spec(module) is None:
-        return False
-
-    if minversion is not None:
-        version = importlib.metadata.version(module)
-
-        return Version(version) >= Version(minversion)
-
-    return True
 
 
 def find_stack_level(test_mode=False) -> int:

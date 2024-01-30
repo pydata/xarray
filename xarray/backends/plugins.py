@@ -9,7 +9,7 @@ from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any, Callable
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
-from xarray.core.utils import module_available
+from xarray.namedarray.utils import module_available
 
 if TYPE_CHECKING:
     import os

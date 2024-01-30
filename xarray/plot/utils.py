@@ -13,8 +13,9 @@ import pandas as pd
 
 from xarray.core.indexes import PandasMultiIndex
 from xarray.core.options import OPTIONS
-from xarray.core.utils import is_scalar, module_available
+from xarray.core.utils import is_scalar
 from xarray.namedarray.pycompat import DuckArrayModule
+from xarray.namedarray.utils import module_available
 
 nc_time_axis_available = module_available("nc_time_axis")
 

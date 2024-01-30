@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import importlib
 import sys
 import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import numpy as np
+from packaging.version import Version
 
 from xarray.namedarray._typing import (
     ErrorOptionsWithWarn,
@@ -36,7 +38,7 @@ V = TypeVar("V")
 T = TypeVar("T")
 
 
-def module_available(module: str) -> bool:
+def module_available(module: str, minversion: str | None = None) -> bool:
     """Checks whether a module is installed without importing it.
 
     Use this for a lightweight check and lazy imports.
@@ -45,15 +47,23 @@ def module_available(module: str) -> bool:
     ----------
     module : str
         Name of the module.
+    minversion : str, optional
+        Minimum version of the module
 
     Returns
     -------
     available : bool
         Whether the module is installed.
     """
-    from importlib.util import find_spec
+    if importlib.util.find_spec(module) is None:
+        return False
 
-    return find_spec(module) is not None
+    if minversion is not None:
+        version = importlib.metadata.version(module)
+
+        return Version(version) >= Version(minversion)
+
+    return True
 
 
 def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:

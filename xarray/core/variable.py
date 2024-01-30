@@ -33,7 +33,6 @@ from xarray.core.utils import (
     decode_numpy_dict_values,
     drop_dims_from_indexers,
     ensure_us_time_resolution,
-    infix_dims,
     maybe_coerce_to_str,
 )
 from xarray.namedarray._typing import _arrayfunction_or_api
@@ -42,6 +41,7 @@ from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import integer_types, is_0d_dask_array, is_chunked_array
 from xarray.namedarray.utils import (
     either_dict_or_kwargs,
+    infix_dims,
     is_dict_like,
     is_duck_dask_array,
 )

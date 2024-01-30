@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from xarray.core import pycompat
-from xarray.core.utils import module_available
+from xarray.namedarray import pycompat
+from xarray.namedarray.utils import module_available
 
 # remove once numpy 2.0 is the oldest supported version
 if module_available("numpy", minversion="2.0.0.dev0"):
