@@ -44,6 +44,7 @@ from xarray.core.utils import (
     ensure_us_time_resolution,
     is_duck_array,
     maybe_coerce_to_str,
+    module_available
 )
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.utils import infix_dims
@@ -1993,8 +1994,15 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
             method = interpolation
 
+        using_numbagg = False
         if skipna or (skipna is None and self.dtype.kind in "cfO"):
-            _quantile_func = np.nanquantile
+            if (module_available("numbagg") and OPTIONS["use_numbagg"] is True and
+                    method == "linear"):
+                import numbagg
+                _quantile_func = numbagg.nanquantile
+                using_numbagg = True
+            else:
+                _quantile_func = np.nanquantile
         else:
             _quantile_func = np.quantile
 
@@ -2016,7 +2024,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         axis = np.arange(-1, -1 * len(dim) - 1, -1)
 
-        kwargs = {"q": q, "axis": axis, "method": method}
+        if using_numbagg:
+            kwargs = {"quantiles": q, "axis": axis}
+        else:
+            kwargs = {"q": q, "axis": axis, "method": method}
 
         result = apply_ufunc(
             _wrapper,
