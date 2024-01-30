@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
     from xarray.core.dataset import Dataset
     from xarray.core.types import NestedSequence
-    from xarray.datatree_.datatree import DataTree
+    from datatree import DataTree
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)

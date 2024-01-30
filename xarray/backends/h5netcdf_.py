@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
-    from xarray.datatree_.datatree import DataTree
+    from datatree import DataTree
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -429,7 +429,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         from h5netcdf.legacyapi import Dataset as ncDataset
 
         from xarray.backends.api import open_dataset
-        from xarray.datatree_.datatree import DataTree, NodePath
+        from datatree import DataTree, NodePath
 
         ds = open_dataset(filename, **kwargs)
         tree_root = DataTree.from_dict({"/": ds})
@@ -451,7 +451,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
 # TODO [MHS, 01/23/2024] directly duplicated from netCDF4 backend
 def _iter_nc_groups(root, parent="/"):
-    from xarray.datatree_.datatree import NodePath
+    from datatree import NodePath
 
     parent = NodePath(parent)
     for path, group in root.groups.items():
