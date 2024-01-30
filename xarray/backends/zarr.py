@@ -32,9 +32,10 @@ from xarray.core.variable import Variable
 if TYPE_CHECKING:
     from io import BufferedIOBase
 
+    from datatree import DataTree
+
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
-    from datatree import DataTree
 
 
 # need some special secret attributes to tell us the dimensions
@@ -1038,9 +1039,10 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(self, store, **kwargs) -> DataTree:
         import zarr  # type: ignore
+        from datatree import DataTree
+        from datatree.treenode import NodePath
 
         from xarray.backends.api import open_dataset
-        from datatree import DataTree, NodePath
 
         zds = zarr.open_group(store, mode="r")
         ds = open_dataset(store, engine="zarr", **kwargs)
@@ -1064,12 +1066,13 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
 
 def _iter_zarr_groups(root, parent="/"):
-    from datatree import NodePath
+    from datatree.treenode import NodePath
 
     parent = NodePath(parent)
     for path, group in root.groups():
         gpath = parent / path
         yield str(gpath)
         yield from _iter_zarr_groups(group, parent=gpath)
+
 
 BACKEND_ENTRYPOINTS["zarr"] = ("zarr", ZarrBackendEntrypoint)

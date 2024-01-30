@@ -2,7 +2,7 @@
 from .datatree import DataTree
 from .extensions import register_datatree_accessor
 from .mapping import TreeIsomorphismError, map_over_subtree
-from .treenode import InvalidTreeError, NodePath, NotFoundInTreeError
+from .treenode import InvalidTreeError, NotFoundInTreeError
 
 try:
     # NOTE: the `_version.py` file must not be present in the git repository
@@ -17,7 +17,6 @@ __all__ = (
     "TreeIsomorphismError",
     "InvalidTreeError",
     "NotFoundInTreeError",
-    "NodePath",
     "map_over_subtree",
     "register_datatree_accessor",
     "__version__",

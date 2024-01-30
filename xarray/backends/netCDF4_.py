@@ -42,9 +42,10 @@ from xarray.core.variable import Variable
 if TYPE_CHECKING:
     from io import BufferedIOBase
 
+    from datatree import DataTree
+
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
-    from datatree import DataTree
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -669,10 +670,11 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         return ds
 
     def open_datatree(self, filename: str, **kwargs) -> DataTree:
+        from datatree import DataTree
+        from datatree.treenode import NodePath
         from netCDF4 import Dataset as ncDataset
 
         from xarray.backends.api import open_dataset
-        from datatree import DataTree, NodePath
 
         ds = open_dataset(filename, **kwargs)
         tree_root = DataTree.from_dict({"/": ds})
@@ -693,7 +695,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
 
 def _iter_nc_groups(root, parent="/"):
-    from datatree import NodePath
+    from datatree.treenode import NodePath
 
     parent = NodePath(parent)
     for path, group in root.groups.items():
