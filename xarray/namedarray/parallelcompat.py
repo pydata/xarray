@@ -311,7 +311,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         dask.array.Array.rechunk
         cubed.Array.rechunk
         """
-        return data.rechunk(chunks, **kwargs)  # type: ignore[attr-defined]
+        return data.rechunk(chunks, **kwargs)
 
     @abstractmethod
     def compute(self, *data: T_ChunkedArray | Any, **kwargs) -> tuple[np.ndarray, ...]:
@@ -401,6 +401,43 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         --------
         dask.array.reduction
         cubed.core.reduction
+        """
+        raise NotImplementedError()
+
+    def scan(
+        self,
+        func: Callable,
+        binop: Callable,
+        ident: float,
+        arr: T_ChunkedArray,
+        axis: int | None = None,
+        dtype: np.dtype | None = None,
+        **kwargs,
+    ) -> T_ChunkedArray:
+        """
+        General version of a 1D scan, also known as a cumulative array reduction.
+
+        Used in ``ffill`` and ``bfill`` in xarray.
+
+        Parameters
+        ----------
+        func: callable
+            Cumulative function like np.cumsum or np.cumprod
+        binop: callable
+            Associated binary operator like ``np.cumsum->add`` or ``np.cumprod->mul``
+        ident: Number
+            Associated identity like ``np.cumsum->0`` or ``np.cumprod->1``
+        arr: dask Array
+        axis: int, optional
+        dtype: dtype
+
+        Returns
+        -------
+        Chunked array
+
+        See also
+        --------
+        dask.array.cumreduction
         """
         raise NotImplementedError()
 

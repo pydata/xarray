@@ -10,7 +10,7 @@ from numpy.core import defchararray
 
 import xarray as xr
 from xarray.core import formatting
-from xarray.tests import requires_dask, requires_netCDF4
+from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
 
 
 class TestFormatting:
@@ -406,19 +406,27 @@ class TestFormatting:
                 "var2": ("x", np.array([3, 4], dtype="int64")),
             },
             coords={
-                "x": np.array(["a", "b"], dtype="U1"),
+                "x": (
+                    "x",
+                    np.array(["a", "b"], dtype="U1"),
+                    {"foo": "bar", "same": "same"},
+                ),
                 "y": np.array([1, 2, 3], dtype="int64"),
             },
-            attrs={"units": "m", "description": "desc"},
+            attrs={"title": "mytitle", "description": "desc"},
         )
 
         ds_b = xr.Dataset(
             data_vars={"var1": ("x", np.array([1, 2], dtype="int64"))},
             coords={
-                "x": ("x", np.array(["a", "c"], dtype="U1"), {"source": 0}),
+                "x": (
+                    "x",
+                    np.array(["a", "c"], dtype="U1"),
+                    {"source": 0, "foo": "baz", "same": "same"},
+                ),
                 "label": ("x", np.array([1, 2], dtype="int64")),
             },
-            attrs={"units": "kg"},
+            attrs={"title": "newtitle"},
         )
 
         byteorder = "<" if sys.byteorder == "little" else ">"
@@ -429,8 +437,12 @@ class TestFormatting:
             (x: 2, y: 3) != (x: 2)
         Differing coordinates:
         L * x        (x) %cU1 'a' 'b'
+            Differing variable attributes:
+                foo: bar
         R * x        (x) %cU1 'a' 'c'
-            source: 0
+            Differing variable attributes:
+                source: 0
+                foo: baz
         Coordinates only on the left object:
           * y        (y) int64 1 2 3
         Coordinates only on the right object:
@@ -441,8 +453,8 @@ class TestFormatting:
         Data variables only on the left object:
             var2     (x) int64 3 4
         Differing attributes:
-        L   units: m
-        R   units: kg
+        L   title: mytitle
+        R   title: newtitle
         Attributes only on the left object:
             description: desc"""
             % (byteorder, byteorder)
@@ -761,3 +773,48 @@ def test_lazy_array_wont_compute() -> None:
     # These will crash if var.data are converted to numpy arrays:
     var.__repr__()
     var._repr_html_()
+
+
+@pytest.mark.parametrize("as_dataset", (False, True))
+def test_format_xindexes_none(as_dataset: bool) -> None:
+    # ensure repr for empty xindexes can be displayed #8367
+
+    expected = """\
+    Indexes:
+        *empty*"""
+    expected = dedent(expected)
+
+    obj: xr.DataArray | xr.Dataset = xr.DataArray()
+    obj = obj._to_temp_dataset() if as_dataset else obj
+
+    actual = repr(obj.xindexes)
+    assert actual == expected
+
+
+@pytest.mark.parametrize("as_dataset", (False, True))
+def test_format_xindexes(as_dataset: bool) -> None:
+    expected = """\
+    Indexes:
+        x        PandasIndex"""
+    expected = dedent(expected)
+
+    obj: xr.DataArray | xr.Dataset = xr.DataArray([1], coords={"x": [1]})
+    obj = obj._to_temp_dataset() if as_dataset else obj
+
+    actual = repr(obj.xindexes)
+    assert actual == expected
+
+
+@requires_cftime
+def test_empty_cftimeindex_repr() -> None:
+    index = xr.coding.cftimeindex.CFTimeIndex([])
+
+    expected = """\
+    Indexes:
+        time     CFTimeIndex([], dtype='object', length=0, calendar=None, freq=None)"""
+    expected = dedent(expected)
+
+    da = xr.DataArray([], coords={"time": index})
+
+    actual = repr(da.indexes)
+    assert actual == expected

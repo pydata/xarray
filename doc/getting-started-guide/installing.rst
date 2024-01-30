@@ -7,9 +7,9 @@ Required dependencies
 ---------------------
 
 - Python (3.9 or later)
-- `numpy <https://www.numpy.org/>`__ (1.22 or later)
-- `packaging <https://packaging.pypa.io/en/latest/#>`__ (21.3 or later)
-- `pandas <https://pandas.pydata.org/>`__ (1.4 or later)
+- `numpy <https://www.numpy.org/>`__ (1.23 or later)
+- `packaging <https://packaging.pypa.io/en/latest/#>`__ (22 or later)
+- `pandas <https://pandas.pydata.org/>`__ (1.5 or later)
 
 .. _optional-dependencies:
 
@@ -38,9 +38,6 @@ For netCDF and IO
 - `cftime <https://unidata.github.io/cftime>`__: recommended if you
   want to encode/decode datetimes for non-standard calendars or dates before
   year 1678 or after year 2262.
-- `PseudoNetCDF <http://github.com/barronh/pseudonetcdf/>`__: recommended
-  for accessing CAMx, GEOS-Chem (bpch), NOAA ARL files, ICARTT files
-  (ffi1001) and many other.
 - `iris <https://github.com/scitools/iris>`__: for conversion to and from iris'
   Cube objects
 

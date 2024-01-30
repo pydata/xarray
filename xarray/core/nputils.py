@@ -1,17 +1,30 @@
 from __future__ import annotations
 
 import warnings
+from typing import Callable
 
 import numpy as np
 import pandas as pd
-from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
 from packaging.version import Version
+
+from xarray.core import pycompat
+from xarray.core.utils import module_available
+
+# remove once numpy 2.0 is the oldest supported version
+if module_available("numpy", minversion="2.0.0.dev0"):
+    from numpy.lib.array_utils import (  # type: ignore[import-not-found,unused-ignore]
+        normalize_axis_index,
+    )
+else:
+    from numpy.core.multiarray import (  # type: ignore[attr-defined,no-redef,unused-ignore]
+        normalize_axis_index,
+    )
 
 # remove once numpy 2.0 is the oldest supported version
 try:
     from numpy.exceptions import RankWarning  # type: ignore[attr-defined,unused-ignore]
 except ImportError:
-    from numpy import RankWarning
+    from numpy import RankWarning  # type: ignore[attr-defined,no-redef,unused-ignore]
 
 from xarray.core.options import OPTIONS
 from xarray.namedarray._typing import _arrayfunction_or_api
@@ -24,15 +37,6 @@ except ImportError:
     # use numpy methods instead
     bn = np
     _BOTTLENECK_AVAILABLE = False
-
-try:
-    import numbagg
-
-    _HAS_NUMBAGG = Version(numbagg.__version__) >= Version("0.5.0")
-except ImportError:
-    # use numpy methods instead
-    numbagg = np
-    _HAS_NUMBAGG = False
 
 
 def _select_along_axis(values, idx, axis):
@@ -174,29 +178,39 @@ class NumpyVIndexAdapter:
         self._array[key] = np.moveaxis(value, vindex_positions, mixed_positions)
 
 
-def _create_method(name, npmodule=np):
+def _create_method(name, npmodule=np) -> Callable:
     def f(values, axis=None, **kwargs):
         dtype = kwargs.get("dtype", None)
         bn_func = getattr(bn, name, None)
-        nba_func = getattr(numbagg, name, None)
 
         if (
-            _HAS_NUMBAGG
+            module_available("numbagg")
+            and pycompat.mod_version("numbagg") >= Version("0.5.0")
             and OPTIONS["use_numbagg"]
             and isinstance(values, np.ndarray)
-            and nba_func is not None
-            # numbagg uses ddof=1 only, but numpy uses ddof=0 by default
-            and (("var" in name or "std" in name) and kwargs.get("ddof", 0) == 1)
+            # numbagg<0.7.0 uses ddof=1 only, but numpy uses ddof=0 by default
+            and (
+                pycompat.mod_version("numbagg") >= Version("0.7.0")
+                or ("var" not in name and "std" not in name)
+                or kwargs.get("ddof", 0) == 1
+            )
             # TODO: bool?
             and values.dtype.kind in "uifc"
             # and values.dtype.isnative
             and (dtype is None or np.dtype(dtype) == values.dtype)
         ):
-            # numbagg does not take care dtype, ddof
-            kwargs.pop("dtype", None)
-            kwargs.pop("ddof", None)
-            result = nba_func(values, axis=axis, **kwargs)
-        elif (
+            import numbagg
+
+            nba_func = getattr(numbagg, name, None)
+            if nba_func is not None:
+                # numbagg does not use dtype
+                kwargs.pop("dtype", None)
+                # prior to 0.7.0, numbagg did not support ddof; we ensure it's limited
+                # to ddof=1 above.
+                if pycompat.mod_version("numbagg") < Version("0.7.0"):
+                    kwargs.pop("ddof", None)
+                return nba_func(values, axis=axis, **kwargs)
+        if (
             _BOTTLENECK_AVAILABLE
             and OPTIONS["use_bottleneck"]
             and isinstance(values, np.ndarray)
@@ -223,7 +237,7 @@ def _nanpolyfit_1d(arr, x, rcond=None):
     mask = np.isnan(arr)
     if not np.all(mask):
         out[:-1], resid, rank, _ = np.linalg.lstsq(x[~mask, :], arr[~mask], rcond=rcond)
-        out[-1] = resid if resid.size > 0 else np.nan
+        out[-1] = resid[0] if resid.size > 0 else np.nan
         warn_on_deficient_rank(rank, x.shape[1])
     return out
 

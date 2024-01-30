@@ -15,15 +15,6 @@ from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex, default_in
 from xarray.core.variable import IndexVariable, Variable
 from xarray.namedarray._typing import _arrayfunction_or_api
 
-__all__ = (
-    "assert_allclose",
-    "assert_chunks_equal",
-    "assert_duckarray_equal",
-    "assert_duckarray_allclose",
-    "assert_equal",
-    "assert_identical",
-)
-
 
 def ensure_warnings(func):
     # sometimes tests elevate warnings to errors

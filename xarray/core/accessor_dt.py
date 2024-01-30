@@ -59,7 +59,8 @@ def _access_through_cftimeindex(values, name):
         field_values = _season_from_months(months)
     elif name == "date":
         raise AttributeError(
-            "'CFTimeIndex' object has no attribute `date`. Consider using the floor method instead, for instance: `.time.dt.floor('D')`."
+            "'CFTimeIndex' object has no attribute `date`. Consider using the floor method "
+            "instead, for instance: `.time.dt.floor('D')`."
         )
     else:
         field_values = getattr(values_as_cftimeindex, name)
@@ -74,6 +75,8 @@ def _access_through_series(values, name):
     if name == "season":
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
+    elif name == "total_seconds":
+        field_values = values_as_series.dt.total_seconds().values
     elif name == "isocalendar":
         # special NaT-handling can be removed when
         # https://github.com/pandas-dev/pandas/issues/54657 is resolved
@@ -455,11 +458,6 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     weekday = dayofweek
 
     @property
-    def weekday_name(self) -> T_DataArray:
-        """The name of day in a week"""
-        return self._date_field("weekday_name", object)
-
-    @property
     def dayofyear(self) -> T_DataArray:
         """The ordinal day of the year"""
         return self._date_field("dayofyear", np.int64)
@@ -543,7 +541,7 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
 
     Examples
     --------
-    >>> dates = pd.timedelta_range(start="1 day", freq="6H", periods=20)
+    >>> dates = pd.timedelta_range(start="1 day", freq="6h", periods=20)
     >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
     <xarray.DataArray (time: 20)>
@@ -574,6 +572,13 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
            43200, 64800])
     Coordinates:
       * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+    >>> ts.dt.total_seconds()
+    <xarray.DataArray 'total_seconds' (time: 20)>
+    array([ 86400., 108000., 129600., 151200., 172800., 194400., 216000.,
+           237600., 259200., 280800., 302400., 324000., 345600., 367200.,
+           388800., 410400., 432000., 453600., 475200., 496800.])
+    Coordinates:
+      * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
     """
 
     @property
@@ -595,6 +600,11 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
     def nanoseconds(self) -> T_DataArray:
         """Number of nanoseconds (>= 0 and less than 1 microsecond) for each element"""
         return self._date_field("nanoseconds", np.int64)
+
+    # Not defined as a property in order to match the Pandas API
+    def total_seconds(self) -> T_DataArray:
+        """Total duration of each element expressed in seconds."""
+        return self._date_field("total_seconds", np.float64)
 
 
 class CombinedDatetimelikeAccessor(

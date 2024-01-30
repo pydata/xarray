@@ -10,7 +10,6 @@ import xarray as xr
 from xarray import DataArray, Dataset, set_options
 from xarray.tests import (
     assert_allclose,
-    assert_array_equal,
     assert_equal,
     assert_identical,
     has_dask,
@@ -22,6 +21,31 @@ pytestmark = [
     pytest.mark.filterwarnings("error:Mean of empty slice"),
     pytest.mark.filterwarnings("error:All-NaN (slice|axis) encountered"),
 ]
+
+
+@pytest.mark.parametrize("func", ["mean", "sum"])
+@pytest.mark.parametrize("min_periods", [1, 10])
+def test_cumulative(d, func, min_periods) -> None:
+    # One dim
+    result = getattr(d.cumulative("z", min_periods=min_periods), func)()
+    expected = getattr(d.rolling(z=d["z"].size, min_periods=min_periods), func)()
+    assert_identical(result, expected)
+
+    # Multiple dim
+    result = getattr(d.cumulative(["z", "x"], min_periods=min_periods), func)()
+    expected = getattr(
+        d.rolling(z=d["z"].size, x=d["x"].size, min_periods=min_periods),
+        func,
+    )()
+    assert_identical(result, expected)
+
+
+def test_cumulative_vs_cum(d) -> None:
+    result = d.cumulative("z").sum()
+    expected = d.cumsum("z")
+    # cumsum drops the coord of the dimension; cumulative doesn't
+    expected = expected.assign_coords(z=result["z"])
+    assert_identical(result, expected)
 
 
 class TestDataArrayRolling:
@@ -83,22 +107,33 @@ class TestDataArrayRolling:
         ):
             da.rolling(foo=2)
 
-    @pytest.mark.parametrize("name", ("sum", "mean", "std", "min", "max", "median"))
+    @pytest.mark.parametrize(
+        "name", ("sum", "mean", "std", "min", "max", "median", "argmin", "argmax")
+    )
     @pytest.mark.parametrize("center", (True, False, None))
     @pytest.mark.parametrize("min_periods", (1, None))
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-    def test_rolling_wrapped_bottleneck(self, da, name, center, min_periods) -> None:
+    def test_rolling_wrapped_bottleneck(
+        self, da, name, center, min_periods, compute_backend
+    ) -> None:
         bn = pytest.importorskip("bottleneck", minversion="1.1")
-
         # Test all bottleneck functions
         rolling_obj = da.rolling(time=7, min_periods=min_periods)
 
         func_name = f"move_{name}"
         actual = getattr(rolling_obj, name)()
+        window = 7
         expected = getattr(bn, func_name)(
-            da.values, window=7, axis=1, min_count=min_periods
+            da.values, window=window, axis=1, min_count=min_periods
         )
-        assert_array_equal(actual.values, expected)
+        # index 0 is at the rightmost edge of the window
+        # need to reverse index here
+        # see GH #8541
+        if func_name in ["move_argmin", "move_argmax"]:
+            expected = window - 1 - expected
+
+        # Using assert_allclose because we get tiny (1e-17) differences in numbagg.
+        np.testing.assert_allclose(actual.values, expected)
 
         with pytest.warns(DeprecationWarning, match="Reductions are applied"):
             getattr(rolling_obj, name)(dim="time")
@@ -106,7 +141,8 @@ class TestDataArrayRolling:
         # Test center
         rolling_obj = da.rolling(time=7, center=center)
         actual = getattr(rolling_obj, name)()["time"]
-        assert_equal(actual, da["time"])
+        # Using assert_allclose because we get tiny (1e-17) differences in numbagg.
+        assert_allclose(actual, da["time"])
 
     @requires_dask
     @pytest.mark.parametrize("name", ("mean", "count"))
@@ -153,7 +189,9 @@ class TestDataArrayRolling:
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
     @pytest.mark.parametrize("window", (1, 2, 3, 4))
-    def test_rolling_pandas_compat(self, center, window, min_periods) -> None:
+    def test_rolling_pandas_compat(
+        self, center, window, min_periods, compute_backend
+    ) -> None:
         s = pd.Series(np.arange(10))
         da = DataArray.from_series(s)
 
@@ -203,7 +241,9 @@ class TestDataArrayRolling:
     @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
     @pytest.mark.parametrize("window", (1, 2, 3, 4))
     @pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
-    def test_rolling_reduce(self, da, center, min_periods, window, name) -> None:
+    def test_rolling_reduce(
+        self, da, center, min_periods, window, name, compute_backend
+    ) -> None:
         if min_periods is not None and window < min_periods:
             min_periods = window
 
@@ -217,13 +257,15 @@ class TestDataArrayRolling:
         actual = rolling_obj.reduce(getattr(np, "nan%s" % name))
         expected = getattr(rolling_obj, name)()
         assert_allclose(actual, expected)
-        assert actual.dims == expected.dims
+        assert actual.sizes == expected.sizes
 
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
     @pytest.mark.parametrize("window", (1, 2, 3, 4))
     @pytest.mark.parametrize("name", ("sum", "max"))
-    def test_rolling_reduce_nonnumeric(self, center, min_periods, window, name) -> None:
+    def test_rolling_reduce_nonnumeric(
+        self, center, min_periods, window, name, compute_backend
+    ) -> None:
         da = DataArray(
             [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time"
         ).isnull()
@@ -237,9 +279,9 @@ class TestDataArrayRolling:
         actual = rolling_obj.reduce(getattr(np, "nan%s" % name))
         expected = getattr(rolling_obj, name)()
         assert_allclose(actual, expected)
-        assert actual.dims == expected.dims
+        assert actual.sizes == expected.sizes
 
-    def test_rolling_count_correct(self) -> None:
+    def test_rolling_count_correct(self, compute_backend) -> None:
         da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
 
         kwargs: list[dict[str, Any]] = [
@@ -279,7 +321,9 @@ class TestDataArrayRolling:
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("min_periods", (None, 1))
     @pytest.mark.parametrize("name", ("sum", "mean", "max"))
-    def test_ndrolling_reduce(self, da, center, min_periods, name) -> None:
+    def test_ndrolling_reduce(
+        self, da, center, min_periods, name, compute_backend
+    ) -> None:
         rolling_obj = da.rolling(time=3, x=2, center=center, min_periods=min_periods)
 
         actual = getattr(rolling_obj, name)()
@@ -291,7 +335,7 @@ class TestDataArrayRolling:
         )()
 
         assert_allclose(actual, expected)
-        assert actual.dims == expected.dims
+        assert actual.sizes == expected.sizes
 
         if name in ["mean"]:
             # test our reimplementation of nanmean using np.nanmean
@@ -560,7 +604,7 @@ class TestDatasetRolling:
     @pytest.mark.parametrize("key", ("z1", "z2"))
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
     def test_rolling_wrapped_bottleneck(
-        self, ds, name, center, min_periods, key
+        self, ds, name, center, min_periods, key, compute_backend
     ) -> None:
         bn = pytest.importorskip("bottleneck", minversion="1.1")
 
@@ -577,12 +621,12 @@ class TestDatasetRolling:
             )
         else:
             raise ValueError
-        assert_array_equal(actual[key].values, expected)
+        np.testing.assert_allclose(actual[key].values, expected)
 
         # Test center
         rolling_obj = ds.rolling(time=7, center=center)
         actual = getattr(rolling_obj, name)()["time"]
-        assert_equal(actual, ds["time"])
+        assert_allclose(actual, ds["time"])
 
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
@@ -631,7 +675,7 @@ class TestDatasetRolling:
         ds_rolling_mean = ds_rolling.construct("window", stride=2, fill_value=0.0).mean(
             "window"
         )
-        assert (ds_rolling_mean.isnull().sum() == 0).to_array(dim="vars").all()
+        assert (ds_rolling_mean.isnull().sum() == 0).to_dataarray(dim="vars").all()
         assert (ds_rolling_mean["x"] == 0.0).sum() >= 0
 
     @pytest.mark.parametrize("center", (True, False))
@@ -700,7 +744,7 @@ class TestDatasetRolling:
         actual = rolling_obj.reduce(getattr(np, "nan%s" % name))
         expected = getattr(rolling_obj, name)()
         assert_allclose(actual, expected)
-        assert ds.dims == actual.dims
+        assert ds.sizes == actual.sizes
         # make sure the order of data_var are not changed.
         assert list(ds.data_vars.keys()) == list(actual.data_vars.keys())
 
@@ -727,7 +771,7 @@ class TestDatasetRolling:
             name,
         )()
         assert_allclose(actual, expected)
-        assert actual.dims == expected.dims
+        assert actual.sizes == expected.sizes
 
         # Do it in the opposite order
         expected = getattr(
@@ -738,7 +782,7 @@ class TestDatasetRolling:
         )()
 
         assert_allclose(actual, expected)
-        assert actual.dims == expected.dims
+        assert actual.sizes == expected.sizes
 
     @pytest.mark.parametrize("center", (True, False, (True, False)))
     @pytest.mark.parametrize("fill_value", (np.nan, 0.0))

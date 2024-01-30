@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import platform
+import string
 import warnings
 from contextlib import contextmanager, nullcontext
 from unittest import mock  # noqa: F401
@@ -53,21 +54,39 @@ def _importorskip(
         mod = importlib.import_module(modname)
         has = True
         if minversion is not None:
-            if Version(mod.__version__) < Version(minversion):
+            v = getattr(mod, "__version__", "999")
+            if Version(v) < Version(minversion):
                 raise ImportError("Minimum version not satisfied")
     except ImportError:
         has = False
-    func = pytest.mark.skipif(not has, reason=f"requires {modname}")
+
+    reason = f"requires {modname}"
+    if minversion is not None:
+        reason += f">={minversion}"
+    func = pytest.mark.skipif(not has, reason=reason)
     return has, func
 
 
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
 has_scipy, requires_scipy = _importorskip("scipy")
-has_pydap, requires_pydap = _importorskip("pydap.client")
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        "ignore",
+        message="'cgi' is deprecated and slated for removal in Python 3.13",
+        category=DeprecationWarning,
+    )
+    has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
-has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
+with warnings.catch_warnings():
+    # see https://github.com/pydata/xarray/issues/8537
+    warnings.filterwarnings(
+        "ignore",
+        message="h5py is running against HDF5 1.14.3",
+        category=UserWarning,
+    )
+
+    has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_pynio, requires_pynio = _importorskip("Nio")
-has_pseudonetcdf, requires_pseudonetcdf = _importorskip("PseudoNetCDF")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
@@ -76,7 +95,14 @@ has_zarr, requires_zarr = _importorskip("zarr")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg", "0.4.0")
-has_seaborn, requires_seaborn = _importorskip("seaborn")
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        "ignore",
+        message="is_categorical_dtype is deprecated and will be removed in a future version.",
+        category=DeprecationWarning,
+    )
+    # seaborn uses the deprecated `pandas.is_categorical_dtype`
+    has_seaborn, requires_seaborn = _importorskip("seaborn")
 has_sparse, requires_sparse = _importorskip("sparse")
 has_cupy, requires_cupy = _importorskip("cupy")
 has_cartopy, requires_cartopy = _importorskip("cartopy")
@@ -90,10 +116,20 @@ has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
+has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
+requires_numbagg_or_bottleneck = pytest.mark.skipif(
+    not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
+)
 # _importorskip does not work for development versions
 has_pandas_version_two = Version(pd.__version__).major >= 2
 requires_pandas_version_two = pytest.mark.skipif(
     not has_pandas_version_two, reason="requires pandas 2.0.0"
+)
+has_numpy_array_api, requires_numpy_array_api = _importorskip("numpy", "1.26.0")
+has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip("h5netcdf", "1.3.0")
+
+has_netCDF4_1_6_2_or_above, requires_netCDF4_1_6_2_or_above = _importorskip(
+    "netCDF4", "1.6.2"
 )
 
 # change some global options for tests
@@ -207,11 +243,18 @@ def source_ndarray(array):
     return base
 
 
+def format_record(record) -> str:
+    """Format warning record like `FutureWarning('Function will be deprecated...')`"""
+    return f"{str(record.category)[8:-2]}('{record.message}'))"
+
+
 @contextmanager
 def assert_no_warnings():
     with warnings.catch_warnings(record=True) as record:
         yield record
-        assert len(record) == 0, "got unexpected warning(s)"
+        assert (
+            len(record) == 0
+        ), f"Got {len(record)} unexpected warning(s): {[format_record(r) for r in record]}"
 
 
 # Internal versions of xarray's test functions that validate additional
@@ -239,28 +282,41 @@ def assert_allclose(a, b, check_default_indexes=True, **kwargs):
     xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
-def create_test_data(seed: int | None = None, add_attrs: bool = True) -> Dataset:
+_DEFAULT_TEST_DIM_SIZES = (8, 9, 10)
+
+
+def create_test_data(
+    seed: int | None = None,
+    add_attrs: bool = True,
+    dim_sizes: tuple[int, int, int] = _DEFAULT_TEST_DIM_SIZES,
+) -> Dataset:
     rs = np.random.RandomState(seed)
     _vars = {
         "var1": ["dim1", "dim2"],
         "var2": ["dim1", "dim2"],
         "var3": ["dim3", "dim1"],
     }
-    _dims = {"dim1": 8, "dim2": 9, "dim3": 10}
+    _dims = {"dim1": dim_sizes[0], "dim2": dim_sizes[1], "dim3": dim_sizes[2]}
 
     obj = Dataset()
     obj["dim2"] = ("dim2", 0.5 * np.arange(_dims["dim2"]))
-    obj["dim3"] = ("dim3", list("abcdefghij"))
+    if _dims["dim3"] > 26:
+        raise RuntimeError(
+            f'Not enough letters for filling this dimension size ({_dims["dim3"]})'
+        )
+    obj["dim3"] = ("dim3", list(string.ascii_lowercase[0 : _dims["dim3"]]))
     obj["time"] = ("time", pd.date_range("2000-01-01", periods=20))
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
         obj[v] = (dims, data)
         if add_attrs:
             obj[v].attrs = {"foo": "variable"}
-    obj.coords["numbers"] = (
-        "dim3",
-        np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64"),
-    )
+
+    if dim_sizes == _DEFAULT_TEST_DIM_SIZES:
+        numbers_values = np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64")
+    else:
+        numbers_values = np.random.randint(0, 3, _dims["dim3"], dtype="int64")
+    obj.coords["numbers"] = ("dim3", numbers_values)
     obj.encoding = {"foo": "bar"}
     assert all(obj.data.flags.writeable for obj in obj.variables.values())
     return obj

@@ -6,7 +6,7 @@ import contextlib
 import functools
 import math
 from collections import defaultdict
-from collections.abc import Collection, Hashable
+from collections.abc import Collection, Hashable, Sequence
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
 from reprlib import recursive_repr
@@ -357,7 +357,7 @@ EMPTY_REPR = "    *empty*"
 
 
 def _calculate_col_width(col_items):
-    max_name_length = max(len(str(s)) for s in col_items) if col_items else 0
+    max_name_length = max((len(str(s)) for s in col_items), default=0)
     col_width = max(max_name_length, 7) + 6
     return col_width
 
@@ -739,7 +739,7 @@ def dataset_repr(ds):
 
 
 def diff_dim_summary(a, b):
-    if a.dims != b.dims:
+    if a.sizes != b.sizes:
         return f"Differing dimensions:\n    ({dim_summary(a)}) != ({dim_summary(b)})"
     else:
         return ""
@@ -783,9 +783,11 @@ def _diff_mapping_repr(
         try:
             # compare xarray variable
             if not callable(compat):
-                compatible = getattr(a_mapping[k], compat)(b_mapping[k])
+                compatible = getattr(a_mapping[k].variable, compat)(
+                    b_mapping[k].variable
+                )
             else:
-                compatible = compat(a_mapping[k], b_mapping[k])
+                compatible = compat(a_mapping[k].variable, b_mapping[k].variable)
             is_variable = True
         except AttributeError:
             # compare attribute value
@@ -806,17 +808,39 @@ def _diff_mapping_repr(
 
             if compat == "identical" and is_variable:
                 attrs_summary = []
+                a_attrs = a_mapping[k].attrs
+                b_attrs = b_mapping[k].attrs
 
+                attrs_to_print = set(a_attrs) ^ set(b_attrs)
+                attrs_to_print.update(
+                    {k for k in set(a_attrs) & set(b_attrs) if a_attrs[k] != b_attrs[k]}
+                )
                 for m in (a_mapping, b_mapping):
                     attr_s = "\n".join(
-                        summarize_attr(ak, av) for ak, av in m[k].attrs.items()
+                        "    " + summarize_attr(ak, av)
+                        for ak, av in m[k].attrs.items()
+                        if ak in attrs_to_print
                     )
+                    if attr_s:
+                        attr_s = "    Differing variable attributes:\n" + attr_s
                     attrs_summary.append(attr_s)
 
                 temp = [
                     "\n".join([var_s, attr_s]) if attr_s else var_s
                     for var_s, attr_s in zip(temp, attrs_summary)
                 ]
+
+                # TODO: It should be possible recursively use _diff_mapping_repr
+                #       instead of explicitly handling variable attrs specially.
+                #       That would require some refactoring.
+                # newdiff = _diff_mapping_repr(
+                #     {k: v for k,v in a_attrs.items() if k in attrs_to_print},
+                #     {k: v for k,v in b_attrs.items() if k in attrs_to_print},
+                #     compat=compat,
+                #     summarizer=summarize_attr,
+                #     title="Variable Attributes"
+                # )
+                # temp += [newdiff]
 
             diff_items += [ab_side + s[1:] for ab_side, s in zip(("L", "R"), temp)]
 
@@ -915,3 +939,16 @@ def diff_dataset_repr(a, b, compat):
         summary.append(diff_attrs_repr(a.attrs, b.attrs, compat))
 
     return "\n".join(summary)
+
+
+def shorten_list_repr(items: Sequence, max_items: int) -> str:
+    if len(items) <= max_items:
+        return repr(items)
+    else:
+        first_half = repr(items[: max_items // 2])[
+            1:-1
+        ]  # Convert to string and remove brackets
+        second_half = repr(items[-max_items // 2 :])[
+            1:-1
+        ]  # Convert to string and remove brackets
+        return f"[{first_half}, ..., {second_half}]"

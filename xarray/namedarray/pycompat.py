@@ -14,7 +14,7 @@ from xarray.namedarray.utils import is_duck_dask_array
 integer_types = (int, np.integer)
 
 if TYPE_CHECKING:
-    ModType = Literal["dask", "pint", "cupy", "sparse", "cubed"]
+    ModType = Literal["dask", "pint", "cupy", "sparse", "cubed", "numbagg"]
     DuckArrayTypes = tuple[type[Any], ...]  # TODO: improve this? maybe Generic
     from xarray.namedarray._typing import _DType, _ShapeType, duckarray
 
@@ -50,6 +50,9 @@ class DuckArrayModule:
                 duck_array_type = (duck_array_module.SparseArray,)
             elif mod == "cubed":
                 duck_array_type = (duck_array_module.Array,)
+            # Not a duck array module, but using this system regardless, to get lazy imports
+            elif mod == "numbagg":
+                duck_array_type = ()
             else:
                 raise NotImplementedError
 

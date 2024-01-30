@@ -6,6 +6,7 @@ import pytest
 
 import xarray as xr
 from xarray.tests import (
+    assert_allclose,
     assert_array_equal,
     assert_chunks_equal,
     assert_equal,
@@ -23,7 +24,7 @@ class TestDatetimeAccessor:
         data = np.random.rand(10, 10, nt)
         lons = np.linspace(0, 11, 10)
         lats = np.linspace(0, 20, 10)
-        self.times = pd.date_range(start="2000/01/01", freq="H", periods=nt)
+        self.times = pd.date_range(start="2000/01/01", freq="h", periods=nt)
 
         self.data = xr.DataArray(
             data,
@@ -99,6 +100,19 @@ class TestDatetimeAccessor:
 
         assert expected.dtype == actual.dtype
         assert_identical(expected, actual)
+
+    def test_total_seconds(self) -> None:
+        # Subtract a value in the middle of the range to ensure that some values
+        # are negative
+        delta = self.data.time - np.datetime64("2000-01-03")
+        actual = delta.dt.total_seconds()
+        expected = xr.DataArray(
+            np.arange(-48, 52, dtype=np.float64) * 3600,
+            name="total_seconds",
+            coords=[self.data.time],
+        )
+        # This works with assert_identical when pandas is >=1.5.0.
+        assert_allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "field, pandas_field",
@@ -261,7 +275,7 @@ class TestDatetimeAccessor:
         "method, parameters", [("floor", "D"), ("ceil", "D"), ("round", "D")]
     )
     def test_accessor_method(self, method, parameters) -> None:
-        dates = pd.date_range("2014-01-01", "2014-05-01", freq="H")
+        dates = pd.date_range("2014-01-01", "2014-05-01", freq="h")
         xdates = xr.DataArray(dates, dims=["time"])
         expected = getattr(dates, method)(parameters)
         actual = getattr(xdates.dt, method)(parameters)
@@ -275,7 +289,7 @@ class TestTimedeltaAccessor:
         data = np.random.rand(10, 10, nt)
         lons = np.linspace(0, 11, 10)
         lats = np.linspace(0, 20, 10)
-        self.times = pd.timedelta_range(start="1 day", freq="6H", periods=nt)
+        self.times = pd.timedelta_range(start="1 day", freq="6h", periods=nt)
 
         self.data = xr.DataArray(
             data,
@@ -313,7 +327,7 @@ class TestTimedeltaAccessor:
         "method, parameters", [("floor", "D"), ("ceil", "D"), ("round", "D")]
     )
     def test_accessor_methods(self, method, parameters) -> None:
-        dates = pd.timedelta_range(start="1 day", end="30 days", freq="6H")
+        dates = pd.timedelta_range(start="1 day", end="30 days", freq="6h")
         xdates = xr.DataArray(dates, dims=["time"])
         expected = getattr(dates, method)(parameters)
         actual = getattr(xdates.dt, method)(parameters)

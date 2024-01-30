@@ -739,7 +739,7 @@ def test_datetime_interp_noerror() -> None:
     xi = xr.DataArray(
         np.linspace(1, 3, 50),
         dims=["time"],
-        coords={"time": pd.date_range("01-01-2001", periods=50, freq="H")},
+        coords={"time": pd.date_range("01-01-2001", periods=50, freq="h")},
     )
     a.interp(x=xi, time=xi.time)  # should not raise an error
 
@@ -838,8 +838,8 @@ def test_interpolate_chunk_1d(
                         if chunked:
                             dest[dim] = xr.DataArray(data=dest[dim], dims=[dim])
                             dest[dim] = dest[dim].chunk(2)
-                actual = da.interp(method=method, **dest, kwargs=kwargs)  # type: ignore
-                expected = da.compute().interp(method=method, **dest, kwargs=kwargs)  # type: ignore
+                actual = da.interp(method=method, **dest, kwargs=kwargs)
+                expected = da.compute().interp(method=method, **dest, kwargs=kwargs)
 
                 assert_identical(actual, expected)
 

@@ -213,7 +213,7 @@ class Coordinates(AbstractCoordinates):
         :py:class:`~xarray.Coordinates` object is passed, its indexes
         will be added to the new created object.
     indexes: dict-like, optional
-        Mapping of where keys are coordinate names and values are
+        Mapping where keys are coordinate names and values are
         :py:class:`~xarray.indexes.Index` objects. If None (default),
         pandas indexes will be created for each dimension coordinate.
         Passing an empty dictionary will skip this default behavior.
@@ -571,11 +571,18 @@ class Coordinates(AbstractCoordinates):
 
         Parameters
         ----------
-        coords : :class:`Coordinates` or mapping of hashable to Any
-            Mapping from coordinate names to the new values. If a ``Coordinates``
-            object is passed, its indexes are assigned in the returned object.
-            Otherwise, a default (pandas) index is created for each dimension
-            coordinate found in the mapping.
+        coords : mapping of dim to coord, optional
+            A mapping whose keys are the names of the coordinates and values are the
+            coordinates to assign. The mapping will generally be a dict or
+            :class:`Coordinates`.
+
+            * If a value is a standard data value — for example, a ``DataArray``,
+              scalar, or array — the data is simply assigned as a coordinate.
+
+            * A coordinate can also be defined and attached to an existing dimension
+              using a tuple with the first element the dimension name and the second
+              element the values for this new coordinate.
+
         **coords_kwargs
             The keyword arguments form of ``coords``.
             One of ``coords`` or ``coords_kwargs`` must be provided.
@@ -605,6 +612,7 @@ class Coordinates(AbstractCoordinates):
           * y_level_1  (y) int64 0 1 0 1
 
         """
+        # TODO: this doesn't support a callable, which is inconsistent with `DataArray.assign_coords`
         coords = either_dict_or_kwargs(coords, coords_kwargs, "assign")
         new_coords = self.copy()
         new_coords.update(coords)

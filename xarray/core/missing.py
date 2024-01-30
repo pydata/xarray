@@ -13,8 +13,13 @@ import pandas as pd
 from xarray.core import utils
 from xarray.core.common import _contains_datetime_like_objects, ones_like
 from xarray.core.computation import apply_ufunc
-from xarray.core.duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
-from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.duck_array_ops import (
+    datetime_to_numeric,
+    push,
+    reshape,
+    timedelta_to_numeric,
+)
+from xarray.core.options import _get_keep_attrs
 from xarray.core.types import Interp1dOptions, InterpOptions
 from xarray.core.utils import OrderedSet, is_scalar
 from xarray.core.variable import Variable, broadcast_variables
@@ -413,11 +418,6 @@ def _bfill(arr, n=None, axis=-1):
 
 def ffill(arr, dim=None, limit=None):
     """forward fill missing values"""
-    if not OPTIONS["use_bottleneck"]:
-        raise RuntimeError(
-            "ffill requires bottleneck to be enabled."
-            " Call `xr.set_options(use_bottleneck=True)` to enable it."
-        )
 
     axis = arr.get_axis_num(dim)
 
@@ -436,11 +436,6 @@ def ffill(arr, dim=None, limit=None):
 
 def bfill(arr, dim=None, limit=None):
     """backfill missing values"""
-    if not OPTIONS["use_bottleneck"]:
-        raise RuntimeError(
-            "bfill requires bottleneck to be enabled."
-            " Call `xr.set_options(use_bottleneck=True)` to enable it."
-        )
 
     axis = arr.get_axis_num(dim)
 
@@ -758,7 +753,7 @@ def _interp1d(var, x, new_x, func, kwargs):
     x, new_x = x[0], new_x[0]
     rslt = func(x, var, assume_sorted=True, **kwargs)(np.ravel(new_x))
     if new_x.ndim > 1:
-        return rslt.reshape(var.shape[:-1] + new_x.shape)
+        return reshape(rslt, (var.shape[:-1] + new_x.shape))
     if new_x.ndim == 0:
         return rslt[..., -1]
     return rslt
@@ -777,7 +772,7 @@ def _interpnd(var, x, new_x, func, kwargs):
     rslt = func(x, var, xi, **kwargs)
     # move back the interpolation axes to the last position
     rslt = rslt.transpose(range(-rslt.ndim + 1, 1))
-    return rslt.reshape(rslt.shape[:-1] + new_x[0].shape)
+    return reshape(rslt, rslt.shape[:-1] + new_x[0].shape)
 
 
 def _chunked_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=True):

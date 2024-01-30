@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import sys
-from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Collection, Hashable, Iterator, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -173,7 +173,8 @@ T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 
 # Temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more:
-T_DuckArray = TypeVar("T_DuckArray", bound=Any)
+T_DuckArray = TypeVar("T_DuckArray", bound=Any, covariant=True)
+
 
 ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
@@ -181,8 +182,9 @@ DaCompatible = Union["DataArray", "VarCompatible"]
 DsCompatible = Union["Dataset", "DaCompatible"]
 GroupByCompatible = Union["Dataset", "DataArray"]
 
-Dims = Union[str, Iterable[Hashable], "ellipsis", None]
-OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None]
+# Don't change to Hashable | Collection[Hashable]
+# Read: https://github.com/pydata/xarray/issues/6142
+Dims = Union[str, Collection[Hashable], "ellipsis", None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
@@ -282,3 +284,6 @@ QuantileMethods = Literal[
     "midpoint",
     "nearest",
 ]
+
+
+ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]

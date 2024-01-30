@@ -179,7 +179,7 @@ def _check_shape_tile_ids(combined_tile_ids):
             raise ValueError(
                 "The supplied objects do not form a hypercube "
                 "because sub-lists do not have consistent "
-                "lengths along dimension" + str(dim)
+                f"lengths along dimension {dim}"
             )
 
 
@@ -739,7 +739,7 @@ def combine_by_coords(
           dimension must have the same size in all objects.
 
     combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
-                     "override"} or callable, default: "drop"
+                     "override"} or callable, default: "no_conflicts"
         A callable or a string indicating how to combine attrs of the objects being
         merged:
 
