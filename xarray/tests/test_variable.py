@@ -1853,8 +1853,8 @@ class TestVariable(VariableSubclassobjects):
 
         # escape special characters
         with pytest.raises(
-            ValueError, match=r"Quantiles must be in the range \[0, 1\]"
-                              r"|kth out of bounds"
+            ValueError,
+            match=r"Quantiles must be in the range \[0, 1\]" r"|kth out of bounds",
         ):
             v.quantile(q, dim="x")
 
