@@ -14,9 +14,11 @@ def backend(request):
     return request.param
 
 
-@pytest.fixture(params=["numbagg", "bottleneck"])
+@pytest.fixture(params=["numbagg", "bottleneck", "None"])
 def compute_backend(request):
-    if request.param == "bottleneck":
+    if request.param == "None":
+        options = dict(use_bottleneck=False, use_numbagg=False)
+    elif request.param == "bottleneck":
         options = dict(use_bottleneck=True, use_numbagg=False)
     elif request.param == "numbagg":
         options = dict(use_bottleneck=False, use_numbagg=True)
