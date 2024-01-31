@@ -2004,6 +2004,7 @@ class TestVariable:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", "None"], indirect=True)
     @pytest.mark.parametrize(
         "func",
         (
@@ -2025,7 +2026,9 @@ class TestVariable:
         ),
         ids=repr,
     )
-    def test_computation(self, func, dtype):
+    def test_computation(self, func, dtype, compute_backend):
+        if compute_backend == "numbagg":
+            pytest.skip("numbagg functions are not supported by pint")
         base_unit = unit_registry.m
         array = np.linspace(0, 5, 5 * 10).reshape(5, 10).astype(dtype) * base_unit
         variable = xr.Variable(("x", "y"), array)
@@ -3757,6 +3760,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", "None"], indirect=True)
     @pytest.mark.parametrize(
         "variant",
         (
@@ -3777,7 +3781,9 @@ class TestDataArray:
         ),
         ids=repr,
     )
-    def test_computation(self, func, variant, dtype):
+    def test_computation(self, func, variant, dtype, compute_backend):
+        if compute_backend == "numbagg":
+            pytest.skip("numbagg functions are not supported by pint")
         unit = unit_registry.m
 
         variants = {
@@ -3883,6 +3889,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", "None"], indirect=True)
     @pytest.mark.parametrize(
         "variant",
         (
@@ -3903,7 +3910,9 @@ class TestDataArray:
         ),
         ids=repr,
     )
-    def test_grouped_operations(self, func, variant, dtype):
+    def test_grouped_operations(self, func, variant, dtype, compute_backend):
+        if compute_backend == "numbagg":
+            pytest.skip("numbagg functions are not supported by pint")
         unit = unit_registry.m
 
         variants = {
@@ -5240,6 +5249,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", "None"], indirect=True)
     @pytest.mark.parametrize(
         "func",
         (
@@ -5262,7 +5272,9 @@ class TestDataset:
             "coords",
         ),
     )
-    def test_computation(self, func, variant, dtype):
+    def test_computation(self, func, variant, dtype, compute_backend):
+        if compute_backend == "numbagg":
+            pytest.skip("numbagg functions are not supported by pint")
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
             "dims": ((1, 1), unit_registry.m, 1),
@@ -5394,6 +5406,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", "None"], indirect=True)
     @pytest.mark.parametrize(
         "func",
         (
@@ -5415,7 +5428,9 @@ class TestDataset:
             "coords",
         ),
     )
-    def test_grouped_operations(self, func, variant, dtype):
+    def test_grouped_operations(self, func, variant, dtype, compute_backend):
+        if compute_backend == "numbagg":
+            pytest.skip("numbagg functions are not supported by pint")
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
             "dims": ((1, 1), unit_registry.m, 1),
