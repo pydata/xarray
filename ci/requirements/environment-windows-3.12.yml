@@ -28,7 +28,7 @@ dependencies:
   - pip
   - pre-commit
   - pydap
-  - pytest==7.4.*
+  - pytest
   - pytest-cov
   - pytest-env
   - pytest-xdist
