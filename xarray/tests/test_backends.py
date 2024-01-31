@@ -1246,6 +1246,11 @@ class CFEncodedBase(DatasetIOBase):
             with self.roundtrip(ds):
                 pass
 
+        # regression GH8628 (can serialize reset multi-index level coordinates)
+        ds_reset = ds.reset_index("x")
+        with self.roundtrip(ds_reset) as actual:
+            assert_identical(actual, ds_reset)
+
 
 class NetCDFBase(CFEncodedBase):
     """Tests for all netCDF3 and netCDF4 backends."""
