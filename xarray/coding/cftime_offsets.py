@@ -700,7 +700,7 @@ _FREQUENCIES = {
 
 
 _FREQUENCY_CONDITION = "|".join(_FREQUENCIES.keys())
-_PATTERN = rf"^((?P<multiple>\d+)|())(?P<freq>({_FREQUENCY_CONDITION}))$"
+_PATTERN = rf"^((?P<multiple>[+-]?\d+)|())(?P<freq>({_FREQUENCY_CONDITION}))$"
 
 
 # pandas defines these offsets as "Tick" objects, which for instance have
@@ -825,7 +825,8 @@ def _generate_range(start, end, periods, offset):
     """Generate a regular range of cftime.datetime objects with a
     given time offset.
 
-    Adapted from pandas.tseries.offsets.generate_range.
+    Adapted from pandas.tseries.offsets.generate_range (now at
+    pandas.core.arrays.datetimes._generate_range).
 
     Parameters
     ----------
@@ -845,10 +846,7 @@ def _generate_range(start, end, periods, offset):
     if start:
         start = offset.rollforward(start)
 
-    if end:
-        end = offset.rollback(end)
-
-    if periods is None and end < start:
+    if periods is None and end < start and offset.n >= 0:
         end = None
         periods = 0
 
@@ -933,7 +931,7 @@ def cftime_range(
     periods : int, optional
         Number of periods to generate.
     freq : str or None, default: "D"
-        Frequency strings can have multiples, e.g. "5h".
+        Frequency strings can have multiples, e.g. "5h" and negative values, e.g. "-1D".
     normalize : bool, default: False
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
@@ -1176,7 +1174,7 @@ def date_range(
     periods : int, optional
         Number of periods to generate.
     freq : str or None, default: "D"
-        Frequency strings can have multiples, e.g. "5h".
+        Frequency strings can have multiples, e.g. "5h" and negative values, e.g. "-1D".
     tz : str or tzinfo, optional
         Time zone name for returning localized DatetimeIndex, for example
         'Asia/Hong_Kong'. By default, the resulting DatetimeIndex is
@@ -1322,6 +1320,11 @@ def date_range_like(source, calendar, use_cftime=None):
 
     source_start = source.values.min()
     source_end = source.values.max()
+
+    freq_as_offset = to_offset(freq)
+    if freq_as_offset.n < 0:
+        source_start, source_end = source_end, source_start
+
     if is_np_datetime_like(source.dtype):
         # We want to use datetime fields (datetime64 object don't have them)
         source_calendar = "standard"
@@ -1344,7 +1347,7 @@ def date_range_like(source, calendar, use_cftime=None):
 
     # For the cases where the source ends on the end of the month, we expect the same in the new calendar.
     if source_end.day == source_end.daysinmonth and isinstance(
-        to_offset(freq), (YearEnd, QuarterEnd, MonthEnd, Day)
+        freq_as_offset, (YearEnd, QuarterEnd, MonthEnd, Day)
     ):
         end = end.replace(day=end.daysinmonth)
 
