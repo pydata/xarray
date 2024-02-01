@@ -1688,7 +1688,9 @@ def test_new_to_legacy_freq_anchored(year_alias, n):
 @pytest.mark.filterwarnings("ignore:Converting a CFTimeIndex with:")
 @pytest.mark.parametrize("start", ("2000", "2001"))
 @pytest.mark.parametrize("end", ("2000", "2001"))
-@pytest.mark.parametrize("freq", ("MS", "-1MS", "YS", "-1YS", "M", "-1M", "Y", "-1Y"))
+@pytest.mark.parametrize(
+    "freq", ("MS", "-1MS", "YS", "-1YS", "ME", "-1ME", "YE", "-1YE")
+)
 def test_cftime_range_same_as_pandas(start, end, freq):
     result = date_range(start, end, freq=freq, calendar="standard", use_cftime=True)
     result = result.to_datetimeindex()
