@@ -6,7 +6,6 @@ from xarray.backends.api import (
     load_dataset,
     open_dataarray,
     open_dataset,
-    open_datatree,
     open_mfdataset,
     save_mfdataset,
 )
@@ -84,7 +83,6 @@ __all__ = (
     "ones_like",
     "open_dataarray",
     "open_dataset",
-    "open_datatree",
     "open_mfdataset",
     "open_zarr",
     "polyval",
