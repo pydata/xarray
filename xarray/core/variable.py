@@ -1997,7 +1997,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         using_numbagg = False
         if skipna or (skipna is None and self.dtype.kind in "cfO"):
             if (
-                module_available("numbagg")
+                module_available("numbagg", minversion="0.5.1")
                 and OPTIONS["use_numbagg"] is True
                 and method == "linear"
             ):
