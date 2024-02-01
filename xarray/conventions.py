@@ -16,7 +16,7 @@ from xarray.core.common import (
 )
 from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.utils import emit_user_level_warning
-from xarray.core.variable import Variable
+from xarray.core.variable import IndexVariable, Variable
 
 CF_RELATED_DATA = (
     "bounds",
@@ -84,13 +84,17 @@ def _infer_dtype(array, name=None):
 
 
 def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
+    # only the pandas multi-index dimension coordinate cannot be serialized (tuple values)
     if isinstance(var._data, indexing.PandasMultiIndexingAdapter):
-        raise NotImplementedError(
-            f"variable {name!r} is a MultiIndex, which cannot yet be "
-            "serialized. Instead, either use reset_index() "
-            "to convert MultiIndex levels into coordinate variables instead "
-            "or use https://cf-xarray.readthedocs.io/en/latest/coding.html."
-        )
+        if name is None and isinstance(var, IndexVariable):
+            name = var.name
+        if var.dims == (name,):
+            raise NotImplementedError(
+                f"variable {name!r} is a MultiIndex, which cannot yet be "
+                "serialized. Instead, either use reset_index() "
+                "to convert MultiIndex levels into coordinate variables instead "
+                "or use https://cf-xarray.readthedocs.io/en/latest/coding.html."
+            )
 
 
 def _copy_with_dtype(data, dtype: np.typing.DTypeLike):

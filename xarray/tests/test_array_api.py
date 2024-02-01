@@ -77,6 +77,22 @@ def test_broadcast(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
         assert_equal(a, e)
 
 
+def test_broadcast_during_arithmetic(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
+    np_arr, xp_arr = arrays
+    np_arr2 = xr.DataArray(np.array([1.0, 2.0]), dims="x")
+    xp_arr2 = xr.DataArray(xp.asarray([1.0, 2.0]), dims="x")
+
+    expected = np_arr * np_arr2
+    actual = xp_arr * xp_arr2
+    assert isinstance(actual.data, Array)
+    assert_equal(actual, expected)
+
+    expected = np_arr2 * np_arr
+    actual = xp_arr2 * xp_arr
+    assert isinstance(actual.data, Array)
+    assert_equal(actual, expected)
+
+
 def test_concat(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     np_arr, xp_arr = arrays
     expected = xr.concat((np_arr, np_arr), dim="x")
@@ -111,6 +127,14 @@ def test_stack(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     np_arr, xp_arr = arrays
     expected = np_arr.stack(z=("x", "y"))
     actual = xp_arr.stack(z=("x", "y"))
+    assert isinstance(actual.data, Array)
+    assert_equal(actual, expected)
+
+
+def test_unstack(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
+    np_arr, xp_arr = arrays
+    expected = np_arr.stack(z=("x", "y")).unstack()
+    actual = xp_arr.stack(z=("x", "y")).unstack()
     assert isinstance(actual.data, Array)
     assert_equal(actual, expected)
 

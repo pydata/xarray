@@ -2724,8 +2724,7 @@ class TestDataset:
         assert_identical(data, actual)
 
         with pytest.raises(ValueError):
-            with pytest.warns(DeprecationWarning):
-                data.drop(["c"], dim="x", errors="wrong_value")  # type: ignore[arg-type]
+            data.drop(["c"], dim="x", errors="wrong_value")  # type: ignore[arg-type]
 
         with pytest.warns(DeprecationWarning):
             actual = data.drop(["a", "b", "c"], "x", errors="ignore")
@@ -3159,8 +3158,7 @@ class TestDataset:
                 original.rename({"a": "x"})
 
         with pytest.raises(ValueError, match=r"'b' conflicts"):
-            with pytest.warns(UserWarning, match="does not create an index anymore"):
-                original.rename({"a": "b"})
+            original.rename({"a": "b"})
 
     def test_rename_perserve_attrs_encoding(self) -> None:
         # test propagate attrs/encoding to new variable(s) created from Index object

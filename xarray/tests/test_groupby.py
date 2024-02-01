@@ -3,10 +3,12 @@ from __future__ import annotations
 import datetime
 import operator
 import warnings
+from unittest import mock
 
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
@@ -65,6 +67,8 @@ def test_groupby_dims_property(dataset, recwarn) -> None:
     with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
         assert dataset.groupby("x").dims == dataset.isel(x=1).dims
         assert dataset.groupby("y").dims == dataset.isel(y=1).dims
+    # in pytest-8, pytest.warns() no longer clears all warnings
+    recwarn.clear()
 
     # when squeeze=False, no warning should be raised
     assert tuple(dataset.groupby("x", squeeze=False).dims) == tuple(
@@ -2499,3 +2503,20 @@ def test_groupby_dim_no_dim_equal(use_flox):
         actual1 = da.drop_vars("lat").groupby("lat", squeeze=False).sum()
         actual2 = da.groupby("lat", squeeze=False).sum()
     assert_identical(actual1, actual2.drop_vars("lat"))
+
+
+@requires_flox
+def test_default_flox_method():
+    import flox.xarray
+
+    da = xr.DataArray([1, 2, 3], dims="x", coords={"label": ("x", [2, 2, 1])})
+
+    result = xr.DataArray([3, 3], dims="label", coords={"label": [1, 2]})
+    with mock.patch("flox.xarray.xarray_reduce", return_value=result) as mocked_reduce:
+        da.groupby("label").sum()
+
+    kwargs = mocked_reduce.call_args.kwargs
+    if Version(flox.__version__) < Version("0.9.0"):
+        assert kwargs["method"] == "cohorts"
+    else:
+        assert "method" not in kwargs

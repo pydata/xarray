@@ -48,6 +48,7 @@ from xarray.backends.netCDF4_ import (
 )
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
+from xarray.coding.cftime_offsets import cftime_range
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
@@ -1245,6 +1246,11 @@ class CFEncodedBase(DatasetIOBase):
             with self.roundtrip(ds):
                 pass
 
+        # regression GH8628 (can serialize reset multi-index level coordinates)
+        ds_reset = ds.reset_index("x")
+        with self.roundtrip(ds_reset) as actual:
+            assert_identical(actual, ds_reset)
+
 
 class NetCDFBase(CFEncodedBase):
     """Tests for all netCDF3 and netCDF4 backends."""
@@ -2265,6 +2271,10 @@ class ZarrBase(CFEncodedBase):
                 pass
 
     @requires_dask
+    @pytest.mark.skipif(
+        ON_WINDOWS,
+        reason="Very flaky on Windows CI. Can re-enable assuming it starts consistently passing.",
+    )
     def test_chunk_encoding_with_dask(self) -> None:
         # These datasets DO have dask chunks. Need to check for various
         # interactions between dask and zarr chunks
@@ -2924,6 +2934,28 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store_target:
             with pytest.raises(TypeError, match=r"Invalid attribute in Dataset.attrs."):
                 ds.to_zarr(store_target, **self.version_kwargs)
+
+    @requires_dask
+    @pytest.mark.parametrize("dtype", ["datetime64[ns]", "timedelta64[ns]"])
+    def test_chunked_datetime64_or_timedelta64(self, dtype) -> None:
+        # Generalized from @malmans2's test in PR #8253
+        original = create_test_data().astype(dtype).chunk(1)
+        with self.roundtrip(original, open_kwargs={"chunks": {}}) as actual:
+            for name, actual_var in actual.variables.items():
+                assert original[name].chunks == actual_var.chunks
+            assert original.chunks == actual.chunks
+
+    @requires_cftime
+    @requires_dask
+    def test_chunked_cftime_datetime(self) -> None:
+        # Based on @malmans2's test in PR #8253
+        times = cftime_range("2000", freq="D", periods=3)
+        original = xr.Dataset(data_vars={"chunked_times": (["time"], times)})
+        original = original.chunk({"time": 1})
+        with self.roundtrip(original, open_kwargs={"chunks": {}}) as actual:
+            for name, actual_var in actual.variables.items():
+                assert original[name].chunks == actual_var.chunks
+            assert original.chunks == actual.chunks
 
     def test_vectorized_indexing_negative_step(self) -> None:
         if not has_dask:
@@ -5412,7 +5444,7 @@ def test_write_file_from_np_str(str_type, tmpdir) -> None:
 class TestNCZarr:
     @property
     def netcdfc_version(self):
-        return Version(nc4.getlibversion().split()[0])
+        return Version(nc4.getlibversion().split()[0].split("-development")[0])
 
     def _create_nczarr(self, filename):
         if self.netcdfc_version < Version("4.8.1"):

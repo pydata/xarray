@@ -114,8 +114,6 @@ from xarray.core.utils import (
     drop_dims_from_indexers,
     either_dict_or_kwargs,
     emit_user_level_warning,
-    infix_dims,
-    is_dict_like,
     is_scalar,
     maybe_wrap_array,
 )
@@ -126,6 +124,7 @@ from xarray.core.variable import (
     broadcast_variables,
     calculate_dimensions,
 )
+from xarray.namedarray.utils import infix_dims, is_dict_like
 from xarray.plot.accessor import DatasetPlotAccessor
 from xarray.util.deprecation_helpers import _deprecate_positional_args
 
@@ -7947,7 +7946,7 @@ class Dataset(
 
         Parameters
         ----------
-        kariables : Hashable, DataArray, sequence of Hashable or DataArray, or Callable
+        variables : Hashable, DataArray, sequence of Hashable or DataArray, or Callable
             1D DataArray objects or name(s) of 1D variable(s) in coords whose values are
             used to sort this array. If a callable, the callable is passed this object,
             and the result is used as the value for cond.

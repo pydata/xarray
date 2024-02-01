@@ -38,7 +38,7 @@ jobs:
           fi
 
       - name: Upload wheel
-        uses: scientific-python/upload-nightly-action@main
+        uses: scientific-python/upload-nightly-action@6e9304f7a3a5501c6f98351537493ec898728299 # 0.3.0
         with:
           anaconda_nightly_upload_token: ${{ secrets.ANACONDA_NIGHTLY }}
           artifacts_path: dist
