@@ -23,6 +23,9 @@ v2024.02.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Allow negative frequency strings (e.g. ``"-1YE"``). These strings are for example used
+  in :py:func:`date_range`,  and :py:func:`cftime_range` (:pull:`8651`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 - Add :py:meth:`NamedArray.expand_dims`, :py:meth:`NamedArray.permute_dims` and :py:meth:`NamedArray.broadcast_to`
   (:pull:`8380`) By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
