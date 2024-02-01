@@ -2004,7 +2004,7 @@ class TestVariable:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("compute_backend", ["numbagg", "None"], indirect=True)
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize(
         "func",
         (
@@ -3760,7 +3760,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("compute_backend", ["numbagg", "None"], indirect=True)
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize(
         "variant",
         (
@@ -3889,7 +3889,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("compute_backend", ["numbagg", "None"], indirect=True)
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize(
         "variant",
         (
@@ -5249,7 +5249,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.parametrize("compute_backend", ["numbagg", "None"], indirect=True)
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize(
         "func",
         (
@@ -5406,7 +5406,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.parametrize("compute_backend", ["numbagg", "None"], indirect=True)
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize(
         "func",
         (

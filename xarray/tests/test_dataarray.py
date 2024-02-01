@@ -2889,7 +2889,7 @@ class TestDataArray:
         with pytest.raises(TypeError):
             orig.mean(out=np.ones(orig.shape))
 
-    @pytest.mark.parametrize("compute_backend", ["numbagg", "None"], indirect=True)
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(

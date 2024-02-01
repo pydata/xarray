@@ -1842,7 +1842,7 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(ValueError, match=r"consists of multiple chunks"):
             v.quantile(0.5, dim="x")
 
-    @pytest.mark.parametrize("compute_backend", ["numbagg", "None"], indirect=True)
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
     def test_quantile_out_of_bounds(self, q, compute_backend):
         if compute_backend == "numbagg" and q == -0.1:

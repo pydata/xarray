@@ -5616,7 +5616,7 @@ class TestDataset:
         )
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("compute_backend", ["numbagg", "None"], indirect=True)
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     def test_quantile(self, q, skipna, compute_backend) -> None:
@@ -5640,7 +5640,7 @@ class TestDataset:
         assert "dim3" in ds_quantile.dims
         assert all(d not in ds_quantile.dims for d in dim)
 
-    @pytest.mark.parametrize("compute_backend", ["numbagg", "None"], indirect=True)
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("skipna", [True, False])
     def test_quantile_skipna(self, skipna, compute_backend) -> None:
         q = 0.1
