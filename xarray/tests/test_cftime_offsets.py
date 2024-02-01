@@ -1607,21 +1607,10 @@ def test_to_offset_deprecation_warning(freq):
 @pytest.mark.filterwarnings("ignore:Converting a CFTimeIndex with:")
 @pytest.mark.parametrize("start", ("2000", "2001"))
 @pytest.mark.parametrize("end", ("2000", "2001"))
-@pytest.mark.parametrize("freq", ("MS", "-1MS", "YS", "-1YS"))
+@pytest.mark.parametrize("freq", ("MS", "-1MS", "YS", "-1YS", "M", "-1M", "Y", "-1Y"))
 def test_cftime_range_same_as_pandas(start, end, freq):
     result = date_range(start, end, freq=freq, calendar="standard", use_cftime=True)
     result = result.to_datetimeindex()
     expected = date_range(start, end, freq=freq, use_cftime=False)
 
     np.testing.assert_array_equal(result, expected)
-
-
-@pytest.mark.parametrize("start", ("2000", "2001"))
-@pytest.mark.parametrize("end", ("2000", "2001"))
-@pytest.mark.parametrize("freq", ("M", "-1M", "Y", "-1Y"))
-def test_cftime_range_end_same_len_pandas(start, end, freq):
-    result = date_range(start, end, freq=freq, calendar="standard", use_cftime=True)
-    expected = date_range(start, end, freq=freq, use_cftime=False)
-
-    # end of month/ year is not convertable to datetimeindex
-    assert result.size == expected.size
