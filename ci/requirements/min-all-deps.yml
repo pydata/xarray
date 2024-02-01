@@ -42,7 +42,7 @@ dependencies:
   - pint=0.22
   - pip
   - pydap=3.3
-  - pytest==7.4.*
+  - pytest
   - pytest-cov
   - pytest-env
   - pytest-xdist

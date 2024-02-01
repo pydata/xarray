@@ -43,6 +43,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fixed a regression that prevented multi-index level coordinates being
+  serialized after resetting or dropping the multi-index (:issue:`8628`, :pull:`8672`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 - Fix bug with broadcasting when wrapping array API-compliant classes. (:issue:`8665`, :pull:`8669`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Ensure :py:meth:`DataArray.unstack` works when wrapping array API-compliant classes. (:issue:`8666`, :pull:`8668`)
