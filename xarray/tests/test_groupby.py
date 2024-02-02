@@ -35,6 +35,7 @@ def dataset():
         {
             "foo": (("x", "y", "z"), np.random.randn(3, 4, 2)),
             "baz": ("x", ["e", "f", "g"]),
+            "cat": ("x", pd.Categorical(["cat1", "cat2", "cat2"])),
         },
         {"x": ("x", ["a", "b", "c"], {"name": "x"}), "y": [1, 2, 3, 4], "z": [1, 2]},
     )

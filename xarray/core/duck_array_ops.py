@@ -11,7 +11,6 @@ import inspect
 import warnings
 from functools import partial
 from importlib import import_module
-from pandas.api.types import is_extension_array_dtype
 
 import numpy as np
 import pandas as pd
@@ -32,6 +31,7 @@ from numpy import (  # noqa
 from numpy import concatenate as _concatenate
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 from packaging.version import Version
+from pandas.api.types import is_extension_array_dtype
 
 from xarray.core import dask_array_ops, dtypes, nputils, pycompat
 from xarray.core.options import OPTIONS
@@ -51,7 +51,6 @@ else:
 
 
 dask_available = module_available("dask")
-
 
 
 HANDLED_FUNCTIONS = {}
@@ -92,17 +91,18 @@ class ExtensionDuckArray:
         if hasattr(self.extension_array, attr):
             return getattr(self.extension_array, attr)
         raise AttributeError(f"{attr} not found.")
-    
+
     def __getitem__(self, key):
         return self.extension_array[key]
-    
+
     def __setitem__(self, key):
         return self.extension_array[key]
-    
+
     def __eq__(self, other):
         if isinstance(other, ExtensionDuckArray):
             return self.extension_array == other.extension_array
         return self.extension_array == other
+
 
 def implements(numpy_function):
     """Register an __array_function__ implementation for MyArray objects."""
@@ -115,8 +115,42 @@ def implements(numpy_function):
 
 
 @implements(np.concatenate)
-def concatenate(arrays, axis=0, out=None):
+def _(arrays, axis=0, out=None):
     return ExtensionDuckArray(type(arrays[0])._concat_same_type(arrays))
+
+
+@implements(np.where)
+def _(condition, x, y):
+    if all(is_extension_array_dtype(array) for array in [x, y]):
+        # set up new codes array
+        new_codes = np.where(condition, x.codes, y.codes)
+
+        # Remap shared categories to have same codes
+        shared_categories = [
+            category for category in x.categories if category in set(y.categories)
+        ]
+        for shared_category in shared_categories:
+            new_codes[~condition & (y == shared_category)] = x.codes[
+                x == shared_category
+            ][0]
+
+        # map non-shared y codes to start from the lowest possible number
+        y_only_categories = [
+            category for category in y.categories if category not in shared_categories
+        ]
+        new_y_code = len(x.categories) + len(shared_categories)
+        for y_only_category in y_only_categories:
+            new_codes[~condition & (y == y_only_category)] = new_y_code
+            new_y_code += 1
+        new_categories = shared_categories + y_only_categories  # preserve order
+        # TODO: think about ordering?
+        return ExtensionDuckArray(
+            pd.Categorical.from_codes(
+                new_codes, categories=new_categories, ordered=False
+            )
+        )
+    return np.where(condition, x, y)
+
 
 def get_array_namespace(x):
     if hasattr(x, "__array_namespace__"):
@@ -297,10 +331,7 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
     )
     if all(are_extension_arrays):
         first_type = type(scalars_or_arrays[0].extension_array)
-        if all(
-            isinstance(x.extension_array, first_type)
-            for x in scalars_or_arrays
-        ):
+        if all(isinstance(x.extension_array, first_type) for x in scalars_or_arrays):
             return scalars_or_arrays
     else:
         arrays = [asarray(x, xp=xp) for x in scalars_or_arrays]

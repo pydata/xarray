@@ -289,6 +289,7 @@ def create_test_data(
     seed: int | None = None,
     add_attrs: bool = True,
     dim_sizes: tuple[int, int, int] = _DEFAULT_TEST_DIM_SIZES,
+    use_extension_array: bool = False,
 ) -> Dataset:
     rs = np.random.RandomState(seed)
     _vars = {
@@ -311,14 +312,25 @@ def create_test_data(
         obj[v] = (dims, data)
         if add_attrs:
             obj[v].attrs = {"foo": "variable"}
-
+    if use_extension_array:
+        obj["var4"] = (
+            "dim1",
+            pd.Categorical(
+                np.random.choice(
+                    list(string.ascii_lowercase[: np.random.randint(5)]),
+                    size=dim_sizes[0],
+                )
+            ),
+        )
     if dim_sizes == _DEFAULT_TEST_DIM_SIZES:
         numbers_values = np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64")
     else:
         numbers_values = np.random.randint(0, 3, _dims["dim3"], dtype="int64")
     obj.coords["numbers"] = ("dim3", numbers_values)
     obj.encoding = {"foo": "bar"}
-    assert all(obj.data.flags.writeable for obj in obj.variables.values())
+    assert all(
+        obj.data.flags.writeable for k, obj in obj.variables.items() if k != "var4"
+    )
     return obj
 
 
