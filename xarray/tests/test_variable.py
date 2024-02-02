@@ -1845,16 +1845,12 @@ class TestVariable(VariableSubclassobjects):
     @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
     def test_quantile_out_of_bounds(self, q, compute_backend):
-        if compute_backend == "numbagg" and q == -0.1:
-            # This should be changed once https://github.com/numbagg/numbagg/issues/276
-            # is resolved.
-            pytest.skip("numbagg does not raise for negative quantiles >= -1")
         v = Variable(["x", "y"], self.d)
 
         # escape special characters
         with pytest.raises(
             ValueError,
-            match=r"Quantiles must be in the range \[0, 1\]" r"|kth out of bounds",
+            match=r"(Q|q)uantiles must be in the range \[0, 1\]",
         ):
             v.quantile(q, dim="x")
 
