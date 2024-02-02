@@ -463,7 +463,7 @@ class BackendEntrypoint:
       decoding and it returns an instance of :py:class:`~datatree.DataTree`.
       It shall take in input at least ``filename_or_obj`` argument. The
       implementation of this method is not mandatory.  For more details see
-      :ref:`RST open_datatree`.
+      <reference to open_datatree documentation>.
 
     Attributes
     ----------
