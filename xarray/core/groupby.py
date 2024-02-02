@@ -26,15 +26,17 @@ from xarray.core.indexes import (
     filter_indexes_from_coords,
     safe_cast_to_index,
 )
-from xarray.core.options import _get_keep_attrs
+from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import Dims, QuantileMethods, T_DataArray, T_Xarray
 from xarray.core.utils import (
     FrozenMappingWarningOnValuesAccess,
+    contains_only_chunked_or_numpy,
     either_dict_or_kwargs,
     emit_user_level_warning,
     hashable,
     is_scalar,
     maybe_wrap_array,
+    module_available,
     peek_at,
 )
 from xarray.core.variable import IndexVariable, Variable
@@ -1267,16 +1269,26 @@ class GroupBy(Generic[T_Xarray]):
             (grouper,) = self.groupers
             dim = grouper.group1d.dims
 
-        return self.map(
-            self._obj.__class__.quantile,
-            shortcut=False,
-            q=q,
-            dim=dim,
-            method=method,
-            keep_attrs=keep_attrs,
-            skipna=skipna,
-            interpolation=interpolation,
-        )
+        if (
+            method == "linear"
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+            and module_available("flox", minversion="0.9.1")
+        ):
+            return self._flox_reduce(
+                func="quantile", q=q, dim=dim, keep_attrs=keep_attrs, skipna=skipna
+            )
+        else:
+            return self.map(
+                self._obj.__class__.quantile,
+                shortcut=False,
+                q=q,
+                dim=dim,
+                method=method,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                interpolation=interpolation,
+            )
 
     def where(self, cond, other=dtypes.NA) -> T_Xarray:
         """Return elements from `self` or `other` depending on `cond`.
