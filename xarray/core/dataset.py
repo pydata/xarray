@@ -24,6 +24,7 @@ from os import PathLike
 from typing import IO, TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
 
 import numpy as np
+from pandas.api.types import is_extension_array_dtype
 
 # remove once numpy 2.0 is the oldest supported version
 try:
@@ -6843,6 +6844,7 @@ class Dataset(
                     # that don't have the reduce dims: PR5393
                     not reduce_dims
                     or not numeric_only
+                    or not is_extension_array_dtype(var.dtype)
                     or np.issubdtype(var.dtype, np.number)
                     or (var.dtype == np.bool_)
                 ):

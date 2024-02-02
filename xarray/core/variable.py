@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, Callable, NoReturn, cast
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
+from pandas.api.types import is_extension_array_dtype
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
@@ -51,6 +52,7 @@ from xarray.namedarray.utils import infix_dims
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
     pd.Index,
+    pd.api.extensions.ExtensionArray,
 )
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
@@ -171,6 +173,8 @@ def _maybe_wrap_data(data):
     """
     if isinstance(data, pd.Index):
         return PandasIndexingAdapter(data)
+    if is_extension_array_dtype(data):
+        return duck_array_ops.ExtensionDuckArray(data)
     return data
 
 

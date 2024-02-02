@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal, Union
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_extension_array_dtype
 
 from xarray.coding import strings, times, variables
 from xarray.coding.variables import SerializationWarning, pop_to
@@ -110,7 +111,10 @@ def ensure_dtype_not_object(var: Variable, name: T_Name = None) -> Variable:
         dims, data, attrs, encoding = variables.unpack_for_encoding(var)
 
         # leave vlen dtypes unchanged
-        if strings.check_vlen_dtype(data.dtype) is not None:
+        if (
+            is_extension_array_dtype(data)
+            or strings.check_vlen_dtype(data.dtype) is not None
+        ):
             return var
 
         if is_duck_dask_array(data):
@@ -352,9 +356,9 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
         attrs = v.attrs
         encoding = v.encoding
         has_date_units = "units" in encoding and "since" in encoding["units"]
-        is_datetime_type = np.issubdtype(
-            v.dtype, np.datetime64
-        ) or contains_cftime_datetimes(v)
+        is_datetime_type = (not is_extension_array_dtype(v)) and (
+            contains_cftime_datetimes(v) or np.issubdtype(v.dtype, np.datetime64)
+        )
 
         if (
             is_datetime_type

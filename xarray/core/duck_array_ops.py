@@ -11,6 +11,7 @@ import inspect
 import warnings
 from functools import partial
 from importlib import import_module
+from pandas.api.types import is_extension_array_dtype
 
 import numpy as np
 import pandas as pd
@@ -51,6 +52,71 @@ else:
 
 dask_available = module_available("dask")
 
+
+
+HANDLED_FUNCTIONS = {}
+
+
+class ExtensionDuckArray:
+    def __init__(self, array: pd.api.extensions.ExtensionArray | ExtensionDuckArray):
+        if isinstance(array, ExtensionDuckArray):
+            self.extension_array = array.extension_array
+        elif is_extension_array_dtype(array):
+            self.extension_array = array
+        else:
+            raise TypeError(f"{array} is not an pandas ExtensionArray.")
+
+    def __array_function__(self, func, types, args, kwargs):
+        # if not all(issubclass(t, ExtensionDuckArray) for t in types):
+        #     return NotImplemented
+        args_as_list = list(args)
+        for index, value in enumerate(args_as_list):
+            if isinstance(value, ExtensionDuckArray):
+                args_as_list[index] = value.extension_array
+            if isinstance(value, list) and index == 0:
+                for sub_index, sub_value in enumerate(args_as_list[index]):
+                    if isinstance(sub_value, ExtensionDuckArray):
+                        args_as_list[index][sub_index] = sub_value.extension_array
+                args_as_list[0] = tuple(args_as_list[0])
+        if func not in HANDLED_FUNCTIONS:
+            return func(*tuple(args_as_list), **kwargs)
+        return HANDLED_FUNCTIONS[func](*tuple(args_as_list), **kwargs)
+
+    def __array_ufunc__(ufunc, method, *inputs, **kwargs):
+        return ufunc(*inputs, **kwargs)
+
+    def __repr__(self):
+        return f"ExtensionDuckArray(array={repr(self.extension_array)})"
+
+    def __getattr__(self, attr: str) -> object:
+        if hasattr(self.extension_array, attr):
+            return getattr(self.extension_array, attr)
+        raise AttributeError(f"{attr} not found.")
+    
+    def __getitem__(self, key):
+        return self.extension_array[key]
+    
+    def __setitem__(self, key):
+        return self.extension_array[key]
+    
+    def __eq__(self, other):
+        if isinstance(other, ExtensionDuckArray):
+            return self.extension_array == other.extension_array
+        return self.extension_array == other
+
+def implements(numpy_function):
+    """Register an __array_function__ implementation for MyArray objects."""
+
+    def decorator(func):
+        HANDLED_FUNCTIONS[numpy_function] = func
+        return func
+
+    return decorator
+
+
+@implements(np.concatenate)
+def concatenate(arrays, axis=0, out=None):
+    return ExtensionDuckArray(type(arrays[0])._concat_same_type(arrays))
 
 def get_array_namespace(x):
     if hasattr(x, "__array_namespace__"):
@@ -154,7 +220,7 @@ def isnull(data):
         return full_like(data, dtype=bool, fill_value=False)
     else:
         # at this point, array should have dtype=object
-        if isinstance(data, np.ndarray):
+        if isinstance(data, np.ndarray) or isinstance(data, ExtensionDuckArray):
             return pandas_isnull(data)
         else:
             # Not reachable yet, but intended for use with other duck array
@@ -226,6 +292,16 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
         import cupy as cp
 
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
+    are_extension_arrays = (
+        isinstance(x, ExtensionDuckArray) for x in scalars_or_arrays
+    )
+    if all(are_extension_arrays):
+        first_type = type(scalars_or_arrays[0].extension_array)
+        if all(
+            isinstance(x.extension_array, first_type)
+            for x in scalars_or_arrays
+        ):
+            return scalars_or_arrays
     else:
         arrays = [asarray(x, xp=xp) for x in scalars_or_arrays]
     # Pass arrays directly instead of dtypes to result_type so scalars
