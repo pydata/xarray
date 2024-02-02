@@ -28,12 +28,12 @@ from xarray.core.indexing import (
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.core.pycompat import (
+    array_type,
     integer_types,
     is_0d_dask_array,
     is_chunked_array,
     is_duck_dask_array,
     to_numpy,
-    array_type,
 )
 from xarray.core.types import T_Chunks
 from xarray.core.utils import (
@@ -2001,9 +2001,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 module_available("numbagg", minversion="0.5.1")
                 and OPTIONS["use_numbagg"] is True
                 and method == "linear"
-                and not isinstance(self.data, array_type('pint'))
+                and not isinstance(self.data, array_type("pint"))
             ):
                 import numbagg
+
                 _quantile_func = numbagg.nanquantile
                 using_numbagg = True
             else:
