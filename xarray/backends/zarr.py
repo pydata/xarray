@@ -1036,19 +1036,25 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             )
         return ds
 
-    def open_datatree(self, store, **kwargs) -> DataTree:
-        import zarr  # type: ignore
+    def open_datatree(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        **kwargs,
+    ) -> DataTree:
+        import zarr
 
         from xarray.backends.api import open_dataset
         from xarray.datatree_.datatree import DataTree
         from xarray.datatree_.datatree.treenode import NodePath
 
-        zds = zarr.open_group(store, mode="r")
-        ds = open_dataset(store, engine="zarr", **kwargs)
+        zds = zarr.open_group(filename_or_obj, mode="r")
+        ds = open_dataset(filename_or_obj, engine="zarr", **kwargs)
         tree_root = DataTree.from_dict({"/": ds})
         for path in _iter_zarr_groups(zds):
             try:
-                subgroup_ds = open_dataset(store, engine="zarr", group=path, **kwargs)
+                subgroup_ds = open_dataset(
+                    filename_or_obj, engine="zarr", group=path, **kwargs
+                )
             except zarr.errors.PathNotFoundError:
                 subgroup_ds = Dataset()
 

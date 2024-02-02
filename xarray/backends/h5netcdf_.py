@@ -425,18 +425,22 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         return ds
 
     # TODO [MHS, 01/23/2024] This is duplicative of the netcdf4 code in an ugly way.
-    def open_datatree(self, filename: str, **kwargs) -> DataTree:
+    def open_datatree(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        **kwargs,
+    ) -> DataTree:
         from h5netcdf.legacyapi import Dataset as ncDataset
 
         from xarray.backends.api import open_dataset
         from xarray.datatree_.datatree import DataTree
         from xarray.datatree_.datatree.treenode import NodePath
 
-        ds = open_dataset(filename, **kwargs)
+        ds = open_dataset(filename_or_obj, **kwargs)
         tree_root = DataTree.from_dict({"/": ds})
-        with ncDataset(filename, mode="r") as ncds:
+        with ncDataset(filename_or_obj, mode="r") as ncds:
             for path in _iter_nc_groups(ncds):
-                subgroup_ds = open_dataset(filename, group=path, **kwargs)
+                subgroup_ds = open_dataset(filename_or_obj, group=path, **kwargs)
 
                 # TODO refactor to use __setitem__ once creation of new nodes by assigning Dataset works again
                 node_name = NodePath(path).name
