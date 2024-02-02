@@ -6,7 +6,6 @@ from typing import Callable, Literal
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 
 from xarray import CFTimeIndex
 from xarray.coding.cftime_offsets import (
@@ -1473,25 +1472,7 @@ def test_date_range_errors() -> None:
     ],
 )
 def test_date_range_like(start, freq, cal_src, cal_tgt, use_cftime, exp0, exp_pd):
-    expected_xarray_freq = freq
-    expected_pandas_freq = freq
-
-    # pandas changed what is returned for infer_freq in version 2.2.  The
-    # development version of xarray follows this, but we need to adapt this test
-    # to still handle older versions of pandas.
-    if Version(pd.__version__) < Version("2.2"):
-        if "ME" in freq:
-            expected_pandas_freq = expected_pandas_freq.replace("ME", "M")
-        elif "QE" in freq:
-            expected_pandas_freq = expected_pandas_freq.replace("QE", "Q")
-        elif "YS" in freq:
-            expected_pandas_freq = expected_pandas_freq.replace("YS", "AS")
-        elif "Y-" in freq:
-            expected_pandas_freq = expected_pandas_freq.replace("YE-", "A-")
-        elif "h" in freq:
-            expected_pandas_freq = freq.replace("h", "H")
-        else:
-            raise ValueError(f"Test not implemented for freq {freq!r}")
+    expected_freq = freq
 
     source = date_range(start, periods=12, freq=freq, calendar=cal_src)
 
@@ -1499,10 +1480,7 @@ def test_date_range_like(start, freq, cal_src, cal_tgt, use_cftime, exp0, exp_pd
 
     assert len(out) == 12
 
-    if exp_pd:
-        assert infer_freq(out) == expected_pandas_freq
-    else:
-        assert infer_freq(out) == expected_xarray_freq
+    assert infer_freq(out) == expected_freq
 
     assert out[0].isoformat().startswith(exp0)
 
