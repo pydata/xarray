@@ -1264,6 +1264,8 @@ def _new_to_legacy_freq(freq):
     # we add logic to continue using the deprecated "M" and "Q" frequency
     # strings in these circumstances.
 
+    # "h" -> "H" conversion not required
+
     # TODO: remove once requiring pandas >= 2.2
 
     if freq and Version(pd.__version__) < Version("2.2"):
@@ -1318,6 +1320,12 @@ def _legacy_to_new_freq(freq):
             elif "YE" not in freq and freq.endswith("Y"):
                 # the "Y-MAY" case is already handled above
                 freq = freq.replace("Y", "YE")
+        elif isinstance(freq_as_offset, Hour):
+            freq = freq.replace("H", "h")
+        elif isinstance(freq_as_offset, Minute):
+            freq = freq.replace("T", "min")
+        elif isinstance(freq_as_offset, Second):
+            freq = freq.replace("S", "s")
     return freq
 
 

@@ -38,6 +38,7 @@ from xarray.coding.frequencies import infer_freq
 from xarray.core.dataarray import DataArray
 from xarray.tests import (
     _CFTIME_CALENDARS,
+    assert_no_warnings,
     has_cftime,
     has_pandas_gt_2_2,
     requires_cftime,
@@ -1489,6 +1490,18 @@ def test_date_range_like(start, freq, cal_src, cal_tgt, use_cftime, exp0, exp_pd
     else:
         assert isinstance(out, CFTimeIndex)
         assert out.calendar == cal_tgt
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    "freq", ("YE", "YS", "YE-MAY", "MS", "ME", "QS", "h", "min", "s")
+)
+@pytest.mark.parametrize("use_cftime", (True, False))
+def test_date_range_like_no_deprecation(freq, use_cftime):
+    source = date_range("2000", periods=3, freq=freq, use_cftime=False)
+
+    with assert_no_warnings():
+        date_range_like(source, "standard", use_cftime=use_cftime)
 
 
 def test_date_range_like_same_calendar():
