@@ -2027,8 +2027,6 @@ class TestVariable:
         ids=repr,
     )
     def test_computation(self, func, dtype, compute_backend):
-        if compute_backend == "numbagg":
-            pytest.skip("numbagg functions are not supported by pint")
         base_unit = unit_registry.m
         array = np.linspace(0, 5, 5 * 10).reshape(5, 10).astype(dtype) * base_unit
         variable = xr.Variable(("x", "y"), array)
@@ -3782,8 +3780,6 @@ class TestDataArray:
         ids=repr,
     )
     def test_computation(self, func, variant, dtype, compute_backend):
-        if compute_backend == "numbagg":
-            pytest.skip("numbagg functions are not supported by pint")
         unit = unit_registry.m
 
         variants = {
@@ -3911,8 +3907,6 @@ class TestDataArray:
         ids=repr,
     )
     def test_grouped_operations(self, func, variant, dtype, compute_backend):
-        if compute_backend == "numbagg":
-            pytest.skip("numbagg functions are not supported by pint")
         unit = unit_registry.m
 
         variants = {
@@ -5273,8 +5267,6 @@ class TestDataset:
         ),
     )
     def test_computation(self, func, variant, dtype, compute_backend):
-        if compute_backend == "numbagg":
-            pytest.skip("numbagg functions are not supported by pint")
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
             "dims": ((1, 1), unit_registry.m, 1),
@@ -5429,8 +5421,6 @@ class TestDataset:
         ),
     )
     def test_grouped_operations(self, func, variant, dtype, compute_backend):
-        if compute_backend == "numbagg":
-            pytest.skip("numbagg functions are not supported by pint")
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
             "dims": ((1, 1), unit_registry.m, 1),
