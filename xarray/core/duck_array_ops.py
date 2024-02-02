@@ -35,10 +35,9 @@ from packaging.version import Version
 from xarray.core import dask_array_ops, dtypes, nputils
 from xarray.core.options import OPTIONS
 from xarray.namedarray import pycompat
-from xarray.namedarray._typing import _arrayfunction_or_api
 from xarray.namedarray.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.namedarray.pycompat import array_type
-from xarray.namedarray.utils import is_duck_dask_array, module_available
+from xarray.namedarray.utils import is_duck_array, is_duck_dask_array, module_available
 
 # remove once numpy 2.0 is the oldest supported version
 if module_available("numpy", minversion="2.0.0.dev0"):
@@ -216,7 +215,7 @@ def astype(data, dtype, **kwargs):
 
 
 def asarray(data, xp=np):
-    return data if isinstance(data, _arrayfunction_or_api) else xp.asarray(data)
+    return data if is_duck_array(data) else xp.asarray(data)
 
 
 def as_shared_dtype(scalars_or_arrays, xp=np):

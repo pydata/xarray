@@ -9,11 +9,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 import numpy as np
 from packaging.version import Version
 
-from xarray.namedarray._typing import (
-    ErrorOptionsWithWarn,
-    _arrayfunction_or_api,
-    _DimsLike,
-)
+from xarray.namedarray._typing import ErrorOptionsWithWarn, _DimsLike
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 10):
@@ -23,14 +19,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from xarray.namedarray._typing import _Dim, duckarray
-
-    try:
-        from dask.array.core import Array as DaskArray
-        from dask.typing import DaskCollection
-    except ImportError:
-        DaskArray = NDArray  # type: ignore
-        DaskCollection: Any = NDArray  # type: ignore
+    from xarray.namedarray._typing import DaskArray, DaskCollection, _Dim, duckarray
 
 
 K = TypeVar("K")
@@ -76,8 +65,24 @@ def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
     return False
 
 
+def is_duck_array(value: Any) -> TypeGuard[duckarray[Any, Any]]:
+    # TODO: replace is_duck_array with runtime checks via _arrayfunction_or_api protocol on
+    # python 3.12 and higher (see https://github.com/pydata/xarray/issues/8696#issuecomment-1924588981)
+    if isinstance(value, np.ndarray):
+        return True
+    return (
+        hasattr(value, "ndim")
+        and hasattr(value, "shape")
+        and hasattr(value, "dtype")
+        and (
+            (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
+            or hasattr(value, "__array_namespace__")
+        )
+    )
+
+
 def is_duck_dask_array(x: duckarray[Any, Any]) -> TypeGuard[DaskArray]:
-    return isinstance(x, _arrayfunction_or_api) and is_dask_collection(x)
+    return is_duck_array(x) and is_dask_collection(x)
 
 
 def to_0d_object_array(

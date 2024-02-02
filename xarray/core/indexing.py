@@ -24,10 +24,13 @@ from xarray.core.utils import (
     is_scalar,
     to_0d_array,
 )
-from xarray.namedarray._typing import _arrayfunction_or_api
 from xarray.namedarray.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.namedarray.pycompat import array_type, integer_types
-from xarray.namedarray.utils import either_dict_or_kwargs, is_duck_dask_array
+from xarray.namedarray.utils import (
+    either_dict_or_kwargs,
+    is_duck_array,
+    is_duck_dask_array,
+)
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
@@ -374,7 +377,7 @@ class OuterIndexer(ExplicitIndexer):
                 k = int(k)
             elif isinstance(k, slice):
                 k = as_integer_slice(k)
-            elif isinstance(k, _arrayfunction_or_api):
+            elif is_duck_array(k):
                 if not np.issubdtype(k.dtype, np.integer):
                     raise TypeError(
                         f"invalid indexer array, does not have integer dtype: {k!r}"
@@ -421,7 +424,7 @@ class VectorizedIndexer(ExplicitIndexer):
                     "Please pass a numpy array by calling ``.compute``. "
                     "See https://github.com/dask/dask/issues/8958."
                 )
-            elif isinstance(k, _arrayfunction_or_api):
+            elif is_duck_array(k):
                 if not np.issubdtype(k.dtype, np.integer):
                     raise TypeError(
                         f"invalid indexer array, does not have integer dtype: {k!r}"

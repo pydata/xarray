@@ -11,8 +11,8 @@ from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedAr
 from xarray.namedarray.utils import is_duck_dask_array, module_available
 
 if TYPE_CHECKING:
-    from xarray.core.types import DaskArray, T_Chunks, T_NormalizedChunks
-    from xarray.namedarray._typing import duckarray
+    from xarray.core.types import T_Chunks
+    from xarray.namedarray._typing import DaskArray, _NormalizedChunks, duckarray
 
 
 dask_available = module_available("dask")
@@ -32,17 +32,17 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     def is_chunked_array(self, data: duckarray[Any, Any]) -> bool:
         return is_duck_dask_array(data)
 
-    def chunks(self, data: DaskArray) -> T_NormalizedChunks:
+    def chunks(self, data: DaskArray) -> _NormalizedChunks:
         return data.chunks
 
     def normalize_chunks(
         self,
-        chunks: T_Chunks | T_NormalizedChunks,
+        chunks: T_Chunks | _NormalizedChunks,
         shape: tuple[int, ...] | None = None,
         limit: int | None = None,
         dtype: np.dtype | None = None,
-        previous_chunks: T_NormalizedChunks | None = None,
-    ) -> T_NormalizedChunks:
+        previous_chunks: _NormalizedChunks | None = None,
+    ) -> _NormalizedChunks:
         """Called by open_dataset"""
         from dask.array.core import normalize_chunks
 
@@ -220,7 +220,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         self,
         *args: Any,  # can't type this as mypy assumes args are all same type, but dask unify_chunks args alternate types
         **kwargs,
-    ) -> tuple[dict[str, T_NormalizedChunks], list[DaskArray]]:
+    ) -> tuple[dict[str, _NormalizedChunks], list[DaskArray]]:
         from dask.array.core import unify_chunks
 
         return unify_chunks(*args, **kwargs)
