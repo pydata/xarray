@@ -1,6 +1,7 @@
 # https://pre-commit.com/
 ci:
     autoupdate_schedule: monthly
+exclude: 'xarray/datatree_.*'
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
@@ -10,12 +11,6 @@ repos:
       - id: check-yaml
       - id: debug-statements
       - id: mixed-line-ending
-  - repo: https://github.com/MarcoGorelli/absolufy-imports
-    rev: v0.3.1
-    hooks:
-      - id: absolufy-imports
-        name: absolufy-imports
-        files: ^xarray/
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
     rev: 'v0.1.9'

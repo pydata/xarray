@@ -67,6 +67,8 @@ def test_groupby_dims_property(dataset, recwarn) -> None:
     with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
         assert dataset.groupby("x").dims == dataset.isel(x=1).dims
         assert dataset.groupby("y").dims == dataset.isel(y=1).dims
+    # in pytest-8, pytest.warns() no longer clears all warnings
+    recwarn.clear()
 
     # when squeeze=False, no warning should be raised
     assert tuple(dataset.groupby("x", squeeze=False).dims) == tuple(
