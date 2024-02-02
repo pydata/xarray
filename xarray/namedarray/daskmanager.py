@@ -11,8 +11,16 @@ from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedAr
 from xarray.namedarray.utils import is_duck_dask_array, module_available
 
 if TYPE_CHECKING:
-    from xarray.core.types import T_Chunks
-    from xarray.namedarray._typing import DaskArray, _NormalizedChunks, duckarray
+    from numpy.typing import NDArray
+
+    from xarray.namedarray._typing import T_Chunks, _NormalizedChunks, duckarray
+
+    try:
+        from dask.array.core import Array as DaskArray
+        from dask.typing import DaskCollection
+    except ImportError:
+        DaskArray = NDArray  # type: ignore
+        DaskCollection: Any = NDArray  # type: ignore
 
 
 dask_available = module_available("dask")
@@ -81,9 +89,9 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     def reduction(
         self,
         arr: T_ChunkedArray,
-        func: Callable,
-        combine_func: Callable | None = None,
-        aggregate_func: Callable | None = None,
+        func: Callable[..., Any],
+        combine_func: Callable[..., Any] | None = None,
+        aggregate_func: Callable[..., Any] | None = None,
         axis: int | Sequence[int] | None = None,
         dtype: np.dtype | None = None,
         keepdims: bool = False,
@@ -102,8 +110,8 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
     def scan(
         self,
-        func: Callable,
-        binop: Callable,
+        func: Callable[..., Any],
+        binop: Callable[..., Any],
         ident: float,
         arr: T_ChunkedArray,
         axis: int | None = None,
@@ -124,7 +132,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
     def apply_gufunc(
         self,
-        func: Callable,
+        func: Callable[..., Any],
         signature: str,
         *args: Any,
         axes: Sequence[tuple[int, ...]] | None = None,
@@ -156,7 +164,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
     def map_blocks(
         self,
-        func: Callable,
+        func: Callable[..., Any],
         *args: Any,
         dtype: np.typing.DTypeLike | None = None,
         chunks: tuple[int, ...] | None = None,
@@ -185,14 +193,14 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
     def blockwise(
         self,
-        func: Callable,
+        func: Callable[..., Any],
         out_ind: Iterable,
         *args: Any,
         # can't type this as mypy assumes args are all same type, but dask blockwise args alternate types
         name: str | None = None,
         token=None,
         dtype: np.dtype | None = None,
-        adjust_chunks: dict[Any, Callable] | None = None,
+        adjust_chunks: dict[Any, Callable[..., Any]] | None = None,
         new_axes: dict[Any, int] | None = None,
         align_arrays: bool = True,
         concatenate: bool | None = None,

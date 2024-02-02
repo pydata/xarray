@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import typing
+import sys
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from enum import Enum
 from types import ModuleType
@@ -18,15 +18,11 @@ from typing import (
 )
 
 import numpy as np
-from numpy.typing import NDArray
 
-if typing.TYPE_CHECKING:
-    try:
-        from dask.array.core import Array as DaskArray
-        from dask.typing import DaskCollection
-    except ImportError:
-        DaskArray = NDArray  # type: ignore
-        DaskCollection: Any = NDArray  # type: ignore
+if sys.version_info >= (3, 11):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
@@ -76,6 +72,10 @@ _AxisLike = Union[_Axis, _Axes]
 
 _Chunks = tuple[_Shape, ...]
 _NormalizedChunks = tuple[tuple[int, ...], ...]
+# FYI in some cases we don't allow `None`, which this doesn't take account of.
+T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
+# We allow the tuple form of this (though arguably we could transition to named dims only)
+T_Chunks: TypeAlias = Union[T_ChunkDim, Mapping[Any, T_ChunkDim]]
 
 _Dim = Hashable
 _Dims = tuple[_Dim, ...]
