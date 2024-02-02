@@ -1,7 +1,7 @@
 import pytest
 
-from datatree.iterators import LevelOrderIter, PreOrderIter
-from datatree.treenode import InvalidTreeError, NamedNode, NodePath, TreeNode
+from xarray.datatree_.datatree.iterators import LevelOrderIter, PreOrderIter
+from xarray.datatree_.datatree.treenode import InvalidTreeError, NamedNode, NodePath, TreeNode
 
 
 class TestFamilyTree:

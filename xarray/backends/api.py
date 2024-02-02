@@ -69,7 +69,7 @@ if TYPE_CHECKING:
     T_NetcdfTypes = Literal[
         "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
     ]
-    from datatree import DataTree
+    from xarray.datatree_.datatree import DataTree
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
@@ -806,7 +806,7 @@ def open_datatree(
         Additional keyword arguments passed to :py:meth:`~xarray.open_dataset` for each group.
     Returns
     -------
-    datatree.DataTree
+    xarray.core.datatree.DataTree
     """
     if engine is None:
         engine = plugins.guess_engine(filename_or_obj)

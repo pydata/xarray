@@ -1,9 +1,9 @@
 import pytest
 import zarr.errors
 
-from xarray import open_datatree
-from datatree.testing import assert_equal
-from datatree.tests import requires_h5netcdf, requires_netCDF4, requires_zarr
+from xarray.backends.api import open_datatree
+from xarray.datatree_.datatree.testing import assert_equal
+from xarray.datatree_.datatree.tests import requires_h5netcdf, requires_netCDF4, requires_zarr
 
 
 class TestIO:
