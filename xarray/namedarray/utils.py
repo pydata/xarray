@@ -68,9 +68,11 @@ def module_available(module: str, minversion: str | None = None) -> bool:
 
 def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
     if module_available("dask"):
-        from dask.typing import DaskCollection
+        from dask.base import is_dask_collection
 
-        return isinstance(x, DaskCollection)
+        # use is_dask_collection function instead of dask.typing.DaskCollection
+        # see https://github.com/pydata/xarray/pull/8241#discussion_r1476276023
+        return is_dask_collection(x)
     return False
 
 
