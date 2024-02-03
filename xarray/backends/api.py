@@ -791,13 +791,15 @@ def open_dataarray(
 def open_mfdataset(
     paths: str | NestedSequence[str | os.PathLike],
     chunks: T_Chunks | None = None,
-    concat_dim: str
-    | DataArray
-    | Index
-    | Sequence[str]
-    | Sequence[DataArray]
-    | Sequence[Index]
-    | None = None,
+    concat_dim: (
+        str
+        | DataArray
+        | Index
+        | Sequence[str]
+        | Sequence[DataArray]
+        | Sequence[Index]
+        | None
+    ) = None,
     compat: CompatOptions = "no_conflicts",
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_Engine | None = None,
@@ -912,7 +914,8 @@ def open_mfdataset(
           aligned are not equal
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
-          dimension must have the same size in all objects.
+        - "strict": similar to "exact", but less permissive.
+          The alignment fails if dimensions' names differ.
     attrs_file : str or path-like, optional
         Path of the file used to read global attributes from.
         By default global attributes are read from the first file provided,

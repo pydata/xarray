@@ -206,7 +206,7 @@ CombineAttrsOptions = Union[
     Literal["drop", "identical", "no_conflicts", "drop_conflicts", "override"],
     Callable[..., Any],
 ]
-JoinOptions = Literal["outer", "inner", "left", "right", "exact", "override"]
+JoinOptions = Literal["outer", "inner", "left", "right", "exact", "override", "strict"]
 
 Interp1dOptions = Literal[
     "linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial"

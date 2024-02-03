@@ -5,7 +5,17 @@ import operator
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Callable, Final, Generic, TypeVar, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Final,
+    Generic,
+    TypeVar,
+    cast,
+    get_args,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -19,7 +29,7 @@ from xarray.core.indexes import (
     indexes_all_equal,
     safe_cast_to_index,
 )
-from xarray.core.types import T_Alignable
+from xarray.core.types import JoinOptions, T_Alignable
 from xarray.core.utils import is_dict_like, is_full_slice
 from xarray.core.variable import Variable, as_compatible_data, calculate_dimensions
 
@@ -28,7 +38,6 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.types import (
         Alignable,
-        JoinOptions,
         T_DataArray,
         T_Dataset,
         T_DuckArray,
@@ -145,7 +154,7 @@ class Aligner(Generic[T_Alignable]):
         self.objects = tuple(objects)
         self.objects_matching_indexes = ()
 
-        if join not in ["inner", "outer", "override", "exact", "left", "right"]:
+        if join not in get_args(JoinOptions):
             raise ValueError(f"invalid value for join: {join}")
         self.join = join
 
@@ -264,13 +273,13 @@ class Aligner(Generic[T_Alignable]):
         self.all_indexes = all_indexes
         self.all_index_vars = all_index_vars
 
-        if self.join == "override":
+        if self.join in ("override", "strict"):
             for dim_sizes in all_indexes_dim_sizes.values():
                 for dim, sizes in dim_sizes.items():
                     if len(sizes) > 1:
                         raise ValueError(
-                            "cannot align objects with join='override' with matching indexes "
-                            f"along dimension {dim!r} that don't have the same size"
+                            f"cannot align objects with join={self.join!r} with matching indexes "
+                            f"along dimension {dim!r} that don't have the same size ({sizes!r})"
                         )
 
     def find_matching_unindexed_dims(self) -> None:
@@ -472,11 +481,26 @@ class Aligner(Generic[T_Alignable]):
                 )
             else:
                 add_err_msg = ""
+            # Same for indexed dims?
             if len(sizes) > 1:
                 raise ValueError(
                     f"cannot reindex or align along dimension {dim!r} "
                     f"because of conflicting dimension sizes: {sizes!r}" + add_err_msg
                 )
+
+    def assert_equal_dimension_names(self) -> None:
+        # Strict mode only allows objects having the exact same dimensions' names.
+        if not self.join == "strict":
+            return
+
+        unique_dims = set(tuple(o.sizes) for o in self.objects)
+        all_objects_have_same_dims = len(unique_dims) == 1
+        if not all_objects_have_same_dims:
+            raise ValueError(
+                f"cannot align objects with join='strict' "
+                f"because given objects do not share the same dimension names ({[tuple(o.sizes) for o in self.objects]!r}); "
+                f"try using join='exact' if you only care about equal indexes"
+            )
 
     def override_indexes(self) -> None:
         objects = list(self.objects)
@@ -568,6 +592,7 @@ class Aligner(Generic[T_Alignable]):
             self.results = (obj.copy(deep=self.copy),)
             return
 
+        self.assert_equal_dimension_names()
         self.find_matching_indexes()
         self.find_matching_unindexed_dims()
         self.assert_no_index_conflict()
@@ -576,7 +601,7 @@ class Aligner(Generic[T_Alignable]):
 
         if self.join == "override":
             self.override_indexes()
-        elif self.join == "exact" and not self.copy:
+        elif not self.copy and (self.join in ("exact", "strict")):
             self.results = self.objects
         else:
             self.reindex_all()
@@ -716,6 +741,8 @@ def align(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
+        - "strict": similar to "exact", but less permissive.
+          The alignment fails if dimensions' names differ.
 
     copy : bool, default: True
         If ``copy=True``, data in the return values is always copied. If

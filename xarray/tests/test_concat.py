@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -1261,3 +1262,103 @@ def test_concat_index_not_same_dim() -> None:
         match=r"Cannot concatenate along dimension 'x' indexes with dimensions.*",
     ):
         concat([ds1, ds2], dim="x")
+
+
+def test_concat_join_coordinate_variables_non_asked_dims():
+    ds1 = Dataset(
+        coords={
+            "x_center": ("x_center", [1, 2, 3]),
+            "x_outer": ("x_outer", [0.5, 1.5, 2.5, 3.5]),
+        },
+    )
+
+    ds2 = Dataset(
+        coords={
+            "x_center": ("x_center", [4, 5, 6]),
+            "x_outer": ("x_outer", [4.5, 5.5, 6.5]),
+        },
+    )
+
+    # Using join='outer'
+    expected_wrongly_concatenated_xds = Dataset(
+        coords={
+            "x_center": ("x_center", [1, 2, 3, 4, 5, 6]),
+            "x_outer": ("x_outer", [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5]),
+        },
+    )
+    # Not using strict mode will allow the concatenation to surprisingly happen
+    # even if `x_outer` sizes do not match
+    actual_xds = concat(
+        [ds1, ds2],
+        dim="x_center",
+        data_vars="different",
+        coords="different",
+        join="outer",
+    )
+    assert all(actual_xds == expected_wrongly_concatenated_xds)
+
+    # Using join='strict'
+    # A check similar to the one made on non-indexed dimensions regarding their sizes.
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            r"cannot align objects with join='strict' with matching indexes "
+            r"along dimension 'x_outer' that don't have the same size ({3, 4})"
+        ),
+    ):
+        concat(
+            [ds1, ds2],
+            dim="x_center",
+            data_vars="different",
+            coords="different",
+            join="strict",
+        )
+
+
+def test_concat_join_non_coordinate_variables():
+    ds1 = Dataset(
+        data_vars={
+            "a": ("x_center", [1, 2, 3]),
+            "b": ("x_outer", [0.5, 1.5, 2.5, 3.5]),
+        },
+    )
+
+    ds2 = Dataset(
+        data_vars={
+            "a": ("x_center", [4, 5, 6]),
+            "b": ("x_outer", [4.5, 5.5, 6.5]),
+        },
+    )
+
+    # Whether join='outer' or join='strict' modes are used,
+    # the concatenation fails because of the behavior disallowing alignment
+    # of non-indexed dimensions (not attached to a coordinate variable).
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"cannot reindex or align along dimension 'x_outer' "
+            r"because of conflicting dimension sizes: {3, 4}"
+        ),
+    ):
+        concat(
+            [ds1, ds2],
+            dim="x_center",
+            data_vars="different",
+            coords="different",
+            join="strict",
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"cannot reindex or align along dimension 'x_outer' "
+            r"because of conflicting dimension sizes: {3, 4}"
+        ),
+    ):
+        concat(
+            [ds1, ds2],
+            dim="x_center",
+            data_vars="different",
+            coords="different",
+            join="outer",
+        )

@@ -166,6 +166,8 @@ class set_options:
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
+        - "strict": similar to "exact", but less permissive.
+          The alignment fails if dimensions' names differ.
 
     cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
         Colormap to use for divergent data plots. If string, must be

@@ -790,6 +790,8 @@ def merge(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
+        - "strict": similar to "exact", but less permissive.
+          The alignment fails if dimensions' names differ.
 
     fill_value : scalar or dict-like, optional
         Value to use for newly missing values. If a dict-like, maps

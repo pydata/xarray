@@ -3188,6 +3188,26 @@ class TestDataArray:
         assert_identical(expected_b, actual_b)
         assert expected_b.x.dtype == actual_b.x.dtype
 
+    def test_align_exact_vs_strict(self) -> None:
+        xda_1 = xr.DataArray([1], dims="x1")
+        xda_2 = xr.DataArray([1], dims="x2")
+
+        # join='exact' passes
+        aligned_1, aligned_2 = xr.align(xda_1, xda_2, join="exact")
+        assert aligned_1 == xda_1
+        assert aligned_2 == xda_2
+
+        # join='strict' fails because of non-matching dimensions' names
+        with pytest.raises(
+            ValueError,
+            match=(
+                r"cannot align objects with join='strict' "
+                r"because given objects do not share the same dimension names "
+                r"([('x1',), ('x2',)])"
+            ),
+        ):
+            xr.align(xda_1, xda_2, join="strict")
+
     def test_broadcast_arrays(self) -> None:
         x = DataArray([1, 2], coords=[("a", [-1, -2])], name="x")
         y = DataArray([1, 2], coords=[("b", [3, 4])], name="y")
