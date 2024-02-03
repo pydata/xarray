@@ -206,6 +206,11 @@ def _create_method(name, npmodule=np) -> Callable:
                 # to ddof=1 above.
                 if pycompat.mod_version("numbagg") < Version("0.7.0"):
                     kwargs.pop("ddof", None)
+                if name == "nanquantile":
+                    if kwargs.get("method", None) != "linear":
+                        return
+                    kwargs["quantiles"] = kwargs.pop("q")
+                    kwargs.pop("method", None)
                 return nba_func(values, axis=axis, **kwargs)
         if (
             _BOTTLENECK_AVAILABLE
@@ -285,3 +290,4 @@ nancumsum = _create_method("nancumsum")
 nancumprod = _create_method("nancumprod")
 nanargmin = _create_method("nanargmin")
 nanargmax = _create_method("nanargmax")
+nanquantile = _create_method("nanquantile")

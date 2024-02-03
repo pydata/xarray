@@ -1995,20 +1995,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
             method = interpolation
 
-        using_numbagg = False
         if skipna or (skipna is None and self.dtype.kind in "cfO"):
-            if (
-                module_available("numbagg", minversion="0.5.1")
-                and OPTIONS["use_numbagg"] is True
-                and method == "linear"
-                and not isinstance(self.data, array_type("pint"))
-            ):
-                import numbagg
-
-                _quantile_func = numbagg.nanquantile
-                using_numbagg = True
-            else:
-                _quantile_func = np.nanquantile
+            _quantile_func = nputils.nanquantile
         else:
             _quantile_func = np.quantile
 
@@ -2030,10 +2018,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         axis = np.arange(-1, -1 * len(dim) - 1, -1)
 
-        if using_numbagg:
-            kwargs = {"quantiles": q, "axis": axis}
-        else:
-            kwargs = {"q": q, "axis": axis, "method": method}
+        kwargs = {"q": q, "axis": axis, "method": method}
 
         result = apply_ufunc(
             _wrapper,
