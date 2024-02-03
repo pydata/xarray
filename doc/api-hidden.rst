@@ -134,7 +134,6 @@
    core.accessor_dt.DatetimeAccessor.time
    core.accessor_dt.DatetimeAccessor.week
    core.accessor_dt.DatetimeAccessor.weekday
-   core.accessor_dt.DatetimeAccessor.weekday_name
    core.accessor_dt.DatetimeAccessor.weekofyear
    core.accessor_dt.DatetimeAccessor.year
 
@@ -352,33 +351,35 @@
    IndexVariable.values
 
 
-   namedarray.core.NamedArray.all
-   namedarray.core.NamedArray.any
-   namedarray.core.NamedArray.attrs
-   namedarray.core.NamedArray.chunks
-   namedarray.core.NamedArray.chunksizes
-   namedarray.core.NamedArray.copy
-   namedarray.core.NamedArray.count
-   namedarray.core.NamedArray.cumprod
-   namedarray.core.NamedArray.cumsum
-   namedarray.core.NamedArray.data
-   namedarray.core.NamedArray.dims
-   namedarray.core.NamedArray.dtype
-   namedarray.core.NamedArray.get_axis_num
-   namedarray.core.NamedArray.max
-   namedarray.core.NamedArray.mean
-   namedarray.core.NamedArray.median
-   namedarray.core.NamedArray.min
-   namedarray.core.NamedArray.nbytes
-   namedarray.core.NamedArray.ndim
-   namedarray.core.NamedArray.prod
-   namedarray.core.NamedArray.reduce
-   namedarray.core.NamedArray.shape
-   namedarray.core.NamedArray.size
-   namedarray.core.NamedArray.sizes
-   namedarray.core.NamedArray.std
-   namedarray.core.NamedArray.sum
-   namedarray.core.NamedArray.var
+   NamedArray.all
+   NamedArray.any
+   NamedArray.attrs
+   NamedArray.broadcast_to
+   NamedArray.chunks
+   NamedArray.chunksizes
+   NamedArray.copy
+   NamedArray.count
+   NamedArray.cumprod
+   NamedArray.cumsum
+   NamedArray.data
+   NamedArray.dims
+   NamedArray.dtype
+   NamedArray.expand_dims
+   NamedArray.get_axis_num
+   NamedArray.max
+   NamedArray.mean
+   NamedArray.median
+   NamedArray.min
+   NamedArray.nbytes
+   NamedArray.ndim
+   NamedArray.prod
+   NamedArray.reduce
+   NamedArray.shape
+   NamedArray.size
+   NamedArray.sizes
+   NamedArray.std
+   NamedArray.sum
+   NamedArray.var
 
 
    plot.plot
@@ -590,20 +591,6 @@
    backends.H5netcdfBackendEntrypoint.url
    backends.H5netcdfBackendEntrypoint.guess_can_open
    backends.H5netcdfBackendEntrypoint.open_dataset
-
-   backends.PseudoNetCDFDataStore.close
-   backends.PseudoNetCDFDataStore.get_attrs
-   backends.PseudoNetCDFDataStore.get_dimensions
-   backends.PseudoNetCDFDataStore.get_encoding
-   backends.PseudoNetCDFDataStore.get_variables
-   backends.PseudoNetCDFDataStore.open
-   backends.PseudoNetCDFDataStore.open_store_variable
-   backends.PseudoNetCDFDataStore.ds
-
-   backends.PseudoNetCDFBackendEntrypoint.description
-   backends.PseudoNetCDFBackendEntrypoint.url
-   backends.PseudoNetCDFBackendEntrypoint.guess_can_open
-   backends.PseudoNetCDFBackendEntrypoint.open_dataset
 
    backends.PydapDataStore.close
    backends.PydapDataStore.get_attrs

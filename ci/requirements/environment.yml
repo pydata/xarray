@@ -7,7 +7,6 @@ dependencies:
   - boto3
   - bottleneck
   - cartopy
-  - cdms2
   - cftime
   - dask-core
   - distributed
@@ -18,7 +17,7 @@ dependencies:
   - hdf5
   - hypothesis
   - iris
-  - lxml  # Optional dep of pydap
+  - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
@@ -33,7 +32,7 @@ dependencies:
   - pip
   - pooch
   - pre-commit
-  - pseudonetcdf
+  - pyarrow # pandas makes a deprecation warning without this, breaking doctests
   - pydap
   - pytest
   - pytest-cov

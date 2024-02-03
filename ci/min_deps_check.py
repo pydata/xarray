@@ -3,6 +3,8 @@
 publication date. Compare it against requirements/min-all-deps.yml to verify the
 policy on obsolete dependencies is being followed. Print a pretty report :)
 """
+from __future__ import annotations
+
 import itertools
 import sys
 from collections.abc import Iterator

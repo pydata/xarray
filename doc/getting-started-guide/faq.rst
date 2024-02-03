@@ -168,18 +168,11 @@ integration with Cartopy_.
 .. _Iris: https://scitools-iris.readthedocs.io/en/stable/
 .. _Cartopy: https://scitools.org.uk/cartopy/docs/latest/
 
-`UV-CDAT`__ is another Python library that implements in-memory netCDF-like
-variables and `tools for working with climate data`__.
-
-__ https://uvcdat.llnl.gov/
-__ https://drclimate.wordpress.com/2014/01/02/a-beginners-guide-to-scripting-with-uv-cdat/
-
 We think the design decisions we have made for xarray (namely, basing it on
 pandas) make it a faster and more flexible data analysis tool. That said, Iris
-and CDAT have some great domain specific functionality, and xarray includes
-methods for converting back and forth between xarray and these libraries. See
-:py:meth:`~xarray.DataArray.to_iris` and :py:meth:`~xarray.DataArray.to_cdms2`
-for more details.
+has some great domain specific functionality, and xarray includes
+methods for converting back and forth between xarray and Iris. See
+:py:meth:`~xarray.DataArray.to_iris` for more details.
 
 What other projects leverage xarray?
 ------------------------------------

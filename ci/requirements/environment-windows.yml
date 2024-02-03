@@ -5,7 +5,6 @@ dependencies:
   - boto3
   - bottleneck
   - cartopy
-  # - cdms2  # Not available on Windows
   - cftime
   - dask-core
   - distributed
@@ -28,7 +27,6 @@ dependencies:
   - pint>=0.22
   - pip
   - pre-commit
-  - pseudonetcdf
   - pydap
   - pytest
   - pytest-cov

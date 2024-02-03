@@ -182,6 +182,7 @@ Computation
    Dataset.groupby_bins
    Dataset.rolling
    Dataset.rolling_exp
+   Dataset.cumulative
    Dataset.weighted
    Dataset.coarsen
    Dataset.resample
@@ -192,6 +193,7 @@ Computation
    Dataset.map_blocks
    Dataset.polyfit
    Dataset.curvefit
+   Dataset.eval
 
 Aggregation
 -----------
@@ -378,6 +380,7 @@ Computation
    DataArray.groupby_bins
    DataArray.rolling
    DataArray.rolling_exp
+   DataArray.cumulative
    DataArray.weighted
    DataArray.coarsen
    DataArray.resample
@@ -520,7 +523,6 @@ Datetimelike properties
    DataArray.dt.nanosecond
    DataArray.dt.dayofweek
    DataArray.dt.weekday
-   DataArray.dt.weekday_name
    DataArray.dt.dayofyear
    DataArray.dt.quarter
    DataArray.dt.days_in_month
@@ -628,11 +630,9 @@ DataArray methods
    load_dataarray
    open_dataarray
    DataArray.as_numpy
-   DataArray.from_cdms2
    DataArray.from_dict
    DataArray.from_iris
    DataArray.from_series
-   DataArray.to_cdms2
    DataArray.to_dask_dataframe
    DataArray.to_dataframe
    DataArray.to_dataset
@@ -1071,6 +1071,27 @@ Testing
    testing.assert_allclose
    testing.assert_chunks_equal
 
+Hypothesis Testing Strategies
+=============================
+
+.. currentmodule:: xarray
+
+See the :ref:`documentation page on testing <testing.hypothesis>` for a guide on how to use these strategies.
+
+.. warning::
+    These strategies should be considered highly experimental, and liable to change at any time.
+
+.. autosummary::
+   :toctree: generated/
+
+   testing.strategies.supported_dtypes
+   testing.strategies.names
+   testing.strategies.dimension_names
+   testing.strategies.dimension_sizes
+   testing.strategies.attrs
+   testing.strategies.variables
+   testing.strategies.unique_subset_of
+
 Exceptions
 ==========
 
@@ -1117,7 +1138,6 @@ arguments for the ``load_store`` and ``dump_to_store`` Dataset methods:
 
    backends.NetCDF4DataStore
    backends.H5NetCDFStore
-   backends.PseudoNetCDFDataStore
    backends.PydapDataStore
    backends.ScipyDataStore
    backends.ZarrStore
@@ -1133,7 +1153,6 @@ used filetypes in the xarray universe.
 
    backends.NetCDF4BackendEntrypoint
    backends.H5netcdfBackendEntrypoint
-   backends.PseudoNetCDFBackendEntrypoint
    backends.PydapBackendEntrypoint
    backends.ScipyBackendEntrypoint
    backends.StoreBackendEntrypoint

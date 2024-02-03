@@ -414,7 +414,7 @@ class CFScaleOffsetCoder(VariableCoder):
 class UnsignedIntegerCoder(VariableCoder):
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         # from netCDF best practices
-        # https://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
+        # https://docs.unidata.ucar.edu/nug/current/best_practices.html#bp_Unsigned-Data
         #     "_Unsigned = "true" to indicate that
         #      integer data should be treated as unsigned"
         if variable.encoding.get("_Unsigned", "false") == "true":
@@ -561,4 +561,35 @@ class NonStringCoder(VariableCoder):
             return variable
 
     def decode(self):
+        raise NotImplementedError()
+
+
+class ObjectVLenStringCoder(VariableCoder):
+    def encode(self):
+        raise NotImplementedError
+
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if variable.dtype == object and variable.encoding.get("dtype", False) == str:
+            variable = variable.astype(variable.encoding["dtype"])
+            return variable
+        else:
+            return variable
+
+
+class NativeEnumCoder(VariableCoder):
+    """Encode Enum into variable dtype metadata."""
+
+    def encode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if (
+            "dtype" in variable.encoding
+            and np.dtype(variable.encoding["dtype"]).metadata
+            and "enum" in variable.encoding["dtype"].metadata
+        ):
+            dims, data, attrs, encoding = unpack_for_encoding(variable)
+            data = data.astype(dtype=variable.encoding.pop("dtype"))
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
+
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         raise NotImplementedError()

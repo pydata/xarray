@@ -50,14 +50,17 @@ from collections.abc import (
     Collection,
     Container,
     Hashable,
+    ItemsView,
     Iterable,
     Iterator,
+    KeysView,
     Mapping,
     MutableMapping,
     MutableSet,
-    Sequence,
+    ValuesView,
 )
 from enum import Enum
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -71,9 +74,10 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 if TYPE_CHECKING:
-    from xarray.core.types import Dims, ErrorOptionsWithWarn, OrderedDims, T_DuckArray
+    from xarray.core.types import Dims, ErrorOptionsWithWarn, T_DuckArray
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -114,6 +118,8 @@ def get_valid_numpy_dtype(array: np.ndarray | pd.Index):
     elif hasattr(array, "categories"):
         # category isn't a real numpy dtype
         dtype = array.categories.dtype
+        if not is_valid_numpy_dtype(dtype):
+            dtype = np.dtype("O")
     elif not is_valid_numpy_dtype(array.dtype):
         dtype = np.dtype("O")
     else:
@@ -471,6 +477,57 @@ def FrozenDict(*args, **kwargs) -> Frozen:
     return Frozen(dict(*args, **kwargs))
 
 
+class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
+    """
+    Class which behaves like a Mapping but warns if the values are accessed.
+
+    Temporary object to aid in deprecation cycle of `Dataset.dims` (see GH issue #8496).
+    `Dataset.dims` is being changed from returning a mapping of dimension names to lengths to just
+    returning a frozen set of dimension names (to increase consistency with `DataArray.dims`).
+    This class retains backwards compatibility but raises a warning only if the return value
+    of ds.dims is used like a dictionary (i.e. it doesn't raise a warning if used in a way that
+    would also be valid for a FrozenSet, e.g. iteration).
+    """
+
+    __slots__ = ("mapping",)
+
+    def _warn(self) -> None:
+        emit_user_level_warning(
+            "The return type of `Dataset.dims` will be changed to return a set of dimension names in future, "
+            "in order to be more consistent with `DataArray.dims`. To access a mapping from dimension names to lengths, "
+            "please use `Dataset.sizes`.",
+            FutureWarning,
+        )
+
+    def __getitem__(self, key: K) -> V:
+        self._warn()
+        return super().__getitem__(key)
+
+    @overload
+    def get(self, key: K, /) -> V | None:
+        ...
+
+    @overload
+    def get(self, key: K, /, default: V | T) -> V | T:
+        ...
+
+    def get(self, key: K, default: T | None = None) -> V | T | None:
+        self._warn()
+        return super().get(key, default)
+
+    def keys(self) -> KeysView[K]:
+        self._warn()
+        return super().keys()
+
+    def items(self) -> ItemsView[K, V]:
+        self._warn()
+        return super().items()
+
+    def values(self) -> ValuesView[V]:
+        self._warn()
+        return super().values()
+
+
 class HybridMappingProxy(Mapping[K, V]):
     """Implements the Mapping interface. Uses the wrapped mapping for item lookup
     and a separate wrapped keys collection for iteration.
@@ -789,36 +846,6 @@ class HiddenKeyDict(MutableMapping[K, V]):
         return len(self._data) - num_hidden
 
 
-def infix_dims(
-    dims_supplied: Collection,
-    dims_all: Collection,
-    missing_dims: ErrorOptionsWithWarn = "raise",
-) -> Iterator:
-    """
-    Resolves a supplied list containing an ellipsis representing other items, to
-    a generator with the 'realized' list of all items
-    """
-    if ... in dims_supplied:
-        if len(set(dims_all)) != len(dims_all):
-            raise ValueError("Cannot use ellipsis with repeated dims")
-        if list(dims_supplied).count(...) > 1:
-            raise ValueError("More than one ellipsis supplied")
-        other_dims = [d for d in dims_all if d not in dims_supplied]
-        existing_dims = drop_missing_dims(dims_supplied, dims_all, missing_dims)
-        for d in existing_dims:
-            if d is ...:
-                yield from other_dims
-            else:
-                yield d
-    else:
-        existing_dims = drop_missing_dims(dims_supplied, dims_all, missing_dims)
-        if set(existing_dims) ^ set(dims_all):
-            raise ValueError(
-                f"{dims_supplied} must be a permuted list of {dims_all}, unless `...` is included"
-            )
-        yield from existing_dims
-
-
 def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
     """Get an new dimension name based on new_dim, that is not used in dims.
     If the same name exists, we add an underscore(s) in the head.
@@ -927,12 +954,9 @@ def drop_missing_dims(
         )
 
 
-T_None = TypeVar("T_None", None, "ellipsis")
-
-
 @overload
 def parse_dims(
-    dim: str | Iterable[Hashable] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
@@ -943,12 +967,12 @@ def parse_dims(
 
 @overload
 def parse_dims(
-    dim: str | Iterable[Hashable] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | T_None:
+) -> tuple[Hashable, ...] | None | ellipsis:
     ...
 
 
@@ -995,7 +1019,7 @@ def parse_dims(
 
 @overload
 def parse_ordered_dims(
-    dim: str | Sequence[Hashable | ellipsis] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
@@ -1006,17 +1030,17 @@ def parse_ordered_dims(
 
 @overload
 def parse_ordered_dims(
-    dim: str | Sequence[Hashable | ellipsis] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | T_None:
+) -> tuple[Hashable, ...] | None | ellipsis:
     ...
 
 
 def parse_ordered_dims(
-    dim: OrderedDims,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
@@ -1070,9 +1094,9 @@ def parse_ordered_dims(
         )
 
 
-def _check_dims(dim: set[Hashable | ellipsis], all_dims: set[Hashable]) -> None:
-    wrong_dims = dim - all_dims
-    if wrong_dims and wrong_dims != {...}:
+def _check_dims(dim: set[Hashable], all_dims: set[Hashable]) -> None:
+    wrong_dims = (dim - all_dims) - {...}
+    if wrong_dims:
         wrong_dims_str = ", ".join(f"'{d!s}'" for d in wrong_dims)
         raise ValueError(
             f"Dimension(s) {wrong_dims_str} do not exist. Expected one or more of {all_dims}"
@@ -1142,7 +1166,7 @@ def contains_only_chunked_or_numpy(obj) -> bool:
     )
 
 
-def module_available(module: str) -> bool:
+def module_available(module: str, minversion: str | None = None) -> bool:
     """Checks whether a module is installed without importing it.
 
     Use this for a lightweight check and lazy imports.
@@ -1151,22 +1175,32 @@ def module_available(module: str) -> bool:
     ----------
     module : str
         Name of the module.
+    minversion : str, optional
+        Minimum version of the module
 
     Returns
     -------
     available : bool
         Whether the module is installed.
     """
-    return importlib.util.find_spec(module) is not None
+    if importlib.util.find_spec(module) is None:
+        return False
+
+    if minversion is not None:
+        version = importlib.metadata.version(module)
+
+        return Version(version) >= Version(minversion)
+
+    return True
 
 
 def find_stack_level(test_mode=False) -> int:
-    """Find the first place in the stack that is not inside xarray.
+    """Find the first place in the stack that is not inside xarray or the Python standard library.
 
     This is unless the code emanates from a test, in which case we would prefer
     to see the xarray source.
 
-    This function is taken from pandas.
+    This function is taken from pandas and modified to exclude standard library paths.
 
     Parameters
     ----------
@@ -1177,19 +1211,32 @@ def find_stack_level(test_mode=False) -> int:
     Returns
     -------
     stacklevel : int
-        First level in the stack that is not part of xarray.
+        First level in the stack that is not part of xarray or the Python standard library.
     """
     import xarray as xr
 
-    pkg_dir = os.path.dirname(xr.__file__)
-    test_dir = os.path.join(pkg_dir, "tests")
+    pkg_dir = Path(xr.__file__).parent
+    test_dir = pkg_dir / "tests"
 
-    # https://stackoverflow.com/questions/17407119/python-inspect-stack-is-slow
+    std_lib_init = sys.modules["os"].__file__
+    # Mostly to appease mypy; I don't think this can happen...
+    if std_lib_init is None:
+        return 0
+
+    std_lib_dir = Path(std_lib_init).parent
+
     frame = inspect.currentframe()
     n = 0
     while frame:
         fname = inspect.getfile(frame)
-        if fname.startswith(pkg_dir) and (not fname.startswith(test_dir) or test_mode):
+        if (
+            fname.startswith(str(pkg_dir))
+            and (not fname.startswith(str(test_dir)) or test_mode)
+        ) or (
+            fname.startswith(str(std_lib_dir))
+            and "site-packages" not in fname
+            and "dist-packages" not in fname
+        ):
             frame = frame.f_back
             n += 1
         else:

@@ -8,13 +8,14 @@ from collections.abc import Hashable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
 import numpy as np
+from packaging.version import Version
 
-from xarray.core import dtypes, duck_array_ops, utils
+from xarray.core import dtypes, duck_array_ops, pycompat, utils
 from xarray.core.arithmetic import CoarsenArithmetic
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
-from xarray.core.utils import either_dict_or_kwargs
+from xarray.core.utils import either_dict_or_kwargs, module_available
 
 try:
     import bottleneck
@@ -145,7 +146,13 @@ class Rolling(Generic[T_Xarray]):
         name: str, fillna: Any, rolling_agg_func: Callable | None = None
     ) -> Callable[..., T_Xarray]:
         """Constructs reduction methods built on a numpy reduction function (e.g. sum),
-        a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean).
+        a numbagg reduction function (e.g. move_sum), a bottleneck reduction function
+        (e.g. move_sum), or a Rolling reduction (_mean).
+
+        The logic here for which function to run is quite diffuse, across this method &
+        _array_reduce. Arguably we could refactor this. But one constraint is that we
+        need context of xarray options, of the functions each library offers, of
+        the array (e.g. dtype).
         """
         if rolling_agg_func:
             array_agg_func = None
@@ -153,14 +160,21 @@ class Rolling(Generic[T_Xarray]):
             array_agg_func = getattr(duck_array_ops, name)
 
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
+        if module_available("numbagg"):
+            import numbagg
+
+            numbagg_move_func = getattr(numbagg, "move_" + name, None)
+        else:
+            numbagg_move_func = None
 
         def method(self, keep_attrs=None, **kwargs):
             keep_attrs = self._get_keep_attrs(keep_attrs)
 
-            return self._numpy_or_bottleneck_reduce(
-                array_agg_func,
-                bottleneck_move_func,
-                rolling_agg_func,
+            return self._array_reduce(
+                array_agg_func=array_agg_func,
+                bottleneck_move_func=bottleneck_move_func,
+                numbagg_move_func=numbagg_move_func,
+                rolling_agg_func=rolling_agg_func,
                 keep_attrs=keep_attrs,
                 fillna=fillna,
                 **kwargs,
@@ -510,9 +524,47 @@ class DataArrayRolling(Rolling["DataArray"]):
         )
         return counts
 
-    def _bottleneck_reduce(self, func, keep_attrs, **kwargs):
-        from xarray.core.dataarray import DataArray
+    def _numbagg_reduce(self, func, keep_attrs, **kwargs):
+        # Some of this is copied from `_bottleneck_reduce`, we could reduce this as part
+        # of a wider refactor.
 
+        axis = self.obj.get_axis_num(self.dim[0])
+
+        padded = self.obj.variable
+        if self.center[0]:
+            if is_duck_dask_array(padded.data):
+                # workaround to make the padded chunk size larger than
+                # self.window - 1
+                shift = -(self.window[0] + 1) // 2
+                offset = (self.window[0] - 1) // 2
+                valid = (slice(None),) * axis + (
+                    slice(offset, offset + self.obj.shape[axis]),
+                )
+            else:
+                shift = (-self.window[0] // 2) + 1
+                valid = (slice(None),) * axis + (slice(-shift, None),)
+            padded = padded.pad({self.dim[0]: (0, -shift)}, mode="constant")
+
+        if is_duck_dask_array(padded.data) and False:
+            raise AssertionError("should not be reachable")
+        else:
+            values = func(
+                padded.data,
+                window=self.window[0],
+                min_count=self.min_periods,
+                axis=axis,
+            )
+
+        if self.center[0]:
+            values = values[valid]
+
+        attrs = self.obj.attrs if keep_attrs else {}
+
+        return self.obj.__class__(
+            values, self.obj.coords, attrs=attrs, name=self.obj.name
+        )
+
+    def _bottleneck_reduce(self, func, keep_attrs, **kwargs):
         # bottleneck doesn't allow min_count to be 0, although it should
         # work the same as if min_count = 1
         # Note bottleneck only works with 1d-rolling.
@@ -544,18 +596,26 @@ class DataArrayRolling(Rolling["DataArray"]):
             values = func(
                 padded.data, window=self.window[0], min_count=min_count, axis=axis
             )
+            # index 0 is at the rightmost edge of the window
+            # need to reverse index here
+            # see GH #8541
+            if func in [bottleneck.move_argmin, bottleneck.move_argmax]:
+                values = self.window[0] - 1 - values
 
         if self.center[0]:
             values = values[valid]
 
         attrs = self.obj.attrs if keep_attrs else {}
 
-        return DataArray(values, self.obj.coords, attrs=attrs, name=self.obj.name)
+        return self.obj.__class__(
+            values, self.obj.coords, attrs=attrs, name=self.obj.name
+        )
 
-    def _numpy_or_bottleneck_reduce(
+    def _array_reduce(
         self,
         array_agg_func,
         bottleneck_move_func,
+        numbagg_move_func,
         rolling_agg_func,
         keep_attrs,
         fillna,
@@ -572,6 +632,35 @@ class DataArrayRolling(Rolling["DataArray"]):
             del kwargs["dim"]
 
         if (
+            OPTIONS["use_numbagg"]
+            and module_available("numbagg")
+            and pycompat.mod_version("numbagg") >= Version("0.6.3")
+            and numbagg_move_func is not None
+            # TODO: we could at least allow this for the equivalent of `apply_ufunc`'s
+            # "parallelized". `rolling_exp` does this, as an example (but rolling_exp is
+            # much simpler)
+            and not is_duck_dask_array(self.obj.data)
+            # Numbagg doesn't handle object arrays and generally has dtype consistency,
+            # so doesn't deal well with bool arrays which are expected to change type.
+            and self.obj.data.dtype.kind not in "ObMm"
+            # TODO: we could also allow this, probably as part of a refactoring of this
+            # module, so we can use the machinery in `self.reduce`.
+            and self.ndim == 1
+        ):
+            import numbagg
+
+            # Numbagg has a default ddof of 1. I (@max-sixty) think we should make
+            # this the default in xarray too, but until we do, don't use numbagg for
+            # std and var unless ddof is set to 1.
+            if (
+                numbagg_move_func not in [numbagg.move_std, numbagg.move_var]
+                or kwargs.get("ddof") == 1
+            ):
+                return self._numbagg_reduce(
+                    numbagg_move_func, keep_attrs=keep_attrs, **kwargs
+                )
+
+        if (
             OPTIONS["use_bottleneck"]
             and bottleneck_move_func is not None
             and not is_duck_dask_array(self.obj.data)
@@ -583,8 +672,10 @@ class DataArrayRolling(Rolling["DataArray"]):
             return self._bottleneck_reduce(
                 bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
             )
+
         if rolling_agg_func:
             return rolling_agg_func(self, keep_attrs=self._get_keep_attrs(keep_attrs))
+
         if fillna is not None:
             if fillna is dtypes.INF:
                 fillna = dtypes.get_pos_infinity(self.obj.dtype, max_for_int=True)
@@ -705,7 +796,7 @@ class DatasetRolling(Rolling["Dataset"]):
             DataArrayRolling._counts, keep_attrs=keep_attrs
         )
 
-    def _numpy_or_bottleneck_reduce(
+    def _array_reduce(
         self,
         array_agg_func,
         bottleneck_move_func,
@@ -715,7 +806,7 @@ class DatasetRolling(Rolling["Dataset"]):
     ):
         return self._dataset_implementation(
             functools.partial(
-                DataArrayRolling._numpy_or_bottleneck_reduce,
+                DataArrayRolling._array_reduce,
                 array_agg_func=array_agg_func,
                 bottleneck_move_func=bottleneck_move_func,
                 rolling_agg_func=rolling_agg_func,

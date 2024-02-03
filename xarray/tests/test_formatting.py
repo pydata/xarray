@@ -10,7 +10,7 @@ from numpy.core import defchararray
 
 import xarray as xr
 from xarray.core import formatting
-from xarray.tests import requires_dask, requires_netCDF4
+from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
 
 
 class TestFormatting:
@@ -773,3 +773,48 @@ def test_lazy_array_wont_compute() -> None:
     # These will crash if var.data are converted to numpy arrays:
     var.__repr__()
     var._repr_html_()
+
+
+@pytest.mark.parametrize("as_dataset", (False, True))
+def test_format_xindexes_none(as_dataset: bool) -> None:
+    # ensure repr for empty xindexes can be displayed #8367
+
+    expected = """\
+    Indexes:
+        *empty*"""
+    expected = dedent(expected)
+
+    obj: xr.DataArray | xr.Dataset = xr.DataArray()
+    obj = obj._to_temp_dataset() if as_dataset else obj
+
+    actual = repr(obj.xindexes)
+    assert actual == expected
+
+
+@pytest.mark.parametrize("as_dataset", (False, True))
+def test_format_xindexes(as_dataset: bool) -> None:
+    expected = """\
+    Indexes:
+        x        PandasIndex"""
+    expected = dedent(expected)
+
+    obj: xr.DataArray | xr.Dataset = xr.DataArray([1], coords={"x": [1]})
+    obj = obj._to_temp_dataset() if as_dataset else obj
+
+    actual = repr(obj.xindexes)
+    assert actual == expected
+
+
+@requires_cftime
+def test_empty_cftimeindex_repr() -> None:
+    index = xr.coding.cftimeindex.CFTimeIndex([])
+
+    expected = """\
+    Indexes:
+        time     CFTimeIndex([], dtype='object', length=0, calendar=None, freq=None)"""
+    expected = dedent(expected)
+
+    da = xr.DataArray([], coords={"time": index})
+
+    actual = repr(da.indexes)
+    assert actual == expected

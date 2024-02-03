@@ -52,10 +52,9 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
     var = Variable(
         ["t"], np.arange(3), {"units": "foobar", "missing_value": 0, "_FillValue": 1}
     )
-    with warnings.catch_warnings(record=True) as w:
+    with pytest.warns(SerializationWarning, match="has multiple fill"):
         actual = conventions.decode_cf_variable("t", var)
         assert_identical(actual, expected)
-        assert "has multiple fill" in str(w[0].message)
 
     expected = Variable(["t"], np.arange(10), {"units": "foobar"})
 
@@ -293,10 +292,9 @@ class TestDecodeCF:
     def test_decode_cf_with_multiple_missing_values(self) -> None:
         original = Variable(["t"], [0, 1, 2], {"missing_value": np.array([0, 1])})
         expected = Variable(["t"], [np.nan, np.nan, 2], {})
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(SerializationWarning, match="has multiple fill"):
             actual = conventions.decode_cf_variable("t", original)
             assert_identical(expected, actual)
-            assert "has multiple fill" in str(w[0].message)
 
     def test_decode_cf_with_drop_variables(self) -> None:
         original = Dataset(
@@ -387,7 +385,6 @@ class TestDecodeCF:
             }
         ).chunk()
         decoded = conventions.decode_cf(original)
-        print(decoded)
         assert all(
             isinstance(var.data, da.Array)
             for name, var in decoded.variables.items()
@@ -493,6 +490,18 @@ class TestCFEncodedDataStore(CFEncodedBase):
     def test_encoding_kwarg_fixed_width_string(self) -> None:
         # CFEncodedInMemoryStore doesn't support explicit string encodings.
         pass
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        np.array([["ab", "cdef", b"X"], [1, 2, "c"]], dtype=object),
+        np.array([["x", 1], ["y", 2]], dtype="object"),
+    ],
+)
+def test_infer_dtype_error_on_mixed_types(data):
+    with pytest.raises(ValueError, match="unable to infer dtype on variable"):
+        conventions._infer_dtype(data, "test")
 
 
 class TestDecodeCFVariableWithArrayUnits:
