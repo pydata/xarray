@@ -28,7 +28,6 @@ from xarray.core.indexing import (
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.core.pycompat import (
-    array_type,
     integer_types,
     is_0d_dask_array,
     is_chunked_array,
@@ -45,7 +44,6 @@ from xarray.core.utils import (
     ensure_us_time_resolution,
     is_duck_array,
     maybe_coerce_to_str,
-    module_available,
 )
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.utils import infix_dims
