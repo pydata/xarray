@@ -627,8 +627,9 @@ def test_repr_file_collapsed(tmp_path) -> None:
     arr_to_store = xr.DataArray(np.arange(300, dtype=np.int64), dims="test")
     arr_to_store.to_netcdf(tmp_path / "test.nc", engine="netcdf4")
 
-    with xr.open_dataarray(tmp_path / "test.nc") as arr, xr.set_options(
-        display_expand_data=False
+    with (
+        xr.open_dataarray(tmp_path / "test.nc") as arr,
+        xr.set_options(display_expand_data=False),
     ):
         actual = repr(arr)
         expected = dedent(
@@ -818,3 +819,56 @@ def test_empty_cftimeindex_repr() -> None:
 
     actual = repr(da.indexes)
     assert actual == expected
+
+
+def test_display_nbytes() -> None:
+    xds = xr.Dataset(
+        {
+            "foo": np.arange(1200),
+            "bar": np.arange(111),
+        }
+    )
+
+    with xr.set_options(display_nbytes=False):
+        actual = repr(xds)
+        expected = """
+<xarray.Dataset>
+Dimensions:  (foo: 1200, bar: 111)
+Coordinates:
+  * foo      (foo) int64 0 1 2 3 4 5 6 7 ... 1193 1194 1195 1196 1197 1198 1199
+  * bar      (bar) int64 0 1 2 3 4 5 6 7 8 ... 103 104 105 106 107 108 109 110
+Data variables:
+    *empty*
+        """.strip()
+        assert actual == expected
+
+        actual = repr(xds["foo"])
+        expected = """
+<xarray.DataArray 'foo' (foo: 1200)>
+array([   0,    1,    2, ..., 1197, 1198, 1199])
+Coordinates:
+  * foo      (foo) int64 0 1 2 3 4 5 6 7 ... 1193 1194 1195 1196 1197 1198 1199
+""".strip()
+        assert actual == expected
+
+    with xr.set_options(display_nbytes=True):
+        actual = repr(xds)
+        expected = """
+<xarray.Dataset 10kB>
+Dimensions:  (foo: 1200, bar: 111)
+Coordinates:
+  * foo      (foo) int64  10kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
+  * bar      (bar) int64 888B  0 1 2 3 4 5 6 7 ... 104 105 106 107 108 109 110
+Data variables:
+    *empty*
+        """.strip()
+        assert actual == expected
+
+        actual = repr(xds["foo"])
+        expected = """
+<xarray.DataArray 'foo' (foo: 1200) 10kB>
+array([   0,    1,    2, ..., 1197, 1198, 1199])
+Coordinates:
+  * foo      (foo) int64  10kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
+""".strip()
+        assert actual == expected
