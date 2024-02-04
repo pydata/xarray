@@ -26,7 +26,7 @@ New Features
 - Allow negative frequency strings (e.g. ``"-1YE"``). These strings are for example used
   in :py:func:`date_range`,  and :py:func:`cftime_range` (:pull:`8651`).
   By `Mathias Hauser <https://github.com/mathause>`_.
-- Added a ``join="exact"`` mode for ``Aligner.align`` and related classes.
+- Added a ``join='strict'`` mode for ``Aligner.align`` and related classes.
   (:issue:`7132`, :issue:`8230`).
   By `Etienne Schalk <https://github.com/etienneschalk>`_.
 - Add :py:meth:`NamedArray.expand_dims`, :py:meth:`NamedArray.permute_dims` and :py:meth:`NamedArray.broadcast_to`
