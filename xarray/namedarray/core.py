@@ -625,7 +625,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self,
     ) -> tuple[PostComputeCallable, tuple[Any, ...]]:
         if is_duck_dask_array(self._data):
-            array_func, array_args = self._data.__dask_postcompute__()  # type: ignore[no-untyped-call]
+            array_func, array_args = self._data.__dask_postcompute__()  # type: ignore
             return self._dask_finalize, (array_func,) + array_args
         else:
             raise AttributeError("Method requires self.data to be a dask array.")
@@ -641,7 +641,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     ]:
         if is_duck_dask_array(self._data):
             a: tuple[PostPersistCallable[Any], tuple[Any, ...]]
-            a = self._data.__dask_postpersist__()  # type: ignore[no-untyped-call]
+            a = self._data.__dask_postpersist__()  # type: ignore
             array_func, array_args = a
 
             return self._dask_finalize, (array_func,) + array_args
@@ -750,8 +750,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         name: str | None = None,
         lock: bool | None = None,
         inline_array: bool | None = None,
-        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
-        from_array_kwargs=None,
+        chunked_array_type: str | ChunkManagerEntrypoint[Any] | None = None,
+        from_array_kwargs: Any = None,
         **chunks_kwargs: Any,
     ) -> Self:
         """Coerce this array's data into a dask array with the given chunks.
@@ -849,7 +849,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 # Using OuterIndexer is a pragmatic choice: dask does not yet handle
                 # different indexing types in an explicit way:
                 # https://github.com/dask/dask/issues/2883
-                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)
+                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore
 
             if is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
@@ -862,7 +862,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         return self._replace(data=data_chunked)
 
-    def to_numpy(self) -> np.ndarray:
+    def to_numpy(self) -> np.ndarray[Any, Any]:
         """Coerces wrapped data to numpy and returns a numpy.ndarray"""
         # TODO an entrypoint so array libraries can choose coercion method?
         data = self._data

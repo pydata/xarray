@@ -96,12 +96,12 @@ def is_0d_dask_array(x: duckarray[Any, Any]) -> bool:
     return is_duck_dask_array(x) and is_scalar(x)
 
 
-def to_numpy(data: duckarray[Any, Any]) -> np.ndarray[_ShapeType, _DType]:
+def to_numpy(data: duckarray[Any, Any]) -> np.ndarray[Any, np.dtype[Any]]:
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
     if isinstance(data, ExplicitlyIndexed):
-        data = data.get_duck_array()
+        data = data.get_duck_array()  # type: ignore
 
     # TODO first attempt to call .to_numpy() once some libraries implement it
     if hasattr(data, "chunks"):
@@ -123,8 +123,8 @@ def to_duck_array(data: Any) -> duckarray[_ShapeType, _DType]:
     from xarray.core.indexing import ExplicitlyIndexed
 
     if isinstance(data, ExplicitlyIndexed):
-        return data.get_duck_array()
+        return data.get_duck_array()  # type: ignore
     elif is_duck_array(data):
         return data
     else:
-        return np.asarray(data)
+        return np.asarray(data)  # type: ignore

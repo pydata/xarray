@@ -19,7 +19,14 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from xarray.namedarray._typing import DaskArray, DaskCollection, _Dim, duckarray
+    try:
+        from dask.array.core import Array as DaskArray
+        from dask.typing import DaskCollection
+    except ImportError:
+        DaskArray = NDArray  # type: ignore
+        DaskCollection: Any = NDArray  # type: ignore
+
+    from xarray.namedarray._typing import _Dim, duckarray
 
 
 K = TypeVar("K")

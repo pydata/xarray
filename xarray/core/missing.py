@@ -23,7 +23,8 @@ from xarray.core.options import _get_keep_attrs
 from xarray.core.types import Interp1dOptions, InterpOptions
 from xarray.core.utils import OrderedSet, is_scalar
 from xarray.core.variable import Variable, broadcast_variables
-from xarray.namedarray.parallelcompat import get_chunked_array_type, is_chunked_array
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray

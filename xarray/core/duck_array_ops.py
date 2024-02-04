@@ -35,8 +35,8 @@ from packaging.version import Version
 from xarray.core import dask_array_ops, dtypes, nputils
 from xarray.core.options import OPTIONS
 from xarray.namedarray import pycompat
-from xarray.namedarray.parallelcompat import get_chunked_array_type, is_chunked_array
-from xarray.namedarray.pycompat import array_type
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import array_type, is_chunked_array
 from xarray.namedarray.utils import is_duck_array, is_duck_dask_array, module_available
 
 # remove once numpy 2.0 is the oldest supported version

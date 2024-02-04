@@ -24,8 +24,8 @@ from xarray.core.utils import (
     is_scalar,
     to_0d_array,
 )
-from xarray.namedarray.parallelcompat import get_chunked_array_type, is_chunked_array
-from xarray.namedarray.pycompat import array_type, integer_types
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import array_type, integer_types, is_chunked_array
 from xarray.namedarray.utils import (
     either_dict_or_kwargs,
     is_duck_array,
