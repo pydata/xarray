@@ -31,6 +31,10 @@ class SupportsRechunk(Protocol):
     def rechunk(self, chunks: Any, **kwargs: Any) -> Any:
         ...
 
+    @property
+    def dtype(self) -> np.dtype[Any]:
+        ...
+
 
 T_ChunkedArray = TypeVar("T_ChunkedArray", bound=SupportsRechunk)
 

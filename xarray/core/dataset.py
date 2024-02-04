@@ -843,7 +843,9 @@ class Dataset(
             chunkmanager = get_chunked_array_type(*lazy_data.values())
 
             # evaluate all the chunked arrays simultaneously
-            evaluated_data = chunkmanager.compute(*lazy_data.values(), **kwargs)
+            evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
+                *lazy_data.values(), **kwargs
+            )
 
             for k, data in zip(lazy_data, evaluated_data):
                 self.variables[k].data = data
