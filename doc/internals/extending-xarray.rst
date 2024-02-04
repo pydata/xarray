@@ -103,7 +103,7 @@ The intent here is that libraries that extend xarray could add such an accessor
 to implement subclass specific functionality rather than using actual subclasses
 or patching in a large number of domain specific methods. For further reading
 on ways to write new accessors and the philosophy behind the approach, see
-https://github.com/pydata/xarray/issues/1080`.
+https://github.com/pydata/xarray/issues/1080.
 
 To help users keep things straight, please `let us know
 <https://github.com/pydata/xarray/issues>`_ if you plan to write a new accessor
