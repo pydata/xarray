@@ -71,7 +71,7 @@ OPTIONS: T_Options = {
     "display_expand_data": "default",
     "display_expand_indexes": "default",
     "display_default_indexes": False,
-    "display_nbytes": True,
+    "display_nbytes": False,
     "enable_cftimeindex": True,
     "file_cache_maxsize": 128,
     "keep_attrs": "default",
