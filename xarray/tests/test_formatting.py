@@ -824,10 +824,13 @@ def test_empty_cftimeindex_repr() -> None:
 def test_display_nbytes() -> None:
     xds = xr.Dataset(
         {
-            "foo": np.arange(1200, dtype=np.int64),
-            "bar": np.arange(111, dtype=np.int64),
+            "foo": np.arange(1200, dtype=np.int16),
+            "bar": np.arange(111, dtype=np.int16),
         }
     )
+
+    # Note: int16 is used to ensure that dtype is shown in the
+    # numpy array representation for all OSes included Windows
 
     with xr.set_options(display_nbytes=False):
         actual = repr(xds)
@@ -835,8 +838,8 @@ def test_display_nbytes() -> None:
 <xarray.Dataset>
 Dimensions:  (foo: 1200, bar: 111)
 Coordinates:
-  * foo      (foo) int64 0 1 2 3 4 5 6 7 ... 1193 1194 1195 1196 1197 1198 1199
-  * bar      (bar) int64 0 1 2 3 4 5 6 7 8 ... 103 104 105 106 107 108 109 110
+  * foo      (foo) int16 0 1 2 3 4 5 6 7 ... 1193 1194 1195 1196 1197 1198 1199
+  * bar      (bar) int16 0 1 2 3 4 5 6 7 8 ... 103 104 105 106 107 108 109 110
 Data variables:
     *empty*
         """.strip()
@@ -845,20 +848,20 @@ Data variables:
         actual = repr(xds["foo"])
         expected = """
 <xarray.DataArray 'foo' (foo: 1200)>
-array([   0,    1,    2, ..., 1197, 1198, 1199])
+array([   0,    1,    2, ..., 1197, 1198, 1199], dtype=int16)
 Coordinates:
-  * foo      (foo) int64 0 1 2 3 4 5 6 7 ... 1193 1194 1195 1196 1197 1198 1199
+  * foo      (foo) int16 0 1 2 3 4 5 6 7 ... 1193 1194 1195 1196 1197 1198 1199
 """.strip()
         assert actual == expected
 
     with xr.set_options(display_nbytes=True):
         actual = repr(xds)
         expected = """
-<xarray.Dataset 10kB>
+<xarray.Dataset 3kB>
 Dimensions:  (foo: 1200, bar: 111)
 Coordinates:
-  * foo      (foo) int64  10kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
-  * bar      (bar) int64 888B  0 1 2 3 4 5 6 7 ... 104 105 106 107 108 109 110
+  * foo      (foo) int16   2kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
+  * bar      (bar) int16 222B  0 1 2 3 4 5 6 7 ... 104 105 106 107 108 109 110
 Data variables:
     *empty*
         """.strip()
@@ -866,9 +869,9 @@ Data variables:
 
         actual = repr(xds["foo"])
         expected = """
-<xarray.DataArray 'foo' (foo: 1200) 10kB>
-array([   0,    1,    2, ..., 1197, 1198, 1199])
+<xarray.DataArray 'foo' (foo: 1200) 2kB>
+array([   0,    1,    2, ..., 1197, 1198, 1199], dtype=int16)
 Coordinates:
-  * foo      (foo) int64  10kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
+  * foo      (foo) int16   2kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
 """.strip()
         assert actual == expected
