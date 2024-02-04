@@ -824,8 +824,8 @@ def test_empty_cftimeindex_repr() -> None:
 def test_display_nbytes() -> None:
     xds = xr.Dataset(
         {
-            "foo": np.arange(1200),
-            "bar": np.arange(111),
+            "foo": np.arange(1200, dtype=np.int64),
+            "bar": np.arange(111, dtype=np.int64),
         }
     )
 
