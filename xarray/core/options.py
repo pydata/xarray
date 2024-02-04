@@ -46,7 +46,6 @@ if TYPE_CHECKING:
         display_expand_data: Literal["default", True, False]
         display_expand_indexes: Literal["default", True, False]
         display_default_indexes: Literal["default", True, False]
-        display_nbytes: Literal["default", True, False]
         enable_cftimeindex: bool
         file_cache_maxsize: int
         keep_attrs: Literal["default", True, False]
@@ -71,7 +70,6 @@ OPTIONS: T_Options = {
     "display_expand_data": "default",
     "display_expand_indexes": "default",
     "display_default_indexes": False,
-    "display_nbytes": False,
     "enable_cftimeindex": True,
     "file_cache_maxsize": 128,
     "keep_attrs": "default",

@@ -316,12 +316,12 @@ class TestFormatting:
         R
             array([1, 2], dtype=int64)
         Differing coordinates:
-        L * x        (x) %cU1 'a' 'b'
-        R * x        (x) %cU1 'a' 'c'
+        L * x        (x) %cU1   8B  'a' 'b'
+        R * x        (x) %cU1   8B  'a' 'c'
         Coordinates only on the left object:
-          * y        (y) int64 1 2 3
+          * y        (y) int64  24B  1 2 3
         Coordinates only on the right object:
-            label    (x) int64 1 2
+            label    (x) int64  16B  1 2
         Differing attributes:
         L   units: m
         R   units: kg
@@ -436,22 +436,22 @@ class TestFormatting:
         Differing dimensions:
             (x: 2, y: 3) != (x: 2)
         Differing coordinates:
-        L * x        (x) %cU1 'a' 'b'
+        L * x        (x) %cU1   8B  'a' 'b'
             Differing variable attributes:
                 foo: bar
-        R * x        (x) %cU1 'a' 'c'
+        R * x        (x) %cU1   8B  'a' 'c'
             Differing variable attributes:
                 source: 0
                 foo: baz
         Coordinates only on the left object:
-          * y        (y) int64 1 2 3
+          * y        (y) int64  24B  1 2 3
         Coordinates only on the right object:
-            label    (x) int64 1 2
+            label    (x) int64  16B  1 2
         Differing data variables:
-        L   var1     (x, y) int64 1 2 3 4 5 6
-        R   var1     (x) int64 1 2
+        L   var1     (x, y) int64  48B  1 2 3 4 5 6
+        R   var1     (x) int64  16B  1 2
         Data variables only on the left object:
-            var2     (x) int64 3 4
+            var2     (x) int64  16B  3 4
         Differing attributes:
         L   title: mytitle
         R   title: newtitle
@@ -472,7 +472,7 @@ class TestFormatting:
         actual = formatting.array_repr(ds_12)
         expected = dedent(
             """\
-        <xarray.DataArray (1, 2) (test: 1)>
+        <xarray.DataArray (1, 2) (test: 1)> Size: 8B
         array([0])
         Dimensions without coordinates: test"""
         )
@@ -491,7 +491,7 @@ class TestFormatting:
             actual = formatting.array_repr(ds[(1, 2)])
             expected = dedent(
                 """\
-            <xarray.DataArray (1, 2) (test: 1)>
+            <xarray.DataArray (1, 2) (test: 1)> Size: 8B
             0
             Dimensions without coordinates: test"""
             )
@@ -832,46 +832,23 @@ def test_display_nbytes() -> None:
     # Note: int16 is used to ensure that dtype is shown in the
     # numpy array representation for all OSes included Windows
 
-    with xr.set_options(display_nbytes=False):
-        actual = repr(xds)
-        expected = """
-<xarray.Dataset>
-Dimensions:  (foo: 1200, bar: 111)
-Coordinates:
-  * foo      (foo) int16 0 1 2 3 4 5 6 7 ... 1193 1194 1195 1196 1197 1198 1199
-  * bar      (bar) int16 0 1 2 3 4 5 6 7 8 ... 103 104 105 106 107 108 109 110
-Data variables:
-    *empty*
-        """.strip()
-        assert actual == expected
-
-        actual = repr(xds["foo"])
-        expected = """
-<xarray.DataArray 'foo' (foo: 1200)>
-array([   0,    1,    2, ..., 1197, 1198, 1199], dtype=int16)
-Coordinates:
-  * foo      (foo) int16 0 1 2 3 4 5 6 7 ... 1193 1194 1195 1196 1197 1198 1199
-""".strip()
-        assert actual == expected
-
-    with xr.set_options(display_nbytes=True):
-        actual = repr(xds)
-        expected = """
-<xarray.Dataset 3kB>
+    actual = repr(xds)
+    expected = """
+<xarray.Dataset> Size: 3kB
 Dimensions:  (foo: 1200, bar: 111)
 Coordinates:
   * foo      (foo) int16   2kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
   * bar      (bar) int16 222B  0 1 2 3 4 5 6 7 ... 104 105 106 107 108 109 110
 Data variables:
     *empty*
-        """.strip()
-        assert actual == expected
+    """.strip()
+    assert actual == expected
 
-        actual = repr(xds["foo"])
-        expected = """
-<xarray.DataArray 'foo' (foo: 1200) 2kB>
+    actual = repr(xds["foo"])
+    expected = """
+<xarray.DataArray 'foo' (foo: 1200)> Size: 2kB
 array([   0,    1,    2, ..., 1197, 1198, 1199], dtype=int16)
 Coordinates:
   * foo      (foo) int16   2kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
 """.strip()
-        assert actual == expected
+    assert actual == expected
