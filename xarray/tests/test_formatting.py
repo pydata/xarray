@@ -837,8 +837,8 @@ def test_display_nbytes() -> None:
 <xarray.Dataset> Size: 3kB
 Dimensions:  (foo: 1200, bar: 111)
 Coordinates:
-  * foo      (foo) int16   2kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
-  * bar      (bar) int16 222B  0 1 2 3 4 5 6 7 ... 104 105 106 107 108 109 110
+  * foo      (foo) int16 2kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
+  * bar      (bar) int16 222B 0 1 2 3 4 5 6 7 ... 104 105 106 107 108 109 110
 Data variables:
     *empty*
     """.strip()
@@ -849,6 +849,6 @@ Data variables:
 <xarray.DataArray 'foo' (foo: 1200)> Size: 2kB
 array([   0,    1,    2, ..., 1197, 1198, 1199], dtype=int16)
 Coordinates:
-  * foo      (foo) int16   2kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
+  * foo      (foo) int16 2kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
 """.strip()
     assert actual == expected
