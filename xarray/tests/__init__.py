@@ -95,6 +95,7 @@ has_zarr, requires_zarr = _importorskip("zarr")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg", "0.4.0")
+has_plum, requires_plum = _importorskip("plum")
 with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",

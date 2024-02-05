@@ -9,7 +9,7 @@ import contextlib
 import datetime
 import inspect
 import warnings
-from collections.abc import Iterable
+from collections.abc import Sequence
 from functools import partial
 from importlib import import_module
 from typing import Generic, TypeVar
@@ -93,7 +93,10 @@ class ExtensionDuckArray(Generic[T_ExtensionArray]):
         args = tuple(replace_duck_with_extension_array(args))
         if func not in HANDLED_FUNCTIONS:
             return func(*args, **kwargs)
-        return HANDLED_FUNCTIONS[func](*args, **kwargs)
+        res = HANDLED_FUNCTIONS[func](*args, **kwargs)
+        if is_extension_array_dtype(res):
+            return ExtensionDuckArray[type(res)](res)
+        return res
 
     def __array_ufunc__(ufunc, method, *inputs, **kwargs):
         return ufunc(*inputs, **kwargs)
@@ -117,6 +120,9 @@ class ExtensionDuckArray(Generic[T_ExtensionArray]):
             return self.extension_array == other.extension_array
         return self.extension_array == other
 
+    def __ne__(self, other):
+        return ~(self == other)
+
 
 def implements(numpy_function):
     """Register an __array_function__ implementation for MyArray objects."""
@@ -130,18 +136,18 @@ def implements(numpy_function):
 
 @implements(np.broadcast_to)
 @dispatch
-def __extension_duck_array__broadcast(arr: pd.Categorical, shape: tuple):
+def __extension_duck_array__broadcast(arr: T_ExtensionArray, shape: tuple):
+    if shape[0] == len(arr) and len(shape) == 1:
+        return arr
     raise NotImplementedError("Cannot broadcast 1d-only pandas categorical array.")
 
 
 @implements(np.concatenate)
 @dispatch
 def __extension_duck_array__concatenate(
-    arrays: Iterable[T_ExtensionArray], axis: int = 0, out=None
+    arrays: Sequence[pd.Categorical], axis: int = 0, out=None
 ):
-    return ExtensionDuckArray[type(arrays[0])](
-        type(arrays[0])._concat_same_type(arrays)
-    )
+    return type(arrays[0])._concat_same_type(arrays)
 
 
 @implements(np.where)
@@ -150,10 +156,8 @@ def __extension_duck_array__where(condition: np.ndarray, x, y):
     return np.where(condition, x, y)
 
 
-@dispatch
-def __extension_duck_array__where(
-    condition: np.ndarray, x: pd.Categorical, y: pd.Categorical
-):
+@__extension_duck_array__where.dispatch
+def _(condition: np.ndarray, x: pd.Categorical, y: pd.Categorical):
     # set up new codes array
     new_codes = np.where(condition, x.codes, y.codes)
 
@@ -179,8 +183,8 @@ def __extension_duck_array__where(
         new_y_code += 1
     new_categories = shared_categories + y_only_categories  # preserve order
     # TODO: think about ordering?
-    return ExtensionDuckArray(
-        pd.Categorical.from_codes(new_codes, categories=new_categories, ordered=False)
+    return pd.Categorical.from_codes(
+        new_codes, categories=new_categories, ordered=False
     )
 
 
