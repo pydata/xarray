@@ -1008,7 +1008,7 @@ class StringAccessor(Generic[T_DataArray]):
         >>> da = xr.DataArray(["", " ", "\\t", "\\n"], dims="x")
         >>> da
         <xarray.DataArray (x: 4)> Size: 16B
-        array(['', ' ', '\t', '\n'], dtype='<U1')
+        array(['', ' ', '\\t', '\\n'], dtype='<U1')
         Dimensions without coordinates: x
         >>> isspace = da.str.isspace()
         >>> isspace
