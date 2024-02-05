@@ -170,7 +170,10 @@ def __extension_duck_array__where(
     y_only_categories = [
         category for category in y.categories if category not in shared_categories
     ]
-    new_y_code = len(x.categories) + len(shared_categories)
+    used_x_only_categories = (
+        x[~x.isin(shared_categories)].remove_unused_categories().categories
+    )
+    new_y_code = len(used_x_only_categories) + len(shared_categories)
     for y_only_category in y_only_categories:
         new_codes[~condition & (y == y_only_category)] = new_y_code
         new_y_code += 1
