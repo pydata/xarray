@@ -261,7 +261,6 @@ class set_options:
       * x        (x) int64 8kB 0 1 ... 999
     Data variables:
         *empty*
-        *empty*
 
     Or to set global options:
 
