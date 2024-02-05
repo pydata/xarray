@@ -78,6 +78,7 @@ def test_groupby_dims_property(dataset, recwarn) -> None:
     )
     assert len(recwarn) == 0
 
+    dataset = dataset.drop_vars(["cat"])
     stacked = dataset.stack({"xy": ("x", "y")})
     assert tuple(stacked.groupby("xy", squeeze=False).dims) == tuple(
         stacked.isel(xy=[0]).dims
@@ -90,7 +91,7 @@ def test_groupby_sizes_property(dataset) -> None:
         assert dataset.groupby("x").sizes == dataset.isel(x=1).sizes
     with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
         assert dataset.groupby("y").sizes == dataset.isel(y=1).sizes
-
+    dataset = dataset.drop("cat")
     stacked = dataset.stack({"xy": ("x", "y")})
     with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
         assert stacked.groupby("xy").sizes == stacked.isel(xy=0).sizes
