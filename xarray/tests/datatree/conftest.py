@@ -42,11 +42,11 @@ def create_test_datatree():
         root_data = modify(xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])}))
 
         # Avoid using __init__ so we can independently test it
-        root = DataTree(data=root_data)
-        set1 = DataTree(name="set1", parent=root, data=set1_data)
+        root: DataTree = DataTree(data=root_data)
+        set1: DataTree = DataTree(name="set1", parent=root, data=set1_data)
         DataTree(name="set1", parent=set1)
         DataTree(name="set2", parent=set1)
-        set2 = DataTree(name="set2", parent=root, data=set2_data)
+        set2: DataTree = DataTree(name="set2", parent=root, data=set2_data)
         DataTree(name="set1", parent=set2)
         DataTree(name="set3", parent=root)
 

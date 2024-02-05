@@ -96,6 +96,11 @@ warn_redundant_casts = true
 warn_unused_configs = true
 warn_unused_ignores = true
 
+# Ignore mypy errors for modules imported from datatree_.
+[[tool.mypy.overrides]]
+module = "xarray.datatree_.*"
+ignore_errors = true
+
 # Much of the numerical computing stack doesn't have type annotations yet.
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
