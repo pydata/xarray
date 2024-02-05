@@ -155,7 +155,6 @@ def test_concat_missing_var() -> None:
 def test_concat_categorical() -> None:
     data1 = create_test_data(use_extension_array=True)
     data2 = create_test_data(use_extension_array=True)
-    data2["var4"]
     concatenated = concat([data1, data2], dim="dim1")
     assert (
         concatenated["var4"]

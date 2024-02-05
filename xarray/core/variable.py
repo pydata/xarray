@@ -174,7 +174,12 @@ def _maybe_wrap_data(data):
     if isinstance(data, pd.Index):
         return PandasIndexingAdapter(data)
     if is_extension_array_dtype(data):
-        return duck_array_ops.ExtensionDuckArray(data)
+        data_type = (
+            type(data.extension_array)
+            if isinstance(data, duck_array_ops.ExtensionDuckArray)
+            else type(data)
+        )
+        return duck_array_ops.ExtensionDuckArray[data_type](data)
     return data
 
 

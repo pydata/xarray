@@ -9,8 +9,10 @@ import contextlib
 import datetime
 import inspect
 import warnings
+from collections.abc import Iterable
 from functools import partial
 from importlib import import_module
+from typing import Generic, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -32,6 +34,7 @@ from numpy import concatenate as _concatenate
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 from packaging.version import Version
 from pandas.api.types import is_extension_array_dtype
+from plum import dispatch  # noqa
 
 from xarray.core import dask_array_ops, dtypes, nputils, pycompat
 from xarray.core.options import OPTIONS
@@ -55,9 +58,13 @@ dask_available = module_available("dask")
 
 HANDLED_FUNCTIONS = {}
 
+T_ExtensionArray = TypeVar("T_ExtensionArray", bound=pd.api.extensions.ExtensionArray)
 
-class ExtensionDuckArray:
-    def __init__(self, array: pd.api.extensions.ExtensionArray | ExtensionDuckArray):
+
+class ExtensionDuckArray(Generic[T_ExtensionArray]):
+    extension_array: T_ExtensionArray
+
+    def __init__(self, array: T_ExtensionArray | ExtensionDuckArray):
         if isinstance(array, ExtensionDuckArray):
             self.extension_array = array.extension_array
         elif is_extension_array_dtype(array):
@@ -68,18 +75,25 @@ class ExtensionDuckArray:
     def __array_function__(self, func, types, args, kwargs):
         # if not all(issubclass(t, ExtensionDuckArray) for t in types):
         #     return NotImplemented
-        args_as_list = list(args)
-        for index, value in enumerate(args_as_list):
-            if isinstance(value, ExtensionDuckArray):
-                args_as_list[index] = value.extension_array
-            if isinstance(value, list) and index == 0:
-                for sub_index, sub_value in enumerate(args_as_list[index]):
-                    if isinstance(sub_value, ExtensionDuckArray):
-                        args_as_list[index][sub_index] = sub_value.extension_array
-                args_as_list[0] = tuple(args_as_list[0])
+        def replace_duck_with_extension_array(args) -> list:
+            args_as_list = list(args)
+            for index, value in enumerate(args_as_list):
+                if isinstance(value, ExtensionDuckArray):
+                    args_as_list[index] = value.extension_array
+                elif isinstance(
+                    value, tuple
+                ):  # should handle more than just tuple? iterable?
+                    args_as_list[index] = tuple(
+                        replace_duck_with_extension_array(value)
+                    )
+                elif isinstance(value, list):
+                    args_as_list[index] = replace_duck_with_extension_array(value)
+            return args_as_list
+
+        args = tuple(replace_duck_with_extension_array(args))
         if func not in HANDLED_FUNCTIONS:
-            return func(*tuple(args_as_list), **kwargs)
-        return HANDLED_FUNCTIONS[func](*tuple(args_as_list), **kwargs)
+            return func(*args, **kwargs)
+        return HANDLED_FUNCTIONS[func](*args, **kwargs)
 
     def __array_ufunc__(ufunc, method, *inputs, **kwargs):
         return ufunc(*inputs, **kwargs)
@@ -115,41 +129,50 @@ def implements(numpy_function):
 
 
 @implements(np.concatenate)
-def _(arrays, axis=0, out=None):
-    return ExtensionDuckArray(type(arrays[0])._concat_same_type(arrays))
+@dispatch
+def __extension_duck_array__concatenate(
+    arrays: Iterable[T_ExtensionArray], axis: int = 0, out=None
+):
+    return ExtensionDuckArray[type(arrays[0])](
+        type(arrays[0])._concat_same_type(arrays)
+    )
 
 
 @implements(np.where)
-def _(condition, x, y):
-    if all(is_extension_array_dtype(array) for array in [x, y]):
-        # set up new codes array
-        new_codes = np.where(condition, x.codes, y.codes)
-
-        # Remap shared categories to have same codes
-        shared_categories = [
-            category for category in x.categories if category in set(y.categories)
-        ]
-        for shared_category in shared_categories:
-            new_codes[~condition & (y == shared_category)] = x.codes[
-                x == shared_category
-            ][0]
-
-        # map non-shared y codes to start from the lowest possible number
-        y_only_categories = [
-            category for category in y.categories if category not in shared_categories
-        ]
-        new_y_code = len(x.categories) + len(shared_categories)
-        for y_only_category in y_only_categories:
-            new_codes[~condition & (y == y_only_category)] = new_y_code
-            new_y_code += 1
-        new_categories = shared_categories + y_only_categories  # preserve order
-        # TODO: think about ordering?
-        return ExtensionDuckArray(
-            pd.Categorical.from_codes(
-                new_codes, categories=new_categories, ordered=False
-            )
-        )
+@dispatch
+def __extension_duck_array__where(condition: np.ndarray, x, y):
     return np.where(condition, x, y)
+
+
+@dispatch
+def __extension_duck_array__where(
+    condition: np.ndarray, x: pd.Categorical, y: pd.Categorical
+):
+    # set up new codes array
+    new_codes = np.where(condition, x.codes, y.codes)
+
+    # Remap shared categories to have same codes
+    shared_categories = [
+        category for category in x.categories if category in set(y.categories)
+    ]
+    for shared_category in shared_categories:
+        new_codes[~condition & (y == shared_category)] = x.codes[x == shared_category][
+            0
+        ]
+
+    # map non-shared y codes to start from the lowest possible number
+    y_only_categories = [
+        category for category in y.categories if category not in shared_categories
+    ]
+    new_y_code = len(x.categories) + len(shared_categories)
+    for y_only_category in y_only_categories:
+        new_codes[~condition & (y == y_only_category)] = new_y_code
+        new_y_code += 1
+    new_categories = shared_categories + y_only_categories  # preserve order
+    # TODO: think about ordering?
+    return ExtensionDuckArray(
+        pd.Categorical.from_codes(new_codes, categories=new_categories, ordered=False)
+    )
 
 
 def get_array_namespace(x):

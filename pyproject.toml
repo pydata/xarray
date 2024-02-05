@@ -45,6 +45,7 @@ dev = [
 io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
 parallel = ["dask[complete]"]
 viz = ["matplotlib", "seaborn", "nc-time-axis"]
+extension_arrays = ["plum"]
 
 [project.urls]
 Documentation = "https://docs.xarray.dev"
