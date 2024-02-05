@@ -714,6 +714,8 @@ def test_groupby_getitem(dataset) -> None:
         assert_identical(dataset.foo.sel(x="a"), dataset.foo.groupby("x")["a"])
     with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
         assert_identical(dataset.foo.sel(z=1), dataset.foo.groupby("z")[1])
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert_identical(dataset.cat.sel(y=1), dataset.cat.groupby("y")[1])
 
     assert_identical(dataset.sel(x=["a"]), dataset.groupby("x", squeeze=False)["a"])
     assert_identical(dataset.sel(z=[1]), dataset.groupby("z", squeeze=False)[1])
@@ -723,6 +725,12 @@ def test_groupby_getitem(dataset) -> None:
     )
     assert_identical(dataset.foo.sel(z=[1]), dataset.foo.groupby("z", squeeze=False)[1])
 
+    assert_identical(dataset.cat.sel(y=[1]), dataset.cat.groupby("y", squeeze=False)[1])
+    with pytest.raises(
+        NotImplementedError, match="Cannot broadcast 1d-only pandas categorical array."
+    ):
+        dataset.groupby("boo", squeeze=False)
+    dataset = dataset.drop_vars(["cat"])
     actual = (
         dataset.groupby("boo", squeeze=False)["f"].unstack().transpose("x", "y", "z")
     )
