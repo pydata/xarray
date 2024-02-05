@@ -634,7 +634,7 @@ def test_repr_file_collapsed(tmp_path) -> None:
         actual = repr(arr)
         expected = dedent(
             """\
-        <xarray.DataArray (test: 300)>
+        <xarray.DataArray (test: 300)> Size: 2kB
         [300 values with dtype=int64]
         Dimensions without coordinates: test"""
         )
@@ -645,7 +645,7 @@ def test_repr_file_collapsed(tmp_path) -> None:
         actual = arr_loaded.__repr__()
         expected = dedent(
             """\
-        <xarray.DataArray (test: 300)>
+        <xarray.DataArray (test: 300)> Size: 2kB
         0 1 2 3 4 5 6 7 8 9 10 11 12 ... 288 289 290 291 292 293 294 295 296 297 298 299
         Dimensions without coordinates: test"""
         )
@@ -709,7 +709,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
             ds, col_width=col_width + 1, max_rows=display_max_rows
         )
         expected = f"""\
-<xarray.Dataset>
+<xarray.Dataset> Size: 1kB
 {dims_start}({dims_values})
 Coordinates: ({n_vars})
 Data variables: ({n_vars})

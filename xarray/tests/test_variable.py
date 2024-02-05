@@ -1230,7 +1230,7 @@ class TestVariable(VariableSubclassobjects):
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
         expected = dedent(
             """
-        <xarray.Variable (time: 2, x: 3)>
+        <xarray.Variable (time: 2, x: 3)> Size: 48B
         array([[1, 2, 3],
                [4, 5, 6]])
         Attributes:
