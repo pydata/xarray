@@ -255,11 +255,12 @@ class set_options:
     >>> with xr.set_options(display_width=40):
     ...     print(ds)
     ...
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 8kB
     Dimensions:  (x: 1000)
     Coordinates:
-      * x        (x) int64 0 1 2 ... 998 999
+      * x        (x) int64 8kB 0 1 ... 999
     Data variables:
+        *empty*
         *empty*
 
     Or to set global options:
