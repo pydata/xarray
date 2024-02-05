@@ -1,5 +1,4 @@
 import pytest
-import zarr.errors
 
 from xarray.backends.api import open_datatree
 from xarray.datatree_.datatree.testing import assert_equal
@@ -117,6 +116,8 @@ class TestIO:
 
     @requires_zarr
     def test_to_zarr_default_write_mode(self, tmpdir, simple_datatree):
+        import zarr
+
         simple_datatree.to_zarr(tmpdir)
 
         # with default settings, to_zarr should not overwrite an existing dir
