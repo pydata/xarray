@@ -148,7 +148,7 @@ def concat(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts",
                      "override"} or callable, default: "override"
         A callable or a string indicating how to combine attrs of the objects being
         merged:

@@ -208,7 +208,7 @@ def merge_collected(
     prioritized : mapping
     compat : str
         Type of equality check to use when checking for conflicts.
-    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts",,
                     "override"} or callable, default: "override"
         A callable or a string indicating how to combine attrs of the objects being
         merged:
@@ -666,7 +666,7 @@ def merge_core(
         Compatibility checks to use when merging variables.
     join : {"outer", "inner", "left", "right"}, optional
         How to combine objects with different indexes.
-    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts",,
                      "override"} or callable, default: "override"
         How to combine attributes of objects
     priority_arg : int, optional
@@ -762,7 +762,7 @@ def merge(
     objects : iterable of Dataset or iterable of DataArray or iterable of dict-like
         Merge together all variables from these objects. If any of them are
         DataArray objects, they must have a name.
-    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", \
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts",,
               "override", "minimal"}, default: "no_conflicts"
         String indicating how to compare variables of the same name for
         potential conflicts:
@@ -795,7 +795,7 @@ def merge(
         Value to use for newly missing values. If a dict-like, maps
         variable names to fill values. Use a data array's name to
         refer to its values.
-    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts",,
                      "override"} or callable, default: "override"
         A callable or a string indicating how to combine attrs of the objects being
         merged:

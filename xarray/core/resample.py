@@ -145,7 +145,7 @@ class Resample(GroupBy[T_Xarray]):
 
         Parameters
         ----------
-        kind : {"linear", "nearest", "zero", "slinear", \
+        kind : {"linear", "nearest", "zero", "slinear",
                 "quadratic", "cubic", "polynomial"}, default: "linear"
             The method used to interpolate. The method should be supported by
             the scipy interpolator:

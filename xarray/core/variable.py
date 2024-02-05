@@ -1231,14 +1231,12 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         self,
         pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
         mode: PadModeOptions = "constant",
-        stat_length: int
-        | tuple[int, int]
-        | Mapping[Any, tuple[int, int]]
-        | None = None,
-        constant_values: float
-        | tuple[float, float]
-        | Mapping[Any, tuple[float, float]]
-        | None = None,
+        stat_length: (
+            int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
+        ) = None,
+        constant_values: (
+            float | tuple[float, float] | Mapping[Any, tuple[float, float]] | None
+        ) = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
         keep_attrs: bool | None = None,
@@ -1794,7 +1792,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             This option is used internally to speed-up groupby operations.
             If `shortcut` is True, some checks of internal consistency between
             arrays to concatenate are skipped.
-        combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+        combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts",
                          "override"}, default: "override"
             String indicating how to combine attrs of the objects being merged:
 
@@ -2961,7 +2959,7 @@ def concat(
         This option is used internally to speed-up groupby operations.
         If `shortcut` is True, some checks of internal consistency between
         arrays to concatenate are skipped.
-    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts",
                      "override"}, default: "override"
         String indicating how to combine attrs of the objects being merged:
 

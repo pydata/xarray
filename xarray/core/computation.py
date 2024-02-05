@@ -1,6 +1,7 @@
 """
 Functions for applying functions that act on arrays to xarray's labeled data.
 """
+
 from __future__ import annotations
 
 import functools
@@ -223,7 +224,7 @@ def build_output_coords_and_indexes(
     exclude_dims : set, optional
         Dimensions excluded from the operation. Coordinates along these
         dimensions are dropped.
-    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts",
                      "override"} or callable, default: "drop"
         A callable or a string indicating how to combine attrs of the objects being
         merged:
@@ -731,9 +732,11 @@ def apply_variable_ufunc(
     output_dims = [broadcast_dims + out for out in signature.output_core_dims]
 
     input_data = [
-        broadcast_compat_data(arg, broadcast_dims, core_dims)
-        if isinstance(arg, Variable)
-        else arg
+        (
+            broadcast_compat_data(arg, broadcast_dims, core_dims)
+            if isinstance(arg, Variable)
+            else arg
+        )
         for arg, core_dims in zip(args, signature.input_core_dims)
     ]
 
@@ -931,7 +934,7 @@ def apply_ufunc(
         the style of NumPy universal functions [1]_ (if this is not the case,
         set ``vectorize=True``). If this function returns multiple outputs, you
         must set ``output_core_dims`` as well.
-    *args : Dataset, DataArray, DataArrayGroupBy, DatasetGroupBy, Variable, \
+    *args : Dataset, DataArray, DataArrayGroupBy, DatasetGroupBy, Variable,
         numpy.ndarray, dask.array.Array or scalar
         Mix of labeled and/or unlabeled arrays to which to apply the function.
     input_core_dims : sequence of sequence, optional
