@@ -883,10 +883,10 @@ class TestDataset:
         expected = dedent(
             """\
         Coordinates:
-          * x        (x) int64 -1 -2
-          * y        (y) int64 0 1 2
-            a        (x) int64 4 5
-            b        int64 -10"""
+          * x        (x) int64 16B -1 -2
+          * y        (y) int64 24B 0 1 2
+            a        (x) int64 16B 4 5
+            b        int64 8B -10"""
         )
         actual = repr(coords)
         assert expected == actual
@@ -1076,8 +1076,8 @@ class TestDataset:
         expected = dedent(
             """\
         Data variables:
-            foo      (x) float64 1.0
-            bar      float64 2.0"""
+            foo      (x) float64 8B 1.0
+            bar      float64 8B 2.0"""
         )
         actual = repr(ds.data_vars)
         assert expected == actual

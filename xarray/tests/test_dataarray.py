@@ -1445,8 +1445,8 @@ class TestDataArray:
         expected_repr = dedent(
             """\
         Coordinates:
-          * x        (x) int64 -1 -2
-          * y        (y) int64 0 1 2"""
+          * x        (x) int64 16B -1 -2
+          * y        (y) int64 24B 0 1 2"""
         )
         actual = repr(da.coords)
         assert expected_repr == actual

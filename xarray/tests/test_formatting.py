@@ -316,12 +316,12 @@ class TestFormatting:
         R
             array([1, 2], dtype=int64)
         Differing coordinates:
-        L * x        (x) %cU1   8B  'a' 'b'
-        R * x        (x) %cU1   8B  'a' 'c'
+        L * x        (x) %cU1 8B 'a' 'b'
+        R * x        (x) %cU1 8B 'a' 'c'
         Coordinates only on the left object:
-          * y        (y) int64  24B  1 2 3
+          * y        (y) int64 24B 1 2 3
         Coordinates only on the right object:
-            label    (x) int64  16B  1 2
+            label    (x) int64 16B 1 2
         Differing attributes:
         L   units: m
         R   units: kg
@@ -436,22 +436,22 @@ class TestFormatting:
         Differing dimensions:
             (x: 2, y: 3) != (x: 2)
         Differing coordinates:
-        L * x        (x) %cU1   8B  'a' 'b'
+        L * x        (x) %cU1 8B 'a' 'b'
             Differing variable attributes:
                 foo: bar
-        R * x        (x) %cU1   8B  'a' 'c'
+        R * x        (x) %cU1 8B 'a' 'c'
             Differing variable attributes:
                 source: 0
                 foo: baz
         Coordinates only on the left object:
-          * y        (y) int64  24B  1 2 3
+          * y        (y) int64 24B 1 2 3
         Coordinates only on the right object:
-            label    (x) int64  16B  1 2
+            label    (x) int64 16B 1 2
         Differing data variables:
-        L   var1     (x, y) int64  48B  1 2 3 4 5 6
-        R   var1     (x) int64  16B  1 2
+        L   var1     (x, y) int64 48B 1 2 3 4 5 6
+        R   var1     (x) int64 16B 1 2
         Data variables only on the left object:
-            var2     (x) int64  16B  3 4
+            var2     (x) int64 16B 3 4
         Differing attributes:
         L   title: mytitle
         R   title: newtitle
