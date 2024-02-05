@@ -419,8 +419,8 @@ def open_dataset(
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio",,
-        "zarr", None}, installed backend,
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
+        "zarr", None}, installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -626,8 +626,8 @@ def open_dataarray(
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio",,
-        "zarr", None}, installed backend,
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
+        "zarr", None}, installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -791,15 +791,13 @@ def open_dataarray(
 def open_mfdataset(
     paths: str | NestedSequence[str | os.PathLike],
     chunks: T_Chunks | None = None,
-    concat_dim: (
-        str
-        | DataArray
-        | Index
-        | Sequence[str]
-        | Sequence[DataArray]
-        | Sequence[Index]
-        | None
-    ) = None,
+    concat_dim: str
+    | DataArray
+    | Index
+    | Sequence[str]
+    | Sequence[DataArray]
+    | Sequence[Index]
+    | None = None,
     compat: CompatOptions = "no_conflicts",
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_Engine | None = None,
@@ -849,7 +847,7 @@ def open_mfdataset(
     combine : {"by_coords", "nested"}, optional
         Whether ``xarray.combine_by_coords`` or ``xarray.combine_nested`` is used to
         combine all the data. Default is to use ``xarray.combine_by_coords``.
-    compat : {"identical", "equals", "broadcast_equals",,
+    compat : {"identical", "equals", "broadcast_equals", \
               "no_conflicts", "override"}, default: "no_conflicts"
         String indicating how to compare variables of the same name for
         potential conflicts when merging:
@@ -868,8 +866,8 @@ def open_mfdataset(
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in
         ``ds.encoding["source"]``.
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio",,
-        "zarr", None}, installed backend,
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
+        "zarr", None}, installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -919,7 +917,7 @@ def open_mfdataset(
         Path of the file used to read global attributes from.
         By default global attributes are read from the first file provided,
         with wildcard matches sorted by filename.
-    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts",,
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
                      "override"} or callable, default: "override"
         A callable or a string indicating how to combine attrs of the objects being
         merged:
@@ -1392,7 +1390,7 @@ def save_mfdataset(
     mode : {"w", "a"}, optional
         Write ("w") or append ("a") mode. If mode="w", any existing file at
         these locations will be overwritten.
-    format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT",,
+    format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
               "NETCDF3_CLASSIC"}, optional
     **kwargs : additional arguments are passed along to ``to_netcdf``
 

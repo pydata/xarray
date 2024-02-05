@@ -3437,7 +3437,7 @@ class DataArray(
         ----------
         dim : Hashable or None, optional
             Specifies the dimension along which to interpolate.
-        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial",
+        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial", \
             "barycentric", "krogh", "pchip", "spline", "akima"}, default: "linear"
             String indicating which method to use for interpolation:
 
@@ -3995,7 +3995,7 @@ class DataArray(
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
             will be overwritten.
-        format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT",
+        format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
                   "NETCDF3_CLASSIC"}, optional
             File format for the resulting netCDF file:
 
@@ -4983,12 +4983,10 @@ class DataArray(
 
     def sortby(
         self,
-        variables: (
-            Hashable
-            | DataArray
-            | Sequence[Hashable | DataArray]
-            | Callable[[Self], Hashable | DataArray | Sequence[Hashable | DataArray]]
-        ),
+        variables: Hashable
+        | DataArray
+        | Sequence[Hashable | DataArray]
+        | Callable[[Self], Hashable | DataArray | Sequence[Hashable | DataArray]],
         ascending: bool = True,
     ) -> Self:
         """Sort object by labels or values (along an axis).
@@ -5234,7 +5232,7 @@ class DataArray(
         edge_order: Literal[1, 2] = 1,
         datetime_unit: DatetimeUnitOptions = None,
     ) -> Self:
-        """Differentiate the array with the second order accurate central
+        """ Differentiate the array with the second order accurate central
         differences.
 
         .. note::
@@ -5247,7 +5245,7 @@ class DataArray(
             The coordinate to be used to compute the gradient.
         edge_order : {1, 2}, default: 1
             N-th order accurate differences at the boundaries.
-        datetime_unit : {"W", "D", "h", "m", "s", "ms",
+        datetime_unit : {"W", "D", "h", "m", "s", "ms", \
                          "us", "ns", "ps", "fs", "as", None}, optional
             Unit to compute gradient. Only valid for datetime coordinate. "Y" and "M" are not available as
             datetime_unit.
@@ -5306,7 +5304,7 @@ class DataArray(
         ----------
         coord : Hashable, or sequence of Hashable
             Coordinate(s) used for the integration.
-        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns',
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as', None}, optional
             Specify the unit if a datetime coordinate is used.
 
@@ -5363,7 +5361,7 @@ class DataArray(
         ----------
         coord : Hashable, or sequence of Hashable
             Coordinate(s) used for the integration.
-        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns',
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as', None}, optional
             Specify the unit if a datetime coordinate is used.
 
@@ -5598,12 +5596,14 @@ class DataArray(
         self,
         pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
         mode: PadModeOptions = "constant",
-        stat_length: (
-            int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
-        ) = None,
-        constant_values: (
-            float | tuple[float, float] | Mapping[Any, tuple[float, float]] | None
-        ) = None,
+        stat_length: int
+        | tuple[int, int]
+        | Mapping[Any, tuple[int, int]]
+        | None = None,
+        constant_values: float
+        | tuple[float, float]
+        | Mapping[Any, tuple[float, float]]
+        | None = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
         keep_attrs: bool | None = None,
@@ -5625,7 +5625,7 @@ class DataArray(
             Mapping with the form of {dim: (pad_before, pad_after)}
             describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
-        mode : {"constant", "edge", "linear_ramp", "maximum", "mean", "median",
+        mode : {"constant", "edge", "linear_ramp", "maximum", "mean", "median", \
             "minimum", "reflect", "symmetric", "wrap"}, default: "constant"
             How to pad the DataArray (taken from numpy docs):
 

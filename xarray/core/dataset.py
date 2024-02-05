@@ -2230,7 +2230,7 @@ class Dataset(
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
             will be overwritten.
-        format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT",,
+        format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
                   "NETCDF3_CLASSIC"}, optional
             File format for the resulting netCDF file:
 
@@ -3801,7 +3801,7 @@ class Dataset(
             New coordinate can be a scalar, array-like or DataArray.
             If DataArrays are passed as new coordinates, their dimensions are
             used for the broadcasting. Missing values are skipped.
-        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial",,
+        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial", \
             "barycentric", "krogh", "pchip", "spline", "akima"}, default: "linear"
             String indicating which method to use for interpolation:
 
@@ -4080,7 +4080,7 @@ class Dataset(
             Object with an 'indexes' attribute giving a mapping from dimension
             names to an 1d array-like, which provides coordinates upon
             which to index the variables in this dataset. Missing values are skipped.
-        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial",,
+        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial", \
             "barycentric", "krogh", "pchip", "spline", "akima"}, default: "linear"
             String indicating which method to use for interpolation:
 
@@ -5646,7 +5646,7 @@ class Dataset(
         overwrite_vars : hashable or iterable of hashable, optional
             If provided, update variables of these name(s) without checking for
             conflicts in this dataset.
-        compat : {"identical", "equals", "broadcast_equals",,
+        compat : {"identical", "equals", "broadcast_equals", \
                   "no_conflicts", "override", "minimal"}, default: "no_conflicts"
             String indicating how to compare variables of the same name for
             potential conflicts:
@@ -5662,7 +5662,7 @@ class Dataset(
             - 'override': skip comparing and pick variable from first dataset
             - 'minimal': drop conflicting coordinates
 
-        join : {"outer", "inner", "left", "right", "exact", "override"},,
+        join : {"outer", "inner", "left", "right", "exact", "override"}, \
                default: "outer"
             Method for joining ``self`` and ``other`` along shared dimensions:
 
@@ -5677,7 +5677,7 @@ class Dataset(
         fill_value : scalar or dict-like, optional
             Value to use for newly missing values. If a dict-like, maps
             variable names (including coordinates) to fill values.
-        combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts",,
+        combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
                          "override"} or callable, default: "override"
             A callable or a string indicating how to combine attrs of the objects being
             merged:
@@ -6466,7 +6466,7 @@ class Dataset(
         ----------
         dim : Hashable or None, optional
             Specifies the dimension along which to interpolate.
-        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial",,
+        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial", \
             "barycentric", "krogh", "pchip", "spline", "akima"}, default: "linear"
             String indicating which method to use for interpolation:
 
@@ -7487,7 +7487,7 @@ class Dataset(
         ----------
         d : dict-like
             Mapping with a minimum structure of
-                ``{"var_0": {"dims": [..], "data": [..]},,
+                ``{"var_0": {"dims": [..], "data": [..]}, \
                             ...}``
 
         Returns
@@ -8265,7 +8265,7 @@ class Dataset(
         edge_order: Literal[1, 2] = 1,
         datetime_unit: DatetimeUnitOptions | None = None,
     ) -> Self:
-        """Differentiate with the second order accurate central
+        """ Differentiate with the second order accurate central
         differences.
 
         .. note::
@@ -8278,7 +8278,7 @@ class Dataset(
             The coordinate to be used to compute the gradient.
         edge_order : {1, 2}, default: 1
             N-th order accurate differences at the boundaries.
-        datetime_unit : None or {"Y", "M", "W", "D", "h", "m", "s", "ms",,
+        datetime_unit : None or {"Y", "M", "W", "D", "h", "m", "s", "ms", \
             "us", "ns", "ps", "fs", "as", None}, default: None
             Unit to compute gradient. Only valid for datetime coordinate.
 
@@ -8346,7 +8346,7 @@ class Dataset(
         ----------
         coord : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
-        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns',,
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as', None}, optional
             Specify the unit if datetime coordinate is used.
 
@@ -8469,7 +8469,7 @@ class Dataset(
         ----------
         coord : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
-        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns',,
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as', None}, optional
             Specify the unit if datetime coordinate is used.
 
@@ -8997,7 +8997,7 @@ class Dataset(
             Mapping with the form of {dim: (pad_before, pad_after)}
             describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
-        mode : {"constant", "edge", "linear_ramp", "maximum", "mean", "median",,
+        mode : {"constant", "edge", "linear_ramp", "maximum", "mean", "median", \
             "minimum", "reflect", "symmetric", "wrap"}, default: "constant"
             How to pad the DataArray (taken from numpy docs):
 

@@ -372,7 +372,7 @@ DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]
 
 def combine_nested(
     datasets: DATASET_HYPERCUBE,
-    concat_dim: str | DataArray | None | Sequence[str | DataArray | pd.Index | None],
+    concat_dim: (str | DataArray | None | Sequence[str | DataArray | pd.Index | None]),
     compat: str = "no_conflicts",
     data_vars: str = "all",
     coords: str = "different",
@@ -413,7 +413,7 @@ def combine_nested(
         nested-list input along which to merge.
         Must be the same length as the depth of the list passed to
         ``datasets``.
-    compat : {"identical", "equals", "broadcast_equals",
+    compat : {"identical", "equals", "broadcast_equals", \
               "no_conflicts", "override"}, optional
         String indicating how to compare variables of the same name for
         potential merge conflicts:
@@ -448,7 +448,7 @@ def combine_nested(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts",
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
                      "override"} or callable, default: "drop"
         A callable or a string indicating how to combine attrs of the objects being
         merged:
@@ -738,7 +738,7 @@ def combine_by_coords(
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
 
-    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts",
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
                      "override"} or callable, default: "no_conflicts"
         A callable or a string indicating how to combine attrs of the objects being
         merged:
