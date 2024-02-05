@@ -128,6 +128,12 @@ def implements(numpy_function):
     return decorator
 
 
+@implements(np.broadcast_to)
+@dispatch
+def __extension_duck_array__broadcast(arr: pd.Categorical, shape: tuple):
+    raise NotImplementedError("Cannot broadcast 1d-only pandas categorical array.")
+
+
 @implements(np.concatenate)
 @dispatch
 def __extension_duck_array__concatenate(
