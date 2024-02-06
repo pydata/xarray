@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 from packaging.version import Version
 
+from xarray.core.types import T_DuckArray
 from xarray.core.utils import is_duck_array, is_scalar, module_available
 
 integer_types = (int, np.integer)
@@ -129,7 +130,7 @@ def to_numpy(data) -> np.ndarray:
     return data
 
 
-def to_duck_array(data):
+def to_duck_array(data, xp=np) -> T_DuckArray:
     from xarray.core.indexing import ExplicitlyIndexed
 
     if isinstance(data, ExplicitlyIndexed):
@@ -137,4 +138,12 @@ def to_duck_array(data):
     elif is_duck_array(data):
         return data
     else:
-        return np.asarray(data)
+        from xarray.core.duck_array_ops import asarray
+
+        array_type_cupy = array_type("cupy")
+        if array_type_cupy and any(isinstance(data, array_type_cupy)):
+            import cupy as cp
+
+            return asarray(data, xp=cp)
+        else:
+            return asarray(data, xp=xp)

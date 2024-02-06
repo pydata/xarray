@@ -35,7 +35,7 @@ from packaging.version import Version
 from xarray.core import dask_array_ops, dtypes, nputils, pycompat
 from xarray.core.options import OPTIONS
 from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
-from xarray.core.pycompat import array_type, is_duck_dask_array
+from xarray.core.pycompat import is_duck_dask_array, to_duck_array
 from xarray.core.utils import is_duck_array, module_available
 
 # remove once numpy 2.0 is the oldest supported version
@@ -217,25 +217,9 @@ def asarray(data, xp=np):
     return data if is_duck_array(data) else xp.asarray(data)
 
 
-def as_duck_array(data, xp=np):
-    if is_duck_array(data):
-        return data
-    elif hasattr(data, "get_duck_array"):
-        # must be a lazy indexing class wrapping a duck array
-        return data.get_duck_array()
-    else:
-        array_type_cupy = array_type("cupy")
-        if array_type_cupy and any(isinstance(data, array_type_cupy)):
-            import cupy as cp
-
-            return asarray(data, xp=cp)
-        else:
-            return asarray(data, xp=xp)
-
-
 def as_shared_dtype(scalars_or_arrays, xp=np):
     """Cast arrays to a shared dtype using xarray's type promotion rules."""
-    duckarrays = [as_duck_array(obj, xp=xp) for obj in scalars_or_arrays]
+    duckarrays = [to_duck_array(obj, xp=xp) for obj in scalars_or_arrays]
     out_type = dtypes.result_type(*duckarrays)
     return [astype(x, out_type, copy=False) for x in duckarrays]
 
