@@ -421,7 +421,7 @@ That implies that all the reference to open files should be dropped. For
 opening files, we therefore suggest to use the helper class provided by Xarray
 :py:class:`~xarray.backends.CachingFileManager`.
 
-Note that any ``BackendArray`` subclass will also be protected such that any attempt 
+Note that any ``BackendArray`` subclass will also be protected such that any attempt
 to write to this array only writes to a copy of whatever might still be stored on disk.
 
 .. _RST indexing:
