@@ -280,8 +280,10 @@ class CFMaskCoder(VariableCoder):
                     data = duck_array_ops.fillna(data, fill_value)
 
         if mv_exists:
+            # Use _FillValue if available to align missing_value to prevent issues
+            # when decoding
             # Ensure missing_value is cast to same dtype as data's
-            encoding["missing_value"] = dtype.type(mv)
+            encoding["missing_value"] = attrs.get("_FillValue", dtype.type(mv))
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
             if not pd.isnull(fill_value) and not fv_exists:
                 if is_time_like and data.dtype.kind in "iu":
@@ -322,7 +324,13 @@ class CFMaskCoder(VariableCoder):
             if _is_time_like(attrs.get("units")) and data.dtype.kind in "iu":
                 dtype, decoded_fill_value = np.int64, np.iinfo(np.int64).min
             else:
-                dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
+                if "scale_factor" not in attrs and "add_offset" not in attrs:
+                    dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
+                else:
+                    dtype, decoded_fill_value = (
+                        _choose_float_dtype(data.dtype, attrs),
+                        np.nan,
+                    )
 
             if encoded_fill_values:
                 transform = partial(
@@ -347,23 +355,51 @@ def _scale_offset_decoding(data, scale_factor, add_offset, dtype: np.typing.DTyp
     return data
 
 
-def _choose_float_dtype(dtype: np.dtype, has_offset: bool) -> type[np.floating[Any]]:
+def _choose_float_dtype(
+    dtype: np.dtype, mapping: MutableMapping
+) -> type[np.floating[Any]]:
     """Return a float dtype that can losslessly represent `dtype` values."""
-    # Keep float32 as-is.  Upcast half-precision to single-precision,
+    # check scale/offset first to derive wanted float dtype
+    # see https://github.com/pydata/xarray/issues/5597#issuecomment-879561954
+    scale_factor = mapping.get("scale_factor")
+    add_offset = mapping.get("add_offset")
+    if scale_factor is not None or add_offset is not None:
+        # get the type from scale_factor/add_offset to determine
+        # the needed floating point type
+        if scale_factor is not None:
+            scale_type = type(scale_factor)
+        if add_offset is not None:
+            offset_type = type(add_offset)
+        # CF conforming, both scale_factor and add-offset are given and
+        # of same floating point type (float32/64)
+        if (
+            add_offset is not None
+            and scale_factor is not None
+            and offset_type == scale_type
+            and scale_type in [np.float32, np.float64]
+        ):
+            # in case of int32 -> we need upcast to float64
+            # due to precision issues
+            if dtype.itemsize == 4 and np.issubdtype(dtype, np.integer):
+                return np.float64
+            return np.dtype(scale_type).type
+        # Not CF conforming and add_offset given:
+        # A scale factor is entirely safe (vanishing into the mantissa),
+        # but a large integer offset could lead to loss of precision.
+        # Sensitivity analysis can be tricky, so we just use a float64
+        # if there's any offset at all - better unoptimised than wrong!
+        if add_offset is not None:
+            return np.float64
+        # return float32 in other cases where only scale_factor is given
+        return np.float32
+    # If no scale_factor or add_offset is given, use some general rules.
+    # Keep float32 as-is. Upcast half-precision to single-precision,
     # because float16 is "intended for storage but not computation"
     if dtype.itemsize <= 4 and np.issubdtype(dtype, np.floating):
         return np.float32
     # float32 can exactly represent all integers up to 24 bits
     if dtype.itemsize <= 2 and np.issubdtype(dtype, np.integer):
-        # A scale factor is entirely safe (vanishing into the mantissa),
-        # but a large integer offset could lead to loss of precision.
-        # Sensitivity analysis can be tricky, so we just use a float64
-        # if there's any offset at all - better unoptimised than wrong!
-        if not has_offset:
-            return np.float32
-    # For all other types and circumstances, we just use float64.
-    # (safe because eg. complex numbers are not supported in NetCDF)
-    return np.float64
+        return np.float32
 
 
 class CFScaleOffsetCoder(VariableCoder):
@@ -377,7 +413,12 @@ class CFScaleOffsetCoder(VariableCoder):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
         if "scale_factor" in encoding or "add_offset" in encoding:
-            dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
+            # if we have a _FillValue/masked_value we do not want to cast now
+            # but leave that to CFMaskCoder
+            dtype = data.dtype
+            if "_FillValue" not in encoding and "missing_value" not in encoding:
+                dtype = _choose_float_dtype(data.dtype, encoding)
+            # but still we need a copy prevent changing original data
             data = duck_array_ops.astype(data, dtype=dtype, copy=True)
         if "add_offset" in encoding:
             data -= pop_to(encoding, attrs, "add_offset", name=name)
@@ -393,11 +434,17 @@ class CFScaleOffsetCoder(VariableCoder):
 
             scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
             add_offset = pop_to(attrs, encoding, "add_offset", name=name)
-            dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
             if np.ndim(scale_factor) > 0:
                 scale_factor = np.asarray(scale_factor).item()
             if np.ndim(add_offset) > 0:
                 add_offset = np.asarray(add_offset).item()
+            # if we have a _FillValue/masked_value we already have the wanted
+            # floating point dtype here (via CFMaskCoder), so no check is necessary
+            # only check in other cases
+            dtype = data.dtype
+            if "_FillValue" not in encoding and "missing_value" not in encoding:
+                dtype = _choose_float_dtype(dtype, encoding)
+
             transform = partial(
                 _scale_offset_decoding,
                 scale_factor=scale_factor,
