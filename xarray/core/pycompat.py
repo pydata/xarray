@@ -87,7 +87,7 @@ def mod_version(mod: ModType) -> Version:
     return _get_cached_duck_array_module(mod).version
 
 
-def is_dask_collection(x):
+def is_dask_collection(x) -> bool:
     if module_available("dask"):
         from dask.base import is_dask_collection
 
@@ -95,7 +95,7 @@ def is_dask_collection(x):
     return False
 
 
-def is_duck_dask_array(x):
+def is_duck_dask_array(x) -> bool:
     return is_duck_array(x) and is_dask_collection(x)
 
 
@@ -103,7 +103,7 @@ def is_chunked_array(x) -> bool:
     return is_duck_dask_array(x) or (is_duck_array(x) and hasattr(x, "chunks"))
 
 
-def is_0d_dask_array(x):
+def is_0d_dask_array(x) -> bool:
     return is_duck_dask_array(x) and is_scalar(x)
 
 
