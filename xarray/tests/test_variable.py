@@ -1236,7 +1236,7 @@ class TestVariable(VariableSubclassobjects):
                 """
             <xarray.Variable (time: 2, x: 3)> Size: 24B
             array([[1, 2, 3],
-                [4, 5, 6]])
+                   [4, 5, 6]])
             Attributes:
                 foo:      bar
             """
@@ -1246,7 +1246,7 @@ class TestVariable(VariableSubclassobjects):
                 """
             <xarray.Variable (time: 2, x: 3)> Size: 48B
             array([[1, 2, 3],
-                [4, 5, 6]])
+                   [4, 5, 6]])
             Attributes:
                 foo:      bar
             """
