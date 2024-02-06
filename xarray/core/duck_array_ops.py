@@ -355,20 +355,23 @@ def asarray(data, xp=np):
 
 def as_shared_dtype(scalars_or_arrays, xp=np):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
-    array_type_cupy = array_type("cupy")
-    if array_type_cupy and any(
-        isinstance(x, array_type_cupy) for x in scalars_or_arrays
+    if any(isinstance(x, ExtensionDuckArray) for x in scalars_or_arrays):
+        extension_array_types = [
+            type(x.extension_array)
+            for x in scalars_or_arrays
+            if isinstance(x, ExtensionDuckArray)
+        ]
+        if len(extension_array_types) == len(scalars_or_arrays) and all(
+            isinstance(x, extension_array_types[0]) for x in extension_array_types
+        ):
+            return scalars_or_arrays
+        arrays = [asarray(np.array(x), xp=xp) for x in scalars_or_arrays]
+    elif array_type_cupy := array_type("cupy") and any(  # noqa: F841
+        isinstance(x, array_type_cupy) for x in scalars_or_arrays  # noqa: F821
     ):
         import cupy as cp
 
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
-    are_extension_arrays = (
-        isinstance(x, ExtensionDuckArray) for x in scalars_or_arrays
-    )
-    if all(are_extension_arrays):
-        first_type = type(scalars_or_arrays[0].extension_array)
-        if all(isinstance(x.extension_array, first_type) for x in scalars_or_arrays):
-            return scalars_or_arrays
     else:
         arrays = [asarray(x, xp=xp) for x in scalars_or_arrays]
     # Pass arrays directly instead of dtypes to result_type so scalars
