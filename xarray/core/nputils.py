@@ -206,9 +206,7 @@ def _create_method(name, npmodule=np) -> Callable:
                 # to ddof=1 above.
                 if pycompat.mod_version("numbagg") < Version("0.7.0"):
                     kwargs.pop("ddof", None)
-                if name == "nanquantile":
-                    if kwargs.get("method", None) != "linear":
-                        return
+                if name == "nanquantile" and kwargs.get("method", "linear") == "linear":
                     kwargs["quantiles"] = kwargs.pop("q")
                     kwargs.pop("method", None)
                 return nba_func(values, axis=axis, **kwargs)
