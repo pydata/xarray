@@ -19,6 +19,9 @@ from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 if TYPE_CHECKING:
     from io import BufferedIOBase
 
+    from h5netcdf.legacyapi import Dataset as ncDatasetLegacyH5
+    from netCDF4 import Dataset as ncDataset
+
     from xarray.core.dataset import Dataset
     from xarray.core.types import NestedSequence
     from xarray.datatree_.datatree import DataTree
@@ -126,6 +129,43 @@ def _decode_variable_name(name):
     if name == NONE_VAR_NAME:
         name = None
     return name
+
+
+def _open_datatree_netcdf(
+    ncDataset: ncDataset | ncDatasetLegacyH5,
+    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    **kwargs,
+) -> DataTree:
+    from xarray.backends.api import open_dataset
+    from xarray.datatree_.datatree import DataTree
+    from xarray.datatree_.datatree.treenode import NodePath
+
+    ds = open_dataset(filename_or_obj, **kwargs)
+    tree_root = DataTree.from_dict({"/": ds})
+    with ncDataset(filename_or_obj, mode="r") as ncds:
+        for path in _iter_nc_groups(ncds):
+            subgroup_ds = open_dataset(filename_or_obj, group=path, **kwargs)
+
+            # TODO refactor to use __setitem__ once creation of new nodes by assigning Dataset works again
+            node_name = NodePath(path).name
+            new_node: DataTree = DataTree(name=node_name, data=subgroup_ds)
+            tree_root._set_item(
+                path,
+                new_node,
+                allow_overwrite=False,
+                new_nodes_along_path=True,
+            )
+    return tree_root
+
+
+def _iter_nc_groups(root, parent="/"):
+    from xarray.datatree_.datatree.treenode import NodePath
+
+    parent = NodePath(parent)
+    for path, group in root.groups.items():
+        gpath = parent / path
+        yield str(gpath)
+        yield from _iter_nc_groups(group, parent=gpath)
 
 
 def find_root_and_group(ds):
