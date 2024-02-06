@@ -241,7 +241,7 @@ def _protect_dataset_variables_inplace(dataset, cache):
                 # only need to protect arrays that were lazy-loaded from disk
                 data = indexing.CopyOnWriteArray(variable._data)
             else:
-                data = variable.data
+                data = variable._data
 
             if cache:
                 data = indexing.MemoryCachedArray(data)
