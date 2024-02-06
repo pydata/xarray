@@ -236,9 +236,16 @@ def _protect_dataset_variables_inplace(dataset, cache):
     for name, variable in dataset.variables.items():
         if name not in dataset._indexes:
             # no need to protect IndexVariable objects
-            data = indexing.CopyOnWriteArray(variable._data)
+
+            if isinstance(variable._data, backends.BackendArray):
+                # only need to protect arrays that were lazy-loaded from disk
+                data = indexing.CopyOnWriteArray(variable._data)
+            else:
+                data = variable.data
+
             if cache:
                 data = indexing.MemoryCachedArray(data)
+
             variable.data = data
 
 

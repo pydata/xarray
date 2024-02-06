@@ -652,6 +652,13 @@ def _wrap_numpy_scalars(array):
 
 
 class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
+    """
+    Ensures that an attempt to write to this array only writes to a copy
+    of whatever might still be stored on disk.
+
+    Used to wrap any array that inherits from BackendArray.
+    """
+
     __slots__ = ("array", "_copied")
 
     def __init__(self, array):
