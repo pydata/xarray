@@ -475,14 +475,14 @@ class TestFormatting:
         if ON_WINDOWS:
             expected = dedent(
                 """\
-            <xarray.DataArray (1, 2) (test: 1)> Size: 8B
+            <xarray.DataArray (1, 2) (test: 1)> Size: 4B
             array([0])
             Dimensions without coordinates: test"""
             )
         else:
             expected = dedent(
                 """\
-            <xarray.DataArray (1, 2) (test: 1)> Size: 4B
+            <xarray.DataArray (1, 2) (test: 1)> Size: 8B
             array([0])
             Dimensions without coordinates: test"""
             )
@@ -499,12 +499,21 @@ class TestFormatting:
 
         with xr.set_options(display_expand_data=False):
             actual = formatting.array_repr(ds[(1, 2)])
-            expected = dedent(
-                """\
-            <xarray.DataArray (1, 2) (test: 1)> Size: 8B
-            0
-            Dimensions without coordinates: test"""
-            )
+            if ON_WINDOWS:
+                expected = dedent(
+                    """\
+                <xarray.DataArray (1, 2) (test: 1)> Size: 4B
+                0
+                Dimensions without coordinates: test"""
+                )
+
+            else:
+                expected = dedent(
+                    """\
+                <xarray.DataArray (1, 2) (test: 1)> Size: 8B
+                0
+                Dimensions without coordinates: test"""
+                )
 
             assert actual == expected
 
@@ -718,8 +727,9 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
         dims_values = formatting.dim_summary_limited(
             ds, col_width=col_width + 1, max_rows=display_max_rows
         )
+        expected_size = "640B" if ON_WINDOWS else "1kB"
         expected = f"""\
-<xarray.Dataset> Size: 1kB
+<xarray.Dataset> Size: {expected_size}
 {dims_start}({dims_values})
 Coordinates: ({n_vars})
 Data variables: ({n_vars})
