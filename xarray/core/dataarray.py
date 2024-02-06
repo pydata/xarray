@@ -972,8 +972,7 @@ class DataArray(
         names: Dims = None,
         *,
         drop: Literal[False] = False,
-    ) -> Dataset:
-        ...
+    ) -> Dataset: ...
 
     @overload
     def reset_coords(
@@ -981,8 +980,7 @@ class DataArray(
         names: Dims = None,
         *,
         drop: Literal[True],
-    ) -> Self:
-        ...
+    ) -> Self: ...
 
     @_deprecate_positional_args("v2023.10.0")
     def reset_coords(
@@ -3916,8 +3914,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> bytes:
-        ...
+    ) -> bytes: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -3933,8 +3930,7 @@ class DataArray(
         *,
         compute: Literal[False],
         invalid_netcdf: bool = False,
-    ) -> Delayed:
-        ...
+    ) -> Delayed: ...
 
     # default return None
     @overload
@@ -3949,8 +3945,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: Literal[True] = True,
         invalid_netcdf: bool = False,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     # if compute cannot be evaluated at type check time
     # we may get back either Delayed or None
@@ -3966,8 +3961,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> Delayed | None:
-        ...
+    ) -> Delayed | None: ...
 
     def to_netcdf(
         self,
@@ -4116,8 +4110,7 @@ class DataArray(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
-    ) -> ZarrStore:
-        ...
+    ) -> ZarrStore: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -4137,8 +4130,7 @@ class DataArray(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
-    ) -> Delayed:
-        ...
+    ) -> Delayed: ...
 
     def to_zarr(
         self,
@@ -4983,10 +4975,12 @@ class DataArray(
 
     def sortby(
         self,
-        variables: Hashable
-        | DataArray
-        | Sequence[Hashable | DataArray]
-        | Callable[[Self], Hashable | DataArray | Sequence[Hashable | DataArray]],
+        variables: (
+            Hashable
+            | DataArray
+            | Sequence[Hashable | DataArray]
+            | Callable[[Self], Hashable | DataArray | Sequence[Hashable | DataArray]]
+        ),
         ascending: bool = True,
     ) -> Self:
         """Sort object by labels or values (along an axis).
@@ -5596,14 +5590,12 @@ class DataArray(
         self,
         pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
         mode: PadModeOptions = "constant",
-        stat_length: int
-        | tuple[int, int]
-        | Mapping[Any, tuple[int, int]]
-        | None = None,
-        constant_values: float
-        | tuple[float, float]
-        | Mapping[Any, tuple[float, float]]
-        | None = None,
+        stat_length: (
+            int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
+        ) = None,
+        constant_values: (
+            float | tuple[float, float] | Mapping[Any, tuple[float, float]] | None
+        ) = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
         keep_attrs: bool | None = None,

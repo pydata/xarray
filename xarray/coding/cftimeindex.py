@@ -1,4 +1,5 @@
 """DatetimeIndex analog for cftime.datetime objects"""
+
 # The pandas.Index subclass defined here was copied and adapted for
 # use with cftime.datetime objects based on the source code defining
 # pandas.DatetimeIndex.

@@ -1,6 +1,7 @@
 """
 Functions for applying functions that act on arrays to xarray's labeled data.
 """
+
 from __future__ import annotations
 
 import functools
@@ -731,9 +732,11 @@ def apply_variable_ufunc(
     output_dims = [broadcast_dims + out for out in signature.output_core_dims]
 
     input_data = [
-        broadcast_compat_data(arg, broadcast_dims, core_dims)
-        if isinstance(arg, Variable)
-        else arg
+        (
+            broadcast_compat_data(arg, broadcast_dims, core_dims)
+            if isinstance(arg, Variable)
+            else arg
+        )
         for arg, core_dims in zip(args, signature.input_core_dims)
     ]
 
@@ -2047,29 +2050,25 @@ def where(cond, x, y, keep_attrs=None):
 @overload
 def polyval(
     coord: DataArray, coeffs: DataArray, degree_dim: Hashable = "degree"
-) -> DataArray:
-    ...
+) -> DataArray: ...
 
 
 @overload
 def polyval(
     coord: DataArray, coeffs: Dataset, degree_dim: Hashable = "degree"
-) -> Dataset:
-    ...
+) -> Dataset: ...
 
 
 @overload
 def polyval(
     coord: Dataset, coeffs: DataArray, degree_dim: Hashable = "degree"
-) -> Dataset:
-    ...
+) -> Dataset: ...
 
 
 @overload
 def polyval(
     coord: Dataset, coeffs: Dataset, degree_dim: Hashable = "degree"
-) -> Dataset:
-    ...
+) -> Dataset: ...
 
 
 @overload
@@ -2077,8 +2076,7 @@ def polyval(
     coord: Dataset | DataArray,
     coeffs: Dataset | DataArray,
     degree_dim: Hashable = "degree",
-) -> Dataset | DataArray:
-    ...
+) -> Dataset | DataArray: ...
 
 
 def polyval(
@@ -2247,23 +2245,19 @@ _V = TypeVar("_V", bound=Union["Dataset", "DataArray"])
 
 
 @overload
-def unify_chunks(__obj: _T) -> tuple[_T]:
-    ...
+def unify_chunks(__obj: _T) -> tuple[_T]: ...
 
 
 @overload
-def unify_chunks(__obj1: _T, __obj2: _U) -> tuple[_T, _U]:
-    ...
+def unify_chunks(__obj1: _T, __obj2: _U) -> tuple[_T, _U]: ...
 
 
 @overload
-def unify_chunks(__obj1: _T, __obj2: _U, __obj3: _V) -> tuple[_T, _U, _V]:
-    ...
+def unify_chunks(__obj1: _T, __obj2: _U, __obj3: _V) -> tuple[_T, _U, _V]: ...
 
 
 @overload
-def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]:
-    ...
+def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]: ...
 
 
 def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]:

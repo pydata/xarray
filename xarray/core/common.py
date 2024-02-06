@@ -200,12 +200,10 @@ class AbstractArray:
         return self._iter()
 
     @overload
-    def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]:
-        ...
+    def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...
 
     @overload
-    def get_axis_num(self, dim: Hashable) -> int:
-        ...
+    def get_axis_num(self, dim: Hashable) -> int: ...
 
     def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
         """Return axis number(s) corresponding to dimension(s) in this array.
@@ -1503,8 +1501,7 @@ def full_like(
     chunks: T_Chunks = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-) -> DataArray:
-    ...
+) -> DataArray: ...
 
 
 @overload
@@ -1516,8 +1513,7 @@ def full_like(
     chunks: T_Chunks = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-) -> Dataset:
-    ...
+) -> Dataset: ...
 
 
 @overload
@@ -1529,8 +1525,7 @@ def full_like(
     chunks: T_Chunks = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-) -> Variable:
-    ...
+) -> Variable: ...
 
 
 @overload
@@ -1542,8 +1537,7 @@ def full_like(
     chunks: T_Chunks = {},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-) -> Dataset | DataArray:
-    ...
+) -> Dataset | DataArray: ...
 
 
 @overload
@@ -1555,8 +1549,7 @@ def full_like(
     chunks: T_Chunks = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-) -> Dataset | DataArray | Variable:
-    ...
+) -> Dataset | DataArray | Variable: ...
 
 
 def full_like(
@@ -1797,8 +1790,7 @@ def zeros_like(
     chunks: T_Chunks = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-) -> DataArray:
-    ...
+) -> DataArray: ...
 
 
 @overload
@@ -1809,8 +1801,7 @@ def zeros_like(
     chunks: T_Chunks = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-) -> Dataset:
-    ...
+) -> Dataset: ...
 
 
 @overload
@@ -1821,8 +1812,7 @@ def zeros_like(
     chunks: T_Chunks = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-) -> Variable:
-    ...
+) -> Variable: ...
 
 
 @overload
@@ -1833,8 +1823,7 @@ def zeros_like(
     chunks: T_Chunks = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-) -> Dataset | DataArray:
-    ...
+) -> Dataset | DataArray: ...
 
 
 @overload
@@ -1845,8 +1834,7 @@ def zeros_like(
     chunks: T_Chunks = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-) -> Dataset | DataArray | Variable:
-    ...
+) -> Dataset | DataArray | Variable: ...
 
 
 def zeros_like(
@@ -1939,8 +1927,7 @@ def ones_like(
     chunks: T_Chunks = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-) -> DataArray:
-    ...
+) -> DataArray: ...
 
 
 @overload
@@ -1951,8 +1938,7 @@ def ones_like(
     chunks: T_Chunks = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-) -> Dataset:
-    ...
+) -> Dataset: ...
 
 
 @overload
@@ -1963,8 +1949,7 @@ def ones_like(
     chunks: T_Chunks = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-) -> Variable:
-    ...
+) -> Variable: ...
 
 
 @overload
@@ -1975,8 +1960,7 @@ def ones_like(
     chunks: T_Chunks = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-) -> Dataset | DataArray:
-    ...
+) -> Dataset | DataArray: ...
 
 
 @overload
@@ -1987,8 +1971,7 @@ def ones_like(
     chunks: T_Chunks = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-) -> Dataset | DataArray | Variable:
-    ...
+) -> Dataset | DataArray | Variable: ...
 
 
 def ones_like(
