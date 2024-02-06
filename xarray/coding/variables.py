@@ -390,8 +390,8 @@ def _choose_float_dtype(
         # if there's any offset at all - better unoptimised than wrong!
         if add_offset is not None:
             return np.float64
-        # return float32 in other cases where only scale_factor is given
-        return np.float32
+        # return dtype depending on given scale_factor
+        return np.dtype(scale_type).type
     # If no scale_factor or add_offset is given, use some general rules.
     # Keep float32 as-is. Upcast half-precision to single-precision,
     # because float16 is "intended for storage but not computation"
