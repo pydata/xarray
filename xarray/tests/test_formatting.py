@@ -12,6 +12,8 @@ import xarray as xr
 from xarray.core import formatting
 from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
 
+ON_WINDOWS = sys.platform == "win32"
+
 
 class TestFormatting:
     def test_get_indexer_at_least_n_items(self) -> None:
@@ -470,12 +472,20 @@ class TestFormatting:
 
         # Test repr function behaves correctly:
         actual = formatting.array_repr(ds_12)
-        expected = dedent(
-            """\
-        <xarray.DataArray (1, 2) (test: 1)> Size: 8B
-        array([0])
-        Dimensions without coordinates: test"""
-        )
+        if ON_WINDOWS:
+            expected = dedent(
+                """\
+            <xarray.DataArray (1, 2) (test: 1)> Size: 8B
+            array([0])
+            Dimensions without coordinates: test"""
+            )
+        else:
+            expected = dedent(
+                """\
+            <xarray.DataArray (1, 2) (test: 1)> Size: 4B
+            array([0])
+            Dimensions without coordinates: test"""
+            )
 
         assert actual == expected
 
