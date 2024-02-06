@@ -66,6 +66,10 @@ Bug fixes
   lead to integer overflow or unsafe conversion from floating point to integer
   values (:issue:`8542`, :pull:`8575`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- CF conform handling of `_FillValue`/`missing_value` and `dtype` in
+  `CFMaskCoder`/`CFScaleOffsetCoder` (:issue:`2304`, :issue:`5597`,
+  :issue:`7691`, :pull:`8713`, see also discussion in :pull:`7654`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
