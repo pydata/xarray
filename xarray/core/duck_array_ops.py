@@ -214,8 +214,6 @@ def astype(data, dtype, **kwargs):
 
 
 def asarray(data, xp=np):
-    print(data)
-    print(type(data))
     return data if is_duck_array(data) else xp.asarray(data)
 
 
