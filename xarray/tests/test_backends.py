@@ -895,9 +895,10 @@ class CFEncodedBase(DatasetIOBase):
     )
     @pytest.mark.parametrize("dtype", [np.dtype("float64"), np.dtype("float32")])
     def test_roundtrip_mask_and_scale(self, decoded_fn, encoded_fn, dtype) -> None:
+        if hasattr(self, "zarr_version") and dtype == np.float32:
+            pytest.skip("float32 will be treated as float64 in zarr")
         decoded = decoded_fn(dtype)
         encoded = encoded_fn(dtype)
-
         with self.roundtrip(decoded) as actual:
             for k in decoded.variables:
                 assert decoded.variables[k].dtype == actual.variables[k].dtype
