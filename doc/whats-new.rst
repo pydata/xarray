@@ -53,6 +53,8 @@ Bug fixes
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Ensure :py:meth:`DataArray.unstack` works when wrapping array API-compliant classes. (:issue:`8666`, :pull:`8668`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Avoid coercing to numpy arrays inside :py:func:`~xarray.core.duck_array_ops.as_shared_dtype`. (:pull:`8714`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Preserve chunks when writing time-like variables to zarr by enabling lazy CF
   encoding of time-like variables (:issue:`7132`, :issue:`8230`, :issue:`8432`,
   :pull:`8575`). By `Spencer Clark <https://github.com/spencerkclark>`_ and
