@@ -425,7 +425,6 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         )
         return ds
 
-    # TODO [MHS, 01/23/2024] This is duplicative of the netcdf4 code in an ugly way.
     def open_datatree(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
