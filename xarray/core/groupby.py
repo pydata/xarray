@@ -272,9 +272,12 @@ class _DummyGroup(Generic[T_Xarray]):
 T_Group = Union["T_DataArray", "IndexVariable", _DummyGroup]
 
 
-def _ensure_1d(
-    group: T_Group, obj: T_Xarray
-) -> tuple[T_Group, T_Xarray, Hashable | None, list[Hashable],]:
+def _ensure_1d(group: T_Group, obj: T_Xarray) -> tuple[
+    T_Group,
+    T_Xarray,
+    Hashable | None,
+    list[Hashable],
+]:
     # 1D cases: do nothing
     if isinstance(group, (IndexVariable, _DummyGroup)) or group.ndim == 1:
         return group, obj, None, []

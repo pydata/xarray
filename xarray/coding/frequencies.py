@@ -1,4 +1,5 @@
 """FrequencyInferer analog for cftime.datetime objects"""
+
 # The infer_freq method and the _CFTimeFrequencyInferer
 # subclass defined here were copied and adapted for
 # use with cftime.datetime objects based on the source code in

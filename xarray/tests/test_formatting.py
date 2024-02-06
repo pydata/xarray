@@ -627,8 +627,9 @@ def test_repr_file_collapsed(tmp_path) -> None:
     arr_to_store = xr.DataArray(np.arange(300, dtype=np.int64), dims="test")
     arr_to_store.to_netcdf(tmp_path / "test.nc", engine="netcdf4")
 
-    with xr.open_dataarray(tmp_path / "test.nc") as arr, xr.set_options(
-        display_expand_data=False
+    with (
+        xr.open_dataarray(tmp_path / "test.nc") as arr,
+        xr.set_options(display_expand_data=False),
     ):
         actual = repr(arr)
         expected = dedent(

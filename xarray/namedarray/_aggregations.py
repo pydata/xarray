@@ -1,4 +1,5 @@
 """Mixin classes with reduction operations."""
+
 # This file was generated using xarray.util.generate_aggregations. Do not edit manually.
 
 from __future__ import annotations

@@ -2,6 +2,7 @@
 DataArray objects.
 
 """
+
 from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex
 
 __all__ = ["Index", "PandasIndex", "PandasMultiIndex"]

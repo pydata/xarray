@@ -1,4 +1,5 @@
 """Time offset classes for use with cftime.datetime objects"""
+
 # The offset classes and mechanisms for generating time ranges defined in
 # this module were copied/adapted from those defined in pandas.  See in
 # particular the objects and methods defined in pandas.tseries.offsets

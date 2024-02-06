@@ -1,5 +1,6 @@
 """String formatting routines for __repr__.
 """
+
 from __future__ import annotations
 
 import contextlib

@@ -354,8 +354,7 @@ def quiver(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     extend: ExtendOptions = None,
     cmap: str | Colormap | None = None,
     **kwargs: Any,
-) -> Quiver:
-    ...
+) -> Quiver: ...
 
 
 @overload
@@ -392,8 +391,7 @@ def quiver(
     extend: ExtendOptions = None,
     cmap: str | Colormap | None = None,
     **kwargs: Any,
-) -> FacetGrid[Dataset]:
-    ...
+) -> FacetGrid[Dataset]: ...
 
 
 @overload
@@ -430,8 +428,7 @@ def quiver(
     extend: ExtendOptions = None,
     cmap: str | Colormap | None = None,
     **kwargs: Any,
-) -> FacetGrid[Dataset]:
-    ...
+) -> FacetGrid[Dataset]: ...
 
 
 @_dsplot
@@ -508,8 +505,7 @@ def streamplot(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     extend: ExtendOptions = None,
     cmap: str | Colormap | None = None,
     **kwargs: Any,
-) -> LineCollection:
-    ...
+) -> LineCollection: ...
 
 
 @overload
@@ -546,8 +542,7 @@ def streamplot(
     extend: ExtendOptions = None,
     cmap: str | Colormap | None = None,
     **kwargs: Any,
-) -> FacetGrid[Dataset]:
-    ...
+) -> FacetGrid[Dataset]: ...
 
 
 @overload
@@ -584,8 +579,7 @@ def streamplot(
     extend: ExtendOptions = None,
     cmap: str | Colormap | None = None,
     **kwargs: Any,
-) -> FacetGrid[Dataset]:
-    ...
+) -> FacetGrid[Dataset]: ...
 
 
 @_dsplot
@@ -786,8 +780,7 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs: Any,
-) -> PathCollection:
-    ...
+) -> PathCollection: ...
 
 
 @overload
@@ -828,8 +821,7 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
-    ...
+) -> FacetGrid[DataArray]: ...
 
 
 @overload
@@ -870,8 +862,7 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
-    ...
+) -> FacetGrid[DataArray]: ...
 
 
 @_update_doc_to_dataset(dataarray_plot.scatter)

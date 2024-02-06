@@ -537,9 +537,13 @@ def map_blocks(
         chunk_index = dict(zip(ichunk.keys(), chunk_tuple))
 
         blocked_args = [
-            subset_dataset_to_block(graph, gname, arg, input_chunk_bounds, chunk_index)
-            if isxr
-            else arg
+            (
+                subset_dataset_to_block(
+                    graph, gname, arg, input_chunk_bounds, chunk_index
+                )
+                if isxr
+                else arg
+            )
             for isxr, arg in zip(is_xarray, npargs)
         ]
 
