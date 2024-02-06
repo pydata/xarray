@@ -504,8 +504,7 @@ class TestDataArray:
         assert_identical(da.coords, coords)
 
     def test_constructor_custom_index(self) -> None:
-        class CustomIndex(Index):
-            ...
+        class CustomIndex(Index): ...
 
         coords = Coordinates(
             coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
@@ -4188,9 +4187,7 @@ class TestDataArray:
             xcoord = x
 
         da_raw = DataArray(
-            np.stack(
-                (10 + 1e-15 * x + 2e-28 * x**2, 30 + 2e-14 * x + 1e-29 * x**2)
-            ),
+            np.stack((10 + 1e-15 * x + 2e-28 * x**2, 30 + 2e-14 * x + 1e-29 * x**2)),
             dims=("d", "x"),
             coords={"x": xcoord, "d": [0, 1]},
         )

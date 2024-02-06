@@ -6,6 +6,7 @@ Control the plot's colorbar
 Use ``cbar_kwargs`` keyword to specify the number of ticks.
 The ``spacing`` kwarg can be used to draw proportional ticks.
 """
+
 import matplotlib.pyplot as plt
 
 import xarray as xr

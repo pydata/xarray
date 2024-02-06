@@ -28,7 +28,6 @@ from xarray.core.indexing import (
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.core.pycompat import (
-    array_type,
     integer_types,
     is_0d_dask_array,
     is_chunked_array,
@@ -45,7 +44,6 @@ from xarray.core.utils import (
     ensure_us_time_resolution,
     is_duck_array,
     maybe_coerce_to_str,
-    module_available,
 )
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.utils import infix_dims
@@ -1233,14 +1231,12 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         self,
         pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
         mode: PadModeOptions = "constant",
-        stat_length: int
-        | tuple[int, int]
-        | Mapping[Any, tuple[int, int]]
-        | None = None,
-        constant_values: float
-        | tuple[float, float]
-        | Mapping[Any, tuple[float, float]]
-        | None = None,
+        stat_length: (
+            int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
+        ) = None,
+        constant_values: (
+            float | tuple[float, float] | Mapping[Any, tuple[float, float]] | None
+        ) = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
         keep_attrs: bool | None = None,
