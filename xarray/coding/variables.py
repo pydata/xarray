@@ -400,6 +400,9 @@ def _choose_float_dtype(
     # float32 can exactly represent all integers up to 24 bits
     if dtype.itemsize <= 2 and np.issubdtype(dtype, np.integer):
         return np.float32
+    # For all other types and circumstances, we just use float64.
+    # (safe because eg. complex numbers are not supported in NetCDF)
+    return np.float64
 
 
 class CFScaleOffsetCoder(VariableCoder):
