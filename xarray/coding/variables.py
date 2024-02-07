@@ -243,6 +243,44 @@ def _is_time_like(units):
         return any(tstr == units for tstr in time_strings)
 
 
+def _check_fill_values(attrs, name, dtype):
+    """ "Check _FillValue and missing_value if available.
+
+    Return dictionary with raw fill values and set with encoded fill values.
+
+    Issue SerializationWarning if appropriate.
+    """
+    raw_fill_dict = {}
+    [
+        pop_to(attrs, raw_fill_dict, attr, name=name)
+        for attr in ("missing_value", "_FillValue")
+    ]
+    encoded_fill_values = set()
+    for k in list(raw_fill_dict):
+        v = raw_fill_dict[k]
+        kfill = {fv for fv in np.ravel(v) if not pd.isnull(fv)}
+        if not kfill and np.issubdtype(dtype, np.integer):
+            warnings.warn(
+                f"variable {name!r} has non-conforming {k!r} "
+                f"{v!r} defined, dropping {k!r} entirely.",
+                SerializationWarning,
+                stacklevel=3,
+            )
+            del raw_fill_dict[k]
+        else:
+            encoded_fill_values |= kfill
+
+        if len(encoded_fill_values) > 1:
+            warnings.warn(
+                f"variable {name!r} has multiple fill values "
+                f"{encoded_fill_values} defined, decoding all values to NaN.",
+                SerializationWarning,
+                stacklevel=3,
+            )
+
+    return raw_fill_dict, encoded_fill_values
+
+
 class CFMaskCoder(VariableCoder):
     """Mask or unmask fill values according to CF conventions."""
 
@@ -264,75 +302,56 @@ class CFMaskCoder(VariableCoder):
                 f"Variable {name!r} has conflicting _FillValue ({fv}) and missing_value ({mv}). Cannot encode data."
             )
 
-        # special case DateTime to properly handle NaT
-        is_time_like = _is_time_like(attrs.get("units"))
-
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
             encoding["_FillValue"] = dtype.type(fv)
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
-            if not pd.isnull(fill_value):
-                if is_time_like and data.dtype.kind in "iu":
-                    data = duck_array_ops.where(
-                        data != np.iinfo(np.int64).min, data, fill_value
-                    )
-                else:
-                    data = duck_array_ops.fillna(data, fill_value)
 
         if mv_exists:
-            # Use _FillValue if available to align missing_value to prevent issues
-            # when decoding
-            # Ensure missing_value is cast to same dtype as data's
+            # try to use _FillValue, if it exists to align both values
+            # or use missing_value and ensure it's cast to same dtype as data's
             encoding["missing_value"] = attrs.get("_FillValue", dtype.type(mv))
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
-            if not pd.isnull(fill_value) and not fv_exists:
-                if is_time_like and data.dtype.kind in "iu":
-                    data = duck_array_ops.where(
-                        data != np.iinfo(np.int64).min, data, fill_value
-                    )
-                else:
-                    data = duck_array_ops.fillna(data, fill_value)
+
+        # apply fillna
+        if not pd.isnull(fill_value):
+            # special case DateTime to properly handle NaT
+            if _is_time_like(attrs.get("units")) and data.dtype.kind in "iu":
+                data = duck_array_ops.where(
+                    data != np.iinfo(np.int64).min, data, fill_value
+                )
+            else:
+                data = duck_array_ops.fillna(data, fill_value)
 
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
     def decode(self, variable: Variable, name: T_Name = None):
-        dims, data, attrs, encoding = unpack_for_decoding(variable)
+        raw_fill_dict, encoded_fill_values = _check_fill_values(
+            variable.attrs, name, variable.dtype
+        )
 
-        raw_fill_values = [
-            pop_to(attrs, encoding, attr, name=name)
-            for attr in ("missing_value", "_FillValue")
-        ]
-        if raw_fill_values:
-            encoded_fill_values = {
-                fv
-                for option in raw_fill_values
-                for fv in np.ravel(option)
-                if not pd.isnull(fv)
-            }
-
-            if len(encoded_fill_values) > 1:
-                warnings.warn(
-                    "variable {!r} has multiple fill values {}, "
-                    "decoding all values to NaN.".format(name, encoded_fill_values),
-                    SerializationWarning,
-                    stacklevel=3,
-                )
-
-            # special case DateTime to properly handle NaT
-            dtype: np.typing.DTypeLike
-            decoded_fill_value: Any
-            if _is_time_like(attrs.get("units")) and data.dtype.kind in "iu":
-                dtype, decoded_fill_value = np.int64, np.iinfo(np.int64).min
-            else:
-                if "scale_factor" not in attrs and "add_offset" not in attrs:
-                    dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
-                else:
-                    dtype, decoded_fill_value = (
-                        _choose_float_dtype(data.dtype, attrs),
-                        np.nan,
-                    )
+        if raw_fill_dict:
+            dims, data, attrs, encoding = unpack_for_decoding(variable)
+            [
+                safe_setitem(encoding, attr, value, name=name)
+                for attr, value in raw_fill_dict.items()
+            ]
 
             if encoded_fill_values:
+                # special case DateTime to properly handle NaT
+                dtype: np.typing.DTypeLike
+                decoded_fill_value: Any
+                if _is_time_like(attrs.get("units")) and data.dtype.kind in "iu":
+                    dtype, decoded_fill_value = np.int64, np.iinfo(np.int64).min
+                else:
+                    if "scale_factor" not in attrs and "add_offset" not in attrs:
+                        dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
+                    else:
+                        dtype, decoded_fill_value = (
+                            _choose_float_dtype(data.dtype, attrs),
+                            np.nan,
+                        )
+
                 transform = partial(
                     _apply_mask,
                     encoded_fill_values=encoded_fill_values,
@@ -367,9 +386,9 @@ def _choose_float_dtype(
         # get the type from scale_factor/add_offset to determine
         # the needed floating point type
         if scale_factor is not None:
-            scale_type = type(scale_factor)
+            scale_type = np.dtype(type(scale_factor))
         if add_offset is not None:
-            offset_type = type(add_offset)
+            offset_type = np.dtype(type(add_offset))
         # CF conforming, both scale_factor and add-offset are given and
         # of same floating point type (float32/64)
         if (
@@ -382,7 +401,7 @@ def _choose_float_dtype(
             # due to precision issues
             if dtype.itemsize == 4 and np.issubdtype(dtype, np.integer):
                 return np.float64
-            return np.dtype(scale_type).type
+            return scale_type
         # Not CF conforming and add_offset given:
         # A scale factor is entirely safe (vanishing into the mantissa),
         # but a large integer offset could lead to loss of precision.
@@ -391,7 +410,7 @@ def _choose_float_dtype(
         if add_offset is not None:
             return np.float64
         # return dtype depending on given scale_factor
-        return np.dtype(scale_type).type
+        return scale_type
     # If no scale_factor or add_offset is given, use some general rules.
     # Keep float32 as-is. Upcast half-precision to single-precision,
     # because float16 is "intended for storage but not computation"

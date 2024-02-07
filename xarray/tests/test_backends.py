@@ -1660,13 +1660,11 @@ class NetCDF4Base(NetCDFBase):
                     [-1, -1, 10, 10.1, 10.2], mask=[True, True, False, False, False]
                 )
                 actual = nc.variables["x"][:]
-                print(actual.dtype, expected.dtype)
                 assert_array_equal(expected, actual)
 
             # now check xarray
             with open_dataset(tmp_file) as ds:
                 expected = create_masked_and_scaled_data(np.dtype(dtype))
-                print(ds.variables["x"].dtype, expected.variables["x"].dtype)
                 assert_identical(expected, ds)
 
     def test_0dimensional_variable(self) -> None:
