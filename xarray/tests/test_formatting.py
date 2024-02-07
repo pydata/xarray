@@ -1024,7 +1024,7 @@ Dimensions without coordinates: x
     ds = xr.DataArray(np.array([0.0]), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 4B
+<xarray.DataArray (x: 1)> Size: 8B
 array([0.])
 Dimensions without coordinates: x
         """.strip()
@@ -1043,7 +1043,7 @@ Dimensions without coordinates: x
     actual = repr(ds)
     expected = """
 <xarray.DataArray (x: 1)> Size: 4B
-array([0.])
+array([0.], dtype=float32)
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
@@ -1052,7 +1052,7 @@ Dimensions without coordinates: x
     actual = repr(ds)
     expected = """
 <xarray.DataArray (x: 1)> Size: 8B
-array([0.], dtype=float64)
+array([0.])
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
