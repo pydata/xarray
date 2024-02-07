@@ -1218,23 +1218,23 @@ class GroupBy(Generic[T_Xarray]):
         ... )
         >>> ds = xr.Dataset({"a": da})
         >>> da.groupby("x").quantile(0)
-        <xarray.DataArray (x: 2, y: 4)>
+        <xarray.DataArray (x: 2, y: 4)> Size: 64B
         array([[0.7, 4.2, 0.7, 1.5],
                [6.5, 7.3, 2.6, 1.9]])
         Coordinates:
-          * y         (y) int64 1 1 2 2
-            quantile  float64 0.0
-          * x         (x) int64 0 1
+          * y         (y) int64 32B 1 1 2 2
+            quantile  float64 8B 0.0
+          * x         (x) int64 16B 0 1
         >>> ds.groupby("y").quantile(0, dim=...)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 40B
         Dimensions:   (y: 2)
         Coordinates:
-            quantile  float64 0.0
-          * y         (y) int64 1 2
+            quantile  float64 8B 0.0
+          * y         (y) int64 16B 1 2
         Data variables:
-            a         (y) float64 0.7 0.7
+            a         (y) float64 16B 0.7 0.7
         >>> da.groupby("x").quantile([0, 0.5, 1])
-        <xarray.DataArray (x: 2, y: 4, quantile: 3)>
+        <xarray.DataArray (x: 2, y: 4, quantile: 3)> Size: 192B
         array([[[0.7 , 1.  , 1.3 ],
                 [4.2 , 6.3 , 8.4 ],
                 [0.7 , 5.05, 9.4 ],
@@ -1245,17 +1245,17 @@ class GroupBy(Generic[T_Xarray]):
                 [2.6 , 2.6 , 2.6 ],
                 [1.9 , 1.9 , 1.9 ]]])
         Coordinates:
-          * y         (y) int64 1 1 2 2
-          * quantile  (quantile) float64 0.0 0.5 1.0
-          * x         (x) int64 0 1
+          * y         (y) int64 32B 1 1 2 2
+          * quantile  (quantile) float64 24B 0.0 0.5 1.0
+          * x         (x) int64 16B 0 1
         >>> ds.groupby("y").quantile([0, 0.5, 1], dim=...)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 88B
         Dimensions:   (y: 2, quantile: 3)
         Coordinates:
-          * quantile  (quantile) float64 0.0 0.5 1.0
-          * y         (y) int64 1 2
+          * quantile  (quantile) float64 24B 0.0 0.5 1.0
+          * y         (y) int64 16B 1 2
         Data variables:
-            a         (y, quantile) float64 0.7 5.35 8.4 0.7 2.25 9.4
+            a         (y, quantile) float64 48B 0.7 5.35 8.4 0.7 2.25 9.4
 
         References
         ----------

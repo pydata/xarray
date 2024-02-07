@@ -224,13 +224,13 @@ class Coordinates(AbstractCoordinates):
 
     >>> xr.Coordinates({"x": [1, 2]})
     Coordinates:
-      * x        (x) int64 1 2
+      * x        (x) int64 16B 1 2
 
     Create a dimension coordinate with no index:
 
     >>> xr.Coordinates(coords={"x": [1, 2]}, indexes={})
     Coordinates:
-        x        (x) int64 1 2
+        x        (x) int64 16B 1 2
 
     Create a new Coordinates object from existing dataset coordinates
     (indexes are passed):
@@ -238,27 +238,27 @@ class Coordinates(AbstractCoordinates):
     >>> ds = xr.Dataset(coords={"x": [1, 2]})
     >>> xr.Coordinates(ds.coords)
     Coordinates:
-      * x        (x) int64 1 2
+      * x        (x) int64 16B 1 2
 
     Create indexed coordinates from a ``pandas.MultiIndex`` object:
 
     >>> midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]])
     >>> xr.Coordinates.from_pandas_multiindex(midx, "x")
     Coordinates:
-      * x          (x) object MultiIndex
-      * x_level_0  (x) object 'a' 'a' 'b' 'b'
-      * x_level_1  (x) int64 0 1 0 1
+      * x          (x) object 32B MultiIndex
+      * x_level_0  (x) object 32B 'a' 'a' 'b' 'b'
+      * x_level_1  (x) int64 32B 0 1 0 1
 
     Create a new Dataset object by passing a Coordinates object:
 
     >>> midx_coords = xr.Coordinates.from_pandas_multiindex(midx, "x")
     >>> xr.Dataset(coords=midx_coords)
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 96B
     Dimensions:    (x: 4)
     Coordinates:
-      * x          (x) object MultiIndex
-      * x_level_0  (x) object 'a' 'a' 'b' 'b'
-      * x_level_1  (x) int64 0 1 0 1
+      * x          (x) object 32B MultiIndex
+      * x_level_0  (x) object 32B 'a' 'a' 'b' 'b'
+      * x_level_1  (x) int64 32B 0 1 0 1
     Data variables:
         *empty*
 
@@ -602,14 +602,14 @@ class Coordinates(AbstractCoordinates):
 
         >>> coords.assign(x=[1, 2])
         Coordinates:
-          * x        (x) int64 1 2
+          * x        (x) int64 16B 1 2
 
         >>> midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]])
         >>> coords.assign(xr.Coordinates.from_pandas_multiindex(midx, "y"))
         Coordinates:
-          * y          (y) object MultiIndex
-          * y_level_0  (y) object 'a' 'a' 'b' 'b'
-          * y_level_1  (y) int64 0 1 0 1
+          * y          (y) object 32B MultiIndex
+          * y_level_0  (y) object 32B 'a' 'a' 'b' 'b'
+          * y_level_1  (y) int64 32B 0 1 0 1
 
         """
         # TODO: this doesn't support a callable, which is inconsistent with `DataArray.assign_coords`
