@@ -146,3 +146,45 @@ def test_where() -> None:
     actual = xr.where(xp_arr, 1, 0)
     assert isinstance(actual.data, Array)
     assert_equal(actual, expected)
+
+
+def test_statistics(arrays) -> None:
+    with xr.set_options(use_bottleneck=False):
+        np_arr_nans, xp_arr_nans = arrays
+
+        # TODO this is not really a test of the array API compatibility specifically, just of the ddof vs correction kwarg handling
+        expected = np_arr_nans.std(ddof=1)
+        actual = np_arr_nans.std(correction=1)
+        assert_equal(actual, expected)
+
+        # test the default value
+        expected = np_arr_nans.std()
+        actual = np_arr_nans.std(correction=0)
+        assert_equal(actual, expected)
+
+        # TODO have to remove the NaNs in the example data because array API standard can't handle them yet, see https://github.com/pydata/xarray/pull/7424#issuecomment-1373979208
+        np_arr, xp_arr = np_arr_nans.fillna(0), xp_arr_nans.fillna(0)
+
+        expected = np_arr.std()
+        actual = xp_arr.std(skipna=False)
+        assert isinstance(actual.data, Array)
+        assert_equal(actual, expected)
+
+        expected = np_arr.std(ddof=1)
+        actual = xp_arr.std(skipna=False, ddof=1)
+        assert isinstance(actual.data, Array)
+        assert_equal(actual, expected)
+
+        expected = np_arr.std(ddof=1)
+        actual = xp_arr.std(skipna=False, correction=1)
+        assert isinstance(actual.data, Array)
+        assert_equal(actual, expected)
+
+        # TODO check this warns
+        expected = np_arr.std(ddof=1)
+        actual = xp_arr.std(skipna=False, ddof=1, correction=1)
+        assert isinstance(actual.data, Array)
+        assert_equal(actual, expected)
+
+        with pytest.raises(ValueError):
+            xp_arr.std(skipna=False, ddof=1, correction=0)
