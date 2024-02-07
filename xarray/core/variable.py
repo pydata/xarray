@@ -1992,7 +1992,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             method = interpolation
 
         if skipna or (skipna is None and self.dtype.kind in "cfO"):
-            _quantile_func = np.nanquantile
+            _quantile_func = nputils.nanquantile
         else:
             _quantile_func = np.quantile
 
