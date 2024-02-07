@@ -1498,6 +1498,9 @@ def test_date_range_like(start, freq, cal_src, cal_tgt, use_cftime, exp0, exp_pd
 )
 @pytest.mark.parametrize("use_cftime", (True, False))
 def test_date_range_like_no_deprecation(freq, use_cftime):
+    # ensure no internal warnings
+    # TODO: remove once freq string deprecation is finished
+
     source = date_range("2000", periods=3, freq=freq, use_cftime=False)
 
     with assert_no_warnings():
