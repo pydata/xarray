@@ -4,6 +4,7 @@ import importlib
 import sys
 import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import numpy as np
@@ -34,6 +35,7 @@ V = TypeVar("V")
 T = TypeVar("T")
 
 
+@lru_cache
 def module_available(module: str, minversion: str | None = None) -> bool:
     """Checks whether a module is installed without importing it.
 
