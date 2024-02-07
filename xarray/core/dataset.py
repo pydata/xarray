@@ -1523,13 +1523,11 @@ class Dataset(
         return _LocIndexer(self)
 
     @overload
-    def __getitem__(self, key: Hashable) -> DataArray:
-        ...
+    def __getitem__(self, key: Hashable) -> DataArray: ...
 
     # Mapping is Iterable
     @overload
-    def __getitem__(self, key: Iterable[Hashable]) -> Self:
-        ...
+    def __getitem__(self, key: Iterable[Hashable]) -> Self: ...
 
     def __getitem__(
         self, key: Mapping[Any, Any] | Hashable | Iterable[Hashable]
@@ -2154,8 +2152,7 @@ class Dataset(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> bytes:
-        ...
+    ) -> bytes: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -2171,8 +2168,7 @@ class Dataset(
         *,
         compute: Literal[False],
         invalid_netcdf: bool = False,
-    ) -> Delayed:
-        ...
+    ) -> Delayed: ...
 
     # default return None
     @overload
@@ -2187,8 +2183,7 @@ class Dataset(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: Literal[True] = True,
         invalid_netcdf: bool = False,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     # if compute cannot be evaluated at type check time
     # we may get back either Delayed or None
@@ -2204,8 +2199,7 @@ class Dataset(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> Delayed | None:
-        ...
+    ) -> Delayed | None: ...
 
     def to_netcdf(
         self,
@@ -2336,8 +2330,7 @@ class Dataset(
         zarr_version: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
-    ) -> ZarrStore:
-        ...
+    ) -> ZarrStore: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -2359,8 +2352,7 @@ class Dataset(
         zarr_version: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
-    ) -> Delayed:
-        ...
+    ) -> Delayed: ...
 
     def to_zarr(
         self,
@@ -7924,10 +7916,12 @@ class Dataset(
 
     def sortby(
         self,
-        variables: Hashable
-        | DataArray
-        | Sequence[Hashable | DataArray]
-        | Callable[[Self], Hashable | DataArray | list[Hashable | DataArray]],
+        variables: (
+            Hashable
+            | DataArray
+            | Sequence[Hashable | DataArray]
+            | Callable[[Self], Hashable | DataArray | list[Hashable | DataArray]]
+        ),
         ascending: bool = True,
     ) -> Self:
         """
@@ -8972,10 +8966,9 @@ class Dataset(
         self,
         pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
         mode: PadModeOptions = "constant",
-        stat_length: int
-        | tuple[int, int]
-        | Mapping[Any, tuple[int, int]]
-        | None = None,
+        stat_length: (
+            int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
+        ) = None,
         constant_values: (
             float | tuple[float, float] | Mapping[Any, tuple[float, float]] | None
         ) = None,

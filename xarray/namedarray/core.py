@@ -103,8 +103,7 @@ def _new(
     dims: _DimsLike | Default = ...,
     data: duckarray[_ShapeType, _DType] = ...,
     attrs: _AttrsLike | Default = ...,
-) -> NamedArray[_ShapeType, _DType]:
-    ...
+) -> NamedArray[_ShapeType, _DType]: ...
 
 
 @overload
@@ -113,8 +112,7 @@ def _new(
     dims: _DimsLike | Default = ...,
     data: Default = ...,
     attrs: _AttrsLike | Default = ...,
-) -> NamedArray[_ShapeType_co, _DType_co]:
-    ...
+) -> NamedArray[_ShapeType_co, _DType_co]: ...
 
 
 def _new(
@@ -162,8 +160,7 @@ def from_array(
     dims: _DimsLike,
     data: duckarray[_ShapeType, _DType],
     attrs: _AttrsLike = ...,
-) -> NamedArray[_ShapeType, _DType]:
-    ...
+) -> NamedArray[_ShapeType, _DType]: ...
 
 
 @overload
@@ -171,8 +168,7 @@ def from_array(
     dims: _DimsLike,
     data: ArrayLike,
     attrs: _AttrsLike = ...,
-) -> NamedArray[Any, Any]:
-    ...
+) -> NamedArray[Any, Any]: ...
 
 
 def from_array(
@@ -284,8 +280,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         dims: _DimsLike | Default = ...,
         data: duckarray[_ShapeType, _DType] = ...,
         attrs: _AttrsLike | Default = ...,
-    ) -> NamedArray[_ShapeType, _DType]:
-        ...
+    ) -> NamedArray[_ShapeType, _DType]: ...
 
     @overload
     def _new(
@@ -293,8 +288,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         dims: _DimsLike | Default = ...,
         data: Default = ...,
         attrs: _AttrsLike | Default = ...,
-    ) -> NamedArray[_ShapeType_co, _DType_co]:
-        ...
+    ) -> NamedArray[_ShapeType_co, _DType_co]: ...
 
     def _new(
         self,
@@ -659,12 +653,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return type(self)(self._dims, data, attrs=self._attrs)
 
     @overload
-    def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]:
-        ...
+    def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...
 
     @overload
-    def get_axis_num(self, dim: Hashable) -> int:
-        ...
+    def get_axis_num(self, dim: Hashable) -> int: ...
 
     def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
         """Return axis number(s) corresponding to dimension(s) in this array.

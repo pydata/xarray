@@ -1,4 +1,5 @@
 """Testing functions exposed to the user API"""
+
 import functools
 import warnings
 from collections.abc import Hashable

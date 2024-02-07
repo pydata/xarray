@@ -12,6 +12,7 @@ The second run of pytest is deliberate, since the first will return an error
 while replacing the doctests.
 
 """
+
 import collections
 import textwrap
 from dataclasses import dataclass, field
@@ -348,9 +349,11 @@ class AggregationGenerator:
         template_kwargs = dict(
             obj=self.datastructure.name,
             method=method.name,
-            keep_attrs="\n        keep_attrs: bool | None = None,"
-            if self.has_keep_attrs
-            else "",
+            keep_attrs=(
+                "\n        keep_attrs: bool | None = None,"
+                if self.has_keep_attrs
+                else ""
+            ),
             kw_only="\n        *," if has_kw_only else "",
         )
 

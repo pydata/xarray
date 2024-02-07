@@ -1059,9 +1059,11 @@ def _decompose_outer_indexer(
         # some backends such as h5py supports only 1 vector in indexers
         # We choose the most efficient axis
         gains = [
-            (np.max(k) - np.min(k) + 1.0) / len(np.unique(k))
-            if isinstance(k, np.ndarray)
-            else 0
+            (
+                (np.max(k) - np.min(k) + 1.0) / len(np.unique(k))
+                if isinstance(k, np.ndarray)
+                else 0
+            )
             for k in indexer_elems
         ]
         array_index = np.argmax(np.array(gains)) if len(gains) > 0 else None
@@ -1274,9 +1276,11 @@ def posify_mask_indexer(indexer):
         replaced by an adjacent non-masked element.
     """
     key = tuple(
-        _posify_mask_subindexer(k.ravel()).reshape(k.shape)
-        if isinstance(k, np.ndarray)
-        else k
+        (
+            _posify_mask_subindexer(k.ravel()).reshape(k.shape)
+            if isinstance(k, np.ndarray)
+            else k
+        )
         for k in indexer.tuple
     )
     return type(indexer)(key)

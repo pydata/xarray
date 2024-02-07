@@ -3,6 +3,7 @@ The code in this module is an experiment in going from N=1 to N=2 parallel compu
 It could later be used as the basis for a public interface allowing any N frameworks to interoperate with xarray,
 but for now it is just a private experiment.
 """
+
 from __future__ import annotations
 
 import functools
@@ -28,12 +29,10 @@ if TYPE_CHECKING:
 
 
 class SupportsRechunk(Protocol):
-    def rechunk(self, chunks: Any, **kwargs: Any) -> Any:
-        ...
+    def rechunk(self, chunks: Any, **kwargs: Any) -> Any: ...
 
     @property
-    def dtype(self) -> np.dtype[Any]:
-        ...
+    def dtype(self) -> np.dtype[Any]: ...
 
 
 T_ChunkedArray = TypeVar("T_ChunkedArray", bound=SupportsRechunk)
