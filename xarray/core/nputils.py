@@ -198,8 +198,10 @@ def _create_method(name, npmodule=np) -> Callable:
             # numbagg.nanquantile only available after 0.8.0 and with linear method
             and (
                 name != "nanquantile"
-                or (pycompat.mod_version("numbagg") >= Version("0.8.0")
-                    and kwargs.get("method", "linear") == "linear")
+                or (
+                    pycompat.mod_version("numbagg") >= Version("0.8.0")
+                    and kwargs.get("method", "linear") == "linear"
+                )
             )
         ):
             import numbagg
