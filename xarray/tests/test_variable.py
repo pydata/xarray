@@ -1856,13 +1856,15 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(ValueError, match=r"consists of multiple chunks"):
             v.quantile(0.5, dim="x")
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
-    def test_quantile_out_of_bounds(self, q):
+    def test_quantile_out_of_bounds(self, q, compute_backend):
         v = Variable(["x", "y"], self.d)
 
         # escape special characters
         with pytest.raises(
-            ValueError, match=r"Quantiles must be in the range \[0, 1\]"
+            ValueError,
+            match=r"(Q|q)uantiles must be in the range \[0, 1\]",
         ):
             v.quantile(q, dim="x")
 
