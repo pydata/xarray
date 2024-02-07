@@ -1159,6 +1159,7 @@ def contains_only_chunked_or_numpy(obj) -> bool:
     )
 
 
+@functools.lru_cache
 def module_available(module: str, minversion: str | None = None) -> bool:
     """Checks whether a module is installed without importing it.
 
