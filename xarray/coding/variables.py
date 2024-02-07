@@ -401,7 +401,7 @@ def _choose_float_dtype(
             # due to precision issues
             if dtype.itemsize == 4 and np.issubdtype(dtype, np.integer):
                 return np.float64
-            return scale_type
+            return scale_type.type
         # Not CF conforming and add_offset given:
         # A scale factor is entirely safe (vanishing into the mantissa),
         # but a large integer offset could lead to loss of precision.
@@ -410,7 +410,7 @@ def _choose_float_dtype(
         if add_offset is not None:
             return np.float64
         # return dtype depending on given scale_factor
-        return scale_type
+        return scale_type.type
     # If no scale_factor or add_offset is given, use some general rules.
     # Keep float32 as-is. Upcast half-precision to single-precision,
     # because float16 is "intended for storage but not computation"
