@@ -12,6 +12,7 @@ from typing import (
     Generic,
     Literal,
     TypeVar,
+    Union,
     cast,
     overload,
 )
@@ -795,6 +796,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         dask.array.from_array
         """
 
+        chunks = cast(Union[tuple[tuple[int, ...], ...], tuple[int, ...]], chunks)
+
         if chunks is None:
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
@@ -828,7 +831,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         data_old = self._data
         if chunkmanager.is_chunked_array(data_old):
-            data_chunked = chunkmanager.rechunk(data_old, chunks)
+            data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore
         else:
             if not isinstance(data_old, ExplicitlyIndexed):
                 ndata = data_old
@@ -846,11 +849,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             if is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
 
-            data_chunked = chunkmanager.from_array(
-                ndata,
-                chunks,
-                **_from_array_kwargs,
-            )
+            data_chunked = chunkmanager.from_array(ndata, chunks, **_from_array_kwargs)  # type: ignore
 
         return self._replace(data=data_chunked)
 
@@ -870,7 +869,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             data = data.magnitude
         if isinstance(data, array_type("sparse")):
             data = data.todense()
-        data = np.asarray(data)
+        data = np.asarray(data)  # type: ignore
+        data = cast(np.ndarray[Any, Any], data)
 
         return data
 
