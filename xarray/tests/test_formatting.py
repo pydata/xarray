@@ -874,22 +874,9 @@ Coordinates:
     assert actual == expected
 
 
-@pytest.mark.skipif(
-    ON_WINDOWS,
-    reason="Default numpy's dtypes vary according to OS",
-)
-def test_array_repr_dtypes() -> None:
+def test_array_repr_dtypes():
 
-    # Integer dtypes
-
-    ds = xr.DataArray(np.array([0]), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 8B
-array([0])
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
+    # Signed integer dtypes
 
     ds = xr.DataArray(np.array([0], dtype="int8"), dims="x")
     actual = repr(ds)
@@ -905,6 +892,100 @@ Dimensions without coordinates: x
     expected = """
 <xarray.DataArray (x: 1)> Size: 2B
 array([0], dtype=int16)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    # Unsigned integer dtypes
+
+    ds = xr.DataArray(np.array([0], dtype="uint8"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 1B
+array([0], dtype=uint8)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="uint16"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 2B
+array([0], dtype=uint16)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="uint32"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 4B
+array([0], dtype=uint32)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="uint64"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 8B
+array([0], dtype=uint64)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    # Float dtypes
+
+    ds = xr.DataArray(np.array([0.0]), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 8B
+array([0.])
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="float16"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 2B
+array([0.], dtype=float16)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="float32"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 4B
+array([0.], dtype=float32)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="float64"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 8B
+array([0.])
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+
+@pytest.mark.skipif(
+    ON_WINDOWS,
+    reason="Default numpy's dtypes vary according to OS",
+)
+def test_array_repr_dtypes_unix() -> None:
+
+    # Signed integer dtypes
+
+    ds = xr.DataArray(np.array([0]), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 8B
+array([0])
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
@@ -927,44 +1008,6 @@ Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
-    # Float dtypes
-
-    ds = xr.DataArray(np.array([0.0]), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 8B
-array([0.])
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
-    ds = xr.DataArray(np.array([0], dtype="float16"), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 2B
-array([0.], dtype=float16)
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
-    ds = xr.DataArray(np.array([0], dtype="float32"), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 4B
-array([0.], dtype=float32)
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
-    ds = xr.DataArray(np.array([0], dtype="float64"), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 8B
-array([0.])
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
 
 @pytest.mark.skipif(
     not ON_WINDOWS,
@@ -983,24 +1026,6 @@ Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
-    ds = xr.DataArray(np.array([0], dtype="int8"), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 1B
-array([0], dtype=int8)
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
-    ds = xr.DataArray(np.array([0], dtype="int16"), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 2B
-array([0], dtype=int16)
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
     ds = xr.DataArray(np.array([0], dtype="int32"), dims="x")
     actual = repr(ds)
     expected = """
@@ -1015,44 +1040,6 @@ Dimensions without coordinates: x
     expected = """
 <xarray.DataArray (x: 1)> Size: 8B
 array([0], dtype=int64)
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
-    # Float dtypes
-
-    ds = xr.DataArray(np.array([0.0]), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 8B
-array([0.])
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
-    ds = xr.DataArray(np.array([0], dtype="float16"), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 2B
-array([0.], dtype=float16)
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
-    ds = xr.DataArray(np.array([0], dtype="float32"), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 4B
-array([0.], dtype=float32)
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
-    ds = xr.DataArray(np.array([0], dtype="float64"), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 8B
-array([0.])
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
