@@ -42,8 +42,7 @@ def concat(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-) -> T_Dataset:
-    ...
+) -> T_Dataset: ...
 
 
 @overload
@@ -57,8 +56,7 @@ def concat(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-) -> T_DataArray:
-    ...
+) -> T_DataArray: ...
 
 
 def concat(

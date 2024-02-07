@@ -675,8 +675,7 @@ class TestDataset:
             Dataset(coords={"x": midx})
 
     def test_constructor_custom_index(self) -> None:
-        class CustomIndex(Index):
-            ...
+        class CustomIndex(Index): ...
 
         coords = Coordinates(
             coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
@@ -3603,8 +3602,7 @@ class TestDataset:
         expected_mindex = ds.set_index(x=["foo", "bar"])
         assert_identical(actual_mindex, expected_mindex)
 
-        class NotAnIndex:
-            ...
+        class NotAnIndex: ...
 
         with pytest.raises(TypeError, match=".*not a subclass of xarray.Index"):
             ds.set_xindex("foo", NotAnIndex)  # type: ignore
@@ -5614,9 +5612,10 @@ class TestDataset:
         )
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
-    def test_quantile(self, q, skipna) -> None:
+    def test_quantile(self, q, skipna, compute_backend) -> None:
         ds = create_test_data(seed=123)
         ds.var1.data[0, 0] = np.nan
 
@@ -5637,8 +5636,9 @@ class TestDataset:
         assert "dim3" in ds_quantile.dims
         assert all(d not in ds_quantile.dims for d in dim)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("skipna", [True, False])
-    def test_quantile_skipna(self, skipna) -> None:
+    def test_quantile_skipna(self, skipna, compute_backend) -> None:
         q = 0.1
         dim = "time"
         ds = Dataset({"a": ([dim], np.arange(0, 11))})

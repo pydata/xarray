@@ -504,8 +504,7 @@ class TestDataArray:
         assert_identical(da.coords, coords)
 
     def test_constructor_custom_index(self) -> None:
-        class CustomIndex(Index):
-            ...
+        class CustomIndex(Index): ...
 
         coords = Coordinates(
             coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
@@ -2889,12 +2888,13 @@ class TestDataArray:
         with pytest.raises(TypeError):
             orig.mean(out=np.ones(orig.shape))
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
         "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
     )
-    def test_quantile(self, q, axis, dim, skipna) -> None:
+    def test_quantile(self, q, axis, dim, skipna, compute_backend) -> None:
         va = self.va.copy(deep=True)
         va[0, 0] = np.nan
 
@@ -4207,9 +4207,7 @@ class TestDataArray:
             xcoord = x
 
         da_raw = DataArray(
-            np.stack(
-                (10 + 1e-15 * x + 2e-28 * x**2, 30 + 2e-14 * x + 1e-29 * x**2)
-            ),
+            np.stack((10 + 1e-15 * x + 2e-28 * x**2, 30 + 2e-14 * x + 1e-29 * x**2)),
             dims=("d", "x"),
             coords={"x": xcoord, "d": [0, 1]},
         )

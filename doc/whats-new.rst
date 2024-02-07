@@ -34,6 +34,10 @@ New Features
 - Xarray now defers to flox's `heuristics <https://flox.readthedocs.io/en/latest/implementation.html#heuristics>`_
   to set default `method` for groupby problems. This only applies to ``flox>=0.9``.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- All `quantile` methods (e.g. :py:meth:`DataArray.quantile`) now use `numbagg`
+  for the calculation of nanquantiles (i.e., `skipna=True`) if it is installed.
+  This is currently limited to the linear interpolation method (`method='linear'`).
+  (:issue:`7377`, :pull:`8684`) By `Marco Wolsza <https://github.com/maawoo>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
