@@ -371,7 +371,7 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
             if isinstance(x, ExtensionDuckArray)
         ]
         if len(extension_array_types) == len(scalars_or_arrays) and all(
-            isinstance(x, extension_array_types[0]) for x in extension_array_types
+            x == extension_array_types[0] for x in extension_array_types
         ):
             return scalars_or_arrays
         arrays = [asarray(np.array(x), xp=xp) for x in scalars_or_arrays]
