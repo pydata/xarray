@@ -1,5 +1,6 @@
 """String formatting routines for __repr__.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -24,6 +25,8 @@ from xarray.core.utils import is_duck_array
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import AbstractCoordinates
+
+UNITS = ("B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
 
 
 def pretty_print(x, numchars: int):
@@ -333,7 +336,9 @@ def summarize_variable(
         dims_str = "({}) ".format(", ".join(map(str, variable.dims)))
     else:
         dims_str = ""
-    front_str = f"{first_col}{dims_str}{variable.dtype} "
+
+    nbytes_str = f" {render_human_readable_nbytes(variable.nbytes)}"
+    front_str = f"{first_col}{dims_str}{variable.dtype}{nbytes_str} "
 
     values_width = max_width - len(front_str)
     values_str = inline_variable_array_repr(variable, values_width)
@@ -668,11 +673,11 @@ def array_repr(arr):
 
     start = f"<xarray.{type(arr).__name__} {name_str}"
     dims = dim_summary_limited(arr, col_width=len(start) + 1, max_rows=max_rows)
+    nbytes_str = render_human_readable_nbytes(arr.nbytes)
     summary = [
-        f"{start}({dims})>",
+        f"{start}({dims})> Size: {nbytes_str}",
         data_repr,
     ]
-
     if hasattr(arr, "coords"):
         if arr.coords:
             col_width = _calculate_col_width(arr.coords)
@@ -705,7 +710,8 @@ def array_repr(arr):
 
 @recursive_repr("<recursive Dataset>")
 def dataset_repr(ds):
-    summary = [f"<xarray.{type(ds).__name__}>"]
+    nbytes_str = render_human_readable_nbytes(ds.nbytes)
+    summary = [f"<xarray.{type(ds).__name__}> Size: {nbytes_str}"]
 
     col_width = _calculate_col_width(ds.variables)
     max_rows = OPTIONS["display_max_rows"]
@@ -950,3 +956,46 @@ def shorten_list_repr(items: Sequence, max_items: int) -> str:
             1:-1
         ]  # Convert to string and remove brackets
         return f"[{first_half}, ..., {second_half}]"
+
+
+def render_human_readable_nbytes(
+    nbytes: int,
+    /,
+    *,
+    attempt_constant_width: bool = False,
+) -> str:
+    """Renders simple human-readable byte count representation
+
+    This is only a quick representation that should not be relied upon for precise needs.
+
+    To get the exact byte count, please use the ``nbytes`` attribute directly.
+
+    Parameters
+    ----------
+    nbytes
+        Byte count
+    attempt_constant_width
+        For reasonable nbytes sizes, tries to render a fixed-width representation.
+
+    Returns
+    -------
+        Human-readable representation of the byte count
+    """
+    dividend = float(nbytes)
+    divisor = 1000.0
+    last_unit_available = UNITS[-1]
+
+    for unit in UNITS:
+        if dividend < divisor or unit == last_unit_available:
+            break
+        dividend /= divisor
+
+    dividend_str = f"{dividend:.0f}"
+    unit_str = f"{unit}"
+
+    if attempt_constant_width:
+        dividend_str = dividend_str.rjust(3)
+        unit_str = unit_str.ljust(2)
+
+    string = f"{dividend_str}{unit_str}"
+    return string
