@@ -34,7 +34,14 @@ from numpy import concatenate as _concatenate
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 from packaging.version import Version
 from pandas.api.types import is_extension_array_dtype
-from plum import dispatch  # noqa
+
+try:
+    from plum import dispatch
+except ImportError:
+
+    def dispatch(*args, **kwargs):
+        pass
+
 
 from xarray.core import dask_array_ops, dtypes, nputils, pycompat
 from xarray.core.options import OPTIONS
