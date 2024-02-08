@@ -542,7 +542,7 @@ class BackendEntrypoint:
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
         """
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def guess_can_open(
         self,
@@ -563,7 +563,7 @@ class BackendEntrypoint:
         Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
         """
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 # mapping of engine name to (module name, BackendEntrypoint Class)
