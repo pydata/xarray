@@ -40,6 +40,7 @@ from xarray.core import dask_array_ops, dtypes, nputils, pycompat
 from xarray.core.options import OPTIONS
 from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.core.pycompat import array_type, is_duck_dask_array
+from xarray.core.types import DTypeLikeSave
 from xarray.core.utils import is_duck_array, module_available
 
 # remove once numpy 2.0 is the oldest supported version
@@ -97,8 +98,6 @@ class ExtensionDuckArray(Generic[T_ExtensionArray]):
             raise TypeError(f"{array} is not an pandas ExtensionArray.")
 
     def __array_function__(self, func, types, args, kwargs):
-        # if not all(issubclass(t, ExtensionDuckArray) for t in types):
-        #     return NotImplemented
         def replace_duck_with_extension_array(args) -> list:
             args_as_list = list(args)
             for index, value in enumerate(args_as_list):
@@ -159,6 +158,14 @@ def implements(numpy_function):
         return func
 
     return decorator
+
+
+@implements(np.issubdtype)
+@dispatch
+def __extension_duck_array__issubdtype(
+    extension_array_dtype: T_ExtensionArray, other_dtype: DTypeLikeSave
+):
+    return False  # never want a function to think a categorical is a subtype of numpy
 
 
 @implements(np.broadcast_to)
