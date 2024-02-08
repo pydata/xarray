@@ -1273,7 +1273,7 @@ class GroupBy(Generic[T_Xarray]):
             method == "linear"
             and OPTIONS["use_flox"]
             and contains_only_chunked_or_numpy(self._obj)
-            and module_available("flox", minversion="0.9.1")
+            and module_available("flox", minversion="0.9.2")
         ):
             return self._flox_reduce(
                 func="quantile", q=q, dim=dim, keep_attrs=keep_attrs, skipna=skipna

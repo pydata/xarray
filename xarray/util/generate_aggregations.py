@@ -531,7 +531,7 @@ AGGREGATION_METHODS = (
     Method("std", extra_kwargs=(skipna, ddof), numeric_only=True),
     Method("var", extra_kwargs=(skipna, ddof), numeric_only=True),
     Method(
-        "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.1"
+        "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.2"
     ),
     # Cumulatives:
     Method("cumsum", extra_kwargs=(skipna,), numeric_only=True),
