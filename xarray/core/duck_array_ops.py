@@ -145,6 +145,12 @@ def __extension_duck_array__broadcast(arr: T_ExtensionArray, shape: tuple):
     raise NotImplementedError("Cannot broadcast 1d-only pandas categorical array.")
 
 
+@implements(np.stack)
+@dispatch
+def __extension_duck_array__stack(arr: T_ExtensionArray, axis: int):
+    raise NotImplementedError("Cannot stack 1d-only pandas categorical array.")
+
+
 @implements(np.concatenate)
 @dispatch
 def __extension_duck_array__concatenate(
