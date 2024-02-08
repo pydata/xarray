@@ -23,6 +23,9 @@ v2024.02.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added a simple `nbytes` representation in DataArrays and Dataset `repr`.
+  (:issue:`8690`, :pull:`8702`).
+  By `Etienne Schalk <https://github.com/etienneschalk>`_.
 - Allow negative frequency strings (e.g. ``"-1YE"``). These strings are for example used
   in :py:func:`date_range`,  and :py:func:`cftime_range` (:pull:`8651`).
   By `Mathias Hauser <https://github.com/mathause>`_.

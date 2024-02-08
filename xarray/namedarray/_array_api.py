@@ -70,10 +70,10 @@ def astype(
     --------
     >>> narr = NamedArray(("x",), nxp.asarray([1.5, 2.5]))
     >>> narr
-    <xarray.NamedArray (x: 2)>
+    <xarray.NamedArray (x: 2)> Size: 16B
     Array([1.5, 2.5], dtype=float64)
     >>> astype(narr, np.dtype(np.int32))
-    <xarray.NamedArray (x: 2)>
+    <xarray.NamedArray (x: 2)> Size: 8B
     Array([1, 2], dtype=int32)
     """
     if isinstance(x._data, _arrayapi):
@@ -111,7 +111,7 @@ def imag(
     --------
     >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))  # TODO: Use nxp
     >>> imag(narr)
-    <xarray.NamedArray (x: 2)>
+    <xarray.NamedArray (x: 2)> Size: 16B
     array([2., 4.])
     """
     xp = _get_data_namespace(x)
@@ -143,7 +143,7 @@ def real(
     --------
     >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))  # TODO: Use nxp
     >>> real(narr)
-    <xarray.NamedArray (x: 2)>
+    <xarray.NamedArray (x: 2)> Size: 16B
     array([1., 2.])
     """
     xp = _get_data_namespace(x)
@@ -181,11 +181,11 @@ def expand_dims(
     --------
     >>> x = NamedArray(("x", "y"), nxp.asarray([[1.0, 2.0], [3.0, 4.0]]))
     >>> expand_dims(x)
-    <xarray.NamedArray (dim_2: 1, x: 2, y: 2)>
+    <xarray.NamedArray (dim_2: 1, x: 2, y: 2)> Size: 32B
     Array([[[1., 2.],
             [3., 4.]]], dtype=float64)
     >>> expand_dims(x, dim="z")
-    <xarray.NamedArray (z: 1, x: 2, y: 2)>
+    <xarray.NamedArray (z: 1, x: 2, y: 2)> Size: 32B
     Array([[[1., 2.],
             [3., 4.]]], dtype=float64)
     """

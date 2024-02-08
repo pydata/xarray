@@ -278,19 +278,19 @@ class DatasetView(Dataset):
         >>> da = xr.DataArray(np.random.randn(2, 3))
         >>> ds = xr.Dataset({"foo": da, "bar": ("x", [-1, 2])})
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 64B
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Dimensions without coordinates: dim_0, dim_1, x
         Data variables:
-            foo      (dim_0, dim_1) float64 1.764 0.4002 0.9787 2.241 1.868 -0.9773
-            bar      (x) int64 -1 2
+            foo      (dim_0, dim_1) float64 48B 1.764 0.4002 0.9787 2.241 1.868 -0.9773
+            bar      (x) int64 16B -1 2
         >>> ds.map(np.fabs)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 64B
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Dimensions without coordinates: dim_0, dim_1, x
         Data variables:
-            foo      (dim_0, dim_1) float64 1.764 0.4002 0.9787 2.241 1.868 0.9773
-            bar      (x) float64 1.0 2.0
+            foo      (dim_0, dim_1) float64 48B 1.764 0.4002 0.9787 2.241 1.868 0.9773
+            bar      (x) float64 16B 1.0 2.0
         """
 
         # Copied from xarray.Dataset so as not to call type(self), which causes problems (see datatree GH188).

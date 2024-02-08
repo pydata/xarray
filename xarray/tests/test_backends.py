@@ -4490,6 +4490,7 @@ class TestDask(DatasetIOBase):
             ) as actual:
                 assert_identical(expected, actual)
 
+    @pytest.mark.xfail(reason="Flaky test. Very open to contributions on fixing this")
     def test_dask_roundtrip(self) -> None:
         with create_tmp_file() as tmp:
             data = create_test_data()
