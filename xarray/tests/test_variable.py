@@ -43,6 +43,7 @@ from xarray.tests import (
     requires_dask,
     requires_pandas_version_two,
     requires_pint,
+    requires_plum,
     requires_sparse,
     source_ndarray,
 )
@@ -1556,6 +1557,13 @@ class TestVariable(VariableSubclassobjects):
             variable = Variable([], value)
             actual = variable.transpose()
             assert_identical(actual, variable)
+
+    @requires_plum
+    def test_pandas_cateogrical_dtype(self):
+        data = pd.Categorical(np.arange(10, dtype="int64"))
+        v = self.cls("x", data)
+        print(v)  # should not error
+        assert pd.api.types.is_extension_array_dtype(v.dtype)
 
     def test_squeeze(self):
         v = Variable(["x", "y"], [[1]])
