@@ -30,6 +30,10 @@ New Features
   to set default `method` for groupby problems. This only applies to ``flox>=0.9``.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
+- Xarray now makes a best attempt not to coerce :py:class:`pandas.api.extensions.ExtensionArray` to a numpy array
+by supporting 1D `ExtensionArray` objects internally where possible.  Thus, `Dataset`s initialized with a `pd.Catgeorical`, for example,
+will retain the object.  However, one cannot do operations that are not possible on the `ExtensionArray` then, such as broadcasting.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
