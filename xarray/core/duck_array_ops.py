@@ -109,11 +109,14 @@ class ExtensionDuckArray(Generic[T_ExtensionArray]):
             return getattr(self.extension_array, attr)
         raise AttributeError(f"{attr} not found.")
 
-    def __getitem__(self, key):
-        return self.extension_array[key]
+    def __getitem__(self, key) -> ExtensionDuckArray[T_ExtensionArray]:
+        item = self.extension_array[key]
+        if is_extension_array_dtype(item):  # not a singleton - better way to check?
+            return ExtensionDuckArray(item)
+        return item
 
-    def __setitem__(self, key):
-        return self.extension_array[key]
+    def __setitem__(self, key, val):
+        self.extension_array[key] = val
 
     def __eq__(self, other):
         if isinstance(other, ExtensionDuckArray):

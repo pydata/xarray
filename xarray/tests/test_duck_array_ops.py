@@ -203,6 +203,23 @@ class TestOps:
             )
         ).all()
 
+    @requires_plum
+    def test___getitem__extension_duck_array(self, categorical1):
+        extension_duck_array = ExtensionDuckArray(categorical1)
+        assert (extension_duck_array[0:2] == categorical1[0:2]).all()
+        assert isinstance(extension_duck_array[0:2], ExtensionDuckArray)
+        assert extension_duck_array[0] == categorical1[0]
+        mask = [True, False, True, False, True]
+        assert (extension_duck_array[mask] == categorical1[mask]).all()
+
+    @requires_plum
+    def test__setitem__extension_duck_array(self, categorical1):
+        extension_duck_array = ExtensionDuckArray(categorical1)
+        extension_duck_array[2] = "cat1"  # already existing category
+        assert extension_duck_array[2] == "cat1"
+        with pytest.raises(TypeError, match="Cannot setitem on a Categorical"):
+            extension_duck_array[2] = "cat4"  # new category
+
     def test_stack_type_promotion(self):
         result = stack([1, "b"])
         assert_array_equal(result, np.array([1, "b"], dtype=object))
