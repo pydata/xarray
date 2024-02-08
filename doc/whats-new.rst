@@ -84,7 +84,7 @@ Internal Changes
 
 - ``DataArray.dt`` now raises an ``AttributeError`` rather than a ``TypeError``
   when the data isn't datetime-like. (:issue:`8718`, :pull:`8724`)
-  By `Maximilian Roos <https://github.com/max-sixty>`_. 
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.2024.01.1:
 
