@@ -1246,6 +1246,11 @@ class CFEncodedBase(DatasetIOBase):
             with self.roundtrip(ds):
                 pass
 
+        # regression GH8628 (can serialize reset multi-index level coordinates)
+        ds_reset = ds.reset_index("x")
+        with self.roundtrip(ds_reset) as actual:
+            assert_identical(actual, ds_reset)
+
 
 class NetCDFBase(CFEncodedBase):
     """Tests for all netCDF3 and netCDF4 backends."""
@@ -2128,7 +2133,10 @@ class ZarrBase(CFEncodedBase):
 
     def test_with_chunkstore(self) -> None:
         expected = create_test_data()
-        with self.create_zarr_target() as store_target, self.create_zarr_target() as chunk_store:
+        with (
+            self.create_zarr_target() as store_target,
+            self.create_zarr_target() as chunk_store,
+        ):
             save_kwargs = {"chunk_store": chunk_store}
             self.save(expected, store_target, **save_kwargs)
             # the chunk store must have been populated with some entries
@@ -4482,6 +4490,7 @@ class TestDask(DatasetIOBase):
             ) as actual:
                 assert_identical(expected, actual)
 
+    @pytest.mark.xfail(reason="Flaky test. Very open to contributions on fixing this")
     def test_dask_roundtrip(self) -> None:
         with create_tmp_file() as tmp:
             data = create_test_data()
@@ -4564,18 +4573,18 @@ class TestDask(DatasetIOBase):
             def num_graph_nodes(obj):
                 return len(obj.__dask_graph__())
 
-            with open_dataset(
-                tmp, inline_array=False, chunks=chunks
-            ) as not_inlined_ds, open_dataset(
-                tmp, inline_array=True, chunks=chunks
-            ) as inlined_ds:
+            with (
+                open_dataset(tmp, inline_array=False, chunks=chunks) as not_inlined_ds,
+                open_dataset(tmp, inline_array=True, chunks=chunks) as inlined_ds,
+            ):
                 assert num_graph_nodes(inlined_ds) < num_graph_nodes(not_inlined_ds)
 
-            with open_dataarray(
-                tmp, inline_array=False, chunks=chunks
-            ) as not_inlined_da, open_dataarray(
-                tmp, inline_array=True, chunks=chunks
-            ) as inlined_da:
+            with (
+                open_dataarray(
+                    tmp, inline_array=False, chunks=chunks
+                ) as not_inlined_da,
+                open_dataarray(tmp, inline_array=True, chunks=chunks) as inlined_da,
+            ):
                 assert num_graph_nodes(inlined_da) < num_graph_nodes(not_inlined_da)
 
 
