@@ -310,7 +310,7 @@ class TestTimedeltaAccessor:
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype("int8")
         nontime_data = nontime_data.assign_coords(time=int_data)
-        with pytest.raises(TypeError, match=r"dt"):
+        with pytest.raises(AttributeError, match=r"dt"):
             nontime_data.time.dt
 
     @pytest.mark.parametrize(
