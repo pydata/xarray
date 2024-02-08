@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 import warnings
 from abc import ABC
 from copy import copy, deepcopy
@@ -58,8 +57,6 @@ _PAD_XR_NP_ARGS = [
     [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
     [{"x": (3, 1), "z": 2}, ((3, 1), (0, 0), (2, 2))],
 ]
-
-ON_WINDOWS = sys.platform == "win32"
 
 
 @pytest.fixture
