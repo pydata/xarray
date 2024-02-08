@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import warnings
 from abc import ABC
 from copy import copy, deepcopy
@@ -57,6 +58,8 @@ _PAD_XR_NP_ARGS = [
     [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
     [{"x": (3, 1), "z": 2}, ((3, 1), (0, 0), (2, 2))],
 ]
+
+ON_WINDOWS = sys.platform == "win32"
 
 
 @pytest.fixture
@@ -1228,15 +1231,26 @@ class TestVariable(VariableSubclassobjects):
 
     def test_repr(self):
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
-        expected = dedent(
+        if ON_WINDOWS:
+            expected = dedent(
+                """
+            <xarray.Variable (time: 2, x: 3)> Size: 24B
+            array([[1, 2, 3],
+                   [4, 5, 6]])
+            Attributes:
+                foo:      bar
             """
-        <xarray.Variable (time: 2, x: 3)>
-        array([[1, 2, 3],
-               [4, 5, 6]])
-        Attributes:
-            foo:      bar
-        """
-        ).strip()
+            ).strip()
+        else:
+            expected = dedent(
+                """
+            <xarray.Variable (time: 2, x: 3)> Size: 48B
+            array([[1, 2, 3],
+                   [4, 5, 6]])
+            Attributes:
+                foo:      bar
+            """
+            ).strip()
         assert expected == repr(v)
 
     def test_repr_lazy_data(self):
@@ -1842,13 +1856,15 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(ValueError, match=r"consists of multiple chunks"):
             v.quantile(0.5, dim="x")
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
-    def test_quantile_out_of_bounds(self, q):
+    def test_quantile_out_of_bounds(self, q, compute_backend):
         v = Variable(["x", "y"], self.d)
 
         # escape special characters
         with pytest.raises(
-            ValueError, match=r"Quantiles must be in the range \[0, 1\]"
+            ValueError,
+            match=r"(Q|q)uantiles must be in the range \[0, 1\]",
         ):
             v.quantile(q, dim="x")
 

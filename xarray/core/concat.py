@@ -42,8 +42,7 @@ def concat(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-) -> T_Dataset:
-    ...
+) -> T_Dataset: ...
 
 
 @overload
@@ -57,8 +56,7 @@ def concat(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-) -> T_DataArray:
-    ...
+) -> T_DataArray: ...
 
 
 def concat(
@@ -179,46 +177,46 @@ def concat(
     ...     np.arange(6).reshape(2, 3), [("x", ["a", "b"]), ("y", [10, 20, 30])]
     ... )
     >>> da
-    <xarray.DataArray (x: 2, y: 3)>
+    <xarray.DataArray (x: 2, y: 3)> Size: 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-      * x        (x) <U1 'a' 'b'
-      * y        (y) int64 10 20 30
+      * x        (x) <U1 8B 'a' 'b'
+      * y        (y) int64 24B 10 20 30
 
     >>> xr.concat([da.isel(y=slice(0, 1)), da.isel(y=slice(1, None))], dim="y")
-    <xarray.DataArray (x: 2, y: 3)>
+    <xarray.DataArray (x: 2, y: 3)> Size: 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-      * x        (x) <U1 'a' 'b'
-      * y        (y) int64 10 20 30
+      * x        (x) <U1 8B 'a' 'b'
+      * y        (y) int64 24B 10 20 30
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], "x")
-    <xarray.DataArray (x: 2, y: 3)>
+    <xarray.DataArray (x: 2, y: 3)> Size: 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-      * x        (x) <U1 'a' 'b'
-      * y        (y) int64 10 20 30
+      * x        (x) <U1 8B 'a' 'b'
+      * y        (y) int64 24B 10 20 30
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], "new_dim")
-    <xarray.DataArray (new_dim: 2, y: 3)>
+    <xarray.DataArray (new_dim: 2, y: 3)> Size: 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-        x        (new_dim) <U1 'a' 'b'
-      * y        (y) int64 10 20 30
+        x        (new_dim) <U1 8B 'a' 'b'
+      * y        (y) int64 24B 10 20 30
     Dimensions without coordinates: new_dim
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], pd.Index([-90, -100], name="new_dim"))
-    <xarray.DataArray (new_dim: 2, y: 3)>
+    <xarray.DataArray (new_dim: 2, y: 3)> Size: 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-        x        (new_dim) <U1 'a' 'b'
-      * y        (y) int64 10 20 30
-      * new_dim  (new_dim) int64 -90 -100
+        x        (new_dim) <U1 8B 'a' 'b'
+      * y        (y) int64 24B 10 20 30
+      * new_dim  (new_dim) int64 16B -90 -100
     """
     # TODO: add ignore_index arguments copied from pandas.concat
     # TODO: support concatenating scalar coordinates even if the concatenated
