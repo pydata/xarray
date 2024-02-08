@@ -796,7 +796,7 @@ def open_datatree(
 ) -> DataTree:
     """
     Open and decode a DataTree from a file or file-like object, creating one tree node for each group in the file.
-    
+
     Parameters
     ----------
     filename_or_obj : str, Path, file-like, or DataStore
