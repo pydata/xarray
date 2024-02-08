@@ -61,6 +61,7 @@ from xarray.tests import (
     requires_dask,
     requires_numexpr,
     requires_pint,
+    requires_plum,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -4613,14 +4614,17 @@ class TestDataset:
         expected = expected.rename({"variable": "abc"}).rename("foo")
         assert_identical(expected, actual)
 
+    @requires_plum
     def test_to_and_from_dataframe(self) -> None:
         x = np.random.randn(10)
         y = np.random.randn(10)
         t = list("abcdefghij")
-        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
+        cat = pd.Categorical(["a", "b"] * 5)
+        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t), "cat": ("t", cat)})
         expected = pd.DataFrame(
             np.array([x, y]).T, columns=["a", "b"], index=pd.Index(t, name="t")
         )
+        expected["cat"] = cat
         actual = ds.to_dataframe()
         # use the .equals method to check all DataFrame metadata
         assert expected.equals(actual), (expected, actual)
@@ -4631,23 +4635,31 @@ class TestDataset:
 
         # check roundtrip
         assert_identical(ds, Dataset.from_dataframe(actual))
-
+        assert isinstance(ds["cat"].variable.data.dtype, pd.CategoricalDtype)
         # test a case with a MultiIndex
         w = np.random.randn(2, 3)
-        ds = Dataset({"w": (("x", "y"), w)})
+        cat = pd.Categorical(["a", "a", "c"])
+        ds = Dataset({"w": (("x", "y"), w), "cat": ("y", cat)})
         ds["y"] = ("y", list("abc"))
         exp_index = pd.MultiIndex.from_arrays(
             [[0, 0, 0, 1, 1, 1], ["a", "b", "c", "a", "b", "c"]], names=["x", "y"]
         )
-        expected = pd.DataFrame(w.reshape(-1), columns=["w"], index=exp_index)
+        expected = pd.DataFrame(
+            {"w": w.reshape(-1), "cat": pd.Categorical(["a", "a", "c", "a", "a", "c"])},
+            index=exp_index,
+        )
         actual = ds.to_dataframe()
         assert expected.equals(actual)
 
         # check roundtrip
+        # from_dataframe attempts to broadcast across because it doesn't know better, so cat must be converted
+        ds["cat"] = (("x", "y"), np.stack((ds["cat"].to_numpy(), ds["cat"].to_numpy())))
         assert_identical(ds.assign_coords(x=[0, 1]), Dataset.from_dataframe(actual))
 
         # Check multiindex reordering
         new_order = ["x", "y"]
+        # revert broadcasting fix above for 1d arrays
+        ds["cat"] = ("y", cat)
         actual = ds.to_dataframe(dim_order=new_order)
         assert expected.equals(actual)
 
@@ -4656,7 +4668,11 @@ class TestDataset:
             [["a", "a", "b", "b", "c", "c"], [0, 1, 0, 1, 0, 1]], names=["y", "x"]
         )
         expected = pd.DataFrame(
-            w.transpose().reshape(-1), columns=["w"], index=exp_index
+            {
+                "w": w.transpose().reshape(-1),
+                "cat": pd.Categorical(["a", "a", "a", "a", "c", "c"]),
+            },
+            index=exp_index,
         )
         actual = ds.to_dataframe(dim_order=new_order)
         assert expected.equals(actual)
@@ -4709,7 +4725,7 @@ class TestDataset:
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
-    def test_from_dataframe_categorical(self) -> None:
+    def test_from_dataframe_categorical_index(self) -> None:
         cat = pd.CategoricalDtype(
             categories=["foo", "bar", "baz", "qux", "quux", "corge"]
         )
@@ -4724,7 +4740,7 @@ class TestDataset:
         assert len(ds["i1"]) == 2
         assert len(ds["i2"]) == 2
 
-    def test_from_dataframe_categorical_string_categories(self) -> None:
+    def test_from_dataframe_categorical_index_string_categories(self) -> None:
         cat = pd.CategoricalIndex(
             pd.Categorical.from_codes(
                 np.array([1, 1, 0, 2]),

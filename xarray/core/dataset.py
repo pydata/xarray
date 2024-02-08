@@ -65,7 +65,7 @@ from xarray.core.coordinates import (
     create_coords_with_default_indexes,
 )
 from xarray.core.daskmanager import DaskManager
-from xarray.core.duck_array_ops import datetime_to_numeric
+from xarray.core.duck_array_ops import ExtensionDuckArray, datetime_to_numeric
 from xarray.core.indexes import (
     Index,
     Indexes,
@@ -7159,13 +7159,36 @@ class Dataset(
         )
 
     def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
-        columns = [k for k in self.variables if k not in self.dims]
+        columns = [
+            k
+            for k in self.variables
+            if k not in self.dims
+            and not isinstance(self.variables[k].data, ExtensionDuckArray)
+        ]
+        extension_array_columns = [
+            k
+            for k in self.variables
+            if k not in self.dims
+            and isinstance(self.variables[k].data, ExtensionDuckArray)
+        ]
         data = [
             self._variables[k].set_dims(ordered_dims).values.reshape(-1)
             for k in columns
         ]
         index = self.coords.to_index([*ordered_dims])
-        return pd.DataFrame(dict(zip(columns, data)), index=index)
+        broadcasted_df = pd.DataFrame(dict(zip(columns, data)), index=index)
+        for extension_array_column in extension_array_columns:
+            extension_array = self.variables[
+                extension_array_column
+            ].data.extension_array
+            index = self[self.variables[extension_array_column].dims[0]].data
+            cat_df = pd.DataFrame(
+                {extension_array_column: extension_array},
+                index=self[self.variables[extension_array_column].dims[0]].data,
+            )
+            cat_df.index.name = self.variables[extension_array_column].dims[0]
+            broadcasted_df = broadcasted_df.join(cat_df)
+        return broadcasted_df
 
     def to_dataframe(self, dim_order: Sequence[Hashable] | None = None) -> pd.DataFrame:
         """Convert this dataset into a pandas.DataFrame.
@@ -7311,11 +7334,14 @@ class Dataset(
                 "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
             )
 
-        # Cast to a NumPy array first, in case the Series is a pandas Extension
-        # array (which doesn't have a valid NumPy dtype)
-        # TODO: allow users to control how this casting happens, e.g., by
-        # forwarding arguments to pandas.Series.to_numpy?
-        arrays = [(k, np.asarray(v)) for k, v in dataframe.items()]
+        arrays = [
+            (k, np.asarray(v))
+            for k, v in dataframe.items()
+            if not is_extension_array_dtype(v)
+        ]
+        extension_arrays = [
+            (k, v) for k, v in dataframe.items() if is_extension_array_dtype(v)
+        ]
 
         indexes: dict[Hashable, Index] = {}
         index_vars: dict[Hashable, Variable] = {}
@@ -7329,6 +7355,8 @@ class Dataset(
                 xr_idx = PandasIndex(lev, dim)
                 indexes[dim] = xr_idx
                 index_vars.update(xr_idx.create_variables())
+            arrays += [(k, np.asarray(v)) for k, v in extension_arrays]
+            extension_arrays = []
         else:
             index_name = idx.name if idx.name is not None else "index"
             dims = (index_name,)
@@ -7342,6 +7370,8 @@ class Dataset(
             obj._set_sparse_data_from_dataframe(idx, arrays, dims)
         else:
             obj._set_numpy_data_from_dataframe(idx, arrays, dims)
+        for name, extension_array in extension_arrays:
+            obj[name] = (dims, extension_array)
         return obj
 
     def to_dask_dataframe(
