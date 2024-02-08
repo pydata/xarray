@@ -472,7 +472,7 @@ class TestFormatting:
                 "bar": np.array([1, 2, 3], dtype=np.uint64),
             }
         )
-        ds[(1, 2)] = xr.DataArray([0], dims="test")
+        ds[(1, 2)] = xr.DataArray(np.array([0], dtype=np.uint64), dims="test")
         ds_12 = ds[(1, 2)]
 
         # Test repr function behaves correctly:
@@ -481,7 +481,7 @@ class TestFormatting:
         expected = dedent(
             """\
         <xarray.DataArray (1, 2) (test: 1)> Size: 8B
-        array([0])
+        array([0], dtype=uint64)
         Dimensions without coordinates: test"""
         )
 
