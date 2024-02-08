@@ -1068,6 +1068,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if chunkmanager.is_chunked_array(data_old):
             data_chunked = chunkmanager.rechunk(data_old, chunks)
         else:
+            if is_extension_array_dtype(data_old):  # dask cannot handle pandas types
+                data_old = np.asarray(data_old)
             if not isinstance(data_old, indexing.ExplicitlyIndexed):
                 ndata = data_old
             else:
