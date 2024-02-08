@@ -1634,15 +1634,19 @@ class TestVariable:
         variable = xr.Variable("x", array)
 
         args = [
-            item * unit
-            if isinstance(item, (int, float, list)) and func.name != "item"
-            else item
+            (
+                item * unit
+                if isinstance(item, (int, float, list)) and func.name != "item"
+                else item
+            )
             for item in func.args
         ]
         kwargs = {
-            key: value * unit
-            if isinstance(value, (int, float, list)) and func.name != "item"
-            else value
+            key: (
+                value * unit
+                if isinstance(value, (int, float, list)) and func.name != "item"
+                else value
+            )
             for key, value in func.kwargs.items()
         }
 
@@ -1653,15 +1657,19 @@ class TestVariable:
             return
 
         converted_args = [
-            strip_units(convert_units(item, {None: unit_registry.m}))
-            if func.name != "item"
-            else item
+            (
+                strip_units(convert_units(item, {None: unit_registry.m}))
+                if func.name != "item"
+                else item
+            )
             for item in args
         ]
         converted_kwargs = {
-            key: strip_units(convert_units(value, {None: unit_registry.m}))
-            if func.name != "item"
-            else value
+            key: (
+                strip_units(convert_units(value, {None: unit_registry.m}))
+                if func.name != "item"
+                else value
+            )
             for key, value in kwargs.items()
         }
 
@@ -1973,9 +1981,11 @@ class TestVariable:
                 strip_units(
                     convert_units(
                         other,
-                        {None: base_unit}
-                        if is_compatible(base_unit, unit)
-                        else {None: None},
+                        (
+                            {None: base_unit}
+                            if is_compatible(base_unit, unit)
+                            else {None: None}
+                        ),
                     )
                 ),
             ),
@@ -2003,6 +2013,7 @@ class TestVariable:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize(
         "func",
         (
@@ -2024,7 +2035,7 @@ class TestVariable:
         ),
         ids=repr,
     )
-    def test_computation(self, func, dtype):
+    def test_computation(self, func, dtype, compute_backend):
         base_unit = unit_registry.m
         array = np.linspace(0, 5, 5 * 10).reshape(5, 10).astype(dtype) * base_unit
         variable = xr.Variable(("x", "y"), array)
@@ -3756,6 +3767,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize(
         "variant",
         (
@@ -3776,7 +3788,7 @@ class TestDataArray:
         ),
         ids=repr,
     )
-    def test_computation(self, func, variant, dtype):
+    def test_computation(self, func, variant, dtype, compute_backend):
         unit = unit_registry.m
 
         variants = {
@@ -3882,6 +3894,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize(
         "variant",
         (
@@ -3902,7 +3915,7 @@ class TestDataArray:
         ),
         ids=repr,
     )
-    def test_grouped_operations(self, func, variant, dtype):
+    def test_grouped_operations(self, func, variant, dtype, compute_backend):
         unit = unit_registry.m
 
         variants = {
@@ -5239,6 +5252,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize(
         "func",
         (
@@ -5261,7 +5275,7 @@ class TestDataset:
             "coords",
         ),
     )
-    def test_computation(self, func, variant, dtype):
+    def test_computation(self, func, variant, dtype, compute_backend):
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
             "dims": ((1, 1), unit_registry.m, 1),
@@ -5393,6 +5407,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize(
         "func",
         (
@@ -5414,7 +5429,7 @@ class TestDataset:
             "coords",
         ),
     )
-    def test_grouped_operations(self, func, variant, dtype):
+    def test_grouped_operations(self, func, variant, dtype, compute_backend):
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
             "dims": ((1, 1), unit_registry.m, 1),

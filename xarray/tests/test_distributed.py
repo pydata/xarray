@@ -1,4 +1,5 @@
 """ isort:skip_file """
+
 from __future__ import annotations
 
 import pickle
