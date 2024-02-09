@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 import pytest
-from packaging.version import Version
 
 from xarray import DataArray, infer_freq
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
@@ -135,13 +133,7 @@ def test_convert_calendar_missing(source, target, freq):
     )
     out = convert_calendar(da_src, target, missing=np.nan, align_on="date")
 
-    if Version(pd.__version__) < Version("2.2"):
-        if freq == "4h" and target == "proleptic_gregorian":
-            expected_freq = "4H"
-        else:
-            expected_freq = freq
-    else:
-        expected_freq = freq
+    expected_freq = freq
     assert infer_freq(out.time) == expected_freq
 
     expected = date_range(
