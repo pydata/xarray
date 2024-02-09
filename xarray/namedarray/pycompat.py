@@ -101,10 +101,10 @@ def to_numpy(data: duckarray[Any, Any]) -> np.ndarray[Any, np.dtype[Any]]:
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
     if isinstance(data, ExplicitlyIndexed):
-        data = data.get_duck_array()  # type: ignore
+        data = data.get_duck_array()  # type: ignore[no-untyped-call]
 
     # TODO first attempt to call .to_numpy() once some libraries implement it
-    if hasattr(data, "chunks"):
+    if is_chunked_array(data):
         chunkmanager = get_chunked_array_type(data)
         data, *_ = chunkmanager.compute(data)
     if isinstance(data, array_type("cupy")):
@@ -121,10 +121,16 @@ def to_numpy(data: duckarray[Any, Any]) -> np.ndarray[Any, np.dtype[Any]]:
 
 def to_duck_array(data: Any) -> duckarray[_ShapeType, _DType]:
     from xarray.core.indexing import ExplicitlyIndexed
+    from xarray.namedarray.parallelcompat import get_chunked_array_type
+
+    if is_chunked_array(data):
+        chunkmanager = get_chunked_array_type(data)
+        loaded_data, *_ = chunkmanager.compute(data)  # type: ignore[var-annotated]
+        return loaded_data
 
     if isinstance(data, ExplicitlyIndexed):
-        return data.get_duck_array()  # type: ignore
+        return data.get_duck_array()  # type: ignore[no-untyped-call, no-any-return]
     elif is_duck_array(data):
         return data
     else:
-        return np.asarray(data)  # type: ignore
+        return np.asarray(data)  # type: ignore[return-value]

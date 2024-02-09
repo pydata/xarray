@@ -35,11 +35,9 @@ from xarray.core.utils import (
     maybe_coerce_to_str,
 )
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
-from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import (
     integer_types,
     is_0d_dask_array,
-    is_chunked_array,
     to_duck_array,
 )
 from xarray.namedarray.utils import (
@@ -934,12 +932,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         dask.array.compute
         """
-        if is_chunked_array(self._data):
-            chunkmanager = get_chunked_array_type(self._data)
-            loaded_data, *_ = chunkmanager.compute(self._data, **kwargs)
-            self._data = as_compatible_data(loaded_data)
-        else:
-            self._data = to_duck_array(self._data)
+        self._data = to_duck_array(self._data)
         return self
 
     def compute(self, **kwargs):
