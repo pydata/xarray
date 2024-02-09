@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 import warnings
 from abc import ABC
 from copy import copy, deepcopy
@@ -58,8 +57,6 @@ _PAD_XR_NP_ARGS = [
     [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
     [{"x": (3, 1), "z": 2}, ((3, 1), (0, 0), (2, 2))],
 ]
-
-ON_WINDOWS = sys.platform == "win32"
 
 
 @pytest.fixture
@@ -1231,26 +1228,16 @@ class TestVariable(VariableSubclassobjects):
 
     def test_repr(self):
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
-        if ON_WINDOWS:
-            expected = dedent(
-                """
-            <xarray.Variable (time: 2, x: 3)> Size: 24B
-            array([[1, 2, 3],
-                   [4, 5, 6]])
-            Attributes:
-                foo:      bar
+        v = v.astype(np.uint64)
+        expected = dedent(
             """
-            ).strip()
-        else:
-            expected = dedent(
-                """
-            <xarray.Variable (time: 2, x: 3)> Size: 48B
-            array([[1, 2, 3],
-                   [4, 5, 6]])
-            Attributes:
-                foo:      bar
-            """
-            ).strip()
+        <xarray.Variable (time: 2, x: 3)> Size: 48B
+        array([[1, 2, 3],
+               [4, 5, 6]], dtype=uint64)
+        Attributes:
+            foo:      bar
+        """
+        ).strip()
         assert expected == repr(v)
 
     def test_repr_lazy_data(self):
