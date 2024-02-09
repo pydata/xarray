@@ -224,7 +224,7 @@ def assert_duckarray_equal(x, y, err_msg="", verbose=True):
     if not is_duck_array(x) and not utils.is_scalar(x):
         x = np.asarray(x)
 
-    if not is_duck_array(x) and not utils.is_scalar(y):
+    if not is_duck_array(y) and not utils.is_scalar(y):
         y = np.asarray(y)
 
     if (is_duck_array(x) and utils.is_scalar(y)) or (
