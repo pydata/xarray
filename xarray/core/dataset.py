@@ -115,7 +115,6 @@ from xarray.core.variable import (
     broadcast_variables,
     calculate_dimensions,
 )
-from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.namedarray.pycompat import array_type, is_chunked_array
 from xarray.namedarray.utils import (
@@ -293,6 +292,9 @@ def _maybe_chunk(
     chunked_array_type: str | ChunkManagerEntrypoint | None = None,
     from_array_kwargs=None,
 ):
+
+    from xarray.namedarray.daskmanager import DaskManager
+
     if chunks is not None:
         chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
 
