@@ -63,7 +63,9 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):  # type: ignore[type-var
             previous_chunks=previous_chunks,
         )  # type: ignore[no-untyped-call]
 
-    def from_array(self, data: Any, chunks: Any, **kwargs: Any) -> Any:
+    def from_array(
+        self, data: Any, chunks: T_Chunks | _NormalizedChunks, **kwargs: Any
+    ) -> DaskArray | Any:
         import dask.array as da
 
         if isinstance(data, ImplicitToExplicitIndexingAdapter):
