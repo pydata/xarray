@@ -37,17 +37,18 @@ def short_data_repr_html(array) -> str:
     return f"<pre>{text}</pre>"
 
 
-def format_dims(dims, dims_with_index) -> str:
-    if not dims:
+def format_dims(dim_sizes, dims_with_index) -> str:
+    if not dim_sizes:
         return ""
 
     dim_css_map = {
-        dim: " class='xr-has-index'" if dim in dims_with_index else "" for dim in dims
+        dim: " class='xr-has-index'" if dim in dims_with_index else ""
+        for dim in dim_sizes
     }
 
     dims_li = "".join(
-        f"<li><span{dim_css_map[dim]}>" f"{escape(str(dim))}</span>: {size}</li>"
-        for dim, size in dims.items()
+        f"<li><span{dim_css_map[dim]}>{escape(str(dim))}</span>: {size}</li>"
+        for dim, size in dim_sizes.items()
     )
 
     return f"<ul class='xr-dim-list'>{dims_li}</ul>"
@@ -55,7 +56,7 @@ def format_dims(dims, dims_with_index) -> str:
 
 def summarize_attrs(attrs) -> str:
     attrs_dl = "".join(
-        f"<dt><span>{escape(str(k))} :</span></dt>" f"<dd>{escape(str(v))}</dd>"
+        f"<dt><span>{escape(str(k))} :</span></dt><dd>{escape(str(v))}</dd>"
         for k, v in attrs.items()
     )
 
@@ -204,7 +205,7 @@ def _mapping_section(
 
 
 def dim_section(obj) -> str:
-    dim_list = format_dims(obj.dims, obj.xindexes.dims)
+    dim_list = format_dims(obj.sizes, obj.xindexes.dims)
 
     return collapsible_section(
         "Dimensions", inline_details=dim_list, enabled=False, collapsed=True

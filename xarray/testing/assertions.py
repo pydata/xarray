@@ -1,4 +1,5 @@
 """Testing functions exposed to the user API"""
+
 import functools
 import warnings
 from collections.abc import Hashable
@@ -13,15 +14,6 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex, default_indexes
 from xarray.core.variable import IndexVariable, Variable
-
-__all__ = (
-    "assert_allclose",
-    "assert_chunks_equal",
-    "assert_duckarray_equal",
-    "assert_duckarray_allclose",
-    "assert_equal",
-    "assert_identical",
-)
 
 
 def ensure_warnings(func):

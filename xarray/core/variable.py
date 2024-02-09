@@ -42,11 +42,11 @@ from xarray.core.utils import (
     drop_dims_from_indexers,
     either_dict_or_kwargs,
     ensure_us_time_resolution,
-    infix_dims,
     is_duck_array,
     maybe_coerce_to_str,
 )
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
+from xarray.namedarray.utils import infix_dims
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -1231,14 +1231,12 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         self,
         pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
         mode: PadModeOptions = "constant",
-        stat_length: int
-        | tuple[int, int]
-        | Mapping[Any, tuple[int, int]]
-        | None = None,
-        constant_values: float
-        | tuple[float, float]
-        | Mapping[Any, tuple[float, float]]
-        | None = None,
+        stat_length: (
+            int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
+        ) = None,
+        constant_values: (
+            float | tuple[float, float] | Mapping[Any, tuple[float, float]] | None
+        ) = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
         keep_attrs: bool | None = None,
@@ -1476,7 +1474,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             tmp_shape = tuple(dims_map[d] for d in expanded_dims)
             expanded_data = duck_array_ops.broadcast_to(self.data, tmp_shape)
         else:
-            expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]
+            indexer = (None,) * (len(expanded_dims) - self.ndim) + (...,)
+            expanded_data = self.data[indexer]
 
         expanded_var = Variable(
             expanded_dims, expanded_data, self._attrs, self._encoding, fastpath=True
@@ -1571,7 +1570,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         reordered = self.transpose(*dim_order)
 
         new_shape = reordered.shape[: len(other_dims)] + new_dim_sizes
-        new_data = reordered.data.reshape(new_shape)
+        new_data = duck_array_ops.reshape(reordered.data, new_shape)
         new_dims = reordered.dims[: len(other_dims)] + new_dim_names
 
         return type(self)(
@@ -1993,7 +1992,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             method = interpolation
 
         if skipna or (skipna is None and self.dtype.kind in "cfO"):
-            _quantile_func = np.nanquantile
+            _quantile_func = nputils.nanquantile
         else:
             _quantile_func = np.quantile
 
@@ -2121,7 +2120,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         >>> v = Variable(("a", "b"), np.arange(8).reshape((2, 4)))
         >>> v.rolling_window("b", 3, "window_dim")
-        <xarray.Variable (a: 2, b: 4, window_dim: 3)>
+        <xarray.Variable (a: 2, b: 4, window_dim: 3)> Size: 192B
         array([[[nan, nan,  0.],
                 [nan,  0.,  1.],
                 [ 0.,  1.,  2.],
@@ -2133,7 +2132,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 [ 5.,  6.,  7.]]])
 
         >>> v.rolling_window("b", 3, "window_dim", center=True)
-        <xarray.Variable (a: 2, b: 4, window_dim: 3)>
+        <xarray.Variable (a: 2, b: 4, window_dim: 3)> Size: 192B
         array([[[nan,  0.,  1.],
                 [ 0.,  1.,  2.],
                 [ 1.,  2.,  3.],
@@ -2310,10 +2309,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         >>> var = xr.Variable("x", [1, np.nan, 3])
         >>> var
-        <xarray.Variable (x: 3)>
+        <xarray.Variable (x: 3)> Size: 24B
         array([ 1., nan,  3.])
         >>> var.isnull()
-        <xarray.Variable (x: 3)>
+        <xarray.Variable (x: 3)> Size: 3B
         array([False,  True, False])
         """
         from xarray.core.computation import apply_ufunc
@@ -2344,10 +2343,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         >>> var = xr.Variable("x", [1, np.nan, 3])
         >>> var
-        <xarray.Variable (x: 3)>
+        <xarray.Variable (x: 3)> Size: 24B
         array([ 1., nan,  3.])
         >>> var.notnull()
-        <xarray.Variable (x: 3)>
+        <xarray.Variable (x: 3)> Size: 3B
         array([ True, False,  True])
         """
         from xarray.core.computation import apply_ufunc

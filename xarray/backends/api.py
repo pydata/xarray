@@ -791,13 +791,15 @@ def open_dataarray(
 def open_mfdataset(
     paths: str | NestedSequence[str | os.PathLike],
     chunks: T_Chunks | None = None,
-    concat_dim: str
-    | DataArray
-    | Index
-    | Sequence[str]
-    | Sequence[DataArray]
-    | Sequence[Index]
-    | None = None,
+    concat_dim: (
+        str
+        | DataArray
+        | Index
+        | Sequence[str]
+        | Sequence[DataArray]
+        | Sequence[Index]
+        | None
+    ) = None,
     compat: CompatOptions = "no_conflicts",
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_Engine | None = None,
@@ -1101,8 +1103,7 @@ def to_netcdf(
     *,
     multifile: Literal[True],
     invalid_netcdf: bool = False,
-) -> tuple[ArrayWriter, AbstractDataStore]:
-    ...
+) -> tuple[ArrayWriter, AbstractDataStore]: ...
 
 
 # path=None writes to bytes
@@ -1119,8 +1120,7 @@ def to_netcdf(
     compute: bool = True,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
-) -> bytes:
-    ...
+) -> bytes: ...
 
 
 # compute=False returns dask.Delayed
@@ -1138,8 +1138,7 @@ def to_netcdf(
     compute: Literal[False],
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
-) -> Delayed:
-    ...
+) -> Delayed: ...
 
 
 # default return None
@@ -1156,8 +1155,60 @@ def to_netcdf(
     compute: Literal[True] = True,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
-) -> None:
-    ...
+) -> None: ...
+
+
+# if compute cannot be evaluated at type check time
+# we may get back either Delayed or None
+@overload
+def to_netcdf(
+    dataset: Dataset,
+    path_or_file: str | os.PathLike,
+    mode: Literal["w", "a"] = "w",
+    format: T_NetcdfTypes | None = None,
+    group: str | None = None,
+    engine: T_NetcdfEngine | None = None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+    unlimited_dims: Iterable[Hashable] | None = None,
+    compute: bool = False,
+    multifile: Literal[False] = False,
+    invalid_netcdf: bool = False,
+) -> Delayed | None: ...
+
+
+# if multifile cannot be evaluated at type check time
+# we may get back either writer and datastore or Delayed or None
+@overload
+def to_netcdf(
+    dataset: Dataset,
+    path_or_file: str | os.PathLike,
+    mode: Literal["w", "a"] = "w",
+    format: T_NetcdfTypes | None = None,
+    group: str | None = None,
+    engine: T_NetcdfEngine | None = None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+    unlimited_dims: Iterable[Hashable] | None = None,
+    compute: bool = False,
+    multifile: bool = False,
+    invalid_netcdf: bool = False,
+) -> tuple[ArrayWriter, AbstractDataStore] | Delayed | None: ...
+
+
+# Any
+@overload
+def to_netcdf(
+    dataset: Dataset,
+    path_or_file: str | os.PathLike | None,
+    mode: Literal["w", "a"] = "w",
+    format: T_NetcdfTypes | None = None,
+    group: str | None = None,
+    engine: T_NetcdfEngine | None = None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+    unlimited_dims: Iterable[Hashable] | None = None,
+    compute: bool = False,
+    multifile: bool = False,
+    invalid_netcdf: bool = False,
+) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None: ...
 
 
 def to_netcdf(
@@ -1377,15 +1428,15 @@ def save_mfdataset(
 
     >>> ds = xr.Dataset(
     ...     {"a": ("time", np.linspace(0, 1, 48))},
-    ...     coords={"time": pd.date_range("2010-01-01", freq="M", periods=48)},
+    ...     coords={"time": pd.date_range("2010-01-01", freq="ME", periods=48)},
     ... )
     >>> ds
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 768B
     Dimensions:  (time: 48)
     Coordinates:
-      * time     (time) datetime64[ns] 2010-01-31 2010-02-28 ... 2013-12-31
+      * time     (time) datetime64[ns] 384B 2010-01-31 2010-02-28 ... 2013-12-31
     Data variables:
-        a        (time) float64 0.0 0.02128 0.04255 0.06383 ... 0.9574 0.9787 1.0
+        a        (time) float64 384B 0.0 0.02128 0.04255 ... 0.9574 0.9787 1.0
     >>> years, datasets = zip(*ds.groupby("time.year"))
     >>> paths = [f"{y}.nc" for y in years]
     >>> xr.save_mfdataset(datasets, paths)
@@ -1591,8 +1642,7 @@ def to_zarr(
     zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
-) -> backends.ZarrStore:
-    ...
+) -> backends.ZarrStore: ...
 
 
 # compute=False returns dask.Delayed
@@ -1615,8 +1665,7 @@ def to_zarr(
     zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
-) -> Delayed:
-    ...
+) -> Delayed: ...
 
 
 def to_zarr(

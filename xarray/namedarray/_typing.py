@@ -7,6 +7,7 @@ from typing import (
     Any,
     Callable,
     Final,
+    Literal,
     Protocol,
     SupportsIndex,
     TypeVar,
@@ -29,7 +30,7 @@ _default = Default.token
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
-
+_dtype = np.dtype
 _DType = TypeVar("_DType", bound=np.dtype[Any])
 _DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
 # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
@@ -42,8 +43,7 @@ _ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
 @runtime_checkable
 class _SupportsDType(Protocol[_DType_co]):
     @property
-    def dtype(self) -> _DType_co:
-        ...
+    def dtype(self) -> _DType_co: ...
 
 
 _DTypeLike = Union[
@@ -69,21 +69,26 @@ _Dim = Hashable
 _Dims = tuple[_Dim, ...]
 
 _DimsLike = Union[str, Iterable[_Dim]]
-_AttrsLike = Union[Mapping[Any, Any], None]
 
-_dtype = np.dtype
+# https://data-apis.org/array-api/latest/API_specification/indexing.html
+# TODO: np.array_api was bugged and didn't allow (None,), but should!
+# https://github.com/numpy/numpy/pull/25022
+# https://github.com/data-apis/array-api/pull/674
+_IndexKey = Union[int, slice, "ellipsis"]
+_IndexKeys = tuple[Union[_IndexKey], ...]  #  tuple[Union[_IndexKey, None], ...]
+_IndexKeyLike = Union[_IndexKey, _IndexKeys]
+
+_AttrsLike = Union[Mapping[Any, Any], None]
 
 
 class _SupportsReal(Protocol[_T_co]):
     @property
-    def real(self) -> _T_co:
-        ...
+    def real(self) -> _T_co: ...
 
 
 class _SupportsImag(Protocol[_T_co]):
     @property
-    def imag(self) -> _T_co:
-        ...
+    def imag(self) -> _T_co: ...
 
 
 @runtime_checkable
@@ -95,12 +100,10 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     """
 
     @property
-    def shape(self) -> _Shape:
-        ...
+    def shape(self) -> _Shape: ...
 
     @property
-    def dtype(self) -> _DType_co:
-        ...
+    def dtype(self) -> _DType_co: ...
 
 
 @runtime_checkable
@@ -114,17 +117,32 @@ class _arrayfunction(
     """
 
     @overload
-    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]:
-        ...
+    def __getitem__(
+        self, key: _arrayfunction[Any, Any] | tuple[_arrayfunction[Any, Any], ...], /
+    ) -> _arrayfunction[Any, _DType_co]: ...
 
     @overload
-    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]:
-        ...
+    def __getitem__(self, key: _IndexKeyLike, /) -> Any: ...
+
+    def __getitem__(
+        self,
+        key: (
+            _IndexKeyLike
+            | _arrayfunction[Any, Any]
+            | tuple[_arrayfunction[Any, Any], ...]
+        ),
+        /,
+    ) -> _arrayfunction[Any, _DType_co] | Any: ...
+
+    @overload
+    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]: ...
+
+    @overload
+    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]: ...
 
     def __array__(
         self, dtype: _DType | None = ..., /
-    ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]:
-        ...
+    ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]: ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
@@ -134,8 +152,7 @@ class _arrayfunction(
         method: Any,
         *inputs: Any,
         **kwargs: Any,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
@@ -145,16 +162,13 @@ class _arrayfunction(
         types: Iterable[type],
         args: Iterable[Any],
         kwargs: Mapping[str, Any],
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @property
-    def imag(self) -> _arrayfunction[_ShapeType_co, Any]:
-        ...
+    def imag(self) -> _arrayfunction[_ShapeType_co, Any]: ...
 
     @property
-    def real(self) -> _arrayfunction[_ShapeType_co, Any]:
-        ...
+    def real(self) -> _arrayfunction[_ShapeType_co, Any]: ...
 
 
 @runtime_checkable
@@ -165,8 +179,15 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
     Corresponds to np.ndarray.
     """
 
-    def __array_namespace__(self) -> ModuleType:
-        ...
+    def __getitem__(
+        self,
+        key: (
+            _IndexKeyLike | Any
+        ),  # TODO: Any should be _arrayapi[Any, _dtype[np.integer]]
+        /,
+    ) -> _arrayapi[Any, Any]: ...
+
+    def __array_namespace__(self) -> ModuleType: ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
@@ -191,8 +212,7 @@ class _chunkedarray(
     """
 
     @property
-    def chunks(self) -> _Chunks:
-        ...
+    def chunks(self) -> _Chunks: ...
 
 
 @runtime_checkable
@@ -206,8 +226,7 @@ class _chunkedarrayfunction(
     """
 
     @property
-    def chunks(self) -> _Chunks:
-        ...
+    def chunks(self) -> _Chunks: ...
 
 
 @runtime_checkable
@@ -221,8 +240,7 @@ class _chunkedarrayapi(
     """
 
     @property
-    def chunks(self) -> _Chunks:
-        ...
+    def chunks(self) -> _Chunks: ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
@@ -243,8 +261,7 @@ class _sparsearray(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, _DType_co]:
-        ...
+    def todense(self) -> np.ndarray[Any, _DType_co]: ...
 
 
 @runtime_checkable
@@ -257,8 +274,7 @@ class _sparsearrayfunction(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, _DType_co]:
-        ...
+    def todense(self) -> np.ndarray[Any, _DType_co]: ...
 
 
 @runtime_checkable
@@ -271,14 +287,15 @@ class _sparsearrayapi(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, _DType_co]:
-        ...
+    def todense(self) -> np.ndarray[Any, _DType_co]: ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _sparsearrayfunction_or_api = (_sparsearrayfunction, _sparsearrayapi)
-
 sparseduckarray = Union[
     _sparsearrayfunction[_ShapeType_co, _DType_co],
     _sparsearrayapi[_ShapeType_co, _DType_co],
 ]
+
+ErrorOptions = Literal["raise", "ignore"]
+ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]

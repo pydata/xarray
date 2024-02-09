@@ -289,18 +289,18 @@ class TestDataset:
         # need to insert str dtype at runtime to handle different endianness
         expected = dedent(
             """\
-            <xarray.Dataset>
+            <xarray.Dataset> Size: 2kB
             Dimensions:  (dim2: 9, dim3: 10, time: 20, dim1: 8)
             Coordinates:
-              * dim2     (dim2) float64 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
-              * dim3     (dim3) %s 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
-              * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-20
-                numbers  (dim3) int64 0 1 2 0 0 1 1 2 2 3
+              * dim2     (dim2) float64 72B 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
+              * dim3     (dim3) %s 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+              * time     (time) datetime64[ns] 160B 2000-01-01 2000-01-02 ... 2000-01-20
+                numbers  (dim3) int64 80B 0 1 2 0 0 1 1 2 2 3
             Dimensions without coordinates: dim1
             Data variables:
-                var1     (dim1, dim2) float64 -1.086 0.9973 0.283 ... 0.1995 0.4684 -0.8312
-                var2     (dim1, dim2) float64 1.162 -1.097 -2.123 ... 0.1302 1.267 0.3328
-                var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 ... -0.2452 -0.3616
+                var1     (dim1, dim2) float64 576B -1.086 0.9973 0.283 ... 0.4684 -0.8312
+                var2     (dim1, dim2) float64 576B 1.162 -1.097 -2.123 ... 1.267 0.3328
+                var3     (dim3, dim1) float64 640B 0.5565 -0.2121 0.4563 ... -0.2452 -0.3616
             Attributes:
                 foo:      bar"""
             % data["dim3"].dtype
@@ -315,7 +315,7 @@ class TestDataset:
 
         expected = dedent(
             """\
-            <xarray.Dataset>
+            <xarray.Dataset> Size: 0B
             Dimensions:  ()
             Data variables:
                 *empty*"""
@@ -328,10 +328,10 @@ class TestDataset:
         data = Dataset({"foo": ("x", np.ones(10))}).mean()
         expected = dedent(
             """\
-            <xarray.Dataset>
+            <xarray.Dataset> Size: 8B
             Dimensions:  ()
             Data variables:
-                foo      float64 1.0"""
+                foo      float64 8B 1.0"""
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
         print(actual)
@@ -345,12 +345,12 @@ class TestDataset:
         data = create_test_multiindex()
         expected = dedent(
             """\
-            <xarray.Dataset>
+            <xarray.Dataset> Size: 96B
             Dimensions:  (x: 4)
             Coordinates:
-              * x        (x) object MultiIndex
-              * level_1  (x) object 'a' 'a' 'b' 'b'
-              * level_2  (x) int64 1 2 1 2
+              * x        (x) object 32B MultiIndex
+              * level_1  (x) object 32B 'a' 'a' 'b' 'b'
+              * level_2  (x) int64 32B 1 2 1 2
             Data variables:
                 *empty*"""
         )
@@ -366,12 +366,12 @@ class TestDataset:
         data = Dataset({}, midx_coords)
         expected = dedent(
             """\
-            <xarray.Dataset>
+            <xarray.Dataset> Size: 96B
             Dimensions:                  (x: 4)
             Coordinates:
-              * x                        (x) object MultiIndex
-              * a_quite_long_level_name  (x) object 'a' 'a' 'b' 'b'
-              * level_2                  (x) int64 1 2 1 2
+              * x                        (x) object 32B MultiIndex
+              * a_quite_long_level_name  (x) object 32B 'a' 'a' 'b' 'b'
+              * level_2                  (x) int64 32B 1 2 1 2
             Data variables:
                 *empty*"""
         )
@@ -394,10 +394,10 @@ class TestDataset:
         byteorder = "<" if sys.byteorder == "little" else ">"
         expected = dedent(
             """\
-            <xarray.Dataset>
+            <xarray.Dataset> Size: 12B
             Dimensions:  (foø: 1)
             Coordinates:
-              * foø      (foø) %cU3 %r
+              * foø      (foø) %cU3 12B %r
             Data variables:
                 *empty*
             Attributes:
@@ -426,11 +426,11 @@ class TestDataset:
         dataset = Dataset({"foo": ("x", Array())})
         expected = dedent(
             """\
-            <xarray.Dataset>
+            <xarray.Dataset> Size: 16B
             Dimensions:  (x: 2)
             Dimensions without coordinates: x
             Data variables:
-                foo      (x) float64 Custom Array"""
+                foo      (x) float64 16B Custom Array"""
         )
         assert expected == repr(dataset)
 
@@ -675,8 +675,7 @@ class TestDataset:
             Dataset(coords={"x": midx})
 
     def test_constructor_custom_index(self) -> None:
-        class CustomIndex(Index):
-            ...
+        class CustomIndex(Index): ...
 
         coords = Coordinates(
             coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
@@ -687,6 +686,7 @@ class TestDataset:
         # test coordinate variables copied
         assert ds.variables["x"] is not coords.variables["x"]
 
+    @pytest.mark.filterwarnings("ignore:return type")
     def test_properties(self) -> None:
         ds = create_test_data()
 
@@ -694,10 +694,15 @@ class TestDataset:
         # These exact types aren't public API, but this makes sure we don't
         # change them inadvertently:
         assert isinstance(ds.dims, utils.Frozen)
+        # TODO change after deprecation cycle in GH #8500 is complete
         assert isinstance(ds.dims.mapping, dict)
         assert type(ds.dims.mapping) is dict  # noqa: E721
-        assert ds.dims == {"dim1": 8, "dim2": 9, "dim3": 10, "time": 20}
-        assert ds.sizes == ds.dims
+        with pytest.warns(
+            FutureWarning,
+            match=" To access a mapping from dimension names to lengths, please use `Dataset.sizes`",
+        ):
+            assert ds.dims == ds.sizes
+        assert ds.sizes == {"dim1": 8, "dim2": 9, "dim3": 10, "time": 20}
 
         # dtypes
         assert isinstance(ds.dtypes, utils.Frozen)
@@ -748,6 +753,27 @@ class TestDataset:
             Dataset({"x": np.int64(1), "y": np.array([1, 2], dtype=np.float32)}).nbytes
             == 16
         )
+
+    def test_warn_ds_dims_deprecation(self) -> None:
+        # TODO remove after deprecation cycle in GH #8500 is complete
+        ds = create_test_data()
+
+        with pytest.warns(FutureWarning, match="return type"):
+            ds.dims["dim1"]
+
+        with pytest.warns(FutureWarning, match="return type"):
+            ds.dims.keys()
+
+        with pytest.warns(FutureWarning, match="return type"):
+            ds.dims.values()
+
+        with pytest.warns(FutureWarning, match="return type"):
+            ds.dims.items()
+
+        with assert_no_warnings():
+            len(ds.dims)
+            ds.dims.__iter__()
+            "dim1" in ds.dims
 
     def test_asarray(self) -> None:
         ds = Dataset({"x": 0})
@@ -804,7 +830,7 @@ class TestDataset:
         b = Dataset()
         b["x"] = ("x", vec, attributes)
         assert_identical(a["x"], b["x"])
-        assert a.dims == b.dims
+        assert a.sizes == b.sizes
         # this should work
         a["x"] = ("x", vec[:5])
         a["z"] = ("x", np.arange(5))
@@ -856,16 +882,16 @@ class TestDataset:
         expected = dedent(
             """\
         Coordinates:
-          * x        (x) int64 -1 -2
-          * y        (y) int64 0 1 2
-            a        (x) int64 4 5
-            b        int64 -10"""
+          * x        (x) int64 16B -1 -2
+          * y        (y) int64 24B 0 1 2
+            a        (x) int64 16B 4 5
+            b        int64 8B -10"""
         )
         actual = repr(coords)
         assert expected == actual
 
         # dims
-        assert coords.dims == {"x": 2, "y": 3}
+        assert coords.sizes == {"x": 2, "y": 3}
 
         # dtypes
         assert coords.dtypes == {
@@ -1049,8 +1075,8 @@ class TestDataset:
         expected = dedent(
             """\
         Data variables:
-            foo      (x) float64 1.0
-            bar      float64 2.0"""
+            foo      (x) float64 8B 1.0
+            bar      float64 8B 2.0"""
         )
         actual = repr(ds.data_vars)
         assert expected == actual
@@ -1215,9 +1241,9 @@ class TestDataset:
         assert list(data.dims) == list(ret.dims)
         for d in data.dims:
             if d in slicers:
-                assert ret.dims[d] == np.arange(data.dims[d])[slicers[d]].size
+                assert ret.sizes[d] == np.arange(data.sizes[d])[slicers[d]].size
             else:
-                assert data.dims[d] == ret.dims[d]
+                assert data.sizes[d] == ret.sizes[d]
         # Verify that the data is what we expect
         for v in data.variables:
             assert data[v].dims == ret[v].dims
@@ -1251,19 +1277,19 @@ class TestDataset:
         assert_identical(data, data.isel(not_a_dim=slice(0, 2), missing_dims="ignore"))
 
         ret = data.isel(dim1=0)
-        assert {"time": 20, "dim2": 9, "dim3": 10} == ret.dims
+        assert {"time": 20, "dim2": 9, "dim3": 10} == ret.sizes
         assert set(data.data_vars) == set(ret.data_vars)
         assert set(data.coords) == set(ret.coords)
         assert set(data.xindexes) == set(ret.xindexes)
 
         ret = data.isel(time=slice(2), dim1=0, dim2=slice(5))
-        assert {"time": 2, "dim2": 5, "dim3": 10} == ret.dims
+        assert {"time": 2, "dim2": 5, "dim3": 10} == ret.sizes
         assert set(data.data_vars) == set(ret.data_vars)
         assert set(data.coords) == set(ret.coords)
         assert set(data.xindexes) == set(ret.xindexes)
 
         ret = data.isel(time=0, dim1=0, dim2=slice(5))
-        assert {"dim2": 5, "dim3": 10} == ret.dims
+        assert {"dim2": 5, "dim3": 10} == ret.sizes
         assert set(data.data_vars) == set(ret.data_vars)
         assert set(data.coords) == set(ret.coords)
         assert set(data.xindexes) == set(list(ret.xindexes) + ["time"])
@@ -2697,8 +2723,7 @@ class TestDataset:
         assert_identical(data, actual)
 
         with pytest.raises(ValueError):
-            with pytest.warns(DeprecationWarning):
-                data.drop(["c"], dim="x", errors="wrong_value")  # type: ignore[arg-type]
+            data.drop(["c"], dim="x", errors="wrong_value")  # type: ignore[arg-type]
 
         with pytest.warns(DeprecationWarning):
             actual = data.drop(["a", "b", "c"], "x", errors="ignore")
@@ -3132,8 +3157,7 @@ class TestDataset:
                 original.rename({"a": "x"})
 
         with pytest.raises(ValueError, match=r"'b' conflicts"):
-            with pytest.warns(UserWarning, match="does not create an index anymore"):
-                original.rename({"a": "b"})
+            original.rename({"a": "b"})
 
     def test_rename_perserve_attrs_encoding(self) -> None:
         # test propagate attrs/encoding to new variable(s) created from Index object
@@ -3578,8 +3602,7 @@ class TestDataset:
         expected_mindex = ds.set_index(x=["foo", "bar"])
         assert_identical(actual_mindex, expected_mindex)
 
-        class NotAnIndex:
-            ...
+        class NotAnIndex: ...
 
         with pytest.raises(TypeError, match=".*not a subclass of xarray.Index"):
             ds.set_xindex("foo", NotAnIndex)  # type: ignore
@@ -5019,7 +5042,7 @@ class TestDataset:
         roundtripped = pickle.loads(pickle.dumps(data))
         assert_identical(data, roundtripped)
         # regression test for #167:
-        assert data.dims == roundtripped.dims
+        assert data.sizes == roundtripped.sizes
 
     def test_lazy_load(self) -> None:
         store = InaccessibleVariableDataStore()
@@ -5477,7 +5500,7 @@ class TestDataset:
         data2 = create_test_data(seed=44)
         add_vars = {"var4": ["dim1", "dim2"], "var5": ["dim1"]}
         for v, dims in sorted(add_vars.items()):
-            size = tuple(data1.dims[d] for d in dims)
+            size = tuple(data1.sizes[d] for d in dims)
             data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {"foo": "variable"})
 
@@ -5637,9 +5660,10 @@ class TestDataset:
         )
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
-    def test_quantile(self, q, skipna) -> None:
+    def test_quantile(self, q, skipna, compute_backend) -> None:
         ds = create_test_data(seed=123)
         ds.var1.data[0, 0] = np.nan
 
@@ -5660,8 +5684,9 @@ class TestDataset:
         assert "dim3" in ds_quantile.dims
         assert all(d not in ds_quantile.dims for d in dim)
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("skipna", [True, False])
-    def test_quantile_skipna(self, skipna) -> None:
+    def test_quantile_skipna(self, skipna, compute_backend) -> None:
         q = 0.1
         dim = "time"
         ds = Dataset({"a": ([dim], np.arange(0, 11))})
@@ -6526,7 +6551,7 @@ class TestDataset:
         assert padded["var1"].shape == (8, 11)
         assert padded["var2"].shape == (8, 11)
         assert padded["var3"].shape == (10, 8)
-        assert dict(padded.dims) == {"dim1": 8, "dim2": 11, "dim3": 10, "time": 20}
+        assert dict(padded.sizes) == {"dim1": 8, "dim2": 11, "dim3": 10, "time": 20}
 
         np.testing.assert_equal(padded["var1"].isel(dim2=[0, -1]).data, 42)
         np.testing.assert_equal(padded["dim2"][[0, -1]].data, np.nan)
@@ -6741,6 +6766,23 @@ class TestDataset:
 
 
 # pytest tests — new tests should go here, rather than in the class.
+
+
+@pytest.mark.parametrize("parser", ["pandas", "python"])
+def test_eval(ds, parser) -> None:
+    """Currently much more minimal testing that `query` above, and much of the setup
+    isn't used. But the risks are fairly low — `query` shares much of the code, and
+    the method is currently experimental."""
+
+    actual = ds.eval("z1 + 5", parser=parser)
+    expect = ds["z1"] + 5
+    assert_identical(expect, actual)
+
+    # check pandas query syntax is supported
+    if parser == "pandas":
+        actual = ds.eval("(z1 > 5) and (z2 > 0)", parser=parser)
+        expect = (ds["z1"] > 5) & (ds["z2"] > 0)
+        assert_identical(expect, actual)
 
 
 @pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
@@ -7221,7 +7263,7 @@ def test_clip(ds) -> None:
     assert all((result.max(...) <= 0.75).values())
 
     result = ds.clip(min=ds.mean("y"), max=ds.mean("y"))
-    assert result.dims == ds.dims
+    assert result.sizes == ds.sizes
 
 
 class TestDropDuplicates:

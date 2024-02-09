@@ -1,4 +1,5 @@
 """Time offset classes for use with cftime.datetime objects"""
+
 # The offset classes and mechanisms for generating time ranges defined in
 # this module were copied/adapted from those defined in pandas.  See in
 # particular the objects and methods defined in pandas.tseries.offsets
@@ -573,7 +574,7 @@ class YearBegin(YearOffset):
 
 
 class YearEnd(YearOffset):
-    _freq = "Y"
+    _freq = "YE"
     _day_option = "end"
     _default_month = 12
 
@@ -669,6 +670,7 @@ _FREQUENCIES = {
     "A": YearEnd,
     "AS": YearBegin,
     "Y": YearEnd,
+    "YE": YearEnd,
     "YS": YearBegin,
     "Q": partial(QuarterEnd, month=12),
     "QE": partial(QuarterEnd, month=12),
@@ -691,6 +693,7 @@ _FREQUENCIES = {
     **_generate_anchored_offsets("A", YearEnd),
     **_generate_anchored_offsets("YS", YearBegin),
     **_generate_anchored_offsets("Y", YearEnd),
+    **_generate_anchored_offsets("YE", YearEnd),
     **_generate_anchored_offsets("QS", QuarterBegin),
     **_generate_anchored_offsets("Q", QuarterEnd),
     **_generate_anchored_offsets("QE", QuarterEnd),
@@ -698,7 +701,7 @@ _FREQUENCIES = {
 
 
 _FREQUENCY_CONDITION = "|".join(_FREQUENCIES.keys())
-_PATTERN = rf"^((?P<multiple>\d+)|())(?P<freq>({_FREQUENCY_CONDITION}))$"
+_PATTERN = rf"^((?P<multiple>[+-]?\d+)|())(?P<freq>({_FREQUENCY_CONDITION}))$"
 
 
 # pandas defines these offsets as "Tick" objects, which for instance have
@@ -716,7 +719,8 @@ def _generate_anchored_deprecated_frequencies(deprecated, recommended):
 
 
 _DEPRECATED_FREQUENICES = {
-    "A": "Y",
+    "A": "YE",
+    "Y": "YE",
     "AS": "YS",
     "Q": "QE",
     "M": "ME",
@@ -725,7 +729,8 @@ _DEPRECATED_FREQUENICES = {
     "S": "s",
     "L": "ms",
     "U": "us",
-    **_generate_anchored_deprecated_frequencies("A", "Y"),
+    **_generate_anchored_deprecated_frequencies("A", "YE"),
+    **_generate_anchored_deprecated_frequencies("Y", "YE"),
     **_generate_anchored_deprecated_frequencies("AS", "YS"),
     **_generate_anchored_deprecated_frequencies("Q", "QE"),
 }
@@ -821,7 +826,8 @@ def _generate_range(start, end, periods, offset):
     """Generate a regular range of cftime.datetime objects with a
     given time offset.
 
-    Adapted from pandas.tseries.offsets.generate_range.
+    Adapted from pandas.tseries.offsets.generate_range (now at
+    pandas.core.arrays.datetimes._generate_range).
 
     Parameters
     ----------
@@ -841,10 +847,7 @@ def _generate_range(start, end, periods, offset):
     if start:
         start = offset.rollforward(start)
 
-    if end:
-        end = offset.rollback(end)
-
-    if periods is None and end < start:
+    if periods is None and end < start and offset.n >= 0:
         end = None
         periods = 0
 
@@ -929,7 +932,7 @@ def cftime_range(
     periods : int, optional
         Number of periods to generate.
     freq : str or None, default: "D"
-        Frequency strings can have multiples, e.g. "5h".
+        Frequency strings can have multiples, e.g. "5h" and negative values, e.g. "-1D".
     normalize : bool, default: False
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
@@ -979,7 +982,7 @@ def cftime_range(
     +--------+--------------------------+
     | Alias  | Description              |
     +========+==========================+
-    | Y      | Year-end frequency       |
+    | YE     | Year-end frequency       |
     +--------+--------------------------+
     | YS     | Year-start frequency     |
     +--------+--------------------------+
@@ -1009,29 +1012,29 @@ def cftime_range(
     +------------+--------------------------------------------------------------------+
     | Alias      | Description                                                        |
     +============+====================================================================+
-    | Y(S)-JAN   | Annual frequency, anchored at the end (or beginning) of January    |
+    | Y(E,S)-JAN | Annual frequency, anchored at the (end, beginning) of January      |
     +------------+--------------------------------------------------------------------+
-    | Y(S)-FEB   | Annual frequency, anchored at the end (or beginning) of February   |
+    | Y(E,S)-FEB | Annual frequency, anchored at the (end, beginning) of February     |
     +------------+--------------------------------------------------------------------+
-    | Y(S)-MAR   | Annual frequency, anchored at the end (or beginning) of March      |
+    | Y(E,S)-MAR | Annual frequency, anchored at the (end, beginning) of March        |
     +------------+--------------------------------------------------------------------+
-    | Y(S)-APR   | Annual frequency, anchored at the end (or beginning) of April      |
+    | Y(E,S)-APR | Annual frequency, anchored at the (end, beginning) of April        |
     +------------+--------------------------------------------------------------------+
-    | Y(S)-MAY   | Annual frequency, anchored at the end (or beginning) of May        |
+    | Y(E,S)-MAY | Annual frequency, anchored at the (end, beginning) of May          |
     +------------+--------------------------------------------------------------------+
-    | Y(S)-JUN   | Annual frequency, anchored at the end (or beginning) of June       |
+    | Y(E,S)-JUN | Annual frequency, anchored at the (end, beginning) of June         |
     +------------+--------------------------------------------------------------------+
-    | Y(S)-JUL   | Annual frequency, anchored at the end (or beginning) of July       |
+    | Y(E,S)-JUL | Annual frequency, anchored at the (end, beginning) of July         |
     +------------+--------------------------------------------------------------------+
-    | Y(S)-AUG   | Annual frequency, anchored at the end (or beginning) of August     |
+    | Y(E,S)-AUG | Annual frequency, anchored at the (end, beginning) of August       |
     +------------+--------------------------------------------------------------------+
-    | Y(S)-SEP   | Annual frequency, anchored at the end (or beginning) of September  |
+    | Y(E,S)-SEP | Annual frequency, anchored at the (end, beginning) of September    |
     +------------+--------------------------------------------------------------------+
-    | Y(S)-OCT   | Annual frequency, anchored at the end (or beginning) of October    |
+    | Y(E,S)-OCT | Annual frequency, anchored at the (end, beginning) of October      |
     +------------+--------------------------------------------------------------------+
-    | Y(S)-NOV   | Annual frequency, anchored at the end (or beginning) of November   |
+    | Y(E,S)-NOV | Annual frequency, anchored at the (end, beginning) of November     |
     +------------+--------------------------------------------------------------------+
-    | Y(S)-DEC   | Annual frequency, anchored at the end (or beginning) of December   |
+    | Y(E,S)-DEC | Annual frequency, anchored at the (end, beginning) of December     |
     +------------+--------------------------------------------------------------------+
     | Q(E,S)-JAN | Quarter frequency, anchored at the (end, beginning) of January     |
     +------------+--------------------------------------------------------------------+
@@ -1172,7 +1175,7 @@ def date_range(
     periods : int, optional
         Number of periods to generate.
     freq : str or None, default: "D"
-        Frequency strings can have multiples, e.g. "5h".
+        Frequency strings can have multiples, e.g. "5h" and negative values, e.g. "-1D".
     tz : str or tzinfo, optional
         Time zone name for returning localized DatetimeIndex, for example
         'Asia/Hong_Kong'. By default, the resulting DatetimeIndex is
@@ -1311,16 +1314,18 @@ def date_range_like(source, calendar, use_cftime=None):
             freq = freq.replace("QE", "Q")
         elif isinstance(freq_as_offset, YearBegin) and "YS" in freq:
             freq = freq.replace("YS", "AS")
-        elif isinstance(freq_as_offset, YearEnd) and "Y-" in freq:
-            # Check for and replace "Y-" instead of just "Y" to prevent
-            # corrupting anchored offsets that contain "Y" in the month
-            # abbreviation, e.g. "Y-MAY" -> "A-MAY".
-            freq = freq.replace("Y-", "A-")
+        elif isinstance(freq_as_offset, YearEnd) and "YE" in freq:
+            freq = freq.replace("YE", "A")
 
     use_cftime = _should_cftime_be_used(source, calendar, use_cftime)
 
     source_start = source.values.min()
     source_end = source.values.max()
+
+    freq_as_offset = to_offset(freq)
+    if freq_as_offset.n < 0:
+        source_start, source_end = source_end, source_start
+
     if is_np_datetime_like(source.dtype):
         # We want to use datetime fields (datetime64 object don't have them)
         source_calendar = "standard"
@@ -1343,7 +1348,7 @@ def date_range_like(source, calendar, use_cftime=None):
 
     # For the cases where the source ends on the end of the month, we expect the same in the new calendar.
     if source_end.day == source_end.daysinmonth and isinstance(
-        to_offset(freq), (YearEnd, QuarterEnd, MonthEnd, Day)
+        freq_as_offset, (YearEnd, QuarterEnd, MonthEnd, Day)
     ):
         end = end.replace(day=end.daysinmonth)
 

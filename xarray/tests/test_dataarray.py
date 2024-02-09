@@ -85,20 +85,23 @@ class TestDataArray:
         self.mindex = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2]], names=("level_1", "level_2")
         )
-        self.mda = DataArray([0, 1, 2, 3], coords={"x": self.mindex}, dims="x")
+        self.mda = DataArray([0, 1, 2, 3], coords={"x": self.mindex}, dims="x").astype(
+            np.uint64
+        )
 
     def test_repr(self) -> None:
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
-        coords = {"x": np.arange(3, dtype=np.int64), "other": np.int64(0)}
+        v = v.astype(np.uint64)
+        coords = {"x": np.arange(3, dtype=np.uint64), "other": np.uint64(0)}
         data_array = DataArray(v, coords, name="my_variable")
         expected = dedent(
             """\
-            <xarray.DataArray 'my_variable' (time: 2, x: 3)>
+            <xarray.DataArray 'my_variable' (time: 2, x: 3)> Size: 48B
             array([[1, 2, 3],
-                   [4, 5, 6]])
+                   [4, 5, 6]], dtype=uint64)
             Coordinates:
-              * x        (x) int64 0 1 2
-                other    int64 0
+              * x        (x) uint64 24B 0 1 2
+                other    uint64 8B 0
             Dimensions without coordinates: time
             Attributes:
                 foo:      bar"""
@@ -108,12 +111,12 @@ class TestDataArray:
     def test_repr_multiindex(self) -> None:
         expected = dedent(
             """\
-            <xarray.DataArray (x: 4)>
-            array([0, 1, 2, 3])
+            <xarray.DataArray (x: 4)> Size: 32B
+            array([0, 1, 2, 3], dtype=uint64)
             Coordinates:
-              * x        (x) object MultiIndex
-              * level_1  (x) object 'a' 'a' 'b' 'b'
-              * level_2  (x) int64 1 2 1 2"""
+              * x        (x) object 32B MultiIndex
+              * level_1  (x) object 32B 'a' 'a' 'b' 'b'
+              * level_2  (x) int64 32B 1 2 1 2"""
         )
         assert expected == repr(self.mda)
 
@@ -122,16 +125,19 @@ class TestDataArray:
             [["a", "b", "c", "d"], [1, 2, 3, 4, 5, 6, 7, 8]],
             names=("level_1", "level_2"),
         )
-        mda_long = DataArray(list(range(32)), coords={"x": mindex_long}, dims="x")
+        mda_long = DataArray(
+            list(range(32)), coords={"x": mindex_long}, dims="x"
+        ).astype(np.uint64)
         expected = dedent(
             """\
-            <xarray.DataArray (x: 32)>
+            <xarray.DataArray (x: 32)> Size: 256B
             array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
-                   17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31])
+                   17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31],
+                  dtype=uint64)
             Coordinates:
-              * x        (x) object MultiIndex
-              * level_1  (x) object 'a' 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
-              * level_2  (x) int64 1 2 3 4 5 6 7 8 1 2 3 4 5 6 ... 4 5 6 7 8 1 2 3 4 5 6 7 8"""
+              * x        (x) object 256B MultiIndex
+              * level_1  (x) object 256B 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
+              * level_2  (x) int64 256B 1 2 3 4 5 6 7 8 1 2 3 4 ... 5 6 7 8 1 2 3 4 5 6 7 8"""
         )
         assert expected == repr(mda_long)
 
@@ -401,8 +407,8 @@ class TestDataArray:
         with pytest.raises(ValueError, match=r"not a subset of the .* dim"):
             DataArray(data, {"x": [0, 1, 2]})
 
-        with pytest.raises(TypeError, match=r"is not a string"):
-            DataArray(data, dims=["x", None])
+        with pytest.raises(TypeError, match=r"is not hashable"):
+            DataArray(data, dims=["x", []])  # type: ignore[list-item]
 
         with pytest.raises(ValueError, match=r"conflicting sizes for dim"):
             DataArray([1, 2, 3], coords=[("x", [0, 1])])
@@ -504,8 +510,7 @@ class TestDataArray:
         assert_identical(da.coords, coords)
 
     def test_constructor_custom_index(self) -> None:
-        class CustomIndex(Index):
-            ...
+        class CustomIndex(Index): ...
 
         coords = Coordinates(
             coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
@@ -1445,8 +1450,8 @@ class TestDataArray:
         expected_repr = dedent(
             """\
         Coordinates:
-          * x        (x) int64 -1 -2
-          * y        (y) int64 0 1 2"""
+          * x        (x) int64 16B -1 -2
+          * y        (y) int64 24B 0 1 2"""
         )
         actual = repr(da.coords)
         assert expected_repr == actual
@@ -2652,6 +2657,14 @@ class TestDataArray:
         actual = renamed.drop_vars("foo", errors="ignore")
         assert_identical(actual, renamed)
 
+    def test_drop_vars_callable(self) -> None:
+        A = DataArray(
+            np.random.randn(2, 3), dims=["x", "y"], coords={"x": [1, 2], "y": [3, 4, 5]}
+        )
+        expected = A.drop_vars(["x", "y"])
+        actual = A.drop_vars(lambda x: x.indexes)
+        assert_identical(expected, actual)
+
     def test_drop_multiindex_level(self) -> None:
         # GH6505
         expected = self.mda.drop_vars(["x", "level_1", "level_2"])
@@ -2881,12 +2894,13 @@ class TestDataArray:
         with pytest.raises(TypeError):
             orig.mean(out=np.ones(orig.shape))
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
         "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
     )
-    def test_quantile(self, q, axis, dim, skipna) -> None:
+    def test_quantile(self, q, axis, dim, skipna, compute_backend) -> None:
         va = self.va.copy(deep=True)
         va[0, 0] = np.nan
 
@@ -4184,9 +4198,7 @@ class TestDataArray:
             xcoord = x
 
         da_raw = DataArray(
-            np.stack(
-                (10 + 1e-15 * x + 2e-28 * x**2, 30 + 2e-14 * x + 1e-29 * x**2)
-            ),
+            np.stack((10 + 1e-15 * x + 2e-28 * x**2, 30 + 2e-14 * x + 1e-29 * x**2)),
             dims=("d", "x"),
             coords={"x": xcoord, "d": [0, 1]},
         )

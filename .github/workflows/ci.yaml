@@ -34,6 +34,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: detect-ci-trigger
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    env:
+      ZARR_V3_EXPERIMENTAL_API: 1
     defaults:
       run:
         shell: bash -l {0}
@@ -42,7 +44,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.9", "3.11"]
+        python-version: ["3.9", "3.11", "3.12"]
         env: [""]
         include:
           # Minimum python version:
@@ -69,7 +71,11 @@ jobs:
 
           if [[ ${{ matrix.os }} == windows* ]] ;
           then
-            echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
+            if [[ ${{ matrix.python-version }} != "3.12" ]]; then
+              echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
+            else
+              echo "CONDA_ENV_FILE=ci/requirements/environment-windows-3.12.yml" >> $GITHUB_ENV
+            fi
           elif [[ "${{ matrix.env }}" != "" ]] ;
           then
             if [[ "${{ matrix.env }}" == "flaky" ]] ;
@@ -80,7 +86,11 @@ jobs:
               echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
             fi
           else
-            echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+            if [[ ${{ matrix.python-version }} != "3.12" ]]; then
+              echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+            else
+              echo "CONDA_ENV_FILE=ci/requirements/environment-3.12.yml" >> $GITHUB_ENV
+            fi
           fi
 
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
@@ -127,13 +137,13 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: Test results for ${{ runner.os }}-${{ matrix.python-version }}
+          name: Test results for ${{ runner.os }}-${{ matrix.python-version }} ${{ matrix.env }}
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v3.1.4
+        uses: codecov/codecov-action@v4.0.1
         with:
           file: ./coverage.xml
           flags: unittests
@@ -147,7 +157,7 @@ jobs:
     if: github.repository == 'pydata/xarray'
     steps:
       - name: Upload
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Event File
           path: ${{ github.event_path }}

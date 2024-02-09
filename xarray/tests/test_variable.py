@@ -1228,11 +1228,12 @@ class TestVariable(VariableSubclassobjects):
 
     def test_repr(self):
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
+        v = v.astype(np.uint64)
         expected = dedent(
             """
-        <xarray.Variable (time: 2, x: 3)>
+        <xarray.Variable (time: 2, x: 3)> Size: 48B
         array([[1, 2, 3],
-               [4, 5, 6]])
+               [4, 5, 6]], dtype=uint64)
         Attributes:
             foo:      bar
         """
@@ -1705,6 +1706,7 @@ class TestVariable(VariableSubclassobjects):
             v * w[0], Variable(["a", "b", "c", "d"], np.einsum("ab,cd->abcd", x, y[0]))
         )
 
+    @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_broadcasting_failures(self):
         a = Variable(["x"], np.arange(10))
         b = Variable(["x"], np.arange(5))
@@ -1753,7 +1755,8 @@ class TestVariable(VariableSubclassobjects):
             v.mean(dim="x", axis=0)
 
     @requires_bottleneck
-    def test_reduce_use_bottleneck(self, monkeypatch):
+    @pytest.mark.parametrize("compute_backend", ["bottleneck"], indirect=True)
+    def test_reduce_use_bottleneck(self, monkeypatch, compute_backend):
         def raise_if_called(*args, **kwargs):
             raise RuntimeError("should not have been called")
 
@@ -1840,13 +1843,15 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(ValueError, match=r"consists of multiple chunks"):
             v.quantile(0.5, dim="x")
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
-    def test_quantile_out_of_bounds(self, q):
+    def test_quantile_out_of_bounds(self, q, compute_backend):
         v = Variable(["x", "y"], self.d)
 
         # escape special characters
         with pytest.raises(
-            ValueError, match=r"Quantiles must be in the range \[0, 1\]"
+            ValueError,
+            match=r"(Q|q)uantiles must be in the range \[0, 1\]",
         ):
             v.quantile(q, dim="x")
 

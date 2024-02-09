@@ -1,4 +1,5 @@
 """FrequencyInferer analog for cftime.datetime objects"""
+
 # The infer_freq method and the _CFTimeFrequencyInferer
 # subclass defined here were copied and adapted for
 # use with cftime.datetime objects based on the source code in
@@ -183,7 +184,7 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
         if len(np.unique(self.index.month)) > 1:
             return None
 
-        return {"cs": "YS", "ce": "Y"}.get(month_anchor_check(self.index))
+        return {"cs": "YS", "ce": "YE"}.get(month_anchor_check(self.index))
 
     def _get_quartely_rule(self):
         if len(self.month_deltas) > 1:
