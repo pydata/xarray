@@ -2478,7 +2478,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         out = super()._to_dense()
         return cast("Variable", out)
 
-    def chunk(
+    def chunk(  # type: ignore[override]
         self,
         chunks: int | Literal["auto"] | Mapping[Any, None | int | tuple[int, ...]] = {},
         name: str | None = None,
@@ -2487,7 +2487,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         chunked_array_type: str | ChunkManagerEntrypoint[Any] | None = None,
         from_array_kwargs: Any = None,
         **chunks_kwargs: Any,
-    ) -> Self:  # type: ignore[override]
+    ) -> Self:
         """Coerce this array's data into a dask array with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
