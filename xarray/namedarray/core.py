@@ -41,8 +41,8 @@ from xarray.namedarray._typing import (
     _SupportsImag,
     _SupportsReal,
 )
-from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
-from xarray.namedarray.pycompat import array_type
+from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.namedarray.pycompat import to_numpy
 from xarray.namedarray.utils import (
     consolidate_dask_from_array_kwargs,
     either_dict_or_kwargs,
@@ -856,23 +856,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def to_numpy(self) -> np.ndarray[Any, Any]:
         """Coerces wrapped data to numpy and returns a numpy.ndarray"""
         # TODO an entrypoint so array libraries can choose coercion method?
-        data = self._data
-
-        # TODO first attempt to call .to_numpy() once some libraries implement it
-        if hasattr(data, "chunks"):
-            chunkmanager = get_chunked_array_type(data)
-            data, *_ = chunkmanager.compute(data)
-        if isinstance(data, array_type("cupy")):
-            data = data.get()
-        # pint has to be imported dynamically as pint imports xarray
-        if isinstance(data, array_type("pint")):
-            data = data.magnitude
-        if isinstance(data, array_type("sparse")):
-            data = data.todense()
-        data = np.asarray(data)  # type: ignore[assignment]
-        data = cast(np.ndarray[Any, Any], data)
-
-        return data
+        return to_numpy(self._data)
 
     def as_numpy(self) -> Self:
         """Coerces wrapped data into a numpy array, returning a Variable."""
