@@ -65,7 +65,7 @@ from xarray.core.coordinates import (
     create_coords_with_default_indexes,
 )
 from xarray.core.daskmanager import DaskManager
-from xarray.core.duck_array_ops import ExtensionDuckArray, datetime_to_numeric
+from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import (
     Index,
     Indexes,
@@ -7155,13 +7155,12 @@ class Dataset(
             k
             for k in self.variables
             if k not in self.dims
-            and not isinstance(self.variables[k].data, ExtensionDuckArray)
+            and not is_extension_array_dtype(self.variables[k].data)
         ]
         extension_array_columns = [
             k
             for k in self.variables
-            if k not in self.dims
-            and isinstance(self.variables[k].data, ExtensionDuckArray)
+            if k not in self.dims and is_extension_array_dtype(self.variables[k].data)
         ]
         data = [
             self._variables[k].set_dims(ordered_dims).values.reshape(-1)

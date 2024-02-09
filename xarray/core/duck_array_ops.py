@@ -340,7 +340,7 @@ def isnull(data):
         return full_like(data, dtype=bool, fill_value=False)
     else:
         # at this point, array should have dtype=object
-        if isinstance(data, np.ndarray) or isinstance(data, ExtensionDuckArray):
+        if isinstance(data, np.ndarray) or is_extension_array_dtype(data):
             return pandas_isnull(data)
         else:
             # Not reachable yet, but intended for use with other duck array
@@ -405,11 +405,11 @@ def asarray(data, xp=np):
 
 def as_shared_dtype(scalars_or_arrays, xp=np):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
-    if any(isinstance(x, ExtensionDuckArray) for x in scalars_or_arrays):
+    if any(is_extension_array_dtype(x) for x in scalars_or_arrays):
         extension_array_types = [
             type(x.extension_array)
             for x in scalars_or_arrays
-            if isinstance(x, ExtensionDuckArray)
+            if is_extension_array_dtype(x)
         ]
         if len(extension_array_types) == len(scalars_or_arrays) and all(
             x == extension_array_types[0] for x in extension_array_types
