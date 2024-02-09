@@ -78,10 +78,12 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):  # type: ignore[type-var
             **kwargs,
         )  # type: ignore[no-untyped-call]
 
-    def compute(self, *data: Any, **kwargs: Any) -> Any:
+    def compute(
+        self, *data: Any, **kwargs: Any
+    ) -> tuple[np.ndarray[Any, _DType_co], ...]:
         from dask.array import compute
 
-        return compute(*data, **kwargs)  # type: ignore[no-untyped-call]
+        return compute(*data, **kwargs)  # type: ignore[no-untyped-call, no-any-return]
 
     @property
     def array_api(self) -> Any:

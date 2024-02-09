@@ -37,7 +37,9 @@ class ChunkedArrayMixinProtocol(Protocol):
     @property
     def chunks(self) -> _NormalizedChunks: ...
 
-    def compute(self, *data: Any, **kwargs: Any) -> np.ndarray[Any, Any]: ...
+    def compute(
+        self, *data: Any, **kwargs: Any
+    ) -> tuple[np.ndarray[Any, _DType_co], ...]: ...
 
 
 T_ChunkedArray = TypeVar("T_ChunkedArray", bound=ChunkedArrayMixinProtocol)
