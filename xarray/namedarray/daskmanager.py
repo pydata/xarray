@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 from packaging.version import Version
@@ -236,10 +236,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):  # type: ignore[type-var
     ) -> tuple[dict[str, _NormalizedChunks], list[DaskArray]]:
         from dask.array.core import unify_chunks
 
-        return cast(
-            tuple[dict[str, _NormalizedChunks], list[DaskArray]],
-            unify_chunks(*args, **kwargs),  # type: ignore[no-untyped-call]
-        )
+        return (unify_chunks(*args, **kwargs),)  # type: ignore[return-value, no-untyped-call]
 
     def store(
         self,
