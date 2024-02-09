@@ -37,7 +37,7 @@ class DaskManager(ChunkManagerEntrypoint[Any]):
         return is_duck_dask_array(data)
 
     def chunks(self, data: Any) -> _NormalizedChunks:
-        return data.chunks  # type: ignore
+        return data.chunks  # type: ignore[no-any-return]
 
     def normalize_chunks(
         self,
@@ -56,7 +56,7 @@ class DaskManager(ChunkManagerEntrypoint[Any]):
             limit=limit,
             dtype=dtype,
             previous_chunks=previous_chunks,
-        )  # type: ignore
+        )  # type: ignore[no-untyped-call]
 
     def from_array(self, data: Any, chunks: Any, **kwargs: Any) -> Any:
         import dask.array as da
@@ -69,12 +69,12 @@ class DaskManager(ChunkManagerEntrypoint[Any]):
             data,
             chunks,
             **kwargs,
-        )  # type: ignore
+        )  # type: ignore[no-untyped-call]
 
     def compute(self, *data: Any, **kwargs: Any) -> Any:
         from dask.array import compute
 
-        return compute(*data, **kwargs)  # type: ignore
+        return compute(*data, **kwargs)  # type: ignore[no-untyped-call]
 
     @property
     def array_api(self) -> Any:
@@ -102,7 +102,7 @@ class DaskManager(ChunkManagerEntrypoint[Any]):
             axis=axis,
             dtype=dtype,
             keepdims=keepdims,
-        )  # type: ignore
+        )  # type: ignore[no-untyped-call]
 
     def scan(
         self,
@@ -124,7 +124,7 @@ class DaskManager(ChunkManagerEntrypoint[Any]):
             axis=axis,
             dtype=dtype,
             **kwargs,
-        )  # type: ignore
+        )  # type: ignore[no-untyped-call]
 
     def apply_gufunc(
         self,
@@ -156,7 +156,7 @@ class DaskManager(ChunkManagerEntrypoint[Any]):
             allow_rechunk=allow_rechunk,
             meta=meta,
             **kwargs,
-        )  # type: ignore
+        )  # type: ignore[no-untyped-call]
 
     def map_blocks(
         self,
@@ -185,7 +185,7 @@ class DaskManager(ChunkManagerEntrypoint[Any]):
             drop_axis=drop_axis,
             new_axis=new_axis,
             **kwargs,
-        )  # type: ignore
+        )  # type: ignore[no-untyped-call]
 
     def blockwise(
         self,
@@ -218,7 +218,7 @@ class DaskManager(ChunkManagerEntrypoint[Any]):
             concatenate=concatenate,
             meta=meta,
             **kwargs,
-        )  # type: ignore
+        )  # type: ignore[no-untyped-call]
 
     def unify_chunks(
         self,
@@ -227,7 +227,7 @@ class DaskManager(ChunkManagerEntrypoint[Any]):
     ) -> Any:
         from dask.array.core import unify_chunks
 
-        return unify_chunks(*args, **kwargs)  # type: ignore
+        return unify_chunks(*args, **kwargs)  # type: ignore[no-untyped-call]
 
     def store(
         self,

@@ -28,14 +28,19 @@ if TYPE_CHECKING:
     )
 
 
-class SupportsRechunk(Protocol):
+class ChunkedArrayMixinProtocol(Protocol):
     def rechunk(self, chunks: Any, **kwargs: Any) -> Any: ...
 
     @property
     def dtype(self) -> np.dtype[Any]: ...
 
+    @property
+    def chunks(self) -> _NormalizedChunks: ...
 
-T_ChunkedArray = TypeVar("T_ChunkedArray", bound=SupportsRechunk)
+    def compute(self, *data: Any, **kwargs: Any) -> np.ndarray[Any, Any]: ...
+
+
+T_ChunkedArray = TypeVar("T_ChunkedArray", bound=ChunkedArrayMixinProtocol)
 
 
 @functools.lru_cache(maxsize=1)
