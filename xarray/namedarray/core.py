@@ -12,7 +12,6 @@ from typing import (
     Generic,
     Literal,
     TypeVar,
-    Union,
     cast,
     overload,
 )
@@ -44,7 +43,6 @@ from xarray.namedarray._typing import (
 from xarray.namedarray.parallelcompat import guess_chunkmanager
 from xarray.namedarray.pycompat import to_numpy
 from xarray.namedarray.utils import (
-    consolidate_dask_from_array_kwargs,
     either_dict_or_kwargs,
     infix_dims,
     is_dict_like,
@@ -733,16 +731,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def chunk(
         self,
-        chunks: (
-            int
-            | Literal["auto"]
-            | tuple[int, ...]
-            | tuple[tuple[int, ...], ...]
-            | Mapping[Any, None | int | tuple[int, ...]]
-        ) = {},
-        name: str | None = None,
-        lock: bool | None = None,
-        inline_array: bool | None = None,
+        chunks: int | Literal["auto"] | Mapping[Any, None | int | tuple[int, ...]] = {},
         chunked_array_type: str | ChunkManagerEntrypoint[Any] | None = None,
         from_array_kwargs: Any = None,
         **chunks_kwargs: Any,
@@ -762,15 +751,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         chunks : int, tuple or dict, optional
             Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
             ``{'x': 5, 'y': 5}``.
-        name : str, optional
-            Used to generate the name for this array in the internal dask
-            graph. Does not need not be unique.
-        lock : bool, default: False
-            Passed on to :py:func:`dask.array.from_array`, if the array is not
-            already as dask array.
-        inline_array : bool, default: False
-            Passed on to :py:func:`dask.array.from_array`, if the array is not
-            already as dask array.
         chunked_array_type: str, optional
             Which chunked array type to coerce this datasets' arrays to.
             Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntrypoint` system.
@@ -796,7 +776,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         dask.array.from_array
         """
 
-        chunks = cast(Union[tuple[tuple[int, ...], ...], tuple[int, ...]], chunks)
+        if from_array_kwargs is None:
+            from_array_kwargs = {}
 
         if chunks is None:
             warnings.warn(
@@ -818,17 +799,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         chunkmanager = guess_chunkmanager(chunked_array_type)
 
-        if from_array_kwargs is None:
-            from_array_kwargs = {}
-
-        # TODO deprecate passing these dask-specific arguments explicitly. In future just pass everything via from_array_kwargs
-        _from_array_kwargs = consolidate_dask_from_array_kwargs(
-            from_array_kwargs,
-            name=name,
-            lock=lock,
-            inline_array=inline_array,
-        )
-
         data_old = self._data
         if chunkmanager.is_chunked_array(data_old):
             data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
@@ -847,9 +817,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[no-untyped-call, assignment]
 
             if is_dict_like(chunks):
-                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
+                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))  # type: ignore[assignment]
 
-            data_chunked = chunkmanager.from_array(ndata, chunks, **_from_array_kwargs)  # type: ignore[arg-type]
+            data_chunked = chunkmanager.from_array(ndata, chunks, **from_array_kwargs)  # type: ignore[arg-type]
 
         return self._replace(data=data_chunked)
 

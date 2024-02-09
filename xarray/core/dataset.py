@@ -102,6 +102,7 @@ from xarray.core.utils import (
     HybridMappingProxy,
     OrderedSet,
     _default,
+    consolidate_dask_from_array_kwargs,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
     emit_user_level_warning,
@@ -118,7 +119,6 @@ from xarray.core.variable import (
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.namedarray.pycompat import array_type, is_chunked_array
 from xarray.namedarray.utils import (
-    consolidate_dask_from_array_kwargs,
     either_dict_or_kwargs,
     infix_dims,
     is_dict_like,
