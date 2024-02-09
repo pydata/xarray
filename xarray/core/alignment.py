@@ -897,6 +897,11 @@ def align(
       * lon      (lon) float64 16B 100.0 120.0
 
     """
+
+    # Test the generalization of the join='strict' mode
+    if join == "exact":
+        join = "strict"
+
     aligner = Aligner(
         objects,
         join=join,
