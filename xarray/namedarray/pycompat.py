@@ -96,7 +96,9 @@ def is_0d_dask_array(x: duckarray[Any, Any]) -> bool:
     return is_duck_dask_array(x) and is_scalar(x)
 
 
-def to_numpy(data: duckarray[Any, Any]) -> np.ndarray[Any, np.dtype[Any]]:
+def to_numpy(
+    data: duckarray[Any, Any], **kwargs: dict[str, Any]
+) -> np.ndarray[Any, np.dtype[Any]]:
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
@@ -106,7 +108,7 @@ def to_numpy(data: duckarray[Any, Any]) -> np.ndarray[Any, np.dtype[Any]]:
     # TODO first attempt to call .to_numpy() once some libraries implement it
     if is_chunked_array(data):
         chunkmanager = get_chunked_array_type(data)
-        data, *_ = chunkmanager.compute(data)
+        data, *_ = chunkmanager.compute(data, **kwargs)
     if isinstance(data, array_type("cupy")):
         data = data.get()
     # pint has to be imported dynamically as pint imports xarray
@@ -119,13 +121,13 @@ def to_numpy(data: duckarray[Any, Any]) -> np.ndarray[Any, np.dtype[Any]]:
     return data
 
 
-def to_duck_array(data: Any) -> duckarray[_ShapeType, _DType]:
+def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, _DType]:
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
     if is_chunked_array(data):
         chunkmanager = get_chunked_array_type(data)
-        loaded_data, *_ = chunkmanager.compute(data)  # type: ignore[var-annotated]
+        loaded_data, *_ = chunkmanager.compute(data, **kwargs)  # type: ignore[var-annotated]
         return loaded_data
 
     if isinstance(data, ExplicitlyIndexed):
