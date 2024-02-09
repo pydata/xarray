@@ -20,7 +20,6 @@ from xarray.core.arithmetic import VariableArithmetic
 from xarray.core.common import AbstractArray
 from xarray.core.indexing import (
     BasicIndexer,
-    ExplicitlyIndexed,
     OuterIndexer,
     PandasIndexingAdapter,
     VectorizedIndexer,
@@ -37,7 +36,12 @@ from xarray.core.utils import (
 )
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import integer_types, is_0d_dask_array, is_chunked_array
+from xarray.namedarray.pycompat import (
+    integer_types,
+    is_0d_dask_array,
+    is_chunked_array,
+    to_duck_array,
+)
 from xarray.namedarray.utils import (
     either_dict_or_kwargs,
     infix_dims,
@@ -934,10 +938,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             chunkmanager = get_chunked_array_type(self._data)
             loaded_data, *_ = chunkmanager.compute(self._data, **kwargs)
             self._data = as_compatible_data(loaded_data)
-        elif isinstance(self._data, ExplicitlyIndexed):
-            self._data = self._data.get_duck_array()
-        elif not is_duck_array(self._data):
-            self._data = np.asarray(self._data)
+        else:
+            self._data = to_duck_array(self._data)
         return self
 
     def compute(self, **kwargs):
