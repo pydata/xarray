@@ -245,14 +245,7 @@ extend-exclude = [
   "doc",
   "_typed_ops.pyi",
 ]
-extend-safe-fixes = [
-  "TID252", # absolute imports
-]
 target-version = "py39"
-
-[tool.ruff.per-file-ignores]
-# don't enforce absolute imports
-"asv_bench/**" = ["TID252"]
 
 [tool.ruff.lint]
 # E402: module level import not at top of file
@@ -271,6 +264,13 @@ select = [
   "I", # isort
   "UP", # Pyupgrade
 ]
+extend-safe-fixes = [
+  "TID252", # absolute imports
+]
+
+[tool.ruff.lint.per-file-ignores]
+# don't enforce absolute imports
+"asv_bench/**" = ["TID252"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["xarray"]
