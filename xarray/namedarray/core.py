@@ -620,7 +620,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self,
     ) -> tuple[PostComputeCallable, tuple[Any, ...]]:
         if is_duck_dask_array(self._data):
-            array_func, array_args = self._data.__dask_postcompute__()  # type: ignore
+            array_func, array_args = self._data.__dask_postcompute__()  # type: ignore[no-untyped-call]
             return self._dask_finalize, (array_func,) + array_args
         else:
             raise AttributeError("Method requires self.data to be a dask array.")
@@ -636,7 +636,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     ]:
         if is_duck_dask_array(self._data):
             a: tuple[PostPersistCallable[Any], tuple[Any, ...]]
-            a = self._data.__dask_postpersist__()  # type: ignore
+            a = self._data.__dask_postpersist__()  # type: ignore[no-untyped-call]
             array_func, array_args = a
 
             return self._dask_finalize, (array_func,) + array_args
@@ -831,7 +831,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         data_old = self._data
         if chunkmanager.is_chunked_array(data_old):
-            data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore
+            data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
         else:
             if not isinstance(data_old, ExplicitlyIndexed):
                 ndata = data_old
@@ -844,12 +844,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 # Using OuterIndexer is a pragmatic choice: dask does not yet handle
                 # different indexing types in an explicit way:
                 # https://github.com/dask/dask/issues/2883
-                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore
+                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[assignment]
 
             if is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
 
-            data_chunked = chunkmanager.from_array(ndata, chunks, **_from_array_kwargs)  # type: ignore
+            data_chunked = chunkmanager.from_array(ndata, chunks, **_from_array_kwargs)  # type: ignore[arg-type]
 
         return self._replace(data=data_chunked)
 
@@ -869,7 +869,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             data = data.magnitude
         if isinstance(data, array_type("sparse")):
             data = data.todense()
-        data = np.asarray(data)  # type: ignore
+        data = np.asarray(data)  # type: ignore[assignment]
         data = cast(np.ndarray[Any, Any], data)
 
         return data
@@ -1055,7 +1055,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if not dim:
             dims = self.dims[::-1]
         else:
-            dims = tuple(infix_dims(dim, self.dims, missing_dims))  # type: ignore
+            dims = tuple(infix_dims(dim, self.dims, missing_dims))  # type: ignore[arg-type]
 
         if len(dims) < 2 or dims == self.dims:
             # no need to transpose if only one dimension
@@ -1134,7 +1134,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         # Ensure the dimensions are in the correct order
         ordered_dims = list(broadcast_shape.keys())
         ordered_shape = tuple(broadcast_shape[d] for d in ordered_dims)
-        data = duck_array_ops.broadcast_to(self._data, ordered_shape)  # type: ignore  # TODO: use array-api-compat function
+        data = duck_array_ops.broadcast_to(self._data, ordered_shape)  # type: ignore[no-untyped-call]  # TODO: use array-api-compat function
         return self._new(data=data, dims=ordered_dims)
 
     def expand_dims(
