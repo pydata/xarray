@@ -3194,7 +3194,7 @@ class TestDataArray:
         assert_identical(expected_b, actual_b)
         assert expected_b.x.dtype == actual_b.x.dtype
 
-    def test_align_exact_vs_strict(self) -> None:
+    def test_align_exact_vs_strict_one_element(self) -> None:
         xda_1 = xr.DataArray([1], dims="x1")
         xda_2 = xr.DataArray([1], dims="x2")
 
@@ -3206,13 +3206,35 @@ class TestDataArray:
         # join='strict' fails because of non-matching dimensions' names
         with pytest.raises(
             ValueError,
-            match=(
-                r"cannot align objects with join='strict' "
-                r"because given objects do not share the same dimension names "
-                r"([('x1',), ('x2',)])"
+            match=re.escape(
+                "cannot align objects with join='strict' "
+                "because given objects do not share the same dimension names "
+                "([('x1',), ('x2',)])"
             ),
         ):
             xr.align(xda_1, xda_2, join="strict")
+
+    def test_align_exact_vs_strict_2d(self) -> None:
+        xda_1 = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("y1", "x1"))
+        xda_2 = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("y2", "x2"))
+        xda_3 = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("y3", "x3"))
+
+        # join='exact' passes
+        aligned_1, aligned_2, aligned_3 = xr.align(xda_1, xda_2, xda_3, join="exact")
+        assert (aligned_1 == xda_1).all()
+        assert (aligned_2 == xda_2).all()
+        assert (aligned_3 == xda_3).all()
+
+        # join='strict' fails because of non-matching dimensions' names
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "cannot align objects with join='strict' "
+                "because given objects do not share the same dimension names "
+                "([('y1', 'x1'), ('y2', 'x2'), ('y3', 'x3')])"
+            ),
+        ):
+            xr.align(xda_1, xda_2, xda_3, join="strict")
 
     def test_broadcast_arrays(self) -> None:
         x = DataArray([1, 2], coords=[("a", [-1, -2])], name="x")

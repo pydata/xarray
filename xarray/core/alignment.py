@@ -481,7 +481,6 @@ class Aligner(Generic[T_Alignable]):
                 )
             else:
                 add_err_msg = ""
-            # Same for indexed dims?
             if len(sizes) > 1:
                 raise ValueError(
                     f"cannot reindex or align along dimension {dim!r} "
