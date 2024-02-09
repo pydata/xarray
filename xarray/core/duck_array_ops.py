@@ -17,17 +17,17 @@ import numpy as np
 import pandas as pd
 from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
-from numpy import (
+from numpy import (  # noqa
     around,  # noqa
     full_like,
-    gradient,  # noqa
+    gradient,
     isclose,
-    isin,  # noqa
+    isin,
     isnat,
-    take,  # noqa
-    tensordot,  # noqa
-    transpose,  # noqa
-    unravel_index,  # noqa
+    take,
+    tensordot,
+    transpose,
+    unravel_index,
 )
 from numpy import concatenate as _concatenate
 from numpy.lib.stride_tricks import sliding_window_view  # noqa

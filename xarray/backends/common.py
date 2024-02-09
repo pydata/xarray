@@ -13,8 +13,8 @@ import numpy as np
 from xarray.conventions import cf_encoder
 from xarray.core import indexing
 from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
-from xarray.namedarray._typing import _chunkedarrayfunction_or_api
 from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
@@ -232,7 +232,7 @@ class ArrayWriter:
         self.lock = lock
 
     def add(self, source, target, region=None):
-        if isinstance(source, _chunkedarrayfunction_or_api):
+        if is_chunked_array(source):
             self.sources.append(source)
             self.targets.append(target)
             self.regions.append(region)

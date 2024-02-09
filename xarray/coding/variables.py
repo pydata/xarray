@@ -163,7 +163,7 @@ def lazy_elemwise_func(array, func: Callable, dtype: np.typing.DTypeLike):
     if is_chunked_array(array):
         chunkmanager = get_chunked_array_type(array)
 
-        return chunkmanager.map_blocks(func, array, dtype=dtype)  # type: ignore
+        return chunkmanager.map_blocks(func, array, dtype=dtype)  # type: ignore[arg-type]
     else:
         return _ElementwiseFunctionArray(array, func, dtype)
 
