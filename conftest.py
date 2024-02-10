@@ -46,4 +46,4 @@ def add_standard_imports(doctest_namespace, tmpdir):
     except ImportError:
         pass
     else:
-        dask.config.set({"dataframe.query-planning": False})
+        dask.config.set({"dataframe.query-planning": True})
