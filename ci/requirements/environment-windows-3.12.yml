@@ -9,7 +9,7 @@ dependencies:
   - dask-core
   - distributed
   - flox
-  - fsspec!
+  - fsspec
   - h5netcdf
   - h5py
   - hdf5
