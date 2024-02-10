@@ -39,3 +39,11 @@ def add_standard_imports(doctest_namespace, tmpdir):
 
     # always switch to the temporary directory, so files get written there
     tmpdir.chdir()
+
+    # Avoid the dask deprecation warning, can remove if CI passes without this.
+    try:
+        import dask
+    except ImportError:
+        pass
+    else:
+        dask.config.set({"dataframe.query-planning": True})
