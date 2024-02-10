@@ -158,10 +158,10 @@ def test_concat_categorical() -> None:
     concatenated = concat([data1, data2], dim="dim1")
     assert (
         concatenated["var4"]
-        == type(data2["var4"].variable.data.extension_array)._concat_same_type(
+        == type(data2["var4"].variable.data.array)._concat_same_type(
             [
-                data1["var4"].variable.data.extension_array,
-                data2["var4"].variable.data.extension_array,
+                data1["var4"].variable.data.array,
+                data2["var4"].variable.data.array,
             ]
         )
     ).all()

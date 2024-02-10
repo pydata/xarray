@@ -12,7 +12,6 @@ from numpy import array, nan
 from xarray import DataArray, Dataset, cftime_range, concat
 from xarray.core import dtypes, duck_array_ops
 from xarray.core.duck_array_ops import (
-    ExtensionDuckArray,
     __extension_duck_array__broadcast,
     __extension_duck_array__concatenate,
     __extension_duck_array__where,
@@ -32,6 +31,7 @@ from xarray.core.duck_array_ops import (
     timedelta_to_numeric,
     where,
 )
+from xarray.core.indexing import ExtensionDuckArray
 from xarray.core.pycompat import array_type
 from xarray.testing import assert_allclose, assert_equal, assert_identical
 from xarray.tests import (

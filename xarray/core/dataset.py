@@ -7169,9 +7169,7 @@ class Dataset(
         index = self.coords.to_index([*ordered_dims])
         broadcasted_df = pd.DataFrame(dict(zip(columns, data)), index=index)
         for extension_array_column in extension_array_columns:
-            extension_array = self.variables[
-                extension_array_column
-            ].data.extension_array
+            extension_array = self.variables[extension_array_column].data.array
             index = self[self.variables[extension_array_column].dims[0]].data
             cat_df = pd.DataFrame(
                 {extension_array_column: extension_array},

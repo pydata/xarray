@@ -22,6 +22,7 @@ from xarray.core.arithmetic import VariableArithmetic
 from xarray.core.common import AbstractArray
 from xarray.core.indexing import (
     BasicIndexer,
+    ExtensionDuckArray,
     OuterIndexer,
     PandasIndexingAdapter,
     VectorizedIndexer,
@@ -176,11 +177,9 @@ def _maybe_wrap_data(data):
         return PandasIndexingAdapter(data)
     if is_extension_array_dtype(data) and find_spec("plum"):
         data_type = (
-            type(data.extension_array)
-            if isinstance(data, duck_array_ops.ExtensionDuckArray)
-            else type(data)
+            type(data.array) if isinstance(data, ExtensionDuckArray) else type(data)
         )
-        return duck_array_ops.ExtensionDuckArray[data_type](data)
+        return ExtensionDuckArray[data_type](data)
     return data
 
 

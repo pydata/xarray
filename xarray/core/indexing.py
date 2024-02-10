@@ -9,10 +9,11 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Generic
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_extension_array_dtype
 
 from xarray.core import duck_array_ops
 from xarray.core.nputils import NumpyVIndexAdapter
@@ -24,7 +25,7 @@ from xarray.core.pycompat import (
     is_duck_array,
     is_duck_dask_array,
 )
-from xarray.core.types import T_Xarray
+from xarray.core.types import T_ExtensionArray, T_Xarray
 from xarray.core.utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
@@ -1571,6 +1572,94 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         # 8000341
         array = self.array.copy(deep=True) if deep else self.array
         return type(self)(array, self._dtype)
+
+
+class ExtensionDuckArray(Generic[T_ExtensionArray]):
+    array: T_ExtensionArray
+
+    def __init__(self, array: T_ExtensionArray | ExtensionDuckArray):
+        """NEP-18 compliant wrapper for pandas extension arrays.
+        To override behavior of common applicable numpy `__array_function__` methods,
+        please use :py:module:`plum` to dispatch the corresponding function with the prefix
+        `__extension_duck_array__` i.e., for :py:func:`numpy.where`.  The only function that is
+        necessary to override at the moment is :py:func:`np.where` since :py:module:`pandas` provides
+        concatenation, and `broadcast`/`stack` are not supported.
+
+        Parameters
+        ----------
+        array : T_ExtensionArray | ExtensionDuckArray
+            The array to be wrapped upon e.g,. :py:class:`xarray.Variable` creation.
+            If also an ExtensionDuckArray, it's `array` attribute will be extracted and assigned to `self.array`.
+
+
+        Examples
+        --------
+        The following is an example of how you might support some different kinds of arrays.
+        ```python
+        from plum import dispatch
+        @dispatch
+        def ___extension_duck_array__where__(cond: np.ndarray, x: pd.arrays.IntegerArray, y: pd.arrays.BooleanArray) -> pd.arrays.IntegerArray:
+            pass
+        ```
+        """
+        if isinstance(array, ExtensionDuckArray):
+            self.array = array.array
+        elif is_extension_array_dtype(array):
+            self.array = array
+        else:
+            raise TypeError(f"{array} is not an pandas ExtensionArray.")
+
+    def __array_function__(self, func, types, args, kwargs):
+        def replace_duck_with_extension_array(args) -> list:
+            args_as_list = list(args)
+            for index, value in enumerate(args_as_list):
+                if isinstance(value, ExtensionDuckArray):
+                    args_as_list[index] = value.array
+                elif isinstance(
+                    value, tuple
+                ):  # should handle more than just tuple? iterable?
+                    args_as_list[index] = tuple(
+                        replace_duck_with_extension_array(value)
+                    )
+                elif isinstance(value, list):
+                    args_as_list[index] = replace_duck_with_extension_array(value)
+            return args_as_list
+
+        args = tuple(replace_duck_with_extension_array(args))
+        if func not in duck_array_ops.HANDLED_EXTENSION_ARRAY_FUNCTIONS:
+            return func(*args, **kwargs)
+        res = duck_array_ops.HANDLED_EXTENSION_ARRAY_FUNCTIONS[func](*args, **kwargs)
+        if is_extension_array_dtype(res):
+            return type(self)[type(res)](res)
+        return res
+
+    def __array_ufunc__(ufunc, method, *inputs, **kwargs):
+        return ufunc(*inputs, **kwargs)
+
+    def __repr__(self):
+        return f"{type(self)}(array={repr(self.array)})"
+
+    def __getattr__(self, attr: str) -> object:
+        if hasattr(self.array, attr):
+            return getattr(self.array, attr)
+        raise AttributeError(f"{attr} not found.")
+
+    def __getitem__(self, key) -> ExtensionDuckArray[T_ExtensionArray]:
+        item = self.array[key]
+        if is_extension_array_dtype(item):  # not a singleton - better way to check?
+            return type(self)(item)
+        return item
+
+    def __setitem__(self, key, val):
+        self.array[key] = val
+
+    def __eq__(self, other):
+        if isinstance(other, ExtensionDuckArray):
+            return self.array == other.array
+        return self.array == other
+
+    def __ne__(self, other):
+        return ~(self == other)
 
 
 class PandasMultiIndexingAdapter(PandasIndexingAdapter):
