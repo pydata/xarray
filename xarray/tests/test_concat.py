@@ -1295,7 +1295,7 @@ def test_concat_join_coordinate_variables_non_asked_dims():
         coords="different",
         join="outer",
     )
-    assert all(actual_xds == expected_wrongly_concatenated_xds)
+    assert_identical(actual_xds, expected_wrongly_concatenated_xds)
 
     # Using join='strict'
     # A check similar to the one made on non-indexed dimensions regarding their sizes.

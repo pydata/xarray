@@ -3194,14 +3194,72 @@ class TestDataArray:
         assert_identical(expected_b, actual_b)
         assert expected_b.x.dtype == actual_b.x.dtype
 
-    def test_align_exact_vs_strict_one_element(self) -> None:
+    def test_align_exact_vs_strict_same_dim_same_size(self) -> None:
+        xda_1 = xr.DataArray([1], dims="x")
+        xda_2 = xr.DataArray([1], dims="x")
+
+        # join='exact' passes
+        aligned_1, aligned_2 = xr.align(xda_1, xda_2, join="exact")
+        assert_identical(aligned_1, xda_1)
+        assert_identical(aligned_2, xda_2)
+
+        # join='strict' passes
+        aligned_1, aligned_2 = xr.align(xda_1, xda_2, join="strict")
+        assert_identical(aligned_1, xda_1)
+        assert_identical(aligned_2, xda_2)
+
+    def test_align_exact_vs_strict_same_dim_differing_sizes(self) -> None:
+        xda_1 = xr.DataArray([1], dims="x")
+        xda_2 = xr.DataArray([1, 2], dims="x")
+
+        # join='exact' fails because of non-matching sizes for the same 'x' dimension
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "cannot reindex or align along dimension 'x' because of "
+                "conflicting dimension sizes: {1, 2}"
+            ),
+        ):
+            xr.align(xda_1, xda_2, join="exact")
+
+        # join='strict' fails because of non-matching sizes for the same 'x' dimension
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "cannot reindex or align along dimension 'x' because of "
+                "conflicting dimension sizes: {1, 2}"
+            ),
+        ):
+            xr.align(xda_1, xda_2, join="strict")
+
+    def test_align_exact_vs_strict_differing_dims_same_sizes(self) -> None:
         xda_1 = xr.DataArray([1], dims="x1")
         xda_2 = xr.DataArray([1], dims="x2")
 
         # join='exact' passes
         aligned_1, aligned_2 = xr.align(xda_1, xda_2, join="exact")
-        assert aligned_1 == xda_1
-        assert aligned_2 == xda_2
+        assert_identical(aligned_1, xda_1)
+        assert_identical(aligned_2, xda_2)
+
+        # join='strict' fails because of non-matching dimensions' names
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "cannot align objects with join='strict' "
+                "because given objects do not share the same dimension names "
+                "([('x1',), ('x2',)])"
+            ),
+        ):
+            xr.align(xda_1, xda_2, join="strict")
+
+    def test_align_exact_vs_strict_differing_dims_differing_sizes(self) -> None:
+        xda_1 = xr.DataArray([1], dims="x1")
+        xda_2 = xr.DataArray([1, 2], dims="x2")
+
+        # join='exact' passes
+        aligned_1, aligned_2 = xr.align(xda_1, xda_2, join="exact")
+        assert_identical(aligned_1, xda_1)
+        assert_identical(aligned_2, xda_2)
 
         # join='strict' fails because of non-matching dimensions' names
         with pytest.raises(
@@ -3221,9 +3279,9 @@ class TestDataArray:
 
         # join='exact' passes
         aligned_1, aligned_2, aligned_3 = xr.align(xda_1, xda_2, xda_3, join="exact")
-        assert (aligned_1 == xda_1).all()
-        assert (aligned_2 == xda_2).all()
-        assert (aligned_3 == xda_3).all()
+        assert_identical(aligned_1, xda_1)
+        assert_identical(aligned_2, xda_2)
+        assert_identical(aligned_3, xda_3)
 
         # join='strict' fails because of non-matching dimensions' names
         with pytest.raises(
