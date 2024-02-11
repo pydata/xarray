@@ -12,7 +12,7 @@ dependencies:
   - dask-expr # dask raises a deprecation warning without this, breaking doctests
   - distributed
   - flox
-  - fsspec!=2021.7.0
+  - fsspec
   - h5netcdf
   - h5py
   - hdf5
