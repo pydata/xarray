@@ -40,8 +40,8 @@ try:
     from plum import dispatch  # type: ignore[import-not-found]
 except ImportError:
 
-    def dispatch(*args, **kwargs):  # type: ignore[misc]
-        pass
+    def dispatch(func):
+        return func
 
 
 from xarray.core import dask_array_ops, dtypes, nputils, pycompat
