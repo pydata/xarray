@@ -32,7 +32,12 @@ from xarray.core.utils import (
     consolidate_dask_from_array_kwargs,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
+    either_dict_or_kwargs,
     ensure_us_time_resolution,
+    infix_dims,
+    is_dict_like,
+    is_duck_array,
+    is_duck_dask_array,
     maybe_coerce_to_str,
 )
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
@@ -40,13 +45,6 @@ from xarray.namedarray.pycompat import (
     integer_types,
     is_0d_dask_array,
     to_duck_array,
-)
-from xarray.namedarray.utils import (
-    either_dict_or_kwargs,
-    infix_dims,
-    is_dict_like,
-    is_duck_array,
-    is_duck_dask_array,
 )
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (

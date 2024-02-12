@@ -20,17 +20,15 @@ from xarray.core.options import OPTIONS
 from xarray.core.types import T_Xarray
 from xarray.core.utils import (
     NDArrayMixin,
+    either_dict_or_kwargs,
     get_valid_numpy_dtype,
+    is_duck_array,
+    is_duck_dask_array,
     is_scalar,
     to_0d_array,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import array_type, integer_types, is_chunked_array
-from xarray.namedarray.utils import (
-    either_dict_or_kwargs,
-    is_duck_array,
-    is_duck_dask_array,
-)
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike

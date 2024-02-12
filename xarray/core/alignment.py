@@ -20,9 +20,8 @@ from xarray.core.indexes import (
     safe_cast_to_index,
 )
 from xarray.core.types import T_Alignable
-from xarray.core.utils import is_full_slice
+from xarray.core.utils import is_dict_like, is_full_slice
 from xarray.core.variable import Variable, as_compatible_data, calculate_dimensions
-from xarray.namedarray.utils import is_dict_like
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray

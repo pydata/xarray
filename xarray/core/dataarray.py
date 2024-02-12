@@ -70,7 +70,6 @@ from xarray.core.variable import (
     as_compatible_data,
     as_variable,
 )
-from xarray.namedarray.utils import either_dict_or_kwargs, infix_dims, is_dict_like
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
@@ -137,7 +136,11 @@ def _infer_coords_and_dims(
 ) -> tuple[Mapping[Hashable, Any], tuple[Hashable, ...]]:
     """All the logic for creating a new DataArray"""
 
-    if coords is not None and not is_dict_like(coords) and len(coords) != len(shape):
+    if (
+        coords is not None
+        and not utils.is_dict_like(coords)
+        and len(coords) != len(shape)
+    ):
         raise ValueError(
             f"coords is not dict-like, but it has {len(coords)} items, "
             f"which does not match the {len(shape)} dimensions of the "
@@ -150,7 +153,7 @@ def _infer_coords_and_dims(
         dims = [f"dim_{n}" for n in range(len(shape))]
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
-            if is_dict_like(coords):
+            if utils.is_dict_like(coords):
                 dims = list(coords.keys())
             else:
                 for n, (dim, coord) in enumerate(zip(dims, coords)):
@@ -172,7 +175,7 @@ def _infer_coords_and_dims(
         new_coords = coords
     else:
         new_coords = {}
-        if is_dict_like(coords):
+        if utils.is_dict_like(coords):
             for k, v in coords.items():
                 new_coords[k] = as_variable(v, name=k)
         elif coords is not None:
@@ -194,7 +197,7 @@ def _check_data_shape(
     if data is dtypes.NA:
         data = np.nan
     if coords is not None and utils.is_scalar(data, include_0d=False):
-        if is_dict_like(coords):
+        if utils.is_dict_like(coords):
             if dims is None:
                 return data
             else:
@@ -215,14 +218,14 @@ class _LocIndexer(Generic[T_DataArray]):
         self.data_array = data_array
 
     def __getitem__(self, key) -> T_DataArray:
-        if not is_dict_like(key):
+        if not utils.is_dict_like(key):
             # expand the indexer so we can handle Ellipsis
             labels = indexing.expanded_indexer(key, self.data_array.ndim)
             key = dict(zip(self.data_array.dims, labels))
         return self.data_array.sel(key)
 
     def __setitem__(self, key, value) -> None:
-        if not is_dict_like(key):
+        if not utils.is_dict_like(key):
             # expand the indexer so we can handle Ellipsis
             labels = indexing.expanded_indexer(key, self.data_array.ndim)
             key = dict(zip(self.data_array.dims, labels))
@@ -831,7 +834,7 @@ class DataArray(
         )
 
     def _item_key_to_dict(self, key: Any) -> Mapping[Hashable, Any]:
-        if is_dict_like(key):
+        if utils.is_dict_like(key):
             return key
         key = indexing.expanded_indexer(key, self.ndim)
         return dict(zip(self.dims, key))
@@ -1380,7 +1383,7 @@ class DataArray(
             )
             chunks = dict(zip(self.dims, chunks))
         else:
-            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+            chunks = utils.either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         ds = self._to_temp_dataset().chunk(
             chunks,
@@ -1460,7 +1463,7 @@ class DataArray(
         Dimensions without coordinates: points
         """
 
-        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
+        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
 
         if any(is_fancy_indexer(idx) for idx in indexers.values()):
             ds = self._to_temp_dataset()._isel_fancy(
@@ -2138,7 +2141,7 @@ class DataArray(
         DataArray.reindex_like
         align
         """
-        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
+        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
         return alignment.reindex(
             self,
             indexers=indexers,
@@ -2448,9 +2451,11 @@ class DataArray(
         if new_name_or_name_dict is None and not names:
             # change name to None?
             return self._replace(name=None)
-        if is_dict_like(new_name_or_name_dict) or new_name_or_name_dict is None:
+        if utils.is_dict_like(new_name_or_name_dict) or new_name_or_name_dict is None:
             # change dims/coords
-            name_dict = either_dict_or_kwargs(new_name_or_name_dict, names, "rename")
+            name_dict = utils.either_dict_or_kwargs(
+                new_name_or_name_dict, names, "rename"
+            )
             dataset = self._to_temp_dataset()._rename(name_dict)
             return self._from_temp_dataset(dataset)
         if utils.hashable(new_name_or_name_dict) and names:
@@ -2516,7 +2521,7 @@ class DataArray(
         DataArray.rename
         Dataset.swap_dims
         """
-        dims_dict = either_dict_or_kwargs(dims_dict, dims_kwargs, "swap_dims")
+        dims_dict = utils.either_dict_or_kwargs(dims_dict, dims_kwargs, "swap_dims")
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
@@ -2610,7 +2615,7 @@ class DataArray(
         elif dim is not None and not isinstance(dim, Mapping):
             dim = {dim: 1}
 
-        dim = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
+        dim = utils.either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
         ds = self._to_temp_dataset().expand_dims(dim, axis)
         return self._from_temp_dataset(ds)
 
@@ -3011,7 +3016,7 @@ class DataArray(
         Dataset.transpose
         """
         if dims:
-            dims = tuple(infix_dims(dims, self.dims, missing_dims))
+            dims = tuple(utils.infix_dims(dims, self.dims, missing_dims))
         variable = self.variable.transpose(*dims)
         if transpose_coords:
             coords: dict[Hashable, Variable] = {}
@@ -3210,7 +3215,7 @@ class DataArray(
           * y        (y) int64 24B 6 9 12
         """
         if labels_kwargs or isinstance(labels, dict):
-            labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
+            labels = utils.either_dict_or_kwargs(labels, labels_kwargs, "drop")
 
         ds = self._to_temp_dataset().drop_sel(labels, errors=errors)
         return self._from_temp_dataset(ds)
@@ -3398,7 +3403,7 @@ class DataArray(
           * Z        (Z) int64 48B 0 1 2 3 4 5
             height   (Z) int64 48B 0 10 20 30 40 50
         """
-        if is_dict_like(value):
+        if utils.is_dict_like(value):
             raise TypeError(
                 "cannot provide fill value as a dictionary with "
                 "fillna on a DataArray"
@@ -6913,7 +6918,7 @@ class DataArray(
         """
         from xarray.core.rolling import DataArrayRolling
 
-        dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
+        dim = utils.either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DataArrayRolling(self, dim, min_periods=min_periods, center=center)
 
     def cumulative(
@@ -7127,7 +7132,7 @@ class DataArray(
         """
         from xarray.core.rolling import DataArrayCoarsen
 
-        dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
+        dim = utils.either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return DataArrayCoarsen(
             self,
             dim,

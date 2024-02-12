@@ -15,13 +15,13 @@ from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.utils import (
     Frozen,
+    either_dict_or_kwargs,
     emit_user_level_warning,
     is_scalar,
 )
 from xarray.namedarray.core import _raise_if_any_duplicate_dimensions
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.namedarray.pycompat import is_chunked_array
-from xarray.namedarray.utils import either_dict_or_kwargs
 
 try:
     import cftime

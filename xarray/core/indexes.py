@@ -19,9 +19,9 @@ from xarray.core.utils import (
     Frozen,
     emit_user_level_warning,
     get_valid_numpy_dtype,
+    is_dict_like,
     is_scalar,
 )
-from xarray.namedarray.utils import is_dict_like
 
 if TYPE_CHECKING:
     from xarray.core.types import ErrorOptions, JoinOptions, Self

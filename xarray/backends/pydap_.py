@@ -18,11 +18,11 @@ from xarray.core.utils import (
     Frozen,
     FrozenDict,
     close_on_error,
+    is_dict_like,
     is_remote_uri,
 )
 from xarray.core.variable import Variable
 from xarray.namedarray.pycompat import integer_types
-from xarray.namedarray.utils import is_dict_like
 
 if TYPE_CHECKING:
     import os

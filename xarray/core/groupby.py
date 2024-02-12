@@ -30,6 +30,7 @@ from xarray.core.options import _get_keep_attrs
 from xarray.core.types import Dims, QuantileMethods, T_DataArray, T_Xarray
 from xarray.core.utils import (
     FrozenMappingWarningOnValuesAccess,
+    either_dict_or_kwargs,
     emit_user_level_warning,
     hashable,
     is_scalar,
@@ -37,7 +38,6 @@ from xarray.core.utils import (
     peek_at,
 )
 from xarray.core.variable import IndexVariable, Variable
-from xarray.namedarray.utils import either_dict_or_kwargs
 from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 if TYPE_CHECKING:

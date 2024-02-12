@@ -74,6 +74,19 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from xarray.namedarray.utils import (  # noqa: F401
+    ReprObject,
+    drop_missing_dims,
+    either_dict_or_kwargs,
+    infix_dims,
+    is_dask_collection,
+    is_dict_like,
+    is_duck_array,
+    is_duck_dask_array,
+    module_available,
+    to_0d_object_array,
+)
+
 if TYPE_CHECKING:
     from xarray.core.types import Dims, ErrorOptionsWithWarn
 
@@ -305,13 +318,6 @@ def is_valid_numpy_dtype(dtype: Any) -> bool:
         return False
     else:
         return True
-
-
-def to_0d_object_array(value: Any) -> np.ndarray:
-    """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
-    result = np.empty((), dtype=object)
-    result[()] = value
-    return result
 
 
 def to_0d_array(value: Any) -> np.ndarray:
@@ -620,31 +626,6 @@ class NDArrayMixin(NdimSizeLenMixin):
         return f"{type(self).__name__}(array={self.array!r})"
 
 
-class ReprObject:
-    """Object that prints as the given value, for use with sentinel values."""
-
-    __slots__ = ("_value",)
-
-    def __init__(self, value: str):
-        self._value = value
-
-    def __repr__(self) -> str:
-        return self._value
-
-    def __eq__(self, other) -> bool:
-        if isinstance(other, ReprObject):
-            return self._value == other._value
-        return False
-
-    def __hash__(self) -> int:
-        return hash((type(self), self._value))
-
-    def __dask_tokenize__(self):
-        from dask.base import normalize_token
-
-        return normalize_token((type(self), self._value))
-
-
 @contextlib.contextmanager
 def close_on_error(f):
     """Context manager to ensure that a file opened by xarray is closed if an
@@ -862,49 +843,6 @@ def drop_dims_from_indexers(
 
     elif missing_dims == "ignore":
         return {key: val for key, val in indexers.items() if key in dims}
-
-    else:
-        raise ValueError(
-            f"Unrecognised option {missing_dims} for missing_dims argument"
-        )
-
-
-def drop_missing_dims(
-    supplied_dims: Iterable[Hashable],
-    dims: Iterable[Hashable],
-    missing_dims: ErrorOptionsWithWarn,
-) -> Iterable[Hashable]:
-    """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
-    are not present in dims.
-
-    Parameters
-    ----------
-    supplied_dims : Iterable of Hashable
-    dims : Iterable of Hashable
-    missing_dims : {"raise", "warn", "ignore"}
-    """
-
-    if missing_dims == "raise":
-        supplied_dims_set = {val for val in supplied_dims if val is not ...}
-        invalid = supplied_dims_set - set(dims)
-        if invalid:
-            raise ValueError(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
-            )
-
-        return supplied_dims
-
-    elif missing_dims == "warn":
-        invalid = set(supplied_dims) - set(dims)
-        if invalid:
-            warnings.warn(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
-            )
-
-        return [val for val in supplied_dims if val in dims or val is ...]
-
-    elif missing_dims == "ignore":
-        return [val for val in supplied_dims if val in dims or val is ...]
 
     else:
         raise ValueError(

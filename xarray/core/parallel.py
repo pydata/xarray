@@ -14,8 +14,8 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import Index
 from xarray.core.merge import merge
+from xarray.core.utils import is_dask_collection
 from xarray.core.variable import Variable
-from xarray.namedarray.utils import is_dask_collection
 
 if TYPE_CHECKING:
     from xarray.core.types import T_Xarray
