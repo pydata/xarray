@@ -452,6 +452,13 @@ class TestPandasMultiIndex:
         assert new_indexes["two"].equals(PandasIndex([1, 2, 3], "two"))
         assert new_pd_idx.equals(pd_midx)
 
+    def test_unstack_requires_unique(self) -> None:
+        pd_midx = pd.MultiIndex.from_product([["a", "a"], [1, 2]], names=["one", "two"])
+        index = PandasMultiIndex(pd_midx, "x")
+
+        with pytest.raises(ValueError, match="Cannot unstack a non-unique MultiIndex"):
+            index.unstack()
+
     def test_create_variables(self) -> None:
         foo_data = np.array([0, 0, 1], dtype="int64")
         bar_data = np.array([1.1, 1.2, 1.3], dtype="float64")

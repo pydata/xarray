@@ -1017,6 +1017,13 @@ class PandasMultiIndex(PandasIndex):
     def unstack(self) -> tuple[dict[Hashable, Index], pd.MultiIndex]:
         clean_index = remove_unused_levels_categories(self.index)
 
+        if not clean_index.is_unique:
+            raise ValueError(
+                "Cannot unstack a non-unique MultiIndex. To restore the previous "
+                "behavior call ``.drop_duplicates('{self.dim}', keep='last')`` before "
+                "unstacking."
+            )
+
         new_indexes: dict[Hashable, Index] = {}
         for name, lev in zip(clean_index.names, clean_index.levels):
             idx = PandasIndex(
