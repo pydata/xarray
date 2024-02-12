@@ -6,6 +6,7 @@ from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import pytest
 from numpy import array, nan
 
@@ -57,6 +58,20 @@ def categorical1():
 @pytest.fixture
 def categorical2():
     return pd.Categorical(["cat2", "cat1", "cat2", "cat3", "cat1"])
+
+
+@pytest.fixture
+def arrow1():
+    return pd.arrays.ArrowExtensionArray(
+        pa.array([{"x": 1, "y": True}, {"x": 2, "y": False}])
+    )
+
+
+@pytest.fixture
+def arrow2():
+    return pd.arrays.ArrowExtensionArray(
+        pa.array([{"x": 3, "y": False}, {"x": 4, "y": True}])
+    )
 
 
 @pytest.fixture
@@ -188,6 +203,13 @@ class TestOps:
             concate_res
             == type(categorical1)._concat_same_type((categorical1, categorical2))
         ).all()
+
+    def test_duck_extension_array_pyarrow_concatenate(arrow1, arrow2):
+        concatenated = concatenate(
+            (ExtensionDuckArray(arrow1), ExtensionDuckArray(arrow2))
+        )
+        assert concatenated[2]["x"] == 3
+        assert concatenated[3]["y"]
 
     def test_concatenate_extension_duck_array_fallback(
         self, categorical1, categorical2
