@@ -7,7 +7,6 @@ from importlib.util import find_spec
 
 import numpy as np
 import pandas as pd
-import pyarrow as pa
 import pytest
 from numpy import array, nan
 
@@ -62,7 +61,8 @@ def categorical2():
     return pd.Categorical(["cat2", "cat1", "cat2", "cat3", "cat1"])
 
 
-if find_spec("arrow"):
+try:
+    import pyarrow as pa
 
     @pytest.fixture
     def arrow1():
@@ -75,6 +75,9 @@ if find_spec("arrow"):
         return pd.arrays.ArrowExtensionArray(
             pa.array([{"x": 3, "y": False}, {"x": 4, "y": True}])
         )
+
+except ImportError:
+    pass
 
 
 @pytest.fixture
