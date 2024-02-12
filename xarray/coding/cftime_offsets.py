@@ -1265,7 +1265,7 @@ def _new_to_legacy_freq(freq):
     # we add logic to continue using the deprecated "M" and "Q" frequency
     # strings in these circumstances.
 
-    # NOTE: other conversions ("h" -> "H", ..., "N" -> "ns") not required
+    # NOTE: other conversions ("h" -> "H", ..., "ns" -> "N") not required
 
     # TODO: remove once requiring pandas >= 2.2
     if not freq or Version(pd.__version__) >= Version("2.2"):
