@@ -39,8 +39,8 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.pycompat import array_type, integer_types
 from xarray.core.utils import is_scalar
+from xarray.namedarray.pycompat import array_type, integer_types
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
     DuckArrayWrapper,

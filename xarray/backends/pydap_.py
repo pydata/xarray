@@ -14,7 +14,6 @@ from xarray.backends.common import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
-from xarray.core.pycompat import integer_types
 from xarray.core.utils import (
     Frozen,
     FrozenDict,
@@ -23,6 +22,7 @@ from xarray.core.utils import (
     is_remote_uri,
 )
 from xarray.core.variable import Variable
+from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
     import os

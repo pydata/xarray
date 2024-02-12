@@ -10,7 +10,7 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray, Variable
-from xarray.core.pycompat import array_type
+from xarray.namedarray.pycompat import array_type
 from xarray.tests import assert_equal, assert_identical, requires_dask
 
 filterwarnings = pytest.mark.filterwarnings

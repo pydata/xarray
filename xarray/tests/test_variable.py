@@ -26,10 +26,10 @@ from xarray.core.indexing import (
     PandasIndexingAdapter,
     VectorizedIndexer,
 )
-from xarray.core.pycompat import array_type
 from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
+from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     assert_allclose,
     assert_array_equal,

@@ -15,12 +15,9 @@ from xarray.core._typed_ops import (
     VariableOpsMixin,
 )
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
-from xarray.core.ops import (
-    IncludeNumpySameMethods,
-    IncludeReduceMethods,
-)
+from xarray.core.ops import IncludeNumpySameMethods, IncludeReduceMethods
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import is_duck_array
+from xarray.namedarray.utils import is_duck_array
 
 
 class SupportsArithmetic:
