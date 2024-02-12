@@ -104,7 +104,10 @@ from xarray.core.utils import (
     _default,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
+    either_dict_or_kwargs,
     emit_user_level_warning,
+    is_dict_like,
+    is_duck_dask_array,
     is_scalar,
     maybe_wrap_array,
 )
@@ -487,12 +490,12 @@ class _LocIndexer(Generic[T_Dataset]):
         self.dataset = dataset
 
     def __getitem__(self, key: Mapping[Any, Any]) -> T_Dataset:
-        if not utils.is_dict_like(key):
+        if not is_dict_like(key):
             raise TypeError("can only lookup dictionaries from Dataset.loc")
         return self.dataset.sel(key)
 
     def __setitem__(self, key, value) -> None:
-        if not utils.is_dict_like(key):
+        if not is_dict_like(key):
             raise TypeError(
                 "can only set locations defined by dictionaries from Dataset.loc."
                 f" Got: {key}"
@@ -1011,9 +1014,7 @@ class Dataset(
         """Persist all Dask arrays in memory"""
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
-            k: v._data
-            for k, v in self.variables.items()
-            if utils.is_duck_dask_array(v._data)
+            k: v._data for k, v in self.variables.items() if is_duck_dask_array(v._data)
         }
         if lazy_data:
             import dask
@@ -1339,7 +1340,7 @@ class Dataset(
     ) -> Self:
         if data is None:
             data = {}
-        elif not utils.is_dict_like(data):
+        elif not is_dict_like(data):
             raise ValueError("Data must be dict-like")
 
         if data:
@@ -1535,7 +1536,7 @@ class Dataset(
         """
         from xarray.core.formatting import shorten_list_repr
 
-        if utils.is_dict_like(key):
+        if is_dict_like(key):
             return self.isel(**key)
         if utils.hashable(key):
             try:
@@ -1572,7 +1573,7 @@ class Dataset(
         """
         from xarray.core.dataarray import DataArray
 
-        if utils.is_dict_like(key):
+        if is_dict_like(key):
             # check for consistency and convert value to dataset
             value = self._setitem_check(key, value)
             # loop over dataset variables and set new values
@@ -2681,7 +2682,7 @@ class Dataset(
                 )
             chunks_mapping = dict.fromkeys(self.dims, chunks)
         else:
-            chunks_mapping = utils.either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+            chunks_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         bad_dims = chunks_mapping.keys() - self.sizes.keys()
         if bad_dims:
@@ -2930,7 +2931,7 @@ class Dataset(
             Tutorial material on basics of indexing
 
         """
-        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
         if any(is_fancy_indexer(idx) for idx in indexers.values()):
             return self._isel_fancy(indexers, drop=drop, missing_dims=missing_dims)
 
@@ -3084,7 +3085,7 @@ class Dataset(
             Tutorial material on basics of indexing
 
         """
-        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "sel")
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "sel")
         query_results = map_index_queries(
             self, indexers=indexers, method=method, tolerance=tolerance
         )
@@ -3173,11 +3174,11 @@ class Dataset(
         if not indexers_kwargs:
             if indexers is None:
                 indexers = 5
-            if not isinstance(indexers, int) and not utils.is_dict_like(indexers):
+            if not isinstance(indexers, int) and not is_dict_like(indexers):
                 raise TypeError("indexers must be either dict-like or a single integer")
         if isinstance(indexers, int):
             indexers = {dim: indexers for dim in self.dims}
-        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "head")
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "head")
         for k, v in indexers.items():
             if not isinstance(v, int):
                 raise TypeError(
@@ -3261,11 +3262,11 @@ class Dataset(
         if not indexers_kwargs:
             if indexers is None:
                 indexers = 5
-            if not isinstance(indexers, int) and not utils.is_dict_like(indexers):
+            if not isinstance(indexers, int) and not is_dict_like(indexers):
                 raise TypeError("indexers must be either dict-like or a single integer")
         if isinstance(indexers, int):
             indexers = {dim: indexers for dim in self.dims}
-        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "tail")
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "tail")
         for k, v in indexers.items():
             if not isinstance(v, int):
                 raise TypeError(
@@ -3346,12 +3347,12 @@ class Dataset(
         if (
             not indexers_kwargs
             and not isinstance(indexers, int)
-            and not utils.is_dict_like(indexers)
+            and not is_dict_like(indexers)
         ):
             raise TypeError("indexers must be either dict-like or a single integer")
         if isinstance(indexers, int):
             indexers = {dim: indexers for dim in self.dims}
-        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "thin")
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "thin")
         for k, v in indexers.items():
             if not isinstance(v, int):
                 raise TypeError(
@@ -3731,7 +3732,7 @@ class Dataset(
         original dataset, use the :py:meth:`~Dataset.fillna()` method.
 
         """
-        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
         return alignment.reindex(
             self,
             indexers=indexers,
@@ -3754,7 +3755,7 @@ class Dataset(
         """
         Same as reindex but supports sparse option.
         """
-        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
         return alignment.reindex(
             self,
             indexers=indexers,
@@ -3917,7 +3918,7 @@ class Dataset(
         if kwargs is None:
             kwargs = {}
 
-        coords = utils.either_dict_or_kwargs(coords, coords_kwargs, "interp")
+        coords = either_dict_or_kwargs(coords, coords_kwargs, "interp")
         indexers = dict(self._validate_interp_indexers(coords))
 
         if coords:
@@ -3982,7 +3983,7 @@ class Dataset(
             if name in indexers:
                 continue
 
-            if utils.is_duck_dask_array(var.data):
+            if is_duck_dask_array(var.data):
                 use_indexers = dask_indexers
             else:
                 use_indexers = validated_indexers
@@ -4211,7 +4212,7 @@ class Dataset(
         """Also used internally by DataArray so that the warning (if any)
         is raised at the right stack level.
         """
-        name_dict = utils.either_dict_or_kwargs(name_dict, names, "rename")
+        name_dict = either_dict_or_kwargs(name_dict, names, "rename")
         for k in name_dict.keys():
             if k not in self and k not in self.dims:
                 raise ValueError(
@@ -4307,7 +4308,7 @@ class Dataset(
         Dataset.rename_vars
         DataArray.rename
         """
-        dims_dict = utils.either_dict_or_kwargs(dims_dict, dims, "rename_dims")
+        dims_dict = either_dict_or_kwargs(dims_dict, dims, "rename_dims")
         for k, v in dims_dict.items():
             if k not in self.dims:
                 raise ValueError(
@@ -4353,7 +4354,7 @@ class Dataset(
         Dataset.rename_dims
         DataArray.rename
         """
-        name_dict = utils.either_dict_or_kwargs(name_dict, names, "rename_vars")
+        name_dict = either_dict_or_kwargs(name_dict, names, "rename_vars")
         for k in name_dict:
             if k not in self:
                 raise ValueError(
@@ -4429,7 +4430,7 @@ class Dataset(
         # TODO: deprecate this method in favor of a (less confusing)
         # rename_dims() method that only renames dimensions.
 
-        dims_dict = utils.either_dict_or_kwargs(dims_dict, dims_kwargs, "swap_dims")
+        dims_dict = either_dict_or_kwargs(dims_dict, dims_kwargs, "swap_dims")
         for current_name, new_name in dims_dict.items():
             if current_name not in self.dims:
                 raise ValueError(
@@ -4590,7 +4591,7 @@ class Dataset(
                 raise ValueError("dims should not contain duplicate values.")
             dim = {d: 1 for d in dim}
 
-        dim = utils.either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
+        dim = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
         assert isinstance(dim, MutableMapping)
 
         if axis is None:
@@ -4731,7 +4732,7 @@ class Dataset(
         Dataset.set_xindex
         Dataset.swap_dims
         """
-        dim_coords = utils.either_dict_or_kwargs(indexes, indexes_kwargs, "set_index")
+        dim_coords = either_dict_or_kwargs(indexes, indexes_kwargs, "set_index")
 
         new_indexes: dict[Hashable, Index] = {}
         new_variables: dict[Hashable, Variable] = {}
@@ -5080,9 +5081,7 @@ class Dataset(
             Another dataset, with this dataset's data but replaced
             coordinates.
         """
-        dim_order = utils.either_dict_or_kwargs(
-            dim_order, dim_order_kwargs, "reorder_levels"
-        )
+        dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs, "reorder_levels")
         variables = self._variables.copy()
         indexes = dict(self._indexes)
         new_indexes: dict[Hashable, Index] = {}
@@ -5266,7 +5265,7 @@ class Dataset(
         --------
         Dataset.unstack
         """
-        dimensions = utils.either_dict_or_kwargs(dimensions, dimensions_kwargs, "stack")
+        dimensions = either_dict_or_kwargs(dimensions, dimensions_kwargs, "stack")
         result = self
         for new_dim, dims in dimensions.items():
             result = result._stack_once(dims, new_dim, index_cls, create_index)
@@ -5562,7 +5561,7 @@ class Dataset(
         #    currently compatible.
         sparse_array_type = array_type("sparse")
         needs_full_reindex = any(
-            utils.is_duck_dask_array(v.data)
+            is_duck_dask_array(v.data)
             or isinstance(v.data, sparse_array_type)
             or not isinstance(v.data, np.ndarray)
             for v in nonindexes
@@ -5963,7 +5962,7 @@ class Dataset(
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
-        if utils.is_dict_like(labels) and not isinstance(labels, dict):
+        if is_dict_like(labels) and not isinstance(labels, dict):
             emit_user_level_warning(
                 "dropping coordinates using `drop` is deprecated; use drop_vars.",
                 DeprecationWarning,
@@ -5973,7 +5972,7 @@ class Dataset(
         if labels_kwargs or isinstance(labels, dict):
             if dim is not None:
                 raise ValueError("cannot specify dim and dict-like arguments.")
-            labels = utils.either_dict_or_kwargs(labels, labels_kwargs, "drop")
+            labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
 
         if dim is None and (is_scalar(labels) or isinstance(labels, Iterable)):
             emit_user_level_warning(
@@ -6053,7 +6052,7 @@ class Dataset(
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
-        labels = utils.either_dict_or_kwargs(labels, labels_kwargs, "drop_sel")
+        labels = either_dict_or_kwargs(labels, labels_kwargs, "drop_sel")
 
         ds = self
         for dim, labels_for_dim in labels.items():
@@ -6119,7 +6118,7 @@ class Dataset(
             A        (x, y) int64 32B 0 2 3 5
         """
 
-        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "drop_isel")
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "drop_isel")
 
         ds = self
         dimension_index = {}
@@ -6432,7 +6431,7 @@ class Dataset(
             C        (x) float64 32B 2.0 2.0 2.0 5.0
             D        (x) float64 32B 3.0 3.0 3.0 4.0
         """
-        if utils.is_dict_like(value):
+        if is_dict_like(value):
             value_keys = getattr(value, "data_vars", value).keys()
             if not set(value_keys) <= set(self.data_vars.keys()):
                 raise ValueError(
@@ -7034,7 +7033,7 @@ class Dataset(
             temperature_f  (lat, lon) float64 32B 51.76 57.75 53.7 51.62
 
         """
-        variables = utils.either_dict_or_kwargs(variables, variables_kwargs, "assign")
+        variables = either_dict_or_kwargs(variables, variables_kwargs, "assign")
         data = self.copy()
 
         # do all calculations first...
@@ -7394,7 +7393,7 @@ class Dataset(
 
             # Make sure var is a dask array, otherwise the array can become too large
             # when it is broadcasted to several dimensions:
-            if not utils.is_duck_dask_array(var._data):
+            if not is_duck_dask_array(var._data):
                 var = var.chunk()
 
             # Broadcast then flatten the array:
@@ -7638,7 +7637,7 @@ class Dataset(
                     dest_vars[k] = f(rhs_vars[k], np.nan)
             return dest_vars
 
-        if utils.is_dict_like(other) and not isinstance(other, Dataset):
+        if is_dict_like(other) and not isinstance(other, Dataset):
             # can't use our shortcut of doing the binary operation with
             # Variable objects, so apply over our data vars instead.
             new_data_vars = apply_over_both(
@@ -7803,7 +7802,7 @@ class Dataset(
         Data variables:
             foo      (x) object 40B nan nan 'a' 'b' 'c'
         """
-        shifts = utils.either_dict_or_kwargs(shifts, shifts_kwargs, "shift")
+        shifts = either_dict_or_kwargs(shifts, shifts_kwargs, "shift")
         invalid = tuple(k for k in shifts if k not in self.dims)
         if invalid:
             raise ValueError(
@@ -7882,7 +7881,7 @@ class Dataset(
             foo      (x) <U1 20B 'd' 'e' 'a' 'b' 'c'
 
         """
-        shifts = utils.either_dict_or_kwargs(shifts, shifts_kwargs, "roll")
+        shifts = either_dict_or_kwargs(shifts, shifts_kwargs, "roll")
         invalid = [k for k in shifts if k not in self.dims]
         if invalid:
             raise ValueError(
@@ -8882,7 +8881,7 @@ class Dataset(
             if dim not in da.dims:
                 continue
 
-            if utils.is_duck_dask_array(da.data) and (
+            if is_duck_dask_array(da.data) and (
                 rank != order or full or skipna is None
             ):
                 # Current algorithm with dask and skipna=False neither supports
@@ -9086,7 +9085,7 @@ class Dataset(
         Data variables:
             foo      (x) float64 64B nan 0.0 1.0 2.0 3.0 4.0 nan nan
         """
-        pad_width = utils.either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
+        pad_width = either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
 
         if mode in ("edge", "reflect", "symmetric", "wrap"):
             coord_pad_mode = mode
@@ -9680,7 +9679,7 @@ class Dataset(
         """
 
         # allow queries to be given either as a dict or as kwargs
-        queries = utils.either_dict_or_kwargs(queries, queries_kwargs, "query")
+        queries = either_dict_or_kwargs(queries, queries_kwargs, "query")
 
         # check queries
         for dim, expr in queries.items():
@@ -10359,7 +10358,7 @@ class Dataset(
         """
         from xarray.core.rolling import DatasetRolling
 
-        dim = utils.either_dict_or_kwargs(dim, window_kwargs, "rolling")
+        dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DatasetRolling(self, dim, min_periods=min_periods, center=center)
 
     def cumulative(
@@ -10452,7 +10451,7 @@ class Dataset(
         """
         from xarray.core.rolling import DatasetCoarsen
 
-        dim = utils.either_dict_or_kwargs(dim, window_kwargs, "coarsen")
+        dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return DatasetCoarsen(
             self,
             dim,

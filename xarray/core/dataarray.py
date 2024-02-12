@@ -62,7 +62,9 @@ from xarray.core.utils import (
     HybridMappingProxy,
     ReprObject,
     _default,
+    either_dict_or_kwargs,
     hashable,
+    infix_dims,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -1383,7 +1385,7 @@ class DataArray(
             )
             chunks = dict(zip(self.dims, chunks))
         else:
-            chunks = utils.either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         ds = self._to_temp_dataset().chunk(
             chunks,
@@ -1463,7 +1465,7 @@ class DataArray(
         Dimensions without coordinates: points
         """
 
-        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
 
         if any(is_fancy_indexer(idx) for idx in indexers.values()):
             ds = self._to_temp_dataset()._isel_fancy(
@@ -2141,7 +2143,7 @@ class DataArray(
         DataArray.reindex_like
         align
         """
-        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
         return alignment.reindex(
             self,
             indexers=indexers,
@@ -2453,9 +2455,7 @@ class DataArray(
             return self._replace(name=None)
         if utils.is_dict_like(new_name_or_name_dict) or new_name_or_name_dict is None:
             # change dims/coords
-            name_dict = utils.either_dict_or_kwargs(
-                new_name_or_name_dict, names, "rename"
-            )
+            name_dict = either_dict_or_kwargs(new_name_or_name_dict, names, "rename")
             dataset = self._to_temp_dataset()._rename(name_dict)
             return self._from_temp_dataset(dataset)
         if utils.hashable(new_name_or_name_dict) and names:
@@ -2521,7 +2521,7 @@ class DataArray(
         DataArray.rename
         Dataset.swap_dims
         """
-        dims_dict = utils.either_dict_or_kwargs(dims_dict, dims_kwargs, "swap_dims")
+        dims_dict = either_dict_or_kwargs(dims_dict, dims_kwargs, "swap_dims")
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
@@ -2615,7 +2615,7 @@ class DataArray(
         elif dim is not None and not isinstance(dim, Mapping):
             dim = {dim: 1}
 
-        dim = utils.either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
+        dim = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
         ds = self._to_temp_dataset().expand_dims(dim, axis)
         return self._from_temp_dataset(ds)
 
@@ -3016,7 +3016,7 @@ class DataArray(
         Dataset.transpose
         """
         if dims:
-            dims = tuple(utils.infix_dims(dims, self.dims, missing_dims))
+            dims = tuple(infix_dims(dims, self.dims, missing_dims))
         variable = self.variable.transpose(*dims)
         if transpose_coords:
             coords: dict[Hashable, Variable] = {}
@@ -3215,7 +3215,7 @@ class DataArray(
           * y        (y) int64 24B 6 9 12
         """
         if labels_kwargs or isinstance(labels, dict):
-            labels = utils.either_dict_or_kwargs(labels, labels_kwargs, "drop")
+            labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
 
         ds = self._to_temp_dataset().drop_sel(labels, errors=errors)
         return self._from_temp_dataset(ds)
@@ -6918,7 +6918,7 @@ class DataArray(
         """
         from xarray.core.rolling import DataArrayRolling
 
-        dim = utils.either_dict_or_kwargs(dim, window_kwargs, "rolling")
+        dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DataArrayRolling(self, dim, min_periods=min_periods, center=center)
 
     def cumulative(
@@ -7132,7 +7132,7 @@ class DataArray(
         """
         from xarray.core.rolling import DataArrayCoarsen
 
-        dim = utils.either_dict_or_kwargs(dim, window_kwargs, "coarsen")
+        dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return DataArrayCoarsen(
             self,
             dim,
