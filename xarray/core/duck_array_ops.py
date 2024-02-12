@@ -37,10 +37,10 @@ from packaging.version import Version
 from pandas.api.types import is_extension_array_dtype
 
 try:
-    from plum import dispatch
+    from plum import dispatch  # type: ignore[import-not-found]
 except ImportError:
 
-    def dispatch(*args, **kwargs):  # type: ignore
+    def dispatch(*args, **kwargs):  # type: ignore[misc]
         pass
 
 
@@ -116,8 +116,10 @@ def __extension_duck_array__where(
     return np.where(condition, x, y)
 
 
-@__extension_duck_array__where.dispatch
-def _(condition: np.ndarray, x: pd.Categorical, y: pd.Categorical):
+@dispatch  # type: ignore[no-redef]
+def __extension_duck_array__where(
+    condition: np.ndarray, x: pd.Categorical, y: pd.Categorical
+):
     # set up new codes array
     new_codes = np.where(condition, x.codes, y.codes)
 

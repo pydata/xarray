@@ -125,6 +125,7 @@ module = [
   "opt_einsum.*",
   "pandas.*",
   "pooch.*",
+  "pyarrow.*",
   "pydap.*",
   "pytest.*",
   "scipy.*",
