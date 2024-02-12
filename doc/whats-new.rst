@@ -59,6 +59,8 @@ Bug fixes
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Ensure :py:meth:`DataArray.unstack` works when wrapping array API-compliant classes. (:issue:`8666`, :pull:`8668`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fix negative slicing of Zarr arrays without dask installed. (:issue:`8252`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Preserve chunks when writing time-like variables to zarr by enabling lazy CF
   encoding of time-like variables (:issue:`7132`, :issue:`8230`, :issue:`8432`,
   :pull:`8575`). By `Spencer Clark <https://github.com/spencerkclark>`_ and
@@ -82,6 +84,9 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- ``DataArray.dt`` now raises an ``AttributeError`` rather than a ``TypeError``
+  when the data isn't datetime-like. (:issue:`8718`, :pull:`8724`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.2024.01.1:
 
