@@ -807,7 +807,7 @@ def open_datatree(
         Additional keyword arguments passed to :py:meth:`~xarray.open_dataset` for each group.
     Returns
     -------
-    xarray.core.datatree.DataTree
+    xarray.DataTree
     """
     if engine is None:
         engine = plugins.guess_engine(filename_or_obj)
