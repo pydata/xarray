@@ -106,7 +106,9 @@ from xarray.core.utils import (
     drop_dims_from_indexers,
     either_dict_or_kwargs,
     emit_user_level_warning,
+    infix_dims,
     is_dict_like,
+    is_duck_array,
     is_duck_dask_array,
     is_scalar,
     maybe_wrap_array,
@@ -490,12 +492,12 @@ class _LocIndexer(Generic[T_Dataset]):
         self.dataset = dataset
 
     def __getitem__(self, key: Mapping[Any, Any]) -> T_Dataset:
-        if not is_dict_like(key):
+        if not utils.is_dict_like(key):
             raise TypeError("can only lookup dictionaries from Dataset.loc")
         return self.dataset.sel(key)
 
     def __setitem__(self, key, value) -> None:
-        if not is_dict_like(key):
+        if not utils.is_dict_like(key):
             raise TypeError(
                 "can only set locations defined by dictionaries from Dataset.loc."
                 f" Got: {key}"
@@ -1340,7 +1342,7 @@ class Dataset(
     ) -> Self:
         if data is None:
             data = {}
-        elif not is_dict_like(data):
+        elif not utils.is_dict_like(data):
             raise ValueError("Data must be dict-like")
 
         if data:
@@ -1536,7 +1538,7 @@ class Dataset(
         """
         from xarray.core.formatting import shorten_list_repr
 
-        if is_dict_like(key):
+        if utils.is_dict_like(key):
             return self.isel(**key)
         if utils.hashable(key):
             try:
@@ -1573,7 +1575,7 @@ class Dataset(
         """
         from xarray.core.dataarray import DataArray
 
-        if is_dict_like(key):
+        if utils.is_dict_like(key):
             # check for consistency and convert value to dataset
             value = self._setitem_check(key, value)
             # loop over dataset variables and set new values
@@ -2737,7 +2739,7 @@ class Dataset(
             elif isinstance(v, Sequence) and len(v) == 0:
                 yield k, np.empty((0,), dtype="int64")
             else:
-                if not utils.is_duck_array(v):
+                if not is_duck_array(v):
                     v = np.asarray(v)
 
                 if v.dtype.kind in "US":
@@ -3732,7 +3734,7 @@ class Dataset(
         original dataset, use the :py:meth:`~Dataset.fillna()` method.
 
         """
-        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
+        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
         return alignment.reindex(
             self,
             indexers=indexers,
@@ -3755,7 +3757,7 @@ class Dataset(
         """
         Same as reindex but supports sparse option.
         """
-        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
+        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
         return alignment.reindex(
             self,
             indexers=indexers,
@@ -5172,7 +5174,7 @@ class Dataset(
         if dims == ...:
             raise ValueError("Please use [...] for dims, rather than just ...")
         if ... in dims:
-            dims = list(utils.infix_dims(dims, self.dims))
+            dims = list(infix_dims(dims, self.dims))
 
         new_variables: dict[Hashable, Variable] = {}
         stacked_var_names: list[Hashable] = []
@@ -6221,9 +6223,9 @@ class Dataset(
                 f'transpose requires dims to be passed as multiple arguments. Expected `{", ".join(list_fix)}`. Received `{dims[0]}` instead'
             )
 
-        # Use utils.infix_dims to check once for missing dimensions
+        # Use infix_dims to check once for missing dimensions
         if len(dims) != 0:
-            _ = list(utils.infix_dims(dims, self.dims, missing_dims))
+            _ = list(infix_dims(dims, self.dims, missing_dims))
 
         ds = self.copy()
         for name, var in self._variables.items():
@@ -6431,7 +6433,7 @@ class Dataset(
             C        (x) float64 32B 2.0 2.0 2.0 5.0
             D        (x) float64 32B 3.0 3.0 3.0 4.0
         """
-        if is_dict_like(value):
+        if utils.is_dict_like(value):
             value_keys = getattr(value, "data_vars", value).keys()
             if not set(value_keys) <= set(self.data_vars.keys()):
                 raise ValueError(
@@ -7637,7 +7639,7 @@ class Dataset(
                     dest_vars[k] = f(rhs_vars[k], np.nan)
             return dest_vars
 
-        if is_dict_like(other) and not isinstance(other, Dataset):
+        if utils.is_dict_like(other) and not isinstance(other, Dataset):
             # can't use our shortcut of doing the binary operation with
             # Variable objects, so apply over our data vars instead.
             new_data_vars = apply_over_both(

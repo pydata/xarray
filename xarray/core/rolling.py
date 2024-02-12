@@ -14,6 +14,11 @@ from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.arithmetic import CoarsenArithmetic
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
+from xarray.core.utils import (
+    either_dict_or_kwargs,
+    is_duck_dask_array,
+    module_available,
+)
 from xarray.namedarray import pycompat
 
 try:
@@ -159,7 +164,7 @@ class Rolling(Generic[T_Xarray]):
             array_agg_func = getattr(duck_array_ops, name)
 
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
-        if utils.module_available("numbagg"):
+        if module_available("numbagg"):
             import numbagg
 
             numbagg_move_func = getattr(numbagg, "move_" + name, None)
@@ -531,7 +536,7 @@ class DataArrayRolling(Rolling["DataArray"]):
 
         padded = self.obj.variable
         if self.center[0]:
-            if utils.is_duck_dask_array(padded.data):
+            if is_duck_dask_array(padded.data):
                 # workaround to make the padded chunk size larger than
                 # self.window - 1
                 shift = -(self.window[0] + 1) // 2
@@ -544,7 +549,7 @@ class DataArrayRolling(Rolling["DataArray"]):
                 valid = (slice(None),) * axis + (slice(-shift, None),)
             padded = padded.pad({self.dim[0]: (0, -shift)}, mode="constant")
 
-        if utils.is_duck_dask_array(padded.data) and False:
+        if is_duck_dask_array(padded.data) and False:
             raise AssertionError("should not be reachable")
         else:
             values = func(
@@ -576,7 +581,7 @@ class DataArrayRolling(Rolling["DataArray"]):
 
         padded = self.obj.variable
         if self.center[0]:
-            if utils.is_duck_dask_array(padded.data):
+            if is_duck_dask_array(padded.data):
                 # workaround to make the padded chunk size larger than
                 # self.window - 1
                 shift = -(self.window[0] + 1) // 2
@@ -589,7 +594,7 @@ class DataArrayRolling(Rolling["DataArray"]):
                 valid = (slice(None),) * axis + (slice(-shift, None),)
             padded = padded.pad({self.dim[0]: (0, -shift)}, mode="constant")
 
-        if utils.is_duck_dask_array(padded.data):
+        if is_duck_dask_array(padded.data):
             raise AssertionError("should not be reachable")
         else:
             values = func(
@@ -632,13 +637,13 @@ class DataArrayRolling(Rolling["DataArray"]):
 
         if (
             OPTIONS["use_numbagg"]
-            and utils.module_available("numbagg")
+            and module_available("numbagg")
             and pycompat.mod_version("numbagg") >= Version("0.6.3")
             and numbagg_move_func is not None
             # TODO: we could at least allow this for the equivalent of `apply_ufunc`'s
             # "parallelized". `rolling_exp` does this, as an example (but rolling_exp is
             # much simpler)
-            and not utils.is_duck_dask_array(self.obj.data)
+            and not is_duck_dask_array(self.obj.data)
             # Numbagg doesn't handle object arrays and generally has dtype consistency,
             # so doesn't deal well with bool arrays which are expected to change type.
             and self.obj.data.dtype.kind not in "ObMm"
@@ -662,7 +667,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         if (
             OPTIONS["use_bottleneck"]
             and bottleneck_move_func is not None
-            and not utils.is_duck_dask_array(self.obj.data)
+            and not is_duck_dask_array(self.obj.data)
             and self.ndim == 1
         ):
             # TODO: re-enable bottleneck with dask after the issues
@@ -1027,7 +1032,7 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         from xarray.core.dataarray import DataArray
         from xarray.core.dataset import Dataset
 
-        window_dim = utils.either_dict_or_kwargs(
+        window_dim = either_dict_or_kwargs(
             window_dim, window_dim_kwargs, "Coarsen.construct"
         )
         if not window_dim:
