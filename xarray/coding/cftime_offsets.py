@@ -1268,7 +1268,7 @@ def _new_to_legacy_freq(freq):
     # NOTE: other conversions ("h" -> "H", ..., "N" -> "ns") not required
 
     # TODO: remove once requiring pandas >= 2.2
-    if freq and Version(pd.__version__) >= Version("2.2"):
+    if not freq or Version(pd.__version__) >= Version("2.2"):
         return freq
 
     try:
@@ -1305,7 +1305,7 @@ def _legacy_to_new_freq(freq):
 
     # TODO: remove once requiring pandas >= 2.2
 
-    if freq and Version(pd.__version__) >= Version("2.2"):
+    if not freq or Version(pd.__version__) >= Version("2.2"):
         return freq
 
     try:
