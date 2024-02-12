@@ -803,7 +803,7 @@ def open_datatree(
         Strings and Path objects are interpreted as a path to a netCDF file or Zarr store.
     engine : str, optional
         Xarray backend engine to use. Valid options include `{"netcdf4", "h5netcdf", "zarr"}`.
-    kwargs :
+    **kwargs : dict
         Additional keyword arguments passed to :py:meth:`~xarray.open_dataset` for each group.
     Returns
     -------
