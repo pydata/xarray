@@ -54,7 +54,7 @@ issue-tracker = "https://github.com/pydata/xarray/issues"
 source-code = "https://github.com/pydata/xarray"
 
 [project.entry-points."xarray.chunkmanagers"]
-dask = "xarray.core.daskmanager:DaskManager"
+dask = "xarray.namedarray.daskmanager:DaskManager"
 
 [build-system]
 build-backend = "setuptools.build_meta"
