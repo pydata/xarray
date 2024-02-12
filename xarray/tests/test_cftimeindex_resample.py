@@ -26,7 +26,7 @@ cftime = pytest.importorskip("cftime")
 FREQS = [
     ("8003D", "4001D"),
     ("8003D", "16006D"),
-    ("8003D", "21AS"),
+    ("8003D", "21YS"),
     ("6h", "3h"),
     ("6h", "12h"),
     ("6h", "400min"),

@@ -1315,7 +1315,7 @@ def test_invalid_cftime_arg() -> None:
     with pytest.warns(
         FutureWarning, match="Following pandas, the `closed` parameter is deprecated"
     ):
-        cftime_range("2000", "2001", None, "Y", closed="left")
+        cftime_range("2000", "2001", None, "YE", closed="left")
 
 
 _CALENDAR_SPECIFIC_MONTH_END_TESTS = [
