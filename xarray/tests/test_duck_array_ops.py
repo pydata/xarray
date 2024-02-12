@@ -175,7 +175,6 @@ class TestOps:
         assert result.dtype == np.float32
         assert_array_equal(result, np.array([1, np.nan], dtype=np.float32))
 
-    @requires_plum
     def test_where_extension_duck_array(self, categorical1, categorical2):
         where_res = where(
             np.array([True, False, True, False, False]),
@@ -196,7 +195,6 @@ class TestOps:
         assert isinstance(where_res, np.ndarray)
         assert (where_res == np.array(["cat1", "cat1", "cat2", "cat3", "cat1"])).all()
 
-    @requires_plum
     def test_concatenate_extension_duck_array(self, categorical1, categorical2):
         concate_res = concatenate(
             [ExtensionDuckArray(categorical1), ExtensionDuckArray(categorical2)]
@@ -228,7 +226,6 @@ class TestOps:
             )
         ).all()
 
-    @requires_plum
     def test___getitem__extension_duck_array(self, categorical1):
         extension_duck_array = ExtensionDuckArray(categorical1)
         assert (extension_duck_array[0:2] == categorical1[0:2]).all()
@@ -237,7 +234,6 @@ class TestOps:
         mask = [True, False, True, False, True]
         assert (extension_duck_array[mask] == categorical1[mask]).all()
 
-    @requires_plum
     def test__setitem__extension_duck_array(self, categorical1):
         extension_duck_array = ExtensionDuckArray(categorical1)
         extension_duck_array[2] = "cat1"  # already existing category
@@ -1060,7 +1056,6 @@ def test_push_dask():
         np.testing.assert_equal(actual, expected)
 
 
-@requires_plum
 def test_where_all_categoricals(categorical1, categorical2):
     assert (
         __extension_duck_array__where(
@@ -1070,7 +1065,6 @@ def test_where_all_categoricals(categorical1, categorical2):
     ).all()
 
 
-@requires_plum
 def test_where_drop_categoricals(categorical1, categorical2):
     assert (
         __extension_duck_array__where(
@@ -1080,18 +1074,15 @@ def test_where_drop_categoricals(categorical1, categorical2):
     ).all()
 
 
-@requires_plum
 def test_broadcast_to_categorical(categorical1):
     with pytest.raises(NotImplementedError):
         __extension_duck_array__broadcast(categorical1, (5, 2))
 
 
-@requires_plum
 def test_broadcast_to_same_categorical(categorical1):
     assert (__extension_duck_array__broadcast(categorical1, (5,)) == categorical1).all()
 
 
-@requires_plum
 def test_concategorical_categorical(categorical1, categorical2):
     assert (
         __extension_duck_array__concatenate([categorical1, categorical2])

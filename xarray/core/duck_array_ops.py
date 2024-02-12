@@ -82,8 +82,8 @@ def implements(numpy_function):
 @dispatch
 def __extension_duck_array__issubdtype(
     extension_array_dtype: T_ExtensionArray, other_dtype: DTypeLikeSave
-):
-    return False  # never want a function to think a categorical is a subtype of numpy
+) -> bool:
+    return False  # never want a function to think a pandas extension dtype is a subtype of numpy
 
 
 @implements(np.broadcast_to)
@@ -104,7 +104,7 @@ def __extension_duck_array__stack(arr: T_ExtensionArray, axis: int):
 @dispatch
 def __extension_duck_array__concatenate(
     arrays: Sequence[T_ExtensionArray], axis: int = 0, out=None
-):
+) -> T_ExtensionArray:
     return type(arrays[0])._concat_same_type(arrays)
 
 
@@ -112,42 +112,15 @@ def __extension_duck_array__concatenate(
 @dispatch
 def __extension_duck_array__where(
     condition: np.ndarray, x: T_ExtensionArray, y: T_ExtensionArray
-):
-    return np.where(condition, x, y)
-
-
-@dispatch  # type: ignore[no-redef]
-def __extension_duck_array__where(
-    condition: np.ndarray, x: pd.Categorical, y: pd.Categorical
-):
-    # set up new codes array
-    new_codes = np.where(condition, x.codes, y.codes)
-
-    # Remap shared categories to have same codes
-    shared_categories = [
-        category for category in x.categories if category in set(y.categories)
-    ]
-    for shared_category in shared_categories:
-        new_codes[~condition & (y == shared_category)] = x.codes[x == shared_category][
-            0
-        ]
-
-    # map non-shared y codes to start from the lowest possible number
-    y_only_categories = [
-        category for category in y.categories if category not in shared_categories
-    ]
-    used_x_only_categories = (
-        x[~x.isin(shared_categories)].remove_unused_categories().categories
-    )
-    new_y_code = len(used_x_only_categories) + len(shared_categories)
-    for y_only_category in y_only_categories:
-        new_codes[~condition & (y == y_only_category)] = new_y_code
-        new_y_code += 1
-    new_categories = shared_categories + y_only_categories  # preserve order
-    # TODO: think about ordering?
-    return pd.Categorical.from_codes(
-        new_codes, categories=new_categories, ordered=False
-    )
+) -> T_ExtensionArray:
+    if (
+        isinstance(x, pd.Categorical)
+        and isinstance(y, pd.Categorical)
+        and x.dtype != y.dtype
+    ):
+        x = x.add_categories(set(y.categories).difference(set(x.categories)))
+        y = y.add_categories(set(x.categories).difference(set(y.categories)))
+    return pd.Series(x).where(condition, pd.Series(y)).array
 
 
 def get_array_namespace(x):
@@ -319,10 +292,10 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
     if any(is_extension_array_dtype(x) for x in scalars_or_arrays):
         extension_array_types = [
-            type(x.array) for x in scalars_or_arrays if is_extension_array_dtype(x)
+            x.dtype for x in scalars_or_arrays if is_extension_array_dtype(x)
         ]
         if len(extension_array_types) == len(scalars_or_arrays) and all(
-            x == extension_array_types[0] for x in extension_array_types
+            isinstance(x, type(extension_array_types[0])) for x in extension_array_types
         ):
             return scalars_or_arrays
         arrays = [asarray(np.array(x), xp=xp) for x in scalars_or_arrays]

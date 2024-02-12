@@ -61,7 +61,6 @@ from xarray.tests import (
     requires_dask,
     requires_numexpr,
     requires_pint,
-    requires_plum,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -4610,7 +4609,6 @@ class TestDataset:
         expected = expected.rename({"variable": "abc"}).rename("foo")
         assert_identical(expected, actual)
 
-    @requires_plum
     def test_to_and_from_dataframe(self) -> None:
         x = np.random.randn(10)
         y = np.random.randn(10)

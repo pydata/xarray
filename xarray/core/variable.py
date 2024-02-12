@@ -8,7 +8,6 @@ import warnings
 from collections.abc import Hashable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
-from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, Callable, NoReturn, cast
 
 import numpy as np
@@ -175,7 +174,7 @@ def _maybe_wrap_data(data):
     """
     if isinstance(data, pd.Index):
         return PandasIndexingAdapter(data)
-    if is_extension_array_dtype(data) and find_spec("plum"):
+    if is_extension_array_dtype(data):
         data_type = (
             type(data.array) if isinstance(data, ExtensionDuckArray) else type(data)
         )
