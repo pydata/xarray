@@ -46,6 +46,7 @@ from xarray.tests import (
     requires_cftime,
     requires_dask,
     requires_plum,
+    requires_pyarrow,
 )
 
 dask_array_type = array_type("dask")
@@ -61,18 +62,19 @@ def categorical2():
     return pd.Categorical(["cat2", "cat1", "cat2", "cat3", "cat1"])
 
 
-@pytest.fixture
-def arrow1():
-    return pd.arrays.ArrowExtensionArray(
-        pa.array([{"x": 1, "y": True}, {"x": 2, "y": False}])
-    )
+if find_spec("arrow"):
 
+    @pytest.fixture
+    def arrow1():
+        return pd.arrays.ArrowExtensionArray(
+            pa.array([{"x": 1, "y": True}, {"x": 2, "y": False}])
+        )
 
-@pytest.fixture
-def arrow2():
-    return pd.arrays.ArrowExtensionArray(
-        pa.array([{"x": 3, "y": False}, {"x": 4, "y": True}])
-    )
+    @pytest.fixture
+    def arrow2():
+        return pd.arrays.ArrowExtensionArray(
+            pa.array([{"x": 3, "y": False}, {"x": 4, "y": True}])
+        )
 
 
 @pytest.fixture
@@ -205,6 +207,7 @@ class TestOps:
             == type(categorical1)._concat_same_type((categorical1, categorical2))
         ).all()
 
+    @requires_pyarrow
     def test_duck_extension_array_pyarrow_concatenate(self, arrow1, arrow2):
         concatenated = concatenate(
             (ExtensionDuckArray(arrow1), ExtensionDuckArray(arrow2))
