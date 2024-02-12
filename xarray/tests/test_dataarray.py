@@ -2526,14 +2526,14 @@ class TestDataArray:
         assert_identical(orig, actual)
 
     def test_unstack_pandas_consistency(self) -> None:
-        df = pd.DataFrame({"foo": range(2), "x": ["a", "b", "b"], "y": [0, 0, 1]})
+        df = pd.DataFrame({"foo": range(3), "x": ["a", "b", "b"], "y": [0, 0, 1]})
         s = df.set_index(["x", "y"])["foo"]
         expected = DataArray(s.unstack(), name="foo")
         actual = DataArray(s, dims="z").unstack("z")
         assert_identical(expected, actual)
 
     def test_unstack_requires_unique(self) -> None:
-        df = pd.DataFrame({"foo": range(3), "x": ["a", "a"], "y": [0, 0]})
+        df = pd.DataFrame({"foo": range(2), "x": ["a", "a"], "y": [0, 0]})
         s = df.set_index(["x", "y"])["foo"]
 
         with pytest.raises(ValueError, match="Cannot unstack a non-unique MultiIndex"):
