@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import warnings
 from collections.abc import Sequence
+from importlib.util import find_spec
 
 import numpy as np
 import pandas as pd
@@ -88,12 +89,14 @@ def int2():
     )
 
 
-@__extension_duck_array__concatenate.dispatch
-def _(arrays: Sequence[pd.arrays.IntegerArray], axis: int = 0, out=None):
-    values = np.concatenate(arrays)
-    mask = np.isnan(values)
-    values = values.astype("int8")
-    return pd.arrays.IntegerArray(values, mask)
+if find_spec("plum"):
+
+    @__extension_duck_array__concatenate.dispatch
+    def _(arrays: Sequence[pd.arrays.IntegerArray], axis: int = 0, out=None):
+        values = np.concatenate(arrays)
+        mask = np.isnan(values)
+        values = values.astype("int8")
+        return pd.arrays.IntegerArray(values, mask)
 
 
 class TestOps:
@@ -204,7 +207,7 @@ class TestOps:
             == type(categorical1)._concat_same_type((categorical1, categorical2))
         ).all()
 
-    def test_duck_extension_array_pyarrow_concatenate(arrow1, arrow2):
+    def test_duck_extension_array_pyarrow_concatenate(self, arrow1, arrow2):
         concatenated = concatenate(
             (ExtensionDuckArray(arrow1), ExtensionDuckArray(arrow2))
         )
