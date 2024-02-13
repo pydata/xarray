@@ -2722,6 +2722,19 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         orig = Variable(dims=(), data=array)
         assert isinstance(orig._data.item(), CustomWithValuesAttr)
 
+    def test_duck_array_with_chunks(self):
+        # Non indexable type
+        class CustomArray(NDArrayMixin, indexing.ExplicitlyIndexed):
+            def __init__(self, array):
+                self.array = array
+
+            @property
+            def chunks(self):
+                return self.shape
+
+        array = CustomArray(np.arange(3))
+        orig = Variable(dims=("x"), data=array, attrs={"foo": "bar"})
+        assert isinstance(orig._data, np.ndarray)  # should not be CustomArray
 
 def test_raise_no_warning_for_nan_in_binary_ops():
     with assert_no_warnings():
