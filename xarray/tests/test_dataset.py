@@ -3767,7 +3767,9 @@ class TestDataset:
         ds = Dataset({"da": [1, 2]}, coords={"y": ("x", [1, 1]), "z": ("x", [0, 0])})
         ds = ds.set_index(x=("y", "z"))
 
-        with pytest.raises(ValueError, match="Cannot unstack a non-unique MultiIndex"):
+        with pytest.raises(
+            ValueError, match="Cannot unstack MultiIndex containing duplicates"
+        ):
             ds.unstack("x")
 
     def test_unstack_fill_value(self) -> None:

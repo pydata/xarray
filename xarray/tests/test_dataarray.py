@@ -2536,7 +2536,9 @@ class TestDataArray:
         df = pd.DataFrame({"foo": range(2), "x": ["a", "a"], "y": [0, 0]})
         s = df.set_index(["x", "y"])["foo"]
 
-        with pytest.raises(ValueError, match="Cannot unstack a non-unique MultiIndex"):
+        with pytest.raises(
+            ValueError, match="Cannot unstack MultiIndex containing duplicates"
+        ):
             DataArray(s, dims="z").unstack("z")
 
     @pytest.mark.filterwarnings("error")

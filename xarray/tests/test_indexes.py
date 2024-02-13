@@ -456,7 +456,9 @@ class TestPandasMultiIndex:
         pd_midx = pd.MultiIndex.from_product([["a", "a"], [1, 2]], names=["one", "two"])
         index = PandasMultiIndex(pd_midx, "x")
 
-        with pytest.raises(ValueError, match="Cannot unstack a non-unique MultiIndex"):
+        with pytest.raises(
+            ValueError, match="Cannot unstack MultiIndex containing duplicates"
+        ):
             index.unstack()
 
     def test_create_variables(self) -> None:
