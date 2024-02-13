@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Callable, Union
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_extension_array_dtype
 
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.variable import Variable
@@ -251,6 +250,7 @@ class CFMaskCoder(VariableCoder):
     def encode(self, variable: Variable, name: T_Name = None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
+        dtype = np.dtype(encoding.get("dtype", data.dtype))
         fv = encoding.get("_FillValue")
         mv = encoding.get("missing_value")
 
@@ -267,8 +267,6 @@ class CFMaskCoder(VariableCoder):
 
         # special case DateTime to properly handle NaT
         is_time_like = _is_time_like(attrs.get("units"))
-
-        dtype = np.dtype(encoding.get("dtype", data.dtype))
 
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
@@ -474,18 +472,16 @@ class DefaultFillvalueCoder(VariableCoder):
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         dims, data, attrs, encoding = unpack_for_encoding(variable)
-        has_no_fill = "_FillValue" not in attrs and "_FillValue" not in encoding
         # make NaN the fill value for float types
-        if is_extension_array_dtype(data):
-            if not has_no_fill:
-                raise ValueError(
-                    "Found _FillValue encoding or attr on extension array."
-                )
-            return variable
-        if has_no_fill and np.issubdtype(variable.dtype, np.floating):
+        if (
+            "_FillValue" not in attrs
+            and "_FillValue" not in encoding
+            and np.issubdtype(variable.dtype, np.floating)
+        ):
             attrs["_FillValue"] = variable.dtype.type(np.nan)
             return Variable(dims, data, attrs, encoding, fastpath=True)
-        return variable
+        else:
+            return variable
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         raise NotImplementedError()

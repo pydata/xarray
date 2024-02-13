@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Callable, Union
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_extension_array_dtype
 from pandas.errors import OutOfBoundsDatetime, OutOfBoundsTimedelta
 
 from xarray.coding.variables import (
@@ -969,10 +968,9 @@ class CFDatetimeCoder(VariableCoder):
         self.use_cftime = use_cftime
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if (not is_extension_array_dtype(variable.data)) and (
-            np.issubdtype(variable.data.dtype, np.datetime64)
-            or contains_cftime_datetimes(variable)
-        ):
+        if np.issubdtype(
+            variable.data.dtype, np.datetime64
+        ) or contains_cftime_datetimes(variable):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
 
             units = encoding.pop("units", None)
@@ -1010,9 +1008,7 @@ class CFDatetimeCoder(VariableCoder):
 
 class CFTimedeltaCoder(VariableCoder):
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if (not is_extension_array_dtype(variable.data)) and np.issubdtype(
-            variable.data.dtype, np.timedelta64
-        ):
+        if np.issubdtype(variable.data.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
 
             data, units = encode_cf_timedelta(

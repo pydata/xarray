@@ -5,7 +5,6 @@ from __future__ import annotations
 from functools import partial
 
 import numpy as np
-from pandas.api.types import is_extension_array_dtype
 
 from xarray.coding.variables import (
     VariableCoder,
@@ -29,10 +28,11 @@ def create_vlen_dtype(element_type):
 
 
 def check_vlen_dtype(dtype):
-    if is_extension_array_dtype(dtype) or dtype.kind != "O" or dtype.metadata is None:
+    if dtype.kind != "O" or dtype.metadata is None:
         return None
-    # check xarray (element_type) as well as h5py (vlen)
-    return dtype.metadata.get("element_type", dtype.metadata.get("vlen"))
+    else:
+        # check xarray (element_type) as well as h5py (vlen)
+        return dtype.metadata.get("element_type", dtype.metadata.get("vlen"))
 
 
 def is_unicode_dtype(dtype):
