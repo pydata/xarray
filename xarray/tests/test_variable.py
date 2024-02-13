@@ -2738,11 +2738,11 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
             def __array_ufunc__(self, *args, **kwargs):
                 return NotImplemented
 
-
         array = CustomArray(np.arange(3))
         assert is_chunked_array(array)
         var = Variable(dims=("x"), data=array)
         var.load()
+
 
 def test_raise_no_warning_for_nan_in_binary_ops():
     with assert_no_warnings():
