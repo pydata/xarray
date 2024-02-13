@@ -804,7 +804,7 @@ def open_datatree(
     engine : str, optional
         Xarray backend engine to use. Valid options include `{"netcdf4", "h5netcdf", "zarr"}`.
     **kwargs : dict
-        Additional keyword arguments passed to :py:meth:`~xarray.open_dataset` for each group.
+        Additional keyword arguments passed to :py:func:`~xarray.open_dataset` for each group.
     Returns
     -------
     xarray.DataTree
