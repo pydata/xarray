@@ -1020,7 +1020,7 @@ class PandasMultiIndex(PandasIndex):
         if not clean_index.is_unique:
             raise ValueError(
                 "Cannot unstack MultiIndex containing duplicates. Make sure entries "
-                "are unique, e.g., by  calling ``.drop_duplicates('{self.dim}')``, "
+                f"are unique, e.g., by  calling ``.drop_duplicates('{self.dim}')``, "
                 "before unstacking."
             )
 
