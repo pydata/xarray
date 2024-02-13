@@ -90,6 +90,9 @@ Internal Changes
   when the data isn't datetime-like. (:issue:`8718`, :pull:`8724`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
+- Move `parallelcompat` and `chunk managers` modules from `xarray/core` to `xarray/namedarray`. (:pull:`8319`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_ and `Anderson Banihirwe <https://github.com/andersy005>`_.
+
 .. _whats-new.2024.01.1:
 
 v2024.01.1 (23 Jan, 2024)
