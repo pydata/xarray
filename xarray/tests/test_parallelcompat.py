@@ -222,7 +222,7 @@ class TestGetChunkedArrayType:
             get_chunked_array_type(*[dask_arr, dummy_arr])
 
 
-def test_bogus_entrypoint():
+def test_bogus_entrypoint() -> None:
     # Create a bogus entry-point as if the user broke their setup.cfg
     # or is actively developing their new chunk manager
     entry_point = EntryPoint(
