@@ -2532,6 +2532,15 @@ class TestDataArray:
         actual = DataArray(s, dims="z").unstack("z")
         assert_identical(expected, actual)
 
+    def test_unstack_requires_unique(self) -> None:
+        df = pd.DataFrame({"foo": range(2), "x": ["a", "a"], "y": [0, 0]})
+        s = df.set_index(["x", "y"])["foo"]
+
+        with pytest.raises(
+            ValueError, match="Cannot unstack MultiIndex containing duplicates"
+        ):
+            DataArray(s, dims="z").unstack("z")
+
     @pytest.mark.filterwarnings("error")
     def test_unstack_roundtrip_integer_array(self) -> None:
         arr = xr.DataArray(

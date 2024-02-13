@@ -3764,6 +3764,14 @@ class TestDataset:
         with pytest.raises(ValueError, match=r".*do not have exactly one multi-index"):
             ds.unstack("x")
 
+        ds = Dataset({"da": [1, 2]}, coords={"y": ("x", [1, 1]), "z": ("x", [0, 0])})
+        ds = ds.set_index(x=("y", "z"))
+
+        with pytest.raises(
+            ValueError, match="Cannot unstack MultiIndex containing duplicates"
+        ):
+            ds.unstack("x")
+
     def test_unstack_fill_value(self) -> None:
         ds = xr.Dataset(
             {"var": (("x",), np.arange(6)), "other_var": (("x",), np.arange(3, 9))},
