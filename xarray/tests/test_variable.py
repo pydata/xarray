@@ -29,7 +29,7 @@ from xarray.core.indexing import (
 from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
-from xarray.namedarray.pycompat import array_type
+from xarray.namedarray.pycompat import array_type, is_chunked_array
 from xarray.tests import (
     assert_allclose,
     assert_array_equal,
@@ -2724,7 +2724,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
 
     def test_duck_array_with_chunks(self):
         # Non indexable type
-        class CustomArray(NDArrayMixin, indexing.ExplicitlyIndexed):
+        class CustomArray(NDArrayMixin):
             def __init__(self, array):
                 self.array = array
 
@@ -2732,9 +2732,17 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
             def chunks(self):
                 return self.shape
 
+            def __array_function__(self, *args, **kwargs):
+                return NotImplemented
+
+            def __array_ufunc__(self, *args, **kwargs):
+                return NotImplemented
+
+
         array = CustomArray(np.arange(3))
-        orig = Variable(dims=("x"), data=array, attrs={"foo": "bar"})
-        assert isinstance(orig._data, np.ndarray)  # should not be CustomArray
+        assert is_chunked_array(array)
+        var = Variable(dims=("x"), data=array)
+        var.load()
 
 def test_raise_no_warning_for_nan_in_binary_ops():
     with assert_no_warnings():
