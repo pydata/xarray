@@ -155,9 +155,7 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
         if chunkmanager.is_chunked_array(chunked_arr)
     ]
     if not selected:
-        raise TypeError(
-            f"Could not find a Chunk Manager which recognises type {type(chunked_arr)}"
-        )
+        return None
     elif len(selected) >= 2:
         raise TypeError(f"Multiple ChunkManagers recognise type {type(chunked_arr)}")
     else:
