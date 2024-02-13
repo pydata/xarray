@@ -19,8 +19,6 @@ from xarray.backends.common import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
-from xarray.core.parallelcompat import guess_chunkmanager
-from xarray.core.pycompat import integer_types
 from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
@@ -28,6 +26,8 @@ from xarray.core.utils import (
     close_on_error,
 )
 from xarray.core.variable import Variable
+from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
@@ -86,19 +86,23 @@ class ZarrArrayWrapper(BackendArray):
     def _oindex(self, key):
         return self._array.oindex[key]
 
+    def _vindex(self, key):
+        return self._array.vindex[key]
+
+    def _getitem(self, key):
+        return self._array[key]
+
     def __getitem__(self, key):
         array = self._array
         if isinstance(key, indexing.BasicIndexer):
-            return array[key.tuple]
+            method = self._getitem
         elif isinstance(key, indexing.VectorizedIndexer):
-            return array.vindex[
-                indexing._arrayize_vectorized_indexer(key, self.shape).tuple
-            ]
-        else:
-            assert isinstance(key, indexing.OuterIndexer)
-            return indexing.explicit_indexing_adapter(
-                key, array.shape, indexing.IndexingSupport.VECTORIZED, self._oindex
-            )
+            method = self._vindex
+        elif isinstance(key, indexing.OuterIndexer):
+            method = self._oindex
+        return indexing.explicit_indexing_adapter(
+            key, array.shape, indexing.IndexingSupport.VECTORIZED, method
+        )
 
         # if self.ndim == 0:
         # could possibly have a work-around for 0d data here

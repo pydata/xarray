@@ -33,7 +33,7 @@ from xarray.core.duck_array_ops import (
     where,
 )
 from xarray.core.indexing import ExtensionDuckArray
-from xarray.core.pycompat import array_type
+from xarray.namedarray.pycompat import array_type
 from xarray.testing import assert_allclose, assert_equal, assert_identical
 from xarray.tests import (
     arm_xfail,
