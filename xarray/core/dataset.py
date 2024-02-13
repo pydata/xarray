@@ -7155,33 +7155,37 @@ class Dataset(
         )
 
     def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
-        columns = [
+        columns_in_order = [k for k in self.variables if k not in self.dims]
+        non_extension_array_columns = [
             k
-            for k in self.variables
-            if k not in self.dims
-            and not is_extension_array_dtype(self.variables[k].data)
+            for k in columns_in_order
+            if not is_extension_array_dtype(self.variables[k].data)
         ]
         extension_array_columns = [
             k
-            for k in self.variables
-            if k not in self.dims and is_extension_array_dtype(self.variables[k].data)
+            for k in columns_in_order
+            if is_extension_array_dtype(self.variables[k].data)
         ]
         data = [
             self._variables[k].set_dims(ordered_dims).values.reshape(-1)
-            for k in columns
+            for k in non_extension_array_columns
         ]
         index = self.coords.to_index([*ordered_dims])
-        broadcasted_df = pd.DataFrame(dict(zip(columns, data)), index=index)
+        broadcasted_df = pd.DataFrame(
+            dict(zip(non_extension_array_columns, data)), index=index
+        )
         for extension_array_column in extension_array_columns:
             extension_array = self.variables[extension_array_column].data.array
             index = self[self.variables[extension_array_column].dims[0]].data
-            cat_df = pd.DataFrame(
+            extension_array_df = pd.DataFrame(
                 {extension_array_column: extension_array},
                 index=self[self.variables[extension_array_column].dims[0]].data,
             )
-            cat_df.index.name = self.variables[extension_array_column].dims[0]
-            broadcasted_df = broadcasted_df.join(cat_df)
-        return broadcasted_df
+            extension_array_df.index.name = self.variables[extension_array_column].dims[
+                0
+            ]
+            broadcasted_df = broadcasted_df.join(extension_array_df)
+        return broadcasted_df[columns_in_order]
 
     def to_dataframe(self, dim_order: Sequence[Hashable] | None = None) -> pd.DataFrame:
         """Convert this dataset into a pandas.DataFrame.
@@ -7365,7 +7369,7 @@ class Dataset(
             obj._set_numpy_data_from_dataframe(idx, arrays, dims)
         for name, extension_array in extension_arrays:
             obj[name] = (dims, extension_array)
-        return obj
+        return obj[dataframe.columns] if len(dataframe.columns) else obj
 
     def to_dask_dataframe(
         self, dim_order: Sequence[Hashable] | None = None, set_index: bool = False
