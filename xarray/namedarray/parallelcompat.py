@@ -11,7 +11,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 from importlib.metadata import EntryPoint, entry_points
-from typing import TYPE_CHECKING, Any, Callable, Generic, Optional, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, Protocol, TypeVar
 
 import numpy as np
 
@@ -121,7 +121,7 @@ def guess_chunkmanager(
         )
 
 
-def get_chunked_array_type(*args: Any) -> Optional[ChunkManagerEntrypoint[Any]]:
+def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any] | None:
     """
     Detects which parallel backend should be used for given set of arrays.
 
