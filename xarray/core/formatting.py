@@ -20,8 +20,8 @@ from pandas.errors import OutOfBoundsDatetime
 from xarray.core.duck_array_ops import array_equiv, astype
 from xarray.core.indexing import MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
-from xarray.core.pycompat import array_type, to_duck_array, to_numpy
 from xarray.core.utils import is_duck_array
+from xarray.namedarray.pycompat import array_type, to_duck_array, to_numpy
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import AbstractCoordinates

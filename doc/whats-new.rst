@@ -74,6 +74,8 @@ Bug fixes
   lead to integer overflow or unsafe conversion from floating point to integer
   values (:issue:`8542`, :pull:`8575`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- Raise an error when unstacking a MultiIndex that has duplicates as this would lead
+  to silent data loss (:issue:`7104`, :pull:`8737`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -87,6 +89,9 @@ Internal Changes
 - ``DataArray.dt`` now raises an ``AttributeError`` rather than a ``TypeError``
   when the data isn't datetime-like. (:issue:`8718`, :pull:`8724`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+- Move `parallelcompat` and `chunk managers` modules from `xarray/core` to `xarray/namedarray`. (:pull:`8319`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_ and `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 .. _whats-new.2024.01.1:
 

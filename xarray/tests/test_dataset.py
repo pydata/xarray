@@ -39,8 +39,8 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.pycompat import array_type, integer_types
 from xarray.core.utils import is_scalar
+from xarray.namedarray.pycompat import array_type, integer_types
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
     DuckArrayWrapper,
@@ -3762,6 +3762,14 @@ class TestDataset:
         ):
             ds.unstack("foo")
         with pytest.raises(ValueError, match=r".*do not have exactly one multi-index"):
+            ds.unstack("x")
+
+        ds = Dataset({"da": [1, 2]}, coords={"y": ("x", [1, 1]), "z": ("x", [0, 0])})
+        ds = ds.set_index(x=("y", "z"))
+
+        with pytest.raises(
+            ValueError, match="Cannot unstack MultiIndex containing duplicates"
+        ):
             ds.unstack("x")
 
     def test_unstack_fill_value(self) -> None:
