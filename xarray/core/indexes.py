@@ -1019,9 +1019,9 @@ class PandasMultiIndex(PandasIndex):
 
         if not clean_index.is_unique:
             raise ValueError(
-                "Cannot unstack a non-unique MultiIndex. To restore the previous "
-                "behavior call ``.drop_duplicates('{self.dim}', keep='last')`` before "
-                "unstacking."
+                "Cannot unstack MultiIndex containing duplicates. Make sure entries "
+                "are unique, e.g., by  calling ``.drop_duplicates('{self.dim}')``, "
+                "before unstacking."
             )
 
         new_indexes: dict[Hashable, Index] = {}
