@@ -2361,6 +2361,11 @@ class TestVariableWithDask(VariableSubclassobjects):
     def test_pad(self, mode, xr_arg, np_arg):
         super().test_pad(mode, xr_arg, np_arg)
 
+    def test_pandas_cateogrical_dtype(self):
+        data = pd.Categorical(np.arange(10, dtype="int64"))
+        with pytest.raises(ValueError, match="was found to be a Pandas ExtensionArray"):
+            self.cls("x", data)
+
 
 @requires_sparse
 class TestVariableWithSparse:
