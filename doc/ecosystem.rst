@@ -36,7 +36,7 @@ Geosciences
 - `rioxarray <https://corteva.github.io/rioxarray>`_: geospatial xarray extension powered by rasterio
 - `salem <https://salem.readthedocs.io>`_: Adds geolocalised subsetting, masking, and plotting operations to xarray's data structures via accessors.
 - `SatPy <https://satpy.readthedocs.io/>`_ : Library for reading and manipulating meteorological remote sensing data and writing it to various image and data file formats.
-- `SARXarray <https://tudelftgeodesy.github.io/sarxarray/>`_: xarray extension for reading and processing large Synthetic Aperture Radar (SAR) data stacks. 
+- `SARXarray <https://tudelftgeodesy.github.io/sarxarray/>`_: xarray extension for reading and processing large Synthetic Aperture Radar (SAR) data stacks.
 - `Spyfit <https://spyfit.readthedocs.io/en/master/>`_: FTIR spectroscopy of the atmosphere
 - `windspharm <https://ajdawson.github.io/windspharm/index.html>`_: Spherical
   harmonic wind analysis in Python.
