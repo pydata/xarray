@@ -11,7 +11,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 from importlib.metadata import EntryPoint, entry_points
-from typing import TYPE_CHECKING, Any, Callable, Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, Optional, Protocol, TypeVar
 
 import numpy as np
 
@@ -121,11 +121,13 @@ def guess_chunkmanager(
         )
 
 
-def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
+def get_chunked_array_type(*args: Any) -> Optional[ChunkManagerEntrypoint[Any]]:
     """
     Detects which parallel backend should be used for given set of arrays.
 
     Also checks that all arrays are of same chunking type (i.e. not a mix of cubed and dask).
+
+    Returns None if no matching ChunkManager is found.
     """
 
     # TODO this list is probably redundant with something inside xarray.apply_ufunc
