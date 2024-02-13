@@ -761,7 +761,7 @@ class DataArray(
     @property
     def values(self) -> np.ndarray:
         """
-        The array's data as a numpy.ndarray.
+        A view onto the DataArray's underlying data as a numpy.ndarray.
 
         If the array's data is not a numpy.ndarray this will attempt to convert
         it naively using np.array(), which will raise an error if the array
