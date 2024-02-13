@@ -74,6 +74,8 @@ Bug fixes
   lead to integer overflow or unsafe conversion from floating point to integer
   values (:issue:`8542`, :pull:`8575`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- Raise an error when unstacking a MultiIndex that has duplicates as this would lead
+  to silent data loss (:issue:`7104`, :pull:`8737`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
