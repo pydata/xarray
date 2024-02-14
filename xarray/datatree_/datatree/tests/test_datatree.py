@@ -6,8 +6,8 @@ import xarray as xr
 import xarray.testing as xrt
 from xarray.tests import create_test_data, source_ndarray
 
-import datatree.testing as dtt
-from datatree import DataTree, NotFoundInTreeError
+import xarray.datatree_.datatree.testing as dtt
+from xarray.datatree_.datatree import DataTree, NotFoundInTreeError
 
 
 class TestTreeCreation:

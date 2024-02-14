@@ -156,7 +156,7 @@ types would also be highly useful for xarray users.
 By pursuing these improvements in NumPy we hope to extend the benefits
 to the full scientific Python community, and avoid tight coupling
 between xarray and specific third-party libraries (e.g., for
-implementing untis). This will allow xarray to maintain its domain
+implementing units). This will allow xarray to maintain its domain
 agnostic strengths.
 
 We expect that we may eventually add some minimal interfaces in xarray

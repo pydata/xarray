@@ -2,8 +2,8 @@ from textwrap import dedent
 
 from xarray import Dataset
 
-from datatree import DataTree
-from datatree.formatting import diff_tree_repr
+from xarray.datatree_.datatree import DataTree
+from xarray.datatree_.datatree.formatting import diff_tree_repr
 
 
 class TestRepr:

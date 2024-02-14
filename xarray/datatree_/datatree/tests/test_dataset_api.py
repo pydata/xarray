@@ -1,8 +1,8 @@
 import numpy as np
 import xarray as xr
 
-from datatree import DataTree
-from datatree.testing import assert_equal
+from xarray.datatree_.datatree import DataTree
+from xarray.datatree_.datatree.testing import assert_equal
 
 
 class TestDSMethodInheritance:
