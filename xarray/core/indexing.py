@@ -1332,6 +1332,14 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def transpose(self, order):
         return self.array.transpose(order)
 
+    def oindex(self, key):
+        array, key = self._indexing_array_and_key(key)
+        return array[key]
+
+    def vindex(self, key):
+        array, key = self._indexing_array_and_key(key)
+        return array[key]
+
     def __getitem__(self, key):
         array, key = self._indexing_array_and_key(key)
         return array[key]
@@ -1376,30 +1384,35 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             )
         self.array = array
 
+    def oindex(self, key):
+        # manual orthogonal indexing (implemented like DaskIndexingAdapter)
+        key = key.tuple
+        value = self.array
+        for axis, subkey in reversed(list(enumerate(key))):
+            value = value[(slice(None),) * axis + (subkey, Ellipsis)]
+        return value
+
+    def vindex(self, key):
+        raise TypeError("Vectorized indexing is not supported")
+
     def __getitem__(self, key):
         if isinstance(key, BasicIndexer):
             return self.array[key.tuple]
         elif isinstance(key, OuterIndexer):
-            # manual orthogonal indexing (implemented like DaskIndexingAdapter)
-            key = key.tuple
-            value = self.array
-            for axis, subkey in reversed(list(enumerate(key))):
-                value = value[(slice(None),) * axis + (subkey, Ellipsis)]
-            return value
+            return self.oindex(key)
         else:
             if isinstance(key, VectorizedIndexer):
-                raise TypeError("Vectorized indexing is not supported")
+                return self.vindex(key)
             else:
                 raise TypeError(f"Unrecognized indexer: {key}")
 
     def __setitem__(self, key, value):
         if isinstance(key, (BasicIndexer, OuterIndexer)):
             self.array[key.tuple] = value
+        elif isinstance(key, VectorizedIndexer):
+            raise TypeError("Vectorized indexing is not supported")
         else:
-            if isinstance(key, VectorizedIndexer):
-                raise TypeError("Vectorized indexing is not supported")
-            else:
-                raise TypeError(f"Unrecognized indexer: {key}")
+            raise TypeError(f"Unrecognized indexer: {key}")
 
     def transpose(self, order):
         xp = self.array.__array_namespace__()
@@ -1417,41 +1430,54 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         """
         self.array = array
 
+    def _rewrite_indexer(self, key):
+        # Rewrite indexer to optimize it for dask array
+        # if possible, short-circuit when keys are effectively slice(None)
+        # This preserves dask name and passes lazy array equivalence checks
+        # (see duck_array_ops.lazy_array_equiv)
+        new_indexer = []
+        rewritten_indexer = False
+        for idim, k in enumerate(key):
+            if isinstance(k, Iterable) and (
+                not is_duck_dask_array(k)
+                and duck_array_ops.array_equiv(k, np.arange(self.array.shape[idim]))
+            ):
+                new_indexer.append(slice(None))
+                rewritten_indexer = True
+            else:
+                new_indexer.append(k)
+        return rewritten_indexer, type(key)(tuple(new_indexer))
+
+    def oindex(self, key):
+        key = key.tuple
+        try:
+            return self.array[key]
+        except NotImplementedError:
+            # manual orthogonal indexing
+            value = self.array
+            for axis, subkey in reversed(list(enumerate(key))):
+                value = value[(slice(None),) * axis + (subkey,)]
+            return value
+
+    def vindex(self, key):
+        return self.array.vindex[key.tuple]
+
     def __getitem__(self, key):
         if not isinstance(key, VectorizedIndexer):
             # if possible, short-circuit when keys are effectively slice(None)
             # This preserves dask name and passes lazy array equivalence checks
             # (see duck_array_ops.lazy_array_equiv)
-            rewritten_indexer = False
-            new_indexer = []
-            for idim, k in enumerate(key.tuple):
-                if isinstance(k, Iterable) and (
-                    not is_duck_dask_array(k)
-                    and duck_array_ops.array_equiv(k, np.arange(self.array.shape[idim]))
-                ):
-                    new_indexer.append(slice(None))
-                    rewritten_indexer = True
-                else:
-                    new_indexer.append(k)
+            rewritten_indexer, new_key = self._rewrite_indexer(key.tuple)
             if rewritten_indexer:
-                key = type(key)(tuple(new_indexer))
+                key = new_key
 
         if isinstance(key, BasicIndexer):
             return self.array[key.tuple]
         elif isinstance(key, VectorizedIndexer):
-            return self.array.vindex[key.tuple]
+            return self.vindex(key)
         else:
             assert isinstance(key, OuterIndexer)
-            key = key.tuple
-            try:
-                return self.array[key]
-            except NotImplementedError:
-                # manual orthogonal indexing.
-                # TODO: port this upstream into dask in a saner way.
-                value = self.array
-                for axis, subkey in reversed(list(enumerate(key))):
-                    value = value[(slice(None),) * axis + (subkey,)]
-                return value
+            return self.oindex(key)
 
     def __setitem__(self, key, value):
         if isinstance(key, BasicIndexer):
@@ -1526,6 +1552,12 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         # as for numpy.ndarray indexing, we always want the result to be
         # a NumPy array.
         return to_0d_array(item)
+
+    def oindex(self, key):
+        return self.__getitem__(key)
+
+    def vindex(self, key):
+        return self.__getitem__(key)
 
     def __getitem__(
         self, indexer
