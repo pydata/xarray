@@ -897,7 +897,8 @@ where the data should be written (in index space, not label space), e.g.,
     ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
 
 Concurrent writes with ``region`` are safe as long as they modify distinct
-chunks in the underlying Zarr arrays (or use an appropriate ``lock``).
+chunks in the underlying Zarr arrays (or use an appropriate ``lock``). 
+Note that incorrectly (or omitting) setting the ``chunksizes`` for the initial Zarr file results in a partial update of the chunks when writing to regions, causing missing values in the Zarr file.
 
 As a safety check to make it harder to inadvertently override existing values,
 if you set ``region`` then *all* variables included in a Dataset must have
