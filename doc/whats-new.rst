@@ -93,6 +93,13 @@ Internal Changes
 - Move `parallelcompat` and `chunk managers` modules from `xarray/core` to `xarray/namedarray`. (:pull:`8319`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_ and `Anderson Banihirwe <https://github.com/andersy005>`_.
 
+- Imports ``datatree`` repository and history into internal
+  location. (:pull:`8688`) By `Matt Savoie <https://github.com/flamingbear>`_
+  and `Justus Magin <https://github.com/keewis>`_.
+
+- Adds :py:func:`open_datatree` into `xarray/backends` (:pull:`8697`) By `Matt
+  Savoie <https://github.com/flamingbear>`_.
+
 .. _whats-new.2024.01.1:
 
 v2024.01.1 (23 Jan, 2024)
