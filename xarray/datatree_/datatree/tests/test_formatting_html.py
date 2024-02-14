@@ -1,7 +1,7 @@
 import pytest
 import xarray as xr
 
-from datatree import DataTree, formatting_html
+from xarray.datatree_.datatree import DataTree, formatting_html
 
 
 @pytest.fixture(scope="module", params=["some html", "some other html"])
