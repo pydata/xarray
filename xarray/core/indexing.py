@@ -560,6 +560,9 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def transpose(self, order):
         return LazilyVectorizedIndexedArray(self.array, self.key).transpose(order)
 
+    def oindex(self, indexer):
+        return type(self)(self.array, self._updated_key(indexer))
+
     def __getitem__(self, indexer):
         if isinstance(indexer, VectorizedIndexer):
             array = LazilyVectorizedIndexedArray(self.array, self.key)
@@ -663,6 +666,9 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         return self.array.get_duck_array()
 
+    def oindex(self, key):
+        return type(self)(_wrap_numpy_scalars(self.array[key]))
+
     def __getitem__(self, key):
         return type(self)(_wrap_numpy_scalars(self.array[key]))
 
@@ -695,6 +701,9 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         self._ensure_cached()
         return self.array.get_duck_array()
+
+    def oindex(self, key):
+        return type(self)(_wrap_numpy_scalars(self.array[key]))
 
     def __getitem__(self, key):
         return type(self)(_wrap_numpy_scalars(self.array[key]))
