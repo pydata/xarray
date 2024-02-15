@@ -7135,4 +7135,6 @@ def test_lazy_data_variable_not_loaded():
     array = InaccessibleArray(np.array([1, 2, 3]))
     v = Variable(data=array, dims="x")
     # No data needs to be accessed, so no error should be raised
-    xr.DataArray(v)
+    da = xr.DataArray(v)
+    # No data needs to be accessed, so no error should be raised
+    xr.DataArray(da)
