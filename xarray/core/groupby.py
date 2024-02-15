@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
+from xarray.coding.cftime_offsets import _new_to_legacy_freq
 from xarray.core import dtypes, duck_array_ops, nputils, ops
 from xarray.core._aggregations import (
     DataArrayGroupByAggregations,
@@ -529,7 +530,8 @@ class ResolvedTimeResampleGrouper(ResolvedGrouper):
             )
         else:
             index_grouper = pd.Grouper(
-                freq=grouper.freq,
+                # TODO remove once requiring pandas >= 2.2
+                freq=_new_to_legacy_freq(grouper.freq),
                 closed=grouper.closed,
                 label=grouper.label,
                 origin=grouper.origin,
