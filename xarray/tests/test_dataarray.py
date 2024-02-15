@@ -7128,3 +7128,11 @@ def test_nD_coord_dataarray() -> None:
     _assert_internal_invariants(da4, check_default_indexes=True)
     assert "x" not in da4.xindexes
     assert "x" in da4.coords
+
+
+def test_lazy_data_variable_not_loaded():
+    # GH8753
+    array = InaccessibleArray(np.array([1, 2, 3]))
+    v = Variable(data=array, dims="x")
+    # No data needs to be accessed, so no error should be raised
+    xr.DataArray(v)

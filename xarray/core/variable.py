@@ -248,7 +248,7 @@ def as_compatible_data(
     from xarray.core.dataarray import DataArray
 
     if isinstance(data, (Variable, DataArray)):
-        return data.data
+        return cast("T_DuckArray", data._data)
 
     if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
         data = _possibly_convert_datetime_or_timedelta_index(data)
