@@ -606,7 +606,7 @@ def test_get_clean_interp_index_cf_calendar(cf_da, calendar):
 
 @requires_cftime
 @pytest.mark.parametrize(
-    ("calendar", "freq"), zip(["gregorian", "proleptic_gregorian"], ["1D", "1M", "1Y"])
+    ("calendar", "freq"), zip(["gregorian", "proleptic_gregorian"], ["1D", "1ME", "1Y"])
 )
 def test_get_clean_interp_index_dt(cf_da, calendar, freq):
     """In the gregorian case, the index should be proportional to normal datetimes."""

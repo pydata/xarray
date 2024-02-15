@@ -2955,7 +2955,7 @@ class TestCFDatetimePlot(PlotTestCase):
         """
         # case for 1d array
         data = np.random.rand(4, 12)
-        time = xr.cftime_range(start="2017", periods=12, freq="1M", calendar="noleap")
+        time = xr.cftime_range(start="2017", periods=12, freq="1ME", calendar="noleap")
         darray = DataArray(data, dims=["x", "time"])
         darray.coords["time"] = time
 

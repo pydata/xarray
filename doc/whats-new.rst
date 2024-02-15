@@ -42,6 +42,8 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- :py:func:`infer_freq` always returns the frequency strings as defined in pandas 2.2
+  (:issue:`8612`, :pull:`8627`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 Deprecations
 ~~~~~~~~~~~~
