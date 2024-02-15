@@ -797,7 +797,12 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             else:
                 actual_indexer = indexer
 
-            data = as_indexable(self._data)[actual_indexer]
+            indexable = as_indexable(self._data)
+
+            if isinstance(indexer, OuterIndexer):
+                data = indexable.oindex(indexer)
+            else:
+                data = indexable[actual_indexer]
             mask = indexing.create_mask(indexer, self.shape, data)
             # we need to invert the mask in order to pass data first. This helps
             # pint to choose the correct unit
