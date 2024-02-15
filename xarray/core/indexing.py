@@ -325,6 +325,18 @@ def as_integer_slice(value):
     return slice(start, stop, step)
 
 
+class IndexCallable:
+    """Provide getitem syntax for a callable object."""
+
+    __slots__ = ("func",)
+
+    def __init__(self, func):
+        self.func = func
+
+    def __getitem__(self, key):
+        return self.func(key)
+
+
 class BasicIndexer(ExplicitIndexer):
     """Tuple for basic indexing.
 
@@ -470,6 +482,10 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
         # Note this is the base class for all lazy indexing classes
         return np.asarray(self.get_duck_array(), dtype=dtype)
 
+    @property
+    def oindex(self):
+        return IndexCallable(self._oindex)
+
 
 class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
     """Wrap an array, converting tuples into the indicated explicit indexer."""
@@ -560,7 +576,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def transpose(self, order):
         return LazilyVectorizedIndexedArray(self.array, self.key).transpose(order)
 
-    def oindex(self, indexer):
+    def _oindex(self, indexer):
         return type(self)(self.array, self._updated_key(indexer))
 
     def __getitem__(self, indexer):
@@ -666,7 +682,7 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         return self.array.get_duck_array()
 
-    def oindex(self, key):
+    def _oindex(self, key):
         return type(self)(_wrap_numpy_scalars(self.array[key]))
 
     def __getitem__(self, key):
@@ -702,7 +718,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
         self._ensure_cached()
         return self.array.get_duck_array()
 
-    def oindex(self, key):
+    def _oindex(self, key):
         return type(self)(_wrap_numpy_scalars(self.array[key]))
 
     def __getitem__(self, key):
@@ -1341,7 +1357,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def transpose(self, order):
         return self.array.transpose(order)
 
-    def oindex(self, key):
+    def _oindex(self, key):
         array, key = self._indexing_array_and_key(key)
         return array[key]
 
@@ -1389,7 +1405,7 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             )
         self.array = array
 
-    def oindex(self, key):
+    def _oindex(self, key):
         # manual orthogonal indexing (implemented like DaskIndexingAdapter)
         key = key.tuple
         value = self.array
@@ -1432,7 +1448,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         """
         self.array = array
 
-    def oindex(self, key):
+    def _oindex(self, key):
         key = key.tuple
         try:
             return self.array[key]
@@ -1444,7 +1460,6 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             return value
 
     def __getitem__(self, key):
-
         if isinstance(key, BasicIndexer):
             return self.array[key.tuple]
         elif isinstance(key, VectorizedIndexer):
@@ -1527,7 +1542,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         # a NumPy array.
         return to_0d_array(item)
 
-    def oindex(self, key):
+    def _oindex(self, key):
         return self.__getitem__(key)
 
     def __getitem__(

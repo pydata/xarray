@@ -762,7 +762,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if isinstance(indexer, BasicIndexer):
             data = indexable[indexer]
         elif isinstance(indexer, OuterIndexer):
-            data = indexable.oindex(indexer)
+            data = indexable.oindex[indexer]
         else:
             data = indexable[indexer]
         if new_order:
@@ -800,7 +800,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             indexable = as_indexable(self._data)
 
             if isinstance(indexer, OuterIndexer):
-                data = indexable.oindex(indexer)
+                data = indexable.oindex[indexer]
             else:
                 data = indexable[actual_indexer]
             mask = indexing.create_mask(indexer, self.shape, data)
