@@ -1,9 +1,12 @@
 import pytest
-import zarr.errors
 
-from datatree.io import open_datatree
-from datatree.testing import assert_equal
-from datatree.tests import requires_h5netcdf, requires_netCDF4, requires_zarr
+from xarray.backends.api import open_datatree
+from xarray.datatree_.datatree.testing import assert_equal
+from xarray.tests import (
+    requires_h5netcdf,
+    requires_netCDF4,
+    requires_zarr,
+)
 
 
 class TestIO:
@@ -35,7 +38,7 @@ class TestIO:
         assert roundtrip_dt["/set2/a"].encoding["zlib"] == comp["zlib"]
         assert roundtrip_dt["/set2/a"].encoding["complevel"] == comp["complevel"]
 
-        enc["/not/a/group"] = {"foo": "bar"}
+        enc["/not/a/group"] = {"foo": "bar"}  # type: ignore
         with pytest.raises(ValueError, match="unexpected encoding group.*"):
             original_dt.to_netcdf(filepath, encoding=enc, engine="netcdf4")
 
@@ -78,7 +81,7 @@ class TestIO:
         print(roundtrip_dt["/set2/a"].encoding)
         assert roundtrip_dt["/set2/a"].encoding["compressor"] == comp["compressor"]
 
-        enc["/not/a/group"] = {"foo": "bar"}
+        enc["/not/a/group"] = {"foo": "bar"}  # type: ignore
         with pytest.raises(ValueError, match="unexpected encoding group.*"):
             original_dt.to_zarr(filepath, encoding=enc, engine="zarr")
 
@@ -113,6 +116,8 @@ class TestIO:
 
     @requires_zarr
     def test_to_zarr_default_write_mode(self, tmpdir, simple_datatree):
+        import zarr
+
         simple_datatree.to_zarr(tmpdir)
 
         # with default settings, to_zarr should not overwrite an existing dir
