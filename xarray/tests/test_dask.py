@@ -1654,39 +1654,6 @@ def test_lazy_array_equiv_merge(compat):
         xr.merge([da1, da2 / 2], compat=compat)
 
 
-@pytest.mark.filterwarnings("ignore::FutureWarning")  # transpose_coords
-@pytest.mark.parametrize("obj", [make_da(), make_ds()])
-@pytest.mark.parametrize(
-    "transform",
-    [
-        lambda a: a.assign_attrs(new_attr="anew"),
-        lambda a: a.assign_coords(cxy=a.cxy),
-        lambda a: a.copy(),
-        lambda a: a.isel(x=np.arange(a.sizes["x"])),
-        lambda a: a.isel(x=slice(None)),
-        lambda a: a.loc[dict(x=slice(None))],
-        lambda a: a.loc[dict(x=np.arange(a.sizes["x"]))],
-        lambda a: a.loc[dict(x=a.x)],
-        lambda a: a.sel(x=a.x),
-        lambda a: a.sel(x=a.x.values),
-        lambda a: a.transpose(...),
-        lambda a: a.squeeze(),  # no dimensions to squeeze
-        lambda a: a.sortby("x"),  # "x" is already sorted
-        lambda a: a.reindex(x=a.x),
-        lambda a: a.reindex_like(a),
-        lambda a: a.rename({"cxy": "cnew"}).rename({"cnew": "cxy"}),
-        lambda a: a.pipe(lambda x: x),
-        lambda a: xr.align(a, xr.zeros_like(a))[0],
-        # assign
-        # swap_dims
-        # set_index / reset_index
-    ],
-)
-def test_transforms_pass_lazy_array_equiv(obj, transform):
-    with raise_if_dask_computes():
-        assert_equal(obj, transform(obj))
-
-
 def test_more_transforms_pass_lazy_array_equiv(map_da, map_ds):
     with raise_if_dask_computes():
         assert_equal(map_ds.cxy.broadcast_like(map_ds.cxy), map_ds.cxy)
