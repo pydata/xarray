@@ -1109,7 +1109,7 @@ def test_duck_extension_array_equality(categorical1, int1):
     categorical_duck_array = ExtensionDuckArray(categorical1)
     assert (int_duck_array != categorical_duck_array).all()
     assert (categorical_duck_array == categorical1).all()
-    assert (int1[0:2] == int_duck_array[0:2]).all()
+    assert (int_duck_array[0:2] == int1[0:2]).all()
 
 
 def test_duck_extension_array_repr(int1):
