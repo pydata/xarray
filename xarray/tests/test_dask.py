@@ -1666,6 +1666,8 @@ def test_lazy_array_equiv_merge(compat):
         lambda a: a.loc[dict(x=slice(None))],
         lambda a: a.transpose(...),
         lambda a: a.squeeze(),  # no dimensions to squeeze
+        lambda a: a.reindex(x=a.x),
+        lambda a: a.reindex_like(a),
         lambda a: a.rename({"cxy": "cnew"}).rename({"cnew": "cxy"}),
         lambda a: a.pipe(lambda x: x),
         lambda a: xr.align(a, xr.zeros_like(a))[0],
