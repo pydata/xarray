@@ -102,6 +102,9 @@ Internal Changes
 - Adds :py:func:`open_datatree` into ``xarray/backends`` (:pull:`8697`) By `Matt
   Savoie <https://github.com/flamingbear>`_.
 
+- Refactor  :py:meth:`xarray.core.indexing.DaskIndexingAdapter.__getitem__` to remove an unnecessary rewrite of the indexer key
+  (:issue: `8377`, :pull:`8758`) By `Anderson Banihirwe <https://github.com/andersy005>`
+
 .. _whats-new.2024.01.1:
 
 v2024.01.1 (23 Jan, 2024)
