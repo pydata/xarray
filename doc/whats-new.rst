@@ -102,6 +102,8 @@ Internal Changes
 - Adds :py:func:`open_datatree` into ``xarray/backends`` (:pull:`8697`) By `Matt
   Savoie <https://github.com/flamingbear>`_.
 
+- Adds ``treenode`` functionality into ``xarray/core`` (:pull:`8757`) By `Matt Savoie <https://github.com/flamingbear>`_.
+
 .. _whats-new.2024.01.1:
 
 v2024.01.1 (23 Jan, 2024)
