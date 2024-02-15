@@ -40,7 +40,7 @@ from xarray.tests import (
     _CFTIME_CALENDARS,
     assert_no_warnings,
     has_cftime,
-    has_pandas_gt_2_2,
+    has_pandas_ge_2_2,
     requires_cftime,
 )
 
@@ -1611,7 +1611,7 @@ def test_to_offset_deprecation_warning(freq):
         to_offset(freq)
 
 
-@pytest.mark.skipif(has_pandas_gt_2_2, reason="only relevant for pandas lt 2.2")
+@pytest.mark.skipif(has_pandas_ge_2_2, reason="only relevant for pandas lt 2.2")
 @pytest.mark.parametrize(
     "freq, expected",
     (
@@ -1636,7 +1636,7 @@ def test_legacy_to_new_freq(freq, expected, n):
     assert result == expected
 
 
-@pytest.mark.skipif(has_pandas_gt_2_2, reason="only relevant for pandas lt 2.2")
+@pytest.mark.skipif(has_pandas_ge_2_2, reason="only relevant for pandas lt 2.2")
 @pytest.mark.parametrize("year_alias", ("YE", "Y", "A"))
 @pytest.mark.parametrize("n", ("", "2"))
 def test_legacy_to_new_freq_anchored(year_alias, n):
@@ -1649,7 +1649,7 @@ def test_legacy_to_new_freq_anchored(year_alias, n):
         assert result == expected
 
 
-@pytest.mark.skipif(has_pandas_gt_2_2, reason="only relevant for pandas lt 2.2")
+@pytest.mark.skipif(has_pandas_ge_2_2, reason="only relevant for pandas lt 2.2")
 @pytest.mark.filterwarnings("ignore:'[AY]' is deprecated")
 @pytest.mark.parametrize(
     "freq, expected",
@@ -1665,7 +1665,7 @@ def test_new_to_legacy_freq(freq, expected, n):
     assert result == expected
 
 
-@pytest.mark.skipif(has_pandas_gt_2_2, reason="only relevant for pandas lt 2.2")
+@pytest.mark.skipif(has_pandas_ge_2_2, reason="only relevant for pandas lt 2.2")
 @pytest.mark.filterwarnings("ignore:'[AY]-.{3}' is deprecated")
 @pytest.mark.parametrize("year_alias", ("A", "Y", "YE"))
 @pytest.mark.parametrize("n", ("", "2"))
@@ -1677,6 +1677,48 @@ def test_new_to_legacy_freq_anchored(year_alias, n):
         expected = f"{n}A-{month}"
 
         assert result == expected
+
+
+@pytest.mark.skipif(has_pandas_ge_2_2, reason="only for pandas lt 2.2")
+@pytest.mark.parametrize(
+    "freq, expected",
+    (
+        # pandas-only freq strings are passed through
+        ("BH", "BH"),
+        ("CBH", "CBH"),
+        ("N", "N"),
+    ),
+)
+def test_legacy_to_new_freq_pd_freq_passthrough(freq, expected):
+
+    result = _legacy_to_new_freq(freq)
+    assert result == expected
+
+
+@pytest.mark.filterwarnings("ignore:'.' is deprecated ")
+@pytest.mark.skipif(has_pandas_ge_2_2, reason="only for pandas lt 2.2")
+@pytest.mark.parametrize(
+    "freq, expected",
+    (
+        # these are each valid in pandas lt 2.2
+        ("T", "T"),
+        ("min", "min"),
+        ("S", "S"),
+        ("s", "s"),
+        ("L", "L"),
+        ("ms", "ms"),
+        ("U", "U"),
+        ("us", "us"),
+        # pandas-only freq strings are passed through
+        ("bh", "bh"),
+        ("cbh", "cbh"),
+        ("ns", "ns"),
+    ),
+)
+def test_new_to_legacy_freq_pd_freq_passthrough(freq, expected):
+
+    result = _new_to_legacy_freq(freq)
+    assert result == expected
 
 
 @pytest.mark.filterwarnings("ignore:Converting a CFTimeIndex with:")
