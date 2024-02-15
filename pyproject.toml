@@ -30,7 +30,7 @@ dependencies = [
 
 [project.optional-dependencies]
 accel = ["scipy", "bottleneck", "numbagg", "flox", "opt_einsum"]
-complete = ["xarray[accel,io,parallel,viz,dev,extension_arrays]"]
+complete = ["xarray[accel,io,parallel,viz,dev]"]
 dev = [
   "hypothesis",
   "pre-commit",
@@ -45,7 +45,6 @@ dev = [
 io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
 parallel = ["dask[complete]"]
 viz = ["matplotlib", "seaborn", "nc-time-axis"]
-extension-arrays = ["plum-dispatch"]
 
 [project.urls]
 Documentation = "https://docs.xarray.dev"

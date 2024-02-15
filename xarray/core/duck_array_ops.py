@@ -36,14 +36,6 @@ from numpy.lib.stride_tricks import sliding_window_view  # noqa
 from packaging.version import Version
 from pandas.api.types import is_extension_array_dtype
 
-try:
-    from plum import dispatch  # type: ignore[import-not-found]
-except ImportError:
-
-    def dispatch(func):
-        return func
-
-
 from xarray.core import dask_array_ops, dtypes, nputils
 from xarray.core.options import OPTIONS
 from xarray.core.types import DTypeLikeSave, T_ExtensionArray
@@ -80,7 +72,6 @@ def implements(numpy_function):
 
 
 @implements(np.issubdtype)
-@dispatch
 def __extension_duck_array__issubdtype(
     extension_array_dtype: T_ExtensionArray, other_dtype: DTypeLikeSave
 ) -> bool:
@@ -88,7 +79,6 @@ def __extension_duck_array__issubdtype(
 
 
 @implements(np.broadcast_to)
-@dispatch
 def __extension_duck_array__broadcast(arr: T_ExtensionArray, shape: tuple):
     if shape[0] == len(arr) and len(shape) == 1:
         return arr
@@ -96,13 +86,11 @@ def __extension_duck_array__broadcast(arr: T_ExtensionArray, shape: tuple):
 
 
 @implements(np.stack)
-@dispatch
 def __extension_duck_array__stack(arr: T_ExtensionArray, axis: int):
     raise NotImplementedError("Cannot stack 1d-only pandas categorical array.")
 
 
 @implements(np.concatenate)
-@dispatch
 def __extension_duck_array__concatenate(
     arrays: Sequence[T_ExtensionArray], axis: int = 0, out=None
 ) -> T_ExtensionArray:
@@ -110,7 +98,6 @@ def __extension_duck_array__concatenate(
 
 
 @implements(np.where)
-@dispatch
 def __extension_duck_array__where(
     condition: np.ndarray, x: T_ExtensionArray, y: T_ExtensionArray
 ) -> T_ExtensionArray:
