@@ -247,9 +247,11 @@ def as_compatible_data(
 
     from xarray.core.dataarray import DataArray
 
+    # TODO: do this uwrapping in the Variable/NamedArray constructor instead.
     if isinstance(data, Variable):
         return cast("T_DuckArray", data._data)
 
+    # TODO: do this uwrapping in the DataArray constructor instead.
     if isinstance(data, DataArray):
         return cast("T_DuckArray", data._variable._data)
 
