@@ -227,6 +227,16 @@ class TestPruning:
 
 
 def create_test_tree():
+    # a
+    # ├── b
+    # │   ├── d
+    # │   └── e
+    # │       ├── f
+    # │       └── g
+    # └── c
+    #     └── h
+    #         └── i
+
     a = NamedNode(name="a")
     b = NamedNode()
     c = NamedNode()
@@ -281,19 +291,20 @@ class TestIterators:
 
 
 class TestAncestry:
+
     def test_parents(self):
-        _, leaf = create_test_tree()
+        _, leaf_f = create_test_tree()
         expected = ["e", "b", "a"]
-        assert [node.name for node in leaf.parents] == expected
+        assert [node.name for node in leaf_f.parents] == expected
 
     def test_lineage(self):
-        _, leaf = create_test_tree()
+        _, leaf_f = create_test_tree()
         expected = ["f", "e", "b", "a"]
-        assert [node.name for node in leaf.lineage] == expected
+        assert [node.name for node in leaf_f.lineage] == expected
 
     def test_ancestors(self):
-        _, leaf = create_test_tree()
-        ancestors = leaf.ancestors
+        _, leaf_f = create_test_tree()
+        ancestors = leaf_f.ancestors
         expected = ["a", "b", "e", "f"]
         for node, expected_name in zip(ancestors, expected):
             assert node.name == expected_name
@@ -372,6 +383,9 @@ class TestRenderTree:
             "NamedNode('Ben')",
             "NamedNode('Kate')",
         ]
+
+        john_str = printout.splitlines()
+        assert len(john_str) == len(expected_nodes)
         for expected_node, printed_node in zip(expected_nodes, printout.splitlines()):
             assert expected_node in printed_node
 

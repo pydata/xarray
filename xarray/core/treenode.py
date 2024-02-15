@@ -491,17 +491,19 @@ class TreeNode(Generic[Tree]):
         """
         Set a new item in the tree, overwriting anything already present at that path.
 
-        The given value either forms a new node of the tree or overwrites an existing item at that location.
+        The given value either forms a new node of the tree or overwrites an
+        existing item at that location.
 
         Parameters
         ----------
         path
         item
         new_nodes_along_path : bool
-            If true, then if necessary new nodes will be created along the given path, until the tree can reach the
-            specified location.
+            If true, then if necessary new nodes will be created along the
+            given path, until the tree can reach the specified location.
         allow_overwrite : bool
-            Whether or not to overwrite any existing node at the location given by path.
+            Whether or not to overwrite any existing node at the location given
+            by path.
 
         Raises
         ------
