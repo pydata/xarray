@@ -20,10 +20,8 @@ class InvalidTreeError(Exception):
     """Raised when user attempts to create an invalid tree in some way."""
 
 
-# TODO [MHS, 02/13/2024] I don't like the description here.  It doesn't make
-# sense on first glance.
 class NotFoundInTreeError(ValueError):
-    """Raised when operation can't be completed because one node is part of the expected tree."""
+    """Raised when operation can't be completed because one node is not part of the expected tree."""
 
 
 class NodePath(PurePosixPath):
