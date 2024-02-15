@@ -1287,7 +1287,7 @@ def test_concat_join_coordinate_variables_non_asked_dims():
     )
 
     # Using join='outer'
-    # Not using strict mode will allow the concatenation to surprisingly happen
+    # default's broadcast=True will allow the concatenation to surprisingly happen
     # even if `x_outer` sizes do not match
     actual_xds = concat(
         [ds1, ds2],
@@ -1315,25 +1315,8 @@ def test_concat_join_coordinate_variables_non_asked_dims():
             coords="different",
         )
 
-    # Using join='strict'
-    # A check similar to the one made on non-indexed dimensions regarding their sizes.
-    with pytest.raises(
-        ValueError,
-        match=re.escape(
-            r"cannot align objects with join='strict' with matching indexes "
-            r"along dimension 'x_outer' that don't have the same size ({3, 4})"
-        ),
-    ):
-        concat(
-            [ds1, ds2],
-            join="strict",
-            dim="x_center",
-            data_vars="different",
-            coords="different",
-        )
 
-
-@pytest.mark.parametrize("join", ("outer", "exact", "strict"))
+@pytest.mark.parametrize("join", ("outer", "exact"))
 def test_concat_join_non_coordinate_variables(join: JoinOptions):
     ds1 = Dataset(
         data_vars={
@@ -1349,7 +1332,7 @@ def test_concat_join_non_coordinate_variables(join: JoinOptions):
         },
     )
 
-    # Whether join='outer' or join='exact' or join='strict' modes are used,
+    # Whether join='outer' or join='exact' modes are used,
     # the concatenation fails because of the behavior disallowing alignment
     # of non-indexed dimensions (not attached to a coordinate variable).
     with pytest.raises(

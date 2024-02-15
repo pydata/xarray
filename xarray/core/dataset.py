@@ -7582,8 +7582,11 @@ class Dataset(
         if isinstance(other, GroupBy):
             return NotImplemented
         align_type = OPTIONS["arithmetic_join"] if join is None else join
+        broadcast = OPTIONS["arithmetic_broadcast"]
         if isinstance(other, (DataArray, Dataset)):
-            self, other = align(self, other, join=align_type, copy=False)
+            self, other = align(
+                self, other, join=align_type, broadcast=broadcast, copy=False
+            )
         g = f if not reflexive else lambda x, y: f(y, x)
         ds = self._calculate_binary_op(g, other, join=align_type)
         keep_attrs = _get_keep_attrs(default=False)

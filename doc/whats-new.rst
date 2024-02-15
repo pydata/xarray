@@ -23,6 +23,9 @@ v2024.02.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added the ability to control broadcasting for alignment, and new gloal option ``arithmetic_broadcast``
+  (:issue:`6806`, :pull:`8698`).
+  By `Etienne Schalk <https://github.com/etienneschalk>`_.
 - Added a simple `nbytes` representation in DataArrays and Dataset `repr`.
   (:issue:`8690`, :pull:`8702`).
   By `Etienne Schalk <https://github.com/etienneschalk>`_.

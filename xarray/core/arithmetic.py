@@ -81,6 +81,7 @@ class SupportsArithmetic:
                 "`.values`)."
             )
 
+        broadcast = OPTIONS["arithmetic_broadcast"]
         join = dataset_join = OPTIONS["arithmetic_join"]
 
         return apply_ufunc(
@@ -89,6 +90,7 @@ class SupportsArithmetic:
             input_core_dims=((),) * ufunc.nin,
             output_core_dims=((),) * ufunc.nout,
             join=join,
+            broadcast=broadcast,
             dataset_join=dataset_join,
             dataset_fill_value=np.nan,
             kwargs=kwargs,

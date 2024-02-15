@@ -914,8 +914,6 @@ def open_mfdataset(
           aligned are not equal
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
-        - "strict": similar to "exact", but less permissive.
-          The alignment fails if dimensions' names differ.
     attrs_file : str or path-like, optional
         Path of the file used to read global attributes from.
         By default global attributes are read from the first file provided,

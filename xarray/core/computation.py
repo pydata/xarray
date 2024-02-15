@@ -905,6 +905,7 @@ def apply_ufunc(
     output_core_dims: Sequence[Sequence] | None = ((),),
     exclude_dims: Set = frozenset(),
     vectorize: bool = False,
+    broadcast: bool = False,
     join: JoinOptions = "exact",
     dataset_join: str = "exact",
     dataset_fill_value: object = _NO_FILL_VALUE,
@@ -969,6 +970,8 @@ def apply_ufunc(
         dimensions as input and vectorize it automatically with
         :py:func:`numpy.vectorize`. This option exists for convenience, but is
         almost always slower than supplying a pre-vectorized function.
+    broadcast : bool
+        The alignment fails if dimensions' names differ.
     join : {"outer", "inner", "left", "right", "exact"}, default: "exact"
         Method for joining the indexes of the passed objects along each
         dimension, and the variables of Dataset objects with mismatched
@@ -1242,6 +1245,7 @@ def apply_ufunc(
             input_core_dims=input_core_dims,
             output_core_dims=output_core_dims,
             exclude_dims=exclude_dims,
+            broadcast=broadcast,
             join=join,
             dataset_join=dataset_join,
             dataset_fill_value=dataset_fill_value,
@@ -1258,6 +1262,7 @@ def apply_ufunc(
             variables_vfunc,
             *args,
             signature=signature,
+            broadcast=broadcast,
             join=join,
             exclude_dims=exclude_dims,
             dataset_join=dataset_join,
@@ -1271,6 +1276,7 @@ def apply_ufunc(
             variables_vfunc,
             *args,
             signature=signature,
+            broadcast=broadcast,
             join=join,
             exclude_dims=exclude_dims,
             keep_attrs=keep_attrs,
@@ -1906,6 +1912,7 @@ def dot(
     subscripts = ",".join(subscripts_list)
     subscripts += "->..." + "".join(dim_map[d] for d in output_core_dims[0])
 
+    broadcast = OPTIONS["arithmetic_broadcast"]
     join = OPTIONS["arithmetic_join"]
     # using "inner" emulates `(a * b).sum()` for all joins (except "exact")
     if join != "exact":
@@ -1920,6 +1927,7 @@ def dot(
         input_core_dims=input_core_dims,
         output_core_dims=output_core_dims,
         join=join,
+        broadcast=broadcast,
         dask="allowed",
     )
     return result.transpose(*all_dims, missing_dims="ignore")

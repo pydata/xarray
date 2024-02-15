@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from xarray.core.utils import FrozenDict
 
@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap
 
     Options = Literal[
+        "arithmetic_broadcast",
         "arithmetic_join",
         "cmap_divergent",
         "cmap_sequential",
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
     ]
 
     class T_Options(TypedDict):
+        arithmetic_broadcast: bool
         arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
         cmap_divergent: str | Colormap
         cmap_sequential: str | Colormap
@@ -57,6 +59,7 @@ if TYPE_CHECKING:
 
 
 OPTIONS: T_Options = {
+    "arithmetic_broadcast": True,
     "arithmetic_join": "inner",
     "cmap_divergent": "RdBu_r",
     "cmap_sequential": "viridis",
@@ -88,26 +91,35 @@ def _positive_integer(value: int) -> bool:
     return isinstance(value, int) and value > 0
 
 
+def _is_boolean(value: Any) -> bool:
+    return isinstance(value, bool)
+
+
+def _is_boolean_or_default(value: Any) -> bool:
+    return value in (True, False, "default")
+
+
 _VALIDATORS = {
+    "arithmetic_broadcast": _is_boolean,
     "arithmetic_join": _JOIN_OPTIONS.__contains__,
     "display_max_rows": _positive_integer,
     "display_values_threshold": _positive_integer,
     "display_style": _DISPLAY_OPTIONS.__contains__,
     "display_width": _positive_integer,
-    "display_expand_attrs": lambda choice: choice in [True, False, "default"],
-    "display_expand_coords": lambda choice: choice in [True, False, "default"],
-    "display_expand_data_vars": lambda choice: choice in [True, False, "default"],
-    "display_expand_data": lambda choice: choice in [True, False, "default"],
-    "display_expand_indexes": lambda choice: choice in [True, False, "default"],
-    "display_default_indexes": lambda choice: choice in [True, False, "default"],
-    "enable_cftimeindex": lambda value: isinstance(value, bool),
+    "display_expand_attrs": _is_boolean_or_default,
+    "display_expand_coords": _is_boolean_or_default,
+    "display_expand_data_vars": _is_boolean_or_default,
+    "display_expand_data": _is_boolean_or_default,
+    "display_expand_indexes": _is_boolean_or_default,
+    "display_default_indexes": _is_boolean_or_default,
+    "enable_cftimeindex": _is_boolean,
     "file_cache_maxsize": _positive_integer,
-    "keep_attrs": lambda choice: choice in [True, False, "default"],
-    "use_bottleneck": lambda value: isinstance(value, bool),
-    "use_numbagg": lambda value: isinstance(value, bool),
-    "use_opt_einsum": lambda value: isinstance(value, bool),
-    "use_flox": lambda value: isinstance(value, bool),
-    "warn_for_unclosed_files": lambda value: isinstance(value, bool),
+    "keep_attrs": _is_boolean_or_default,
+    "use_bottleneck": _is_boolean,
+    "use_numbagg": _is_boolean,
+    "use_opt_einsum": _is_boolean,
+    "use_flox": _is_boolean,
+    "warn_for_unclosed_files": _is_boolean,
 }
 
 
@@ -154,6 +166,8 @@ class set_options:
 
     Parameters
     ----------
+    arithmetic_broadcast : bool, default: True
+        Whether to allow or disallow broadcasting
     arithmetic_join : {"inner", "outer", "left", "right", "exact"}, default: "inner"
         DataArray/Dataset alignment in binary operations:
 
@@ -166,8 +180,6 @@ class set_options:
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-        - "strict": similar to "exact", but less permissive.
-          The alignment fails if dimensions' names differ.
 
     cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
         Colormap to use for divergent data plots. If string, must be

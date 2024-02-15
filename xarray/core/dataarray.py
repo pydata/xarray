@@ -4671,8 +4671,11 @@ class DataArray(
         if isinstance(other, (Dataset, GroupBy)):
             return NotImplemented
         if isinstance(other, DataArray):
+            broadcast = OPTIONS["arithmetic_broadcast"]
             align_type = OPTIONS["arithmetic_join"]
-            self, other = align(self, other, join=align_type, copy=False)
+            self, other = align(
+                self, other, join=align_type, broadcast=broadcast, copy=False
+            )
         other_variable_or_arraylike: DaCompatible = getattr(other, "variable", other)
         other_coords = getattr(other, "coords", None)
 
