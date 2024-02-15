@@ -4908,7 +4908,7 @@ class TestReduce1D(TestReduce):
         with pytest.raises(ValueError):
             xr.DataArray(5).idxmin()
 
-        coordarr0 = xr.DataArray(ar0.coords["x"], dims=["x"])
+        coordarr0 = xr.DataArray(ar0.coords["x"].data, dims=["x"])
         coordarr1 = coordarr0.copy()
 
         hasna = np.isnan(minindex)
@@ -5023,7 +5023,7 @@ class TestReduce1D(TestReduce):
         with pytest.raises(ValueError):
             xr.DataArray(5).idxmax()
 
-        coordarr0 = xr.DataArray(ar0.coords["x"], dims=["x"])
+        coordarr0 = xr.DataArray(ar0.coords["x"].data, dims=["x"])
         coordarr1 = coordarr0.copy()
 
         hasna = np.isnan(maxindex)
