@@ -116,6 +116,7 @@ def da(index) -> xr.DataArray:
     )
 
 
+@pytest.mark.filterwarnings("ignore:.*the `(base|loffset)` parameter to resample")
 @pytest.mark.parametrize("freqs", FREQS, ids=lambda x: "{}->{}".format(*x))
 @pytest.mark.parametrize("closed", [None, "left", "right"])
 @pytest.mark.parametrize("label", [None, "left", "right"])
@@ -180,6 +181,7 @@ def test_closed_label_defaults(freq, expected) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:Converting a CFTimeIndex")
+@pytest.mark.filterwarnings("ignore:.*the `(base|loffset)` parameter to resample")
 @pytest.mark.parametrize(
     "calendar", ["gregorian", "noleap", "all_leap", "360_day", "julian"]
 )
@@ -212,6 +214,7 @@ class DateRangeKwargs(TypedDict):
     freq: str
 
 
+@pytest.mark.filterwarnings("ignore:.*the `(base|loffset)` parameter to resample")
 @pytest.mark.parametrize("closed", ["left", "right"])
 @pytest.mark.parametrize(
     "origin",
@@ -236,6 +239,7 @@ def test_origin(closed, origin) -> None:
     )
 
 
+@pytest.mark.filterwarnings("ignore:.*the `(base|loffset)` parameter to resample")
 def test_base_and_offset_error():
     cftime_index = xr.cftime_range("2000", periods=5)
     da_cftime = da(cftime_index)
@@ -279,6 +283,7 @@ def test_resample_loffset_cftimeindex(loffset) -> None:
     xr.testing.assert_identical(result, expected)
 
 
+@pytest.mark.filterwarnings("ignore:.*the `(base|loffset)` parameter to resample")
 def test_resample_invalid_loffset_cftimeindex() -> None:
     times = xr.cftime_range("2000-01-01", freq="6h", periods=10)
     da = xr.DataArray(np.arange(10), [("time", times)])
