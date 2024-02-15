@@ -6,12 +6,12 @@ from typing import Any, Generic
 import numpy as np
 from packaging.version import Version
 
-from xarray.core import pycompat
 from xarray.core.computation import apply_ufunc
 from xarray.core.options import _get_keep_attrs
 from xarray.core.pdcompat import count_not_none
 from xarray.core.types import T_DataWithCoords
 from xarray.core.utils import module_available
+from xarray.namedarray import pycompat
 
 
 def _get_alpha(

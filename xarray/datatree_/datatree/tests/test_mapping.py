@@ -2,9 +2,9 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from datatree.datatree import DataTree
-from datatree.mapping import TreeIsomorphismError, check_isomorphic, map_over_subtree
-from datatree.testing import assert_equal
+from xarray.datatree_.datatree.datatree import DataTree
+from xarray.datatree_.datatree.mapping import TreeIsomorphismError, check_isomorphic, map_over_subtree
+from xarray.datatree_.datatree.testing import assert_equal
 
 empty = xr.Dataset()
 

@@ -16,6 +16,7 @@ from xarray.backends.common import (
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
+    _open_datatree_netcdf,
     find_root_and_group,
     robust_getitem,
 )
@@ -44,6 +45,7 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
+    from xarray.datatree_.datatree import DataTree
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -666,6 +668,15 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                 decode_timedelta=decode_timedelta,
             )
         return ds
+
+    def open_datatree(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        **kwargs,
+    ) -> DataTree:
+        from netCDF4 import Dataset as ncDataset
+
+        return _open_datatree_netcdf(ncDataset, filename_or_obj, **kwargs)
 
 
 BACKEND_ENTRYPOINTS["netcdf4"] = ("netCDF4", NetCDF4BackendEntrypoint)

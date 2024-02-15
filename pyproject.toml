@@ -54,7 +54,7 @@ issue-tracker = "https://github.com/pydata/xarray/issues"
 source-code = "https://github.com/pydata/xarray"
 
 [project.entry-points."xarray.chunkmanagers"]
-dask = "xarray.core.daskmanager:DaskManager"
+dask = "xarray.namedarray.daskmanager:DaskManager"
 
 [build-system]
 build-backend = "setuptools.build_meta"
@@ -95,6 +95,11 @@ show_error_context = true
 warn_redundant_casts = true
 warn_unused_configs = true
 warn_unused_ignores = true
+
+# Ignore mypy errors for modules imported from datatree_.
+[[tool.mypy.overrides]]
+module = "xarray.datatree_.*"
+ignore_errors = true
 
 # Much of the numerical computing stack doesn't have type annotations yet.
 [[tool.mypy.overrides]]

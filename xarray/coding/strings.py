@@ -15,8 +15,9 @@ from xarray.coding.variables import (
     unpack_for_encoding,
 )
 from xarray.core import indexing
-from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.core.variable import Variable
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import is_chunked_array
 
 
 def create_vlen_dtype(element_type):
