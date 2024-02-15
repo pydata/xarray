@@ -1336,10 +1336,6 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         array, key = self._indexing_array_and_key(key)
         return array[key]
 
-    def vindex(self, key):
-        array, key = self._indexing_array_and_key(key)
-        return array[key]
-
     def __getitem__(self, key):
         array, key = self._indexing_array_and_key(key)
         return array[key]
@@ -1392,9 +1388,6 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             value = value[(slice(None),) * axis + (subkey, Ellipsis)]
         return value
 
-    def vindex(self, key):
-        raise TypeError("Vectorized indexing is not supported")
-
     def __getitem__(self, key):
         if isinstance(key, BasicIndexer):
             return self.array[key.tuple]
@@ -1402,7 +1395,7 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             return self.oindex(key)
         else:
             if isinstance(key, VectorizedIndexer):
-                return self.vindex(key)
+                raise TypeError("Vectorized indexing is not supported")
             else:
                 raise TypeError(f"Unrecognized indexer: {key}")
 
@@ -1459,9 +1452,6 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 value = value[(slice(None),) * axis + (subkey,)]
             return value
 
-    def vindex(self, key):
-        return self.array.vindex[key.tuple]
-
     def __getitem__(self, key):
         if not isinstance(key, VectorizedIndexer):
             # if possible, short-circuit when keys are effectively slice(None)
@@ -1474,7 +1464,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         if isinstance(key, BasicIndexer):
             return self.array[key.tuple]
         elif isinstance(key, VectorizedIndexer):
-            return self.vindex(key)
+            return self.array.vindex[key.tuple]
         else:
             assert isinstance(key, OuterIndexer)
             return self.oindex(key)
@@ -1554,9 +1544,6 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return to_0d_array(item)
 
     def oindex(self, key):
-        return self.__getitem__(key)
-
-    def vindex(self, key):
         return self.__getitem__(key)
 
     def __getitem__(

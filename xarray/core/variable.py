@@ -764,7 +764,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         elif isinstance(indexer, OuterIndexer):
             data = indexable.oindex(indexer)
         else:
-            data = indexable.vindex(indexer)
+            data = indexable[indexer]
         if new_order:
             data = np.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
