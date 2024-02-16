@@ -2,12 +2,13 @@ from copy import copy, deepcopy
 
 import numpy as np
 import pytest
-import xarray as xr
-import xarray.testing as xrt
-from xarray.tests import create_test_data, source_ndarray
 
+import xarray as xr
 import xarray.datatree_.datatree.testing as dtt
-from xarray.datatree_.datatree import DataTree, NotFoundInTreeError
+import xarray.testing as xrt
+from xarray.core.datatree import DataTree
+from xarray.core.treenode import NotFoundInTreeError
+from xarray.tests import create_test_data, source_ndarray
 
 
 class TestTreeCreation:
@@ -166,8 +167,7 @@ class TestVariablesChildrenNameCollisions:
             dt.ds = new_ds
 
 
-class TestGet:
-    ...
+class TestGet: ...
 
 
 class TestGetItem:
@@ -212,7 +212,9 @@ class TestGetItem:
         results = DataTree(name="results", data=data)
         xrt.assert_identical(results[["temp", "p"]], data[["temp", "p"]])
 
-    @pytest.mark.xfail(reason="Indexing needs to return whole tree (GH https://github.com/xarray-contrib/datatree/issues/77)")
+    @pytest.mark.xfail(
+        reason="Indexing needs to return whole tree (GH https://github.com/xarray-contrib/datatree/issues/77)"
+    )
     def test_getitem_dict_like_selection_access_to_dataset(self):
         data = xr.Dataset({"temp": [0, 50]})
         results = DataTree(name="results", data=data)
@@ -450,8 +452,7 @@ class TestSetItem:
         xrt.assert_identical(results.to_dataset(), expected)
 
 
-class TestDictionaryInterface:
-    ...
+class TestDictionaryInterface: ...
 
 
 class TestTreeFromDict:
