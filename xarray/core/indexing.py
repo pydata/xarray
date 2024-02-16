@@ -1420,7 +1420,7 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         if isinstance(key, BasicIndexer):
             return self.array[key.tuple]
         elif isinstance(key, OuterIndexer):
-            return self.oindex(key)
+            return self.oindex[key]
         else:
             if isinstance(key, VectorizedIndexer):
                 raise TypeError("Vectorized indexing is not supported")
@@ -1469,7 +1469,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             return self.array.vindex[key.tuple]
         else:
             assert isinstance(key, OuterIndexer)
-            return self.oindex(key)
+            return self.oindex[key]
 
     def __setitem__(self, key, value):
         if isinstance(key, BasicIndexer):
