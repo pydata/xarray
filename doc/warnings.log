@@ -1,0 +1,68 @@
+
+Traceback (most recent call last):
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\sphinx\config.py", line 350, in eval_config_file
+    exec(code, namespace)
+  File "C:\Users\AL RHO\Desktop\outreachy\xarray\doc\conf.py", line 48, in <module>
+    import matplotlib
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\matplotlib\__init__.py", line 131, in <module>
+    from . import _api, _version, cbook, _docstring, rcsetup
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\matplotlib\rcsetup.py", line 27, in <module>
+    from matplotlib.colors import Colormap, is_color_like
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\matplotlib\colors.py", line 52, in <module>
+    from PIL.PngImagePlugin import PngInfo
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\PIL\PngImagePlugin.py", line 42, in <module>
+    from . import Image, ImageChops, ImageFile, ImagePalette, ImageSequence
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\PIL\ImagePalette.py", line 21, in <module>
+    from . import GimpGradientFile, GimpPaletteFile, ImageColor, PaletteFile
+ValueError: source code string cannot contain null bytes
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\sphinx\cmd\build.py", line 276, in build_main
+    app = Sphinx(args.sourcedir, args.confdir, args.outputdir,
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\sphinx\application.py", line 202, in __init__
+    self.config = Config.read(self.confdir, confoverrides or {}, self.tags)
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\sphinx\config.py", line 172, in read
+    namespace = eval_config_file(filename, tags)
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\sphinx\config.py", line 363, in eval_config_file
+    raise ConfigError(msg % traceback.format_exc()) from exc
+sphinx.errors.ConfigError: There is a programmable error in your configuration file:
+
+Traceback (most recent call last):
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\sphinx\config.py", line 350, in eval_config_file
+    exec(code, namespace)
+  File "C:\Users\AL RHO\Desktop\outreachy\xarray\doc\conf.py", line 48, in <module>
+    import matplotlib
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\matplotlib\__init__.py", line 131, in <module>
+    from . import _api, _version, cbook, _docstring, rcsetup
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\matplotlib\rcsetup.py", line 27, in <module>
+    from matplotlib.colors import Colormap, is_color_like
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\matplotlib\colors.py", line 52, in <module>
+    from PIL.PngImagePlugin import PngInfo
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\PIL\PngImagePlugin.py", line 42, in <module>
+    from . import Image, ImageChops, ImageFile, ImagePalette, ImageSequence
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\PIL\ImagePalette.py", line 21, in <module>
+    from . import GimpGradientFile, GimpPaletteFile, ImageColor, PaletteFile
+ValueError: source code string cannot contain null bytes
+
+
+[91mConfiguration error:[39;49;00m
+There is a programmable error in your configuration file:
+
+Traceback (most recent call last):
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\sphinx\config.py", line 350, in eval_config_file
+    exec(code, namespace)
+  File "C:\Users\AL RHO\Desktop\outreachy\xarray\doc\conf.py", line 48, in <module>
+    import matplotlib
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\matplotlib\__init__.py", line 131, in <module>
+    from . import _api, _version, cbook, _docstring, rcsetup
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\matplotlib\rcsetup.py", line 27, in <module>
+    from matplotlib.colors import Colormap, is_color_like
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\matplotlib\colors.py", line 52, in <module>
+    from PIL.PngImagePlugin import PngInfo
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\PIL\PngImagePlugin.py", line 42, in <module>
+    from . import Image, ImageChops, ImageFile, ImagePalette, ImageSequence
+  File "C:\ProgramData\Anaconda\envs\xarray-docs\lib\site-packages\PIL\ImagePalette.py", line 21, in <module>
+    from . import GimpGradientFile, GimpPaletteFile, ImageColor, PaletteFile
+ValueError: source code string cannot contain null bytes
