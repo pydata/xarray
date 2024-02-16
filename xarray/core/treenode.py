@@ -601,6 +601,12 @@ class NamedNode(TreeNode, Generic[Tree]):
                 raise ValueError("node names cannot contain forward slashes")
         self._name = name
 
+    def __repr__(self, level=0):
+        repr_value = "\t" * level + self.__str__() + "\n"
+        for child in self.children:
+            repr_value += self.get(child).__repr__(level + 1)
+        return repr_value
+
     def __str__(self) -> str:
         return f"NamedNode({self.name})" if self.name else "NamedNode()"
 

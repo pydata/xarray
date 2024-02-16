@@ -380,20 +380,24 @@ class TestRenderTree:
         mary: NamedNode = NamedNode(children={"Sam": sam, "Ben": ben})
         kate: NamedNode = NamedNode()
         john: NamedNode = NamedNode(children={"Mary": mary, "Kate": kate})
-
-        printout = john.__str__()
         expected_nodes = [
             "NamedNode()",
-            "NamedNode('Mary')",
-            "NamedNode('Sam')",
-            "NamedNode('Ben')",
-            "NamedNode('Kate')",
+            "\tNamedNode(Mary)",
+            "\t\tNamedNode(Sam)",
+            "\t\tNamedNode(Ben)",
+            "\tNamedNode(Kate)",
         ]
+        expected_str = "NamedNode(Mary)"
 
-        john_str = printout.splitlines()
-        assert len(john_str) == len(expected_nodes)
-        for expected_node, printed_node in zip(expected_nodes, printout.splitlines()):
-            assert expected_node in printed_node
+        john_repr = john.__repr__()
+        mary_str = mary.__str__()
+
+        assert mary_str == expected_str
+
+        john_nodes = john_repr.splitlines()
+        assert len(john_nodes) == len(expected_nodes)
+        for expected_node, repr_node in zip(expected_nodes, john_nodes):
+            assert expected_node == repr_node
 
 
 def test_nodepath():
