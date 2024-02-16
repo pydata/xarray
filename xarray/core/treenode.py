@@ -608,7 +608,7 @@ class NamedNode(TreeNode, Generic[Tree]):
         return repr_value
 
     def __str__(self) -> str:
-        return f'NamedNode("{self.name}")' if self.name else "NamedNode()"
+        return f"NamedNode('{self.name}')" if self.name else "NamedNode()"
 
     def _post_attach(self: NamedNode, parent: NamedNode) -> None:
         """Ensures child has name attribute corresponding to key under which it has been stored."""
