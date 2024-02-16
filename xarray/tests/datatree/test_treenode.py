@@ -382,13 +382,12 @@ class TestRenderTree:
         john: NamedNode = NamedNode(children={"Mary": mary, "Kate": kate})
         expected_nodes = [
             "NamedNode()",
-            "\tNamedNode(Mary)",
-            "\t\tNamedNode(Sam)",
-            "\t\tNamedNode(Ben)",
-            "\tNamedNode(Kate)",
+            '\tNamedNode("Mary")',
+            '\t\tNamedNode("Sam")',
+            '\t\tNamedNode("Ben")',
+            '\tNamedNode("Kate")',
         ]
-        expected_str = "NamedNode(Mary)"
-
+        expected_str = 'NamedNode("Mary")'
         john_repr = john.__repr__()
         mary_str = mary.__str__()
 
