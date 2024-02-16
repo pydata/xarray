@@ -103,6 +103,8 @@ Internal Changes
   Savoie <https://github.com/flamingbear>`_.
 
 - Adds ``treenode`` functionality into ``xarray/core`` (:pull:`8757`) By `Matt Savoie <https://github.com/flamingbear>`_.
+- Refactor  :py:meth:`xarray.core.indexing.DaskIndexingAdapter.__getitem__` to remove an unnecessary rewrite of the indexer key
+  (:issue: `8377`, :pull:`8758`) By `Anderson Banihirwe <https://github.com/andersy005>`
 
 .. _whats-new.2024.01.1:
 
