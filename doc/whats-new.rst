@@ -46,6 +46,8 @@ will retain the object.  However, one cannot do operations that are not possible
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- :py:func:`infer_freq` always returns the frequency strings as defined in pandas 2.2
+  (:issue:`8612`, :pull:`8627`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -103,6 +105,9 @@ Internal Changes
 
 - Adds :py:func:`open_datatree` into ``xarray/backends`` (:pull:`8697`) By `Matt
   Savoie <https://github.com/flamingbear>`_.
+
+- Refactor  :py:meth:`xarray.core.indexing.DaskIndexingAdapter.__getitem__` to remove an unnecessary rewrite of the indexer key
+  (:issue: `8377`, :pull:`8758`) By `Anderson Banihirwe <https://github.com/andersy005>`
 
 .. _whats-new.2024.01.1:
 

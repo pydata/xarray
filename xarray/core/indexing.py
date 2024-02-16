@@ -4,7 +4,7 @@ import enum
 import functools
 import operator
 from collections import Counter, defaultdict
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Hashable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -1419,23 +1419,6 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         self.array = array
 
     def __getitem__(self, key):
-        if not isinstance(key, VectorizedIndexer):
-            # if possible, short-circuit when keys are effectively slice(None)
-            # This preserves dask name and passes lazy array equivalence checks
-            # (see duck_array_ops.lazy_array_equiv)
-            rewritten_indexer = False
-            new_indexer = []
-            for idim, k in enumerate(key.tuple):
-                if isinstance(k, Iterable) and (
-                    not is_duck_dask_array(k)
-                    and duck_array_ops.array_equiv(k, np.arange(self.array.shape[idim]))
-                ):
-                    new_indexer.append(slice(None))
-                    rewritten_indexer = True
-                else:
-                    new_indexer.append(k)
-            if rewritten_indexer:
-                key = type(key)(tuple(new_indexer))
 
         if isinstance(key, BasicIndexer):
             return self.array[key.tuple]
