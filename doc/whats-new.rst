@@ -96,13 +96,18 @@ Internal Changes
   By `Tom Nicholas <https://github.com/TomNicholas>`_ and `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 - Imports ``datatree`` repository and history into internal
-  location. (:pull:`8688`) By `Matt Savoie <https://github.com/flamingbear>`_
-  and `Justus Magin <https://github.com/keewis>`_.
+  location. (:pull:`8688`) By `Matt Savoie <https://github.com/flamingbear>`_,
+  `Justus Magin <https://github.com/keewis>`_ and `Tom Nicholas
+  <https://github.com/TomNicholas>`_.
 
-- Adds :py:func:`open_datatree` into ``xarray/backends`` (:pull:`8697`) By `Matt
-  Savoie <https://github.com/flamingbear>`_.
+- Adds :py:func:`open_datatree` into ``xarray/backends`` (:pull:`8697`) By
+  `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
+  <https://github.com/TomNicholas>`_.
 
-- Adds ``treenode`` functionality into ``xarray/core`` (:pull:`8757`) By `Matt Savoie <https://github.com/flamingbear>`_.
+- Migrates ``treenode`` functionality into ``xarray/core`` (:pull:`8757`) By
+  `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
+  <https://github.com/TomNicholas>`_.
+
 - Refactor  :py:meth:`xarray.core.indexing.DaskIndexingAdapter.__getitem__` to remove an unnecessary rewrite of the indexer key
   (:issue: `8377`, :pull:`8758`) By `Anderson Banihirwe <https://github.com/andersy005>`
 
