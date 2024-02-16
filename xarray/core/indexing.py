@@ -3,7 +3,6 @@ from __future__ import annotations
 import enum
 import functools
 import operator
-from abc import ABC, abstractmethod
 from collections import Counter, defaultdict
 from collections.abc import Hashable, Mapping
 from contextlib import suppress
@@ -471,7 +470,7 @@ class ExplicitlyIndexed:
         return self.array
 
 
-class ExplicitlyIndexedNDArrayMixin(ABC, NDArrayMixin, ExplicitlyIndexed):
+class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
     __slots__ = ()
 
     def get_duck_array(self):
@@ -483,9 +482,8 @@ class ExplicitlyIndexedNDArrayMixin(ABC, NDArrayMixin, ExplicitlyIndexed):
         # Note this is the base class for all lazy indexing classes
         return np.asarray(self.get_duck_array(), dtype=dtype)
 
-    @abstractmethod
     def _oindex(self, key):
-        pass
+        raise NotImplementedError("This method should be overridden")
 
     @property
     def oindex(self):
