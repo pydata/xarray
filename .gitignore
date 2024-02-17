@@ -79,3 +79,6 @@ doc/team-panel.txt
 doc/external-examples-gallery.txt
 doc/notebooks-examples-gallery.txt
 doc/videos-gallery.txt
+
+# MyPy Report
+mypy_report/

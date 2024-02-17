@@ -89,7 +89,13 @@ with warnings.catch_warnings():
 has_pynio, requires_pynio = _importorskip("Nio")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
-has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        "ignore",
+        message="The current Dask DataFrame implementation is deprecated.",
+        category=DeprecationWarning,
+    )
+    has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
