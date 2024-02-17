@@ -917,6 +917,7 @@ def align(
 def deep_align(
     objects: Iterable[Any],
     join: JoinOptions = "inner",
+    broadcast: bool = True,
     copy: bool = True,
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),

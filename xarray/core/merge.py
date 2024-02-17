@@ -541,6 +541,7 @@ def merge_coords(
     objects: Iterable[CoercibleMapping],
     compat: CompatOptions = "minimal",
     join: JoinOptions = "outer",
+    broadcast: bool = True,
     priority_arg: int | None = None,
     indexes: Mapping[Any, Index] | None = None,
     fill_value: object = dtypes.NA,
@@ -554,7 +555,12 @@ def merge_coords(
     _assert_compat_valid(compat)
     coerced = coerce_pandas_values(objects)
     aligned = deep_align(
-        coerced, join=join, copy=False, indexes=indexes, fill_value=fill_value
+        coerced,
+        join=join,
+        broadcast=broadcast,
+        copy=False,
+        indexes=indexes,
+        fill_value=fill_value,
     )
     collected = collect_variables_and_indexes(aligned, indexes=indexes)
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
@@ -647,6 +653,7 @@ def merge_core(
     objects: Iterable[CoercibleMapping],
     compat: CompatOptions = "broadcast_equals",
     join: JoinOptions = "outer",
+    broadcast: bool = True,
     combine_attrs: CombineAttrsOptions = "override",
     priority_arg: int | None = None,
     explicit_coords: Iterable[Hashable] | None = None,
@@ -709,7 +716,12 @@ def merge_core(
 
     coerced = coerce_pandas_values(objects)
     aligned = deep_align(
-        coerced, join=join, copy=False, indexes=indexes, fill_value=fill_value
+        coerced,
+        join=join,
+        broadcast=broadcast,
+        copy=False,
+        indexes=indexes,
+        fill_value=fill_value,
     )
 
     for pos, obj in skip_align_objs:

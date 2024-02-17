@@ -282,6 +282,7 @@ def apply_dataarray_vfunc(
     *args,
     signature: _UFuncSignature,
     join: JoinOptions = "inner",
+    broadcast: bool = True,
     exclude_dims=frozenset(),
     keep_attrs="override",
 ) -> tuple[DataArray, ...] | DataArray:
@@ -295,6 +296,7 @@ def apply_dataarray_vfunc(
             deep_align(
                 args,
                 join=join,
+                broadcast=broadcast,
                 copy=False,
                 exclude=exclude_dims,
                 raise_on_invalid=False,
@@ -494,6 +496,7 @@ def apply_dataset_vfunc(
     signature: _UFuncSignature,
     join="inner",
     dataset_join="exact",
+    broadcast: bool = True,
     fill_value=_NO_FILL_VALUE,
     exclude_dims=frozenset(),
     keep_attrs="override",
@@ -518,6 +521,7 @@ def apply_dataset_vfunc(
             deep_align(
                 args,
                 join=join,
+                broadcast=broadcast,
                 copy=False,
                 exclude=exclude_dims,
                 raise_on_invalid=False,

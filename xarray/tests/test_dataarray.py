@@ -51,6 +51,7 @@ from xarray.tests import (
     requires_bottleneck,
     requires_cupy,
     requires_dask,
+    requires_dask_expr,
     requires_iris,
     requires_numexpr,
     requires_pint,
@@ -3246,6 +3247,26 @@ class TestDataArray:
         ):
             xr.align(xda_1, xda_2, join="exact", broadcast=False)
 
+    def test_broadcast_on_vs_off_global_option(self) -> None:
+        xda_1 = xr.DataArray([1], dims="x1")
+        xda_2 = xr.DataArray([1], dims="x2")
+
+        with xr.set_options(arithmetic_broadcast=True):
+            expected_xda = xr.DataArray([[1.0]], dims=("x1", "x2"))
+            actual_xda = xda_1 / xda_2
+            assert_identical(expected_xda, actual_xda)
+
+        with xr.set_options(arithmetic_broadcast=False):
+            with pytest.raises(
+                ValueError,
+                match=re.escape(
+                    "cannot align objects with broadcast=False "
+                    "because given objects do not share the same dimension names "
+                    "([('x1',), ('x2',)])"
+                ),
+            ):
+                xda_1 / xda_2
+
     def test_broadcast_on_vs_off_differing_dims_differing_sizes(self) -> None:
         xda_1 = xr.DataArray([1], dims="x1")
         xda_2 = xr.DataArray([1, 2], dims="x2")
@@ -3464,6 +3485,7 @@ class TestDataArray:
         assert len(actual) == 0
         assert_array_equal(actual.index.names, list("ABC"))
 
+    @requires_dask_expr
     @requires_dask
     def test_to_dask_dataframe(self) -> None:
         arr_np = np.arange(3 * 4).reshape(3, 4)
