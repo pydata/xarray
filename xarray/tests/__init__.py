@@ -110,6 +110,7 @@ has_cartopy, requires_cartopy = _importorskip("cartopy")
 has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
+has_pandas_ge_2_2, __ = _importorskip("pandas", "2.2")
 
 
 # some special cases

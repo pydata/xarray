@@ -34,13 +34,13 @@ from xarray.core.combine import (
     _nested_combine,
     combine_by_coords,
 )
-from xarray.core.daskmanager import DaskManager
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.indexes import Index
-from xarray.core.parallelcompat import guess_chunkmanager
 from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import is_remote_uri
+from xarray.namedarray.daskmanager import DaskManager
+from xarray.namedarray.parallelcompat import guess_chunkmanager
 
 if TYPE_CHECKING:
     try:
@@ -69,6 +69,7 @@ if TYPE_CHECKING:
     T_NetcdfTypes = Literal[
         "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
     ]
+    from xarray.datatree_.datatree import DataTree
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
@@ -786,6 +787,34 @@ def open_dataarray(
         data_array.name = None
 
     return data_array
+
+
+def open_datatree(
+    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    engine: T_Engine = None,
+    **kwargs,
+) -> DataTree:
+    """
+    Open and decode a DataTree from a file or file-like object, creating one tree node for each group in the file.
+
+    Parameters
+    ----------
+    filename_or_obj : str, Path, file-like, or DataStore
+        Strings and Path objects are interpreted as a path to a netCDF file or Zarr store.
+    engine : str, optional
+        Xarray backend engine to use. Valid options include `{"netcdf4", "h5netcdf", "zarr"}`.
+    **kwargs : dict
+        Additional keyword arguments passed to :py:func:`~xarray.open_dataset` for each group.
+    Returns
+    -------
+    xarray.DataTree
+    """
+    if engine is None:
+        engine = plugins.guess_engine(filename_or_obj)
+
+    backend = plugins.get_backend(engine)
+
+    return backend.open_datatree(filename_or_obj, **kwargs)
 
 
 def open_mfdataset(

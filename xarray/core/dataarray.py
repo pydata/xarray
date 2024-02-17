@@ -64,6 +64,7 @@ from xarray.core.utils import (
     _default,
     either_dict_or_kwargs,
     hashable,
+    infix_dims,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -71,7 +72,6 @@ from xarray.core.variable import (
     as_compatible_data,
     as_variable,
 )
-from xarray.namedarray.utils import infix_dims
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
@@ -85,7 +85,6 @@ if TYPE_CHECKING:
     from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.groupby import DataArrayGroupBy
-    from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DataArrayResample
     from xarray.core.rolling import DataArrayCoarsen, DataArrayRolling
     from xarray.core.types import (
@@ -108,6 +107,7 @@ if TYPE_CHECKING:
         T_Xarray,
     )
     from xarray.core.weighted import DataArrayWeighted
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
     T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
 

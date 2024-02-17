@@ -4,7 +4,7 @@ import enum
 import functools
 import operator
 from collections import Counter, defaultdict
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Hashable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -17,21 +17,18 @@ import pandas as pd
 from xarray.core import duck_array_ops
 from xarray.core.nputils import NumpyVIndexAdapter
 from xarray.core.options import OPTIONS
-from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
-from xarray.core.pycompat import (
-    array_type,
-    integer_types,
-    is_duck_array,
-    is_duck_dask_array,
-)
 from xarray.core.types import T_Xarray
 from xarray.core.utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
     get_valid_numpy_dtype,
+    is_duck_array,
+    is_duck_dask_array,
     is_scalar,
     to_0d_array,
 )
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import array_type, integer_types, is_chunked_array
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
@@ -1421,23 +1418,6 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         self.array = array
 
     def __getitem__(self, key):
-        if not isinstance(key, VectorizedIndexer):
-            # if possible, short-circuit when keys are effectively slice(None)
-            # This preserves dask name and passes lazy array equivalence checks
-            # (see duck_array_ops.lazy_array_equiv)
-            rewritten_indexer = False
-            new_indexer = []
-            for idim, k in enumerate(key.tuple):
-                if isinstance(k, Iterable) and (
-                    not is_duck_dask_array(k)
-                    and duck_array_ops.array_equiv(k, np.arange(self.array.shape[idim]))
-                ):
-                    new_indexer.append(slice(None))
-                    rewritten_indexer = True
-                else:
-                    new_indexer.append(k)
-            if rewritten_indexer:
-                key = type(key)(tuple(new_indexer))
 
         if isinstance(key, BasicIndexer):
             return self.array[key.tuple]
