@@ -105,8 +105,7 @@ Internal Changes
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Move ``parallelcompat`` and ``chunk managers`` modules from ``xarray/core`` to ``xarray/namedarray``. (:pull:`8319`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_ and `Anderson Banihirwe <https://github.com/andersy005>`_.
-- Imports ``datatree`` repository and history into internal
-  location. (:pull:`8688`)
+- Imports ``datatree`` repository and history into internal location. (:pull:`8688`)
   By `Matt Savoie <https://github.com/flamingbear>`_ and `Justus Magin <https://github.com/keewis>`_.
 - Adds :py:func:`open_datatree` into ``xarray/backends`` (:pull:`8697`)
   By `Matt Savoie <https://github.com/flamingbear>`_.
