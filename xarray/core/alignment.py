@@ -604,7 +604,7 @@ class Aligner(Generic[T_Alignable]):
 
         if self.join == "override":
             self.override_indexes()
-        elif not self.copy and self.join == "exact":
+        elif self.join == "exact" and not self.copy:
             self.results = self.objects
         else:
             self.reindex_all()
