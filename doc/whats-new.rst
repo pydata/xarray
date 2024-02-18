@@ -93,6 +93,9 @@ Documentation
 - Fix `variables` arg typo in `Dataset.sortby()` docstring
   (:issue:`8663`, :pull:`8670`)
   By `Tom Vo <https://github.com/tomvothecoder>`_.
+- Fixed documentation where the use of the depreciated pandas frequency string
+  prevented the documentation from being built. (:pull:`8638`)
+  By `Sam Coleman <https://github.com/nameloCmaS>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -139,9 +142,6 @@ Documentation
 
 - Pin ``sphinx-book-theme`` to ``1.0.1`` to fix a rendering issue with the sidebar in the docs. (:issue:`8619`, :pull:`8632`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-- Fixed documentation where the use of the depreciated pandas frequency string
-  prevented the documentation from being built. (:pull:`8638`)
-  By `Sam Coleman <https://github.com/nameloCmaS>`_.
 
 .. _whats-new.2024.01.0:
 
