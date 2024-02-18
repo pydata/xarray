@@ -330,6 +330,7 @@ intersphinx_mapping = {
     "cubed": ("https://cubed-dev.github.io/cubed/", None),
     "datatree": ("https://xarray-datatree.readthedocs.io/en/latest/", None),
     "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
+    "flox": ("https://flox.readthedocs.io/en/latest/", None),
     # "opt_einsum": ("https://dgasmith.github.io/opt_einsum/", None),
 }
 
