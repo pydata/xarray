@@ -20,6 +20,9 @@ What's New
 v2024.02.0 (unreleased)
 -----------------------
 
+This release brings size information to the text ``repr``, changes to the accepted frequency
+strings, and various bug fixes.
+
 New Features
 ~~~~~~~~~~~~
 
