@@ -23,6 +23,10 @@ v2024.02.0 (unreleased)
 This release brings size information to the text ``repr``, changes to the accepted frequency
 strings, and various bug fixes.
 
+Thanks to our 12 contributors:
+
+Anderson Banihirwe, Deepak Cherian, Eivind Jahren, Etienne Schalk, Justus Magin, Marco Wolsza, Mathias Hauser, Matt Savoie, Maximilian Roos, Rambaud Pierrick, Tom Nicholas
+
 New Features
 ~~~~~~~~~~~~
 
