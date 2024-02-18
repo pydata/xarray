@@ -327,7 +327,7 @@ intersphinx_mapping = {
     "cftime": ("https://unidata.github.io/cftime", None),
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
     "hypothesis": ("https://hypothesis.readthedocs.io/en/latest/", None),
-    "cubed": ("https://tom-e-white.com/cubed/", None),
+    "cubed": ("https://cubed-dev.github.io/cubed/", None),
     "datatree": ("https://xarray-datatree.readthedocs.io/en/latest/", None),
     "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
     # "opt_einsum": ("https://dgasmith.github.io/opt_einsum/", None),
