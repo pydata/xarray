@@ -984,6 +984,7 @@ def deep_align(
     aligned = align(
         *targets,
         join=join,
+        broadcast=broadcast,
         copy=copy,
         indexes=indexes,
         exclude=exclude,
