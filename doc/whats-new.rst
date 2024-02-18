@@ -25,7 +25,8 @@ strings, and various bug fixes.
 
 Thanks to our 12 contributors:
 
-Anderson Banihirwe, Deepak Cherian, Eivind Jahren, Etienne Schalk, Justus Magin, Marco Wolsza, Mathias Hauser, Matt Savoie, Maximilian Roos, Rambaud Pierrick, Tom Nicholas
+Anderson Banihirwe, Deepak Cherian, Eivind Jahren, Etienne Schalk, Justus Magin, Marco Wolsza,
+Mathias Hauser, Matt Savoie, Maximilian Roos, Rambaud Pierrick, Tom Nicholas
 
 New Features
 ~~~~~~~~~~~~
@@ -33,10 +34,11 @@ New Features
 - Added a simple ``nbytes`` representation in DataArrays and Dataset ``repr``.
   (:issue:`8690`, :pull:`8702`).
   By `Etienne Schalk <https://github.com/etienneschalk>`_.
-- Allow negative frequency strings (e.g. ``"-1YE"``). These strings are for example used
-  in :py:func:`date_range`,  and :py:func:`cftime_range` (:pull:`8651`).
+- Allow negative frequency strings (e.g. ``"-1YE"``). These strings are for example used in
+  :py:func:`date_range`, and :py:func:`cftime_range` (:pull:`8651`).
   By `Mathias Hauser <https://github.com/mathause>`_.
-- Add :py:meth:`NamedArray.expand_dims`, :py:meth:`NamedArray.permute_dims` and :py:meth:`NamedArray.broadcast_to` (:pull:`8380`)
+- Add :py:meth:`NamedArray.expand_dims`, :py:meth:`NamedArray.permute_dims` and
+  :py:meth:`NamedArray.broadcast_to` (:pull:`8380`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Xarray now defers to `flox's heuristics <https://flox.readthedocs.io/en/latest/implementation.html#heuristics>`_
   to set the default `method` for groupby problems. This only applies to ``flox>=0.9``.
@@ -56,60 +58,61 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-- The `dt.weekday_name` parameter wasn't functional on modern pandas versions and has been removed. (:issue:`8610`, :pull:`8664`)
+- The `dt.weekday_name` parameter wasn't functional on modern pandas versions and has been
+  removed. (:issue:`8610`, :pull:`8664`)
   By `Sam Coleman <https://github.com/nameloCmaS>`_.
 
 
 Bug fixes
 ~~~~~~~~~
 
-- Fixed a regression that prevented multi-index level coordinates being
-  serialized after resetting or dropping the multi-index (:issue:`8628`, :pull:`8672`).
+- Fixed a regression that prevented multi-index level coordinates being serialized after resetting
+  or dropping the multi-index (:issue:`8628`, :pull:`8672`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - Fix bug with broadcasting when wrapping array API-compliant classes. (:issue:`8665`, :pull:`8669`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-- Ensure :py:meth:`DataArray.unstack` works when wrapping array API-compliant classes. (:issue:`8666`, :pull:`8668`)
+- Ensure :py:meth:`DataArray.unstack` works when wrapping array API-compliant
+  classes. (:issue:`8666`, :pull:`8668`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Fix negative slicing of Zarr arrays without dask installed. (:issue:`8252`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Preserve chunks when writing time-like variables to zarr by enabling lazy CF
-  encoding of time-like variables (:issue:`7132`, :issue:`8230`, :issue:`8432`,
-  :pull:`8575`).
+- Preserve chunks when writing time-like variables to zarr by enabling lazy CF encoding of time-like
+  variables (:issue:`7132`, :issue:`8230`, :issue:`8432`, :pull:`8575`).
   By `Spencer Clark <https://github.com/spencerkclark>`_ and `Mattia Almansi <https://github.com/malmans2>`_.
-- Preserve chunks when writing time-like variables to zarr by enabling their
-  lazy encoding (:issue:`7132`, :issue:`8230`, :issue:`8432`, :pull:`8253`,
-  :pull:`8575`; see also discussion in :pull:`8253`).
+- Preserve chunks when writing time-like variables to zarr by enabling their lazy encoding
+  (:issue:`7132`, :issue:`8230`, :issue:`8432`, :pull:`8253`, :pull:`8575`; see also discussion in
+  :pull:`8253`).
    By `Spencer Clark <https://github.com/spencerkclark>`_ and `Mattia Almansi <https://github.com/malmans2>`_.
-- Raise an informative error if dtype encoding of time-like variables would
-  lead to integer overflow or unsafe conversion from floating point to integer
-  values (:issue:`8542`, :pull:`8575`).
+- Raise an informative error if dtype encoding of time-like variables would lead to integer overflow
+  or unsafe conversion from floating point to integer values (:issue:`8542`, :pull:`8575`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
-- Raise an error when unstacking a MultiIndex that has duplicates as this would lead
-  to silent data loss (:issue:`7104`, :pull:`8737`).
+- Raise an error when unstacking a MultiIndex that has duplicates as this would lead to silent data
+  loss (:issue:`7104`, :pull:`8737`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
-- Fix `variables` arg typo in `Dataset.sortby()` docstring
-  (:issue:`8663`, :pull:`8670`)
+- Fix `variables` arg typo in `Dataset.sortby()` docstring (:issue:`8663`, :pull:`8670`)
   By `Tom Vo <https://github.com/tomvothecoder>`_.
-- Fixed documentation where the use of the depreciated pandas frequency string
-  prevented the documentation from being built. (:pull:`8638`)
+- Fixed documentation where the use of the depreciated pandas frequency string prevented the
+  documentation from being built. (:pull:`8638`)
   By `Sam Coleman <https://github.com/nameloCmaS>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
-- ``DataArray.dt`` now raises an ``AttributeError`` rather than a ``TypeError``
-  when the data isn't datetime-like. (:issue:`8718`, :pull:`8724`)
+- ``DataArray.dt`` now raises an ``AttributeError`` rather than a ``TypeError`` when the data isn't
+  datetime-like. (:issue:`8718`, :pull:`8724`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Move ``parallelcompat`` and ``chunk managers`` modules from ``xarray/core`` to ``xarray/namedarray``. (:pull:`8319`)
+- Move ``parallelcompat`` and ``chunk managers`` modules from ``xarray/core`` to
+  ``xarray/namedarray``. (:pull:`8319`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_ and `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Imports ``datatree`` repository and history into internal location. (:pull:`8688`)
   By `Matt Savoie <https://github.com/flamingbear>`_ and `Justus Magin <https://github.com/keewis>`_.
 - Adds :py:func:`open_datatree` into ``xarray/backends`` (:pull:`8697`)
   By `Matt Savoie <https://github.com/flamingbear>`_.
-- Refactor  :py:meth:`xarray.core.indexing.DaskIndexingAdapter.__getitem__` to remove an unnecessary rewrite of the indexer key (:issue: `8377`, :pull:`8758`)
+- Refactor :py:meth:`xarray.core.indexing.DaskIndexingAdapter.__getitem__` to remove an unnecessary
+  rewrite of the indexer key (:issue: `8377`, :pull:`8758`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 .. _whats-new.2024.01.1:
