@@ -501,7 +501,7 @@ class Aligner(Generic[T_Alignable]):
         if self.broadcast:
             return
 
-        unique_dims = set(o.dims for o in self.objects)
+        unique_dims = set(tuple(o.dims) for o in self.objects)
         all_objects_have_same_dims = len(unique_dims) == 1
         if not all_objects_have_same_dims:
             raise ValueError(

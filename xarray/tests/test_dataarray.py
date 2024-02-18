@@ -3205,14 +3205,15 @@ class TestDataArray:
         assert expected_b.x.dtype == actual_b.x.dtype
 
     @pytest.mark.parametrize("broadcast", [True, False])
-    def test_broadcast_on_vs_off_same_dim_same_size(self, broadcast) -> None:
+    def test_broadcast_on_vs_off_same_dim_same_size(self, broadcast: bool) -> None:
         xda = xr.DataArray([1], dims="x")
 
         aligned_1, aligned_2 = xr.align(xda, xda, join="exact", broadcast=broadcast)
         assert_identical(aligned_1, xda)
         assert_identical(aligned_2, xda)
 
-    def test_broadcast_on_vs_off_same_dim_differing_sizes(self) -> None:
+    @pytest.mark.parametrize("broadcast", [True, False])
+    def test_broadcast_on_vs_off_same_dim_differing_sizes(self: bool) -> None:
         xda_1 = xr.DataArray([1], dims="x")
         xda_2 = xr.DataArray([1, 2], dims="x")
 
@@ -3223,16 +3224,7 @@ class TestDataArray:
                 "conflicting dimension sizes: {1, 2}"
             ),
         ):
-            xr.align(xda_1, xda_2, join="exact", broadcast=True)
-
-        with pytest.raises(
-            ValueError,
-            match=re.escape(
-                "cannot reindex or align along dimension 'x' because of "
-                "conflicting dimension sizes: {1, 2}"
-            ),
-        ):
-            xr.align(xda_1, xda_2, join="exact", broadcast=False)
+            xr.align(xda_1, xda_2, join="exact", broadcast=broadcast)
 
     def test_broadcast_on_vs_off_differing_dims_same_sizes(self) -> None:
         xda_1 = xr.DataArray([1], dims="x1")
