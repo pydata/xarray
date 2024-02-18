@@ -23,7 +23,7 @@ v2024.02.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
-- Added a simple `nbytes` representation in DataArrays and Dataset `repr`.
+- Added a simple ``nbytes`` representation in DataArrays and Dataset ``repr``.
   (:issue:`8690`, :pull:`8702`).
   By `Etienne Schalk <https://github.com/etienneschalk>`_.
 - Allow negative frequency strings (e.g. ``"-1YE"``). These strings are for example used
@@ -31,8 +31,8 @@ New Features
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Add :py:meth:`NamedArray.expand_dims`, :py:meth:`NamedArray.permute_dims` and :py:meth:`NamedArray.broadcast_to` (:pull:`8380`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
-- Xarray now defers to flox's `heuristics <https://flox.readthedocs.io/en/latest/implementation.html#heuristics>`_
-  to set default `method` for groupby problems. This only applies to ``flox>=0.9``.
+- Xarray now defers to `flox's heuristics <https://flox.readthedocs.io/en/latest/implementation.html#heuristics>`_
+  to set the default `method` for groupby problems. This only applies to ``flox>=0.9``.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - All `quantile` methods (e.g. :py:meth:`DataArray.quantile`) now use `numbagg`
   for the calculation of nanquantiles (i.e., `skipna=True`) if it is installed.
