@@ -280,10 +280,15 @@ class Aligner(Generic[T_Alignable]):
             for dim_sizes in all_indexes_dim_sizes.values():
                 for dim, sizes in dim_sizes.items():
                     if len(sizes) > 1:
+                        message = (
+                            "join='override'"
+                            if self.join == "override"
+                            else "broadcast=False"
+                        )
                         raise ValueError(
-                            f"cannot align objects"
-                            f"with indexes "
-                            f"along dimension {dim!r} that don't have the same size ({sizes!r}) when {message} "
+                            f"cannot align objects with indexes "
+                            f"along dimension {dim!r} that don't have the same size "
+                            f"({sizes!r}) when {message}"
                         )
 
     def find_matching_unindexed_dims(self) -> None:
