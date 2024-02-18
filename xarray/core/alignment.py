@@ -501,13 +501,13 @@ class Aligner(Generic[T_Alignable]):
         if self.broadcast:
             return
 
-        unique_dims = set(tuple(o.sizes) for o in self.objects)
+        unique_dims = set(o.dims for o in self.objects)
         all_objects_have_same_dims = len(unique_dims) == 1
         if not all_objects_have_same_dims:
             raise ValueError(
                 f"cannot align objects with broadcast=False "
                 f"because given objects do not share the same dimension names "
-                f"({[tuple(o.sizes) for o in self.objects]!r})."
+                f"({[tuple(o.dims) for o in self.objects]!r})."
             )
 
     def override_indexes(self) -> None:
