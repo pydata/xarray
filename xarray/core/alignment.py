@@ -281,9 +281,9 @@ class Aligner(Generic[T_Alignable]):
                 for dim, sizes in dim_sizes.items():
                     if len(sizes) > 1:
                         raise ValueError(
-                            f"cannot align objects with join={self.join!r} or "
-                            f"broadcast={self.broadcast!r} with matching indexes "
-                            f"along dimension {dim!r} that don't have the same size ({sizes!r})"
+                            f"cannot align objects"
+                            f"with indexes "
+                            f"along dimension {dim!r} that don't have the same size ({sizes!r}) when {message} "
                         )
 
     def find_matching_unindexed_dims(self) -> None:
@@ -745,8 +745,9 @@ def align(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-    broadcast : bool
-        The alignment fails if dimensions' names differ.
+    broadcast : bool, optional
+        Disallow automatic broadcasting of all objects along dimensions that are present in some but not all objects.
+        If False, this will raise an error when all objects do *not* have the same dimensions.
     copy : bool, default: True
         If ``copy=True``, data in the return values is always copied. If
         ``copy=False`` and reindexing is unnecessary, or can be performed with

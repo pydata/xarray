@@ -3204,17 +3204,13 @@ class TestDataArray:
         assert_identical(expected_b, actual_b)
         assert expected_b.x.dtype == actual_b.x.dtype
 
-    def test_broadcast_on_vs_off_same_dim_same_size(self) -> None:
-        xda_1 = xr.DataArray([1], dims="x")
-        xda_2 = xr.DataArray([1], dims="x")
+    @pytest.mark.parametrize("broadcast", [True, False])
+    def test_broadcast_on_vs_off_same_dim_same_size(self, broadcast) -> None:
+        xda = xr.DataArray([1], dims="x")
 
-        aligned_1, aligned_2 = xr.align(xda_1, xda_2, join="exact", broadcast=True)
-        assert_identical(aligned_1, xda_1)
-        assert_identical(aligned_2, xda_2)
-
-        aligned_1, aligned_2 = xr.align(xda_1, xda_2, join="exact", broadcast=False)
-        assert_identical(aligned_1, xda_1)
-        assert_identical(aligned_2, xda_2)
+        aligned_1, aligned_2 = xr.align(xda, xda, join="exact", broadcast=broadcast)
+        assert_identical(aligned_1, xda)
+        assert_identical(aligned_2, xda)
 
     def test_broadcast_on_vs_off_same_dim_differing_sizes(self) -> None:
         xda_1 = xr.DataArray([1], dims="x")
