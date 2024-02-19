@@ -15,6 +15,37 @@ What's New
     np.random.seed(123456)
 
 
+.. _whats-new.2024.03.0:
+
+v2024.03.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Migrates ``treenode`` functionality into ``xarray/core`` (:pull:`8757`) By
+  `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
+  <https://github.com/TomNicholas>`_.
+
 .. _whats-new.2024.02.0:
 
 v2024.02.0 (Feb 19, 2024)
@@ -107,26 +138,13 @@ Internal Changes
 - Move ``parallelcompat`` and ``chunk managers`` modules from ``xarray/core`` to
   ``xarray/namedarray``. (:pull:`8319`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_ and `Anderson Banihirwe <https://github.com/andersy005>`_.
-
 - Imports ``datatree`` repository and history into internal
   location. (:pull:`8688`) By `Matt Savoie <https://github.com/flamingbear>`_,
   `Justus Magin <https://github.com/keewis>`_ and `Tom Nicholas
   <https://github.com/TomNicholas>`_.
-
 - Adds :py:func:`open_datatree` into ``xarray/backends`` (:pull:`8697`) By
   `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
   <https://github.com/TomNicholas>`_.
-
-- Migrates ``treenode`` functionality into ``xarray/core`` (:pull:`8757`) By
-  `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
-  <https://github.com/TomNicholas>`_.
-
-- Refactor  :py:meth:`xarray.core.indexing.DaskIndexingAdapter.__getitem__` to remove an unnecessary rewrite of the indexer key
-  (:issue: `8377`, :pull:`8758`) By `Anderson Banihirwe <https://github.com/andersy005>`
-- Imports ``datatree`` repository and history into internal location. (:pull:`8688`)
-  By `Matt Savoie <https://github.com/flamingbear>`_ and `Justus Magin <https://github.com/keewis>`_.
-- Adds :py:func:`open_datatree` into ``xarray/backends`` (:pull:`8697`)
-  By `Matt Savoie <https://github.com/flamingbear>`_.
 - Refactor :py:meth:`xarray.core.indexing.DaskIndexingAdapter.__getitem__` to remove an unnecessary
   rewrite of the indexer key (:issue: `8377`, :pull:`8758`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
