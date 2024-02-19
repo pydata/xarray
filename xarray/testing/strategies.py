@@ -44,7 +44,7 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     Generates only those numpy dtypes which xarray can handle.
 
     Use instead of hypothesis.extra.numpy.scalar_dtypes in order to exclude weirder dtypes such as unicode, byte_string, array, or nested dtypes.
-    Also excludes datetimes, which dodges bugs with pandas non-nanosecond datetime overflows.
+    Also excludes datetimes, which dodges bugs with pandas non-nanosecond datetime overflows.  Checks only native endianness.
 
     Requires the hypothesis package to be installed.
 
@@ -55,10 +55,10 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     # TODO should this be exposed publicly?
     # We should at least decide what the set of numpy dtypes that xarray officially supports is.
     return (
-        npst.integer_dtypes()
-        | npst.unsigned_integer_dtypes()
-        | npst.floating_dtypes()
-        | npst.complex_number_dtypes()
+        npst.integer_dtypes(endianness="=")
+        | npst.unsigned_integer_dtypes(endianness="=")
+        | npst.floating_dtypes(endianness="=")
+        | npst.complex_number_dtypes(endianness="=")
     )
 
 
