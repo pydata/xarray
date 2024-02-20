@@ -9,68 +9,62 @@ from xarray.tests import (
 )
 
 
-class TestIO:
-    @requires_netCDF4
-    def test_to_netcdf(self, tmpdir, simple_datatree):
-        filepath = str(
-            tmpdir / "test.nc"
-        )  # casting to str avoids a pathlib bug in xarray
-        original_dt = simple_datatree
-        original_dt.to_netcdf(filepath, engine="netcdf4")
+class DatatreeIOBase:
+    engine = None
 
-        roundtrip_dt = open_datatree(filepath)
+    def test_to_netcdf(self, tmpdir, simple_datatree):
+        filepath = tmpdir / "test.nc"
+        original_dt = simple_datatree
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        roundtrip_dt = open_datatree(filepath, engine=self.engine)
         assert_equal(original_dt, roundtrip_dt)
 
-    @requires_netCDF4
     def test_netcdf_encoding(self, tmpdir, simple_datatree):
-        filepath = str(
-            tmpdir / "test.nc"
-        )  # casting to str avoids a pathlib bug in xarray
+        filepath = tmpdir / "test.nc"
         original_dt = simple_datatree
 
         # add compression
         comp = dict(zlib=True, complevel=9)
         enc = {"/set2": {var: comp for var in original_dt["/set2"].ds.data_vars}}
 
-        original_dt.to_netcdf(filepath, encoding=enc, engine="netcdf4")
-        roundtrip_dt = open_datatree(filepath)
+        original_dt.to_netcdf(filepath, encoding=enc, engine=self.engine)
+        roundtrip_dt = open_datatree(filepath, engine=self.engine)
 
         assert roundtrip_dt["/set2/a"].encoding["zlib"] == comp["zlib"]
         assert roundtrip_dt["/set2/a"].encoding["complevel"] == comp["complevel"]
 
         enc["/not/a/group"] = {"foo": "bar"}  # type: ignore
         with pytest.raises(ValueError, match="unexpected encoding group.*"):
-            original_dt.to_netcdf(filepath, encoding=enc, engine="netcdf4")
+            original_dt.to_netcdf(filepath, encoding=enc, engine=self.engine)
 
-    @requires_h5netcdf
-    def test_to_h5netcdf(self, tmpdir, simple_datatree):
-        filepath = str(
-            tmpdir / "test.nc"
-        )  # casting to str avoids a pathlib bug in xarray
+
+@requires_netCDF4
+class TestNetCDF4DatatreeIO(DatatreeIOBase):
+    engine = "netcdf4"
+
+
+@requires_h5netcdf
+class TestH5NetCDFDatatreeIO(DatatreeIOBase):
+    engine = "h5netcdf"
+
+
+@requires_zarr
+class TestZarrDatatreeIO:
+    engine = "zarr"
+
+    def test_to_zarr(self, tmpdir, simple_datatree):
+        filepath = tmpdir / "test.zarr"
         original_dt = simple_datatree
-        original_dt.to_netcdf(filepath, engine="h5netcdf")
+        original_dt.to_zarr(filepath)
 
         roundtrip_dt = open_datatree(filepath)
         assert_equal(original_dt, roundtrip_dt)
 
-    @requires_zarr
-    def test_to_zarr(self, tmpdir, simple_datatree):
-        filepath = str(
-            tmpdir / "test.zarr"
-        )  # casting to str avoids a pathlib bug in xarray
-        original_dt = simple_datatree
-        original_dt.to_zarr(filepath)
-
-        roundtrip_dt = open_datatree(filepath, engine="zarr")
-        assert_equal(original_dt, roundtrip_dt)
-
-    @requires_zarr
     def test_zarr_encoding(self, tmpdir, simple_datatree):
         import zarr
 
-        filepath = str(
-            tmpdir / "test.zarr"
-        )  # casting to str avoids a pathlib bug in xarray
+        filepath = tmpdir / "test.zarr"
         original_dt = simple_datatree
 
         comp = {"compressor": zarr.Blosc(cname="zstd", clevel=3, shuffle=2)}
@@ -85,13 +79,10 @@ class TestIO:
         with pytest.raises(ValueError, match="unexpected encoding group.*"):
             original_dt.to_zarr(filepath, encoding=enc, engine="zarr")
 
-    @requires_zarr
     def test_to_zarr_zip_store(self, tmpdir, simple_datatree):
         from zarr.storage import ZipStore
 
-        filepath = str(
-            tmpdir / "test.zarr.zip"
-        )  # casting to str avoids a pathlib bug in xarray
+        filepath = tmpdir / "test.zarr.zip"
         original_dt = simple_datatree
         store = ZipStore(filepath)
         original_dt.to_zarr(store)
@@ -99,7 +90,6 @@ class TestIO:
         roundtrip_dt = open_datatree(store, engine="zarr")
         assert_equal(original_dt, roundtrip_dt)
 
-    @requires_zarr
     def test_to_zarr_not_consolidated(self, tmpdir, simple_datatree):
         filepath = tmpdir / "test.zarr"
         zmetadata = filepath / ".zmetadata"
@@ -114,7 +104,6 @@ class TestIO:
             roundtrip_dt = open_datatree(filepath, engine="zarr")
         assert_equal(original_dt, roundtrip_dt)
 
-    @requires_zarr
     def test_to_zarr_default_write_mode(self, tmpdir, simple_datatree):
         import zarr
 
