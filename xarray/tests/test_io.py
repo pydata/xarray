@@ -58,7 +58,7 @@ class TestZarrDatatreeIO:
         original_dt = simple_datatree
         original_dt.to_zarr(filepath)
 
-        roundtrip_dt = open_datatree(filepath)
+        roundtrip_dt = open_datatree(filepath, engine="zarr")
         assert_equal(original_dt, roundtrip_dt)
 
     def test_zarr_encoding(self, tmpdir, simple_datatree):
