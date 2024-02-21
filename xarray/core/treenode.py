@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sys
-from collections import OrderedDict
 from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
 from typing import (
@@ -51,8 +50,8 @@ class TreeNode(Generic[Tree]):
 
     This class stores no data, it has only parents and children attributes, and various methods.
 
-    Stores child nodes in an Ordered Dictionary, which is necessary to ensure that equality checks between two trees
-    also check that the order of child nodes is the same.
+    Stores child nodes in an dict, ensuring that equality checks between trees
+    and order of child nodes is the preserved (since python 3.7).
 
     Nodes themselves are intrinsically unnamed (do not possess a ._name attribute), but if the node has a parent you can
     find the key it is stored under via the .name property.
@@ -69,15 +68,16 @@ class TreeNode(Generic[Tree]):
     Also allows access to any other node in the tree via unix-like paths, including upwards referencing via '../'.
 
     (This class is heavily inspired by the anytree library's NodeMixin class.)
+
     """
 
     _parent: Tree | None
-    _children: OrderedDict[str, Tree]
+    _children: dict[str, Tree]
 
     def __init__(self, children: Mapping[str, Tree] | None = None):
         """Create a parentless node."""
         self._parent = None
-        self._children = OrderedDict()
+        self._children = {}
         if children is not None:
             self.children = children
 
@@ -123,13 +123,11 @@ class TreeNode(Generic[Tree]):
         if parent is not None:
             self._pre_detach(parent)
             parents_children = parent.children
-            parent._children = OrderedDict(
-                {
-                    name: child
-                    for name, child in parents_children.items()
-                    if child is not self
-                }
-            )
+            parent._children = {
+                name: child
+                for name, child in parents_children.items()
+                if child is not self
+            }
             self._parent = None
             self._post_detach(parent)
 
@@ -163,7 +161,7 @@ class TreeNode(Generic[Tree]):
     @children.setter
     def children(self: Tree, children: Mapping[str, Tree]) -> None:
         self._check_children(children)
-        children = OrderedDict(children)
+        children = {**children}
 
         old_children = self.children
         del self.children
@@ -311,20 +309,18 @@ class TreeNode(Generic[Tree]):
         return tuple([node for node in self.subtree if node.is_leaf])
 
     @property
-    def siblings(self: Tree) -> OrderedDict[str, Tree]:
+    def siblings(self: Tree) -> dict[str, Tree]:
         """
         Nodes with the same parent as this node.
         """
         if self.parent:
-            return OrderedDict(
-                {
-                    name: child
-                    for name, child in self.parent.children.items()
-                    if child is not self
-                }
-            )
+            return {
+                name: child
+                for name, child in self.parent.children.items()
+                if child is not self
+            }
         else:
-            return OrderedDict()
+            return {}
 
     @property
     def subtree(self: Tree) -> Iterator[Tree]:
@@ -580,7 +576,7 @@ class NamedNode(TreeNode, Generic[Tree]):
 
     _name: str | None
     _parent: Tree | None
-    _children: OrderedDict[str, Tree]
+    _children: dict[str, Tree]
 
     def __init__(self, name=None, children=None):
         super().__init__(children=children)
