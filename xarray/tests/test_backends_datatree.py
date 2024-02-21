@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 import pytest
 
 from xarray.backends.api import open_datatree
@@ -8,9 +10,12 @@ from xarray.tests import (
     requires_zarr,
 )
 
+if TYPE_CHECKING:
+    from xarray.backends.api import T_NetcdfEngine
+
 
 class DatatreeIOBase:
-    engine = None
+    engine: T_NetcdfEngine | None = None
 
     def test_to_netcdf(self, tmpdir, simple_datatree):
         filepath = tmpdir / "test.nc"
@@ -41,12 +46,12 @@ class DatatreeIOBase:
 
 @requires_netCDF4
 class TestNetCDF4DatatreeIO(DatatreeIOBase):
-    engine = "netcdf4"
+    engine: T_NetcdfEngine | None = "netcdf4"
 
 
 @requires_h5netcdf
 class TestH5NetCDFDatatreeIO(DatatreeIOBase):
-    engine = "h5netcdf"
+    engine: T_NetcdfEngine | None = "h5netcdf"
 
 
 @requires_zarr
