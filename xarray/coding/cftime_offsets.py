@@ -1152,7 +1152,7 @@ def date_range(
     start=None,
     end=None,
     periods=None,
-    freq="D",
+    freq=None,
     tz=None,
     normalize=False,
     name=None,
@@ -1217,6 +1217,9 @@ def date_range(
     date_range_like
     """
     from xarray.coding.times import _is_standard_calendar
+
+    if freq is None and any(arg is None for arg in [periods, start, end]):
+        freq = "D"
 
     if tz is not None:
         use_cftime = False
