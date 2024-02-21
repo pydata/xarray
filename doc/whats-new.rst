@@ -23,6 +23,9 @@ v2024.03.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add the ``.oindex`` property to Explicitly Indexed Arrays for orthogonal indexing functionality. (:issue:`8238`, :pull:`8750`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -42,6 +45,7 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
 
 
 .. _whats-new.2024.02.0:
