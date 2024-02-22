@@ -4,7 +4,7 @@ import enum
 import functools
 import operator
 from collections import Counter, defaultdict
-from collections.abc import Hashable, Mapping
+from collections.abc import Hashable, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -18,7 +18,7 @@ from pandas.api.types import is_extension_array_dtype
 from xarray.core import duck_array_ops
 from xarray.core.nputils import NumpyVIndexAdapter
 from xarray.core.options import OPTIONS
-from xarray.core.types import T_ExtensionArray, T_Xarray
+from xarray.core.types import DTypeLikeSave, T_ExtensionArray, T_Xarray
 from xarray.core.utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
@@ -1455,6 +1455,59 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return self.array.transpose(order)
 
 
+HANDLED_EXTENSION_ARRAY_FUNCTIONS: dict[Callable, Callable] = {}
+
+
+def implements(numpy_function):
+    """Register an __array_function__ implementation for MyArray objects."""
+
+    def decorator(func):
+        HANDLED_EXTENSION_ARRAY_FUNCTIONS[numpy_function] = func
+        return func
+
+    return decorator
+
+
+@implements(np.issubdtype)
+def __extension_duck_array__issubdtype(
+    extension_array_dtype: T_ExtensionArray, other_dtype: DTypeLikeSave
+) -> bool:
+    return False  # never want a function to think a pandas extension dtype is a subtype of numpy
+
+
+@implements(np.broadcast_to)
+def __extension_duck_array__broadcast(arr: T_ExtensionArray, shape: tuple):
+    if shape[0] == len(arr) and len(shape) == 1:
+        return arr
+    raise NotImplementedError("Cannot broadcast 1d-only pandas categorical array.")
+
+
+@implements(np.stack)
+def __extension_duck_array__stack(arr: T_ExtensionArray, axis: int):
+    raise NotImplementedError("Cannot stack 1d-only pandas categorical array.")
+
+
+@implements(np.concatenate)
+def __extension_duck_array__concatenate(
+    arrays: Sequence[T_ExtensionArray], axis: int = 0, out=None
+) -> T_ExtensionArray:
+    return type(arrays[0])._concat_same_type(arrays)
+
+
+@implements(np.where)
+def __extension_duck_array__where(
+    condition: np.ndarray, x: T_ExtensionArray, y: T_ExtensionArray
+) -> T_ExtensionArray:
+    if (
+        isinstance(x, pd.Categorical)
+        and isinstance(y, pd.Categorical)
+        and x.dtype != y.dtype
+    ):
+        x = x.add_categories(set(y.categories).difference(set(x.categories)))
+        y = y.add_categories(set(x.categories).difference(set(y.categories)))
+    return pd.Series(x).where(condition, pd.Series(y)).array
+
+
 class ExtensionDuckArray(Generic[T_ExtensionArray]):
     array: T_ExtensionArray
 
@@ -1489,9 +1542,9 @@ class ExtensionDuckArray(Generic[T_ExtensionArray]):
             return args_as_list
 
         args = tuple(replace_duck_with_extension_array(args))
-        if func not in duck_array_ops.HANDLED_EXTENSION_ARRAY_FUNCTIONS:
+        if func not in HANDLED_EXTENSION_ARRAY_FUNCTIONS:
             return func(*args, **kwargs)
-        res = duck_array_ops.HANDLED_EXTENSION_ARRAY_FUNCTIONS[func](*args, **kwargs)
+        res = HANDLED_EXTENSION_ARRAY_FUNCTIONS[func](*args, **kwargs)
         if is_extension_array_dtype(res):
             return type(self)[type(res)](res)
         return res

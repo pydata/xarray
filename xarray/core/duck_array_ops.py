@@ -10,10 +10,8 @@ import contextlib
 import datetime
 import inspect
 import warnings
-from collections.abc import Sequence
 from functools import partial
 from importlib import import_module
-from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -38,7 +36,6 @@ from pandas.api.types import is_extension_array_dtype
 
 from xarray.core import dask_array_ops, dtypes, nputils
 from xarray.core.options import OPTIONS
-from xarray.core.types import DTypeLikeSave, T_ExtensionArray
 from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
 from xarray.namedarray import pycompat
 from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -56,59 +53,6 @@ else:
 
 
 dask_available = module_available("dask")
-
-
-HANDLED_EXTENSION_ARRAY_FUNCTIONS: dict[Callable, Callable] = {}
-
-
-def implements(numpy_function):
-    """Register an __array_function__ implementation for MyArray objects."""
-
-    def decorator(func):
-        HANDLED_EXTENSION_ARRAY_FUNCTIONS[numpy_function] = func
-        return func
-
-    return decorator
-
-
-@implements(np.issubdtype)
-def __extension_duck_array__issubdtype(
-    extension_array_dtype: T_ExtensionArray, other_dtype: DTypeLikeSave
-) -> bool:
-    return False  # never want a function to think a pandas extension dtype is a subtype of numpy
-
-
-@implements(np.broadcast_to)
-def __extension_duck_array__broadcast(arr: T_ExtensionArray, shape: tuple):
-    if shape[0] == len(arr) and len(shape) == 1:
-        return arr
-    raise NotImplementedError("Cannot broadcast 1d-only pandas categorical array.")
-
-
-@implements(np.stack)
-def __extension_duck_array__stack(arr: T_ExtensionArray, axis: int):
-    raise NotImplementedError("Cannot stack 1d-only pandas categorical array.")
-
-
-@implements(np.concatenate)
-def __extension_duck_array__concatenate(
-    arrays: Sequence[T_ExtensionArray], axis: int = 0, out=None
-) -> T_ExtensionArray:
-    return type(arrays[0])._concat_same_type(arrays)
-
-
-@implements(np.where)
-def __extension_duck_array__where(
-    condition: np.ndarray, x: T_ExtensionArray, y: T_ExtensionArray
-) -> T_ExtensionArray:
-    if (
-        isinstance(x, pd.Categorical)
-        and isinstance(y, pd.Categorical)
-        and x.dtype != y.dtype
-    ):
-        x = x.add_categories(set(y.categories).difference(set(x.categories)))
-        y = y.add_categories(set(x.categories).difference(set(y.categories)))
-    return pd.Series(x).where(condition, pd.Series(y)).array
 
 
 def get_array_namespace(x):
