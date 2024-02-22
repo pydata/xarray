@@ -1774,5 +1774,4 @@ def test_date_range_no_freq(start, end):
     result = date_range(start=start, end=end)
     expected = pd.date_range(start=start, end=end)
 
-    # Assert that the results are equal
     np.testing.assert_array_equal(result, expected)
