@@ -914,7 +914,7 @@ def cftime_range(
     start=None,
     end=None,
     periods=None,
-    freq="D",
+    freq=None,
     normalize=False,
     name=None,
     closed: NoDefault | SideOptions = no_default,
@@ -1100,6 +1100,10 @@ def cftime_range(
     --------
     pandas.date_range
     """
+
+    if freq is None and any(arg is None for arg in [periods, start, end]):
+        freq = "D"
+
     # Adapted from pandas.core.indexes.datetimes._generate_range.
     if count_not_none(start, end, periods, freq) != 3:
         raise ValueError(
@@ -1217,9 +1221,6 @@ def date_range(
     date_range_like
     """
     from xarray.coding.times import _is_standard_calendar
-
-    if freq is None and any(arg is None for arg in [periods, start, end]):
-        freq = "D"
 
     if tz is not None:
         use_cftime = False

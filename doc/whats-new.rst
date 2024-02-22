@@ -34,7 +34,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- The logic of the frequency parameter in :py:meth:`xr.date_range` and :py:meth:`xr.cftime_range` are
+  set to 'D' only if periods, start, or end are None. (:issue:`8770`, :pull:`8774`).
+  By `Roberto Chang <https://github.com/rjavierch>`_.
 
 Documentation
 ~~~~~~~~~~~~~
