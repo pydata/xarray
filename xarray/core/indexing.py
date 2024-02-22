@@ -1458,18 +1458,16 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 class ExtensionDuckArray(Generic[T_ExtensionArray]):
     array: T_ExtensionArray
 
-    def __init__(self, array: T_ExtensionArray | ExtensionDuckArray):
+    def __init__(self, array: T_ExtensionArray):
         """NEP-18 compliant wrapper for pandas extension arrays.
 
         Parameters
         ----------
-        array : T_ExtensionArray | ExtensionDuckArray
+        array : T_ExtensionArray
             The array to be wrapped upon e.g,. :py:class:`xarray.Variable` creation.
         ```
         """
-        if isinstance(array, ExtensionDuckArray):
-            self.array = array.array
-        elif is_extension_array_dtype(array):
+        if isinstance(array, pd.api.extensions.ExtensionArray):
             self.array = array
         else:
             raise TypeError(f"{array} is not an pandas ExtensionArray.")
