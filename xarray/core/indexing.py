@@ -1460,27 +1460,11 @@ class ExtensionDuckArray(Generic[T_ExtensionArray]):
 
     def __init__(self, array: T_ExtensionArray | ExtensionDuckArray):
         """NEP-18 compliant wrapper for pandas extension arrays.
-        To override behavior of common applicable numpy `__array_function__` methods,
-        please use :py:module:`plum` to dispatch the corresponding function with the prefix
-        `__extension_duck_array__` i.e., for :py:func:`numpy.where`.  The only function that is
-        necessary to override at the moment is :py:func:`np.where` since :py:module:`pandas` provides
-        concatenation, and `broadcast`/`stack` are not supported.
 
         Parameters
         ----------
         array : T_ExtensionArray | ExtensionDuckArray
             The array to be wrapped upon e.g,. :py:class:`xarray.Variable` creation.
-            If also an ExtensionDuckArray, it's `array` attribute will be extracted and assigned to `self.array`.
-
-
-        Examples
-        --------
-        The following is an example of how you might support some different kinds of arrays.
-        ```python
-        from plum import dispatch
-        @dispatch
-        def ___extension_duck_array__where__(cond: np.ndarray, x: pd.arrays.IntegerArray, y: pd.arrays.BooleanArray) -> pd.arrays.IntegerArray:
-            pass
         ```
         """
         if isinstance(array, ExtensionDuckArray):
