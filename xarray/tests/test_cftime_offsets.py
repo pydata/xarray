@@ -1294,7 +1294,6 @@ def test_cftime_range_name():
         (None, None, 5, "YE", None),
         ("2000", None, None, "YE", None),
         (None, "2000", None, "YE", None),
-        ("2000", "2001", None, None, None),
         (None, None, None, None, None),
         ("2000", "2001", None, "YE", "up"),
         ("2000", "2001", 5, "YE", None),
@@ -1737,41 +1736,43 @@ def test_cftime_range_same_as_pandas(start, end, freq):
 
 @pytest.mark.filterwarnings("ignore:Converting a CFTimeIndex with:")
 @pytest.mark.parametrize(
-    "start, end",
+    "start, end, periods",
     [
-        ("2022-01-01", "2022-01-10"),
-        ("2022-02-01", "2022-02-28"),
-        ("2022-03-01", "2022-03-31"),
+        ("2022-01-01", "2022-01-10", 2),
+        ("2022-03-01", "2022-03-31", 2),
+        ("2022-01-01", "2022-01-10", None),
+        ("2022-03-01", "2022-03-31", None),
     ],
 )
-def test_cftime_range_no_freq(start, end):
+def test_cftime_range_no_freq(start, end, periods):
     """
     Test whether cftime_range produces the same result as Pandas
-    when freq is not provided, but start and end are.
+    when freq is not provided, but start, end and periods are.
     """
     # Generate date ranges using cftime_range
-    result = cftime_range(start=start, end=end)
+    result = cftime_range(start=start, end=end, periods=periods)
     result = result.to_datetimeindex()
-    expected = pd.date_range(start=start, end=end)
+    expected = pd.date_range(start=start, end=end, periods=periods)
 
     np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.parametrize(
-    "start, end",
+    "start, end, periods",
     [
-        ("2022-01-01", "2022-01-10"),
-        ("2022-02-01", "2022-02-28"),
-        ("2022-03-01", "2022-03-31"),
+        ("2022-01-01", "2022-01-10", 2),
+        ("2022-03-01", "2022-03-31", 2),
+        ("2022-01-01", "2022-01-10", None),
+        ("2022-03-01", "2022-03-31", None),
     ],
 )
-def test_date_range_no_freq(start, end):
+def test_date_range_no_freq(start, end, periods):
     """
     Test whether date_range produces the same result as Pandas
-    when freq is not provided, but start and end are.
+    when freq is not provided, but start, end and periods are.
     """
     # Generate date ranges using date_range
-    result = date_range(start=start, end=end)
-    expected = pd.date_range(start=start, end=end)
+    result = date_range(start=start, end=end, periods=periods)
+    expected = pd.date_range(start=start, end=end, periods=periods)
 
     np.testing.assert_array_equal(result, expected)
