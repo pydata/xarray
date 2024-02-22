@@ -1754,7 +1754,6 @@ def test_cftime_range_no_freq(start, end):
     result = result.to_datetimeindex()
     expected = pd.date_range(start=start, end=end)
 
-    # Assert that the results are equal
     np.testing.assert_array_equal(result, expected)
 
 
