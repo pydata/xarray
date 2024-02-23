@@ -336,7 +336,8 @@ class IndexCallable:
     def __getitem__(self, key):
         return self.func(key)
 
-
+        def __setitem__(self, key, value):
+            raise NotImplementedError
 class BasicIndexer(ExplicitIndexer):
     """Tuple for basic indexing.
 
