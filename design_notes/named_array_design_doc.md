@@ -87,6 +87,39 @@ The named-array package is designed to be interoperable with other scientific Py
 
 Further implementation details are in Appendix: [Implementation Details](#appendix-implementation-details).
 
+## Plan for decoupling lazy indexing functionality from NamedArray
+
+Today's implementation Xarray's lazy indexing functionality uses three private objects: `*Indexer`, `*IndexingAdapter`, `*Array`.
+These objects are needed for two reason:
+1. We need to translate from Xarray (NamedArray) indexing rules to bare array indexing rules.
+   - `*Indexer` objects track the type of indexing - basic, orthogonal, vectorized
+2. Not all arrays support the same indexing rules, so we need `*Indexing` adapters
+   1. Indexing Adapters today implement `__getitem__` and use type of `*Indexer` object to do appropriate conversions.
+3. We also want to support lazy indexing of on-disk arrays.
+   1. These again support different types of indexing, so we have `explicit_indexing_adapter` that understands `*Indexer` objects.
+
+### Goals
+1. We would like to keep the lazy indexing array objects, and backend array objects within Xarray. Thus NamedArray cannot treat these objects specially.
+2. A key source of confusion (and coupling) is that both lazy indexing arrays and indexing adapters, both handle Indexer objects, and both subclass `ExplicitlyIndexedNDArrayMixin`. These are however conceptually different.
+
+### Proposal
+
+1. The `NumpyIndexingAdapter`, `DaskIndexingAdapter`, and `ArrayApiIndexingAdapter` classes will need to migrate to Named Array project since we will want to support indexing of numpy, dask, and array-API arrays appropriately.
+2. The `as_indexable` function which wraps an array with the appropriate adapter will also migrate over to named array.
+3. Lazy indexing arrays will implement `__getitem__` for basic indexing, `.oindex` for orthogonal indexing, and `.vindex` for vectorized indexing.
+4. IndexingAdapter classes will similarly implement `__getitem__`, `oindex`, and `vindex`.
+5. `NamedArray.__getitem__` (and `__setitem__`) will still use `*Indexer` objects internally (for e.g. in `NamedArray._broadcast_indexes`), but use `.oindex`, `.vindex` on the underlying indexing adapters.
+6. We will move the `*Indexer` and `*IndexingAdapter` classes to Named Array. These will be considered private in the long-term.
+7. `as_indexable` will no longer special case `ExplicitlyIndexed` objects (we can special case a new `IndexingAdapter` mixin class that will be private to NamedArray). To handle Xarray's lazy indexing arrays, we will introduce a new `ExplicitIndexingAdapter` which will wrap any array with any of `.oindex` of `.vindex` implemented.
+   1. This will be the last case in the if-chain that is, we will try to wrap with all other `IndexingAdapter` objects before using `ExplicitIndexingAdapter` as a fallback. This Adapter will be used for the lazy indexing arrays, and backend arrays.
+   2. As with other indexing adapters (point 4 above), this `ExplicitIndexingAdapter` will only implement `__getitem__` and will understand `*Indexer` objects.
+8. For backwards compatibility with external backends, we will have to gracefully deprecate `indexing.explicit_indexing_adapter` which translates from Xarray's indexing rules to the indexing supported by the backend.
+   1. We could split `explicit_indexing_adapter` in to 3:
+      - `basic_indexing_adapter`, `outer_indexing_adapter` and `vectorized_indexing_adapter` for public use.
+   2. Implement fall back `.oindex`, `.vindex` properties on `BackendArray` base class. These will simply rewrap the `key` tuple with the appropriate `*Indexer` object, and pass it on to `__getitem__` or `__setitem__`. These methods will also raise DeprecationWarning so that external backends will know to migrate to `.oindex`, and `.vindex` over the next year.
+
+THe most uncertain piece here is maintaining backward compatibility with external backends. We should first migrate a single internal backend, and test out the proposed approach.
+
 ## Project Timeline and Milestones
 
 We have identified the following milestones for the completion of this project:
