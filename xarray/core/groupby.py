@@ -348,6 +348,19 @@ def _apply_loffset(
 
 @dataclass
 class ResolvedGrouper(Generic[T_DataWithCoords]):
+    """
+    Wrapper around a Grouper object.
+
+    The Grouper object represents an abstract instruction to group an object.
+    The ResovledGrouper object is a concrete version that contains all the common
+    logic necessary for a GroupBy problem including the intermediates necessary for
+    executing a GroupBy calculation. Specialization to the grouping problem at hand,
+    is accomplished by calling the `factorize` method on the encapsulated Grouper
+    object.
+
+    This class is private API, while Groupers are public.
+    """
+
     grouper: Grouper
     group: T_Group
     obj: T_DataWithCoords
@@ -400,9 +413,6 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
         return self.group1d.dims
 
     def factorize(self) -> None:
-        # This design makes it clear  to mypy that
-        # codes, group_indices, unique_coord, and full_index
-        # are set by the factorize  method on the derived class.
         (
             self.codes,
             self.group_indices,
@@ -414,10 +424,22 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
 class Grouper(ABC):
     @property
     def can_squeeze(self) -> bool:
+        """TODO: delete this when the `squeeze` kwarg is deprecated. Only `UniqueGrouper`
+        should override it."""
         return False
 
     @abstractmethod
     def factorize(self, group) -> T_FactorizeOut:
+        """
+        Takes the group, and creates intermediates necessary for GroupBy.
+        These intermediates are
+        1. codes - Same shape as `group` containing a unique integer code for each group.
+        2. group_indices - Indexes that let us index out the members of each group.
+        3. unique_coord - Unique groups present in the dataset.
+        4. full_index - Unique groups in the output. This differes from `unique_coord` in the
+           case of resampling and binning, where certain groups in the output are not present in
+           the input.
+        """
         pass
 
 
@@ -427,6 +449,8 @@ class Resampler(Grouper):
 
 @dataclass
 class UniqueGrouper(Grouper):
+    """Grouper object for grouping by a categorical variable."""
+
     _group_as_index: pd.Index | None = None
 
     @property
@@ -495,6 +519,8 @@ class UniqueGrouper(Grouper):
 
 @dataclass
 class BinGrouper(Grouper):
+    """Grouper object for binning numeric data."""
+
     bins: Any  # TODO: What is the typing?
     cut_kwargs: Mapping = field(default_factory=dict)
     binned: Any = None
@@ -540,6 +566,8 @@ class BinGrouper(Grouper):
 
 @dataclass
 class TimeResampler(Resampler):
+    """Grouper object specialized to resampling the time coordinate."""
+
     freq: str
     closed: SideOptions | None = field(default=None)
     label: SideOptions | None = field(default=None)
