@@ -55,7 +55,7 @@ if TYPE_CHECKING:
     GroupIndex = Union[int, slice, list[int]]
     T_GroupIndices = list[GroupIndex]
     T_FactorizeOut = tuple[
-        DataArray, T_GroupIndices, Union[pd.Index, "_DummyGroup"], pd.Index, DataArray
+        DataArray, T_GroupIndices, Union[pd.Index, "_DummyGroup"], pd.Index
     ]
 
 
@@ -406,6 +406,10 @@ class ResolvedGrouper:
 
 
 class Grouper(ABC):
+    @property
+    def can_squeeze(self) -> bool:
+        return False
+
     @abstractmethod
     def factorize(self, group) -> T_FactorizeOut:
         pass
