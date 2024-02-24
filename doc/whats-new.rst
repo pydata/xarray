@@ -15,10 +15,43 @@ What's New
     np.random.seed(123456)
 
 
+.. _whats-new.2024.03.0:
+
+v2024.03.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+- Add the ``.oindex`` property to Explicitly Indexed Arrays for orthogonal indexing functionality. (:issue:`8238`, :pull:`8750`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+
 .. _whats-new.2024.02.0:
 
-v2024.02.0 (unreleased)
------------------------
+v2024.02.0 (Feb 19, 2024)
+-------------------------
 
 This release brings size information to the text ``repr``, changes to the accepted frequency
 strings, and various bug fixes.
