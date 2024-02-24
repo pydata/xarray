@@ -655,6 +655,12 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def _updated_key(self, new_key):
         return _combine_indexers(self.key, self.shape, new_key)
 
+    def _oindex_get(self, indexer):
+        return type(self)(self.array, self._updated_key(indexer))
+
+    def _vindex_get(self, indexer):
+        return type(self)(self.array, self._updated_key(indexer))
+
     def __getitem__(self, indexer):
         # If the indexed array becomes a scalar, return LazilyIndexedArray
         if all(isinstance(ind, integer_types) for ind in indexer.tuple):
@@ -1386,7 +1392,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     def _vindex_get(self, key):
         array = NumpyVIndexAdapter(self.array)
-        return array[key]
+        return array[key.tuple]
 
     def __getitem__(self, key):
         array, key = self._indexing_array_and_key(key)
