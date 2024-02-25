@@ -2272,7 +2272,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             return NotImplemented
 
         if not OPTIONS["arithmetic_broadcast"]:
-            raise ValueError("Arithmetic broadcast is disabled via global option")
+            raise ValueError("arithmetic broadcast is disabled via global option")
         if reflexive and issubclass(type(self), type(other)):
             other_data, self_data, dims = _broadcast_compat_data(other, self)
         else:

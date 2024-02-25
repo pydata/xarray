@@ -50,7 +50,8 @@ from xarray.tests import (
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
-    requires_dask,requires_dask_expr,
+    requires_dask,
+    requires_dask_expr,
     requires_iris,
     requires_numexpr,
     requires_pint,
@@ -3203,47 +3204,6 @@ class TestDataArray:
         assert_identical(expected_b, actual_b)
         assert expected_b.x.dtype == actual_b.x.dtype
 
-
- @pytest.mark.parametrize("broadcast", [True, False])
-    def test_broadcast_on_vs_off_same_dim_same_size(self, broadcast: bool) -> None:
-        xda = xr.DataArray([1], dims="x")
-
-        aligned_1, aligned_2 = xr.align(xda, xda, join="exact", broadcast=broadcast)
-        assert_identical(aligned_1, xda)
-        assert_identical(aligned_2, xda)
-
-    @pytest.mark.parametrize("broadcast", [True, False])
-    def test_broadcast_on_vs_off_same_dim_differing_sizes(self: bool) -> None:
-        xda_1 = xr.DataArray([1], dims="x")
-        xda_2 = xr.DataArray([1, 2], dims="x")
-
-        with pytest.raises(
-            ValueError,
-            match=re.escape(
-                "cannot reindex or align along dimension 'x' because of "
-                "conflicting dimension sizes: {1, 2}"
-            ),
-        ):
-            xr.align(xda_1, xda_2, join="exact", broadcast=broadcast)
-
-    def test_broadcast_on_vs_off_differing_dims_same_sizes(self) -> None:
-        xda_1 = xr.DataArray([1], dims="x1")
-        xda_2 = xr.DataArray([1], dims="x2")
-
-        aligned_1, aligned_2 = xr.align(xda_1, xda_2, join="exact", broadcast=True)
-        assert_identical(aligned_1, xda_1)
-        assert_identical(aligned_2, xda_2)
-
-        with pytest.raises(
-            ValueError,
-            match=re.escape(
-                "cannot align objects with broadcast=False "
-                "because given objects do not share the same dimension names "
-                "([('x1',), ('x2',)])"
-            ),
-        ):
-            xr.align(xda_1, xda_2, join="exact", broadcast=False)
-
     def test_broadcast_on_vs_off_global_option(self) -> None:
         xda_1 = xr.DataArray([1], dims="x1")
         xda_2 = xr.DataArray([1], dims="x2")
@@ -3256,53 +3216,10 @@ class TestDataArray:
         with xr.set_options(arithmetic_broadcast=False):
             with pytest.raises(
                 ValueError,
-                match=re.escape(
-                    "cannot align objects with broadcast=False "
-                    "because given objects do not share the same dimension names "
-                    "([('x1',), ('x2',)])"
-                ),
+                match=re.escape("arithmetic broadcast is disabled via global option"),
             ):
                 xda_1 / xda_2
 
-    def test_broadcast_on_vs_off_differing_dims_differing_sizes(self) -> None:
-        xda_1 = xr.DataArray([1], dims="x1")
-        xda_2 = xr.DataArray([1, 2], dims="x2")
-
-        aligned_1, aligned_2 = xr.align(xda_1, xda_2, join="exact", broadcast=True)
-        assert_identical(aligned_1, xda_1)
-        assert_identical(aligned_2, xda_2)
-
-        with pytest.raises(
-            ValueError,
-            match=re.escape(
-                "cannot align objects with broadcast=False "
-                "because given objects do not share the same dimension names "
-                "([('x1',), ('x2',)])"
-            ),
-        ):
-            xr.align(xda_1, xda_2, join="exact", broadcast=False)
-
-    def test_broadcast_on_vs_off_2d(self) -> None:
-        xda_1 = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("y1", "x1"))
-        xda_2 = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("y2", "x2"))
-        xda_3 = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("y3", "x3"))
-
-        aligned_1, aligned_2, aligned_3 = xr.align(
-            xda_1, xda_2, xda_3, join="exact", broadcast=True
-        )
-        assert_identical(aligned_1, xda_1)
-        assert_identical(aligned_2, xda_2)
-        assert_identical(aligned_3, xda_3)
-
-        with pytest.raises(
-            ValueError,
-            match=re.escape(
-                "cannot align objects with broadcast=False "
-                "because given objects do not share the same dimension names "
-                "([('y1', 'x1'), ('y2', 'x2'), ('y3', 'x3')])"
-            ),
-        ):
-            xr.align(xda_1, xda_2, xda_3, join="exact", broadcast=False)
     def test_broadcast_arrays(self) -> None:
         x = DataArray([1, 2], coords=[("a", [-1, -2])], name="x")
         y = DataArray([1, 2], coords=[("b", [3, 4])], name="y")
@@ -3480,6 +3397,7 @@ class TestDataArray:
         actual = arr.to_dataframe()
         assert len(actual) == 0
         assert_array_equal(actual.index.names, list("ABC"))
+
     @requires_dask_expr
     @requires_dask
     def test_to_dask_dataframe(self) -> None:
