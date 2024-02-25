@@ -2271,8 +2271,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if isinstance(other, (xr.DataArray, xr.Dataset)):
             return NotImplemented
 
-        if not OPTIONS["arithmetic_broadcast"]:
-            raise ValueError("arithmetic broadcast is disabled via global option")
         if reflexive and issubclass(type(self), type(other)):
             other_data, self_data, dims = _broadcast_compat_data(other, self)
         else:
@@ -2867,6 +2865,14 @@ def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
 
 
 def _broadcast_compat_data(self, other):
+    if not OPTIONS["arithmetic_broadcast"]:
+        if not isinstance(self, Variable):
+            raise NotImplementedError
+        if (isinstance(other, Variable) and self.dims != other.dims) or (
+            isinstance(other, np.ndarray) and self.ndim != other.ndim
+        ):
+            raise ValueError("arithmetic broadcast is disabled via global option")
+
     if all(hasattr(other, attr) for attr in ["dims", "data", "shape", "encoding"]):
         # `other` satisfies the necessary Variable API for broadcast_variables
         new_self, new_other = _broadcast_compat_variables(self, other)

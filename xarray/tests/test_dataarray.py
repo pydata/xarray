@@ -3204,14 +3204,14 @@ class TestDataArray:
         assert_identical(expected_b, actual_b)
         assert expected_b.x.dtype == actual_b.x.dtype
 
-    def test_broadcast_on_vs_off_global_option(self) -> None:
+    def test_broadcast_on_vs_off_global_option_different_dims(self) -> None:
         xda_1 = xr.DataArray([1], dims="x1")
         xda_2 = xr.DataArray([1], dims="x2")
 
         with xr.set_options(arithmetic_broadcast=True):
             expected_xda = xr.DataArray([[1.0]], dims=("x1", "x2"))
             actual_xda = xda_1 / xda_2
-            assert_identical(expected_xda, actual_xda)
+            assert_identical(actual_xda, expected_xda)
 
         with xr.set_options(arithmetic_broadcast=False):
             with pytest.raises(
@@ -3219,6 +3219,27 @@ class TestDataArray:
                 match=re.escape("arithmetic broadcast is disabled via global option"),
             ):
                 xda_1 / xda_2
+
+    @pytest.mark.parametrize("arithmetic_broadcast", [True, False])
+    def test_broadcast_on_vs_off_global_option_same_dims(
+        self, arithmetic_broadcast: bool
+    ) -> None:
+        # Ensure that no error is raised when arithmetic broadcasting is disabled,
+        # when broadcasting is not needed. The two DataArrays have the same
+        # dimensions of the same size.
+        xda_1 = xr.DataArray([1], dims="x")
+        xda_2 = xr.DataArray([1], dims="x")
+        expected_xda = xr.DataArray([2.0], dims=("x",))
+
+        with xr.set_options(arithmetic_broadcast=arithmetic_broadcast):
+            actual_xda = xda_1 + xda_2
+            assert_identical(actual_xda, expected_xda)
+
+            actual_xda = xda_1 + np.array([1.0])
+            assert_identical(actual_xda, expected_xda)
+
+            actual_xda = np.array([1.0]) + xda_1
+            assert_identical(actual_xda, expected_xda)
 
     def test_broadcast_arrays(self) -> None:
         x = DataArray([1, 2], coords=[("a", [-1, -2])], name="x")
