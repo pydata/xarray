@@ -2270,7 +2270,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def _binary_op(self, other, f, reflexive=False):
         if isinstance(other, (xr.DataArray, xr.Dataset)):
             return NotImplemented
-
         if reflexive and issubclass(type(self), type(other)):
             other_data, self_data, dims = _broadcast_compat_data(other, self)
         else:
