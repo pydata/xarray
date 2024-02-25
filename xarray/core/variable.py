@@ -2866,8 +2866,6 @@ def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
 
 def _broadcast_compat_data(self, other):
     if not OPTIONS["arithmetic_broadcast"]:
-        if not isinstance(self, Variable):
-            raise NotImplementedError
         if (isinstance(other, Variable) and self.dims != other.dims) or (
             isinstance(other, np.ndarray) and self.ndim != other.ndim
         ):
