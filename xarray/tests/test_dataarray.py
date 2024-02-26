@@ -3216,7 +3216,11 @@ class TestDataArray:
         with xr.set_options(arithmetic_broadcast=False):
             with pytest.raises(
                 ValueError,
-                match=re.escape("arithmetic broadcast is disabled via global option"),
+                match=re.escape(
+                    "Broadcasting is necessary but automatic broadcasting is disabled via "
+                    "global option `'arithmetic_broadcast'`. "
+                    "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
+                ),
             ):
                 xda_1 / xda_2
 

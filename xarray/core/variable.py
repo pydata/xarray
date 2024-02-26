@@ -2869,8 +2869,9 @@ def _broadcast_compat_data(self, other):
             is_duck_array(other) and self.ndim != other.ndim
         ):
             raise ValueError(
-                "Broadcasting is necessary but automatic broadcasting is disabled via global option "
-                "`'arithmetic_broadcast'`. Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
+                "Broadcasting is necessary but automatic broadcasting is disabled via "
+                "global option `'arithmetic_broadcast'`. "
+                "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
             )
 
     if all(hasattr(other, attr) for attr in ["dims", "data", "shape", "encoding"]):
