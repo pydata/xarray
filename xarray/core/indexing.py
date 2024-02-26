@@ -488,9 +488,16 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
     def _oindex_get(self, key):
         raise NotImplementedError("This method should be overridden")
 
+    def _vindex_get(self, key):
+        raise NotImplementedError("This method should be overridden")
+
     @property
     def oindex(self):
         return IndexCallable(self._oindex_get)
+
+    @property
+    def vindex(self):
+        return IndexCallable(self._vindex_get)
 
 
 class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
@@ -585,6 +592,10 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def _oindex_get(self, indexer):
         return type(self)(self.array, self._updated_key(indexer))
 
+    def _vindex_get(self, indexer):
+        array = LazilyVectorizedIndexedArray(self.array, self.key)
+        return array[indexer]
+
     def __getitem__(self, indexer):
         if isinstance(indexer, VectorizedIndexer):
             array = LazilyVectorizedIndexedArray(self.array, self.key)
@@ -644,6 +655,12 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def _updated_key(self, new_key):
         return _combine_indexers(self.key, self.shape, new_key)
 
+    def _oindex_get(self, indexer):
+        return type(self)(self.array, self._updated_key(indexer))
+
+    def _vindex_get(self, indexer):
+        return type(self)(self.array, self._updated_key(indexer))
+
     def __getitem__(self, indexer):
         # If the indexed array becomes a scalar, return LazilyIndexedArray
         if all(isinstance(ind, integer_types) for ind in indexer.tuple):
@@ -691,6 +708,9 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
     def _oindex_get(self, key):
         return type(self)(_wrap_numpy_scalars(self.array[key]))
 
+    def _vindex_get(self, key):
+        return type(self)(_wrap_numpy_scalars(self.array[key]))
+
     def __getitem__(self, key):
         return type(self)(_wrap_numpy_scalars(self.array[key]))
 
@@ -725,6 +745,9 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
         return self.array.get_duck_array()
 
     def _oindex_get(self, key):
+        return type(self)(_wrap_numpy_scalars(self.array[key]))
+
+    def _vindex_get(self, key):
         return type(self)(_wrap_numpy_scalars(self.array[key]))
 
     def __getitem__(self, key):
@@ -1364,8 +1387,12 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return self.array.transpose(order)
 
     def _oindex_get(self, key):
-        array, key = self._indexing_array_and_key(key)
-        return array[key]
+        key = _outer_to_numpy_indexer(key, self.array.shape)
+        return self.array[key]
+
+    def _vindex_get(self, key):
+        array = NumpyVIndexAdapter(self.array)
+        return array[key.tuple]
 
     def __getitem__(self, key):
         array, key = self._indexing_array_and_key(key)
@@ -1419,6 +1446,9 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             value = value[(slice(None),) * axis + (subkey, Ellipsis)]
         return value
 
+    def _vindex_get(self, key):
+        raise TypeError("Vectorized indexing is not supported")
+
     def __getitem__(self, key):
         if isinstance(key, BasicIndexer):
             return self.array[key.tuple]
@@ -1465,11 +1495,14 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 value = value[(slice(None),) * axis + (subkey,)]
             return value
 
+    def _vindex_get(self, key):
+        return self.array.vindex[key.tuple]
+
     def __getitem__(self, key):
         if isinstance(key, BasicIndexer):
             return self.array[key.tuple]
         elif isinstance(key, VectorizedIndexer):
-            return self.array.vindex[key.tuple]
+            return self.vindex[key]
         else:
             assert isinstance(key, OuterIndexer)
             return self.oindex[key]
@@ -1549,6 +1582,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return to_0d_array(item)
 
     def _oindex_get(self, key):
+        return self.__getitem__(key)
+
+    def _vindex_get(self, key):
         return self.__getitem__(key)
 
     def __getitem__(
