@@ -759,10 +759,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
         indexable = as_indexable(self._data)
 
-        if isinstance(indexer, BasicIndexer):
-            data = indexable[indexer]
-        elif isinstance(indexer, OuterIndexer):
+        if isinstance(indexer, OuterIndexer):
             data = indexable.oindex[indexer]
+        elif isinstance(indexer, VectorizedIndexer):
+            data = indexable.vindex[indexer]
         else:
             data = indexable[indexer]
         if new_order:
@@ -801,6 +801,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
             if isinstance(indexer, OuterIndexer):
                 data = indexable.oindex[indexer]
+
+            elif isinstance(indexer, VectorizedIndexer):
+                data = indexable.vindex[indexer]
             else:
                 data = indexable[actual_indexer]
             mask = indexing.create_mask(indexer, self.shape, data)

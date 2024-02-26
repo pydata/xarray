@@ -26,6 +26,8 @@ New Features
 - Add the ``.oindex`` property to Explicitly Indexed Arrays for orthogonal indexing functionality. (:issue:`8238`, :pull:`8750`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
+- Add the ``.vindex`` property to Explicitly Indexed Arrays for vectorized indexing functionality. (:issue:`8238`, :pull:`8780`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
