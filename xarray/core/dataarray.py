@@ -761,11 +761,15 @@ class DataArray(
     @property
     def values(self) -> np.ndarray:
         """
-        A view onto the DataArray's underlying data as a numpy.ndarray.
+        The array's data converted to numpy.ndarray.
 
-        If the array's data is not a numpy.ndarray this will attempt to convert
-        it naively using np.array(), which will raise an error if the array
-        type does not support coercion like this (e.g. cupy).
+        Note that this array is not copied; operations on it follow 
+        numpy's rules of what generates a view vs. a copy, and changes 
+        to this array may be reflected in the DataArray as well.
+
+        This will attempt to convert the array naively using np.array(), 
+        which will raise an error if the array type does not support 
+        coercion like this (e.g. cupy).
         """
         return self.variable.values
 
