@@ -865,7 +865,6 @@ Coordinates:
 
 
 def test_array_repr_dtypes():
-
     # These dtypes are expected to be represented similarly
     # on Ubuntu, macOS and Windows environments of the CI.
     # Unsigned integer could be used as easy replacements
@@ -975,7 +974,6 @@ Dimensions without coordinates: x
     reason="Default numpy's dtypes vary according to OS",
 )
 def test_array_repr_dtypes_unix() -> None:
-
     # Signed integer dtypes
 
     ds = xr.DataArray(np.array([0]), dims="x")
@@ -1011,7 +1009,6 @@ Dimensions without coordinates: x
     reason="Default numpy's dtypes vary according to OS",
 )
 def test_array_repr_dtypes_on_windows() -> None:
-
     # Integer dtypes
 
     ds = xr.DataArray(np.array([0]), dims="x")

@@ -105,7 +105,6 @@ def register_dataset_accessor(name):
     ...     def plot(self):
     ...         # plot this array's data on a map, e.g., using Cartopy
     ...         pass
-    ...
 
     Back in an interactive IPython session:
 

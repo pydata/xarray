@@ -510,7 +510,8 @@ class TestDataArray:
         assert_identical(da.coords, coords)
 
     def test_constructor_custom_index(self) -> None:
-        class CustomIndex(Index): ...
+        class CustomIndex(Index):
+            ...
 
         coords = Coordinates(
             coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}

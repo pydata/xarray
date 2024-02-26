@@ -972,7 +972,8 @@ class DataArray(
         names: Dims = None,
         *,
         drop: Literal[False] = False,
-    ) -> Dataset: ...
+    ) -> Dataset:
+        ...
 
     @overload
     def reset_coords(
@@ -980,7 +981,8 @@ class DataArray(
         names: Dims = None,
         *,
         drop: Literal[True],
-    ) -> Self: ...
+    ) -> Self:
+        ...
 
     @_deprecate_positional_args("v2023.10.0")
     def reset_coords(
@@ -1524,7 +1526,7 @@ class DataArray(
           Do not try to assign values when using any of the indexing methods
           ``isel`` or ``sel``::
 
-            da = xr.DataArray([0, 1, 2, 3], dims=['x'])
+            da = xr.DataArray([0, 1, 2, 3], dims=["x"])
             # DO NOT do this
             da.isel(x=[0, 1, 2])[1] = -1
 
@@ -3914,7 +3916,8 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> bytes: ...
+    ) -> bytes:
+        ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -3930,7 +3933,8 @@ class DataArray(
         *,
         compute: Literal[False],
         invalid_netcdf: bool = False,
-    ) -> Delayed: ...
+    ) -> Delayed:
+        ...
 
     # default return None
     @overload
@@ -3945,7 +3949,8 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: Literal[True] = True,
         invalid_netcdf: bool = False,
-    ) -> None: ...
+    ) -> None:
+        ...
 
     # if compute cannot be evaluated at type check time
     # we may get back either Delayed or None
@@ -3961,7 +3966,8 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> Delayed | None: ...
+    ) -> Delayed | None:
+        ...
 
     def to_netcdf(
         self,
@@ -4110,7 +4116,8 @@ class DataArray(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
-    ) -> ZarrStore: ...
+    ) -> ZarrStore:
+        ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -4130,7 +4137,8 @@ class DataArray(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
-    ) -> Delayed: ...
+    ) -> Delayed:
+        ...
 
     def to_zarr(
         self,
@@ -5484,7 +5492,6 @@ class DataArray(
         ...     gb = da.groupby(groupby_type)
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
-        ...
         >>> time = xr.cftime_range("1990-01", "1992-01", freq="ME")
         >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)
@@ -6310,7 +6317,6 @@ class DataArray(
         >>> rng = np.random.default_rng(seed=0)
         >>> def exp_decay(t, time_constant, amplitude):
         ...     return np.exp(-t / time_constant) * amplitude
-        ...
         >>> t = np.arange(11)
         >>> da = xr.DataArray(
         ...     np.stack(

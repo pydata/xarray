@@ -235,13 +235,10 @@ class AbstractDataStore:
         For example::
 
             class SuffixAppendingDataStore(AbstractDataStore):
-
                 def load(self):
                     variables, attributes = AbstractDataStore.load(self)
-                    variables = {'%s_suffix' % k: v
-                                 for k, v in variables.items()}
-                    attributes = {'%s_suffix' % k: v
-                                  for k, v in attributes.items()}
+                    variables = {"%s_suffix" % k: v for k, v in variables.items()}
+                    attributes = {"%s_suffix" % k: v for k, v in attributes.items()}
                     return variables, attributes
 
         This function will be called anytime variables or attributes

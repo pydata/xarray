@@ -183,7 +183,9 @@ class Resample(GroupBy[T_Xarray]):
 
 
 # https://github.com/python/mypy/issues/9031
-class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations):  # type: ignore[misc]
+class DataArrayResample(
+    Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations
+):  # type: ignore[misc]
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -336,7 +338,9 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
 
 
 # https://github.com/python/mypy/issues/9031
-class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations):  # type: ignore[misc]
+class DatasetResample(
+    Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations
+):  # type: ignore[misc]
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def map(

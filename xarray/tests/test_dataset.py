@@ -675,7 +675,8 @@ class TestDataset:
             Dataset(coords={"x": midx})
 
     def test_constructor_custom_index(self) -> None:
-        class CustomIndex(Index): ...
+        class CustomIndex(Index):
+            ...
 
         coords = Coordinates(
             coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
@@ -3602,7 +3603,8 @@ class TestDataset:
         expected_mindex = ds.set_index(x=["foo", "bar"])
         assert_identical(actual_mindex, expected_mindex)
 
-        class NotAnIndex: ...
+        class NotAnIndex:
+            ...
 
         with pytest.raises(TypeError, match=".*not a subclass of xarray.Index"):
             ds.set_xindex("foo", NotAnIndex)  # type: ignore

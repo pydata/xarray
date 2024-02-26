@@ -273,7 +273,9 @@ class _DummyGroup(Generic[T_Xarray]):
 T_Group = Union["T_DataArray", "IndexVariable", _DummyGroup]
 
 
-def _ensure_1d(group: T_Group, obj: T_Xarray) -> tuple[
+def _ensure_1d(
+    group: T_Group, obj: T_Xarray
+) -> tuple[
     T_Group,
     T_Xarray,
     Hashable | None,

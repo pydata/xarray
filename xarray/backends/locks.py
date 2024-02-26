@@ -40,9 +40,9 @@ class SerializableLock:
     The creation of locks is itself not threadsafe.
     """
 
-    _locks: ClassVar[WeakValueDictionary[Hashable, threading.Lock]] = (
-        WeakValueDictionary()
-    )
+    _locks: ClassVar[
+        WeakValueDictionary[Hashable, threading.Lock]
+    ] = WeakValueDictionary()
     token: Hashable
     lock: threading.Lock
 

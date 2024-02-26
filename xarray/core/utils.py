@@ -470,10 +470,12 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
         return super().__getitem__(key)
 
     @overload
-    def get(self, key: K, /) -> V | None: ...
+    def get(self, key: K, /) -> V | None:
+        ...
 
     @overload
-    def get(self, key: K, /, default: V | T) -> V | T: ...
+    def get(self, key: K, /, default: V | T) -> V | T:
+        ...
 
     def get(self, key: K, default: T | None = None) -> V | T | None:
         self._warn()
@@ -857,7 +859,8 @@ def parse_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[True] = True,
-) -> tuple[Hashable, ...]: ...
+) -> tuple[Hashable, ...]:
+    ...
 
 
 @overload
@@ -867,7 +870,8 @@ def parse_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | ellipsis: ...
+) -> tuple[Hashable, ...] | None | ellipsis:
+    ...
 
 
 def parse_dims(
@@ -918,7 +922,8 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[True] = True,
-) -> tuple[Hashable, ...]: ...
+) -> tuple[Hashable, ...]:
+    ...
 
 
 @overload
@@ -928,7 +933,8 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | ellipsis: ...
+) -> tuple[Hashable, ...] | None | ellipsis:
+    ...
 
 
 def parse_ordered_dims(
@@ -1010,10 +1016,12 @@ class UncachedAccessor(Generic[_Accessor]):
         self._accessor = accessor
 
     @overload
-    def __get__(self, obj: None, cls) -> type[_Accessor]: ...
+    def __get__(self, obj: None, cls) -> type[_Accessor]:
+        ...
 
     @overload
-    def __get__(self, obj: object, cls) -> _Accessor: ...
+    def __get__(self, obj: object, cls) -> _Accessor:
+        ...
 
     def __get__(self, obj: None | object, cls) -> type[_Accessor] | _Accessor:
         if obj is None:

@@ -36,7 +36,8 @@ class ArrayStrategyFn(Protocol[T_DuckArray]):
         *,
         shape: "_ShapeLike",
         dtype: "_DTypeLikeNested",
-    ) -> st.SearchStrategy[T_DuckArray]: ...
+    ) -> st.SearchStrategy[T_DuckArray]:
+        ...
 
 
 def supported_dtypes() -> st.SearchStrategy[np.dtype]:
@@ -367,7 +368,8 @@ def unique_subset_of(
     *,
     min_size: int = 0,
     max_size: Union[int, None] = None,
-) -> st.SearchStrategy[Sequence[Hashable]]: ...
+) -> st.SearchStrategy[Sequence[Hashable]]:
+    ...
 
 
 @overload
@@ -376,7 +378,8 @@ def unique_subset_of(
     *,
     min_size: int = 0,
     max_size: Union[int, None] = None,
-) -> st.SearchStrategy[Mapping[Hashable, Any]]: ...
+) -> st.SearchStrategy[Mapping[Hashable, Any]]:
+    ...
 
 
 @st.composite
