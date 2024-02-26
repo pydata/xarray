@@ -3232,14 +3232,9 @@ class TestDataArray:
         expected_xda = xr.DataArray([2.0], dims=("x",))
 
         with xr.set_options(arithmetic_broadcast=arithmetic_broadcast):
-            actual_xda = xda_1 + xda_2
-            assert_identical(actual_xda, expected_xda)
-
-            actual_xda = xda_1 + np.array([1.0])
-            assert_identical(actual_xda, expected_xda)
-
-            actual_xda = np.array([1.0]) + xda_1
-            assert_identical(actual_xda, expected_xda)
+            assert_identical(xda_1 + xda_2, expected_xda)
+            assert_identical(xda_1 + np.array([1.0]), expected_xda)
+            assert_identical(np.array([1.0]) + xda_1, expected_xda)
 
     def test_broadcast_arrays(self) -> None:
         x = DataArray([1, 2], coords=[("a", [-1, -2])], name="x")
