@@ -2866,7 +2866,7 @@ def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
 def _broadcast_compat_data(self, other):
     if not OPTIONS["arithmetic_broadcast"]:
         if (isinstance(other, Variable) and self.dims != other.dims) or (
-            isinstance(other, np.ndarray) and self.ndim != other.ndim
+            is_duck_array(other) and self.ndim != other.ndim
         ):
             raise ValueError("Broadcasting is necessary but automatic broadcasting is disabled via global option "
             "`'arithmetic_broadcast'`. Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting.")
