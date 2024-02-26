@@ -23,6 +23,9 @@ v2024.03.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add the ``.oindex`` property to Explicitly Indexed Arrays for orthogonal indexing functionality. (:issue:`8238`, :pull:`8750`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -34,7 +37,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- The default ``freq`` parameter in :py:meth:`xr.date_range` and :py:meth:`xr.cftime_range` is
+  set to ``'D'`` only if ``periods``, ``start``, or ``end`` are ``None`` (:issue:`8770`, :pull:`8774`).
+  By `Roberto Chang <https://github.com/rjavierch>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -45,6 +50,7 @@ Internal Changes
 - Migrates ``treenode`` functionality into ``xarray/core`` (:pull:`8757`)
   By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
   <https://github.com/TomNicholas>`_.
+
 
 .. _whats-new.2024.02.0:
 
