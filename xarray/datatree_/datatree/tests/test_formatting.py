@@ -108,13 +108,13 @@ class TestDiffFormatting:
         Data in nodes at position '/a' do not match:
 
         Data variables only on the left object:
-            v        int64 1
+            v        int64 8B 1
 
         Data in nodes at position '/a/b' do not match:
 
         Differing data variables:
-        L   w        int64 5
-        R   w        int64 6"""
+        L   w        int64 8B 5
+        R   w        int64 8B 6"""
         )
         actual = diff_tree_repr(dt_1, dt_2, "equals")
         assert actual == expected

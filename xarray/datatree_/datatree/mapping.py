@@ -9,10 +9,10 @@ from typing import TYPE_CHECKING, Callable, Tuple
 from xarray import DataArray, Dataset
 
 from .iterators import LevelOrderIter
-from .treenode import NodePath, TreeNode
+from xarray.core.treenode import NodePath, TreeNode
 
 if TYPE_CHECKING:
-    from .datatree import DataTree
+    from xarray.core.datatree import DataTree
 
 
 class TreeIsomorphismError(ValueError):

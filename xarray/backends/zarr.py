@@ -1048,8 +1048,8 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         import zarr
 
         from xarray.backends.api import open_dataset
+        from xarray.core.treenode import NodePath
         from xarray.datatree_.datatree import DataTree
-        from xarray.datatree_.datatree.treenode import NodePath
 
         zds = zarr.open_group(filename_or_obj, mode="r")
         ds = open_dataset(filename_or_obj, engine="zarr", **kwargs)
@@ -1075,7 +1075,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
 
 def _iter_zarr_groups(root, parent="/"):
-    from xarray.datatree_.datatree.treenode import NodePath
+    from xarray.core.treenode import NodePath
 
     parent = NodePath(parent)
     for path, group in root.groups():

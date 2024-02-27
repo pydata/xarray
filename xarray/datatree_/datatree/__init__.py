@@ -2,7 +2,7 @@
 from .datatree import DataTree
 from .extensions import register_datatree_accessor
 from .mapping import TreeIsomorphismError, map_over_subtree
-from .treenode import InvalidTreeError, NotFoundInTreeError
+from xarray.core.treenode import InvalidTreeError, NotFoundInTreeError
 
 
 __all__ = (

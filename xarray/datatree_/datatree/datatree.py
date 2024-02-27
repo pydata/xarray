@@ -50,7 +50,7 @@ from .ops import (
     MappedDataWithCoords,
 )
 from .render import RenderTree
-from .treenode import NamedNode, NodePath, Tree
+from xarray.core.treenode import NamedNode, NodePath, Tree
 
 try:
     from xarray.core.variable import calculate_dimensions
