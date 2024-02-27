@@ -297,7 +297,6 @@ class TestIterators:
 
 
 class TestAncestry:
-
     def test_parents(self):
         _, leaf_f = create_test_tree()
         expected = ["e", "b", "a"]
