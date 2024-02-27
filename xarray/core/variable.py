@@ -218,10 +218,12 @@ def _possibly_convert_datetime_or_timedelta_index(data):
     this in version 2.0.0, in xarray we will need to make sure we are ready to
     handle non-nanosecond precision datetimes or timedeltas in our code
     before allowing such values to pass through unchanged."""
-    if isinstance(data, (pd.DatetimeIndex, pd.TimedeltaIndex)):
-        return _as_nanosecond_precision(data)
-    else:
-        return data
+    if isinstance(data, PandasIndexingAdapter):
+        if isinstance(data.array, (pd.DatetimeIndex, pd.TimedeltaIndex)):
+            data = PandasIndexingAdapter(_as_nanosecond_precision(data.array))
+    elif isinstance(data, (pd.DatetimeIndex, pd.TimedeltaIndex)):
+        data = _as_nanosecond_precision(data)
+    return data
 
 
 def as_compatible_data(

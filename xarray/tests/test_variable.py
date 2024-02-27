@@ -3011,3 +3011,19 @@ def test_pandas_two_only_timedelta_conversion_warning() -> None:
         var = Variable(["time"], data)
 
     assert var.dtype == np.dtype("timedelta64[ns]")
+
+
+@requires_pandas_version_two
+@pytest.mark.parametrize(
+    ("index", "dtype"),
+    [
+        (pd.date_range("2000", periods=1), "datetime64"),
+        (pd.timedelta_range("1", periods=1), "timedelta64"),
+    ],
+    ids=lambda x: f"{x}",
+)
+def test_pandas_indexing_adapter_non_nanosecond_conversion(index, dtype) -> None:
+    data = PandasIndexingAdapter(index.astype(f"{dtype}[s]"))
+    with pytest.warns(UserWarning, match="non-nanosecond precision"):
+        var = Variable(["time"], data)
+    assert var.dtype == np.dtype(f"{dtype}[ns]")
