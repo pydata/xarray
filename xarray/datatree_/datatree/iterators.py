@@ -2,7 +2,7 @@ from abc import abstractmethod
 from collections import abc
 from typing import Callable, Iterator, List, Optional
 
-from .treenode import Tree
+from xarray.core.treenode import Tree
 
 """These iterators are copied from anytree.iterators, with minor modifications."""
 
