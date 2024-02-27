@@ -57,7 +57,7 @@ Internal Changes
 - Migrates ``treenode`` functionality into ``xarray/core`` (:pull:`8757`)
   By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
   <https://github.com/TomNicholas>`_.
-- Migrates ``datatree`` functionality into ``xarray/core``. (:pull: `8786`)
+- Migrates ``datatree`` functionality into ``xarray/core``. (:pull: `8789`)
   By `Owen Littlejohns <https://github.com/owenlittlejohns`_ and `Tom Nicholas
   <https://github.com/TomNicholas>`_.
 
