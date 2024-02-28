@@ -10,6 +10,7 @@ from typing import (
     Callable,
     Generic,
     NoReturn,
+    Union,
     overload,
 )
 
@@ -73,7 +74,7 @@ if TYPE_CHECKING:
 # """
 
 
-T_Path = str | NodePath
+T_Path = Union[str, NodePath]
 
 
 def _coerce_to_dataset(data: Dataset | DataArray | None) -> Dataset:
