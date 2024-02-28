@@ -921,7 +921,9 @@ class DataTree(
         else:
             raise ValueError("Invalid format for key")
 
-    def update(self, other: Dataset | Mapping[str, DataTree | DataArray]) -> None:
+    def update(
+        self, other: Dataset | Mapping[str, DataTree | DataArray | Variable]
+    ) -> None:
         """
         Update this node's children and / or variables.
 
