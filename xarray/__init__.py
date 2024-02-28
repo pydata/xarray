@@ -97,7 +97,6 @@ __all__ = (
     # Classes
     "CFTimeIndex",
     "Context",
-    "Coordinate",
     "Coordinates",
     "DataArray",
     "Dataset",
