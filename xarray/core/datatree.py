@@ -167,11 +167,11 @@ class DatasetView(Dataset):
 
     # FIXME https://github.com/python/mypy/issues/7328
     @overload
-    def __getitem__(self, key: Mapping) -> Dataset:  # type: ignore[misc]
+    def __getitem__(self, key: Mapping) -> Dataset:  # type: ignore[overload-overlap]
         ...
 
     @overload
-    def __getitem__(self, key: Hashable) -> DataArray:  # type: ignore[misc]
+    def __getitem__(self, key: Hashable) -> DataArray:  # type: ignore[overload-overlap]
         ...
 
     @overload
@@ -361,7 +361,7 @@ class DataTree(
 
     def __init__(
         self,
-        data: Dataset | DataArray | None = None,
+        data: Dataset | DataArray | DataTree | None = None,
         parent: DataTree | None = None,
         children: Mapping[str, DataTree] | None = None,
         name: str | None = None,
@@ -1337,7 +1337,7 @@ class DataTree(
         # TODO this signature means that func has no way to know which node it is being called upon - change?
 
         # TODO fix this typing error
-        return map_over_subtree(func)(self, *args, **kwargs)  # type: ignore[operator]
+        return map_over_subtree(func)(self, *args, **kwargs)
 
     def map_over_subtree_inplace(
         self,
