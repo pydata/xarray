@@ -328,6 +328,7 @@ class TestLazyArray:
             ([0, 3, 5], arr[:2]),
         ]
         for i, j in indexers:
+
             expected_b = v[i][j]
             actual = v_lazy[i][j]
             assert expected_b.shape == actual.shape
@@ -360,8 +361,15 @@ class TestLazyArray:
 
         def check_indexing(v_eager, v_lazy, indexers):
             for indexer in indexers:
-                actual = v_lazy[indexer]
-                expected = v_eager[indexer]
+                if isinstance(indexer, indexing.VectorizedIndexer):
+                    actual = v_lazy.vindex[indexer]
+                    expected = v_eager.vindex[indexer]
+                elif isinstance(indexer, indexing.OuterIndexer):
+                    actual = v_lazy.oindex[indexer]
+                    expected = v_eager.oindex[indexer]
+                else:
+                    actual = v_lazy[indexer]
+                    expected = v_eager[indexer]
                 assert expected.shape == actual.shape
                 assert isinstance(
                     actual._data,
@@ -556,7 +564,9 @@ class Test_vectorized_indexer:
             vindex_array = indexing._arrayize_vectorized_indexer(
                 vindex, self.data.shape
             )
-            np.testing.assert_array_equal(self.data[vindex], self.data[vindex_array])
+            np.testing.assert_array_equal(
+                self.data.vindex[vindex], self.data.vindex[vindex_array]
+            )
 
         actual = indexing._arrayize_vectorized_indexer(
             indexing.VectorizedIndexer((slice(None),)), shape=(5,)
@@ -667,16 +677,39 @@ def test_decompose_indexers(shape, indexer_mode, indexing_support) -> None:
     indexer = get_indexers(shape, indexer_mode)
 
     backend_ind, np_ind = indexing.decompose_indexer(indexer, shape, indexing_support)
+    indexing_adapter = indexing.NumpyIndexingAdapter(data)
 
-    expected = indexing.NumpyIndexingAdapter(data)[indexer]
-    array = indexing.NumpyIndexingAdapter(data)[backend_ind]
+    # Dispatch to appropriate indexing method
+    if indexer_mode.startswith("vectorized"):
+        expected = indexing_adapter.vindex[indexer]
+
+    elif indexer_mode.startswith("outer"):
+        expected = indexing_adapter.oindex[indexer]
+
+    else:
+        expected = indexing_adapter[indexer]  # Basic indexing
+
+    if isinstance(backend_ind, indexing.VectorizedIndexer):
+        array = indexing_adapter.vindex[backend_ind]
+    elif isinstance(backend_ind, indexing.OuterIndexer):
+        array = indexing_adapter.oindex[backend_ind]
+    else:
+        array = indexing_adapter[backend_ind]
+
     if len(np_ind.tuple) > 0:
-        array = indexing.NumpyIndexingAdapter(array)[np_ind]
+        array_indexing_adapter = indexing.NumpyIndexingAdapter(array)
+        if isinstance(np_ind, indexing.VectorizedIndexer):
+            array = array_indexing_adapter.vindex[np_ind]
+        elif isinstance(np_ind, indexing.OuterIndexer):
+            array = array_indexing_adapter.oindex[np_ind]
+        else:
+            array = array_indexing_adapter[np_ind]
     np.testing.assert_array_equal(expected, array)
 
     if not all(isinstance(k, indexing.integer_types) for k in np_ind.tuple):
         combined_ind = indexing._combine_indexers(backend_ind, shape, np_ind)
-        array = indexing.NumpyIndexingAdapter(data)[combined_ind]
+        # combined_ind is a VectorizedIndexer
+        array = indexing_adapter.vindex[combined_ind]
         np.testing.assert_array_equal(expected, array)
 
 
