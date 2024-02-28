@@ -289,7 +289,7 @@ class DatasetView(Dataset):
             bar      (x) float64 16B 1.0 2.0
         """
 
-        # Copied from xarray.Dataset so as not to call type(self), which causes problems (see datatree GH188).
+        # Copied from xarray.Dataset so as not to call type(self), which causes problems (see https://github.com/xarray-contrib/datatree/issues/188).
         # TODO Refactor xarray upstream to avoid needing to overwrite this.
         # TODO This copied version will drop all attrs - the keep_attrs stuff should be re-instated
         variables = {
@@ -328,8 +328,6 @@ class DataTree(
     # TODO all groupby classes
 
     # TODO a lot of properties like .variables could be defined in a DataMapping class which both Dataset and DataTree inherit from
-
-    # TODO __slots__
 
     # TODO all groupby classes
 
