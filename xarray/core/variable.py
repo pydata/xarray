@@ -19,9 +19,9 @@ import xarray as xr  # only for Dataset and DataArray
 from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
 from xarray.core.arithmetic import VariableArithmetic
 from xarray.core.common import AbstractArray
+from xarray.core.extension_array import ExtensionDuckArray
 from xarray.core.indexing import (
     BasicIndexer,
-    ExtensionDuckArray,
     OuterIndexer,
     PandasIndexingAdapter,
     VectorizedIndexer,

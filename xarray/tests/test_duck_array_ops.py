@@ -27,7 +27,7 @@ from xarray.core.duck_array_ops import (
     timedelta_to_numeric,
     where,
 )
-from xarray.core.indexing import ExtensionDuckArray
+from xarray.core.extension_array import ExtensionDuckArray
 from xarray.namedarray.pycompat import array_type
 from xarray.testing import assert_allclose, assert_equal, assert_identical
 from xarray.tests import (
