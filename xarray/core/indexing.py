@@ -592,7 +592,6 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return tuple(shape)
 
     def get_duck_array(self):
-        # TODO: Remove explicitlyIndexed special case when we implement fall back .oindex, .vindex properties on BackendArray base class
         if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
             if isinstance(self.key, VectorizedIndexer):
                 array = self.array.vindex[self.key]
@@ -666,7 +665,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return np.broadcast(*self.key.tuple).shape
 
     def get_duck_array(self):
-        # TODO: Remove explicitlyIndexed special case when we implement fall back .oindex, .vindex properties on BackendArray base class
+
         if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
             if isinstance(self.key, VectorizedIndexer):
                 array = self.array.vindex[self.key]
