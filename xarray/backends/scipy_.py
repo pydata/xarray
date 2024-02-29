@@ -23,7 +23,7 @@ from xarray.backends.netcdf3 import (
     is_valid_nc3_name,
 )
 from xarray.backends.store import StoreBackendEntrypoint
-from xarray.core.indexing import NumpyIndexingAdapter
+from xarray.core.indexing import NumpyIndexingAdapter, OuterIndexer, VectorizedIndexer
 from xarray.core.utils import (
     Frozen,
     FrozenDict,
@@ -64,7 +64,13 @@ class ScipyArrayWrapper(BackendArray):
         return ds.variables[self.variable_name]
 
     def __getitem__(self, key):
-        data = NumpyIndexingAdapter(self.get_variable().data)[key]
+        indexable = NumpyIndexingAdapter(self.get_variable().data)
+        if isinstance(key, OuterIndexer):
+            data = indexable.oindex[key]
+        elif isinstance(key, VectorizedIndexer):
+            data = indexable.vindex[key]
+        else:
+            data = indexable[key]
         # Copy data if the source file is mmapped. This makes things consistent
         # with the netCDF4 library by ensuring we can safely read arrays even
         # after closing associated files.
