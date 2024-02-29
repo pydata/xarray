@@ -210,7 +210,7 @@ class TestGetItem:
     def test_getitem_multiple_data_variables(self):
         data = xr.Dataset({"temp": [0, 50], "p": [5, 8, 7]})
         results: DataTree = DataTree(name="results", data=data)
-        xrt.assert_identical(results[["temp", "p"]], data[["temp", "p"]])
+        xrt.assert_identical(results[["temp", "p"]], data[["temp", "p"]])  # type: ignore[index]
 
     @pytest.mark.xfail(
         reason="Indexing needs to return whole tree (GH https://github.com/xarray-contrib/datatree/issues/77)"
@@ -218,7 +218,7 @@ class TestGetItem:
     def test_getitem_dict_like_selection_access_to_dataset(self):
         data = xr.Dataset({"temp": [0, 50]})
         results: DataTree = DataTree(name="results", data=data)
-        xrt.assert_identical(results[{"temp": 1}], data[{"temp": 1}])
+        xrt.assert_identical(results[{"temp": 1}], data[{"temp": 1}])  # type: ignore[index]
 
 
 class TestUpdate:
@@ -728,5 +728,5 @@ class TestSubset:
             },
             name="Abe",
         )
-        elders = simpsons.filter(lambda node: node["age"] > 18)
+        elders = simpsons.filter(lambda node: node["age"].item() > 18)
         dtt.assert_identical(elders, expected)

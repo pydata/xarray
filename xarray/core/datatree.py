@@ -166,7 +166,7 @@ class DatasetView(Dataset):
         )
 
     # FIXME https://github.com/python/mypy/issues/7328
-    @overload
+    @overload  # type: ignore[override]
     def __getitem__(self, key: Mapping) -> Dataset:  # type: ignore[overload-overlap]
         ...
 
@@ -177,13 +177,13 @@ class DatasetView(Dataset):
     @overload
     def __getitem__(self, key: Any) -> Dataset: ...
 
-    def __getitem__(self, key) -> DataArray:
+    def __getitem__(self, key) -> DataArray | Dataset:
         # TODO call the `_get_item` method of DataTree to allow path-like access to contents of other nodes
         # For now just call Dataset.__getitem__
         return Dataset.__getitem__(self, key)
 
     @classmethod
-    def _construct_direct(
+    def _construct_direct(  # type: ignore[override]
         cls,
         variables: dict[Any, Variable],
         coord_names: set[Hashable],
@@ -211,7 +211,7 @@ class DatasetView(Dataset):
         obj._encoding = encoding
         return obj
 
-    def _replace(
+    def _replace(  # type: ignore[override]
         self,
         variables: dict[Hashable, Variable] | None = None,
         coord_names: set[Hashable] | None = None,
@@ -240,7 +240,7 @@ class DatasetView(Dataset):
             inplace=inplace,
         )
 
-    def map(
+    def map(  # type: ignore[override]
         self,
         func: Callable,
         keep_attrs: bool | None = None,
@@ -359,7 +359,7 @@ class DataTree(
 
     def __init__(
         self,
-        data: Dataset | DataArray | DataTree | None = None,
+        data: Dataset | DataArray | None = None,
         parent: DataTree | None = None,
         children: Mapping[str, DataTree] | None = None,
         name: str | None = None,
@@ -629,7 +629,7 @@ class DataTree(
             "invoking the `to_array()` method."
         )
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # type: ignore[override]
         return datatree_repr(self)
 
     def __str__(self) -> str:
@@ -690,7 +690,7 @@ class DataTree(
         indexes: dict[Hashable, Index] | None = None,
         encoding: dict | None | Default = _default,
         name: str | None | Default = _default,
-        parent: DataTree | None = _default,
+        parent: DataTree | None | Default = _default,
         children: dict[str, DataTree] | None = None,
         inplace: bool = False,
     ) -> DataTree:
@@ -1059,14 +1059,18 @@ class DataTree(
 
         # First create the root node
         root_data = d.pop("/", None)
-        obj = cls(name=name, data=root_data, parent=None, children=None)
+        if isinstance(root_data, DataTree):
+            obj = root_data.copy()
+            obj.orphan()
+        else:
+            obj = cls(name=name, data=root_data, parent=None, children=None)
 
         if d:
             # Populate tree with children determined from data_objects mapping
             for path, data in d.items():
                 # Create and set new node
                 node_name = NodePath(path).name
-                if isinstance(data, cls):
+                if isinstance(data, DataTree):
                     new_node = data.copy()
                     new_node.orphan()
                 else:
