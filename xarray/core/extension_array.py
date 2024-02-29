@@ -62,7 +62,7 @@ def __extension_duck_array__where(
     return pd.Series(x).where(condition, pd.Series(y)).array
 
 
-class ExtensionDuckArray(Generic[T_ExtensionArray]):
+class PandasExtensionArray(Generic[T_ExtensionArray]):
     array: T_ExtensionArray
 
     def __init__(self, array: T_ExtensionArray):
@@ -83,7 +83,7 @@ class ExtensionDuckArray(Generic[T_ExtensionArray]):
         def replace_duck_with_extension_array(args) -> list:
             args_as_list = list(args)
             for index, value in enumerate(args_as_list):
-                if isinstance(value, ExtensionDuckArray):
+                if isinstance(value, PandasExtensionArray):
                     args_as_list[index] = value.array
                 elif isinstance(
                     value, tuple
@@ -114,7 +114,7 @@ class ExtensionDuckArray(Generic[T_ExtensionArray]):
             return getattr(self.array, attr)
         raise AttributeError(f"{attr} not found.")
 
-    def __getitem__(self, key) -> ExtensionDuckArray[T_ExtensionArray]:
+    def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
         item = self.array[key]
         if is_extension_array_dtype(item):  # not a singleton - better way to check?
             return type(self)(item)
@@ -124,7 +124,7 @@ class ExtensionDuckArray(Generic[T_ExtensionArray]):
         self.array[key] = val
 
     def __eq__(self, other):
-        if isinstance(other, ExtensionDuckArray):
+        if isinstance(other, PandasExtensionArray):
             return self.array == other.array
         return self.array == other
 
