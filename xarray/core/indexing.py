@@ -592,7 +592,12 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return tuple(shape)
 
     def get_duck_array(self):
-        array = self.array[self.key]
+        if isinstance(self.key, OuterIndexer):
+            array = self.array.oindex[self.key]
+        elif isinstance(self.key, VectorizedIndexer):
+            array = self.array.vindex[self.key]
+        else:
+            array = self.array[self.key]
         # self.array[self.key] is now a numpy array when
         # self.array is a BackendArray subclass
         # and self.key is BasicIndexer((slice(None, None, None),))
@@ -656,7 +661,12 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return np.broadcast(*self.key.tuple).shape
 
     def get_duck_array(self):
-        array = self.array[self.key]
+        if isinstance(self.key, OuterIndexer):
+            array = self.array.oindex[self.key]
+        elif isinstance(self.key, VectorizedIndexer):
+            array = self.array.vindex[self.key]
+        else:
+            array = self.array[self.key]
         # self.array[self.key] is now a numpy array when
         # self.array is a BackendArray subclass
         # and self.key is BasicIndexer((slice(None, None, None),))
