@@ -593,14 +593,13 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
     def get_duck_array(self):
         # TODO: Remove explicitlyIndexed special case when we implement fall back .oindex, .vindex properties on BackendArray base class
-        if not isinstance(self.array, ExplicitlyIndexed) and isinstance(
-            self.key, OuterIndexer
-        ):
-            array = self.array.oindex[self.key]
-        elif not isinstance(self.array, ExplicitlyIndexed) and isinstance(
-            self.key, VectorizedIndexer
-        ):
-            array = self.array.vindex[self.key]
+        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
+            if isinstance(self.key, VectorizedIndexer):
+                array = self.array.vindex[self.key]
+            elif isinstance(self.key, OuterIndexer):
+                array = self.array.oindex[self.key]
+            else:
+                array = self.array[self.key]
         else:
             array = self.array[self.key]
 
@@ -668,14 +667,13 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
     def get_duck_array(self):
         # TODO: Remove explicitlyIndexed special case when we implement fall back .oindex, .vindex properties on BackendArray base class
-        if not isinstance(self.array, ExplicitlyIndexed) and isinstance(
-            self.key, OuterIndexer
-        ):
-            array = self.array.oindex[self.key]
-        elif not isinstance(self.array, ExplicitlyIndexed) and isinstance(
-            self.key, VectorizedIndexer
-        ):
-            array = self.array.vindex[self.key]
+        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
+            if isinstance(self.key, VectorizedIndexer):
+                array = self.array.vindex[self.key]
+            elif isinstance(self.key, OuterIndexer):
+                array = self.array.oindex[self.key]
+            else:
+                array = self.array[self.key]
         else:
             array = self.array[self.key]
         # self.array[self.key] is now a numpy array when
