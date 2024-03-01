@@ -2592,11 +2592,13 @@ class IndexVariable(Variable):
         if not isinstance(self._data, PandasIndexingAdapter):
             self._data = PandasIndexingAdapter(self._data)
 
-    def __dask_tokenize__(self):
+    def __dask_tokenize__(self) -> object:
         from dask.base import normalize_token
 
         # Don't waste time converting pd.Index to np.ndarray
-        return normalize_token((type(self), self._dims, self._data.array, self._attrs))
+        return normalize_token(
+            (type(self), self._dims, self._data.array, self._attrs or None)
+        )
 
     def load(self):
         # data is already loaded into memory for IndexVariable

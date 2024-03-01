@@ -218,7 +218,7 @@ class ReprObject:
     def __hash__(self) -> int:
         return hash((type(self), self._value))
 
-    def __dask_tokenize__(self) -> Hashable:
+    def __dask_tokenize__(self) -> object:
         from dask.base import normalize_token
 
-        return normalize_token((type(self), self._value))  # type: ignore[no-any-return]
+        return normalize_token((type(self), self._value))

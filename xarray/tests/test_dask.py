@@ -299,17 +299,6 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
 
-    def test_tokenize_empty_attrs(self) -> None:
-        # Issue #6970
-        assert self.eager_var._attrs is None
-        expected = dask.base.tokenize(self.eager_var)
-        assert self.eager_var.attrs == self.eager_var._attrs == {}
-        assert (
-            expected
-            == dask.base.tokenize(self.eager_var)
-            == dask.base.tokenize(self.lazy_var.compute())
-        )
-
     @requires_pint
     def test_tokenize_duck_dask_array(self):
         import pint
@@ -1571,6 +1560,30 @@ def test_token_identical(obj, transform):
     assert dask.base.tokenize(obj.compute()) == dask.base.tokenize(
         transform(obj.compute())
     )
+
+
+@pytest.mark.parametrize(
+    "obj",
+    [
+        make_ds(),  # Dataset
+        make_ds().variables["c2"],  # Variable
+        make_ds().variables["x"],  # IndexVariable
+    ],
+)
+def test_tokenize_empty_attrs(obj):
+    """Issues #6970 and #8788"""
+    obj.attrs = {}
+    assert obj._attrs is None
+    a = dask.base.tokenize(obj)
+
+    assert obj.attrs == {}
+    assert obj._attrs == {}  # attrs getter changed None to dict
+    b = dask.base.tokenize(obj)
+    assert a == b
+
+    obj2 = obj.copy()
+    c = dask.base.tokenize(obj2)
+    assert a == c
 
 
 def test_recursive_token():

@@ -511,7 +511,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     @attrs.setter
     def attrs(self, value: Mapping[Any, Any]) -> None:
-        self._attrs = dict(value)
+        self._attrs = dict(value) if value else None
 
     def _check_shape(self, new_data: duckarray[Any, _DType_co]) -> None:
         if new_data.shape != self.shape:
@@ -570,13 +570,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return real(self)
         return self._new(data=self._data.real)
 
-    def __dask_tokenize__(self) -> Hashable:
+    def __dask_tokenize__(self) -> object:
         # Use v.data, instead of v._data, in order to cope with the wrappers
         # around NetCDF and the like
         from dask.base import normalize_token
 
-        s, d, a, attrs = type(self), self._dims, self.data, self.attrs
-        return normalize_token((s, d, a, attrs))  # type: ignore[no-any-return]
+        return normalize_token((type(self), self._dims, self.data, self._attrs or None))
 
     def __dask_graph__(self) -> Graph | None:
         if is_duck_dask_array(self._data):
