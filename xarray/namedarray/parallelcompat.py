@@ -108,7 +108,8 @@ def guess_chunkmanager(
     if isinstance(manager, str):
         if manager not in chunkmanagers:
             raise ValueError(
-                f"unrecognized chunk manager {manager} - must be one of: {list(chunkmanagers)}"
+                f"requested chunk manager '{manager}' not found in available chunk managers"
+                f"({list(chunkmanagers)}) - do you need to install '{manager}'?"
             )
 
         return chunkmanagers[manager]
