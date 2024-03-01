@@ -1027,10 +1027,10 @@ def _decompose_vectorized_indexer(
     >>> array = np.arange(36).reshape(6, 6)
     >>> backend_indexer = OuterIndexer((np.array([0, 1, 3]), np.array([2, 3])))
     >>> # load subslice of the array
-    ... array = NumpyIndexingAdapter(array)[backend_indexer]
+    ... array = NumpyIndexingAdapter(array).oindex[backend_indexer]
     >>> np_indexer = VectorizedIndexer((np.array([0, 2, 1]), np.array([0, 1, 0])))
     >>> # vectorized indexing for on-memory np.ndarray.
-    ... NumpyIndexingAdapter(array)[np_indexer]
+    ... NumpyIndexingAdapter(array).vindex[np_indexer]
     array([ 2, 21,  8])
     """
     assert isinstance(indexer, VectorizedIndexer)
