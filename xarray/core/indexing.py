@@ -1112,7 +1112,7 @@ def _decompose_outer_indexer(
     ... array = NumpyIndexingAdapter(array)[backend_indexer]
     >>> np_indexer = OuterIndexer((np.array([0, 2, 1]), np.array([0, 1, 0])))
     >>> # outer indexing for on-memory np.ndarray.
-    ... NumpyIndexingAdapter(array)[np_indexer]
+    ... NumpyIndexingAdapter(array).oindex[np_indexer]
     array([[ 2,  3,  2],
            [14, 15, 14],
            [ 8,  9,  8]])
