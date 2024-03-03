@@ -401,7 +401,7 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
     codes: DataArray = field(init=False)
     group_indices: T_GroupIndices = field(init=False)
     unique_coord: IndexVariable | _DummyGroup = field(init=False)
-    full_index: pd.Index = field(init=pd.Index())
+    full_index: pd.Index = field(init=False)
 
     # _ensure_1d:
     group1d: T_Group = field(init=False)
