@@ -352,7 +352,7 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
     Wrapper around a Grouper object.
 
     The Grouper object represents an abstract instruction to group an object.
-    The ResovledGrouper object is a concrete version that contains all the common
+    The ResolvedGrouper object is a concrete version that contains all the common
     logic necessary for a GroupBy problem including the intermediates necessary for
     executing a GroupBy calculation. Specialization to the grouping problem at hand,
     is accomplished by calling the `factorize` method on the encapsulated Grouper
@@ -436,7 +436,7 @@ class Grouper(ABC):
         1. codes - Same shape as `group` containing a unique integer code for each group.
         2. group_indices - Indexes that let us index out the members of each group.
         3. unique_coord - Unique groups present in the dataset.
-        4. full_index - Unique groups in the output. This differes from `unique_coord` in the
+        4. full_index - Unique groups in the output. This differs from `unique_coord` in the
            case of resampling and binning, where certain groups in the output are not present in
            the input.
         """
