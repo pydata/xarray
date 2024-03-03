@@ -23,6 +23,11 @@ v2024.03.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add the ``.oindex`` property to Explicitly Indexed Arrays for orthogonal indexing functionality. (:issue:`8238`, :pull:`8750`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
+
+- Add the ``.vindex`` property to Explicitly Indexed Arrays for vectorized indexing functionality. (:issue:`8238`, :pull:`8780`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -34,7 +39,14 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- The default ``freq`` parameter in :py:meth:`xr.date_range` and :py:meth:`xr.cftime_range` is
+  set to ``'D'`` only if ``periods``, ``start``, or ``end`` are ``None`` (:issue:`8770`, :pull:`8774`).
+  By `Roberto Chang <https://github.com/rjavierch>`_.
+- Ensure that non-nanosecond precision :py:class:`numpy.datetime64` and
+  :py:class:`numpy.timedelta64` values are cast to nanosecond precision values
+  when used in :py:meth:`DataArray.expand_dims` and
+  ::py:meth:`Dataset.expand_dims` (:pull:`8781`).  By `Spencer
+  Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -42,6 +54,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Migrates ``treenode`` functionality into ``xarray/core`` (:pull:`8757`)
+  By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
+  <https://github.com/TomNicholas>`_.
 
 
 .. _whats-new.2024.02.0:
@@ -137,9 +152,11 @@ Internal Changes
   ``xarray/namedarray``. (:pull:`8319`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_ and `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Imports ``datatree`` repository and history into internal location. (:pull:`8688`)
-  By `Matt Savoie <https://github.com/flamingbear>`_ and `Justus Magin <https://github.com/keewis>`_.
+  By `Matt Savoie <https://github.com/flamingbear>`_, `Justus Magin <https://github.com/keewis>`_
+  and `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Adds :py:func:`open_datatree` into ``xarray/backends`` (:pull:`8697`)
-  By `Matt Savoie <https://github.com/flamingbear>`_.
+  By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
+  <https://github.com/TomNicholas>`_.
 - Refactor :py:meth:`xarray.core.indexing.DaskIndexingAdapter.__getitem__` to remove an unnecessary
   rewrite of the indexer key (:issue: `8377`, :pull:`8758`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.

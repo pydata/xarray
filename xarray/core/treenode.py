@@ -1,17 +1,12 @@
 from __future__ import annotations
 
 import sys
-from collections import OrderedDict
+from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
 from typing import (
     TYPE_CHECKING,
     Generic,
-    Iterator,
-    Mapping,
-    Optional,
-    Tuple,
     TypeVar,
-    Union,
 )
 
 from xarray.core.utils import Frozen, is_dict_like
@@ -25,7 +20,7 @@ class InvalidTreeError(Exception):
 
 
 class NotFoundInTreeError(ValueError):
-    """Raised when operation can't be completed because one node is part of the expected tree."""
+    """Raised when operation can't be completed because one node is not part of the expected tree."""
 
 
 class NodePath(PurePosixPath):
@@ -55,8 +50,8 @@ class TreeNode(Generic[Tree]):
 
     This class stores no data, it has only parents and children attributes, and various methods.
 
-    Stores child nodes in an Ordered Dictionary, which is necessary to ensure that equality checks between two trees
-    also check that the order of child nodes is the same.
+    Stores child nodes in an dict, ensuring that equality checks between trees
+    and order of child nodes is preserved (since python 3.7).
 
     Nodes themselves are intrinsically unnamed (do not possess a ._name attribute), but if the node has a parent you can
     find the key it is stored under via the .name property.
@@ -73,15 +68,16 @@ class TreeNode(Generic[Tree]):
     Also allows access to any other node in the tree via unix-like paths, including upwards referencing via '../'.
 
     (This class is heavily inspired by the anytree library's NodeMixin class.)
+
     """
 
-    _parent: Optional[Tree]
-    _children: OrderedDict[str, Tree]
+    _parent: Tree | None
+    _children: dict[str, Tree]
 
-    def __init__(self, children: Optional[Mapping[str, Tree]] = None):
+    def __init__(self, children: Mapping[str, Tree] | None = None):
         """Create a parentless node."""
         self._parent = None
-        self._children = OrderedDict()
+        self._children = {}
         if children is not None:
             self.children = children
 
@@ -91,7 +87,7 @@ class TreeNode(Generic[Tree]):
         return self._parent
 
     def _set_parent(
-        self, new_parent: Tree | None, child_name: Optional[str] = None
+        self, new_parent: Tree | None, child_name: str | None = None
     ) -> None:
         # TODO is it possible to refactor in a way that removes this private method?
 
@@ -127,17 +123,15 @@ class TreeNode(Generic[Tree]):
         if parent is not None:
             self._pre_detach(parent)
             parents_children = parent.children
-            parent._children = OrderedDict(
-                {
-                    name: child
-                    for name, child in parents_children.items()
-                    if child is not self
-                }
-            )
+            parent._children = {
+                name: child
+                for name, child in parents_children.items()
+                if child is not self
+            }
             self._parent = None
             self._post_detach(parent)
 
-    def _attach(self, parent: Tree | None, child_name: Optional[str] = None) -> None:
+    def _attach(self, parent: Tree | None, child_name: str | None = None) -> None:
         if parent is not None:
             if child_name is None:
                 raise ValueError(
@@ -167,7 +161,7 @@ class TreeNode(Generic[Tree]):
     @children.setter
     def children(self: Tree, children: Mapping[str, Tree]) -> None:
         self._check_children(children)
-        children = OrderedDict(children)
+        children = {**children}
 
         old_children = self.children
         del self.children
@@ -242,7 +236,7 @@ class TreeNode(Generic[Tree]):
             yield node
             node = node.parent
 
-    def iter_lineage(self: Tree) -> Tuple[Tree, ...]:
+    def iter_lineage(self: Tree) -> tuple[Tree, ...]:
         """Iterate up the tree, starting from the current node."""
         from warnings import warn
 
@@ -254,7 +248,7 @@ class TreeNode(Generic[Tree]):
         return tuple((self, *self.parents))
 
     @property
-    def lineage(self: Tree) -> Tuple[Tree, ...]:
+    def lineage(self: Tree) -> tuple[Tree, ...]:
         """All parent nodes and their parent nodes, starting with the closest."""
         from warnings import warn
 
@@ -266,12 +260,12 @@ class TreeNode(Generic[Tree]):
         return self.iter_lineage()
 
     @property
-    def parents(self: Tree) -> Tuple[Tree, ...]:
+    def parents(self: Tree) -> tuple[Tree, ...]:
         """All parent nodes and their parent nodes, starting with the closest."""
         return tuple(self._iter_parents())
 
     @property
-    def ancestors(self: Tree) -> Tuple[Tree, ...]:
+    def ancestors(self: Tree) -> tuple[Tree, ...]:
         """All parent nodes and their parent nodes, starting with the most distant."""
 
         from warnings import warn
@@ -306,7 +300,7 @@ class TreeNode(Generic[Tree]):
         return self.children == {}
 
     @property
-    def leaves(self: Tree) -> Tuple[Tree, ...]:
+    def leaves(self: Tree) -> tuple[Tree, ...]:
         """
         All leaf nodes.
 
@@ -315,20 +309,18 @@ class TreeNode(Generic[Tree]):
         return tuple([node for node in self.subtree if node.is_leaf])
 
     @property
-    def siblings(self: Tree) -> OrderedDict[str, Tree]:
+    def siblings(self: Tree) -> dict[str, Tree]:
         """
         Nodes with the same parent as this node.
         """
         if self.parent:
-            return OrderedDict(
-                {
-                    name: child
-                    for name, child in self.parent.children.items()
-                    if child is not self
-                }
-            )
+            return {
+                name: child
+                for name, child in self.parent.children.items()
+                if child is not self
+            }
         else:
-            return OrderedDict()
+            return {}
 
     @property
     def subtree(self: Tree) -> Iterator[Tree]:
@@ -341,12 +333,12 @@ class TreeNode(Generic[Tree]):
         --------
         DataTree.descendants
         """
-        from . import iterators
+        from xarray.datatree_.datatree import iterators
 
         return iterators.PreOrderIter(self)
 
     @property
-    def descendants(self: Tree) -> Tuple[Tree, ...]:
+    def descendants(self: Tree) -> tuple[Tree, ...]:
         """
         Child nodes and all their child nodes.
 
@@ -431,7 +423,7 @@ class TreeNode(Generic[Tree]):
         """Method call after attaching to `parent`."""
         pass
 
-    def get(self: Tree, key: str, default: Optional[Tree] = None) -> Optional[Tree]:
+    def get(self: Tree, key: str, default: Tree | None = None) -> Tree | None:
         """
         Return the child node with the specified key.
 
@@ -445,7 +437,7 @@ class TreeNode(Generic[Tree]):
 
     # TODO `._walk` method to be called by both `_get_item` and `_set_item`
 
-    def _get_item(self: Tree, path: str | NodePath) -> Union[Tree, T_DataArray]:
+    def _get_item(self: Tree, path: str | NodePath) -> Tree | T_DataArray:
         """
         Returns the object lying at the given path.
 
@@ -488,24 +480,26 @@ class TreeNode(Generic[Tree]):
     def _set_item(
         self: Tree,
         path: str | NodePath,
-        item: Union[Tree, T_DataArray],
+        item: Tree | T_DataArray,
         new_nodes_along_path: bool = False,
         allow_overwrite: bool = True,
     ) -> None:
         """
         Set a new item in the tree, overwriting anything already present at that path.
 
-        The given value either forms a new node of the tree or overwrites an existing item at that location.
+        The given value either forms a new node of the tree or overwrites an
+        existing item at that location.
 
         Parameters
         ----------
         path
         item
         new_nodes_along_path : bool
-            If true, then if necessary new nodes will be created along the given path, until the tree can reach the
-            specified location.
+            If true, then if necessary new nodes will be created along the
+            given path, until the tree can reach the specified location.
         allow_overwrite : bool
-            Whether or not to overwrite any existing node at the location given by path.
+            Whether or not to overwrite any existing node at the location given
+            by path.
 
         Raises
         ------
@@ -580,9 +574,9 @@ class NamedNode(TreeNode, Generic[Tree]):
     Implements path-like relationships to other nodes in its tree.
     """
 
-    _name: Optional[str]
-    _parent: Optional[Tree]
-    _children: OrderedDict[str, Tree]
+    _name: str | None
+    _parent: Tree | None
+    _children: dict[str, Tree]
 
     def __init__(self, name=None, children=None):
         super().__init__(children=children)
@@ -603,8 +597,14 @@ class NamedNode(TreeNode, Generic[Tree]):
                 raise ValueError("node names cannot contain forward slashes")
         self._name = name
 
+    def __repr__(self, level=0):
+        repr_value = "\t" * level + self.__str__() + "\n"
+        for child in self.children:
+            repr_value += self.get(child).__repr__(level + 1)
+        return repr_value
+
     def __str__(self) -> str:
-        return f"NamedNode({self.name})" if self.name else "NamedNode()"
+        return f"NamedNode('{self.name}')" if self.name else "NamedNode()"
 
     def _post_attach(self: NamedNode, parent: NamedNode) -> None:
         """Ensures child has name attribute corresponding to key under which it has been stored."""

@@ -1070,7 +1070,7 @@ class DataArray(
         dataset[self.name] = self.variable
         return dataset
 
-    def __dask_tokenize__(self):
+    def __dask_tokenize__(self) -> object:
         from dask.base import normalize_token
 
         return normalize_token((type(self), self._variable, self._coords, self._name))
