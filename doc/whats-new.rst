@@ -32,10 +32,6 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- ``Datatree``'s ``as_array`` renamed ``to_dataarray`` to align with ``Dataset``. (:pull:`8789`)
-  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and `Matt Savoie
-  <https://github.com/flamingbear>`_
-
 
 Deprecations
 ~~~~~~~~~~~~
