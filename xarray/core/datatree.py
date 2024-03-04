@@ -1514,7 +1514,7 @@ class DataTree(
             Persistence mode: “w” means create (overwrite if exists); “w-” means create (fail if exists);
             “a” means override existing variables (create if does not exist); “r+” means modify existing
             array values only (raise an error if any metadata or shapes would change). The default mode
-            is “a” if append_dim is set. Otherwise, it is “r+” if region is set and w- otherwise.
+            is “w-”.
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
