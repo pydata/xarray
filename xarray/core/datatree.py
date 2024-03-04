@@ -1448,7 +1448,7 @@ class DataTree(
 
     # TODO some kind of .collapse() or .flatten() method to merge a subtree
 
-    def as_dataarray(self) -> DataArray:
+    def to_dataarray(self) -> DataArray:
         return self.ds.as_dataarray()
 
     @property
