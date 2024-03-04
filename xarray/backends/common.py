@@ -329,11 +329,11 @@ class AbstractWritableDataStore(AbstractDataStore):
         attributes : dict-like
 
         """
-        variables = {k: self.encode_variable(v) for k, v in variables.items()}
+        variables = {k: self.encode_variable(v, k) for k, v in variables.items()}
         attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
         return variables, attributes
 
-    def encode_variable(self, v):
+    def encode_variable(self, v, name):
         """encode one variable"""
         return v
 
@@ -480,7 +480,7 @@ class WritableCFDataStore(AbstractWritableDataStore):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.
         variables, attributes = cf_encoder(variables, attributes)
-        variables = {k: self.encode_variable(v) for k, v in variables.items()}
+        variables = {k: self.encode_variable(v, k) for k, v in variables.items()}
         attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
         return variables, attributes
 

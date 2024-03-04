@@ -209,7 +209,7 @@ class ScipyDataStore(WritableCFDataStore):
         value = encode_nc3_attr_value(value)
         setattr(self.ds, key, value)
 
-    def encode_variable(self, variable):
+    def encode_variable(self, variable, name):
         variable = encode_nc3_variable(variable)
         return variable
 

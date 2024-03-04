@@ -260,7 +260,7 @@ class H5NetCDFStore(WritableCFDataStore):
     def set_attribute(self, key, value):
         self.ds.attrs[key] = value
 
-    def encode_variable(self, variable):
+    def encode_variable(self, variable, name):
         return _encode_nc4_variable(variable)
 
     def prepare_variable(
