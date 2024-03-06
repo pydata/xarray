@@ -1251,6 +1251,16 @@ class CFEncodedBase(DatasetIOBase):
         with self.roundtrip(ds_reset) as actual:
             assert_identical(actual, ds_reset)
 
+    def test_reset_multiindex_as_indexvariable(self) -> None:
+        # regression noted in https://github.com/xarray-contrib/xeofs/issues/148
+        ds = xr.Dataset(coords={"dim1": [1, 2, 3]})
+        ds = ds.stack(feature=["dim1"])
+        ds_reset = ds.reset_index("feature")
+        # Convert dim1 back to an IndexVariable, should still be able to serialize
+        ds_reset["dim1"] = ds_reset.dim1.variable.to_index_variable()
+        with self.roundtrip(ds_reset) as actual:
+            assert_identical(actual, ds_reset)
+
 
 class NetCDFBase(CFEncodedBase):
     """Tests for all netCDF3 and netCDF4 backends."""
