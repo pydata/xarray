@@ -600,6 +600,8 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
             else:
                 array = self.array[self.key]
         else:
+            # If the array is not an ExplicitlyIndexedNDArrayMixin,
+            # it may wrap a BackendArray so use its __getitem__
             array = self.array[self.key]
 
         # self.array[self.key] is now a numpy array when
@@ -673,6 +675,9 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
                 array = self.array.oindex[self.key]
             else:
                 array = self.array[self.key]
+
+        # If the array is not an ExplicitlyIndexedNDArrayMixin,
+        # it may wrap a BackendArray so use its __getitem__
         else:
             array = self.array[self.key]
         # self.array[self.key] is now a numpy array when
