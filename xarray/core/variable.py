@@ -218,10 +218,12 @@ def _possibly_convert_datetime_or_timedelta_index(data):
     this in version 2.0.0, in xarray we will need to make sure we are ready to
     handle non-nanosecond precision datetimes or timedeltas in our code
     before allowing such values to pass through unchanged."""
-    if isinstance(data, (pd.DatetimeIndex, pd.TimedeltaIndex)):
-        return _as_nanosecond_precision(data)
-    else:
-        return data
+    if isinstance(data, PandasIndexingAdapter):
+        if isinstance(data.array, (pd.DatetimeIndex, pd.TimedeltaIndex)):
+            data = PandasIndexingAdapter(_as_nanosecond_precision(data.array))
+    elif isinstance(data, (pd.DatetimeIndex, pd.TimedeltaIndex)):
+        data = _as_nanosecond_precision(data)
+    return data
 
 
 def as_compatible_data(
@@ -2590,11 +2592,13 @@ class IndexVariable(Variable):
         if not isinstance(self._data, PandasIndexingAdapter):
             self._data = PandasIndexingAdapter(self._data)
 
-    def __dask_tokenize__(self):
+    def __dask_tokenize__(self) -> object:
         from dask.base import normalize_token
 
         # Don't waste time converting pd.Index to np.ndarray
-        return normalize_token((type(self), self._dims, self._data.array, self._attrs))
+        return normalize_token(
+            (type(self), self._dims, self._data.array, self._attrs or None)
+        )
 
     def load(self):
         # data is already loaded into memory for IndexVariable

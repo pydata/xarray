@@ -694,7 +694,7 @@ class Dataset(
             data_vars, coords
         )
 
-        self._attrs = dict(attrs) if attrs is not None else None
+        self._attrs = dict(attrs) if attrs else None
         self._close = None
         self._encoding = None
         self._variables = variables
@@ -739,7 +739,7 @@ class Dataset(
 
     @attrs.setter
     def attrs(self, value: Mapping[Any, Any]) -> None:
-        self._attrs = dict(value)
+        self._attrs = dict(value) if value else None
 
     @property
     def encoding(self) -> dict[Any, Any]:
@@ -856,11 +856,11 @@ class Dataset(
 
         return self
 
-    def __dask_tokenize__(self):
+    def __dask_tokenize__(self) -> object:
         from dask.base import normalize_token
 
         return normalize_token(
-            (type(self), self._variables, self._coord_names, self._attrs)
+            (type(self), self._variables, self._coord_names, self._attrs or None)
         )
 
     def __dask_graph__(self):
@@ -10179,13 +10179,13 @@ class Dataset(
         """
         from xarray.core.groupby import (
             DatasetGroupBy,
-            ResolvedUniqueGrouper,
+            ResolvedGrouper,
             UniqueGrouper,
             _validate_groupby_squeeze,
         )
 
         _validate_groupby_squeeze(squeeze)
-        rgrouper = ResolvedUniqueGrouper(UniqueGrouper(), group, self)
+        rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
 
         return DatasetGroupBy(
             self,
@@ -10265,7 +10265,7 @@ class Dataset(
         from xarray.core.groupby import (
             BinGrouper,
             DatasetGroupBy,
-            ResolvedBinGrouper,
+            ResolvedGrouper,
             _validate_groupby_squeeze,
         )
 
@@ -10279,7 +10279,7 @@ class Dataset(
                 "include_lowest": include_lowest,
             },
         )
-        rgrouper = ResolvedBinGrouper(grouper, group, self)
+        rgrouper = ResolvedGrouper(grouper, group, self)
 
         return DatasetGroupBy(
             self,
