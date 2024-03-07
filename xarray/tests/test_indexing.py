@@ -708,7 +708,7 @@ def test_decompose_indexers(shape, indexer_mode, indexing_support) -> None:
 
     if not all(isinstance(k, indexing.integer_types) for k in np_ind.tuple):
         combined_ind = indexing._combine_indexers(backend_ind, shape, np_ind)
-        # combined_ind is a VectorizedIndexer
+        assert isinstance(combined_ind, VectorizedIndexer)
         array = indexing_adapter.vindex[combined_ind]
         np.testing.assert_array_equal(expected, array)
 
