@@ -86,8 +86,8 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 [tool.mypy]
 enable_error_code = "redundant-self"
 exclude = [
-	'xarray/util/generate_.*\.py',
-	'xarray/datatree_/.*\.py',
+  'xarray/util/generate_.*\.py',
+  'xarray/datatree_/.*\.py',
 ]
 files = "xarray"
 show_error_codes = true
@@ -247,7 +247,6 @@ reportMissingTypeStubs = false
 [tool.ruff]
 builtins = ["ellipsis"]
 extend-exclude = [
-  "doc",
   "_typed_ops.pyi",
 ]
 target-version = "py39"
@@ -256,6 +255,9 @@ target-version = "py39"
 # E402: module level import not at top of file
 # E501: line too long - let black worry about that
 # E731: do not assign a lambda expression, use a def
+extend-safe-fixes = [
+  "TID252", # absolute imports
+]
 ignore = [
   "E402",
   "E501",
@@ -269,9 +271,6 @@ select = [
   "I", # isort
   "UP", # Pyupgrade
 ]
-extend-safe-fixes = [
-  "TID252", # absolute imports
-]
 
 [tool.ruff.lint.per-file-ignores]
 # don't enforce absolute imports
@@ -283,6 +282,13 @@ known-first-party = ["xarray"]
 [tool.ruff.lint.flake8-tidy-imports]
 # Disallow all relative imports.
 ban-relative-imports = "all"
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.format]
+docstring-code-format = true
+preview = false
 
 [tool.pytest.ini_options]
 addopts = ["--strict-config", "--strict-markers"]

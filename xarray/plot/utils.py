@@ -974,7 +974,7 @@ def legend_elements(
     This is useful for obtaining a legend for a `~.Axes.scatter` plot;
     e.g.::
 
-        scatter = plt.scatter([1, 2, 3],  [4, 5, 6],  c=[7, 2, 3])
+        scatter = plt.scatter([1, 2, 3], [4, 5, 6], c=[7, 2, 3])
         plt.legend(*scatter.legend_elements())
 
     creates three legend elements, one for each color with the numerical
@@ -1291,14 +1291,16 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
 def _parse_size(
     data: None,
     norm: tuple[float | None, float | None, bool] | Normalize | None,
-) -> None: ...
+) -> None:
+    ...
 
 
 @overload
 def _parse_size(
     data: DataArray,
     norm: tuple[float | None, float | None, bool] | Normalize | None,
-) -> pd.Series: ...
+) -> pd.Series:
+    ...
 
 
 # copied from seaborn
@@ -1443,10 +1445,12 @@ class _Normalize(Sequence):
         return self._data_is_numeric
 
     @overload
-    def _calc_widths(self, y: np.ndarray) -> np.ndarray: ...
+    def _calc_widths(self, y: np.ndarray) -> np.ndarray:
+        ...
 
     @overload
-    def _calc_widths(self, y: DataArray) -> DataArray: ...
+    def _calc_widths(self, y: DataArray) -> DataArray:
+        ...
 
     def _calc_widths(self, y: np.ndarray | DataArray) -> np.ndarray | DataArray:
         """
@@ -1468,10 +1472,12 @@ class _Normalize(Sequence):
         return widths
 
     @overload
-    def _indexes_centered(self, x: np.ndarray) -> np.ndarray: ...
+    def _indexes_centered(self, x: np.ndarray) -> np.ndarray:
+        ...
 
     @overload
-    def _indexes_centered(self, x: DataArray) -> DataArray: ...
+    def _indexes_centered(self, x: DataArray) -> DataArray:
+        ...
 
     def _indexes_centered(self, x: np.ndarray | DataArray) -> np.ndarray | DataArray:
         """

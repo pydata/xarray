@@ -599,7 +599,8 @@ def align(
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
     fill_value=dtypes.NA,
-) -> tuple[T_Obj1]: ...
+) -> tuple[T_Obj1]:
+    ...
 
 
 @overload
@@ -613,7 +614,8 @@ def align(
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
     fill_value=dtypes.NA,
-) -> tuple[T_Obj1, T_Obj2]: ...
+) -> tuple[T_Obj1, T_Obj2]:
+    ...
 
 
 @overload
@@ -628,7 +630,8 @@ def align(
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
     fill_value=dtypes.NA,
-) -> tuple[T_Obj1, T_Obj2, T_Obj3]: ...
+) -> tuple[T_Obj1, T_Obj2, T_Obj3]:
+    ...
 
 
 @overload
@@ -644,7 +647,8 @@ def align(
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
     fill_value=dtypes.NA,
-) -> tuple[T_Obj1, T_Obj2, T_Obj3, T_Obj4]: ...
+) -> tuple[T_Obj1, T_Obj2, T_Obj3, T_Obj4]:
+    ...
 
 
 @overload
@@ -661,7 +665,8 @@ def align(
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
     fill_value=dtypes.NA,
-) -> tuple[T_Obj1, T_Obj2, T_Obj3, T_Obj4, T_Obj5]: ...
+) -> tuple[T_Obj1, T_Obj2, T_Obj3, T_Obj4, T_Obj5]:
+    ...
 
 
 @overload
@@ -672,7 +677,8 @@ def align(
     indexes=None,
     exclude: str | Iterable[Hashable] = frozenset(),
     fill_value=dtypes.NA,
-) -> tuple[T_Alignable, ...]: ...
+) -> tuple[T_Alignable, ...]:
+    ...
 
 
 def align(
@@ -1090,13 +1096,15 @@ def _broadcast_helper(
 @overload
 def broadcast(
     obj1: T_Obj1, /, *, exclude: str | Iterable[Hashable] | None = None
-) -> tuple[T_Obj1]: ...
+) -> tuple[T_Obj1]:
+    ...
 
 
 @overload
 def broadcast(
     obj1: T_Obj1, obj2: T_Obj2, /, *, exclude: str | Iterable[Hashable] | None = None
-) -> tuple[T_Obj1, T_Obj2]: ...
+) -> tuple[T_Obj1, T_Obj2]:
+    ...
 
 
 @overload
@@ -1107,7 +1115,8 @@ def broadcast(
     /,
     *,
     exclude: str | Iterable[Hashable] | None = None,
-) -> tuple[T_Obj1, T_Obj2, T_Obj3]: ...
+) -> tuple[T_Obj1, T_Obj2, T_Obj3]:
+    ...
 
 
 @overload
@@ -1119,7 +1128,8 @@ def broadcast(
     /,
     *,
     exclude: str | Iterable[Hashable] | None = None,
-) -> tuple[T_Obj1, T_Obj2, T_Obj3, T_Obj4]: ...
+) -> tuple[T_Obj1, T_Obj2, T_Obj3, T_Obj4]:
+    ...
 
 
 @overload
@@ -1132,13 +1142,15 @@ def broadcast(
     /,
     *,
     exclude: str | Iterable[Hashable] | None = None,
-) -> tuple[T_Obj1, T_Obj2, T_Obj3, T_Obj4, T_Obj5]: ...
+) -> tuple[T_Obj1, T_Obj2, T_Obj3, T_Obj4, T_Obj5]:
+    ...
 
 
 @overload
 def broadcast(
     *args: T_Alignable, exclude: str | Iterable[Hashable] | None = None
-) -> tuple[T_Alignable, ...]: ...
+) -> tuple[T_Alignable, ...]:
+    ...
 
 
 def broadcast(

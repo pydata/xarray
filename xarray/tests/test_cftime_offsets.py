@@ -1689,7 +1689,6 @@ def test_new_to_legacy_freq_anchored(year_alias, n):
     ),
 )
 def test_legacy_to_new_freq_pd_freq_passthrough(freq, expected):
-
     result = _legacy_to_new_freq(freq)
     assert result == expected
 
@@ -1715,7 +1714,6 @@ def test_legacy_to_new_freq_pd_freq_passthrough(freq, expected):
     ),
 )
 def test_new_to_legacy_freq_pd_freq_passthrough(freq, expected):
-
     result = _new_to_legacy_freq(freq)
     assert result == expected
 

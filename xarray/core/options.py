@@ -257,7 +257,6 @@ class set_options:
     >>> ds = xr.Dataset({"x": np.arange(1000)})
     >>> with xr.set_options(display_width=40):
     ...     print(ds)
-    ...
     <xarray.Dataset> Size: 8kB
     Dimensions:  (x: 1000)
     Coordinates:

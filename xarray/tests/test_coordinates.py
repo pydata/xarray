@@ -60,7 +60,9 @@ class TestCoordinates:
             Coordinates(indexes={"x": idx})
 
         with pytest.raises(TypeError, match=".* is not an `xarray.indexes.Index`"):
-            Coordinates(coords={"x": ("x", [1, 2, 3])}, indexes={"x": "not_an_xarray_index"})  # type: ignore
+            Coordinates(
+                coords={"x": ("x", [1, 2, 3])}, indexes={"x": "not_an_xarray_index"}
+            )  # type: ignore
 
     def test_init_dim_sizes_conflict(self) -> None:
         with pytest.raises(ValueError):

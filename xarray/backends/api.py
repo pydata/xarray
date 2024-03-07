@@ -1132,7 +1132,8 @@ def to_netcdf(
     *,
     multifile: Literal[True],
     invalid_netcdf: bool = False,
-) -> tuple[ArrayWriter, AbstractDataStore]: ...
+) -> tuple[ArrayWriter, AbstractDataStore]:
+    ...
 
 
 # path=None writes to bytes
@@ -1149,7 +1150,8 @@ def to_netcdf(
     compute: bool = True,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
-) -> bytes: ...
+) -> bytes:
+    ...
 
 
 # compute=False returns dask.Delayed
@@ -1167,7 +1169,8 @@ def to_netcdf(
     compute: Literal[False],
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
-) -> Delayed: ...
+) -> Delayed:
+    ...
 
 
 # default return None
@@ -1184,7 +1187,8 @@ def to_netcdf(
     compute: Literal[True] = True,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
-) -> None: ...
+) -> None:
+    ...
 
 
 # if compute cannot be evaluated at type check time
@@ -1202,7 +1206,8 @@ def to_netcdf(
     compute: bool = False,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
-) -> Delayed | None: ...
+) -> Delayed | None:
+    ...
 
 
 # if multifile cannot be evaluated at type check time
@@ -1220,7 +1225,8 @@ def to_netcdf(
     compute: bool = False,
     multifile: bool = False,
     invalid_netcdf: bool = False,
-) -> tuple[ArrayWriter, AbstractDataStore] | Delayed | None: ...
+) -> tuple[ArrayWriter, AbstractDataStore] | Delayed | None:
+    ...
 
 
 # Any
@@ -1237,7 +1243,8 @@ def to_netcdf(
     compute: bool = False,
     multifile: bool = False,
     invalid_netcdf: bool = False,
-) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None: ...
+) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
+    ...
 
 
 def to_netcdf(
@@ -1671,7 +1678,8 @@ def to_zarr(
     zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
-) -> backends.ZarrStore: ...
+) -> backends.ZarrStore:
+    ...
 
 
 # compute=False returns dask.Delayed
@@ -1694,7 +1702,8 @@ def to_zarr(
     zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
-) -> Delayed: ...
+) -> Delayed:
+    ...
 
 
 def to_zarr(

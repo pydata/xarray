@@ -391,7 +391,8 @@ class TestNamedArray(NamedArraySubclassobjects):
                 dims: _DimsLike | Default = ...,
                 data: duckarray[Any, _DType] = ...,
                 attrs: _AttrsLike | Default = ...,
-            ) -> Variable[Any, _DType]: ...
+            ) -> Variable[Any, _DType]:
+                ...
 
             @overload
             def _new(
@@ -399,7 +400,8 @@ class TestNamedArray(NamedArraySubclassobjects):
                 dims: _DimsLike | Default = ...,
                 data: Default = ...,
                 attrs: _AttrsLike | Default = ...,
-            ) -> Variable[_ShapeType_co, _DType_co]: ...
+            ) -> Variable[_ShapeType_co, _DType_co]:
+                ...
 
             def _new(
                 self,
@@ -452,7 +454,8 @@ class TestNamedArray(NamedArraySubclassobjects):
                 dims: _DimsLike | Default = ...,
                 data: duckarray[Any, _DType] = ...,
                 attrs: _AttrsLike | Default = ...,
-            ) -> Variable[Any, _DType]: ...
+            ) -> Variable[Any, _DType]:
+                ...
 
             @overload
             def _new(
@@ -460,7 +463,8 @@ class TestNamedArray(NamedArraySubclassobjects):
                 dims: _DimsLike | Default = ...,
                 data: Default = ...,
                 attrs: _AttrsLike | Default = ...,
-            ) -> Variable[_ShapeType_co, _DType_co]: ...
+            ) -> Variable[_ShapeType_co, _DType_co]:
+                ...
 
             def _new(
                 self,
