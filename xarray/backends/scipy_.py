@@ -70,7 +70,7 @@ class ScipyArrayWrapper(BackendArray):
 
     def __getitem__(self, key):
         data = indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem
+            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
         )
         # Copy data if the source file is mmapped. This makes things consistent
         # with the netCDF4 library by ensuring we can safely read arrays even
