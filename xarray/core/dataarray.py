@@ -6704,13 +6704,13 @@ class DataArray(
         """
         from xarray.core.groupby import (
             DataArrayGroupBy,
-            ResolvedUniqueGrouper,
+            ResolvedGrouper,
             UniqueGrouper,
             _validate_groupby_squeeze,
         )
 
         _validate_groupby_squeeze(squeeze)
-        rgrouper = ResolvedUniqueGrouper(UniqueGrouper(), group, self)
+        rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
         return DataArrayGroupBy(
             self,
             (rgrouper,),
@@ -6789,7 +6789,7 @@ class DataArray(
         from xarray.core.groupby import (
             BinGrouper,
             DataArrayGroupBy,
-            ResolvedBinGrouper,
+            ResolvedGrouper,
             _validate_groupby_squeeze,
         )
 
@@ -6803,7 +6803,7 @@ class DataArray(
                 "include_lowest": include_lowest,
             },
         )
-        rgrouper = ResolvedBinGrouper(grouper, group, self)
+        rgrouper = ResolvedGrouper(grouper, group, self)
 
         return DataArrayGroupBy(
             self,
