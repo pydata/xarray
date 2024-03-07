@@ -68,6 +68,12 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def dtype(self) -> np.dtype:
         return np.dtype(self._dtype)
 
+    def _oindex_get(self, key):
+        return type(self)(self.array.oindex[key], self.func, self.dtype)
+
+    def _vindex_get(self, key):
+        return type(self)(self.array.vindex[key], self.func, self.dtype)
+
     def __getitem__(self, key):
         return type(self)(self.array[key], self.func, self.dtype)
 
