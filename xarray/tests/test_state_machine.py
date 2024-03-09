@@ -8,7 +8,22 @@ from hypothesis.stateful import RuleBasedStateMachine, invariant, precondition, 
 
 import xarray.testing.strategies as xrst
 from xarray import Dataset
+from xarray.indexes import PandasMultiIndex
 from xarray.testing import _assert_internal_invariants
+
+
+def get_not_multiindex_dims(ds: Dataset) -> set:
+    dims = ds.dims
+    mindexes = [
+        name
+        for name, index in ds.xindexes.items()
+        if isinstance(index, PandasMultiIndex)
+    ]
+    return set(dims) - set(mindexes)
+
+
+def get_dimension_coordinates(ds: Dataset) -> set:
+    return set(ds.dims) & set(ds._variables)
 
 
 @st.composite
@@ -52,12 +67,18 @@ class DatasetStateMachine(RuleBasedStateMachine):
     @precondition(lambda self: len(self.dataset.dims) >= 1)
     def reset_index(self):
         dim = random.choice(tuple(self.dataset.dims))
+        note(f"> resetting {dim}")
         self.dataset = self.dataset.reset_index(dim)
 
     @rule(newname=UNIQUE_NAME)
-    @precondition(lambda self: len(self.dataset.dims) >= 2)
+    @precondition(lambda self: len(get_not_multiindex_dims(self.dataset)) >= 2)
     def stack(self, newname):
-        oldnames = random.choices(tuple(self.dataset.dims), k=2)
+        choices = list(get_not_multiindex_dims(self.dataset))
+        # cannot stack repeated dims ('0', '0'), so random.choices isn't the best way to choose it
+        # Instead shuffle and pick the first two.
+        random.shuffle(choices)
+        oldnames = choices[:2]
+        note(f"> stacking {oldnames} as {newname}")
         self.dataset = self.dataset.stack({newname: oldnames})
 
     @rule()
@@ -65,32 +86,30 @@ class DatasetStateMachine(RuleBasedStateMachine):
         self.dataset = self.dataset.unstack()
 
     @rule(newname=UNIQUE_NAME)
-    @precondition(lambda self: len(self.dataset.dims) >= 1)
+    @precondition(lambda self: bool(get_dimension_coordinates(self.dataset)))
     def rename_vars(self, newname):
         # benbovy: "skip the default indexes invariant test when the name of an
         # existing dimension coordinate is passed as input kwarg or dict key
         # to .rename_vars()."
-        oldname = random.choice(tuple(self.dataset.dims))
+
+        oldname = random.choice(tuple(get_dimension_coordinates(self.dataset)))
         self.check_default_indexes = False
-        self.dataset = self.dataset.rename_vars({oldname: newname})
         note(f"> renaming {oldname} to {newname}")
+        self.dataset = self.dataset.rename_vars({oldname: newname})
 
     @rule()
-    @precondition(
-        lambda self: (
-            len(self.dataset._variables) >= 2
-            and (set(self.dataset.dims) & set(self.dataset._variables))
-        )
-    )
+    @precondition(lambda self: len(self.dataset._variables) >= 2)
+    @precondition(lambda self: bool(get_dimension_coordinates(self.dataset)))
     def swap_dims(self):
         ds = self.dataset
         # need a dimension coordinate for swapping
-        dim = random.choice(tuple(set(ds.dims) & set(ds._variables)))
+        dim = random.choice(tuple(get_dimension_coordinates(ds)))
+        # Can only swap to a variable with the same dim
         to = random.choice(
-            [name for name, var in ds._variables.items() if var.size == ds.sizes[dim]]
+            [name for name, var in ds._variables.items() if var.dims == (dim,)]
         )
-        self.dataset = ds.swap_dims({dim: to})
         note(f"> swapping {dim} to {to}")
+        self.dataset = ds.swap_dims({dim: to})
 
     # TODO: enable when we have serializable attrs only
     # @rule()
