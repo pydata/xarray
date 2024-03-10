@@ -951,8 +951,7 @@ def lines(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs: Any,
-) -> LineCollection:
-    ...
+) -> LineCollection: ...
 
 
 @overload
@@ -993,8 +992,7 @@ def lines(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
-    ...
+) -> FacetGrid[DataArray]: ...
 
 
 @overload
@@ -1035,8 +1033,7 @@ def lines(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
-    ...
+) -> FacetGrid[DataArray]: ...
 
 
 @_update_doc_to_dataset(dataarray_plot.lines)

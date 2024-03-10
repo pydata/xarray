@@ -1846,8 +1846,7 @@ def _line(
     plotnonfinite: bool = False,
     data=None,
     **kwargs,
-) -> LineCollection:
-    ...
+) -> LineCollection: ...
 
 
 @overload
@@ -1870,8 +1869,7 @@ def _line(
     plotnonfinite: bool = False,
     data=None,
     **kwargs,
-) -> Line3DCollection:
-    ...
+) -> Line3DCollection: ...
 
 
 def _line(
