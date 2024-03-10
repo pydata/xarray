@@ -878,10 +878,6 @@ def test_dask_token():
     import dask
 
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
-
-    # https://github.com/pydata/sparse/issues/300
-    s.__dask_tokenize__ = lambda: dask.base.normalize_token(s.__dict__)
-
     a = DataArray(s)
     t1 = dask.base.tokenize(a)
     t2 = dask.base.tokenize(a)

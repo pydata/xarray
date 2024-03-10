@@ -16,6 +16,7 @@ from typing import (
     List,
     Mapping,
     MutableMapping,
+    NoReturn,
     Optional,
     Set,
     Tuple,
@@ -49,7 +50,7 @@ from .ops import (
     MappedDataWithCoords,
 )
 from .render import RenderTree
-from .treenode import NamedNode, NodePath, Tree
+from xarray.core.treenode import NamedNode, NodePath, Tree
 
 try:
     from xarray.core.variable import calculate_dimensions
@@ -160,7 +161,7 @@ class DatasetView(Dataset):
             "use `.copy()` first to get a mutable version of the input dataset."
         )
 
-    def update(self, other) -> None:
+    def update(self, other) -> NoReturn:
         raise AttributeError(
             "Mutation of the DatasetView is not allowed, please use `.update` on the wrapping DataTree node, "
             "or use `dt.to_dataset()` if you want a mutable dataset. If calling this from within `map_over_subtree`,"

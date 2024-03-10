@@ -316,21 +316,22 @@ htmlhelp_basename = "xarraydoc"
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/3/", None),
-    "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
-    "iris": ("https://scitools-iris.readthedocs.io/en/latest", None),
-    "numpy": ("https://numpy.org/doc/stable", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy", None),
-    "numba": ("https://numba.readthedocs.io/en/stable/", None),
-    "matplotlib": ("https://matplotlib.org/stable/", None),
-    "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
-    "sparse": ("https://sparse.pydata.org/en/latest/", None),
-    "hypothesis": ("https://hypothesis.readthedocs.io/en/latest/", None),
-    "cubed": ("https://tom-e-white.com/cubed/", None),
+    "cubed": ("https://cubed-dev.github.io/cubed/", None),
+    "dask": ("https://docs.dask.org/en/latest", None),
     "datatree": ("https://xarray-datatree.readthedocs.io/en/latest/", None),
+    "flox": ("https://flox.readthedocs.io/en/latest/", None),
+    "hypothesis": ("https://hypothesis.readthedocs.io/en/latest/", None),
+    "iris": ("https://scitools-iris.readthedocs.io/en/latest", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    "numba": ("https://numba.readthedocs.io/en/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
+    "python": ("https://docs.python.org/3/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
+    "sparse": ("https://sparse.pydata.org/en/latest/", None),
     "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
-    # "opt_einsum": ("https://dgasmith.github.io/opt_einsum/", None),
+    "zarr": ("https://zarr.readthedocs.io/en/latest/", None),
 }
 
 

@@ -41,11 +41,7 @@ from xarray.core.utils import (
     maybe_coerce_to_str,
 )
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
-from xarray.namedarray.pycompat import (
-    integer_types,
-    is_0d_dask_array,
-    to_duck_array,
-)
+from xarray.namedarray.pycompat import integer_types, is_0d_dask_array, to_duck_array
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -222,10 +218,12 @@ def _possibly_convert_datetime_or_timedelta_index(data):
     this in version 2.0.0, in xarray we will need to make sure we are ready to
     handle non-nanosecond precision datetimes or timedeltas in our code
     before allowing such values to pass through unchanged."""
-    if isinstance(data, (pd.DatetimeIndex, pd.TimedeltaIndex)):
-        return _as_nanosecond_precision(data)
-    else:
-        return data
+    if isinstance(data, PandasIndexingAdapter):
+        if isinstance(data.array, (pd.DatetimeIndex, pd.TimedeltaIndex)):
+            data = PandasIndexingAdapter(_as_nanosecond_precision(data.array))
+    elif isinstance(data, (pd.DatetimeIndex, pd.TimedeltaIndex)):
+        data = _as_nanosecond_precision(data)
+    return data
 
 
 def as_compatible_data(
@@ -761,7 +759,14 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         array `x.values` directly.
         """
         dims, indexer, new_order = self._broadcast_indexes(key)
-        data = as_indexable(self._data)[indexer]
+        indexable = as_indexable(self._data)
+
+        if isinstance(indexer, OuterIndexer):
+            data = indexable.oindex[indexer]
+        elif isinstance(indexer, VectorizedIndexer):
+            data = indexable.vindex[indexer]
+        else:
+            data = indexable[indexer]
         if new_order:
             data = np.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
@@ -794,7 +799,15 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             else:
                 actual_indexer = indexer
 
-            data = as_indexable(self._data)[actual_indexer]
+            indexable = as_indexable(self._data)
+
+            if isinstance(indexer, OuterIndexer):
+                data = indexable.oindex[indexer]
+
+            elif isinstance(indexer, VectorizedIndexer):
+                data = indexable.vindex[indexer]
+            else:
+                data = indexable[actual_indexer]
             mask = indexing.create_mask(indexer, self.shape, data)
             # we need to invert the mask in order to pass data first. This helps
             # pint to choose the correct unit
@@ -2579,11 +2592,13 @@ class IndexVariable(Variable):
         if not isinstance(self._data, PandasIndexingAdapter):
             self._data = PandasIndexingAdapter(self._data)
 
-    def __dask_tokenize__(self):
+    def __dask_tokenize__(self) -> object:
         from dask.base import normalize_token
 
         # Don't waste time converting pd.Index to np.ndarray
-        return normalize_token((type(self), self._dims, self._data.array, self._attrs))
+        return normalize_token(
+            (type(self), self._dims, self._data.array, self._attrs or None)
+        )
 
     def load(self):
         # data is already loaded into memory for IndexVariable
