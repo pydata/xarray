@@ -1309,11 +1309,11 @@ def lines(
 
         assert isinstance(ax, mpl_toolkits.mplot3d.axes3d.Axes3D)
         # return ax.scatter(xplt_np, yplt_np, zplt_np, **kwargs)
-        return _line(ax, xplt_np, yplt_np, zplt_np, **kwargs)
+        return _line(ax, *plts_np, **kwargs)
 
     if len(plts_np) == 2:
         # return ax.scatter(plts_np[0], plts_np[1], **kwargs)
-        return _line(ax, plts_np[0], plts_np[1], None, **kwargs)
+        return _line(ax, *plts_np, **kwargs)
 
     raise ValueError("At least two variables required for a lines plot.")
 
