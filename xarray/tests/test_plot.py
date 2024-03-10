@@ -3244,6 +3244,7 @@ def test_maybe_gca() -> None:
 
 
 @requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["scatter", "lines"])
 @pytest.mark.parametrize(
     "x, y, z, hue, markersize, row, col, add_legend, add_colorbar",
     [
@@ -3256,10 +3257,19 @@ def test_maybe_gca() -> None:
         ("A", "B", "z", "y", "x", "w", None, True, True),
     ],
 )
-def test_datarray_scatter(
-    x, y, z, hue, markersize, row, col, add_legend, add_colorbar
+def test_plot1d_functions(
+    x: Hashable,
+    y: Hashable,
+    z: Hashable,
+    hue: Hashable,
+    markersize: Hashable,
+    row: Hashable,
+    col: Hashable,
+    add_legend: bool | None,
+    add_colorbar: bool | None,
+    plotfunc: str,
 ) -> None:
-    """Test datarray scatter. Merge with TestPlot1D eventually."""
+    """Test plot1d function. Merge with TestPlot1D eventually."""
     ds = xr.tutorial.scatter_example_dataset()
 
     extra_coords = [v for v in [x, hue, markersize] if v is not None]
@@ -3273,7 +3283,7 @@ def test_datarray_scatter(
     darray = xr.DataArray(ds[y], coords=coords)
 
     with figure_context():
-        darray.plot.scatter(
+        getattr(darray.plot, plotfunc)(
             x=x,
             z=z,
             hue=hue,
@@ -3385,43 +3395,3 @@ def test_plot1d_filtered_nulls() -> None:
         actual = pc.get_offsets().shape[0]
 
         assert expected == actual
-
-
-@requires_matplotlib
-@pytest.mark.parametrize(
-    "x, y, z, hue, markersize, row, col, add_legend, add_colorbar",
-    [
-        ("A", "B", None, None, None, None, None, None, None),
-        ("B", "A", None, "w", None, None, None, True, None),
-        ("A", "B", None, "y", "x", None, None, True, True),
-        ("A", "B", "z", None, None, None, None, None, None),
-        ("B", "A", "z", "w", None, None, None, True, None),
-        ("A", "B", "z", "y", "x", None, None, True, True),
-        ("A", "B", "z", "y", "x", "w", None, True, True),
-    ],
-)
-def test_dataarray_lines(
-    x, y, z, hue, markersize, row, col, add_legend, add_colorbar
-) -> None:
-    """Test datarray lines."""
-    ds = xr.tutorial.scatter_example_dataset()
-
-    extra_coords = [v for v in [x, hue, markersize] if v is not None]
-
-    # Base coords:
-    coords = dict(ds.coords)
-
-    # Add extra coords to the DataArray:
-    coords.update({v: ds[v] for v in extra_coords})
-
-    darray = xr.DataArray(ds[y], coords=coords)
-
-    with figure_context():
-        darray.plot.lines(
-            x=x,
-            z=z,
-            hue=hue,
-            markersize=markersize,
-            add_legend=add_legend,
-            add_colorbar=add_colorbar,
-        )
