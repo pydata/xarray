@@ -1903,6 +1903,11 @@ def _line(
 
     rcParams = plt.matplotlib.rcParams
 
+    # Process **kwargs to handle aliases, conflicts with explicit kwargs:
+    x_: np.ndarray
+    y_: np.ndarray
+    x_, y_ = self._process_unit_info([("x", x), ("y", y)], kwargs)  # ignore[union-attr]
+
     # Handle z inputs:
     if z is not None:
         from mpl_toolkits.mplot3d.art3d import Line3DCollection
@@ -1910,21 +1915,18 @@ def _line(
         LineCollection_ = Line3DCollection
         add_collection_ = self.add_collection3d
         auto_scale = self.auto_scale_xyz
-        auto_scale_args: tuple[Any, ...] = (x, y, z, self.has_data())
+        auto_scale_args: tuple[Any, ...] = (x_, y_, z, self.has_data())
     else:
         LineCollection_ = plt.matplotlib.collections.LineCollection
         add_collection_ = self.add_collection
         auto_scale = self._request_autoscale_view
         auto_scale_args = tuple()
 
-    # Process **kwargs to handle aliases, conflicts with explicit kwargs:
-    x, y = self._process_unit_info([("x", x), ("y", y)], kwargs)  # ignore[union-attr]
-
     if s is None:
         s = np.array([rcParams["lines.linewidth"]])
 
     s_: np.ndarray = np.ma.ravel(s)
-    if len(s_) not in (1, x.size) or (
+    if len(s_) not in (1, x_.size) or (
         not np.issubdtype(s_.dtype, np.floating)
         and not np.issubdtype(s_.dtype, np.integer)
     ):
@@ -1937,7 +1939,7 @@ def _line(
         c,
         edgecolors,
         kwargs,
-        x.size,
+        x_.size,
         get_next_color_func=self._get_patches_for_fill.get_next_color,
     )
 
@@ -1948,17 +1950,17 @@ def _line(
     drawstyle = kwargs.pop("drawstyle", "default")
     if drawstyle == "default":
         # Draw linear lines:
-        xyz = list(v for v in (x, y, z) if v is not None)
+        xyz = list(v for v in (x_, y_, z) if v is not None)
     else:
         # Draw stepwise lines:
         from matplotlib.cbook import STEP_LOOKUP_MAP
 
         step_func = STEP_LOOKUP_MAP[drawstyle]
-        xyz = step_func(*tuple(v for v in (x, y, z) if v is not None))
+        xyz = step_func(*tuple(v for v in (x_, y_, z) if v is not None))
 
         # Create steps by repeating all elements, then roll the last array by 1:
         # Might be scary duplicating number of elements?
-        # xyz = list(np.repeat(v, 2) for v in (x, y, z) if v is not None)
+        # xyz = list(np.repeat(v, 2) for v in (x_, y_, z) if v is not None)
         # c = np.repeat(c, 2)  # TODO: Off by one?
         # s_ = np.repeat(s_, 2)
         # if drawstyle == "steps-pre":
