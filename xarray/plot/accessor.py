@@ -77,8 +77,7 @@ class DataArrayPlotAccessor:
         add_legend: bool = True,
         _labels: bool = True,
         **kwargs: Any,
-    ) -> list[Line3D]:
-        ...
+    ) -> list[Line3D]: ...
 
     @overload
     def line(
@@ -104,8 +103,7 @@ class DataArrayPlotAccessor:
         add_legend: bool = True,
         _labels: bool = True,
         **kwargs: Any,
-    ) -> FacetGrid[DataArray]:
-        ...
+    ) -> FacetGrid[DataArray]: ...
 
     @overload
     def line(
@@ -131,8 +129,7 @@ class DataArrayPlotAccessor:
         add_legend: bool = True,
         _labels: bool = True,
         **kwargs: Any,
-    ) -> FacetGrid[DataArray]:
-        ...
+    ) -> FacetGrid[DataArray]: ...
 
     @functools.wraps(dataarray_plot.line, assigned=("__doc__",))
     def line(self, *args, **kwargs) -> list[Line3D] | FacetGrid[DataArray]:
@@ -152,8 +149,7 @@ class DataArrayPlotAccessor:
         row: None = None,  # no wrap -> primitive
         col: None = None,  # no wrap -> primitive
         **kwargs: Any,
-    ) -> list[Line3D]:
-        ...
+    ) -> list[Line3D]: ...
 
     @overload
     def step(
@@ -165,8 +161,7 @@ class DataArrayPlotAccessor:
         row: Hashable,  # wrap -> FacetGrid
         col: Hashable | None = None,
         **kwargs: Any,
-    ) -> FacetGrid[DataArray]:
-        ...
+    ) -> FacetGrid[DataArray]: ...
 
     @overload
     def step(
@@ -178,8 +173,7 @@ class DataArrayPlotAccessor:
         row: Hashable | None = None,
         col: Hashable,  # wrap -> FacetGrid
         **kwargs: Any,
-    ) -> FacetGrid[DataArray]:
-        ...
+    ) -> FacetGrid[DataArray]: ...
 
     @functools.wraps(dataarray_plot.step, assigned=("__doc__",))
     def step(self, *args, **kwargs) -> list[Line3D] | FacetGrid[DataArray]:
@@ -223,8 +217,7 @@ class DataArrayPlotAccessor:
         extend=None,
         levels=None,
         **kwargs,
-    ) -> PathCollection:
-        ...
+    ) -> PathCollection: ...
 
     @overload
     def scatter(
@@ -264,8 +257,7 @@ class DataArrayPlotAccessor:
         extend=None,
         levels=None,
         **kwargs,
-    ) -> FacetGrid[DataArray]:
-        ...
+    ) -> FacetGrid[DataArray]: ...
 
     @overload
     def scatter(
@@ -305,8 +297,7 @@ class DataArrayPlotAccessor:
         extend=None,
         levels=None,
         **kwargs,
-    ) -> FacetGrid[DataArray]:
-        ...
+    ) -> FacetGrid[DataArray]: ...
 
     @functools.wraps(dataarray_plot.scatter, assigned=("__doc__",))
     def scatter(self, *args, **kwargs) -> PathCollection | FacetGrid[DataArray]:
@@ -349,8 +340,7 @@ class DataArrayPlotAccessor:
         ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> AxesImage:
-        ...
+    ) -> AxesImage: ...
 
     @overload
     def imshow(
@@ -389,8 +379,7 @@ class DataArrayPlotAccessor:
         ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> FacetGrid[DataArray]:
-        ...
+    ) -> FacetGrid[DataArray]: ...
 
     @overload
     def imshow(
@@ -429,8 +418,7 @@ class DataArrayPlotAccessor:
         ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> FacetGrid[DataArray]:
-        ...
+    ) -> FacetGrid[DataArray]: ...
 
     @functools.wraps(dataarray_plot.imshow, assigned=("__doc__",))
     def imshow(self, *args, **kwargs) -> AxesImage | FacetGrid[DataArray]:
@@ -473,8 +461,7 @@ class DataArrayPlotAccessor:
         ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> QuadContourSet:
-        ...
+    ) -> QuadContourSet: ...
 
     @overload
     def contour(
@@ -513,8 +500,7 @@ class DataArrayPlotAccessor:
         ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> FacetGrid[DataArray]:
-        ...
+    ) -> FacetGrid[DataArray]: ...
 
     @overload
     def contour(
@@ -553,8 +539,7 @@ class DataArrayPlotAccessor:
         ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> FacetGrid[DataArray]:
-        ...
+    ) -> FacetGrid[DataArray]: ...
 
     @functools.wraps(dataarray_plot.contour, assigned=("__doc__",))
     def contour(self, *args, **kwargs) -> QuadContourSet | FacetGrid[DataArray]:
@@ -597,8 +582,7 @@ class DataArrayPlotAccessor:
         ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> QuadContourSet:
-        ...
+    ) -> QuadContourSet: ...
 
     @overload
     def contourf(
@@ -637,8 +621,7 @@ class DataArrayPlotAccessor:
         ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> FacetGrid[DataArray]:
-        ...
+    ) -> FacetGrid[DataArray]: ...
 
     @overload
     def contourf(
@@ -677,8 +660,7 @@ class DataArrayPlotAccessor:
         ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> FacetGrid:
-        ...
+    ) -> FacetGrid: ...
 
     @functools.wraps(dataarray_plot.contourf, assigned=("__doc__",))
     def contourf(self, *args, **kwargs) -> QuadContourSet | FacetGrid[DataArray]:
@@ -721,8 +703,7 @@ class DataArrayPlotAccessor:
         ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> QuadMesh:
-        ...
+    ) -> QuadMesh: ...
 
     @overload
     def pcolormesh(
@@ -761,8 +742,7 @@ class DataArrayPlotAccessor:
         ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> FacetGrid[DataArray]:
-        ...
+    ) -> FacetGrid[DataArray]: ...
 
     @overload
     def pcolormesh(
@@ -801,8 +781,7 @@ class DataArrayPlotAccessor:
         ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> FacetGrid[DataArray]:
-        ...
+    ) -> FacetGrid[DataArray]: ...
 
     @functools.wraps(dataarray_plot.pcolormesh, assigned=("__doc__",))
     def pcolormesh(self, *args, **kwargs) -> QuadMesh | FacetGrid[DataArray]:
@@ -845,8 +824,7 @@ class DataArrayPlotAccessor:
         ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> Poly3DCollection:
-        ...
+    ) -> Poly3DCollection: ...
 
     @overload
     def surface(
@@ -885,8 +863,7 @@ class DataArrayPlotAccessor:
         ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> FacetGrid:
-        ...
+    ) -> FacetGrid: ...
 
     @overload
     def surface(
@@ -925,8 +902,7 @@ class DataArrayPlotAccessor:
         ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> FacetGrid:
-        ...
+    ) -> FacetGrid: ...
 
     @functools.wraps(dataarray_plot.surface, assigned=("__doc__",))
     def surface(self, *args, **kwargs) -> Poly3DCollection:
@@ -1116,8 +1092,7 @@ class DatasetPlotAccessor:
         extend=None,
         levels=None,
         **kwargs: Any,
-    ) -> PathCollection:
-        ...
+    ) -> PathCollection: ...
 
     @overload
     def scatter(
@@ -1157,8 +1132,7 @@ class DatasetPlotAccessor:
         extend=None,
         levels=None,
         **kwargs: Any,
-    ) -> FacetGrid[Dataset]:
-        ...
+    ) -> FacetGrid[Dataset]: ...
 
     @overload
     def scatter(
@@ -1198,8 +1172,7 @@ class DatasetPlotAccessor:
         extend=None,
         levels=None,
         **kwargs: Any,
-    ) -> FacetGrid[Dataset]:
-        ...
+    ) -> FacetGrid[Dataset]: ...
 
     @functools.wraps(dataset_plot.scatter, assigned=("__doc__",))
     def scatter(self, *args, **kwargs) -> PathCollection | FacetGrid[Dataset]:
@@ -1239,8 +1212,7 @@ class DatasetPlotAccessor:
         extend=None,
         cmap=None,
         **kwargs: Any,
-    ) -> Quiver:
-        ...
+    ) -> Quiver: ...
 
     @overload
     def quiver(
@@ -1276,8 +1248,7 @@ class DatasetPlotAccessor:
         extend=None,
         cmap=None,
         **kwargs: Any,
-    ) -> FacetGrid[Dataset]:
-        ...
+    ) -> FacetGrid[Dataset]: ...
 
     @overload
     def quiver(
@@ -1313,8 +1284,7 @@ class DatasetPlotAccessor:
         extend=None,
         cmap=None,
         **kwargs: Any,
-    ) -> FacetGrid[Dataset]:
-        ...
+    ) -> FacetGrid[Dataset]: ...
 
     @functools.wraps(dataset_plot.quiver, assigned=("__doc__",))
     def quiver(self, *args, **kwargs) -> Quiver | FacetGrid[Dataset]:
@@ -1354,8 +1324,7 @@ class DatasetPlotAccessor:
         extend=None,
         cmap=None,
         **kwargs: Any,
-    ) -> LineCollection:
-        ...
+    ) -> LineCollection: ...
 
     @overload
     def streamplot(
@@ -1391,8 +1360,7 @@ class DatasetPlotAccessor:
         extend=None,
         cmap=None,
         **kwargs: Any,
-    ) -> FacetGrid[Dataset]:
-        ...
+    ) -> FacetGrid[Dataset]: ...
 
     @overload
     def streamplot(
@@ -1428,8 +1396,7 @@ class DatasetPlotAccessor:
         extend=None,
         cmap=None,
         **kwargs: Any,
-    ) -> FacetGrid[Dataset]:
-        ...
+    ) -> FacetGrid[Dataset]: ...
 
     @functools.wraps(dataset_plot.streamplot, assigned=("__doc__",))
     def streamplot(self, *args, **kwargs) -> LineCollection | FacetGrid[Dataset]:

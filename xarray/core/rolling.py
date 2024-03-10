@@ -10,12 +10,16 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 import numpy as np
 from packaging.version import Version
 
-from xarray.core import dtypes, duck_array_ops, pycompat, utils
+from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.arithmetic import CoarsenArithmetic
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
-from xarray.core.utils import either_dict_or_kwargs, module_available
+from xarray.core.utils import (
+    either_dict_or_kwargs,
+    is_duck_dask_array,
+    module_available,
+)
+from xarray.namedarray import pycompat
 
 try:
     import bottleneck
@@ -345,7 +349,7 @@ class DataArrayRolling(Rolling["DataArray"]):
 
         >>> rolling = da.rolling(b=3)
         >>> rolling.construct("window_dim")
-        <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
+        <xarray.DataArray (a: 2, b: 4, window_dim: 3)> Size: 192B
         array([[[nan, nan,  0.],
                 [nan,  0.,  1.],
                 [ 0.,  1.,  2.],
@@ -359,7 +363,7 @@ class DataArrayRolling(Rolling["DataArray"]):
 
         >>> rolling = da.rolling(b=3, center=True)
         >>> rolling.construct("window_dim")
-        <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
+        <xarray.DataArray (a: 2, b: 4, window_dim: 3)> Size: 192B
         array([[[nan,  0.,  1.],
                 [ 0.,  1.,  2.],
                 [ 1.,  2.,  3.],
@@ -451,7 +455,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         >>> da = xr.DataArray(np.arange(8).reshape(2, 4), dims=("a", "b"))
         >>> rolling = da.rolling(b=3)
         >>> rolling.construct("window_dim")
-        <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
+        <xarray.DataArray (a: 2, b: 4, window_dim: 3)> Size: 192B
         array([[[nan, nan,  0.],
                 [nan,  0.,  1.],
                 [ 0.,  1.,  2.],
@@ -464,14 +468,14 @@ class DataArrayRolling(Rolling["DataArray"]):
         Dimensions without coordinates: a, b, window_dim
 
         >>> rolling.reduce(np.sum)
-        <xarray.DataArray (a: 2, b: 4)>
+        <xarray.DataArray (a: 2, b: 4)> Size: 64B
         array([[nan, nan,  3.,  6.],
                [nan, nan, 15., 18.]])
         Dimensions without coordinates: a, b
 
         >>> rolling = da.rolling(b=3, min_periods=1)
         >>> rolling.reduce(np.nansum)
-        <xarray.DataArray (a: 2, b: 4)>
+        <xarray.DataArray (a: 2, b: 4)> Size: 64B
         array([[ 0.,  1.,  3.,  6.],
                [ 4.,  9., 15., 18.]])
         Dimensions without coordinates: a, b
@@ -596,6 +600,11 @@ class DataArrayRolling(Rolling["DataArray"]):
             values = func(
                 padded.data, window=self.window[0], min_count=min_count, axis=axis
             )
+            # index 0 is at the rightmost edge of the window
+            # need to reverse index here
+            # see GH #8541
+            if func in [bottleneck.move_argmin, bottleneck.move_argmax]:
+                values = self.window[0] - 1 - values
 
         if self.center[0]:
             values = values[valid]
@@ -1009,7 +1018,7 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         --------
         >>> da = xr.DataArray(np.arange(24), dims="time")
         >>> da.coarsen(time=12).construct(time=("year", "month"))
-        <xarray.DataArray (year: 2, month: 12)>
+        <xarray.DataArray (year: 2, month: 12)> Size: 192B
         array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11],
                [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]])
         Dimensions without coordinates: year, month
@@ -1165,7 +1174,7 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
         >>> da = xr.DataArray(np.arange(8).reshape(2, 4), dims=("a", "b"))
         >>> coarsen = da.coarsen(b=2)
         >>> coarsen.reduce(np.sum)
-        <xarray.DataArray (a: 2, b: 2)>
+        <xarray.DataArray (a: 2, b: 2)> Size: 32B
         array([[ 1,  5],
                [ 9, 13]])
         Dimensions without coordinates: a, b

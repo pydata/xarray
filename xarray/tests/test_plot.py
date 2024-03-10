@@ -15,7 +15,7 @@ import pytest
 import xarray as xr
 import xarray.plot as xplt
 from xarray import DataArray, Dataset
-from xarray.core.utils import module_available
+from xarray.namedarray.utils import module_available
 from xarray.plot.dataarray_plot import _infer_interval_breaks
 from xarray.plot.dataset_plot import _infer_meta_data
 from xarray.plot.utils import (
@@ -2955,7 +2955,7 @@ class TestCFDatetimePlot(PlotTestCase):
         """
         # case for 1d array
         data = np.random.rand(4, 12)
-        time = xr.cftime_range(start="2017", periods=12, freq="1M", calendar="noleap")
+        time = xr.cftime_range(start="2017", periods=12, freq="1ME", calendar="noleap")
         darray = DataArray(data, dims=["x", "time"])
         darray.coords["time"] = time
 
@@ -3372,6 +3372,18 @@ def test_plot1d_default_rcparams() -> None:
         np.testing.assert_allclose(
             ax.collections[0].get_edgecolor(), mpl.colors.to_rgba_array("k")
         )
+
+
+def test_plot1d_filtered_nulls() -> None:
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+    y = ds.y.where(ds.y > 0.2)
+    expected = y.notnull().sum().item()
+
+    with figure_context():
+        pc = y.plot.scatter()
+        actual = pc.get_offsets().shape[0]
+
+        assert expected == actual
 
 
 @requires_matplotlib

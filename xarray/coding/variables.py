@@ -1,4 +1,5 @@
 """Coders for individual Variable objects."""
+
 from __future__ import annotations
 
 import warnings
@@ -10,9 +11,9 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import dtypes, duck_array_ops, indexing
-from xarray.core.parallelcompat import get_chunked_array_type
-from xarray.core.pycompat import is_chunked_array
 from xarray.core.variable import Variable
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     T_VarTuple = tuple[tuple[Hashable, ...], Any, dict, dict]
@@ -162,7 +163,7 @@ def lazy_elemwise_func(array, func: Callable, dtype: np.typing.DTypeLike):
     if is_chunked_array(array):
         chunkmanager = get_chunked_array_type(array)
 
-        return chunkmanager.map_blocks(func, array, dtype=dtype)
+        return chunkmanager.map_blocks(func, array, dtype=dtype)  # type: ignore[arg-type]
     else:
         return _ElementwiseFunctionArray(array, func, dtype)
 
@@ -414,7 +415,7 @@ class CFScaleOffsetCoder(VariableCoder):
 class UnsignedIntegerCoder(VariableCoder):
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         # from netCDF best practices
-        # https://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
+        # https://docs.unidata.ucar.edu/nug/current/best_practices.html#bp_Unsigned-Data
         #     "_Unsigned = "true" to indicate that
         #      integer data should be treated as unsigned"
         if variable.encoding.get("_Unsigned", "false") == "true":
@@ -566,7 +567,7 @@ class NonStringCoder(VariableCoder):
 
 class ObjectVLenStringCoder(VariableCoder):
     def encode(self):
-        return NotImplementedError
+        raise NotImplementedError
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         if variable.dtype == object and variable.encoding.get("dtype", False) == str:
@@ -574,3 +575,22 @@ class ObjectVLenStringCoder(VariableCoder):
             return variable
         else:
             return variable
+
+
+class NativeEnumCoder(VariableCoder):
+    """Encode Enum into variable dtype metadata."""
+
+    def encode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if (
+            "dtype" in variable.encoding
+            and np.dtype(variable.encoding["dtype"]).metadata
+            and "enum" in variable.encoding["dtype"].metadata
+        ):
+            dims, data, attrs, encoding = unpack_for_encoding(variable)
+            data = data.astype(dtype=variable.encoding.pop("dtype"))
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
+
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
+        raise NotImplementedError()

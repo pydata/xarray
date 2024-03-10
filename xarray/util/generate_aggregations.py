@@ -12,6 +12,7 @@ The second run of pytest is deliberate, since the first will return an error
 while replacing the doctests.
 
 """
+
 import collections
 import textwrap
 from dataclasses import dataclass, field
@@ -89,6 +90,19 @@ GROUPBY_PREAMBLE = """
 class {obj}{cls}Aggregations:
     _obj: {obj}
 
+    def _reduce_without_squeeze_warn(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
+    ) -> {obj}:
+        raise NotImplementedError()
+
     def reduce(
         self,
         func: Callable[..., Any],
@@ -112,6 +126,19 @@ RESAMPLE_PREAMBLE = """
 
 class {obj}{cls}Aggregations:
     _obj: {obj}
+
+    def _reduce_without_squeeze_warn(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
+    ) -> {obj}:
+        raise NotImplementedError()
 
     def reduce(
         self,
@@ -321,9 +348,11 @@ class AggregationGenerator:
         template_kwargs = dict(
             obj=self.datastructure.name,
             method=method.name,
-            keep_attrs="\n        keep_attrs: bool | None = None,"
-            if self.has_keep_attrs
-            else "",
+            keep_attrs=(
+                "\n        keep_attrs: bool | None = None,"
+                if self.has_keep_attrs
+                else ""
+            ),
             kw_only="\n        *," if has_kw_only else "",
         )
 
@@ -429,7 +458,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
 
         if method_is_not_flox_supported:
             return f"""\
-        return self.reduce(
+        return self._reduce_without_squeeze_warn(
             duck_array_ops.{method.array_method},
             dim=dim,{extra_kwargs}
             keep_attrs=keep_attrs,
@@ -451,7 +480,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.{method.array_method},
                 dim=dim,{extra_kwargs}
                 keep_attrs=keep_attrs,
@@ -506,7 +535,7 @@ DATASET_OBJECT = DataStructure(
         >>> da = xr.DataArray({example_array},
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -521,7 +550,7 @@ DATAARRAY_OBJECT = DataStructure(
         >>> da = xr.DataArray({example_array},
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )""",
@@ -563,7 +592,7 @@ DATAARRAY_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     methods=AGGREGATION_METHODS,
     docref="resampling",
     docref_description="resampling operations",
-    example_call_preamble='.resample(time="3M")',
+    example_call_preamble='.resample(time="3ME")',
     definition_preamble=RESAMPLE_PREAMBLE,
     notes=_FLOX_RESAMPLE_NOTES,
 )
@@ -583,7 +612,7 @@ DATASET_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     methods=AGGREGATION_METHODS,
     docref="resampling",
     docref_description="resampling operations",
-    example_call_preamble='.resample(time="3M")',
+    example_call_preamble='.resample(time="3ME")',
     definition_preamble=RESAMPLE_PREAMBLE,
     notes=_FLOX_RESAMPLE_NOTES,
 )

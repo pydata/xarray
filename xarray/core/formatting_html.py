@@ -47,7 +47,7 @@ def format_dims(dim_sizes, dims_with_index) -> str:
     }
 
     dims_li = "".join(
-        f"<li><span{dim_css_map[dim]}>" f"{escape(str(dim))}</span>: {size}</li>"
+        f"<li><span{dim_css_map[dim]}>{escape(str(dim))}</span>: {size}</li>"
         for dim, size in dim_sizes.items()
     )
 
@@ -56,7 +56,7 @@ def format_dims(dim_sizes, dims_with_index) -> str:
 
 def summarize_attrs(attrs) -> str:
     attrs_dl = "".join(
-        f"<dt><span>{escape(str(k))} :</span></dt>" f"<dd>{escape(str(v))}</dd>"
+        f"<dt><span>{escape(str(k))} :</span></dt><dd>{escape(str(v))}</dd>"
         for k, v in attrs.items()
     )
 

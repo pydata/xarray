@@ -9,15 +9,16 @@ dependencies:
   - cartopy
   - cftime
   - dask-core
+  - dask-expr # dask raises a deprecation warning without this, breaking doctests
   - distributed
   - flox
-  - fsspec!=2021.7.0
+  - fsspec
   - h5netcdf
   - h5py
   - hdf5
   - hypothesis
   - iris
-  - lxml  # Optional dep of pydap
+  - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
@@ -32,6 +33,7 @@ dependencies:
   - pip
   - pooch
   - pre-commit
+  - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - pydap
   - pytest
   - pytest-cov
