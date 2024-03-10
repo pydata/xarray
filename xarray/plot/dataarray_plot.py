@@ -1155,8 +1155,7 @@ def lines(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> LineCollection:
-    ...
+) -> LineCollection: ...
 
 
 @overload
@@ -1197,8 +1196,7 @@ def lines(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> FacetGrid[DataArray]:
-    ...
+) -> FacetGrid[DataArray]: ...
 
 
 @overload
@@ -1239,8 +1237,7 @@ def lines(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> FacetGrid[DataArray]:
-    ...
+) -> FacetGrid[DataArray]: ...
 
 
 @_plot1d

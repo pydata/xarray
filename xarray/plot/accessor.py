@@ -965,8 +965,7 @@ class DatasetPlotAccessor:
         extend=None,
         levels=None,
         **kwargs: Any,
-    ) -> LineCollection:
-        ...
+    ) -> LineCollection: ...
 
     @overload
     def lines(
@@ -1006,8 +1005,7 @@ class DatasetPlotAccessor:
         extend=None,
         levels=None,
         **kwargs: Any,
-    ) -> FacetGrid[DataArray]:
-        ...
+    ) -> FacetGrid[DataArray]: ...
 
     @overload
     def lines(
@@ -1047,8 +1045,7 @@ class DatasetPlotAccessor:
         extend=None,
         levels=None,
         **kwargs: Any,
-    ) -> FacetGrid[DataArray]:
-        ...
+    ) -> FacetGrid[DataArray]: ...
 
     @functools.wraps(dataset_plot.lines)
     def lines(self, *args, **kwargs) -> LineCollection | FacetGrid[DataArray]:
