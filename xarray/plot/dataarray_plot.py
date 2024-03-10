@@ -1313,7 +1313,7 @@ def lines(
 
     if len(plts_np) == 2:
         # return ax.scatter(plts_np[0], plts_np[1], **kwargs)
-        return _line(ax, plts_np[0], plts_np[1], **kwargs)
+        return _line(ax, plts_np[0], plts_np[1], None, **kwargs)
 
     raise ValueError("At least two variables required for a lines plot.")
 
