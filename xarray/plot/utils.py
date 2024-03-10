@@ -1910,20 +1910,13 @@ def _line(
 
         LineCollection_ = Line3DCollection
         add_collection_ = self.add_collection3d
-
-        # auto_scale = self.auto_scale_xyz
-        # auto_scale_args: tuple[Any, ...] = (x, y, z, self.has_data())
-        def auto_scale(ax: Axes | Axes3D) -> None:
-            ax.auto_scale_xyz(x, y, z, ax.has_data())
-
+        auto_scale = self.auto_scale_xyz
+        auto_scale_args: tuple[Any, ...] = (x, y, z, self.has_data())
     else:
         LineCollection_ = plt.matplotlib.collections.LineCollection
         add_collection_ = self.add_collection
-        # auto_scale = self._request_autoscale_view
-        # auto_scale_args = tuple()
-
-        def auto_scale(ax: Axes | Axes3D) -> None:
-            ax._request_autoscale_view
+        auto_scale = self._request_autoscale_view
+        auto_scale_args = tuple()
 
     # Process **kwargs to handle aliases, conflicts with explicit kwargs:
     x, y = self._process_unit_info([("x", x), ("y", y)], kwargs)  # ignore[union-attr]
@@ -2000,8 +1993,7 @@ def _line(
 
     # self._request_autoscale_view()
     # self.autoscale_view()
-    # auto_scale(*auto_scale_args)
-    auto_scale(self)
+    auto_scale(*auto_scale_args)
 
     return collection
 
