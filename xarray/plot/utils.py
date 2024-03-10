@@ -1922,10 +1922,11 @@ def _line(
 
     if s is None:
         s = np.array([rcParams["lines.linewidth"]])
-    # s = np.ma.ravel(s)
-    if len(s) not in (1, x.size) or (
-        not np.issubdtype(s.dtype, np.floating)
-        and not np.issubdtype(s.dtype, np.integer)
+
+    s_: np.ndarray = np.ma.ravel(s)
+    if len(s_) not in (1, x.size) or (
+        not np.issubdtype(s_.dtype, np.floating)
+        and not np.issubdtype(s_.dtype, np.integer)
     ):
         raise ValueError(
             "s must be a scalar, " "or float array-like with the same size as x and y"
@@ -1959,7 +1960,7 @@ def _line(
         # Might be scary duplicating number of elements?
         # xyz = list(np.repeat(v, 2) for v in (x, y, z) if v is not None)
         # c = np.repeat(c, 2)  # TODO: Off by one?
-        # s = np.repeat(s, 2)
+        # s_ = np.repeat(s_, 2)
         # if drawstyle == "steps-pre":
         #     xyz[-1][:-1] = xyz[-1][1:]
         # elif drawstyle == "steps-post":
@@ -1976,7 +1977,7 @@ def _line(
 
     collection = LineCollection_(
         segments,
-        linewidths=s,
+        linewidths=s_,
         linestyles="solid",
     )
     # collection.set_transform(plt.matplotlib.transforms.IdentityTransform())
