@@ -3374,6 +3374,7 @@ def test_plot1d_default_rcparams() -> None:
         )
 
 
+@requires_matplotlib
 def test_plot1d_filtered_nulls() -> None:
     ds = xr.tutorial.scatter_example_dataset(seed=42)
     y = ds.y.where(ds.y > 0.2)
