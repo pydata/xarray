@@ -1910,6 +1910,7 @@ def _line(
 
         LineCollection_ = Line3DCollection
         add_collection_ = self.add_collection3d
+
         # auto_scale = self.auto_scale_xyz
         # auto_scale_args: tuple[Any, ...] = (x, y, z, self.has_data())
         def auto_scale(ax: Axes | Axes3D) -> None:
