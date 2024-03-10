@@ -32,7 +32,6 @@ if TYPE_CHECKING:
     from matplotlib.ticker import FuncFormatter
     from matplotlib.typing import ColorType, LineStyleType
     from mpl_toolkits.mplot3d.art3d import Line3DCollection
-    from mpl_toolkits.mplot3d.axes3d import Axes3D
     from numpy.typing import ArrayLike
 
     from xarray.core.dataarray import DataArray
@@ -1829,7 +1828,7 @@ def _guess_coords_to_plot(
 
 @overload
 def _line(
-    self: Axes,
+    self,  # Axes,
     x: float | ArrayLike,
     y: float | ArrayLike,
     z: None = ...,
@@ -1852,7 +1851,7 @@ def _line(
 
 @overload
 def _line(
-    self: Axes3D,
+    self,  # Axes3D,
     x: float | ArrayLike,
     y: float | ArrayLike,
     z: float | ArrayLike = ...,
@@ -1874,7 +1873,7 @@ def _line(
 
 
 def _line(
-    self: Axes | Axes3D,
+    self,  # Axes | Axes3D
     x: float | ArrayLike,
     y: float | ArrayLike,
     z: float | ArrayLike | None = None,
