@@ -1294,14 +1294,16 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
 def _parse_size(
     data: None,
     norm: tuple[float | None, float | None, bool] | Normalize | None,
-) -> None: ...
+) -> None:
+    ...
 
 
 @overload
 def _parse_size(
     data: DataArray,
     norm: tuple[float | None, float | None, bool] | Normalize | None,
-) -> pd.Series: ...
+) -> pd.Series:
+    ...
 
 
 # copied from seaborn
@@ -1446,10 +1448,12 @@ class _Normalize(Sequence):
         return self._data_is_numeric
 
     @overload
-    def _calc_widths(self, y: np.ndarray) -> np.ndarray: ...
+    def _calc_widths(self, y: np.ndarray) -> np.ndarray:
+        ...
 
     @overload
-    def _calc_widths(self, y: DataArray) -> DataArray: ...
+    def _calc_widths(self, y: DataArray) -> DataArray:
+        ...
 
     def _calc_widths(self, y: np.ndarray | DataArray) -> np.ndarray | DataArray:
         """
@@ -1471,10 +1475,12 @@ class _Normalize(Sequence):
         return widths
 
     @overload
-    def _indexes_centered(self, x: np.ndarray) -> np.ndarray: ...
+    def _indexes_centered(self, x: np.ndarray) -> np.ndarray:
+        ...
 
     @overload
-    def _indexes_centered(self, x: DataArray) -> DataArray: ...
+    def _indexes_centered(self, x: DataArray) -> DataArray:
+        ...
 
     def _indexes_centered(self, x: np.ndarray | DataArray) -> np.ndarray | DataArray:
         """
@@ -1831,22 +1837,23 @@ def _line(
     self,
     x: float | ArrayLike,
     y: float | ArrayLike,
-    z: None = None,
-    s: float | ArrayLike | None = None,
-    c: Sequence[ColorType] | ColorType | None = None,
-    linestyle: LineStyleType | None = None,
-    cmap: str | Colormap | None = None,
-    norm: str | Normalize | None = None,
-    vmin: float | None = None,
-    vmax: float | None = None,
-    alpha: float | None = None,
-    linewidths: float | Sequence[float] | None = None,
+    z: None = ...,
+    s: float | ArrayLike | None = ...,
+    c: Sequence[ColorType] | ColorType | None = ...,
+    linestyle: LineStyleType | None = ...,
+    cmap: str | Colormap | None = ...,
+    norm: str | Normalize | None = ...,
+    vmin: float | None = ...,
+    vmax: float | None = ...,
+    alpha: float | None = ...,
+    linewidths: float | Sequence[float] | None = ...,
     *,
-    edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = None,
-    plotnonfinite: bool = False,
-    data=None,
+    edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = ...,
+    plotnonfinite: bool = ...,
+    data=...,
     **kwargs,
-) -> LineCollection: ...
+) -> LineCollection:
+    ...
 
 
 @overload
@@ -1854,22 +1861,23 @@ def _line(
     self,
     x: float | ArrayLike,
     y: float | ArrayLike,
-    z: float | ArrayLike = None,
-    s: float | ArrayLike | None = None,
-    c: Sequence[ColorType] | ColorType | None = None,
-    linestyle: LineStyleType | None = None,
-    cmap: str | Colormap | None = None,
-    norm: str | Normalize | None = None,
-    vmin: float | None = None,
-    vmax: float | None = None,
-    alpha: float | None = None,
-    linewidths: float | Sequence[float] | None = None,
+    z: float | ArrayLike = ...,
+    s: float | ArrayLike | None = ...,
+    c: Sequence[ColorType] | ColorType | None = ...,
+    linestyle: LineStyleType | None = ...,
+    cmap: str | Colormap | None = ...,
+    norm: str | Normalize | None = ...,
+    vmin: float | None = ...,
+    vmax: float | None = ...,
+    alpha: float | None = ...,
+    linewidths: float | Sequence[float] | None = ...,
     *,
-    edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = None,
-    plotnonfinite: bool = False,
-    data=None,
+    edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = ...,
+    plotnonfinite: bool = ...,
+    data=...,
     **kwargs,
-) -> Line3DCollection: ...
+) -> Line3DCollection:
+    ...
 
 
 def _line(
