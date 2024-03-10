@@ -348,7 +348,8 @@ def line(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
-) -> list[Line3D]: ...
+) -> list[Line3D]:
+    ...
 
 
 @overload
@@ -375,7 +376,8 @@ def line(
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]: ...
+) -> FacetGrid[T_DataArray]:
+    ...
 
 
 @overload
@@ -402,7 +404,8 @@ def line(
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]: ...
+) -> FacetGrid[T_DataArray]:
+    ...
 
 
 # This function signature should not change so that it can use
@@ -556,7 +559,8 @@ def step(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     row: None = None,  # no wrap -> primitive
     col: None = None,  # no wrap -> primitive
     **kwargs: Any,
-) -> list[Line3D]: ...
+) -> list[Line3D]:
+    ...
 
 
 @overload
@@ -569,7 +573,8 @@ def step(
     row: Hashable,  # wrap -> FacetGrid
     col: Hashable | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]: ...
+) -> FacetGrid[DataArray]:
+    ...
 
 
 @overload
@@ -582,7 +587,8 @@ def step(
     row: Hashable | None = None,
     col: Hashable,  # wrap -> FacetGrid
     **kwargs: Any,
-) -> FacetGrid[DataArray]: ...
+) -> FacetGrid[DataArray]:
+    ...
 
 
 def step(
@@ -1155,7 +1161,8 @@ def lines(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> LineCollection: ...
+) -> LineCollection:
+    ...
 
 
 @overload
@@ -1196,7 +1203,8 @@ def lines(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> FacetGrid[DataArray]: ...
+) -> FacetGrid[DataArray]:
+    ...
 
 
 @overload
@@ -1237,7 +1245,8 @@ def lines(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> FacetGrid[DataArray]: ...
+) -> FacetGrid[DataArray]:
+    ...
 
 
 @_plot1d
@@ -1252,8 +1261,39 @@ def lines(
     Line plot of DataArray index against values
     Wraps :func:`matplotlib:matplotlib.collections.LineCollection`
     """
+    # if "u" in kwargs or "v" in kwargs:
+    #     raise ValueError("u, v are not allowed in scatter plots.")
+
+    # zplt: DataArray | None = kwargs.pop("zplt", None)
+    # hueplt: DataArray | None = kwargs.pop("hueplt", None)
+    # sizeplt: DataArray | None = kwargs.pop("sizeplt", None)
+
+    # if hueplt is not None:
+    #     kwargs.update(c=hueplt.to_numpy().ravel())
+
+    # if sizeplt is not None:
+    #     kwargs.update(s=sizeplt.to_numpy().ravel())
+
+    # # # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
+    # # xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
+    # #     xplt.to_numpy(), yplt.to_numpy(), kwargs
+    # # )
+    # # zplt_val = zplt.to_numpy() if zplt is not None else None
+    # # z_suffix = ""  # TODO: to _resolve_intervals?
+    # # _ensure_plottable(xplt_val, yplt_val)
+
+    # axis_order = ["x", "y", "z"]
+
+    # plts_dict: dict[str, DataArray | None] = dict(x=xplt, y=yplt, z=zplt)
+    # plts_or_none = [plts_dict[v] for v in axis_order]
+    # plts = [p for p in plts_or_none if p is not None]
+    # primitive = _line(ax, *[p.to_numpy().ravel() for p in plts], **kwargs)
+    # _add_labels(add_labels, plts, ("", "", ""), (True, False, False), ax)
+
+    # return primitive
+
     if "u" in kwargs or "v" in kwargs:
-        raise ValueError("u, v are not allowed in scatter plots.")
+        raise ValueError("u, v are not allowed in lines plots.")
 
     zplt: DataArray | None = kwargs.pop("zplt", None)
     hueplt: DataArray | None = kwargs.pop("hueplt", None)
@@ -1265,23 +1305,26 @@ def lines(
     if sizeplt is not None:
         kwargs.update(s=sizeplt.to_numpy().ravel())
 
-    # # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
-    # xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
-    #     xplt.to_numpy(), yplt.to_numpy(), kwargs
-    # )
-    # zplt_val = zplt.to_numpy() if zplt is not None else None
-    # z_suffix = ""  # TODO: to _resolve_intervals?
-    # _ensure_plottable(xplt_val, yplt_val)
+    plts_or_none = (xplt, yplt, zplt)
+    _add_labels(add_labels, plts_or_none, ("", "", ""), ax)
 
-    axis_order = ["x", "y", "z"]
+    xplt_np = None if xplt is None else xplt.to_numpy().ravel()
+    yplt_np = None if yplt is None else yplt.to_numpy().ravel()
+    zplt_np = None if zplt is None else zplt.to_numpy().ravel()
+    plts_np = tuple(p for p in (xplt_np, yplt_np, zplt_np) if p is not None)
 
-    plts_dict: dict[str, DataArray | None] = dict(x=xplt, y=yplt, z=zplt)
-    plts_or_none = [plts_dict[v] for v in axis_order]
-    plts = [p for p in plts_or_none if p is not None]
-    primitive = _line(ax, *[p.to_numpy().ravel() for p in plts], **kwargs)
-    _add_labels(add_labels, plts, ("", "", ""), (True, False, False), ax)
+    if len(plts_np) == 3:
+        import mpl_toolkits
 
-    return primitive
+        assert isinstance(ax, mpl_toolkits.mplot3d.axes3d.Axes3D)
+        # return ax.scatter(xplt_np, yplt_np, zplt_np, **kwargs)
+        return _line(ax, xplt_np, yplt_np, zplt_np, **kwargs)
+
+    if len(plts_np) == 2:
+        # return ax.scatter(plts_np[0], plts_np[1], **kwargs)
+        return _line(ax, plts_np[0], plts_np[1], **kwargs)
+
+    raise ValueError("At least two variables required for a lines plot.")
 
 
 @overload
@@ -1322,7 +1365,8 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> PathCollection: ...
+) -> PathCollection:
+    ...
 
 
 @overload
@@ -1363,7 +1407,8 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> FacetGrid[T_DataArray]: ...
+) -> FacetGrid[T_DataArray]:
+    ...
 
 
 @overload
@@ -1404,7 +1449,8 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> FacetGrid[T_DataArray]: ...
+) -> FacetGrid[T_DataArray]:
+    ...
 
 
 @_plot1d
@@ -1871,7 +1917,8 @@ def imshow(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> AxesImage: ...
+) -> AxesImage:
+    ...
 
 
 @overload
@@ -1911,7 +1958,8 @@ def imshow(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]: ...
+) -> FacetGrid[T_DataArray]:
+    ...
 
 
 @overload
@@ -1951,7 +1999,8 @@ def imshow(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]: ...
+) -> FacetGrid[T_DataArray]:
+    ...
 
 
 @_plot2d
@@ -2087,7 +2136,8 @@ def contour(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> QuadContourSet: ...
+) -> QuadContourSet:
+    ...
 
 
 @overload
@@ -2127,7 +2177,8 @@ def contour(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]: ...
+) -> FacetGrid[T_DataArray]:
+    ...
 
 
 @overload
@@ -2167,7 +2218,8 @@ def contour(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]: ...
+) -> FacetGrid[T_DataArray]:
+    ...
 
 
 @_plot2d
@@ -2220,7 +2272,8 @@ def contourf(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> QuadContourSet: ...
+) -> QuadContourSet:
+    ...
 
 
 @overload
@@ -2260,7 +2313,8 @@ def contourf(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]: ...
+) -> FacetGrid[T_DataArray]:
+    ...
 
 
 @overload
@@ -2300,7 +2354,8 @@ def contourf(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]: ...
+) -> FacetGrid[T_DataArray]:
+    ...
 
 
 @_plot2d
@@ -2353,7 +2408,8 @@ def pcolormesh(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> QuadMesh: ...
+) -> QuadMesh:
+    ...
 
 
 @overload
@@ -2393,7 +2449,8 @@ def pcolormesh(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]: ...
+) -> FacetGrid[T_DataArray]:
+    ...
 
 
 @overload
@@ -2433,7 +2490,8 @@ def pcolormesh(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]: ...
+) -> FacetGrid[T_DataArray]:
+    ...
 
 
 @_plot2d
@@ -2537,7 +2595,8 @@ def surface(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> Poly3DCollection: ...
+) -> Poly3DCollection:
+    ...
 
 
 @overload
@@ -2577,7 +2636,8 @@ def surface(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]: ...
+) -> FacetGrid[T_DataArray]:
+    ...
 
 
 @overload
@@ -2617,7 +2677,8 @@ def surface(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]: ...
+) -> FacetGrid[T_DataArray]:
+    ...
 
 
 @_plot2d
