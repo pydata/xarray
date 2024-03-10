@@ -190,7 +190,7 @@ def _prepare_plot1d_data(
         # When stacking dims the lines will continue connecting. For floats
         # this can be solved by adding a nan element in between the flattening
         # points:
-        dims_T = []
+        dims_T: list[Hashable] = []
         if np.issubdtype(darray.dtype, np.floating):
             i = 0
             for v in ("z", "x"):

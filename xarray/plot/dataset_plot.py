@@ -914,7 +914,7 @@ def scatter(
 
 
 @overload
-def lines(
+def lines(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
