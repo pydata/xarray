@@ -1160,7 +1160,7 @@ def lines(  # type: ignore[misc,unused-ignore]  # None is hashable :(
 
 @overload
 def lines(
-    darray: DataArray,
+    darray: T_DataArray,
     *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
@@ -1201,7 +1201,7 @@ def lines(
 
 @overload
 def lines(
-    darray: DataArray,
+    darray: T_DataArray,
     *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
@@ -1252,37 +1252,6 @@ def lines(
     Line plot of DataArray index against values
     Wraps :func:`matplotlib:matplotlib.collections.LineCollection`
     """
-    # if "u" in kwargs or "v" in kwargs:
-    #     raise ValueError("u, v are not allowed in scatter plots.")
-
-    # zplt: DataArray | None = kwargs.pop("zplt", None)
-    # hueplt: DataArray | None = kwargs.pop("hueplt", None)
-    # sizeplt: DataArray | None = kwargs.pop("sizeplt", None)
-
-    # if hueplt is not None:
-    #     kwargs.update(c=hueplt.to_numpy().ravel())
-
-    # if sizeplt is not None:
-    #     kwargs.update(s=sizeplt.to_numpy().ravel())
-
-    # # # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
-    # # xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
-    # #     xplt.to_numpy(), yplt.to_numpy(), kwargs
-    # # )
-    # # zplt_val = zplt.to_numpy() if zplt is not None else None
-    # # z_suffix = ""  # TODO: to _resolve_intervals?
-    # # _ensure_plottable(xplt_val, yplt_val)
-
-    # axis_order = ["x", "y", "z"]
-
-    # plts_dict: dict[str, DataArray | None] = dict(x=xplt, y=yplt, z=zplt)
-    # plts_or_none = [plts_dict[v] for v in axis_order]
-    # plts = [p for p in plts_or_none if p is not None]
-    # primitive = _line(ax, *[p.to_numpy().ravel() for p in plts], **kwargs)
-    # _add_labels(add_labels, plts, ("", "", ""), (True, False, False), ax)
-
-    # return primitive
-
     if "u" in kwargs or "v" in kwargs:
         raise ValueError("u, v are not allowed in lines plots.")
 
@@ -1308,11 +1277,9 @@ def lines(
         import mpl_toolkits
 
         assert isinstance(ax, mpl_toolkits.mplot3d.axes3d.Axes3D)
-        # return ax.scatter(xplt_np, yplt_np, zplt_np, **kwargs)
         return _line(ax, *plts_np, **kwargs)
 
     if len(plts_np) == 2:
-        # return ax.scatter(plts_np[0], plts_np[1], **kwargs)
         return _line(ax, *plts_np, **kwargs)
 
     raise ValueError("At least two variables required for a lines plot.")
