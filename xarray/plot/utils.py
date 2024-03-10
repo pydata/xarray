@@ -1295,14 +1295,16 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
 def _parse_size(
     data: None,
     norm: tuple[float | None, float | None, bool] | Normalize | None,
-) -> None: ...
+) -> None:
+    ...
 
 
 @overload
 def _parse_size(
     data: DataArray,
     norm: tuple[float | None, float | None, bool] | Normalize | None,
-) -> pd.Series: ...
+) -> pd.Series:
+    ...
 
 
 # copied from seaborn
@@ -1447,10 +1449,12 @@ class _Normalize(Sequence):
         return self._data_is_numeric
 
     @overload
-    def _calc_widths(self, y: np.ndarray) -> np.ndarray: ...
+    def _calc_widths(self, y: np.ndarray) -> np.ndarray:
+        ...
 
     @overload
-    def _calc_widths(self, y: DataArray) -> DataArray: ...
+    def _calc_widths(self, y: DataArray) -> DataArray:
+        ...
 
     def _calc_widths(self, y: np.ndarray | DataArray) -> np.ndarray | DataArray:
         """
@@ -1472,10 +1476,12 @@ class _Normalize(Sequence):
         return widths
 
     @overload
-    def _indexes_centered(self, x: np.ndarray) -> np.ndarray: ...
+    def _indexes_centered(self, x: np.ndarray) -> np.ndarray:
+        ...
 
     @overload
-    def _indexes_centered(self, x: DataArray) -> DataArray: ...
+    def _indexes_centered(self, x: DataArray) -> DataArray:
+        ...
 
     def _indexes_centered(self, x: np.ndarray | DataArray) -> np.ndarray | DataArray:
         """
@@ -1847,7 +1853,8 @@ def _line(
     plotnonfinite: bool = ...,
     data=...,
     **kwargs,
-) -> LineCollection: ...
+) -> LineCollection:
+    ...
 
 
 @overload
@@ -1870,7 +1877,8 @@ def _line(
     plotnonfinite: bool = ...,
     data=...,
     **kwargs,
-) -> Line3DCollection: ...
+) -> Line3DCollection:
+    ...
 
 
 def _line(
@@ -1911,7 +1919,7 @@ def _line(
         LineCollection_ = Line3DCollection
         add_collection_ = self.add_collection3d
         auto_scale = self.auto_scale_xyz
-        auto_scale_args = (x, y, z, self.has_data())
+        auto_scale_args: tuple[Any, ...] = (x, y, z, self.has_data())
     else:
         LineCollection_ = plt.matplotlib.collections.LineCollection
         add_collection_ = self.add_collection
