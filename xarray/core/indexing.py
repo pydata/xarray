@@ -686,6 +686,10 @@ def _wrap_numpy_scalars(array):
     """Wrap NumPy scalars in 0d arrays."""
     if np.isscalar(array):
         return np.array(array)
+    elif hasattr(array, "dtype"):
+        return array
+    elif np.ndim(array) == 0:
+        return np.array(array)
     else:
         return array
 

@@ -2060,6 +2060,25 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
             assert actual["x"].encoding["chunksizes"] == (50, 100)
             assert actual["y"].encoding["chunksizes"] == (100, 50)
 
+    @requires_cftime
+    def test_roundtrip_cftime_bnds(self):
+        # Regression test for issue #7794
+        import cftime
+        original = xr.Dataset(
+            {"foo": ("time", [0.]),
+             "time_bnds": (("time","bnds"), [[cftime.Datetime360Day(2005, 12, 1, 0, 0, 0, 0),
+                                              cftime.Datetime360Day(2005, 12, 2, 0, 0, 0, 0)]])},
+            {"time": [cftime.Datetime360Day(2005, 12, 1, 12, 0, 0, 0)]})
+
+
+        with create_tmp_file() as tmp_file:
+            original.to_netcdf(tmp_file)
+            with open_dataset(tmp_file) as actual:
+                tb = actual.time_bnds.values
+                chunked = actual.chunk(time=1)
+                with create_tmp_file() as tmp_file_chunked:
+                    chunked.to_netcdf(tmp_file_chunked)
+
 
 @requires_zarr
 class ZarrBase(CFEncodedBase):
