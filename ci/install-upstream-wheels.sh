@@ -31,6 +31,15 @@ python -m pip install \
     h5py \
     matplotlib \
     pandas
+# for some reason pandas depends on pyarrow already.
+# Remove once a `pyarrow` version compiled with `numpy>=2.0` is on `conda-forge`
+python -m pip install \
+    -i https://pypi.fury.io/arrow-nightlies/ \
+    --prefer-binary \
+    --no-deps \
+    --pre \
+    --upgrade \
+    pyarrow
 # without build isolation for packages compiling against numpy
 # TODO: remove once there are `numpy>=2.0` builds for numcodecs and cftime
 python -m pip install \
