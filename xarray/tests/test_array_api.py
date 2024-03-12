@@ -13,13 +13,13 @@ try:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
 
-        import numpy.array_api as xp  # isort:skip
-        from numpy.array_api._array_object import Array  # isort:skip
+        import numpy.array_api as xp
+        from numpy.array_api._array_object import Array
 except ImportError:
     # for `numpy>=2.0`
     xp = pytest.importorskip("array_api_strict")
 
-    from array_api_strict._array_object import Array  # isort:skip
+    from array_api_strict._array_object import Array  # type: ignore[no-redef]
 
 
 @pytest.fixture
