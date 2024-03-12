@@ -41,7 +41,7 @@ python -m pip install \
     --upgrade \
     pyarrow
 # without build isolation for packages compiling against numpy
-# TODO: remove once there are `numpy>=2.0` builds for numcodecs and cftime
+# TODO: remove once there are `numpy>=2.0` builds for these
 python -m pip install \
     --no-deps \
     --upgrade \
@@ -52,6 +52,11 @@ python -m pip install \
     --upgrade \
     --no-build-isolation \
     git+https://github.com/zarr-developers/numcodecs
+python -m pip install \
+    --no-deps \
+    --upgrade \
+    --no-build-isolation \
+    git+https://github.com/pydata/numexpr
 python -m pip install \
     --no-deps \
     --upgrade \
