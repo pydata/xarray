@@ -4,10 +4,12 @@
 micromamba install "cython>=0.29.20" py-cpuinfo
 # temporarily (?) remove numbagg and numba
 micromamba remove -y numba numbagg
+# temporarily remove numexpr
+micromamba remove -y numexpr
 # temporarily remove backends
-micromamba remove -y cf_units h5py hdf5 netcdf4
+micromamba remove -y cf_units hdf5 h5py netcdf4
 # forcibly remove packages to avoid artifacts
-conda uninstall -y --force \
+micromamba remove -y --force \
     numpy \
     scipy \
     pandas \
@@ -30,8 +32,17 @@ python -m pip install \
     scipy \
     matplotlib \
     pandas
+# for some reason pandas depends on pyarrow already.
+# Remove once a `pyarrow` version compiled with `numpy>=2.0` is on `conda-forge`
+python -m pip install \
+    -i https://pypi.fury.io/arrow-nightlies/ \
+    --prefer-binary \
+    --no-deps \
+    --pre \
+    --upgrade \
+    pyarrow
 # without build isolation for packages compiling against numpy
-# TODO: remove once there are `numpy>=2.0` builds for numcodecs and cftime
+# TODO: remove once there are `numpy>=2.0` builds for these
 python -m pip install \
     --no-deps \
     --upgrade \

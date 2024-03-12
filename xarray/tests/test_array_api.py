@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import warnings
-
 import pytest
 
 import xarray as xr
@@ -9,10 +7,19 @@ from xarray.testing import assert_equal
 
 np = pytest.importorskip("numpy", minversion="1.22")
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    import numpy.array_api as xp  # isort:skip
-    from numpy.array_api._array_object import Array  # isort:skip
+try:
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+
+        import numpy.array_api as xp
+        from numpy.array_api._array_object import Array
+except ImportError:
+    # for `numpy>=2.0`
+    xp = pytest.importorskip("array_api_strict")
+
+    from array_api_strict._array_object import Array  # type: ignore[no-redef]
 
 
 @pytest.fixture
