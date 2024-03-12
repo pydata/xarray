@@ -7,7 +7,7 @@ micromamba remove -y numba numbagg
 # temporarily remove backends
 micromamba remove -y cf_units netcdf4
 # forcibly remove packages to avoid artifacts
-conda uninstall -y --force \
+micromamba remove -y --force \
     numpy \
     scipy \
     pandas \
