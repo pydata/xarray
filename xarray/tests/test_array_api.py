@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-import warnings
-
 import pytest
 
 import xarray as xr
 from xarray.testing import assert_equal
 
 np = pytest.importorskip("numpy", minversion="1.22")
+xp = pytest.importorskip("array_api_strict")
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    import numpy.array_api as xp  # isort:skip
-    from numpy.array_api._array_object import Array  # isort:skip
+from array_api_strict._array_object import Array  # isort:skip
 
 
 @pytest.fixture
