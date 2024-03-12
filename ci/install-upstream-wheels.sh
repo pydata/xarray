@@ -4,6 +4,8 @@
 micromamba install "cython>=0.29.20" py-cpuinfo
 # temporarily (?) remove numbagg and numba
 micromamba remove -y numba numbagg
+# temporarily remove numexpr
+micromamba remove -y numexpr
 # temporarily remove backends
 micromamba remove -y cf_units hdf5 h5py netcdf4
 # forcibly remove packages to avoid artifacts
@@ -51,11 +53,6 @@ python -m pip install \
     --upgrade \
     --no-build-isolation \
     git+https://github.com/zarr-developers/numcodecs
-python -m pip install \
-    --no-deps \
-    --upgrade \
-    --no-build-isolation \
-    git+https://github.com/pydata/numexpr
 python -m pip install \
     --no-deps \
     --upgrade \
