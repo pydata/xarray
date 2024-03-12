@@ -2064,17 +2064,28 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
     def test_roundtrip_cftime_bnds(self):
         # Regression test for issue #7794
         import cftime
-        original = xr.Dataset(
-            {"foo": ("time", [0.]),
-             "time_bnds": (("time","bnds"), [[cftime.Datetime360Day(2005, 12, 1, 0, 0, 0, 0),
-                                              cftime.Datetime360Day(2005, 12, 2, 0, 0, 0, 0)]])},
-            {"time": [cftime.Datetime360Day(2005, 12, 1, 12, 0, 0, 0)]})
 
+        original = xr.Dataset(
+            {
+                "foo": ("time", [0.0]),
+                "time_bnds": (
+                    ("time", "bnds"),
+                    [
+                        [
+                            cftime.Datetime360Day(2005, 12, 1, 0, 0, 0, 0),
+                            cftime.Datetime360Day(2005, 12, 2, 0, 0, 0, 0),
+                        ]
+                    ],
+                ),
+            },
+            {"time": [cftime.Datetime360Day(2005, 12, 1, 12, 0, 0, 0)]},
+        )
 
         with create_tmp_file() as tmp_file:
             original.to_netcdf(tmp_file)
             with open_dataset(tmp_file) as actual:
-                tb = actual.time_bnds.values
+                # Needed to load time_bnds into memory
+                assert actual.time_bnds.values == original.time_bnds
                 chunked = actual.chunk(time=1)
                 with create_tmp_file() as tmp_file_chunked:
                     chunked.to_netcdf(tmp_file_chunked)
