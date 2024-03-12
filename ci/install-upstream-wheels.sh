@@ -28,7 +28,6 @@ python -m pip install \
     --upgrade \
     numpy \
     scipy \
-    h5py \
     matplotlib \
     pandas
 # for some reason pandas depends on pyarrow already.
