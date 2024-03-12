@@ -138,6 +138,7 @@ module = [
   "toolz.*",
   "zarr.*",
   "numpy.exceptions.*", # remove once support for `numpy<2.0` has been dropped
+  "array_api_strict.*",
 ]
 
 # Gradually we want to add more modules to this list, ratcheting up our total
