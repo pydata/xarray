@@ -2084,8 +2084,8 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
         with create_tmp_file() as tmp_file:
             original.to_netcdf(tmp_file)
             with open_dataset(tmp_file) as actual:
-                # Needed to load time_bnds into memory
-                assert actual.time_bnds.values == original.time_bnds
+                # Operation to load actual time_bnds into memory
+                assert_array_equal(actual.time_bnds.values, original.time_bnds.values)
                 chunked = actual.chunk(time=1)
                 with create_tmp_file() as tmp_file_chunked:
                     chunked.to_netcdf(tmp_file_chunked)
