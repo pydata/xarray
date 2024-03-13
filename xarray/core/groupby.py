@@ -589,10 +589,6 @@ class BinGrouper(Grouper):
         full_index = binned.categories
         uniques = np.sort(pd.unique(binned_codes))
         unique_values = full_index[uniques[uniques != -1]]
-        if (binned_codes == -1).all():
-            raise ValueError(
-                f"None of the data falls within bins with edges {self.bins!r}"
-            )
 
         codes = DataArray(
             binned_codes, getattr(group, "coords", None), name=new_dim_name
