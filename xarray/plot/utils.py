@@ -710,6 +710,8 @@ def _is_numeric(arr):
 
 
 def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
+    _use_concise_data = cbar_kwargs.pop("_use_concise_date", False)
+
     cbar_kwargs.setdefault("extend", cmap_params["extend"])
     if cbar_ax is None:
         cbar_kwargs.setdefault("ax", ax)
@@ -722,6 +724,9 @@ def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
 
     fig = ax.get_figure()
     cbar = fig.colorbar(primitive, **cbar_kwargs)
+
+    if _use_concise_data:
+        _set_concise_date(ax=cbar.ax, axis="y")
 
     return cbar
 
