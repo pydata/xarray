@@ -23,6 +23,9 @@ v2024.03.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Do not broadcast in arithmetic operations when global option ``arithmetic_broadcast=False``
+  (:issue:`6806`, :pull:`8784`).
+  By `Etienne Schalk <https://github.com/etienneschalk>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 - Add the ``.oindex`` property to Explicitly Indexed Arrays for orthogonal indexing functionality. (:issue:`8238`, :pull:`8750`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
