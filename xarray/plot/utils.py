@@ -1900,8 +1900,41 @@ def _line(
 
     """
     import matplotlib.pyplot as plt
+    import matplotlib.cbook as cbook
+    import matplotlib.collections as mcoll
+    from matplotlib import _api
 
     rcParams = plt.matplotlib.rcParams
+
+    def _parse_lines_color_args(
+        self, c, edgecolors, kwargs, xsize, get_next_color_func
+    ):
+        if edgecolors is None:
+            # Use "face" instead of rcParams['scatter.edgecolors']
+            edgecolors = "face"
+
+        c, colors, edgecolors = self._parse_scatter_color_args(
+            c,
+            edgecolors,
+            kwargs,
+            x_.size,
+            get_next_color_func=self._get_patches_for_fill.get_next_color,
+        )
+
+        return c, colors, edgecolors
+
+    # add edgecolors and linewidths to kwargs so they
+    # can be processed by normailze_kwargs
+    if edgecolors is not None:
+        kwargs.update({"edgecolors": edgecolors})
+    if linewidths is not None:
+        kwargs.update({"linewidths": linewidths})
+
+    kwargs = cbook.normalize_kwargs(kwargs, mcoll.Collection)
+    # re direct linewidth and edgecolor so it can be
+    # further processed by the rest of the function
+    linewidths = kwargs.pop("linewidth", None)
+    edgecolors = kwargs.pop("edgecolor", None)
 
     # Process **kwargs to handle aliases, conflicts with explicit kwargs:
     x_: np.ndarray
@@ -1934,14 +1967,39 @@ def _line(
             "s must be a scalar, " "or float array-like with the same size as x and y"
         )
 
-    edgecolors or kwargs.get("edgecolor", None)
-    c, colors, edgecolors = self._parse_scatter_color_args(
+    # get the original edgecolor the user passed before we normalize
+    orig_edgecolor = edgecolors
+    if edgecolors is None:
+        orig_edgecolor = kwargs.get("edgecolor", None)
+    c, colors, edgecolors = _parse_lines_color_args(
+        self,
         c,
         edgecolors,
         kwargs,
         x_.size,
         get_next_color_func=self._get_patches_for_fill.get_next_color,
     )
+
+    print(f"{edgecolors=}")
+    if plotnonfinite and colors is None:
+        c = np.ma.masked_invalid(c)
+        x, y, s, edgecolors, linewidths = cbook._combine_masks(
+            x, y, s, edgecolors, linewidths
+        )
+    else:
+        x, y, s, c, colors, edgecolors, linewidths = cbook._combine_masks(
+            x, y, s, c, colors, edgecolors, linewidths
+        )
+
+    # Unmask edgecolors if it was actually a single RGB or RGBA.
+    if (
+        x.size in (3, 4)
+        and np.ma.is_masked(edgecolors)
+        and not np.ma.is_masked(orig_edgecolor)
+    ):
+        edgecolors = edgecolors.data
+
+    # scales = s  # Renamed for readability below.
 
     # load default linestyle from rcParams
     if linestyle is None:
@@ -1958,20 +2016,6 @@ def _line(
         step_func = STEP_LOOKUP_MAP[drawstyle]
         xyz = step_func(*tuple(v for v in (x_, y_, z) if v is not None))
 
-        # Create steps by repeating all elements, then roll the last array by 1:
-        # Might be scary duplicating number of elements?
-        # xyz = list(np.repeat(v, 2) for v in (x_, y_, z) if v is not None)
-        # c = np.repeat(c, 2)  # TODO: Off by one?
-        # s_ = np.repeat(s_, 2)
-        # if drawstyle == "steps-pre":
-        #     xyz[-1][:-1] = xyz[-1][1:]
-        # elif drawstyle == "steps-post":
-        #     xyz[-1][1:] = xyz[-1][:-1]
-        # else:
-        #     raise NotImplementedError(
-        #         f"Allowed values are: 'default', 'steps-pre', 'steps-post', got {drawstyle}."
-        #     )
-
     # Broadcast arrays to correct format:
     # https://stackoverflow.com/questions/42215777/matplotlib-line-color-in-3d
     points = np.stack(np.broadcast_arrays(*xyz), axis=-1).reshape(-1, 1, len(xyz))
@@ -1981,6 +2025,9 @@ def _line(
         segments,
         linewidths=s_,
         linestyles="solid",
+        facecolors=colors,
+        edgecolors=edgecolors,
+        alpha=alpha,
     )
     # collection.set_transform(plt.matplotlib.transforms.IdentityTransform())
     collection.update(kwargs)
@@ -1990,6 +2037,16 @@ def _line(
         collection.set_cmap(cmap)
         collection.set_norm(norm)
         collection._scale_norm(norm, vmin, vmax)
+    else:
+        extra_kwargs = {"cmap": cmap, "norm": norm, "vmin": vmin, "vmax": vmax}
+        extra_keys = [k for k, v in extra_kwargs.items() if v is not None]
+        if any(extra_keys):
+            keys_str = ", ".join(f"'{k}'" for k in extra_keys)
+            _api.warn_external(
+                "No data for colormapping provided via 'c'. "
+                f"Parameters {keys_str} will be ignored"
+            )
+    collection._internal_update(kwargs)
 
     add_collection_(collection)
 
