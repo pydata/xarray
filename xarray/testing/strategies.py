@@ -197,6 +197,22 @@ def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
     )
 
 
+def serializable_attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
+    """
+    Generates arbitrary valid attributes dictionaries for xarray objects.
+
+    These are intended to be serialized, and so, are less general than the
+    `attrs` function above.
+
+    Requires the hypothesis package to be installed.
+
+    See Also
+    --------
+    :ref:`testing.hypothesis`_
+    """
+    return st.dictionaries(_attr_keys, _attr_values)
+
+
 @st.composite
 def variables(
     draw: st.DrawFn,

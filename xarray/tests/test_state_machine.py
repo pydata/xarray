@@ -42,6 +42,7 @@ UNIQUE_NAME = unique(strategy=xrst.names())
 DIM_NAME = xrst.dimension_names(name_strategy=UNIQUE_NAME, min_dims=1, max_dims=1)
 
 
+# TODO: add datetime64[ns]
 def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
     return (
         npst.integer_dtypes(endianness="<", sizes=(32, 64))
@@ -83,6 +84,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
 
     @rule()
     def unstack(self):
+        # TODO: Drop duplicates
         self.dataset = self.dataset.unstack()
 
     @rule(newname=UNIQUE_NAME)
@@ -128,5 +130,5 @@ class DatasetStateMachine(RuleBasedStateMachine):
         _assert_internal_invariants(self.dataset, self.check_default_indexes)
 
 
-DatasetStateMachine.TestCase.settings = settings(max_examples=1000)
+DatasetStateMachine.TestCase.settings = settings(max_examples=1000, deadline=None)
 DatasetTest = DatasetStateMachine.TestCase
