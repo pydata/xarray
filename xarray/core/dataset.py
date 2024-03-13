@@ -2417,7 +2417,7 @@ class Dataset(
             ``dask.delayed.Delayed`` object that can be computed to write
             array data later. Metadata is always updated eagerly.
         consolidated : bool, optional
-            If True, apply zarr's `consolidate_metadata` function to the store
+            If True, apply :func:`zarr.convenience.consolidate_metadata`
             after writing metadata and read existing stores with consolidated
             metadata; if False, do not. The default (`consolidated=None`) means
             write consolidated metadata and attempt to read consolidated
@@ -7266,10 +7266,11 @@ class Dataset(
         Each column will be converted into an independent variable in the
         Dataset. If the dataframe's index is a MultiIndex, it will be expanded
         into a tensor product of one-dimensional indices (filling in missing
-        values with NaN). This method will produce a Dataset very similar to
+        values with NaN). If you rather preserve the MultiIndex use
+        `xr.Dataset(df)`. This method will produce a Dataset very similar to
         that on which the 'to_dataframe' method was called, except with
         possibly redundant dimensions (since all dataset variables will have
-        the same dimensionality)
+        the same dimensionality).
 
         Parameters
         ----------
@@ -10179,13 +10180,13 @@ class Dataset(
         """
         from xarray.core.groupby import (
             DatasetGroupBy,
-            ResolvedUniqueGrouper,
+            ResolvedGrouper,
             UniqueGrouper,
             _validate_groupby_squeeze,
         )
 
         _validate_groupby_squeeze(squeeze)
-        rgrouper = ResolvedUniqueGrouper(UniqueGrouper(), group, self)
+        rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
 
         return DatasetGroupBy(
             self,
@@ -10265,7 +10266,7 @@ class Dataset(
         from xarray.core.groupby import (
             BinGrouper,
             DatasetGroupBy,
-            ResolvedBinGrouper,
+            ResolvedGrouper,
             _validate_groupby_squeeze,
         )
 
@@ -10279,7 +10280,7 @@ class Dataset(
                 "include_lowest": include_lowest,
             },
         )
-        rgrouper = ResolvedBinGrouper(grouper, group, self)
+        rgrouper = ResolvedGrouper(grouper, group, self)
 
         return DatasetGroupBy(
             self,

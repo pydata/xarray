@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib.metadata import EntryPoint
 from typing import Any
 
 import numpy as np
@@ -13,6 +14,7 @@ from xarray.namedarray.parallelcompat import (
     get_chunked_array_type,
     guess_chunkmanager,
     list_chunkmanagers,
+    load_chunkmanagers,
 )
 from xarray.tests import has_dask, requires_dask
 
@@ -220,3 +222,13 @@ class TestGetChunkedArrayType:
 
         with pytest.raises(TypeError, match="received multiple types"):
             get_chunked_array_type(*[dask_arr, dummy_arr])
+
+
+def test_bogus_entrypoint() -> None:
+    # Create a bogus entry-point as if the user broke their setup.cfg
+    # or is actively developing their new chunk manager
+    entry_point = EntryPoint(
+        "bogus", "xarray.bogus.doesnotwork", "xarray.chunkmanagers"
+    )
+    with pytest.warns(UserWarning, match="Failed to load chunk manager"):
+        assert len(load_chunkmanagers([entry_point])) == 0
