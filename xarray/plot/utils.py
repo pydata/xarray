@@ -1980,7 +1980,6 @@ def _line(
         get_next_color_func=self._get_patches_for_fill.get_next_color,
     )
 
-    print(f"{edgecolors=}")
     if plotnonfinite and colors is None:
         c = np.ma.masked_invalid(c)
         x, y, s, edgecolors, linewidths = cbook._combine_masks(
@@ -2024,10 +2023,11 @@ def _line(
     collection = LineCollection_(
         segments,
         linewidths=s_,
-        linestyles="solid",
+        linestyles=linestyle,
         facecolors=colors,
         edgecolors=edgecolors,
         alpha=alpha,
+        # offset_transform=kwargs.pop("transform", self.transData),
     )
     # collection.set_transform(plt.matplotlib.transforms.IdentityTransform())
     collection.update(kwargs)
@@ -2050,8 +2050,6 @@ def _line(
 
     add_collection_(collection)
 
-    # self._request_autoscale_view()
-    # self.autoscale_view()
     auto_scale(*auto_scale_args)
 
     return collection
