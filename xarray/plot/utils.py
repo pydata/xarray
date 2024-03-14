@@ -1899,9 +1899,9 @@ def _line(
     support it directly, just like PatchCollection doesn't either.
 
     """
-    import matplotlib.pyplot as plt
     import matplotlib.cbook as cbook
     import matplotlib.collections as mcoll
+    import matplotlib.pyplot as plt
     from matplotlib import _api
 
     rcParams = plt.matplotlib.rcParams
