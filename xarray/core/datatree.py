@@ -919,8 +919,20 @@ class DataTree(
         else:
             raise ValueError("Invalid format for key")
 
+    @overload
+    def update(self, other: Dataset) -> None: ...
+
+    @overload
+    def update(self, other: Mapping[Hashable, DataArray | Variable]) -> None: ...
+
+    @overload
+    def update(self, other: Mapping[str, DataTree]) -> None: ...
+
     def update(
-        self, other: Dataset | Mapping[str, DataTree | DataArray | Variable]
+        self,
+        other: (
+            Dataset | Mapping[Hashable, DataArray | Variable] | Mapping[str, DataTree]
+        ),
     ) -> None:
         """
         Update this node's children and / or variables.
@@ -934,7 +946,8 @@ class DataTree(
             if isinstance(v, DataTree):
                 # avoid named node being stored under inconsistent key
                 new_child = v.copy()
-                new_child.name = k
+                # Datatree's name is always a string until we fix that (#8836)
+                new_child.name = k  # type: ignore[assignment]
                 new_children[k] = new_child
             elif isinstance(v, (DataArray, Variable)):
                 # TODO this should also accommodate other types that can be coerced into Variables
