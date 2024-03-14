@@ -3395,3 +3395,43 @@ def test_plot1d_filtered_nulls() -> None:
         actual = pc.get_offsets().shape[0]
 
         assert expected == actual
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["lines"])
+def test_plot1d_lines_color(plotfunc: str, x="z", color="b") -> None:
+    from matplotlib.colors import to_rgba_array
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    darray = ds.A.sel(x=0, y=0)
+
+    with figure_context():
+        fig, ax = plt.subplots()
+        getattr(darray.plot, plotfunc)(x=x, color=color)
+        coll = ax.collections[0]
+
+        # Make sure color is respected:
+        expected_color = to_rgba_array(color)
+        actual_color = coll.get_edgecolor()
+        assert np.testing.assert_allclose(expected_color, actual_color)
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["lines"])
+def test_plot1d_lines_linestyle(plotfunc: str, x="z", linestyle="dashed") -> None:
+    from matplotlib.lines import _get_dash_pattern
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    darray = ds.A.sel(x=0, y=0)
+
+    with figure_context():
+        fig, ax = plt.subplots()
+        getattr(darray.plot, plotfunc)(x=x, linestyle=linestyle)
+        coll = ax.collections[0]
+
+        # Make sure linestyle is respected:
+        expected_linestyle = _get_dash_pattern(linestyle)
+        actual_linestyle = coll.get_linestyle()
+        assert np.testing.assert_allclose(expected_linestyle, actual_linestyle)
