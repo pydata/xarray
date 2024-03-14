@@ -952,13 +952,18 @@ def explicit_indexing_adapter(
     if numpy_indices.tuple:
         # index the loaded np.ndarray
         indexable = NumpyIndexingAdapter(result)
-        if isinstance(numpy_indices, VectorizedIndexer):
-            result = indexable.vindex[numpy_indices]
-        elif isinstance(numpy_indices, OuterIndexer):
-            result = indexable.oindex[numpy_indices]
-        else:
-            result = indexable[numpy_indices]
+        result = apply_indexer(indexable, numpy_indices)
     return result
+
+
+def apply_indexer(indexable, indexer):
+    """Apply an indexer to an indexable object."""
+    if isinstance(indexer, VectorizedIndexer):
+        return indexable.vindex[indexer]
+    elif isinstance(indexer, OuterIndexer):
+        return indexable.oindex[indexer]
+    else:
+        return indexable[indexer]
 
 
 def decompose_indexer(
@@ -1638,12 +1643,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
         if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
             indexable = NumpyIndexingAdapter(np.asarray(self))
-            if isinstance(indexer, VectorizedIndexer):
-                return indexable.vindex[indexer]
-            elif isinstance(indexer, OuterIndexer):
-                return indexable.oindex[indexer]
-            else:
-                return indexable[indexer]
+            return apply_indexer(indexable, indexer)
 
         result = self.array[key]
 
