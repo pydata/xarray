@@ -3421,7 +3421,10 @@ def test_plot1d_lines_color(plotfunc: str, x="z", color="b") -> None:
 @pytest.mark.parametrize("plotfunc", ["lines"])
 def test_plot1d_lines_linestyle(plotfunc: str, x="z", linestyle="dashed") -> None:
     # TODO: Is there a public function that converts linestyle to dash pattern?
-    from matplotlib.lines import _get_dash_pattern, _scale_dashes  # type: ignore[attr-defined]
+    from matplotlib.lines import (  # type: ignore[attr-defined]
+        _get_dash_pattern,
+        _scale_dashes,
+    )
 
     ds = xr.tutorial.scatter_example_dataset(seed=42)
 
