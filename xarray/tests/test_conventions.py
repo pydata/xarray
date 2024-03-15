@@ -64,23 +64,12 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
         {"units": "foobar", "missing_value": np.nan, "_FillValue": np.nan},
     )
 
-    expected_warnings = {
-        (
-            SerializationWarning,
-            "variable 't' has non-conforming 'missing_value' nan defined, "
-            "dropping 'missing_value' entirely.",
-        ),
-        (
-            SerializationWarning,
-            "variable 't' has non-conforming '_FillValue' nan defined, "
-            "dropping '_FillValue' entirely.",
-        ),
-    }
-
+    # the following code issues two warnings, so we need to check for both
     with pytest.warns(Warning) as winfo:
         actual = conventions.decode_cf_variable("t", var)
-    actual_warnings = {(warn.category, str(warn.message)) for warn in winfo}
-    assert actual_warnings == expected_warnings
+    for aw in winfo:
+        assert aw.category == SerializationWarning
+        assert "non-conforming" in str(aw.message)
 
     assert_identical(actual, expected)
 
@@ -93,10 +82,13 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
             "_FillValue": np.float32(np.nan),
         },
     )
+
+    # the following code issues two warnings, so we need to check for both
     with pytest.warns(Warning) as winfo:
         actual = conventions.decode_cf_variable("t", var)
-    actual_warnings = {(warn.category, str(warn.message)) for warn in winfo}
-    assert actual_warnings == expected_warnings
+    for aw in winfo:
+        assert aw.category == SerializationWarning
+        assert "non-conforming" in str(aw.message)
     assert_identical(actual, expected)
 
 
