@@ -63,7 +63,25 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
         np.arange(10),
         {"units": "foobar", "missing_value": np.nan, "_FillValue": np.nan},
     )
-    actual = conventions.decode_cf_variable("t", var)
+
+    expected_warnings = {
+        (
+            SerializationWarning,
+            "variable 't' has non-conforming 'missing_value' nan defined, "
+            "dropping 'missing_value' entirely.",
+        ),
+        (
+            SerializationWarning,
+            "variable 't' has non-conforming '_FillValue' nan defined, "
+            "dropping '_FillValue' entirely.",
+        ),
+    }
+
+    with pytest.warns(Warning) as winfo:
+        actual = conventions.decode_cf_variable("t", var)
+    actual_warnings = {(warn.category, warn.message.args[0]) for warn in winfo}
+    assert actual_warnings == expected_warnings
+
     assert_identical(actual, expected)
 
     var = Variable(
@@ -75,7 +93,10 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
             "_FillValue": np.float32(np.nan),
         },
     )
-    actual = conventions.decode_cf_variable("t", var)
+    with pytest.warns(Warning) as winfo:
+        actual = conventions.decode_cf_variable("t", var)
+    actual_warnings = {(warn.category, warn.message.args[0]) for warn in winfo}
+    assert actual_warnings == expected_warnings
     assert_identical(actual, expected)
 
 
@@ -121,6 +142,8 @@ class TestEncodeCFVariable:
         v.encoding = {"dtype": "int16"}
         with pytest.warns(Warning, match="floating point data as an integer"):
             conventions.encode_cf_variable(v)
+
+        conventions.encode_cf_variable(v)
 
     def test_multidimensional_coordinates(self) -> None:
         # regression test for GH1763
