@@ -526,12 +526,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
         key = expanded_indexer(key, self.ndim)
         indexer = self.indexer_cls(key)
 
-        if isinstance(indexer, OuterIndexer):
-            result = self.array.oindex[indexer]
-        elif isinstance(indexer, VectorizedIndexer):
-            result = self.array.vindex[indexer]
-        else:
-            result = self.array[indexer]
+        result = apply_indexer(self.array, indexer)
 
         if isinstance(result, ExplicitlyIndexed):
             return type(self)(result, self.indexer_cls)
@@ -593,12 +588,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
     def get_duck_array(self):
         if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
-            if isinstance(self.key, VectorizedIndexer):
-                array = self.array.vindex[self.key]
-            elif isinstance(self.key, OuterIndexer):
-                array = self.array.oindex[self.key]
-            else:
-                array = self.array[self.key]
+            array = apply_indexer(self.array, self.key)
         else:
             # If the array is not an ExplicitlyIndexedNDArrayMixin,
             # it may wrap a BackendArray so use its __getitem__
@@ -669,16 +659,10 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
 
         if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
-            if isinstance(self.key, VectorizedIndexer):
-                array = self.array.vindex[self.key]
-            elif isinstance(self.key, OuterIndexer):
-                array = self.array.oindex[self.key]
-            else:
-                array = self.array[self.key]
-
-        # If the array is not an ExplicitlyIndexedNDArrayMixin,
-        # it may wrap a BackendArray so use its __getitem__
+            array = apply_indexer(self.array, self.key)
         else:
+            # If the array is not an ExplicitlyIndexedNDArrayMixin,
+            # it may wrap a BackendArray so use its __getitem__
             array = self.array[self.key]
         # self.array[self.key] is now a numpy array when
         # self.array is a BackendArray subclass
