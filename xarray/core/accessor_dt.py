@@ -13,9 +13,9 @@ from xarray.core.common import (
     is_np_datetime_like,
     is_np_timedelta_like,
 )
-from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.types import T_DataArray
 from xarray.core.variable import IndexVariable
+from xarray.namedarray.utils import is_duck_dask_array
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
@@ -616,7 +616,11 @@ class CombinedDatetimelikeAccessor(
         # appropriate. Since we're checking the dtypes anyway, we'll just
         # do all the validation here.
         if not _contains_datetime_like_objects(obj.variable):
-            raise TypeError(
+            # We use an AttributeError here so that `obj.dt` raises an error that
+            # `getattr` expects; https://github.com/pydata/xarray/issues/8718. It's a
+            # bit unusual in a `__new__`, but that's the only case where we use this
+            # class.
+            raise AttributeError(
                 "'.dt' accessor only available for "
                 "DataArray with datetime64 timedelta64 dtype or "
                 "for arrays containing cftime datetime "

@@ -1,7 +1,7 @@
 import pytest
 import xarray as xr
 
-from datatree import DataTree
+from xarray.datatree_.datatree import DataTree
 
 
 @pytest.fixture(scope="module")

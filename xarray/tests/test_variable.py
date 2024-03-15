@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 import warnings
 from abc import ABC
 from copy import copy, deepcopy
@@ -27,10 +26,10 @@ from xarray.core.indexing import (
     PandasIndexingAdapter,
     VectorizedIndexer,
 )
-from xarray.core.pycompat import array_type
 from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
+from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     assert_allclose,
     assert_array_equal,
@@ -58,8 +57,6 @@ _PAD_XR_NP_ARGS = [
     [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
     [{"x": (3, 1), "z": 2}, ((3, 1), (0, 0), (2, 2))],
 ]
-
-ON_WINDOWS = sys.platform == "win32"
 
 
 @pytest.fixture
@@ -1231,26 +1228,16 @@ class TestVariable(VariableSubclassobjects):
 
     def test_repr(self):
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
-        if ON_WINDOWS:
-            expected = dedent(
-                """
-            <xarray.Variable (time: 2, x: 3)> Size: 24B
-            array([[1, 2, 3],
-                   [4, 5, 6]])
-            Attributes:
-                foo:      bar
+        v = v.astype(np.uint64)
+        expected = dedent(
             """
-            ).strip()
-        else:
-            expected = dedent(
-                """
-            <xarray.Variable (time: 2, x: 3)> Size: 48B
-            array([[1, 2, 3],
-                   [4, 5, 6]])
-            Attributes:
-                foo:      bar
-            """
-            ).strip()
+        <xarray.Variable (time: 2, x: 3)> Size: 48B
+        array([[1, 2, 3],
+               [4, 5, 6]], dtype=uint64)
+        Attributes:
+            foo:      bar
+        """
+        ).strip()
         assert expected == repr(v)
 
     def test_repr_lazy_data(self):
@@ -3024,3 +3011,19 @@ def test_pandas_two_only_timedelta_conversion_warning() -> None:
         var = Variable(["time"], data)
 
     assert var.dtype == np.dtype("timedelta64[ns]")
+
+
+@requires_pandas_version_two
+@pytest.mark.parametrize(
+    ("index", "dtype"),
+    [
+        (pd.date_range("2000", periods=1), "datetime64"),
+        (pd.timedelta_range("1", periods=1), "timedelta64"),
+    ],
+    ids=lambda x: f"{x}",
+)
+def test_pandas_indexing_adapter_non_nanosecond_conversion(index, dtype) -> None:
+    data = PandasIndexingAdapter(index.astype(f"{dtype}[s]"))
+    with pytest.warns(UserWarning, match="non-nanosecond precision"):
+        var = Variable(["time"], data)
+    assert var.dtype == np.dtype(f"{dtype}[ns]")

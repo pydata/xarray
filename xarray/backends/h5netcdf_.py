@@ -11,6 +11,7 @@ from xarray.backends.common import (
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
+    _open_datatree_netcdf,
     find_root_and_group,
 )
 from xarray.backends.file_manager import CachingFileManager, DummyFileManager
@@ -38,6 +39,7 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
+    from xarray.datatree_.datatree import DataTree
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -422,6 +424,15 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             decode_timedelta=decode_timedelta,
         )
         return ds
+
+    def open_datatree(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        **kwargs,
+    ) -> DataTree:
+        from h5netcdf.legacyapi import Dataset as ncDataset
+
+        return _open_datatree_netcdf(ncDataset, filename_or_obj, **kwargs)
 
 
 BACKEND_ENTRYPOINTS["h5netcdf"] = ("h5netcdf", H5netcdfBackendEntrypoint)

@@ -10,9 +10,6 @@ from xarray.core.formatting_html import (
     datavar_section,
     dim_section,
 )
-from xarray.core.options import OPTIONS
-
-OPTIONS["display_expand_groups"] = "default"
 
 
 def summarize_children(children: Mapping[str, Any]) -> str:

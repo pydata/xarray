@@ -39,8 +39,8 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.pycompat import array_type, integer_types
 from xarray.core.utils import is_scalar
+from xarray.namedarray.pycompat import array_type, integer_types
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
     DuckArrayWrapper,
@@ -60,6 +60,7 @@ from xarray.tests import (
     requires_cupy,
     requires_dask,
     requires_numexpr,
+    requires_pandas_version_two,
     requires_pint,
     requires_scipy,
     requires_sparse,
@@ -3446,6 +3447,13 @@ class TestDataset:
         )
         assert_identical(other_way_expected, other_way)
 
+    @requires_pandas_version_two
+    def test_expand_dims_non_nanosecond_conversion(self) -> None:
+        # Regression test for https://github.com/pydata/xarray/issues/7493#issuecomment-1953091000
+        with pytest.warns(UserWarning, match="non-nanosecond precision"):
+            ds = Dataset().expand_dims({"time": [np.datetime64("2018-01-01", "s")]})
+        assert ds.time.dtype == np.dtype("datetime64[ns]")
+
     def test_set_index(self) -> None:
         expected = create_test_multiindex()
         mindex = expected["x"].to_index()
@@ -3764,6 +3772,14 @@ class TestDataset:
         with pytest.raises(ValueError, match=r".*do not have exactly one multi-index"):
             ds.unstack("x")
 
+        ds = Dataset({"da": [1, 2]}, coords={"y": ("x", [1, 1]), "z": ("x", [0, 0])})
+        ds = ds.set_index(x=("y", "z"))
+
+        with pytest.raises(
+            ValueError, match="Cannot unstack MultiIndex containing duplicates"
+        ):
+            ds.unstack("x")
+
     def test_unstack_fill_value(self) -> None:
         ds = xr.Dataset(
             {"var": (("x",), np.arange(6)), "other_var": (("x",), np.arange(3, 9))},
@@ -4067,7 +4083,8 @@ class TestDataset:
         assert_identical(actual, expected)
 
     def test_time_season(self) -> None:
-        ds = Dataset({"t": pd.date_range("2000-01-01", periods=12, freq="M")})
+        time = xr.date_range("2000-01-01", periods=12, freq="ME", use_cftime=False)
+        ds = Dataset({"t": time})
         seas = ["DJF"] * 2 + ["MAM"] * 3 + ["JJA"] * 3 + ["SON"] * 3 + ["DJF"]
         assert_array_equal(seas, ds["t.season"])
 
@@ -6947,7 +6964,7 @@ def test_differentiate_datetime(dask) -> None:
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_cftime(dask) -> None:
     rs = np.random.RandomState(42)
-    coord = xr.cftime_range("2000", periods=8, freq="2M")
+    coord = xr.cftime_range("2000", periods=8, freq="2ME")
 
     da = xr.DataArray(
         rs.randn(8, 6),

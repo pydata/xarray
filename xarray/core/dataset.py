@@ -63,7 +63,6 @@ from xarray.core.coordinates import (
     assert_coordinate_consistent,
     create_coords_with_default_indexes,
 )
-from xarray.core.daskmanager import DaskManager
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import (
     Index,
@@ -86,13 +85,6 @@ from xarray.core.merge import (
 )
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
-from xarray.core.pycompat import (
-    array_type,
-    is_chunked_array,
-    is_duck_array,
-    is_duck_dask_array,
-)
 from xarray.core.types import (
     QuantileMethods,
     Self,
@@ -114,6 +106,10 @@ from xarray.core.utils import (
     drop_dims_from_indexers,
     either_dict_or_kwargs,
     emit_user_level_warning,
+    infix_dims,
+    is_dict_like,
+    is_duck_array,
+    is_duck_dask_array,
     is_scalar,
     maybe_wrap_array,
 )
@@ -124,7 +120,8 @@ from xarray.core.variable import (
     broadcast_variables,
     calculate_dimensions,
 )
-from xarray.namedarray.utils import infix_dims, is_dict_like
+from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
+from xarray.namedarray.pycompat import array_type, is_chunked_array
 from xarray.plot.accessor import DatasetPlotAccessor
 from xarray.util.deprecation_helpers import _deprecate_positional_args
 
@@ -138,7 +135,6 @@ if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
     from xarray.core.merge import CoercibleMapping, CoercibleValue, _MergeResult
-    from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
     from xarray.core.types import (
@@ -164,6 +160,7 @@ if TYPE_CHECKING:
         T_Xarray,
     )
     from xarray.core.weighted import DatasetWeighted
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -292,6 +289,9 @@ def _maybe_chunk(
     chunked_array_type: str | ChunkManagerEntrypoint | None = None,
     from_array_kwargs=None,
 ):
+
+    from xarray.namedarray.daskmanager import DaskManager
+
     if chunks is not None:
         chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
 
@@ -694,7 +694,7 @@ class Dataset(
             data_vars, coords
         )
 
-        self._attrs = dict(attrs) if attrs is not None else None
+        self._attrs = dict(attrs) if attrs else None
         self._close = None
         self._encoding = None
         self._variables = variables
@@ -739,7 +739,7 @@ class Dataset(
 
     @attrs.setter
     def attrs(self, value: Mapping[Any, Any]) -> None:
-        self._attrs = dict(value)
+        self._attrs = dict(value) if value else None
 
     @property
     def encoding(self) -> dict[Any, Any]:
@@ -842,7 +842,9 @@ class Dataset(
             chunkmanager = get_chunked_array_type(*lazy_data.values())
 
             # evaluate all the chunked arrays simultaneously
-            evaluated_data = chunkmanager.compute(*lazy_data.values(), **kwargs)
+            evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
+                *lazy_data.values(), **kwargs
+            )
 
             for k, data in zip(lazy_data, evaluated_data):
                 self.variables[k].data = data
@@ -854,11 +856,11 @@ class Dataset(
 
         return self
 
-    def __dask_tokenize__(self):
+    def __dask_tokenize__(self) -> object:
         from dask.base import normalize_token
 
         return normalize_token(
-            (type(self), self._variables, self._coord_names, self._attrs)
+            (type(self), self._variables, self._coord_names, self._attrs or None)
         )
 
     def __dask_graph__(self):
@@ -2415,7 +2417,7 @@ class Dataset(
             ``dask.delayed.Delayed`` object that can be computed to write
             array data later. Metadata is always updated eagerly.
         consolidated : bool, optional
-            If True, apply zarr's `consolidate_metadata` function to the store
+            If True, apply :func:`zarr.convenience.consolidate_metadata`
             after writing metadata and read existing stores with consolidated
             metadata; if False, do not. The default (`consolidated=None`) means
             write consolidated metadata and attempt to read consolidated
@@ -7264,10 +7266,11 @@ class Dataset(
         Each column will be converted into an independent variable in the
         Dataset. If the dataframe's index is a MultiIndex, it will be expanded
         into a tensor product of one-dimensional indices (filling in missing
-        values with NaN). This method will produce a Dataset very similar to
+        values with NaN). If you rather preserve the MultiIndex use
+        `xr.Dataset(df)`. This method will produce a Dataset very similar to
         that on which the 'to_dataframe' method was called, except with
         possibly redundant dimensions (since all dataset variables will have
-        the same dimensionality)
+        the same dimensionality).
 
         Parameters
         ----------
@@ -10177,13 +10180,13 @@ class Dataset(
         """
         from xarray.core.groupby import (
             DatasetGroupBy,
-            ResolvedUniqueGrouper,
+            ResolvedGrouper,
             UniqueGrouper,
             _validate_groupby_squeeze,
         )
 
         _validate_groupby_squeeze(squeeze)
-        rgrouper = ResolvedUniqueGrouper(UniqueGrouper(), group, self)
+        rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
 
         return DatasetGroupBy(
             self,
@@ -10263,7 +10266,7 @@ class Dataset(
         from xarray.core.groupby import (
             BinGrouper,
             DatasetGroupBy,
-            ResolvedBinGrouper,
+            ResolvedGrouper,
             _validate_groupby_squeeze,
         )
 
@@ -10277,7 +10280,7 @@ class Dataset(
                 "include_lowest": include_lowest,
             },
         )
-        rgrouper = ResolvedBinGrouper(grouper, group, self)
+        rgrouper = ResolvedGrouper(grouper, group, self)
 
         return DatasetGroupBy(
             self,
