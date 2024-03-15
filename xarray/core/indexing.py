@@ -491,6 +491,13 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
     def _vindex_get(self, key):
         raise NotImplementedError("This method should be overridden")
 
+    def _check_and_raise_if_non_basic_indexer(self, key):
+        if isinstance(key, (VectorizedIndexer, OuterIndexer)):
+            raise TypeError(
+                "Vectorized indexing with vectorized or outer indexers is not supported. "
+                "Please use .vindex and .oindex properties to index the array."
+            )
+
     @property
     def oindex(self):
         return IndexCallable(self._oindex_get)
@@ -517,7 +524,10 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
 
     def __getitem__(self, key):
         key = expanded_indexer(key, self.ndim)
-        result = self.array[self.indexer_cls(key)]
+        indexer = self.indexer_cls(key)
+
+        result = apply_indexer(self.array, indexer)
+
         if isinstance(result, ExplicitlyIndexed):
             return type(self)(result, self.indexer_cls)
         else:
@@ -577,7 +587,13 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return tuple(shape)
 
     def get_duck_array(self):
-        array = self.array[self.key]
+        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
+            array = apply_indexer(self.array, self.key)
+        else:
+            # If the array is not an ExplicitlyIndexedNDArrayMixin,
+            # it may wrap a BackendArray so use its __getitem__
+            array = self.array[self.key]
+
         # self.array[self.key] is now a numpy array when
         # self.array is a BackendArray subclass
         # and self.key is BasicIndexer((slice(None, None, None),))
@@ -594,12 +610,10 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
     def _vindex_get(self, indexer):
         array = LazilyVectorizedIndexedArray(self.array, self.key)
-        return array[indexer]
+        return array.vindex[indexer]
 
     def __getitem__(self, indexer):
-        if isinstance(indexer, VectorizedIndexer):
-            array = LazilyVectorizedIndexedArray(self.array, self.key)
-            return array[indexer]
+        self._check_and_raise_if_non_basic_indexer(indexer)
         return type(self)(self.array, self._updated_key(indexer))
 
     def __setitem__(self, key, value):
@@ -643,7 +657,13 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return np.broadcast(*self.key.tuple).shape
 
     def get_duck_array(self):
-        array = self.array[self.key]
+
+        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
+            array = apply_indexer(self.array, self.key)
+        else:
+            # If the array is not an ExplicitlyIndexedNDArrayMixin,
+            # it may wrap a BackendArray so use its __getitem__
+            array = self.array[self.key]
         # self.array[self.key] is now a numpy array when
         # self.array is a BackendArray subclass
         # and self.key is BasicIndexer((slice(None, None, None),))
@@ -662,6 +682,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return type(self)(self.array, self._updated_key(indexer))
 
     def __getitem__(self, indexer):
+        self._check_and_raise_if_non_basic_indexer(indexer)
         # If the indexed array becomes a scalar, return LazilyIndexedArray
         if all(isinstance(ind, integer_types) for ind in indexer.tuple):
             key = BasicIndexer(tuple(k[indexer.tuple] for k in self.key.tuple))
@@ -706,12 +727,13 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
         return self.array.get_duck_array()
 
     def _oindex_get(self, key):
-        return type(self)(_wrap_numpy_scalars(self.array[key]))
+        return type(self)(_wrap_numpy_scalars(self.array.oindex[key]))
 
     def _vindex_get(self, key):
-        return type(self)(_wrap_numpy_scalars(self.array[key]))
+        return type(self)(_wrap_numpy_scalars(self.array.vindex[key]))
 
     def __getitem__(self, key):
+        self._check_and_raise_if_non_basic_indexer(key)
         return type(self)(_wrap_numpy_scalars(self.array[key]))
 
     def transpose(self, order):
@@ -745,12 +767,13 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
         return self.array.get_duck_array()
 
     def _oindex_get(self, key):
-        return type(self)(_wrap_numpy_scalars(self.array[key]))
+        return type(self)(_wrap_numpy_scalars(self.array.oindex[key]))
 
     def _vindex_get(self, key):
-        return type(self)(_wrap_numpy_scalars(self.array[key]))
+        return type(self)(_wrap_numpy_scalars(self.array.vindex[key]))
 
     def __getitem__(self, key):
+        self._check_and_raise_if_non_basic_indexer(key)
         return type(self)(_wrap_numpy_scalars(self.array[key]))
 
     def transpose(self, order):
@@ -912,8 +935,19 @@ def explicit_indexing_adapter(
     result = raw_indexing_method(raw_key.tuple)
     if numpy_indices.tuple:
         # index the loaded np.ndarray
-        result = NumpyIndexingAdapter(result)[numpy_indices]
+        indexable = NumpyIndexingAdapter(result)
+        result = apply_indexer(indexable, numpy_indices)
     return result
+
+
+def apply_indexer(indexable, indexer):
+    """Apply an indexer to an indexable object."""
+    if isinstance(indexer, VectorizedIndexer):
+        return indexable.vindex[indexer]
+    elif isinstance(indexer, OuterIndexer):
+        return indexable.oindex[indexer]
+    else:
+        return indexable[indexer]
 
 
 def decompose_indexer(
@@ -987,10 +1021,10 @@ def _decompose_vectorized_indexer(
     >>> array = np.arange(36).reshape(6, 6)
     >>> backend_indexer = OuterIndexer((np.array([0, 1, 3]), np.array([2, 3])))
     >>> # load subslice of the array
-    ... array = NumpyIndexingAdapter(array)[backend_indexer]
+    ... array = NumpyIndexingAdapter(array).oindex[backend_indexer]
     >>> np_indexer = VectorizedIndexer((np.array([0, 2, 1]), np.array([0, 1, 0])))
     >>> # vectorized indexing for on-memory np.ndarray.
-    ... NumpyIndexingAdapter(array)[np_indexer]
+    ... NumpyIndexingAdapter(array).vindex[np_indexer]
     array([ 2, 21,  8])
     """
     assert isinstance(indexer, VectorizedIndexer)
@@ -1072,7 +1106,7 @@ def _decompose_outer_indexer(
     ... array = NumpyIndexingAdapter(array)[backend_indexer]
     >>> np_indexer = OuterIndexer((np.array([0, 2, 1]), np.array([0, 1, 0])))
     >>> # outer indexing for on-memory np.ndarray.
-    ... NumpyIndexingAdapter(array)[np_indexer]
+    ... NumpyIndexingAdapter(array).oindex[np_indexer]
     array([[ 2,  3,  2],
            [14, 15, 14],
            [ 8,  9,  8]])
@@ -1395,6 +1429,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return array[key.tuple]
 
     def __getitem__(self, key):
+        self._check_and_raise_if_non_basic_indexer(key)
         array, key = self._indexing_array_and_key(key)
         return array[key]
 
@@ -1450,15 +1485,8 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         raise TypeError("Vectorized indexing is not supported")
 
     def __getitem__(self, key):
-        if isinstance(key, BasicIndexer):
-            return self.array[key.tuple]
-        elif isinstance(key, OuterIndexer):
-            return self.oindex[key]
-        else:
-            if isinstance(key, VectorizedIndexer):
-                raise TypeError("Vectorized indexing is not supported")
-            else:
-                raise TypeError(f"Unrecognized indexer: {key}")
+        self._check_and_raise_if_non_basic_indexer(key)
+        return self.array[key.tuple]
 
     def __setitem__(self, key, value):
         if isinstance(key, (BasicIndexer, OuterIndexer)):
@@ -1499,13 +1527,8 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return self.array.vindex[key.tuple]
 
     def __getitem__(self, key):
-        if isinstance(key, BasicIndexer):
-            return self.array[key.tuple]
-        elif isinstance(key, VectorizedIndexer):
-            return self.vindex[key]
-        else:
-            assert isinstance(key, OuterIndexer)
-            return self.oindex[key]
+        self._check_and_raise_if_non_basic_indexer(key)
+        return self.array[key.tuple]
 
     def __setitem__(self, key, value):
         if isinstance(key, BasicIndexer):
@@ -1603,7 +1626,8 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             (key,) = key
 
         if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
-            return NumpyIndexingAdapter(np.asarray(self))[indexer]
+            indexable = NumpyIndexingAdapter(np.asarray(self))
+            return apply_indexer(indexable, indexer)
 
         result = self.array[key]
 
