@@ -22,6 +22,15 @@ def get_not_multiindex_dims(ds: Dataset) -> set:
     return set(dims) - set(mindexes)
 
 
+def get_multiindex_dims(ds: Dataset) -> list:
+    mindexes = [
+        name
+        for name, index in ds.xindexes.items()
+        if isinstance(index, PandasMultiIndex)
+    ]
+    return mindexes
+
+
 def get_dimension_coordinates(ds: Dataset) -> set:
     return set(ds.dims) & set(ds._variables)
 
@@ -84,8 +93,12 @@ class DatasetStateMachine(RuleBasedStateMachine):
 
     @rule()
     def unstack(self):
-        # TODO: Drop duplicates
-        self.dataset = self.dataset.unstack()
+        choices = get_multiindex_dims(self.dataset)
+        if choices:
+            dim = random.choice(choices)
+            self.dataset = self.dataset.drop_duplicates(dim).unstack(dim)
+        else:
+            self.dataset = self.dataset.unstack()
 
     @rule(newname=UNIQUE_NAME)
     @precondition(lambda self: bool(get_dimension_coordinates(self.dataset)))
@@ -93,7 +106,6 @@ class DatasetStateMachine(RuleBasedStateMachine):
         # benbovy: "skip the default indexes invariant test when the name of an
         # existing dimension coordinate is passed as input kwarg or dict key
         # to .rename_vars()."
-
         oldname = random.choice(tuple(get_dimension_coordinates(self.dataset)))
         self.check_default_indexes = False
         note(f"> renaming {oldname} to {newname}")
