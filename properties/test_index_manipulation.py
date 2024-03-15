@@ -1,15 +1,20 @@
 import random
 
+import numpy as np
+import pytest
+
+from xarray import Dataset
+from xarray.indexes import PandasMultiIndex
+from xarray.testing import _assert_internal_invariants
+
+pytest.importorskip("hypothesis")
+
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
-import numpy as np
 from hypothesis import assume, note, settings
 from hypothesis.stateful import RuleBasedStateMachine, invariant, precondition, rule
 
 import xarray.testing.strategies as xrst
-from xarray import Dataset
-from xarray.indexes import PandasMultiIndex
-from xarray.testing import _assert_internal_invariants
 
 
 def get_not_multiindex_dims(ds: Dataset) -> set:
