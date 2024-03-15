@@ -3,7 +3,7 @@ import random
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
-from hypothesis import note, settings
+from hypothesis import assume, note, settings
 from hypothesis.stateful import RuleBasedStateMachine, invariant, precondition, rule
 
 import xarray.testing.strategies as xrst
@@ -97,7 +97,8 @@ class DatasetStateMachine(RuleBasedStateMachine):
         choices = get_multiindex_dims(self.dataset)
         if choices:
             dim = random.choice(choices)
-            self.dataset = self.dataset.drop_duplicates(dim).unstack(dim)
+            assume(self.dataset.xindexes[dim].index.is_unique)
+            self.dataset = self.dataset.unstack(dim)
         else:
             self.dataset = self.dataset.unstack()
 
