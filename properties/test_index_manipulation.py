@@ -77,7 +77,8 @@ class DatasetStateMachine(RuleBasedStateMachine):
     @rule()
     @precondition(lambda self: len(self.dataset.dims) >= 1)
     def reset_index(self):
-        dim = random.choice(tuple(self.dataset.dims))
+        dim = random.choice(tuple(set(self.dataset.dims) & set(self.dataset.xindexes)))
+        self.check_default_indexes = False
         note(f"> resetting {dim}")
         self.dataset = self.dataset.reset_index(dim)
 
