@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     ]
 
     class T_Options(TypedDict):
+        arithmetic_broadcast: bool
         arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
         cmap_divergent: str | Colormap
         cmap_sequential: str | Colormap
@@ -59,6 +60,7 @@ if TYPE_CHECKING:
 
 
 OPTIONS: T_Options = {
+    "arithmetic_broadcast": True,
     "arithmetic_join": "inner",
     "cmap_divergent": "RdBu_r",
     "cmap_sequential": "viridis",
@@ -92,6 +94,7 @@ def _positive_integer(value: int) -> bool:
 
 
 _VALIDATORS = {
+    "arithmetic_broadcast": lambda value: isinstance(value, bool),
     "arithmetic_join": _JOIN_OPTIONS.__contains__,
     "display_max_rows": _positive_integer,
     "display_values_threshold": _positive_integer,
