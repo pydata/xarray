@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from numpy._typing import _SupportsDType
     from numpy.typing import ArrayLike
 
+    from xarray._array_api._types import array
     from xarray.backends.common import BackendEntrypoint
     from xarray.core.alignment import Aligner
     from xarray.core.common import AbstractArray, DataWithCoords
@@ -92,6 +93,7 @@ if TYPE_CHECKING:
 else:
     DTypeLikeSave: Any = None
 
+T_DuckArray = TypeVar("T_DuckArray", bound="array")
 
 class Alignable(Protocol):
     """Represents any Xarray type that supports alignment.
