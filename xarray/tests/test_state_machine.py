@@ -74,6 +74,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
         # non-dim coord of same size; this allows renaming
         self.dataset[name + "_"] = var
 
+    @rule()
     @precondition(lambda self: len(self.dataset.dims) >= 1)
     def reset_index(self):
         dim = random.choice(tuple(self.dataset.dims))
