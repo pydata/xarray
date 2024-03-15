@@ -336,6 +336,43 @@ class TestDecodeCF:
         assert_identical(expected, actual)
         assert_identical(expected, actual2)
 
+    def test_decode_cf_with_keep_variables(self) -> None:
+        original = Dataset(
+            {
+                "t": ("t", [0, 1, 2], {"units": "days since 2000-01-01"}),
+                "x": ("x", [9, 8, 7], {"units": "km"}),
+                "foo": (
+                    ("t", "x"),
+                    [[0, 0, 0], [1, 1, 1], [2, 2, 2]],
+                    {"units": "bar"},
+                ),
+                "y": ("t", [5, 10, -999], {"_FillValue": -999}),
+            }
+        )
+        expected = Dataset(
+            {
+                "t": pd.date_range("2000-01-01", periods=3),
+                "foo": (
+                    ("t", "x"),
+                    [[0, 0, 0], [1, 1, 1], [2, 2, 2]],
+                    {"units": "bar"},
+                ),
+                "y": ("t", [5, 10, np.nan]),
+            }
+        )
+        expected2 = Dataset(
+            {
+                "t": pd.date_range("2000-01-01", periods=3),
+            }
+        )
+        expected3 = Dataset()
+        actual = conventions.decode_cf(original, keep_variables=("t", "foo", "y"))
+        actual2 = conventions.decode_cf(original, keep_variables="t")
+        actual3 = conventions.decode_cf(original, keep_variables=[])
+        assert_identical(expected, actual)
+        assert_identical(expected2, actual2)
+        assert_identical(expected3, actual3)
+
     @pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
     def test_invalid_time_units_raises_eagerly(self) -> None:
         ds = Dataset({"time": ("time", [0, 1], {"units": "foobar since 123"})})

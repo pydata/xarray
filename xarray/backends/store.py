@@ -35,6 +35,7 @@ class StoreBackendEntrypoint(BackendEntrypoint):
         concat_characters=True,
         decode_coords=True,
         drop_variables: str | Iterable[str] | None = None,
+        keep_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
     ) -> Dataset:
@@ -51,6 +52,7 @@ class StoreBackendEntrypoint(BackendEntrypoint):
             concat_characters=concat_characters,
             decode_coords=decode_coords,
             drop_variables=drop_variables,
+            keep_variables=keep_variables,
             use_cftime=use_cftime,
             decode_timedelta=decode_timedelta,
         )
