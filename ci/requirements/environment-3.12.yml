@@ -4,11 +4,13 @@ channels:
   - nodefaults
 dependencies:
   - aiobotocore
+  - array-api-strict
   - boto3
   - bottleneck
   - cartopy
   - cftime
   - dask-core
+  - dask-expr
   - distributed
   - flox
   - fsspec

@@ -2,11 +2,13 @@ name: xarray-tests
 channels:
   - conda-forge
 dependencies:
+  - array-api-strict
   - boto3
   - bottleneck
   - cartopy
   - cftime
   - dask-core
+  - dask-expr
   - distributed
   - flox
   - fsspec

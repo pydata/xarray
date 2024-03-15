@@ -1106,10 +1106,10 @@ def find_stack_level(test_mode=False) -> int:
     return n
 
 
-def emit_user_level_warning(message, category=None):
+def emit_user_level_warning(message, category=None) -> None:
     """Emit a warning at the user level by inspecting the stack trace."""
     stacklevel = find_stack_level()
-    warnings.warn(message, category=category, stacklevel=stacklevel)
+    return warnings.warn(message, category=category, stacklevel=stacklevel)
 
 
 def consolidate_dask_from_array_kwargs(
