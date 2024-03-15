@@ -79,7 +79,7 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
 
     with pytest.warns(Warning) as winfo:
         actual = conventions.decode_cf_variable("t", var)
-    actual_warnings = {(warn.category, warn.message.args[0]) for warn in winfo}
+    actual_warnings = {(warn.category, str(warn.message)) for warn in winfo}
     assert actual_warnings == expected_warnings
 
     assert_identical(actual, expected)
@@ -95,7 +95,7 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
     )
     with pytest.warns(Warning) as winfo:
         actual = conventions.decode_cf_variable("t", var)
-    actual_warnings = {(warn.category, warn.message.args[0]) for warn in winfo}
+    actual_warnings = {(warn.category, str(warn.message)) for warn in winfo}
     assert actual_warnings == expected_warnings
     assert_identical(actual, expected)
 
