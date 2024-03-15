@@ -3,7 +3,7 @@
 # install cython for building cftime without build isolation
 micromamba install "cython>=0.29.20" py-cpuinfo
 # temporarily (?) remove numbagg and numba
-# micromamba remove -y numba numbagg
+micromamba remove -y numba numbagg sparse
 # temporarily remove numexpr
 micromamba remove -y numexpr
 # temporarily remove backends
@@ -67,9 +67,9 @@ python -m pip install \
     git+https://github.com/zarr-developers/zarr \
     git+https://github.com/pypa/packaging \
     git+https://github.com/hgrecco/pint \
-    git+https://github.com/pydata/sparse \
     git+https://github.com/intake/filesystem_spec \
     git+https://github.com/SciTools/nc-time-axis \
     git+https://github.com/xarray-contrib/flox \
     git+https://github.com/dgasmith/opt_einsum
+    # git+https://github.com/pydata/sparse
     # git+https://github.com/h5netcdf/h5netcdf
