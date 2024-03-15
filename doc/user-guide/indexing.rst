@@ -549,6 +549,7 @@ __ https://numpy.org/doc/stable/user/basics.indexing.html#assigning-values-to-in
 You can also assign values to all variables of a :py:class:`Dataset` at once:
 
 .. ipython:: python
+    :okwarning:
 
     ds_org = xr.tutorial.open_dataset("eraint_uvz").isel(
         latitude=slice(56, 59), longitude=slice(255, 258), level=0

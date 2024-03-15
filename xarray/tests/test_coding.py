@@ -51,9 +51,8 @@ def test_CFMaskCoder_encode_missing_fill_values_conflict(data, encoding) -> None
     assert encoded.dtype == encoded.attrs["missing_value"].dtype
     assert encoded.dtype == encoded.attrs["_FillValue"].dtype
 
-    with pytest.warns(variables.SerializationWarning):
-        roundtripped = decode_cf_variable("foo", encoded)
-        assert_identical(roundtripped, original)
+    roundtripped = decode_cf_variable("foo", encoded)
+    assert_identical(roundtripped, original)
 
 
 def test_CFMaskCoder_missing_value() -> None:
@@ -96,16 +95,18 @@ def test_coder_roundtrip() -> None:
 
 
 @pytest.mark.parametrize("dtype", "u1 u2 i1 i2 f2 f4".split())
-def test_scaling_converts_to_float32(dtype) -> None:
+@pytest.mark.parametrize("dtype2", "f4 f8".split())
+def test_scaling_converts_to_float(dtype: str, dtype2: str) -> None:
+    dt = np.dtype(dtype2)
     original = xr.Variable(
-        ("x",), np.arange(10, dtype=dtype), encoding=dict(scale_factor=10)
+        ("x",), np.arange(10, dtype=dtype), encoding=dict(scale_factor=dt.type(10))
     )
     coder = variables.CFScaleOffsetCoder()
     encoded = coder.encode(original)
-    assert encoded.dtype == np.float32
+    assert encoded.dtype == dt
     roundtripped = coder.decode(encoded)
     assert_identical(original, roundtripped)
-    assert roundtripped.dtype == np.float32
+    assert roundtripped.dtype == dt
 
 
 @pytest.mark.parametrize("scale_factor", (10, [10]))
