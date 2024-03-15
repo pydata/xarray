@@ -32,6 +32,9 @@ New Features
 - Add the ``.vindex`` property to Explicitly Indexed Arrays for vectorized indexing functionality. (:issue:`8238`, :pull:`8780`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
+- Expand use of ``.oindex`` and ``.vindex`` properties. (:pull: `8790`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
