@@ -14,7 +14,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import Index
 from xarray.core.merge import merge
-from xarray.core.pycompat import is_dask_collection
+from xarray.core.utils import is_dask_collection
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
@@ -306,15 +306,15 @@ def map_blocks(
     ...     coords={"time": time, "month": month},
     ... ).chunk()
     >>> array.map_blocks(calculate_anomaly, template=array).compute()
-    <xarray.DataArray (time: 24)>
+    <xarray.DataArray (time: 24)> Size: 192B
     array([ 0.12894847,  0.11323072, -0.0855964 , -0.09334032,  0.26848862,
             0.12382735,  0.22460641,  0.07650108, -0.07673453, -0.22865714,
            -0.19063865,  0.0590131 , -0.12894847, -0.11323072,  0.0855964 ,
             0.09334032, -0.26848862, -0.12382735, -0.22460641, -0.07650108,
             0.07673453,  0.22865714,  0.19063865, -0.0590131 ])
     Coordinates:
-      * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
-        month    (time) int64 1 2 3 4 5 6 7 8 9 10 11 12 1 2 3 4 5 6 7 8 9 10 11 12
+      * time     (time) object 192B 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
+        month    (time) int64 192B 1 2 3 4 5 6 7 8 9 10 ... 3 4 5 6 7 8 9 10 11 12
 
     Note that one must explicitly use ``args=[]`` and ``kwargs={}`` to pass arguments
     to the function being applied in ``xr.map_blocks()``:
@@ -324,11 +324,11 @@ def map_blocks(
     ...     kwargs={"groupby_type": "time.year"},
     ...     template=array,
     ... )  # doctest: +ELLIPSIS
-    <xarray.DataArray (time: 24)>
+    <xarray.DataArray (time: 24)> Size: 192B
     dask.array<<this-array>-calculate_anomaly, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>
     Coordinates:
-      * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
-        month    (time) int64 dask.array<chunksize=(24,), meta=np.ndarray>
+      * time     (time) object 192B 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
+        month    (time) int64 192B dask.array<chunksize=(24,), meta=np.ndarray>
     """
 
     def _wrapper(
@@ -537,9 +537,13 @@ def map_blocks(
         chunk_index = dict(zip(ichunk.keys(), chunk_tuple))
 
         blocked_args = [
-            subset_dataset_to_block(graph, gname, arg, input_chunk_bounds, chunk_index)
-            if isxr
-            else arg
+            (
+                subset_dataset_to_block(
+                    graph, gname, arg, input_chunk_bounds, chunk_index
+                )
+                if isxr
+                else arg
+            )
             for isxr, arg in zip(is_xarray, npargs)
         ]
 

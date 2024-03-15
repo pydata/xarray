@@ -3,6 +3,7 @@
 Currently, this means Dask or NumPy arrays. None of these functions should
 accept or return xarray objects.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -32,11 +33,12 @@ from numpy import concatenate as _concatenate
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 from packaging.version import Version
 
-from xarray.core import dask_array_ops, dtypes, nputils, pycompat
+from xarray.core import dask_array_ops, dtypes, nputils
 from xarray.core.options import OPTIONS
-from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
-from xarray.core.pycompat import array_type, is_duck_dask_array
-from xarray.core.utils import is_duck_array, module_available
+from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
+from xarray.namedarray import pycompat
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import array_type, is_chunked_array
 
 # remove once numpy 2.0 is the oldest supported version
 if module_available("numpy", minversion="2.0.0.dev0"):

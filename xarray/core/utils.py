@@ -1,4 +1,5 @@
 """Internal utilities; not for external use"""
+
 # Some functions in this module are derived from functions in pandas. For
 # reference, here is a copy of the pandas copyright notice:
 
@@ -37,7 +38,6 @@ from __future__ import annotations
 
 import contextlib
 import functools
-import importlib
 import inspect
 import io
 import itertools
@@ -68,16 +68,27 @@ from typing import (
     Generic,
     Literal,
     TypeVar,
-    cast,
     overload,
 )
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
+
+from xarray.namedarray.utils import (  # noqa: F401
+    ReprObject,
+    drop_missing_dims,
+    either_dict_or_kwargs,
+    infix_dims,
+    is_dask_collection,
+    is_dict_like,
+    is_duck_array,
+    is_duck_dask_array,
+    module_available,
+    to_0d_object_array,
+)
 
 if TYPE_CHECKING:
-    from xarray.core.types import Dims, ErrorOptionsWithWarn, T_DuckArray
+    from xarray.core.types import Dims, ErrorOptionsWithWarn
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -246,50 +257,12 @@ def remove_incompatible_items(
             del first_dict[k]
 
 
-# It's probably OK to give this as a TypeGuard; though it's not perfectly robust.
-def is_dict_like(value: Any) -> TypeGuard[Mapping]:
-    return hasattr(value, "keys") and hasattr(value, "__getitem__")
-
-
 def is_full_slice(value: Any) -> bool:
     return isinstance(value, slice) and value == slice(None)
 
 
 def is_list_like(value: Any) -> TypeGuard[list | tuple]:
     return isinstance(value, (list, tuple))
-
-
-def is_duck_array(value: Any) -> TypeGuard[T_DuckArray]:
-    if isinstance(value, np.ndarray):
-        return True
-    return (
-        hasattr(value, "ndim")
-        and hasattr(value, "shape")
-        and hasattr(value, "dtype")
-        and (
-            (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
-            or hasattr(value, "__array_namespace__")
-        )
-    )
-
-
-def either_dict_or_kwargs(
-    pos_kwargs: Mapping[Any, T] | None,
-    kw_kwargs: Mapping[str, T],
-    func_name: str,
-) -> Mapping[Hashable, T]:
-    if pos_kwargs is None or pos_kwargs == {}:
-        # Need an explicit cast to appease mypy due to invariance; see
-        # https://github.com/python/mypy/issues/6228
-        return cast(Mapping[Hashable, T], kw_kwargs)
-
-    if not is_dict_like(pos_kwargs):
-        raise ValueError(f"the first argument to .{func_name} must be a dictionary")
-    if kw_kwargs:
-        raise ValueError(
-            f"cannot specify both keyword and positional arguments to .{func_name}"
-        )
-    return pos_kwargs
 
 
 def _is_scalar(value, include_0d):
@@ -345,13 +318,6 @@ def is_valid_numpy_dtype(dtype: Any) -> bool:
         return False
     else:
         return True
-
-
-def to_0d_object_array(value: Any) -> np.ndarray:
-    """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
-    result = np.empty((), dtype=object)
-    result[()] = value
-    return result
 
 
 def to_0d_array(value: Any) -> np.ndarray:
@@ -504,12 +470,10 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
         return super().__getitem__(key)
 
     @overload
-    def get(self, key: K, /) -> V | None:
-        ...
+    def get(self, key: K, /) -> V | None: ...
 
     @overload
-    def get(self, key: K, /, default: V | T) -> V | T:
-        ...
+    def get(self, key: K, /, default: V | T) -> V | T: ...
 
     def get(self, key: K, default: T | None = None) -> V | T | None:
         self._warn()
@@ -660,31 +624,6 @@ class NDArrayMixin(NdimSizeLenMixin):
 
     def __repr__(self: Any) -> str:
         return f"{type(self).__name__}(array={self.array!r})"
-
-
-class ReprObject:
-    """Object that prints as the given value, for use with sentinel values."""
-
-    __slots__ = ("_value",)
-
-    def __init__(self, value: str):
-        self._value = value
-
-    def __repr__(self) -> str:
-        return self._value
-
-    def __eq__(self, other) -> bool:
-        if isinstance(other, ReprObject):
-            return self._value == other._value
-        return False
-
-    def __hash__(self) -> int:
-        return hash((type(self), self._value))
-
-    def __dask_tokenize__(self):
-        from dask.base import normalize_token
-
-        return normalize_token((type(self), self._value))
 
 
 @contextlib.contextmanager
@@ -911,49 +850,6 @@ def drop_dims_from_indexers(
         )
 
 
-def drop_missing_dims(
-    supplied_dims: Iterable[Hashable],
-    dims: Iterable[Hashable],
-    missing_dims: ErrorOptionsWithWarn,
-) -> Iterable[Hashable]:
-    """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
-    are not present in dims.
-
-    Parameters
-    ----------
-    supplied_dims : Iterable of Hashable
-    dims : Iterable of Hashable
-    missing_dims : {"raise", "warn", "ignore"}
-    """
-
-    if missing_dims == "raise":
-        supplied_dims_set = {val for val in supplied_dims if val is not ...}
-        invalid = supplied_dims_set - set(dims)
-        if invalid:
-            raise ValueError(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
-            )
-
-        return supplied_dims
-
-    elif missing_dims == "warn":
-        invalid = set(supplied_dims) - set(dims)
-        if invalid:
-            warnings.warn(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
-            )
-
-        return [val for val in supplied_dims if val in dims or val is ...]
-
-    elif missing_dims == "ignore":
-        return [val for val in supplied_dims if val in dims or val is ...]
-
-    else:
-        raise ValueError(
-            f"Unrecognised option {missing_dims} for missing_dims argument"
-        )
-
-
 @overload
 def parse_dims(
     dim: Dims,
@@ -961,8 +857,7 @@ def parse_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[True] = True,
-) -> tuple[Hashable, ...]:
-    ...
+) -> tuple[Hashable, ...]: ...
 
 
 @overload
@@ -972,8 +867,7 @@ def parse_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | ellipsis:
-    ...
+) -> tuple[Hashable, ...] | None | ellipsis: ...
 
 
 def parse_dims(
@@ -1024,8 +918,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[True] = True,
-) -> tuple[Hashable, ...]:
-    ...
+) -> tuple[Hashable, ...]: ...
 
 
 @overload
@@ -1035,8 +928,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | ellipsis:
-    ...
+) -> tuple[Hashable, ...] | None | ellipsis: ...
 
 
 def parse_ordered_dims(
@@ -1118,12 +1010,10 @@ class UncachedAccessor(Generic[_Accessor]):
         self._accessor = accessor
 
     @overload
-    def __get__(self, obj: None, cls) -> type[_Accessor]:
-        ...
+    def __get__(self, obj: None, cls) -> type[_Accessor]: ...
 
     @overload
-    def __get__(self, obj: object, cls) -> _Accessor:
-        ...
+    def __get__(self, obj: object, cls) -> _Accessor: ...
 
     def __get__(self, obj: None | object, cls) -> type[_Accessor] | _Accessor:
         if obj is None:
@@ -1153,7 +1043,7 @@ def contains_only_chunked_or_numpy(obj) -> bool:
 
     Expects obj to be Dataset or DataArray"""
     from xarray.core.dataarray import DataArray
-    from xarray.core.pycompat import is_chunked_array
+    from xarray.namedarray.pycompat import is_chunked_array
 
     if isinstance(obj, DataArray):
         obj = obj._to_temp_dataset()
@@ -1164,34 +1054,6 @@ def contains_only_chunked_or_numpy(obj) -> bool:
             for var in obj.variables.values()
         ]
     )
-
-
-def module_available(module: str, minversion: str | None = None) -> bool:
-    """Checks whether a module is installed without importing it.
-
-    Use this for a lightweight check and lazy imports.
-
-    Parameters
-    ----------
-    module : str
-        Name of the module.
-    minversion : str, optional
-        Minimum version of the module
-
-    Returns
-    -------
-    available : bool
-        Whether the module is installed.
-    """
-    if importlib.util.find_spec(module) is None:
-        return False
-
-    if minversion is not None:
-        version = importlib.metadata.version(module)
-
-        return Version(version) >= Version(minversion)
-
-    return True
 
 
 def find_stack_level(test_mode=False) -> int:
@@ -1244,18 +1106,18 @@ def find_stack_level(test_mode=False) -> int:
     return n
 
 
-def emit_user_level_warning(message, category=None):
+def emit_user_level_warning(message, category=None) -> None:
     """Emit a warning at the user level by inspecting the stack trace."""
     stacklevel = find_stack_level()
-    warnings.warn(message, category=category, stacklevel=stacklevel)
+    return warnings.warn(message, category=category, stacklevel=stacklevel)
 
 
 def consolidate_dask_from_array_kwargs(
-    from_array_kwargs: dict,
+    from_array_kwargs: dict[Any, Any],
     name: str | None = None,
     lock: bool | None = None,
     inline_array: bool | None = None,
-) -> dict:
+) -> dict[Any, Any]:
     """
     Merge dask-specific kwargs with arbitrary from_array_kwargs dict.
 
@@ -1288,12 +1150,12 @@ def consolidate_dask_from_array_kwargs(
 
 
 def _resolve_doubly_passed_kwarg(
-    kwargs_dict: dict,
+    kwargs_dict: dict[Any, Any],
     kwarg_name: str,
     passed_kwarg_value: str | bool | None,
     default: bool | None,
     err_msg_dict_name: str,
-) -> dict:
+) -> dict[Any, Any]:
     # if in kwargs_dict but not passed explicitly then just pass kwargs_dict through unaltered
     if kwarg_name in kwargs_dict and passed_kwarg_value is None:
         pass

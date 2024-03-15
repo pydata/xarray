@@ -14,7 +14,7 @@ from xarray.core.missing import (
     _get_nan_block_lengths,
     get_clean_interp_index,
 )
-from xarray.core.pycompat import array_type
+from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     _CFTIME_CALENDARS,
     assert_allclose,
@@ -606,7 +606,7 @@ def test_get_clean_interp_index_cf_calendar(cf_da, calendar):
 
 @requires_cftime
 @pytest.mark.parametrize(
-    ("calendar", "freq"), zip(["gregorian", "proleptic_gregorian"], ["1D", "1M", "1Y"])
+    ("calendar", "freq"), zip(["gregorian", "proleptic_gregorian"], ["1D", "1ME", "1Y"])
 )
 def test_get_clean_interp_index_dt(cf_da, calendar, freq):
     """In the gregorian case, the index should be proportional to normal datetimes."""
