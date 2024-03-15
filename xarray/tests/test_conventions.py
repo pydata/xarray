@@ -143,7 +143,6 @@ class TestEncodeCFVariable:
         with pytest.warns(Warning, match="floating point data as an integer"):
             conventions.encode_cf_variable(v)
 
-        conventions.encode_cf_variable(v)
 
     def test_multidimensional_coordinates(self) -> None:
         # regression test for GH1763
