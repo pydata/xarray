@@ -65,10 +65,9 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
     )
 
     # the following code issues two warnings, so we need to check for both
-    with pytest.warns(Warning) as winfo:
+    with pytest.warns(SerializationWarning) as winfo:
         actual = conventions.decode_cf_variable("t", var)
     for aw in winfo:
-        assert aw.category == SerializationWarning
         assert "non-conforming" in str(aw.message)
 
     assert_identical(actual, expected)
@@ -84,10 +83,9 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
     )
 
     # the following code issues two warnings, so we need to check for both
-    with pytest.warns(Warning) as winfo:
+    with pytest.warns(SerializationWarning) as winfo:
         actual = conventions.decode_cf_variable("t", var)
     for aw in winfo:
-        assert aw.category == SerializationWarning
         assert "non-conforming" in str(aw.message)
     assert_identical(actual, expected)
 
