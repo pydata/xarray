@@ -563,7 +563,7 @@ repr_da = xr.DataArray(
     coords={
         "z": ["a", "b", "c", "a", "b", "c"],
         "x": [1, 1, 1, 2, 2, 3, 4, 5, 3, 4],
-        "t": pd.date_range("2001-01-01", freq="M", periods=24),
+        "t": xr.date_range("2001-01-01", freq="ME", periods=24, use_cftime=False),
         "month": ("t", list(range(1, 13)) * 2),
     },
 )
@@ -1801,19 +1801,19 @@ class TestDataArrayResample:
                 time=(
                     "time",
                     xr.date_range(
-                        "2001-01-01", freq="M", periods=6, use_cftime=use_cftime
+                        "2001-01-01", freq="ME", periods=6, use_cftime=use_cftime
                     ),
                 ),
                 labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
             ),
         )
-        actual = da.resample(time="3M").count()
+        actual = da.resample(time="3ME").count()
         expected = DataArray(
             [1, 3, 1],
             dims="time",
             coords={
                 "time": xr.date_range(
-                    "2001-01-01", freq="3M", periods=3, use_cftime=use_cftime
+                    "2001-01-01", freq="3ME", periods=3, use_cftime=use_cftime
                 )
             },
         )
@@ -2074,7 +2074,7 @@ class TestDataArrayResample:
     def test_upsample_interpolate_bug_2197(self):
         dates = pd.date_range("2007-02-01", "2007-03-01", freq="D")
         da = xr.DataArray(np.arange(len(dates)), [("time", dates)])
-        result = da.resample(time="M").interpolate("linear")
+        result = da.resample(time="ME").interpolate("linear")
         expected_times = np.array(
             [np.datetime64("2007-02-28"), np.datetime64("2007-03-31")]
         )
@@ -2369,7 +2369,7 @@ class TestDatasetResample:
             }
         )
         assert_allclose(
-            ds.resample(time="M").mean()["foo"], ds.foo.resample(time="M").mean()
+            ds.resample(time="ME").mean()["foo"], ds.foo.resample(time="ME").mean()
         )
 
     def test_ds_resample_apply_func_args(self):
@@ -2444,21 +2444,21 @@ def test_resample_cumsum(method: str, expected_array: list[float]) -> None:
     ds = xr.Dataset(
         {"foo": ("time", [1, 2, 3, 1, 2, np.nan])},
         coords={
-            "time": pd.date_range("01-01-2001", freq="M", periods=6),
+            "time": xr.date_range("01-01-2001", freq="ME", periods=6, use_cftime=False),
         },
     )
-    actual = getattr(ds.resample(time="3M"), method)(dim="time")
+    actual = getattr(ds.resample(time="3ME"), method)(dim="time")
     expected = xr.Dataset(
         {"foo": (("time",), expected_array)},
         coords={
-            "time": pd.date_range("01-01-2001", freq="M", periods=6),
+            "time": xr.date_range("01-01-2001", freq="ME", periods=6, use_cftime=False),
         },
     )
     # TODO: Remove drop_vars when GH6528 is fixed
     # when Dataset.cumsum propagates indexes, and the group variable?
     assert_identical(expected.drop_vars(["time"]), actual)
 
-    actual = getattr(ds.foo.resample(time="3M"), method)(dim="time")
+    actual = getattr(ds.foo.resample(time="3ME"), method)(dim="time")
     expected.coords["time"] = ds.time
     assert_identical(expected.drop_vars(["time"]).foo, actual)
 

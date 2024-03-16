@@ -13,15 +13,14 @@ import pandas as pd
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
 from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
-from xarray.core.pycompat import is_chunked_array
 from xarray.core.utils import (
     Frozen,
     either_dict_or_kwargs,
-    emit_user_level_warning,
     is_scalar,
 )
 from xarray.namedarray.core import _raise_if_any_duplicate_dimensions
+from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
+from xarray.namedarray.pycompat import is_chunked_array
 
 try:
     import cftime
@@ -1050,8 +1049,7 @@ class DataWithCoords(AttrAccessMixin):
         # TODO support non-string indexer after removing the old API.
 
         from xarray.core.dataarray import DataArray
-        from xarray.core.groupby import ResolvedTimeResampleGrouper, TimeResampleGrouper
-        from xarray.core.pdcompat import _convert_base_to_offset
+        from xarray.core.groupby import ResolvedGrouper, TimeResampler
         from xarray.core.resample import RESAMPLE_DIM
 
         # note: the second argument (now 'skipna') use to be 'dim'
@@ -1074,44 +1072,24 @@ class DataWithCoords(AttrAccessMixin):
         dim_name: Hashable = dim
         dim_coord = self[dim]
 
-        if loffset is not None:
-            emit_user_level_warning(
-                "Following pandas, the `loffset` parameter to resample is deprecated.  "
-                "Switch to updating the resampled dataset time coordinate using "
-                "time offset arithmetic.  For example:\n"
-                "    >>> offset = pd.tseries.frequencies.to_offset(freq) / 2\n"
-                '    >>> resampled_ds["time"] = resampled_ds.get_index("time") + offset',
-                FutureWarning,
-            )
+        group = DataArray(
+            dim_coord,
+            coords=dim_coord.coords,
+            dims=dim_coord.dims,
+            name=RESAMPLE_DIM,
+        )
 
-        if base is not None:
-            emit_user_level_warning(
-                "Following pandas, the `base` parameter to resample will be deprecated in "
-                "a future version of xarray.  Switch to using `origin` or `offset` instead.",
-                FutureWarning,
-            )
-
-        if base is not None and offset is not None:
-            raise ValueError("base and offset cannot be present at the same time")
-
-        if base is not None:
-            index = self._indexes[dim_name].to_pandas_index()
-            offset = _convert_base_to_offset(base, freq, index)
-
-        grouper = TimeResampleGrouper(
+        grouper = TimeResampler(
             freq=freq,
             closed=closed,
             label=label,
             origin=origin,
             offset=offset,
             loffset=loffset,
+            base=base,
         )
 
-        group = DataArray(
-            dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
-        )
-
-        rgrouper = ResolvedTimeResampleGrouper(grouper, group, self)
+        rgrouper = ResolvedGrouper(grouper, group, self)
 
         return resample_cls(
             self,

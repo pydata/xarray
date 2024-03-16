@@ -51,6 +51,7 @@ from xarray.tests import (
     requires_bottleneck,
     requires_cupy,
     requires_dask,
+    requires_dask_expr,
     requires_iris,
     requires_numexpr,
     requires_pint,
@@ -71,8 +72,6 @@ pytestmark = [
     pytest.mark.filterwarnings("error:All-NaN (slice|axis) encountered"),
 ]
 
-ON_WINDOWS = sys.platform == "win32"
-
 
 class TestDataArray:
     @pytest.fixture(autouse=True)
@@ -87,61 +86,34 @@ class TestDataArray:
         self.mindex = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2]], names=("level_1", "level_2")
         )
-        self.mda = DataArray([0, 1, 2, 3], coords={"x": self.mindex}, dims="x")
+        self.mda = DataArray([0, 1, 2, 3], coords={"x": self.mindex}, dims="x").astype(
+            np.uint64
+        )
 
-    @pytest.mark.skipif(
-        ON_WINDOWS,
-        reason="Default numpy's dtypes vary according to OS",
-    )
     def test_repr(self) -> None:
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
-        coords = {"x": np.arange(3, dtype=np.int64), "other": np.int64(0)}
+        v = v.astype(np.uint64)
+        coords = {"x": np.arange(3, dtype=np.uint64), "other": np.uint64(0)}
         data_array = DataArray(v, coords, name="my_variable")
         expected = dedent(
             """\
             <xarray.DataArray 'my_variable' (time: 2, x: 3)> Size: 48B
             array([[1, 2, 3],
-                   [4, 5, 6]])
+                   [4, 5, 6]], dtype=uint64)
             Coordinates:
-              * x        (x) int64 24B 0 1 2
-                other    int64 8B 0
+              * x        (x) uint64 24B 0 1 2
+                other    uint64 8B 0
             Dimensions without coordinates: time
             Attributes:
                 foo:      bar"""
         )
         assert expected == repr(data_array)
 
-    @pytest.mark.skipif(
-        not ON_WINDOWS,
-        reason="Default numpy's dtypes vary according to OS",
-    )
-    def test_repr_windows(self) -> None:
-        v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
-        coords = {"x": np.arange(3, dtype=np.int64), "other": np.int64(0)}
-        data_array = DataArray(v, coords, name="my_variable")
-        expected = dedent(
-            """\
-            <xarray.DataArray 'my_variable' (time: 2, x: 3)> Size: 24B
-            array([[1, 2, 3],
-                   [4, 5, 6]])
-            Coordinates:
-              * x        (x) int64 24B 0 1 2
-                other    int64 8B 0
-            Dimensions without coordinates: time
-            Attributes:
-                foo:      bar"""
-        )
-        assert expected == repr(data_array)
-
-    @pytest.mark.skipif(
-        ON_WINDOWS,
-        reason="Default numpy's dtypes vary according to OS",
-    )
     def test_repr_multiindex(self) -> None:
         expected = dedent(
             """\
             <xarray.DataArray (x: 4)> Size: 32B
-            array([0, 1, 2, 3])
+            array([0, 1, 2, 3], dtype=uint64)
             Coordinates:
               * x        (x) object 32B MultiIndex
               * level_1  (x) object 32B 'a' 'a' 'b' 'b'
@@ -149,59 +121,20 @@ class TestDataArray:
         )
         assert expected == repr(self.mda)
 
-    @pytest.mark.skipif(
-        not ON_WINDOWS,
-        reason="Default numpy's dtypes vary according to OS",
-    )
-    def test_repr_multiindex_windows(self) -> None:
-        expected = dedent(
-            """\
-            <xarray.DataArray (x: 4)> Size: 16B
-            array([0, 1, 2, 3])
-            Coordinates:
-              * x        (x) object 32B MultiIndex
-              * level_1  (x) object 32B 'a' 'a' 'b' 'b'
-              * level_2  (x) int64 32B 1 2 1 2"""
-        )
-        assert expected == repr(self.mda)
-
-    @pytest.mark.skipif(
-        ON_WINDOWS,
-        reason="Default numpy's dtypes vary according to OS",
-    )
     def test_repr_multiindex_long(self) -> None:
         mindex_long = pd.MultiIndex.from_product(
             [["a", "b", "c", "d"], [1, 2, 3, 4, 5, 6, 7, 8]],
             names=("level_1", "level_2"),
         )
-        mda_long = DataArray(list(range(32)), coords={"x": mindex_long}, dims="x")
+        mda_long = DataArray(
+            list(range(32)), coords={"x": mindex_long}, dims="x"
+        ).astype(np.uint64)
         expected = dedent(
             """\
             <xarray.DataArray (x: 32)> Size: 256B
             array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
-                   17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31])
-            Coordinates:
-              * x        (x) object 256B MultiIndex
-              * level_1  (x) object 256B 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
-              * level_2  (x) int64 256B 1 2 3 4 5 6 7 8 1 2 3 4 ... 5 6 7 8 1 2 3 4 5 6 7 8"""
-        )
-        assert expected == repr(mda_long)
-
-    @pytest.mark.skipif(
-        not ON_WINDOWS,
-        reason="Default numpy's dtypes vary according to OS",
-    )
-    def test_repr_multiindex_long_windows(self) -> None:
-        mindex_long = pd.MultiIndex.from_product(
-            [["a", "b", "c", "d"], [1, 2, 3, 4, 5, 6, 7, 8]],
-            names=("level_1", "level_2"),
-        )
-        mda_long = DataArray(list(range(32)), coords={"x": mindex_long}, dims="x")
-        expected = dedent(
-            """\
-            <xarray.DataArray (x: 32)> Size: 128B
-            array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
-                   17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31])
+                   17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31],
+                  dtype=uint64)
             Coordinates:
               * x        (x) object 256B MultiIndex
               * level_1  (x) object 256B 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
@@ -2600,6 +2533,15 @@ class TestDataArray:
         actual = DataArray(s, dims="z").unstack("z")
         assert_identical(expected, actual)
 
+    def test_unstack_requires_unique(self) -> None:
+        df = pd.DataFrame({"foo": range(2), "x": ["a", "a"], "y": [0, 0]})
+        s = df.set_index(["x", "y"])["foo"]
+
+        with pytest.raises(
+            ValueError, match="Cannot unstack MultiIndex containing duplicates"
+        ):
+            DataArray(s, dims="z").unstack("z")
+
     @pytest.mark.filterwarnings("error")
     def test_unstack_roundtrip_integer_array(self) -> None:
         arr = xr.DataArray(
@@ -3262,6 +3204,42 @@ class TestDataArray:
         assert_identical(expected_b, actual_b)
         assert expected_b.x.dtype == actual_b.x.dtype
 
+    def test_broadcast_on_vs_off_global_option_different_dims(self) -> None:
+        xda_1 = xr.DataArray([1], dims="x1")
+        xda_2 = xr.DataArray([1], dims="x2")
+
+        with xr.set_options(arithmetic_broadcast=True):
+            expected_xda = xr.DataArray([[1.0]], dims=("x1", "x2"))
+            actual_xda = xda_1 / xda_2
+            assert_identical(actual_xda, expected_xda)
+
+        with xr.set_options(arithmetic_broadcast=False):
+            with pytest.raises(
+                ValueError,
+                match=re.escape(
+                    "Broadcasting is necessary but automatic broadcasting is disabled via "
+                    "global option `'arithmetic_broadcast'`. "
+                    "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
+                ),
+            ):
+                xda_1 / xda_2
+
+    @pytest.mark.parametrize("arithmetic_broadcast", [True, False])
+    def test_broadcast_on_vs_off_global_option_same_dims(
+        self, arithmetic_broadcast: bool
+    ) -> None:
+        # Ensure that no error is raised when arithmetic broadcasting is disabled,
+        # when broadcasting is not needed. The two DataArrays have the same
+        # dimensions of the same size.
+        xda_1 = xr.DataArray([1], dims="x")
+        xda_2 = xr.DataArray([1], dims="x")
+        expected_xda = xr.DataArray([2.0], dims=("x",))
+
+        with xr.set_options(arithmetic_broadcast=arithmetic_broadcast):
+            assert_identical(xda_1 + xda_2, expected_xda)
+            assert_identical(xda_1 + np.array([1.0]), expected_xda)
+            assert_identical(np.array([1.0]) + xda_1, expected_xda)
+
     def test_broadcast_arrays(self) -> None:
         x = DataArray([1, 2], coords=[("a", [-1, -2])], name="x")
         y = DataArray([1, 2], coords=[("b", [3, 4])], name="y")
@@ -3440,7 +3418,9 @@ class TestDataArray:
         assert len(actual) == 0
         assert_array_equal(actual.index.names, list("ABC"))
 
+    @requires_dask_expr
     @requires_dask
+    @pytest.mark.xfail(reason="dask-expr is broken")
     def test_to_dask_dataframe(self) -> None:
         arr_np = np.arange(3 * 4).reshape(3, 4)
         arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")

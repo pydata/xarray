@@ -10,7 +10,7 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray, Variable
-from xarray.core.pycompat import array_type
+from xarray.namedarray.pycompat import array_type
 from xarray.tests import assert_equal, assert_identical, requires_dask
 
 filterwarnings = pytest.mark.filterwarnings
@@ -878,10 +878,6 @@ def test_dask_token():
     import dask
 
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
-
-    # https://github.com/pydata/sparse/issues/300
-    s.__dask_tokenize__ = lambda: dask.base.normalize_token(s.__dict__)
-
     a = DataArray(s)
     t1 = dask.base.tokenize(a)
     t2 = dask.base.tokenize(a)

@@ -15,8 +15,9 @@ from xarray.coding.variables import (
     unpack_for_encoding,
 )
 from xarray.core import indexing
-from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.core.variable import Variable
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import is_chunked_array
 
 
 def create_vlen_dtype(element_type):
@@ -236,6 +237,12 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
     def __repr__(self):
         return f"{type(self).__name__}({self.array!r})"
+
+    def _vindex_get(self, key):
+        return _numpy_char_to_bytes(self.array.vindex[key])
+
+    def _oindex_get(self, key):
+        return _numpy_char_to_bytes(self.array.oindex[key])
 
     def __getitem__(self, key):
         # require slicing the last dimension completely
