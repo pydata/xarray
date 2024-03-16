@@ -3609,7 +3609,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.9.1")
+            and module_available("flox", minversion="0.9.2")
             and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
@@ -5126,7 +5126,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.9.1")
+            and module_available("flox", minversion="0.9.2")
             and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
@@ -6544,7 +6544,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.9.1")
+            and module_available("flox", minversion="0.9.2")
             and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
@@ -7952,7 +7952,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.9.1")
+            and module_available("flox", minversion="0.9.2")
             and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(

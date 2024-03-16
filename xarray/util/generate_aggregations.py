@@ -464,19 +464,16 @@ class GroupByAggregationGenerator(AggregationGenerator):
             **kwargs,
         )"""
 
-        else:
-            return (
-                """\
+        min_version_check = f"""
+            and module_available("flox", minversion="{method.min_flox_version}")"""
+
+        return (
+            """\
         if (
             flox_available
             and OPTIONS["use_flox"]"""
-                + (
-                    f"""
-            and module_available("flox", minversion="{method.min_flox_version}")"""
-                    if method.min_flox_version is not None
-                    else ""
-                )
-                + f"""
+            + (min_version_check if method.min_flox_version is not None else "")
+            + f"""
             and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
@@ -493,7 +490,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
                 keep_attrs=keep_attrs,
                 **kwargs,
             )"""
-            )
+        )
 
 
 class GenericAggregationGenerator(AggregationGenerator):
