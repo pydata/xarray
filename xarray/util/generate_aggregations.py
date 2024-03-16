@@ -442,9 +442,9 @@ class GroupByAggregationGenerator(AggregationGenerator):
         if self.datastructure.numeric_only:
             extra_kwargs.append(f"numeric_only={method.numeric_only},")
 
-        # numpy_groupies & flox do not support median
-        # https://github.com/ml31415/numpy-groupies/issues/43
-        method_is_not_flox_supported = method.name in ("cumsum", "cumprod")
+        # median isn't enabled yet, because it would break if a single group was present in multiple
+        # chunks. The non-flox code path will just rechunk every group to a single chunk and execute the median
+        method_is_not_flox_supported = method.name in ("median", "cumsum", "cumprod")
         if method_is_not_flox_supported:
             indent = 12
         else:

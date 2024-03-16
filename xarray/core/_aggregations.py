@@ -3606,30 +3606,14 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) float64 24B nan 2.0 1.5
         """
-        if (
-            flox_available
-            and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.9.2")
-            and contains_only_chunked_or_numpy(self._obj)
-        ):
-            return self._flox_reduce(
-                func="median",
-                dim=dim,
-                skipna=skipna,
-                numeric_only=True,
-                # fill_value=fill_value,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-        else:
-            return self._reduce_without_squeeze_warn(
-                duck_array_ops.median,
-                dim=dim,
-                skipna=skipna,
-                numeric_only=True,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
+        return self._reduce_without_squeeze_warn(
+            duck_array_ops.median,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
 
     def cumsum(
         self,
@@ -5123,30 +5107,14 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 24B 1.0 2.0 nan
         """
-        if (
-            flox_available
-            and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.9.2")
-            and contains_only_chunked_or_numpy(self._obj)
-        ):
-            return self._flox_reduce(
-                func="median",
-                dim=dim,
-                skipna=skipna,
-                numeric_only=True,
-                # fill_value=fill_value,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-        else:
-            return self._reduce_without_squeeze_warn(
-                duck_array_ops.median,
-                dim=dim,
-                skipna=skipna,
-                numeric_only=True,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
+        return self._reduce_without_squeeze_warn(
+            duck_array_ops.median,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
 
     def cumsum(
         self,
@@ -6541,28 +6509,13 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
         """
-        if (
-            flox_available
-            and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.9.2")
-            and contains_only_chunked_or_numpy(self._obj)
-        ):
-            return self._flox_reduce(
-                func="median",
-                dim=dim,
-                skipna=skipna,
-                # fill_value=fill_value,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-        else:
-            return self._reduce_without_squeeze_warn(
-                duck_array_ops.median,
-                dim=dim,
-                skipna=skipna,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
+        return self._reduce_without_squeeze_warn(
+            duck_array_ops.median,
+            dim=dim,
+            skipna=skipna,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
 
     def cumsum(
         self,
@@ -7949,28 +7902,13 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         """
-        if (
-            flox_available
-            and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.9.2")
-            and contains_only_chunked_or_numpy(self._obj)
-        ):
-            return self._flox_reduce(
-                func="median",
-                dim=dim,
-                skipna=skipna,
-                # fill_value=fill_value,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-        else:
-            return self._reduce_without_squeeze_warn(
-                duck_array_ops.median,
-                dim=dim,
-                skipna=skipna,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
+        return self._reduce_without_squeeze_warn(
+            duck_array_ops.median,
+            dim=dim,
+            skipna=skipna,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
 
     def cumsum(
         self,
