@@ -245,6 +245,7 @@ def test_da_groupby_empty() -> None:
         empty_array.groupby("dim")
 
 
+@requires_dask
 def test_dask_da_groupby_quantile() -> None:
     # Only works when the grouped reduction can run blockwise
     # Scalar quantile
@@ -266,6 +267,7 @@ def test_dask_da_groupby_quantile() -> None:
     assert_identical(expected, actual)
 
 
+@requires_dask
 def test_dask_da_groupby_median() -> None:
     expected = xr.DataArray(data=[2, 5], coords={"x": [1, 2]}, dims="x")
     array = xr.DataArray(
