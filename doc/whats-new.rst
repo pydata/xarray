@@ -23,22 +23,7 @@ v2024.03.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
-- Added a simple `nbytes` representation in DataArrays and Dataset `repr`.
-  (:issue:`8690`, :pull:`8702`).
-  By `Etienne Schalk <https://github.com/etienneschalk>`_.
-- Allow negative frequency strings (e.g. ``"-1YE"``). These strings are for example used
-  in :py:func:`date_range`,  and :py:func:`cftime_range` (:pull:`8651`).
-  By `Mathias Hauser <https://github.com/mathause>`_.
-- Add :py:meth:`NamedArray.expand_dims`, :py:meth:`NamedArray.permute_dims` and :py:meth:`NamedArray.broadcast_to`
-  (:pull:`8380`) By `Anderson Banihirwe <https://github.com/andersy005>`_.
-- Xarray now defers to flox's `heuristics <https://flox.readthedocs.io/en/latest/implementation.html#heuristics>`_
-  to set default `method` for groupby problems. This only applies to ``flox>=0.9``.
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-- All `quantile` methods (e.g. :py:meth:`DataArray.quantile`) now use `numbagg`
-  for the calculation of nanquantiles (i.e., `skipna=True`) if it is installed.
-  This is currently limited to the linear interpolation method (`method='linear'`).
-  (:issue:`7377`, :pull:`8684`) By `Marco Wolsza <https://github.com/maawoo>`_.
-- Grouped and resampling quantile calculations now use ``flox>=0.9.2`` if present.
+- Grouped and resampling quantile calculations now use the vectorized algorithm in ``flox>=0.9.2`` if present.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Do not broadcast in arithmetic operations when global option ``arithmetic_broadcast=False``
   (:issue:`6806`, :pull:`8784`).
