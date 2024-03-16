@@ -842,7 +842,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             value = np.moveaxis(value, new_order, range(len(new_order)))
 
         indexable = as_indexable(self._data)
-        indexable[index_tuple] = value
+        indexing.set_with_indexer(indexable, index_tuple, value)
 
     @property
     def encoding(self) -> dict[Any, Any]:
