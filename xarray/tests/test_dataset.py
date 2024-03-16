@@ -2948,10 +2948,11 @@ class TestDataset:
             name="value",
         ).to_dataset()
         ds_cp = ds.copy(deep=deep)
-        ds_cp.coords["a"].data[0] = 999
+        new_a = np.array([999, 2])
+        ds_cp.coords["a"] = ds_cp.a.copy(data=new_a)
 
         expected_cp = xr.DataArray(
-            xr.IndexVariable("a", np.array([999, 2])),
+            xr.IndexVariable("a", new_a),
             coords={"a": [999, 2]},
             dims=["a"],
         )
