@@ -209,7 +209,11 @@ def _possibly_convert_objects(values):
     as_series = pd.Series(values.ravel(), copy=False)
     if as_series.dtype.kind in "mM":
         as_series = _as_nanosecond_precision(as_series)
-    return np.asarray(as_series).reshape(values.shape)
+    result = np.asarray(as_series).reshape(values.shape)
+    if not result.flags.writeable:
+        # GH8843, pandas copy-on-write mode creates read-only arrays by default
+        result = result.copy()
+    return result
 
 
 def _possibly_convert_datetime_or_timedelta_index(data):
