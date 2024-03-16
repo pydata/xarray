@@ -38,7 +38,7 @@ New Features
   for the calculation of nanquantiles (i.e., `skipna=True`) if it is installed.
   This is currently limited to the linear interpolation method (`method='linear'`).
   (:issue:`7377`, :pull:`8684`) By `Marco Wolsza <https://github.com/maawoo>`_.
-- Grouped and resampled median and quantile calculations now use ``flox>=0.9.1`` if present.
+- Grouped and resampling quantile calculations now use ``flox>=0.9.2`` if present.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
