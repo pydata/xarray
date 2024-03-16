@@ -132,6 +132,9 @@ class DatasetStateMachine(RuleBasedStateMachine):
         to = random.choice(
             [name for name, var in ds._variables.items() if var.dims == (dim,)]
         )
+        # TODO: swapping a dimension to itself
+        # TODO: swapping from Index to a MultiIndex level
+        # TODO: swapping from MultiIndex to a level of the same MultiIndex
         note(f"> swapping {dim} to {to}")
         self.dataset = ds.swap_dims({dim: to})
 
