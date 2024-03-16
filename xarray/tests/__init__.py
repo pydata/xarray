@@ -37,7 +37,6 @@ try:
 except ImportError:
     pass
 
-
 # https://github.com/pydata/xarray/issues/7322
 warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is deprecated")
 warnings.filterwarnings("ignore", "Deprecated call to `pkg_resources.declare_namespace")
