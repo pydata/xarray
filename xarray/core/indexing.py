@@ -328,7 +328,7 @@ def as_integer_slice(value):
 class IndexCallable:
     """Provide getitem and setitem syntax for callable objects."""
 
-    __slots__ = ("func_get", "func_set")
+    __slots__ = ("getter", "setter")
 
     def __init__(self, func_get, func_set=None):
         self.func_get = func_get
@@ -643,7 +643,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
     def _oindex_set(self, key, value):
         full_key = self._updated_key(key)
-        self.array[full_key] = value
+        self.array.oindex[full_key] = value
 
     def __setitem__(self, key, value):
         self._check_and_raise_if_non_basic_indexer(key)
