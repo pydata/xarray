@@ -940,15 +940,15 @@ class DataTree(
         Just like `dict.update` this is an in-place operation.
         """
         # TODO separate by type
-        new_children = {}
+        new_children: dict[str, DataTree] = {}
         new_variables = {}
         for k, v in other.items():
             if isinstance(v, DataTree):
                 # avoid named node being stored under inconsistent key
-                new_child = v.copy()
+                new_child: DataTree = v.copy()
                 # Datatree's name is always a string until we fix that (#8836)
-                new_child.name = k  # type: ignore[assignment]
-                new_children[k] = new_child
+                new_child.name = str(k)
+                new_children[str(k)] = new_child
             elif isinstance(v, (DataArray, Variable)):
                 # TODO this should also accommodate other types that can be coerced into Variables
                 new_variables[k] = v
