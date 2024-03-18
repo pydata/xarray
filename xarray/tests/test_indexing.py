@@ -23,6 +23,28 @@ from xarray.tests import (
 B = IndexerMaker(indexing.BasicIndexer)
 
 
+class TestIndexCallable:
+    def test_getitem(self):
+        def getter(key):
+            return key * 2
+
+        indexer = indexing.IndexCallable(getter)
+        assert indexer[3] == 6
+        assert indexer[0] == 0
+        assert indexer[-1] == -2
+
+    def test_setitem(self):
+        def getter(key):
+            return key * 2
+
+        def setter(key, value):
+            raise NotImplementedError("Setter not implemented")
+
+        indexer = indexing.IndexCallable(getter, setter)
+        with pytest.raises(NotImplementedError):
+            indexer[3] = 6
+
+
 class TestIndexers:
     def set_to_zero(self, x, i):
         x = x.copy()
