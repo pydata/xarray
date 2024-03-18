@@ -1,4 +1,5 @@
 import random
+from collections.abc import Hashable
 
 import numpy as np
 import pytest
@@ -16,6 +17,7 @@ from hypothesis.stateful import (
     Bundle,
     RuleBasedStateMachine,
     consumes,
+    given,
     invariant,
     precondition,
     rule,
@@ -24,17 +26,17 @@ from hypothesis.stateful import (
 import xarray.testing.strategies as xrst
 
 
-def get_not_multiindex_dims(ds: Dataset) -> set:
+def get_not_multiindex_dims(ds: Dataset) -> tuple[Hashable]:
     dims = ds.dims
     mindexes = [
         name
         for name, index in ds.xindexes.items()
         if isinstance(index, PandasMultiIndex)
     ]
-    return set(dims) - set(mindexes)
+    return tuple(set(dims) - set(mindexes))
 
 
-def get_multiindex_dims(ds: Dataset) -> list:
+def get_multiindex_dims(ds: Dataset) -> list[Hashable]:
     mindexes = [
         name
         for name, index in ds.xindexes.items()
@@ -43,8 +45,8 @@ def get_multiindex_dims(ds: Dataset) -> list:
     return mindexes
 
 
-def get_dimension_coordinates(ds: Dataset) -> set:
-    return set(ds.dims) & set(ds._variables)
+def get_dimension_coordinates(ds: Dataset) -> tuple[Hashable]:
+    return tuple(set(ds.dims) & set(ds._variables))
 
 
 @st.composite
@@ -90,32 +92,39 @@ class DatasetStateMachine(RuleBasedStateMachine):
         return name
 
     @rule()
+    @given(st.data())
     @precondition(
         lambda self: len(set(self.dataset.dims) & set(self.dataset.xindexes)) >= 1
     )
-    def reset_index(self):
-        dim = random.choice(tuple(set(self.dataset.dims) & set(self.dataset.xindexes)))
+    def reset_index(self, data):
+        dim = data.draw(
+            xrst.unique_subset_of(
+                tuple(set(self.dataset.dims) & set(self.dataset.xindexes)),
+                min_size=1,
+                max_size=1,
+            )
+        )
         self.check_default_indexes = False
         note(f"> resetting {dim}")
         self.dataset = self.dataset.reset_index(dim)
 
     @rule(newname=UNIQUE_NAME)
+    @given(data=st.data())
     @precondition(lambda self: len(get_not_multiindex_dims(self.dataset)) >= 2)
-    def stack(self, newname):
+    def stack(self, data, newname):
         choices = list(get_not_multiindex_dims(self.dataset))
-        # cannot stack repeated dims ('0', '0'), so random.choices isn't the best way to choose it
-        # Instead shuffle and pick the first two.
-        random.shuffle(choices)
-        oldnames = choices[:2]
+        oldnames = data.draw(xrst.unique_subset_of(choices, min_size=2, max_size=2))
         note(f"> stacking {oldnames} as {newname}")
         self.dataset = self.dataset.stack({newname: oldnames})
 
     @rule()
-    def unstack(self):
+    @given(data=st.data())
+    def unstack(self, data):
         choices = get_multiindex_dims(self.dataset)
         if choices:
-            dim = random.choice(choices)
+            dim = data.draw(xrst.unique_subset_of(choices, min_size=1, max_size=1))
             assume(self.dataset.xindexes[dim].index.is_unique)
+            note(f"> unstacking {dim}")
             self.dataset = self.dataset.unstack(dim)
         else:
             self.dataset = self.dataset.unstack()
@@ -131,15 +140,18 @@ class DatasetStateMachine(RuleBasedStateMachine):
         self.dataset = self.dataset.rename_vars({oldname: newname})
 
     @rule(dim=consumes(dims))
+    @given(data=st.data())
     @precondition(lambda self: len(self.dataset._variables) >= 2)
     @precondition(lambda self: bool(get_dimension_coordinates(self.dataset)))
-    def swap_dims(self, dim):
+    def swap_dims(self, data, dim):
         ds = self.dataset
         # need a dimension coordinate for swapping
-        dim = random.choice(tuple(get_dimension_coordinates(ds)))
+        dim = data.draw(xrst.unique_subset_of(get_dimension_coordinates(ds)))
         # Can only swap to a variable with the same dim
-        to = random.choice(
-            [name for name, var in ds._variables.items() if var.dims == (dim,)]
+        to = data.draw(
+            xrst.unique_subset_of(
+                [name for name, var in ds._variables.items() if var.dims == (dim,)]
+            )
         )
         # TODO: swapping a dimension to itself
         # TODO: swapping from Index to a MultiIndex level
