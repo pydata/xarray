@@ -212,7 +212,10 @@ def _possibly_convert_objects(values):
     result = np.asarray(as_series).reshape(values.shape)
     if not result.flags.writeable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
-        result.flags.writeable = True
+        try:
+            result.flags.writeable = True
+        except ValueError:
+            result = result.copy()
     return result
 
 
