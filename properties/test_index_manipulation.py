@@ -89,7 +89,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
 
     @rule(
         newname=UNIQUE_NAME,
-        oldnames=st.lists(consumes(indexed_dims), min_size=1),
+        oldnames=st.lists(consumes(indexed_dims), min_size=1, unique=True),
         target=multi_indexed_dims,
     )
     def stack(self, newname, oldnames):

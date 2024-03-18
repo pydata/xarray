@@ -406,7 +406,9 @@ def index_variables(
 ) -> xr.Variable:
 
     index = draw(pdst.indexes(min_size=1, dtype=draw(dtype)))
-    _dims = draw(dimension_names(min_dims=1, max_dims=1))
+    if dims is None:
+        dims = dimension_names(min_dims=1, max_dims=1)
+    _dims = draw(dims)
     return xr.Variable(dims=_dims, data=index, attrs=draw(attrs))
 
 
