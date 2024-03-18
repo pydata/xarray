@@ -1450,24 +1450,6 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             )
         self.array = array
 
-    def _indexing_array_and_key(self, key):
-        if isinstance(key, OuterIndexer):
-            array = self.array
-            key = _outer_to_numpy_indexer(key, self.array.shape)
-        elif isinstance(key, VectorizedIndexer):
-            array = NumpyVIndexAdapter(self.array)
-            key = key.tuple
-        elif isinstance(key, BasicIndexer):
-            array = self.array
-            # We want 0d slices rather than scalars. This is achieved by
-            # appending an ellipsis (see
-            # https://numpy.org/doc/stable/reference/arrays.indexing.html#detailed-notes).
-            key = key.tuple + (Ellipsis,)
-        else:
-            raise TypeError(f"unexpected key type: {type(key)}")
-
-        return array, key
-
     def transpose(self, order):
         return self.array.transpose(order)
 
@@ -1481,7 +1463,12 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     def __getitem__(self, key):
         self._check_and_raise_if_non_basic_indexer(key)
-        array, key = self._indexing_array_and_key(key)
+
+        array = self.array
+        # We want 0d slices rather than scalars. This is achieved by
+        # appending an ellipsis (see
+        # https://numpy.org/doc/stable/reference/arrays.indexing.html#detailed-notes).
+        key = key.tuple + (Ellipsis,)
         return array[key]
 
     def _safe_setitem(self, array, key, value):
@@ -1507,7 +1494,11 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     def __setitem__(self, key, value):
         self._check_and_raise_if_non_basic_indexer(key)
-        array, key = self._indexing_array_and_key(key)
+        array = self.array
+        # We want 0d slices rather than scalars. This is achieved by
+        # appending an ellipsis (see
+        # https://numpy.org/doc/stable/reference/arrays.indexing.html#detailed-notes).
+        key = key.tuple + (Ellipsis,)
         self._safe_setitem(array, key, value)
 
 
