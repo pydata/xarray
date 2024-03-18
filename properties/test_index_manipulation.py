@@ -124,12 +124,13 @@ class DatasetStateMachine(RuleBasedStateMachine):
     @precondition(lambda self: len(self.dataset._variables) >= 2)
     def swap_dims(self, data, dim):
         ds = self.dataset
+        choices = [name for name, var in ds._variables.items() if var.dims == (dim,)]
+        # TODO: is there a better way to skip if choices == []
+        # note(choices)
+        # if not choices:
+        #     return dim
         # Can only swap to a variable with the same dim
-        to = data.draw(
-            st.sampled_from(
-                [name for name, var in ds._variables.items() if var.dims == (dim,)]
-            )
-        )
+        to = data.draw(st.sampled_from(choices))
         # TODO: swapping a dimension to itself
         # TODO: swapping from Index to a MultiIndex level
         # TODO: swapping from MultiIndex to a level of the same MultiIndex
