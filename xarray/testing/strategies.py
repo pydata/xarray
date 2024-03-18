@@ -9,6 +9,7 @@ except ImportError as e:
     ) from e
 
 import hypothesis.extra.numpy as npst
+import hypothesis.extra.pandas as pdst
 import numpy as np
 from hypothesis.errors import InvalidArgument
 
@@ -26,6 +27,7 @@ __all__ = [
     "dimension_sizes",
     "attrs",
     "variables",
+    "index_variables",
     "unique_subset_of",
 ]
 
@@ -59,6 +61,15 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
         | npst.unsigned_integer_dtypes()
         | npst.floating_dtypes()
         | npst.complex_number_dtypes()
+    )
+
+
+# TODO: add datetime64[ns]
+def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
+    return (
+        npst.integer_dtypes(endianness="<", sizes=(32, 64))
+        | npst.unsigned_integer_dtypes(endianness="<", sizes=(32, 64))
+        | npst.floating_dtypes(endianness="<", sizes=(32, 64))
     )
 
 
@@ -380,6 +391,23 @@ def variables(
         )
 
     return xr.Variable(dims=dim_names, data=_data, attrs=draw(attrs))
+
+
+@st.composite
+def index_variables(
+    draw: st.DrawFn,
+    *,
+    dims: Union[
+        st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]],
+        None,
+    ] = None,
+    dtype: st.SearchStrategy[np.dtype] = pandas_index_dtypes(),
+    attrs: st.SearchStrategy[Mapping] = attrs(),
+) -> xr.Variable:
+
+    index = draw(pdst.indexes(min_size=1, dtype=draw(dtype)))
+    _dims = draw(dimension_names(min_dims=1, max_dims=1))
+    return xr.Variable(dims=_dims, data=index, attrs=draw(attrs))
 
 
 @overload

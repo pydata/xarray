@@ -1,7 +1,6 @@
 import random
 from collections.abc import Hashable
 
-import numpy as np
 import pytest
 
 from xarray import Dataset
@@ -10,7 +9,6 @@ from xarray.testing import _assert_internal_invariants
 
 pytest.importorskip("hypothesis")
 
-import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 from hypothesis import assume, note, settings
 from hypothesis.stateful import (
@@ -65,15 +63,6 @@ UNIQUE_NAME = unique(strategy=xrst.names())
 DIM_NAME = xrst.dimension_names(name_strategy=UNIQUE_NAME, min_dims=1, max_dims=1)
 
 
-# TODO: add datetime64[ns]
-def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
-    return (
-        npst.integer_dtypes(endianness="<", sizes=(32, 64))
-        | npst.unsigned_integer_dtypes(endianness="<", sizes=(32, 64))
-        | npst.floating_dtypes(endianness="<", sizes=(32, 64))
-    )
-
-
 class DatasetStateMachine(RuleBasedStateMachine):
     indexed_dims = Bundle("indexed_dims")
     multi_indexed_dims = Bundle("multi_indexed_dims")
@@ -83,10 +72,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
         self.dataset = Dataset()
         self.check_default_indexes = True
 
-    @rule(
-        var=xrst.variables(dims=DIM_NAME, dtype=pandas_index_dtypes()),
-        target=indexed_dims,
-    )
+    @rule(var=xrst.index_variables(dims=DIM_NAME), target=indexed_dims)
     def add_dim_coord(self, var):
         (name,) = var.dims
         # dim coord
