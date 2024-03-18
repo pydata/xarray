@@ -17,8 +17,8 @@ from hypothesis.stateful import (
     Bundle,
     RuleBasedStateMachine,
     consumes,
-    given,
     invariant,
+    multiple,
     precondition,
     rule,
 )
@@ -75,14 +75,18 @@ def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
 
 
 class DatasetStateMachine(RuleBasedStateMachine):
-    dims = Bundle("dims")
+    indexed_dims = Bundle("indexed_dims")
+    multi_indexed_dims = Bundle("multi_indexed_dims")
 
     def __init__(self):
         super().__init__()
         self.dataset = Dataset()
         self.check_default_indexes = True
 
-    @rule(var=xrst.variables(dims=DIM_NAME, dtype=pandas_index_dtypes()), target=dims)
+    @rule(
+        var=xrst.variables(dims=DIM_NAME, dtype=pandas_index_dtypes()),
+        target=indexed_dims,
+    )
     def add_dim_coord(self, var):
         (name,) = var.dims
         # dim coord
@@ -91,46 +95,37 @@ class DatasetStateMachine(RuleBasedStateMachine):
         self.dataset[name + "_"] = var
         return name
 
-    @rule()
-    @given(st.data())
-    @precondition(
-        lambda self: len(set(self.dataset.dims) & set(self.dataset.xindexes)) >= 1
-    )
-    def reset_index(self, data):
-        dim = data.draw(
-            xrst.unique_subset_of(
-                tuple(set(self.dataset.dims) & set(self.dataset.xindexes)),
-                min_size=1,
-                max_size=1,
-            )
-        )
+    @rule(dim=st.one_of(consumes(indexed_dims), consumes(multi_indexed_dims)))
+    def reset_index(self, dim):
         self.check_default_indexes = False
         note(f"> resetting {dim}")
         self.dataset = self.dataset.reset_index(dim)
 
-    @rule(newname=UNIQUE_NAME)
-    @given(data=st.data())
-    @precondition(lambda self: len(get_not_multiindex_dims(self.dataset)) >= 2)
-    def stack(self, data, newname):
-        choices = list(get_not_multiindex_dims(self.dataset))
-        oldnames = data.draw(xrst.unique_subset_of(choices, min_size=2, max_size=2))
+    @rule(
+        newname=UNIQUE_NAME,
+        oldnames=st.lists(consumes(indexed_dims), min_size=1),
+        target=multi_indexed_dims,
+    )
+    def stack(self, newname, oldnames):
         note(f"> stacking {oldnames} as {newname}")
         self.dataset = self.dataset.stack({newname: oldnames})
+        return newname
 
-    @rule()
-    @given(data=st.data())
-    def unstack(self, data):
-        choices = get_multiindex_dims(self.dataset)
-        if choices:
-            dim = data.draw(xrst.unique_subset_of(choices, min_size=1, max_size=1))
-            assume(self.dataset.xindexes[dim].index.is_unique)
-            note(f"> unstacking {dim}")
-            self.dataset = self.dataset.unstack(dim)
+    # TODO: add st.none() to dim
+    @rule(dim=consumes(multi_indexed_dims), target=indexed_dims)
+    def unstack(self, dim):
+        if dim is not None:
+            pd_index = self.dataset.xindexes[dim].index
+            assume(pd_index.is_unique)
+        note(f"> unstacking {dim}")
+        self.dataset = self.dataset.unstack(dim)
+        if dim is not None:
+            return multiple(pd_index.names)
         else:
-            self.dataset = self.dataset.unstack()
+            # TODO Fix this when adding st.none()
+            return multiple()
 
-    @rule(newname=UNIQUE_NAME, oldname=consumes(dims))
-    @precondition(lambda self: bool(get_dimension_coordinates(self.dataset)))
+    @rule(newname=UNIQUE_NAME, oldname=consumes(indexed_dims))
     def rename_vars(self, newname, oldname):
         # benbovy: "skip the default indexes invariant test when the name of an
         # existing dimension coordinate is passed as input kwarg or dict key
@@ -139,17 +134,13 @@ class DatasetStateMachine(RuleBasedStateMachine):
         note(f"> renaming {oldname} to {newname}")
         self.dataset = self.dataset.rename_vars({oldname: newname})
 
-    @rule(dim=consumes(dims))
-    @given(data=st.data())
+    @rule(data=st.data(), dim=consumes(indexed_dims), target=indexed_dims)
     @precondition(lambda self: len(self.dataset._variables) >= 2)
-    @precondition(lambda self: bool(get_dimension_coordinates(self.dataset)))
     def swap_dims(self, data, dim):
         ds = self.dataset
-        # need a dimension coordinate for swapping
-        dim = data.draw(xrst.unique_subset_of(get_dimension_coordinates(ds)))
         # Can only swap to a variable with the same dim
         to = data.draw(
-            xrst.unique_subset_of(
+            st.sampled_from(
                 [name for name, var in ds._variables.items() if var.dims == (dim,)]
             )
         )
@@ -158,6 +149,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
         # TODO: swapping from MultiIndex to a level of the same MultiIndex
         note(f"> swapping {dim} to {to}")
         self.dataset = ds.swap_dims({dim: to})
+        return to
 
     # TODO: enable when we have serializable attrs only
     # @rule()
@@ -172,7 +164,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
 
     @invariant()
     def assert_invariants(self):
-        note(f"> ===\n\n {self.dataset!r} \n===\n\n")
+        # note(f"> ===\n\n {self.dataset!r} \n===\n\n")
         _assert_internal_invariants(self.dataset, self.check_default_indexes)
 
 
