@@ -383,15 +383,8 @@ class TestLazyArray:
 
         def check_indexing(v_eager, v_lazy, indexers):
             for indexer in indexers:
-                if isinstance(indexer, indexing.VectorizedIndexer):
-                    actual = v_lazy.vindex[indexer]
-                    expected = v_eager.vindex[indexer]
-                elif isinstance(indexer, indexing.OuterIndexer):
-                    actual = v_lazy.oindex[indexer]
-                    expected = v_eager.oindex[indexer]
-                else:
-                    actual = v_lazy[indexer]
-                    expected = v_eager[indexer]
+                actual = v_lazy[indexer]
+                expected = v_eager[indexer]
                 assert expected.shape == actual.shape
                 assert isinstance(
                     actual._data,
