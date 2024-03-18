@@ -64,6 +64,21 @@ def var():
     return Variable(dims=list("xyz"), data=np.random.rand(3, 4, 5))
 
 
+@pytest.mark.parametrize(
+    "data",
+    [
+        np.array(["a", "bc", "def"], dtype=object),
+        np.array(["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[ns]"),
+    ],
+)
+def test_as_compatible_data_writeable(data):
+    pd.set_option("mode.copy_on_write", True)
+    # GH8843, ensure writeable arrays for data_vars even with
+    # pandas copy-on-write mode
+    assert as_compatible_data(data).flags.writeable
+    pd.reset_option("mode.copy_on_write")
+
+
 class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
     @pytest.fixture
     def target(self, data):

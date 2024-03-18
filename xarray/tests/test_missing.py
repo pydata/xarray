@@ -122,10 +122,13 @@ def test_interpolate_pd_compat(method, fill_value) -> None:
                 # for the numpy linear methods.
                 # see https://github.com/pandas-dev/pandas/issues/55144
                 # This aligns the pandas output with the xarray output
-                expected.values[pd.isnull(actual.values)] = np.nan
-                expected.values[actual.values == fill_value] = fill_value
+                fixed = expected.values.copy()
+                fixed[pd.isnull(actual.values)] = np.nan
+                fixed[actual.values == fill_value] = fill_value
+            else:
+                fixed = expected.values
 
-            np.testing.assert_allclose(actual.values, expected.values)
+            np.testing.assert_allclose(actual.values, fixed)
 
 
 @requires_scipy
