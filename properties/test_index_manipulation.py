@@ -12,7 +12,14 @@ pytest.importorskip("hypothesis")
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 from hypothesis import assume, note, settings
-from hypothesis.stateful import RuleBasedStateMachine, invariant, precondition, rule
+from hypothesis.stateful import (
+    Bundle,
+    RuleBasedStateMachine,
+    consumes,
+    invariant,
+    precondition,
+    rule,
+)
 
 import xarray.testing.strategies as xrst
 
@@ -66,18 +73,21 @@ def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
 
 
 class DatasetStateMachine(RuleBasedStateMachine):
+    dims = Bundle("dims")
+
     def __init__(self):
         super().__init__()
         self.dataset = Dataset()
         self.check_default_indexes = True
 
-    @rule(var=xrst.variables(dims=DIM_NAME, dtype=pandas_index_dtypes()))
+    @rule(var=xrst.variables(dims=DIM_NAME, dtype=pandas_index_dtypes()), target=dims)
     def add_dim_coord(self, var):
         (name,) = var.dims
         # dim coord
         self.dataset[name] = var
         # non-dim coord of same size; this allows renaming
         self.dataset[name + "_"] = var
+        return name
 
     @rule()
     @precondition(
@@ -110,21 +120,20 @@ class DatasetStateMachine(RuleBasedStateMachine):
         else:
             self.dataset = self.dataset.unstack()
 
-    @rule(newname=UNIQUE_NAME)
+    @rule(newname=UNIQUE_NAME, oldname=consumes(dims))
     @precondition(lambda self: bool(get_dimension_coordinates(self.dataset)))
-    def rename_vars(self, newname):
+    def rename_vars(self, newname, oldname):
         # benbovy: "skip the default indexes invariant test when the name of an
         # existing dimension coordinate is passed as input kwarg or dict key
         # to .rename_vars()."
-        oldname = random.choice(tuple(get_dimension_coordinates(self.dataset)))
         self.check_default_indexes = False
         note(f"> renaming {oldname} to {newname}")
         self.dataset = self.dataset.rename_vars({oldname: newname})
 
-    @rule()
+    @rule(dim=consumes(dims))
     @precondition(lambda self: len(self.dataset._variables) >= 2)
     @precondition(lambda self: bool(get_dimension_coordinates(self.dataset)))
-    def swap_dims(self):
+    def swap_dims(self, dim):
         ds = self.dataset
         # need a dimension coordinate for swapping
         dim = random.choice(tuple(get_dimension_coordinates(ds)))
