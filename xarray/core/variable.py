@@ -766,12 +766,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
         indexable = as_indexable(self._data)
 
-        if isinstance(indexer, OuterIndexer):
-            data = indexable.oindex[indexer]
-        elif isinstance(indexer, VectorizedIndexer):
-            data = indexable.vindex[indexer]
-        else:
-            data = indexable[indexer]
+        data = indexing.apply_indexer(indexable, indexer)
+
         if new_order:
             data = np.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
@@ -796,6 +792,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
 
         if self.size:
+
             if is_duck_dask_array(self._data):
                 # dask's indexing is faster this way; also vindex does not
                 # support negative indices yet:
@@ -805,14 +802,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 actual_indexer = indexer
 
             indexable = as_indexable(self._data)
+            data = indexing.apply_indexer(indexable, actual_indexer)
 
-            if isinstance(indexer, OuterIndexer):
-                data = indexable.oindex[indexer]
-
-            elif isinstance(indexer, VectorizedIndexer):
-                data = indexable.vindex[indexer]
-            else:
-                data = indexable[actual_indexer]
             mask = indexing.create_mask(indexer, self.shape, data)
             # we need to invert the mask in order to pass data first. This helps
             # pint to choose the correct unit
@@ -2881,6 +2872,16 @@ def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
 
 
 def _broadcast_compat_data(self, other):
+    if not OPTIONS["arithmetic_broadcast"]:
+        if (isinstance(other, Variable) and self.dims != other.dims) or (
+            is_duck_array(other) and self.ndim != other.ndim
+        ):
+            raise ValueError(
+                "Broadcasting is necessary but automatic broadcasting is disabled via "
+                "global option `'arithmetic_broadcast'`. "
+                "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
+            )
+
     if all(hasattr(other, attr) for attr in ["dims", "data", "shape", "encoding"]):
         # `other` satisfies the necessary Variable API for broadcast_variables
         new_self, new_other = _broadcast_compat_variables(self, other)

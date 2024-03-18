@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Protocol, TypeVar
 
 import numpy as np
 
+from xarray.core.utils import emit_user_level_warning
 from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
@@ -73,9 +74,15 @@ def load_chunkmanagers(
 ) -> dict[str, ChunkManagerEntrypoint[Any]]:
     """Load entrypoints and instantiate chunkmanagers only once."""
 
-    loaded_entrypoints = {
-        entrypoint.name: entrypoint.load() for entrypoint in entrypoints
-    }
+    loaded_entrypoints = {}
+    for entrypoint in entrypoints:
+        try:
+            loaded_entrypoints[entrypoint.name] = entrypoint.load()
+        except ModuleNotFoundError as e:
+            emit_user_level_warning(
+                f"Failed to load chunk manager entrypoint {entrypoint.name} due to {e}. Skipping.",
+            )
+            pass
 
     available_chunkmanagers = {
         name: chunkmanager()
