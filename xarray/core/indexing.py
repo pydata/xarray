@@ -330,19 +330,19 @@ class IndexCallable:
 
     __slots__ = ("getter", "setter")
 
-    def __init__(self, func_get, func_set=None):
-        self.func_get = func_get
-        self.func_set = func_set
+    def __init__(self, getter, setter=None):
+        self.getter = getter
+        self.setter = setter
 
     def __getitem__(self, key):
-        return self.func_get(key)
+        return self.getter(key)
 
     def __setitem__(self, key, value):
-        if self.func_set is None:
+        if self.setter is None:
             raise NotImplementedError(
                 "Setting values is not supported for this indexer."
             )
-        self.func_set(key, value)
+        self.setter(key, value)
 
 
 class BasicIndexer(ExplicitIndexer):
