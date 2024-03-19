@@ -1374,6 +1374,8 @@ class GroupBy(Generic[T_Xarray]):
            "Sample quantiles in statistical packages,"
            The American Statistician, 50(4), pp. 361-365, 1996
         """
+        from xarray.core.dataarray import DataArray
+
         if dim is None:
             (grouper,) = self.groupers
             dim = grouper.group1d.dims
@@ -1384,9 +1386,13 @@ class GroupBy(Generic[T_Xarray]):
             and contains_only_chunked_or_numpy(self._obj)
             and module_available("flox", minversion="0.9.4")
         ):
-            return self._flox_reduce(
+
+            result = self._flox_reduce(
                 func="quantile", q=q, dim=dim, keep_attrs=keep_attrs, skipna=skipna
             )
+            if isinstance(result, DataArray) and not is_scalar(q):
+                result = self._restore_dim_order(result)
+            return result
         else:
             return self.map(
                 self._obj.__class__.quantile,
