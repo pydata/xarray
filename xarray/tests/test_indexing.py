@@ -421,6 +421,41 @@ class TestLazyArray:
         ]
         check_indexing(v_eager, v_lazy, indexers)
 
+    def test_lazily_indexed_array_vindex_setitem(self) -> None:
+
+        lazy = indexing.LazilyIndexedArray(np.random.rand(10, 20, 30))
+
+        # vectorized indexing
+        indexer = indexing.VectorizedIndexer(
+            (np.array([0, 1]), np.array([0, 1]), slice(None, None, None))
+        )
+        with pytest.raises(
+            NotImplementedError,
+            match=r"Lazy item assignment with the vectorized indexer is not yet",
+        ):
+            lazy.vindex[indexer] = 0
+
+    @pytest.mark.parametrize(
+        "indexer_class, key, value",
+        [
+            (indexing.OuterIndexer, (0, 1, slice(None, None, None)), 10),
+            (indexing.BasicIndexer, (0, 1, slice(None, None, None)), 10),
+        ],
+    )
+    def test_lazily_indexed_array_setitem(self, indexer_class, key, value) -> None:
+        original = np.random.rand(10, 20, 30)
+        x = indexing.NumpyIndexingAdapter(original)
+        lazy = indexing.LazilyIndexedArray(x)
+
+        if indexer_class is indexing.BasicIndexer:
+            indexer = indexer_class(key)
+            lazy[indexer] = value
+        elif indexer_class is indexing.OuterIndexer:
+            indexer = indexer_class(key)
+            lazy.oindex[indexer] = value
+
+        assert_array_equal(original[key], value)
+
 
 class TestCopyOnWriteArray:
     def test_setitem(self) -> None:
