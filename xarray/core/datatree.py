@@ -929,12 +929,14 @@ class DataTree(
     def update(self, other: Mapping[Hashable, DataArray | Variable]) -> None: ...
 
     @overload
-    def update(self, other: Mapping[str, DataTree]) -> None: ...
+    def update(self, other: Mapping[str, DataTree | DataArray | Variable]) -> None: ...
 
     def update(
         self,
         other: (
-            Dataset | Mapping[Hashable, DataArray | Variable] | Mapping[str, DataTree]
+            Dataset
+            | Mapping[Hashable, DataArray | Variable]
+            | Mapping[str, DataTree | DataArray | Variable]
         ),
     ) -> None:
         """
