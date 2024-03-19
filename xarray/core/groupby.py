@@ -1211,13 +1211,9 @@ class GroupBy(Generic[T_Xarray]):
                     (result.sizes[grouper.name],) + var.shape,
                 )
 
-        if isbin:
-            # Fix dimension order when binning a dimension coordinate
-            # Needed as long as we do a separate code path for pint;
-            # For some reason Datasets and DataArrays behave differently!
-            (group_dim,) = grouper.dims
-            if isinstance(self._obj, Dataset) and group_dim in self._obj.dims:
-                result = result.transpose(grouper.name, ...)
+        if not isinstance(result, Dataset):
+            # only restore dimension order for arrays
+            result = self._restore_dim_order(result)
 
         return result
 
@@ -1374,7 +1370,6 @@ class GroupBy(Generic[T_Xarray]):
            "Sample quantiles in statistical packages,"
            The American Statistician, 50(4), pp. 361-365, 1996
         """
-        from xarray.core.dataarray import DataArray
 
         if dim is None:
             (grouper,) = self.groupers
@@ -1392,8 +1387,6 @@ class GroupBy(Generic[T_Xarray]):
             result = self._flox_reduce(
                 func="quantile", q=q, dim=dim, keep_attrs=keep_attrs, skipna=skipna
             )
-            if isinstance(result, DataArray) and not is_scalar(q):
-                result = self._restore_dim_order(result)
             return result
         else:
             return self.map(
