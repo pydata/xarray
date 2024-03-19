@@ -1370,7 +1370,6 @@ class GroupBy(Generic[T_Xarray]):
            "Sample quantiles in statistical packages,"
            The American Statistician, 50(4), pp. 361-365, 1996
         """
-
         if dim is None:
             (grouper,) = self.groupers
             dim = grouper.group1d.dims
