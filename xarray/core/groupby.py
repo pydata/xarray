@@ -1077,6 +1077,9 @@ class GroupBy(Generic[T_Xarray]):
                         result[var] = result[var].transpose(d, ...)
         return result
 
+    def _restore_dim_order(self, stacked):
+        raise NotImplementedError
+
     def _maybe_restore_empty_groups(self, combined):
         """Our index contained empty groups (e.g., from a resampling or binning). If we
         reduced on that dimension, we want to restore the full index.
