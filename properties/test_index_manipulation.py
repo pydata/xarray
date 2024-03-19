@@ -106,7 +106,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
         note(f"> unstacking {dim}")
         self.dataset = self.dataset.unstack(dim)
         if dim is not None:
-            return multiple(pd_index.names)
+            return multiple(*pd_index.names)
         else:
             # TODO Fix this when adding st.none()
             return multiple()
