@@ -309,6 +309,8 @@ class CFMaskCoder(VariableCoder):
         dtype = np.dtype(encoding.get("dtype", data.dtype))
         fv = encoding.get("_FillValue")
         mv = encoding.get("missing_value")
+        # to properly handle _FillValue/missing_value below [a], [b]
+        # we need to check if unsigned data is written as signed data
         unsigned = encoding.get("_Unsigned") is not None
 
         fv_exists = fv is not None
@@ -324,7 +326,7 @@ class CFMaskCoder(VariableCoder):
 
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
-            # need to skip this if _Unsigned is available
+            # [a] need to skip this if _Unsigned is available
             if not unsigned:
                 encoding["_FillValue"] = dtype.type(fv)
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
@@ -332,7 +334,7 @@ class CFMaskCoder(VariableCoder):
         if mv_exists:
             # try to use _FillValue, if it exists to align both values
             # or use missing_value and ensure it's cast to same dtype as data's
-            # need to provide mv verbatim if _Unsigned is available
+            # [b] need to provide mv verbatim if _Unsigned is available
             encoding["missing_value"] = attrs.get(
                 "_FillValue",
                 (dtype.type(mv) if not unsigned else mv),
