@@ -123,7 +123,7 @@ class TestStoreDatasets:
     def test_set_data(self):
         john: DataTree = DataTree(name="john")
         dat = xr.Dataset({"a": 0})
-        john.ds = dat
+        john.ds = dat  # type: ignore[assignment]
 
         xrt.assert_identical(john.to_dataset(), dat)
 
@@ -144,7 +144,7 @@ class TestStoreDatasets:
         eve: DataTree = DataTree(children={"john": john})
         assert eve.is_hollow
 
-        eve.ds = xr.Dataset({"a": 1})
+        eve.ds = xr.Dataset({"a": 1})  # type: ignore[assignment]
         assert not eve.is_hollow
 
 
@@ -158,13 +158,13 @@ class TestVariablesChildrenNameCollisions:
         dt: DataTree = DataTree(data=None)
         DataTree(name="a", data=None, parent=dt)
         with pytest.raises(KeyError, match="names would collide"):
-            dt.ds = xr.Dataset({"a": 0})
+            dt.ds = xr.Dataset({"a": 0})  # type: ignore[assignment]
 
-        dt.ds = xr.Dataset()
+        dt.ds = xr.Dataset()  # type: ignore[assignment]
 
         new_ds = dt.to_dataset().assign(a=xr.DataArray(0))
         with pytest.raises(KeyError, match="names would collide"):
-            dt.ds = new_ds
+            dt.ds = new_ds  # type: ignore[assignment]
 
 
 class TestGet: ...
@@ -380,7 +380,7 @@ class TestSetItem:
         john["mary"] = DataTree()
         xrt.assert_identical(mary.to_dataset(), xr.Dataset())
 
-        john.ds = xr.Dataset()
+        john.ds = xr.Dataset()  # type: ignore[assignment]
         with pytest.raises(ValueError, match="has no name"):
             john["."] = DataTree()
 

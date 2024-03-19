@@ -174,6 +174,7 @@ class DatasetView(Dataset):
     def __getitem__(self, key: Hashable) -> DataArray:  # type: ignore[overload-overlap]
         ...
 
+    # See: https://github.com/pydata/xarray/issues/8855
     @overload
     def __getitem__(self, key: Any) -> Dataset: ...
 
@@ -441,6 +442,8 @@ class DataTree(
 
     @ds.setter
     def ds(self, data: Dataset | DataArray | None = None) -> None:
+        # Known mypy issue for setters with different type to property:
+        # https://github.com/python/mypy/issues/3004
         ds = _coerce_to_dataset(data)
 
         _check_for_name_collisions(self.children, ds.variables)
@@ -810,7 +813,7 @@ class DataTree(
         """Copy just one node of a tree"""
         new_node: DataTree = DataTree()
         new_node.name = self.name
-        new_node.ds = self.to_dataset().copy(deep=deep)
+        new_node.ds = self.to_dataset().copy(deep=deep)  # type: ignore[assignment]
         return new_node
 
     def __copy__(self: DataTree) -> DataTree:
