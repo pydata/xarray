@@ -1148,7 +1148,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if is_dict_like(key):
             return tuple(key.get(dim, slice(None)) for dim in self.dims)
         else:
-            return tuple(key)
+            return key
 
     def _validate_indexers(self, key: Any) -> None:
         """Make sanity checks"""
