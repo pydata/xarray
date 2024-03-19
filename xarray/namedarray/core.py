@@ -1128,6 +1128,19 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         return expand_dims(self, dim=dim)
 
+    @property
+    def _in_memory(self) -> bool:
+        """Return whether the data is in memory."""
+        # TODO: Remove the import once the indexing adapters are moved to namedarray
+        from xarray.core import indexing
+
+        return isinstance(
+            self._data, (np.ndarray, np.number, indexing.PandasIndexingAdapter)
+        ) or (
+            isinstance(self._data, indexing.MemoryCachedArray)
+            and isinstance(self._data.array, indexing.NumpyIndexingAdapter)
+        )
+
 
 _NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]
 
