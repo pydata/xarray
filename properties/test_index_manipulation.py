@@ -58,9 +58,9 @@ def unique(draw, strategy):
 
 random.seed(123456)
 
-# This strategy will be shared to ensure we get unique names on each draw.
-# So we don't rename to an already present dimension name, for example.
-unique_names = unique(strategy=xrst.names())
+# Share to ensure we get unique names on each draw?
+UNIQUE_NAME = unique(strategy=xrst.names())
+DIM_NAME = xrst.dimension_names(name_strategy=UNIQUE_NAME, min_dims=1, max_dims=1)
 
 
 class DatasetStateMachine(RuleBasedStateMachine):
@@ -72,14 +72,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
         self.dataset = Dataset()
         self.check_default_indexes = True
 
-    @rule(
-        var=xrst.index_variables(
-            dims=xrst.dimension_names(
-                name_strategy=st.shared(unique_names), min_dims=1, max_dims=1
-            )
-        ),
-        target=indexed_dims,
-    )
+    @rule(var=xrst.index_variables(dims=DIM_NAME), target=indexed_dims)
     def add_dim_coord(self, var):
         (name,) = var.dims
         # dim coord
@@ -95,7 +88,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
         self.dataset = self.dataset.reset_index(dim)
 
     @rule(
-        newname=st.shared(unique_names),
+        newname=UNIQUE_NAME,
         oldnames=st.lists(consumes(indexed_dims), min_size=1, unique=True),
         target=multi_indexed_dims,
     )
@@ -118,7 +111,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
             # TODO Fix this when adding st.none()
             return multiple()
 
-    @rule(newname=st.shared(unique_names), oldname=consumes(indexed_dims))
+    @rule(newname=UNIQUE_NAME, oldname=consumes(indexed_dims))
     def rename_vars(self, newname, oldname):
         # benbovy: "skip the default indexes invariant test when the name of an
         # existing dimension coordinate is passed as input kwarg or dict key
