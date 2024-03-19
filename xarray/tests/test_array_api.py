@@ -6,20 +6,9 @@ import xarray as xr
 from xarray.testing import assert_equal
 
 np = pytest.importorskip("numpy", minversion="1.22")
+xp = pytest.importorskip("array_api_strict")
 
-try:
-    import warnings
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-
-        import numpy.array_api as xp
-        from numpy.array_api._array_object import Array
-except ImportError:
-    # for `numpy>=2.0`
-    xp = pytest.importorskip("array_api_strict")
-
-    from array_api_strict._array_object import Array  # type: ignore[no-redef]
+from array_api_strict._array_object import Array  # isort:skip # type: ignore[no-redef]
 
 
 @pytest.fixture
