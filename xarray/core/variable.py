@@ -554,32 +554,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         return item
 
-    def __getitem__(self, key) -> Self:
-        """Return a new Variable object whose contents are consistent with
-        getting the provided key from the underlying data.
-
-        NB. __getitem__ and __setitem__ implement xarray-style indexing,
-        where if keys are unlabeled arrays, we index the array orthogonally
-        with them. If keys are labeled array (such as Variables), they are
-        broadcasted with our usual scheme and then the array is indexed with
-        the broadcasted key, like numpy's fancy indexing.
-
-        If you really want to do indexing like `x[x > 0]`, manipulate the numpy
-        array `x.values` directly.
-        """
-        dims, indexer, new_order = self._broadcast_indexes(key)
-        indexable = as_indexable(self._data)
-
-        data = indexing.apply_indexer(indexable, indexer)
-
-        if new_order:
-            data = np.moveaxis(data, range(len(new_order)), new_order)
-        return self._finalize_indexing_result(dims, data)
-
-    def _finalize_indexing_result(self, dims, data) -> Self:
-        """Used by IndexVariable to return IndexVariable objects when possible."""
-        return self._replace(dims=dims, data=data)
-
     def _getitem_with_mask(self, key, fill_value=dtypes.NA):
         """Index this Variable with -1 remapped to fill_value."""
         # TODO(shoyer): expose this method in public API somewhere (isel?) and

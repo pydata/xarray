@@ -1341,6 +1341,34 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         return out_dims, VectorizedIndexer(tuple(out_key)), new_order
 
+    def _finalize_indexing_result(self, dims, data) -> Self:
+        """xarray.core.variable.IndexVariable overrides the implementation of this method to return  to return IndexVariable objects when possible."""
+        return self._replace(dims=dims, data=data)
+
+    def __getitem__(self, key) -> Self:
+        """Return a new Variable object whose contents are consistent with
+        getting the provided key from the underlying data.
+
+        NB. __getitem__ and __setitem__ implement xarray-style indexing,
+        where if keys are unlabeled arrays, we index the array orthogonally
+        with them. If keys are labeled array (such as Variables), they are
+        broadcasted with our usual scheme and then the array is indexed with
+        the broadcasted key, like numpy's fancy indexing.
+
+        If you really want to do indexing like `x[x > 0]`, manipulate the numpy
+        array `x.values` directly.
+        """
+        from xarray.core.indexing import apply_indexer, as_indexable
+
+        dims, indexer, new_order = self._broadcast_indexes(key)
+        indexable = as_indexable(self._data)
+
+        data = apply_indexer(indexable, indexer)
+
+        if new_order:
+            data = np.moveaxis(data, range(len(new_order)), new_order)
+        return self._finalize_indexing_result(dims, data)
+
 
 _NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]
 
