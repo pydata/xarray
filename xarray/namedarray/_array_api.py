@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from types import ModuleType
 from typing import Any
 
@@ -20,14 +19,6 @@ from xarray.namedarray._typing import (
     _SupportsReal,
 )
 from xarray.namedarray.core import NamedArray
-
-with warnings.catch_warnings():
-    warnings.filterwarnings(
-        "ignore",
-        r"The numpy.array_api submodule is still experimental",
-        category=UserWarning,
-    )
-    import numpy.array_api as nxp  # noqa: F401
 
 
 def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
