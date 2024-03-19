@@ -57,6 +57,9 @@ Bug fixes
   `CFMaskCoder`/`CFScaleOffsetCoder` (:issue:`2304`, :issue:`5597`,
   :issue:`7691`, :pull:`8713`, see also discussion in :pull:`7654`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- do not cast `_FillValue`/`missing_value` in `CFMaskCoder` if `_Unsigned` is provided
+  (:issue:`8844`, :pull:`8852`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
