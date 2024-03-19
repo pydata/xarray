@@ -1380,13 +1380,15 @@ class GroupBy(Generic[T_Xarray]):
             (grouper,) = self.groupers
             dim = grouper.group1d.dims
 
+        # Dataset.quantile does this, do it for flox to ensure same output.
+        q = np.asarray(q, dtype=np.float64)
+
         if (
             method == "linear"
             and OPTIONS["use_flox"]
             and contains_only_chunked_or_numpy(self._obj)
             and module_available("flox", minversion="0.9.4")
         ):
-
             result = self._flox_reduce(
                 func="quantile", q=q, dim=dim, keep_attrs=keep_attrs, skipna=skipna
             )
