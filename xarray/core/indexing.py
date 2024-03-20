@@ -639,7 +639,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         array = LazilyVectorizedIndexedArray(self.array, self.key)
         return array.vindex[indexer]
 
-    def __getitem__(self, indexer: BasicIndexer):
+    def __getitem__(self, indexer: ExplicitIndexer):
         self._check_and_raise_if_non_basic_indexer(indexer)
         return type(self)(self.array, self._updated_key(indexer))
 
@@ -713,7 +713,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def _vindex_get(self, indexer: VectorizedIndexer):
         return type(self)(self.array, self._updated_key(indexer))
 
-    def __getitem__(self, indexer: BasicIndexer):
+    def __getitem__(self, indexer: ExplicitIndexer):
         self._check_and_raise_if_non_basic_indexer(indexer)
         # If the indexed array becomes a scalar, return LazilyIndexedArray
         if all(isinstance(ind, integer_types) for ind in indexer.tuple):
@@ -725,7 +725,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         key = VectorizedIndexer(tuple(k.transpose(order) for k in self.key.tuple))
         return type(self)(self.array, key)
 
-    def __setitem__(self, indexer: BasicIndexer, value: Any) -> None:
+    def __setitem__(self, indexer: ExplicitIndexer, value: Any) -> None:
         raise NotImplementedError(
             "Lazy item assignment with the vectorized indexer is not yet "
             "implemented. Load your data first by .load() or compute()."
@@ -764,7 +764,7 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
     def _vindex_get(self, indexer: VectorizedIndexer):
         return type(self)(_wrap_numpy_scalars(self.array.vindex[indexer]))
 
-    def __getitem__(self, indexer: BasicIndexer):
+    def __getitem__(self, indexer: ExplicitIndexer):
         self._check_and_raise_if_non_basic_indexer(indexer)
         return type(self)(_wrap_numpy_scalars(self.array[indexer]))
 
@@ -779,7 +779,7 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
         self._ensure_copied()
         self.array.oindex[indexer] = value
 
-    def __setitem__(self, indexer: BasicIndexer, value: Any) -> None:
+    def __setitem__(self, indexer: ExplicitIndexer, value: Any) -> None:
         self._check_and_raise_if_non_basic_indexer(indexer)
         self._ensure_copied()
 
@@ -814,7 +814,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
     def _vindex_get(self, indexer: VectorizedIndexer):
         return type(self)(_wrap_numpy_scalars(self.array.vindex[indexer]))
 
-    def __getitem__(self, indexer: BasicIndexer):
+    def __getitem__(self, indexer: ExplicitIndexer):
         self._check_and_raise_if_non_basic_indexer(indexer)
         return type(self)(_wrap_numpy_scalars(self.array[indexer]))
 
@@ -827,7 +827,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
     def _oindex_set(self, indexer: OuterIndexer, value: Any) -> None:
         self.array.oindex[indexer] = value
 
-    def __setitem__(self, indexer: BasicIndexer, value: Any) -> None:
+    def __setitem__(self, indexer: ExplicitIndexer, value: Any) -> None:
         self._check_and_raise_if_non_basic_indexer(indexer)
         self.array[indexer] = value
 
@@ -1475,7 +1475,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         array = NumpyVIndexAdapter(self.array)
         return array[indexer.tuple]
 
-    def __getitem__(self, indexer: BasicIndexer):
+    def __getitem__(self, indexer: ExplicitIndexer):
         self._check_and_raise_if_non_basic_indexer(indexer)
 
         array = self.array
@@ -1506,7 +1506,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         array = NumpyVIndexAdapter(self.array)
         self._safe_setitem(array, indexer.tuple, value)
 
-    def __setitem__(self, indexer: BasicIndexer, value: Any) -> None:
+    def __setitem__(self, indexer: ExplicitIndexer, value: Any) -> None:
         self._check_and_raise_if_non_basic_indexer(indexer)
         array = self.array
         # We want 0d slices rather than scalars. This is achieved by
@@ -1552,7 +1552,7 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def _vindex_get(self, indexer: VectorizedIndexer):
         raise TypeError("Vectorized indexing is not supported")
 
-    def __getitem__(self, indexer: BasicIndexer):
+    def __getitem__(self, indexer: ExplicitIndexer):
         self._check_and_raise_if_non_basic_indexer(indexer)
         return self.array[indexer.tuple]
 
@@ -1562,7 +1562,7 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def _vindex_set(self, indexer: VectorizedIndexer, value: Any) -> None:
         raise TypeError("Vectorized indexing is not supported")
 
-    def __setitem__(self, indexer: BasicIndexer, value: Any) -> None:
+    def __setitem__(self, indexer: ExplicitIndexer, value: Any) -> None:
         self._check_and_raise_if_non_basic_indexer(indexer)
         self.array[indexer.tuple] = value
 
@@ -1596,7 +1596,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def _vindex_get(self, indexer: VectorizedIndexer):
         return self.array.vindex[indexer.tuple]
 
-    def __getitem__(self, indexer: BasicIndexer):
+    def __getitem__(self, indexer: ExplicitIndexer):
         self._check_and_raise_if_non_basic_indexer(indexer)
         return self.array[indexer.tuple]
 
@@ -1611,7 +1611,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def _vindex_set(self, indexer: VectorizedIndexer, value: Any) -> None:
         self.array.vindex[indexer.tuple] = value
 
-    def __setitem__(self, indexer: BasicIndexer, value: Any) -> None:
+    def __setitem__(self, indexer: ExplicitIndexer, value: Any) -> None:
         self._check_and_raise_if_non_basic_indexer(indexer)
         self.array[indexer.tuple] = value
 
