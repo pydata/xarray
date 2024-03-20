@@ -5867,7 +5867,7 @@ class Dataset(
         for var in names_set:
             maybe_midx = self._indexes.get(var, None)
             if isinstance(maybe_midx, PandasMultiIndex):
-                idx_coord_names = set(maybe_midx.index.names + [maybe_midx.dim])
+                idx_coord_names = set(list(maybe_midx.index.names) + [maybe_midx.dim])
                 idx_other_names = idx_coord_names - set(names_set)
                 other_names.update(idx_other_names)
         if other_names:
