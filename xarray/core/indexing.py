@@ -35,7 +35,8 @@ if TYPE_CHECKING:
 
     from xarray.core.indexes import Index
     from xarray.core.variable import Variable
-    from xarray.namedarray._typing import _Shape
+    from xarray.namedarray._typing import _Shape, duckarray
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
 @dataclass
@@ -283,7 +284,7 @@ def _index_indexer_1d(old_indexer, applied_indexer, size: int):
         if isinstance(applied_indexer, slice):
             indexer = slice_slice(old_indexer, applied_indexer, size)
         else:
-            indexer = _expand_slice(old_indexer, size)[applied_indexer]
+            indexer = _expand_slice(old_indexer, size)[applied_indexer]  # type: ignore[assignment]
     else:
         indexer = old_indexer[applied_indexer]
     return indexer
@@ -408,12 +409,12 @@ class OuterIndexer(ExplicitIndexer):
                     raise TypeError(
                         f"invalid indexer array, does not have integer dtype: {k!r}"
                     )
-                if k.ndim > 1:
+                if k.ndim > 1:  # type: ignore[union-attr]
                     raise TypeError(
                         f"invalid indexer array for {type(self).__name__}; must be scalar "
                         f"or have 1 dimension: {k!r}"
                     )
-                k = k.astype(np.int64)
+                k = k.astype(np.int64)  # type: ignore[union-attr]
             else:
                 raise TypeError(
                     f"unexpected indexer type for {type(self).__name__}: {k!r}"
@@ -456,14 +457,14 @@ class VectorizedIndexer(ExplicitIndexer):
                         f"invalid indexer array, does not have integer dtype: {k!r}"
                     )
                 if ndim is None:
-                    ndim = k.ndim
+                    ndim = k.ndim  # type: ignore[union-attr]
                 elif ndim != k.ndim:
                     ndims = [k.ndim for k in key if isinstance(k, np.ndarray)]
                     raise ValueError(
                         "invalid indexer key: ndarray arguments "
                         f"have different numbers of dimensions: {ndims}"
                     )
-                k = k.astype(np.int64)
+                k = k.astype(np.int64)  # type: ignore[union-attr]
             else:
                 raise TypeError(
                     f"unexpected indexer type for {type(self).__name__}: {k!r}"
@@ -671,7 +672,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
     __slots__ = ("array", "key")
 
-    def __init__(self, array, key: ExplicitIndexer):
+    def __init__(self, array: duckarray[Any, Any], key: ExplicitIndexer):
         """
         Parameters
         ----------
@@ -746,7 +747,7 @@ def _wrap_numpy_scalars(array):
 class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array", "_copied")
 
-    def __init__(self, array):
+    def __init__(self, array: duckarray[Any, Any]):
         self.array = as_indexable(array)
         self._copied = False
 
@@ -1296,7 +1297,9 @@ def _arrayize_vectorized_indexer(
     return VectorizedIndexer(tuple(new_key))
 
 
-def _chunked_array_with_chunks_hint(array, chunks, chunkmanager):
+def _chunked_array_with_chunks_hint(
+    array, chunks, chunkmanager: ChunkManagerEntrypoint[Any]
+):
     """Create a chunked array using the chunks hint for dimensions of size > 1."""
 
     if len(chunks) < array.ndim:
@@ -1304,21 +1307,21 @@ def _chunked_array_with_chunks_hint(array, chunks, chunkmanager):
     new_chunks = []
     for chunk, size in zip(chunks, array.shape):
         new_chunks.append(chunk if size > 1 else (1,))
-    return chunkmanager.from_array(array, new_chunks)
+    return chunkmanager.from_array(array, new_chunks)  # type: ignore[arg-type]
 
 
 def _logical_any(args):
     return functools.reduce(operator.or_, args)
 
 
-def _masked_result_drop_slice(key, data: Any | None = None):
+def _masked_result_drop_slice(key, data: duckarray[Any, Any] | None = None):
     key = (k for k in key if not isinstance(k, slice))
     chunks_hint = getattr(data, "chunks", None)
 
     new_keys = []
     for k in key:
         if isinstance(k, np.ndarray):
-            if is_chunked_array(data):
+            if is_chunked_array(data):  # type: ignore[arg-type]
                 chunkmanager = get_chunked_array_type(data)
                 new_keys.append(
                     _chunked_array_with_chunks_hint(k, chunks_hint, chunkmanager)
@@ -1336,7 +1339,9 @@ def _masked_result_drop_slice(key, data: Any | None = None):
     return mask
 
 
-def create_mask(indexer: ExplicitIndexer, shape: _Shape, data: Any | None = None):
+def create_mask(
+    indexer: ExplicitIndexer, shape: _Shape, data: duckarray[Any, Any] | None = None
+):
     """Create a mask for indexing with a fill-value.
 
     Parameters

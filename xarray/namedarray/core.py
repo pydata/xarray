@@ -813,7 +813,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 # Using OuterIndexer is a pragmatic choice: dask does not yet handle
                 # different indexing types in an explicit way:
                 # https://github.com/dask/dask/issues/2883
-                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[no-untyped-call, assignment]
+                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[assignment]
 
             if is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))  # type: ignore[assignment]
