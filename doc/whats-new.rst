@@ -59,6 +59,8 @@ Bug fixes
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - do not cast `_FillValue`/`missing_value` in `CFMaskCoder` if `_Unsigned` is provided
   (:issue:`8844`, :pull:`8852`).
+- Adapt handling of copy keyword argument in scipy backend for numpy >= 2.0dev
+  (:issue:`8844`, :pull:`8851`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation

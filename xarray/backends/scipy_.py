@@ -28,6 +28,7 @@ from xarray.core.utils import (
     Frozen,
     FrozenDict,
     close_on_error,
+    module_available,
     try_read_magic_number_from_file_or_path,
 )
 from xarray.core.variable import Variable
@@ -37,6 +38,9 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
+
+
+HAS_NUMPY_2_0 = module_available("numpy", minversion="2.0.0.dev0")
 
 
 def _decode_string(s):
@@ -76,6 +80,12 @@ class ScipyArrayWrapper(BackendArray):
         # with the netCDF4 library by ensuring we can safely read arrays even
         # after closing associated files.
         copy = self.datastore.ds.use_mmap
+
+        # adapt handling of copy-kwarg to numpy 2.0
+        # see https://github.com/numpy/numpy/issues/25916
+        # and https://github.com/numpy/numpy/pull/25922
+        copy = None if HAS_NUMPY_2_0 and copy is False else copy
+
         return np.array(data, dtype=self.dtype, copy=copy)
 
     def __setitem__(self, key, value):
