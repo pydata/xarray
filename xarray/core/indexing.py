@@ -580,8 +580,8 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         """
         if isinstance(array, type(self)) and key is None:
             # unwrap
-            key = array.key
-            array = array.array
+            key = array.key  # type: ignore[has-type]
+            array = array.array  # type: ignore[has-type]
 
         if key is None:
             key = BasicIndexer((slice(None),) * array.ndim)
@@ -681,7 +681,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         """
         if isinstance(key, (BasicIndexer, OuterIndexer)):
             self.key = _outer_to_vectorized_indexer(key, array.shape)
-        else:
+        elif isinstance(key, VectorizedIndexer):
             self.key = _arrayize_vectorized_indexer(key, array.shape)
         self.array = as_indexable(array)
 
