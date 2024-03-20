@@ -301,16 +301,16 @@ class ExplicitIndexer:
 
     __slots__ = ("_key",)
 
-    def __init__(self, key):
+    def __init__(self, key: tuple[Any, ...]):
         if type(self) is ExplicitIndexer:
             raise TypeError("cannot instantiate base ExplicitIndexer objects")
         self._key = tuple(key)
 
     @property
-    def tuple(self):
+    def tuple(self) -> tuple[Any, ...]:
         return self._key
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}({self.tuple})"
 
 
@@ -373,7 +373,7 @@ class BasicIndexer(ExplicitIndexer):
                 )
             new_key.append(k)
 
-        super().__init__(new_key)
+        super().__init__(tuple(new_key))
 
 
 class OuterIndexer(ExplicitIndexer):
@@ -416,7 +416,7 @@ class OuterIndexer(ExplicitIndexer):
                 )
             new_key.append(k)
 
-        super().__init__(new_key)
+        super().__init__(tuple(new_key))
 
 
 class VectorizedIndexer(ExplicitIndexer):
@@ -466,7 +466,7 @@ class VectorizedIndexer(ExplicitIndexer):
                 )
             new_key.append(k)
 
-        super().__init__(new_key)
+        super().__init__(tuple(new_key))
 
 
 class ExplicitlyIndexed:
@@ -504,12 +504,12 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
             f"{self.__class__.__name__}._vindex_get method should be overridden"
         )
 
-    def _oindex_set(self, key, value):
+    def _oindex_set(self, key, value: Any):
         raise NotImplementedError(
             f"{self.__class__.__name__}._oindex_set method should be overridden"
         )
 
-    def _vindex_set(self, key, value):
+    def _vindex_set(self, key, value: Any):
         raise NotImplementedError(
             f"{self.__class__.__name__}._vindex_set method should be overridden"
         )
