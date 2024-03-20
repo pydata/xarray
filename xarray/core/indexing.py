@@ -387,7 +387,9 @@ class OuterIndexer(ExplicitIndexer):
 
     __slots__ = ()
 
-    def __init__(self, key: tuple[int | slice | np.ndarray, ...]):
+    def __init__(
+        self, key: tuple[int | slice | np.ndarray[Any, np.dtype[np.generic]], ...]
+    ):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
@@ -429,7 +431,7 @@ class VectorizedIndexer(ExplicitIndexer):
 
     __slots__ = ()
 
-    def __init__(self, key: tuple[slice | np.ndarray, ...]):
+    def __init__(self, key: tuple[slice | np.ndarray[Any, np.dtype[np.generic]], ...]):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
