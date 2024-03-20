@@ -330,14 +330,16 @@ class IndexCallable:
 
     __slots__ = ("getter", "setter")
 
-    def __init__(self, getter, setter=None):
+    def __init__(
+        self, getter: Callable[..., Any], setter: Callable[..., Any] | None = None
+    ):
         self.getter = getter
         self.setter = setter
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: Any) -> Any:
         return self.getter(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: Any, value: Any) -> None:
         if self.setter is None:
             raise NotImplementedError(
                 "Setting values is not supported for this indexer."
@@ -355,7 +357,7 @@ class BasicIndexer(ExplicitIndexer):
 
     __slots__ = ()
 
-    def __init__(self, key):
+    def __init__(self, key: tuple[int | slice, ...]):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
@@ -385,7 +387,7 @@ class OuterIndexer(ExplicitIndexer):
 
     __slots__ = ()
 
-    def __init__(self, key):
+    def __init__(self, key: tuple[int | slice | np.ndarray, ...]):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
@@ -427,7 +429,7 @@ class VectorizedIndexer(ExplicitIndexer):
 
     __slots__ = ()
 
-    def __init__(self, key):
+    def __init__(self, key: tuple[slice | np.ndarray, ...]):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
