@@ -3414,7 +3414,7 @@ def test_plot1d_lines_color(plotfunc: str, x="z", color="b") -> None:
         # Make sure color is respected:
         expected_color = to_rgba_array(color)
         actual_color = coll.get_edgecolor()
-        assert np.testing.assert_allclose(expected_color, actual_color)
+        np.testing.assert_allclose(expected_color, actual_color)
 
 
 @requires_matplotlib
