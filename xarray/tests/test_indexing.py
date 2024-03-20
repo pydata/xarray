@@ -880,7 +880,7 @@ def test_create_mask_dask() -> None:
 
 def test_create_mask_error() -> None:
     with pytest.raises(TypeError, match=r"unexpected key type"):
-        indexing.create_mask((1, 2), (3, 4))
+        indexing.create_mask((1, 2), (3, 4))  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
