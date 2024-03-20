@@ -4,7 +4,7 @@ import enum
 import functools
 import operator
 from collections import Counter, defaultdict
-from collections.abc import Hashable, Mapping
+from collections.abc import Hashable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -164,7 +164,7 @@ def map_index_queries(
     obj: T_Xarray,
     indexers: Mapping[Any, Any],
     method=None,
-    tolerance: float | None = None,
+    tolerance: int | float | Iterable[int | float] | None = None,
     **indexers_kwargs: Any,
 ) -> IndexSelResult:
     """Execute index queries from a DataArray / Dataset and label-based indexers
@@ -358,7 +358,7 @@ class BasicIndexer(ExplicitIndexer):
 
     __slots__ = ()
 
-    def __init__(self, key: tuple[int | slice, ...]):
+    def __init__(self, key: tuple[int | np.integer | slice, ...]):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
@@ -389,7 +389,10 @@ class OuterIndexer(ExplicitIndexer):
     __slots__ = ()
 
     def __init__(
-        self, key: tuple[int | slice | np.ndarray[Any, np.dtype[np.generic]], ...]
+        self,
+        key: tuple[
+            int | np.integer | slice | np.ndarray[Any, np.dtype[np.generic]], ...
+        ],
     ):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
@@ -565,7 +568,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
     __slots__ = ("array", "key")
 
-    def __init__(self, array, key: ExplicitIndexer | None = None):
+    def __init__(self, array: Any, key: ExplicitIndexer | None = None):
         """
         Parameters
         ----------
@@ -1272,7 +1275,7 @@ def _decompose_outer_indexer(
 
 
 def _arrayize_vectorized_indexer(
-    indexer: VectorizedIndexer, shape: _Shape
+    indexer: ExplicitIndexer | VectorizedIndexer, shape: _Shape
 ) -> VectorizedIndexer:
     """Return an identical vindex but slices are replaced by arrays"""
     slices = [v for v in indexer.tuple if isinstance(v, slice)]
