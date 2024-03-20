@@ -235,7 +235,7 @@ def expanded_indexer(key, ndim):
     return tuple(new_key)
 
 
-def _expand_slice(slice_: slice, size: int) -> np.ndarray:
+def _expand_slice(slice_, size: int) -> np.ndarray:
     return np.arange(*slice_.indices(size))
 
 
