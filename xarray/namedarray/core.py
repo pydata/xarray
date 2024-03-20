@@ -1148,7 +1148,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if is_dict_like(key):
             return tuple(key.get(dim, slice(None)) for dim in self.dims)
         else:
-            return key
+            return key if isinstance(key, tuple) else (key,)
 
     def _validate_indexers(self, key: Any) -> None:
         """Make sanity checks"""
@@ -1287,7 +1287,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         from xarray.core.variable import as_variable
 
         variables = []
-        out_dims_set = OrderedSet()
+        out_dims_set: OrderedSet[Hashable] = OrderedSet()
         for dim, value in zip(self.dims, key):
             if isinstance(value, slice):
                 out_dims_set.add(dim)
@@ -1303,7 +1303,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 variables.append(variable)
                 out_dims_set.update(variable.dims)
 
-        variable_dims = set()
+        variable_dims: set[Hashable] = set()
         for variable in variables:
             variable_dims.update(variable.dims)
 
@@ -1341,11 +1341,11 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         return out_dims, VectorizedIndexer(tuple(out_key)), new_order
 
-    def _finalize_indexing_result(self, dims, data) -> Self:
+    def _finalize_indexing_result(self, dims: _Dims, data: duckarray[Any, Any]) -> Self:
         """xarray.core.variable.IndexVariable overrides the implementation of this method to return  to return IndexVariable objects when possible."""
         return self._replace(dims=dims, data=data)
 
-    def __getitem__(self, key) -> Self:
+    def __getitem__(self, key: Any) -> Self:
         """Return a new Variable object whose contents are consistent with
         getting the provided key from the underlying data.
 
@@ -1383,7 +1383,7 @@ def _raise_if_any_duplicate_dimensions(
         )
 
 
-def _unified_dims(namedarrays):
+def _unified_dims(namedarrays: Iterable[T_NamedArray]) -> dict[_Dim, int]:
     # validate dimensions
     all_dims = {}
     for var in namedarrays:
@@ -1401,7 +1401,7 @@ def _unified_dims(namedarrays):
     return all_dims
 
 
-def _broadcast_compat_variables(*namedarrays):
+def _broadcast_compat_variables(*namedarrays: T_NamedArray) -> tuple[T_NamedArray, ...]:
     """Create broadcast compatible variables, with the same dimensions.
 
     Unlike the result of broadcast_variables(), some variables may have
@@ -1414,7 +1414,7 @@ def _broadcast_compat_variables(*namedarrays):
     )
 
 
-def broadcast_variables(*namedarrays: NamedArray) -> tuple[NamedArray, ...]:
+def broadcast_variables(*namedarrays: T_NamedArray) -> tuple[T_NamedArray, ...]:
     """Given any number of namedarrays, return namedarrays with matching dimensions
     and broadcast data.
 
@@ -1431,12 +1431,14 @@ def broadcast_variables(*namedarrays: NamedArray) -> tuple[NamedArray, ...]:
     )
 
 
-def _broadcast_compat_data(self, other):
+def _broadcast_compat_data(
+    self: T_NamedArray, other: T_NamedArray
+) -> tuple[Any, Any, _Dims]:
     from xarray.core.options import OPTIONS
 
     if not OPTIONS["arithmetic_broadcast"]:
         if (isinstance(other, NamedArray) and self.dims != other.dims) or (
-            is_duck_array(other) and self.ndim != other.ndim
+            is_duck_array(other) and self.ndim != other.ndim  # type: ignore[union-attr]
         ):
             raise ValueError(
                 "Broadcasting is necessary but automatic broadcasting is disabled via "
