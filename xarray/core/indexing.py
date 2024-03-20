@@ -1275,7 +1275,7 @@ def _decompose_outer_indexer(
 
 
 def _arrayize_vectorized_indexer(
-    indexer: ExplicitIndexer | VectorizedIndexer, shape: _Shape
+    indexer: VectorizedIndexer, shape: _Shape
 ) -> VectorizedIndexer:
     """Return an identical vindex but slices are replaced by arrays"""
     slices = [v for v in indexer.tuple if isinstance(v, slice)]
