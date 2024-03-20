@@ -1322,7 +1322,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                     slices.append((i, value))
 
         try:
-            variables = _broadcast_compat_variables(*variables)
+            variables = _broadcast_compat_namedarrays(*variables)
         except ValueError:
             raise IndexError(f"Dimensions of indexers mismatch: {key}")
 
@@ -1401,10 +1401,12 @@ def _unified_dims(namedarrays: Iterable[T_NamedArray]) -> dict[_Dim, int]:
     return all_dims
 
 
-def _broadcast_compat_variables(*namedarrays: T_NamedArray) -> tuple[T_NamedArray, ...]:
+def _broadcast_compat_namedarrays(
+    *namedarrays: T_NamedArray,
+) -> tuple[T_NamedArray, ...]:
     """Create broadcast compatible variables, with the same dimensions.
 
-    Unlike the result of broadcast_variables(), some variables may have
+    Unlike the result of broadcast_namedarrays(), some variables may have
     dimensions of size 1 instead of the size of the broadcast dimension.
     """
     dims = tuple(_unified_dims(namedarrays))
@@ -1414,7 +1416,7 @@ def _broadcast_compat_variables(*namedarrays: T_NamedArray) -> tuple[T_NamedArra
     )
 
 
-def broadcast_variables(*namedarrays: T_NamedArray) -> tuple[T_NamedArray, ...]:
+def broadcast_namedarrays(*namedarrays: T_NamedArray) -> tuple[T_NamedArray, ...]:
     """Given any number of namedarrays, return namedarrays with matching dimensions
     and broadcast data.
 
@@ -1447,8 +1449,8 @@ def _broadcast_compat_data(
             )
 
     if all(hasattr(other, attr) for attr in ["dims", "data", "shape", "encoding"]):
-        # `other` satisfies the necessary Variable API for broadcast_variables
-        new_self, new_other = _broadcast_compat_variables(self, other)
+        # `other` satisfies the necessary Variable API for broadcast_namedarrays
+        new_self, new_other = _broadcast_compat_namedarrays(self, other)
         self_data = new_self.data
         other_data = new_other.data
         dims = new_self.dims

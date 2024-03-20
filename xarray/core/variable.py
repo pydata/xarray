@@ -18,10 +18,7 @@ import xarray as xr  # only for Dataset and DataArray
 from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
 from xarray.core.arithmetic import VariableArithmetic
 from xarray.core.common import AbstractArray
-from xarray.core.indexing import (
-    PandasIndexingAdapter,
-    as_indexable,
-)
+from xarray.core.indexing import PandasIndexingAdapter, as_indexable
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.utils import (
     _default,
@@ -39,7 +36,7 @@ from xarray.core.utils import (
 from xarray.namedarray.core import (
     NamedArray,
     _broadcast_compat_data,
-    broadcast_variables,
+    broadcast_namedarrays,
 )
 from xarray.namedarray.pycompat import to_duck_array
 
@@ -570,7 +567,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
 
         if self.size:
-
             if is_duck_dask_array(self._data):
                 # dask's indexing is faster this way; also vindex does not
                 # support negative indices yet:
@@ -1527,7 +1523,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         values in the same locations.
         """
         try:
-            self, other = broadcast_variables(self, other)
+            self, other = broadcast_namedarrays(self, other)
         except (ValueError, AttributeError):
             return False
         return self.equals(other, equiv=equiv)

@@ -117,7 +117,7 @@ from xarray.core.variable import (
     IndexVariable,
     Variable,
     as_variable,
-    broadcast_variables,
+    broadcast_namedarrays,
     calculate_dimensions,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
@@ -289,7 +289,6 @@ def _maybe_chunk(
     chunked_array_type: str | ChunkManagerEntrypoint | None = None,
     from_array_kwargs=None,
 ):
-
     from xarray.namedarray.daskmanager import DaskManager
 
     if chunks is not None:
@@ -7079,7 +7078,7 @@ class Dataset(
         from xarray.core.dataarray import DataArray
 
         data_vars = [self.variables[k] for k in self.data_vars]
-        broadcast_vars = broadcast_variables(*data_vars)
+        broadcast_vars = broadcast_namedarrays(*data_vars)
         data = duck_array_ops.stack([b.data for b in broadcast_vars], axis=0)
 
         dims = (dim,) + broadcast_vars[0].dims
