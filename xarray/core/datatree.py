@@ -822,7 +822,7 @@ class DataTree(
     def __deepcopy__(self: DataTree, memo: dict[int, Any] | None = None) -> DataTree:
         return self._copy_subtree(deep=True, memo=memo)
 
-    def get(
+    def get(  # type: ignore[override]
         self: DataTree, key: str, default: DataTree | DataArray | None = None
     ) -> DataTree | DataArray | None:
         """
