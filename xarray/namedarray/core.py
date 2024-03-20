@@ -1383,7 +1383,7 @@ def _raise_if_any_duplicate_dimensions(
         )
 
 
-def _unified_dims(namedarrays: Iterable[T_NamedArray]) -> dict[_Dim, int]:
+def _unified_dims(namedarrays: Iterable[T_NamedArray]) -> Mapping[_Dim, int]:
     # validate dimensions
     all_dims = {}
     for var in namedarrays:
@@ -1402,21 +1402,33 @@ def _unified_dims(namedarrays: Iterable[T_NamedArray]) -> dict[_Dim, int]:
 
 
 def _broadcast_compat_namedarrays(
-    *namedarrays: T_NamedArray,
-) -> tuple[T_NamedArray, ...]:
+    *namedarrays: NamedArray[Any, _DType_co],
+) -> tuple[NamedArray[Any, _DType_co], ...]:
     """Create broadcast compatible variables, with the same dimensions.
 
     Unlike the result of broadcast_namedarrays(), some variables may have
     dimensions of size 1 instead of the size of the broadcast dimension.
     """
-    dims = tuple(_unified_dims(namedarrays))
-    return tuple(
-        namedarray.set_dims(dims) if namedarray.dims != dims else namedarray
-        for namedarray in namedarrays
-    )
+
+    dims_map = _unified_dims(namedarrays)
+    dims_tuple = tuple(dims_map)
+    result = []
+    for var in namedarrays:
+        if var.dims != dims_tuple:
+            additional_dims = set(dims_map) - set(var.dims)
+            expanded_var = var
+            for dim in additional_dims:
+                expanded_var = expanded_var.expand_dims(dim=dim)
+            result.append(expanded_var)
+        else:
+            result.append(var)
+
+    return tuple(result)
 
 
-def broadcast_namedarrays(*namedarrays: T_NamedArray) -> tuple[T_NamedArray, ...]:
+def broadcast_namedarrays(
+    *namedarrays: NamedArray[Any, _DType_co],
+) -> tuple[NamedArray[Any, _DType_co], ...]:
     """Given any number of namedarrays, return namedarrays with matching dimensions
     and broadcast data.
 
@@ -1428,13 +1440,23 @@ def broadcast_namedarrays(*namedarrays: T_NamedArray) -> tuple[T_NamedArray, ...
     """
     dims_map = _unified_dims(namedarrays)
     dims_tuple = tuple(dims_map)
-    return tuple(
-        var.set_dims(dims_map) if var.dims != dims_tuple else var for var in namedarrays
-    )
+    result = []
+    for var in namedarrays:
+        if var.dims != dims_tuple:
+            additional_dims = set(dims_map) - set(var.dims)
+            expanded_var = var
+            for dim in additional_dims:
+                expanded_var = expanded_var.expand_dims(dim=dim)
+            expanded_var = expanded_var.broadcast_to(**dims_map)
+            result.append(expanded_var)
+        else:
+            result.append(var)
+
+    return tuple(result)
 
 
 def _broadcast_compat_data(
-    self: T_NamedArray, other: T_NamedArray
+    self: NamedArray[Any, _DType_co], other: NamedArray[Any, _DType_co]
 ) -> tuple[Any, Any, _Dims]:
     from xarray.core.options import OPTIONS
 
