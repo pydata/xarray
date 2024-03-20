@@ -235,17 +235,17 @@ def expanded_indexer(key, ndim):
     return tuple(new_key)
 
 
-def _expand_slice(slice_, size):
+def _expand_slice(slice_: slice, size: int) -> np.ndarray:
     return np.arange(*slice_.indices(size))
 
 
-def _normalize_slice(sl: slice, size):
+def _normalize_slice(sl: slice, size) -> slice:
     """Ensure that given slice only contains positive start and stop values
     (stop can be -1 for full-size slices with negative steps, e.g. [-10::-1])"""
     return slice(*sl.indices(size))
 
 
-def slice_slice(old_slice: slice, applied_slice: slice, size):
+def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
     """Given a slice and the size of the dimension to which it will be applied,
     index it with another slice to return a new slice equivalent to applying
     the slices sequentially
@@ -274,7 +274,7 @@ def slice_slice(old_slice: slice, applied_slice: slice, size):
     return slice(start, stop, step)
 
 
-def _index_indexer_1d(old_indexer, applied_indexer, size):
+def _index_indexer_1d(old_indexer, applied_indexer, size: int):
     assert isinstance(applied_indexer, integer_types + (slice, np.ndarray))
     if isinstance(applied_indexer, slice) and applied_indexer == slice(None):
         # shortcut for the usual case
@@ -495,28 +495,28 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
         # Note this is the base class for all lazy indexing classes
         return np.asarray(self.get_duck_array(), dtype=dtype)
 
-    def _oindex_get(self, key: OuterIndexer):
+    def _oindex_get(self, indexer: OuterIndexer):
         raise NotImplementedError(
             f"{self.__class__.__name__}._oindex_get method should be overridden"
         )
 
-    def _vindex_get(self, key: VectorizedIndexer):
+    def _vindex_get(self, indexer: VectorizedIndexer):
         raise NotImplementedError(
             f"{self.__class__.__name__}._vindex_get method should be overridden"
         )
 
-    def _oindex_set(self, key: OuterIndexer, value: Any) -> None:
+    def _oindex_set(self, indexer: OuterIndexer, value: Any) -> None:
         raise NotImplementedError(
             f"{self.__class__.__name__}._oindex_set method should be overridden"
         )
 
-    def _vindex_set(self, key: VectorizedIndexer, value: Any) -> None:
+    def _vindex_set(self, indexer: VectorizedIndexer, value: Any) -> None:
         raise NotImplementedError(
             f"{self.__class__.__name__}._vindex_set method should be overridden"
         )
 
-    def _check_and_raise_if_non_basic_indexer(self, key: ExplicitIndexer) -> None:
-        if isinstance(key, (VectorizedIndexer, OuterIndexer)):
+    def _check_and_raise_if_non_basic_indexer(self, indexer: ExplicitIndexer) -> None:
+        if isinstance(indexer, (VectorizedIndexer, OuterIndexer)):
             raise TypeError(
                 "Vectorized indexing with vectorized or outer indexers is not supported. "
                 "Please use .vindex and .oindex properties to index the array."
@@ -546,7 +546,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
     def get_duck_array(self):
         return self.array.get_duck_array()
 
-    def __getitem__(self, key: ExplicitIndexer):
+    def __getitem__(self, key: Any):
         key = expanded_indexer(key, self.ndim)
         indexer = self.indexer_cls(key)
 
@@ -594,11 +594,11 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
                 full_key.append(k)
             else:
                 full_key.append(_index_indexer_1d(k, next(iter_new_key), size))
-        full_key = tuple(full_key)
+        full_key_tuple = tuple(full_key)
 
-        if all(isinstance(k, integer_types + (slice,)) for k in full_key):
-            return BasicIndexer(full_key)
-        return OuterIndexer(full_key)
+        if all(isinstance(k, integer_types + (slice,)) for k in full_key_tuple):
+            return BasicIndexer(full_key_tuple)
+        return OuterIndexer(full_key_tuple)
 
     @property
     def shape(self) -> _Shape:
@@ -722,7 +722,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         key = VectorizedIndexer(tuple(k.transpose(order) for k in self.key.tuple))
         return type(self)(self.array, key)
 
-    def __setitem__(self, key: BasicIndexer, value: Any) -> None:
+    def __setitem__(self, indexer: BasicIndexer, value: Any) -> None:
         raise NotImplementedError(
             "Lazy item assignment with the vectorized indexer is not yet "
             "implemented. Load your data first by .load() or compute()."
@@ -755,32 +755,32 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         return self.array.get_duck_array()
 
-    def _oindex_get(self, key: OuterIndexer):
-        return type(self)(_wrap_numpy_scalars(self.array.oindex[key]))
+    def _oindex_get(self, indexer: OuterIndexer):
+        return type(self)(_wrap_numpy_scalars(self.array.oindex[indexer]))
 
-    def _vindex_get(self, key: VectorizedIndexer):
-        return type(self)(_wrap_numpy_scalars(self.array.vindex[key]))
+    def _vindex_get(self, indexer: VectorizedIndexer):
+        return type(self)(_wrap_numpy_scalars(self.array.vindex[indexer]))
 
-    def __getitem__(self, key: BasicIndexer):
-        self._check_and_raise_if_non_basic_indexer(key)
-        return type(self)(_wrap_numpy_scalars(self.array[key]))
+    def __getitem__(self, indexer: BasicIndexer):
+        self._check_and_raise_if_non_basic_indexer(indexer)
+        return type(self)(_wrap_numpy_scalars(self.array[indexer]))
 
     def transpose(self, order):
         return self.array.transpose(order)
 
-    def _vindex_set(self, key: VectorizedIndexer, value: Any) -> None:
+    def _vindex_set(self, indexer: VectorizedIndexer, value: Any) -> None:
         self._ensure_copied()
-        self.array.vindex[key] = value
+        self.array.vindex[indexer] = value
 
-    def _oindex_set(self, key: OuterIndexer, value: Any) -> None:
+    def _oindex_set(self, indexer: OuterIndexer, value: Any) -> None:
         self._ensure_copied()
-        self.array.oindex[key] = value
+        self.array.oindex[indexer] = value
 
-    def __setitem__(self, key: BasicIndexer, value: Any) -> None:
-        self._check_and_raise_if_non_basic_indexer(key)
+    def __setitem__(self, indexer: BasicIndexer, value: Any) -> None:
+        self._check_and_raise_if_non_basic_indexer(indexer)
         self._ensure_copied()
 
-        self.array[key] = value
+        self.array[indexer] = value
 
     def __deepcopy__(self, memo):
         # CopyOnWriteArray is used to wrap backend array objects, which might
@@ -805,28 +805,28 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
         self._ensure_cached()
         return self.array.get_duck_array()
 
-    def _oindex_get(self, key: OuterIndexer):
-        return type(self)(_wrap_numpy_scalars(self.array.oindex[key]))
+    def _oindex_get(self, indexer: OuterIndexer):
+        return type(self)(_wrap_numpy_scalars(self.array.oindex[indexer]))
 
-    def _vindex_get(self, key: VectorizedIndexer):
-        return type(self)(_wrap_numpy_scalars(self.array.vindex[key]))
+    def _vindex_get(self, indexer: VectorizedIndexer):
+        return type(self)(_wrap_numpy_scalars(self.array.vindex[indexer]))
 
-    def __getitem__(self, key: BasicIndexer):
-        self._check_and_raise_if_non_basic_indexer(key)
-        return type(self)(_wrap_numpy_scalars(self.array[key]))
+    def __getitem__(self, indexer: BasicIndexer):
+        self._check_and_raise_if_non_basic_indexer(indexer)
+        return type(self)(_wrap_numpy_scalars(self.array[indexer]))
 
     def transpose(self, order):
         return self.array.transpose(order)
 
-    def _vindex_set(self, key: VectorizedIndexer, value: Any) -> None:
-        self.array.vindex[key] = value
+    def _vindex_set(self, indexer: VectorizedIndexer, value: Any) -> None:
+        self.array.vindex[indexer] = value
 
-    def _oindex_set(self, key: OuterIndexer, value: Any) -> None:
-        self.array.oindex[key] = value
+    def _oindex_set(self, indexer: OuterIndexer, value: Any) -> None:
+        self.array.oindex[indexer] = value
 
-    def __setitem__(self, key: BasicIndexer, value: Any) -> None:
-        self._check_and_raise_if_non_basic_indexer(key)
-        self.array[key] = value
+    def __setitem__(self, indexer: BasicIndexer, value: Any) -> None:
+        self._check_and_raise_if_non_basic_indexer(indexer)
+        self.array[indexer] = value
 
 
 def as_indexable(array):
@@ -852,13 +852,13 @@ def as_indexable(array):
 
 
 def _outer_to_vectorized_indexer(
-    key: BasicIndexer | OuterIndexer, shape: _Shape
+    indexer: BasicIndexer | OuterIndexer, shape: _Shape
 ) -> VectorizedIndexer:
     """Convert an OuterIndexer into an vectorized indexer.
 
     Parameters
     ----------
-    key : Outer/Basic Indexer
+    indexer : Outer/Basic Indexer
         An indexer to convert.
     shape : tuple
         Shape of the array subject to the indexing.
@@ -870,7 +870,7 @@ def _outer_to_vectorized_indexer(
         Each element is an array: broadcasting them together gives the shape
         of the result.
     """
-    key = key.tuple
+    key = indexer.tuple
 
     n_dim = len([k for k in key if not isinstance(k, integer_types)])
     i_dim = 0
@@ -882,18 +882,18 @@ def _outer_to_vectorized_indexer(
             if isinstance(k, slice):
                 k = np.arange(*k.indices(size))
             assert k.dtype.kind in {"i", "u"}
-            shape = [(1,) * i_dim + (k.size,) + (1,) * (n_dim - i_dim - 1)]
-            new_key.append(k.reshape(*shape))
+            new_shape = [(1,) * i_dim + (k.size,) + (1,) * (n_dim - i_dim - 1)]
+            new_key.append(k.reshape(*new_shape))
             i_dim += 1
     return VectorizedIndexer(tuple(new_key))
 
 
-def _outer_to_numpy_indexer(key: BasicIndexer | OuterIndexer, shape: _Shape):
+def _outer_to_numpy_indexer(indexer: BasicIndexer | OuterIndexer, shape: _Shape):
     """Convert an OuterIndexer into an indexer for NumPy.
 
     Parameters
     ----------
-    key : Basic/OuterIndexer
+    indexer : Basic/OuterIndexer
         An indexer to convert.
     shape : tuple
         Shape of the array subject to the indexing.
@@ -903,18 +903,16 @@ def _outer_to_numpy_indexer(key: BasicIndexer | OuterIndexer, shape: _Shape):
     tuple
         Tuple suitable for use to index a NumPy array.
     """
-    if len([k for k in key.tuple if not isinstance(k, slice)]) <= 1:
+    if len([k for k in indexer.tuple if not isinstance(k, slice)]) <= 1:
         # If there is only one vector and all others are slice,
         # it can be safely used in mixed basic/advanced indexing.
         # Boolean index should already be converted to integer array.
-        return key.tuple
+        return indexer.tuple
     else:
-        return _outer_to_vectorized_indexer(key, shape).tuple
+        return _outer_to_vectorized_indexer(indexer, shape).tuple
 
 
-def _combine_indexers(
-    old_key: ExplicitIndexer, shape: _Shape, new_key: ExplicitIndexer
-) -> VectorizedIndexer:
+def _combine_indexers(old_key, shape: _Shape, new_key) -> VectorizedIndexer:
     """Combine two indexers.
 
     Parameters
@@ -958,7 +956,7 @@ def explicit_indexing_adapter(
     key: ExplicitIndexer,
     shape: _Shape,
     indexing_support: IndexingSupport,
-    raw_indexing_method: Callable,
+    raw_indexing_method: Callable[..., Any],
 ) -> Any:
     """Support explicit indexing by delegating to a raw indexing method.
 
@@ -1000,7 +998,7 @@ def apply_indexer(indexable, indexer: ExplicitIndexer):
         return indexable[indexer]
 
 
-def set_with_indexer(indexable, indexer: ExplicitIndexer, value) -> None:
+def set_with_indexer(indexable, indexer: ExplicitIndexer, value: Any) -> None:
     """Set values in an indexable object using an indexer."""
     if isinstance(indexer, VectorizedIndexer):
         indexable.vindex[indexer] = value
@@ -1274,7 +1272,7 @@ def _decompose_outer_indexer(
 
 
 def _arrayize_vectorized_indexer(
-    indexer: ExplicitIndexer, shape: _Shape
+    indexer: VectorizedIndexer, shape: _Shape
 ) -> VectorizedIndexer:
     """Return an identical vindex but slices are replaced by arrays"""
     slices = [v for v in indexer.tuple if isinstance(v, slice)]
@@ -1466,22 +1464,22 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def transpose(self, order):
         return self.array.transpose(order)
 
-    def _oindex_get(self, key: OuterIndexer):
-        key = _outer_to_numpy_indexer(key, self.array.shape)
+    def _oindex_get(self, indexer: OuterIndexer):
+        key = _outer_to_numpy_indexer(indexer, self.array.shape)
         return self.array[key]
 
-    def _vindex_get(self, key: VectorizedIndexer):
+    def _vindex_get(self, indexer: VectorizedIndexer):
         array = NumpyVIndexAdapter(self.array)
-        return array[key.tuple]
+        return array[indexer.tuple]
 
-    def __getitem__(self, key: BasicIndexer):
-        self._check_and_raise_if_non_basic_indexer(key)
+    def __getitem__(self, indexer: BasicIndexer):
+        self._check_and_raise_if_non_basic_indexer(indexer)
 
         array = self.array
         # We want 0d slices rather than scalars. This is achieved by
         # appending an ellipsis (see
         # https://numpy.org/doc/stable/reference/arrays.indexing.html#detailed-notes).
-        key = key.tuple + (Ellipsis,)
+        key = indexer.tuple + (Ellipsis,)
         return array[key]
 
     def _safe_setitem(self, array, key: tuple[Any, ...], value: Any) -> None:
@@ -1497,21 +1495,21 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             else:
                 raise exc
 
-    def _oindex_set(self, key: OuterIndexer, value: Any) -> None:
-        key = _outer_to_numpy_indexer(key, self.array.shape)
+    def _oindex_set(self, indexer: OuterIndexer, value: Any) -> None:
+        key = _outer_to_numpy_indexer(indexer, self.array.shape)
         self._safe_setitem(self.array, key, value)
 
-    def _vindex_set(self, key: VectorizedIndexer, value: Any) -> None:
+    def _vindex_set(self, indexer: VectorizedIndexer, value: Any) -> None:
         array = NumpyVIndexAdapter(self.array)
-        self._safe_setitem(array, key.tuple, value)
+        self._safe_setitem(array, indexer.tuple, value)
 
-    def __setitem__(self, key: BasicIndexer, value: Any) -> None:
-        self._check_and_raise_if_non_basic_indexer(key)
+    def __setitem__(self, indexer: BasicIndexer, value: Any) -> None:
+        self._check_and_raise_if_non_basic_indexer(indexer)
         array = self.array
         # We want 0d slices rather than scalars. This is achieved by
         # appending an ellipsis (see
         # https://numpy.org/doc/stable/reference/arrays.indexing.html#detailed-notes).
-        key = key.tuple + (Ellipsis,)
+        key = indexer.tuple + (Ellipsis,)
         self._safe_setitem(array, key, value)
 
 
@@ -1540,30 +1538,30 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             )
         self.array = array
 
-    def _oindex_get(self, key: OuterIndexer):
+    def _oindex_get(self, indexer: OuterIndexer):
         # manual orthogonal indexing (implemented like DaskIndexingAdapter)
-        key = key.tuple
+        key = indexer.tuple
         value = self.array
         for axis, subkey in reversed(list(enumerate(key))):
             value = value[(slice(None),) * axis + (subkey, Ellipsis)]
         return value
 
-    def _vindex_get(self, key: VectorizedIndexer):
+    def _vindex_get(self, indexer: VectorizedIndexer):
         raise TypeError("Vectorized indexing is not supported")
 
-    def __getitem__(self, key: BasicIndexer):
-        self._check_and_raise_if_non_basic_indexer(key)
-        return self.array[key.tuple]
+    def __getitem__(self, indexer: BasicIndexer):
+        self._check_and_raise_if_non_basic_indexer(indexer)
+        return self.array[indexer.tuple]
 
-    def _oindex_set(self, key: OuterIndexer, value: Any) -> None:
-        self.array[key.tuple] = value
+    def _oindex_set(self, indexer: OuterIndexer, value: Any) -> None:
+        self.array[indexer.tuple] = value
 
-    def _vindex_set(self, key: VectorizedIndexer, value: Any) -> None:
+    def _vindex_set(self, indexer: VectorizedIndexer, value: Any) -> None:
         raise TypeError("Vectorized indexing is not supported")
 
-    def __setitem__(self, key: BasicIndexer, value: Any) -> None:
-        self._check_and_raise_if_non_basic_indexer(key)
-        self.array[key.tuple] = value
+    def __setitem__(self, indexer: BasicIndexer, value: Any) -> None:
+        self._check_and_raise_if_non_basic_indexer(indexer)
+        self.array[indexer.tuple] = value
 
     def transpose(self, order):
         xp = self.array.__array_namespace__()
@@ -1581,8 +1579,8 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         """
         self.array = array
 
-    def _oindex_get(self, key: OuterIndexer):
-        key = key.tuple
+    def _oindex_get(self, indexer: OuterIndexer):
+        key = indexer.tuple
         try:
             return self.array[key]
         except NotImplementedError:
@@ -1592,27 +1590,27 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 value = value[(slice(None),) * axis + (subkey,)]
             return value
 
-    def _vindex_get(self, key: VectorizedIndexer):
-        return self.array.vindex[key.tuple]
+    def _vindex_get(self, indexer: VectorizedIndexer):
+        return self.array.vindex[indexer.tuple]
 
-    def __getitem__(self, key: BasicIndexer):
-        self._check_and_raise_if_non_basic_indexer(key)
-        return self.array[key.tuple]
+    def __getitem__(self, indexer: BasicIndexer):
+        self._check_and_raise_if_non_basic_indexer(indexer)
+        return self.array[indexer.tuple]
 
-    def _oindex_set(self, key: OuterIndexer, value: Any) -> None:
-        num_non_slices = sum(0 if isinstance(k, slice) else 1 for k in key.tuple)
+    def _oindex_set(self, indexer: OuterIndexer, value: Any) -> None:
+        num_non_slices = sum(0 if isinstance(k, slice) else 1 for k in indexer.tuple)
         if num_non_slices > 1:
             raise NotImplementedError(
                 "xarray can't set arrays with multiple " "array indices to dask yet."
             )
-        self.array[key.tuple] = value
+        self.array[indexer.tuple] = value
 
-    def _vindex_set(self, key: VectorizedIndexer, value: Any) -> None:
-        self.array.vindex[key.tuple] = value
+    def _vindex_set(self, indexer: VectorizedIndexer, value: Any) -> None:
+        self.array.vindex[indexer.tuple] = value
 
-    def __setitem__(self, key: BasicIndexer, value: Any) -> None:
-        self._check_and_raise_if_non_basic_indexer(key)
-        self.array[key.tuple] = value
+    def __setitem__(self, indexer: BasicIndexer, value: Any) -> None:
+        self._check_and_raise_if_non_basic_indexer(indexer)
+        self.array[indexer.tuple] = value
 
     def transpose(self, order):
         return self.array.transpose(order)
@@ -1674,11 +1672,11 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         # a NumPy array.
         return to_0d_array(item)
 
-    def _oindex_get(self, key: OuterIndexer):
-        return self.__getitem__(key)
+    def _oindex_get(self, indexer: OuterIndexer):
+        return self.__getitem__(indexer)
 
-    def _vindex_get(self, key: VectorizedIndexer):
-        return self.__getitem__(key)
+    def _vindex_get(self, indexer: VectorizedIndexer):
+        return self.__getitem__(indexer)
 
     def __getitem__(
         self, indexer: ExplicitIndexer
