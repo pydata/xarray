@@ -9,6 +9,7 @@ from xarray.backends.common import (
     AbstractDataStore,
     BackendEntrypoint,
 )
+from xarray.core.coordinates import Coordinates
 from xarray.core.dataset import Dataset
 
 if TYPE_CHECKING:
@@ -35,6 +36,7 @@ class StoreBackendEntrypoint(BackendEntrypoint):
         concat_characters=True,
         decode_coords=True,
         drop_variables: str | Iterable[str] | None = None,
+        set_indexes: bool = True,
         use_cftime=None,
         decode_timedelta=None,
     ) -> Dataset:
@@ -55,8 +57,22 @@ class StoreBackendEntrypoint(BackendEntrypoint):
             decode_timedelta=decode_timedelta,
         )
 
-        ds = Dataset(vars, attrs=attrs)
-        ds = ds.set_coords(coord_names.intersection(vars))
+        # split data and coordinate variables (promote dimension coordinates)
+        data_vars = {}
+        coord_vars = {}
+        for name, var in vars.items():
+            if name in coord_names or var.dims == (name,):
+                coord_vars[name] = var
+            else:
+                data_vars[name] = var
+
+        if set_indexes:
+            coords = coord_vars
+        else:
+            # explict Coordinates object with no index passed
+            coords = Coordinates(coord_vars)
+
+        ds = Dataset(data_vars, coords=coords, attrs=attrs)
         ds.set_close(filename_or_obj.close)
         ds.encoding = encoding
 
