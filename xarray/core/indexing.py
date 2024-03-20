@@ -985,7 +985,7 @@ def explicit_indexing_adapter(
     return result
 
 
-def apply_indexer(indexable, indexer):
+def apply_indexer(indexable, indexer: ExplicitIndexer):
     """Apply an indexer to an indexable object."""
     if isinstance(indexer, VectorizedIndexer):
         return indexable.vindex[indexer]
@@ -995,7 +995,7 @@ def apply_indexer(indexable, indexer):
         return indexable[indexer]
 
 
-def set_with_indexer(indexable, indexer, value):
+def set_with_indexer(indexable, indexer: ExplicitIndexer, value):
     """Set values in an indexable object using an indexer."""
     if isinstance(indexer, VectorizedIndexer):
         indexable.vindex[indexer] = value
@@ -1328,7 +1328,7 @@ def _masked_result_drop_slice(key, data=None):
     return mask
 
 
-def create_mask(indexer, shape, data=None):
+def create_mask(indexer: ExplicitIndexer, shape, data=None):
     """Create a mask for indexing with a fill-value.
 
     Parameters
@@ -1399,7 +1399,7 @@ def _posify_mask_subindexer(index):
     return new_index
 
 
-def posify_mask_indexer(indexer):
+def posify_mask_indexer(indexer: ExplicitIndexer) -> ExplicitIndexer:
     """Convert masked values (-1) in an indexer to nearest unmasked values.
 
     This routine is useful for dask, where it can be much faster to index
