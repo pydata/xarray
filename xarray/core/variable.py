@@ -209,7 +209,14 @@ def _possibly_convert_objects(values):
     as_series = pd.Series(values.ravel(), copy=False)
     if as_series.dtype.kind in "mM":
         as_series = _as_nanosecond_precision(as_series)
-    return np.asarray(as_series).reshape(values.shape)
+    result = np.asarray(as_series).reshape(values.shape)
+    if not result.flags.writeable:
+        # GH8843, pandas copy-on-write mode creates read-only arrays by default
+        try:
+            result.flags.writeable = True
+        except ValueError:
+            result = result.copy()
+    return result
 
 
 def _possibly_convert_datetime_or_timedelta_index(data):
@@ -761,12 +768,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
         indexable = as_indexable(self._data)
 
-        if isinstance(indexer, OuterIndexer):
-            data = indexable.oindex[indexer]
-        elif isinstance(indexer, VectorizedIndexer):
-            data = indexable.vindex[indexer]
-        else:
-            data = indexable[indexer]
+        data = indexing.apply_indexer(indexable, indexer)
+
         if new_order:
             data = np.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
@@ -791,6 +794,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
 
         if self.size:
+
             if is_duck_dask_array(self._data):
                 # dask's indexing is faster this way; also vindex does not
                 # support negative indices yet:
@@ -800,14 +804,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 actual_indexer = indexer
 
             indexable = as_indexable(self._data)
+            data = indexing.apply_indexer(indexable, actual_indexer)
 
-            if isinstance(indexer, OuterIndexer):
-                data = indexable.oindex[indexer]
-
-            elif isinstance(indexer, VectorizedIndexer):
-                data = indexable.vindex[indexer]
-            else:
-                data = indexable[actual_indexer]
             mask = indexing.create_mask(indexer, self.shape, data)
             # we need to invert the mask in order to pass data first. This helps
             # pint to choose the correct unit
@@ -851,7 +849,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             value = np.moveaxis(value, new_order, range(len(new_order)))
 
         indexable = as_indexable(self._data)
-        indexable[index_tuple] = value
+        indexing.set_with_indexer(indexable, index_tuple, value)
 
     @property
     def encoding(self) -> dict[Any, Any]:

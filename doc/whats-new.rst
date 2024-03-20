@@ -32,6 +32,9 @@ New Features
 - Add the ``.vindex`` property to Explicitly Indexed Arrays for vectorized indexing functionality. (:issue:`8238`, :pull:`8780`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
+- Expand use of ``.oindex`` and ``.vindex`` properties. (:pull: `8790`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
@@ -50,6 +53,15 @@ Bug fixes
   when used in :py:meth:`DataArray.expand_dims` and
   ::py:meth:`Dataset.expand_dims` (:pull:`8781`).  By `Spencer
   Clark <https://github.com/spencerkclark>`_.
+- CF conform handling of `_FillValue`/`missing_value` and `dtype` in
+  `CFMaskCoder`/`CFScaleOffsetCoder` (:issue:`2304`, :issue:`5597`,
+  :issue:`7691`, :pull:`8713`, see also discussion in :pull:`7654`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- do not cast `_FillValue`/`missing_value` in `CFMaskCoder` if `_Unsigned` is provided
+  (:issue:`8844`, :pull:`8852`).
+- Adapt handling of copy keyword argument in scipy backend for numpy >= 2.0dev
+  (:issue:`8844`, :pull:`8851`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
