@@ -23,6 +23,28 @@ from xarray.tests import (
 B = IndexerMaker(indexing.BasicIndexer)
 
 
+class TestIndexCallable:
+    def test_getitem(self):
+        def getter(key):
+            return key * 2
+
+        indexer = indexing.IndexCallable(getter)
+        assert indexer[3] == 6
+        assert indexer[0] == 0
+        assert indexer[-1] == -2
+
+    def test_setitem(self):
+        def getter(key):
+            return key * 2
+
+        def setter(key, value):
+            raise NotImplementedError("Setter not implemented")
+
+        indexer = indexing.IndexCallable(getter, setter)
+        with pytest.raises(NotImplementedError):
+            indexer[3] = 6
+
+
 class TestIndexers:
     def set_to_zero(self, x, i):
         x = x.copy()
@@ -361,15 +383,8 @@ class TestLazyArray:
 
         def check_indexing(v_eager, v_lazy, indexers):
             for indexer in indexers:
-                if isinstance(indexer, indexing.VectorizedIndexer):
-                    actual = v_lazy.vindex[indexer]
-                    expected = v_eager.vindex[indexer]
-                elif isinstance(indexer, indexing.OuterIndexer):
-                    actual = v_lazy.oindex[indexer]
-                    expected = v_eager.oindex[indexer]
-                else:
-                    actual = v_lazy[indexer]
-                    expected = v_eager[indexer]
+                actual = v_lazy[indexer]
+                expected = v_eager[indexer]
                 assert expected.shape == actual.shape
                 assert isinstance(
                     actual._data,
@@ -405,6 +420,41 @@ class TestLazyArray:
             (Variable(["i", "j"], [[0, 1], [1, 2]]),),
         ]
         check_indexing(v_eager, v_lazy, indexers)
+
+    def test_lazily_indexed_array_vindex_setitem(self) -> None:
+
+        lazy = indexing.LazilyIndexedArray(np.random.rand(10, 20, 30))
+
+        # vectorized indexing
+        indexer = indexing.VectorizedIndexer(
+            (np.array([0, 1]), np.array([0, 1]), slice(None, None, None))
+        )
+        with pytest.raises(
+            NotImplementedError,
+            match=r"Lazy item assignment with the vectorized indexer is not yet",
+        ):
+            lazy.vindex[indexer] = 0
+
+    @pytest.mark.parametrize(
+        "indexer_class, key, value",
+        [
+            (indexing.OuterIndexer, (0, 1, slice(None, None, None)), 10),
+            (indexing.BasicIndexer, (0, 1, slice(None, None, None)), 10),
+        ],
+    )
+    def test_lazily_indexed_array_setitem(self, indexer_class, key, value) -> None:
+        original = np.random.rand(10, 20, 30)
+        x = indexing.NumpyIndexingAdapter(original)
+        lazy = indexing.LazilyIndexedArray(x)
+
+        if indexer_class is indexing.BasicIndexer:
+            indexer = indexer_class(key)
+            lazy[indexer] = value
+        elif indexer_class is indexing.OuterIndexer:
+            indexer = indexer_class(key)
+            lazy.oindex[indexer] = value
+
+        assert_array_equal(original[key], value)
 
 
 class TestCopyOnWriteArray:
@@ -830,7 +880,7 @@ def test_create_mask_dask() -> None:
 
 def test_create_mask_error() -> None:
     with pytest.raises(TypeError, match=r"unexpected key type"):
-        indexing.create_mask((1, 2), (3, 4))
+        indexing.create_mask((1, 2), (3, 4))  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
