@@ -7052,12 +7052,10 @@ def test_cumulative_integrate(dask) -> None:
     # along x
     actual = da.cumulative_integrate("x")
 
-    # From scipy-1.6.0 cumtrapz is renamed to cumulative_trapezoid, but cumtrapz is
-    # still provided for backward compatibility
-    from scipy.integrate import cumtrapz
+    from scipy.integrate import cumulative_trapezoid
 
     expected_x = xr.DataArray(
-        cumtrapz(da.compute(), da["x"], axis=0, initial=0.0),
+        cumulative_trapezoid(da.compute(), da["x"], axis=0, initial=0.0),
         dims=["x", "y"],
         coords=da.coords,
     )
@@ -7073,7 +7071,7 @@ def test_cumulative_integrate(dask) -> None:
     # along y
     actual = da.cumulative_integrate("y")
     expected_y = xr.DataArray(
-        cumtrapz(da, da["y"], axis=1, initial=0.0),
+        cumulative_trapezoid(da, da["y"], axis=1, initial=0.0),
         dims=["x", "y"],
         coords=da.coords,
     )
