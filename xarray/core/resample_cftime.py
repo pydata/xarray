@@ -1,4 +1,5 @@
 """Resampling for CFTimeIndex. Does not support non-integer freq."""
+
 # The mechanisms for resampling CFTimeIndex was copied and adapted from
 # the source code defined in pandas.core.resample
 #
@@ -45,7 +46,6 @@ import pandas as pd
 
 from xarray.coding.cftime_offsets import (
     BaseCFTimeOffset,
-    Day,
     MonthEnd,
     QuarterEnd,
     Tick,
@@ -152,7 +152,10 @@ class CFTimeGrouper:
                     f"Got {self.loffset}."
                 )
 
-            labels = labels + pd.to_timedelta(self.loffset)
+            if isinstance(self.loffset, datetime.timedelta):
+                labels = labels + self.loffset
+            else:
+                labels = labels + to_offset(self.loffset)
 
         # check binner fits data
         if index[0] < datetime_bins[0]:
@@ -254,8 +257,7 @@ def _adjust_bin_edges(
     labels: np.ndarray,
 ):
     """This is required for determining the bin edges resampling with
-    daily frequencies greater than one day, month end, and year end
-    frequencies.
+    month end, quarter end, and year end frequencies.
 
     Consider the following example.  Let's say you want to downsample the
     time series with the following coordinates to month end frequency:
@@ -283,14 +285,8 @@ def _adjust_bin_edges(
     The labels are still:
 
     CFTimeIndex([2000-01-31 00:00:00, 2000-02-29 00:00:00], dtype='object')
-
-    This is also required for daily frequencies longer than one day and
-    year-end frequencies.
     """
-    is_super_daily = isinstance(freq, (MonthEnd, QuarterEnd, YearEnd)) or (
-        isinstance(freq, Day) and freq.n > 1
-    )
-    if is_super_daily:
+    if isinstance(freq, (MonthEnd, QuarterEnd, YearEnd)):
         if closed == "right":
             datetime_bins = datetime_bins + datetime.timedelta(days=1, microseconds=-1)
         if datetime_bins[-2] > index.max():

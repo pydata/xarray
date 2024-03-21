@@ -32,6 +32,10 @@ def test_vlen_dtype() -> None:
     assert strings.is_bytes_dtype(dtype)
     assert strings.check_vlen_dtype(dtype) is bytes
 
+    # check h5py variant ("vlen")
+    dtype = np.dtype("O", metadata={"vlen": str})  # type: ignore[call-overload,unused-ignore]
+    assert strings.check_vlen_dtype(dtype) is str
+
     assert strings.check_vlen_dtype(np.dtype(object)) is None
 
 
@@ -177,7 +181,7 @@ def test_StackedBytesArray_vectorized_indexing() -> None:
 
     V = IndexerMaker(indexing.VectorizedIndexer)
     indexer = V[np.array([[0, 1], [1, 0]])]
-    actual = stacked[indexer]
+    actual = stacked.vindex[indexer]
     assert_array_equal(actual, expected)
 
 

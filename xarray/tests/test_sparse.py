@@ -10,7 +10,7 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray, Variable
-from xarray.core.pycompat import array_type
+from xarray.namedarray.pycompat import array_type
 from xarray.tests import assert_equal, assert_identical, requires_dask
 
 filterwarnings = pytest.mark.filterwarnings
@@ -147,7 +147,6 @@ def test_variable_property(prop):
                 ],
             ),
             True,
-            marks=xfail(reason="Coercion to dense"),
         ),
         param(
             do("conjugate"),
@@ -201,7 +200,6 @@ def test_variable_property(prop):
         param(
             do("reduce", func="sum", dim="x"),
             True,
-            marks=xfail(reason="Coercion to dense"),
         ),
         param(
             do("rolling_window", dim="x", window=2, window_dim="x_win"),
@@ -218,7 +216,7 @@ def test_variable_property(prop):
         param(
             do("var"), False, marks=xfail(reason="Missing implementation for np.nanvar")
         ),
-        param(do("to_dict"), False, marks=xfail(reason="Coercion to dense")),
+        param(do("to_dict"), False),
         (do("where", cond=make_xrvar({"x": 10, "y": 5}) > 0.5), True),
     ],
     ids=repr,
@@ -237,7 +235,14 @@ def test_variable_method(func, sparse_output):
         assert isinstance(ret_s.data, sparse.SparseArray)
         assert np.allclose(ret_s.data.todense(), ret_d.data, equal_nan=True)
     else:
-        assert np.allclose(ret_s, ret_d, equal_nan=True)
+        if func.meth != "to_dict":
+            assert np.allclose(ret_s, ret_d)
+        else:
+            # pop the arrays from the dict
+            arr_s, arr_d = ret_s.pop("data"), ret_d.pop("data")
+
+            assert np.allclose(arr_s, arr_d)
+            assert ret_s == ret_d
 
 
 @pytest.mark.parametrize(
@@ -292,7 +297,7 @@ class TestSparseVariable:
     def test_repr(self):
         expected = dedent(
             """\
-            <xarray.Variable (x: 4, y: 6)>
+            <xarray.Variable (x: 4, y: 6)> Size: 288B
             <COO: shape=(4, 6), dtype=float64, nnz=12, fill_value=0.0>"""
         )
         assert expected == repr(self.var)
@@ -573,7 +578,7 @@ class TestSparseDataArrayAndDataset:
 
     def test_to_dataset_roundtrip(self):
         x = self.sp_xr
-        assert_equal(x, x.to_dataset("x").to_array("x"))
+        assert_equal(x, x.to_dataset("x").to_dataarray("x"))
 
     def test_align(self):
         a1 = xr.DataArray(
@@ -676,10 +681,10 @@ class TestSparseDataArrayAndDataset:
         )
         expected = dedent(
             """\
-            <xarray.DataArray (x: 4)>
+            <xarray.DataArray (x: 4)> Size: 64B
             <COO: shape=(4,), dtype=float64, nnz=4, fill_value=0.0>
             Coordinates:
-                y        (x) int64 <COO: nnz=3, fill_value=0>
+                y        (x) int64 48B <COO: nnz=3, fill_value=0>
             Dimensions without coordinates: x"""
         )
         assert expected == repr(a)
@@ -691,13 +696,13 @@ class TestSparseDataArrayAndDataset:
         )
         expected = dedent(
             """\
-            <xarray.Dataset>
+            <xarray.Dataset> Size: 112B
             Dimensions:  (x: 4)
             Coordinates:
-                y        (x) int64 <COO: nnz=3, fill_value=0>
+                y        (x) int64 48B <COO: nnz=3, fill_value=0>
             Dimensions without coordinates: x
             Data variables:
-                a        (x) float64 <COO: nnz=4, fill_value=0.0>"""
+                a        (x) float64 64B <COO: nnz=4, fill_value=0.0>"""
         )
         assert expected == repr(ds)
 
@@ -708,11 +713,11 @@ class TestSparseDataArrayAndDataset:
         ).chunk()
         expected = dedent(
             """\
-            <xarray.Dataset>
+            <xarray.Dataset> Size: 32B
             Dimensions:  (x: 4)
             Dimensions without coordinates: x
             Data variables:
-                a        (x) float64 dask.array<chunksize=(4,), meta=sparse.COO>"""
+                a        (x) float64 32B dask.array<chunksize=(4,), meta=sparse.COO>"""
         )
         assert expected == repr(ds)
 
@@ -825,7 +830,7 @@ class TestSparseDataArrayAndDataset:
     @pytest.mark.xfail
     def test_merge(self):
         x = self.sp_xr
-        y = xr.merge([x, x.rename("bar")]).to_array()
+        y = xr.merge([x, x.rename("bar")]).to_dataarray()
         assert isinstance(y, sparse.SparseArray)
 
     @pytest.mark.xfail
@@ -873,10 +878,6 @@ def test_dask_token():
     import dask
 
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
-
-    # https://github.com/pydata/sparse/issues/300
-    s.__dask_tokenize__ = lambda: dask.base.normalize_token(s.__dict__)
-
     a = DataArray(s)
     t1 = dask.base.tokenize(a)
     t2 = dask.base.tokenize(a)

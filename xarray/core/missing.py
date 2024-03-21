@@ -13,12 +13,18 @@ import pandas as pd
 from xarray.core import utils
 from xarray.core.common import _contains_datetime_like_objects, ones_like
 from xarray.core.computation import apply_ufunc
-from xarray.core.duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
-from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.duck_array_ops import (
+    datetime_to_numeric,
+    push,
+    reshape,
+    timedelta_to_numeric,
+)
+from xarray.core.options import _get_keep_attrs
 from xarray.core.types import Interp1dOptions, InterpOptions
 from xarray.core.utils import OrderedSet, is_scalar
 from xarray.core.variable import Variable, broadcast_variables
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -66,9 +72,7 @@ class BaseInterpolator:
         return self.f(x, **self.call_kwargs)
 
     def __repr__(self):
-        return "{type}: method={method}".format(
-            type=self.__class__.__name__, method=self.method
-        )
+        return f"{self.__class__.__name__}: method={self.method}"
 
 
 class NumpyInterpolator(BaseInterpolator):
@@ -415,11 +419,6 @@ def _bfill(arr, n=None, axis=-1):
 
 def ffill(arr, dim=None, limit=None):
     """forward fill missing values"""
-    if not OPTIONS["use_bottleneck"]:
-        raise RuntimeError(
-            "ffill requires bottleneck to be enabled."
-            " Call `xr.set_options(use_bottleneck=True)` to enable it."
-        )
 
     axis = arr.get_axis_num(dim)
 
@@ -438,11 +437,6 @@ def ffill(arr, dim=None, limit=None):
 
 def bfill(arr, dim=None, limit=None):
     """backfill missing values"""
-    if not OPTIONS["use_bottleneck"]:
-        raise RuntimeError(
-            "bfill requires bottleneck to be enabled."
-            " Call `xr.set_options(use_bottleneck=True)` to enable it."
-        )
 
     axis = arr.get_axis_num(dim)
 
@@ -476,9 +470,9 @@ def _get_interpolator(
 
     returns interpolator class and keyword arguments for the class
     """
-    interp_class: type[NumpyInterpolator] | type[ScipyInterpolator] | type[
-        SplineInterpolator
-    ]
+    interp_class: (
+        type[NumpyInterpolator] | type[ScipyInterpolator] | type[SplineInterpolator]
+    )
 
     interp1d_methods = get_args(Interp1dOptions)
     valid_methods = tuple(vv for v in get_args(InterpOptions) for vv in get_args(v))
@@ -503,7 +497,7 @@ def _get_interpolator(
             )
         elif method == "barycentric":
             interp_class = _import_interpolant("BarycentricInterpolator", method)
-        elif method == "krog":
+        elif method in ["krogh", "krog"]:
             interp_class = _import_interpolant("KroghInterpolator", method)
         elif method == "pchip":
             interp_class = _import_interpolant("PchipInterpolator", method)
@@ -639,7 +633,7 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
             var.transpose(*original_dims).data, x, destination, method, kwargs
         )
 
-        result = Variable(new_dims, interped, attrs=var.attrs)
+        result = Variable(new_dims, interped, attrs=var.attrs, fastpath=True)
 
         # dimension of the output array
         out_dims: OrderedSet = OrderedSet()
@@ -648,7 +642,8 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
                 out_dims.update(indexes_coords[d][1].dims)
             else:
                 out_dims.add(d)
-        result = result.transpose(*out_dims)
+        if len(out_dims) > 1:
+            result = result.transpose(*out_dims)
     return result
 
 
@@ -679,7 +674,7 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
 
     Notes
     -----
-    This requiers scipy installed.
+    This requires scipy installed.
 
     See Also
     --------
@@ -693,8 +688,8 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
     else:
         func, kwargs = _get_interpolator_nd(method, **kwargs)
 
-    if is_duck_dask_array(var):
-        import dask.array as da
+    if is_chunked_array(var):
+        chunkmanager = get_chunked_array_type(var)
 
         ndim = var.ndim
         nconst = ndim - len(x)
@@ -709,40 +704,36 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
         ]
         new_x_arginds = [item for pair in new_x_arginds for item in pair]
 
-        args = (
-            var,
-            range(ndim),
-            *x_arginds,
-            *new_x_arginds,
-        )
+        args = (var, range(ndim), *x_arginds, *new_x_arginds)
 
-        _, rechunked = da.unify_chunks(*args)
+        _, rechunked = chunkmanager.unify_chunks(*args)
 
         args = tuple(elem for pair in zip(rechunked, args[1::2]) for elem in pair)
 
         new_x = rechunked[1 + (len(rechunked) - 1) // 2 :]
 
+        new_x0_chunks = new_x[0].chunks
+        new_x0_shape = new_x[0].shape
+        new_x0_chunks_is_not_none = new_x0_chunks is not None
         new_axes = {
-            ndim + i: new_x[0].chunks[i]
-            if new_x[0].chunks is not None
-            else new_x[0].shape[i]
+            ndim + i: new_x0_chunks[i] if new_x0_chunks_is_not_none else new_x0_shape[i]
             for i in range(new_x[0].ndim)
         }
 
-        # if useful, re-use localize for each chunk of new_x
-        localize = (method in ["linear", "nearest"]) and (new_x[0].chunks is not None)
+        # if useful, reuse localize for each chunk of new_x
+        localize = (method in ["linear", "nearest"]) and new_x0_chunks_is_not_none
 
         # scipy.interpolate.interp1d always forces to float.
         # Use the same check for blockwise as well:
         if not issubclass(var.dtype.type, np.inexact):
-            dtype = np.float_
+            dtype = float
         else:
             dtype = var.dtype
 
         meta = var._meta
 
-        return da.blockwise(
-            _dask_aware_interpnd,
+        return chunkmanager.blockwise(
+            _chunked_aware_interpnd,
             out_ind,
             *args,
             interp_func=func,
@@ -763,7 +754,7 @@ def _interp1d(var, x, new_x, func, kwargs):
     x, new_x = x[0], new_x[0]
     rslt = func(x, var, assume_sorted=True, **kwargs)(np.ravel(new_x))
     if new_x.ndim > 1:
-        return rslt.reshape(var.shape[:-1] + new_x.shape)
+        return reshape(rslt, (var.shape[:-1] + new_x.shape))
     if new_x.ndim == 0:
         return rslt[..., -1]
     return rslt
@@ -782,11 +773,11 @@ def _interpnd(var, x, new_x, func, kwargs):
     rslt = func(x, var, xi, **kwargs)
     # move back the interpolation axes to the last position
     rslt = rslt.transpose(range(-rslt.ndim + 1, 1))
-    return rslt.reshape(rslt.shape[:-1] + new_x[0].shape)
+    return reshape(rslt, rslt.shape[:-1] + new_x[0].shape)
 
 
-def _dask_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=True):
-    """Wrapper for `_interpnd` through `blockwise`
+def _chunked_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=True):
+    """Wrapper for `_interpnd` through `blockwise` for chunked arrays.
 
     The first half arrays in `coords` are original coordinates,
     the other half are destination coordinates

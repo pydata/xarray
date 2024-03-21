@@ -9,6 +9,7 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable, concat
 from xarray.core import dtypes, merge
+from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import PandasIndex
 from xarray.tests import (
     InaccessibleArray,
@@ -297,6 +298,7 @@ def test_concat_multiple_datasets_with_multiple_missing_variables() -> None:
     assert_identical(actual, expected)
 
 
+@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 def test_concat_type_of_missing_fill() -> None:
     datasets = create_typed_datasets(2, seed=123)
     expected1 = concat(datasets, dim="day", fill_value=dtypes.NA)
@@ -492,7 +494,7 @@ class TestConcatDataset:
 
     def test_concat_2(self, data) -> None:
         dim = "dim2"
-        datasets = [g for _, g in data.groupby(dim, squeeze=True)]
+        datasets = [g.squeeze(dim) for _, g in data.groupby(dim, squeeze=False)]
         concat_over = [k for k, v in data.coords.items() if dim in v.dims and k != dim]
         actual = concat(datasets, data[dim], coords=concat_over)
         assert_identical(data, self.rectify_dim_order(data, actual))
@@ -503,11 +505,11 @@ class TestConcatDataset:
         data = data.copy(deep=True)
         # make sure the coords argument behaves as expected
         data.coords["extra"] = ("dim4", np.arange(3))
-        datasets = [g for _, g in data.groupby(dim, squeeze=True)]
+        datasets = [g.squeeze() for _, g in data.groupby(dim, squeeze=False)]
 
         actual = concat(datasets, data[dim], coords=coords)
         if coords == "all":
-            expected = np.array([data["extra"].values for _ in range(data.dims[dim])])
+            expected = np.array([data["extra"].values for _ in range(data.sizes[dim])])
             assert_array_equal(actual["extra"].values, expected)
 
         else:
@@ -537,8 +539,7 @@ class TestConcatDataset:
         actual = concat(objs, dim="x", data_vars="minimal")
         assert_identical(data, actual)
 
-    def test_concat_data_vars(self):
-        # TODO: annotating this func fails
+    def test_concat_data_vars(self) -> None:
         data = Dataset({"foo": ("x", np.random.randn(10))})
         objs: list[Dataset] = [data.isel(x=slice(5)), data.isel(x=slice(5, None))]
         for data_vars in ["minimal", "different", "all", [], ["foo"]]:
@@ -614,11 +615,14 @@ class TestConcatDataset:
         with pytest.raises(ValueError, match=r"must supply at least one"):
             concat([], "dim1")
 
-        with pytest.raises(ValueError, match=r"are not coordinates"):
+        with pytest.raises(ValueError, match=r"are not found in the coordinates"):
             concat([data, data], "new_dim", coords=["not_found"])
 
+        with pytest.raises(ValueError, match=r"are not found in the data variables"):
+            concat([data, data], "new_dim", data_vars=["not_found"])
+
         with pytest.raises(ValueError, match=r"global attributes not"):
-            # call deepcopy seperately to get unique attrs
+            # call deepcopy separately to get unique attrs
             data0 = deepcopy(split_data[0])
             data1 = deepcopy(split_data[1])
             data1.attrs["foo"] = "bar"
@@ -906,8 +910,9 @@ class TestConcatDataset:
         assert_identical(actual, expected)
 
     def test_concat_multiindex(self) -> None:
-        x = pd.MultiIndex.from_product([[1, 2, 3], ["a", "b"]])
-        expected = Dataset(coords={"x": x})
+        midx = pd.MultiIndex.from_product([[1, 2, 3], ["a", "b"]])
+        midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
+        expected = Dataset(coords=midx_coords)
         actual = concat(
             [expected.isel(x=slice(2)), expected.isel(x=slice(2, None))], "x"
         )
@@ -917,8 +922,9 @@ class TestConcatDataset:
     def test_concat_along_new_dim_multiindex(self) -> None:
         # see https://github.com/pydata/xarray/issues/6881
         level_names = ["x_level_0", "x_level_1"]
-        x = pd.MultiIndex.from_product([[1, 2, 3], ["a", "b"]], names=level_names)
-        ds = Dataset(coords={"x": x})
+        midx = pd.MultiIndex.from_product([[1, 2, 3], ["a", "b"]], names=level_names)
+        midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
+        ds = Dataset(coords=midx_coords)
         concatenated = concat([ds], "new")
         actual = list(concatenated.xindexes.get_all_coords("x"))
         expected = ["x"] + level_names
@@ -994,7 +1000,7 @@ class TestConcatDataArray:
         actual = concat([foo, bar], "w")
         assert_equal(expected, actual)
         # from iteration:
-        grouped = [g for _, g in foo.groupby("x")]
+        grouped = [g.squeeze() for _, g in foo.groupby("x", squeeze=False)]
         stacked = concat(grouped, ds["x"])
         assert_identical(foo, stacked)
         # with an index as the 'dim' argument
@@ -1064,10 +1070,10 @@ class TestConcatDataArray:
     def test_concat_join_kwarg(self) -> None:
         ds1 = Dataset(
             {"a": (("x", "y"), [[0]])}, coords={"x": [0], "y": [0]}
-        ).to_array()
+        ).to_dataarray()
         ds2 = Dataset(
             {"a": (("x", "y"), [[0]])}, coords={"x": [1], "y": [0.0001]}
-        ).to_array()
+        ).to_dataarray()
 
         expected: dict[JoinOptions, Any] = {}
         expected["outer"] = Dataset(
@@ -1095,7 +1101,7 @@ class TestConcatDataArray:
 
         for join in expected:
             actual = concat([ds1, ds2], join=join, dim="x")
-            assert_equal(actual, expected[join].to_array())
+            assert_equal(actual, expected[join].to_dataarray())
 
     def test_concat_combine_attrs_kwarg(self) -> None:
         da1 = DataArray([0], coords=[("x", [0])], attrs={"b": 42})
@@ -1208,7 +1214,7 @@ def test_concat_preserve_coordinate_order() -> None:
     # check dimension order
     for act, exp in zip(actual.dims, expected.dims):
         assert act == exp
-        assert actual.dims[act] == expected.dims[exp]
+        assert actual.sizes[act] == expected.sizes[exp]
 
     # check coordinate order
     for act, exp in zip(actual.coords, expected.coords):
@@ -1218,7 +1224,7 @@ def test_concat_preserve_coordinate_order() -> None:
 
 def test_concat_typing_check() -> None:
     ds = Dataset({"foo": 1}, {"bar": 2})
-    da = Dataset({"foo": 3}, {"bar": 4}).to_array(dim="foo")
+    da = Dataset({"foo": 3}, {"bar": 4}).to_dataarray(dim="foo")
 
     # concatenate a list of non-homogeneous types must raise TypeError
     with pytest.raises(

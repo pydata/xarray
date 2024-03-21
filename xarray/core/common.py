@@ -13,14 +13,14 @@ import pandas as pd
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
 from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pdcompat import _convert_base_to_offset
-from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.utils import (
     Frozen,
     either_dict_or_kwargs,
-    emit_user_level_warning,
     is_scalar,
 )
+from xarray.namedarray.core import _raise_if_any_duplicate_dimensions
+from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
+from xarray.namedarray.pycompat import is_chunked_array
 
 try:
     import cftime
@@ -45,7 +45,9 @@ if TYPE_CHECKING:
         DatetimeLike,
         DTypeLikeSave,
         ScalarOrArray,
+        Self,
         SideOptions,
+        T_Chunks,
         T_DataWithCoords,
         T_Variable,
     )
@@ -159,7 +161,7 @@ class AbstractArray:
     def __complex__(self: Any) -> complex:
         return complex(self.values)
 
-    def __array__(self: Any, dtype: DTypeLike = None) -> np.ndarray:
+    def __array__(self: Any, dtype: DTypeLike | None = None) -> np.ndarray:
         return np.asarray(self.values, dtype=dtype)
 
     def __repr__(self) -> str:
@@ -196,6 +198,12 @@ class AbstractArray:
             raise TypeError("iteration over a 0-d array")
         return self._iter()
 
+    @overload
+    def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...
+
+    @overload
+    def get_axis_num(self, dim: Hashable) -> int: ...
+
     def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
@@ -209,19 +217,20 @@ class AbstractArray:
         int or tuple of int
             Axis number or numbers corresponding to the given dimensions.
         """
-        if isinstance(dim, Iterable) and not isinstance(dim, str):
+        if not isinstance(dim, str) and isinstance(dim, Iterable):
             return tuple(self._get_axis_num(d) for d in dim)
         else:
             return self._get_axis_num(dim)
 
     def _get_axis_num(self: Any, dim: Hashable) -> int:
+        _raise_if_any_duplicate_dimensions(self.dims)
         try:
             return self.dims.index(dim)
         except ValueError:
             raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
 
     @property
-    def sizes(self: Any) -> Frozen[Hashable, int]:
+    def sizes(self: Any) -> Mapping[Hashable, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.
@@ -305,9 +314,7 @@ class AttrAccessMixin:
         except AttributeError as e:
             # Don't accidentally shadow custom AttributeErrors, e.g.
             # DataArray.dims.setter
-            if str(e) != "{!r} object has no attribute {!r}".format(
-                type(self).__name__, name
-            ):
+            if str(e) != f"{type(self).__name__!r} object has no attribute {name!r}":
                 raise
             raise AttributeError(
                 f"cannot set attribute {name!r} on a {type(self).__name__!r} object. Use __setitem__ style"
@@ -382,11 +389,11 @@ class DataWithCoords(AttrAccessMixin):
     __slots__ = ("_close",)
 
     def squeeze(
-        self: T_DataWithCoords,
+        self,
         dim: Hashable | Iterable[Hashable] | None = None,
         drop: bool = False,
         axis: int | Iterable[int] | None = None,
-    ) -> T_DataWithCoords:
+    ) -> Self:
         """Return a new object with squeezed data.
 
         Parameters
@@ -415,12 +422,12 @@ class DataWithCoords(AttrAccessMixin):
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
     def clip(
-        self: T_DataWithCoords,
+        self,
         min: ScalarOrArray | None = None,
         max: ScalarOrArray | None = None,
         *,
         keep_attrs: bool | None = None,
-    ) -> T_DataWithCoords:
+    ) -> Self:
         """
         Return an array whose values are limited to ``[min, max]``.
         At least one of max or min must be given.
@@ -473,10 +480,10 @@ class DataWithCoords(AttrAccessMixin):
         return {k: v(self) if callable(v) else v for k, v in kwargs.items()}
 
     def assign_coords(
-        self: T_DataWithCoords,
-        coords: Mapping[Any, Any] | None = None,
+        self,
+        coords: Mapping | None = None,
         **coords_kwargs: Any,
-    ) -> T_DataWithCoords:
+    ) -> Self:
         """Assign new coordinates to this object.
 
         Returns a new object with all the original data in addition to the new
@@ -484,15 +491,21 @@ class DataWithCoords(AttrAccessMixin):
 
         Parameters
         ----------
-        coords : dict-like or None, optional
-            A dict where the keys are the names of the coordinates
-            with the new values to assign. If the values are callable, they are
-            computed on this object and assigned to new coordinate variables.
-            If the values are not callable, (e.g. a ``DataArray``, scalar, or
-            array), they are simply assigned. A new coordinate can also be
-            defined and attached to an existing dimension using a tuple with
-            the first element the dimension name and the second element the
-            values for this new coordinate.
+        coords : mapping of dim to coord, optional
+            A mapping whose keys are the names of the coordinates and values are the
+            coordinates to assign. The mapping will generally be a dict or
+            :class:`Coordinates`.
+
+            * If a value is a standard data value — for example, a ``DataArray``,
+              scalar, or array — the data is simply assigned as a coordinate.
+
+            * If a value is callable, it is called with this object as the only
+              parameter, and the return value is used as new coordinate variables.
+
+            * A coordinate can also be defined and attached to an existing dimension
+              using a tuple with the first element the dimension name and the second
+              element the values for this new coordinate.
+
         **coords_kwargs : optional
             The keyword arguments form of ``coords``.
             One of ``coords`` or ``coords_kwargs`` must be provided.
@@ -513,33 +526,33 @@ class DataWithCoords(AttrAccessMixin):
         ...     dims="lon",
         ... )
         >>> da
-        <xarray.DataArray (lon: 4)>
+        <xarray.DataArray (lon: 4)> Size: 32B
         array([0.5488135 , 0.71518937, 0.60276338, 0.54488318])
         Coordinates:
-          * lon      (lon) int64 358 359 0 1
+          * lon      (lon) int64 32B 358 359 0 1
         >>> da.assign_coords(lon=(((da.lon + 180) % 360) - 180))
-        <xarray.DataArray (lon: 4)>
+        <xarray.DataArray (lon: 4)> Size: 32B
         array([0.5488135 , 0.71518937, 0.60276338, 0.54488318])
         Coordinates:
-          * lon      (lon) int64 -2 -1 0 1
+          * lon      (lon) int64 32B -2 -1 0 1
 
         The function also accepts dictionary arguments:
 
         >>> da.assign_coords({"lon": (((da.lon + 180) % 360) - 180)})
-        <xarray.DataArray (lon: 4)>
+        <xarray.DataArray (lon: 4)> Size: 32B
         array([0.5488135 , 0.71518937, 0.60276338, 0.54488318])
         Coordinates:
-          * lon      (lon) int64 -2 -1 0 1
+          * lon      (lon) int64 32B -2 -1 0 1
 
         New coordinate can also be attached to an existing dimension:
 
         >>> lon_2 = np.array([300, 289, 0, 1])
         >>> da.assign_coords(lon_2=("lon", lon_2))
-        <xarray.DataArray (lon: 4)>
+        <xarray.DataArray (lon: 4)> Size: 32B
         array([0.5488135 , 0.71518937, 0.60276338, 0.54488318])
         Coordinates:
-          * lon      (lon) int64 358 359 0 1
-            lon_2    (lon) int64 300 289 0 1
+          * lon      (lon) int64 32B 358 359 0 1
+            lon_2    (lon) int64 32B 300 289 0 1
 
         Note that the same result can also be obtained with a dict e.g.
 
@@ -565,41 +578,33 @@ class DataWithCoords(AttrAccessMixin):
         ...     attrs=dict(description="Weather-related data"),
         ... )
         >>> ds
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 360B
         Dimensions:         (x: 2, y: 2, time: 4)
         Coordinates:
-            lon             (x, y) float64 260.2 260.7 260.2 260.8
-            lat             (x, y) float64 42.25 42.21 42.63 42.59
-          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 ... 2014-09-09
-            reference_time  datetime64[ns] 2014-09-05
+            lon             (x, y) float64 32B 260.2 260.7 260.2 260.8
+            lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
+          * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
+            reference_time  datetime64[ns] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
-            temperature     (x, y, time) float64 20.0 20.8 21.6 22.4 ... 30.4 31.2 32.0
-            precipitation   (x, y, time) float64 2.0 0.0 0.0 0.0 0.0 ... 0.0 0.0 0.0 2.0
+            temperature     (x, y, time) float64 128B 20.0 20.8 21.6 ... 30.4 31.2 32.0
+            precipitation   (x, y, time) float64 128B 2.0 0.0 0.0 0.0 ... 0.0 0.0 2.0
         Attributes:
             description:  Weather-related data
         >>> ds.assign_coords(lon=(((ds.lon + 180) % 360) - 180))
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 360B
         Dimensions:         (x: 2, y: 2, time: 4)
         Coordinates:
-            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
-            lat             (x, y) float64 42.25 42.21 42.63 42.59
-          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 ... 2014-09-09
-            reference_time  datetime64[ns] 2014-09-05
+            lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
+            lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
+          * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
+            reference_time  datetime64[ns] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
-            temperature     (x, y, time) float64 20.0 20.8 21.6 22.4 ... 30.4 31.2 32.0
-            precipitation   (x, y, time) float64 2.0 0.0 0.0 0.0 0.0 ... 0.0 0.0 0.0 2.0
+            temperature     (x, y, time) float64 128B 20.0 20.8 21.6 ... 30.4 31.2 32.0
+            precipitation   (x, y, time) float64 128B 2.0 0.0 0.0 0.0 ... 0.0 0.0 2.0
         Attributes:
             description:  Weather-related data
-
-        Notes
-        -----
-        Since ``coords_kwargs`` is a dictionary, the order of your arguments
-        may not be preserved, and so the order of the new variables is not well
-        defined. Assigning multiple variables within the same ``assign_coords``
-        is possible, but you cannot reference other variables created within
-        the same ``assign_coords`` call.
 
         See Also
         --------
@@ -607,15 +612,21 @@ class DataWithCoords(AttrAccessMixin):
         Dataset.swap_dims
         Dataset.set_coords
         """
+        from xarray.core.coordinates import Coordinates
+
         coords_combined = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
         data = self.copy(deep=False)
-        results: dict[Hashable, Any] = self._calc_assign_results(coords_combined)
+
+        results: Coordinates | dict[Hashable, Any]
+        if isinstance(coords, Coordinates):
+            results = coords
+        else:
+            results = self._calc_assign_results(coords_combined)
+
         data.coords.update(results)
         return data
 
-    def assign_attrs(
-        self: T_DataWithCoords, *args: Any, **kwargs: Any
-    ) -> T_DataWithCoords:
+    def assign_attrs(self, *args: Any, **kwargs: Any) -> Self:
         """Assign new attrs to this object.
 
         Returns a new object equivalent to ``self.attrs.update(*args, **kwargs)``.
@@ -626,6 +637,36 @@ class DataWithCoords(AttrAccessMixin):
             positional arguments passed into ``attrs.update``.
         **kwargs
             keyword arguments passed into ``attrs.update``.
+
+        Examples
+        --------
+        >>> dataset = xr.Dataset({"temperature": [25, 30, 27]})
+        >>> dataset
+        <xarray.Dataset> Size: 24B
+        Dimensions:      (temperature: 3)
+        Coordinates:
+          * temperature  (temperature) int64 24B 25 30 27
+        Data variables:
+            *empty*
+
+        >>> new_dataset = dataset.assign_attrs(
+        ...     units="Celsius", description="Temperature data"
+        ... )
+        >>> new_dataset
+        <xarray.Dataset> Size: 24B
+        Dimensions:      (temperature: 3)
+        Coordinates:
+          * temperature  (temperature) int64 24B 25 30 27
+        Data variables:
+            *empty*
+        Attributes:
+            units:        Celsius
+            description:  Temperature data
+
+        # Attributes of the new dataset
+
+        >>> new_dataset.attrs
+        {'units': 'Celsius', 'description': 'Temperature data'}
 
         Returns
         -------
@@ -705,14 +746,14 @@ class DataWithCoords(AttrAccessMixin):
         ...     coords={"lat": [10, 20], "lon": [150, 160]},
         ... )
         >>> x
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 96B
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
-          * lat            (lat) int64 10 20
-          * lon            (lon) int64 150 160
+          * lat            (lat) int64 16B 10 20
+          * lon            (lon) int64 16B 150 160
         Data variables:
-            temperature_c  (lat, lon) float64 10.98 14.3 12.06 10.9
-            precipitation  (lat, lon) float64 0.4237 0.6459 0.4376 0.8918
+            temperature_c  (lat, lon) float64 32B 10.98 14.3 12.06 10.9
+            precipitation  (lat, lon) float64 32B 0.4237 0.6459 0.4376 0.8918
 
         >>> def adder(data, arg):
         ...     return data + arg
@@ -724,38 +765,38 @@ class DataWithCoords(AttrAccessMixin):
         ...     return (data * mult_arg) - sub_arg
         ...
         >>> x.pipe(adder, 2)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 96B
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
-          * lat            (lat) int64 10 20
-          * lon            (lon) int64 150 160
+          * lat            (lat) int64 16B 10 20
+          * lon            (lon) int64 16B 150 160
         Data variables:
-            temperature_c  (lat, lon) float64 12.98 16.3 14.06 12.9
-            precipitation  (lat, lon) float64 2.424 2.646 2.438 2.892
+            temperature_c  (lat, lon) float64 32B 12.98 16.3 14.06 12.9
+            precipitation  (lat, lon) float64 32B 2.424 2.646 2.438 2.892
 
         >>> x.pipe(adder, arg=2)
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 96B
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
-          * lat            (lat) int64 10 20
-          * lon            (lon) int64 150 160
+          * lat            (lat) int64 16B 10 20
+          * lon            (lon) int64 16B 150 160
         Data variables:
-            temperature_c  (lat, lon) float64 12.98 16.3 14.06 12.9
-            precipitation  (lat, lon) float64 2.424 2.646 2.438 2.892
+            temperature_c  (lat, lon) float64 32B 12.98 16.3 14.06 12.9
+            precipitation  (lat, lon) float64 32B 2.424 2.646 2.438 2.892
 
         >>> (
         ...     x.pipe(adder, arg=2)
         ...     .pipe(div, arg=2)
         ...     .pipe(sub_mult, sub_arg=2, mult_arg=2)
         ... )
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 96B
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
-          * lat            (lat) int64 10 20
-          * lon            (lon) int64 150 160
+          * lat            (lat) int64 16B 10 20
+          * lon            (lon) int64 16B 150 160
         Data variables:
-            temperature_c  (lat, lon) float64 10.98 14.3 12.06 10.9
-            precipitation  (lat, lon) float64 0.4237 0.6459 0.4376 0.8918
+            temperature_c  (lat, lon) float64 32B 10.98 14.3 12.06 10.9
+            precipitation  (lat, lon) float64 32B 0.4237 0.6459 0.4376 0.8918
 
         See Also
         --------
@@ -824,7 +865,6 @@ class DataWithCoords(AttrAccessMixin):
         base: int | None,
         offset: pd.Timedelta | datetime.timedelta | str | None,
         origin: str | DatetimeLike,
-        keep_attrs: bool | None,
         loffset: datetime.timedelta | str | None,
         restore_coord_dims: bool | None,
         **indexer_kwargs: str,
@@ -906,36 +946,96 @@ class DataWithCoords(AttrAccessMixin):
         ...     dims="time",
         ... )
         >>> da
-        <xarray.DataArray (time: 12)>
+        <xarray.DataArray (time: 12)> Size: 96B
         array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
         >>> da.resample(time="QS-DEC").mean()
-        <xarray.DataArray (time: 4)>
+        <xarray.DataArray (time: 4)> Size: 32B
         array([ 1.,  4.,  7., 10.])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-01 2000-03-01 2000-06-01 2000-09-01
+          * time     (time) datetime64[ns] 32B 1999-12-01 2000-03-01 ... 2000-09-01
 
         Upsample monthly time-series data to daily data:
 
         >>> da.resample(time="1D").interpolate("linear")  # +doctest: ELLIPSIS
-        <xarray.DataArray (time: 337)>
+        <xarray.DataArray (time: 337)> Size: 3kB
         array([ 0.        ,  0.03225806,  0.06451613,  0.09677419,  0.12903226,
                 0.16129032,  0.19354839,  0.22580645,  0.25806452,  0.29032258,
                 0.32258065,  0.35483871,  0.38709677,  0.41935484,  0.4516129 ,
+                0.48387097,  0.51612903,  0.5483871 ,  0.58064516,  0.61290323,
+                0.64516129,  0.67741935,  0.70967742,  0.74193548,  0.77419355,
+                0.80645161,  0.83870968,  0.87096774,  0.90322581,  0.93548387,
+                0.96774194,  1.        ,  1.03225806,  1.06451613,  1.09677419,
+                1.12903226,  1.16129032,  1.19354839,  1.22580645,  1.25806452,
+                1.29032258,  1.32258065,  1.35483871,  1.38709677,  1.41935484,
+                1.4516129 ,  1.48387097,  1.51612903,  1.5483871 ,  1.58064516,
+                1.61290323,  1.64516129,  1.67741935,  1.70967742,  1.74193548,
+                1.77419355,  1.80645161,  1.83870968,  1.87096774,  1.90322581,
+                1.93548387,  1.96774194,  2.        ,  2.03448276,  2.06896552,
+                2.10344828,  2.13793103,  2.17241379,  2.20689655,  2.24137931,
+                2.27586207,  2.31034483,  2.34482759,  2.37931034,  2.4137931 ,
+                2.44827586,  2.48275862,  2.51724138,  2.55172414,  2.5862069 ,
+                2.62068966,  2.65517241,  2.68965517,  2.72413793,  2.75862069,
+                2.79310345,  2.82758621,  2.86206897,  2.89655172,  2.93103448,
+                2.96551724,  3.        ,  3.03225806,  3.06451613,  3.09677419,
+                3.12903226,  3.16129032,  3.19354839,  3.22580645,  3.25806452,
         ...
+                7.87096774,  7.90322581,  7.93548387,  7.96774194,  8.        ,
+                8.03225806,  8.06451613,  8.09677419,  8.12903226,  8.16129032,
+                8.19354839,  8.22580645,  8.25806452,  8.29032258,  8.32258065,
+                8.35483871,  8.38709677,  8.41935484,  8.4516129 ,  8.48387097,
+                8.51612903,  8.5483871 ,  8.58064516,  8.61290323,  8.64516129,
+                8.67741935,  8.70967742,  8.74193548,  8.77419355,  8.80645161,
+                8.83870968,  8.87096774,  8.90322581,  8.93548387,  8.96774194,
+                9.        ,  9.03333333,  9.06666667,  9.1       ,  9.13333333,
+                9.16666667,  9.2       ,  9.23333333,  9.26666667,  9.3       ,
+                9.33333333,  9.36666667,  9.4       ,  9.43333333,  9.46666667,
+                9.5       ,  9.53333333,  9.56666667,  9.6       ,  9.63333333,
+                9.66666667,  9.7       ,  9.73333333,  9.76666667,  9.8       ,
+                9.83333333,  9.86666667,  9.9       ,  9.93333333,  9.96666667,
+               10.        , 10.03225806, 10.06451613, 10.09677419, 10.12903226,
+               10.16129032, 10.19354839, 10.22580645, 10.25806452, 10.29032258,
+               10.32258065, 10.35483871, 10.38709677, 10.41935484, 10.4516129 ,
+               10.48387097, 10.51612903, 10.5483871 , 10.58064516, 10.61290323,
+               10.64516129, 10.67741935, 10.70967742, 10.74193548, 10.77419355,
                10.80645161, 10.83870968, 10.87096774, 10.90322581, 10.93548387,
                10.96774194, 11.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
 
         Limit scope of upsampling method
 
         >>> da.resample(time="1D").nearest(tolerance="1D")
-        <xarray.DataArray (time: 337)>
-        array([ 0.,  0., nan, ..., nan, 11., 11.])
+        <xarray.DataArray (time: 337)> Size: 3kB
+        array([ 0.,  0., nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan,  1.,  1.,  1., nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan,  2.,  2.,  2., nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,  3.,
+                3.,  3., nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan,  4.,  4.,  4., nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan,  5.,  5.,  5., nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+                6.,  6.,  6., nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan,  7.,  7.,  7., nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan,  8.,  8.,  8., nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan,  9.,  9.,  9., nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, 10., 10., 10., nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 11., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
 
         See Also
         --------
@@ -949,15 +1049,8 @@ class DataWithCoords(AttrAccessMixin):
         # TODO support non-string indexer after removing the old API.
 
         from xarray.core.dataarray import DataArray
-        from xarray.core.groupby import TimeResampleGrouper
+        from xarray.core.groupby import ResolvedGrouper, TimeResampler
         from xarray.core.resample import RESAMPLE_DIM
-
-        if keep_attrs is not None:
-            warnings.warn(
-                "Passing ``keep_attrs`` to ``resample`` has no effect and will raise an"
-                " error in xarray 0.20. Pass ``keep_attrs`` directly to the applied"
-                " function, e.g. ``resample(...).mean(keep_attrs=True)``."
-            )
 
         # note: the second argument (now 'skipna') use to be 'dim'
         if (
@@ -979,52 +1072,38 @@ class DataWithCoords(AttrAccessMixin):
         dim_name: Hashable = dim
         dim_coord = self[dim]
 
-        if loffset is not None:
-            emit_user_level_warning(
-                "Following pandas, the `loffset` parameter to resample will be deprecated "
-                "in a future version of xarray.  Switch to using time offset arithmetic.",
-                FutureWarning,
-            )
+        group = DataArray(
+            dim_coord,
+            coords=dim_coord.coords,
+            dims=dim_coord.dims,
+            name=RESAMPLE_DIM,
+        )
 
-        if base is not None:
-            emit_user_level_warning(
-                "Following pandas, the `base` parameter to resample will be deprecated in "
-                "a future version of xarray.  Switch to using `origin` or `offset` instead.",
-                FutureWarning,
-            )
-
-        if base is not None and offset is not None:
-            raise ValueError("base and offset cannot be present at the same time")
-
-        if base is not None:
-            index = self._indexes[dim_name].to_pandas_index()
-            offset = _convert_base_to_offset(base, freq, index)
-
-        grouper = TimeResampleGrouper(
+        grouper = TimeResampler(
             freq=freq,
             closed=closed,
             label=label,
             origin=origin,
             offset=offset,
             loffset=loffset,
+            base=base,
         )
 
-        group = DataArray(
-            dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
-        )
+        rgrouper = ResolvedGrouper(grouper, group, self)
+
         return resample_cls(
             self,
-            group=group,
+            (rgrouper,),
             dim=dim_name,
-            grouper=grouper,
             resample_dim=RESAMPLE_DIM,
             restore_coord_dims=restore_coord_dims,
         )
 
-    def where(
-        self: T_DataWithCoords, cond: Any, other: Any = dtypes.NA, drop: bool = False
-    ) -> T_DataWithCoords:
+    def where(self, cond: Any, other: Any = dtypes.NA, drop: bool = False) -> Self:
         """Filter elements from this object according to a condition.
+
+        Returns elements from 'DataArray', where 'cond' is True,
+        otherwise fill in 'other'.
 
         This operation follows the normal broadcasting and alignment rules that
         xarray uses for binary arithmetic.
@@ -1033,10 +1112,12 @@ class DataWithCoords(AttrAccessMixin):
         ----------
         cond : DataArray, Dataset, or callable
             Locations at which to preserve this object's values. dtype must be `bool`.
-            If a callable, it must expect this object as its only parameter.
-        other : scalar, DataArray or Dataset, optional
+            If a callable, the callable is passed this object, and the result is used as
+            the value for cond.
+        other : scalar, DataArray, Dataset, or callable, optional
             Value to use for locations in this object where ``cond`` is False.
-            By default, these locations filled with NA.
+            By default, these locations are filled with NA. If a callable, it must
+            expect this object as its only parameter.
         drop : bool, default: False
             If True, coordinate labels that only correspond to False values of
             the condition are dropped from the result.
@@ -1050,7 +1131,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         >>> a = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"))
         >>> a
-        <xarray.DataArray (x: 5, y: 5)>
+        <xarray.DataArray (x: 5, y: 5)> Size: 200B
         array([[ 0,  1,  2,  3,  4],
                [ 5,  6,  7,  8,  9],
                [10, 11, 12, 13, 14],
@@ -1059,7 +1140,7 @@ class DataWithCoords(AttrAccessMixin):
         Dimensions without coordinates: x, y
 
         >>> a.where(a.x + a.y < 4)
-        <xarray.DataArray (x: 5, y: 5)>
+        <xarray.DataArray (x: 5, y: 5)> Size: 200B
         array([[ 0.,  1.,  2.,  3., nan],
                [ 5.,  6.,  7., nan, nan],
                [10., 11., nan, nan, nan],
@@ -1068,7 +1149,7 @@ class DataWithCoords(AttrAccessMixin):
         Dimensions without coordinates: x, y
 
         >>> a.where(a.x + a.y < 5, -1)
-        <xarray.DataArray (x: 5, y: 5)>
+        <xarray.DataArray (x: 5, y: 5)> Size: 200B
         array([[ 0,  1,  2,  3,  4],
                [ 5,  6,  7,  8, -1],
                [10, 11, 12, -1, -1],
@@ -1077,27 +1158,28 @@ class DataWithCoords(AttrAccessMixin):
         Dimensions without coordinates: x, y
 
         >>> a.where(a.x + a.y < 4, drop=True)
-        <xarray.DataArray (x: 4, y: 4)>
+        <xarray.DataArray (x: 4, y: 4)> Size: 128B
         array([[ 0.,  1.,  2.,  3.],
                [ 5.,  6.,  7., nan],
                [10., 11., nan, nan],
                [15., nan, nan, nan]])
         Dimensions without coordinates: x, y
 
-        >>> a.where(lambda x: x.x + x.y < 4, drop=True)
-        <xarray.DataArray (x: 4, y: 4)>
+        >>> a.where(lambda x: x.x + x.y < 4, lambda x: -x)
+        <xarray.DataArray (x: 5, y: 5)> Size: 200B
+        array([[  0,   1,   2,   3,  -4],
+               [  5,   6,   7,  -8,  -9],
+               [ 10,  11, -12, -13, -14],
+               [ 15, -16, -17, -18, -19],
+               [-20, -21, -22, -23, -24]])
+        Dimensions without coordinates: x, y
+
+        >>> a.where(a.x + a.y < 4, drop=True)
+        <xarray.DataArray (x: 4, y: 4)> Size: 128B
         array([[ 0.,  1.,  2.,  3.],
                [ 5.,  6.,  7., nan],
                [10., 11., nan, nan],
                [15., nan, nan, nan]])
-        Dimensions without coordinates: x, y
-
-        >>> a.where(a.x + a.y < 4, -1, drop=True)
-        <xarray.DataArray (x: 4, y: 4)>
-        array([[ 0,  1,  2,  3],
-               [ 5,  6,  7, -1],
-               [10, 11, -1, -1],
-               [15, -1, -1, -1]])
         Dimensions without coordinates: x, y
 
         See Also
@@ -1111,14 +1193,16 @@ class DataWithCoords(AttrAccessMixin):
 
         if callable(cond):
             cond = cond(self)
+        if callable(other):
+            other = other(self)
 
         if drop:
             if not isinstance(cond, (Dataset, DataArray)):
                 raise TypeError(
-                    f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r}"
+                    f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r} (or a callable than returns one)."
                 )
 
-            self, cond = align(self, cond)  # type: ignore[assignment]
+            self, cond = align(self, cond)
 
             def _dataarray_indexer(dim: Hashable) -> DataArray:
                 return cond.any(dim=(d for d in cond.dims if d != dim))
@@ -1127,8 +1211,8 @@ class DataWithCoords(AttrAccessMixin):
                 cond_wdim = cond.drop_vars(
                     var for var in cond if dim not in cond[var].dims
                 )
-                keepany = cond_wdim.any(dim=(d for d in cond.dims.keys() if d != dim))
-                return keepany.to_array().any("variable")
+                keepany = cond_wdim.any(dim=(d for d in cond.dims if d != dim))
+                return keepany.to_dataarray().any("variable")
 
             _get_indexer = (
                 _dataarray_indexer if isinstance(cond, DataArray) else _dataset_indexer
@@ -1165,9 +1249,7 @@ class DataWithCoords(AttrAccessMixin):
             self._close()
         self._close = None
 
-    def isnull(
-        self: T_DataWithCoords, keep_attrs: bool | None = None
-    ) -> T_DataWithCoords:
+    def isnull(self, keep_attrs: bool | None = None) -> Self:
         """Test each value in the array for whether it is a missing value.
 
         Parameters
@@ -1190,11 +1272,11 @@ class DataWithCoords(AttrAccessMixin):
         --------
         >>> array = xr.DataArray([1, np.nan, 3], dims="x")
         >>> array
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 24B
         array([ 1., nan,  3.])
         Dimensions without coordinates: x
         >>> array.isnull()
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 3B
         array([False,  True, False])
         Dimensions without coordinates: x
         """
@@ -1210,9 +1292,7 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs=keep_attrs,
         )
 
-    def notnull(
-        self: T_DataWithCoords, keep_attrs: bool | None = None
-    ) -> T_DataWithCoords:
+    def notnull(self, keep_attrs: bool | None = None) -> Self:
         """Test each value in the array for whether it is not a missing value.
 
         Parameters
@@ -1235,11 +1315,11 @@ class DataWithCoords(AttrAccessMixin):
         --------
         >>> array = xr.DataArray([1, np.nan, 3], dims="x")
         >>> array
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 24B
         array([ 1., nan,  3.])
         Dimensions without coordinates: x
         >>> array.notnull()
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 3B
         array([ True, False,  True])
         Dimensions without coordinates: x
         """
@@ -1255,7 +1335,7 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs=keep_attrs,
         )
 
-    def isin(self: T_DataWithCoords, test_elements: Any) -> T_DataWithCoords:
+    def isin(self, test_elements: Any) -> Self:
         """Tests each value in the array for whether it is in test elements.
 
         Parameters
@@ -1274,7 +1354,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         >>> array = xr.DataArray([1, 2, 3], dims="x")
         >>> array.isin([1, 3])
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 3B
         array([ True, False,  True])
         Dimensions without coordinates: x
 
@@ -1289,9 +1369,7 @@ class DataWithCoords(AttrAccessMixin):
 
         if isinstance(test_elements, Dataset):
             raise TypeError(
-                "isin() argument must be convertible to an array: {}".format(
-                    test_elements
-                )
+                f"isin() argument must be convertible to an array: {test_elements}"
             )
         elif isinstance(test_elements, (Variable, DataArray)):
             # need to explicitly pull out data to support dask arrays as the
@@ -1306,7 +1384,7 @@ class DataWithCoords(AttrAccessMixin):
         )
 
     def astype(
-        self: T_DataWithCoords,
+        self,
         dtype,
         *,
         order=None,
@@ -1314,7 +1392,7 @@ class DataWithCoords(AttrAccessMixin):
         subok=None,
         copy=None,
         keep_attrs=True,
-    ) -> T_DataWithCoords:
+    ) -> Self:
         """
         Copy of the xarray object, with data cast to a specified type.
         Leaves coordinate dtype unchanged.
@@ -1381,7 +1459,7 @@ class DataWithCoords(AttrAccessMixin):
             dask="allowed",
         )
 
-    def __enter__(self: T_DataWithCoords) -> T_DataWithCoords:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
@@ -1394,47 +1472,77 @@ class DataWithCoords(AttrAccessMixin):
 
 @overload
 def full_like(
-    other: DataArray, fill_value: Any, dtype: DTypeLikeSave = None
-) -> DataArray:
-    ...
+    other: DataArray,
+    fill_value: Any,
+    dtype: DTypeLikeSave | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> DataArray: ...
 
 
 @overload
 def full_like(
-    other: Dataset, fill_value: Any, dtype: DTypeMaybeMapping = None
-) -> Dataset:
-    ...
+    other: Dataset,
+    fill_value: Any,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Dataset: ...
 
 
 @overload
 def full_like(
-    other: Variable, fill_value: Any, dtype: DTypeLikeSave = None
-) -> Variable:
-    ...
+    other: Variable,
+    fill_value: Any,
+    dtype: DTypeLikeSave | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Variable: ...
 
 
 @overload
 def full_like(
-    other: Dataset | DataArray, fill_value: Any, dtype: DTypeMaybeMapping = None
-) -> Dataset | DataArray:
-    ...
+    other: Dataset | DataArray,
+    fill_value: Any,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = {},
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Dataset | DataArray: ...
 
 
 @overload
 def full_like(
     other: Dataset | DataArray | Variable,
     fill_value: Any,
-    dtype: DTypeMaybeMapping = None,
-) -> Dataset | DataArray | Variable:
-    ...
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Dataset | DataArray | Variable: ...
 
 
 def full_like(
     other: Dataset | DataArray | Variable,
     fill_value: Any,
-    dtype: DTypeMaybeMapping = None,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
-    """Return a new object with the same shape and type as a given object.
+    """
+    Return a new object with the same shape and type as a given object.
+
+    Returned object will be chunked if if the given object is chunked, or if chunks or chunked_array_type are specified.
 
     Parameters
     ----------
@@ -1447,6 +1555,18 @@ def full_like(
     dtype : dtype or dict-like of dtype, optional
         dtype of the new array. If a dict-like, maps dtypes to
         variables. If omitted, it defaults to other.dtype.
+    chunks : int, "auto", tuple of int or mapping of Hashable to int, optional
+        Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, ``(5, 5)`` or
+        ``{"x": 5, "y": 5}``.
+    chunked_array_type: str, optional
+        Which chunked array type to coerce the underlying data array to.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Experimental API that should not be relied upon.
+    from_array_kwargs: dict, optional
+        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+        For example, with dask as the default chunked array type, this method would pass additional kwargs
+        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
 
     Returns
     -------
@@ -1464,72 +1584,72 @@ def full_like(
     ...     coords={"lat": [1, 2], "lon": [0, 1, 2]},
     ... )
     >>> x
-    <xarray.DataArray (lat: 2, lon: 3)>
+    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-      * lat      (lat) int64 1 2
-      * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 16B 1 2
+      * lon      (lon) int64 24B 0 1 2
 
     >>> xr.full_like(x, 1)
-    <xarray.DataArray (lat: 2, lon: 3)>
+    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
     array([[1, 1, 1],
            [1, 1, 1]])
     Coordinates:
-      * lat      (lat) int64 1 2
-      * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 16B 1 2
+      * lon      (lon) int64 24B 0 1 2
 
     >>> xr.full_like(x, 0.5)
-    <xarray.DataArray (lat: 2, lon: 3)>
+    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
     array([[0, 0, 0],
            [0, 0, 0]])
     Coordinates:
-      * lat      (lat) int64 1 2
-      * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 16B 1 2
+      * lon      (lon) int64 24B 0 1 2
 
     >>> xr.full_like(x, 0.5, dtype=np.double)
-    <xarray.DataArray (lat: 2, lon: 3)>
+    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
     array([[0.5, 0.5, 0.5],
            [0.5, 0.5, 0.5]])
     Coordinates:
-      * lat      (lat) int64 1 2
-      * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 16B 1 2
+      * lon      (lon) int64 24B 0 1 2
 
     >>> xr.full_like(x, np.nan, dtype=np.double)
-    <xarray.DataArray (lat: 2, lon: 3)>
+    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
     array([[nan, nan, nan],
            [nan, nan, nan]])
     Coordinates:
-      * lat      (lat) int64 1 2
-      * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 16B 1 2
+      * lon      (lon) int64 24B 0 1 2
 
     >>> ds = xr.Dataset(
     ...     {"a": ("x", [3, 5, 2]), "b": ("x", [9, 1, 0])}, coords={"x": [2, 4, 6]}
     ... )
     >>> ds
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 72B
     Dimensions:  (x: 3)
     Coordinates:
-      * x        (x) int64 2 4 6
+      * x        (x) int64 24B 2 4 6
     Data variables:
-        a        (x) int64 3 5 2
-        b        (x) int64 9 1 0
+        a        (x) int64 24B 3 5 2
+        b        (x) int64 24B 9 1 0
     >>> xr.full_like(ds, fill_value={"a": 1, "b": 2})
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 72B
     Dimensions:  (x: 3)
     Coordinates:
-      * x        (x) int64 2 4 6
+      * x        (x) int64 24B 2 4 6
     Data variables:
-        a        (x) int64 1 1 1
-        b        (x) int64 2 2 2
+        a        (x) int64 24B 1 1 1
+        b        (x) int64 24B 2 2 2
     >>> xr.full_like(ds, fill_value={"a": 1, "b": 2}, dtype={"a": bool, "b": float})
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 51B
     Dimensions:  (x: 3)
     Coordinates:
-      * x        (x) int64 2 4 6
+      * x        (x) int64 24B 2 4 6
     Data variables:
-        a        (x) bool True True True
-        b        (x) float64 2.0 2.0 2.0
+        a        (x) bool 3B True True True
+        b        (x) float64 24B 2.0 2.0 2.0
 
     See Also
     --------
@@ -1560,7 +1680,12 @@ def full_like(
 
         data_vars = {
             k: _full_like_variable(
-                v.variable, fill_value.get(k, dtypes.NA), dtype_.get(k, None)
+                v.variable,
+                fill_value.get(k, dtypes.NA),
+                dtype_.get(k, None),
+                chunks,
+                chunked_array_type,
+                from_array_kwargs,
             )
             for k, v in other.data_vars.items()
         }
@@ -1569,7 +1694,14 @@ def full_like(
         if isinstance(dtype, Mapping):
             raise ValueError("'dtype' cannot be dict-like when passing a DataArray")
         return DataArray(
-            _full_like_variable(other.variable, fill_value, dtype),
+            _full_like_variable(
+                other.variable,
+                fill_value,
+                dtype,
+                chunks,
+                chunked_array_type,
+                from_array_kwargs,
+            ),
             dims=other.dims,
             coords=other.coords,
             attrs=other.attrs,
@@ -1578,13 +1710,20 @@ def full_like(
     elif isinstance(other, Variable):
         if isinstance(dtype, Mapping):
             raise ValueError("'dtype' cannot be dict-like when passing a Variable")
-        return _full_like_variable(other, fill_value, dtype)
+        return _full_like_variable(
+            other, fill_value, dtype, chunks, chunked_array_type, from_array_kwargs
+        )
     else:
         raise TypeError("Expected DataArray, Dataset, or Variable")
 
 
 def _full_like_variable(
-    other: Variable, fill_value: Any, dtype: DTypeLike = None
+    other: Variable,
+    fill_value: Any,
+    dtype: DTypeLike | None = None,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable:
     """Inner function of full_like, where other must be a variable"""
     from xarray.core.variable import Variable
@@ -1592,13 +1731,28 @@ def _full_like_variable(
     if fill_value is dtypes.NA:
         fill_value = dtypes.get_fill_value(dtype if dtype is not None else other.dtype)
 
-    if is_duck_dask_array(other.data):
-        import dask.array
+    if (
+        is_chunked_array(other.data)
+        or chunked_array_type is not None
+        or chunks is not None
+    ):
+        if chunked_array_type is None:
+            chunkmanager = get_chunked_array_type(other.data)
+        else:
+            chunkmanager = guess_chunkmanager(chunked_array_type)
 
         if dtype is None:
             dtype = other.dtype
-        data = dask.array.full(
-            other.shape, fill_value, dtype=dtype, chunks=other.data.chunks
+
+        if from_array_kwargs is None:
+            from_array_kwargs = {}
+
+        data = chunkmanager.array_api.full(
+            other.shape,
+            fill_value,
+            dtype=dtype,
+            chunks=chunks if chunks else other.data.chunks,
+            **from_array_kwargs,
         )
     else:
         data = np.full_like(other.data, fill_value, dtype=dtype)
@@ -1607,36 +1761,67 @@ def _full_like_variable(
 
 
 @overload
-def zeros_like(other: DataArray, dtype: DTypeLikeSave = None) -> DataArray:
-    ...
-
-
-@overload
-def zeros_like(other: Dataset, dtype: DTypeMaybeMapping = None) -> Dataset:
-    ...
-
-
-@overload
-def zeros_like(other: Variable, dtype: DTypeLikeSave = None) -> Variable:
-    ...
+def zeros_like(
+    other: DataArray,
+    dtype: DTypeLikeSave | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> DataArray: ...
 
 
 @overload
 def zeros_like(
-    other: Dataset | DataArray, dtype: DTypeMaybeMapping = None
-) -> Dataset | DataArray:
-    ...
+    other: Dataset,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Dataset: ...
 
 
 @overload
 def zeros_like(
-    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
-) -> Dataset | DataArray | Variable:
-    ...
+    other: Variable,
+    dtype: DTypeLikeSave | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Variable: ...
+
+
+@overload
+def zeros_like(
+    other: Dataset | DataArray,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Dataset | DataArray: ...
+
+
+@overload
+def zeros_like(
+    other: Dataset | DataArray | Variable,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Dataset | DataArray | Variable: ...
 
 
 def zeros_like(
-    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+    other: Dataset | DataArray | Variable,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
     """Return a new object of zeros with the same shape and
     type as a given dataarray or dataset.
@@ -1647,6 +1832,18 @@ def zeros_like(
         The reference object. The output will have the same dimensions and coordinates as this object.
     dtype : dtype, optional
         dtype of the new array. If omitted, it defaults to other.dtype.
+    chunks : int, "auto", tuple of int or mapping of Hashable to int, optional
+        Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, ``(5, 5)`` or
+        ``{"x": 5, "y": 5}``.
+    chunked_array_type: str, optional
+        Which chunked array type to coerce the underlying data array to.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Experimental API that should not be relied upon.
+    from_array_kwargs: dict, optional
+        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+        For example, with dask as the default chunked array type, this method would pass additional kwargs
+        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
 
     Returns
     -------
@@ -1661,28 +1858,28 @@ def zeros_like(
     ...     coords={"lat": [1, 2], "lon": [0, 1, 2]},
     ... )
     >>> x
-    <xarray.DataArray (lat: 2, lon: 3)>
+    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-      * lat      (lat) int64 1 2
-      * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 16B 1 2
+      * lon      (lon) int64 24B 0 1 2
 
     >>> xr.zeros_like(x)
-    <xarray.DataArray (lat: 2, lon: 3)>
+    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
     array([[0, 0, 0],
            [0, 0, 0]])
     Coordinates:
-      * lat      (lat) int64 1 2
-      * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 16B 1 2
+      * lon      (lon) int64 24B 0 1 2
 
     >>> xr.zeros_like(x, dtype=float)
-    <xarray.DataArray (lat: 2, lon: 3)>
+    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
     array([[0., 0., 0.],
            [0., 0., 0.]])
     Coordinates:
-      * lat      (lat) int64 1 2
-      * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 16B 1 2
+      * lon      (lon) int64 24B 0 1 2
 
     See Also
     --------
@@ -1690,40 +1887,78 @@ def zeros_like(
     full_like
 
     """
-    return full_like(other, 0, dtype)
-
-
-@overload
-def ones_like(other: DataArray, dtype: DTypeLikeSave = None) -> DataArray:
-    ...
-
-
-@overload
-def ones_like(other: Dataset, dtype: DTypeMaybeMapping = None) -> Dataset:
-    ...
-
-
-@overload
-def ones_like(other: Variable, dtype: DTypeLikeSave = None) -> Variable:
-    ...
+    return full_like(
+        other,
+        0,
+        dtype,
+        chunks=chunks,
+        chunked_array_type=chunked_array_type,
+        from_array_kwargs=from_array_kwargs,
+    )
 
 
 @overload
 def ones_like(
-    other: Dataset | DataArray, dtype: DTypeMaybeMapping = None
-) -> Dataset | DataArray:
-    ...
+    other: DataArray,
+    dtype: DTypeLikeSave | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> DataArray: ...
 
 
 @overload
 def ones_like(
-    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
-) -> Dataset | DataArray | Variable:
-    ...
+    other: Dataset,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Dataset: ...
+
+
+@overload
+def ones_like(
+    other: Variable,
+    dtype: DTypeLikeSave | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Variable: ...
+
+
+@overload
+def ones_like(
+    other: Dataset | DataArray,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Dataset | DataArray: ...
+
+
+@overload
+def ones_like(
+    other: Dataset | DataArray | Variable,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Dataset | DataArray | Variable: ...
 
 
 def ones_like(
-    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+    other: Dataset | DataArray | Variable,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
     """Return a new object of ones with the same shape and
     type as a given dataarray or dataset.
@@ -1734,6 +1969,18 @@ def ones_like(
         The reference object. The output will have the same dimensions and coordinates as this object.
     dtype : dtype, optional
         dtype of the new array. If omitted, it defaults to other.dtype.
+    chunks : int, "auto", tuple of int or mapping of Hashable to int, optional
+        Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, ``(5, 5)`` or
+        ``{"x": 5, "y": 5}``.
+    chunked_array_type: str, optional
+        Which chunked array type to coerce the underlying data array to.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Experimental API that should not be relied upon.
+    from_array_kwargs: dict, optional
+        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+        For example, with dask as the default chunked array type, this method would pass additional kwargs
+        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
 
     Returns
     -------
@@ -1748,20 +1995,20 @@ def ones_like(
     ...     coords={"lat": [1, 2], "lon": [0, 1, 2]},
     ... )
     >>> x
-    <xarray.DataArray (lat: 2, lon: 3)>
+    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-      * lat      (lat) int64 1 2
-      * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 16B 1 2
+      * lon      (lon) int64 24B 0 1 2
 
     >>> xr.ones_like(x)
-    <xarray.DataArray (lat: 2, lon: 3)>
+    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
     array([[1, 1, 1],
            [1, 1, 1]])
     Coordinates:
-      * lat      (lat) int64 1 2
-      * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 16B 1 2
+      * lon      (lon) int64 24B 0 1 2
 
     See Also
     --------
@@ -1769,7 +2016,14 @@ def ones_like(
     full_like
 
     """
-    return full_like(other, 1, dtype)
+    return full_like(
+        other,
+        1,
+        dtype,
+        chunks=chunks,
+        chunked_array_type=chunked_array_type,
+        from_array_kwargs=from_array_kwargs,
+    )
 
 
 def get_chunksizes(

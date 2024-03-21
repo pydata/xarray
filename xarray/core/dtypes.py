@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+from typing import Any
 
 import numpy as np
 
@@ -37,14 +38,14 @@ NINF = AlwaysLessThan()
 # instead of following NumPy's own type-promotion rules. These type promotion
 # rules match pandas instead. For reference, see the NumPy type hierarchy:
 # https://numpy.org/doc/stable/reference/arrays.scalars.html
-PROMOTE_TO_OBJECT = [
-    {np.number, np.character},  # numpy promotes to character
-    {np.bool_, np.character},  # numpy promotes to character
-    {np.bytes_, np.unicode_},  # numpy promotes to unicode
-]
+PROMOTE_TO_OBJECT: tuple[tuple[type[np.generic], type[np.generic]], ...] = (
+    (np.number, np.character),  # numpy promotes to character
+    (np.bool_, np.character),  # numpy promotes to character
+    (np.bytes_, np.str_),  # numpy promotes to unicode
+)
 
 
-def maybe_promote(dtype):
+def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     """Simpler equivalent of pandas.core.common._maybe_promote
 
     Parameters
@@ -57,24 +58,33 @@ def maybe_promote(dtype):
     fill_value : Valid missing value for the promoted dtype.
     """
     # N.B. these casting rules should match pandas
+    dtype_: np.typing.DTypeLike
+    fill_value: Any
     if np.issubdtype(dtype, np.floating):
+        dtype_ = dtype
         fill_value = np.nan
     elif np.issubdtype(dtype, np.timedelta64):
         # See https://github.com/numpy/numpy/issues/10685
         # np.timedelta64 is a subclass of np.integer
         # Check np.timedelta64 before np.integer
         fill_value = np.timedelta64("NaT")
+        dtype_ = dtype
     elif np.issubdtype(dtype, np.integer):
-        dtype = np.float32 if dtype.itemsize <= 2 else np.float64
+        dtype_ = np.float32 if dtype.itemsize <= 2 else np.float64
         fill_value = np.nan
     elif np.issubdtype(dtype, np.complexfloating):
+        dtype_ = dtype
         fill_value = np.nan + np.nan * 1j
     elif np.issubdtype(dtype, np.datetime64):
+        dtype_ = dtype
         fill_value = np.datetime64("NaT")
     else:
-        dtype = object
+        dtype_ = object
         fill_value = np.nan
-    return np.dtype(dtype), fill_value
+
+    dtype_out = np.dtype(dtype_)
+    fill_value = dtype_out.type(fill_value)
+    return dtype_out, fill_value
 
 
 NAT_TYPES = {np.datetime64("NaT").dtype, np.timedelta64("NaT").dtype}
@@ -156,7 +166,9 @@ def is_datetime_like(dtype):
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
-def result_type(*arrays_and_dtypes):
+def result_type(
+    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
+) -> np.dtype:
     """Like np.result_type, but with type promotion rules matching pandas.
 
     Examples of changed behavior:

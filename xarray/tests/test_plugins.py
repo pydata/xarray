@@ -2,11 +2,26 @@ from __future__ import annotations
 
 import sys
 from importlib.metadata import EntryPoint
+
+if sys.version_info >= (3, 10):
+    from importlib.metadata import EntryPoints
+else:
+    EntryPoints = list[EntryPoint]
 from unittest import mock
 
 import pytest
 
 from xarray.backends import common, plugins
+from xarray.tests import (
+    has_h5netcdf,
+    has_netCDF4,
+    has_pydap,
+    has_pynio,
+    has_scipy,
+    has_zarr,
+)
+
+# Do not import list_engines here, this will break the lazy tests
 
 importlib_metadata_mock = "importlib.metadata"
 
@@ -57,7 +72,7 @@ def test_broken_plugin() -> None:
         "xarray.backends",
     )
     with pytest.warns(RuntimeWarning) as record:
-        _ = plugins.build_engines([broken_backend])
+        _ = plugins.build_engines(EntryPoints([broken_backend]))
     assert len(record) == 1
     message = str(record[0].message)
     assert "Engine 'broken_backend'" in message
@@ -99,23 +114,29 @@ def test_set_missing_parameters() -> None:
     assert backend_1.open_dataset_parameters == ("filename_or_obj", "decoder")
     assert backend_2.open_dataset_parameters == ("filename_or_obj",)
 
-    backend = DummyBackendEntrypointKwargs()
-    backend.open_dataset_parameters = ("filename_or_obj", "decoder")  # type: ignore[misc]
-    plugins.set_missing_parameters({"engine": backend})
-    assert backend.open_dataset_parameters == ("filename_or_obj", "decoder")
+    backend_kwargs = DummyBackendEntrypointKwargs
+    backend_kwargs.open_dataset_parameters = ("filename_or_obj", "decoder")
+    plugins.set_missing_parameters({"engine": backend_kwargs})
+    assert backend_kwargs.open_dataset_parameters == ("filename_or_obj", "decoder")
 
-    backend_args = DummyBackendEntrypointArgs()
-    backend_args.open_dataset_parameters = ("filename_or_obj", "decoder")  # type: ignore[misc]
+    backend_args = DummyBackendEntrypointArgs
+    backend_args.open_dataset_parameters = ("filename_or_obj", "decoder")
     plugins.set_missing_parameters({"engine": backend_args})
     assert backend_args.open_dataset_parameters == ("filename_or_obj", "decoder")
 
+    # reset
+    backend_1.open_dataset_parameters = None
+    backend_1.open_dataset_parameters = None
+    backend_kwargs.open_dataset_parameters = None
+    backend_args.open_dataset_parameters = None
+
 
 def test_set_missing_parameters_raise_error() -> None:
-    backend = DummyBackendEntrypointKwargs()
+    backend = DummyBackendEntrypointKwargs
     with pytest.raises(TypeError):
         plugins.set_missing_parameters({"engine": backend})
 
-    backend_args = DummyBackendEntrypointArgs()
+    backend_args = DummyBackendEntrypointArgs
     with pytest.raises(TypeError):
         plugins.set_missing_parameters({"engine": backend_args})
 
@@ -128,7 +149,7 @@ def test_build_engines() -> None:
     dummy_pkg_entrypoint = EntryPoint(
         "dummy", "xarray.tests.test_plugins:backend_1", "xarray_backends"
     )
-    backend_entrypoints = plugins.build_engines([dummy_pkg_entrypoint])
+    backend_entrypoints = plugins.build_engines(EntryPoints([dummy_pkg_entrypoint]))
 
     assert isinstance(backend_entrypoints["dummy"], DummyBackendEntrypoint1)
     assert backend_entrypoints["dummy"].open_dataset_parameters == (
@@ -142,10 +163,16 @@ def test_build_engines() -> None:
     mock.MagicMock(return_value=DummyBackendEntrypoint1),
 )
 def test_build_engines_sorted() -> None:
-    dummy_pkg_entrypoints = [
-        EntryPoint("dummy2", "xarray.tests.test_plugins:backend_1", "xarray.backends"),
-        EntryPoint("dummy1", "xarray.tests.test_plugins:backend_1", "xarray.backends"),
-    ]
+    dummy_pkg_entrypoints = EntryPoints(
+        [
+            EntryPoint(
+                "dummy2", "xarray.tests.test_plugins:backend_1", "xarray.backends"
+            ),
+            EntryPoint(
+                "dummy1", "xarray.tests.test_plugins:backend_1", "xarray.backends"
+            ),
+        ]
+    )
     backend_entrypoints = list(plugins.build_engines(dummy_pkg_entrypoints))
 
     indices = []
@@ -191,28 +218,29 @@ def test_lazy_import() -> None:
     When importing xarray these should not be imported as well.
     Only when running code for the first time that requires them.
     """
-    blacklisted = [
-        "h5netcdf",
-        "netCDF4",
-        "PseudoNetCDF",
-        "pydap",
-        "Nio",
-        "scipy",
-        "zarr",
-        "matplotlib",
-        "nc_time_axis",
-        "flox",
+    deny_list = [
+        "cubed",
+        "cupy",
         # "dask",  # TODO: backends.locks is not lazy yet :(
         "dask.array",
         "dask.distributed",
-        "sparse",
-        "cupy",
+        "flox",
+        "h5netcdf",
+        "matplotlib",
+        "nc_time_axis",
+        "netCDF4",
+        "Nio",
+        "numbagg",
         "pint",
+        "pydap",
+        "scipy",
+        "sparse",
+        "zarr",
     ]
     # ensure that none of the above modules has been imported before
     modules_backup = {}
     for pkg in list(sys.modules.keys()):
-        for mod in blacklisted + ["xarray"]:
+        for mod in deny_list + ["xarray"]:
             if pkg.startswith(mod):
                 modules_backup[pkg] = sys.modules[pkg]
                 del sys.modules[pkg]
@@ -228,7 +256,7 @@ def test_lazy_import() -> None:
         # lazy loaded are loaded when importing xarray
         is_imported = set()
         for pkg in sys.modules:
-            for mod in blacklisted:
+            for mod in deny_list:
                 if pkg.startswith(mod):
                     is_imported.add(mod)
                     break
@@ -239,3 +267,56 @@ def test_lazy_import() -> None:
     finally:
         # restore original
         sys.modules.update(modules_backup)
+
+
+def test_list_engines() -> None:
+    from xarray.backends import list_engines
+
+    engines = list_engines()
+    assert list_engines.cache_info().currsize == 1
+
+    assert ("scipy" in engines) == has_scipy
+    assert ("h5netcdf" in engines) == has_h5netcdf
+    assert ("netcdf4" in engines) == has_netCDF4
+    assert ("pydap" in engines) == has_pydap
+    assert ("zarr" in engines) == has_zarr
+    assert ("pynio" in engines) == has_pynio
+    assert "store" in engines
+
+
+def test_refresh_engines() -> None:
+    from xarray.backends import list_engines, refresh_engines
+
+    EntryPointMock1 = mock.MagicMock()
+    EntryPointMock1.name = "test1"
+    EntryPointMock1.load.return_value = DummyBackendEntrypoint1
+
+    if sys.version_info >= (3, 10):
+        return_value = EntryPoints([EntryPointMock1])
+    else:
+        return_value = {"xarray.backends": [EntryPointMock1]}
+
+    with mock.patch("xarray.backends.plugins.entry_points", return_value=return_value):
+        list_engines.cache_clear()
+        engines = list_engines()
+    assert "test1" in engines
+    assert isinstance(engines["test1"], DummyBackendEntrypoint1)
+
+    EntryPointMock2 = mock.MagicMock()
+    EntryPointMock2.name = "test2"
+    EntryPointMock2.load.return_value = DummyBackendEntrypoint2
+
+    if sys.version_info >= (3, 10):
+        return_value2 = EntryPoints([EntryPointMock2])
+    else:
+        return_value2 = {"xarray.backends": [EntryPointMock2]}
+
+    with mock.patch("xarray.backends.plugins.entry_points", return_value=return_value2):
+        refresh_engines()
+        engines = list_engines()
+    assert "test1" not in engines
+    assert "test2" in engines
+    assert isinstance(engines["test2"], DummyBackendEntrypoint2)
+
+    # reset to original
+    refresh_engines()

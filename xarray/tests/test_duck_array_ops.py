@@ -27,7 +27,7 @@ from xarray.core.duck_array_ops import (
     timedelta_to_numeric,
     where,
 )
-from xarray.core.pycompat import array_type
+from xarray.namedarray.pycompat import array_type
 from xarray.testing import assert_allclose, assert_equal, assert_identical
 from xarray.tests import (
     arm_xfail,
@@ -500,7 +500,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
         expected = getattr(da.compute(), func)(skipna=skipna, dim=aggdim)
         assert_allclose(actual, expected, rtol=rtol)
 
-        # make sure the compatiblility with pandas' results.
+        # make sure the compatibility with pandas' results.
         if func in ["var", "std"]:
             expected = series_reduce(da, func, skipna=skipna, dim=aggdim, ddof=0)
             assert_allclose(actual, expected, rtol=rtol)
@@ -577,17 +577,39 @@ def test_argmin_max_error():
 
 
 @pytest.mark.parametrize(
-    "array",
+    ["array", "expected"],
     [
-        np.array([np.datetime64("2000-01-01"), np.datetime64("NaT")]),
-        np.array([np.timedelta64(1, "h"), np.timedelta64("NaT")]),
-        np.array([0.0, np.nan]),
-        np.array([1j, np.nan]),
-        np.array(["foo", np.nan], dtype=object),
+        (
+            np.array([np.datetime64("2000-01-01"), np.datetime64("NaT")]),
+            np.array([False, True]),
+        ),
+        (
+            np.array([np.timedelta64(1, "h"), np.timedelta64("NaT")]),
+            np.array([False, True]),
+        ),
+        (
+            np.array([0.0, np.nan]),
+            np.array([False, True]),
+        ),
+        (
+            np.array([1j, np.nan]),
+            np.array([False, True]),
+        ),
+        (
+            np.array(["foo", np.nan], dtype=object),
+            np.array([False, True]),
+        ),
+        (
+            np.array([1, 2], dtype=int),
+            np.array([False, False]),
+        ),
+        (
+            np.array([True, False], dtype=bool),
+            np.array([False, False]),
+        ),
     ],
 )
-def test_isnull(array):
-    expected = np.array([False, True])
+def test_isnull(array, expected):
     actual = duck_array_ops.isnull(array)
     np.testing.assert_equal(expected, actual)
 

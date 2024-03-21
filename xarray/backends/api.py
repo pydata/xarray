@@ -3,17 +3,31 @@ from __future__ import annotations
 import os
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from functools import partial
-from glob import glob
 from io import BytesIO
 from numbers import Number
-from typing import TYPE_CHECKING, Any, Callable, Final, Literal, Union, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Final,
+    Literal,
+    Union,
+    cast,
+    overload,
+)
 
 import numpy as np
 
 from xarray import backends, conventions
 from xarray.backends import plugins
-from xarray.backends.common import AbstractDataStore, ArrayWriter, _normalize_path
+from xarray.backends.common import (
+    AbstractDataStore,
+    ArrayWriter,
+    _find_absolute_paths,
+    _normalize_path,
+)
 from xarray.backends.locks import _get_scheduler
+from xarray.backends.zarr import open_zarr
 from xarray.core import indexing
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
@@ -23,7 +37,10 @@ from xarray.core.combine import (
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.indexes import Index
+from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import is_remote_uri
+from xarray.namedarray.daskmanager import DaskManager
+from xarray.namedarray.parallelcompat import guess_chunkmanager
 
 if TYPE_CHECKING:
     try:
@@ -38,21 +55,21 @@ if TYPE_CHECKING:
         CompatOptions,
         JoinOptions,
         NestedSequence,
+        T_Chunks,
     )
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
         T_NetcdfEngine,
-        Literal["pydap", "pynio", "pseudonetcdf", "zarr"],
+        Literal["pydap", "pynio", "zarr"],
         type[BackendEntrypoint],
         str,  # no nice typing support for custom backends
         None,
     ]
-    T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
     T_NetcdfTypes = Literal[
         "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
     ]
-
+    from xarray.datatree_.datatree import DataTree
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
@@ -63,7 +80,6 @@ ENGINES = {
     "pydap": backends.PydapDataStore.open,
     "h5netcdf": backends.H5NetCDFStore.open,
     "pynio": backends.NioDataStore,
-    "pseudonetcdf": backends.PseudoNetCDFDataStore.open,
     "zarr": backends.ZarrStore.open_group,
 }
 
@@ -297,17 +313,27 @@ def _chunk_ds(
     chunks,
     overwrite_encoded_chunks,
     inline_array,
+    chunked_array_type,
+    from_array_kwargs,
     **extra_tokens,
 ):
-    from dask.base import tokenize
+    chunkmanager = guess_chunkmanager(chunked_array_type)
 
-    mtime = _get_mtime(filename_or_obj)
-    token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
-    name_prefix = f"open_dataset-{token}"
+    # TODO refactor to move this dask-specific logic inside the DaskManager class
+    if isinstance(chunkmanager, DaskManager):
+        from dask.base import tokenize
+
+        mtime = _get_mtime(filename_or_obj)
+        token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
+        name_prefix = "open_dataset-"
+    else:
+        # not used
+        token = (None,)
+        name_prefix = None
 
     variables = {}
     for name, var in backend_ds.variables.items():
-        var_chunks = _get_chunk(var, chunks)
+        var_chunks = _get_chunk(var, chunks, chunkmanager)
         variables[name] = _maybe_chunk(
             name,
             var,
@@ -316,6 +342,8 @@ def _chunk_ds(
             name_prefix=name_prefix,
             token=token,
             inline_array=inline_array,
+            chunked_array_type=chunkmanager,
+            from_array_kwargs=from_array_kwargs.copy(),
         )
     return backend_ds._replace(variables)
 
@@ -328,6 +356,8 @@ def _dataset_from_backend_dataset(
     cache,
     overwrite_encoded_chunks,
     inline_array,
+    chunked_array_type,
+    from_array_kwargs,
     **extra_tokens,
 ):
     if not isinstance(chunks, (int, dict)) and chunks not in {None, "auto"}:
@@ -346,6 +376,8 @@ def _dataset_from_backend_dataset(
             chunks,
             overwrite_encoded_chunks,
             inline_array,
+            chunked_array_type,
+            from_array_kwargs,
             **extra_tokens,
         )
 
@@ -373,6 +405,8 @@ def open_dataset(
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> Dataset:
@@ -387,7 +421,7 @@ def open_dataset(
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
-        "pseudonetcdf", "zarr", None}, installed backend \
+        "zarr", None}, installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -419,8 +453,7 @@ def open_dataset(
         taken from variable attributes (if they exist).  If the `_FillValue` or
         `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
-        be replaced by NA. mask_and_scale defaults to True except for the
-        pseudonetcdf backend. This keyword may not be supported by all the backends.
+        be replaced by NA. This keyword may not be supported by all the backends.
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
@@ -455,6 +488,9 @@ def open_dataset(
           as coordinate variables.
         - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
           other attributes as coordinate variables.
+
+        Only existing variables can be set as coordinates. Missing variables
+        will be silently ignored.
     drop_variables: str or iterable of str, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
@@ -465,6 +501,15 @@ def open_dataset(
         itself, and each chunk refers to that task by its key. With
         ``inline_array=True``, Dask will instead inline the array directly
         in the values of the task graph. See :py:func:`dask.array.from_array`.
+    chunked_array_type: str, optional
+        Which chunked array type to coerce this datasets' arrays to.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Experimental API that should not be relied upon.
+    from_array_kwargs: dict
+        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+        For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
+        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -478,7 +523,7 @@ def open_dataset(
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-          "scipy", "pynio", "pseudonetcdf".
+          "scipy", "pynio".
 
         See engine open function for kwargs accepted by each specific engine.
 
@@ -508,6 +553,9 @@ def open_dataset(
     if engine is None:
         engine = plugins.guess_engine(filename_or_obj)
 
+    if from_array_kwargs is None:
+        from_array_kwargs = {}
+
     backend = plugins.get_backend(engine)
 
     decoders = _resolve_decoders_kwargs(
@@ -536,6 +584,8 @@ def open_dataset(
         cache,
         overwrite_encoded_chunks,
         inline_array,
+        chunked_array_type,
+        from_array_kwargs,
         drop_variables=drop_variables,
         **decoders,
         **kwargs,
@@ -546,8 +596,8 @@ def open_dataset(
 def open_dataarray(
     filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     *,
-    engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    engine: T_Engine | None = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
@@ -558,6 +608,8 @@ def open_dataarray(
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> DataArray:
@@ -576,7 +628,7 @@ def open_dataarray(
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
-        "pseudonetcdf", "zarr", None}, installed backend \
+        "zarr", None}, installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -606,8 +658,7 @@ def open_dataarray(
         taken from variable attributes (if they exist).  If the `_FillValue` or
         `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
-        be replaced by NA. mask_and_scale defaults to True except for the
-        pseudonetcdf backend. This keyword may not be supported by all the backends.
+        be replaced by NA. This keyword may not be supported by all the backends.
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
@@ -642,6 +693,9 @@ def open_dataarray(
           as coordinate variables.
         - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
           other attributes as coordinate variables.
+
+        Only existing variables can be set as coordinates. Missing variables
+        will be silently ignored.
     drop_variables: str or iterable of str, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
@@ -652,6 +706,15 @@ def open_dataarray(
         itself, and each chunk refers to that task by its key. With
         ``inline_array=True``, Dask will instead inline the array directly
         in the values of the task graph. See :py:func:`dask.array.from_array`.
+    chunked_array_type: str, optional
+        Which chunked array type to coerce the underlying data array to.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Experimental API that should not be relied upon.
+    from_array_kwargs: dict
+        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+        For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
+        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -665,7 +728,7 @@ def open_dataarray(
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-          "scipy", "pynio", "pseudonetcdf".
+          "scipy", "pynio".
 
         See engine open function for kwargs accepted by each specific engine.
 
@@ -695,6 +758,8 @@ def open_dataarray(
         cache=cache,
         drop_variables=drop_variables,
         inline_array=inline_array,
+        chunked_array_type=chunked_array_type,
+        from_array_kwargs=from_array_kwargs,
         backend_kwargs=backend_kwargs,
         use_cftime=use_cftime,
         decode_timedelta=decode_timedelta,
@@ -724,19 +789,49 @@ def open_dataarray(
     return data_array
 
 
+def open_datatree(
+    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    engine: T_Engine = None,
+    **kwargs,
+) -> DataTree:
+    """
+    Open and decode a DataTree from a file or file-like object, creating one tree node for each group in the file.
+
+    Parameters
+    ----------
+    filename_or_obj : str, Path, file-like, or DataStore
+        Strings and Path objects are interpreted as a path to a netCDF file or Zarr store.
+    engine : str, optional
+        Xarray backend engine to use. Valid options include `{"netcdf4", "h5netcdf", "zarr"}`.
+    **kwargs : dict
+        Additional keyword arguments passed to :py:func:`~xarray.open_dataset` for each group.
+    Returns
+    -------
+    xarray.DataTree
+    """
+    if engine is None:
+        engine = plugins.guess_engine(filename_or_obj)
+
+    backend = plugins.get_backend(engine)
+
+    return backend.open_datatree(filename_or_obj, **kwargs)
+
+
 def open_mfdataset(
     paths: str | NestedSequence[str | os.PathLike],
-    chunks: T_Chunks = None,
-    concat_dim: str
-    | DataArray
-    | Index
-    | Sequence[str]
-    | Sequence[DataArray]
-    | Sequence[Index]
-    | None = None,
+    chunks: T_Chunks | None = None,
+    concat_dim: (
+        str
+        | DataArray
+        | Index
+        | Sequence[str]
+        | Sequence[DataArray]
+        | Sequence[Index]
+        | None
+    ) = None,
     compat: CompatOptions = "no_conflicts",
     preprocess: Callable[[Dataset], Dataset] | None = None,
-    engine: T_Engine = None,
+    engine: T_Engine | None = None,
     data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
     coords="different",
     combine: Literal["by_coords", "nested"] = "by_coords",
@@ -803,7 +898,7 @@ def open_mfdataset(
         You can find the file-name from which each dataset was loaded in
         ``ds.encoding["source"]``.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
-        "pseudonetcdf", "zarr", None}, installed backend \
+        "zarr", None}, installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -870,7 +965,9 @@ def open_mfdataset(
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
     **kwargs : optional
-        Additional arguments passed on to :py:func:`xarray.open_dataset`.
+        Additional arguments passed on to :py:func:`xarray.open_dataset`. For an
+        overview of some of the possible options, see the documentation of
+        :py:func:`xarray.open_dataset`
 
     Returns
     -------
@@ -905,43 +1002,20 @@ def open_mfdataset(
     ...     "file_*.nc", concat_dim="time", preprocess=partial_func
     ... )  # doctest: +SKIP
 
+    It is also possible to use any argument to ``open_dataset`` together
+    with ``open_mfdataset``, such as for example ``drop_variables``:
+
+    >>> ds = xr.open_mfdataset(
+    ...     "file.nc", drop_variables=["varname_1", "varname_2"]  # any list of vars
+    ... )  # doctest: +SKIP
+
     References
     ----------
 
     .. [1] https://docs.xarray.dev/en/stable/dask.html
     .. [2] https://docs.xarray.dev/en/stable/dask.html#chunking-and-performance
     """
-    if isinstance(paths, str):
-        if is_remote_uri(paths) and engine == "zarr":
-            try:
-                from fsspec.core import get_fs_token_paths
-            except ImportError as e:
-                raise ImportError(
-                    "The use of remote URLs for opening zarr requires the package fsspec"
-                ) from e
-
-            fs, _, _ = get_fs_token_paths(
-                paths,
-                mode="rb",
-                storage_options=kwargs.get("backend_kwargs", {}).get(
-                    "storage_options", {}
-                ),
-                expand=False,
-            )
-            tmp_paths = fs.glob(fs._strip_protocol(paths))  # finds directories
-            paths = [fs.get_mapper(path) for path in tmp_paths]
-        elif is_remote_uri(paths):
-            raise ValueError(
-                "cannot do wild-card matching for paths that are remote URLs "
-                f"unless engine='zarr' is specified. Got paths: {paths}. "
-                "Instead, supply paths as an explicit list of strings."
-            )
-        else:
-            paths = sorted(glob(_normalize_path(paths)))
-    elif isinstance(paths, os.PathLike):
-        paths = [os.fspath(paths)]
-    else:
-        paths = [os.fspath(p) if isinstance(p, os.PathLike) else p for p in paths]
+    paths = _find_absolute_paths(paths, engine=engine, **kwargs)
 
     if not paths:
         raise OSError("no files to open")
@@ -1017,8 +1091,8 @@ def open_mfdataset(
             )
         else:
             raise ValueError(
-                "{} is an invalid option for the keyword argument"
-                " ``combine``".format(combine)
+                f"{combine} is an invalid option for the keyword argument"
+                " ``combine``"
             )
     except ValueError:
         for ds in datasets:
@@ -1058,8 +1132,7 @@ def to_netcdf(
     *,
     multifile: Literal[True],
     invalid_netcdf: bool = False,
-) -> tuple[ArrayWriter, AbstractDataStore]:
-    ...
+) -> tuple[ArrayWriter, AbstractDataStore]: ...
 
 
 # path=None writes to bytes
@@ -1076,8 +1149,7 @@ def to_netcdf(
     compute: bool = True,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
-) -> bytes:
-    ...
+) -> bytes: ...
 
 
 # compute=False returns dask.Delayed
@@ -1095,8 +1167,7 @@ def to_netcdf(
     compute: Literal[False],
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
-) -> Delayed:
-    ...
+) -> Delayed: ...
 
 
 # default return None
@@ -1113,8 +1184,60 @@ def to_netcdf(
     compute: Literal[True] = True,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
-) -> None:
-    ...
+) -> None: ...
+
+
+# if compute cannot be evaluated at type check time
+# we may get back either Delayed or None
+@overload
+def to_netcdf(
+    dataset: Dataset,
+    path_or_file: str | os.PathLike,
+    mode: Literal["w", "a"] = "w",
+    format: T_NetcdfTypes | None = None,
+    group: str | None = None,
+    engine: T_NetcdfEngine | None = None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+    unlimited_dims: Iterable[Hashable] | None = None,
+    compute: bool = False,
+    multifile: Literal[False] = False,
+    invalid_netcdf: bool = False,
+) -> Delayed | None: ...
+
+
+# if multifile cannot be evaluated at type check time
+# we may get back either writer and datastore or Delayed or None
+@overload
+def to_netcdf(
+    dataset: Dataset,
+    path_or_file: str | os.PathLike,
+    mode: Literal["w", "a"] = "w",
+    format: T_NetcdfTypes | None = None,
+    group: str | None = None,
+    engine: T_NetcdfEngine | None = None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+    unlimited_dims: Iterable[Hashable] | None = None,
+    compute: bool = False,
+    multifile: bool = False,
+    invalid_netcdf: bool = False,
+) -> tuple[ArrayWriter, AbstractDataStore] | Delayed | None: ...
+
+
+# Any
+@overload
+def to_netcdf(
+    dataset: Dataset,
+    path_or_file: str | os.PathLike | None,
+    mode: Literal["w", "a"] = "w",
+    format: T_NetcdfTypes | None = None,
+    group: str | None = None,
+    engine: T_NetcdfEngine | None = None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+    unlimited_dims: Iterable[Hashable] | None = None,
+    compute: bool = False,
+    multifile: bool = False,
+    invalid_netcdf: bool = False,
+) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None: ...
 
 
 def to_netcdf(
@@ -1334,15 +1457,15 @@ def save_mfdataset(
 
     >>> ds = xr.Dataset(
     ...     {"a": ("time", np.linspace(0, 1, 48))},
-    ...     coords={"time": pd.date_range("2010-01-01", freq="M", periods=48)},
+    ...     coords={"time": pd.date_range("2010-01-01", freq="ME", periods=48)},
     ... )
     >>> ds
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 768B
     Dimensions:  (time: 48)
     Coordinates:
-      * time     (time) datetime64[ns] 2010-01-31 2010-02-28 ... 2013-12-31
+      * time     (time) datetime64[ns] 384B 2010-01-31 2010-02-28 ... 2013-12-31
     Data variables:
-        a        (time) float64 0.0 0.02128 0.04255 0.06383 ... 0.9574 0.9787 1.0
+        a        (time) float64 384B 0.0 0.02128 0.04255 ... 0.9574 0.9787 1.0
     >>> years, datasets = zip(*ds.groupby("time.year"))
     >>> paths = [f"{y}.nc" for y in years]
     >>> xr.save_mfdataset(datasets, paths)
@@ -1401,9 +1524,62 @@ def save_mfdataset(
         )
 
 
-def _validate_region(ds, region):
+def _auto_detect_region(ds_new, ds_orig, dim):
+    # Create a mapping array of coordinates to indices on the original array
+    coord = ds_orig[dim]
+    da_map = DataArray(np.arange(coord.size), coords={dim: coord})
+
+    try:
+        da_idxs = da_map.sel({dim: ds_new[dim]})
+    except KeyError as e:
+        if "not all values found" in str(e):
+            raise KeyError(
+                f"Not all values of coordinate '{dim}' in the new array were"
+                " found in the original store. Writing to a zarr region slice"
+                " requires that no dimensions or metadata are changed by the write."
+            )
+        else:
+            raise e
+
+    if (da_idxs.diff(dim) != 1).any():
+        raise ValueError(
+            f"The auto-detected region of coordinate '{dim}' for writing new data"
+            " to the original store had non-contiguous indices. Writing to a zarr"
+            " region slice requires that the new data constitute a contiguous subset"
+            " of the original store."
+        )
+
+    dim_slice = slice(da_idxs.values[0], da_idxs.values[-1] + 1)
+
+    return dim_slice
+
+
+def _auto_detect_regions(ds, region, open_kwargs):
+    ds_original = open_zarr(**open_kwargs)
+    for key, val in region.items():
+        if val == "auto":
+            region[key] = _auto_detect_region(ds, ds_original, key)
+    return region
+
+
+def _validate_and_autodetect_region(
+    ds, region, mode, open_kwargs
+) -> tuple[dict[str, slice], bool]:
+    if region == "auto":
+        region = {dim: "auto" for dim in ds.dims}
+
     if not isinstance(region, dict):
         raise TypeError(f"``region`` must be a dict, got {type(region)}")
+
+    if any(v == "auto" for v in region.values()):
+        region_was_autodetected = True
+        if mode != "r+":
+            raise ValueError(
+                f"``mode`` must be 'r+' when using ``region='auto'``, got {mode}"
+            )
+        region = _auto_detect_regions(ds, region, open_kwargs)
+    else:
+        region_was_autodetected = False
 
     for k, v in region.items():
         if k not in ds.dims:
@@ -1435,6 +1611,8 @@ def _validate_region(ds, region):
             f"from this dataset before exporting to zarr, write: "
             f".drop_vars({non_matching_vars!r})"
         )
+
+    return region, region_was_autodetected
 
 
 def _validate_datatypes_for_zarr_append(zstore, dataset):
@@ -1479,19 +1657,21 @@ def to_zarr(
     dataset: Dataset,
     store: MutableMapping | str | os.PathLike[str] | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
-    mode: Literal["w", "w-", "a", "r+", None] = None,
+    mode: ZarrWriteModes | None = None,
     synchronizer=None,
     group: str | None = None,
     encoding: Mapping | None = None,
+    *,
     compute: Literal[True] = True,
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
-    region: Mapping[str, slice] | None = None,
+    region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
-) -> backends.ZarrStore:
-    ...
+    write_empty_chunks: bool | None = None,
+    chunkmanager_store_kwargs: dict[str, Any] | None = None,
+) -> backends.ZarrStore: ...
 
 
 # compute=False returns dask.Delayed
@@ -1500,7 +1680,7 @@ def to_zarr(
     dataset: Dataset,
     store: MutableMapping | str | os.PathLike[str] | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
-    mode: Literal["w", "w-", "a", "r+", None] = None,
+    mode: ZarrWriteModes | None = None,
     synchronizer=None,
     group: str | None = None,
     encoding: Mapping | None = None,
@@ -1508,29 +1688,33 @@ def to_zarr(
     compute: Literal[False],
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
-    region: Mapping[str, slice] | None = None,
+    region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
-) -> Delayed:
-    ...
+    write_empty_chunks: bool | None = None,
+    chunkmanager_store_kwargs: dict[str, Any] | None = None,
+) -> Delayed: ...
 
 
 def to_zarr(
     dataset: Dataset,
     store: MutableMapping | str | os.PathLike[str] | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
-    mode: Literal["w", "w-", "a", "r+", None] = None,
+    mode: ZarrWriteModes | None = None,
     synchronizer=None,
     group: str | None = None,
     encoding: Mapping | None = None,
+    *,
     compute: bool = True,
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
-    region: Mapping[str, slice] | None = None,
+    region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
+    write_empty_chunks: bool | None = None,
+    chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore | Delayed:
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
@@ -1574,23 +1758,38 @@ def to_zarr(
         else:
             mode = "w-"
 
-    if mode != "a" and append_dim is not None:
+    if mode not in ["a", "a-"] and append_dim is not None:
         raise ValueError("cannot set append_dim unless mode='a' or mode=None")
 
-    if mode not in ["a", "r+"] and region is not None:
-        raise ValueError("cannot set region unless mode='a', mode='r+' or mode=None")
+    if mode not in ["a", "a-", "r+"] and region is not None:
+        raise ValueError(
+            "cannot set region unless mode='a', mode='a-', mode='r+' or mode=None"
+        )
 
-    if mode not in ["w", "w-", "a", "r+"]:
+    if mode not in ["w", "w-", "a", "a-", "r+"]:
         raise ValueError(
             "The only supported options for mode are 'w', "
-            f"'w-', 'a' and 'r+', but mode={mode!r}"
+            f"'w-', 'a', 'a-', and 'r+', but mode={mode!r}"
         )
 
     # validate Dataset keys, DataArray names
     _validate_dataset_names(dataset)
 
     if region is not None:
-        _validate_region(dataset, region)
+        open_kwargs = dict(
+            store=store,
+            synchronizer=synchronizer,
+            group=group,
+            consolidated=consolidated,
+            storage_options=storage_options,
+            zarr_version=zarr_version,
+        )
+        region, region_was_autodetected = _validate_and_autodetect_region(
+            dataset, region, mode, open_kwargs
+        )
+        # drop indices to avoid potential race condition with auto region
+        if region_was_autodetected:
+            dataset = dataset.drop_vars(dataset.indexes)
         if append_dim is not None and append_dim in region:
             raise ValueError(
                 f"cannot list the same dimension in both ``append_dim`` and "
@@ -1623,9 +1822,10 @@ def to_zarr(
         safe_chunks=safe_chunks,
         stacklevel=4,  # for Dataset.to_zarr()
         zarr_version=zarr_version,
+        write_empty=write_empty_chunks,
     )
 
-    if mode in ["a", "r+"]:
+    if mode in ["a", "a-", "r+"]:
         _validate_datatypes_for_zarr_append(zstore, dataset)
         if append_dim is not None:
             existing_dims = zstore.get_dimensions()
@@ -1652,7 +1852,9 @@ def to_zarr(
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
     dump_to_store(dataset, zstore, writer, encoding=encoding)
-    writes = writer.sync(compute=compute)
+    writes = writer.sync(
+        compute=compute, chunkmanager_store_kwargs=chunkmanager_store_kwargs
+    )
 
     if compute:
         _finalize_store(writes, zstore)

@@ -2,33 +2,33 @@ name: xarray-tests
 channels:
   - conda-forge
 dependencies:
+  - array-api-strict
   - boto3
   - bottleneck
   - cartopy
-  # - cdms2  # Not available on Windows
   - cftime
   - dask-core
+  - dask-expr
   - distributed
   - flox
-  - fsspec!=2021.7.0
+  - fsspec
   - h5netcdf
   - h5py
   - hdf5
   - hypothesis
   - iris
-  - lxml  # Optional dep of pydap
+  - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
   - numba
   - numbagg
-  - numpy<1.24
+  - numpy
   - packaging
-  - pandas<2
-  - pint
+  - pandas
+  - pint>=0.22
   - pip
   - pre-commit
-  - pseudonetcdf
   - pydap
   - pytest
   - pytest-cov

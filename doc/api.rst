@@ -110,6 +110,7 @@ Dataset contents
    Dataset.drop_indexes
    Dataset.drop_duplicates
    Dataset.drop_dims
+   Dataset.drop_encoding
    Dataset.set_coords
    Dataset.reset_coords
    Dataset.convert_calendar
@@ -181,6 +182,7 @@ Computation
    Dataset.groupby_bins
    Dataset.rolling
    Dataset.rolling_exp
+   Dataset.cumulative
    Dataset.weighted
    Dataset.coarsen
    Dataset.resample
@@ -191,6 +193,7 @@ Computation
    Dataset.map_blocks
    Dataset.polyfit
    Dataset.curvefit
+   Dataset.eval
 
 Aggregation
 -----------
@@ -302,6 +305,7 @@ DataArray contents
    DataArray.drop_vars
    DataArray.drop_indexes
    DataArray.drop_duplicates
+   DataArray.drop_encoding
    DataArray.reset_coords
    DataArray.copy
    DataArray.convert_calendar
@@ -376,6 +380,7 @@ Computation
    DataArray.groupby_bins
    DataArray.rolling
    DataArray.rolling_exp
+   DataArray.cumulative
    DataArray.weighted
    DataArray.coarsen
    DataArray.resample
@@ -518,7 +523,6 @@ Datetimelike properties
    DataArray.dt.nanosecond
    DataArray.dt.dayofweek
    DataArray.dt.weekday
-   DataArray.dt.weekday_name
    DataArray.dt.dayofyear
    DataArray.dt.quarter
    DataArray.dt.days_in_month
@@ -555,6 +559,7 @@ Datetimelike properties
    DataArray.dt.seconds
    DataArray.dt.microseconds
    DataArray.dt.nanoseconds
+   DataArray.dt.total_seconds
 
 **Timedelta methods**:
 
@@ -595,13 +600,12 @@ Dataset methods
    load_dataset
    open_dataset
    open_mfdataset
-   open_rasterio
    open_zarr
    save_mfdataset
    Dataset.as_numpy
    Dataset.from_dataframe
    Dataset.from_dict
-   Dataset.to_array
+   Dataset.to_dataarray
    Dataset.to_dataframe
    Dataset.to_dask_dataframe
    Dataset.to_dict
@@ -626,11 +630,10 @@ DataArray methods
    load_dataarray
    open_dataarray
    DataArray.as_numpy
-   DataArray.from_cdms2
    DataArray.from_dict
    DataArray.from_iris
    DataArray.from_series
-   DataArray.to_cdms2
+   DataArray.to_dask_dataframe
    DataArray.to_dataframe
    DataArray.to_dataset
    DataArray.to_dict
@@ -641,6 +644,7 @@ DataArray methods
    DataArray.to_numpy
    DataArray.to_pandas
    DataArray.to_series
+   DataArray.to_zarr
    DataArray.chunk
    DataArray.close
    DataArray.compute
@@ -1054,7 +1058,6 @@ Tutorial
    :toctree: generated/
 
    tutorial.open_dataset
-   tutorial.open_rasterio
    tutorial.load_dataset
 
 Testing
@@ -1067,6 +1070,27 @@ Testing
    testing.assert_identical
    testing.assert_allclose
    testing.assert_chunks_equal
+
+Hypothesis Testing Strategies
+=============================
+
+.. currentmodule:: xarray
+
+See the :ref:`documentation page on testing <testing.hypothesis>` for a guide on how to use these strategies.
+
+.. warning::
+    These strategies should be considered highly experimental, and liable to change at any time.
+
+.. autosummary::
+   :toctree: generated/
+
+   testing.strategies.supported_dtypes
+   testing.strategies.names
+   testing.strategies.dimension_names
+   testing.strategies.dimension_sizes
+   testing.strategies.attrs
+   testing.strategies.variables
+   testing.strategies.unique_subset_of
 
 Exceptions
 ==========
@@ -1083,12 +1107,14 @@ Advanced API
 .. autosummary::
    :toctree: generated/
 
+   Coordinates
    Dataset.variables
    DataArray.variable
    Variable
    IndexVariable
    as_variable
-   indexes.Index
+   Index
+   IndexSelResult
    Context
    register_dataset_accessor
    register_dataarray_accessor
@@ -1096,6 +1122,7 @@ Advanced API
    backends.BackendArray
    backends.BackendEntrypoint
    backends.list_engines
+   backends.refresh_engines
 
 Default, pandas-backed indexes built-in Xarray:
 
@@ -1111,7 +1138,6 @@ arguments for the ``load_store`` and ``dump_to_store`` Dataset methods:
 
    backends.NetCDF4DataStore
    backends.H5NetCDFStore
-   backends.PseudoNetCDFDataStore
    backends.PydapDataStore
    backends.ScipyDataStore
    backends.ZarrStore
@@ -1127,7 +1153,6 @@ used filetypes in the xarray universe.
 
    backends.NetCDF4BackendEntrypoint
    backends.H5netcdfBackendEntrypoint
-   backends.PseudoNetCDFBackendEntrypoint
    backends.PydapBackendEntrypoint
    backends.ScipyBackendEntrypoint
    backends.StoreBackendEntrypoint

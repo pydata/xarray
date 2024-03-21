@@ -1,4 +1,5 @@
 """DatetimeIndex analog for cftime.datetime objects"""
+
 # The pandas.Index subclass defined here was copied and adapted for
 # use with cftime.datetime objects based on the source code defining
 # pandas.DatetimeIndex.
@@ -187,7 +188,7 @@ def _parsed_string_to_bounds(date_type, resolution, parsed):
 
 def get_date_field(datetimes, field):
     """Adapted from pandas.tslib.get_date_field"""
-    return np.array([getattr(date, field) for date in datetimes])
+    return np.array([getattr(date, field) for date in datetimes], dtype=np.int64)
 
 
 def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
@@ -228,12 +229,12 @@ def assert_all_valid_date_type(data):
         if not isinstance(sample, cftime.datetime):
             raise TypeError(
                 "CFTimeIndex requires cftime.datetime "
-                "objects. Got object of {}.".format(date_type)
+                f"objects. Got object of {date_type}."
             )
         if not all(isinstance(value, date_type) for value in data):
             raise TypeError(
                 "CFTimeIndex requires using datetime "
-                "objects of all the same type.  Got\n{}.".format(data)
+                f"objects of all the same type.  Got\n{data}."
             )
 
 
@@ -272,8 +273,8 @@ def format_attrs(index, separator=", "):
     attrs = {
         "dtype": f"'{index.dtype}'",
         "length": f"{len(index)}",
-        "calendar": f"'{index.calendar}'",
-        "freq": f"'{index.freq}'" if len(index) >= 3 else None,
+        "calendar": f"{index.calendar!r}",
+        "freq": f"{index.freq!r}",
     }
 
     attrs_str = [f"{k}={v}" for k, v in attrs.items()]
@@ -382,30 +383,30 @@ class CFTimeIndex(pd.Index):
         ...     dims=["time"],
         ... )
         >>> da.sel(time="2001-01-01")
-        <xarray.DataArray (time: 1)>
+        <xarray.DataArray (time: 1)> Size: 8B
         array([1])
         Coordinates:
-          * time     (time) object 2001-01-01 00:00:00
+          * time     (time) object 8B 2001-01-01 00:00:00
         >>> da = xr.DataArray(
         ...     [1, 2],
         ...     coords=[[pd.Timestamp(2001, 1, 1), pd.Timestamp(2001, 2, 1)]],
         ...     dims=["time"],
         ... )
         >>> da.sel(time="2001-01-01")
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(1)
         Coordinates:
-            time     datetime64[ns] 2001-01-01
+            time     datetime64[ns] 8B 2001-01-01
         >>> da = xr.DataArray(
         ...     [1, 2],
         ...     coords=[[pd.Timestamp(2001, 1, 1, 1), pd.Timestamp(2001, 2, 1)]],
         ...     dims=["time"],
         ... )
         >>> da.sel(time="2001-01-01")
-        <xarray.DataArray (time: 1)>
+        <xarray.DataArray (time: 1)> Size: 8B
         array([1])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-01T01:00:00
+          * time     (time) datetime64[ns] 8B 2001-01-01T01:00:00
         """
         start, end = _parsed_string_to_bounds(self.date_type, resolution, parsed)
 
@@ -470,13 +471,9 @@ class CFTimeIndex(pd.Index):
         else:
             return super().get_loc(key)
 
-    def _maybe_cast_slice_bound(self, label, side, kind=None):
+    def _maybe_cast_slice_bound(self, label, side):
         """Adapted from
         pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound
-
-        Note that we have never used the kind argument in CFTimeIndex and it is
-        deprecated as of pandas version 1.3.0.  It exists only for compatibility
-        reasons.  We can remove it when our minimum version of pandas is 1.3.0.
         """
         if not isinstance(label, str):
             return label
@@ -538,11 +535,11 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> index = xr.cftime_range("2000", periods=1, freq="M")
+        >>> index = xr.cftime_range("2000", periods=1, freq="ME")
         >>> index
         CFTimeIndex([2000-01-31 00:00:00],
                     dtype='object', length=1, calendar='standard', freq=None)
-        >>> index.shift(1, "M")
+        >>> index.shift(1, "ME")
         CFTimeIndex([2000-02-29 00:00:00],
                     dtype='object', length=1, calendar='standard', freq=None)
         >>> index.shift(1.5, "D")
@@ -557,8 +554,7 @@ class CFTimeIndex(pd.Index):
             return self + n * to_offset(freq)
         else:
             raise TypeError(
-                "'freq' must be of type "
-                "str or datetime.timedelta, got {}.".format(freq)
+                f"'freq' must be of type str or datetime.timedelta, got {freq}."
             )
 
     def __add__(self, other):
@@ -613,7 +609,7 @@ class CFTimeIndex(pd.Index):
         ------
         ValueError
             If the CFTimeIndex contains dates that are not possible in the
-            standard calendar or outside the pandas.Timestamp-valid range.
+            standard calendar or outside the nanosecond-precision range.
 
         Warns
         -----
@@ -635,15 +631,19 @@ class CFTimeIndex(pd.Index):
         >>> times.to_datetimeindex()
         DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
         """
+
+        if not self._data.size:
+            return pd.DatetimeIndex([])
+
         nptimes = cftime_to_nptime(self)
         calendar = infer_calendar_name(self)
         if calendar not in _STANDARD_CALENDARS and not unsafe:
             warnings.warn(
                 "Converting a CFTimeIndex with dates from a non-standard "
-                "calendar, {!r}, to a pandas.DatetimeIndex, which uses dates "
+                f"calendar, {calendar!r}, to a pandas.DatetimeIndex, which uses dates "
                 "from the standard calendar.  This may lead to subtle errors "
                 "in operations that depend on the length of time between "
-                "dates.".format(calendar),
+                "dates.",
                 RuntimeWarning,
                 stacklevel=2,
             )
@@ -684,6 +684,9 @@ class CFTimeIndex(pd.Index):
         """Convert to integers with units of microseconds since 1970-01-01."""
         from xarray.core.resample_cftime import exact_cftime_datetime_difference
 
+        if not self._data.size:
+            return np.array([], dtype=np.int64)
+
         epoch = self.date_type(1970, 1, 1)
         return np.array(
             [
@@ -698,6 +701,9 @@ class CFTimeIndex(pd.Index):
         """The calendar used by the datetimes in the index."""
         from xarray.coding.times import infer_calendar_name
 
+        if not self._data.size:
+            return None
+
         return infer_calendar_name(self)
 
     @property
@@ -705,11 +711,18 @@ class CFTimeIndex(pd.Index):
         """The frequency used by the dates in the index."""
         from xarray.coding.frequencies import infer_freq
 
+        # min 3 elemtents required to determine freq
+        if self._data.size < 3:
+            return None
+
         return infer_freq(self)
 
     def _round_via_method(self, freq, method):
         """Round dates using a specified method."""
         from xarray.coding.cftime_offsets import CFTIME_TICKS, to_offset
+
+        if not self._data.size:
+            return CFTimeIndex(np.array(self))
 
         offset = to_offset(freq)
         if not isinstance(offset, CFTIME_TICKS):

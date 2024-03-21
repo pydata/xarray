@@ -3,12 +3,14 @@
 Currently, this means Dask or NumPy arrays. None of these functions should
 accept or return xarray objects.
 """
+
 from __future__ import annotations
 
 import contextlib
 import datetime
 import inspect
 import warnings
+from functools import partial
 from importlib import import_module
 
 import numpy as np
@@ -17,7 +19,7 @@ from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
 from numpy import (  # noqa
     around,  # noqa
-    einsum,
+    full_like,
     gradient,
     isclose,
     isin,
@@ -26,15 +28,28 @@ from numpy import (  # noqa
     tensordot,
     transpose,
     unravel_index,
-    zeros_like,  # noqa
 )
 from numpy import concatenate as _concatenate
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
+from packaging.version import Version
 
 from xarray.core import dask_array_ops, dtypes, nputils
-from xarray.core.nputils import nanfirst, nanlast
-from xarray.core.pycompat import array_type, is_duck_dask_array
-from xarray.core.utils import is_duck_array, module_available
+from xarray.core.options import OPTIONS
+from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
+from xarray.namedarray import pycompat
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import array_type, is_chunked_array
+
+# remove once numpy 2.0 is the oldest supported version
+if module_available("numpy", minversion="2.0.0.dev0"):
+    from numpy.lib.array_utils import (  # type: ignore[import-not-found,unused-ignore]
+        normalize_axis_index,
+    )
+else:
+    from numpy.core.multiarray import (  # type: ignore[attr-defined,no-redef,unused-ignore]
+        normalize_axis_index,
+    )
+
 
 dask_available = module_available("dask")
 
@@ -44,6 +59,17 @@ def get_array_namespace(x):
         return x.__array_namespace__()
     else:
         return np
+
+
+def einsum(*args, **kwargs):
+    from xarray.core.options import OPTIONS
+
+    if OPTIONS["use_opt_einsum"] and module_available("opt_einsum"):
+        import opt_einsum
+
+        return opt_einsum.contract(*args, **kwargs)
+    else:
+        return np.einsum(*args, **kwargs)
 
 
 def _dask_or_eager_func(
@@ -127,7 +153,7 @@ def isnull(data):
         return xp.isnan(data)
     elif issubclass(scalar_type, (np.bool_, np.integer, np.character, np.void)):
         # these types cannot represent missing values
-        return zeros_like(data, dtype=bool)
+        return full_like(data, dtype=bool, fill_value=False)
     else:
         # at this point, array should have dtype=object
         if isinstance(data, np.ndarray):
@@ -182,6 +208,9 @@ def cumulative_trapezoid(y, x, axis):
 def astype(data, dtype, **kwargs):
     if hasattr(data, "__array_namespace__"):
         xp = get_array_namespace(data)
+        if xp == np:
+            # numpy currently doesn't have a astype:
+            return data.astype(dtype, **kwargs)
         return xp.astype(data, dtype, **kwargs)
     return data.astype(dtype, **kwargs)
 
@@ -192,7 +221,10 @@ def asarray(data, xp=np):
 
 def as_shared_dtype(scalars_or_arrays, xp=np):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
-    if any(isinstance(x, array_type("cupy")) for x in scalars_or_arrays):
+    array_type_cupy = array_type("cupy")
+    if array_type_cupy and any(
+        isinstance(x, array_type_cupy) for x in scalars_or_arrays
+    ):
         import cupy as cp
 
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
@@ -315,7 +347,10 @@ def fillna(data, other):
 
 def concatenate(arrays, axis=0):
     """concatenate() with better dtype promotion rules."""
-    if hasattr(arrays[0], "__array_namespace__"):
+    # TODO: remove the additional check once `numpy` adds `concat` to its array namespace
+    if hasattr(arrays[0], "__array_namespace__") and not isinstance(
+        arrays[0], np.ndarray
+    ):
         xp = get_array_namespace(arrays[0])
         return xp.concat(as_shared_dtype(arrays, xp=xp), axis=axis)
     return _concatenate(as_shared_dtype(arrays), axis=axis)
@@ -330,6 +365,10 @@ def stack(arrays, axis=0):
 def reshape(array, shape):
     xp = get_array_namespace(array)
     return xp.reshape(array, shape)
+
+
+def ravel(array):
+    return reshape(array, (-1,))
 
 
 @contextlib.contextmanager
@@ -358,7 +397,7 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
         values = asarray(values)
 
         if coerce_strings and values.dtype.kind in "SU":
-            values = values.astype(object)
+            values = astype(values, object)
 
         func = None
         if skipna or (skipna is None and values.dtype.kind in "cfO"):
@@ -640,10 +679,10 @@ def first(values, axis, skipna=None):
     """Return the first non-NA elements in this array along the given axis"""
     if (skipna or skipna is None) and values.dtype.kind not in "iSU":
         # only bother for dtypes that can hold NaN
-        if is_duck_dask_array(values):
-            return dask_array_ops.nanfirst(values, axis)
+        if is_chunked_array(values):
+            return chunked_nanfirst(values, axis)
         else:
-            return nanfirst(values, axis)
+            return nputils.nanfirst(values, axis)
     return take(values, 0, axis=axis)
 
 
@@ -651,10 +690,10 @@ def last(values, axis, skipna=None):
     """Return the last non-NA elements in this array along the given axis"""
     if (skipna or skipna is None) and values.dtype.kind not in "iSU":
         # only bother for dtypes that can hold NaN
-        if is_duck_dask_array(values):
-            return dask_array_ops.nanlast(values, axis)
+        if is_chunked_array(values):
+            return chunked_nanlast(values, axis)
         else:
-            return nanlast(values, axis)
+            return nputils.nanlast(values, axis)
     return take(values, -1, axis=axis)
 
 
@@ -666,10 +705,70 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
         return nputils.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)
 
 
-def push(array, n, axis):
-    from bottleneck import push
+def _push(array, n: int | None = None, axis: int = -1):
+    """
+    Use either bottleneck or numbagg depending on options & what's available
+    """
 
+    if not OPTIONS["use_bottleneck"] and not OPTIONS["use_numbagg"]:
+        raise RuntimeError(
+            "ffill & bfill requires bottleneck or numbagg to be enabled."
+            " Call `xr.set_options(use_bottleneck=True)` or `xr.set_options(use_numbagg=True)` to enable one."
+        )
+    if OPTIONS["use_numbagg"] and module_available("numbagg"):
+        import numbagg
+
+        if pycompat.mod_version("numbagg") < Version("0.6.2"):
+            warnings.warn(
+                f"numbagg >= 0.6.2 is required for bfill & ffill; {pycompat.mod_version('numbagg')} is installed. We'll attempt with bottleneck instead."
+            )
+        else:
+            return numbagg.ffill(array, limit=n, axis=axis)
+
+    # work around for bottleneck 178
+    limit = n if n is not None else array.shape[axis]
+
+    import bottleneck as bn
+
+    return bn.push(array, limit, axis)
+
+
+def push(array, n, axis):
+    if not OPTIONS["use_bottleneck"] and not OPTIONS["use_numbagg"]:
+        raise RuntimeError(
+            "ffill & bfill requires bottleneck or numbagg to be enabled."
+            " Call `xr.set_options(use_bottleneck=True)` or `xr.set_options(use_numbagg=True)` to enable one."
+        )
     if is_duck_dask_array(array):
         return dask_array_ops.push(array, n, axis)
     else:
-        return push(array, n, axis)
+        return _push(array, n, axis)
+
+
+def _first_last_wrapper(array, *, axis, op, keepdims):
+    return op(array, axis, keepdims=keepdims)
+
+
+def _chunked_first_or_last(darray, axis, op):
+    chunkmanager = get_chunked_array_type(darray)
+
+    # This will raise the same error message seen for numpy
+    axis = normalize_axis_index(axis, darray.ndim)
+
+    wrapped_op = partial(_first_last_wrapper, op=op)
+    return chunkmanager.reduction(
+        darray,
+        func=wrapped_op,
+        aggregate_func=wrapped_op,
+        axis=axis,
+        dtype=darray.dtype,
+        keepdims=False,  # match numpy version
+    )
+
+
+def chunked_nanfirst(darray, axis):
+    return _chunked_first_or_last(darray, axis, op=nputils.nanfirst)
+
+
+def chunked_nanlast(darray, axis):
+    return _chunked_first_or_last(darray, axis, op=nputils.nanlast)

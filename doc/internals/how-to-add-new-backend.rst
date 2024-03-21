@@ -9,7 +9,8 @@ to integrate any code in Xarray; all you need to do is:
 - Create a class that inherits from Xarray :py:class:`~xarray.backends.BackendEntrypoint`
   and implements the method ``open_dataset`` see :ref:`RST backend_entrypoint`
 
-- Declare this class as an external plugin in your ``setup.py``, see :ref:`RST backend_registration`
+- Declare this class as an external plugin in your project configuration, see :ref:`RST
+  backend_registration`
 
 If you also want to support lazy loading and dask see :ref:`RST lazy_loading`.
 
@@ -267,42 +268,57 @@ interface only the boolean keywords related to the supported decoders.
 How to register a backend
 +++++++++++++++++++++++++
 
-Define a new entrypoint in your ``setup.py`` (or ``setup.cfg``) with:
+Define a new entrypoint in your ``pyproject.toml`` (or ``setup.cfg/setup.py`` for older
+configurations), with:
 
 - group: ``xarray.backends``
 - name: the name to be passed to :py:meth:`~xarray.open_dataset`  as ``engine``
 - object reference: the reference of the class that you have implemented.
 
-You can declare the entrypoint in ``setup.py`` using the following syntax:
+You can declare the entrypoint in your project configuration like so:
 
-.. code-block::
+.. tab:: pyproject.toml
 
-    setuptools.setup(
-        entry_points={
-            "xarray.backends": ["my_engine=my_package.my_module:MyBackendEntryClass"],
-        },
-    )
+   .. code:: toml
 
-in ``setup.cfg``:
+      [project.entry-points."xarray.backends"]
+      my_engine = "my_package.my_module:MyBackendEntrypoint"
 
-.. code-block:: cfg
+.. tab:: pyproject.toml [Poetry]
 
-    [options.entry_points]
-    xarray.backends =
-        my_engine = my_package.my_module:MyBackendEntryClass
+   .. code-block:: toml
+
+       [tool.poetry.plugins."xarray.backends"]
+       my_engine = "my_package.my_module:MyBackendEntrypoint"
+
+.. tab:: setup.cfg
+
+   .. code-block:: cfg
+
+       [options.entry_points]
+       xarray.backends =
+           my_engine = my_package.my_module:MyBackendEntrypoint
+
+.. tab:: setup.py
+
+   .. code-block::
+
+       setuptools.setup(
+           entry_points={
+               "xarray.backends": [
+                   "my_engine=my_package.my_module:MyBackendEntrypoint"
+               ],
+           },
+       )
 
 
-See https://packaging.python.org/specifications/entry-points/#data-model
-for more information
+See the `Python Packaging User Guide
+<https://packaging.python.org/specifications/entry-points/#data-model>`_ for more
+information on entrypoints and details of the syntax.
 
-If you are using `Poetry <https://python-poetry.org/>`_ for your build system, you can accomplish the same thing using "plugins". In this case you would need to add the following to your ``pyproject.toml`` file:
-
-.. code-block:: toml
-
-    [tool.poetry.plugins."xarray.backends"]
-    "my_engine" = "my_package.my_module:MyBackendEntryClass"
-
-See https://python-poetry.org/docs/pyproject/#plugins for more information on Poetry plugins.
+If you're using Poetry, note that table name in ``pyproject.toml`` is slightly different.
+See `the Poetry docs <https://python-poetry.org/docs/pyproject/#plugins>`_ for more
+information on plugins.
 
 .. _RST lazy_loading:
 

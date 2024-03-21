@@ -7,9 +7,9 @@ Required dependencies
 ---------------------
 
 - Python (3.9 or later)
-- `numpy <https://www.numpy.org/>`__ (1.21 or later)
-- `packaging <https://packaging.pypa.io/en/latest/#>`__ (21.3 or later)
-- `pandas <https://pandas.pydata.org/>`__ (1.4 or later)
+- `numpy <https://www.numpy.org/>`__ (1.23 or later)
+- `packaging <https://packaging.pypa.io/en/latest/#>`__ (22 or later)
+- `pandas <https://pandas.pydata.org/>`__ (1.5 or later)
 
 .. _optional-dependencies:
 
@@ -38,11 +38,6 @@ For netCDF and IO
 - `cftime <https://unidata.github.io/cftime>`__: recommended if you
   want to encode/decode datetimes for non-standard calendars or dates before
   year 1678 or after year 2262.
-- `PseudoNetCDF <http://github.com/barronh/pseudonetcdf/>`__: recommended
-  for accessing CAMx, GEOS-Chem (bpch), NOAA ARL files, ICARTT files
-  (ffi1001) and many other.
-- `rasterio <https://github.com/rasterio/rasterio>`__: for reading GeoTiffs and
-  other gridded raster datasets.
 - `iris <https://github.com/scitools/iris>`__: for conversion to and from iris'
   Cube objects
 
@@ -88,7 +83,7 @@ Minimum dependency versions
 Xarray adopts a rolling policy regarding the minimum supported version of its
 dependencies:
 
-- **Python:** 24 months
+- **Python:** 30 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
 - **numpy:** 18 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
@@ -137,13 +132,13 @@ We also maintain other dependency sets for different subsets of functionality::
 The above commands should install most of the `optional dependencies`_. However,
 some packages which are either not listed on PyPI or require extra
 installation steps are excluded. To know which dependencies would be
-installed, take a look at the ``[options.extras_require]`` section in
-``setup.cfg``:
+installed, take a look at the ``[project.optional-dependencies]`` section in
+``pyproject.toml``:
 
-.. literalinclude:: ../../setup.cfg
-   :language: ini
-   :start-at: [options.extras_require]
-   :end-before: [options.package_data]
+.. literalinclude:: ../../pyproject.toml
+   :language: toml
+   :start-at: [project.optional-dependencies]
+   :end-before: [build-system]
 
 Development versions
 --------------------

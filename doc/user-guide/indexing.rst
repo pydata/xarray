@@ -352,7 +352,6 @@ dimensions:
     ind_x = xr.DataArray([0, 1], dims=["x"])
     ind_y = xr.DataArray([0, 1], dims=["y"])
     da[ind_x, ind_y]  # orthogonal indexing
-    da[ind_x, ind_x]  # vectorized indexing
 
 Slices or sequences/arrays without named-dimensions are treated as if they have
 the same dimension which is indexed along:
@@ -399,6 +398,12 @@ These methods may also be applied to ``Dataset`` objects
 Vectorized indexing may be used to extract information from the nearest
 grid cells of interest, for example, the nearest climate model grid cells
 to a collection specified weather station latitudes and longitudes.
+To trigger vectorized indexing behavior
+you will need to provide the selection dimensions with a new
+shared output dimension name. In the example below, the selections
+of the closest latitude and longitude are renamed to an output
+dimension named "points":
+
 
 .. ipython:: python
 
@@ -544,6 +549,7 @@ __ https://numpy.org/doc/stable/user/basics.indexing.html#assigning-values-to-in
 You can also assign values to all variables of a :py:class:`Dataset` at once:
 
 .. ipython:: python
+    :okwarning:
 
     ds_org = xr.tutorial.open_dataset("eraint_uvz").isel(
         latitude=slice(56, 59), longitude=slice(255, 258), level=0

@@ -1,25 +1,32 @@
 """String formatting routines for __repr__.
 """
+
 from __future__ import annotations
 
 import contextlib
 import functools
 import math
 from collections import defaultdict
-from collections.abc import Collection, Hashable
+from collections.abc import Collection, Hashable, Sequence
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
 from reprlib import recursive_repr
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
-from xarray.core.duck_array_ops import array_equiv
+from xarray.core.duck_array_ops import array_equiv, astype
 from xarray.core.indexing import MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
-from xarray.core.pycompat import array_type
 from xarray.core.utils import is_duck_array
+from xarray.namedarray.pycompat import array_type, to_duck_array, to_numpy
+
+if TYPE_CHECKING:
+    from xarray.core.coordinates import AbstractCoordinates
+
+UNITS = ("B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
 
 
 def pretty_print(x, numchars: int):
@@ -64,6 +71,8 @@ def first_n_items(array, n_desired):
     # might not be a numpy.ndarray. Moreover, access to elements of the array
     # could be very expensive (e.g. if it's only available over DAP), so go out
     # of our way to get them in a single call to __getitem__ using only slices.
+    from xarray.core.variable import Variable
+
     if n_desired < 1:
         raise ValueError("must request at least one item")
 
@@ -74,7 +83,14 @@ def first_n_items(array, n_desired):
     if n_desired < array.size:
         indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=False)
         array = array[indexer]
-    return np.asarray(array).flat[:n_desired]
+
+    # We pass variable objects in to handle indexing
+    # with indexer above. It would not work with our
+    # lazy indexing classes at the moment, so we cannot
+    # pass Variable._data
+    if isinstance(array, Variable):
+        array = array._data
+    return np.ravel(to_duck_array(array))[:n_desired]
 
 
 def last_n_items(array, n_desired):
@@ -83,13 +99,22 @@ def last_n_items(array, n_desired):
     # might not be a numpy.ndarray. Moreover, access to elements of the array
     # could be very expensive (e.g. if it's only available over DAP), so go out
     # of our way to get them in a single call to __getitem__ using only slices.
+    from xarray.core.variable import Variable
+
     if (n_desired == 0) or (array.size == 0):
         return []
 
     if n_desired < array.size:
         indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=True)
         array = array[indexer]
-    return np.asarray(array).flat[-n_desired:]
+
+    # We pass variable objects in to handle indexing
+    # with indexer above. It would not work with our
+    # lazy indexing classes at the moment, so we cannot
+    # pass Variable._data
+    if isinstance(array, Variable):
+        array = array._data
+    return np.ravel(to_duck_array(array))[-n_desired:]
 
 
 def last_item(array):
@@ -99,7 +124,8 @@ def last_item(array):
         return []
 
     indexer = (slice(-1, None),) * array.ndim
-    return np.ravel(np.asarray(array[indexer])).tolist()
+    # to_numpy since dask doesn't support tolist
+    return np.ravel(to_numpy(array[indexer])).tolist()
 
 
 def calc_max_rows_first(max_rows: int) -> int:
@@ -114,9 +140,9 @@ def calc_max_rows_last(max_rows: int) -> int:
 
 def format_timestamp(t):
     """Cast given object to a Timestamp and return a nicely formatted string"""
-    # Timestamp is only valid for 1678 to 2262
     try:
-        datetime_str = str(pd.Timestamp(t))
+        timestamp = pd.Timestamp(t)
+        datetime_str = timestamp.isoformat(sep=" ")
     except OutOfBoundsDatetime:
         datetime_str = str(t)
 
@@ -156,6 +182,8 @@ def format_item(x, timedelta_format=None, quote_strings=True):
     if isinstance(x, (np.timedelta64, timedelta)):
         return format_timedelta(x, timedelta_format=timedelta_format)
     elif isinstance(x, (str, bytes)):
+        if hasattr(x, "dtype"):
+            x = x.item()
         return repr(x) if quote_strings else x
     elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating):
         return f"{x.item():.4}"
@@ -165,10 +193,10 @@ def format_item(x, timedelta_format=None, quote_strings=True):
 
 def format_items(x):
     """Returns a succinct summaries of all items in a sequence as strings"""
-    x = np.asarray(x)
+    x = to_duck_array(x)
     timedelta_format = "datetime"
     if np.issubdtype(x.dtype, np.timedelta64):
-        x = np.asarray(x, dtype="timedelta64[ns]")
+        x = astype(x, dtype="timedelta64[ns]")
         day_part = x[~pd.isnull(x)].astype("timedelta64[D]").astype("timedelta64[ns]")
         time_needed = x[~pd.isnull(x)] != day_part
         day_needed = day_part != np.timedelta64(0, "ns")
@@ -308,7 +336,9 @@ def summarize_variable(
         dims_str = "({}) ".format(", ".join(map(str, variable.dims)))
     else:
         dims_str = ""
-    front_str = f"{first_col}{dims_str}{variable.dtype} "
+
+    nbytes_str = f" {render_human_readable_nbytes(variable.nbytes)}"
+    front_str = f"{first_col}{dims_str}{variable.dtype}{nbytes_str} "
 
     values_width = max_width - len(front_str)
     values_str = inline_variable_array_repr(variable, values_width)
@@ -332,7 +362,7 @@ EMPTY_REPR = "    *empty*"
 
 
 def _calculate_col_width(col_items):
-    max_name_length = max(len(str(s)) for s in col_items) if col_items else 0
+    max_name_length = max((len(str(s)) for s in col_items), default=0)
     col_width = max(max_name_length, 7) + 6
     return col_width
 
@@ -398,7 +428,7 @@ attrs_repr = functools.partial(
 )
 
 
-def coords_repr(coords, col_width=None, max_rows=None):
+def coords_repr(coords: AbstractCoordinates, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(coords)
     return _mapping_repr(
@@ -412,7 +442,7 @@ def coords_repr(coords, col_width=None, max_rows=None):
     )
 
 
-def inline_index_repr(index, max_width=None):
+def inline_index_repr(index: pd.Index, max_width=None):
     if hasattr(index, "_repr_inline_"):
         repr_ = index._repr_inline_(max_width=max_width)
     else:
@@ -424,20 +454,36 @@ def inline_index_repr(index, max_width=None):
 
 
 def summarize_index(
-    name: Hashable, index, col_width: int, max_width: int | None = None
-):
+    names: tuple[Hashable, ...],
+    index,
+    col_width: int,
+    max_width: int | None = None,
+) -> str:
     if max_width is None:
         max_width = OPTIONS["display_width"]
 
-    preformatted = pretty_print(f"    {name} ", col_width)
+    def prefixes(length: int) -> list[str]:
+        if length in (0, 1):
+            return [" "]
 
-    index_width = max_width - len(preformatted)
+        return ["┌"] + ["│"] * max(length - 2, 0) + ["└"]
+
+    preformatted = [
+        pretty_print(f"  {prefix} {name}", col_width)
+        for prefix, name in zip(prefixes(len(names)), names)
+    ]
+
+    head, *tail = preformatted
+    index_width = max_width - len(head)
     repr_ = inline_index_repr(index, max_width=index_width)
-    return preformatted + repr_
+    return "\n".join([head + repr_] + [line.rstrip() for line in tail])
 
 
-def nondefault_indexes(indexes):
+def filter_nondefault_indexes(indexes, filter_indexes: bool):
     from xarray.core.indexes import PandasIndex, PandasMultiIndex
+
+    if not filter_indexes:
+        return indexes
 
     default_indexes = (PandasIndex, PandasMultiIndex)
 
@@ -448,7 +494,9 @@ def nondefault_indexes(indexes):
     }
 
 
-def indexes_repr(indexes, col_width=None, max_rows=None):
+def indexes_repr(indexes, max_rows: int | None = None) -> str:
+    col_width = _calculate_col_width(chain.from_iterable(indexes))
+
     return _mapping_repr(
         indexes,
         "Indexes",
@@ -557,8 +605,12 @@ def limit_lines(string: str, *, limit: int):
     return string
 
 
-def short_numpy_repr(array):
-    array = np.asarray(array)
+def short_array_repr(array):
+    from xarray.core.common import AbstractArray
+
+    if isinstance(array, AbstractArray):
+        array = array.data
+    array = to_duck_array(array)
 
     # default to lower precision so a full (abbreviated) line can fit on
     # one line with the default display_width
@@ -582,14 +634,20 @@ def short_data_repr(array):
     """Format "data" for DataArray and Variable."""
     internal_data = getattr(array, "variable", array)._data
     if isinstance(array, np.ndarray):
-        return short_numpy_repr(array)
+        return short_array_repr(array)
     elif is_duck_array(internal_data):
         return limit_lines(repr(array.data), limit=40)
-    elif array._in_memory:
-        return short_numpy_repr(array)
+    elif getattr(array, "_in_memory", None):
+        return short_array_repr(array)
     else:
         # internal xarray array type
         return f"[{array.size} values with dtype={array.dtype}]"
+
+
+def _get_indexes_dict(indexes):
+    return {
+        tuple(index_vars.keys()): idx for idx, index_vars in indexes.group_by_index()
+    }
 
 
 @recursive_repr("<recursive array>")
@@ -615,11 +673,11 @@ def array_repr(arr):
 
     start = f"<xarray.{type(arr).__name__} {name_str}"
     dims = dim_summary_limited(arr, col_width=len(start) + 1, max_rows=max_rows)
+    nbytes_str = render_human_readable_nbytes(arr.nbytes)
     summary = [
-        f"{start}({dims})>",
+        f"{start}({dims})> Size: {nbytes_str}",
         data_repr,
     ]
-
     if hasattr(arr, "coords"):
         if arr.coords:
             col_width = _calculate_col_width(arr.coords)
@@ -636,15 +694,13 @@ def array_repr(arr):
         display_default_indexes = _get_boolean_with_default(
             "display_default_indexes", False
         )
-        if display_default_indexes:
-            xindexes = arr.xindexes
-        else:
-            xindexes = nondefault_indexes(arr.xindexes)
+
+        xindexes = filter_nondefault_indexes(
+            _get_indexes_dict(arr.xindexes), not display_default_indexes
+        )
 
         if xindexes:
-            summary.append(
-                indexes_repr(xindexes, col_width=col_width, max_rows=max_rows)
-            )
+            summary.append(indexes_repr(xindexes, max_rows=max_rows))
 
     if arr.attrs:
         summary.append(attrs_repr(arr.attrs, max_rows=max_rows))
@@ -654,7 +710,8 @@ def array_repr(arr):
 
 @recursive_repr("<recursive Dataset>")
 def dataset_repr(ds):
-    summary = [f"<xarray.{type(ds).__name__}>"]
+    nbytes_str = render_human_readable_nbytes(ds.nbytes)
+    summary = [f"<xarray.{type(ds).__name__}> Size: {nbytes_str}"]
 
     col_width = _calculate_col_width(ds.variables)
     max_rows = OPTIONS["display_max_rows"]
@@ -675,12 +732,11 @@ def dataset_repr(ds):
     display_default_indexes = _get_boolean_with_default(
         "display_default_indexes", False
     )
-    if display_default_indexes:
-        xindexes = ds.xindexes
-    else:
-        xindexes = nondefault_indexes(ds.xindexes)
+    xindexes = filter_nondefault_indexes(
+        _get_indexes_dict(ds.xindexes), not display_default_indexes
+    )
     if xindexes:
-        summary.append(indexes_repr(xindexes, col_width=col_width, max_rows=max_rows))
+        summary.append(indexes_repr(xindexes, max_rows=max_rows))
 
     if ds.attrs:
         summary.append(attrs_repr(ds.attrs, max_rows=max_rows))
@@ -689,10 +745,8 @@ def dataset_repr(ds):
 
 
 def diff_dim_summary(a, b):
-    if a.dims != b.dims:
-        return "Differing dimensions:\n    ({}) != ({})".format(
-            dim_summary(a), dim_summary(b)
-        )
+    if a.sizes != b.sizes:
+        return f"Differing dimensions:\n    ({dim_summary(a)}) != ({dim_summary(b)})"
     else:
         return ""
 
@@ -735,9 +789,11 @@ def _diff_mapping_repr(
         try:
             # compare xarray variable
             if not callable(compat):
-                compatible = getattr(a_mapping[k], compat)(b_mapping[k])
+                compatible = getattr(a_mapping[k].variable, compat)(
+                    b_mapping[k].variable
+                )
             else:
-                compatible = compat(a_mapping[k], b_mapping[k])
+                compatible = compat(a_mapping[k].variable, b_mapping[k].variable)
             is_variable = True
         except AttributeError:
             # compare attribute value
@@ -756,17 +812,39 @@ def _diff_mapping_repr(
 
             if compat == "identical" and is_variable:
                 attrs_summary = []
+                a_attrs = a_mapping[k].attrs
+                b_attrs = b_mapping[k].attrs
 
+                attrs_to_print = set(a_attrs) ^ set(b_attrs)
+                attrs_to_print.update(
+                    {k for k in set(a_attrs) & set(b_attrs) if a_attrs[k] != b_attrs[k]}
+                )
                 for m in (a_mapping, b_mapping):
                     attr_s = "\n".join(
-                        summarize_attr(ak, av) for ak, av in m[k].attrs.items()
+                        "    " + summarize_attr(ak, av)
+                        for ak, av in m[k].attrs.items()
+                        if ak in attrs_to_print
                     )
+                    if attr_s:
+                        attr_s = "    Differing variable attributes:\n" + attr_s
                     attrs_summary.append(attr_s)
 
                 temp = [
                     "\n".join([var_s, attr_s]) if attr_s else var_s
                     for var_s, attr_s in zip(temp, attrs_summary)
                 ]
+
+                # TODO: It should be possible recursively use _diff_mapping_repr
+                #       instead of explicitly handling variable attrs specially.
+                #       That would require some refactoring.
+                # newdiff = _diff_mapping_repr(
+                #     {k: v for k,v in a_attrs.items() if k in attrs_to_print},
+                #     {k: v for k,v in b_attrs.items() if k in attrs_to_print},
+                #     compat=compat,
+                #     summarizer=summarize_attr,
+                #     title="Variable Attributes"
+                # )
+                # temp += [newdiff]
 
             diff_items += [ab_side + s[1:] for ab_side, s in zip(("L", "R"), temp)]
 
@@ -819,9 +897,7 @@ def _compat_to_str(compat):
 def diff_array_repr(a, b, compat):
     # used for DataArray, Variable and IndexVariable
     summary = [
-        "Left and right {} objects are not {}".format(
-            type(a).__name__, _compat_to_str(compat)
-        )
+        f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
     summary.append(diff_dim_summary(a, b))
@@ -831,7 +907,7 @@ def diff_array_repr(a, b, compat):
         equiv = array_equiv
 
     if not equiv(a.data, b.data):
-        temp = [wrap_indent(short_numpy_repr(obj), start="    ") for obj in (a, b)]
+        temp = [wrap_indent(short_array_repr(obj), start="    ") for obj in (a, b)]
         diff_data_repr = [
             ab_side + "\n" + ab_data_repr
             for ab_side, ab_data_repr in zip(("L", "R"), temp)
@@ -852,9 +928,7 @@ def diff_array_repr(a, b, compat):
 
 def diff_dataset_repr(a, b, compat):
     summary = [
-        "Left and right {} objects are not {}".format(
-            type(a).__name__, _compat_to_str(compat)
-        )
+        f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
     col_width = _calculate_col_width(set(list(a.variables) + list(b.variables)))
@@ -869,3 +943,59 @@ def diff_dataset_repr(a, b, compat):
         summary.append(diff_attrs_repr(a.attrs, b.attrs, compat))
 
     return "\n".join(summary)
+
+
+def shorten_list_repr(items: Sequence, max_items: int) -> str:
+    if len(items) <= max_items:
+        return repr(items)
+    else:
+        first_half = repr(items[: max_items // 2])[
+            1:-1
+        ]  # Convert to string and remove brackets
+        second_half = repr(items[-max_items // 2 :])[
+            1:-1
+        ]  # Convert to string and remove brackets
+        return f"[{first_half}, ..., {second_half}]"
+
+
+def render_human_readable_nbytes(
+    nbytes: int,
+    /,
+    *,
+    attempt_constant_width: bool = False,
+) -> str:
+    """Renders simple human-readable byte count representation
+
+    This is only a quick representation that should not be relied upon for precise needs.
+
+    To get the exact byte count, please use the ``nbytes`` attribute directly.
+
+    Parameters
+    ----------
+    nbytes
+        Byte count
+    attempt_constant_width
+        For reasonable nbytes sizes, tries to render a fixed-width representation.
+
+    Returns
+    -------
+        Human-readable representation of the byte count
+    """
+    dividend = float(nbytes)
+    divisor = 1000.0
+    last_unit_available = UNITS[-1]
+
+    for unit in UNITS:
+        if dividend < divisor or unit == last_unit_available:
+            break
+        dividend /= divisor
+
+    dividend_str = f"{dividend:.0f}"
+    unit_str = f"{unit}"
+
+    if attempt_constant_width:
+        dividend_str = dividend_str.rjust(3)
+        unit_str = unit_str.ljust(2)
+
+    string = f"{dividend_str}{unit_str}"
+    return string
