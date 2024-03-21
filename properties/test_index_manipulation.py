@@ -1,4 +1,3 @@
-import random
 from collections.abc import Hashable
 
 import pytest
@@ -55,8 +54,6 @@ def unique(draw, strategy):
         strategy.filter(lambda x: x not in seen).map(lambda x: seen.add(x) or x)
     )
 
-
-random.seed(123456)
 
 # Share to ensure we get unique names on each draw?
 UNIQUE_NAME = unique(strategy=xrst.names())
