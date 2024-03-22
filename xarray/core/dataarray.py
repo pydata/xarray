@@ -208,11 +208,17 @@ def _check_data_shape(
                 return data
             else:
                 data_shape = tuple(
-                    as_variable(coords[k], k).size if k in coords.keys() else 1
+                    (
+                        as_variable(coords[k], k, auto_convert=False).size
+                        if k in coords.keys()
+                        else 1
+                    )
                     for k in dims
                 )
         else:
-            data_shape = tuple(as_variable(coord, "foo").size for coord in coords)
+            data_shape = tuple(
+                as_variable(coord, "foo", auto_convert=False).size for coord in coords
+            )
         data = np.full(data_shape, data)
     return data
 
