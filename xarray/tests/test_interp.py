@@ -833,7 +833,9 @@ def test_interpolate_chunk_1d(
 
                         dest[dim] = cast(
                             xr.DataArray,
-                            np.linspace(before, after, len(da.coords[dim]) * 13),
+                            np.linspace(
+                                before.item(), after.item(), len(da.coords[dim]) * 13
+                            ),
                         )
                         if chunked:
                             dest[dim] = xr.DataArray(data=dest[dim], dims=[dim])
