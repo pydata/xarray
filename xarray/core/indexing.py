@@ -1686,6 +1686,28 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def _vindex_get(self, indexer: VectorizedIndexer):
         return self.__getitem__(indexer)
 
+    def _prepare_key(self, key: tuple[Any, ...]) -> tuple[Any, ...]:
+        if isinstance(key, tuple) and len(key) == 1:
+            # unpack key so it can index a pandas.Index object (pandas.Index
+            # objects don't like tuples)
+            (key,) = key
+
+        return key
+
+    def _handle_result(
+        self, result: Any
+    ) -> (
+        PandasIndexingAdapter
+        | NumpyIndexingAdapter
+        | np.ndarray
+        | np.datetime64
+        | np.timedelta64
+    ):
+        if isinstance(result, pd.Index):
+            return type(self)(result, dtype=self.dtype)
+        else:
+            return self._convert_scalar(result)
+
     def __getitem__(
         self, indexer: ExplicitIndexer
     ) -> (
@@ -1695,11 +1717,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         | np.datetime64
         | np.timedelta64
     ):
-        key = indexer.tuple
-        if isinstance(key, tuple) and len(key) == 1:
-            # unpack key so it can index a pandas.Index object (pandas.Index
-            # objects don't like tuples)
-            (key,) = key
+        key = self._prepare_key(indexer.tuple)
 
         if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
             indexable = NumpyIndexingAdapter(np.asarray(self))
@@ -1707,10 +1725,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
         result = self.array[key]
 
-        if isinstance(result, pd.Index):
-            return type(self)(result, dtype=self.dtype)
-        else:
-            return self._convert_scalar(result)
+        return self._handle_result(result)
 
     def transpose(self, order) -> pd.Index:
         return self.array  # self.array should be always one-dimensional
