@@ -51,6 +51,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    assert_writeable,
     create_test_data,
     has_cftime,
     has_dask,
@@ -79,6 +80,13 @@ try:
 except ImportError:
     pass
 
+# from numpy version 2.0 trapz is deprecated and renamed to trapezoid
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy import trapezoid  # type: ignore[attr-defined,unused-ignore]
+except ImportError:
+    from numpy import trapz as trapezoid
+
 sparse_array_type = array_type("sparse")
 
 pytestmark = [
@@ -96,11 +104,11 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
     nt2 = 2
     time1 = pd.date_range("2000-01-01", periods=nt1)
     time2 = pd.date_range("2000-02-01", periods=nt2)
-    string_var = np.array(["ae", "bc", "df"], dtype=object)
+    string_var = np.array(["a", "bc", "def"], dtype=object)
     string_var_to_append = np.array(["asdf", "asdfg"], dtype=object)
     string_var_fixed_length = np.array(["aa", "bb", "cc"], dtype="|S2")
     string_var_fixed_length_to_append = np.array(["dd", "ee"], dtype="|S2")
-    unicode_var = ["áó", "áó", "áó"]
+    unicode_var = np.array(["áó", "áó", "áó"])
     datetime_var = np.array(
         ["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[s]"
     )
@@ -119,17 +127,11 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
                     coords=[lat, lon, time1],
                     dims=["lat", "lon", "time"],
                 ),
-                "string_var": xr.DataArray(string_var, coords=[time1], dims=["time"]),
-                "string_var_fixed_length": xr.DataArray(
-                    string_var_fixed_length, coords=[time1], dims=["time"]
-                ),
-                "unicode_var": xr.DataArray(
-                    unicode_var, coords=[time1], dims=["time"]
-                ).astype(np.str_),
-                "datetime_var": xr.DataArray(
-                    datetime_var, coords=[time1], dims=["time"]
-                ),
-                "bool_var": xr.DataArray(bool_var, coords=[time1], dims=["time"]),
+                "string_var": ("time", string_var),
+                "string_var_fixed_length": ("time", string_var_fixed_length),
+                "unicode_var": ("time", unicode_var),
+                "datetime_var": ("time", datetime_var),
+                "bool_var": ("time", bool_var),
             }
         )
 
@@ -140,21 +142,11 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
                     coords=[lat, lon, time2],
                     dims=["lat", "lon", "time"],
                 ),
-                "string_var": xr.DataArray(
-                    string_var_to_append, coords=[time2], dims=["time"]
-                ),
-                "string_var_fixed_length": xr.DataArray(
-                    string_var_fixed_length_to_append, coords=[time2], dims=["time"]
-                ),
-                "unicode_var": xr.DataArray(
-                    unicode_var[:nt2], coords=[time2], dims=["time"]
-                ).astype(np.str_),
-                "datetime_var": xr.DataArray(
-                    datetime_var_to_append, coords=[time2], dims=["time"]
-                ),
-                "bool_var": xr.DataArray(
-                    bool_var_to_append, coords=[time2], dims=["time"]
-                ),
+                "string_var": ("time", string_var_to_append),
+                "string_var_fixed_length": ("time", string_var_fixed_length_to_append),
+                "unicode_var": ("time", unicode_var[:nt2]),
+                "datetime_var": ("time", datetime_var_to_append),
+                "bool_var": ("time", bool_var_to_append),
             }
         )
 
@@ -168,8 +160,9 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
             }
         )
 
-    assert all(objp.data.flags.writeable for objp in ds.variables.values())
-    assert all(objp.data.flags.writeable for objp in ds_to_append.variables.values())
+    assert_writeable(ds)
+    assert_writeable(ds_to_append)
+    assert_writeable(ds_with_new_var)
     return ds, ds_to_append, ds_with_new_var
 
 
@@ -182,10 +175,8 @@ def create_append_string_length_mismatch_test_data(dtype) -> tuple[Dataset, Data
         ds_to_append = xr.Dataset(
             {"temperature": (["time"], data_to_append)}, coords={"time": [0, 1, 2]}
         )
-        assert all(objp.data.flags.writeable for objp in ds.variables.values())
-        assert all(
-            objp.data.flags.writeable for objp in ds_to_append.variables.values()
-        )
+        assert_writeable(ds)
+        assert_writeable(ds_to_append)
         return ds, ds_to_append
 
     u2_strings = ["ab", "cd", "ef"]
@@ -2964,10 +2955,11 @@ class TestDataset:
             name="value",
         ).to_dataset()
         ds_cp = ds.copy(deep=deep)
-        ds_cp.coords["a"].data[0] = 999
+        new_a = np.array([999, 2])
+        ds_cp.coords["a"] = ds_cp.a.copy(data=new_a)
 
         expected_cp = xr.DataArray(
-            xr.IndexVariable("a", np.array([999, 2])),
+            xr.IndexVariable("a", new_a),
             coords={"a": [999, 2]},
             dims=["a"],
         )
@@ -7014,7 +7006,7 @@ def test_integrate(dask) -> None:
     actual = da.integrate("x")
     # coordinate that contains x should be dropped.
     expected_x = xr.DataArray(
-        np.trapz(da.compute(), da["x"], axis=0),
+        trapezoid(da.compute(), da["x"], axis=0),
         dims=["y"],
         coords={k: v for k, v in da.coords.items() if "x" not in v.dims},
     )
@@ -7027,7 +7019,7 @@ def test_integrate(dask) -> None:
     # along y
     actual = da.integrate("y")
     expected_y = xr.DataArray(
-        np.trapz(da, da["y"], axis=1),
+        trapezoid(da, da["y"], axis=1),
         dims=["x"],
         coords={k: v for k, v in da.coords.items() if "y" not in v.dims},
     )
@@ -7067,12 +7059,10 @@ def test_cumulative_integrate(dask) -> None:
     # along x
     actual = da.cumulative_integrate("x")
 
-    # From scipy-1.6.0 cumtrapz is renamed to cumulative_trapezoid, but cumtrapz is
-    # still provided for backward compatibility
-    from scipy.integrate import cumtrapz
+    from scipy.integrate import cumulative_trapezoid
 
     expected_x = xr.DataArray(
-        cumtrapz(da.compute(), da["x"], axis=0, initial=0.0),
+        cumulative_trapezoid(da.compute(), da["x"], axis=0, initial=0.0),
         dims=["x", "y"],
         coords=da.coords,
     )
@@ -7088,7 +7078,7 @@ def test_cumulative_integrate(dask) -> None:
     # along y
     actual = da.cumulative_integrate("y")
     expected_y = xr.DataArray(
-        cumtrapz(da, da["y"], axis=1, initial=0.0),
+        cumulative_trapezoid(da, da["y"], axis=1, initial=0.0),
         dims=["x", "y"],
         coords=da.coords,
     )
@@ -7110,7 +7100,7 @@ def test_cumulative_integrate(dask) -> None:
 @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("which_datetime", ["np", "cftime"])
-def test_trapz_datetime(dask, which_datetime) -> None:
+def test_trapezoid_datetime(dask, which_datetime) -> None:
     rs = np.random.RandomState(42)
     if which_datetime == "np":
         coord = np.array(
@@ -7141,7 +7131,7 @@ def test_trapz_datetime(dask, which_datetime) -> None:
         da = da.chunk({"time": 4})
 
     actual = da.integrate("time", datetime_unit="D")
-    expected_data = np.trapz(
+    expected_data = trapezoid(
         da.compute().data,
         duck_array_ops.datetime_to_numeric(da["time"].data, datetime_unit="D"),
         axis=0,

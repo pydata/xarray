@@ -57,6 +57,16 @@ Bug fixes
   `CFMaskCoder`/`CFScaleOffsetCoder` (:issue:`2304`, :issue:`5597`,
   :issue:`7691`, :pull:`8713`, see also discussion in :pull:`7654`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- do not cast `_FillValue`/`missing_value` in `CFMaskCoder` if `_Unsigned` is provided
+  (:issue:`8844`, :pull:`8852`).
+- Adapt handling of copy keyword argument for numpy >= 2.0dev
+  (:issue:`8844`, :pull:`8851`, :pull:`8865``).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- import trapz/trapezoid depending on numpy version.
+  (:issue:`8844`, :pull:`8865`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+
 
 Documentation
 ~~~~~~~~~~~~~
