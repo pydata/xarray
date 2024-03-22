@@ -81,10 +81,11 @@ except ImportError:
     pass
 
 # from numpy version 2.0 trapz is deprecated and renamed to trapezoid
+# remove once numpy 2.0 is the oldest supported version
 try:
-    from numpy import trapz as trapezoid
+    from numpy import trapezoid  # type: ignore[attr-defined,unused-ignore]
 except ImportError:
-    from numpy import trapezoid
+    from numpy import trapz as trapezoid
 
 sparse_array_type = array_type("sparse")
 
