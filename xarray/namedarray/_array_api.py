@@ -59,7 +59,7 @@ def astype(
 
     Examples
     --------
-    >>> narr = NamedArray(("x",), nxp.asarray([1.5, 2.5]))
+    >>> narr = NamedArray(("x",), np.asarray([1.5, 2.5]))
     >>> narr
     <xarray.NamedArray (x: 2)> Size: 16B
     Array([1.5, 2.5], dtype=float64)
@@ -100,7 +100,7 @@ def imag(
 
     Examples
     --------
-    >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))  # TODO: Use nxp
+    >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))
     >>> imag(narr)
     <xarray.NamedArray (x: 2)> Size: 16B
     array([2., 4.])
@@ -132,7 +132,7 @@ def real(
 
     Examples
     --------
-    >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))  # TODO: Use nxp
+    >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))
     >>> real(narr)
     <xarray.NamedArray (x: 2)> Size: 16B
     array([1., 2.])
@@ -170,7 +170,7 @@ def expand_dims(
 
     Examples
     --------
-    >>> x = NamedArray(("x", "y"), nxp.asarray([[1.0, 2.0], [3.0, 4.0]]))
+    >>> x = NamedArray(("x", "y"), np.asarray([[1.0, 2.0], [3.0, 4.0]]))
     >>> expand_dims(x)
     <xarray.NamedArray (dim_2: 1, x: 2, y: 2)> Size: 32B
     Array([[[1., 2.],
