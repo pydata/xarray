@@ -80,6 +80,13 @@ try:
 except ImportError:
     pass
 
+# from numpy version 2.0 trapz is deprecated and renamed to trapezoid
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy import trapezoid  # type: ignore[attr-defined,unused-ignore]
+except ImportError:
+    from numpy import trapz as trapezoid
+
 sparse_array_type = array_type("sparse")
 
 pytestmark = [
@@ -6999,7 +7006,7 @@ def test_integrate(dask) -> None:
     actual = da.integrate("x")
     # coordinate that contains x should be dropped.
     expected_x = xr.DataArray(
-        np.trapz(da.compute(), da["x"], axis=0),
+        trapezoid(da.compute(), da["x"], axis=0),
         dims=["y"],
         coords={k: v for k, v in da.coords.items() if "x" not in v.dims},
     )
@@ -7012,7 +7019,7 @@ def test_integrate(dask) -> None:
     # along y
     actual = da.integrate("y")
     expected_y = xr.DataArray(
-        np.trapz(da, da["y"], axis=1),
+        trapezoid(da, da["y"], axis=1),
         dims=["x"],
         coords={k: v for k, v in da.coords.items() if "y" not in v.dims},
     )
@@ -7052,12 +7059,10 @@ def test_cumulative_integrate(dask) -> None:
     # along x
     actual = da.cumulative_integrate("x")
 
-    # From scipy-1.6.0 cumtrapz is renamed to cumulative_trapezoid, but cumtrapz is
-    # still provided for backward compatibility
-    from scipy.integrate import cumtrapz
+    from scipy.integrate import cumulative_trapezoid
 
     expected_x = xr.DataArray(
-        cumtrapz(da.compute(), da["x"], axis=0, initial=0.0),
+        cumulative_trapezoid(da.compute(), da["x"], axis=0, initial=0.0),
         dims=["x", "y"],
         coords=da.coords,
     )
@@ -7073,7 +7078,7 @@ def test_cumulative_integrate(dask) -> None:
     # along y
     actual = da.cumulative_integrate("y")
     expected_y = xr.DataArray(
-        cumtrapz(da, da["y"], axis=1, initial=0.0),
+        cumulative_trapezoid(da, da["y"], axis=1, initial=0.0),
         dims=["x", "y"],
         coords=da.coords,
     )
@@ -7095,7 +7100,7 @@ def test_cumulative_integrate(dask) -> None:
 @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("which_datetime", ["np", "cftime"])
-def test_trapz_datetime(dask, which_datetime) -> None:
+def test_trapezoid_datetime(dask, which_datetime) -> None:
     rs = np.random.RandomState(42)
     if which_datetime == "np":
         coord = np.array(
@@ -7126,7 +7131,7 @@ def test_trapz_datetime(dask, which_datetime) -> None:
         da = da.chunk({"time": 4})
 
     actual = da.integrate("time", datetime_unit="D")
-    expected_data = np.trapz(
+    expected_data = trapezoid(
         da.compute().data,
         duck_array_ops.datetime_to_numeric(da["time"].data, datetime_unit="D"),
         axis=0,
