@@ -139,19 +139,33 @@ around.__doc__ = str.replace(
 )
 
 
+def extract_dtype(dtype):
+    return getattr(dtype, "_np_dtype", dtype)
+
+
+def issubdtype(dtype, dtype_classes):
+    if not isinstance(dtype_classes, tuple):
+        return np.issubdtype(extract_dtype(dtype), dtype_classes)
+
+    return any(
+        np.issubdtype(extract_dtype(dtype), dtype_class)
+        for dtype_class in dtype_classes
+    )
+
+
 def isnull(data):
     data = asarray(data)
-    scalar_type = type(data.dtype)
-    if issubclass(scalar_type, (np.datetime64, np.timedelta64)):
+    scalar_type = data.dtype
+    if issubdtype(scalar_type, (np.datetime64, np.timedelta64)):
         # datetime types use NaT for null
         # note: must check timedelta64 before integers, because currently
         # timedelta64 inherits from np.integer
         return isnat(data)
-    elif issubclass(scalar_type, np.inexact):
+    elif issubdtype(scalar_type, np.inexact):
         # float types use NaN for null
         xp = get_array_namespace(data)
         return xp.isnan(data)
-    elif issubclass(scalar_type, (np.bool_, np.integer, np.character, np.void)):
+    elif issubdtype(scalar_type, (np.bool_, np.integer, np.character, np.void)):
         # these types cannot represent missing values
         return full_like(data, dtype=bool, fill_value=False)
     else:
