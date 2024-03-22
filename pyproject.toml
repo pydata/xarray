@@ -269,6 +269,7 @@ select = [
   "TID", # flake8-tidy-imports (absolute imports)
   "I", # isort
   "UP", # Pyupgrade
+  "NPY201", # NumPy 2.0
 ]
 extend-safe-fixes = [
   "TID252", # absolute imports
