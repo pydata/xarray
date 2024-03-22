@@ -141,7 +141,7 @@ around.__doc__ = str.replace(
 
 def isnull(data):
     data = asarray(data)
-    scalar_type = data.dtype.type
+    scalar_type = type(data.dtype)
     if issubclass(scalar_type, (np.datetime64, np.timedelta64)):
         # datetime types use NaT for null
         # note: must check timedelta64 before integers, because currently
