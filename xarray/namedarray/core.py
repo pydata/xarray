@@ -1383,7 +1383,9 @@ def _raise_if_any_duplicate_dimensions(
         )
 
 
-def _unified_dims(namedarrays: Iterable[T_NamedArray]) -> Mapping[_Dim, int]:
+def _unified_dims(
+    namedarrays: tuple[NamedArray[Any, _DType_co], ...],
+) -> Mapping[_Dim, int]:
     # validate dimensions
     all_dims = {}
     for var in namedarrays:
@@ -1402,22 +1404,34 @@ def _unified_dims(namedarrays: Iterable[T_NamedArray]) -> Mapping[_Dim, int]:
 
 
 def _broadcast_compat_namedarrays(
-    *namedarrays: tuple[NamedArray[Any, _DType_co], ...],
+    *namedarrays: NamedArray[Any, _DType_co],
 ) -> tuple[NamedArray[Any, _DType_co], ...]:
     """Create broadcast compatible variables, with the same dimensions.
 
     Unlike the result of broadcast_namedarrays(), some variables may have
     dimensions of size 1 instead of the size of the broadcast dimension.
     """
-    dims = tuple(_unified_dims(namedarrays))
-    return tuple(
-        namedarray.set_dims(dims) if namedarray.dims != dims else namedarray
-        for namedarray in namedarrays
-    )
+    dims_map = _unified_dims(namedarrays)
+    dims_tuple = tuple(dims_map)
+    result = []
+    for var in namedarrays:
+        if var.dims != dims_tuple:
+            if hasattr(var, "set_dims"):
+                result.append(var.set_dims(dims_map))
+            else:
+                additional_dims = set(dims_map) - set(var.dims)
+                expanded_var = var
+                for dim in additional_dims:
+                    expanded_var = expanded_var.expand_dims(dim=dim)
+                result.append(expanded_var.permute_dims(*dims_tuple))
+        else:
+            result.append(var)
+
+    return tuple(result)
 
 
 def broadcast_namedarrays(
-    *namedarrays: tuple[NamedArray[Any, _DType_co], ...],
+    *namedarrays: NamedArray[Any, _DType_co],
 ) -> tuple[NamedArray[Any, _DType_co], ...]:
     """Given any number of namedarrays, return namedarrays with matching dimensions
     and broadcast data.
