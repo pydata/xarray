@@ -2028,15 +2028,17 @@ class TestImshow(Common2dMixin, PlotTestCase):
         for vmin2, vmax2 in ((-1.2, -1), (2, 2.1)):
             da.plot.imshow(vmin=vmin2, vmax=vmax2)
 
-    def test_imshow_rgb_values_in_valid_range(self) -> None:
-        da = DataArray(np.arange(75, dtype="uint8").reshape((5, 5, 3)))
+    @pytest.mark.parametrize(["dtype"], [(np.uint8, np.int8, np.int16)])
+    def test_imshow_rgb_values_in_valid_range(self, dtype) -> None:
+        da = DataArray(np.arange(75, dtype=dtype).reshape((5, 5, 3)))
         _, ax = plt.subplots()
         out = da.plot.imshow(ax=ax).get_array()
         assert out is not None
-        dtype = out.dtype
-        assert dtype is not None
-        assert dtype == np.uint8
+        actual_dtype = out.dtype
+        assert actual_dtype is not None
+        assert actual_dtype == np.uint8
         assert (out[..., :3] == da.values).all()  # Compare without added alpha
+        assert (out[..., -1] == 255).all()  # Compare alpha
 
     @pytest.mark.filterwarnings("ignore:Several dimensions of this array")
     def test_regression_rgb_imshow_dim_size_one(self) -> None:
