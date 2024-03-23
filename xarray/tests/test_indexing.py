@@ -433,7 +433,7 @@ class TestLazyArray:
             NotImplementedError,
             match=r"Lazy item assignment with the vectorized indexer is not yet",
         ):
-            lazy.vindex[indexer] = 0
+            lazy.vindex[indexer.tuple] = 0
 
     @pytest.mark.parametrize(
         "indexer_class, key, value",
@@ -449,10 +449,10 @@ class TestLazyArray:
 
         if indexer_class is indexing.BasicIndexer:
             indexer = indexer_class(key)
-            lazy[indexer] = value
+            lazy[indexer.tuple] = value
         elif indexer_class is indexing.OuterIndexer:
             indexer = indexer_class(key)
-            lazy.oindex[indexer] = value
+            lazy.oindex[indexer.tuple] = value
 
         assert_array_equal(original[key], value)
 
@@ -461,16 +461,16 @@ class TestCopyOnWriteArray:
     def test_setitem(self) -> None:
         original = np.arange(10)
         wrapped = indexing.CopyOnWriteArray(original)
-        wrapped[B[:]] = 0
+        wrapped[B[:].tuple] = 0
         assert_array_equal(original, np.arange(10))
         assert_array_equal(wrapped, np.zeros(10))
 
     def test_sub_array(self) -> None:
         original = np.arange(10)
         wrapped = indexing.CopyOnWriteArray(original)
-        child = wrapped[B[:5]]
+        child = wrapped[B[:5].tuple]
         assert isinstance(child, indexing.CopyOnWriteArray)
-        child[B[:]] = 0
+        child[B[:].tuple] = 0
         assert_array_equal(original, np.arange(10))
         assert_array_equal(wrapped, np.arange(10))
         assert_array_equal(child, np.zeros(5))
@@ -478,7 +478,7 @@ class TestCopyOnWriteArray:
     def test_index_scalar(self) -> None:
         # regression test for GH1374
         x = indexing.CopyOnWriteArray(np.array(["foo", "bar"]))
-        assert np.array(x[B[0]][B[()]]) == "foo"
+        assert np.array(x[B[0].tuple][B[()].tuple]) == "foo"
 
 
 class TestMemoryCachedArray:
@@ -491,7 +491,7 @@ class TestMemoryCachedArray:
     def test_sub_array(self) -> None:
         original = indexing.LazilyIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
-        child = wrapped[B[:5]]
+        child = wrapped[B[:5].tuple]
         assert isinstance(child, indexing.MemoryCachedArray)
         assert_array_equal(child, np.arange(5))
         assert isinstance(child.array, indexing.NumpyIndexingAdapter)
@@ -500,13 +500,13 @@ class TestMemoryCachedArray:
     def test_setitem(self) -> None:
         original = np.arange(10)
         wrapped = indexing.MemoryCachedArray(original)
-        wrapped[B[:]] = 0
+        wrapped[B[:].tuple] = 0
         assert_array_equal(original, np.zeros(10))
 
     def test_index_scalar(self) -> None:
         # regression test for GH1374
         x = indexing.MemoryCachedArray(np.array(["foo", "bar"]))
-        assert np.array(x[B[0]][B[()]]) == "foo"
+        assert np.array(x[B[0].tuple][B[()].tuple]) == "foo"
 
 
 def test_base_explicit_indexer() -> None:
@@ -615,7 +615,7 @@ class Test_vectorized_indexer:
                 vindex, self.data.shape
             )
             np.testing.assert_array_equal(
-                self.data.vindex[vindex], self.data.vindex[vindex_array]
+                self.data.vindex[vindex.tuple], self.data.vindex[vindex_array.tuple]
             )
 
         actual = indexing._arrayize_vectorized_indexer(
@@ -731,35 +731,35 @@ def test_decompose_indexers(shape, indexer_mode, indexing_support) -> None:
 
     # Dispatch to appropriate indexing method
     if indexer_mode.startswith("vectorized"):
-        expected = indexing_adapter.vindex[indexer]
+        expected = indexing_adapter.vindex[indexer.tuple]
 
     elif indexer_mode.startswith("outer"):
-        expected = indexing_adapter.oindex[indexer]
+        expected = indexing_adapter.oindex[indexer.tuple]
 
     else:
-        expected = indexing_adapter[indexer]  # Basic indexing
+        expected = indexing_adapter[indexer.tuple]  # Basic indexing
 
     if isinstance(backend_ind, indexing.VectorizedIndexer):
-        array = indexing_adapter.vindex[backend_ind]
+        array = indexing_adapter.vindex[backend_ind.tuple]
     elif isinstance(backend_ind, indexing.OuterIndexer):
-        array = indexing_adapter.oindex[backend_ind]
+        array = indexing_adapter.oindex[backend_ind.tuple]
     else:
-        array = indexing_adapter[backend_ind]
+        array = indexing_adapter[backend_ind.tuple]
 
     if len(np_ind.tuple) > 0:
         array_indexing_adapter = indexing.NumpyIndexingAdapter(array)
         if isinstance(np_ind, indexing.VectorizedIndexer):
-            array = array_indexing_adapter.vindex[np_ind]
+            array = array_indexing_adapter.vindex[np_ind.tuple]
         elif isinstance(np_ind, indexing.OuterIndexer):
-            array = array_indexing_adapter.oindex[np_ind]
+            array = array_indexing_adapter.oindex[np_ind.tuple]
         else:
-            array = array_indexing_adapter[np_ind]
+            array = array_indexing_adapter[np_ind.tuple]
     np.testing.assert_array_equal(expected, array)
 
     if not all(isinstance(k, indexing.integer_types) for k in np_ind.tuple):
         combined_ind = indexing._combine_indexers(backend_ind, shape, np_ind)
         assert isinstance(combined_ind, indexing.VectorizedIndexer)
-        array = indexing_adapter.vindex[combined_ind]
+        array = indexing_adapter.vindex[combined_ind.tuple]
         np.testing.assert_array_equal(expected, array)
 
 
