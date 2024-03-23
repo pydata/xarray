@@ -1680,12 +1680,6 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         # a NumPy array.
         return to_0d_array(item)
 
-    def _oindex_get(self, indexer: OuterIndexer):
-        return self.__getitem__(indexer)
-
-    def _vindex_get(self, indexer: VectorizedIndexer):
-        return self.__getitem__(indexer)
-
     def _prepare_key(self, key: tuple[Any, ...]) -> tuple[Any, ...]:
         if isinstance(key, tuple) and len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
@@ -1708,7 +1702,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         else:
             return self._convert_scalar(result)
 
-    def __getitem__(
+    def _get_item(
         self, indexer: ExplicitIndexer
     ) -> (
         PandasIndexingAdapter
@@ -1726,6 +1720,39 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         result = self.array[key]
 
         return self._handle_result(result)
+
+    def _oindex_get(
+        self, indexer: OuterIndexer
+    ) -> (
+        PandasIndexingAdapter
+        | NumpyIndexingAdapter
+        | np.ndarray
+        | np.datetime64
+        | np.timedelta64
+    ):
+        return self._get_item(indexer)
+
+    def _vindex_get(
+        self, indexer: VectorizedIndexer
+    ) -> (
+        PandasIndexingAdapter
+        | NumpyIndexingAdapter
+        | np.ndarray
+        | np.datetime64
+        | np.timedelta64
+    ):
+        return self._get_item(indexer)
+
+    def __getitem__(
+        self, indexer: ExplicitIndexer
+    ) -> (
+        PandasIndexingAdapter
+        | NumpyIndexingAdapter
+        | np.ndarray
+        | np.datetime64
+        | np.timedelta64
+    ):
+        return self._get_item(indexer)
 
     def transpose(self, order) -> pd.Index:
         return self.array  # self.array should be always one-dimensional
@@ -1780,6 +1807,34 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
             idx = tuple(self.array.names).index(self.level)
             item = item[idx]
         return super()._convert_scalar(item)
+
+    def _oindex_get(
+        self, indexer: OuterIndexer
+    ) -> (
+        PandasIndexingAdapter
+        | NumpyIndexingAdapter
+        | np.ndarray
+        | np.datetime64
+        | np.timedelta64
+    ):
+        result = super()._oindex_get(indexer)
+        if isinstance(result, type(self)):
+            result.level = self.level
+        return result
+
+    def _vindex_get(
+        self, indexer: VectorizedIndexer
+    ) -> (
+        PandasIndexingAdapter
+        | NumpyIndexingAdapter
+        | np.ndarray
+        | np.datetime64
+        | np.timedelta64
+    ):
+        result = super()._vindex_get(indexer)
+        if isinstance(result, type(self)):
+            result.level = self.level
+        return result
 
     def __getitem__(self, indexer: ExplicitIndexer):
         result = super().__getitem__(indexer)
