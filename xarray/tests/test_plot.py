@@ -2028,7 +2028,7 @@ class TestImshow(Common2dMixin, PlotTestCase):
         for vmin2, vmax2 in ((-1.2, -1), (2, 2.1)):
             da.plot.imshow(vmin=vmin2, vmax=vmax2)
 
-    @pytest.mark.parametrize(["dtype"], [(np.uint8, np.int8, np.int16)])
+    @pytest.mark.parametrize("dtype", [np.uint8, np.int8, np.int16])
     def test_imshow_rgb_values_in_valid_range(self, dtype) -> None:
         da = DataArray(np.arange(75, dtype=dtype).reshape((5, 5, 3)))
         _, ax = plt.subplots()
