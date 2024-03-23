@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import partial
+from typing import Any
 
 import numpy as np
 
@@ -240,7 +241,7 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
     @property
     def dtype(self):
-        return np.dtype("S" + str(self.array.shape[-1]))
+        return np.dtype(f"S{str(self.array.shape[-1])}")
 
     @property
     def shape(self) -> tuple[int, ...]:
@@ -249,15 +250,15 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def __repr__(self):
         return f"{type(self).__name__}({self.array!r})"
 
-    def _vindex_get(self, key):
+    def _vindex_get(self, key: tuple[Any, ...]):
         return _numpy_char_to_bytes(self.array.vindex[key])
 
-    def _oindex_get(self, key):
+    def _oindex_get(self, key: tuple[Any, ...]):
         return _numpy_char_to_bytes(self.array.oindex[key])
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: tuple[Any, ...]):
         # require slicing the last dimension completely
-        key = type(key)(indexing.expanded_indexer(key.tuple, self.array.ndim))
-        if key.tuple[-1] != slice(None):
+        indexer = indexing.expanded_indexer(key, self.array.ndim)
+        if indexer[-1] != slice(None):
             raise IndexError("too many indices")
-        return _numpy_char_to_bytes(self.array[key])
+        return _numpy_char_to_bytes(self.array[indexer])
