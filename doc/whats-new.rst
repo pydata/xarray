@@ -38,6 +38,8 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Don't allow overwriting index variables with ``to_zarr`` region writes. (:issue:`8589`, :pull:`8876`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Deprecations
 ~~~~~~~~~~~~
