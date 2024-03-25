@@ -20,6 +20,7 @@ from xarray.core import utils
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
+from xarray.core.variable import IndexVariable
 from xarray.testing import (  # noqa: F401
     assert_chunks_equal,
     assert_duckarray_allclose,
@@ -45,6 +46,15 @@ arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
     reason="expected failure on ARM",
 )
+
+
+def assert_writeable(ds):
+    readonly = [
+        name
+        for name, var in ds.variables.items()
+        if not isinstance(var, IndexVariable) and not var.data.flags.writeable
+    ]
+    assert not readonly, readonly
 
 
 def _importorskip(
@@ -338,9 +348,7 @@ def create_test_data(
         numbers_values = np.random.randint(0, 3, _dims["dim3"], dtype="int64")
     obj.coords["numbers"] = ("dim3", numbers_values)
     obj.encoding = {"foo": "bar"}
-    assert all(
-        obj.data.flags.writeable for k, obj in obj.variables.items() if k != "var4"
-    )
+    assert_writeable(obj)
     return obj
 
 

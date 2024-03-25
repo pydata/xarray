@@ -2605,7 +2605,9 @@ class ZarrBase(CFEncodedBase):
             # overwrite a coordinate;
             # for mode='a-', this will not get written to the store
             # because it does not have the append_dim as a dim
-            ds_to_append.lon.data[:] = -999
+            lon = ds_to_append.lon.to_numpy().copy()
+            lon[:] = -999
+            ds_to_append["lon"] = lon
             ds_to_append.to_zarr(
                 store_target, mode="a-", append_dim="time", **self.version_kwargs
             )
@@ -2615,7 +2617,9 @@ class ZarrBase(CFEncodedBase):
             # by default, mode="a" will overwrite all coordinates.
             ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
             actual = xr.open_dataset(store_target, engine="zarr", **self.version_kwargs)
-            original2.lon.data[:] = -999
+            lon = original2.lon.to_numpy().copy()
+            lon[:] = -999
+            original2["lon"] = lon
             assert_identical(original2, actual)
 
     @requires_dask
