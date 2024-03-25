@@ -18,6 +18,7 @@ import xarray.testing
 from xarray import Dataset
 from xarray.core import utils
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
 from xarray.core.variable import IndexVariable
@@ -52,7 +53,9 @@ def assert_writeable(ds):
     readonly = [
         name
         for name, var in ds.variables.items()
-        if not isinstance(var, IndexVariable) and not var.data.flags.writeable
+        if not isinstance(var, IndexVariable)
+        and not var.data.flags.writeable
+        and not isinstance(var.data, PandasExtensionArray)
     ]
     assert not readonly, readonly
 
