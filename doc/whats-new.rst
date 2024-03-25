@@ -35,6 +35,9 @@ New Features
 - Expand use of ``.oindex`` and ``.vindex`` properties. (:pull: `8790`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 
+- Enable plotting of ```datetime.dates``. (:pull: `8873`)
+  By `Sascha Hofmann <<https://github.com/saschahofmann>`_.
+  
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
