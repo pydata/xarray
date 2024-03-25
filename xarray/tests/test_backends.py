@@ -3560,6 +3560,15 @@ class TestH5NetCDFData(NetCDF4Base):
             assert actual.x.encoding["compression"] == "lzf"
             assert actual.x.encoding["compression_opts"] is None
 
+    def test_decode_utf8_warning(self) -> None:
+        title = b"\xc3"
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, "w") as f:
+                f.title = title
+            with pytest.warns(UnicodeWarning, match="returning bytes undecoded"):
+                ds = xr.load_dataset(tmp_file, engine="h5netcdf")
+                assert ds.title == title
+
 
 @requires_h5netcdf
 @requires_netCDF4

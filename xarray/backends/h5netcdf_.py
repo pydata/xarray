@@ -28,6 +28,7 @@ from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
 from xarray.core.utils import (
     FrozenDict,
+    emit_user_level_warning,
     is_remote_uri,
     read_magic_number_from_file,
     try_read_magic_number_from_file_or_path,
@@ -60,9 +61,14 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
 
 def maybe_decode_bytes(txt):
     if isinstance(txt, bytes):
-        return txt.decode("utf-8")
-    else:
-        return txt
+        try:
+            return txt.decode("utf-8")
+        except UnicodeDecodeError:
+            emit_user_level_warning(
+                "'utf-8' codec can't decode bytes, " "returning bytes undecoded.",
+                UnicodeWarning,
+            )
+    return txt
 
 
 def _read_attributes(h5netcdf_var):
