@@ -20,6 +20,11 @@ import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
 from xarray.core import dtypes, formatting, formatting_html
+from xarray.core.indexing import (
+    ExplicitlyIndexed,
+    ImplicitToExplicitIndexingAdapter,
+    OuterIndexer,
+)
 from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray._typing import (
     ErrorOptionsWithWarn,
@@ -35,9 +40,12 @@ from xarray.namedarray._typing import (
     _SupportsImag,
     _SupportsReal,
 )
+from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.namedarray.pycompat import to_numpy
 from xarray.namedarray.utils import (
     either_dict_or_kwargs,
     infix_dims,
+    is_dict_like,
     is_duck_dask_array,
     to_0d_object_array,
 )
@@ -60,6 +68,7 @@ if TYPE_CHECKING:
         _ShapeType,
         duckarray,
     )
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
     try:
         from dask.typing import (
@@ -502,7 +511,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     @attrs.setter
     def attrs(self, value: Mapping[Any, Any]) -> None:
-        self._attrs = dict(value)
+        self._attrs = dict(value) if value else None
 
     def _check_shape(self, new_data: duckarray[Any, _DType_co]) -> None:
         if new_data.shape != self.shape:
@@ -561,13 +570,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return real(self)
         return self._new(data=self._data.real)
 
-    def __dask_tokenize__(self) -> Hashable:
+    def __dask_tokenize__(self) -> object:
         # Use v.data, instead of v._data, in order to cope with the wrappers
         # around NetCDF and the like
         from dask.base import normalize_token
 
-        s, d, a, attrs = type(self), self._dims, self.data, self.attrs
-        return normalize_token((s, d, a, attrs))  # type: ignore[no-any-return]
+        return normalize_token((type(self), self._dims, self.data, self._attrs or None))
 
     def __dask_graph__(self) -> Graph | None:
         if is_duck_dask_array(self._data):
@@ -719,6 +727,109 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def sizes(self) -> dict[_Dim, _IntOrUnknown]:
         """Ordered mapping from dimension names to lengths."""
         return dict(zip(self.dims, self.shape))
+
+    def chunk(
+        self,
+        chunks: int | Literal["auto"] | Mapping[Any, None | int | tuple[int, ...]] = {},
+        chunked_array_type: str | ChunkManagerEntrypoint[Any] | None = None,
+        from_array_kwargs: Any = None,
+        **chunks_kwargs: Any,
+    ) -> Self:
+        """Coerce this array's data into a dask array with the given chunks.
+
+        If this variable is a non-dask array, it will be converted to dask
+        array. If it's a dask array, it will be rechunked to the given chunk
+        sizes.
+
+        If neither chunks is not provided for one or more dimensions, chunk
+        sizes along that dimension will not be updated; non-dask arrays will be
+        converted into dask arrays with a single block.
+
+        Parameters
+        ----------
+        chunks : int, tuple or dict, optional
+            Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
+            ``{'x': 5, 'y': 5}``.
+        chunked_array_type: str, optional
+            Which chunked array type to coerce this datasets' arrays to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntrypoint` system.
+            Experimental API that should not be relied upon.
+        from_array_kwargs: dict, optional
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+            For example, with dask as the default chunked array type, this method would pass additional kwargs
+            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+        **chunks_kwargs : {dim: chunks, ...}, optional
+            The keyword arguments form of ``chunks``.
+            One of chunks or chunks_kwargs must be provided.
+
+        Returns
+        -------
+        chunked : xarray.Variable
+
+        See Also
+        --------
+        Variable.chunks
+        Variable.chunksizes
+        xarray.unify_chunks
+        dask.array.from_array
+        """
+
+        if from_array_kwargs is None:
+            from_array_kwargs = {}
+
+        if chunks is None:
+            warnings.warn(
+                "None value for 'chunks' is deprecated. "
+                "It will raise an error in the future. Use instead '{}'",
+                category=FutureWarning,
+            )
+            chunks = {}
+
+        if isinstance(chunks, (float, str, int, tuple, list)):
+            # TODO we shouldn't assume here that other chunkmanagers can handle these types
+            # TODO should we call normalize_chunks here?
+            pass  # dask.array.from_array can handle these directly
+        else:
+            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+
+        if is_dict_like(chunks):
+            chunks = {self.get_axis_num(dim): chunk for dim, chunk in chunks.items()}
+
+        chunkmanager = guess_chunkmanager(chunked_array_type)
+
+        data_old = self._data
+        if chunkmanager.is_chunked_array(data_old):
+            data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
+        else:
+            if not isinstance(data_old, ExplicitlyIndexed):
+                ndata = data_old
+            else:
+                # Unambiguously handle array storage backends (like NetCDF4 and h5py)
+                # that can't handle general array indexing. For example, in netCDF4 you
+                # can do "outer" indexing along two dimensions independent, which works
+                # differently from how NumPy handles it.
+                # da.from_array works by using lazy indexing with a tuple of slices.
+                # Using OuterIndexer is a pragmatic choice: dask does not yet handle
+                # different indexing types in an explicit way:
+                # https://github.com/dask/dask/issues/2883
+                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[assignment]
+
+            if is_dict_like(chunks):
+                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))  # type: ignore[assignment]
+
+            data_chunked = chunkmanager.from_array(ndata, chunks, **from_array_kwargs)  # type: ignore[arg-type]
+
+        return self._replace(data=data_chunked)
+
+    def to_numpy(self) -> np.ndarray[Any, Any]:
+        """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+        # TODO an entrypoint so array libraries can choose coercion method?
+        return to_numpy(self._data)
+
+    def as_numpy(self) -> Self:
+        """Coerces wrapped data into a numpy array, returning a Variable."""
+        return self._replace(data=self.to_numpy())
 
     def reduce(
         self,
@@ -897,7 +1008,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if not dim:
             dims = self.dims[::-1]
         else:
-            dims = tuple(infix_dims(dim, self.dims, missing_dims))  # type: ignore
+            dims = tuple(infix_dims(dim, self.dims, missing_dims))  # type: ignore[arg-type]
 
         if len(dims) < 2 or dims == self.dims:
             # no need to transpose if only one dimension
@@ -976,7 +1087,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         # Ensure the dimensions are in the correct order
         ordered_dims = list(broadcast_shape.keys())
         ordered_shape = tuple(broadcast_shape[d] for d in ordered_dims)
-        data = duck_array_ops.broadcast_to(self._data, ordered_shape)  # type: ignore  # TODO: use array-api-compat function
+        data = duck_array_ops.broadcast_to(self._data, ordered_shape)  # type: ignore[no-untyped-call]  # TODO: use array-api-compat function
         return self._new(data=data, dims=ordered_dims)
 
     def expand_dims(

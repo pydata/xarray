@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from xarray.core import pycompat
-from xarray.core.utils import module_available
+from xarray.core.utils import is_duck_array, module_available
+from xarray.namedarray import pycompat
 
 # remove once numpy 2.0 is the oldest supported version
 if module_available("numpy", minversion="2.0.0.dev0"):
@@ -27,7 +27,6 @@ except ImportError:
     from numpy import RankWarning  # type: ignore[attr-defined,no-redef,unused-ignore]
 
 from xarray.core.options import OPTIONS
-from xarray.core.pycompat import is_duck_array
 
 try:
     import bottleneck as bn
@@ -195,6 +194,14 @@ def _create_method(name, npmodule=np) -> Callable:
             and values.dtype.kind in "uifc"
             # and values.dtype.isnative
             and (dtype is None or np.dtype(dtype) == values.dtype)
+            # numbagg.nanquantile only available after 0.8.0 and with linear method
+            and (
+                name != "nanquantile"
+                or (
+                    pycompat.mod_version("numbagg") >= Version("0.8.0")
+                    and kwargs.get("method", "linear") == "linear"
+                )
+            )
         ):
             import numbagg
 
@@ -206,6 +213,9 @@ def _create_method(name, npmodule=np) -> Callable:
                 # to ddof=1 above.
                 if pycompat.mod_version("numbagg") < Version("0.7.0"):
                     kwargs.pop("ddof", None)
+                if name == "nanquantile":
+                    kwargs["quantiles"] = kwargs.pop("q")
+                    kwargs.pop("method", None)
                 return nba_func(values, axis=axis, **kwargs)
         if (
             _BOTTLENECK_AVAILABLE
@@ -285,3 +295,4 @@ nancumsum = _create_method("nancumsum")
 nancumprod = _create_method("nancumprod")
 nanargmin = _create_method("nanargmin")
 nanargmax = _create_method("nanargmax")
+nanquantile = _create_method("nanquantile")

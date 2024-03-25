@@ -26,10 +26,10 @@ from xarray.core.indexing import (
     PandasIndexingAdapter,
     VectorizedIndexer,
 )
-from xarray.core.pycompat import array_type
 from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
+from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     assert_allclose,
     assert_array_equal,
@@ -62,6 +62,21 @@ _PAD_XR_NP_ARGS = [
 @pytest.fixture
 def var():
     return Variable(dims=list("xyz"), data=np.random.rand(3, 4, 5))
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        np.array(["a", "bc", "def"], dtype=object),
+        np.array(["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[ns]"),
+    ],
+)
+def test_as_compatible_data_writeable(data):
+    pd.set_option("mode.copy_on_write", True)
+    # GH8843, ensure writeable arrays for data_vars even with
+    # pandas copy-on-write mode
+    assert as_compatible_data(data).flags.writeable
+    pd.reset_option("mode.copy_on_write")
 
 
 class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
@@ -1228,11 +1243,12 @@ class TestVariable(VariableSubclassobjects):
 
     def test_repr(self):
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
+        v = v.astype(np.uint64)
         expected = dedent(
             """
-        <xarray.Variable (time: 2, x: 3)>
+        <xarray.Variable (time: 2, x: 3)> Size: 48B
         array([[1, 2, 3],
-               [4, 5, 6]])
+               [4, 5, 6]], dtype=uint64)
         Attributes:
             foo:      bar
         """
@@ -1842,13 +1858,15 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(ValueError, match=r"consists of multiple chunks"):
             v.quantile(0.5, dim="x")
 
+    @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
-    def test_quantile_out_of_bounds(self, q):
+    def test_quantile_out_of_bounds(self, q, compute_backend):
         v = Variable(["x", "y"], self.d)
 
         # escape special characters
         with pytest.raises(
-            ValueError, match=r"Quantiles must be in the range \[0, 1\]"
+            ValueError,
+            match=r"(Q|q)uantiles must be in the range \[0, 1\]",
         ):
             v.quantile(q, dim="x")
 
@@ -3008,3 +3026,19 @@ def test_pandas_two_only_timedelta_conversion_warning() -> None:
         var = Variable(["time"], data)
 
     assert var.dtype == np.dtype("timedelta64[ns]")
+
+
+@requires_pandas_version_two
+@pytest.mark.parametrize(
+    ("index", "dtype"),
+    [
+        (pd.date_range("2000", periods=1), "datetime64"),
+        (pd.timedelta_range("1", periods=1), "timedelta64"),
+    ],
+    ids=lambda x: f"{x}",
+)
+def test_pandas_indexing_adapter_non_nanosecond_conversion(index, dtype) -> None:
+    data = PandasIndexingAdapter(index.astype(f"{dtype}[s]"))
+    with pytest.warns(UserWarning, match="non-nanosecond precision"):
+        var = Variable(["time"], data)
+    assert var.dtype == np.dtype(f"{dtype}[ns]")

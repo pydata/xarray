@@ -7,14 +7,15 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 from packaging.version import Version
 
-from xarray.core.types import T_DuckArray
-from xarray.core.utils import is_duck_array, is_scalar, module_available
+from xarray.core.utils import is_scalar, module_available
+from xarray.namedarray.utils import is_duck_array, is_duck_dask_array
 
 integer_types = (int, np.integer)
 
 if TYPE_CHECKING:
     ModType = Literal["dask", "pint", "cupy", "sparse", "cubed", "numbagg"]
     DuckArrayTypes = tuple[type[Any], ...]  # TODO: improve this? maybe Generic
+    from xarray.namedarray._typing import _DType, _ShapeType, duckarray
 
 
 class DuckArrayModule:
@@ -95,29 +96,27 @@ def is_dask_collection(x) -> bool:
     return False
 
 
-def is_duck_dask_array(x) -> bool:
-    return is_duck_array(x) and is_dask_collection(x)
-
-
-def is_chunked_array(x) -> bool:
+def is_chunked_array(x: duckarray[Any, Any]) -> bool:
     return is_duck_dask_array(x) or (is_duck_array(x) and hasattr(x, "chunks"))
 
 
-def is_0d_dask_array(x) -> bool:
+def is_0d_dask_array(x: duckarray[Any, Any]) -> bool:
     return is_duck_dask_array(x) and is_scalar(x)
 
 
-def to_numpy(data) -> np.ndarray:
+def to_numpy(
+    data: duckarray[Any, Any], **kwargs: dict[str, Any]
+) -> np.ndarray[Any, np.dtype[Any]]:
     from xarray.core.indexing import ExplicitlyIndexed
-    from xarray.core.parallelcompat import get_chunked_array_type
+    from xarray.namedarray.parallelcompat import get_chunked_array_type
 
     if isinstance(data, ExplicitlyIndexed):
-        data = data.get_duck_array()
+        data = data.get_duck_array()  # type: ignore[no-untyped-call]
 
     # TODO first attempt to call .to_numpy() once some libraries implement it
-    if hasattr(data, "chunks"):
+    if is_chunked_array(data):
         chunkmanager = get_chunked_array_type(data)
-        data, *_ = chunkmanager.compute(data)
+        data, *_ = chunkmanager.compute(data, **kwargs)
     if isinstance(data, array_type("cupy")):
         data = data.get()
     # pint has to be imported dynamically as pint imports xarray
@@ -130,11 +129,19 @@ def to_numpy(data) -> np.ndarray:
     return data
 
 
-def to_duck_array(data, xp=np) -> T_DuckArray:
+def to_duck_array(
+    data: Any, xp=np, **kwargs: dict[str, Any]
+) -> duckarray[_ShapeType, _DType]:
     from xarray.core.indexing import ExplicitlyIndexed
+    from xarray.namedarray.parallelcompat import get_chunked_array_type
+
+    if is_chunked_array(data):
+        chunkmanager = get_chunked_array_type(data)
+        loaded_data, *_ = chunkmanager.compute(data, **kwargs)  # type: ignore[var-annotated]
+        return loaded_data
 
     if isinstance(data, ExplicitlyIndexed):
-        return data.get_duck_array()
+        return data.get_duck_array()  # type: ignore[no-untyped-call, no-any-return]
     elif is_duck_array(data):
         return data
     else:

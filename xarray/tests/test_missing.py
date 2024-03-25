@@ -14,7 +14,7 @@ from xarray.core.missing import (
     _get_nan_block_lengths,
     get_clean_interp_index,
 )
-from xarray.core.pycompat import array_type
+from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     _CFTIME_CALENDARS,
     assert_allclose,
@@ -122,10 +122,13 @@ def test_interpolate_pd_compat(method, fill_value) -> None:
                 # for the numpy linear methods.
                 # see https://github.com/pandas-dev/pandas/issues/55144
                 # This aligns the pandas output with the xarray output
-                expected.values[pd.isnull(actual.values)] = np.nan
-                expected.values[actual.values == fill_value] = fill_value
+                fixed = expected.values.copy()
+                fixed[pd.isnull(actual.values)] = np.nan
+                fixed[actual.values == fill_value] = fill_value
+            else:
+                fixed = expected.values
 
-            np.testing.assert_allclose(actual.values, expected.values)
+            np.testing.assert_allclose(actual.values, fixed)
 
 
 @requires_scipy
@@ -606,7 +609,7 @@ def test_get_clean_interp_index_cf_calendar(cf_da, calendar):
 
 @requires_cftime
 @pytest.mark.parametrize(
-    ("calendar", "freq"), zip(["gregorian", "proleptic_gregorian"], ["1D", "1M", "1Y"])
+    ("calendar", "freq"), zip(["gregorian", "proleptic_gregorian"], ["1D", "1ME", "1Y"])
 )
 def test_get_clean_interp_index_dt(cf_da, calendar, freq):
     """In the gregorian case, the index should be proportional to normal datetimes."""

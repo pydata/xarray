@@ -54,7 +54,7 @@ issue-tracker = "https://github.com/pydata/xarray/issues"
 source-code = "https://github.com/pydata/xarray"
 
 [project.entry-points."xarray.chunkmanagers"]
-dask = "xarray.core.daskmanager:DaskManager"
+dask = "xarray.namedarray.daskmanager:DaskManager"
 
 [build-system]
 build-backend = "setuptools.build_meta"
@@ -96,6 +96,11 @@ warn_redundant_casts = true
 warn_unused_configs = true
 warn_unused_ignores = true
 
+# Ignore mypy errors for modules imported from datatree_.
+[[tool.mypy.overrides]]
+module = "xarray.datatree_.*"
+ignore_errors = true
+
 # Much of the numerical computing stack doesn't have type annotations yet.
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
@@ -133,6 +138,7 @@ module = [
   "toolz.*",
   "zarr.*",
   "numpy.exceptions.*", # remove once support for `numpy<2.0` has been dropped
+  "array_api_strict.*",
 ]
 
 # Gradually we want to add more modules to this list, ratcheting up our total
@@ -245,14 +251,7 @@ extend-exclude = [
   "doc",
   "_typed_ops.pyi",
 ]
-extend-safe-fixes = [
-  "TID252", # absolute imports
-]
 target-version = "py39"
-
-[tool.ruff.per-file-ignores]
-# don't enforce absolute imports
-"asv_bench/**" = ["TID252"]
 
 [tool.ruff.lint]
 # E402: module level import not at top of file
@@ -271,6 +270,13 @@ select = [
   "I", # isort
   "UP", # Pyupgrade
 ]
+extend-safe-fixes = [
+  "TID252", # absolute imports
+]
+
+[tool.ruff.lint.per-file-ignores]
+# don't enforce absolute imports
+"asv_bench/**" = ["TID252"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["xarray"]

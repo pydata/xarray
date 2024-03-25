@@ -19,8 +19,6 @@ from xarray.backends.common import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
-from xarray.core.parallelcompat import guess_chunkmanager
-from xarray.core.pycompat import integer_types
 from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
@@ -28,12 +26,15 @@ from xarray.core.utils import (
     close_on_error,
 )
 from xarray.core.variable import Variable
+from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
+    from xarray.datatree_.datatree import DataTree
 
 
 # need some special secret attributes to tell us the dimensions
@@ -86,19 +87,23 @@ class ZarrArrayWrapper(BackendArray):
     def _oindex(self, key):
         return self._array.oindex[key]
 
+    def _vindex(self, key):
+        return self._array.vindex[key]
+
+    def _getitem(self, key):
+        return self._array[key]
+
     def __getitem__(self, key):
         array = self._array
         if isinstance(key, indexing.BasicIndexer):
-            return array[key.tuple]
+            method = self._getitem
         elif isinstance(key, indexing.VectorizedIndexer):
-            return array.vindex[
-                indexing._arrayize_vectorized_indexer(key, self.shape).tuple
-            ]
-        else:
-            assert isinstance(key, indexing.OuterIndexer)
-            return indexing.explicit_indexing_adapter(
-                key, array.shape, indexing.IndexingSupport.VECTORIZED, self._oindex
-            )
+            method = self._vindex
+        elif isinstance(key, indexing.OuterIndexer):
+            method = self._oindex
+        return indexing.explicit_indexing_adapter(
+            key, array.shape, indexing.IndexingSupport.VECTORIZED, method
+        )
 
         # if self.ndim == 0:
         # could possibly have a work-around for 0d data here
@@ -1034,6 +1039,49 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 decode_timedelta=decode_timedelta,
             )
         return ds
+
+    def open_datatree(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        **kwargs,
+    ) -> DataTree:
+        import zarr
+
+        from xarray.backends.api import open_dataset
+        from xarray.core.treenode import NodePath
+        from xarray.datatree_.datatree import DataTree
+
+        zds = zarr.open_group(filename_or_obj, mode="r")
+        ds = open_dataset(filename_or_obj, engine="zarr", **kwargs)
+        tree_root = DataTree.from_dict({"/": ds})
+        for path in _iter_zarr_groups(zds):
+            try:
+                subgroup_ds = open_dataset(
+                    filename_or_obj, engine="zarr", group=path, **kwargs
+                )
+            except zarr.errors.PathNotFoundError:
+                subgroup_ds = Dataset()
+
+            # TODO refactor to use __setitem__ once creation of new nodes by assigning Dataset works again
+            node_name = NodePath(path).name
+            new_node: DataTree = DataTree(name=node_name, data=subgroup_ds)
+            tree_root._set_item(
+                path,
+                new_node,
+                allow_overwrite=False,
+                new_nodes_along_path=True,
+            )
+        return tree_root
+
+
+def _iter_zarr_groups(root, parent="/"):
+    from xarray.core.treenode import NodePath
+
+    parent = NodePath(parent)
+    for path, group in root.groups():
+        gpath = parent / path
+        yield str(gpath)
+        yield from _iter_zarr_groups(group, parent=gpath)
 
 
 BACKEND_ENTRYPOINTS["zarr"] = ("zarr", ZarrBackendEntrypoint)

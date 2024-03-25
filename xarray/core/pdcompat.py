@@ -83,6 +83,7 @@ def _convert_base_to_offset(base, freq, index):
     from xarray.coding.cftimeindex import CFTimeIndex
 
     if isinstance(index, pd.DatetimeIndex):
+        freq = cftime_offsets._new_to_legacy_freq(freq)
         freq = pd.tseries.frequencies.to_offset(freq)
         if isinstance(freq, pd.offsets.Tick):
             return pd.Timedelta(base * freq.nanos // freq.n)
