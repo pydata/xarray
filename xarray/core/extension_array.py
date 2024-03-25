@@ -79,6 +79,10 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
         else:
             raise TypeError(f"{array} is not an pandas ExtensionArray.")
 
+    @property
+    def writeable(self):
+        return False  # TODO: creat i/o within xarray for at common types i.e., categoricals
+
     def __array_function__(self, func, types, args, kwargs):
         def replace_duck_with_extension_array(args) -> list:
             args_as_list = list(args)
