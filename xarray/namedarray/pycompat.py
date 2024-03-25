@@ -132,13 +132,21 @@ def to_numpy(
 def to_duck_array(
     data: Any, xp=np, **kwargs: dict[str, Any]
 ) -> duckarray[_ShapeType, _DType]:
-    from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
     if is_chunked_array(data):
         chunkmanager = get_chunked_array_type(data)
         loaded_data, *_ = chunkmanager.compute(data, **kwargs)  # type: ignore[var-annotated]
         return loaded_data
+
+    return to_lazy_duck_array(data)
+
+
+def to_lazy_duck_array(
+    data: Any, xp=np, **kwargs: dict[str, Any]
+) -> duckarray[_ShapeType, _DType]:
+    """Doesn't compute chunked data."""
+    from xarray.core.indexing import ExplicitlyIndexed
 
     if isinstance(data, ExplicitlyIndexed):
         return data.get_duck_array()  # type: ignore[no-untyped-call, no-any-return]

@@ -38,7 +38,7 @@ from xarray.core.options import OPTIONS
 from xarray.core.utils import is_duck_array, module_available
 from xarray.namedarray import pycompat
 from xarray.namedarray.parallelcompat import get_chunked_array_type, is_chunked_array
-from xarray.namedarray.pycompat import is_duck_dask_array, to_duck_array
+from xarray.namedarray.pycompat import is_duck_dask_array, to_lazy_duck_array
 
 # remove once numpy 2.0 is the oldest supported version
 if module_available("numpy", minversion="2.0.0.dev0"):
@@ -221,7 +221,7 @@ def asarray(data, xp=np):
 
 def as_shared_dtype(scalars_or_arrays, xp=np):
     """Cast arrays to a shared dtype using xarray's type promotion rules."""
-    duckarrays = [to_duck_array(obj, xp=xp) for obj in scalars_or_arrays]
+    duckarrays = [to_lazy_duck_array(obj, xp=xp) for obj in scalars_or_arrays]
     out_type = dtypes.result_type(*duckarrays)
     return [astype(x, out_type, copy=False) for x in duckarrays]
 
