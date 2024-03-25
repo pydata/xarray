@@ -206,7 +206,7 @@ def map_index_queries(
     return merged
 
 
-def expanded_indexer(key, ndim):
+def expanded_indexer(key, ndim: int) -> tuple[Any, ...]:
     """Given a key for indexing an ndarray, return an equivalent key which is a
     tuple with length equal to the number of dimensions.
 
@@ -833,7 +833,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
         self.array[indexer] = value
 
 
-def as_indexable(array):
+def as_indexable(array: Any):
     """
     This function always returns a ExplicitlyIndexed subclass,
     so that the vectorized indexing is always possible with the returned
