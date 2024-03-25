@@ -3565,9 +3565,10 @@ class TestH5NetCDFData(NetCDF4Base):
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, "w") as f:
                 f.title = title
-            with pytest.warns(UnicodeWarning, match="returning bytes undecoded"):
+            with pytest.warns(UnicodeWarning, match="returning bytes undecoded") as w:
                 ds = xr.load_dataset(tmp_file, engine="h5netcdf")
                 assert ds.title == title
+                assert "attribute 'title' of h5netcdf object '/'" in str(w[0].message)
 
 
 @requires_h5netcdf

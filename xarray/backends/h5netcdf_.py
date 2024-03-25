@@ -59,18 +59,6 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
             return array[key]
 
 
-def maybe_decode_bytes(txt):
-    if isinstance(txt, bytes):
-        try:
-            return txt.decode("utf-8")
-        except UnicodeDecodeError:
-            emit_user_level_warning(
-                "'utf-8' codec can't decode bytes, " "returning bytes undecoded.",
-                UnicodeWarning,
-            )
-    return txt
-
-
 def _read_attributes(h5netcdf_var):
     # GH451
     # to ensure conventions decoding works properly on Python 3, decode all
@@ -78,7 +66,16 @@ def _read_attributes(h5netcdf_var):
     attrs = {}
     for k, v in h5netcdf_var.attrs.items():
         if k not in ["_FillValue", "missing_value"]:
-            v = maybe_decode_bytes(v)
+            if isinstance(v, bytes):
+                try:
+                    v = v.decode("utf-8")
+                except UnicodeDecodeError:
+                    emit_user_level_warning(
+                        f"'utf-8' codec can't decode bytes for attribute "
+                        f"{k!r} of h5netcdf object {h5netcdf_var.name!r}, "
+                        f"returning bytes undecoded.",
+                        UnicodeWarning,
+                    )
         attrs[k] = v
     return attrs
 
