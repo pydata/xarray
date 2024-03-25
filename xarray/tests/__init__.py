@@ -54,8 +54,8 @@ def assert_writeable(ds):
         name
         for name, var in ds.variables.items()
         if not isinstance(var, IndexVariable)
-        and not var.data.flags.writeable
         and not isinstance(var.data, PandasExtensionArray)
+        and not var.data.flags.writeable
     ]
     assert not readonly, readonly
 
