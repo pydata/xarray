@@ -678,11 +678,6 @@ def _dataset_concat(
         else:
             index_vars = index.create_variables()
         result[dim] = index_vars[dim]
-        result_indexes[dim] = index
-
-    # TODO: add indexes at Dataset creation (when it is supported)
-    # TODO: do we actually need this step anymore?
-    result = result._overwrite_indexes(result_indexes)
 
     return result
 
