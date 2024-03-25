@@ -59,7 +59,10 @@ def unique(draw, strategy):
 UNIQUE_NAME = unique(strategy=xrst.names())
 DIM_NAME = xrst.dimension_names(name_strategy=UNIQUE_NAME, min_dims=1, max_dims=1)
 
+from hypothesis import seed
 
+
+@seed(222637475654255579925165578590114755457)
 class DatasetStateMachine(RuleBasedStateMachine):
     indexed_dims = Bundle("indexed_dims")
     multi_indexed_dims = Bundle("multi_indexed_dims")
