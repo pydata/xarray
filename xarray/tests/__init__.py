@@ -4,7 +4,9 @@ import importlib
 import platform
 import string
 import warnings
+from collections.abc import Iterable
 from contextlib import contextmanager, nullcontext
+from typing import Any, Callable
 from unittest import mock  # noqa: F401
 
 import numpy as np
@@ -206,6 +208,105 @@ class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
 
     def __getitem__(self, key):
         raise UnexpectedDataAccess("Tried accessing data.")
+
+
+HANDLED_ARRAY_FUNCTIONS: dict[str, Callable] = {}
+
+
+def implements(numpy_function):
+    """Register an __array_function__ implementation for ManifestArray objects."""
+
+    def decorator(func):
+        HANDLED_ARRAY_FUNCTIONS[numpy_function] = func
+        return func
+
+    return decorator
+
+
+@implements(np.concatenate)
+def concatenate(
+    arrays: Iterable[ConcatenatableArray], /, *, axis=0
+) -> ConcatenatableArray:
+    if any(not isinstance(arr, ConcatenatableArray) for arr in arrays):
+        raise TypeError
+
+    result = np.concatenate([arr.array for arr in arrays], axis=axis)
+    return ConcatenatableArray(result)
+
+
+@implements(np.stack)
+def stack(arrays: Iterable[ConcatenatableArray], /, *, axis=0) -> ConcatenatableArray:
+    if any(not isinstance(arr, ConcatenatableArray) for arr in arrays):
+        raise TypeError
+
+    result = np.stack([arr.array for arr in arrays], axis=axis)
+    return ConcatenatableArray(result)
+
+
+@implements(np.result_type)
+def result_type(*arrays_and_dtypes) -> np.dtype:
+    """Called by xarray to ensure all arguments to concat have the same dtype."""
+    first_dtype, *other_dtypes = (np.dtype(obj) for obj in arrays_and_dtypes)
+    for other_dtype in other_dtypes:
+        if other_dtype != first_dtype:
+            raise ValueError("dtypes not all consistent")
+    return first_dtype
+
+
+@implements(np.broadcast_to)
+def broadcast_to(
+    x: ConcatenatableArray, /, shape: tuple[int, ...]
+) -> ConcatenatableArray:
+    """
+    Broadcasts an array to a specified shape, by either manipulating chunk keys or copying chunk manifest entries.
+    """
+    if not isinstance(x, ConcatenatableArray):
+        raise TypeError
+
+    result = np.broadcast_to(x.array, shape=shape)
+    return ConcatenatableArray(result)
+
+
+class ConcatenatableArray(utils.NDArrayMixin):
+    """Disallows loading or coercing to an index but does support concatenation / stacking."""
+
+    # TODO only reason this is different from InaccessibleArray is to avoid it being a subclass of ExplicitlyIndexed
+
+    HANDLED_ARRAY_FUNCTIONS = [concatenate, stack, result_type]
+
+    def __init__(self, array):
+        self.array = array
+
+    def get_duck_array(self):
+        raise UnexpectedDataAccess("Tried accessing data")
+
+    def __array__(self, dtype: np.typing.DTypeLike = None):
+        raise UnexpectedDataAccess("Tried accessing data")
+
+    def __getitem__(self, key):
+        raise UnexpectedDataAccess("Tried accessing data.")
+
+    def __array_function__(self, func, types, args, kwargs) -> Any:
+        if func not in HANDLED_ARRAY_FUNCTIONS:
+            return NotImplemented
+
+        # Note: this allows subclasses that don't override
+        # __array_function__ to handle ManifestArray objects
+        if not all(issubclass(t, ConcatenatableArray) for t in types):
+            return NotImplemented
+
+        return HANDLED_ARRAY_FUNCTIONS[func](*args, **kwargs)
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs) -> Any:
+        """We have to define this in order to convince xarray that this class is a duckarray, even though we will never support ufuncs."""
+        return NotImplemented
+
+    def astype(self, dtype: np.dtype, /, *, copy: bool = True) -> ConcatenatableArray:
+        """Needed because xarray will call this even when it's a no-op"""
+        if dtype != self.dtype:
+            raise NotImplementedError()
+        else:
+            return self
 
 
 class FirstElementAccessibleArray(InaccessibleArray):
