@@ -4,7 +4,7 @@ import itertools
 import textwrap
 import warnings
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
-from datetime import datetime
+from datetime import datetime, date
 from inspect import getfullargspec
 from typing import TYPE_CHECKING, Any, Callable, Literal, overload
 
@@ -672,7 +672,7 @@ def _ensure_plottable(*args) -> None:
         np.bool_,
         np.str_,
     )
-    other_types: tuple[type[object], ...] = (datetime,)
+    other_types: tuple[type[object], ...] = (datetime, date)
     cftime_datetime_types: tuple[type[object], ...] = (
         () if cftime is None else (cftime.datetime,)
     )
