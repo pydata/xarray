@@ -8,6 +8,7 @@ import pandas as pd
 
 from xarray.core import dtypes, utils
 from xarray.core.alignment import align, reindex_variables
+from xarray.core.coordinates import Coordinates
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.merge import (
@@ -646,14 +647,26 @@ def _dataset_concat(
             # preserves original variable order
             result_vars[name] = result_vars.pop(name)
 
-    result = type(datasets[0])(result_vars, attrs=result_attrs)
-
-    absent_coord_names = coord_names - set(result.variables)
+    absent_coord_names = coord_names - set(result_vars)
     if absent_coord_names:
         raise ValueError(
             f"Variables {absent_coord_names!r} are coordinates in some datasets but not others."
         )
-    result = result.set_coords(coord_names)
+    coord_vars = {
+        name: result_var
+        for name, result_var in result_vars.items()
+        if name in coord_names
+    }
+    coords = Coordinates(coord_vars, indexes=result_indexes)
+
+    # TODO: this is just the complement of the set of coord_vars
+    result_data_vars = {
+        name: result_var
+        for name, result_var in result_vars.items()
+        if name not in coord_names
+    }
+
+    result = type(datasets[0])(result_data_vars, coords=coords, attrs=result_attrs)
     result.encoding = result_encoding
 
     result = result.drop_vars(unlabeled_dims, errors="ignore")
@@ -668,6 +681,7 @@ def _dataset_concat(
         result_indexes[dim] = index
 
     # TODO: add indexes at Dataset creation (when it is supported)
+    # TODO: do we actually need this step anymore?
     result = result._overwrite_indexes(result_indexes)
 
     return result
