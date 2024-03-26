@@ -71,7 +71,8 @@ Bug fixes
 - Warn and return bytes undecoded in case of UnicodeDecodeError in h5netcdf-backend
   (:issue:`5563`, :pull:`8874`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-
+- Fix a regression when saving dropped multi-indexes with the zarr backend (:pull:`8809`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Documentation
 ~~~~~~~~~~~~~
