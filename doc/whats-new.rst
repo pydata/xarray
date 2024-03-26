@@ -28,12 +28,13 @@ New Features
   By `Etienne Schalk <https://github.com/etienneschalk>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 - Add the ``.oindex`` property to Explicitly Indexed Arrays for orthogonal indexing functionality. (:issue:`8238`, :pull:`8750`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
-
 - Add the ``.vindex`` property to Explicitly Indexed Arrays for vectorized indexing functionality. (:issue:`8238`, :pull:`8780`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
-
 - Expand use of ``.oindex`` and ``.vindex`` properties. (:pull: `8790`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
+- Allow creating :py:class:`xr.Coordinates` objects with no indexes (:pull:`8711`)
+  By `Benoit Bovy <https://github.com/benbovy>`_ and `Tom Nicholas
+  <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

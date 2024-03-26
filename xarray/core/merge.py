@@ -355,7 +355,7 @@ def collect_variables_and_indexes(
                 indexes_.pop(name, None)
                 append_all(coords_, indexes_)
 
-            variable = as_variable(variable, name=name)
+            variable = as_variable(variable, name=name, auto_convert=False)
             if name in indexes:
                 append(name, variable, indexes[name])
             elif variable.dims == (name,):
