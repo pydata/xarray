@@ -6,7 +6,7 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray, Dataset
-from xarray.datatree_.datatree import DataTree
+from xarray.core.datatree import DataTree
 from xarray.tests import create_test_data, requires_dask
 
 

@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
-    from xarray.datatree_.datatree import DataTree
+    from xarray.core.datatree import DataTree
 
 
 # need some special secret attributes to tell us the dimensions
@@ -1048,8 +1048,8 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         import zarr
 
         from xarray.backends.api import open_dataset
+        from xarray.core.datatree import DataTree
         from xarray.core.treenode import NodePath
-        from xarray.datatree_.datatree import DataTree
 
         zds = zarr.open_group(filename_or_obj, mode="r")
         ds = open_dataset(filename_or_obj, engine="zarr", **kwargs)
