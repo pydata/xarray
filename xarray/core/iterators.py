@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from collections import abc
-from typing import Callable, Iterator, List, Optional
+from collections.abc import Iterator
+from typing import Callable
 
 from xarray.core.treenode import Tree
 
@@ -11,9 +12,9 @@ class AbstractIter(abc.Iterator):
     def __init__(
         self,
         node: Tree,
-        filter_: Optional[Callable] = None,
-        stop: Optional[Callable] = None,
-        maxlevel: Optional[int] = None,
+        filter_: Callable | None = None,
+        stop: Callable | None = None,
+        maxlevel: int | None = None,
     ):
         """
         Iterate over tree starting at `node`.
@@ -60,15 +61,14 @@ class AbstractIter(abc.Iterator):
 
     @staticmethod
     @abstractmethod
-    def _iter(children: List[Tree], filter_, stop, maxlevel) -> Iterator[Tree]:
-        ...
+    def _iter(children: list[Tree], filter_, stop, maxlevel) -> Iterator[Tree]: ...
 
     @staticmethod
     def _abort_at_level(level, maxlevel):
         return maxlevel is not None and level > maxlevel
 
     @staticmethod
-    def _get_children(children: List[Tree], stop) -> List[Tree]:
+    def _get_children(children: list[Tree], stop) -> list[Tree]:
         return [child for child in children if not stop(child)]
 
 
@@ -88,10 +88,9 @@ class PreOrderIter(AbstractIter):
                 yield child_
             if not AbstractIter._abort_at_level(2, maxlevel):
                 descendantmaxlevel = maxlevel - 1 if maxlevel else None
-                for descendant_ in PreOrderIter._iter(
+                yield from PreOrderIter._iter(
                     list(child_.children.values()), filter_, stop, descendantmaxlevel
-                ):
-                    yield descendant_
+                )
 
 
 class LevelOrderIter(AbstractIter):
