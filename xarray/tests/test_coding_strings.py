@@ -151,9 +151,9 @@ def test_StackedBytesArray() -> None:
     assert_array_equal(expected, actual)
 
     B = IndexerMaker(indexing.BasicIndexer)
-    assert_array_equal(expected[:1], actual[B[:1]])
+    assert_array_equal(expected[:1], actual[B[:1].tuple])
     with pytest.raises(IndexError):
-        actual[B[:, :2]]
+        actual[B[:, :2].tuple]
 
 
 def test_StackedBytesArray_scalar() -> None:
@@ -171,7 +171,7 @@ def test_StackedBytesArray_scalar() -> None:
 
     B = IndexerMaker(indexing.BasicIndexer)
     with pytest.raises(IndexError):
-        actual[B[:2]]
+        actual[B[:2].tuple]
 
 
 def test_StackedBytesArray_vectorized_indexing() -> None:
@@ -181,7 +181,7 @@ def test_StackedBytesArray_vectorized_indexing() -> None:
 
     V = IndexerMaker(indexing.VectorizedIndexer)
     indexer = V[np.array([[0, 1], [1, 0]])]
-    actual = stacked.vindex[indexer]
+    actual = stacked.vindex[indexer.tuple]
     assert_array_equal(actual, expected)
 
 
