@@ -4,10 +4,9 @@ import functools
 import sys
 from itertools import repeat
 from textwrap import dedent
-from typing import TYPE_CHECKING, Callable, Tuple
+from typing import TYPE_CHECKING, Callable
 
 from xarray import DataArray, Dataset
-
 from xarray.core.iterators import LevelOrderIter
 from xarray.core.treenode import NodePath, TreeNode
 
@@ -154,7 +153,7 @@ def map_over_subtree(func: Callable) -> Callable:
     # TODO inspect function to work out immediately if the wrong number of arguments were passed for it?
 
     @functools.wraps(func)
-    def _map_over_subtree(*args, **kwargs) -> DataTree | Tuple[DataTree, ...]:
+    def _map_over_subtree(*args, **kwargs) -> DataTree | tuple[DataTree, ...]:
         """Internal function which maps func over every node in tree, returning a tree of the results."""
         from xarray.core.datatree import DataTree
 
