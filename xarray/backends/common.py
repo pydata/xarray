@@ -333,7 +333,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
         return variables, attributes
 
-    def encode_variable(self, v, name):
+    def encode_variable(self, v, name: str | None = None):
         """encode one variable"""
         return v
 
