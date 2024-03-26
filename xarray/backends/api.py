@@ -69,7 +69,7 @@ if TYPE_CHECKING:
     T_NetcdfTypes = Literal[
         "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
     ]
-    from xarray.datatree_.datatree import DataTree
+    from xarray.core.datatree import DataTree
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"

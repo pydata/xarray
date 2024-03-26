@@ -23,17 +23,20 @@ v2024.03.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Grouped and resampling quantile calculations now use the vectorized algorithm in ``flox>=0.9.4`` if present.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Do not broadcast in arithmetic operations when global option ``arithmetic_broadcast=False``
   (:issue:`6806`, :pull:`8784`).
   By `Etienne Schalk <https://github.com/etienneschalk>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 - Add the ``.oindex`` property to Explicitly Indexed Arrays for orthogonal indexing functionality. (:issue:`8238`, :pull:`8750`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
-
 - Add the ``.vindex`` property to Explicitly Indexed Arrays for vectorized indexing functionality. (:issue:`8238`, :pull:`8780`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
-
 - Expand use of ``.oindex`` and ``.vindex`` properties. (:pull: `8790`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
+- Allow creating :py:class:`xr.Coordinates` objects with no indexes (:pull:`8711`)
+  By `Benoit Bovy <https://github.com/benbovy>`_ and `Tom Nicholas
+  <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -57,15 +60,17 @@ Bug fixes
   `CFMaskCoder`/`CFScaleOffsetCoder` (:issue:`2304`, :issue:`5597`,
   :issue:`7691`, :pull:`8713`, see also discussion in :pull:`7654`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- do not cast `_FillValue`/`missing_value` in `CFMaskCoder` if `_Unsigned` is provided
+- Do not cast `_FillValue`/`missing_value` in `CFMaskCoder` if `_Unsigned` is provided
   (:issue:`8844`, :pull:`8852`).
 - Adapt handling of copy keyword argument for numpy >= 2.0dev
-  (:issue:`8844`, :pull:`8851`, :pull:`8865``).
+  (:issue:`8844`, :pull:`8851`, :pull:`8865`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- import trapz/trapezoid depending on numpy version.
+- Import trapz/trapezoid depending on numpy version
   (:issue:`8844`, :pull:`8865`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-
+- Warn and return bytes undecoded in case of UnicodeDecodeError in h5netcdf-backend
+  (:issue:`5563`, :pull:`8874`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Documentation
@@ -77,6 +82,9 @@ Internal Changes
 - Migrates ``treenode`` functionality into ``xarray/core`` (:pull:`8757`)
   By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
   <https://github.com/TomNicholas>`_.
+- Migrates ``datatree`` functionality into ``xarray/core``. (:pull: `8789`)
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
+  <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 .. _whats-new.2024.02.0:
