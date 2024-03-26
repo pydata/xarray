@@ -2,11 +2,11 @@ from typing import TYPE_CHECKING
 
 from xarray.core.formatting import _compat_to_str, diff_dataset_repr
 
-from .mapping import diff_treestructure
-from .render import RenderTree
+from xarray.datatree_.datatree.mapping import diff_treestructure
+from xarray.datatree_.datatree.render import RenderTree
 
 if TYPE_CHECKING:
-    from .datatree import DataTree
+    from xarray.core.datatree import DataTree
 
 
 def diff_nodewise_summary(a, b, compat):

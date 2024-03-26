@@ -230,7 +230,7 @@ class TreeNode(Generic[Tree]):
         pass
 
     def _iter_parents(self: Tree) -> Iterator[Tree]:
-        """Iterate up the tree, starting from the current node."""
+        """Iterate up the tree, starting from the current node's parent."""
         node: Tree | None = self.parent
         while node is not None:
             yield node

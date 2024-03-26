@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
-    from xarray.datatree_.datatree import DataTree
+    from xarray.core.datatree import DataTree
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):

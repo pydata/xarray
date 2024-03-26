@@ -2,7 +2,7 @@ from textwrap import dedent
 
 from xarray import Dataset
 
-from xarray.datatree_.datatree import DataTree
+from xarray.core.datatree import DataTree
 from xarray.datatree_.datatree.formatting import diff_tree_repr
 
 
