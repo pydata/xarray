@@ -2392,8 +2392,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -2490,8 +2488,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -2588,8 +2584,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -2692,8 +2686,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -2808,8 +2800,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -2924,8 +2914,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -3049,8 +3037,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -3186,8 +3172,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -3320,8 +3304,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -3454,8 +3436,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -3584,8 +3564,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -3687,8 +3665,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -3788,8 +3764,6 @@ class DatasetGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -3919,8 +3893,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -4017,8 +3989,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -4115,8 +4085,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -4219,8 +4187,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -4335,8 +4301,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -4451,8 +4415,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -4576,8 +4538,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -4713,8 +4673,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -4847,8 +4805,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -4981,8 +4937,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -5111,8 +5065,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -5214,8 +5166,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -5315,8 +5265,6 @@ class DatasetResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -5446,8 +5394,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -5537,8 +5483,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -5628,8 +5572,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -5725,8 +5667,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -5832,8 +5772,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -5939,8 +5877,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -6055,8 +5991,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -6181,8 +6115,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -6304,8 +6236,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -6427,8 +6357,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -6546,8 +6474,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -6641,8 +6567,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -6738,8 +6662,6 @@ class DataArrayGroupByAggregations:
         Use the ``flox`` package to significantly speed up groupby computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        other methods might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -6865,8 +6787,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -6956,8 +6876,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -7047,8 +6965,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -7144,8 +7060,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -7251,8 +7165,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Examples
@@ -7358,8 +7270,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -7474,8 +7384,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -7600,8 +7508,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -7723,8 +7629,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -7846,8 +7750,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -7965,8 +7867,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -8060,8 +7960,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
@@ -8157,8 +8055,6 @@ class DataArrayResampleAggregations:
         Use the ``flox`` package to significantly speed up resampling computations,
         especially with dask arrays. Xarray will use flox by default if installed.
         Pass flox-specific keyword arguments in ``**kwargs``.
-        The default choice is ``method="cohorts"`` which generalizes the best,
-        ``method="blockwise"`` might work better for your problem.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
