@@ -6866,6 +6866,7 @@ class DataArray(
         dim: Mapping[Any, int] | None = None,
         min_periods: int | None = None,
         center: bool | Mapping[Any, bool] = False,
+        pad: bool = True,
         **window_kwargs: int,
     ) -> DataArrayRolling:
         """
@@ -6933,7 +6934,9 @@ class DataArray(
         from xarray.core.rolling import DataArrayRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
-        return DataArrayRolling(self, dim, min_periods=min_periods, center=center)
+        return DataArrayRolling(
+            self, dim, min_periods=min_periods, center=center, pad=pad
+        )
 
     def cumulative(
         self,

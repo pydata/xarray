@@ -10329,6 +10329,7 @@ class Dataset(
         dim: Mapping[Any, int] | None = None,
         min_periods: int | None = None,
         center: bool | Mapping[Any, bool] = False,
+        pad: bool = True,
         **window_kwargs: int,
     ) -> DatasetRolling:
         """
@@ -10362,7 +10363,9 @@ class Dataset(
         from xarray.core.rolling import DatasetRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
-        return DatasetRolling(self, dim, min_periods=min_periods, center=center)
+        return DatasetRolling(
+            self, dim, min_periods=min_periods, center=center, pad=pad
+        )
 
     def cumulative(
         self,

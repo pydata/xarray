@@ -57,6 +57,7 @@ from collections.abc import (
     Mapping,
     MutableMapping,
     MutableSet,
+    Sequence,
     ValuesView,
 )
 from enum import Enum
@@ -68,6 +69,7 @@ from typing import (
     Generic,
     Literal,
     TypeVar,
+    Union,
     overload,
 )
 
@@ -1036,6 +1038,65 @@ def iterate_nested(nested_list):
             yield from iterate_nested(item)
         else:
             yield item
+
+
+ItemOrSequence = Union[T, Sequence[T]]
+
+
+def expand_args_to_dims(
+    dim: ItemOrSequence[Hashable],
+    arg_names: Sequence[str],
+    args: Sequence[ItemOrSequence[Any]],
+) -> tuple[Sequence[Hashable], Sequence[Sequence[Any]]]:
+    """Expand dims and all elements in args to be arrays of the length of the number of dimensions
+
+    Parameters
+    ----------
+    dim : str or sequence of str
+        Dimension(s)
+    arg_names : sequence of str
+        Names of the arguments to expand
+    args : sequence of args, which may be individual items or lists of items
+        Arguments to expand
+
+    Raises
+    ------
+    ValueError: raised if dim is a scalar and any of the args are not scalars
+    ValueError: raised if any of the produced lists are of the wrong length
+
+    Returns
+    -------
+    list of dims, list of lists of arguments
+    """
+    if is_scalar(dim):
+        dim_list: Sequence[Hashable] = [dim]
+    else:
+        assert isinstance(dim, Sequence)
+        dim_list = dim
+
+    # dim is now a list
+    nroll = len(dim_list)
+
+    def to_list(arg):
+        if is_scalar(arg):
+            return [arg] * nroll
+        elif isinstance(arg, list) and len(arg) == 1 and nroll > 1:
+            return [arg[0]] * nroll
+        return arg
+
+    arr_args = [to_list(arg) for arg in args]
+
+    if any(len(arg) != len(dim_list) for arg in arr_args):
+        names_args_len = ", ".join(
+            f"{name}={args!r} (len={len(args)})"
+            for name, args in zip(arg_names, arr_args)
+            if len(args) != len(dim_list)
+        )
+        raise ValueError(
+            f"Expected all arguments to have len={len(dim_list)}.  Received: {names_args_len}"
+        )
+
+    return dim_list, arr_args
 
 
 def contains_only_chunked_or_numpy(obj) -> bool:

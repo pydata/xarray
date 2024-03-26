@@ -7,7 +7,12 @@ import pandas as pd
 import pytest
 
 from xarray.core import duck_array_ops, utils
-from xarray.core.utils import either_dict_or_kwargs, infix_dims, iterate_nested
+from xarray.core.utils import (
+    either_dict_or_kwargs,
+    expand_args_to_dims,
+    infix_dims,
+    iterate_nested,
+)
 from xarray.tests import assert_array_equal, requires_dask
 
 
@@ -346,6 +351,27 @@ def test_parse_ordered_dims_raises() -> None:
 )
 def test_iterate_nested(nested_list, expected):
     assert list(iterate_nested(nested_list)) == expected
+
+
+def test_expand_args_to_dims() -> None:
+    dims, (arg1, arg2, arg3, arg4) = expand_args_to_dims(
+        ["a", "b"],
+        ["arg1", "arg2", "arg3", "arg4"],
+        [1, ["val2.1", "val2.2"], False, [True, False]],
+    )
+
+    assert dims == ["a", "b"]
+    assert arg1 == [1, 1]
+    assert arg2 == ["val2.1", "val2.2"]
+    assert arg3 == [False, False]
+    assert arg4 == [True, False]
+
+    with pytest.raises(ValueError, match="Expected all arguments"):
+        expand_args_to_dims(
+            ["a", "b"],
+            ["arg1", "arg2", "arg3", "arg4"],
+            ["asdf", ["arg2.1", "arg2.2"], ["arg3.1"], ["arg4.1", "arg4.2", "arg4.3"]],
+        )
 
 
 def test_find_stack_level():
