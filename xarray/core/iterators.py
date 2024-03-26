@@ -11,6 +11,24 @@ from xarray.core.treenode import Tree
 
 
 class AbstractIter(abc.Iterator):
+    """Iterate over tree starting at ``node``. This is a base class for iterators
+    used by `DataTree`. See ``PreOrderIter`` and ``LevelOrderIter`` for
+    specific implementation of iteration algorithms.
+
+    Parameters
+    ----------
+    node : Tree
+        Node in a tree to begin iteration at.
+    filter_ : Callable, optional
+        Function called with every `node` as argument, `node` is returned if `True`.
+        Default is to iterate through all ``node`` objects in the tree.
+    stop : Callable, optional
+        Function that will cause iteration to stop if ``stop`` returns ``True``
+        for ``node``.
+    maxlevel : int, optional
+        Maximum level to descend in the node hierarchy.
+    """
+
     def __init__(
         self,
         node: Tree,
@@ -18,14 +36,6 @@ class AbstractIter(abc.Iterator):
         stop: Callable | None = None,
         maxlevel: int | None = None,
     ):
-        """
-        Iterate over tree starting at `node`.
-        Base class for all iterators.
-        Keyword Args:
-            filter_: function called with every `node` as argument, `node` is returned if `True`.
-            stop: stop iteration at `node` if `stop` function returns `True` for `node`.
-            maxlevel (int): maximum descending in the node hierarchy.
-        """
         self.node = node
         self.filter_ = filter_
         self.stop = stop
@@ -45,11 +55,11 @@ class AbstractIter(abc.Iterator):
         return self._iter(children, filter_, stop, maxlevel)
 
     @staticmethod
-    def __default_filter(node):
+    def __default_filter(node: Tree) -> bool:
         return True
 
     @staticmethod
-    def __default_stop(node):
+    def __default_stop(node: Tree) -> bool:
         return False
 
     def __iter__(self) -> Iterator[Tree]:
@@ -63,26 +73,65 @@ class AbstractIter(abc.Iterator):
 
     @staticmethod
     @abstractmethod
-    def _iter(children: list[Tree], filter_, stop, maxlevel) -> Iterator[Tree]: ...
+    def _iter(
+        children: list[Tree], filter_: Callable, stop: Callable, maxlevel: int | None
+    ) -> Iterator[Tree]: ...
 
     @staticmethod
-    def _abort_at_level(level, maxlevel):
+    def _abort_at_level(level: int, maxlevel: int | None) -> bool:
         return maxlevel is not None and level > maxlevel
 
     @staticmethod
-    def _get_children(children: list[Tree], stop) -> list[Tree]:
+    def _get_children(children: list[Tree], stop: Callable) -> list[Tree]:
         return [child for child in children if not stop(child)]
 
 
 class PreOrderIter(AbstractIter):
-    """
-    Iterate over tree applying pre-order strategy starting at `node`.
+    """Iterate over tree applying pre-order strategy starting at `node`.
+
     Start at root and go-down until reaching a leaf node.
     Step upwards then, and search for the next leafs.
+
+    Examples
+    --------
+    >>> from xarray.core.datatree import DataTree
+    >>> from xarray.core.iterators import PreOrderIter
+    >>> f = DataTree("f")
+    >>> b = DataTree("b", parent=f)
+    >>> a = DataTree("a", parent=b)
+    >>> d = DataTree("d", parent=b)
+    >>> c = DataTree("c", parent=d)
+    >>> e = DataTree("e", parent=d)
+    >>> g = DataTree("g", parent=f)
+    >>> i = DataTree("i", parent=g)
+    >>> h = DataTree("h", parent=i)
+    >>> print(f)
+    DataTree('f', parent=None)
+    ├── DataTree('b')
+    │   ├── DataTree('a')
+    │   └── DataTree('d')
+    │       ├── DataTree('c')
+    │       └── DataTree('e')
+    └── DataTree('g')
+        └── DataTree('i')
+            └── DataTree('h')
+    >>> [node.name for node in PreOrderIter(f)]
+    ['f', 'b', 'a', 'd', 'c', 'e', 'g', 'i', 'h']
+    >>> [node.name for node in PreOrderIter(f, maxlevel=3)]
+    ['f', 'b', 'a', 'd', 'g', 'i']
+    >>> [
+    ...     node.name
+    ...     for node in PreOrderIter(f, filter_=lambda n: n.name not in ("e", "g"))
+    ... ]
+    ['f', 'b', 'a', 'd', 'c', 'i', 'h']
+    >>> [node.name for node in PreOrderIter(f, stop=lambda n: n.name == "d")]
+    ['f', 'b', 'a', 'g', 'i', 'h']
     """
 
     @staticmethod
-    def _iter(children, filter_, stop, maxlevel):
+    def _iter(
+        children: list[Tree], filter_: Callable, stop: Callable, maxlevel: int | None
+    ) -> Iterator[Tree]:
         for child_ in children:
             if stop(child_):
                 continue
@@ -96,12 +145,48 @@ class PreOrderIter(AbstractIter):
 
 
 class LevelOrderIter(AbstractIter):
-    """
-    Iterate over tree applying level-order strategy starting at `node`.
+    """Iterate over tree applying level-order strategy starting at `node`.
+
+    Examples
+    --------
+    >>> from xarray.core.datatree import DataTree
+    >>> from xarray.core.iterators import PreOrderIter
+    >>> f = DataTree("f")
+    >>> b = DataTree("b", parent=f)
+    >>> a = DataTree("a", parent=b)
+    >>> d = DataTree("d", parent=b)
+    >>> c = DataTree("c", parent=d)
+    >>> e = DataTree("e", parent=d)
+    >>> g = DataTree("g", parent=f)
+    >>> i = DataTree("i", parent=g)
+    >>> h = DataTree("h", parent=i)
+    >>> print(f)
+    DataTree('f', parent=None)
+    ├── DataTree('b')
+    │   ├── DataTree('a')
+    │   └── DataTree('d')
+    │       ├── DataTree('c')
+    │       └── DataTree('e')
+    └── DataTree('g')
+        └── DataTree('i')
+            └── DataTree('h')
+    >>> [node.name for node in LevelOrderIter(f)]
+    ['f', 'b', 'g', 'a', 'd', 'i', 'c', 'e', 'h']
+    >>> [node.name for node in LevelOrderIter(f, maxlevel=3)]
+    ['f', 'b', 'g', 'a', 'd', 'i']
+    >>> [
+    ...     node.name
+    ...     for node in LevelOrderIter(f, filter_=lambda n: n.name not in ("e", "g"))
+    ... ]
+    ['f', 'b', 'a', 'd', 'i', 'c', 'h']
+    >>> [node.name for node in LevelOrderIter(f, stop=lambda n: n.name == "d")]
+    ['f', 'b', 'g', 'a', 'i', 'h']
     """
 
     @staticmethod
-    def _iter(children, filter_, stop, maxlevel):
+    def _iter(
+        children: list[Tree], filter_: Callable, stop: Callable, maxlevel: int | None
+    ) -> Iterator[Tree]:
         level = 1
         while children:
             next_children = []
