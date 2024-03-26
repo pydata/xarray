@@ -87,7 +87,7 @@ Internal Changes
   <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Migrates ``iterator`` functionality into ``xarray/core`` (:pull: `8879`)
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and `Tom Nicholas
-  <https://github.omc/TomNicholas>`_.
+  <https://github.com/TomNicholas>`_.
 
 
 .. _whats-new.2024.02.0:
