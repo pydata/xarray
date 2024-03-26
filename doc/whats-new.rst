@@ -23,6 +23,8 @@ v2024.03.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Grouped and resampling quantile calculations now use the vectorized algorithm in ``flox>=0.9.4`` if present.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Do not broadcast in arithmetic operations when global option ``arithmetic_broadcast=False``
   (:issue:`6806`, :pull:`8784`).
   By `Etienne Schalk <https://github.com/etienneschalk>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
