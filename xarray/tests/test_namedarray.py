@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-import warnings
 from abc import abstractmethod
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
@@ -358,17 +357,11 @@ class TestNamedArray(NamedArraySubclassobjects):
         test_duck_array_typevar(custom_a)
 
         # Test numpy's array api:
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                r"The numpy.array_api submodule is still experimental",
-                category=UserWarning,
-            )
-            import numpy.array_api as nxp
+        import array_api_strict as nxp
 
         # TODO: nxp doesn't use dtype typevars, so can only use Any for the moment:
         arrayapi_a: duckarray[Any, Any]  #  duckarray[Any, np.dtype[np.int64]]
-        arrayapi_a = nxp.asarray([2.1, 4], dtype=np.dtype(np.int64))
+        arrayapi_a = nxp.asarray([2.1, 4], dtype=np.int64)
         test_duck_array_typevar(arrayapi_a)
 
     def test_new_namedarray(self) -> None:
