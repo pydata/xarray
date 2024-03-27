@@ -978,6 +978,32 @@ class TestConcatDataset:
 
         assert np.issubdtype(actual.x2.dtype, dtype)
 
+    def test_concat_avoids_index_auto_creation(self) -> None:
+        # TODO once passing indexes={} directly to DataArray constructor is allowed then no need to create coords first
+        coords = Coordinates({"x": np.array([1, 2, 3])}, indexes={})
+        datasets = [
+            Dataset(
+                {"a": (["x", "y"], np.zeros((3, 3)))},
+                coords=coords,
+            )
+            for _ in range(2)
+        ]
+        # should not raise on concat
+        combined = concat(datasets, dim="x")
+        assert combined["a"].shape == (6, 3)
+        assert combined["a"].dims == ("x", "y")
+
+        # nor have auto-created any indexes
+        assert combined.indexes == {}
+
+        # should not raise on stack
+        combined = concat(datasets, dim="z")
+        assert combined["a"].shape == (2, 3, 3)
+        assert combined["a"].dims == ("z", "x", "y")
+
+        # nor have auto-created any indexes
+        assert combined.indexes == {}
+
 
 class TestConcatDataArray:
     def test_concat(self) -> None:
@@ -1050,6 +1076,33 @@ class TestConcatDataArray:
         combined = concat(arrays, dim="z")
         assert combined.shape == (2, 3, 3)
         assert combined.dims == ("z", "x", "y")
+
+    def test_concat_avoids_index_auto_creation(self) -> None:
+        # TODO once passing indexes={} directly to DataArray constructor is allowed then no need to create coords first
+        coords = Coordinates({"x": np.array([1, 2, 3])}, indexes={})
+        arrays = [
+            DataArray(
+                np.zeros((3, 3)),
+                dims=["x", "y"],
+                coords=coords,
+            )
+            for _ in range(2)
+        ]
+        # should not raise on concat
+        combined = concat(arrays, dim="x")
+        assert combined.shape == (6, 3)
+        assert combined.dims == ("x", "y")
+
+        # nor have auto-created any indexes
+        assert combined.indexes == {}
+
+        # should not raise on stack
+        combined = concat(arrays, dim="z")
+        assert combined.shape == (2, 3, 3)
+        assert combined.dims == ("z", "x", "y")
+
+        # nor have auto-created any indexes
+        assert combined.indexes == {}
 
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
     def test_concat_fill_value(self, fill_value) -> None:
