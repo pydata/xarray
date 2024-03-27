@@ -4120,7 +4120,7 @@ class DataArray(
         compute: Literal[True] = True,
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
-        region: Mapping[str, slice] | None = None,
+        region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
@@ -4140,7 +4140,7 @@ class DataArray(
         compute: Literal[False],
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
-        region: Mapping[str, slice] | None = None,
+        region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
@@ -4158,7 +4158,7 @@ class DataArray(
         compute: bool = True,
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
-        region: Mapping[str, slice] | None = None,
+        region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
@@ -4237,6 +4237,12 @@ class DataArray(
               in with ``region``, use a separate call to ``to_zarr()`` with
               ``compute=False``. See "Appending to existing Zarr stores" in
               the reference documentation for full details.
+
+            Users are expected to ensure that the specified region aligns with
+            Zarr chunk boundaries, and that dask chunks are also aligned.
+            Xarray makes limited checks that these multiple chunk boundaries line up.
+            It is possible to write incomplete chunks and corrupt the data with this
+            option if you are not careful.
         safe_chunks : bool, default: True
             If True, only allow writes to when there is a many-to-one relationship
             between Zarr chunks (specified in encoding) and Dask chunks.

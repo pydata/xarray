@@ -22,7 +22,10 @@ v2024.03.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Partial writes to existing chunks with ``region`` or ``append_dim`` will now raise an error
+  (unless ``safe_chunks=False``); previously an error would only be raised on
+  new variables. (:pull:`8459`, :issue:`8371`, :issue:`8882`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Grouped and resampling quantile calculations now use the vectorized algorithm in ``flox>=0.9.4`` if present.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Do not broadcast in arithmetic operations when global option ``arithmetic_broadcast=False``
