@@ -1029,6 +1029,9 @@ def _plot1d(plotfunc):
             if "label" not in cbar_kwargs:
                 cbar_kwargs["label"] = label_from_attrs(hueplt_norm.data)
 
+            if np.issubdtype(hueplt_norm.data.dtype, np.datetime64):
+                cbar_kwargs["_use_concise_date"] = True
+
             _add_colorbar(
                 primitive, ax, kwargs.get("cbar_ax", None), cbar_kwargs, cmap_params
             )
