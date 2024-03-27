@@ -623,7 +623,12 @@ class ZarrStore(AbstractWritableDataStore):
             # avoid needing to load index variables into memory.
             # TODO: consider making loading indexes lazy again?
             existing_vars, _, _ = conventions.decode_cf_variables(
-                self.get_variables(), self.get_attrs()
+                {
+                    k: v
+                    for k, v in self.get_variables().items()
+                    if k in existing_variable_names
+                },
+                self.get_attrs(),
             )
             # Modified variables must use the same encoding as the store.
             vars_with_encoding = {}
