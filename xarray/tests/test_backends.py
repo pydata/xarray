@@ -5751,3 +5751,40 @@ def test_zarr_region_chunk_partial(tmp_path):
             ds.chunk(3).isel(a=[r]).to_zarr(
                 tmp_path / "foo.zarr", region=dict(a=slice(r, r + 1))
             )
+
+
+@requires_zarr
+@requires_dask
+def test_zarr_append_chunk_partial(tmp_path):
+    t_coords = np.array([np.datetime64("2020-01-01").astype("datetime64[ns]")])
+    data = np.ones((10, 10))
+
+    da = xr.DataArray(
+        data.reshape((-1, 10, 10)),
+        dims=["time", "x", "y"],
+        coords={"time": t_coords},
+        name="foo",
+    )
+    da.to_zarr(tmp_path / "foo.zarr", mode="w", encoding={"foo": {"chunks": (5, 5, 1)}})
+
+    new_time = np.array([np.datetime64("2021-01-01").astype("datetime64[ns]")])
+
+    da2 = xr.DataArray(
+        data.reshape((-1, 10, 10)),
+        dims=["time", "x", "y"],
+        coords={"time": new_time},
+        name="foo",
+    )
+    with pytest.raises(ValueError, match="encoding was provided"):
+        da2.to_zarr(
+            tmp_path / "foo.zarr",
+            append_dim="time",
+            mode="a",
+            encoding={"foo": {"chunks": (1, 1, 1)}},
+        )
+
+    # chunking with dask sidesteps the encoding check, so we need a different check
+    with pytest.raises(ValueError, match="Specified zarr chunks"):
+        da2.chunk({"x": 1, "y": 1, "time": 1}).to_zarr(
+            tmp_path / "foo.zarr", append_dim="time", mode="a"
+        )
