@@ -123,6 +123,10 @@ New Features
   (:issue:`7377`, :pull:`8684`)
   By `Marco Wolsza <https://github.com/maawoo>`_.
 
+- Xarray now makes a best attempt not to coerce :py:class:`pandas.api.extensions.ExtensionArray` to a numpy array
+by supporting 1D `ExtensionArray` objects internally where possible.  Thus, `Dataset`s initialized with a `pd.Catgeorical`, for example,
+will retain the object.  However, one cannot do operations that are not possible on the `ExtensionArray` then, such as broadcasting.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
