@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import warnings
-
 import pytest
 
 import xarray as xr
@@ -9,10 +7,19 @@ from xarray.testing import assert_equal
 
 np = pytest.importorskip("numpy", minversion="1.22")
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    import numpy.array_api as xp  # isort:skip
-    from numpy.array_api._array_object import Array  # isort:skip
+try:
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+
+        import numpy.array_api as xp
+        from numpy.array_api._array_object import Array
+except ImportError:
+    # for `numpy>=2.0`
+    xp = pytest.importorskip("array_api_strict")
+
+    from array_api_strict._array_object import Array  # type: ignore[no-redef]
 
 
 @pytest.fixture
@@ -77,6 +84,22 @@ def test_broadcast(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
         assert_equal(a, e)
 
 
+def test_broadcast_during_arithmetic(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
+    np_arr, xp_arr = arrays
+    np_arr2 = xr.DataArray(np.array([1.0, 2.0]), dims="x")
+    xp_arr2 = xr.DataArray(xp.asarray([1.0, 2.0]), dims="x")
+
+    expected = np_arr * np_arr2
+    actual = xp_arr * xp_arr2
+    assert isinstance(actual.data, Array)
+    assert_equal(actual, expected)
+
+    expected = np_arr2 * np_arr
+    actual = xp_arr2 * xp_arr
+    assert isinstance(actual.data, Array)
+    assert_equal(actual, expected)
+
+
 def test_concat(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     np_arr, xp_arr = arrays
     expected = xr.concat((np_arr, np_arr), dim="x")
@@ -111,6 +134,14 @@ def test_stack(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     np_arr, xp_arr = arrays
     expected = np_arr.stack(z=("x", "y"))
     actual = xp_arr.stack(z=("x", "y"))
+    assert isinstance(actual.data, Array)
+    assert_equal(actual, expected)
+
+
+def test_unstack(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
+    np_arr, xp_arr = arrays
+    expected = np_arr.stack(z=("x", "y")).unstack()
+    actual = xp_arr.stack(z=("x", "y")).unstack()
     assert isinstance(actual.data, Array)
     assert_equal(actual, expected)
 

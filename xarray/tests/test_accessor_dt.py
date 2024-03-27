@@ -145,7 +145,7 @@ class TestDatetimeAccessor:
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype("int8")
         nontime_data = nontime_data.assign_coords(time=int_data)
-        with pytest.raises(TypeError, match=r"dt"):
+        with pytest.raises(AttributeError, match=r"dt"):
             nontime_data.time.dt
 
     @pytest.mark.filterwarnings("ignore:dt.weekofyear and dt.week have been deprecated")
@@ -248,7 +248,9 @@ class TestDatetimeAccessor:
         assert_equal(actual.compute(), expected.compute())
 
     def test_seasons(self) -> None:
-        dates = pd.date_range(start="2000/01/01", freq="M", periods=12)
+        dates = xr.date_range(
+            start="2000/01/01", freq="ME", periods=12, use_cftime=False
+        )
         dates = dates.append(pd.Index([np.datetime64("NaT")]))
         dates = xr.DataArray(dates)
         seasons = xr.DataArray(
@@ -310,7 +312,7 @@ class TestTimedeltaAccessor:
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype("int8")
         nontime_data = nontime_data.assign_coords(time=int_data)
-        with pytest.raises(TypeError, match=r"dt"):
+        with pytest.raises(AttributeError, match=r"dt"):
             nontime_data.time.dt
 
     @pytest.mark.parametrize(

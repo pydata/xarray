@@ -194,7 +194,7 @@ class TestVariable(DaskTestCase):
     def test_repr(self):
         expected = dedent(
             f"""\
-            <xarray.Variable (x: 4, y: 6)>
+            <xarray.Variable (x: 4, y: 6)> Size: 192B
             {self.lazy_var.data!r}"""
         )
         assert expected == repr(self.lazy_var)
@@ -298,17 +298,6 @@ class TestVariable(DaskTestCase):
 
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
-
-    def test_tokenize_empty_attrs(self) -> None:
-        # Issue #6970
-        assert self.eager_var._attrs is None
-        expected = dask.base.tokenize(self.eager_var)
-        assert self.eager_var.attrs == self.eager_var._attrs == {}
-        assert (
-            expected
-            == dask.base.tokenize(self.eager_var)
-            == dask.base.tokenize(self.lazy_var.compute())
-        )
 
     @requires_pint
     def test_tokenize_duck_dask_array(self):
@@ -666,10 +655,10 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(data, dims=["x"], coords={"y": ("x", nonindex_coord)})
         expected = dedent(
             f"""\
-            <xarray.DataArray 'data' (x: 1)>
+            <xarray.DataArray 'data' (x: 1)> Size: 8B
             {data!r}
             Coordinates:
-                y        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>
+                y        (x) int64 8B dask.array<chunksize=(1,), meta=np.ndarray>
             Dimensions without coordinates: x"""
         )
         assert expected == repr(a)
@@ -681,13 +670,13 @@ class TestDataArrayAndDataset(DaskTestCase):
         ds = Dataset(data_vars={"a": ("x", data)}, coords={"y": ("x", nonindex_coord)})
         expected = dedent(
             """\
-            <xarray.Dataset>
+            <xarray.Dataset> Size: 16B
             Dimensions:  (x: 1)
             Coordinates:
-                y        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>
+                y        (x) int64 8B dask.array<chunksize=(1,), meta=np.ndarray>
             Dimensions without coordinates: x
             Data variables:
-                a        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>"""
+                a        (x) int64 8B dask.array<chunksize=(1,), meta=np.ndarray>"""
         )
         assert expected == repr(ds)
         assert kernel_call_count == 0  # should not evaluate dask array
@@ -802,7 +791,7 @@ class TestToDaskDataFrame:
         assert isinstance(actual, dd.DataFrame)
 
         # use the .equals from pandas to check dataframes are equivalent
-        assert_frame_equal(expected.compute(), actual.compute())
+        assert_frame_equal(actual.compute(), expected.compute())
 
         # test if no index is given
         expected = dd.from_pandas(expected_pd.reset_index(drop=False), chunksize=4)
@@ -810,8 +799,12 @@ class TestToDaskDataFrame:
         actual = ds.to_dask_dataframe(set_index=False)
 
         assert isinstance(actual, dd.DataFrame)
-        assert_frame_equal(expected.compute(), actual.compute())
+        assert_frame_equal(actual.compute(), expected.compute())
 
+    @pytest.mark.xfail(
+        reason="Currently pandas with pyarrow installed will return a `string[pyarrow]` type, "
+        "which causes the `y` column to have a different type depending on whether pyarrow is installed"
+    )
     def test_to_dask_dataframe_2D(self):
         # Test if 2-D dataset is supplied
         w = np.random.randn(2, 3)
@@ -830,7 +823,7 @@ class TestToDaskDataFrame:
         actual = ds.to_dask_dataframe(set_index=False)
 
         assert isinstance(actual, dd.DataFrame)
-        assert_frame_equal(expected, actual.compute())
+        assert_frame_equal(actual.compute(), expected)
 
     @pytest.mark.xfail(raises=NotImplementedError)
     def test_to_dask_dataframe_2D_set_index(self):
@@ -863,6 +856,10 @@ class TestToDaskDataFrame:
         assert isinstance(actual, dd.DataFrame)
         assert_frame_equal(expected.compute(), actual.compute())
 
+    @pytest.mark.xfail(
+        reason="Currently pandas with pyarrow installed will return a `string[pyarrow]` type, "
+        "which causes the index to have a different type depending on whether pyarrow is installed"
+    )
     def test_to_dask_dataframe_not_daskarray(self):
         # Test if DataArray is not a dask array
         x = np.random.randn(10)
@@ -1565,6 +1562,30 @@ def test_token_identical(obj, transform):
     )
 
 
+@pytest.mark.parametrize(
+    "obj",
+    [
+        make_ds(),  # Dataset
+        make_ds().variables["c2"],  # Variable
+        make_ds().variables["x"],  # IndexVariable
+    ],
+)
+def test_tokenize_empty_attrs(obj):
+    """Issues #6970 and #8788"""
+    obj.attrs = {}
+    assert obj._attrs is None
+    a = dask.base.tokenize(obj)
+
+    assert obj.attrs == {}
+    assert obj._attrs == {}  # attrs getter changed None to dict
+    b = dask.base.tokenize(obj)
+    assert a == b
+
+    obj2 = obj.copy()
+    c = dask.base.tokenize(obj2)
+    assert a == c
+
+
 def test_recursive_token():
     """Test that tokenization is invoked recursively, and doesn't just rely on the
     output of str()
@@ -1654,16 +1675,10 @@ def test_lazy_array_equiv_merge(compat):
         lambda a: a.assign_attrs(new_attr="anew"),
         lambda a: a.assign_coords(cxy=a.cxy),
         lambda a: a.copy(),
-        lambda a: a.isel(x=np.arange(a.sizes["x"])),
         lambda a: a.isel(x=slice(None)),
         lambda a: a.loc[dict(x=slice(None))],
-        lambda a: a.loc[dict(x=np.arange(a.sizes["x"]))],
-        lambda a: a.loc[dict(x=a.x)],
-        lambda a: a.sel(x=a.x),
-        lambda a: a.sel(x=a.x.values),
         lambda a: a.transpose(...),
         lambda a: a.squeeze(),  # no dimensions to squeeze
-        lambda a: a.sortby("x"),  # "x" is already sorted
         lambda a: a.reindex(x=a.x),
         lambda a: a.reindex_like(a),
         lambda a: a.rename({"cxy": "cnew"}).rename({"cnew": "cxy"}),

@@ -13,12 +13,12 @@ import sys
 import tempfile
 import uuid
 import warnings
-from collections.abc import Generator, Iterator
+from collections.abc import Generator, Iterator, Mapping
 from contextlib import ExitStack
 from io import BytesIO
 from os import listdir
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 from unittest.mock import patch
 
 import numpy as np
@@ -48,12 +48,13 @@ from xarray.backends.netCDF4_ import (
 )
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
+from xarray.coding.cftime_offsets import cftime_range
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
-from xarray.core.pycompat import array_type
+from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     assert_allclose,
     assert_array_equal,
@@ -141,96 +142,100 @@ def open_example_mfdataset(names, *args, **kwargs) -> Dataset:
     )
 
 
-def create_masked_and_scaled_data() -> Dataset:
-    x = np.array([np.nan, np.nan, 10, 10.1, 10.2], dtype=np.float32)
+def create_masked_and_scaled_data(dtype: np.dtype) -> Dataset:
+    x = np.array([np.nan, np.nan, 10, 10.1, 10.2], dtype=dtype)
     encoding = {
         "_FillValue": -1,
-        "add_offset": 10,
-        "scale_factor": np.float32(0.1),
+        "add_offset": dtype.type(10),
+        "scale_factor": dtype.type(0.1),
         "dtype": "i2",
     }
     return Dataset({"x": ("t", x, {}, encoding)})
 
 
-def create_encoded_masked_and_scaled_data() -> Dataset:
-    attributes = {"_FillValue": -1, "add_offset": 10, "scale_factor": np.float32(0.1)}
+def create_encoded_masked_and_scaled_data(dtype: np.dtype) -> Dataset:
+    attributes = {
+        "_FillValue": -1,
+        "add_offset": dtype.type(10),
+        "scale_factor": dtype.type(0.1),
+    }
     return Dataset(
         {"x": ("t", np.array([-1, -1, 0, 1, 2], dtype=np.int16), attributes)}
     )
 
 
-def create_unsigned_masked_scaled_data() -> Dataset:
+def create_unsigned_masked_scaled_data(dtype: np.dtype) -> Dataset:
     encoding = {
         "_FillValue": 255,
         "_Unsigned": "true",
         "dtype": "i1",
-        "add_offset": 10,
-        "scale_factor": np.float32(0.1),
+        "add_offset": dtype.type(10),
+        "scale_factor": dtype.type(0.1),
     }
-    x = np.array([10.0, 10.1, 22.7, 22.8, np.nan], dtype=np.float32)
+    x = np.array([10.0, 10.1, 22.7, 22.8, np.nan], dtype=dtype)
     return Dataset({"x": ("t", x, {}, encoding)})
 
 
-def create_encoded_unsigned_masked_scaled_data() -> Dataset:
+def create_encoded_unsigned_masked_scaled_data(dtype: np.dtype) -> Dataset:
     # These are values as written to the file: the _FillValue will
     # be represented in the signed form.
     attributes = {
         "_FillValue": -1,
         "_Unsigned": "true",
-        "add_offset": 10,
-        "scale_factor": np.float32(0.1),
+        "add_offset": dtype.type(10),
+        "scale_factor": dtype.type(0.1),
     }
     # Create unsigned data corresponding to [0, 1, 127, 128, 255] unsigned
     sb = np.asarray([0, 1, 127, -128, -1], dtype="i1")
     return Dataset({"x": ("t", sb, attributes)})
 
 
-def create_bad_unsigned_masked_scaled_data() -> Dataset:
+def create_bad_unsigned_masked_scaled_data(dtype: np.dtype) -> Dataset:
     encoding = {
         "_FillValue": 255,
         "_Unsigned": True,
         "dtype": "i1",
-        "add_offset": 10,
-        "scale_factor": np.float32(0.1),
+        "add_offset": dtype.type(10),
+        "scale_factor": dtype.type(0.1),
     }
-    x = np.array([10.0, 10.1, 22.7, 22.8, np.nan], dtype=np.float32)
+    x = np.array([10.0, 10.1, 22.7, 22.8, np.nan], dtype=dtype)
     return Dataset({"x": ("t", x, {}, encoding)})
 
 
-def create_bad_encoded_unsigned_masked_scaled_data() -> Dataset:
+def create_bad_encoded_unsigned_masked_scaled_data(dtype: np.dtype) -> Dataset:
     # These are values as written to the file: the _FillValue will
     # be represented in the signed form.
     attributes = {
         "_FillValue": -1,
         "_Unsigned": True,
-        "add_offset": 10,
-        "scale_factor": np.float32(0.1),
+        "add_offset": dtype.type(10),
+        "scale_factor": dtype.type(0.1),
     }
     # Create signed data corresponding to [0, 1, 127, 128, 255] unsigned
     sb = np.asarray([0, 1, 127, -128, -1], dtype="i1")
     return Dataset({"x": ("t", sb, attributes)})
 
 
-def create_signed_masked_scaled_data() -> Dataset:
+def create_signed_masked_scaled_data(dtype: np.dtype) -> Dataset:
     encoding = {
         "_FillValue": -127,
         "_Unsigned": "false",
         "dtype": "i1",
-        "add_offset": 10,
-        "scale_factor": np.float32(0.1),
+        "add_offset": dtype.type(10),
+        "scale_factor": dtype.type(0.1),
     }
-    x = np.array([-1.0, 10.1, 22.7, np.nan], dtype=np.float32)
+    x = np.array([-1.0, 10.1, 22.7, np.nan], dtype=dtype)
     return Dataset({"x": ("t", x, {}, encoding)})
 
 
-def create_encoded_signed_masked_scaled_data() -> Dataset:
+def create_encoded_signed_masked_scaled_data(dtype: np.dtype) -> Dataset:
     # These are values as written to the file: the _FillValue will
     # be represented in the signed form.
     attributes = {
         "_FillValue": -127,
         "_Unsigned": "false",
-        "add_offset": 10,
-        "scale_factor": np.float32(0.1),
+        "add_offset": dtype.type(10),
+        "scale_factor": dtype.type(0.1),
     }
     # Create signed data corresponding to [0, 1, 127, 128, 255] unsigned
     sb = np.asarray([-110, 1, 127, -127], dtype="i1")
@@ -432,8 +437,6 @@ class DatasetIOBase:
             assert_identical(expected, computed)
 
     def test_pickle(self) -> None:
-        if not has_dask:
-            pytest.xfail("pickling requires dask for SerializableLock")
         expected = Dataset({"foo": ("x", [42])})
         with self.roundtrip(expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
             with roundtripped:
@@ -444,8 +447,6 @@ class DatasetIOBase:
 
     @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
     def test_pickle_dataarray(self) -> None:
-        if not has_dask:
-            pytest.xfail("pickling requires dask for SerializableLock")
         expected = Dataset({"foo": ("x", [42])})
         with self.roundtrip(expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
             with roundtripped:
@@ -892,10 +893,12 @@ class CFEncodedBase(DatasetIOBase):
             (create_masked_and_scaled_data, create_encoded_masked_and_scaled_data),
         ],
     )
-    def test_roundtrip_mask_and_scale(self, decoded_fn, encoded_fn) -> None:
-        decoded = decoded_fn()
-        encoded = encoded_fn()
-
+    @pytest.mark.parametrize("dtype", [np.dtype("float64"), np.dtype("float32")])
+    def test_roundtrip_mask_and_scale(self, decoded_fn, encoded_fn, dtype) -> None:
+        if hasattr(self, "zarr_version") and dtype == np.float32:
+            pytest.skip("float32 will be treated as float64 in zarr")
+        decoded = decoded_fn(dtype)
+        encoded = encoded_fn(dtype)
         with self.roundtrip(decoded) as actual:
             for k in decoded.variables:
                 assert decoded.variables[k].dtype == actual.variables[k].dtype
@@ -915,7 +918,7 @@ class CFEncodedBase(DatasetIOBase):
 
         # make sure roundtrip encoding didn't change the
         # original dataset.
-        assert_allclose(encoded, encoded_fn(), decode_bytes=False)
+        assert_allclose(encoded, encoded_fn(dtype), decode_bytes=False)
 
         with self.roundtrip(encoded) as actual:
             for k in decoded.variables:
@@ -1248,6 +1251,11 @@ class CFEncodedBase(DatasetIOBase):
         with pytest.raises(NotImplementedError, match=r"MultiIndex"):
             with self.roundtrip(ds):
                 pass
+
+        # regression GH8628 (can serialize reset multi-index level coordinates)
+        ds_reset = ds.reset_index("x")
+        with self.roundtrip(ds_reset) as actual:
+            assert_identical(actual, ds_reset)
 
 
 class NetCDFBase(CFEncodedBase):
@@ -1643,6 +1651,7 @@ class NetCDF4Base(NetCDFBase):
                 v.add_offset = 10
                 v.scale_factor = 0.1
                 v[:] = np.array([-1, -1, 0, 1, 2])
+                dtype = type(v.scale_factor)
 
             # first make sure netCDF4 reads the masked and scaled data
             # correctly
@@ -1655,7 +1664,7 @@ class NetCDF4Base(NetCDFBase):
 
             # now check xarray
             with open_dataset(tmp_file) as ds:
-                expected = create_masked_and_scaled_data()
+                expected = create_masked_and_scaled_data(np.dtype(dtype))
                 assert_identical(expected, ds)
 
     def test_0dimensional_variable(self) -> None:
@@ -1707,6 +1716,126 @@ class NetCDF4Base(NetCDFBase):
             with pytest.raises(ValueError, match="Forward slashes '/' are not allowed"):
                 with self.roundtrip(ds):
                     pass
+
+    @requires_netCDF4
+    def test_encoding_enum__no_fill_value(self):
+        with create_tmp_file() as tmp_file:
+            cloud_type_dict = {"clear": 0, "cloudy": 1}
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("time", size=2)
+                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                v = nc.createVariable(
+                    "clouds",
+                    cloud_type,
+                    "time",
+                    fill_value=None,
+                )
+                v[:] = 1
+            with open_dataset(tmp_file) as original:
+                save_kwargs = {}
+                if self.engine == "h5netcdf":
+                    save_kwargs["invalid_netcdf"] = True
+                with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
+                    assert_equal(original, actual)
+                    assert (
+                        actual.clouds.encoding["dtype"].metadata["enum"]
+                        == cloud_type_dict
+                    )
+                    if self.engine != "h5netcdf":
+                        # not implemented in h5netcdf yet
+                        assert (
+                            actual.clouds.encoding["dtype"].metadata["enum_name"]
+                            == "cloud_type"
+                        )
+
+    @requires_netCDF4
+    def test_encoding_enum__multiple_variable_with_enum(self):
+        with create_tmp_file() as tmp_file:
+            cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("time", size=2)
+                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                nc.createVariable(
+                    "clouds",
+                    cloud_type,
+                    "time",
+                    fill_value=255,
+                )
+                nc.createVariable(
+                    "tifa",
+                    cloud_type,
+                    "time",
+                    fill_value=255,
+                )
+            with open_dataset(tmp_file) as original:
+                save_kwargs = {}
+                if self.engine == "h5netcdf":
+                    save_kwargs["invalid_netcdf"] = True
+                with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
+                    assert_equal(original, actual)
+                    assert (
+                        actual.clouds.encoding["dtype"] == actual.tifa.encoding["dtype"]
+                    )
+                    assert (
+                        actual.clouds.encoding["dtype"].metadata
+                        == actual.tifa.encoding["dtype"].metadata
+                    )
+                    assert (
+                        actual.clouds.encoding["dtype"].metadata["enum"]
+                        == cloud_type_dict
+                    )
+                    if self.engine != "h5netcdf":
+                        # not implemented in h5netcdf yet
+                        assert (
+                            actual.clouds.encoding["dtype"].metadata["enum_name"]
+                            == "cloud_type"
+                        )
+
+    @requires_netCDF4
+    def test_encoding_enum__error_multiple_variable_with_changing_enum(self):
+        """
+        Given 2 variables, if they share the same enum type,
+        the 2 enum definition should be identical.
+        """
+        with create_tmp_file() as tmp_file:
+            cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("time", size=2)
+                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                nc.createVariable(
+                    "clouds",
+                    cloud_type,
+                    "time",
+                    fill_value=255,
+                )
+                nc.createVariable(
+                    "tifa",
+                    cloud_type,
+                    "time",
+                    fill_value=255,
+                )
+            with open_dataset(tmp_file) as original:
+                assert (
+                    original.clouds.encoding["dtype"].metadata
+                    == original.tifa.encoding["dtype"].metadata
+                )
+                modified_enum = original.clouds.encoding["dtype"].metadata["enum"]
+                modified_enum.update({"neblig": 2})
+                original.clouds.encoding["dtype"] = np.dtype(
+                    "u1",
+                    metadata={"enum": modified_enum, "enum_name": "cloud_type"},
+                )
+                if self.engine != "h5netcdf":
+                    # not implemented yet in h5netcdf
+                    with pytest.raises(
+                        ValueError,
+                        match=(
+                            "Cannot save variable .*"
+                            " because an enum `cloud_type` already exists in the Dataset .*"
+                        ),
+                    ):
+                        with self.roundtrip(original):
+                            pass
 
 
 @requires_netCDF4
@@ -2011,7 +2140,10 @@ class ZarrBase(CFEncodedBase):
 
     def test_with_chunkstore(self) -> None:
         expected = create_test_data()
-        with self.create_zarr_target() as store_target, self.create_zarr_target() as chunk_store:
+        with (
+            self.create_zarr_target() as store_target,
+            self.create_zarr_target() as chunk_store,
+        ):
             save_kwargs = {"chunk_store": chunk_store}
             self.save(expected, store_target, **save_kwargs)
             # the chunk store must have been populated with some entries
@@ -2149,6 +2281,10 @@ class ZarrBase(CFEncodedBase):
                 pass
 
     @requires_dask
+    @pytest.mark.skipif(
+        ON_WINDOWS,
+        reason="Very flaky on Windows CI. Can re-enable assuming it starts consistently passing.",
+    )
     def test_chunk_encoding_with_dask(self) -> None:
         # These datasets DO have dask chunks. Need to check for various
         # interactions between dask and zarr chunks
@@ -2467,7 +2603,9 @@ class ZarrBase(CFEncodedBase):
             # overwrite a coordinate;
             # for mode='a-', this will not get written to the store
             # because it does not have the append_dim as a dim
-            ds_to_append.lon.data[:] = -999
+            lon = ds_to_append.lon.to_numpy().copy()
+            lon[:] = -999
+            ds_to_append["lon"] = lon
             ds_to_append.to_zarr(
                 store_target, mode="a-", append_dim="time", **self.version_kwargs
             )
@@ -2477,7 +2615,9 @@ class ZarrBase(CFEncodedBase):
             # by default, mode="a" will overwrite all coordinates.
             ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
             actual = xr.open_dataset(store_target, engine="zarr", **self.version_kwargs)
-            original2.lon.data[:] = -999
+            lon = original2.lon.to_numpy().copy()
+            lon[:] = -999
+            original2["lon"] = lon
             assert_identical(original2, actual)
 
     @requires_dask
@@ -2807,6 +2947,28 @@ class ZarrBase(CFEncodedBase):
             with pytest.raises(TypeError, match=r"Invalid attribute in Dataset.attrs."):
                 ds.to_zarr(store_target, **self.version_kwargs)
 
+    @requires_dask
+    @pytest.mark.parametrize("dtype", ["datetime64[ns]", "timedelta64[ns]"])
+    def test_chunked_datetime64_or_timedelta64(self, dtype) -> None:
+        # Generalized from @malmans2's test in PR #8253
+        original = create_test_data().astype(dtype).chunk(1)
+        with self.roundtrip(original, open_kwargs={"chunks": {}}) as actual:
+            for name, actual_var in actual.variables.items():
+                assert original[name].chunks == actual_var.chunks
+            assert original.chunks == actual.chunks
+
+    @requires_cftime
+    @requires_dask
+    def test_chunked_cftime_datetime(self) -> None:
+        # Based on @malmans2's test in PR #8253
+        times = cftime_range("2000", freq="D", periods=3)
+        original = xr.Dataset(data_vars={"chunked_times": (["time"], times)})
+        original = original.chunk({"time": 1})
+        with self.roundtrip(original, open_kwargs={"chunks": {}}) as actual:
+            for name, actual_var in actual.variables.items():
+                assert original[name].chunks == actual_var.chunks
+            assert original.chunks == actual.chunks
+
     def test_vectorized_indexing_negative_step(self) -> None:
         if not has_dask:
             pytest.xfail(
@@ -2827,6 +2989,10 @@ class TestZarrDictStore(ZarrBase):
 
 
 @requires_zarr
+@pytest.mark.skipif(
+    ON_WINDOWS,
+    reason="Very flaky on Windows CI. Can re-enable assuming it starts consistently passing.",
+)
 class TestZarrDirectoryStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
@@ -3391,6 +3557,16 @@ class TestH5NetCDFData(NetCDF4Base):
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             assert actual.x.encoding["compression"] == "lzf"
             assert actual.x.encoding["compression_opts"] is None
+
+    def test_decode_utf8_warning(self) -> None:
+        title = b"\xc3"
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, "w") as f:
+                f.title = title
+            with pytest.warns(UnicodeWarning, match="returning bytes undecoded") as w:
+                ds = xr.load_dataset(tmp_file, engine="h5netcdf")
+                assert ds.title == title
+                assert "attribute 'title' of h5netcdf object '/'" in str(w[0].message)
 
 
 @requires_h5netcdf
@@ -4333,6 +4509,7 @@ class TestDask(DatasetIOBase):
             ) as actual:
                 assert_identical(expected, actual)
 
+    @pytest.mark.xfail(reason="Flaky test. Very open to contributions on fixing this")
     def test_dask_roundtrip(self) -> None:
         with create_tmp_file() as tmp:
             data = create_test_data()
@@ -4415,18 +4592,18 @@ class TestDask(DatasetIOBase):
             def num_graph_nodes(obj):
                 return len(obj.__dask_graph__())
 
-            with open_dataset(
-                tmp, inline_array=False, chunks=chunks
-            ) as not_inlined_ds, open_dataset(
-                tmp, inline_array=True, chunks=chunks
-            ) as inlined_ds:
+            with (
+                open_dataset(tmp, inline_array=False, chunks=chunks) as not_inlined_ds,
+                open_dataset(tmp, inline_array=True, chunks=chunks) as inlined_ds,
+            ):
                 assert num_graph_nodes(inlined_ds) < num_graph_nodes(not_inlined_ds)
 
-            with open_dataarray(
-                tmp, inline_array=False, chunks=chunks
-            ) as not_inlined_da, open_dataarray(
-                tmp, inline_array=True, chunks=chunks
-            ) as inlined_da:
+            with (
+                open_dataarray(
+                    tmp, inline_array=False, chunks=chunks
+                ) as not_inlined_da,
+                open_dataarray(tmp, inline_array=True, chunks=chunks) as inlined_da,
+            ):
                 assert num_graph_nodes(inlined_da) < num_graph_nodes(not_inlined_da)
 
 
@@ -5290,7 +5467,7 @@ def test_write_file_from_np_str(str_type, tmpdir) -> None:
 class TestNCZarr:
     @property
     def netcdfc_version(self):
-        return Version(nc4.getlibversion().split()[0])
+        return Version(nc4.getlibversion().split()[0].split("-development")[0])
 
     def _create_nczarr(self, filename):
         if self.netcdfc_version < Version("4.8.1"):
@@ -5472,24 +5649,27 @@ class TestZarrRegionAuto:
             }
         )
 
-        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+        region_slice = dict(x=slice(2, 4), y=slice(6, 8))
+        ds_region = 1 + ds.isel(region_slice)
 
         ds.to_zarr(tmp_path / "test.zarr")
 
-        with patch.object(
-            ZarrStore,
-            "set_variables",
-            side_effect=ZarrStore.set_variables,
-            autospec=True,
-        ) as mock:
-            ds_region.to_zarr(tmp_path / "test.zarr", region="auto", mode="r+")
+        region: Mapping[str, slice] | Literal["auto"]
+        for region in [region_slice, "auto"]:  # type: ignore
+            with patch.object(
+                ZarrStore,
+                "set_variables",
+                side_effect=ZarrStore.set_variables,
+                autospec=True,
+            ) as mock:
+                ds_region.to_zarr(tmp_path / "test.zarr", region=region, mode="r+")
 
-            # should write the data vars but never the index vars with auto mode
-            for call in mock.call_args_list:
-                written_variables = call.args[1].keys()
-                assert "test" in written_variables
-                assert "x" not in written_variables
-                assert "y" not in written_variables
+                # should write the data vars but never the index vars with auto mode
+                for call in mock.call_args_list:
+                    written_variables = call.args[1].keys()
+                    assert "test" in written_variables
+                    assert "x" not in written_variables
+                    assert "y" not in written_variables
 
     def test_zarr_region_append(self, tmp_path):
         x = np.arange(0, 50, 10)

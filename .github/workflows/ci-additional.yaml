@@ -79,7 +79,8 @@ jobs:
           #
           # If dependencies emit warnings we can't do anything about, add ignores to
           # `xarray/tests/__init__.py`.
-          python -m pytest --doctest-modules xarray --ignore xarray/tests -Werror
+          # [MHS, 01/25/2024] Skip datatree_ documentation remove after #8572
+          python -m pytest --doctest-modules xarray --ignore xarray/tests --ignore xarray/datatree_ -Werror
 
   mypy:
     name: Mypy
@@ -120,14 +121,14 @@ jobs:
           python xarray/util/print_versions.py
       - name: Install mypy
         run: |
-          python -m pip install "mypy<1.8" --force-reinstall
+          python -m pip install "mypy<1.9" --force-reinstall
 
       - name: Run mypy
         run: |
           python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report xarray/
 
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v3.1.4
+        uses: codecov/codecov-action@v4.1.0
         with:
           file: mypy_report/cobertura.xml
           flags: mypy
@@ -174,14 +175,14 @@ jobs:
           python xarray/util/print_versions.py
       - name: Install mypy
         run: |
-          python -m pip install "mypy<1.8" --force-reinstall
+          python -m pip install "mypy<1.9" --force-reinstall
 
       - name: Run mypy
         run: |
           python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report xarray/
 
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v3.1.4
+        uses: codecov/codecov-action@v4.1.0
         with:
           file: mypy_report/cobertura.xml
           flags: mypy39
@@ -242,7 +243,7 @@ jobs:
           python -m pyright xarray/
 
       - name: Upload pyright coverage to Codecov
-        uses: codecov/codecov-action@v3.1.4
+        uses: codecov/codecov-action@v4.1.0
         with:
           file: pyright_report/cobertura.xml
           flags: pyright
@@ -301,7 +302,7 @@ jobs:
           python -m pyright xarray/
 
       - name: Upload pyright coverage to Codecov
-        uses: codecov/codecov-action@v3.1.4
+        uses: codecov/codecov-action@v4.1.0
         with:
           file: pyright_report/cobertura.xml
           flags: pyright39
@@ -320,11 +321,6 @@ jobs:
       run:
         shell: bash -l {0}
 
-    strategy:
-      matrix:
-        environment-file: ["bare-minimum", "min-all-deps"]
-      fail-fast: false
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -340,6 +336,10 @@ jobs:
             conda
             python-dateutil
 
-      - name: minimum versions policy
+      - name: All-deps minimum versions policy
         run: |
-          python ci/min_deps_check.py ci/requirements/${{ matrix.environment-file }}.yml
+          python ci/min_deps_check.py ci/requirements/min-all-deps.yml
+
+      - name: Bare minimum versions policy
+        run: |
+          python ci/min_deps_check.py ci/requirements/bare-minimum.yml

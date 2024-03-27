@@ -20,6 +20,7 @@ from xarray.core import utils
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
+from xarray.core.variable import IndexVariable
 from xarray.testing import (  # noqa: F401
     assert_chunks_equal,
     assert_duckarray_allclose,
@@ -47,6 +48,15 @@ arm_xfail = pytest.mark.xfail(
 )
 
 
+def assert_writeable(ds):
+    readonly = [
+        name
+        for name, var in ds.variables.items()
+        if not isinstance(var, IndexVariable) and not var.data.flags.writeable
+    ]
+    assert not readonly, readonly
+
+
 def _importorskip(
     modname: str, minversion: str | None = None
 ) -> tuple[bool, pytest.MarkDecorator]:
@@ -59,7 +69,11 @@ def _importorskip(
                 raise ImportError("Minimum version not satisfied")
     except ImportError:
         has = False
-    func = pytest.mark.skipif(not has, reason=f"requires {modname}")
+
+    reason = f"requires {modname}"
+    if minversion is not None:
+        reason += f">={minversion}"
+    func = pytest.mark.skipif(not has, reason=reason)
     return has, func
 
 
@@ -85,6 +99,13 @@ with warnings.catch_warnings():
 has_pynio, requires_pynio = _importorskip("Nio")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        "ignore",
+        message="The current Dask DataFrame implementation is deprecated.",
+        category=DeprecationWarning,
+    )
+    has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
@@ -105,6 +126,7 @@ has_cartopy, requires_cartopy = _importorskip("cartopy")
 has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
+has_pandas_ge_2_2, __ = _importorskip("pandas", "2.2")
 
 
 # some special cases
@@ -122,10 +144,7 @@ requires_pandas_version_two = pytest.mark.skipif(
     not has_pandas_version_two, reason="requires pandas 2.0.0"
 )
 has_numpy_array_api, requires_numpy_array_api = _importorskip("numpy", "1.26.0")
-has_h5netcdf_ros3 = _importorskip("h5netcdf", "1.3.0")
-requires_h5netcdf_ros3 = pytest.mark.skipif(
-    not has_h5netcdf_ros3[0], reason="requires h5netcdf 1.3.0"
-)
+has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip("h5netcdf", "1.3.0")
 
 has_netCDF4_1_6_2_or_above, requires_netCDF4_1_6_2_or_above = _importorskip(
     "netCDF4", "1.6.2"
@@ -317,7 +336,7 @@ def create_test_data(
         numbers_values = np.random.randint(0, 3, _dims["dim3"], dtype="int64")
     obj.coords["numbers"] = ("dim3", numbers_values)
     obj.encoding = {"foo": "bar"}
-    assert all(obj.data.flags.writeable for obj in obj.variables.values())
+    assert_writeable(obj)
     return obj
 
 

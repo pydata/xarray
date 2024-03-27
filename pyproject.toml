@@ -12,6 +12,7 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering",
 ]
 description = "N-D labeled arrays and datasets in Python"
@@ -22,10 +23,28 @@ readme = "README.md"
 requires-python = ">=3.9"
 
 dependencies = [
-  "numpy>=1.22",
-  "packaging>=21.3",
-  "pandas>=1.4",
+  "numpy>=1.23",
+  "packaging>=22",
+  "pandas>=1.5",
 ]
+
+[project.optional-dependencies]
+accel = ["scipy", "bottleneck", "numbagg", "flox", "opt_einsum"]
+complete = ["xarray[accel,io,parallel,viz,dev]"]
+dev = [
+  "hypothesis",
+  "pre-commit",
+  "pytest",
+  "pytest-cov",
+  "pytest-env",
+  "pytest-xdist",
+  "pytest-timeout",
+  "ruff",
+  "xarray[complete]",
+]
+io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
+parallel = ["dask[complete]"]
+viz = ["matplotlib", "seaborn", "nc-time-axis"]
 
 [project.urls]
 Documentation = "https://docs.xarray.dev"
@@ -35,14 +54,7 @@ issue-tracker = "https://github.com/pydata/xarray/issues"
 source-code = "https://github.com/pydata/xarray"
 
 [project.entry-points."xarray.chunkmanagers"]
-dask = "xarray.core.daskmanager:DaskManager"
-
-[project.optional-dependencies]
-accel = ["scipy", "bottleneck", "numbagg", "flox", "opt_einsum"]
-complete = ["xarray[accel,io,parallel,viz]"]
-io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
-parallel = ["dask[complete]"]
-viz = ["matplotlib", "seaborn", "nc-time-axis"]
+dask = "xarray.namedarray.daskmanager:DaskManager"
 
 [build-system]
 build-backend = "setuptools.build_meta"
@@ -73,13 +85,21 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 
 [tool.mypy]
 enable_error_code = "redundant-self"
-exclude = 'xarray/util/generate_.*\.py'
+exclude = [
+	'xarray/util/generate_.*\.py',
+	'xarray/datatree_/.*\.py',
+]
 files = "xarray"
 show_error_codes = true
 show_error_context = true
 warn_redundant_casts = true
 warn_unused_configs = true
 warn_unused_ignores = true
+
+# Ignore mypy errors for modules imported from datatree_.
+[[tool.mypy.overrides]]
+module = "xarray.datatree_.*"
+ignore_errors = true
 
 # Much of the numerical computing stack doesn't have type annotations yet.
 [[tool.mypy.overrides]]
@@ -118,6 +138,7 @@ module = [
   "toolz.*",
   "zarr.*",
   "numpy.exceptions.*", # remove once support for `numpy<2.0` has been dropped
+  "array_api_strict.*",
 ]
 
 # Gradually we want to add more modules to this list, ratcheting up our total
@@ -226,12 +247,13 @@ reportMissingTypeStubs = false
 
 [tool.ruff]
 builtins = ["ellipsis"]
-exclude = [
-  ".eggs",
+extend-exclude = [
   "doc",
   "_typed_ops.pyi",
 ]
 target-version = "py39"
+
+[tool.ruff.lint]
 # E402: module level import not at top of file
 # E501: line too long - let black worry about that
 # E731: do not assign a lambda expression, use a def
@@ -244,12 +266,24 @@ select = [
   "F", # Pyflakes
   "E", # Pycodestyle
   "W",
+  "TID", # flake8-tidy-imports (absolute imports)
   "I", # isort
   "UP", # Pyupgrade
 ]
+extend-safe-fixes = [
+  "TID252", # absolute imports
+]
 
-[tool.ruff.isort]
+[tool.ruff.lint.per-file-ignores]
+# don't enforce absolute imports
+"asv_bench/**" = ["TID252"]
+
+[tool.ruff.lint.isort]
 known-first-party = ["xarray"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+# Disallow all relative imports.
+ban-relative-imports = "all"
 
 [tool.pytest.ini_options]
 addopts = ["--strict-config", "--strict-markers"]
@@ -268,3 +302,8 @@ testpaths = ["xarray/tests", "properties"]
 
 [tool.aliases]
 test = "pytest"
+
+[tool.repo-review]
+ignore = [
+  "PP308", # This option creates a large amount of log lines.
+]

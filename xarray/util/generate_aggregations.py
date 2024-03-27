@@ -12,12 +12,14 @@ The second run of pytest is deliberate, since the first will return an error
 while replacing the doctests.
 
 """
+
 import collections
 import textwrap
 from dataclasses import dataclass, field
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with reduction operations."""
+
 # This file was generated using xarray.util.generate_aggregations. Do not edit manually.
 
 from __future__ import annotations
@@ -89,6 +91,19 @@ GROUPBY_PREAMBLE = """
 class {obj}{cls}Aggregations:
     _obj: {obj}
 
+    def _reduce_without_squeeze_warn(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
+    ) -> {obj}:
+        raise NotImplementedError()
+
     def reduce(
         self,
         func: Callable[..., Any],
@@ -112,6 +127,19 @@ RESAMPLE_PREAMBLE = """
 
 class {obj}{cls}Aggregations:
     _obj: {obj}
+
+    def _reduce_without_squeeze_warn(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
+    ) -> {obj}:
+        raise NotImplementedError()
 
     def reduce(
         self,
@@ -218,13 +246,9 @@ _NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
 _FLOX_NOTES_TEMPLATE = """Use the ``flox`` package to significantly speed up {kind} computations,
 especially with dask arrays. Xarray will use flox by default if installed.
 Pass flox-specific keyword arguments in ``**kwargs``.
-The default choice is ``method="cohorts"`` which generalizes the best,
-{recco} might work better for your problem.
 See the `flox documentation <https://flox.readthedocs.io>`_ for more."""
-_FLOX_GROUPBY_NOTES = _FLOX_NOTES_TEMPLATE.format(kind="groupby", recco="other methods")
-_FLOX_RESAMPLE_NOTES = _FLOX_NOTES_TEMPLATE.format(
-    kind="resampling", recco='``method="blockwise"``'
-)
+_FLOX_GROUPBY_NOTES = _FLOX_NOTES_TEMPLATE.format(kind="groupby")
+_FLOX_RESAMPLE_NOTES = _FLOX_NOTES_TEMPLATE.format(kind="resampling")
 
 ExtraKwarg = collections.namedtuple("ExtraKwarg", "docs kwarg call example")
 skipna = ExtraKwarg(
@@ -273,11 +297,13 @@ class Method:
         extra_kwargs=tuple(),
         numeric_only=False,
         see_also_modules=("numpy", "dask.array"),
+        min_flox_version=None,
     ):
         self.name = name
         self.extra_kwargs = extra_kwargs
         self.numeric_only = numeric_only
         self.see_also_modules = see_also_modules
+        self.min_flox_version = min_flox_version
         if bool_reduce:
             self.array_method = f"array_{name}"
             self.np_example_array = """
@@ -321,9 +347,11 @@ class AggregationGenerator:
         template_kwargs = dict(
             obj=self.datastructure.name,
             method=method.name,
-            keep_attrs="\n        keep_attrs: bool | None = None,"
-            if self.has_keep_attrs
-            else "",
+            keep_attrs=(
+                "\n        keep_attrs: bool | None = None,"
+                if self.has_keep_attrs
+                else ""
+            ),
             kw_only="\n        *," if has_kw_only else "",
         )
 
@@ -414,8 +442,8 @@ class GroupByAggregationGenerator(AggregationGenerator):
         if self.datastructure.numeric_only:
             extra_kwargs.append(f"numeric_only={method.numeric_only},")
 
-        # numpy_groupies & flox do not support median
-        # https://github.com/ml31415/numpy-groupies/issues/43
+        # median isn't enabled yet, because it would break if a single group was present in multiple
+        # chunks. The non-flox code path will just rechunk every group to a single chunk and execute the median
         method_is_not_flox_supported = method.name in ("median", "cumsum", "cumprod")
         if method_is_not_flox_supported:
             indent = 12
@@ -429,18 +457,23 @@ class GroupByAggregationGenerator(AggregationGenerator):
 
         if method_is_not_flox_supported:
             return f"""\
-        return self.reduce(
+        return self._reduce_without_squeeze_warn(
             duck_array_ops.{method.array_method},
             dim=dim,{extra_kwargs}
             keep_attrs=keep_attrs,
             **kwargs,
         )"""
 
-        else:
-            return f"""\
+        min_version_check = f"""
+            and module_available("flox", minversion="{method.min_flox_version}")"""
+
+        return (
+            """\
         if (
             flox_available
-            and OPTIONS["use_flox"]
+            and OPTIONS["use_flox"]"""
+            + (min_version_check if method.min_flox_version is not None else "")
+            + f"""
             and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
@@ -451,12 +484,13 @@ class GroupByAggregationGenerator(AggregationGenerator):
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.{method.array_method},
                 dim=dim,{extra_kwargs}
                 keep_attrs=keep_attrs,
                 **kwargs,
             )"""
+        )
 
 
 class GenericAggregationGenerator(AggregationGenerator):
@@ -493,7 +527,9 @@ AGGREGATION_METHODS = (
     Method("sum", extra_kwargs=(skipna, min_count), numeric_only=True),
     Method("std", extra_kwargs=(skipna, ddof), numeric_only=True),
     Method("var", extra_kwargs=(skipna, ddof), numeric_only=True),
-    Method("median", extra_kwargs=(skipna,), numeric_only=True),
+    Method(
+        "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.2"
+    ),
     # Cumulatives:
     Method("cumsum", extra_kwargs=(skipna,), numeric_only=True),
     Method("cumprod", extra_kwargs=(skipna,), numeric_only=True),
@@ -506,7 +542,7 @@ DATASET_OBJECT = DataStructure(
         >>> da = xr.DataArray({example_array},
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -521,7 +557,7 @@ DATAARRAY_OBJECT = DataStructure(
         >>> da = xr.DataArray({example_array},
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )""",
@@ -563,7 +599,7 @@ DATAARRAY_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     methods=AGGREGATION_METHODS,
     docref="resampling",
     docref_description="resampling operations",
-    example_call_preamble='.resample(time="3M")',
+    example_call_preamble='.resample(time="3ME")',
     definition_preamble=RESAMPLE_PREAMBLE,
     notes=_FLOX_RESAMPLE_NOTES,
 )
@@ -583,7 +619,7 @@ DATASET_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     methods=AGGREGATION_METHODS,
     docref="resampling",
     docref_description="resampling operations",
-    example_call_preamble='.resample(time="3M")',
+    example_call_preamble='.resample(time="3ME")',
     definition_preamble=RESAMPLE_PREAMBLE,
     notes=_FLOX_RESAMPLE_NOTES,
 )

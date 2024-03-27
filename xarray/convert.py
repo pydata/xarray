@@ -1,5 +1,6 @@
 """Functions for converting to and from xarray objects
 """
+
 from collections import Counter
 
 import numpy as np
@@ -9,7 +10,7 @@ from xarray.conventions import decode_cf
 from xarray.core import duck_array_ops
 from xarray.core.dataarray import DataArray
 from xarray.core.dtypes import get_fill_value
-from xarray.core.pycompat import array_type
+from xarray.namedarray.pycompat import array_type
 
 iris_forbidden_keys = {
     "standard_name",

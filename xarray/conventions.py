@@ -14,9 +14,9 @@ from xarray.core.common import (
     _contains_datetime_like_objects,
     contains_cftime_datetimes,
 )
-from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import IndexVariable, Variable
+from xarray.namedarray.utils import is_duck_dask_array
 
 CF_RELATED_DATA = (
     "bounds",
@@ -48,10 +48,6 @@ if TYPE_CHECKING:
     T_DatasetOrAbstractstore = Union[Dataset, AbstractDataStore]
 
 
-def _var_as_tuple(var: Variable) -> T_VarTuple:
-    return var.dims, var.data, var.attrs.copy(), var.encoding.copy()
-
-
 def _infer_dtype(array, name=None):
     """Given an object array with no missing values, infer its dtype from all elements."""
     if array.dtype.kind != "O":
@@ -59,15 +55,6 @@ def _infer_dtype(array, name=None):
 
     if array.size == 0:
         return np.dtype(float)
-
-    native_dtypes = set(np.vectorize(type, otypes=[object])(array.ravel()))
-    if len(native_dtypes) > 1 and native_dtypes != {bytes, str}:
-        raise ValueError(
-            "unable to infer dtype on variable {!r}; object array "
-            "contains mixed native types: {}".format(
-                name, ", ".join(x.__name__ for x in native_dtypes)
-            )
-        )
 
     native_dtypes = set(np.vectorize(type, otypes=[object])(array.ravel()))
     if len(native_dtypes) > 1 and native_dtypes != {bytes, str}:
@@ -97,13 +84,17 @@ def _infer_dtype(array, name=None):
 
 
 def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
-    if isinstance(var, IndexVariable) and isinstance(var.to_index(), pd.MultiIndex):
-        raise NotImplementedError(
-            f"variable {name!r} is a MultiIndex, which cannot yet be "
-            "serialized to netCDF files. Instead, either use reset_index() "
-            "to convert MultiIndex levels into coordinate variables instead "
-            "or use https://cf-xarray.readthedocs.io/en/latest/coding.html."
-        )
+    # only the pandas multi-index dimension coordinate cannot be serialized (tuple values)
+    if isinstance(var._data, indexing.PandasMultiIndexingAdapter):
+        if name is None and isinstance(var, IndexVariable):
+            name = var.name
+        if var.dims == (name,):
+            raise NotImplementedError(
+                f"variable {name!r} is a MultiIndex, which cannot yet be "
+                "serialized. Instead, either use reset_index() "
+                "to convert MultiIndex levels into coordinate variables instead "
+                "or use https://cf-xarray.readthedocs.io/en/latest/coding.html."
+            )
 
 
 def _copy_with_dtype(data, dtype: np.typing.DTypeLike):
@@ -120,7 +111,7 @@ def _copy_with_dtype(data, dtype: np.typing.DTypeLike):
 def ensure_dtype_not_object(var: Variable, name: T_Name = None) -> Variable:
     # TODO: move this from conventions to backends? (it's not CF related)
     if var.dtype.kind == "O":
-        dims, data, attrs, encoding = _var_as_tuple(var)
+        dims, data, attrs, encoding = variables.unpack_for_encoding(var)
 
         # leave vlen dtypes unchanged
         if strings.check_vlen_dtype(data.dtype) is not None:
@@ -171,7 +162,7 @@ def encode_cf_variable(
     var: Variable, needs_copy: bool = True, name: T_Name = None
 ) -> Variable:
     """
-    Converts an Variable into an Variable which follows some
+    Converts a Variable into a Variable which follows some
     of the CF conventions:
 
         - Nans are masked using _FillValue (or the deprecated missing_value)
@@ -197,6 +188,7 @@ def encode_cf_variable(
         variables.CFScaleOffsetCoder(),
         variables.CFMaskCoder(),
         variables.UnsignedIntegerCoder(),
+        variables.NativeEnumCoder(),
         variables.NonStringCoder(),
         variables.DefaultFillvalueCoder(),
         variables.BooleanCoder(),
@@ -456,7 +448,7 @@ def decode_cf_variables(
                 decode_timedelta=decode_timedelta,
             )
         except Exception as e:
-            raise type(e)(f"Failed to decode variable {k!r}: {e}")
+            raise type(e)(f"Failed to decode variable {k!r}: {e}") from e
         if decode_coords in [True, "coordinates", "all"]:
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:
@@ -642,12 +634,18 @@ def cf_decoder(
     decode_cf_variable
     """
     variables, attributes, _ = decode_cf_variables(
-        variables, attributes, concat_characters, mask_and_scale, decode_times
+        variables,
+        attributes,
+        concat_characters,
+        mask_and_scale,
+        decode_times,
     )
     return variables, attributes
 
 
-def _encode_coordinates(variables, attributes, non_dim_coord_names):
+def _encode_coordinates(
+    variables: T_Variables, attributes: T_Attrs, non_dim_coord_names
+):
     # calculate global and variable specific coordinates
     non_dim_coord_names = set(non_dim_coord_names)
 
@@ -675,7 +673,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 variable_coordinates[k].add(coord_name)
 
             if any(
-                attr_name in v.encoding and coord_name in v.encoding.get(attr_name)
+                coord_name in v.encoding.get(attr_name, tuple())
                 for attr_name in CF_RELATED_DATA
             ):
                 not_technically_coordinates.add(coord_name)
@@ -742,7 +740,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     return variables, attributes
 
 
-def encode_dataset_coordinates(dataset):
+def encode_dataset_coordinates(dataset: Dataset):
     """Encode coordinates on the given dataset object into variable specific
     and global attributes.
 
@@ -764,7 +762,7 @@ def encode_dataset_coordinates(dataset):
     )
 
 
-def cf_encoder(variables, attributes):
+def cf_encoder(variables: T_Variables, attributes: T_Attrs):
     """
     Encode a set of CF encoded variables and attributes.
     Takes a dicts of variables and attributes and encodes them

@@ -36,6 +36,7 @@ Geosciences
 - `rioxarray <https://corteva.github.io/rioxarray>`_: geospatial xarray extension powered by rasterio
 - `salem <https://salem.readthedocs.io>`_: Adds geolocalised subsetting, masking, and plotting operations to xarray's data structures via accessors.
 - `SatPy <https://satpy.readthedocs.io/>`_ : Library for reading and manipulating meteorological remote sensing data and writing it to various image and data file formats.
+- `SARXarray <https://tudelftgeodesy.github.io/sarxarray/>`_: xarray extension for reading and processing large Synthetic Aperture Radar (SAR) data stacks.
 - `Spyfit <https://spyfit.readthedocs.io/en/master/>`_: FTIR spectroscopy of the atmosphere
 - `windspharm <https://ajdawson.github.io/windspharm/index.html>`_: Spherical
   harmonic wind analysis in Python.
@@ -98,7 +99,6 @@ Visualization
 Non-Python projects
 ~~~~~~~~~~~~~~~~~~~
 - `xframe <https://github.com/xtensor-stack/xframe>`_: C++ data structures inspired by xarray.
-- `AxisArrays <https://github.com/JuliaArrays/AxisArrays.jl>`_ and
-  `NamedArrays <https://github.com/davidavdav/NamedArrays.jl>`_: similar data structures for Julia.
+- `AxisArrays <https://github.com/JuliaArrays/AxisArrays.jl>`_, `NamedArrays <https://github.com/davidavdav/NamedArrays.jl>`_ and `YAXArrays.jl <https://github.com/JuliaDataCubes/YAXArrays.jl>`_: similar data structures for Julia.
 
 More projects can be found at the `"xarray" Github topic <https://github.com/topics/xarray>`_.

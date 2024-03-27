@@ -1,0 +1,49 @@
+name: xarray-tests
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - aiobotocore
+  - array-api-strict
+  - boto3
+  - bottleneck
+  - cartopy
+  - cftime
+  - dask-core
+  - dask-expr
+  - distributed
+  - flox
+  - fsspec
+  - h5netcdf
+  - h5py
+  - hdf5
+  - hypothesis
+  - iris
+  - lxml # Optional dep of pydap
+  - matplotlib-base
+  - nc-time-axis
+  - netcdf4
+  # - numba
+  # - numbagg
+  - numexpr
+  - numpy
+  - opt_einsum
+  - packaging
+  - pandas
+  # - pint>=0.22
+  - pip
+  - pooch
+  - pre-commit
+  - pydap
+  - pytest
+  - pytest-cov
+  - pytest-env
+  - pytest-xdist
+  - pytest-timeout
+  - rasterio
+  - scipy
+  - seaborn
+  # - sparse
+  - toolz
+  - typing_extensions
+  - zarr
