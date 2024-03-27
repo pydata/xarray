@@ -38,6 +38,9 @@ New Features
   By `Benoit Bovy <https://github.com/benbovy>`_ and `Tom Nicholas
   <https://github.com/TomNicholas>`_.
 
+- Enable plotting of ```datetime.dates``. (:pull: `8873`)
+  By `Sascha Hofmann <<https://github.com/saschahofmann>`_.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
