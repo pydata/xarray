@@ -3244,6 +3244,7 @@ def test_maybe_gca() -> None:
 
 
 @requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["scatter", "lines"])
 @pytest.mark.parametrize(
     "x, y, z, hue, markersize, row, col, add_legend, add_colorbar",
     [
@@ -3256,10 +3257,19 @@ def test_maybe_gca() -> None:
         ("A", "B", "z", "y", "x", "w", None, True, True),
     ],
 )
-def test_datarray_scatter(
-    x, y, z, hue, markersize, row, col, add_legend, add_colorbar
+def test_plot1d_functions(
+    x: Hashable,
+    y: Hashable,
+    z: Hashable,
+    hue: Hashable,
+    markersize: Hashable,
+    row: Hashable,
+    col: Hashable,
+    add_legend: bool | None,
+    add_colorbar: bool | None,
+    plotfunc: str,
 ) -> None:
-    """Test datarray scatter. Merge with TestPlot1D eventually."""
+    """Test plot1d function. Merge with TestPlot1D eventually."""
     ds = xr.tutorial.scatter_example_dataset()
 
     extra_coords = [v for v in [x, hue, markersize] if v is not None]
@@ -3273,7 +3283,7 @@ def test_datarray_scatter(
     darray = xr.DataArray(ds[y], coords=coords)
 
     with figure_context():
-        darray.plot.scatter(
+        getattr(darray.plot, plotfunc)(
             x=x,
             z=z,
             hue=hue,
@@ -3385,3 +3395,48 @@ def test_plot1d_filtered_nulls() -> None:
         actual = pc.get_offsets().shape[0]
 
         assert expected == actual
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["lines"])
+def test_plot1d_lines_color(plotfunc: str, x="z", color="b") -> None:
+    from matplotlib.colors import to_rgba_array
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    darray = ds.A.sel(x=0, y=0)
+
+    with figure_context():
+        fig, ax = plt.subplots()
+        getattr(darray.plot, plotfunc)(x=x, color=color)
+        coll = ax.collections[0]
+
+        # Make sure color is respected:
+        expected_color = to_rgba_array(color)
+        actual_color = coll.get_edgecolor()
+        np.testing.assert_allclose(expected_color, actual_color)
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["lines"])
+def test_plot1d_lines_linestyle(plotfunc: str, x="z", linestyle="dashed") -> None:
+    # TODO: Is there a public function that converts linestyle to dash pattern?
+    from matplotlib.lines import (  # type: ignore[attr-defined]
+        _get_dash_pattern,
+        _scale_dashes,
+    )
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    darray = ds.A.sel(x=0, y=0)
+
+    with figure_context():
+        fig, ax = plt.subplots()
+        getattr(darray.plot, plotfunc)(x=x, linestyle=linestyle)
+        coll = ax.collections[0]
+
+        # Make sure linestyle is respected:
+        w = coll.get_linewidth().item()
+        expected_linestyle = [_scale_dashes(*_get_dash_pattern(linestyle), w)]
+        actual_linestyle = coll.get_linestyle()
+        assert expected_linestyle == actual_linestyle
