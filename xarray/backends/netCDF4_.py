@@ -490,7 +490,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         else:
             self.ds.setncattr(key, value)
 
-    def encode_variable(self, variable):
+    def encode_variable(self, variable, name):
         variable = _force_native_endianness(variable)
         if self.format == "NETCDF4":
             variable = _encode_nc4_variable(variable)
