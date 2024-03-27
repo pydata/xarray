@@ -9,6 +9,7 @@ except ImportError as e:
     ) from e
 
 import hypothesis.extra.numpy as npst
+import hypothesis.extra.pandas as pdst
 import numpy as np
 from hypothesis.errors import InvalidArgument
 
@@ -26,6 +27,7 @@ __all__ = [
     "dimension_sizes",
     "attrs",
     "variables",
+    "index_variables",
     "unique_subset_of",
 ]
 
@@ -62,6 +64,15 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     )
 
 
+# TODO: add datetime64[ns]
+def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
+    return (
+        npst.integer_dtypes(endianness="<", sizes=(32, 64))
+        | npst.unsigned_integer_dtypes(endianness="<", sizes=(32, 64))
+        | npst.floating_dtypes(endianness="<", sizes=(32, 64))
+    )
+
+
 # TODO Generalize to all valid unicode characters once formatting bugs in xarray's reprs are fixed + docs can handle it.
 _readable_characters = st.characters(
     categories=["L", "N"], max_codepoint=0x017F
@@ -87,6 +98,7 @@ def names() -> st.SearchStrategy[str]:
 
 def dimension_names(
     *,
+    name_strategy=None,
     min_dims: int = 0,
     max_dims: int = 3,
 ) -> st.SearchStrategy[list[Hashable]]:
@@ -97,14 +109,18 @@ def dimension_names(
 
     Parameters
     ----------
+    name_strategy
+        Strategy for making names. Useful if we need to share this.
     min_dims
         Minimum number of dimensions in generated list.
     max_dims
         Maximum number of dimensions in generated list.
     """
 
+    elements = names() if name_strategy is None else name_strategy
+
     return st.lists(
-        elements=names(),
+        elements=elements,
         min_size=min_dims,
         max_size=max_dims,
         unique=True,
@@ -190,6 +206,22 @@ def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
         lambda children: st.dictionaries(_attr_keys, children),
         max_leaves=3,
     )
+
+
+def serializable_attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
+    """
+    Generates arbitrary valid attributes dictionaries for xarray objects.
+
+    These are intended to be serialized, and so, are less general than the
+    `attrs` function above.
+
+    Requires the hypothesis package to be installed.
+
+    See Also
+    --------
+    :ref:`testing.hypothesis`_
+    """
+    return st.dictionaries(_attr_keys, _attr_values)
 
 
 @st.composite
@@ -359,6 +391,23 @@ def variables(
         )
 
     return xr.Variable(dims=dim_names, data=_data, attrs=draw(attrs))
+
+
+@st.composite
+def index_variables(
+    draw: st.DrawFn,
+    *,
+    dims: Union[
+        st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]],
+        None,
+    ] = None,
+    dtype: st.SearchStrategy[np.dtype] = pandas_index_dtypes(),
+    attrs: st.SearchStrategy[Mapping] = attrs(),
+) -> xr.Variable:
+
+    index = draw(pdst.indexes(min_size=1, dtype=draw(dtype)))
+    _dims = draw(dimension_names(min_dims=1, max_dims=1))
+    return xr.Variable(dims=_dims, data=index, attrs=draw(attrs))
 
 
 @overload
