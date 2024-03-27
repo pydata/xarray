@@ -5,8 +5,8 @@ from typing import cast
 
 import pytest
 
+from xarray.core.iterators import LevelOrderIter, PreOrderIter
 from xarray.core.treenode import InvalidTreeError, NamedNode, NodePath, TreeNode
-from xarray.datatree_.datatree.iterators import LevelOrderIter, PreOrderIter
 
 
 class TestFamilyTree:
