@@ -5788,3 +5788,21 @@ def test_zarr_append_chunk_partial(tmp_path):
         da2.chunk({"x": 1, "y": 1, "time": 1}).to_zarr(
             tmp_path / "foo.zarr", append_dim="time", mode="a"
         )
+
+
+@requires_zarr
+@requires_dask
+@pytest.mark.skip(
+    reason="We do not check that region lines up with chunk boundaries yet."
+)
+def test_zarr_region_chunk_partial_offset(tmp_path):
+    # https://github.com/pydata/xarray/pull/8459#issuecomment-1819417545
+    store = tmp_path / "foo.zarr"
+    data = np.ones((30,))
+    da = xr.DataArray(data, dims=["x"], coords={"x": range(30)}, name="foo").chunk(x=10)
+    da.to_zarr(store, compute=False)
+
+    da.isel(x=slice(10)).chunk(x=(10,)).to_zarr(store, region="auto")
+    # This write is unsafe, and should raise an error, but does not.
+    with pytest.raises(ValueError):
+        da.isel(x=slice(5, 25)).chunk(x=(10, 10)).to_zarr(store, region="auto")
