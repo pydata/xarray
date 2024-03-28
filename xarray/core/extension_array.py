@@ -124,7 +124,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
 
     def __eq__(self, other):
         if np.isscalar(other):
-            other = type(self)(pd.Categorical([other]))
+            other = type(self)(type(self.array)([other]))
         if isinstance(other, PandasExtensionArray):
             return self.array == other.array
         return self.array == other
