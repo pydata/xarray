@@ -658,6 +658,11 @@ def _dataset_concat(
         for name, result_var in result_vars.items()
         if name in coord_names
     }
+    result_data_vars = {
+        name: result_var
+        for name, result_var in result_vars.items()
+        if name not in coord_names
+    }
 
     if index is not None:
         if dim_var is not None:
@@ -668,15 +673,13 @@ def _dataset_concat(
         coord_vars[dim] = index_vars[dim]
         result_indexes[dim] = index
         unlabeled_dims = unlabeled_dims - set([dim])
+    else:
+        if dim in result_data_vars:
+            coord_vars[dim] = result_data_vars[dim]
+            result_data_vars.pop(dim)
 
     # TODO: add indexes at Dataset creation (when it is supported)
     coords = Coordinates(coord_vars, indexes=result_indexes)
-
-    result_data_vars = {
-        name: result_var
-        for name, result_var in result_vars.items()
-        if name not in coord_names
-    }
 
     result = type(datasets[0])(result_data_vars, coords=coords, attrs=result_attrs)
     result.encoding = result_encoding
