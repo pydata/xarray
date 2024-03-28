@@ -2261,7 +2261,6 @@ class ZarrBase(CFEncodedBase):
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
         with self.roundtrip(original, open_kwargs={"chunks": {}}) as actual:
             for k, v in actual.data_vars.items():
-                print(k)
                 assert v.chunks == actual[k].chunks
 
     def test_chunk_encoding(self) -> None:
@@ -2467,6 +2466,24 @@ class ZarrBase(CFEncodedBase):
             original, save_kwargs={"group": group}, open_kwargs={"group": group}
         ) as actual:
             assert_identical(original, actual)
+
+    @requires_zarr
+    def test_zarr_mode_w_overwrites_encoding(self) -> None:
+        import zarr
+
+        data = Dataset({"foo": ("x", [1.0, 1.0, 1.0])})
+        with self.create_zarr_target() as store:
+            data.to_zarr(
+                store, **self.version_kwargs, encoding={"foo": {"add_offset": 1}}
+            )
+            np.testing.assert_equal(zarr.open_group(store)["foo"], data.foo.data - 1)
+            data.to_zarr(
+                store,
+                **self.version_kwargs,
+                encoding={"foo": {"add_offset": 0}},
+                mode="w",
+            )
+            np.testing.assert_equal(zarr.open_group(store)["foo"], data.foo.data)
 
     def test_encoding_kwarg_fixed_width_string(self) -> None:
         # not relevant for zarr, since we don't use EncodedStringCoder
