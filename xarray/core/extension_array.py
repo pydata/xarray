@@ -74,10 +74,9 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
             The array to be wrapped upon e.g,. :py:class:`xarray.Variable` creation.
         ```
         """
-        if isinstance(array, pd.api.extensions.ExtensionArray):
-            self.array = array
-        else:
+        if not isinstance(array, pd.api.extensions.ExtensionArray):
             raise TypeError(f"{array} is not an pandas ExtensionArray.")
+        self.array = array
 
     def __array_function__(self, func, types, args, kwargs):
         def replace_duck_with_extension_array(args) -> list:
