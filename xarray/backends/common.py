@@ -210,12 +210,12 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return self[key]  # type: ignore [index]
 
-    def _oindex_get(self, indexer: indexing.OuterIndexer):
+    def _oindex_get(self, key: indexing.OuterIndexer):
         raise NotImplementedError(
             f"{self.__class__.__name__}._oindex_get method should be overridden"
         )
 
-    def _vindex_get(self, indexer: indexing.VectorizedIndexer):
+    def _vindex_get(self, key: indexing.VectorizedIndexer):
         raise NotImplementedError(
             f"{self.__class__.__name__}._vindex_get method should be overridden"
         )

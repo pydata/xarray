@@ -85,15 +85,15 @@ class ScipyArrayWrapper(BackendArray):
             data = self.get_variable(needs_lock=False).data
             return data[key]
 
-    def _vindex_get(self, indexer: indexing.VectorizedIndexer):
+    def _vindex_get(self, key: indexing.VectorizedIndexer):
         data = indexing.explicit_indexing_adapter(
-            indexer, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
+            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
         )
         return self._finalize_result(data)
 
-    def _oindex_get(self, indexer: indexing.OuterIndexer):
+    def _oindex_get(self, key: indexing.OuterIndexer):
         data = indexing.explicit_indexing_adapter(
-            indexer, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
+            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
         )
         return self._finalize_result(data)
 
