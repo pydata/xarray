@@ -1,6 +1,7 @@
 import pytest
 
-from xarray.datatree_.datatree import DataTree, register_datatree_accessor
+from xarray.core.datatree import DataTree
+from xarray.datatree_.datatree.extensions import register_datatree_accessor
 
 
 class TestAccessor:
