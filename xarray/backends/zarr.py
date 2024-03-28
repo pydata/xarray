@@ -93,16 +93,38 @@ class ZarrArrayWrapper(BackendArray):
     def _getitem(self, key):
         return self._array[key]
 
-    def __getitem__(self, key):
-        array = self._array
-        if isinstance(key, indexing.BasicIndexer):
-            method = self._getitem
-        elif isinstance(key, indexing.VectorizedIndexer):
-            method = self._vindex
-        elif isinstance(key, indexing.OuterIndexer):
-            method = self._oindex
+    def _oindex_get(self, key: indexing.OuterIndexer):
+        def raw_indexing_method(key):
+            return self._array.oindex[key]
+
         return indexing.explicit_indexing_adapter(
-            key, array.shape, indexing.IndexingSupport.VECTORIZED, method
+            key,
+            self._array.shape,
+            indexing.IndexingSupport.VECTORIZED,
+            raw_indexing_method,
+        )
+
+    def _vindex_get(self, key: indexing.VectorizedIndexer):
+
+        def raw_indexing_method(key):
+            return self._array.vindex[key]
+
+        return indexing.explicit_indexing_adapter(
+            key,
+            self._array.shape,
+            indexing.IndexingSupport.VECTORIZED,
+            raw_indexing_method,
+        )
+
+    def __getitem__(self, key: indexing.BasicIndexer):
+        def raw_indexing_method(key):
+            return self._array[key]
+
+        return indexing.explicit_indexing_adapter(
+            key,
+            self._array.shape,
+            indexing.IndexingSupport.VECTORIZED,
+            raw_indexing_method,
         )
 
         # if self.ndim == 0:

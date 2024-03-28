@@ -50,7 +50,17 @@ class NioArrayWrapper(BackendArray):
         ds = self.datastore._manager.acquire(needs_lock)
         return ds.variables[self.variable_name]
 
-    def __getitem__(self, key):
+    def _oindex_get(self, key: indexing.OuterIndexer):
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem
+        )
+
+    def _vindex_get(self, key: indexing.VectorizedIndexer):
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem
+        )
+
+    def __getitem__(self, key: indexing.BasicIndexer):
         return indexing.explicit_indexing_adapter(
             key, self.shape, indexing.IndexingSupport.BASIC, self._getitem
         )
