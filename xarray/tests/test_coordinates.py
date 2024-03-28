@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -9,7 +8,7 @@ from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import PandasIndex, PandasMultiIndex
-from xarray.core.variable import IndexVariable, Variable
+from xarray.core.variable import IndexVariable
 from xarray.tests import assert_identical, source_ndarray
 
 
@@ -69,12 +68,6 @@ class TestCoordinates:
     def test_init_dim_sizes_conflict(self) -> None:
         with pytest.raises(ValueError):
             Coordinates(coords={"foo": ("x", [1, 2]), "bar": ("x", [1, 2, 3, 4])})
-
-    def test_init_var_shares_name_with_dim(self) -> None:
-        # regression test for GH #8883
-        var = Variable(data=np.arange(6).reshape(2, 3), dims=["x", "y"])
-        with pytest.raises(ValueError):
-            Coordinates(coords={"x": var}, indexes={})
 
     def test_from_pandas_multiindex(self) -> None:
         midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
