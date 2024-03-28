@@ -5,7 +5,7 @@ import inspect
 import math
 from collections.abc import Hashable
 from copy import copy
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Callable, Literal
 
 import numpy as np
@@ -624,7 +624,7 @@ class TestPlot(PlotTestCase):
         nrow = 3
         ncol = 4
         start = date(2000, 1, 1)
-        time =[start + timedelta(days=i) for i in range(nrow)]
+        time = [start + timedelta(days=i) for i in range(nrow)]
         a = DataArray(
             easy_array((nrow, ncol)), coords=[("time", time), ("y", range(ncol))]
         )
