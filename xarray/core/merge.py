@@ -562,25 +562,6 @@ def merge_coords(
     return variables, out_indexes
 
 
-def assert_valid_explicit_coords(
-    variables: Mapping[Any, Any],
-    dims: Mapping[Any, int],
-    explicit_coords: Iterable[Hashable],
-) -> None:
-    """Validate explicit coordinate names/dims.
-
-    Raise a MergeError if an explicit coord shares a name with a dimension
-    but is comprised of arbitrary dimensions.
-    """
-    for coord_name in explicit_coords:
-        if coord_name in dims and variables[coord_name].dims != (coord_name,):
-            raise MergeError(
-                f"coordinate {coord_name} shares a name with a dataset dimension, but is "
-                "not a 1D variable along that dimension. This is disallowed "
-                "by the xarray data model."
-            )
-
-
 def merge_attrs(variable_attrs, combine_attrs, context=None):
     """Combine attributes from different variables according to combine_attrs"""
     if not variable_attrs:
@@ -728,7 +709,6 @@ def merge_core(
         # coordinates may be dropped in merged results
         coord_names.intersection_update(variables)
     if explicit_coords is not None:
-        assert_valid_explicit_coords(variables, dims, explicit_coords)
         coord_names.update(explicit_coords)
     for dim, size in dims.items():
         if dim in variables:
