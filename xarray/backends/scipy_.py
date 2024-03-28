@@ -67,15 +67,7 @@ class ScipyArrayWrapper(BackendArray):
         ds = self.datastore._manager.acquire(needs_lock)
         return ds.variables[self.variable_name]
 
-    def _getitem(self, key):
-        with self.datastore.lock:
-            data = self.get_variable(needs_lock=False).data
-            return data[key]
-
-    def __getitem__(self, key):
-        data = indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
-        )
+    def _finalize_result(self, data):
         # Copy data if the source file is mmapped. This makes things consistent
         # with the netCDF4 library by ensuring we can safely read arrays even
         # after closing associated files.
@@ -87,6 +79,29 @@ class ScipyArrayWrapper(BackendArray):
         copy = None if HAS_NUMPY_2_0 and copy is False else copy
 
         return np.array(data, dtype=self.dtype, copy=copy)
+
+    def _getitem(self, key):
+        with self.datastore.lock:
+            data = self.get_variable(needs_lock=False).data
+            return data[key]
+
+    def _vindex_get(self, indexer: indexing.VectorizedIndexer):
+        data = indexing.explicit_indexing_adapter(
+            indexer, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
+        )
+        return self._finalize_result(data)
+
+    def _oindex_get(self, indexer: indexing.OuterIndexer):
+        data = indexing.explicit_indexing_adapter(
+            indexer, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
+        )
+        return self._finalize_result(data)
+
+    def __getitem__(self, key):
+        data = indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
+        )
+        return self._finalize_result(data)
 
     def __setitem__(self, key, value):
         with self.datastore.lock:

@@ -210,6 +210,24 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return self[key]  # type: ignore [index]
 
+    def _oindex_get(self, indexer: indexing.OuterIndexer):
+        raise NotImplementedError(
+            f"{self.__class__.__name__}._oindex_get method should be overridden"
+        )
+
+    def _vindex_get(self, indexer: indexing.VectorizedIndexer):
+        raise NotImplementedError(
+            f"{self.__class__.__name__}._vindex_get method should be overridden"
+        )
+
+    @property
+    def oindex(self) -> indexing.IndexCallable:
+        return indexing.IndexCallable(self._oindex_get)
+
+    @property
+    def vindex(self) -> indexing.IndexCallable:
+        return indexing.IndexCallable(self._vindex_get)
+
 
 class AbstractDataStore:
     __slots__ = ()
