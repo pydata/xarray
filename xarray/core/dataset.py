@@ -7332,14 +7332,13 @@ class Dataset(
                 "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
             )
 
-        arrays = [
-            (k, np.asarray(v))
-            for k, v in dataframe.items()
-            if not is_extension_array_dtype(v)
-        ]
-        extension_arrays = [
-            (k, v) for k, v in dataframe.items() if is_extension_array_dtype(v)
-        ]
+        arrays = []
+        extension_arrays = []
+        for k, v in dataframe.items():
+            if not is_extension_array_dtype(v):
+                arrays.append((k, np.asarray(v)))
+            else:
+                extension_arrays.append((k, v))
 
         indexes: dict[Hashable, Index] = {}
         index_vars: dict[Hashable, Variable] = {}
