@@ -37,8 +37,7 @@ New Features
 - Allow creating :py:class:`xr.Coordinates` objects with no indexes (:pull:`8711`)
   By `Benoit Bovy <https://github.com/benbovy>`_ and `Tom Nicholas
   <https://github.com/TomNicholas>`_.
-
-- Enable plotting of ```datetime.dates``. (:pull: `8873`)
+- Enable plotting of ```datetime.dates``. (:issue:`8866`, :pull: `8873`)
   By `Sascha Hofmann <<https://github.com/saschahofmann>`_.
 
 Breaking changes
