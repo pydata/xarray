@@ -22,11 +22,7 @@ from xarray.core.indexes import (
     assert_no_index_corrupted,
     create_default_index_implicit,
 )
-from xarray.core.merge import (
-    assert_valid_explicit_coords,
-    merge_coordinates_without_align,
-    merge_coords,
-)
+from xarray.core.merge import merge_coordinates_without_align, merge_coords
 from xarray.core.types import DataVars, Self, T_DataArray, T_Xarray
 from xarray.core.utils import (
     Frozen,
@@ -309,11 +305,6 @@ class Coordinates(AbstractCoordinates):
                     variables.update(index_vars)
                 else:
                     variables[name] = var
-
-            dims = set(d for var in variables.values() for d in var.dims)
-            assert_valid_explicit_coords(
-                variables, dims=dims, explicit_coords=list(variables)
-            )
 
         if indexes is None:
             indexes = {}
