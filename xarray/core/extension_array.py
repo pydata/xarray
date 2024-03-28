@@ -129,3 +129,6 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
 
     def __ne__(self, other):
         return ~(self == other)
+
+    def __len__(self):
+        return len(self.array)
