@@ -652,14 +652,26 @@ def _dataset_concat(
         raise ValueError(
             f"Variables {absent_coord_names!r} are coordinates in some datasets but not others."
         )
+
     coord_vars = {
         name: result_var
         for name, result_var in result_vars.items()
         if name in coord_names
     }
+
+    if index is not None:
+        if dim_var is not None:
+            index_vars = index.create_variables({dim: dim_var})
+        else:
+            index_vars = index.create_variables()
+
+        coord_vars[dim] = index_vars[dim]
+        result_indexes[dim] = index
+        unlabeled_dims = unlabeled_dims - set([dim])
+
+    # TODO: add indexes at Dataset creation (when it is supported)
     coords = Coordinates(coord_vars, indexes=result_indexes)
 
-    # TODO: this is just the complement of the set of coord_vars
     result_data_vars = {
         name: result_var
         for name, result_var in result_vars.items()
@@ -670,14 +682,6 @@ def _dataset_concat(
     result.encoding = result_encoding
 
     result = result.drop_vars(unlabeled_dims, errors="ignore")
-
-    if index is not None:
-        # add concat index / coordinate last to ensure that its in the final Dataset
-        if dim_var is not None:
-            index_vars = index.create_variables({dim: dim_var})
-        else:
-            index_vars = index.create_variables()
-        result[dim] = index_vars[dim]
 
     return result
 
