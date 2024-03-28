@@ -69,7 +69,7 @@ if TYPE_CHECKING:
     T_NetcdfTypes = Literal[
         "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
     ]
-    from xarray.datatree_.datatree import DataTree
+    from xarray.core.datatree import DataTree
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
@@ -1562,9 +1562,7 @@ def _auto_detect_regions(ds, region, open_kwargs):
     return region
 
 
-def _validate_and_autodetect_region(
-    ds, region, mode, open_kwargs
-) -> tuple[dict[str, slice], bool]:
+def _validate_and_autodetect_region(ds, region, mode, open_kwargs) -> dict[str, slice]:
     if region == "auto":
         region = {dim: "auto" for dim in ds.dims}
 
@@ -1572,14 +1570,11 @@ def _validate_and_autodetect_region(
         raise TypeError(f"``region`` must be a dict, got {type(region)}")
 
     if any(v == "auto" for v in region.values()):
-        region_was_autodetected = True
         if mode != "r+":
             raise ValueError(
                 f"``mode`` must be 'r+' when using ``region='auto'``, got {mode}"
             )
         region = _auto_detect_regions(ds, region, open_kwargs)
-    else:
-        region_was_autodetected = False
 
     for k, v in region.items():
         if k not in ds.dims:
@@ -1612,7 +1607,7 @@ def _validate_and_autodetect_region(
             f".drop_vars({non_matching_vars!r})"
         )
 
-    return region, region_was_autodetected
+    return region
 
 
 def _validate_datatypes_for_zarr_append(zstore, dataset):
@@ -1784,12 +1779,9 @@ def to_zarr(
             storage_options=storage_options,
             zarr_version=zarr_version,
         )
-        region, region_was_autodetected = _validate_and_autodetect_region(
-            dataset, region, mode, open_kwargs
-        )
-        # drop indices to avoid potential race condition with auto region
-        if region_was_autodetected:
-            dataset = dataset.drop_vars(dataset.indexes)
+        region = _validate_and_autodetect_region(dataset, region, mode, open_kwargs)
+        # can't modify indexed with region writes
+        dataset = dataset.drop_vars(dataset.indexes)
         if append_dim is not None and append_dim in region:
             raise ValueError(
                 f"cannot list the same dimension in both ``append_dim`` and "

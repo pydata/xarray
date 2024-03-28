@@ -13,12 +13,12 @@ import sys
 import tempfile
 import uuid
 import warnings
-from collections.abc import Generator, Iterator
+from collections.abc import Generator, Iterator, Mapping
 from contextlib import ExitStack
 from io import BytesIO
 from os import listdir
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 from unittest.mock import patch
 
 import numpy as np
@@ -3577,6 +3577,16 @@ class TestH5NetCDFData(NetCDF4Base):
             assert actual.x.encoding["compression"] == "lzf"
             assert actual.x.encoding["compression_opts"] is None
 
+    def test_decode_utf8_warning(self) -> None:
+        title = b"\xc3"
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, "w") as f:
+                f.title = title
+            with pytest.warns(UnicodeWarning, match="returning bytes undecoded") as w:
+                ds = xr.load_dataset(tmp_file, engine="h5netcdf")
+                assert ds.title == title
+                assert "attribute 'title' of h5netcdf object '/'" in str(w[0].message)
+
 
 @requires_h5netcdf
 @requires_netCDF4
@@ -5658,24 +5668,27 @@ class TestZarrRegionAuto:
             }
         )
 
-        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+        region_slice = dict(x=slice(2, 4), y=slice(6, 8))
+        ds_region = 1 + ds.isel(region_slice)
 
         ds.to_zarr(tmp_path / "test.zarr")
 
-        with patch.object(
-            ZarrStore,
-            "set_variables",
-            side_effect=ZarrStore.set_variables,
-            autospec=True,
-        ) as mock:
-            ds_region.to_zarr(tmp_path / "test.zarr", region="auto", mode="r+")
+        region: Mapping[str, slice] | Literal["auto"]
+        for region in [region_slice, "auto"]:  # type: ignore
+            with patch.object(
+                ZarrStore,
+                "set_variables",
+                side_effect=ZarrStore.set_variables,
+                autospec=True,
+            ) as mock:
+                ds_region.to_zarr(tmp_path / "test.zarr", region=region, mode="r+")
 
-            # should write the data vars but never the index vars with auto mode
-            for call in mock.call_args_list:
-                written_variables = call.args[1].keys()
-                assert "test" in written_variables
-                assert "x" not in written_variables
-                assert "y" not in written_variables
+                # should write the data vars but never the index vars with auto mode
+                for call in mock.call_args_list:
+                    written_variables = call.args[1].keys()
+                    assert "test" in written_variables
+                    assert "x" not in written_variables
+                    assert "y" not in written_variables
 
     def test_zarr_region_append(self, tmp_path):
         x = np.arange(0, 50, 10)

@@ -1216,7 +1216,8 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(TypeError, match=r"without an explicit list of dimensions"):
             as_variable(data)
 
-        actual = as_variable(data, name="x")
+        with pytest.warns(FutureWarning, match="IndexVariable"):
+            actual = as_variable(data, name="x")
         assert_identical(expected.to_index_variable(), actual)
 
         actual = as_variable(0)
@@ -1234,9 +1235,11 @@ class TestVariable(VariableSubclassobjects):
 
         # test datetime, timedelta conversion
         dt = np.array([datetime(1999, 1, 1) + timedelta(days=x) for x in range(10)])
-        assert as_variable(dt, "time").dtype.kind == "M"
+        with pytest.warns(FutureWarning, match="IndexVariable"):
+            assert as_variable(dt, "time").dtype.kind == "M"
         td = np.array([timedelta(days=x) for x in range(10)])
-        assert as_variable(td, "time").dtype.kind == "m"
+        with pytest.warns(FutureWarning, match="IndexVariable"):
+            assert as_variable(td, "time").dtype.kind == "m"
 
         with pytest.raises(TypeError):
             as_variable(("x", DataArray([])))
