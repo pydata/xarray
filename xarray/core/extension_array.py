@@ -109,9 +109,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
         return f"{type(self)}(array={repr(self.array)})"
 
     def __getattr__(self, attr: str) -> object:
-        if hasattr(self.array, attr):
-            return getattr(self.array, attr)
-        raise AttributeError(f"{attr} not found.")
+        return getattr(self.array, attr)
 
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
         item = self.array[key]
