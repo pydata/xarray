@@ -73,6 +73,9 @@ Bug fixes
 - Warn and return bytes undecoded in case of UnicodeDecodeError in h5netcdf-backend
   (:issue:`5563`, :pull:`8874`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix bug incorrectly disallowing creation of a dataset with a multidimensional coordinate variable with the same name as one of its dims.
+  (:issue:`8884`, :pull:`8886`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 Documentation
