@@ -221,6 +221,7 @@ class TestOps:
         assert (extension_duck_array[0:2] == categorical1[0:2]).all()
         assert isinstance(extension_duck_array[0:2], PandasExtensionArray)
         assert extension_duck_array[0] == categorical1[0]
+        assert isinstance(extension_duck_array[0], PandasExtensionArray)
         mask = [True, False, True, False, True]
         assert (extension_duck_array[mask] == categorical1[mask]).all()
 

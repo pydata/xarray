@@ -113,8 +113,10 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
 
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
         item = self.array[key]
-        if is_extension_array_dtype(item):  # not a singleton - better way to check?
+        if is_extension_array_dtype(item):
             return type(self)(item)
+        if np.isscalar(item):
+            return type(self)([item])
         return item
 
     def __setitem__(self, key, val):
