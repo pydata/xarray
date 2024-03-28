@@ -175,15 +175,6 @@ class TestOps:
             where_res == pd.Categorical(["cat1", "cat1", "cat2", "cat3", "cat1"])
         ).all()
 
-    def test_where_extension_duck_array_fallback(self, categorical1, categorical2):
-        where_res = where(
-            np.array([True, False, True, False, False]),
-            PandasExtensionArray(categorical1),
-            np.array(categorical2),
-        )
-        assert isinstance(where_res, np.ndarray)
-        assert (where_res == np.array(["cat1", "cat1", "cat2", "cat3", "cat1"])).all()
-
     def test_concatenate_extension_duck_array(self, categorical1, categorical2):
         concate_res = concatenate(
             [PandasExtensionArray(categorical1), PandasExtensionArray(categorical2)]
@@ -201,20 +192,6 @@ class TestOps:
         )
         assert concatenated[2]["x"] == 3
         assert concatenated[3]["y"]
-
-    def test_concatenate_extension_duck_array_fallback(
-        self, categorical1, categorical2
-    ):
-        concate_res = concatenate(
-            [PandasExtensionArray(categorical1), np.array(categorical2)]
-        )
-        assert isinstance(concate_res, np.ndarray)
-        assert (
-            concate_res
-            == np.array(
-                type(categorical1)._concat_same_type((categorical1, categorical2))
-            )
-        ).all()
 
     def test___getitem__extension_duck_array(self, categorical1):
         extension_duck_array = PandasExtensionArray(categorical1)
