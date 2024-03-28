@@ -311,11 +311,8 @@ class Coordinates(AbstractCoordinates):
                     variables[name] = var
 
             dims = set(d for var in variables.values() for d in var.dims)
-            sizes = {
-                d: -1 for d in dims
-            }  # TODO the lengths here are never used, so assert_valid_explicit_coords should be refactored
             assert_valid_explicit_coords(
-                variables, dims=sizes, explicit_coords=list(variables)
+                variables, dims=dims, explicit_coords=list(variables)
             )
 
         if indexes is None:
