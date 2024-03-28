@@ -12,6 +12,7 @@ from xarray.core import dtypes, merge
 from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import PandasIndex
 from xarray.tests import (
+    ConcatenatableArray,
     InaccessibleArray,
     assert_array_equal,
     assert_equal,
@@ -979,11 +980,13 @@ class TestConcatDataset:
         assert np.issubdtype(actual.x2.dtype, dtype)
 
     def test_concat_avoids_index_auto_creation(self) -> None:
-        # TODO once passing indexes={} directly to DataArray constructor is allowed then no need to create coords first
-        coords = Coordinates({"x": np.array([1, 2, 3])}, indexes={})
+        # TODO once passing indexes={} directly to Dataset constructor is allowed then no need to create coords first
+        coords = Coordinates(
+            {"x": ConcatenatableArray(np.array([1, 2, 3]))}, indexes={}
+        )
         datasets = [
             Dataset(
-                {"a": (["x", "y"], np.zeros((3, 3)))},
+                {"a": (["x", "y"], ConcatenatableArray(np.zeros((3, 3))))},
                 coords=coords,
             )
             for _ in range(2)
@@ -1079,10 +1082,12 @@ class TestConcatDataArray:
 
     def test_concat_avoids_index_auto_creation(self) -> None:
         # TODO once passing indexes={} directly to DataArray constructor is allowed then no need to create coords first
-        coords = Coordinates({"x": np.array([1, 2, 3])}, indexes={})
+        coords = Coordinates(
+            {"x": ConcatenatableArray(np.array([1, 2, 3]))}, indexes={}
+        )
         arrays = [
             DataArray(
-                np.zeros((3, 3)),
+                ConcatenatableArray(np.zeros((3, 3))),
                 dims=["x", "y"],
                 coords=coords,
             )
