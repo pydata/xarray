@@ -564,7 +564,7 @@ def merge_coords(
 
 def assert_valid_explicit_coords(
     variables: Mapping[Any, Any],
-    dims: Iterable[Any],
+    dims: Mapping[Any, int],
     explicit_coords: Iterable[Hashable],
 ) -> None:
     """Validate explicit coordinate names/dims.
@@ -721,16 +721,16 @@ def merge_core(
         collected, prioritized, compat=compat, combine_attrs=combine_attrs
     )
 
-    sizes = calculate_dimensions(variables)
+    dims = calculate_dimensions(variables)
 
     coord_names, noncoord_names = determine_coords(coerced)
     if compat == "minimal":
         # coordinates may be dropped in merged results
         coord_names.intersection_update(variables)
     if explicit_coords is not None:
-        assert_valid_explicit_coords(variables, sizes.keys(), explicit_coords)
+        assert_valid_explicit_coords(variables, dims, explicit_coords)
         coord_names.update(explicit_coords)
-    for dim, size in sizes.items():
+    for dim, size in dims.items():
         if dim in variables:
             coord_names.add(dim)
     ambiguous_coords = coord_names.intersection(noncoord_names)
@@ -745,7 +745,7 @@ def merge_core(
         combine_attrs,
     )
 
-    return _MergeResult(variables, coord_names, sizes, out_indexes, attrs)
+    return _MergeResult(variables, coord_names, dims, out_indexes, attrs)
 
 
 def merge(
