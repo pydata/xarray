@@ -116,7 +116,7 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
         if is_extension_array_dtype(item):
             return type(self)(item)
         if np.isscalar(item):
-            return type(self)(pd.Categorical([item]))
+            return type(self)(type(self.array)([item]))
         return item
 
     def __setitem__(self, key, val):
