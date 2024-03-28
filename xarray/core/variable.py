@@ -35,6 +35,7 @@ from xarray.core.utils import (
     decode_numpy_dict_values,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
+    emit_user_level_warning,
     ensure_us_time_resolution,
     infix_dims,
     is_dict_like,
@@ -83,7 +84,9 @@ class MissingDimensionsError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
-def as_variable(obj: T_DuckArray | Any, name=None) -> Variable | IndexVariable:
+def as_variable(
+    obj: T_DuckArray | Any, name=None, auto_convert: bool = True
+) -> Variable | IndexVariable:
     """Convert an object into a Variable.
 
     Parameters
@@ -103,6 +106,9 @@ def as_variable(obj: T_DuckArray | Any, name=None) -> Variable | IndexVariable:
           along a dimension of this given name.
         - Variables with name matching one of their dimensions are converted
           into `IndexVariable` objects.
+    auto_convert : bool, optional
+        For internal use only! If True, convert a "dimension" variable into
+        an IndexVariable object (deprecated).
 
     Returns
     -------
@@ -153,9 +159,15 @@ def as_variable(obj: T_DuckArray | Any, name=None) -> Variable | IndexVariable:
             f"explicit list of dimensions: {obj!r}"
         )
 
-    if name is not None and name in obj.dims and obj.ndim == 1:
-        # automatically convert the Variable into an Index
-        obj = obj.to_index_variable()
+    if auto_convert:
+        if name is not None and name in obj.dims and obj.ndim == 1:
+            # automatically convert the Variable into an Index
+            emit_user_level_warning(
+                f"variable {name!r} with name matching its dimension will not be "
+                "automatically converted into an `IndexVariable` object in the future.",
+                FutureWarning,
+            )
+            obj = obj.to_index_variable()
 
     return obj
 
@@ -711,8 +723,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 variable = (
                     value
                     if isinstance(value, Variable)
-                    else as_variable(value, name=dim)
+                    else as_variable(value, name=dim, auto_convert=False)
                 )
+                if variable.dims == (dim,):
+                    variable = variable.to_index_variable()
                 if variable.dtype.kind == "b":  # boolean indexing case
                     (variable,) = variable._nonzero()
 

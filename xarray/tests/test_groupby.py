@@ -247,6 +247,51 @@ def test_da_groupby_empty() -> None:
         empty_array.groupby("dim")
 
 
+@requires_dask
+def test_dask_da_groupby_quantile() -> None:
+    # Only works when the grouped reduction can run blockwise
+    # Scalar quantile
+    expected = xr.DataArray(
+        data=[2, 5], coords={"x": [1, 2], "quantile": 0.5}, dims="x"
+    )
+    array = xr.DataArray(
+        data=[1, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
+    )
+    with pytest.raises(ValueError):
+        array.chunk(x=1).groupby("x").quantile(0.5)
+
+    # will work blockwise with flox
+    actual = array.chunk(x=3).groupby("x").quantile(0.5)
+    assert_identical(expected, actual)
+
+    # will work blockwise with flox
+    actual = array.chunk(x=-1).groupby("x").quantile(0.5)
+    assert_identical(expected, actual)
+
+
+@requires_dask
+def test_dask_da_groupby_median() -> None:
+    expected = xr.DataArray(data=[2, 5], coords={"x": [1, 2]}, dims="x")
+    array = xr.DataArray(
+        data=[1, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
+    )
+    with xr.set_options(use_flox=False):
+        actual = array.chunk(x=1).groupby("x").median()
+    assert_identical(expected, actual)
+
+    with xr.set_options(use_flox=True):
+        actual = array.chunk(x=1).groupby("x").median()
+    assert_identical(expected, actual)
+
+    # will work blockwise with flox
+    actual = array.chunk(x=3).groupby("x").median()
+    assert_identical(expected, actual)
+
+    # will work blockwise with flox
+    actual = array.chunk(x=-1).groupby("x").median()
+    assert_identical(expected, actual)
+
+
 def test_da_groupby_quantile() -> None:
     array = xr.DataArray(
         data=[1, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
