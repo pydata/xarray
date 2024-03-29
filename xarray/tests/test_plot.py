@@ -85,19 +85,19 @@ def test_all_figures_closed():
 
 @pytest.mark.flaky
 @pytest.mark.skip(reason="maybe flaky")
-def text_in_fig():
+def text_in_fig() -> set(str):
     """
     Return the set of all text in the figure
     """
     return {t.get_text() for t in plt.gcf().findobj(mpl.text.Text)}
 
 
-def find_possible_colorbars():
+def find_possible_colorbars() -> list[mpl.collections.QuadMesh]:
     # nb. this function also matches meshes from pcolormesh
     return plt.gcf().findobj(mpl.collections.QuadMesh)
 
 
-def substring_in_axes(substring, ax):
+def substring_in_axes(substring, ax) -> bool:
     """
     Return True if a substring is found anywhere in an axes
     """
@@ -108,7 +108,7 @@ def substring_in_axes(substring, ax):
     return False
 
 
-def substring_not_in_axes(substring, ax):
+def substring_not_in_axes(substring, ax) -> bool:
     """
     Return True if a substring is not found anywhere in an axes
     """
@@ -117,7 +117,7 @@ def substring_not_in_axes(substring, ax):
     return all(check)
 
 
-def property_in_axes_text(property, property_str, target_txt, ax):
+def property_in_axes_text(property, property_str, target_txt, ax) -> bool:
     """
     Return True if the specified text in an axes
     has the property assigned to property_str
@@ -130,7 +130,7 @@ def property_in_axes_text(property, property_str, target_txt, ax):
     return all(check)
 
 
-def easy_array(shape, start=0, stop=1):
+def easy_array(shape: tuple[int, ...], start: float = 0, stop: float = 1) -> np.ndarray:
     """
     Make an array with desired shape using np.linspace
 
@@ -140,7 +140,7 @@ def easy_array(shape, start=0, stop=1):
     return a.reshape(shape)
 
 
-def get_colorbar_label(colorbar):
+def get_colorbar_label(colorbar) -> str:
     if colorbar.orientation == "vertical":
         return colorbar.ax.get_ylabel()
     else:
