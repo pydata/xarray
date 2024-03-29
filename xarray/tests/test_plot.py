@@ -97,7 +97,7 @@ def find_possible_colorbars() -> list[mpl.collections.QuadMesh]:
     return plt.gcf().findobj(mpl.collections.QuadMesh)  # type: ignore[return-value] # mpl error?
 
 
-def substring_in_axes(substring: str, ax) -> bool:
+def substring_in_axes(substring: Hashable, ax: mpl.axes) -> bool:
     """
     Return True if a substring is found anywhere in an axes
     """
@@ -108,7 +108,7 @@ def substring_in_axes(substring: str, ax) -> bool:
     return False
 
 
-def substring_not_in_axes(substring, ax) -> bool:
+def substring_not_in_axes(substring: Hashable, ax: mpl.axes) -> bool:
     """
     Return True if a substring is not found anywhere in an axes
     """
@@ -117,12 +117,12 @@ def substring_not_in_axes(substring, ax) -> bool:
     return all(check)
 
 
-def property_in_axes_text(property, property_str, target_txt, ax) -> bool:
+def property_in_axes_text(property, property_str, target_txt, ax: mpl.axes) -> bool:
     """
     Return True if the specified text in an axes
     has the property assigned to property_str
     """
-    alltxt = ax.findobj(mpl.text.Text)
+    alltxt: list[mpl.text.Text] = ax.findobj(mpl.text.Text)
     check = []
     for t in alltxt:
         if t.get_text() == target_txt:
@@ -2999,7 +2999,7 @@ class TestNcAxisNotInstalled(PlotTestCase):
 @requires_matplotlib
 class TestAxesKwargs:
     @pytest.fixture(params=[1, 2, 3])
-    def data_array(self, request) -> DataArray:
+    def data_array(self, request) -> DataArray:  # type: ignore[return] # error: Missing return statement  [return]
         """
         Return a simple DataArray
         """
@@ -3012,7 +3012,7 @@ class TestAxesKwargs:
             return DataArray(easy_array((10, 3, 2)))
 
     @pytest.fixture(params=[1, 2])
-    def data_array_logspaced(self, request) -> DataArray:
+    def data_array_logspaced(self, request) -> DataArray:  # type: ignore[return] # error: Missing return statement  [return]
         """
         Return a simple DataArray with logspaced coordinates
         """
