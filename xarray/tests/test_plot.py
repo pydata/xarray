@@ -97,7 +97,7 @@ def find_possible_colorbars() -> list[mpl.collections.QuadMesh]:
     return plt.gcf().findobj(mpl.collections.QuadMesh)  # type: ignore[return-value] # mpl error?
 
 
-def substring_in_axes(substring: Hashable, ax: mpl.axes) -> bool:
+def substring_in_axes(substring: Hashable, ax: mpl.axes.Axes) -> bool:
     """
     Return True if a substring is found anywhere in an axes
     """
@@ -108,7 +108,7 @@ def substring_in_axes(substring: Hashable, ax: mpl.axes) -> bool:
     return False
 
 
-def substring_not_in_axes(substring: Hashable, ax: mpl.axes) -> bool:
+def substring_not_in_axes(substring: Hashable, ax: mpl.axes.Axes) -> bool:
     """
     Return True if a substring is not found anywhere in an axes
     """
@@ -117,7 +117,9 @@ def substring_not_in_axes(substring: Hashable, ax: mpl.axes) -> bool:
     return all(check)
 
 
-def property_in_axes_text(property, property_str, target_txt, ax: mpl.axes) -> bool:
+def property_in_axes_text(
+    property, property_str, target_txt, ax: mpl.axes.Axes
+) -> bool:
     """
     Return True if the specified text in an axes
     has the property assigned to property_str
