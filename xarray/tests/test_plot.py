@@ -3,10 +3,10 @@ from __future__ import annotations
 import contextlib
 import inspect
 import math
-from collections.abc import Hashable
+from collections.abc import Generator, Hashable
 from copy import copy
 from datetime import datetime
-from typing import Any, Callable, Literal, Generator
+from typing import Any, Callable, Literal
 
 import numpy as np
 import pandas as pd
