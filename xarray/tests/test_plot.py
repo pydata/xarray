@@ -6,7 +6,7 @@ import math
 from collections.abc import Hashable
 from copy import copy
 from datetime import datetime
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, Generator
 
 import numpy as np
 import pandas as pd
@@ -150,7 +150,7 @@ def get_colorbar_label(colorbar) -> str:
 @requires_matplotlib
 class PlotTestCase:
     @pytest.fixture(autouse=True)
-    def setup(self) -> None:
+    def setup(self) -> Generator:
         yield
         # Remove all matplotlib figures
         plt.close("all")
