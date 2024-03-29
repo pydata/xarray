@@ -133,6 +133,7 @@ jobs:
           path: .hypothesis/
           key: cache-hypothesis
           enableCrossOsArchive: true
+          save-always: true
 
       - name: Run tests
         run: python -m pytest
