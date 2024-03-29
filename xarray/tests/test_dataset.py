@@ -3560,6 +3560,9 @@ class TestDataset:
             assert name not in reset.variables
         for name in converted:
             assert_identical(reset[name].variable, ds[name].variable.to_base_variable())
+            # check that variable data is converted back to a numpy array
+            # (https://github.com/pydata/xarray/issues/8887)
+            assert isinstance(reset[name].variable._data, np.ndarray)
         for old_name, new_name in renamed.items():
             assert_identical(ds[old_name].variable, reset[new_name].variable)
 
