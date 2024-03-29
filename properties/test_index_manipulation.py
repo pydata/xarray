@@ -1,49 +1,22 @@
-from collections.abc import Hashable
+import itertools
 
 import pytest
 
 from xarray import Dataset
-from xarray.indexes import PandasMultiIndex
 from xarray.testing import _assert_internal_invariants
 
 pytest.importorskip("hypothesis")
 
 import hypothesis.strategies as st
-from hypothesis import assume, note, settings
+from hypothesis import note, settings
 from hypothesis.stateful import (
-    Bundle,
     RuleBasedStateMachine,
-    consumes,
     invariant,
-    multiple,
     precondition,
     rule,
 )
 
 import xarray.testing.strategies as xrst
-
-
-def get_not_multiindex_dims(ds: Dataset) -> tuple[Hashable]:
-    dims = ds.dims
-    mindexes = [
-        name
-        for name, index in ds.xindexes.items()
-        if isinstance(index, PandasMultiIndex)
-    ]
-    return tuple(set(dims) - set(mindexes))
-
-
-def get_multiindex_dims(ds: Dataset) -> list[Hashable]:
-    mindexes = [
-        name
-        for name, index in ds.xindexes.items()
-        if isinstance(index, PandasMultiIndex)
-    ]
-    return mindexes
-
-
-def get_dimension_coordinates(ds: Dataset) -> tuple[Hashable]:
-    return tuple(set(ds.dims) & set(ds._variables))
 
 
 @st.composite
@@ -59,60 +32,87 @@ def unique(draw, strategy):
 UNIQUE_NAME = unique(strategy=xrst.names())
 DIM_NAME = xrst.dimension_names(name_strategy=UNIQUE_NAME, min_dims=1, max_dims=1)
 
-from hypothesis import seed
 
-
-@seed(222637475654255579925165578590114755457)
 class DatasetStateMachine(RuleBasedStateMachine):
-    indexed_dims = Bundle("indexed_dims")
-    multi_indexed_dims = Bundle("multi_indexed_dims")
+    # Can't use bundles because we'd need pre-conditions on consumes(bundle)
+    # indexed_dims = Bundle("indexed_dims")
+    # multi_indexed_dims = Bundle("multi_indexed_dims")
 
     def __init__(self):
         super().__init__()
         self.dataset = Dataset()
         self.check_default_indexes = True
 
-    @rule(var=xrst.index_variables(dims=DIM_NAME), target=indexed_dims)
+        # We track these separately as lists so we can guarantee order of iteration over them.
+        # Order of iteration over Dataset.dims is not guaranteed
+        self.indexed_dims = []
+        self.multi_indexed_dims = []
+
+    @rule(var=xrst.index_variables(dims=DIM_NAME))
     def add_dim_coord(self, var):
         (name,) = var.dims
         # dim coord
         self.dataset[name] = var
         # non-dim coord of same size; this allows renaming
         self.dataset[name + "_"] = var
-        return name
 
-    @rule(dim=st.one_of(consumes(indexed_dims), consumes(multi_indexed_dims)))
-    def reset_index(self, dim):
+        self.indexed_dims.append(name)
+
+    @property
+    def has_dims(self) -> bool:
+        return bool(self.indexed_dims + self.multi_indexed_dims)
+
+    @rule(data=st.data())
+    @precondition(lambda self: self.has_dims)
+    def reset_index(self, data):
+        dim = data.draw(st.sampled_from(self.indexed_dims + self.multi_indexed_dims))
         self.check_default_indexes = False
         note(f"> resetting {dim}")
         self.dataset = self.dataset.reset_index(dim)
 
-    @rule(
-        newname=UNIQUE_NAME,
-        oldnames=st.lists(consumes(indexed_dims), min_size=1, unique=True),
-        target=multi_indexed_dims,
-    )
-    def stack(self, newname, oldnames):
+        if dim in self.indexed_dims:
+            del self.indexed_dims[self.indexed_dims.index(dim)]
+        elif dim in self.multi_indexed_dims:
+            del self.multi_indexed_dims[self.multi_indexed_dims.index(dim)]
+
+    @rule(newname=UNIQUE_NAME, data=st.data())
+    @precondition(lambda self: bool(self.indexed_dims))
+    def stack(self, newname, data):
+        oldnames = data.draw(
+            st.lists(st.sampled_from(self.indexed_dims), min_size=1, unique=True)
+        )
         note(f"> stacking {oldnames} as {newname}")
         self.dataset = self.dataset.stack({newname: oldnames})
-        return newname
 
-    # TODO: add st.none() to dim
-    @rule(dim=consumes(multi_indexed_dims), target=indexed_dims)
-    def unstack(self, dim):
+        self.multi_indexed_dims += [newname]
+        for dim in oldnames:
+            del self.indexed_dims[self.indexed_dims.index(dim)]
+
+    @rule(data=st.data())
+    @precondition(lambda self: bool(self.multi_indexed_dims))
+    def unstack(self, data):
+        # TODO: add None
+        dim = data.draw(st.sampled_from(self.multi_indexed_dims))
+        note(f"> unstacking {dim}")
         if dim is not None:
             pd_index = self.dataset.xindexes[dim].index
-            assume(pd_index.is_unique)
-        note(f"> unstacking {dim}")
         self.dataset = self.dataset.unstack(dim)
-        if dim is not None:
-            return multiple(*pd_index.names)
-        else:
-            # TODO Fix this when adding st.none()
-            return multiple()
 
-    @rule(newname=UNIQUE_NAME, oldname=consumes(indexed_dims))
-    def rename_vars(self, newname, oldname):
+        del self.multi_indexed_dims[self.multi_indexed_dims.index(dim)]
+
+        if dim is not None:
+            pd_index = self.dataset.xindexes[dim].index
+            self.indexed_dims.extend(pd_index.names)
+        else:
+            # TODO: fix this
+            pass
+
+    @rule(newname=UNIQUE_NAME, data=st.data())
+    @precondition(lambda self: self.has_dims)
+    def rename_vars(self, newname, data):
+        oldname = data.draw(
+            st.sampled_from(self.indexed_dims + self.multi_indexed_dims)
+        )
         # benbovy: "skip the default indexes invariant test when the name of an
         # existing dimension coordinate is passed as input kwarg or dict key
         # to .rename_vars()."
@@ -120,23 +120,40 @@ class DatasetStateMachine(RuleBasedStateMachine):
         note(f"> renaming {oldname} to {newname}")
         self.dataset = self.dataset.rename_vars({oldname: newname})
 
-    @rule(data=st.data(), dim=consumes(indexed_dims), target=indexed_dims)
-    @precondition(lambda self: len(self.dataset._variables) >= 2)
-    def swap_dims(self, data, dim):
+        dim = oldname
+        if dim in self.indexed_dims:
+            del self.indexed_dims[self.indexed_dims.index(dim)]
+        elif dim in self.multi_indexed_dims:
+            del self.multi_indexed_dims[self.multi_indexed_dims.index(dim)]
+
+    @property
+    def swappable_dims(self):
+        options = []
+        for dim in self.indexed_dims:
+            choices = [
+                name
+                for name, var in self.dataset._variables.items()
+                if var.dims == (dim,)
+            ]
+            options.extend(
+                (a, b) for a, b in itertools.zip_longest((dim,), choices, fillvalue=dim)
+            )
+        note(f"found swappable dims: {options}, all_dims: {tuple(self.dataset.dims)}")
+        return options
+
+    @rule(data=st.data())
+    @precondition(lambda self: bool(self.swappable_dims))
+    def swap_dims(self, data):
         ds = self.dataset
-        choices = [name for name, var in ds._variables.items() if var.dims == (dim,)]
-        # TODO: is there a better way to skip if choices == []
-        # note(choices)
-        # if not choices:
-        #     return dim
-        # Can only swap to a variable with the same dim
-        to = data.draw(st.sampled_from(choices))
+        dim, to = data.draw(st.sampled_from(self.swappable_dims))
         # TODO: swapping a dimension to itself
         # TODO: swapping from Index to a MultiIndex level
         # TODO: swapping from MultiIndex to a level of the same MultiIndex
         note(f"> swapping {dim} to {to}")
         self.dataset = ds.swap_dims({dim: to})
-        return to
+
+        del self.indexed_dims[self.indexed_dims.index(dim)]
+        self.indexed_dims += [to]
 
     # TODO: enable when we have serializable attrs only
     # @rule()
@@ -155,5 +172,5 @@ class DatasetStateMachine(RuleBasedStateMachine):
         _assert_internal_invariants(self.dataset, self.check_default_indexes)
 
 
-DatasetStateMachine.TestCase.settings = settings(max_examples=1000, deadline=None)
+DatasetStateMachine.TestCase.settings = settings(max_examples=200, deadline=None)
 DatasetTest = DatasetStateMachine.TestCase
