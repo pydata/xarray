@@ -1423,7 +1423,7 @@ class TestDataArrayGroupBy:
         # regression test for #326
         array = self.da
         grouped = array.groupby("abc")
-        actual = grouped.map(np.asarray)
+        actual = grouped.map(np.asarray)  # type: ignore[arg-type] # TODO: Not sure using np.asarray like this makes sense with array api
         assert_equal(array, actual)
 
     def test_groupby_map_changes_metadata(self) -> None:
@@ -1468,11 +1468,11 @@ class TestDataArrayGroupBy:
         assert_allclose(expected_agg, actual_agg)
 
         with pytest.raises(TypeError, match=r"only support binary ops"):
-            grouped + 1
+            grouped + 1  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"only support binary ops"):
-            grouped + grouped
+            grouped + grouped  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"in-place operations"):
-            array += grouped
+            array += grouped  # type: ignore[arg-type]
 
     def test_groupby_math_not_aligned(self) -> None:
         array = DataArray(
