@@ -1468,9 +1468,9 @@ class TestDataArrayGroupBy:
         assert_allclose(expected_agg, actual_agg)
 
         with pytest.raises(TypeError, match=r"only support binary ops"):
-            grouped + 1  # type: ignore[arg-type]
+            grouped + 1  # type: ignore[type-var]
         with pytest.raises(TypeError, match=r"only support binary ops"):
-            grouped + grouped  # type: ignore[arg-type]
+            grouped + grouped  # type: ignore[type-var]
         with pytest.raises(TypeError, match=r"in-place operations"):
             array += grouped  # type: ignore[arg-type]
 
