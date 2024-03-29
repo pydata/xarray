@@ -1248,13 +1248,12 @@ class TestDataArrayGroupBy:
 
     def test_groupby_properties(self) -> None:
         grouped = self.da.groupby("abc")
-        expected_groups: dict[Any, Any] = {
-            "a": range(0, 9),
-            "c": [9],
-            "b": range(10, 20),
-        }
+        expected_groups = {"a": range(0, 9), "c": [9], "b": range(10, 20)}
         assert expected_groups.keys() == grouped.groups.keys()
         for key in expected_groups:
+            # TODO: array_api doesn't allow slice:
+            assert not isinstance(expected_groups[key], slice)
+            assert not isinstance(grouped.groups[key], slice)
             np.testing.assert_array_equal(expected_groups[key], grouped.groups[key])
         assert 3 == len(grouped)
 
