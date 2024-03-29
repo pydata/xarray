@@ -28,7 +28,9 @@ def unique(draw, strategy):
     )
 
 
-# Share to ensure we get unique names on each draw?
+# Share to ensure we get unique names on each draw,
+# so we don't try to add two variables with the same name
+# or stack to a dimension with a name that already exists in the Dataset.
 UNIQUE_NAME = unique(strategy=xrst.names())
 DIM_NAME = xrst.dimension_names(name_strategy=UNIQUE_NAME, min_dims=1, max_dims=1)
 
@@ -101,7 +103,6 @@ class DatasetStateMachine(RuleBasedStateMachine):
         del self.multi_indexed_dims[self.multi_indexed_dims.index(dim)]
 
         if dim is not None:
-            pd_index = self.dataset.xindexes[dim].index
             self.indexed_dims.extend(pd_index.names)
         else:
             # TODO: fix this
@@ -110,17 +111,14 @@ class DatasetStateMachine(RuleBasedStateMachine):
     @rule(newname=UNIQUE_NAME, data=st.data())
     @precondition(lambda self: self.has_dims)
     def rename_vars(self, newname, data):
-        oldname = data.draw(
-            st.sampled_from(self.indexed_dims + self.multi_indexed_dims)
-        )
+        dim = data.draw(st.sampled_from(self.indexed_dims + self.multi_indexed_dims))
         # benbovy: "skip the default indexes invariant test when the name of an
         # existing dimension coordinate is passed as input kwarg or dict key
         # to .rename_vars()."
         self.check_default_indexes = False
-        note(f"> renaming {oldname} to {newname}")
-        self.dataset = self.dataset.rename_vars({oldname: newname})
+        note(f"> renaming {dim} to {newname}")
+        self.dataset = self.dataset.rename_vars({dim: newname})
 
-        dim = oldname
         if dim in self.indexed_dims:
             del self.indexed_dims[self.indexed_dims.index(dim)]
         elif dim in self.multi_indexed_dims:
@@ -134,22 +132,25 @@ class DatasetStateMachine(RuleBasedStateMachine):
                 name
                 for name, var in self.dataset._variables.items()
                 if var.dims == (dim,)
+                # TODO: allow swapping a dimension to itself
+                and name != dim
             ]
             options.extend(
                 (a, b) for a, b in itertools.zip_longest((dim,), choices, fillvalue=dim)
             )
-        note(f"found swappable dims: {options}, all_dims: {tuple(self.dataset.dims)}")
         return options
 
     @rule(data=st.data())
     @precondition(lambda self: bool(self.swappable_dims))
     def swap_dims(self, data):
         ds = self.dataset
-        dim, to = data.draw(st.sampled_from(self.swappable_dims))
-        # TODO: swapping a dimension to itself
+        options = self.swappable_dims
+        dim, to = data.draw(st.sampled_from(options))
         # TODO: swapping from Index to a MultiIndex level
         # TODO: swapping from MultiIndex to a level of the same MultiIndex
-        note(f"> swapping {dim} to {to}")
+        note(
+            f"> swapping {dim} to {to}, found swappable dims: {options}, all_dims: {tuple(self.dataset.dims)}"
+        )
         self.dataset = ds.swap_dims({dim: to})
 
         del self.indexed_dims[self.indexed_dims.index(dim)]
@@ -168,7 +169,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
 
     @invariant()
     def assert_invariants(self):
-        # note(f"> ===\n\n {self.dataset!r} \n===\n\n")
+        note(f"> ===\n\n {self.dataset!r} \n===\n\n")
         _assert_internal_invariants(self.dataset, self.check_default_indexes)
 
 
