@@ -1140,7 +1140,7 @@ def test_groupby_dataset_where() -> None:
     ds = Dataset({"a": ("x", range(5))}, {"c": ("x", [0, 0, 1, 1, 1])})
     cond = Dataset({"a": ("c", [True, False])})
     expected = ds.copy(deep=True)
-    expected["a"].values = [0, 1] + [np.nan] * 3
+    expected["a"].values = np.array([0, 1] + [np.nan] * 3)
     actual = ds.groupby("c").where(cond)
     assert_identical(expected, actual)
 
@@ -1250,7 +1250,7 @@ class TestDataArrayGroupBy:
         expected_groups = {"a": range(0, 9), "c": [9], "b": range(10, 20)}
         assert expected_groups.keys() == grouped.groups.keys()
         for key in expected_groups:
-            assert_array_equal(expected_groups[key], grouped.groups[key])
+            assert_array_equal(list(expected_groups[key]), list(grouped.groups[key]))
         assert 3 == len(grouped)
 
     @pytest.mark.parametrize(
