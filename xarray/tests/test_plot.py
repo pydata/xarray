@@ -1236,7 +1236,7 @@ class TestDiscreteColorMap:
     def test_discrete_colormap_provided_boundary_norm(self) -> None:
         norm = mpl.colors.BoundaryNorm([0, 5, 10, 15], 4)
         primitive = self.darray.plot.contourf(norm=norm)
-        np.testing.assert_allclose(primitive.levels, norm.boundaries)
+        np.testing.assert_allclose(list(primitive.levels), norm.boundaries)
 
     def test_discrete_colormap_provided_boundary_norm_matching_cmap_levels(
         self,
