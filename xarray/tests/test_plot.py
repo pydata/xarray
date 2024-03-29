@@ -1243,7 +1243,9 @@ class TestDiscreteColorMap:
     ) -> None:
         norm = mpl.colors.BoundaryNorm([0, 5, 10, 15], 4)
         primitive = self.darray.plot.contourf(norm=norm)
-        assert primitive.colorbar.norm.Ncmap == primitive.colorbar.norm.N
+        cbar = primitive.colorbar
+        assert cbar is not None
+        assert cbar.norm.Ncmap == cbar.norm.N
 
 
 class Common2dMixin:
