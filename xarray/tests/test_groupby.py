@@ -2058,7 +2058,7 @@ class TestDataArrayResample:
         # Split the times into equal sub-intervals to simulate the 6 hour
         # to 1 hour up-sampling
         new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
-        kinds: InterpOptions = [
+        kinds: list[InterpOptions] = [
             "linear",
             "nearest",
             "zero",
@@ -2131,7 +2131,7 @@ class TestDataArrayResample:
         # Split the times into equal sub-intervals to simulate the 6 hour
         # to 1 hour up-sampling
         new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
-        kinds: InterpOptions = [
+        kinds: list[InterpOptions] = [
             "linear",
             "nearest",
             "zero",
