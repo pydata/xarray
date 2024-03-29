@@ -101,7 +101,7 @@ def substring_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
     """
     Return True if a substring is found anywhere in an axes
     """
-    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}
+    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}  # type: ignore[attr-defined] # mpl error?
     for txt in alltxt:
         if substring in txt:
             return True
@@ -2522,7 +2522,7 @@ class TestFacetedLinePlots(PlotTestCase):
 
         # Leftmost column should have array name
         for ax in g.axs[:, 0]:
-            assert substring_in_axes(self.darray.name, ax)
+            assert substring_in_axes(str(self.darray.name), ax)
 
     def test_test_empty_cell(self) -> None:
         g = (
