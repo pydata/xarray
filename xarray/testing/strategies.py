@@ -384,8 +384,10 @@ def index_variables(
     dtype: st.SearchStrategy[np.dtype] = pandas_index_dtypes(),
     attrs: st.SearchStrategy[Mapping] = attrs(),
 ) -> xr.Variable:
-
-    index = draw(pdst.indexes(min_size=1, dtype=draw(dtype)))
+    elements = npst.from_dtype(
+        dtype=draw(dtype), allow_nan=False, allow_infinity=False, allow_subnormal=False
+    )
+    index = draw(pdst.indexes(elements=elements, min_size=1))
     if dims is None:
         dims = dimension_names(min_dims=1, max_dims=1)
     _dims = draw(dims)
