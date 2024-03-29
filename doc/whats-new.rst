@@ -17,8 +17,14 @@ What's New
 
 .. _whats-new.2024.03.0:
 
-v2024.03.0 (unreleased)
------------------------
+v2024.03.0 (Mar 29, 2024)
+-------------------------
+
+This release brings performance improvements for grouped and resampled quantile calculations, CF decoding improvements,
+minor optimizations to distributed Zarr writes, and compatibility fixes for Numpy 2.0 and Pandas 3.0.
+
+Thanks to the 18 contirbutors to this release:
+Anderson Banihirwe, Christoph Hasse, Deepak Cherian, Etienne Schalk, Justus Magin, Kai Mühlbauer, Kevin Schwarzwald, Mark Harfouche, Martin, Matt Savoie, Maximilian Roos, Ray Bell, Roberto Chang, Spencer Clark, Tom Nicholas, crusaderky, owenlittlejohns, saschahofmann
 
 New Features
 ~~~~~~~~~~~~
@@ -45,12 +51,8 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
 - Don't allow overwriting index variables with ``to_zarr`` region writes. (:issue:`8589`, :pull:`8876`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
-Deprecations
-~~~~~~~~~~~~
 
 
 Bug fixes
@@ -81,11 +83,6 @@ Bug fixes
 - Fix bug incorrectly disallowing creation of a dataset with a multidimensional coordinate variable with the same name as one of its dims.
   (:issue:`8884`, :pull:`8886`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
-
-Documentation
-~~~~~~~~~~~~~
-
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
