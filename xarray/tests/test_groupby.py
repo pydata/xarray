@@ -1247,7 +1247,7 @@ class TestDataArrayGroupBy:
 
     def test_groupby_properties(self) -> None:
         grouped = self.da.groupby("abc")
-        expected_groups = {"a": range(0, 9), "c": [9], "b": range(10, 20)}
+        expected_groups: dict = {"a": range(0, 9), "c": [9], "b": range(10, 20)}
         assert expected_groups.keys() == grouped.groups.keys()
         for key in expected_groups:
             assert_array_equal(list(expected_groups[key]), list(grouped.groups[key]))
