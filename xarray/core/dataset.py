@@ -10140,9 +10140,10 @@ class Dataset(
 
     def groupby(
         self,
-        group: Hashable | DataArray | IndexVariable,
+        group: Hashable | DataArray | IndexVariable | None = None,
         squeeze: bool | None = None,
         restore_coord_dims: bool = False,
+        **groupers,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
 
@@ -10192,7 +10193,16 @@ class Dataset(
         )
 
         _validate_groupby_squeeze(squeeze)
-        rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
+        if group is not None:
+            assert not groupers
+            rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
+        else:
+            if len(groupers) > 1:
+                raise ValueError("grouping by multiple variables is not supported yet.")
+            if not groupers:
+                raise ValueError
+            for group, grouper in groupers.items():
+                rgrouper = ResolvedGrouper(grouper, group, self)
 
         return DatasetGroupBy(
             self,
