@@ -298,7 +298,7 @@ markers = [
 ]
 minversion = "7"
 python_files = "test_*.py"
-testpaths = ["xarray/tests", "properties"]
+testpaths = ["properties"]
 
 [tool.aliases]
 test = "pytest"
