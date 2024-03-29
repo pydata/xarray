@@ -14,6 +14,7 @@ from packaging.version import Version
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core.groupby import _consolidate_slices
+from xarray.core.types import InterpOptions
 from xarray.tests import (
     InaccessibleArray,
     assert_allclose,
@@ -2057,7 +2058,15 @@ class TestDataArrayResample:
         # Split the times into equal sub-intervals to simulate the 6 hour
         # to 1 hour up-sampling
         new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
-        for kind in ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]:
+        kinds: InterpOptions = [
+            "linear",
+            "nearest",
+            "zero",
+            "slinear",
+            "quadratic",
+            "cubic",
+        ]
+        for kind in kinds:
             actual = array.resample(time="1h").interpolate(kind)
             f = interp1d(
                 np.arange(len(times)),
@@ -2122,7 +2131,15 @@ class TestDataArrayResample:
         # Split the times into equal sub-intervals to simulate the 6 hour
         # to 1 hour up-sampling
         new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
-        for kind in ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]:
+        kinds: InterpOptions = [
+            "linear",
+            "nearest",
+            "zero",
+            "slinear",
+            "quadratic",
+            "cubic",
+        ]
+        for kind in kinds:
             actual = array.chunk(chunks).resample(time="1h").interpolate(kind)
             actual = actual.compute()
             f = interp1d(
@@ -2360,13 +2377,13 @@ class TestDatasetResample:
         )
 
         with pytest.raises(TypeError, match=r"resample\(\) no longer supports"):
-            ds.resample("1D", "time")
+            ds.resample("1D", "time")  # type: ignore[arg-type]
 
         with pytest.raises(TypeError, match=r"resample\(\) no longer supports"):
-            ds.resample("1D", dim="time", how="mean")
+            ds.resample("1D", dim="time", how="mean")  # type: ignore[arg-type]
 
         with pytest.raises(TypeError, match=r"resample\(\) no longer supports"):
-            ds.resample("1D", dim="time")
+            ds.resample("1D", dim="time")  # type: ignore[arg-type]
 
     def test_resample_ds_da_are_the_same(self) -> None:
         time = pd.date_range("2000-01-01", freq="6h", periods=365 * 4)
