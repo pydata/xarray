@@ -85,23 +85,23 @@ def test_all_figures_closed():
 
 @pytest.mark.flaky
 @pytest.mark.skip(reason="maybe flaky")
-def text_in_fig() -> set(str):
+def text_in_fig() -> set[str]:
     """
     Return the set of all text in the figure
     """
-    return {t.get_text() for t in plt.gcf().findobj(mpl.text.Text)}
+    return {t.get_text() for t in plt.gcf().findobj(mpl.text.Text)}  # type: ignore[attr-defined] # mpl error?
 
 
 def find_possible_colorbars() -> list[mpl.collections.QuadMesh]:
     # nb. this function also matches meshes from pcolormesh
-    return plt.gcf().findobj(mpl.collections.QuadMesh)
+    return plt.gcf().findobj(mpl.collections.QuadMesh)  # type: ignore[return-value] # mpl error?
 
 
-def substring_in_axes(substring, ax) -> bool:
+def substring_in_axes(substring: str, ax) -> bool:
     """
     Return True if a substring is found anywhere in an axes
     """
-    alltxt = {t.get_text() for t in ax.findobj(mpl.text.Text)}
+    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}
     for txt in alltxt:
         if substring in txt:
             return True
