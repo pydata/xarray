@@ -1256,7 +1256,7 @@ class TestDataArrayGroupBy:
         }
         assert expected_groups.keys() == grouped.groups.keys()
         for key in expected_groups:
-            np.assert_array_equal(expected_groups[key], grouped.groups[key])
+            np.testing.assert_array_equal(expected_groups[key], grouped.groups[key])
         assert 3 == len(grouped)
 
     @pytest.mark.parametrize(
