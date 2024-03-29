@@ -2999,7 +2999,7 @@ class TestNcAxisNotInstalled(PlotTestCase):
 @requires_matplotlib
 class TestAxesKwargs:
     @pytest.fixture(params=[1, 2, 3])
-    def data_array(self, request) -> Generator[None, None, DataArray]:
+    def data_array(self, request) -> DataArray:
         """
         Return a simple DataArray
         """
@@ -3012,7 +3012,7 @@ class TestAxesKwargs:
             return DataArray(easy_array((10, 3, 2)))
 
     @pytest.fixture(params=[1, 2])
-    def data_array_logspaced(self, request) -> Generator[None, None, DataArray]:
+    def data_array_logspaced(self, request) -> DataArray:
         """
         Return a simple DataArray with logspaced coordinates
         """
