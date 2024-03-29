@@ -1495,10 +1495,10 @@ class TestDataArrayGroupBy:
         expected.coords["c"] = (["x"], [123] * 2 + [np.nan] * 2)
         assert_identical(expected, actual)
 
-        other = Dataset({"a": ("b", [10])}, {"b": [0]})
-        actual = array.groupby("b") + other
-        expected = Dataset({"a": ("x", [10, 11, np.nan, np.nan])}, array.coords)
-        assert_identical(expected, actual)
+        other_ds = Dataset({"a": ("b", [10])}, {"b": [0]})
+        actual_ds = array.groupby("b") + other_ds
+        expected_ds = Dataset({"a": ("x", [10, 11, np.nan, np.nan])}, array.coords)
+        assert_identical(expected_ds, actual_ds)
 
     def test_groupby_restore_dim_order(self) -> None:
         array = DataArray(
