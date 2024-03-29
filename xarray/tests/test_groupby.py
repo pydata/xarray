@@ -1558,7 +1558,7 @@ class TestDataArrayGroupBy:
         expected = array  # should be a no-op
         assert_identical(expected, actual)
 
-    def make_groupby_multidim_example_array(self) -> None:
+    def make_groupby_multidim_example_array(self) -> DataArray:
         return DataArray(
             [[[0, 1], [2, 3]], [[5, 10], [15, 20]]],
             coords={
@@ -1880,7 +1880,7 @@ class TestDataArrayResample:
         times = pd.date_range("2000-01-01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("__resample_dim__", times)])
         with pytest.raises(ValueError, match=r"Proxy resampling dimension"):
-            array.resample(**{"__resample_dim__": "1D"}).first()
+            array.resample(**{"__resample_dim__": "1D"}).first()  # type: ignore[arg-type]
 
     @requires_scipy
     def test_resample_drop_nondim_coords(self) -> None:
