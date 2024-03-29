@@ -632,7 +632,7 @@ class PandasIndex(Index):
         # the checks below.
 
         # preserve wrapped pd.Index (if any)
-        data = getattr(var._data, "array", var.data)
+        data = getattr(var._data, "array") if hasattr(var._data, "array") else var.data
         # multi-index level variable: get level index
         if isinstance(var._data, PandasMultiIndexingAdapter):
             level = var._data.level
