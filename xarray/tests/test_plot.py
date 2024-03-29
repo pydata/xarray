@@ -97,7 +97,7 @@ def find_possible_colorbars() -> list[mpl.collections.QuadMesh]:
     return plt.gcf().findobj(mpl.collections.QuadMesh)  # type: ignore[return-value] # mpl error?
 
 
-def substring_in_axes(substring: Hashable, ax: mpl.axes.Axes) -> bool:
+def substring_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
     """
     Return True if a substring is found anywhere in an axes
     """
@@ -108,11 +108,11 @@ def substring_in_axes(substring: Hashable, ax: mpl.axes.Axes) -> bool:
     return False
 
 
-def substring_not_in_axes(substring: Hashable, ax: mpl.axes.Axes) -> bool:
+def substring_not_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
     """
     Return True if a substring is not found anywhere in an axes
     """
-    alltxt = {t.get_text() for t in ax.findobj(mpl.text.Text)}
+    alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}  # type: ignore[attr-defined] # mpl error?
     check = [(substring not in txt) for txt in alltxt]
     return all(check)
 
@@ -124,7 +124,7 @@ def property_in_axes_text(
     Return True if the specified text in an axes
     has the property assigned to property_str
     """
-    alltxt: list[mpl.text.Text] = ax.findobj(mpl.text.Text)
+    alltxt: list[mpl.text.Text] = ax.findobj(mpl.text.Text)  # type: ignore[assignment]
     check = []
     for t in alltxt:
         if t.get_text() == target_txt:
