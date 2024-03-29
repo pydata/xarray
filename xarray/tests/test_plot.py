@@ -1247,7 +1247,7 @@ class TestDiscreteColorMap:
         primitive = self.darray.plot.contourf(norm=norm)
         cbar = primitive.colorbar
         assert cbar is not None
-        assert cbar.norm.Ncmap == cbar.norm.N
+        assert cbar.norm.Ncmap == cbar.norm.N  # type: ignore[attr-defined] # Exists, debatable if public though.
 
 
 class Common2dMixin:
