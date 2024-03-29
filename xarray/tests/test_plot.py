@@ -3139,11 +3139,11 @@ def test_get_axis_raises() -> None:
 
     # cannot provide both ax and figsize
     with pytest.raises(ValueError, match="both `figsize` and `ax`"):
-        get_axis(figsize=[4, 4], size=None, aspect=None, ax="something")
+        get_axis(figsize=[4, 4], size=None, aspect=None, ax="something")  # type: ignore[arg-type]
 
     # cannot provide both ax and size
     with pytest.raises(ValueError, match="both `size` and `ax`"):
-        get_axis(figsize=None, size=200, aspect=4 / 3, ax="something")
+        get_axis(figsize=None, size=200, aspect=4 / 3, ax="something")  # type: ignore[arg-type]
 
     # cannot provide both size and figsize
     with pytest.raises(ValueError, match="both `figsize` and `size`"):
@@ -3155,7 +3155,7 @@ def test_get_axis_raises() -> None:
 
     # cannot provide axis and subplot_kws
     with pytest.raises(ValueError, match="cannot use subplot_kws with existing ax"):
-        get_axis(figsize=None, size=None, aspect=None, ax=1, something_else=5)
+        get_axis(figsize=None, size=None, aspect=None, ax=1, something_else=5)  # type: ignore[arg-type]
 
 
 @requires_matplotlib
