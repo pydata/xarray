@@ -2028,17 +2028,17 @@ class TestDataArrayResample:
         array = DataArray(np.arange(2), [("time", times)])
 
         # Forward fill
-        actual = array.resample(time="6h").ffill(tolerance="12h")
+        actual = array.resample(time="6h").ffill(tolerance="12h")  # type: ignore[arg-type] # TODO: tolerance also allows strings, same issue in .reindex.
         expected = DataArray([0.0, 0.0, 0.0, np.nan, 1.0], [("time", times_upsampled)])
         assert_identical(expected, actual)
 
         # Backward fill
-        actual = array.resample(time="6h").bfill(tolerance="12h")
+        actual = array.resample(time="6h").bfill(tolerance="12h")  # type: ignore[arg-type] # TODO: tolerance also allows strings, same issue in .reindex.
         expected = DataArray([0.0, np.nan, 1.0, 1.0, 1.0], [("time", times_upsampled)])
         assert_identical(expected, actual)
 
         # Nearest
-        actual = array.resample(time="6h").nearest(tolerance="6h")
+        actual = array.resample(time="6h").nearest(tolerance="6h")  # type: ignore[arg-type] # TODO: tolerance also allows strings, same issue in .reindex.
         expected = DataArray([0, 0, np.nan, 1, 1], [("time", times_upsampled)])
         assert_identical(expected, actual)
 
