@@ -23,7 +23,7 @@ v2024.03.0 (Mar 29, 2024)
 This release brings performance improvements for grouped and resampled quantile calculations, CF decoding improvements,
 minor optimizations to distributed Zarr writes, and compatibility fixes for Numpy 2.0 and Pandas 3.0.
 
-Thanks to the 18 contirbutors to this release:
+Thanks to the 18 contributors to this release:
 Anderson Banihirwe, Christoph Hasse, Deepak Cherian, Etienne Schalk, Justus Magin, Kai Mühlbauer, Kevin Schwarzwald, Mark Harfouche, Martin, Matt Savoie, Maximilian Roos, Ray Bell, Roberto Chang, Spencer Clark, Tom Nicholas, crusaderky, owenlittlejohns, saschahofmann
 
 New Features
