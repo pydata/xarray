@@ -150,27 +150,27 @@ def get_colorbar_label(colorbar) -> str:
 @requires_matplotlib
 class PlotTestCase:
     @pytest.fixture(autouse=True)
-    def setup(self):
+    def setup(self) -> None:
         yield
         # Remove all matplotlib figures
         plt.close("all")
 
-    def pass_in_axis(self, plotmethod, subplot_kw=None):
+    def pass_in_axis(self, plotmethod, subplot_kw=None) -> None:
         fig, axs = plt.subplots(ncols=2, subplot_kw=subplot_kw)
         plotmethod(ax=axs[0])
         assert axs[0].has_data()
 
     @pytest.mark.slow
-    def imshow_called(self, plotmethod):
+    def imshow_called(self, plotmethod) -> bool:
         plotmethod()
         images = plt.gca().findobj(mpl.image.AxesImage)
         return len(images) > 0
 
-    def contourf_called(self, plotmethod):
+    def contourf_called(self, plotmethod) -> bool:
         plotmethod()
 
         # Compatible with mpl before (PathCollection) and after (QuadContourSet) 3.8
-        def matchfunc(x):
+        def matchfunc(x) -> bool:
             return isinstance(
                 x, (mpl.collections.PathCollection, mpl.contour.QuadContourSet)
             )
@@ -2621,7 +2621,7 @@ class TestDatasetQuiverPlots(PlotTestCase):
             (True, "continuous", False, True),
         ],
     )
-    def test_add_guide(self, add_guide, hue_style, legend, colorbar):
+    def test_add_guide(self, add_guide, hue_style, legend, colorbar) -> None:
         meta_data = _infer_meta_data(
             self.ds,
             x="x",
@@ -2797,7 +2797,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         add_legend: bool | None,
         add_colorbar: bool | None,
         error_type: type[Exception],
-    ):
+    ) -> None:
         with pytest.raises(error_type):
             self.ds.plot.scatter(
                 x=x, y=y, hue=hue, add_legend=add_legend, add_colorbar=add_colorbar
@@ -2997,7 +2997,7 @@ class TestNcAxisNotInstalled(PlotTestCase):
 @requires_matplotlib
 class TestAxesKwargs:
     @pytest.fixture(params=[1, 2, 3])
-    def data_array(self, request):
+    def data_array(self, request) -> DataArray:
         """
         Return a simple DataArray
         """
@@ -3010,7 +3010,7 @@ class TestAxesKwargs:
             return DataArray(easy_array((10, 3, 2)))
 
     @pytest.fixture(params=[1, 2])
-    def data_array_logspaced(self, request):
+    def data_array_logspaced(self, request) -> DataArray:
         """
         Return a simple DataArray with logspaced coordinates
         """
@@ -3132,7 +3132,7 @@ def test_facetgrid_single_contour() -> None:
 
 
 @requires_matplotlib
-def test_get_axis_raises():
+def test_get_axis_raises() -> None:
     # test get_axis raises an error if trying to do invalid things
 
     # cannot provide both ax and figsize
