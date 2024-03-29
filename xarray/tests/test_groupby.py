@@ -18,7 +18,6 @@ from xarray.core.types import InterpOptions
 from xarray.tests import (
     InaccessibleArray,
     assert_allclose,
-    assert_array_equal,
     assert_equal,
     assert_identical,
     create_test_data,
