@@ -3015,20 +3015,22 @@ class TestNcAxisNotInstalled(PlotTestCase):
 @requires_matplotlib
 class TestAxesKwargs:
     @pytest.fixture(params=[1, 2, 3])
-    def data_array(self, request) -> DataArray:  # type: ignore[return] # error: Missing return statement  [return]
+    def data_array(self, request) -> DataArray:
         """
         Return a simple DataArray
         """
         dims = request.param
         if dims == 1:
             return DataArray(easy_array((10,)))
-        if dims == 2:
+        elif dims == 2:
             return DataArray(easy_array((10, 3)))
-        if dims == 3:
+        elif dims == 3:
             return DataArray(easy_array((10, 3, 2)))
+        else:
+            raise ValueError(f"No DataArray implemented for {dims=}.")
 
     @pytest.fixture(params=[1, 2])
-    def data_array_logspaced(self, request) -> DataArray:  # type: ignore[return] # error: Missing return statement  [return]
+    def data_array_logspaced(self, request) -> DataArray:
         """
         Return a simple DataArray with logspaced coordinates
         """
@@ -3037,12 +3039,14 @@ class TestAxesKwargs:
             return DataArray(
                 np.arange(7), dims=("x",), coords={"x": np.logspace(-3, 3, 7)}
             )
-        if dims == 2:
+        elif dims == 2:
             return DataArray(
                 np.arange(16).reshape(4, 4),
                 dims=("y", "x"),
                 coords={"x": np.logspace(-1, 2, 4), "y": np.logspace(-5, -1, 4)},
             )
+        else:
+            raise ValueError(f"No DataArray implemented for {dims=}.")
 
     @pytest.mark.parametrize("xincrease", [True, False])
     def test_xincrease_kwarg(self, data_array, xincrease) -> None:
