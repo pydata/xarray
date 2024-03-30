@@ -61,15 +61,20 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
         | npst.unsigned_integer_dtypes()
         | npst.floating_dtypes()
         | npst.complex_number_dtypes()
+        | npst.datetime64_dtypes()
+        | npst.timedelta64_dtypes()
+        | npst.unicode_string_dtypes()
     )
 
 
-# TODO: add datetime64[ns]
 def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
     return (
         npst.integer_dtypes(endianness="<", sizes=(32, 64))
         | npst.unsigned_integer_dtypes(endianness="<", sizes=(32, 64))
         | npst.floating_dtypes(endianness="<", sizes=(32, 64))
+        | npst.datetime64_dtypes(endianness="<")
+        | npst.timedelta64_dtypes(endianness="<")
+        | npst.unicode_string_dtypes(endianness="<")
     )
 
 
