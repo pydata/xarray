@@ -64,6 +64,16 @@ class DatasetStateMachine(RuleBasedStateMachine):
 
         self.indexed_dims.append(name)
 
+    @rule(var=xrst.index_variables(dims=DIM_NAME))
+    def assign_coords(self, var):
+        # https://github.com/HypothesisWorks/hypothesis/issues/3943
+        assume(np.all(~np.isnat(var.data)) if var.dtype.kind in ["mM"] else True)
+
+        (name,) = var.dims
+        self.dataset = self.dataset.assign_coords({name: var})
+
+        self.indexed_dims.append(name)
+
     @property
     def has_indexed_dims(self) -> bool:
         return bool(self.indexed_dims + self.multi_indexed_dims)
