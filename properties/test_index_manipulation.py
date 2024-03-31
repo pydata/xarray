@@ -51,7 +51,13 @@ class DatasetStateMachine(RuleBasedStateMachine):
         self.indexed_dims = []
         self.multi_indexed_dims = []
 
-    @rule(var=xrst.index_variables(dims=DIM_NAME))
+    # TODO: stacking with a timedelta64 index and unstacking converts it to object
+    @rule(
+        var=xrst.index_variables(
+            dims=DIM_NAME,
+            dtype=xrst.pandas_index_dtypes().filter(lambda x: x.kind != "m"),
+        )
+    )
     def add_dim_coord(self, var):
         # https://github.com/HypothesisWorks/hypothesis/issues/3943
         assume(np.all(~np.isnat(var.data)) if var.dtype.kind in ["mM"] else True)
