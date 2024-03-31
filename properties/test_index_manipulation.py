@@ -57,6 +57,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
         assume(np.all(~np.isnat(var.data)) if var.dtype.kind in ["mM"] else True)
 
         (name,) = var.dims
+        note(f"setting {name}")
         # dim coord
         self.dataset[name] = var
         # non-dim coord of same size; this allows renaming
@@ -70,6 +71,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
         assume(np.all(~np.isnat(var.data)) if var.dtype.kind in ["mM"] else True)
 
         (name,) = var.dims
+        note(f"assign_coords: {name}")
         self.dataset = self.dataset.assign_coords({name: var})
 
         self.indexed_dims.append(name)
@@ -158,7 +160,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
                 unique=True,
             )
         )
-        note(f"> dropping {dims}")
+        note(f"> drop_dims: {dims}")
         self.dataset = self.dataset.drop_dims(dims)
 
         for dim in dims:
@@ -175,7 +177,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
         dims = data.draw(
             st.lists(st.sampled_from(self.indexed_dims), min_size=1, unique=True)
         )
-        note(f"> dropping {dims}")
+        note(f"> drop_indexes: {dims}")
         self.dataset = self.dataset.drop_indexes(dims)
 
         for dim in dims:
