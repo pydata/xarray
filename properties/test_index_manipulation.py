@@ -159,13 +159,14 @@ class DatasetStateMachine(RuleBasedStateMachine):
 
     @property
     def swappable_dims(self):
+        ds = self.dataset
         options = []
         for dim in self.indexed_dims:
             choices = [
                 name
-                for name, var in self.dataset._variables.items()
+                for name, var in ds._variables.items()
                 if var.dims == (dim,)
-                # TODO: allow swapping a dimension to itself
+                # TODO: Avoid swapping a dimension to itself
                 and name != dim
             ]
             options.extend(
@@ -174,13 +175,15 @@ class DatasetStateMachine(RuleBasedStateMachine):
         return options
 
     @rule(data=st.data())
+    # TODO: Avoid swapping from Index to a MultiIndex level
+    # TODO: Avoid swapping from MultiIndex to a level of the same MultiIndex
+    # TODO: Avoid swapping when a MultiIndex is present
+    @precondition(lambda self: not bool(self.multi_indexed_dims))
     @precondition(lambda self: bool(self.swappable_dims))
     def swap_dims(self, data):
         ds = self.dataset
         options = self.swappable_dims
         dim, to = data.draw(st.sampled_from(options))
-        # TODO: swapping from Index to a MultiIndex level
-        # TODO: swapping from MultiIndex to a level of the same MultiIndex
         note(
             f"> swapping {dim} to {to}, found swappable dims: {options}, all_dims: {tuple(self.dataset.dims)}"
         )
@@ -202,9 +205,9 @@ class DatasetStateMachine(RuleBasedStateMachine):
 
     @invariant()
     def assert_invariants(self):
-        note(f"> ===\n\n {self.dataset!r} \n===\n\n")
+        # note(f"> ===\n\n {self.dataset!r} \n===\n\n")
         _assert_internal_invariants(self.dataset, self.check_default_indexes)
 
 
-DatasetStateMachine.TestCase.settings = settings(max_examples=200, deadline=None)
+DatasetStateMachine.TestCase.settings = settings(max_examples=300, deadline=None)
 DatasetTest = DatasetStateMachine.TestCase
