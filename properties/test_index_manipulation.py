@@ -138,7 +138,11 @@ class DatasetStateMachine(RuleBasedStateMachine):
     @rule(data=st.data())
     def drop_dims(self, data):
         dims = data.draw(
-            st.lists(st.sampled_from(sorted(tuple(self.dataset.dims))), min_size=1)
+            st.lists(
+                st.sampled_from(sorted(tuple(self.dataset.dims))),
+                min_size=1,
+                unique=True,
+            )
         )
         note(f"> dropping {dims}")
         self.dataset = self.dataset.drop_dims(dims)
