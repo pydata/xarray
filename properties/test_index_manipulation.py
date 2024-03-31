@@ -61,11 +61,11 @@ class DatasetStateMachine(RuleBasedStateMachine):
         self.indexed_dims.append(name)
 
     @property
-    def has_dims(self) -> bool:
+    def has_indexed_dims(self) -> bool:
         return bool(self.indexed_dims + self.multi_indexed_dims)
 
     @rule(data=st.data())
-    @precondition(lambda self: self.has_dims)
+    @precondition(lambda self: self.has_indexed_dims)
     def reset_index(self, data):
         dim = data.draw(st.sampled_from(self.indexed_dims + self.multi_indexed_dims))
         self.check_default_indexes = False
@@ -114,9 +114,9 @@ class DatasetStateMachine(RuleBasedStateMachine):
             pass
 
     @rule(newname=UNIQUE_NAME, data=st.data())
-    @precondition(lambda self: self.has_dims)
+    @precondition(lambda self: bool(self.dataset.variables))
     def rename_vars(self, newname, data):
-        dim = data.draw(st.sampled_from(self.indexed_dims + self.multi_indexed_dims))
+        dim = data.draw(st.sampled_from(sorted(self.dataset.variables)))
         # benbovy: "skip the default indexes invariant test when the name of an
         # existing dimension coordinate is passed as input kwarg or dict key
         # to .rename_vars()."
@@ -129,13 +129,11 @@ class DatasetStateMachine(RuleBasedStateMachine):
         elif dim in self.multi_indexed_dims:
             del self.multi_indexed_dims[self.multi_indexed_dims.index(dim)]
 
-    @precondition(lambda self: self.has_dims)
+    @precondition(lambda self: bool(self.dataset.dims))
     @rule(data=st.data())
     def drop_dims(self, data):
         dims = data.draw(
-            st.lists(
-                st.sampled_from(self.indexed_dims + self.multi_indexed_dims), min_size=1
-            )
+            st.lists(st.sampled_from(sorted(tuple(self.dataset.dims))), min_size=1)
         )
         note(f"> dropping {dims}")
         self.dataset = self.dataset.drop_dims(dims)
