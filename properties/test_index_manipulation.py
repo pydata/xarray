@@ -1,5 +1,6 @@
 import itertools
 
+import numpy as np
 import pytest
 
 from xarray import Dataset
@@ -8,7 +9,7 @@ from xarray.testing import _assert_internal_invariants
 pytest.importorskip("hypothesis")
 
 import hypothesis.strategies as st
-from hypothesis import note, settings
+from hypothesis import assume, note, settings
 from hypothesis.stateful import (
     RuleBasedStateMachine,
     invariant,
@@ -52,6 +53,9 @@ class DatasetStateMachine(RuleBasedStateMachine):
 
     @rule(var=xrst.index_variables(dims=DIM_NAME))
     def add_dim_coord(self, var):
+        # https://github.com/HypothesisWorks/hypothesis/issues/3943
+        assume(np.all(~np.isnat(var.data)) if var.dtype.kind in ["mM"] else True)
+
         (name,) = var.dims
         # dim coord
         self.dataset[name] = var
