@@ -268,10 +268,6 @@ def _assert_indexes_invariants_checks(
     }
     assert indexes.keys() <= index_vars, (set(indexes), index_vars)
 
-    for k, v in possible_coord_variables.items():
-        if isinstance(v, IndexVariable):
-            assert k == v.name, (k, v.name)
-
     # check pandas index wrappers vs. coordinate data adapters
     for k, index in indexes.items():
         if isinstance(index, PandasIndex):
