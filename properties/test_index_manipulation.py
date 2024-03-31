@@ -157,6 +157,23 @@ class DatasetStateMachine(RuleBasedStateMachine):
             elif dim in self.multi_indexed_dims:
                 del self.multi_indexed_dims[self.multi_indexed_dims.index(dim)]
 
+    @precondition(lambda self: bool(self.indexed_dims))
+    @rule(data=st.data())
+    def drop_indexes(self, data):
+        self.check_default_indexes = False
+
+        dims = data.draw(
+            st.lists(st.sampled_from(self.indexed_dims), min_size=1, unique=True)
+        )
+        note(f"> dropping {dims}")
+        self.dataset = self.dataset.drop_indexes(dims)
+
+        for dim in dims:
+            if dim in self.indexed_dims:
+                del self.indexed_dims[self.indexed_dims.index(dim)]
+            elif dim in self.multi_indexed_dims:
+                del self.multi_indexed_dims[self.multi_indexed_dims.index(dim)]
+
     @property
     def swappable_dims(self):
         ds = self.dataset
