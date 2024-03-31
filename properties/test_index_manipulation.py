@@ -81,7 +81,12 @@ class DatasetStateMachine(RuleBasedStateMachine):
     @precondition(lambda self: bool(self.indexed_dims))
     def stack(self, newname, data, create_index):
         oldnames = data.draw(
-            st.lists(st.sampled_from(self.indexed_dims), min_size=1, unique=True)
+            st.lists(
+                st.sampled_from(self.indexed_dims),
+                min_size=1,
+                max_size=3 if create_index else None,
+                unique=True,
+            )
         )
         note(f"> stacking {oldnames} as {newname}")
         self.dataset = self.dataset.stack(
