@@ -77,16 +77,21 @@ class DatasetStateMachine(RuleBasedStateMachine):
         elif dim in self.multi_indexed_dims:
             del self.multi_indexed_dims[self.multi_indexed_dims.index(dim)]
 
-    @rule(newname=UNIQUE_NAME, data=st.data())
+    @rule(newname=UNIQUE_NAME, data=st.data(), create_index=st.booleans())
     @precondition(lambda self: bool(self.indexed_dims))
-    def stack(self, newname, data):
+    def stack(self, newname, data, create_index):
         oldnames = data.draw(
             st.lists(st.sampled_from(self.indexed_dims), min_size=1, unique=True)
         )
         note(f"> stacking {oldnames} as {newname}")
-        self.dataset = self.dataset.stack({newname: oldnames})
+        self.dataset = self.dataset.stack(
+            {newname: oldnames}, create_index=create_index
+        )
 
-        self.multi_indexed_dims += [newname]
+        if create_index:
+            self.multi_indexed_dims += [newname]
+
+        # if create_index is False, then we just drop these
         for dim in oldnames:
             del self.indexed_dims[self.indexed_dims.index(dim)]
 
