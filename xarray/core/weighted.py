@@ -84,7 +84,7 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     method supported by this weighted version corresponds to the default "linear"
     option of ``numpy.quantile``. This is "Type 7" option, described in Hyndman
     and Fan (1996) [2]_. The implementation is largely inspired by a blog post
-    from A. Akinshin's [3]_.
+    from A. Akinshin's (2023) [3]_.
 
     Parameters
     ----------
@@ -122,7 +122,8 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     .. [1] https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/
     .. [2] Hyndman, R. J. & Fan, Y. (1996). Sample Quantiles in Statistical Packages.
            The American Statistician, 50(4), 361–365. https://doi.org/10.2307/2684934
-    .. [3] https://aakinshin.net/posts/weighted-quantiles
+    .. [3] Akinshin, A. (2023) "Weighted quantile estimators" arXiv:2304.07265 [stat.ME]
+           https://arxiv.org/abs/2304.07265
     """
 
 
