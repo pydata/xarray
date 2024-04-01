@@ -23,7 +23,6 @@ from xarray.testing.strategies import (
     datasets,
     dimension_names,
     dimension_sizes,
-    numeric_dtypes,
     supported_dtypes,
     unique_subset_of,
     variables,
