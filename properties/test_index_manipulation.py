@@ -7,6 +7,7 @@ from xarray import Dataset
 from xarray.testing import _assert_internal_invariants
 
 pytest.importorskip("hypothesis")
+pytestmark = pytest.mark.slow_hypothesis
 
 import hypothesis.strategies as st
 from hypothesis import note, settings
@@ -52,12 +53,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
         self.multi_indexed_dims = []
 
     # TODO: stacking with a timedelta64 index and unstacking converts it to object
-    @rule(
-        var=xrst.index_variables(
-            dims=DIM_NAME,
-            dtype=xrst.pandas_index_dtypes().filter(lambda x: x.kind != "m"),
-        )
-    )
+    @rule(var=xrst.index_variables(dims=DIM_NAME, dtype=xrst.pandas_index_dtypes()))
     def add_dim_coord(self, var):
         (name,) = var.dims
         note(f"adding dimension coordinate {name}")
@@ -252,4 +248,13 @@ def test_unstack_object():
 
     ds = xr.Dataset()
     ds["0"] = np.array(["", "\x000"], dtype=object)
+    ds.stack({"1": ["0"]}).unstack()
+
+
+@pytest.mark.skip(reason="failure detected by hypothesis")
+def test_unstack_timedelta_index():
+    import xarray as xr
+
+    ds = xr.Dataset()
+    ds["0"] = np.array([0, 1, 2, 3], dtype="timedelta64[ns]")
     ds.stack({"1": ["0"]}).unstack()
