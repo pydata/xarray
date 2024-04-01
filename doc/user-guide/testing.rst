@@ -12,7 +12,7 @@ Testing your code
 
     np.random.seed(123456)
 
-.. _hypothesis:
+.. _testing.hypothesis:
 
 Hypothesis testing
 ------------------
@@ -45,8 +45,7 @@ These strategies are accessible in the :py:mod:`xarray.testing.strategies` modul
 
 .. autosummary::
 
-   testing.strategies.numeric_dtypes
-   testing.strategies.np_arrays
+   testing.strategies.supported_dtypes
    testing.strategies.names
    testing.strategies.dimension_names
    testing.strategies.dimension_sizes
@@ -56,8 +55,9 @@ These strategies are accessible in the :py:mod:`xarray.testing.strategies` modul
    testing.strategies.dataarrays
    testing.strategies.data_variables
    testing.strategies.datasets
+   testing.strategies.unique_subset_of
 
-These build upon the numpy strategies offered in :py:mod:`hypothesis.extra.numpy`:
+These build upon the numpy and array API strategies offered in :py:mod:`hypothesis.extra.numpy` and :py:mod:`hypothesis.extra.array_api`:
 
 .. ipython:: python
 
@@ -73,9 +73,9 @@ which is a general hypothesis method valid for all strategies.
 
     import xarray.testing.strategies as xrst
 
-    xrst.dataarrays().example()
-    xrst.dataarrays().example()
-    xrst.dataarrays().example()
+    xrst.variables().example()
+    xrst.variables().example()
+    xrst.variables().example()
 
 You can see that calling ``.example()`` multiple times will generate different examples, giving you an idea of the wide
 range of data that the xarray strategies can generate.
@@ -89,10 +89,9 @@ In your tests however you should not use ``.example()`` - instead you should par
 
 .. ipython:: python
 
-    @given(xrst.dataarrays())
-    def test_function_that_acts_on_dataarrays(da):
-        assert func(da) == ...
-
+    @given(xrst.variables())
+    def test_function_that_acts_on_variables(var):
+        assert func(var) == ...
 
 Chaining Strategies
 ~~~~~~~~~~~~~~~~~~~
@@ -102,39 +101,13 @@ examples.
 
 .. ipython:: python
 
-    # generate a DataArray with shape (3, 4), but all other details still arbitrary
-    xrst.dataarrays(
-        data=xrst.np_arrays(shape=(3, 4), dtype=np.dtype("int32"))
-    ).example()
+    # generate a Variable containing an array with a complex number dtype, but all other details still arbitrary
+    from hypothesis.extra.numpy import complex_number_dtypes
+
+    xrst.variables(dtype=complex_number_dtypes()).example()
 
 This also works with custom strategies, or strategies defined in other packages.
-For example you could create a ``chunks`` strategy to specify particular chunking patterns for a dask-backed array.
-
-.. warning::
-    When passing multiple different strategies to the same constructor the drawn examples must be mutually compatible.
-
-    In order to construct a valid xarray object to return, our strategies must check that the
-    variables / dimensions / coordinates are mutually compatible. If you pass multiple custom strategies to a strategy
-    constructor which are not compatible in all cases, an error will be raised, *even if they are still compatible in
-    other cases*. For example
-
-    .. code-block::
-
-        @st.given(st.data())
-        def test_something_else_inefficiently(data):
-            arrs = npst.arrays(dtype=numeric_dtypes)  # generates arrays of any shape
-            dims = xrst.dimension_names()  # generates lists of any number of dimensions
-
-            # Drawing examples from this strategy will raise a hypothesis.errors.InvalidArgument error.
-            var = data.draw(xrst.variables(data=arrs, dims=dims))
-
-            assert ...
-
-    Here we have passed custom strategies which won't often be compatible: only rarely will the array's ``ndims``
-    correspond to the number of dimensions drawn. We forbid arguments that are only *sometimes* compatible in order to
-    avoid extremely poor example generation performance (as generating invalid examples and rejecting them is
-    potentially unboundedly inefficient).
-
+For example you could imagine creating a ``chunks`` strategy to specify particular chunking patterns for a dask-backed array.
 
 Fixing Arguments
 ~~~~~~~~~~~~~~~~
@@ -146,8 +119,8 @@ over all other aspects, then use :py:func:`hypothesis.strategies.just()`.
 
     import hypothesis.strategies as st
 
-    # Generates only dataarrays with dimensions ["x", "y"]
-    xrst.dataarrays(dims=st.just(["x", "y"])).example()
+    # Generates only variable objects with dimensions ["x", "y"]
+    xrst.variables(dims=st.just(["x", "y"])).example()
 
 (This is technically another example of chaining strategies - :py:func:`hypothesis.strategies.just()` is simply a
 special strategy that just contains a single example.)
@@ -157,15 +130,15 @@ To fix the length of dimensions you can instead pass ``dims`` as a mapping of di
 
 .. ipython:: python
 
-    # Generates only dataarrays with dimensions ["x", "y"], of lengths 2 & 3 respectively
-    xrst.dataarrays(dims=st.just({"x": 2, "y": 3})).example()
+    # Generates only variables with dimensions ["x", "y"], of lengths 2 & 3 respectively
+    xrst.variables(dims=st.just({"x": 2, "y": 3})).example()
 
 You can also use this to specify that you want examples which are missing some part of the data structure, for instance
 
 .. ipython:: python
 
-    # Generates only dataarrays with no coordinates
-    xrst.datasets(data_vars=st.just({})).example()
+    # Generates a Variable with no attributes
+    xrst.variables(attrs=st.just({})).example()
 
 Through a combination of chaining strategies and fixing arguments, you can specify quite complicated requirements on the
 objects your chained strategy will generate.
@@ -178,101 +151,158 @@ objects your chained strategy will generate.
 
     fixed_x_variable_y_maybe_z.example()
 
-    special_dataarrays = xrst.dataarrays(dims=fixed_x_variable_y_maybe_z)
+    special_variables = xrst.variables(dims=fixed_x_variable_y_maybe_z)
 
-    special_dataarrays.example()
-    special_dataarrays.example()
+    special_variables.example()
+    special_variables.example()
 
 Here we have used one of hypothesis' built-in strategies :py:func:`hypothesis.strategies.fixed_dictionaries` to create a
 strategy which generates mappings of dimension names to lengths (i.e. the ``size`` of the xarray object we want).
 This particular strategy will always generate an ``x`` dimension of length 2, and a ``y`` dimension of
 length either 3 or 4, and will sometimes also generate a ``z`` dimension of length 2.
-By feeding this strategy for dictionaries into the ``dims`` argument of xarray's :py:func:`~st.dataarrays` strategy,
-we can generate arbitrary :py:class:`~xarray.DataArray` objects whose dimensions will always match these specifications.
 
+By feeding this strategy for dictionaries into the ``dims`` argument of xarray's :py:func:`~st.variables` strategy,
+we can generate arbitrary :py:class:`~xarray.Variable` objects whose dimensions will always match these specifications.
 
-Creating Duck-type Arrays
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Generating Duck-type Arrays
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Xarray objects don't have to wrap numpy arrays, in fact they can wrap any array type which presents the same API as a
-numpy array (so-called "duck array wrapping", see :ref:`wrapping numpy-like arrays <internals.duck_arrays>`).
+numpy array (so-called "duck array wrapping", see :ref:`wrapping numpy-like arrays <internals.duckarrays>`).
 
-Imagine we want to write a strategy which generates arbitrary ``DataArray`` objects, each of which wraps a
+Imagine we want to write a strategy which generates arbitrary ``Variable`` objects, each of which wraps a
 :py:class:`sparse.COO` array instead of a ``numpy.ndarray``. How could we do that? There are two ways:
 
-1. Create a xarray object with numpy data and use ``.map()`` to convert the underlying array to a
+1. Create a xarray object with numpy data and use the hypothesis' ``.map()`` method to convert the underlying array to a
 different type:
 
 .. ipython:: python
-    :okexcept:
 
     import sparse
 
 .. ipython:: python
-    :okexcept:
 
-    def convert_to_sparse(da):
-        if da.ndim == 0:
-            return da
-        else:
-            da.data = sparse.COO.from_numpy(da.values)
-            return da
+    def convert_to_sparse(var):
+        return var.copy(data=sparse.COO.from_numpy(var.to_numpy()))
 
 .. ipython:: python
-    :okexcept:
 
-    sparse_dataarrays = xrst.dataarrays().map(convert_to_sparse)
+    sparse_variables = xrst.variables(dims=xrst.dimension_names(min_dims=1)).map(
+        convert_to_sparse
+    )
 
-    sparse_dataarrays.example()
-    sparse_dataarrays.example()
+    sparse_variables.example()
+    sparse_variables.example()
 
-2. Pass a strategy which generates the duck-typed arrays directly to the ``data`` argument of the xarray
-strategies:
+2. Pass a function which returns a strategy which generates the duck-typed arrays directly to the ``array_strategy_fn`` argument of the xarray strategies:
 
 .. ipython:: python
-    :okexcept:
 
-    @st.composite
-    def sparse_arrays(draw) -> st.SearchStrategy[sparse._coo.core.COO]:
+    def sparse_random_arrays(shape: tuple[int]) -> sparse._coo.core.COO:
         """Strategy which generates random sparse.COO arrays"""
-        shape = draw(npst.array_shapes())
-        density = draw(st.integers(min_value=0, max_value=1))
-        return sparse.random(shape, density=density)
+        if shape is None:
+            shape = npst.array_shapes()
+        else:
+            shape = st.just(shape)
+        density = st.integers(min_value=0, max_value=1)
+        # note sparse.random does not accept a dtype kwarg
+        return st.builds(sparse.random, shape=shape, density=density)
+
+
+    def sparse_random_arrays_fn(
+        *, shape: tuple[int, ...], dtype: np.dtype
+    ) -> st.SearchStrategy[sparse._coo.core.COO]:
+        return sparse_random_arrays(shape=shape)
+
 
 .. ipython:: python
-    :okexcept:
 
-    sparse_dataarrays = xrst.dataarrays(data=sparse_arrays())
-
-    sparse_dataarrays.example()
-    sparse_dataarrays.example()
+    sparse_random_variables = xrst.variables(
+        array_strategy_fn=sparse_random_arrays_fn, dtype=st.just(np.dtype("float64"))
+    )
+    sparse_random_variables.example()
 
 Either approach is fine, but one may be more convenient than the other depending on the type of the duck array which you
 want to wrap.
 
-Creating datasets can be a little more involved. Using method (1) is simple:
+Compatibility with the Python Array API Standard
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Xarray aims to be compatible with any duck-array type that conforms to the `Python Array API Standard <https://data-apis.org/array-api/latest/>`_
+(see our :ref:`docs on Array API Standard support <internals.duckarrays.array_api_standard>`).
+
+.. warning::
+
+    The strategies defined in :py:mod:`testing.strategies` are **not** guaranteed to use array API standard-compliant
+    dtypes by default.
+    For example arrays with the dtype ``np.dtype('float16')`` may be generated by :py:func:`testing.strategies.variables`
+    (assuming the ``dtype`` kwarg was not explicitly passed), despite ``np.dtype('float16')`` not being in the
+    array API standard.
+
+If the array type you want to generate has an array API-compliant top-level namespace
+(e.g. that which is conventionally imported as ``xp`` or similar),
+you can use this neat trick:
 
 .. ipython:: python
-    :okexcept:
+    :okwarning:
 
-    def convert_ds_to_sparse(ds):
-        return ds.map(convert_to_sparse)
+    from numpy import array_api as xp  # available in numpy 1.26.0
+
+    from hypothesis.extra.array_api import make_strategies_namespace
+
+    xps = make_strategies_namespace(xp)
+
+    xp_variables = xrst.variables(
+        array_strategy_fn=xps.arrays,
+        dtype=xps.scalar_dtypes(),
+    )
+    xp_variables.example()
+
+Another array API-compliant duck array library would replace the import, e.g. ``import cupy as cp`` instead.
+
+Testing over Subsets of Dimensions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A common task when testing xarray user code is checking that your function works for all valid input dimensions.
+We can chain strategies to achieve this, for which the helper strategy :py:func:`~testing.strategies.unique_subset_of`
+is useful.
+
+It works for lists of dimension names
 
 .. ipython:: python
-    :okexcept:
 
-    sparse_datasets = xrst.datasets().map(convert_ds_to_sparse)
+    dims = ["x", "y", "z"]
+    xrst.unique_subset_of(dims).example()
+    xrst.unique_subset_of(dims).example()
 
-    sparse_datasets.example()
-
-but building a dataset from scratch (i.e. method (2)) requires building the dataset object in such as way that all of
-the data variables have compatible dimensions. You can build up a dictionary of the form ``{var_name: data_variable}``
-yourself, or you can use the ``data_vars`` argument to the ``data_variables`` strategy (TODO):
+as well as for mappings of dimension names to sizes
 
 .. ipython:: python
-    :okexcept:
 
-    sparse_data_vars = xrst.data_variables(data=sparse_arrays())
-    sparse_datasets = xrst.datasets(data_vars=sparse_data_vars)
+    dim_sizes = {"x": 2, "y": 3, "z": 4}
+    xrst.unique_subset_of(dim_sizes).example()
+    xrst.unique_subset_of(dim_sizes).example()
 
-    sparse_datasets.example()
+This is useful because operations like reductions can be performed over any subset of the xarray object's dimensions.
+For example we can write a pytest test that tests that a reduction gives the expected result when applying that reduction
+along any possible valid subset of the Variable's dimensions.
+
+.. code-block:: python
+
+    import numpy.testing as npt
+
+
+    @given(st.data(), xrst.variables(dims=xrst.dimension_names(min_dims=1)))
+    def test_mean(data, var):
+        """Test that the mean of an xarray Variable is always equal to the mean of the underlying array."""
+
+        # specify arbitrary reduction along at least one dimension
+        reduction_dims = data.draw(xrst.unique_subset_of(var.dims, min_size=1))
+
+        # create expected result (using nanmean because arrays with Nans will be generated)
+        reduction_axes = tuple(var.get_axis_num(dim) for dim in reduction_dims)
+        expected = np.nanmean(var.data, axis=reduction_axes)
+
+        # assert property is always satisfied
+        result = var.mean(dim=reduction_dims).data
+        npt.assert_equal(expected, result)

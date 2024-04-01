@@ -242,17 +242,18 @@ html_theme_options = dict(
     Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
     twitter_url="https://twitter.com/xarray_dev",
     icon_links=[],  # workaround for pydata/pydata-sphinx-theme#1220
+    announcement="🍾 <a href='https://github.com/pydata/xarray/discussions/8462'>Xarray is now 10 years old!</a> 🎉",
 )
 
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = "_static/dataset-diagram-logo.png"
+html_logo = "_static/logos/Xarray_Logo_RGB_Final.svg"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-html_favicon = "_static/favicon.ico"
+html_favicon = "_static/logos/Xarray_Icon_Final.svg"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -263,11 +264,11 @@ html_css_files = ["style.css"]
 
 # configuration for sphinxext.opengraph
 ogp_site_url = "https://docs.xarray.dev/en/latest/"
-ogp_image = "https://docs.xarray.dev/en/stable/_static/dataset-diagram-logo.png"
+ogp_image = "https://docs.xarray.dev/en/stable/_static/logos/Xarray_Logo_RGB_Final.png"
 ogp_custom_meta_tags = [
     '<meta name="twitter:card" content="summary_large_image" />',
     '<meta property="twitter:site" content="@xarray_dev" />',
-    '<meta name="image" property="og:image" content="https://docs.xarray.dev/en/stable/_static/dataset-diagram-logo.png" />',
+    '<meta name="image" property="og:image" content="https://docs.xarray.dev/en/stable/_static/logos/Xarray_Logo_RGB_Final.png" />',
 ]
 
 # Redirects for pages that were moved to new locations
@@ -315,20 +316,24 @@ htmlhelp_basename = "xarraydoc"
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/3/", None),
-    "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
-    "iris": ("https://scitools-iris.readthedocs.io/en/latest", None),
-    "numpy": ("https://numpy.org/doc/stable", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy", None),
-    "numba": ("https://numba.readthedocs.io/en/stable/", None),
-    "matplotlib": ("https://matplotlib.org/stable/", None),
-    "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
     "hypothesis": ("https://hypothesis.readthedocs.io/en/latest/", None),
-    "cubed": ("https://tom-e-white.com/cubed/", None),
+    "cubed": ("https://cubed-dev.github.io/cubed/", None),
+    "dask": ("https://docs.dask.org/en/latest", None),
     "datatree": ("https://xarray-datatree.readthedocs.io/en/latest/", None),
-    # "opt_einsum": ("https://dgasmith.github.io/opt_einsum/", None),
+    "flox": ("https://flox.readthedocs.io/en/latest/", None),
+    "hypothesis": ("https://hypothesis.readthedocs.io/en/latest/", None),
+    "iris": ("https://scitools-iris.readthedocs.io/en/latest", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    "numba": ("https://numba.readthedocs.io/en/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
+    "python": ("https://docs.python.org/3/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
+    "sparse": ("https://sparse.pydata.org/en/latest/", None),
+    "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
+    "zarr": ("https://zarr.readthedocs.io/en/latest/", None),
 }
 
 

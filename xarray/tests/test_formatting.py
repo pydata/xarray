@@ -10,7 +10,9 @@ from numpy.core import defchararray
 
 import xarray as xr
 from xarray.core import formatting
-from xarray.tests import requires_dask, requires_netCDF4
+from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
+
+ON_WINDOWS = sys.platform == "win32"
 
 
 class TestFormatting:
@@ -316,12 +318,12 @@ class TestFormatting:
         R
             array([1, 2], dtype=int64)
         Differing coordinates:
-        L * x        (x) %cU1 'a' 'b'
-        R * x        (x) %cU1 'a' 'c'
+        L * x        (x) %cU1 8B 'a' 'b'
+        R * x        (x) %cU1 8B 'a' 'c'
         Coordinates only on the left object:
-          * y        (y) int64 1 2 3
+          * y        (y) int64 24B 1 2 3
         Coordinates only on the right object:
-            label    (x) int64 1 2
+            label    (x) int64 16B 1 2
         Differing attributes:
         L   units: m
         R   units: kg
@@ -406,19 +408,27 @@ class TestFormatting:
                 "var2": ("x", np.array([3, 4], dtype="int64")),
             },
             coords={
-                "x": np.array(["a", "b"], dtype="U1"),
+                "x": (
+                    "x",
+                    np.array(["a", "b"], dtype="U1"),
+                    {"foo": "bar", "same": "same"},
+                ),
                 "y": np.array([1, 2, 3], dtype="int64"),
             },
-            attrs={"units": "m", "description": "desc"},
+            attrs={"title": "mytitle", "description": "desc"},
         )
 
         ds_b = xr.Dataset(
             data_vars={"var1": ("x", np.array([1, 2], dtype="int64"))},
             coords={
-                "x": ("x", np.array(["a", "c"], dtype="U1"), {"source": 0}),
+                "x": (
+                    "x",
+                    np.array(["a", "c"], dtype="U1"),
+                    {"source": 0, "foo": "baz", "same": "same"},
+                ),
                 "label": ("x", np.array([1, 2], dtype="int64")),
             },
-            attrs={"units": "kg"},
+            attrs={"title": "newtitle"},
         )
 
         byteorder = "<" if sys.byteorder == "little" else ">"
@@ -428,21 +438,25 @@ class TestFormatting:
         Differing dimensions:
             (x: 2, y: 3) != (x: 2)
         Differing coordinates:
-        L * x        (x) %cU1 'a' 'b'
-        R * x        (x) %cU1 'a' 'c'
-            source: 0
+        L * x        (x) %cU1 8B 'a' 'b'
+            Differing variable attributes:
+                foo: bar
+        R * x        (x) %cU1 8B 'a' 'c'
+            Differing variable attributes:
+                source: 0
+                foo: baz
         Coordinates only on the left object:
-          * y        (y) int64 1 2 3
+          * y        (y) int64 24B 1 2 3
         Coordinates only on the right object:
-            label    (x) int64 1 2
+            label    (x) int64 16B 1 2
         Differing data variables:
-        L   var1     (x, y) int64 1 2 3 4 5 6
-        R   var1     (x) int64 1 2
+        L   var1     (x, y) int64 48B 1 2 3 4 5 6
+        R   var1     (x) int64 16B 1 2
         Data variables only on the left object:
-            var2     (x) int64 3 4
+            var2     (x) int64 16B 3 4
         Differing attributes:
-        L   units: m
-        R   units: kg
+        L   title: mytitle
+        R   title: newtitle
         Attributes only on the left object:
             description: desc"""
             % (byteorder, byteorder)
@@ -452,16 +466,22 @@ class TestFormatting:
         assert actual == expected
 
     def test_array_repr(self) -> None:
-        ds = xr.Dataset(coords={"foo": [1, 2, 3], "bar": [1, 2, 3]})
-        ds[(1, 2)] = xr.DataArray([0], dims="test")
+        ds = xr.Dataset(
+            coords={
+                "foo": np.array([1, 2, 3], dtype=np.uint64),
+                "bar": np.array([1, 2, 3], dtype=np.uint64),
+            }
+        )
+        ds[(1, 2)] = xr.DataArray(np.array([0], dtype=np.uint64), dims="test")
         ds_12 = ds[(1, 2)]
 
         # Test repr function behaves correctly:
         actual = formatting.array_repr(ds_12)
+
         expected = dedent(
             """\
-        <xarray.DataArray (1, 2) (test: 1)>
-        array([0])
+        <xarray.DataArray (1, 2) (test: 1)> Size: 8B
+        array([0], dtype=uint64)
         Dimensions without coordinates: test"""
         )
 
@@ -479,7 +499,7 @@ class TestFormatting:
             actual = formatting.array_repr(ds[(1, 2)])
             expected = dedent(
                 """\
-            <xarray.DataArray (1, 2) (test: 1)>
+            <xarray.DataArray (1, 2) (test: 1)> Size: 8B
             0
             Dimensions without coordinates: test"""
             )
@@ -615,13 +635,14 @@ def test_repr_file_collapsed(tmp_path) -> None:
     arr_to_store = xr.DataArray(np.arange(300, dtype=np.int64), dims="test")
     arr_to_store.to_netcdf(tmp_path / "test.nc", engine="netcdf4")
 
-    with xr.open_dataarray(tmp_path / "test.nc") as arr, xr.set_options(
-        display_expand_data=False
+    with (
+        xr.open_dataarray(tmp_path / "test.nc") as arr,
+        xr.set_options(display_expand_data=False),
     ):
         actual = repr(arr)
         expected = dedent(
             """\
-        <xarray.DataArray (test: 300)>
+        <xarray.DataArray (test: 300)> Size: 2kB
         [300 values with dtype=int64]
         Dimensions without coordinates: test"""
         )
@@ -632,7 +653,7 @@ def test_repr_file_collapsed(tmp_path) -> None:
         actual = arr_loaded.__repr__()
         expected = dedent(
             """\
-        <xarray.DataArray (test: 300)>
+        <xarray.DataArray (test: 300)> Size: 2kB
         0 1 2 3 4 5 6 7 8 9 10 11 12 ... 288 289 290 291 292 293 294 295 296 297 298 299
         Dimensions without coordinates: test"""
         )
@@ -650,15 +671,16 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     b = defchararray.add("attr_", np.arange(0, n_attr).astype(str))
     c = defchararray.add("coord", np.arange(0, n_vars).astype(str))
     attrs = {k: 2 for k in b}
-    coords = {_c: np.array([0, 1]) for _c in c}
+    coords = {_c: np.array([0, 1], dtype=np.uint64) for _c in c}
     data_vars = dict()
     for v, _c in zip(a, coords.items()):
         data_vars[v] = xr.DataArray(
             name=v,
-            data=np.array([3, 4]),
+            data=np.array([3, 4], dtype=np.uint64),
             dims=[_c[0]],
             coords=dict([_c]),
         )
+
     ds = xr.Dataset(data_vars)
     ds.attrs = attrs
 
@@ -695,8 +717,9 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
         dims_values = formatting.dim_summary_limited(
             ds, col_width=col_width + 1, max_rows=display_max_rows
         )
+        expected_size = "1kB"
         expected = f"""\
-<xarray.Dataset>
+<xarray.Dataset> Size: {expected_size}
 {dims_start}({dims_values})
 Coordinates: ({n_vars})
 Data variables: ({n_vars})
@@ -761,3 +784,259 @@ def test_lazy_array_wont_compute() -> None:
     # These will crash if var.data are converted to numpy arrays:
     var.__repr__()
     var._repr_html_()
+
+
+@pytest.mark.parametrize("as_dataset", (False, True))
+def test_format_xindexes_none(as_dataset: bool) -> None:
+    # ensure repr for empty xindexes can be displayed #8367
+
+    expected = """\
+    Indexes:
+        *empty*"""
+    expected = dedent(expected)
+
+    obj: xr.DataArray | xr.Dataset = xr.DataArray()
+    obj = obj._to_temp_dataset() if as_dataset else obj
+
+    actual = repr(obj.xindexes)
+    assert actual == expected
+
+
+@pytest.mark.parametrize("as_dataset", (False, True))
+def test_format_xindexes(as_dataset: bool) -> None:
+    expected = """\
+    Indexes:
+        x        PandasIndex"""
+    expected = dedent(expected)
+
+    obj: xr.DataArray | xr.Dataset = xr.DataArray([1], coords={"x": [1]})
+    obj = obj._to_temp_dataset() if as_dataset else obj
+
+    actual = repr(obj.xindexes)
+    assert actual == expected
+
+
+@requires_cftime
+def test_empty_cftimeindex_repr() -> None:
+    index = xr.coding.cftimeindex.CFTimeIndex([])
+
+    expected = """\
+    Indexes:
+        time     CFTimeIndex([], dtype='object', length=0, calendar=None, freq=None)"""
+    expected = dedent(expected)
+
+    da = xr.DataArray([], coords={"time": index})
+
+    actual = repr(da.indexes)
+    assert actual == expected
+
+
+def test_display_nbytes() -> None:
+    xds = xr.Dataset(
+        {
+            "foo": np.arange(1200, dtype=np.int16),
+            "bar": np.arange(111, dtype=np.int16),
+        }
+    )
+
+    # Note: int16 is used to ensure that dtype is shown in the
+    # numpy array representation for all OSes included Windows
+
+    actual = repr(xds)
+    expected = """
+<xarray.Dataset> Size: 3kB
+Dimensions:  (foo: 1200, bar: 111)
+Coordinates:
+  * foo      (foo) int16 2kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
+  * bar      (bar) int16 222B 0 1 2 3 4 5 6 7 ... 104 105 106 107 108 109 110
+Data variables:
+    *empty*
+    """.strip()
+    assert actual == expected
+
+    actual = repr(xds["foo"])
+    expected = """
+<xarray.DataArray 'foo' (foo: 1200)> Size: 2kB
+array([   0,    1,    2, ..., 1197, 1198, 1199], dtype=int16)
+Coordinates:
+  * foo      (foo) int16 2kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
+""".strip()
+    assert actual == expected
+
+
+def test_array_repr_dtypes():
+
+    # These dtypes are expected to be represented similarly
+    # on Ubuntu, macOS and Windows environments of the CI.
+    # Unsigned integer could be used as easy replacements
+    # for tests where the data-type does not matter,
+    # but the repr does, including the size
+    # (size of a int == size of an uint)
+
+    # Signed integer dtypes
+
+    ds = xr.DataArray(np.array([0], dtype="int8"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 1B
+array([0], dtype=int8)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="int16"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 2B
+array([0], dtype=int16)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    # Unsigned integer dtypes
+
+    ds = xr.DataArray(np.array([0], dtype="uint8"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 1B
+array([0], dtype=uint8)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="uint16"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 2B
+array([0], dtype=uint16)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="uint32"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 4B
+array([0], dtype=uint32)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="uint64"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 8B
+array([0], dtype=uint64)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    # Float dtypes
+
+    ds = xr.DataArray(np.array([0.0]), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 8B
+array([0.])
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="float16"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 2B
+array([0.], dtype=float16)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="float32"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 4B
+array([0.], dtype=float32)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="float64"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 8B
+array([0.])
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+
+@pytest.mark.skipif(
+    ON_WINDOWS,
+    reason="Default numpy's dtypes vary according to OS",
+)
+def test_array_repr_dtypes_unix() -> None:
+
+    # Signed integer dtypes
+
+    ds = xr.DataArray(np.array([0]), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 8B
+array([0])
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="int32"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 4B
+array([0], dtype=int32)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="int64"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 8B
+array([0])
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+
+@pytest.mark.skipif(
+    not ON_WINDOWS,
+    reason="Default numpy's dtypes vary according to OS",
+)
+def test_array_repr_dtypes_on_windows() -> None:
+
+    # Integer dtypes
+
+    ds = xr.DataArray(np.array([0]), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 4B
+array([0])
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="int32"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 4B
+array([0])
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected
+
+    ds = xr.DataArray(np.array([0], dtype="int64"), dims="x")
+    actual = repr(ds)
+    expected = """
+<xarray.DataArray (x: 1)> Size: 8B
+array([0], dtype=int64)
+Dimensions without coordinates: x
+        """.strip()
+    assert actual == expected

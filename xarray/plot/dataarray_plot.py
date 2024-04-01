@@ -27,6 +27,7 @@ from xarray.plot.utils import (
     _rescale_imshow_rgb,
     _resolve_intervals_1dplot,
     _resolve_intervals_2dplot,
+    _set_concise_date,
     _update_axes,
     get_axis,
     label_from_attrs,
@@ -332,8 +333,7 @@ def line(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
-) -> list[Line3D]:
-    ...
+) -> list[Line3D]: ...
 
 
 @overload
@@ -360,8 +360,7 @@ def line(
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @overload
@@ -388,8 +387,7 @@ def line(
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 # This function signature should not change so that it can use
@@ -525,14 +523,8 @@ def line(
         assert hueplt is not None
         ax.legend(handles=primitive, labels=list(hueplt.to_numpy()), title=hue_label)
 
-    # Rotate dates on xlabels
-    # Do this without calling autofmt_xdate so that x-axes ticks
-    # on other subplots (if any) are not deleted.
-    # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
     if np.issubdtype(xplt.dtype, np.datetime64):
-        for xlabels in ax.get_xticklabels():
-            xlabels.set_rotation(30)
-            xlabels.set_horizontalalignment("right")
+        _set_concise_date(ax, axis="x")
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
 
@@ -549,8 +541,7 @@ def step(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     row: None = None,  # no wrap -> primitive
     col: None = None,  # no wrap -> primitive
     **kwargs: Any,
-) -> list[Line3D]:
-    ...
+) -> list[Line3D]: ...
 
 
 @overload
@@ -563,8 +554,7 @@ def step(
     row: Hashable,  # wrap -> FacetGrid
     col: Hashable | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
-    ...
+) -> FacetGrid[DataArray]: ...
 
 
 @overload
@@ -577,8 +567,7 @@ def step(
     row: Hashable | None = None,
     col: Hashable,  # wrap -> FacetGrid
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
-    ...
+) -> FacetGrid[DataArray]: ...
 
 
 def step(
@@ -949,6 +938,12 @@ def _plot1d(plotfunc):
         if plotfunc.__name__ == "scatter":
             size_ = kwargs.pop("_size", markersize)
             size_r = _MARKERSIZE_RANGE
+
+            # Remove any nulls, .where(m, drop=True) doesn't work when m is
+            # a dask array, so load the array to memory.
+            # It will have to be loaded to memory at some point anyway:
+            darray = darray.load()
+            darray = darray.where(darray.notnull(), drop=True)
         else:
             size_ = kwargs.pop("_size", linewidth)
             size_r = _LINEWIDTH_RANGE
@@ -1041,9 +1036,11 @@ def _plot1d(plotfunc):
         if add_legend_:
             if plotfunc.__name__ in ["scatter", "line"]:
                 _add_legend(
-                    hueplt_norm
-                    if add_legend or not add_colorbar_
-                    else _Normalize(None),
+                    (
+                        hueplt_norm
+                        if add_legend or not add_colorbar_
+                        else _Normalize(None)
+                    ),
                     sizeplt_norm,
                     primitive,
                     legend_ax=ax,
@@ -1087,14 +1084,12 @@ def _add_labels(
     add_labels: bool | Iterable[bool],
     darrays: Iterable[DataArray | None],
     suffixes: Iterable[str],
-    rotate_labels: Iterable[bool],
     ax: Axes,
 ) -> None:
     """Set x, y, z labels."""
     add_labels = [add_labels] * 3 if isinstance(add_labels, bool) else add_labels
-    for axis, add_label, darray, suffix, rotate_label in zip(
-        ("x", "y", "z"), add_labels, darrays, suffixes, rotate_labels
-    ):
+    axes: tuple[Literal["x", "y", "z"], ...] = ("x", "y", "z")
+    for axis, add_label, darray, suffix in zip(axes, add_labels, darrays, suffixes):
         if darray is None:
             continue
 
@@ -1103,14 +1098,8 @@ def _add_labels(
             if label is not None:
                 getattr(ax, f"set_{axis}label")(label)
 
-        if rotate_label and np.issubdtype(darray.dtype, np.datetime64):
-            # Rotate dates on xlabels
-            # Do this without calling autofmt_xdate so that x-axes ticks
-            # on other subplots (if any) are not deleted.
-            # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
-            for labels in getattr(ax, f"get_{axis}ticklabels")():
-                labels.set_rotation(30)
-                labels.set_horizontalalignment("right")
+        if np.issubdtype(darray.dtype, np.datetime64):
+            _set_concise_date(ax, axis=axis)
 
 
 @overload
@@ -1151,8 +1140,7 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> PathCollection:
-    ...
+) -> PathCollection: ...
 
 
 @overload
@@ -1193,8 +1181,7 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @overload
@@ -1235,8 +1222,7 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @_plot1d
@@ -1265,7 +1251,7 @@ def scatter(
         kwargs.update(s=sizeplt.to_numpy().ravel())
 
     plts_or_none = (xplt, yplt, zplt)
-    _add_labels(add_labels, plts_or_none, ("", "", ""), (True, False, False), ax)
+    _add_labels(add_labels, plts_or_none, ("", "", ""), ax)
 
     xplt_np = None if xplt is None else xplt.to_numpy().ravel()
     yplt_np = None if yplt is None else yplt.to_numpy().ravel()
@@ -1653,14 +1639,8 @@ def _plot2d(plotfunc):
             ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim
         )
 
-        # Rotate dates on xlabels
-        # Do this without calling autofmt_xdate so that x-axes ticks
-        # on other subplots (if any) are not deleted.
-        # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
         if np.issubdtype(xplt.dtype, np.datetime64):
-            for xlabels in ax.get_xticklabels():
-                xlabels.set_rotation(30)
-                xlabels.set_horizontalalignment("right")
+            _set_concise_date(ax, "x")
 
         return primitive
 
@@ -1709,8 +1689,7 @@ def imshow(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> AxesImage:
-    ...
+) -> AxesImage: ...
 
 
 @overload
@@ -1750,8 +1729,7 @@ def imshow(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @overload
@@ -1791,8 +1769,7 @@ def imshow(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @_plot2d
@@ -1871,9 +1848,10 @@ def imshow(
         # missing data transparent.  We therefore add an alpha channel if
         # there isn't one, and set it to transparent where data is masked.
         if z.shape[-1] == 3:
-            alpha = np.ma.ones(z.shape[:2] + (1,), dtype=z.dtype)
+            safe_dtype = np.promote_types(z.dtype, np.uint8)
+            alpha = np.ma.ones(z.shape[:2] + (1,), dtype=safe_dtype)
             if np.issubdtype(z.dtype, np.integer):
-                alpha *= 255
+                alpha[:] = 255
             z = np.ma.concatenate((z, alpha), axis=2)
         else:
             z = z.copy()
@@ -1928,8 +1906,7 @@ def contour(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> QuadContourSet:
-    ...
+) -> QuadContourSet: ...
 
 
 @overload
@@ -1969,8 +1946,7 @@ def contour(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @overload
@@ -2010,8 +1986,7 @@ def contour(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @_plot2d
@@ -2064,8 +2039,7 @@ def contourf(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> QuadContourSet:
-    ...
+) -> QuadContourSet: ...
 
 
 @overload
@@ -2105,8 +2079,7 @@ def contourf(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @overload
@@ -2146,8 +2119,7 @@ def contourf(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @_plot2d
@@ -2200,8 +2172,7 @@ def pcolormesh(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> QuadMesh:
-    ...
+) -> QuadMesh: ...
 
 
 @overload
@@ -2241,8 +2212,7 @@ def pcolormesh(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @overload
@@ -2282,8 +2252,7 @@ def pcolormesh(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @_plot2d
@@ -2387,8 +2356,7 @@ def surface(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> Poly3DCollection:
-    ...
+) -> Poly3DCollection: ...
 
 
 @overload
@@ -2428,8 +2396,7 @@ def surface(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @overload
@@ -2469,8 +2436,7 @@ def surface(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
-    ...
+) -> FacetGrid[T_DataArray]: ...
 
 
 @_plot2d

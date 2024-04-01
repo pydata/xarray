@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Hashable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast
 
 import numpy as np
 import pandas as pd
@@ -26,27 +26,23 @@ from xarray.core.indexing import (
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
-from xarray.core.pycompat import (
-    integer_types,
-    is_0d_dask_array,
-    is_chunked_array,
-    is_duck_dask_array,
-    to_numpy,
-)
-from xarray.core.types import T_Chunks
 from xarray.core.utils import (
     OrderedSet,
     _default,
+    consolidate_dask_from_array_kwargs,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
+    emit_user_level_warning,
     ensure_us_time_resolution,
     infix_dims,
+    is_dict_like,
     is_duck_array,
+    is_duck_dask_array,
     maybe_coerce_to_str,
 )
-from xarray.namedarray.core import NamedArray
+from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
+from xarray.namedarray.pycompat import integer_types, is_0d_dask_array, to_duck_array
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -56,7 +52,6 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
-    from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.types import (
         Dims,
         ErrorOptionsWithWarn,
@@ -66,6 +61,8 @@ if TYPE_CHECKING:
         Self,
         T_DuckArray,
     )
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
+
 
 NON_NANOSECOND_WARNING = (
     "Converting non-nanosecond precision {case} values to nanosecond precision. "
@@ -84,7 +81,9 @@ class MissingDimensionsError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
-def as_variable(obj: T_DuckArray | Any, name=None) -> Variable | IndexVariable:
+def as_variable(
+    obj: T_DuckArray | Any, name=None, auto_convert: bool = True
+) -> Variable | IndexVariable:
     """Convert an object into a Variable.
 
     Parameters
@@ -104,6 +103,9 @@ def as_variable(obj: T_DuckArray | Any, name=None) -> Variable | IndexVariable:
           along a dimension of this given name.
         - Variables with name matching one of their dimensions are converted
           into `IndexVariable` objects.
+    auto_convert : bool, optional
+        For internal use only! If True, convert a "dimension" variable into
+        an IndexVariable object (deprecated).
 
     Returns
     -------
@@ -154,9 +156,15 @@ def as_variable(obj: T_DuckArray | Any, name=None) -> Variable | IndexVariable:
             f"explicit list of dimensions: {obj!r}"
         )
 
-    if name is not None and name in obj.dims and obj.ndim == 1:
-        # automatically convert the Variable into an Index
-        obj = obj.to_index_variable()
+    if auto_convert:
+        if name is not None and name in obj.dims and obj.ndim == 1:
+            # automatically convert the Variable into an Index
+            emit_user_level_warning(
+                f"variable {name!r} with name matching its dimension will not be "
+                "automatically converted into an `IndexVariable` object in the future.",
+                FutureWarning,
+            )
+            obj = obj.to_index_variable()
 
     return obj
 
@@ -213,7 +221,14 @@ def _possibly_convert_objects(values):
     as_series = pd.Series(values.ravel(), copy=False)
     if as_series.dtype.kind in "mM":
         as_series = _as_nanosecond_precision(as_series)
-    return np.asarray(as_series).reshape(values.shape)
+    result = np.asarray(as_series).reshape(values.shape)
+    if not result.flags.writeable:
+        # GH8843, pandas copy-on-write mode creates read-only arrays by default
+        try:
+            result.flags.writeable = True
+        except ValueError:
+            result = result.copy()
+    return result
 
 
 def _possibly_convert_datetime_or_timedelta_index(data):
@@ -222,10 +237,12 @@ def _possibly_convert_datetime_or_timedelta_index(data):
     this in version 2.0.0, in xarray we will need to make sure we are ready to
     handle non-nanosecond precision datetimes or timedeltas in our code
     before allowing such values to pass through unchanged."""
-    if isinstance(data, (pd.DatetimeIndex, pd.TimedeltaIndex)):
-        return _as_nanosecond_precision(data)
-    else:
-        return data
+    if isinstance(data, PandasIndexingAdapter):
+        if isinstance(data.array, (pd.DatetimeIndex, pd.TimedeltaIndex)):
+            data = PandasIndexingAdapter(_as_nanosecond_precision(data.array))
+    elif isinstance(data, (pd.DatetimeIndex, pd.TimedeltaIndex)):
+        data = _as_nanosecond_precision(data)
+    return data
 
 
 def as_compatible_data(
@@ -498,54 +515,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             dask="allowed",
         )
 
-    def load(self, **kwargs):
-        """Manually trigger loading of this variable's data from disk or a
-        remote source into memory and return this variable.
-
-        Normally, it should not be necessary to call this method in user code,
-        because all xarray functions should either work on deferred data or
-        load data automatically.
-
-        Parameters
-        ----------
-        **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
-
-        See Also
-        --------
-        dask.array.compute
-        """
-        if is_chunked_array(self._data):
-            chunkmanager = get_chunked_array_type(self._data)
-            loaded_data, *_ = chunkmanager.compute(self._data, **kwargs)
-            self._data = as_compatible_data(loaded_data)
-        elif isinstance(self._data, indexing.ExplicitlyIndexed):
-            self._data = self._data.get_duck_array()
-        elif not is_duck_array(self._data):
-            self._data = np.asarray(self._data)
-        return self
-
-    def compute(self, **kwargs):
-        """Manually trigger loading of this variable's data from disk or a
-        remote source into memory and return a new variable. The original is
-        left unaltered.
-
-        Normally, it should not be necessary to call this method in user code,
-        because all xarray functions should either work on deferred data or
-        load data automatically.
-
-        Parameters
-        ----------
-        **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
-
-        See Also
-        --------
-        dask.array.compute
-        """
-        new = self.copy(deep=False)
-        return new.load(**kwargs)
-
     def _dask_finalize(self, results, array_func, *args, **kwargs):
         data = array_func(results, *args, **kwargs)
         return Variable(self._dims, data, attrs=self._attrs, encoding=self._encoding)
@@ -608,7 +577,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return item
 
     def _item_key_to_tuple(self, key):
-        if utils.is_dict_like(key):
+        if is_dict_like(key):
             return tuple(key.get(dim, slice(None)) for dim in self.dims)
         else:
             return key
@@ -749,8 +718,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 variable = (
                     value
                     if isinstance(value, Variable)
-                    else as_variable(value, name=dim)
+                    else as_variable(value, name=dim, auto_convert=False)
                 )
+                if variable.dims == (dim,):
+                    variable = variable.to_index_variable()
                 if variable.dtype.kind == "b":  # boolean indexing case
                     (variable,) = variable._nonzero()
 
@@ -809,7 +780,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         array `x.values` directly.
         """
         dims, indexer, new_order = self._broadcast_indexes(key)
-        data = as_indexable(self._data)[indexer]
+        indexable = as_indexable(self._data)
+
+        data = indexing.apply_indexer(indexable, indexer)
+
         if new_order:
             data = np.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
@@ -834,6 +808,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
 
         if self.size:
+
             if is_duck_dask_array(self._data):
                 # dask's indexing is faster this way; also vindex does not
                 # support negative indices yet:
@@ -842,7 +817,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             else:
                 actual_indexer = indexer
 
-            data = as_indexable(self._data)[actual_indexer]
+            indexable = as_indexable(self._data)
+            data = indexing.apply_indexer(indexable, actual_indexer)
+
             mask = indexing.create_mask(indexer, self.shape, data)
             # we need to invert the mask in order to pass data first. This helps
             # pint to choose the correct unit
@@ -886,7 +863,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             value = np.moveaxis(value, new_order, range(len(new_order)))
 
         indexable = as_indexable(self._data)
-        indexable[index_tuple] = value
+        indexing.set_with_indexer(indexable, index_tuple, value)
 
     @property
     def encoding(self) -> dict[Any, Any]:
@@ -964,135 +941,46 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             encoding = copy.copy(self._encoding)
         return type(self)(dims, data, attrs, encoding, fastpath=True)
 
-    def chunk(
-        self,
-        chunks: T_Chunks = {},
-        name: str | None = None,
-        lock: bool | None = None,
-        inline_array: bool | None = None,
-        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
-        from_array_kwargs=None,
-        **chunks_kwargs: Any,
-    ) -> Self:
-        """Coerce this array's data into a dask array with the given chunks.
+    def load(self, **kwargs):
+        """Manually trigger loading of this variable's data from disk or a
+        remote source into memory and return this variable.
 
-        If this variable is a non-dask array, it will be converted to dask
-        array. If it's a dask array, it will be rechunked to the given chunk
-        sizes.
-
-        If neither chunks is not provided for one or more dimensions, chunk
-        sizes along that dimension will not be updated; non-dask arrays will be
-        converted into dask arrays with a single block.
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically.
 
         Parameters
         ----------
-        chunks : int, tuple or dict, optional
-            Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
-            ``{'x': 5, 'y': 5}``.
-        name : str, optional
-            Used to generate the name for this array in the internal dask
-            graph. Does not need not be unique.
-        lock : bool, default: False
-            Passed on to :py:func:`dask.array.from_array`, if the array is not
-            already as dask array.
-        inline_array : bool, default: False
-            Passed on to :py:func:`dask.array.from_array`, if the array is not
-            already as dask array.
-        chunked_array_type: str, optional
-            Which chunked array type to coerce this datasets' arrays to.
-            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntrypoint` system.
-            Experimental API that should not be relied upon.
-        from_array_kwargs: dict, optional
-            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
-            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
-            For example, with dask as the default chunked array type, this method would pass additional kwargs
-            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
-        **chunks_kwargs : {dim: chunks, ...}, optional
-            The keyword arguments form of ``chunks``.
-            One of chunks or chunks_kwargs must be provided.
-
-        Returns
-        -------
-        chunked : xarray.Variable
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
 
         See Also
         --------
-        Variable.chunks
-        Variable.chunksizes
-        xarray.unify_chunks
-        dask.array.from_array
+        dask.array.compute
         """
+        self._data = to_duck_array(self._data, **kwargs)
+        return self
 
-        if chunks is None:
-            warnings.warn(
-                "None value for 'chunks' is deprecated. "
-                "It will raise an error in the future. Use instead '{}'",
-                category=FutureWarning,
-            )
-            chunks = {}
+    def compute(self, **kwargs):
+        """Manually trigger loading of this variable's data from disk or a
+        remote source into memory and return a new variable. The original is
+        left unaltered.
 
-        if isinstance(chunks, (float, str, int, tuple, list)):
-            # TODO we shouldn't assume here that other chunkmanagers can handle these types
-            # TODO should we call normalize_chunks here?
-            pass  # dask.array.from_array can handle these directly
-        else:
-            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically.
 
-        if utils.is_dict_like(chunks):
-            chunks = {self.get_axis_num(dim): chunk for dim, chunk in chunks.items()}
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
 
-        chunkmanager = guess_chunkmanager(chunked_array_type)
-
-        if from_array_kwargs is None:
-            from_array_kwargs = {}
-
-        # TODO deprecate passing these dask-specific arguments explicitly. In future just pass everything via from_array_kwargs
-        _from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
-            from_array_kwargs,
-            name=name,
-            lock=lock,
-            inline_array=inline_array,
-        )
-
-        data_old = self._data
-        if chunkmanager.is_chunked_array(data_old):
-            data_chunked = chunkmanager.rechunk(data_old, chunks)
-        else:
-            if not isinstance(data_old, indexing.ExplicitlyIndexed):
-                ndata = data_old
-            else:
-                # Unambiguously handle array storage backends (like NetCDF4 and h5py)
-                # that can't handle general array indexing. For example, in netCDF4 you
-                # can do "outer" indexing along two dimensions independent, which works
-                # differently from how NumPy handles it.
-                # da.from_array works by using lazy indexing with a tuple of slices.
-                # Using OuterIndexer is a pragmatic choice: dask does not yet handle
-                # different indexing types in an explicit way:
-                # https://github.com/dask/dask/issues/2883
-                # TODO: ImplicitToExplicitIndexingAdapter doesn't match the array api:
-                ndata = indexing.ImplicitToExplicitIndexingAdapter(  # type: ignore[assignment]
-                    data_old, indexing.OuterIndexer
-                )
-
-            if utils.is_dict_like(chunks):
-                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
-
-            data_chunked = chunkmanager.from_array(
-                ndata,
-                chunks,
-                **_from_array_kwargs,
-            )
-
-        return self._replace(data=data_chunked)
-
-    def to_numpy(self) -> np.ndarray:
-        """Coerces wrapped data to numpy and returns a numpy.ndarray"""
-        # TODO an entrypoint so array libraries can choose coercion method?
-        return to_numpy(self._data)
-
-    def as_numpy(self) -> Self:
-        """Coerces wrapped data into a numpy array, returning a Variable."""
-        return self._replace(data=self.to_numpy())
+        See Also
+        --------
+        dask.array.compute
+        """
+        new = self.copy(deep=False)
+        return new.load(**kwargs)
 
     def isel(
         self,
@@ -1231,14 +1119,12 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         self,
         pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
         mode: PadModeOptions = "constant",
-        stat_length: int
-        | tuple[int, int]
-        | Mapping[Any, tuple[int, int]]
-        | None = None,
-        constant_values: float
-        | tuple[float, float]
-        | Mapping[Any, tuple[float, float]]
-        | None = None,
+        stat_length: (
+            int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
+        ) = None,
+        constant_values: (
+            float | tuple[float, float] | Mapping[Any, tuple[float, float]] | None
+        ) = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
         keep_attrs: bool | None = None,
@@ -1454,7 +1340,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if isinstance(dims, str):
             dims = [dims]
 
-        if shape is None and utils.is_dict_like(dims):
+        if shape is None and is_dict_like(dims):
             shape = dims.values()
 
         missing_dims = set(self.dims) - set(dims)
@@ -1476,7 +1362,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             tmp_shape = tuple(dims_map[d] for d in expanded_dims)
             expanded_data = duck_array_ops.broadcast_to(self.data, tmp_shape)
         else:
-            expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]
+            indexer = (None,) * (len(expanded_dims) - self.ndim) + (...,)
+            expanded_data = self.data[indexer]
 
         expanded_var = Variable(
             expanded_dims, expanded_data, self._attrs, self._encoding, fastpath=True
@@ -1541,15 +1428,15 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             result = result._stack_once(dims, new_dim)
         return result
 
-    def _unstack_once_full(self, dims: Mapping[Any, int], old_dim: Hashable) -> Self:
+    def _unstack_once_full(self, dim: Mapping[Any, int], old_dim: Hashable) -> Self:
         """
         Unstacks the variable without needing an index.
 
         Unlike `_unstack_once`, this function requires the existing dimension to
         contain the full product of the new dimensions.
         """
-        new_dim_names = tuple(dims.keys())
-        new_dim_sizes = tuple(dims.values())
+        new_dim_names = tuple(dim.keys())
+        new_dim_sizes = tuple(dim.values())
 
         if old_dim not in self.dims:
             raise ValueError(f"invalid existing dimension: {old_dim}")
@@ -1571,7 +1458,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         reordered = self.transpose(*dim_order)
 
         new_shape = reordered.shape[: len(other_dims)] + new_dim_sizes
-        new_data = reordered.data.reshape(new_shape)
+        new_data = duck_array_ops.reshape(reordered.data, new_shape)
         new_dims = reordered.dims[: len(other_dims)] + new_dim_names
 
         return type(self)(
@@ -1993,7 +1880,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             method = interpolation
 
         if skipna or (skipna is None and self.dtype.kind in "cfO"):
-            _quantile_func = np.nanquantile
+            _quantile_func = nputils.nanquantile
         else:
             _quantile_func = np.quantile
 
@@ -2063,6 +1950,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         Dataset.rank, DataArray.rank
         """
+        # This could / should arguably be implemented at the DataArray & Dataset level
         if not OPTIONS["use_bottleneck"]:
             raise RuntimeError(
                 "rank requires bottleneck to be enabled."
@@ -2071,24 +1959,20 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         import bottleneck as bn
 
-        data = self.data
-
-        if is_duck_dask_array(data):
-            raise TypeError(
-                "rank does not work for arrays stored as dask "
-                "arrays. Load the data via .compute() or .load() "
-                "prior to calling this method."
-            )
-        elif not isinstance(data, np.ndarray):
-            raise TypeError(f"rank is not implemented for {type(data)} objects.")
-
-        axis = self.get_axis_num(dim)
         func = bn.nanrankdata if self.dtype.kind == "f" else bn.rankdata
-        ranked = func(data, axis=axis)
+        ranked = xr.apply_ufunc(
+            func,
+            self,
+            input_core_dims=[[dim]],
+            output_core_dims=[[dim]],
+            dask="parallelized",
+            kwargs=dict(axis=-1),
+        ).transpose(*self.dims)
+
         if pct:
-            count = np.sum(~np.isnan(data), axis=axis, keepdims=True)
+            count = self.notnull().sum(dim)
             ranked /= count
-        return Variable(self.dims, ranked)
+        return ranked
 
     def rolling_window(
         self, dim, window, window_dim, center=False, fill_value=dtypes.NA
@@ -2124,7 +2008,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         >>> v = Variable(("a", "b"), np.arange(8).reshape((2, 4)))
         >>> v.rolling_window("b", 3, "window_dim")
-        <xarray.Variable (a: 2, b: 4, window_dim: 3)>
+        <xarray.Variable (a: 2, b: 4, window_dim: 3)> Size: 192B
         array([[[nan, nan,  0.],
                 [nan,  0.,  1.],
                 [ 0.,  1.,  2.],
@@ -2136,7 +2020,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 [ 5.,  6.,  7.]]])
 
         >>> v.rolling_window("b", 3, "window_dim", center=True)
-        <xarray.Variable (a: 2, b: 4, window_dim: 3)>
+        <xarray.Variable (a: 2, b: 4, window_dim: 3)> Size: 192B
         array([[[nan,  0.,  1.],
                 [ 0.,  1.,  2.],
                 [ 1.,  2.,  3.],
@@ -2234,10 +2118,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         Construct a reshaped-array for coarsen
         """
-        if not utils.is_dict_like(boundary):
+        if not is_dict_like(boundary):
             boundary = {d: boundary for d in windows.keys()}
 
-        if not utils.is_dict_like(side):
+        if not is_dict_like(side):
             side = {d: side for d in windows.keys()}
 
         # remove unrelated dimensions
@@ -2313,10 +2197,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         >>> var = xr.Variable("x", [1, np.nan, 3])
         >>> var
-        <xarray.Variable (x: 3)>
+        <xarray.Variable (x: 3)> Size: 24B
         array([ 1., nan,  3.])
         >>> var.isnull()
-        <xarray.Variable (x: 3)>
+        <xarray.Variable (x: 3)> Size: 3B
         array([False,  True, False])
         """
         from xarray.core.computation import apply_ufunc
@@ -2347,10 +2231,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         >>> var = xr.Variable("x", [1, np.nan, 3])
         >>> var
-        <xarray.Variable (x: 3)>
+        <xarray.Variable (x: 3)> Size: 24B
         array([ 1., nan,  3.])
         >>> var.notnull()
-        <xarray.Variable (x: 3)>
+        <xarray.Variable (x: 3)> Size: 3B
         array([ True, False,  True])
         """
         from xarray.core.computation import apply_ufunc
@@ -2599,7 +2483,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         Use sparse-array as backend.
         """
-        from xarray.namedarray.utils import _default as _default_named
+        from xarray.namedarray._typing import _default as _default_named
 
         if sparse_format is _default:
             sparse_format = _default_named
@@ -2616,6 +2500,83 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         out = super()._to_dense()
         return cast("Variable", out)
+
+    def chunk(  # type: ignore[override]
+        self,
+        chunks: int | Literal["auto"] | Mapping[Any, None | int | tuple[int, ...]] = {},
+        name: str | None = None,
+        lock: bool | None = None,
+        inline_array: bool | None = None,
+        chunked_array_type: str | ChunkManagerEntrypoint[Any] | None = None,
+        from_array_kwargs: Any = None,
+        **chunks_kwargs: Any,
+    ) -> Self:
+        """Coerce this array's data into a dask array with the given chunks.
+
+        If this variable is a non-dask array, it will be converted to dask
+        array. If it's a dask array, it will be rechunked to the given chunk
+        sizes.
+
+        If neither chunks is not provided for one or more dimensions, chunk
+        sizes along that dimension will not be updated; non-dask arrays will be
+        converted into dask arrays with a single block.
+
+        Parameters
+        ----------
+        chunks : int, tuple or dict, optional
+            Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
+            ``{'x': 5, 'y': 5}``.
+        name : str, optional
+            Used to generate the name for this array in the internal dask
+            graph. Does not need not be unique.
+        lock : bool, default: False
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
+        inline_array : bool, default: False
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
+        chunked_array_type: str, optional
+            Which chunked array type to coerce this datasets' arrays to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntrypoint` system.
+            Experimental API that should not be relied upon.
+        from_array_kwargs: dict, optional
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+            For example, with dask as the default chunked array type, this method would pass additional kwargs
+            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+        **chunks_kwargs : {dim: chunks, ...}, optional
+            The keyword arguments form of ``chunks``.
+            One of chunks or chunks_kwargs must be provided.
+
+        Returns
+        -------
+        chunked : xarray.Variable
+
+        See Also
+        --------
+        Variable.chunks
+        Variable.chunksizes
+        xarray.unify_chunks
+        dask.array.from_array
+        """
+
+        if from_array_kwargs is None:
+            from_array_kwargs = {}
+
+        # TODO deprecate passing these dask-specific arguments explicitly. In future just pass everything via from_array_kwargs
+        _from_array_kwargs = consolidate_dask_from_array_kwargs(
+            from_array_kwargs,
+            name=name,
+            lock=lock,
+            inline_array=inline_array,
+        )
+
+        return super().chunk(
+            chunks=chunks,
+            chunked_array_type=chunked_array_type,
+            from_array_kwargs=_from_array_kwargs,
+            **chunks_kwargs,
+        )
 
 
 class IndexVariable(Variable):
@@ -2643,11 +2604,13 @@ class IndexVariable(Variable):
         if not isinstance(self._data, PandasIndexingAdapter):
             self._data = PandasIndexingAdapter(self._data)
 
-    def __dask_tokenize__(self):
+    def __dask_tokenize__(self) -> object:
         from dask.base import normalize_token
 
         # Don't waste time converting pd.Index to np.ndarray
-        return normalize_token((type(self), self._dims, self._data.array, self._attrs))
+        return normalize_token(
+            (type(self), self._dims, self._data.array, self._attrs or None)
+        )
 
     def load(self):
         # data is already loaded into memory for IndexVariable
@@ -2879,11 +2842,8 @@ def _unified_dims(variables):
     all_dims = {}
     for var in variables:
         var_dims = var.dims
-        if len(set(var_dims)) < len(var_dims):
-            raise ValueError(
-                "broadcasting cannot handle duplicate "
-                f"dimensions: {list(var_dims)!r}"
-            )
+        _raise_if_any_duplicate_dimensions(var_dims, err_context="Broadcasting")
+
         for d, s in zip(var_dims, var.shape):
             if d not in all_dims:
                 all_dims[d] = s
@@ -2923,6 +2883,16 @@ def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
 
 
 def _broadcast_compat_data(self, other):
+    if not OPTIONS["arithmetic_broadcast"]:
+        if (isinstance(other, Variable) and self.dims != other.dims) or (
+            is_duck_array(other) and self.ndim != other.ndim
+        ):
+            raise ValueError(
+                "Broadcasting is necessary but automatic broadcasting is disabled via "
+                "global option `'arithmetic_broadcast'`. "
+                "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
+            )
+
     if all(hasattr(other, attr) for attr in ["dims", "data", "shape", "encoding"]):
         # `other` satisfies the necessary Variable API for broadcast_variables
         new_self, new_other = _broadcast_compat_variables(self, other)

@@ -5,7 +5,7 @@ import inspect
 import math
 from collections.abc import Hashable
 from copy import copy
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Callable, Literal
 
 import numpy as np
@@ -15,7 +15,7 @@ import pytest
 import xarray as xr
 import xarray.plot as xplt
 from xarray import DataArray, Dataset
-from xarray.core.utils import module_available
+from xarray.namedarray.utils import module_available
 from xarray.plot.dataarray_plot import _infer_interval_breaks
 from xarray.plot.dataset_plot import _infer_meta_data
 from xarray.plot.utils import (
@@ -620,6 +620,18 @@ class TestPlot(PlotTestCase):
         ax = plt.gca()
         assert ax.has_data()
 
+    def test_date_dimension(self) -> None:
+        nrow = 3
+        ncol = 4
+        start = date(2000, 1, 1)
+        time = [start + timedelta(days=i) for i in range(nrow)]
+        a = DataArray(
+            easy_array((nrow, ncol)), coords=[("time", time), ("y", range(ncol))]
+        )
+        a.plot()
+        ax = plt.gca()
+        assert ax.has_data()
+
     @pytest.mark.slow
     @pytest.mark.filterwarnings("ignore:tight_layout cannot")
     def test_convenient_facetgrid(self) -> None:
@@ -787,12 +799,17 @@ class TestPlot1D(PlotTestCase):
         self.darray[1] = np.nan
         self.darray.plot.line()
 
-    def test_x_ticks_are_rotated_for_time(self) -> None:
+    def test_dates_are_concise(self) -> None:
+        import matplotlib.dates as mdates
+
         time = pd.date_range("2000-01-01", "2000-01-10")
         a = DataArray(np.arange(len(time)), [("t", time)])
         a.plot.line()
-        rotation = plt.gca().get_xticklabels()[0].get_rotation()
-        assert rotation != 0
+
+        ax = plt.gca()
+
+        assert isinstance(ax.xaxis.get_major_locator(), mdates.AutoDateLocator)
+        assert isinstance(ax.xaxis.get_major_formatter(), mdates.ConciseDateFormatter)
 
     def test_xyincrease_false_changes_axes(self) -> None:
         self.darray.plot.line(xincrease=False, yincrease=False)
@@ -1356,12 +1373,17 @@ class Common2dMixin:
         diffs = xlim[0] - 0, xlim[1] - 14, ylim[0] - 0, ylim[1] - 9
         assert all(abs(x) < 1 for x in diffs)
 
-    def test_x_ticks_are_rotated_for_time(self) -> None:
+    def test_dates_are_concise(self) -> None:
+        import matplotlib.dates as mdates
+
         time = pd.date_range("2000-01-01", "2000-01-10")
         a = DataArray(np.random.randn(2, len(time)), [("xx", [1, 2]), ("t", time)])
-        a.plot(x="t")
-        rotation = plt.gca().get_xticklabels()[0].get_rotation()
-        assert rotation != 0
+        self.plotfunc(a, x="t")
+
+        ax = plt.gca()
+
+        assert isinstance(ax.xaxis.get_major_locator(), mdates.AutoDateLocator)
+        assert isinstance(ax.xaxis.get_major_formatter(), mdates.ConciseDateFormatter)
 
     def test_plot_nans(self) -> None:
         x1 = self.darray[:5]
@@ -1888,6 +1910,25 @@ class TestPcolormeshLogscale(PlotTestCase):
 class TestImshow(Common2dMixin, PlotTestCase):
     plotfunc = staticmethod(xplt.imshow)
 
+    @pytest.mark.xfail(
+        reason=(
+            "Failing inside matplotlib. Should probably be fixed upstream because "
+            "other plot functions can handle it. "
+            "Remove this test when it works, already in Common2dMixin"
+        )
+    )
+    def test_dates_are_concise(self) -> None:
+        import matplotlib.dates as mdates
+
+        time = pd.date_range("2000-01-01", "2000-01-10")
+        a = DataArray(np.random.randn(2, len(time)), [("xx", [1, 2]), ("t", time)])
+        self.plotfunc(a, x="t")
+
+        ax = plt.gca()
+
+        assert isinstance(ax.xaxis.get_major_locator(), mdates.AutoDateLocator)
+        assert isinstance(ax.xaxis.get_major_formatter(), mdates.ConciseDateFormatter)
+
     @pytest.mark.slow
     def test_imshow_called(self) -> None:
         # Having both statements ensures the test works properly
@@ -1999,15 +2040,17 @@ class TestImshow(Common2dMixin, PlotTestCase):
         for vmin2, vmax2 in ((-1.2, -1), (2, 2.1)):
             da.plot.imshow(vmin=vmin2, vmax=vmax2)
 
-    def test_imshow_rgb_values_in_valid_range(self) -> None:
-        da = DataArray(np.arange(75, dtype="uint8").reshape((5, 5, 3)))
+    @pytest.mark.parametrize("dtype", [np.uint8, np.int8, np.int16])
+    def test_imshow_rgb_values_in_valid_range(self, dtype) -> None:
+        da = DataArray(np.arange(75, dtype=dtype).reshape((5, 5, 3)))
         _, ax = plt.subplots()
         out = da.plot.imshow(ax=ax).get_array()
         assert out is not None
-        dtype = out.dtype
-        assert dtype is not None
-        assert dtype == np.uint8
+        actual_dtype = out.dtype
+        assert actual_dtype is not None
+        assert actual_dtype == np.uint8
         assert (out[..., :3] == da.values).all()  # Compare without added alpha
+        assert (out[..., -1] == 255).all()  # Compare alpha
 
     @pytest.mark.filterwarnings("ignore:Several dimensions of this array")
     def test_regression_rgb_imshow_dim_size_one(self) -> None:
@@ -2031,6 +2074,25 @@ class TestImshow(Common2dMixin, PlotTestCase):
 class TestSurface(Common2dMixin, PlotTestCase):
     plotfunc = staticmethod(xplt.surface)
     subplot_kws = {"projection": "3d"}
+
+    @pytest.mark.xfail(
+        reason=(
+            "Failing inside matplotlib. Should probably be fixed upstream because "
+            "other plot functions can handle it. "
+            "Remove this test when it works, already in Common2dMixin"
+        )
+    )
+    def test_dates_are_concise(self) -> None:
+        import matplotlib.dates as mdates
+
+        time = pd.date_range("2000-01-01", "2000-01-10")
+        a = DataArray(np.random.randn(2, len(time)), [("xx", [1, 2]), ("t", time)])
+        self.plotfunc(a, x="t")
+
+        ax = plt.gca()
+
+        assert isinstance(ax.xaxis.get_major_locator(), mdates.AutoDateLocator)
+        assert isinstance(ax.xaxis.get_major_formatter(), mdates.ConciseDateFormatter)
 
     def test_primitive_artist_returned(self) -> None:
         artist = self.plotmethod()
@@ -2907,7 +2969,7 @@ class TestCFDatetimePlot(PlotTestCase):
         """
         # case for 1d array
         data = np.random.rand(4, 12)
-        time = xr.cftime_range(start="2017", periods=12, freq="1M", calendar="noleap")
+        time = xr.cftime_range(start="2017", periods=12, freq="1ME", calendar="noleap")
         darray = DataArray(data, dims=["x", "time"])
         darray.coords["time"] = time
 
@@ -3324,3 +3386,16 @@ def test_plot1d_default_rcparams() -> None:
         np.testing.assert_allclose(
             ax.collections[0].get_edgecolor(), mpl.colors.to_rgba_array("k")
         )
+
+
+@requires_matplotlib
+def test_plot1d_filtered_nulls() -> None:
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+    y = ds.y.where(ds.y > 0.2)
+    expected = y.notnull().sum().item()
+
+    with figure_context():
+        pc = y.plot.scatter()
+        actual = pc.get_offsets().shape[0]
+
+        assert expected == actual

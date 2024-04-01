@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import sys
-from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Collection, Hashable, Iterator, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -102,16 +102,13 @@ class Alignable(Protocol):
     """
 
     @property
-    def dims(self) -> Frozen[Hashable, int] | tuple[Hashable, ...]:
-        ...
+    def dims(self) -> Frozen[Hashable, int] | tuple[Hashable, ...]: ...
 
     @property
-    def sizes(self) -> Mapping[Hashable, int]:
-        ...
+    def sizes(self) -> Mapping[Hashable, int]: ...
 
     @property
-    def xindexes(self) -> Indexes[Index]:
-        ...
+    def xindexes(self) -> Indexes[Index]: ...
 
     def _reindex_callback(
         self,
@@ -122,27 +119,22 @@ class Alignable(Protocol):
         fill_value: Any,
         exclude_dims: frozenset[Hashable],
         exclude_vars: frozenset[Hashable],
-    ) -> Self:
-        ...
+    ) -> Self: ...
 
     def _overwrite_indexes(
         self,
         indexes: Mapping[Any, Index],
         variables: Mapping[Any, Variable] | None = None,
-    ) -> Self:
-        ...
+    ) -> Self: ...
 
-    def __len__(self) -> int:
-        ...
+    def __len__(self) -> int: ...
 
-    def __iter__(self) -> Iterator[Hashable]:
-        ...
+    def __iter__(self) -> Iterator[Hashable]: ...
 
     def copy(
         self,
         deep: bool = False,
-    ) -> Self:
-        ...
+    ) -> Self: ...
 
 
 T_Alignable = TypeVar("T_Alignable", bound="Alignable")
@@ -173,7 +165,8 @@ T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 
 # Temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more:
-T_DuckArray = TypeVar("T_DuckArray", bound=Any)
+T_DuckArray = TypeVar("T_DuckArray", bound=Any, covariant=True)
+
 
 ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
@@ -181,8 +174,9 @@ DaCompatible = Union["DataArray", "VarCompatible"]
 DsCompatible = Union["Dataset", "DaCompatible"]
 GroupByCompatible = Union["Dataset", "DataArray"]
 
-Dims = Union[str, Iterable[Hashable], "ellipsis", None]
-OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None]
+# Don't change to Hashable | Collection[Hashable]
+# Read: https://github.com/pydata/xarray/issues/6142
+Dims = Union[str, Collection[Hashable], "ellipsis", None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
@@ -282,3 +276,6 @@ QuantileMethods = Literal[
     "midpoint",
     "nearest",
 ]
+
+
+ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]

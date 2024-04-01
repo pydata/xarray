@@ -12,14 +12,18 @@ import numpy as np
 
 from xarray.conventions import cf_encoder
 from xarray.core import indexing
-from xarray.core.parallelcompat import get_chunked_array_type
-from xarray.core.pycompat import is_chunked_array
 from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
 
+    from h5netcdf.legacyapi import Dataset as ncDatasetLegacyH5
+    from netCDF4 import Dataset as ncDataset
+
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
     from xarray.core.types import NestedSequence
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
@@ -125,6 +129,43 @@ def _decode_variable_name(name):
     if name == NONE_VAR_NAME:
         name = None
     return name
+
+
+def _open_datatree_netcdf(
+    ncDataset: ncDataset | ncDatasetLegacyH5,
+    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    **kwargs,
+) -> DataTree:
+    from xarray.backends.api import open_dataset
+    from xarray.core.datatree import DataTree
+    from xarray.core.treenode import NodePath
+
+    ds = open_dataset(filename_or_obj, **kwargs)
+    tree_root = DataTree.from_dict({"/": ds})
+    with ncDataset(filename_or_obj, mode="r") as ncds:
+        for path in _iter_nc_groups(ncds):
+            subgroup_ds = open_dataset(filename_or_obj, group=path, **kwargs)
+
+            # TODO refactor to use __setitem__ once creation of new nodes by assigning Dataset works again
+            node_name = NodePath(path).name
+            new_node: DataTree = DataTree(name=node_name, data=subgroup_ds)
+            tree_root._set_item(
+                path,
+                new_node,
+                allow_overwrite=False,
+                new_nodes_along_path=True,
+            )
+    return tree_root
+
+
+def _iter_nc_groups(root, parent="/"):
+    from xarray.core.treenode import NodePath
+
+    parent = NodePath(parent)
+    for path, group in root.groups.items():
+        gpath = parent / path
+        yield str(gpath)
+        yield from _iter_nc_groups(group, parent=gpath)
 
 
 def find_root_and_group(ds):
@@ -458,6 +499,11 @@ class BackendEntrypoint:
     - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
       ``filename_or_obj``, ``False`` otherwise. The implementation of this
       method is not mandatory.
+    - ``open_datatree`` method: it shall implement reading from file, variables
+      decoding and it returns an instance of :py:class:`~datatree.DataTree`.
+      It shall take in input at least ``filename_or_obj`` argument. The
+      implementation of this method is not mandatory.  For more details see
+      <reference to open_datatree documentation>.
 
     Attributes
     ----------
@@ -496,7 +542,7 @@ class BackendEntrypoint:
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
         """
 
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def guess_can_open(
         self,
@@ -507,6 +553,17 @@ class BackendEntrypoint:
         """
 
         return False
+
+    def open_datatree(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        **kwargs: Any,
+    ) -> DataTree:
+        """
+        Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
+        """
+
+        raise NotImplementedError()
 
 
 # mapping of engine name to (module name, BackendEntrypoint Class)
