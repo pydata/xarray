@@ -230,13 +230,16 @@ class DatasetStateMachine(RuleBasedStateMachine):
     # TODO: enable when we have serializable attrs only
     # @rule()
     # def roundtrip_zarr(self):
-    #     if not has_zarr:
-    #         return
+    #     note("> roundtrip to zarr")
+    #     from xarray.tests.test_backends import create_tmp_file, ON_WINDOWS
+    #     import xarray as xr
+    #     # if not has_zarr:
+    #     #     return
     #     expected = self.dataset
     #     with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as path:
     #         self.dataset.to_zarr(path + ".zarr")
     #         with xr.open_dataset(path + ".zarr", engine="zarr") as ds:
-    #             assert_identical(expected, ds)
+    #             xr.testing.assert_identical(expected, ds)
 
     @invariant()
     def assert_invariants(self):
