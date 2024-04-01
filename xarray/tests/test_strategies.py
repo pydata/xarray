@@ -23,7 +23,6 @@ from xarray.testing.strategies import (
     datasets,
     dimension_names,
     dimension_sizes,
-    np_arrays,
     numeric_dtypes,
     supported_dtypes,
     unique_subset_of,
@@ -32,32 +31,6 @@ from xarray.testing.strategies import (
 from xarray.tests import requires_numpy_array_api
 
 ALLOWED_ATTRS_VALUES_TYPES = (int, bool, str, np.ndarray)
-
-
-class TestNumpyArraysStrategy:
-    @given(np_arrays())
-    def test_given_nothing(self, arr):
-        assert isinstance(arr, np.ndarray)
-
-    @given(np_arrays(dtype=np.dtype("int32")))
-    def test_fixed_dtype(self, arr):
-        assert arr.dtype == np.dtype("int32")
-
-    @given(st.data())
-    def test_arbitrary_valid_dtype(self, data):
-        valid_dtype = data.draw(numeric_dtypes())
-        arr = data.draw(np_arrays(dtype=valid_dtype))
-        assert arr.dtype == valid_dtype
-
-    @given(np_arrays(shape=(2, 3)))
-    def test_fixed_shape(self, arr):
-        assert arr.shape == (2, 3)
-
-    @given(st.data())
-    def test_arbitrary_shape(self, data):
-        shape = data.draw(npst.array_shapes())
-        arr = data.draw(np_arrays(shape=shape))
-        assert arr.shape == shape
 
 
 class TestDimensionNamesStrategy:

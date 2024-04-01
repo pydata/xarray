@@ -468,7 +468,7 @@ def _alignable_variables(
     Generates dicts of names mapping to variables with compatible (i.e. alignable) dimensions and sizes.
     """
 
-    alignable_dim_sizes = draw(_unique_subset_of(dim_sizes)) if dim_sizes else {}
+    alignable_dim_sizes = draw(unique_subset_of(dim_sizes)) if dim_sizes else {}
 
     vars = variables(dims=st.just(alignable_dim_sizes))
     # TODO don't hard code max number of variables
@@ -508,12 +508,12 @@ def coordinate_variables(
         # Possibly generate 1D "dimension coordinates" - explicit possibility not to helps with shrinking
         if len(dim_names) > 0 and draw(st.booleans()):
             # first generate subset of dimension names - these set which dimension coords will be included
-            dim_coord_names_and_lengths = draw(_unique_subset_of(dim_sizes))
+            dim_coord_names_and_lengths = draw(unique_subset_of(dim_sizes))
 
             # then generate 1D variables for each name
             dim_coords = {
-                n: draw(variables(dims=st.just({n: l})))
-                for n, l in dim_coord_names_and_lengths.items()
+                n: draw(variables(dims=st.just({n: length})))
+                for n, length in dim_coord_names_and_lengths.items()
             }
             all_coords.update(dim_coords)
 
@@ -586,7 +586,7 @@ def dataarrays(
         _data = draw(data)
         dim_names = draw(dimension_names(min_dims=_data.ndim, max_dims=_data.ndim))
         dim_sizes: Mapping[Hashable, int] = {
-            n: l for n, l in zip(dim_names, _data.shape)
+            n: length for n, length in zip(dim_names, _data.shape)
         }
         coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
@@ -617,7 +617,7 @@ def dataarrays(
                     "unique dimension names. Please only pass strategies which are guaranteed to "
                     "draw compatible examples for data and dims."
                 )
-            dim_sizes = {n: l for n, l in zip(_dims, _data.shape)}
+            dim_sizes = {n: length for n, length in zip(_dims, _data.shape)}
         elif isinstance(_dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
             dim_sizes = _dims
@@ -637,7 +637,7 @@ def dataarrays(
         # nothing provided, so generate everything consistently by drawing dims to match data, and coords to match both
         _data = draw(np_arrays())
         dim_names = draw(dimension_names(min_dims=_data.ndim, max_dims=_data.ndim))
-        dim_sizes = {n: l for n, l in zip(dim_names, _data.shape)}
+        dim_sizes = {n: length for n, length in zip(dim_names, _data.shape)}
         coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
     return xr.DataArray(
