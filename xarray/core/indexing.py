@@ -566,9 +566,9 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
 
 
 BackendArray_fallback_warning_message = (
-    "The array does not support indexing using the .vindex and .oindex properties. "
+    "The array {0} does not support indexing using the .vindex and .oindex properties. "
     "The __getitem__ method is being used instead. This fallback behavior will be "
-    "removed in a future version. Please ensure that the backend array implements "
+    "removed in a future version. Please ensure that the backend array {1} implements "
     "support for the .vindex and .oindex properties to avoid potential issues."
 )
 
@@ -626,11 +626,13 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         try:
             array = apply_indexer(self.array, self.key)
-        except AttributeError as _:
+        except NotImplementedError as _:
             # If the array is not an ExplicitlyIndexedNDArrayMixin,
             # it may wrap a BackendArray subclass that doesn't implement .oindex and .vindex. so use its __getitem__
             warnings.warn(
-                BackendArray_fallback_warning_message,
+                BackendArray_fallback_warning_message.format(
+                    self.array.__class__.__name__, self.array.__class__.__name__
+                ),
                 category=DeprecationWarning,
             )
             array = self.array[self.key]
@@ -706,11 +708,13 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         try:
             array = apply_indexer(self.array, self.key)
-        except AttributeError as _:
+        except NotImplementedError as _:
             # If the array is not an ExplicitlyIndexedNDArrayMixin,
             # it may wrap a BackendArray subclass that doesn't implement .oindex and .vindex. so use its __getitem__
             warnings.warn(
-                BackendArray_fallback_warning_message,
+                BackendArray_fallback_warning_message.format(
+                    self.array.__class__.__name__, self.array.__class__.__name__
+                ),
                 category=DeprecationWarning,
             )
             array = self.array[self.key]
