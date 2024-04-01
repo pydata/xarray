@@ -63,7 +63,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
         assume(np.all(~np.isnat(var.data)) if var.dtype.kind in ["mM"] else True)
 
         (name,) = var.dims
-        note(f"setting {name}")
+        note(f"adding dimension coordinate {name}")
         # dim coord
         self.dataset[name] = var
         # non-dim coord of same size; this allows renaming
@@ -210,6 +210,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
         return options
 
     @rule(data=st.data())
+    # TODO: swap_dims is basically all broken if a multiindex is present
     # TODO: Avoid swapping from Index to a MultiIndex level
     # TODO: Avoid swapping from MultiIndex to a level of the same MultiIndex
     # TODO: Avoid swapping when a MultiIndex is present
