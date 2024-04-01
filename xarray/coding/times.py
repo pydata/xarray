@@ -446,15 +446,7 @@ def format_cftime_datetime(date) -> str:
     """Converts a cftime.datetime object to a string with the format:
     YYYY-MM-DD HH:MM:SS.UUUUUU
     """
-    return "{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.{:06d}".format(
-        date.year,
-        date.month,
-        date.day,
-        date.hour,
-        date.minute,
-        date.second,
-        date.microsecond,
-    )
+    return f"{date.year:04d}-{date.month:02d}-{date.day:02d} {date.hour:02d}:{date.minute:02d}:{date.second:02d}.{date.microsecond:06d}"
 
 
 def infer_timedelta_units(deltas) -> str:
