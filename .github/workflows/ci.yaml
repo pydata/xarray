@@ -42,25 +42,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest"]
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.12"]
+        python-version: ["3.9", "3.11", "3.12"]
         env: [""]
-        # include:
-        #   # Minimum python version:
-        #   - env: "bare-minimum"
-        #     python-version: "3.9"
-        #     os: ubuntu-latest
-        #   - env: "min-all-deps"
-        #     python-version: "3.9"
-        #     os: ubuntu-latest
-        #   # Latest python version:
-        #   - env: "all-but-dask"
-        #     python-version: "3.10"
-        #     os: ubuntu-latest
-        #   - env: "flaky"
-        #     python-version: "3.10"
-        #     os: ubuntu-latest
+        include:
+          # Minimum python version:
+          - env: "bare-minimum"
+            python-version: "3.9"
+            os: ubuntu-latest
+          - env: "min-all-deps"
+            python-version: "3.9"
+            os: ubuntu-latest
+          # Latest python version:
+          - env: "all-but-dask"
+            python-version: "3.10"
+            os: ubuntu-latest
+          - env: "flaky"
+            python-version: "3.10"
+            os: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -136,7 +136,12 @@ jobs:
           save-always: true
 
       - name: Run tests
-        run: python -m pytest
+        run: python -m pytest -n 4
+          --timeout 180
+          --cov=xarray
+          --cov-report=xml
+          --junitxml=pytest.xml
+          $PYTEST_EXTRA_FLAGS
 
       - name: Upload test results
         if: always()
