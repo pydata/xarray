@@ -450,15 +450,6 @@ New Features
   Accessible under :py:func:`testing.strategies`, and documented in a new page on testing in the User Guide.
   (:issue:`6911`, :pull:`6908`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-- Enable taking the mean of dask-backed :py:class:`cftime.datetime` arrays
-  (:pull:`6556`, :pull:`6940`).  By `Deepak Cherian
-  <https://github.com/dcherian>`_ and `Spencer Clark
-  <https://github.com/spencerkclark>`_.
-- Allow creating Xarray objects where a multidimensional variable shares its name
-  with a dimension. Examples include output from finite volume models like FVCOM.
-  (:issue:`2233`, :pull:`7989`)
-  By `Deepak Cherian <https://github.com/dcherian>`_ and `Benoit Bovy <https://github.com/benbovy>`_.
-
 - Use `opt_einsum <https://optimized-einsum.readthedocs.io/en/stable/>`_ for :py:func:`xarray.dot` by default if installed.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
 - Add ``DataArray.dt.total_seconds()`` method to match the Pandas API. (:pull:`8435`).
