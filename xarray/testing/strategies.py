@@ -34,15 +34,6 @@ __all__ = [
 ]
 
 
-# required to exclude weirder dtypes e.g. unicode, byte_string, array, or nested dtypes.
-def numeric_dtypes() -> st.SearchStrategy[np.dtype]:
-    """
-    Generates only those numpy dtypes which xarray can handle.
-
-    Requires the hypothesis package to be installed.
-    """
-
-
 class ArrayStrategyFn(Protocol[T_DuckArray]):
     def __call__(
         self,
