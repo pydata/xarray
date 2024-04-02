@@ -1165,7 +1165,7 @@ class DataArray(
         Returns
         -------
         object : DataArray
-            New object with data as in memory numpy array.
+            New object with the data and all coordinates as in-memory arrays.
 
         See Also
         --------
