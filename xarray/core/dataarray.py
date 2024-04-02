@@ -1125,6 +1125,7 @@ class DataArray(
     def load(self, **kwargs) -> Self:
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return this array.
+
         Unlike compute, the original dataset is modified and returned.
 
         Normally, it should not be necessary to call this method in user code,
