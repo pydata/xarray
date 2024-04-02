@@ -211,7 +211,11 @@ def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
     --------
     :ref:`testing.hypothesis`_
     """
-    return st.dictionaries(_attr_keys, _attr_values)
+    return st.recursive(
+        st.dictionaries(_attr_keys, _attr_values),
+        lambda children: st.dictionaries(_attr_keys, children),
+        max_leaves=3,
+    )
 
 
 @st.composite
