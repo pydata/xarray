@@ -1008,7 +1008,7 @@ class Dataset(
         Returns
         -------
         object : Dataset
-            New object with data as numpy arrays in memory.
+            New object with lazy data variables and coordinates as in-memory arrays.
 
         See Also
         --------
@@ -1052,7 +1052,7 @@ class Dataset(
         Returns
         -------
         object : Dataset
-            New object with data as persisted dask arrays.
+            New object with all dask-backed coordinates and data variables as persisted dask arrays.
 
         See Also
         --------

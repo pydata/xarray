@@ -1150,8 +1150,9 @@ class DataArray(
 
     def compute(self, **kwargs) -> Self:
         """Manually trigger loading of this array's data from disk or a
-        remote source into memory and return a new array. Unlike load, the original is
-        left unaltered.
+        remote source into memory and return a new array.
+        
+        Unlike load, the original is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -1191,7 +1192,7 @@ class DataArray(
         Returns
         -------
         object : DataArray
-            New object with data as persisted dask array.
+            New object with dask-backed data and coordinates as persisted dask arrays.
 
         See Also
         --------
