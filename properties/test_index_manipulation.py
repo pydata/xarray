@@ -15,6 +15,7 @@ import hypothesis.strategies as st
 from hypothesis import note, settings
 from hypothesis.stateful import (
     RuleBasedStateMachine,
+    initialize,
     invariant,
     precondition,
     rule,
@@ -50,6 +51,14 @@ index_variables = st.builds(
 )
 
 
+def add_dim_coord_and_data_var(ds, var):
+    (name,) = var.dims
+    # dim coord
+    ds[name] = var
+    # non-dim coord of same size; this allows renaming
+    ds[name + "_"] = var
+
+
 class DatasetStateMachine(RuleBasedStateMachine):
     # Can't use bundles because we'd need pre-conditions on consumes(bundle)
     # indexed_dims = Bundle("indexed_dims")
@@ -65,15 +74,20 @@ class DatasetStateMachine(RuleBasedStateMachine):
         self.indexed_dims = []
         self.multi_indexed_dims = []
 
+    @initialize(var=index_variables)
+    def init_ds(self, var):
+        """Initialize the Dataset so that at least one rule will always fire."""
+        (name,) = var.dims
+        add_dim_coord_and_data_var(self.dataset, var)
+
+        self.indexed_dims.append(name)
+
     # TODO: stacking with a timedelta64 index and unstacking converts it to object
     @rule(var=index_variables)
     def add_dim_coord(self, var):
         (name,) = var.dims
         note(f"adding dimension coordinate {name}")
-        # dim coord
-        self.dataset[name] = var
-        # non-dim coord of same size; this allows renaming
-        self.dataset[name + "_"] = var
+        add_dim_coord_and_data_var(self.dataset, var)
 
         self.indexed_dims.append(name)
 
