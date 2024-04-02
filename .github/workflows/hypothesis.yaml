@@ -58,11 +58,11 @@ jobs:
       - name: Setup micromamba
         uses: mamba-org/setup-micromamba@v1
         with:
-          environment-file: ${{env.CONDA_ENV_FILE}}
+          environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests
           create-args: >-
             python=${{env.PYTHON_VERSION}}
-            conda
+            pytest-reportlog
           cache-environment: true
           cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
 
