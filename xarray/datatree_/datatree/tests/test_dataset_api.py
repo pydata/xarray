@@ -1,7 +1,7 @@
 import numpy as np
 import xarray as xr
 
-from xarray.datatree_.datatree import DataTree
+from xarray.core.datatree import DataTree
 from xarray.datatree_.datatree.testing import assert_equal
 
 

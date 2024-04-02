@@ -159,7 +159,9 @@ def _infer_coords_and_dims(
                 dims = list(coords.keys())
             else:
                 for n, (dim, coord) in enumerate(zip(dims, coords)):
-                    coord = as_variable(coord, name=dims[n]).to_index_variable()
+                    coord = as_variable(
+                        coord, name=dims[n], auto_convert=False
+                    ).to_index_variable()
                     dims[n] = coord.name
     dims_tuple = tuple(dims)
     if len(dims_tuple) != len(shape):
@@ -179,10 +181,12 @@ def _infer_coords_and_dims(
         new_coords = {}
         if utils.is_dict_like(coords):
             for k, v in coords.items():
-                new_coords[k] = as_variable(v, name=k)
+                new_coords[k] = as_variable(v, name=k, auto_convert=False)
+                if new_coords[k].dims == (k,):
+                    new_coords[k] = new_coords[k].to_index_variable()
         elif coords is not None:
             for dim, coord in zip(dims_tuple, coords):
-                var = as_variable(coord, name=dim)
+                var = as_variable(coord, name=dim, auto_convert=False)
                 var.dims = (dim,)
                 new_coords[dim] = var.to_index_variable()
 
@@ -204,11 +208,17 @@ def _check_data_shape(
                 return data
             else:
                 data_shape = tuple(
-                    as_variable(coords[k], k).size if k in coords.keys() else 1
+                    (
+                        as_variable(coords[k], k, auto_convert=False).size
+                        if k in coords.keys()
+                        else 1
+                    )
                     for k in dims
                 )
         else:
-            data_shape = tuple(as_variable(coord, "foo").size for coord in coords)
+            data_shape = tuple(
+                as_variable(coord, "foo", auto_convert=False).size for coord in coords
+            )
         data = np.full(data_shape, data)
     return data
 
@@ -761,11 +771,15 @@ class DataArray(
     @property
     def values(self) -> np.ndarray:
         """
-        The array's data as a numpy.ndarray.
+        The array's data converted to numpy.ndarray.
 
-        If the array's data is not a numpy.ndarray this will attempt to convert
-        it naively using np.array(), which will raise an error if the array
-        type does not support coercion like this (e.g. cupy).
+        This will attempt to convert the array naively using np.array(),
+        which will raise an error if the array type does not support
+        coercion like this (e.g. cupy).
+
+        Note that this array is not copied; operations on it follow
+        numpy's rules of what generates a view vs. a copy, and changes
+        to this array may be reflected in the DataArray as well.
         """
         return self.variable.values
 
@@ -4106,7 +4120,7 @@ class DataArray(
         compute: Literal[True] = True,
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
-        region: Mapping[str, slice] | None = None,
+        region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
@@ -4126,7 +4140,7 @@ class DataArray(
         compute: Literal[False],
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
-        region: Mapping[str, slice] | None = None,
+        region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
@@ -4144,7 +4158,7 @@ class DataArray(
         compute: bool = True,
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
-        region: Mapping[str, slice] | None = None,
+        region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
@@ -4223,6 +4237,12 @@ class DataArray(
               in with ``region``, use a separate call to ``to_zarr()`` with
               ``compute=False``. See "Appending to existing Zarr stores" in
               the reference documentation for full details.
+
+            Users are expected to ensure that the specified region aligns with
+            Zarr chunk boundaries, and that dask chunks are also aligned.
+            Xarray makes limited checks that these multiple chunk boundaries line up.
+            It is possible to write incomplete chunks and corrupt the data with this
+            option if you are not careful.
         safe_chunks : bool, default: True
             If True, only allow writes to when there is a many-to-one relationship
             between Zarr chunks (specified in encoding) and Dask chunks.
