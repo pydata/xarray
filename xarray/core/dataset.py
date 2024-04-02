@@ -1005,6 +1005,11 @@ class Dataset(
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
 
+        Returns
+        -------
+        object : Dataset
+            New object with data as numpy arrays in memory.
+
         See Also
         --------
         dask.compute
@@ -1037,11 +1042,17 @@ class Dataset(
         operation keeps the data as dask arrays. This is particularly useful
         when using the dask.distributed scheduler and you want to load a large
         amount of data into distributed memory.
+        Unlike load but like compute, the original dataset is left unaltered.
 
         Parameters
         ----------
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.persist``.
+
+        Returns
+        -------
+        object : Dataset
+            New object with data as persisted dask arrays.
 
         See Also
         --------

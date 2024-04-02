@@ -1148,7 +1148,7 @@ class DataArray(
 
     def compute(self, **kwargs) -> Self:
         """Manually trigger loading of this array's data from disk or a
-        remote source into memory and return a new array. The original is
+        remote source into memory and return a new array. Unlike load, the original is
         left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
@@ -1160,6 +1160,11 @@ class DataArray(
         ----------
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
+
+        Returns
+        -------
+        object : DataArray
+            New object with data as in memory numpy array.
 
         See Also
         --------
@@ -1174,11 +1179,17 @@ class DataArray(
         This keeps them as dask arrays but encourages them to keep data in
         memory.  This is particularly useful when on a distributed machine.
         When on a single machine consider using ``.compute()`` instead.
+        Unlike load but like compute, the original dataset is left unaltered.
 
         Parameters
         ----------
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.persist``.
+
+        Returns
+        -------
+        object : DataArray
+            New object with data as persisted dask array.
 
         See Also
         --------
