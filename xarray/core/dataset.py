@@ -1042,7 +1042,7 @@ class Dataset(
         operation keeps the data as dask arrays. This is particularly useful
         when using the dask.distributed scheduler and you want to load a large
         amount of data into distributed memory.
-        Unlike load but like compute, the original dataset is left unaltered.
+        Like compute (but unlike load), the original dataset is left unaltered.
 
         Parameters
         ----------

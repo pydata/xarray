@@ -1182,7 +1182,7 @@ class DataArray(
         This keeps them as dask arrays but encourages them to keep data in
         memory.  This is particularly useful when on a distributed machine.
         When on a single machine consider using ``.compute()`` instead.
-        Unlike load but like compute, the original dataset is left unaltered.
+        Like compute (but unlike load), the original dataset is left unaltered.
 
         Parameters
         ----------
