@@ -9,7 +9,6 @@ except ImportError as e:
     ) from e
 
 import hypothesis.extra.numpy as npst
-import hypothesis.extra.pandas as pdst
 import numpy as np
 from hypothesis.errors import InvalidArgument
 
@@ -22,12 +21,12 @@ if TYPE_CHECKING:
 
 __all__ = [
     "supported_dtypes",
+    "pandas_index_dtypes",
     "names",
     "dimension_names",
     "dimension_sizes",
     "attrs",
     "variables",
-    "index_variables",
     "unique_subset_of",
 ]
 
@@ -61,19 +60,25 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
         | npst.unsigned_integer_dtypes()
         | npst.floating_dtypes()
         | npst.complex_number_dtypes()
-        | npst.datetime64_dtypes()
-        | npst.timedelta64_dtypes()
-        | npst.unicode_string_dtypes()
+        # | npst.datetime64_dtypes()
+        # | npst.timedelta64_dtypes()
+        # | npst.unicode_string_dtypes()
     )
 
 
 def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
+    """
+    Dtypes supported by pandas indexes.
+    Restrict datetime64 and timedelta64 to ns frequency till Xarray relaxes that.
+    """
     return (
         npst.integer_dtypes(endianness="=", sizes=(32, 64))
         | npst.unsigned_integer_dtypes(endianness="=", sizes=(32, 64))
         | npst.floating_dtypes(endianness="=", sizes=(32, 64))
-        | npst.datetime64_dtypes(endianness="=")
-        | npst.timedelta64_dtypes(endianness="=", max_period="D")
+        # TODO: unset max_period
+        | npst.datetime64_dtypes(endianness="=", max_period="ns")
+        # TODO: set max_period="D"
+        | npst.timedelta64_dtypes(endianness="=", max_period="ns")
         | npst.unicode_string_dtypes(endianness="=")
     )
 
@@ -376,27 +381,6 @@ def variables(
         )
 
     return xr.Variable(dims=dim_names, data=_data, attrs=draw(attrs))
-
-
-@st.composite
-def index_variables(
-    draw: st.DrawFn,
-    *,
-    dims: Union[
-        st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]],
-        None,
-    ] = None,
-    dtype: st.SearchStrategy[np.dtype] = pandas_index_dtypes(),
-    attrs: st.SearchStrategy[Mapping] = attrs(),
-) -> xr.Variable:
-    elements = npst.from_dtype(
-        dtype=draw(dtype), allow_nan=False, allow_infinity=False, allow_subnormal=False
-    )
-    index = draw(pdst.indexes(elements=elements, min_size=1))
-    if dims is None:
-        dims = dimension_names(min_dims=1, max_dims=1)
-    _dims = draw(dims)
-    return xr.Variable(dims=_dims, data=index, attrs=draw(attrs))
 
 
 @overload

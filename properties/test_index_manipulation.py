@@ -3,12 +3,14 @@ import itertools
 import numpy as np
 import pytest
 
+import xarray as xr
 from xarray import Dataset
 from xarray.testing import _assert_internal_invariants
 
 pytest.importorskip("hypothesis")
 pytestmark = pytest.mark.slow_hypothesis
 
+import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 from hypothesis import note, settings
 from hypothesis.stateful import (
@@ -35,6 +37,17 @@ def unique(draw, strategy):
 # or stack to a dimension with a name that already exists in the Dataset.
 UNIQUE_NAME = unique(strategy=xrst.names())
 DIM_NAME = xrst.dimension_names(name_strategy=UNIQUE_NAME, min_dims=1, max_dims=1)
+index_variables = st.builds(
+    xr.Variable,
+    data=npst.arrays(
+        dtype=xrst.pandas_index_dtypes(),
+        shape=npst.array_shapes(min_dims=1, max_dims=1),
+        elements=dict(allow_nan=False, allow_infinity=False, allow_subnormal=False),
+        unique=True,
+    ),
+    dims=DIM_NAME,
+    attrs=xrst.attrs(),
+)
 
 
 class DatasetStateMachine(RuleBasedStateMachine):
@@ -53,7 +66,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
         self.multi_indexed_dims = []
 
     # TODO: stacking with a timedelta64 index and unstacking converts it to object
-    @rule(var=xrst.index_variables(dims=DIM_NAME, dtype=xrst.pandas_index_dtypes()))
+    @rule(var=index_variables)
     def add_dim_coord(self, var):
         (name,) = var.dims
         note(f"adding dimension coordinate {name}")
@@ -64,7 +77,7 @@ class DatasetStateMachine(RuleBasedStateMachine):
 
         self.indexed_dims.append(name)
 
-    @rule(var=xrst.index_variables(dims=DIM_NAME))
+    @rule(var=index_variables)
     def assign_coords(self, var):
         (name,) = var.dims
         note(f"assign_coords: {name}")
