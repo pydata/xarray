@@ -404,6 +404,7 @@ def open_dataset(
     concat_characters: bool | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
+    keep_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -495,6 +496,10 @@ def open_dataset(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    keep_variables: str or iterable of str, optional
+        A variable or list of variables to load from the dataset. This is
+        useful if you don't need all the variables in the file and don't
+        want to spend time loading them. Default is to load all variables.
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -573,6 +578,7 @@ def open_dataset(
     backend_ds = backend.open_dataset(
         filename_or_obj,
         drop_variables=drop_variables,
+        keep_variables=keep_variables,
         **decoders,
         **kwargs,
     )
@@ -587,6 +593,7 @@ def open_dataset(
         chunked_array_type,
         from_array_kwargs,
         drop_variables=drop_variables,
+        keep_variables=keep_variables,
         **decoders,
         **kwargs,
     )
@@ -607,6 +614,7 @@ def open_dataarray(
     concat_characters: bool | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
+    keep_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -700,6 +708,10 @@ def open_dataarray(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    keep_variables: str or iterable of str, optional
+        A variable or list of variables to load from the dataset. This is
+        useful if you don't need all the variables in the file and don't
+        want to spend time loading them. Default is to load all variables.
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -757,6 +769,7 @@ def open_dataarray(
         chunks=chunks,
         cache=cache,
         drop_variables=drop_variables,
+        keep_variables=keep_variables,
         inline_array=inline_array,
         chunked_array_type=chunked_array_type,
         from_array_kwargs=from_array_kwargs,
