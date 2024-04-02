@@ -566,9 +566,9 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
 
 
 BackendArray_fallback_warning_message = (
-    "The array {0} does not support indexing using the .vindex and .oindex properties. "
+    "The array `{0}` does not support indexing using the .vindex and .oindex properties. "
     "The __getitem__ method is being used instead. This fallback behavior will be "
-    "removed in a future version. Please ensure that the backend array {1} implements "
+    "removed in a future version. Please ensure that the backend array `{1}` implements "
     "support for the .vindex and .oindex properties to avoid potential issues."
 )
 
@@ -634,6 +634,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
                     self.array.__class__.__name__, self.array.__class__.__name__
                 ),
                 category=DeprecationWarning,
+                stacklevel=2,
             )
             array = self.array[self.key]
 
@@ -716,6 +717,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
                     self.array.__class__.__name__, self.array.__class__.__name__
                 ),
                 category=DeprecationWarning,
+                stacklevel=2,
             )
             array = self.array[self.key]
 

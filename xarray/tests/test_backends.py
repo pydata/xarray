@@ -5828,3 +5828,49 @@ def test_zarr_region_chunk_partial_offset(tmp_path):
     # This write is unsafe, and should raise an error, but does not.
     # with pytest.raises(ValueError):
     #     da.isel(x=slice(5, 25)).chunk(x=(10, 10)).to_zarr(store, region="auto")
+
+
+def test_backend_array_deprecation_warning(capsys):
+    class CustomBackendArray(xr.backends.common.BackendArray):
+        def __init__(self):
+            array = self.get_array()
+            self.shape = array.shape
+            self.dtype = array.dtype
+
+        def get_array(self):
+            return np.arange(10)
+
+        def __getitem__(self, key):
+            return xr.core.indexing.explicit_indexing_adapter(
+                key, self.shape, xr.core.indexing.IndexingSupport.BASIC, self._getitem
+            )
+
+        def _getitem(self, key):
+            array = self.get_array()
+            return array[key]
+
+    cba = CustomBackendArray()
+    indexer = xr.core.indexing.VectorizedIndexer(key=(np.array([0]),))
+
+    la = xr.core.indexing.LazilyIndexedArray(cba, indexer)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        la.vindex[indexer].get_duck_array()
+
+    captured = capsys.readouterr()
+    assert len(w) == 1
+    assert issubclass(w[-1].category, DeprecationWarning)
+    assert (
+        "The array `CustomBackendArray` does not support indexing using the .vindex and .oindex properties."
+        in str(w[-1].message)
+    )
+    assert "The __getitem__ method is being used instead." in str(w[-1].message)
+    assert "This fallback behavior will be removed in a future version." in str(
+        w[-1].message
+    )
+    assert (
+        "Please ensure that the backend array `CustomBackendArray` implements support for the .vindex and .oindex properties to avoid potential issues."
+        in str(w[-1].message)
+    )
+    assert captured.out == ""
