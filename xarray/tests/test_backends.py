@@ -2818,11 +2818,15 @@ class ZarrBase(CFEncodedBase):
     def test_write_region_errors(self) -> None:
         data = Dataset({"u": (("x",), np.arange(5))})
         data2 = Dataset({"u": (("x",), np.array([10, 11]))})
+        data3 = Dataset(
+            {"u": (("x",), np.array([10, 11])), "v": (("y",), np.arange(3))},
+            coords={"y": ("y", [1, 2, 3])},
+        )
 
         @contextlib.contextmanager
         def setup_and_verify_store(expected=data):
             with self.create_zarr_target() as store:
-                data.to_zarr(store, **self.version_kwargs)
+                expected.to_zarr(store, **self.version_kwargs)
                 yield store
                 with self.open(store) as actual:
                     assert_identical(actual, expected)
@@ -2890,6 +2894,20 @@ class ZarrBase(CFEncodedBase):
                 match=r"variable 'u' already exists with different dimension sizes",
             ):
                 data2.to_zarr(store, region={"x": slice(3)}, **self.version_kwargs)
+
+        # region writes should ignore indexes that don't overlap the region
+        expected3 = Dataset(
+            {"u": (("x",), np.array([10, 11, 2, 3, 4]))}, coords={"y": ("y", [1, 2, 3])}
+        )
+        with setup_and_verify_store(expected3) as store:
+            data3.drop_vars("v").to_zarr(
+                store, region={"x": slice(2)}, **self.version_kwargs
+            )
+
+        # but fail on data vars that don't overlap the region
+        with setup_and_verify_store() as store:
+            with pytest.raises(ValueError, match=r"when setting `region` explicitly"):
+                data3.to_zarr(store, region={"x": slice(2)}, **self.version_kwargs)
 
     @requires_dask
     def test_encoding_chunksizes(self) -> None:

@@ -1562,7 +1562,9 @@ def _auto_detect_regions(ds, region, open_kwargs):
     return region
 
 
-def _validate_and_autodetect_region(ds, region, mode, open_kwargs) -> dict[str, slice]:
+def _validate_and_autodetect_region(
+    ds, region, mode, open_kwargs
+) -> tuple[dict[str, slice], Dataset]:
     if region == "auto":
         region = {dim: "auto" for dim in ds.dims}
 
@@ -1592,7 +1594,10 @@ def _validate_and_autodetect_region(ds, region, mode, open_kwargs) -> dict[str, 
                 "step on all slices in ``region`` must be 1 or None, got "
                 f"region={region}"
             )
+    # Need to initially keep indexes for auto-detecting regions, then safe to drop
+    ds = ds.drop_vars(ds.indexes)
 
+    # Raise for any non-index variables not corresponding to the region write
     non_matching_vars = [
         k for k, v in ds.variables.items() if not set(region).intersection(v.dims)
     ]
@@ -1607,7 +1612,7 @@ def _validate_and_autodetect_region(ds, region, mode, open_kwargs) -> dict[str, 
             f".drop_vars({non_matching_vars!r})"
         )
 
-    return region
+    return region, ds
 
 
 def _validate_datatypes_for_zarr_append(zstore, dataset):
@@ -1779,9 +1784,10 @@ def to_zarr(
             storage_options=storage_options,
             zarr_version=zarr_version,
         )
-        region = _validate_and_autodetect_region(dataset, region, mode, open_kwargs)
-        # can't modify indexed with region writes
-        dataset = dataset.drop_vars(dataset.indexes)
+        region, dataset = _validate_and_autodetect_region(
+            dataset, region, mode, open_kwargs
+        )
+
         if append_dim is not None and append_dim in region:
             raise ValueError(
                 f"cannot list the same dimension in both ``append_dim`` and "
