@@ -108,7 +108,7 @@ def names() -> st.SearchStrategy[str]:
 
 def dimension_names(
     *,
-    name_strategy=None,
+    name_strategy=names(),
     min_dims: int = 0,
     max_dims: int = 3,
 ) -> st.SearchStrategy[list[Hashable]]:
@@ -127,10 +127,8 @@ def dimension_names(
         Maximum number of dimensions in generated list.
     """
 
-    elements = names() if name_strategy is None else name_strategy
-
     return st.lists(
-        elements=elements,
+        elements=name_strategy,
         min_size=min_dims,
         max_size=max_dims,
         unique=True,
