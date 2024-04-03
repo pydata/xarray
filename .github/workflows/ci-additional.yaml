@@ -35,14 +35,13 @@ jobs:
     runs-on: "ubuntu-latest"
     needs: detect-ci-trigger
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
+
     defaults:
       run:
         shell: bash -l {0}
-
     env:
       CONDA_ENV_FILE: ci/requirements/environment.yml
       PYTHON_VERSION: "3.11"
-
     steps:
       - uses: actions/checkout@v4
         with:
