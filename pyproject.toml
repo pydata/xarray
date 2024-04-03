@@ -172,7 +172,6 @@ module = [
   "xarray.tests.test_dask",
   "xarray.tests.test_dataarray",
   "xarray.tests.test_duck_array_ops",
-  "xarray.tests.test_groupby",
   "xarray.tests.test_indexing",
   "xarray.tests.test_merge",
   "xarray.tests.test_missing",

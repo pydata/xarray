@@ -1848,9 +1848,10 @@ def imshow(
         # missing data transparent.  We therefore add an alpha channel if
         # there isn't one, and set it to transparent where data is masked.
         if z.shape[-1] == 3:
-            alpha = np.ma.ones(z.shape[:2] + (1,), dtype=z.dtype)
+            safe_dtype = np.promote_types(z.dtype, np.uint8)
+            alpha = np.ma.ones(z.shape[:2] + (1,), dtype=safe_dtype)
             if np.issubdtype(z.dtype, np.integer):
-                alpha *= 255
+                alpha[:] = 255
             z = np.ma.concatenate((z, alpha), axis=2)
         else:
             z = z.copy()
