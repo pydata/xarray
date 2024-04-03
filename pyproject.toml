@@ -294,6 +294,7 @@ markers = [
   "flaky: flaky tests",
   "network: tests requiring a network connection",
   "slow: slow tests",
+  "slow_hypothesis: slow hypothesis tests",
 ]
 minversion = "7"
 python_files = "test_*.py"
