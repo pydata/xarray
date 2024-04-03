@@ -716,7 +716,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
                 BackendArray_fallback_warning_message.format(
                     self.array.__class__.__name__, self.array.__class__.__name__
                 ),
-                category=DeprecationWarning,
+                category=PendingDeprecationWarning,
                 stacklevel=2,
             )
             array = self.array[self.key]
