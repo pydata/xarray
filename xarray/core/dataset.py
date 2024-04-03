@@ -1005,6 +1005,11 @@ class Dataset(
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
 
+        Returns
+        -------
+        object : Dataset
+            New object with lazy data variables and coordinates as in-memory arrays.
+
         See Also
         --------
         dask.compute
@@ -1037,11 +1042,17 @@ class Dataset(
         operation keeps the data as dask arrays. This is particularly useful
         when using the dask.distributed scheduler and you want to load a large
         amount of data into distributed memory.
+        Like compute (but unlike load), the original dataset is left unaltered.
 
         Parameters
         ----------
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.persist``.
+
+        Returns
+        -------
+        object : Dataset
+            New object with all dask-backed coordinates and data variables as persisted dask arrays.
 
         See Also
         --------
@@ -2452,6 +2463,12 @@ class Dataset(
               in with ``region``, use a separate call to ``to_zarr()`` with
               ``compute=False``. See "Appending to existing Zarr stores" in
               the reference documentation for full details.
+
+            Users are expected to ensure that the specified region aligns with
+            Zarr chunk boundaries, and that dask chunks are also aligned.
+            Xarray makes limited checks that these multiple chunk boundaries line up.
+            It is possible to write incomplete chunks and corrupt the data with this
+            option if you are not careful.
         safe_chunks : bool, default: True
             If True, only allow writes to when there is a many-to-one relationship
             between Zarr chunks (specified in encoding) and Dask chunks.

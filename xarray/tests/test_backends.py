@@ -13,12 +13,12 @@ import sys
 import tempfile
 import uuid
 import warnings
-from collections.abc import Generator, Iterator
+from collections.abc import Generator, Iterator, Mapping
 from contextlib import ExitStack
 from io import BytesIO
 from os import listdir
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 from unittest.mock import patch
 
 import numpy as np
@@ -2261,7 +2261,6 @@ class ZarrBase(CFEncodedBase):
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
         with self.roundtrip(original, open_kwargs={"chunks": {}}) as actual:
             for k, v in actual.data_vars.items():
-                print(k)
                 assert v.chunks == actual[k].chunks
 
     def test_chunk_encoding(self) -> None:
@@ -2305,7 +2304,7 @@ class ZarrBase(CFEncodedBase):
         # should fail if encoding["chunks"] clashes with dask_chunks
         badenc = ds.chunk({"x": 4})
         badenc.var1.encoding["chunks"] = (6,)
-        with pytest.raises(NotImplementedError, match=r"named 'var1' would overlap"):
+        with pytest.raises(ValueError, match=r"named 'var1' would overlap"):
             with self.roundtrip(badenc) as actual:
                 pass
 
@@ -2343,9 +2342,7 @@ class ZarrBase(CFEncodedBase):
         # but itermediate unaligned chunks are bad
         badenc = ds.chunk({"x": (3, 5, 3, 1)})
         badenc.var1.encoding["chunks"] = (3,)
-        with pytest.raises(
-            NotImplementedError, match=r"would overlap multiple dask chunks"
-        ):
+        with pytest.raises(ValueError, match=r"would overlap multiple dask chunks"):
             with self.roundtrip(badenc) as actual:
                 pass
 
@@ -2359,7 +2356,7 @@ class ZarrBase(CFEncodedBase):
         # TODO: remove this failure once synchronized overlapping writes are
         # supported by xarray
         ds_chunk4["var1"].encoding.update({"chunks": 5})
-        with pytest.raises(NotImplementedError, match=r"named 'var1' would overlap"):
+        with pytest.raises(ValueError, match=r"named 'var1' would overlap"):
             with self.roundtrip(ds_chunk4) as actual:
                 pass
         # override option
@@ -2467,6 +2464,27 @@ class ZarrBase(CFEncodedBase):
             original, save_kwargs={"group": group}, open_kwargs={"group": group}
         ) as actual:
             assert_identical(original, actual)
+
+    def test_zarr_mode_w_overwrites_encoding(self) -> None:
+        import zarr
+
+        data = Dataset({"foo": ("x", [1.0, 1.0, 1.0])})
+        with self.create_zarr_target() as store:
+            data.to_zarr(
+                store, **self.version_kwargs, encoding={"foo": {"add_offset": 1}}
+            )
+            np.testing.assert_equal(
+                zarr.open_group(store, **self.version_kwargs)["foo"], data.foo.data - 1
+            )
+            data.to_zarr(
+                store,
+                **self.version_kwargs,
+                encoding={"foo": {"add_offset": 0}},
+                mode="w",
+            )
+            np.testing.assert_equal(
+                zarr.open_group(store, **self.version_kwargs)["foo"], data.foo.data
+            )
 
     def test_encoding_kwarg_fixed_width_string(self) -> None:
         # not relevant for zarr, since we don't use EncodedStringCoder
@@ -5651,24 +5669,27 @@ class TestZarrRegionAuto:
             }
         )
 
-        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+        region_slice = dict(x=slice(2, 4), y=slice(6, 8))
+        ds_region = 1 + ds.isel(region_slice)
 
         ds.to_zarr(tmp_path / "test.zarr")
 
-        with patch.object(
-            ZarrStore,
-            "set_variables",
-            side_effect=ZarrStore.set_variables,
-            autospec=True,
-        ) as mock:
-            ds_region.to_zarr(tmp_path / "test.zarr", region="auto", mode="r+")
+        region: Mapping[str, slice] | Literal["auto"]
+        for region in [region_slice, "auto"]:  # type: ignore
+            with patch.object(
+                ZarrStore,
+                "set_variables",
+                side_effect=ZarrStore.set_variables,
+                autospec=True,
+            ) as mock:
+                ds_region.to_zarr(tmp_path / "test.zarr", region=region, mode="r+")
 
-            # should write the data vars but never the index vars with auto mode
-            for call in mock.call_args_list:
-                written_variables = call.args[1].keys()
-                assert "test" in written_variables
-                assert "x" not in written_variables
-                assert "y" not in written_variables
+                # should write the data vars but never the index vars with auto mode
+                for call in mock.call_args_list:
+                    written_variables = call.args[1].keys()
+                    assert "test" in written_variables
+                    assert "x" not in written_variables
+                    assert "y" not in written_variables
 
     def test_zarr_region_append(self, tmp_path):
         x = np.arange(0, 50, 10)
@@ -5730,3 +5751,80 @@ def test_zarr_region(tmp_path):
 
     # Write without region
     ds_transposed.to_zarr(tmp_path / "test.zarr", mode="r+")
+
+
+@requires_zarr
+@requires_dask
+def test_zarr_region_chunk_partial(tmp_path):
+    """
+    Check that writing to partial chunks with `region` fails, assuming `safe_chunks=False`.
+    """
+    ds = (
+        xr.DataArray(np.arange(120).reshape(4, 3, -1), dims=list("abc"))
+        .rename("var1")
+        .to_dataset()
+    )
+
+    ds.chunk(5).to_zarr(tmp_path / "foo.zarr", compute=False, mode="w")
+    with pytest.raises(ValueError):
+        for r in range(ds.sizes["a"]):
+            ds.chunk(3).isel(a=[r]).to_zarr(
+                tmp_path / "foo.zarr", region=dict(a=slice(r, r + 1))
+            )
+
+
+@requires_zarr
+@requires_dask
+def test_zarr_append_chunk_partial(tmp_path):
+    t_coords = np.array([np.datetime64("2020-01-01").astype("datetime64[ns]")])
+    data = np.ones((10, 10))
+
+    da = xr.DataArray(
+        data.reshape((-1, 10, 10)),
+        dims=["time", "x", "y"],
+        coords={"time": t_coords},
+        name="foo",
+    )
+    da.to_zarr(tmp_path / "foo.zarr", mode="w", encoding={"foo": {"chunks": (5, 5, 1)}})
+
+    new_time = np.array([np.datetime64("2021-01-01").astype("datetime64[ns]")])
+
+    da2 = xr.DataArray(
+        data.reshape((-1, 10, 10)),
+        dims=["time", "x", "y"],
+        coords={"time": new_time},
+        name="foo",
+    )
+    with pytest.raises(ValueError, match="encoding was provided"):
+        da2.to_zarr(
+            tmp_path / "foo.zarr",
+            append_dim="time",
+            mode="a",
+            encoding={"foo": {"chunks": (1, 1, 1)}},
+        )
+
+    # chunking with dask sidesteps the encoding check, so we need a different check
+    with pytest.raises(ValueError, match="Specified zarr chunks"):
+        da2.chunk({"x": 1, "y": 1, "time": 1}).to_zarr(
+            tmp_path / "foo.zarr", append_dim="time", mode="a"
+        )
+
+
+@requires_zarr
+@requires_dask
+def test_zarr_region_chunk_partial_offset(tmp_path):
+    # https://github.com/pydata/xarray/pull/8459#issuecomment-1819417545
+    store = tmp_path / "foo.zarr"
+    data = np.ones((30,))
+    da = xr.DataArray(data, dims=["x"], coords={"x": range(30)}, name="foo").chunk(x=10)
+    da.to_zarr(store, compute=False)
+
+    da.isel(x=slice(10)).chunk(x=(10,)).to_zarr(store, region="auto")
+
+    da.isel(x=slice(5, 25)).chunk(x=(10, 10)).to_zarr(
+        store, safe_chunks=False, region="auto"
+    )
+
+    # This write is unsafe, and should raise an error, but does not.
+    # with pytest.raises(ValueError):
+    #     da.isel(x=slice(5, 25)).chunk(x=(10, 10)).to_zarr(store, region="auto")
