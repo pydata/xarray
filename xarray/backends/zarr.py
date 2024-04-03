@@ -84,15 +84,6 @@ class ZarrArrayWrapper(BackendArray):
     def get_array(self):
         return self._array
 
-    def _oindex(self, key):
-        return self._array.oindex[key]
-
-    def _vindex(self, key):
-        return self._array.vindex[key]
-
-    def _getitem(self, key):
-        return self._array[key]
-
     def _oindex_get(self, key: indexing.OuterIndexer):
         def raw_indexing_method(key):
             return self._array.oindex[key]

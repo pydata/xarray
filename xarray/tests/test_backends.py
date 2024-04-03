@@ -5860,7 +5860,7 @@ def test_backend_array_deprecation_warning(capsys):
 
     captured = capsys.readouterr()
     assert len(w) == 1
-    assert issubclass(w[-1].category, DeprecationWarning)
+    assert issubclass(w[-1].category, PendingDeprecationWarning)
     assert (
         "The array `CustomBackendArray` does not support indexing using the .vindex and .oindex properties."
         in str(w[-1].message)
