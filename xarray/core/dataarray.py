@@ -1126,6 +1126,8 @@ class DataArray(
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return this array.
 
+        Unlike compute, the original dataset is modified and returned.
+
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
         load data automatically. However, this method can be necessary when
@@ -1148,8 +1150,9 @@ class DataArray(
 
     def compute(self, **kwargs) -> Self:
         """Manually trigger loading of this array's data from disk or a
-        remote source into memory and return a new array. The original is
-        left unaltered.
+        remote source into memory and return a new array.
+
+        Unlike load, the original is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -1160,6 +1163,11 @@ class DataArray(
         ----------
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
+
+        Returns
+        -------
+        object : DataArray
+            New object with the data and all coordinates as in-memory arrays.
 
         See Also
         --------
@@ -1174,11 +1182,17 @@ class DataArray(
         This keeps them as dask arrays but encourages them to keep data in
         memory.  This is particularly useful when on a distributed machine.
         When on a single machine consider using ``.compute()`` instead.
+        Like compute (but unlike load), the original dataset is left unaltered.
 
         Parameters
         ----------
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.persist``.
+
+        Returns
+        -------
+        object : DataArray
+            New object with all dask-backed data and coordinates as persisted dask arrays.
 
         See Also
         --------
