@@ -1153,6 +1153,7 @@ class PandasMultiIndex(PandasIndex):
                 attrs=attrs,
                 encoding=encoding,
                 fastpath=True,
+                name=name,
             )
 
         return index_vars
