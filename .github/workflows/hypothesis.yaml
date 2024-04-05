@@ -83,7 +83,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .hypothesis/
-          key: cache-hypothesis-${{ runner.os }}
+          key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
             cache-hypothesis-
 
