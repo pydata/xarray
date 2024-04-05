@@ -76,19 +76,33 @@ jobs:
           conda info -a
           conda list
           python xarray/util/print_versions.py
+
+      # https://github.com/actions/cache/blob/main/tips-and-workarounds.md#update-a-cache
       - name: Restore cached hypothesis directory
-        uses: actions/cache@v4
+        id: restore-hypothesis-cache
+        uses: actions/cache/restore@v4
         with:
           path: .hypothesis/
-          key: cache-hypothesis
-          enableCrossOsArchive: true
-          save-always: true
+          key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            cache-hypothesis-
+
       - name: Run slow Hypothesis tests
         if: success()
         id: status
         run: |
            python -m pytest --hypothesis-show-statistics --run-slow-hypothesis properties/*.py \
              --report-log output-${{ matrix.python-version }}-log.jsonl
+
+      # explicitly save the cache so it gets updated, also do this even if it fails.
+      - name: Save cached hypothesis directory
+        id: save-hypothesis-cache
+        if: always() && steps.status.outcome != 'skipped'
+        uses: actions/cache/save@v4
+        with:
+          path: .hypothesis/
+          key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}
+
       - name: Generate and publish the report
         if: |
           failure()
