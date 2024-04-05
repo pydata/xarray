@@ -204,12 +204,12 @@ def repr(request):
     return request.param
 
 
-class Test_summarize_children:
+class Test_summarize_datatree_children:
     """
-    Unit tests for summarize_children.
+    Unit tests for summarize_datatree_children.
     """
 
-    func = staticmethod(fh.summarize_children)
+    func = staticmethod(fh.summarize_datatree_children)
 
     @pytest.fixture(scope="class")
     def childfree_tree_factory(self):
@@ -233,9 +233,9 @@ class Test_summarize_children:
         return childfree_tree_factory()
 
     @pytest.fixture(scope="function")
-    def mock_node_repr(self, monkeypatch):
+    def mock_datatree_node_repr(self, monkeypatch):
         """
-        Apply mocking for node_repr.
+        Apply mocking for datatree_node_repr.
         """
 
         def mock(group_title, dt):
@@ -244,12 +244,12 @@ class Test_summarize_children:
             """
             return group_title + " " + str(id(dt))
 
-        monkeypatch.setattr(fh, "node_repr", mock)
+        monkeypatch.setattr(fh, "datatree_node_repr", mock)
 
     @pytest.fixture(scope="function")
-    def mock_wrap_repr(self, monkeypatch):
+    def mock_wrap_datatree_repr(self, monkeypatch):
         """
-        Apply mocking for _wrap_repr.
+        Apply mocking for _wrap_datatree_repr.
         """
 
         def mock(r, *, end, **kwargs):
@@ -258,7 +258,7 @@ class Test_summarize_children:
             """
             return r + " " + ("end" if end else "not end") + "//"
 
-        monkeypatch.setattr(fh, "_wrap_repr", mock)
+        monkeypatch.setattr(fh, "_wrap_datatree_repr", mock)
 
     def test_empty_mapping(self):
         """
@@ -269,11 +269,13 @@ class Test_summarize_children:
             "<div style='display: inline-grid; grid-template-columns: 100%'>" "</div>"
         )
 
-    def test_one_child(self, childfree_tree, mock_wrap_repr, mock_node_repr):
+    def test_one_child(
+        self, childfree_tree, mock_wrap_datatree_repr, mock_datatree_node_repr
+    ):
         """
         Test with one child.
 
-        Uses a mock of _wrap_repr and node_repr to essentially mock
+        Uses a mock of _wrap_datatree_repr and _datatree_node_repr to essentially mock
         the inline lambda function "lines_callback".
         """
         # Create mapping of children
@@ -289,11 +291,13 @@ class Test_summarize_children:
             "</div>"
         )
 
-    def test_two_children(self, childfree_tree_factory, mock_wrap_repr, mock_node_repr):
+    def test_two_children(
+        self, childfree_tree_factory, mock_wrap_datatree_repr, mock_datatree_node_repr
+    ):
         """
         Test with two level deep children.
 
-        Uses a mock of _wrap_repr and node_repr to essentially mock
+        Uses a mock of _wrap_datatree_repr and datatree_node_repr to essentially mock
         the inline lambda function "lines_callback".
         """
 
@@ -316,12 +320,12 @@ class Test_summarize_children:
         )
 
 
-class Test__wrap_repr:
+class Test__wrap_datatree_repr:
     """
-    Unit tests for _wrap_repr.
+    Unit tests for _wrap_datatree_repr.
     """
 
-    func = staticmethod(fh._wrap_repr)
+    func = staticmethod(fh._wrap_datatree_repr)
 
     def test_end(self, repr):
         """

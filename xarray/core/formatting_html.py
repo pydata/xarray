@@ -345,11 +345,13 @@ def dataset_repr(ds) -> str:
     return _obj_repr(ds, header_components, sections)
 
 
-def summarize_children(children: Mapping[str, Any]) -> str:
+def summarize_datatree_children(children: Mapping[str, Any]) -> str:
     N_CHILDREN = len(children) - 1
 
-    # Get result from node_repr and wrap it
-    lines_callback = lambda n, c, end: _wrap_repr(node_repr(n, c), end=end)
+    # Get result from datatree_node_repr and wrap it
+    lines_callback = lambda n, c, end: _wrap_datatree_repr(
+        datatree_node_repr(n, c), end=end
+    )
 
     children_html = "".join(
         (
@@ -372,13 +374,13 @@ def summarize_children(children: Mapping[str, Any]) -> str:
 children_section = partial(
     _mapping_section,
     name="Groups",
-    details_func=summarize_children,
+    details_func=summarize_datatree_children,
     max_items_collapse=1,
     expand_option_name="display_expand_groups",
 )
 
 
-def node_repr(group_title: str, dt: Any) -> str:
+def datatree_node_repr(group_title: str, dt: Any) -> str:
     header_components = [f"<div class='xr-obj-type'>{escape(group_title)}</div>"]
 
     ds = dt.ds
@@ -394,7 +396,7 @@ def node_repr(group_title: str, dt: Any) -> str:
     return _obj_repr(ds, header_components, sections)
 
 
-def _wrap_repr(r: str, end: bool = False) -> str:
+def _wrap_datatree_repr(r: str, end: bool = False) -> str:
     """
     Wrap HTML representation with a tee to the left of it.
 
@@ -467,4 +469,4 @@ def _wrap_repr(r: str, end: bool = False) -> str:
 
 def datatree_repr(dt: Any) -> str:
     obj_type = f"datatree.{type(dt).__name__}"
-    return node_repr(obj_type, dt)
+    return datatree_node_repr(obj_type, dt)
