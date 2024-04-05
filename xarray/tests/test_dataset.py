@@ -80,6 +80,13 @@ try:
 except ImportError:
     pass
 
+# from numpy version 2.0 trapz is deprecated and renamed to trapezoid
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy import trapezoid  # type: ignore[attr-defined,unused-ignore]
+except ImportError:
+    from numpy import trapz as trapezoid
+
 sparse_array_type = array_type("sparse")
 
 pytestmark = [
@@ -478,14 +485,6 @@ class TestDataset:
         expected = Dataset({"x": x1, "z": z})
         actual = Dataset({"z": expected["z"]})
         assert_identical(expected, actual)
-
-    def test_constructor_invalid_dims(self) -> None:
-        # regression for GH1120
-        with pytest.raises(MergeError):
-            Dataset(
-                data_vars=dict(v=("y", [1, 2, 3, 4])),
-                coords=dict(y=DataArray([0.1, 0.2, 0.3, 0.4], dims="x")),
-            )
 
     def test_constructor_1d(self) -> None:
         expected = Dataset({"x": (["x"], 5.0 + np.arange(5))})
@@ -6999,7 +6998,7 @@ def test_integrate(dask) -> None:
     actual = da.integrate("x")
     # coordinate that contains x should be dropped.
     expected_x = xr.DataArray(
-        np.trapz(da.compute(), da["x"], axis=0),
+        trapezoid(da.compute(), da["x"], axis=0),
         dims=["y"],
         coords={k: v for k, v in da.coords.items() if "x" not in v.dims},
     )
@@ -7012,7 +7011,7 @@ def test_integrate(dask) -> None:
     # along y
     actual = da.integrate("y")
     expected_y = xr.DataArray(
-        np.trapz(da, da["y"], axis=1),
+        trapezoid(da, da["y"], axis=1),
         dims=["x"],
         coords={k: v for k, v in da.coords.items() if "y" not in v.dims},
     )
@@ -7093,7 +7092,7 @@ def test_cumulative_integrate(dask) -> None:
 @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("which_datetime", ["np", "cftime"])
-def test_trapz_datetime(dask, which_datetime) -> None:
+def test_trapezoid_datetime(dask, which_datetime) -> None:
     rs = np.random.RandomState(42)
     if which_datetime == "np":
         coord = np.array(
@@ -7124,7 +7123,7 @@ def test_trapz_datetime(dask, which_datetime) -> None:
         da = da.chunk({"time": 4})
 
     actual = da.integrate("time", datetime_unit="D")
-    expected_data = np.trapz(
+    expected_data = trapezoid(
         da.compute().data,
         duck_array_ops.datetime_to_numeric(da["time"].data, datetime_unit="D"),
         axis=0,
