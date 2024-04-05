@@ -879,6 +879,7 @@ Zoom in a little on the xaxis, and compare a few latitudes and longitudes:
 
 .. ipython:: python
     :okwarning:
+
     air_zoom = air.isel(time=slice(1200, 1500), lat=[5, 10, 15], lon=[10, 15])
     air_zoom.plot.lines(x="time", hue="lat", linewidth="lon")
 
@@ -897,6 +898,7 @@ fashion as scatter
 
 .. ipython:: python
     :okwarning:
+
     ds = xr.tutorial.scatter_example_dataset(seed=42)
 
     @savefig lines_xyhuewidthrowcol.png
