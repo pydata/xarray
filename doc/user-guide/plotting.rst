@@ -899,8 +899,8 @@ fashion as scatter
     :okwarning:
     ds = xr.tutorial.scatter_example_dataset(seed=42)
 
-    @savefig lines_xyzhuewidthrowcol.png
-    ds.plot.lines(x="A", y="B", z="z", hue="y", linewidth="x", row="x", col="w")
+    @savefig lines_xyhuewidthrowcol.png
+    ds.plot.lines(x="A", y="B", hue="y", linewidth="x", row="x", col="w")
 
 Quiver
 ~~~~~~
