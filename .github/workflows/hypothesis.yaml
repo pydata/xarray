@@ -82,7 +82,7 @@ jobs:
         id: restore-hypothesis-cache
         uses: actions/cache/restore@v4
         with:
-          path: client/.hypothesis/
+          path: .hypothesis/
           key: cache-hypothesis-${{ runner.os }}
           restore-keys: |
             cache-hypothesis-
@@ -100,7 +100,7 @@ jobs:
         if: always() && steps.status.outcome != 'skipped'
         uses: actions/cache/save@v4
         with:
-          path: client/.hypothesis/
+          path: .hypothesis/
           key: ${{ steps.restore-hypothesis-cache.outputs.cache-primary-key }}
 
       - name: Generate and publish the report
