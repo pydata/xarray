@@ -57,6 +57,8 @@ Imports
     # Use defaults so we don't get gridlines in generated docs
     import matplotlib as mpl
 
+    %matplotlib inline
+
     mpl.rcdefaults()
 
 The following imports are necessary for all of the examples.
@@ -848,7 +850,7 @@ For more advanced scatter plots, we recommend converting the relevant data varia
 to a pandas DataFrame and using the extensive plotting capabilities of ``seaborn``.
 
 Lines
-~~~~~~~
+~~~~~
 
 py:func:`xarray.plot.lines` calls matplotlib.collections.LineCollection under the hood,
 allowing multiple lines being drawn efficiently. It uses similar arguments as
@@ -881,6 +883,8 @@ Zoom in a little on the xaxis, and compare a few latitudes and longitudes:
     :okwarning:
 
     air_zoom = air.isel(time=slice(1200, 1500), lat=[5, 10, 15], lon=[10, 15])
+
+    @savefig lines_hue_linewidth.png
     air_zoom.plot.lines(x="time", hue="lat", linewidth="lon")
 
 Lines can modify the linestyle but does not allow markers. Instead combine lines
