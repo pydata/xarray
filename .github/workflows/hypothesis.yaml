@@ -101,7 +101,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: .hypothesis/
-          key: ${{ steps.restore-hypothesis-cache.outputs.cache-primary-key }}
+          key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}
 
       - name: Generate and publish the report
         if: |
