@@ -57,8 +57,6 @@ Imports
     # Use defaults so we don't get gridlines in generated docs
     import matplotlib as mpl
 
-    %matplotlib inline
-
     mpl.rcdefaults()
 
 The following imports are necessary for all of the examples.
