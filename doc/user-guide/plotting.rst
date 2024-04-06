@@ -883,7 +883,7 @@ Zoom in a little on the xaxis, and compare a few latitudes and longitudes:
     air_zoom = air.isel(time=slice(1200, 1500), lat=[5, 10, 15], lon=[10, 15])
 
     @savefig lines_hue_linewidth.png
-    air_zoom.plot.lines(x="time", hue="lat", linewidth="lon")
+    air_zoom.plot.lines(x="time", hue="lat", linewidth="lon", add_colorbar=False)
 
 Lines can modify the linestyle but does not allow markers. Instead combine lines
 with scatter
@@ -891,8 +891,8 @@ with scatter
 .. ipython:: python
     :okwarning:
 
-    @savefig lines_linestyle_marker.png
     air.isel(lat=10, lon=10)[:200].plot.lines(x="time", color="k", linestyle="dashed")
+    @savefig lines_linestyle_marker.png
     air.isel(lat=10, lon=10)[:200].plot.scatter(x="time", color="k", marker="^")
 
 Switching to another dataset with more variables we can analyse in similar
