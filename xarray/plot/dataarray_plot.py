@@ -1249,8 +1249,10 @@ def lines(
     **kwargs,
 ) -> LineCollection:
     """
-    Line plot of DataArray index against values
-    Wraps :func:`matplotlib:matplotlib.collections.LineCollection`
+    Line plot of DataArray values.
+
+    Wraps :func:`matplotlib:matplotlib.collections.LineCollection` which allows
+    efficient plotting of many lines.
     """
     if "u" in kwargs or "v" in kwargs:
         raise ValueError("u, v are not allowed in lines plots.")

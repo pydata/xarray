@@ -1075,7 +1075,12 @@ def lines(
     levels: ArrayLike | None = None,
     **kwargs: Any,
 ) -> LineCollection | FacetGrid[DataArray]:
-    """Line plot Dataset data variables against each other."""
+    """
+    Line plot Dataset data variables against each other.
+
+    Wraps :func:`matplotlib:matplotlib.collections.LineCollection` which allows
+    efficient plotting of many lines.
+    """
     locals_ = locals()
     del locals_["ds"]
     locals_.update(locals_.pop("kwargs", {}))

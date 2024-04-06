@@ -13,6 +13,7 @@ from xarray.plot.dataarray_plot import (
     hist,
     imshow,
     line,
+    lines,
     pcolormesh,
     plot,
     step,
@@ -32,5 +33,6 @@ __all__ = [
     "pcolormesh",
     "FacetGrid",
     "scatter",
+    "lines"
     "surface",
 ]
