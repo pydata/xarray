@@ -878,7 +878,7 @@ Make it a little more transparent
     :okwarning:
 
     @savefig lines_air_hue_alpha.png
-    air.isel(lon=10).plot.lines(x="time", hue="lat", alpha=0.2)
+    air.isel(lon=10).plot.lines(x="time", hue="lat", alpha=0.25)
 
 Zoom in a little on the xaxis, and compare a few latitudes and longitudes:
 
