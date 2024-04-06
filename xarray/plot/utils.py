@@ -1725,16 +1725,16 @@ def _add_legend(
 
             # Only save unique values, don't sort values as it was already sort in
             # legend_elements:
-            # lbl_ = np.array(lbl)
-            # _, ind = np.unique(lbl_, return_index=True)
-            # ind = np.sort(ind)
-            # lbl = lbl_[ind].tolist()
-            # hdl = np.array(hdl)[ind].tolist()
-
-            u, ind = np.unique(lbl, return_index=True)
-            ind = np.argsort(ind)
-            lbl = u[ind].tolist()
+            lbl_ = np.array(lbl)
+            _, ind = np.unique(lbl_, return_index=True)
+            ind = np.sort(ind)
+            lbl = lbl_[ind].tolist()
             hdl = np.array(hdl)[ind].tolist()
+
+            # u, ind = np.unique(lbl, return_index=True)
+            # ind = np.argsort(ind)
+            # lbl = u[ind].tolist()
+            # hdl = np.array(hdl)[ind].tolist()
 
             # Add a subtitle:
             hdl, lbl = _legend_add_subtitle(hdl, lbl, label_from_attrs(huesizeplt.data))
