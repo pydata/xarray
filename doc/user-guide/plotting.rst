@@ -850,6 +850,11 @@ to a pandas DataFrame and using the extensive plotting capabilities of ``seaborn
 Lines
 ~~~~~
 
+.. ipython:: python
+    :suppress:
+
+    plt.close("all")
+
 py:func:`xarray.plot.lines` calls matplotlib.collections.LineCollection under the hood,
 allowing multiple lines being drawn efficiently. It uses similar arguments as
 py:func:`xarray.plot.scatter`.
@@ -892,8 +897,10 @@ with scatter
     :okwarning:
 
     air.isel(lat=10, lon=10)[:200].plot.lines(x="time", color="k", linestyle="dashed")
-    @savefig lines_linestyle_marker.png
     air.isel(lat=10, lon=10)[:200].plot.scatter(x="time", color="k", marker="^")
+    @savefig lines_linestyle_marker.png
+    plt.draw()
+
 
 Switching to another dataset with more variables we can analyse in similar
 fashion as scatter
