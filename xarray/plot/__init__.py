@@ -33,6 +33,6 @@ __all__ = [
     "pcolormesh",
     "FacetGrid",
     "scatter",
-    "lines"
+    "lines",
     "surface",
 ]
