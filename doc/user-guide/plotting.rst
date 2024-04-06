@@ -855,11 +855,11 @@ Lines
 
     plt.close("all")
 
-py:func:`xarray.plot.lines` calls matplotlib.collections.LineCollection under the hood,
+:py:func:`xarray.plot.lines` calls matplotlib.collections.LineCollection under the hood,
 allowing multiple lines being drawn efficiently. It uses similar arguments as
-py:func:`xarray.plot.scatter`.
+:py:func:`xarray.plot.scatter`.
 
-Let's return to the air temperature dataset
+Let's return to the air temperature dataset:
 
 .. ipython:: python
     :okwarning:
@@ -872,15 +872,18 @@ Let's return to the air temperature dataset
     @savefig lines_air_hue.png
     air.isel(lon=10).plot.lines(x="time", hue="lat")
 
-Make it a little more transparent
+Make it a little more transparent:
 
 .. ipython:: python
     :okwarning:
 
     @savefig lines_air_hue_alpha.png
-    air.isel(lon=10).plot.lines(x="time", hue="lat", alpha=0.25)
+    air.isel(lon=10).plot.lines(x="time", hue="lat", alpha=0.2)
 
-Zoom in a little on the xaxis, and compare a few latitudes and longitudes:
+Zoom in a little on the x-axis, and compare a few latitudes and longitudes,
+group them using ``hue`` and ``linewidth``. The  ``linewidth`` kwarg works in
+a similar way as ``markersize`` kwarg for scatter plots, it lets you vary the
+line's size by variable value.
 
 .. ipython:: python
     :okwarning:
@@ -890,8 +893,8 @@ Zoom in a little on the xaxis, and compare a few latitudes and longitudes:
     @savefig lines_hue_linewidth.png
     air_zoom.plot.lines(x="time", hue="lat", linewidth="lon", add_colorbar=False)
 
-Lines can modify the linestyle but does not allow markers. Instead combine lines
-with scatter
+Lines can modify the linestyle but does not allow markers. Instead combine :py:func:`xarray.plot.lines`
+with :py:func:`xarray.plot.scatter`:
 
 .. ipython:: python
     :okwarning:
@@ -903,7 +906,7 @@ with scatter
 
 
 Switching to another dataset with more variables we can analyse in similar
-fashion as scatter
+fashion as :py:func:`xarray.plot.scatter`:
 
 .. ipython:: python
     :okwarning:
