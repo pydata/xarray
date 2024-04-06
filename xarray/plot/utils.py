@@ -1722,9 +1722,8 @@ def _add_legend(
                 lbl += lbl_
 
             # Only save unique values:
-            u, ind = np.unique(lbl, return_index=True)
-            ind = np.argsort(ind)
-            lbl = u[ind].tolist()
+            lbl, ind = np.unique(lbl, return_index=True)
+            lbl = lbl.tolist()
             hdl = np.array(hdl)[ind].tolist()
 
             # Add a subtitle:
