@@ -2897,6 +2897,57 @@ class TestDatasetScatterPlots(PlotTestCase):
         )
         assert actual == expected
 
+    def test_legend_labels_facegrid2(self) -> None:
+        ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+        g = ds.plot.scatter(
+            x="A", y="B", hue="y", markersize="x", row="x", col="w", add_colorbar=False
+        )
+
+        legend = g.figlegend
+        assert legend is not None
+        actual = tuple(t.get_text() for t in legend.texts)
+        expected = (
+            "y [yunits]",
+            "$\\mathdefault{0.0}$",
+            "$\\mathdefault{0.1}$",
+            "$\\mathdefault{0.2}$",
+            "$\\mathdefault{0.3}$",
+            "$\\mathdefault{0.4}$",
+            "$\\mathdefault{0.5}$",
+            "$\\mathdefault{0.6}$",
+            "$\\mathdefault{0.7}$",
+            "$\\mathdefault{0.8}$",
+            "$\\mathdefault{0.9}$",
+            "$\\mathdefault{1.0}$",
+            "x [xunits]",
+            "$\\mathdefault{0}$",
+            "$\\mathdefault{1}$",
+            "$\\mathdefault{2}$",
+        )
+        assert actual == expected
+
+        actual = [v.get_markersize() for v in legend.get_lines()]
+        expected = [
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            4.242640687119285,
+            6.708203932499369,
+            8.48528137423857,
+        ]
+        np.testing.assert_allclose(expected, actual)
+
     def test_add_legend_by_default(self) -> None:
         sc = self.ds.plot.scatter(x="A", y="B", hue="hue")
         fig = sc.figure
