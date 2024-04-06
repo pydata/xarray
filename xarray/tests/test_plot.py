@@ -2906,8 +2906,8 @@ class TestDatasetScatterPlots(PlotTestCase):
 
         legend = g.figlegend
         assert legend is not None
-        actual = tuple(t.get_text() for t in legend.texts)
-        expected = (
+        actual_text = [t.get_text() for t in legend.texts]
+        expected_text = [
             "y [yunits]",
             "$\\mathdefault{0.0}$",
             "$\\mathdefault{0.1}$",
@@ -2924,11 +2924,11 @@ class TestDatasetScatterPlots(PlotTestCase):
             "$\\mathdefault{0}$",
             "$\\mathdefault{1}$",
             "$\\mathdefault{2}$",
-        )
-        assert actual == expected
+        ]
+        assert actual_text == expected_text
 
-        actual = [v.get_markersize() for v in legend.get_lines()]
-        expected = [
+        actual_size = [v.get_markersize() for v in legend.get_lines()]
+        expected_size = [
             6.0,
             6.0,
             6.0,
@@ -2946,7 +2946,7 @@ class TestDatasetScatterPlots(PlotTestCase):
             6.708203932499369,
             8.48528137423857,
         ]
-        np.testing.assert_allclose(expected, actual)
+        np.testing.assert_allclose(expected_size, actual_size)
 
     def test_add_legend_by_default(self) -> None:
         sc = self.ds.plot.scatter(x="A", y="B", hue="hue")
