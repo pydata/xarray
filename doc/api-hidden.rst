@@ -391,6 +391,7 @@
    plot.imshow
    plot.pcolormesh
    plot.scatter
+   plot.lines
    plot.surface
 
    CFTimeIndex.all
