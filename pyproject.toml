@@ -171,12 +171,10 @@ module = [
   "xarray.tests.test_dask",
   "xarray.tests.test_dataarray",
   "xarray.tests.test_duck_array_ops",
-  "xarray.tests.test_groupby",
   "xarray.tests.test_indexing",
   "xarray.tests.test_merge",
   "xarray.tests.test_missing",
   "xarray.tests.test_parallelcompat",
-  "xarray.tests.test_plot",
   "xarray.tests.test_sparse",
   "xarray.tests.test_ufuncs",
   "xarray.tests.test_units",
@@ -295,6 +293,7 @@ markers = [
   "flaky: flaky tests",
   "network: tests requiring a network connection",
   "slow: slow tests",
+  "slow_hypothesis: slow hypothesis tests",
 ]
 minversion = "7"
 python_files = "test_*.py"

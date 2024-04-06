@@ -33,6 +33,7 @@ from xarray.core.utils import (
     decode_numpy_dict_values,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
+    emit_user_level_warning,
     ensure_us_time_resolution,
     infix_dims,
     is_dict_like,
@@ -80,7 +81,9 @@ class MissingDimensionsError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
-def as_variable(obj: T_DuckArray | Any, name=None) -> Variable | IndexVariable:
+def as_variable(
+    obj: T_DuckArray | Any, name=None, auto_convert: bool = True
+) -> Variable | IndexVariable:
     """Convert an object into a Variable.
 
     Parameters
@@ -100,6 +103,9 @@ def as_variable(obj: T_DuckArray | Any, name=None) -> Variable | IndexVariable:
           along a dimension of this given name.
         - Variables with name matching one of their dimensions are converted
           into `IndexVariable` objects.
+    auto_convert : bool, optional
+        For internal use only! If True, convert a "dimension" variable into
+        an IndexVariable object (deprecated).
 
     Returns
     -------
@@ -150,9 +156,15 @@ def as_variable(obj: T_DuckArray | Any, name=None) -> Variable | IndexVariable:
             f"explicit list of dimensions: {obj!r}"
         )
 
-    if name is not None and name in obj.dims and obj.ndim == 1:
-        # automatically convert the Variable into an Index
-        obj = obj.to_index_variable()
+    if auto_convert:
+        if name is not None and name in obj.dims and obj.ndim == 1:
+            # automatically convert the Variable into an Index
+            emit_user_level_warning(
+                f"variable {name!r} with name matching its dimension will not be "
+                "automatically converted into an `IndexVariable` object in the future.",
+                FutureWarning,
+            )
+            obj = obj.to_index_variable()
 
     return obj
 
@@ -209,7 +221,14 @@ def _possibly_convert_objects(values):
     as_series = pd.Series(values.ravel(), copy=False)
     if as_series.dtype.kind in "mM":
         as_series = _as_nanosecond_precision(as_series)
-    return np.asarray(as_series).reshape(values.shape)
+    result = np.asarray(as_series).reshape(values.shape)
+    if not result.flags.writeable:
+        # GH8843, pandas copy-on-write mode creates read-only arrays by default
+        try:
+            result.flags.writeable = True
+        except ValueError:
+            result = result.copy()
+    return result
 
 
 def _possibly_convert_datetime_or_timedelta_index(data):
@@ -245,8 +264,13 @@ def as_compatible_data(
 
     from xarray.core.dataarray import DataArray
 
-    if isinstance(data, (Variable, DataArray)):
-        return data.data
+    # TODO: do this uwrapping in the Variable/NamedArray constructor instead.
+    if isinstance(data, Variable):
+        return cast("T_DuckArray", data._data)
+
+    # TODO: do this uwrapping in the DataArray constructor instead.
+    if isinstance(data, DataArray):
+        return cast("T_DuckArray", data._variable._data)
 
     if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
         data = _possibly_convert_datetime_or_timedelta_index(data)
@@ -699,8 +723,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 variable = (
                     value
                     if isinstance(value, Variable)
-                    else as_variable(value, name=dim)
+                    else as_variable(value, name=dim, auto_convert=False)
                 )
+                if variable.dims == (dim,):
+                    variable = variable.to_index_variable()
                 if variable.dtype.kind == "b":  # boolean indexing case
                     (variable,) = variable._nonzero()
 
@@ -761,12 +787,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
         indexable = as_indexable(self._data)
 
-        if isinstance(indexer, OuterIndexer):
-            data = indexable.oindex[indexer]
-        elif isinstance(indexer, VectorizedIndexer):
-            data = indexable.vindex[indexer]
-        else:
-            data = indexable[indexer]
+        data = indexing.apply_indexer(indexable, indexer)
+
         if new_order:
             data = np.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
@@ -791,6 +813,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
 
         if self.size:
+
             if is_duck_dask_array(self._data):
                 # dask's indexing is faster this way; also vindex does not
                 # support negative indices yet:
@@ -800,14 +823,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 actual_indexer = indexer
 
             indexable = as_indexable(self._data)
+            data = indexing.apply_indexer(indexable, actual_indexer)
 
-            if isinstance(indexer, OuterIndexer):
-                data = indexable.oindex[indexer]
-
-            elif isinstance(indexer, VectorizedIndexer):
-                data = indexable.vindex[indexer]
-            else:
-                data = indexable[actual_indexer]
             mask = indexing.create_mask(indexer, self.shape, data)
             # we need to invert the mask in order to pass data first. This helps
             # pint to choose the correct unit
@@ -851,7 +868,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             value = np.moveaxis(value, new_order, range(len(new_order)))
 
         indexable = as_indexable(self._data)
-        indexable[index_tuple] = value
+        indexing.set_with_indexer(indexable, index_tuple, value)
 
     @property
     def encoding(self) -> dict[Any, Any]:

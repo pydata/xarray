@@ -64,6 +64,21 @@ def var():
     return Variable(dims=list("xyz"), data=np.random.rand(3, 4, 5))
 
 
+@pytest.mark.parametrize(
+    "data",
+    [
+        np.array(["a", "bc", "def"], dtype=object),
+        np.array(["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[ns]"),
+    ],
+)
+def test_as_compatible_data_writeable(data):
+    pd.set_option("mode.copy_on_write", True)
+    # GH8843, ensure writeable arrays for data_vars even with
+    # pandas copy-on-write mode
+    assert as_compatible_data(data).flags.writeable
+    pd.reset_option("mode.copy_on_write")
+
+
 class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
     @pytest.fixture
     def target(self, data):
@@ -1201,7 +1216,8 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(TypeError, match=r"without an explicit list of dimensions"):
             as_variable(data)
 
-        actual = as_variable(data, name="x")
+        with pytest.warns(FutureWarning, match="IndexVariable"):
+            actual = as_variable(data, name="x")
         assert_identical(expected.to_index_variable(), actual)
 
         actual = as_variable(0)
@@ -1219,9 +1235,11 @@ class TestVariable(VariableSubclassobjects):
 
         # test datetime, timedelta conversion
         dt = np.array([datetime(1999, 1, 1) + timedelta(days=x) for x in range(10)])
-        assert as_variable(dt, "time").dtype.kind == "M"
+        with pytest.warns(FutureWarning, match="IndexVariable"):
+            assert as_variable(dt, "time").dtype.kind == "M"
         td = np.array([timedelta(days=x) for x in range(10)])
-        assert as_variable(td, "time").dtype.kind == "m"
+        with pytest.warns(FutureWarning, match="IndexVariable"):
+            assert as_variable(td, "time").dtype.kind == "m"
 
         with pytest.raises(TypeError):
             as_variable(("x", DataArray([])))

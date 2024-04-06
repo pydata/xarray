@@ -35,14 +35,13 @@ jobs:
     runs-on: "ubuntu-latest"
     needs: detect-ci-trigger
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
+
     defaults:
       run:
         shell: bash -l {0}
-
     env:
       CONDA_ENV_FILE: ci/requirements/environment.yml
       PYTHON_VERSION: "3.11"
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -128,7 +127,7 @@ jobs:
           python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report xarray/
 
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v4.1.0
+        uses: codecov/codecov-action@v4.1.1
         with:
           file: mypy_report/cobertura.xml
           flags: mypy
@@ -182,7 +181,7 @@ jobs:
           python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report xarray/
 
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v4.1.0
+        uses: codecov/codecov-action@v4.1.1
         with:
           file: mypy_report/cobertura.xml
           flags: mypy39
@@ -243,7 +242,7 @@ jobs:
           python -m pyright xarray/
 
       - name: Upload pyright coverage to Codecov
-        uses: codecov/codecov-action@v4.1.0
+        uses: codecov/codecov-action@v4.1.1
         with:
           file: pyright_report/cobertura.xml
           flags: pyright
@@ -302,7 +301,7 @@ jobs:
           python -m pyright xarray/
 
       - name: Upload pyright coverage to Codecov
-        uses: codecov/codecov-action@v4.1.0
+        uses: codecov/codecov-action@v4.1.1
         with:
           file: pyright_report/cobertura.xml
           flags: pyright39

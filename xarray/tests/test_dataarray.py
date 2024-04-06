@@ -3420,6 +3420,7 @@ class TestDataArray:
 
     @requires_dask_expr
     @requires_dask
+    @pytest.mark.xfail(reason="dask-expr is broken")
     def test_to_dask_dataframe(self) -> None:
         arr_np = np.arange(3 * 4).reshape(3, 4)
         arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
@@ -4946,7 +4947,7 @@ class TestReduce1D(TestReduce):
         with pytest.raises(ValueError):
             xr.DataArray(5).idxmin()
 
-        coordarr0 = xr.DataArray(ar0.coords["x"], dims=["x"])
+        coordarr0 = xr.DataArray(ar0.coords["x"].data, dims=["x"])
         coordarr1 = coordarr0.copy()
 
         hasna = np.isnan(minindex)
@@ -5061,7 +5062,7 @@ class TestReduce1D(TestReduce):
         with pytest.raises(ValueError):
             xr.DataArray(5).idxmax()
 
-        coordarr0 = xr.DataArray(ar0.coords["x"], dims=["x"])
+        coordarr0 = xr.DataArray(ar0.coords["x"].data, dims=["x"])
         coordarr1 = coordarr0.copy()
 
         hasna = np.isnan(maxindex)
@@ -7166,3 +7167,13 @@ def test_nD_coord_dataarray() -> None:
     _assert_internal_invariants(da4, check_default_indexes=True)
     assert "x" not in da4.xindexes
     assert "x" in da4.coords
+
+
+def test_lazy_data_variable_not_loaded():
+    # GH8753
+    array = InaccessibleArray(np.array([1, 2, 3]))
+    v = Variable(data=array, dims="x")
+    # No data needs to be accessed, so no error should be raised
+    da = xr.DataArray(v)
+    # No data needs to be accessed, so no error should be raised
+    xr.DataArray(da)

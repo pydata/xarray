@@ -15,29 +15,65 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2024.03.0:
+.. _whats-new.2024.04.0:
 
-v2024.03.0 (unreleased)
+v2024.04.0 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
 
-- Do not broadcast in arithmetic operations when global option ``arithmetic_broadcast=False``
-  (:issue:`6806`, :pull:`8784`).
-  By `Etienne Schalk <https://github.com/etienneschalk>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
-- Add the ``.oindex`` property to Explicitly Indexed Arrays for orthogonal indexing functionality. (:issue:`8238`, :pull:`8750`)
-  By `Anderson Banihirwe <https://github.com/andersy005>`_.
-
-- Add the ``.vindex`` property to Explicitly Indexed Arrays for vectorized indexing functionality. (:issue:`8238`, :pull:`8780`)
-  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
 
-Deprecations
+Bug fixes
+~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2024.03.0:
+
+v2024.03.0 (Mar 29, 2024)
+-------------------------
+
+This release brings performance improvements for grouped and resampled quantile calculations, CF decoding improvements,
+minor optimizations to distributed Zarr writes, and compatibility fixes for Numpy 2.0 and Pandas 3.0.
+
+Thanks to the 18 contributors to this release:
+Anderson Banihirwe, Christoph Hasse, Deepak Cherian, Etienne Schalk, Justus Magin, Kai Mühlbauer, Kevin Schwarzwald, Mark Harfouche, Martin, Matt Savoie, Maximilian Roos, Ray Bell, Roberto Chang, Spencer Clark, Tom Nicholas, crusaderky, owenlittlejohns, saschahofmann
+
+New Features
 ~~~~~~~~~~~~
+- Partial writes to existing chunks with ``region`` or ``append_dim`` will now raise an error
+  (unless ``safe_chunks=False``); previously an error would only be raised on
+  new variables. (:pull:`8459`, :issue:`8371`, :issue:`8882`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Grouped and resampling quantile calculations now use the vectorized algorithm in ``flox>=0.9.4`` if present.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Do not broadcast in arithmetic operations when global option ``arithmetic_broadcast=False``
+  (:issue:`6806`, :pull:`8784`).
+  By `Etienne Schalk <https://github.com/etienneschalk>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
+- Add the ``.oindex`` property to Explicitly Indexed Arrays for orthogonal indexing functionality. (:issue:`8238`, :pull:`8750`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
+- Add the ``.vindex`` property to Explicitly Indexed Arrays for vectorized indexing functionality. (:issue:`8238`, :pull:`8780`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
+- Expand use of ``.oindex`` and ``.vindex`` properties. (:pull: `8790`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
+- Allow creating :py:class:`xr.Coordinates` objects with no indexes (:pull:`8711`)
+  By `Benoit Bovy <https://github.com/benbovy>`_ and `Tom Nicholas
+  <https://github.com/TomNicholas>`_.
+- Enable plotting of ``datetime.dates``. (:issue:`8866`, :pull:`8873`)
+  By `Sascha Hofmann <https://github.com/saschahofmann>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+- Don't allow overwriting index variables with ``to_zarr`` region writes. (:issue:`8589`, :pull:`8876`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Bug fixes
@@ -50,16 +86,33 @@ Bug fixes
   when used in :py:meth:`DataArray.expand_dims` and
   ::py:meth:`Dataset.expand_dims` (:pull:`8781`).  By `Spencer
   Clark <https://github.com/spencerkclark>`_.
-
-Documentation
-~~~~~~~~~~~~~
-
+- CF conform handling of `_FillValue`/`missing_value` and `dtype` in
+  `CFMaskCoder`/`CFScaleOffsetCoder` (:issue:`2304`, :issue:`5597`,
+  :issue:`7691`, :pull:`8713`, see also discussion in :pull:`7654`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Do not cast `_FillValue`/`missing_value` in `CFMaskCoder` if `_Unsigned` is provided
+  (:issue:`8844`, :pull:`8852`).
+- Adapt handling of copy keyword argument for numpy >= 2.0dev
+  (:issue:`8844`, :pull:`8851`, :pull:`8865`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Import trapz/trapezoid depending on numpy version
+  (:issue:`8844`, :pull:`8865`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Warn and return bytes undecoded in case of UnicodeDecodeError in h5netcdf-backend
+  (:issue:`5563`, :pull:`8874`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix bug incorrectly disallowing creation of a dataset with a multidimensional coordinate variable with the same name as one of its dims.
+  (:issue:`8884`, :pull:`8886`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Migrates ``treenode`` functionality into ``xarray/core`` (:pull:`8757`)
   By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
   <https://github.com/TomNicholas>`_.
+- Migrates ``datatree`` functionality into ``xarray/core``. (:pull: `8789`)
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
+  <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 .. _whats-new.2024.02.0:
