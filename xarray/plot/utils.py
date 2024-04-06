@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap, Normalize
     from matplotlib.ticker import FuncFormatter
     from matplotlib.typing import ColorType, DrawStyleType, LineStyleType
+    from matplotlib.lines import Line2D
     from mpl_toolkits.mplot3d.art3d import Line3DCollection
     from numpy.typing import ArrayLike
 
@@ -1715,15 +1716,24 @@ def _add_legend(
             # values correctly. Order might be different because
             # legend_elements uses np.unique instead of pd.unique,
             # FacetGrid.add_legend might have troubles with this:
-            hdl, lbl = [], []
+            hdl: list[Line2D] = []
+            lbl: list[str] = []
             for p in primitive:
                 hdl_, lbl_ = legend_elements(p, prop, num="auto", func=huesizeplt.func)
                 hdl += hdl_
                 lbl += lbl_
 
-            # Only save unique values:
-            lbl, ind = np.unique(np.array(lbl), return_index=True)
-            lbl = lbl.tolist()
+            # Only save unique values, don't sort values as it was already sort in
+            # legend_elements:
+            # lbl_ = np.array(lbl)
+            # _, ind = np.unique(lbl_, return_index=True)
+            # ind = np.sort(ind)
+            # lbl = lbl_[ind].tolist()
+            # hdl = np.array(hdl)[ind].tolist()
+
+            u, ind = np.unique(lbl, return_index=True)
+            ind = np.argsort(ind)
+            lbl = u[ind].tolist()
             hdl = np.array(hdl)[ind].tolist()
 
             # Add a subtitle:
