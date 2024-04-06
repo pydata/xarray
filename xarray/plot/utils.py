@@ -1722,7 +1722,7 @@ def _add_legend(
                 lbl += lbl_
 
             # Only save unique values:
-            lbl, ind = np.unique(lbl, return_index=True)
+            lbl, ind = np.unique(np.array(lbl), return_index=True)
             lbl = lbl.tolist()
             hdl = np.array(hdl)[ind].tolist()
 
