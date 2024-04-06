@@ -29,9 +29,9 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.collections import LineCollection
     from matplotlib.colors import Colormap, Normalize
+    from matplotlib.lines import Line2D
     from matplotlib.ticker import FuncFormatter
     from matplotlib.typing import ColorType, DrawStyleType, LineStyleType
-    from matplotlib.lines import Line2D
     from mpl_toolkits.mplot3d.art3d import Line3DCollection
     from numpy.typing import ArrayLike
 
