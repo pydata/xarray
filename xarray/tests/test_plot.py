@@ -3528,8 +3528,8 @@ def test_plot1d_lines_facetgrid_legend() -> None:
 
         legend = g.figlegend
         assert legend is not None
-        actual = tuple(t.get_text() for t in legend.texts)
-        expected = (
+        actual_text = [t.get_text() for t in legend.texts]
+        expected_text = [
             "y [yunits]",
             "$\\mathdefault{0.0}$",
             "$\\mathdefault{0.1}$",
@@ -3546,11 +3546,11 @@ def test_plot1d_lines_facetgrid_legend() -> None:
             "$\\mathdefault{0}$",
             "$\\mathdefault{1}$",
             "$\\mathdefault{2}$",
-        )
-        assert actual == expected
+        ]
+        assert expected_text == actual_text
 
-        actual = [v.get_linewidth() for v in legend.get_lines()]
-        expected = [
+        actual_size = [v.get_linewidth() for v in legend.get_lines()]
+        expected_size = [
             1.5,
             6.0,
             6.0,
@@ -3568,4 +3568,4 @@ def test_plot1d_lines_facetgrid_legend() -> None:
             1.9364916731037085,
             2.449489742783178,
         ]
-        np.testing.assert_allclose(expected, actual)
+        np.testing.assert_allclose(expected_size, actual_size)
