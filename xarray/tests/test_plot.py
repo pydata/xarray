@@ -3513,3 +3513,57 @@ def test_plot1d_lines_linestyle(plotfunc: str, x="z", linestyle="dashed") -> Non
         expected_linestyle = [_scale_dashes(*_get_dash_pattern(linestyle), w)]
         actual_linestyle = coll.get_linestyle()
         assert expected_linestyle == actual_linestyle
+
+
+@requires_matplotlib
+def test_plot1d_lines_legend() -> None:
+    # asserts that order is correct, only unique values, no nans/masked values.
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+    g = ds.plot.lines(
+        x="A", y="B", hue="y", linewidth="x", row="x", col="w", add_colorbar=False
+    )
+
+    legend = g.figlegend
+    assert legend is not None
+    actual = tuple(t.get_text() for t in legend.texts)
+    expected = (
+        "y [yunits]",
+        "$\\mathdefault{0.0}$",
+        "$\\mathdefault{0.1}$",
+        "$\\mathdefault{0.2}$",
+        "$\\mathdefault{0.3}$",
+        "$\\mathdefault{0.4}$",
+        "$\\mathdefault{0.5}$",
+        "$\\mathdefault{0.6}$",
+        "$\\mathdefault{0.7}$",
+        "$\\mathdefault{0.8}$",
+        "$\\mathdefault{0.9}$",
+        "$\\mathdefault{1.0}$",
+        "x [xunits]",
+        "$\\mathdefault{0}$",
+        "$\\mathdefault{1}$",
+        "$\\mathdefault{2}$",
+    )
+    assert actual == expected
+
+    actual = [v.get_linewidth() for v in legend.get_lines()]
+    expected = [
+        1.5,
+        6.0,
+        6.0,
+        6.0,
+        6.0,
+        6.0,
+        6.0,
+        6.0,
+        6.0,
+        6.0,
+        6.0,
+        6.0,
+        1.5,
+        1.224744871391589,
+        1.9364916731037085,
+        2.449489742783178,
+    ]
+    np.testing.assert_allclose(expected, actual)

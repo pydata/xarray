@@ -1056,9 +1056,9 @@ def legend_elements(
 
     elif prop == "sizes":
         if isinstance(self, mpl.collections.LineCollection):
-            arr = self.get_linewidths()
+            arr = np.ma.asarray(self.get_linewidths())
         else:
-            arr = self.get_sizes()
+            arr = np.ma.asarray(self.get_sizes())
         _color = kwargs.pop("color", "k")
 
         def _get_color_and_size(value):
@@ -1071,7 +1071,7 @@ def legend_elements(
         )
 
     # Get the unique values and their labels:
-    values = np.unique(arr)
+    values = np.unique(arr[~arr.mask])
     label_values = np.asarray(func(values))
     label_values_are_numeric = np.issubdtype(label_values.dtype, np.number)
 
