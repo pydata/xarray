@@ -385,17 +385,10 @@ def _dataset_from_backend_dataset(
 
     # Ensure source filename always stored in dataset object
     if "source" not in ds.encoding:
-        try:
-            from fsspec.core import OpenFile
-            from fsspec.spec import AbstractBufferedFile
-        except ImportError:
-            OpenFile = None
-            AbstractBufferedFile = None
+        path = getattr(filename_or_obj, "path", filename_or_obj)
 
-        if isinstance(filename_or_obj, (str, os.PathLike)):
-            ds.encoding["source"] = _normalize_path(filename_or_obj)
-        elif isinstance(filename_or_obj, (OpenFile, AbstractBufferedFile)):
-            ds.encoding["source"] = _normalize_path(filename_or_obj.path)
+        if isinstance(path, (str, os.PathLike)):
+            ds.encoding["source"] = _normalize_path(path)
 
     return ds
 
