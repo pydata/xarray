@@ -191,7 +191,7 @@ def _prepare_plot1d_data(
         # this can be solved by adding a nan element in between the flattening
         # points:
         dims_T: list[Hashable] = []
-        if np.issubdtype(darray.dtype, np.floating):
+        if plotfunc_name == "lines" and np.issubdtype(darray.dtype, np.floating):
             i = 0
             for v in ("z", "x"):
                 coord = coords_to_plot.get(v, None)
@@ -211,7 +211,7 @@ def _prepare_plot1d_data(
                     darray_nan = np.nan * darray.isel({d: -1})
                     darray = concat([darray, darray_nan], dim=d)
                     dims_T.append(d)
-                    i += 1
+                    # i += 1
 
         # Lines should never connect to the same coordinate when stacked,
         # transpose to avoid this as much as possible:
