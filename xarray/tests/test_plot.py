@@ -3344,7 +3344,6 @@ def test_plot1d_functions(
     plotfunc: str,
 ) -> None:
     """Test plot1d function. Merge with TestPlot1D eventually."""
-    import matplotlib.pyplot as plt
 
     ds = xr.tutorial.scatter_example_dataset(seed=42)
 
