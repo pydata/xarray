@@ -514,7 +514,6 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
                 mappable = func(
                     subset,
                     x=coords_to_plot["x"],
-                    y=coords_to_plot["y"],
                     z=coords_to_plot["z"],
                     ax=ax,
                     hue=hue,
