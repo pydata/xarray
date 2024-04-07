@@ -3319,7 +3319,7 @@ def test_maybe_gca() -> None:
 @requires_matplotlib
 @pytest.mark.parametrize("plotfunc", ["scatter", "lines"])
 @pytest.mark.parametrize(
-    "x, y, z, hue, markersize, row, col, add_legend, add_colorbar",
+    "x, y, z, hue, _size, row, col, add_legend, add_colorbar",
     [
         ("A", "B", None, None, None, None, None, None, None),
         ("B", "A", None, "w", None, None, None, True, None),
@@ -3328,6 +3328,7 @@ def test_maybe_gca() -> None:
         ("B", "A", "z", "w", None, None, None, True, None),
         ("A", "B", "z", "y", "x", None, None, True, True),
         ("A", "B", "z", "y", "x", "w", None, True, True),
+        ("A", "B", "z", "y", "x", "w", "x", True, True),
     ],
 )
 def test_plot1d_functions(
@@ -3335,7 +3336,7 @@ def test_plot1d_functions(
     y: Hashable,
     z: Hashable,
     hue: Hashable,
-    markersize: Hashable,
+    _size: Hashable,
     row: Hashable,
     col: Hashable,
     add_legend: bool | None,
@@ -3345,7 +3346,7 @@ def test_plot1d_functions(
     """Test plot1d function. Merge with TestPlot1D eventually."""
     ds = xr.tutorial.scatter_example_dataset()
 
-    extra_coords = [v for v in [x, hue, markersize] if v is not None]
+    extra_coords = [v for v in [x, hue, _size] if v is not None]
 
     # Base coords:
     coords = dict(ds.coords)
@@ -3360,7 +3361,7 @@ def test_plot1d_functions(
             x=x,
             z=z,
             hue=hue,
-            markersize=markersize,
+            _size=_size,
             add_legend=add_legend,
             add_colorbar=add_colorbar,
         )
