@@ -123,6 +123,13 @@ def as_variable(
     if isinstance(obj, Variable):
         obj = obj.copy(deep=False)
     elif isinstance(obj, tuple):
+        try:
+            dims, data, *attrs = obj
+        except ValueError:
+            raise ValueError(
+                f"Tuple {obj} is not in the form (dims, data[, attrs])"
+            )
+        
         if isinstance(obj[1], DataArray):
             raise TypeError(
                 f"Variable {name!r}: Using a DataArray object to construct a variable is"
