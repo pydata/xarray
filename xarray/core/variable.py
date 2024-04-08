@@ -126,10 +126,8 @@ def as_variable(
         try:
             dims, data, *attrs = obj
         except ValueError:
-            raise ValueError(
-                f"Tuple {obj} is not in the form (dims, data[, attrs])"
-            )
-        
+            raise ValueError(f"Tuple {obj} is not in the form (dims, data[, attrs])")
+
         if isinstance(obj[1], DataArray):
             raise TypeError(
                 f"Variable {name!r}: Using a DataArray object to construct a variable is"
