@@ -124,7 +124,7 @@ def as_variable(
         obj = obj.copy(deep=False)
     elif isinstance(obj, tuple):
         try:
-            dims, data, *attrs = obj
+            dims_, data_, *attrs = obj
         except ValueError:
             raise ValueError(f"Tuple {obj} is not in the form (dims, data[, attrs])")
 
