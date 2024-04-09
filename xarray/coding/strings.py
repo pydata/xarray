@@ -258,7 +258,7 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
         key = type(key)(indexing.expanded_indexer(key.tuple, self.array.ndim))
         if key.tuple[-1] != slice(None):
             raise IndexError("too many indices")
-
+        # TODO: this is a temporary fix until BackendArray supports vindex and oindex
         if isinstance(key, indexing.OuterIndexer):
             data = self.array.oindex[key]
         elif isinstance(key, indexing.VectorizedIndexer):
