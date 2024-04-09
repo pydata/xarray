@@ -258,4 +258,11 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
         key = type(key)(indexing.expanded_indexer(key.tuple, self.array.ndim))
         if key.tuple[-1] != slice(None):
             raise IndexError("too many indices")
-        return _numpy_char_to_bytes(self.array[key])
+
+        if isinstance(key, indexing.OuterIndexer):
+            data = self.array.oindex[key]
+        elif isinstance(key, indexing.VectorizedIndexer):
+            data = self.array.vindex[key]
+        else:
+            data = self.array[key]
+        return _numpy_char_to_bytes(data)

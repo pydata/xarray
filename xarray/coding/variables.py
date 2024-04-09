@@ -73,7 +73,14 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
         # TODO: this is a temporary fix until BackendArray supports vindex and oindex
 
     def __getitem__(self, key):
-        return type(self)(self.array[key], self.func, self.dtype)
+        # TODO: this is a temporary fix until BackendArray supports vindex and oindex
+        if isinstance(key, indexing.OuterIndexer):
+            data = self.array.oindex[key]
+        elif isinstance(key, indexing.VectorizedIndexer):
+            data = self.array.vindex[key]
+        else:
+            data = self.array[key]
+        return type(self)(data, self.func, self.dtype)
 
     def get_duck_array(self):
         return self.func(self.array.get_duck_array())
@@ -116,7 +123,14 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
         # TODO: this is a temporary fix until BackendArray supports vindex and oindex
 
     def __getitem__(self, key) -> np.ndarray:
-        return np.asarray(self.array[key], dtype=self.dtype)
+        # TODO: this is a temporary fix until BackendArray supports vindex and oindex
+        if isinstance(key, indexing.OuterIndexer):
+            data = self.array.oindex[key]
+        elif isinstance(key, indexing.VectorizedIndexer):
+            data = self.array.vindex[key]
+        else:
+            data = self.array[key]
+        return np.asarray(data, dtype=self.dtype)
 
 
 class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
@@ -152,7 +166,14 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
         # TODO: this is a temporary fix until BackendArray supports vindex and oindex
 
     def __getitem__(self, key) -> np.ndarray:
-        return np.asarray(self.array[key], dtype=self.dtype)
+        # TODO: this is a temporary fix until BackendArray supports vindex and oindex
+        if isinstance(key, indexing.OuterIndexer):
+            data = self.array.oindex[key]
+        elif isinstance(key, indexing.VectorizedIndexer):
+            data = self.array.vindex[key]
+        else:
+            data = self.array[key]
+        return np.asarray(data, dtype=self.dtype)
 
 
 def lazy_elemwise_func(array, func: Callable, dtype: np.typing.DTypeLike):
