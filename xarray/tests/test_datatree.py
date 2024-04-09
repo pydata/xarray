@@ -494,11 +494,11 @@ class TestTreeFromDict:
         assert paths == [
             "/",
             "/set1",
+            "/set2",
+            "/set3",
             "/set1/set1",
             "/set1/set2",
-            "/set2",
             "/set2/set1",
-            "/set3",
         ]
 
     def test_datatree_values(self):
