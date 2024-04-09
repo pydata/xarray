@@ -615,7 +615,18 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return tuple(shape)
 
     def get_duck_array(self):
-        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
+        from xarray.coding import strings, variables
+
+        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin) and not isinstance(
+            self.array,
+            (
+                strings.StackedBytesArray,
+                variables._ElementwiseFunctionArray,
+                variables.BoolTypeArray,
+                variables.NativeEndiannessArray,
+            ),
+        ):
+            # TODO: Remove the isinstance check for variables.BoolTypeArray and variables.NativeEndiannessArray once the BackendArrray is updated with oindex and vindex properties
             array = apply_indexer(self.array, self.key)
         else:
             # If the array is not an ExplicitlyIndexedNDArrayMixin,
@@ -691,7 +702,18 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return np.broadcast(*self.key.tuple).shape
 
     def get_duck_array(self):
-        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
+        from xarray.coding import strings, variables
+
+        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin) and not isinstance(
+            self.array,
+            (
+                strings.StackedBytesArray,
+                variables._ElementwiseFunctionArray,
+                variables.BoolTypeArray,
+                variables.NativeEndiannessArray,
+            ),
+        ):
+            # TODO: Remove the isinstance check for variables.BoolTypeArray and variables.NativeEndiannessArray once the BackendArrray is updated with oindex and vindex properties
             array = apply_indexer(self.array, self.key)
         else:
             # If the array is not an ExplicitlyIndexedNDArrayMixin,
