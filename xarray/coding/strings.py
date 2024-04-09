@@ -249,6 +249,10 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def __repr__(self):
         return f"{type(self).__name__}({self.array!r})"
 
+    def _check_and_raise_if_non_basic_indexer(self, indexer) -> None:
+        ...
+        # TODO: this is a temporary fix until BackendArray supports vindex and oindex
+
     def __getitem__(self, key):
         # require slicing the last dimension completely
         key = type(key)(indexing.expanded_indexer(key.tuple, self.array.ndim))

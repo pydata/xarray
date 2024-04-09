@@ -68,6 +68,10 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def dtype(self) -> np.dtype:
         return np.dtype(self._dtype)
 
+    def _check_and_raise_if_non_basic_indexer(self, indexer) -> None:
+        ...
+        # TODO: this is a temporary fix until BackendArray supports vindex and oindex
+
     def __getitem__(self, key):
         return type(self)(self.array[key], self.func, self.dtype)
 
@@ -107,6 +111,10 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def dtype(self) -> np.dtype:
         return np.dtype(self.array.dtype.kind + str(self.array.dtype.itemsize))
 
+    def _check_and_raise_if_non_basic_indexer(self, indexer) -> None:
+        ...
+        # TODO: this is a temporary fix until BackendArray supports vindex and oindex
+
     def __getitem__(self, key) -> np.ndarray:
         return np.asarray(self.array[key], dtype=self.dtype)
 
@@ -138,6 +146,10 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     @property
     def dtype(self) -> np.dtype:
         return np.dtype("bool")
+
+    def _check_and_raise_if_non_basic_indexer(self, indexer) -> None:
+        ...
+        # TODO: this is a temporary fix until BackendArray supports vindex and oindex
 
     def __getitem__(self, key) -> np.ndarray:
         return np.asarray(self.array[key], dtype=self.dtype)
