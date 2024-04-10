@@ -148,6 +148,7 @@ module = [
 # way of testing our annotations.
 [[tool.mypy.overrides]]
 check_untyped_defs = true
+disallow_untyped_defs = true
 module = [
   "xarray.core.accessor_dt",
   "xarray.core.accessor_str",
@@ -161,7 +162,6 @@ module = [
 # from here in time...)
 [[tool.mypy.overrides]]
 check_untyped_defs = false
-disallow_untyped_calls = false
 disallow_untyped_defs = true
 module = [
   "xarray.tests.test_coarsen",
