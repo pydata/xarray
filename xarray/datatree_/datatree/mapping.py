@@ -156,7 +156,7 @@ def map_over_subtree(func: Callable) -> Callable:
     @functools.wraps(func)
     def _map_over_subtree(*args, **kwargs) -> DataTree | Tuple[DataTree, ...]:
         """Internal function which maps func over every node in tree, returning a tree of the results."""
-        from .datatree import DataTree
+        from xarray.core.datatree import DataTree
 
         all_tree_inputs = [a for a in args if isinstance(a, DataTree)] + [
             a for a in kwargs.values() if isinstance(a, DataTree)

@@ -127,6 +127,14 @@ jobs:
         run: |
           python -c "import xarray"
 
+      - name: Restore cached hypothesis directory
+        uses: actions/cache@v4
+        with:
+          path: .hypothesis/
+          key: cache-hypothesis
+          enableCrossOsArchive: true
+          save-always: true
+
       - name: Run tests
         run: python -m pytest -n 4
           --timeout 180
@@ -143,7 +151,7 @@ jobs:
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v4.1.0
+        uses: codecov/codecov-action@v4.2.0
         with:
           file: ./coverage.xml
           flags: unittests

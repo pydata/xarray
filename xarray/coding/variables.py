@@ -81,9 +81,7 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return self.func(self.array.get_duck_array())
 
     def __repr__(self) -> str:
-        return "{}({!r}, func={!r}, dtype={!r})".format(
-            type(self).__name__, self.array, self.func, self.dtype
-        )
+        return f"{type(self).__name__}({self.array!r}, func={self.func!r}, dtype={self.dtype!r})"
 
 
 class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
@@ -309,6 +307,9 @@ class CFMaskCoder(VariableCoder):
         dtype = np.dtype(encoding.get("dtype", data.dtype))
         fv = encoding.get("_FillValue")
         mv = encoding.get("missing_value")
+        # to properly handle _FillValue/missing_value below [a], [b]
+        # we need to check if unsigned data is written as signed data
+        unsigned = encoding.get("_Unsigned") is not None
 
         fv_exists = fv is not None
         mv_exists = mv is not None
@@ -323,13 +324,19 @@ class CFMaskCoder(VariableCoder):
 
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
-            encoding["_FillValue"] = dtype.type(fv)
+            # [a] need to skip this if _Unsigned is available
+            if not unsigned:
+                encoding["_FillValue"] = dtype.type(fv)
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
 
         if mv_exists:
             # try to use _FillValue, if it exists to align both values
             # or use missing_value and ensure it's cast to same dtype as data's
-            encoding["missing_value"] = attrs.get("_FillValue", dtype.type(mv))
+            # [b] need to provide mv verbatim if _Unsigned is available
+            encoding["missing_value"] = attrs.get(
+                "_FillValue",
+                (dtype.type(mv) if not unsigned else mv),
+            )
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
 
         # apply fillna
@@ -522,7 +529,6 @@ class UnsignedIntegerCoder(VariableCoder):
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         if "_Unsigned" in variable.attrs:
             dims, data, attrs, encoding = unpack_for_decoding(variable)
-
             unsigned = pop_to(attrs, encoding, "_Unsigned")
 
             if data.dtype.kind == "i":
