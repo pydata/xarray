@@ -11,7 +11,7 @@ from xarray.core.treenode import Tree
 
 class LevelOrderIter(abc.Iterator):
     """Iterate over tree applying level-order strategy starting at `node`.
-       This is the iterator used by `DataTree` to traverse nodes.
+    This is the iterator used by `DataTree` to traverse nodes.
 
     Parameters
     ----------
@@ -25,6 +25,7 @@ class LevelOrderIter(abc.Iterator):
         for ``node``.
     maxlevel : int, optional
         Maximum level to descend in the node hierarchy.
+
     Examples
     --------
     >>> from xarray.core.datatree import DataTree
@@ -59,7 +60,6 @@ class LevelOrderIter(abc.Iterator):
     ['f', 'b', 'a', 'd', 'i', 'c', 'h']
     >>> [node.name for node in LevelOrderIter(f, stop=lambda n: n.name == "d")]
     ['f', 'b', 'g', 'a', 'i', 'h']
-
     """
 
     def __init__(
