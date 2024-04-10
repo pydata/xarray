@@ -128,13 +128,13 @@ def as_variable(
         except ValueError:
             raise ValueError(f"Tuple {obj} is not in the form (dims, data[, attrs])")
 
-        if isinstance(obj[1], DataArray):
+        if isinstance(data_, DataArray):
             raise TypeError(
                 f"Variable {name!r}: Using a DataArray object to construct a variable is"
                 " ambiguous, please extract the data using the .data property."
             )
         try:
-            obj = Variable(*obj)
+            obj = Variable(dims_, data_, *attrs)
         except (TypeError, ValueError) as error:
             raise error.__class__(
                 f"Variable {name!r}: Could not convert tuple of form "
