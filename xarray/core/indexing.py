@@ -9,7 +9,7 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, overload
 
 import numpy as np
 import pandas as pd
@@ -236,14 +236,34 @@ def expanded_indexer(key, ndim):
     return tuple(new_key)
 
 
-def _expand_slice(slice_, size: int) -> np.ndarray:
-    return np.arange(*slice_.indices(size))
+def _normalize_slice(sl: slice, size: int) -> slice:
+    """
+    Ensure that given slice only contains positive start and stop values
+    (stop can be -1 for full-size slices with negative steps, e.g. [-10::-1])
 
-
-def _normalize_slice(sl: slice, size) -> slice:
-    """Ensure that given slice only contains positive start and stop values
-    (stop can be -1 for full-size slices with negative steps, e.g. [-10::-1])"""
+    Examples
+    --------
+    >>> _normalize_slice(slice(0, 9), 10)
+    slice(0, 9, 1)
+    >>> _normalize_slice(slice(0, -1), 10)
+    slice(0, 9, 1)
+    """
     return slice(*sl.indices(size))
+
+
+def _expand_slice(slice_: slice, size: int) -> np.ndarray[Any, np.dtype[np.integer]]:
+    """
+    Expand slice to an array containing only positive integers.
+
+    Examples
+    --------
+    >>> _expand_slice(slice(0, 9), 10)
+    array([0, 1, 2, 3, 4, 5, 6, 7, 8])
+    >>> _expand_slice(slice(0, -1), 10)
+    array([0, 1, 2, 3, 4, 5, 6, 7, 8])
+    """
+    sl = _normalize_slice(slice_, size)
+    return np.arange(sl.start, sl.stop, sl.step)
 
 
 def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
@@ -316,11 +336,15 @@ class ExplicitIndexer:
         return f"{type(self).__name__}({self.tuple})"
 
 
-def as_integer_or_none(value):
+@overload
+def as_integer_or_none(value: int) -> int: ...
+@overload
+def as_integer_or_none(value: None) -> None: ...
+def as_integer_or_none(value: int | None) -> int | None:
     return None if value is None else operator.index(value)
 
 
-def as_integer_slice(value):
+def as_integer_slice(value: slice) -> slice:
     start = as_integer_or_none(value.start)
     stop = as_integer_or_none(value.stop)
     step = as_integer_or_none(value.step)
