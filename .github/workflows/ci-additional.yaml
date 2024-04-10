@@ -3,9 +3,11 @@ on:
   push:
     branches:
       - "main"
+      - "backend-indexing"
   pull_request:
     branches:
       - "main"
+      - "backend-indexing"
   workflow_dispatch: # allows you to trigger manually
 
 concurrency:
