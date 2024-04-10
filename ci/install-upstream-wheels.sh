@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
 # install cython for building cftime without build isolation
-mamba install "cython>=0.29.20" py-cpuinfo
+micromamba install "cython>=0.29.20" py-cpuinfo
 # temporarily (?) remove numbagg and numba
-mamba remove -y numba numbagg sparse
+micromamba remove -y numba numbagg sparse
 # temporarily remove numexpr
-mamba remove -y numexpr
+micromamba remove -y numexpr
 # temporarily remove backends
-mamba remove -y cf_units hdf5 h5py netcdf4
+micromamba remove -y cf_units hdf5 h5py netcdf4
 # forcibly remove packages to avoid artifacts
-mamba remove -y --force \
+micromamba remove -y --force \
     numpy \
     scipy \
     pandas \
