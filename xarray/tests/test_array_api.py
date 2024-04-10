@@ -54,8 +54,8 @@ def test_aggregation_skipna(arrays) -> None:
 def test_astype(arrays) -> None:
     np_arr, xp_arr = arrays
     expected = np_arr.astype(np.int64)
-    actual = xp_arr.astype(np.int64)
-    assert actual.dtype == np.int64
+    actual = xp_arr.astype(xp.int64)
+    assert actual.dtype == xp.int64
     assert isinstance(actual.data, Array)
     assert_equal(actual, expected)
 
