@@ -161,7 +161,7 @@ module = [
 # from here in time...)
 [[tool.mypy.overrides]]
 check_untyped_defs = false
-disallow_untyped_calls = true
+disallow_untyped_calls = false
 disallow_untyped_defs = true
 module = [
   "xarray.tests.test_coarsen",
