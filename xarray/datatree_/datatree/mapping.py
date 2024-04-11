@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Callable, Tuple
 
 from xarray import DataArray, Dataset
 
-from .iterators import LevelOrderIter
+from xarray.core.iterators import LevelOrderIter
 from xarray.core.treenode import NodePath, TreeNode
 
 if TYPE_CHECKING:
