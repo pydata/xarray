@@ -176,7 +176,6 @@ module = [
   "xarray.tests.test_merge",
   "xarray.tests.test_missing",
   "xarray.tests.test_parallelcompat",
-  "xarray.tests.test_plot",
   "xarray.tests.test_sparse",
   "xarray.tests.test_ufuncs",
   "xarray.tests.test_units",
