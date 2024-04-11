@@ -264,7 +264,7 @@ class Test_summarize_datatree_children:
         """
         Test with an empty mapping of children.
         """
-        children = {}  # type: Dict[Any, Any]
+        children: dict[any, any] = {}
         assert self.func(children) == (
             "<div style='display: inline-grid; grid-template-columns: 100%'>" "</div>"
         )
