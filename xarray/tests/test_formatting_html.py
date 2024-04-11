@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -264,7 +266,7 @@ class Test_summarize_datatree_children:
         """
         Test with an empty mapping of children.
         """
-        children: dict[any, any] = {}
+        children: dict[Any, Any] = {}
         assert self.func(children) == (
             "<div style='display: inline-grid; grid-template-columns: 100%'>" "</div>"
         )
