@@ -1447,7 +1447,8 @@ def save_mfdataset(
     compute : bool
         If true compute immediately, otherwise return a
         ``dask.delayed.Delayed`` object that can be computed later.
-    **kwargs : additional arguments are passed along to ``to_netcdf``
+    **kwargs : dict, optional
+        Additional arguments are passed along to ``to_netcdf``.
 
     Examples
     --------
