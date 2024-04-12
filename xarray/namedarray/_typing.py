@@ -45,7 +45,7 @@ _T_co = TypeVar("_T_co", covariant=True)
 
 
 class _DType2(Protocol):
-    def __eq__(self, other: DType2, /) -> bool:
+    def __eq__(self, other: _DType2, /) -> bool:
         """
         Computes the truth value of ``self == other`` in order to test for data type object equality.
 
