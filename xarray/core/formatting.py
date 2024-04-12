@@ -322,7 +322,7 @@ def summarize_variable(
     is_index: bool = False,
 ) -> str:
     """Summarize a variable in one line, e.g., for the Dataset.__repr__."""
-    from xarray.core import DataArray
+    from xarray.core.dataarray import DataArray
 
     variable = var.variable if isinstance(var, DataArray) else var
 
