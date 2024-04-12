@@ -44,7 +44,7 @@ _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
 
-class _DType2(Protocol):
+class _DType2(Protocol[Any]):
     def __eq__(self, other: _DType2, /) -> bool:
         """
         Computes the truth value of ``self == other`` in order to test for data type object equality.
@@ -64,7 +64,8 @@ class _DType2(Protocol):
         ...
 
 
-_dtype = np.dtype
+# _dtype = np.dtype
+_dtype = _DType2
 _DType = TypeVar("_DType", bound=_dtype[Any])
 _DType_co = TypeVar("_DType_co", covariant=True, bound=_dtype[Any])
 # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
