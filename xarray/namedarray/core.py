@@ -478,7 +478,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if isinstance(self._data, _arrayapi):
             xp = _get_data_namespace(self)
 
-            if xp.isdtype(self.dtype, "integral"):
+            if xp.isdtype(self.dtype, "bool"):
+                itemsize = 1
+            elif xp.isdtype(self.dtype, "integral"):
                 itemsize = xp.iinfo(self.dtype).bits // 8
             else:
                 itemsize = xp.finfo(self.dtype).bits // 8
