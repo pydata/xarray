@@ -65,7 +65,7 @@ def _get_indexer_at_least_n_items(shape, n_desired, from_end):
     return indexer
 
 
-def first_n_items(array, n_desired):
+def first_n_items(array: T_Variable, n_desired: int) -> np.ndarray:
     """Returns the first n_desired items of an array"""
     # Unfortunately, we can't just do array.flat[:n_desired] here because it
     # might not be a numpy.ndarray. Moreover, access to elements of the array
@@ -78,7 +78,7 @@ def first_n_items(array, n_desired):
 
     if array.size == 0:
         # work around for https://github.com/numpy/numpy/issues/5195
-        return []
+        return np.array([])
 
     if n_desired < array.size:
         indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=False)
@@ -88,21 +88,22 @@ def first_n_items(array, n_desired):
     # with indexer above. It would not work with our
     # lazy indexing classes at the moment, so we cannot
     # pass Variable._data
-    if isinstance(array, Variable):
-        array = array._data
-    return np.ravel(to_duck_array(array))[:n_desired]
+    # if isinstance(array, Variable):
+    #     array = array._data
+    # return np.ravel(to_duck_array(array))[:n_desired]
+    return array.stack(dict(__stacked__=array.dims))[:n_desired]
 
 
-def last_n_items(array, n_desired):
+def last_n_items(array: T_Variable, n_desired: int) -> np.ndarray:
     """Returns the last n_desired items of an array"""
     # Unfortunately, we can't just do array.flat[-n_desired:] here because it
     # might not be a numpy.ndarray. Moreover, access to elements of the array
     # could be very expensive (e.g. if it's only available over DAP), so go out
     # of our way to get them in a single call to __getitem__ using only slices.
-    from xarray.core.variable import Variable
+    # from xarray.core.variable import Variable
 
     if (n_desired == 0) or (array.size == 0):
-        return []
+        return np.array([])
 
     if n_desired < array.size:
         indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=True)
@@ -112,9 +113,10 @@ def last_n_items(array, n_desired):
     # with indexer above. It would not work with our
     # lazy indexing classes at the moment, so we cannot
     # pass Variable._data
-    if isinstance(array, Variable):
-        array = array._data
-    return np.ravel(to_duck_array(array))[-n_desired:]
+    # if isinstance(array, Variable):
+    #     array = array._data
+    # return np.ravel(to_duck_array(array))[-n_desired:]
+    return array.stack(dict(__stacked__=array.dims))[-n_desired:]
 
 
 def last_item(array):
