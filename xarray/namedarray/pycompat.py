@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from importlib import import_module
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
 from packaging.version import Version
@@ -15,7 +15,16 @@ integer_types = (int, np.integer)
 if TYPE_CHECKING:
     ModType = Literal["dask", "pint", "cupy", "sparse", "cubed", "numbagg"]
     DuckArrayTypes = tuple[type[Any], ...]  # TODO: improve this? maybe Generic
-    from xarray.namedarray._typing import _DType, _ShapeType, duckarray
+    from xarray.core.indexing import ExplicitlyIndexed
+
+    from xarray.namedarray._typing import (
+        _DType,
+        _ShapeType,
+        duckarray,
+        chunkedduckarray,
+        _dtype,
+        _generic,
+    )
 
 
 class DuckArrayModule:
@@ -121,7 +130,31 @@ def to_numpy(
     return data
 
 
-def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, _DType]:
+@overload
+def to_duck_array(
+    data: ExplicitlyIndexed, **kwargs: dict[str, Any]
+) -> duckarray[Any, _dtype[_generic]]: ...
+@overload
+def to_duck_array(
+    data: chunkedduckarray[_ShapeType, _DType], **kwargs: dict[str, Any]
+) -> chunkedduckarray[_ShapeType, _DType]: ...
+@overload
+def to_duck_array(
+    data: duckarray[_ShapeType, _DType], **kwargs: dict[str, Any]
+) -> duckarray[_ShapeType, _DType]: ...
+@overload
+def to_duck_array(
+    data: np.typing.ArrayLike, **kwargs: dict[str, Any]
+) -> duckarray[Any, _dtype[_generic]]: ...
+def to_duck_array(
+    data: (
+        ExplicitlyIndexed
+        | chunkedduckarray[_ShapeType, _DType]
+        | duckarray[_ShapeType, _DType]
+        | np.typing.ArrayLike
+    ),
+    **kwargs: dict[str, Any],
+) -> duckarray[_ShapeType, _DType] | duckarray[Any, _dtype[_generic]]:
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
