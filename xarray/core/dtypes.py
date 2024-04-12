@@ -195,7 +195,11 @@ def result_type(
     from xarray.core.duck_array_ops import get_array_namespace
 
     namespaces = {get_array_namespace(t) for t in arrays_and_dtypes}
-    [xp] = namespaces
+    non_numpy = namespaces - {np}
+    if non_numpy:
+        [xp] = non_numpy
+    else:
+        xp = np
 
     types = {xp.result_type(t) for t in arrays_and_dtypes}
 
