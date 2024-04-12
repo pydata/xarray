@@ -167,7 +167,7 @@ def is_datetime_like(dtype):
 
 
 def isdtype(dtype, compare, xp=None):
-    if xp is None or xp is np:
+    if xp in (None, np) or not hasattr(xp, "isdtype"):
         # need to take this path to allow checking for datetime/timedelta/strings
         return np.issubdtype(dtype, compare)
     else:
