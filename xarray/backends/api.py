@@ -1416,8 +1416,6 @@ def save_mfdataset(
         these locations will be overwritten.
     format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
               "NETCDF3_CLASSIC"}, optional
-    **kwargs : additional arguments are passed along to ``to_netcdf``
-
         File format for the resulting netCDF file:
 
         * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
@@ -1449,10 +1447,10 @@ def save_mfdataset(
     compute : bool
         If true compute immediately, otherwise return a
         ``dask.delayed.Delayed`` object that can be computed later.
+    **kwargs : additional arguments are passed along to ``to_netcdf``
 
     Examples
     --------
-
     Save a dataset into one netCDF per year of data:
 
     >>> ds = xr.Dataset(
