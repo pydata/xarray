@@ -470,11 +470,13 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         If the underlying data array does not include ``nbytes``, estimates
         the bytes consumed based on the ``size`` and ``dtype``.
         """
+        from xarray.namedarray._array_api import _get_data_namespace
+
         if hasattr(self._data, "nbytes"):
             return self._data.nbytes  # type: ignore[no-any-return]
 
         if isinstance(self._data, _arrayapi):
-            xp = self._data.__array_namespace__()
+            xp = _get_data_namespace(self)
 
             if xp.isdtype(self.dtype, "integral"):
                 itemsize = xp.iinfo(self.dtype).bits // 8
