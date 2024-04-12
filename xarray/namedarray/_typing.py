@@ -177,7 +177,7 @@ class _arrayfunction(
     ) -> _arrayfunction[Any, _DType_co] | Any: ...
 
     def __array__(
-        self, dtype: _dtype | None = ..., /
+        self, dtype: _dtype[_generic] | None = ..., /
     ) -> np.ndarray[Any, np.dtype[np.generic]]: ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
