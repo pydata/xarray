@@ -72,7 +72,6 @@ def first_n_items(array: T_Variable, n_desired: int) -> np.ndarray:
     # might not be a numpy.ndarray. Moreover, access to elements of the array
     # could be very expensive (e.g. if it's only available over DAP), so go out
     # of our way to get them in a single call to __getitem__ using only slices.
-    from xarray.core.variable import Variable
 
     if n_desired < 1:
         raise ValueError("must request at least one item")
