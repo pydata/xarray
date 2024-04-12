@@ -16,14 +16,13 @@ if TYPE_CHECKING:
     ModType = Literal["dask", "pint", "cupy", "sparse", "cubed", "numbagg"]
     DuckArrayTypes = tuple[type[Any], ...]  # TODO: improve this? maybe Generic
     from xarray.core.indexing import ExplicitlyIndexed
-
     from xarray.namedarray._typing import (
         _DType,
-        _ShapeType,
-        duckarray,
-        chunkedduckarray,
         _dtype,
         _generic,
+        _ShapeType,
+        chunkedduckarray,
+        duckarray,
     )
 
 
