@@ -44,7 +44,7 @@ _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
 
-class _DType2(Protocol[_T]):
+class _DType2(Protocol[_T_co]):
     def __eq__(self, other: _DType2[Any], /) -> bool:
         """
         Computes the truth value of ``self == other`` in order to test for data type object equality.
@@ -175,14 +175,14 @@ class _arrayfunction(
     ) -> _arrayfunction[Any, _DType_co] | Any: ...
 
     @overload
-    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]: ...
+    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, Any]: ...
 
     @overload
-    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]: ...
+    def __array__(self, dtype: Any, /) -> np.ndarray[Any, Any]: ...
 
     def __array__(
-        self, dtype: _DType | None = ..., /
-    ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]: ...
+        self, dtype: Any | None = ..., /
+    ) -> np.ndarray[Any, Any] | np.ndarray[Any, Any]: ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
