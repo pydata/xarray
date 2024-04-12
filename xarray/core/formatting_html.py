@@ -6,8 +6,8 @@ from collections.abc import Mapping
 from functools import lru_cache, partial
 from html import escape
 from importlib.resources import files
+from typing import TYPE_CHECKING
 
-from xarray.core.datatree import DataTree
 from xarray.core.formatting import (
     inline_index_repr,
     inline_variable_array_repr,
@@ -19,6 +19,9 @@ STATIC_FILES = (
     ("xarray.static.html", "icons-svg-inline.html"),
     ("xarray.static.css", "style.css"),
 )
+
+if TYPE_CHECKING:
+    from xarray.core.datatree import DataTree
 
 
 @lru_cache(None)
