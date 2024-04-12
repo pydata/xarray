@@ -43,9 +43,11 @@ _default = Default.token
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
+_generic = Any
+
 
 class _DType2(Protocol[_T_co]):
-    def __eq__(self, other: _DType2[Any], /) -> bool:
+    def __eq__(self, other: _DType2[_generic], /) -> bool:
         """
         Computes the truth value of ``self == other`` in order to test for data type object equality.
 
@@ -66,12 +68,12 @@ class _DType2(Protocol[_T_co]):
 
 # _dtype = np.dtype
 _dtype = _DType2
-_DType = TypeVar("_DType", bound=_dtype[Any])
-_DType_co = TypeVar("_DType_co", covariant=True, bound=_dtype[Any])
+_DType = TypeVar("_DType", bound=_dtype[_generic])
+_DType_co = TypeVar("_DType_co", covariant=True, bound=_dtype[_generic])
 # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
 
-_ScalarType = TypeVar("_ScalarType", bound=np.generic)
-_ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
+_ScalarType = TypeVar("_ScalarType", bound=_generic)
+_ScalarType_co = TypeVar("_ScalarType_co", bound=_generic, covariant=True)
 
 
 # A protocol for anything with the dtype attribute
@@ -174,15 +176,9 @@ class _arrayfunction(
         /,
     ) -> _arrayfunction[Any, _DType_co] | Any: ...
 
-    @overload
-    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, Any]: ...
-
-    @overload
-    def __array__(self, dtype: Any, /) -> np.ndarray[Any, Any]: ...
-
     def __array__(
-        self, dtype: Any | None = ..., /
-    ) -> np.ndarray[Any, Any] | np.ndarray[Any, Any]: ...
+        self, dtype: _dtype | None = ..., /
+    ) -> np.ndarray[Any, np.dtype[np.generic]]: ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
@@ -301,7 +297,7 @@ class _sparsearray(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, Any]: ...
+    def todense(self) -> np.ndarray[Any, np.dtype[np.generic]]: ...
 
 
 @runtime_checkable
@@ -314,7 +310,7 @@ class _sparsearrayfunction(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, Any]: ...
+    def todense(self) -> np.ndarray[Any, np.dtype[np.generic]]: ...
 
 
 @runtime_checkable
@@ -327,7 +323,7 @@ class _sparsearrayapi(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, Any]: ...
+    def todense(self) -> np.ndarray[Any, np.dtype[np.generic]]: ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
