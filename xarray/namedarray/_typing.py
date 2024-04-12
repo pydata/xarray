@@ -301,7 +301,7 @@ class _sparsearray(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, _DType_co]: ...
+    def todense(self) -> np.ndarray[Any, Any]: ...
 
 
 @runtime_checkable
@@ -314,7 +314,7 @@ class _sparsearrayfunction(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, _DType_co]: ...
+    def todense(self) -> np.ndarray[Any, Any]: ...
 
 
 @runtime_checkable
@@ -327,7 +327,7 @@ class _sparsearrayapi(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, _DType_co]: ...
+    def todense(self) -> np.ndarray[Any, Any]: ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
