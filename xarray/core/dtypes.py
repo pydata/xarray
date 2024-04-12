@@ -199,10 +199,13 @@ def result_type(
 
     types = {xp.result_type(t) for t in arrays_and_dtypes}
 
-    for left, right in PROMOTE_TO_OBJECT:
-        if any(isdtype(t, left, xp=xp) for t in types) and any(
-            isdtype(t, right, xp=xp) for t in types
-        ):
-            return xp.dtype(object)
+    if any(isinstance(t, np.dtype) for t in types):
+        # only check if there's numpy dtypes – the array API does not
+        # define the types we're checking for
+        for left, right in PROMOTE_TO_OBJECT:
+            if any(isdtype(t, left, xp=xp) for t in types) and any(
+                isdtype(t, right, xp=xp) for t in types
+            ):
+                return xp.dtype(object)
 
     return xp.result_type(*arrays_and_dtypes)
