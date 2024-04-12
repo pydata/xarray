@@ -475,7 +475,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if hasattr(self._data, "nbytes"):
             return self._data.nbytes  # type: ignore[no-any-return]
 
-        if isinstance(self._data, _arrayapi):
+        if hasattr(self.dtype, "itemsize"):
+            itemsize = self.dtype.itemsize
+        elif isinstance(self._data, _arrayapi):
             xp = _get_data_namespace(self)
 
             if xp.isdtype(self.dtype, "bool"):
@@ -485,7 +487,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             else:
                 itemsize = xp.finfo(self.dtype).bits // 8
         else:
-            itemsize = self.dtype.itemsize
+            raise TypeError(
+                "cannot compute the number of bytes (no array API nor nbytes / itemsize)"
+            )
 
         return self.size * itemsize
 
