@@ -166,6 +166,14 @@ def is_datetime_like(dtype):
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
+def isdtype(dtype, compare, xp=None):
+    if xp is None or xp is np:
+        # need to take this path to allow checking for datetime/timedelta/strings
+        return np.issubdtype(dtype, compare)
+    else:
+        return xp.isdtype(dtype, compare)
+
+
 def result_type(
     *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
 ) -> np.dtype:
@@ -184,12 +192,17 @@ def result_type(
     -------
     numpy.dtype for the result.
     """
-    types = {np.result_type(t).type for t in arrays_and_dtypes}
+    from xarray.core.duck_array_ops import get_array_namespace
+
+    namespaces = {get_array_namespace(t) for t in arrays_and_dtypes}
+    [xp] = namespaces
+
+    types = {xp.result_type(t) for t in arrays_and_dtypes}
 
     for left, right in PROMOTE_TO_OBJECT:
-        if any(issubclass(t, left) for t in types) and any(
-            issubclass(t, right) for t in types
+        if any(isdtype(t, left, xp=xp) for t in types) and any(
+            isdtype(t, right, xp=xp) for t in types
         ):
-            return np.dtype(object)
+            return xp.dtype(object)
 
-    return np.result_type(*arrays_and_dtypes)
+    return xp.result_type(*arrays_and_dtypes)
