@@ -167,33 +167,55 @@ def is_datetime_like(dtype):
 
 
 def isdtype(dtype, kind, xp=None):
-    if xp in (None, np) or not hasattr(xp, "isdtype"):
-        # need to take this path to allow checking for datetime/timedelta/strings
-        long_names = {
-            "bool": "b",
-            "signed integer": "i",
-            "unsigned integer": "u",
-            "integral": "ui",
-            "real floating": "f",
-            "complex floating": "c",
-            "numeric": "uifc",
-            "object": "O",
-            "character": "U",
-        }
+    array_api_names = {
+        "bool": "b",
+        "signed integer": "i",
+        "unsigned integer": "u",
+        "integral": "ui",
+        "real floating": "f",
+        "complex floating": "c",
+        "numeric": "uifc",
+    }
+    numpy_names = {
+        "object": "O",
+        "character": "U",
+        "string": "S",
+    }
+    long_names = array_api_names | numpy_names
 
-        if isinstance(kind, str):
+    def compare_dtype(dtype, kind):
+        if isinstance(kind, np.dtype):
+            return dtype == kind
+        elif isinstance(kind, str):
             return dtype.kind in long_names.get(kind, kind)
-        elif isinstance(kind, np.dtype) or issubclass(kind, np.generic):
+        elif isinstance(kind, type) and issubclass(kind, (np.dtype, np.generic)):
             return np.issubdtype(dtype, kind)
-        elif not isinstance(kind, tuple):
+        else:
             raise TypeError(f"unknown dtype kind: {kind}")
 
-        if all(isinstance(k, str) for k in kind):
-            return dtype.kind in "".join(long_names.get(k, k) for k in kind)
-        else:
-            return any(np.issubdtype(dtype, k) for k in kind)
+    def is_numpy_kind(kind):
+        return (isinstance(kind, str) and kind in numpy_names) or (
+            isinstance(kind, type) and issubclass(kind, (np.dtype, np.generic))
+        )
+
+    def split_numpy_kinds(kinds):
+        if not isinstance(kinds, tuple):
+            kinds = (kinds,)
+
+        numpy_kinds = tuple(kind for kind in kinds if is_numpy_kind(kind))
+        non_numpy_kinds = tuple(kind for kind in kinds if not is_numpy_kind(kind))
+
+        return numpy_kinds, non_numpy_kinds
+
+    numpy_kinds, non_numpy_kinds = split_numpy_kinds(kind)
+    if xp in (None, np) or not hasattr(xp, "isdtype"):
+        # need to take this path to allow checking for datetime/timedelta/strings
+        return any(compare_dtype(dtype, k) for k in (numpy_kinds + non_numpy_kinds))
+    elif non_numpy_kinds:
+        return xp.isdtype(dtype, non_numpy_kinds)
     else:
-        return xp.isdtype(dtype, kind)
+        # can't compare numpy kinds with non-numpy dtypes
+        return False
 
 
 def result_type(
