@@ -472,8 +472,18 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """
         if hasattr(self._data, "nbytes"):
             return self._data.nbytes  # type: ignore[no-any-return]
+
+        if isinstance(self._data, _arrayapi):
+            xp = self._data.__array_namespace__()
+
+            if xp.isdtype(self.dtype, "integral"):
+                itemsize = xp.iinfo(self.dtype).bits // 8
+            else:
+                itemsize = xp.finfo(self.dtype).bits // 8
         else:
-            return self.size * self.dtype.itemsize
+            itemsize = self.dtype.itemsize
+
+        return self.size * itemsize
 
     @property
     def dims(self) -> _Dims:
