@@ -166,12 +166,34 @@ def is_datetime_like(dtype):
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
-def isdtype(dtype, compare, xp=None):
+def isdtype(dtype, kind, xp=None):
     if xp in (None, np) or not hasattr(xp, "isdtype"):
         # need to take this path to allow checking for datetime/timedelta/strings
-        return np.issubdtype(dtype, compare)
+        long_names = {
+            "bool": "b",
+            "signed integer": "i",
+            "unsigned integer": "u",
+            "integral": "ui",
+            "real floating": "f",
+            "complex floating": "c",
+            "numeric": "uifc",
+            "object": "O",
+            "character": "U",
+        }
+
+        if isinstance(kind, str):
+            return dtype.kind in long_names.get(kind, kind)
+        elif isinstance(kind, np.dtype) or issubclass(kind, np.generic):
+            return np.issubdtype(dtype, kind)
+        elif not isinstance(kind, tuple):
+            raise TypeError(f"unknown dtype kind: {kind}")
+
+        if all(isinstance(k, str) for k in kind):
+            return dtype.kind in "".join(long_names.get(k, k) for k in kind)
+        else:
+            return any(np.issubdtype(dtype, k) for k in kind)
     else:
-        return xp.isdtype(dtype, compare)
+        return xp.isdtype(dtype, kind)
 
 
 def result_type(
