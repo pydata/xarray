@@ -6,8 +6,8 @@ from collections.abc import Mapping
 from functools import lru_cache, partial
 from html import escape
 from importlib.resources import files
-from typing import Any
 
+from xarray.core.datatree import DataTree
 from xarray.core.formatting import (
     inline_index_repr,
     inline_variable_array_repr,
@@ -345,7 +345,7 @@ def dataset_repr(ds) -> str:
     return _obj_repr(ds, header_components, sections)
 
 
-def summarize_datatree_children(children: Mapping[str, Any]) -> str:
+def summarize_datatree_children(children: Mapping[str, DataTree]) -> str:
     N_CHILDREN = len(children) - 1
 
     # Get result from datatree_node_repr and wrap it
@@ -380,7 +380,7 @@ children_section = partial(
 )
 
 
-def datatree_node_repr(group_title: str, dt: Any) -> str:
+def datatree_node_repr(group_title: str, dt: DataTree) -> str:
     header_components = [f"<div class='xr-obj-type'>{escape(group_title)}</div>"]
 
     ds = dt.ds
@@ -467,6 +467,6 @@ def _wrap_datatree_repr(r: str, end: bool = False) -> str:
     )
 
 
-def datatree_repr(dt: Any) -> str:
+def datatree_repr(dt: DataTree) -> str:
     obj_type = f"datatree.{type(dt).__name__}"
     return datatree_node_repr(obj_type, dt)
