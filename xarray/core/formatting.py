@@ -20,6 +20,7 @@ from pandas.errors import OutOfBoundsDatetime
 from xarray.core.duck_array_ops import array_equiv, astype
 from xarray.core.indexing import MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
+from xarray.core.types import T_DataArray, T_Variable
 from xarray.core.utils import is_duck_array
 from xarray.namedarray.pycompat import array_type, to_duck_array, to_numpy
 
@@ -211,7 +212,7 @@ def format_items(x):
     return formatted
 
 
-def format_array_flat(array, max_width: int):
+def format_array_flat(array: T_Variable, max_width: int) -> str:
     """Return a formatted string for as many items in the flattened version of
     array that will fit within max_width characters.
     """
@@ -296,7 +297,7 @@ def inline_sparse_repr(array):
     )
 
 
-def inline_variable_array_repr(var, max_width):
+def inline_variable_array_repr(var: T_Variable, max_width: int) -> str:
     """Build a one-line summary of a variable's data."""
     if hasattr(var._data, "_repr_inline_"):
         return var._data._repr_inline_(max_width)
@@ -316,13 +317,15 @@ def inline_variable_array_repr(var, max_width):
 
 def summarize_variable(
     name: Hashable,
-    var,
+    var: T_DataArray | T_Variable,
     col_width: int,
     max_width: int | None = None,
     is_index: bool = False,
-):
+) -> str:
     """Summarize a variable in one line, e.g., for the Dataset.__repr__."""
-    variable = getattr(var, "variable", var)
+    from xarray.core import DataArray
+
+    variable = var.variable if isinstance(var, DataArray) else var
 
     if max_width is None:
         max_width_options = OPTIONS["display_width"]
