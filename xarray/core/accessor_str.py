@@ -121,7 +121,9 @@ def _apply_str_ufunc(
 ) -> Any:
     # TODO handling of na values ?
     if dtype is None:
-        dtype = obj.dtype
+        # need to strip length information from dtype
+        # otherwise changes in output size are not reflected
+        dtype = np.dtype(f"{obj.dtype.byteorder}{obj.dtype.char}")
 
     dask_gufunc_kwargs = dict()
     if output_sizes is not None:
