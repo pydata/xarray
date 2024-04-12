@@ -43,9 +43,30 @@ _default = Default.token
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
+
+class _DType2(Protocol):
+    def __eq__(self, other: DType2, /) -> bool:
+        """
+        Computes the truth value of ``self == other`` in order to test for data type object equality.
+
+        Parameters
+        ----------
+        self: dtype
+            data type instance. May be any supported data type.
+        other: dtype
+            other data type instance. May be any supported data type.
+
+        Returns
+        -------
+        out: bool
+            a boolean indicating whether the data type objects are equal.
+        """
+        ...
+
+
 _dtype = np.dtype
-_DType = TypeVar("_DType", bound=np.dtype[Any])
-_DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
+_DType = TypeVar("_DType", bound=_dtype[Any])
+_DType_co = TypeVar("_DType_co", covariant=True, bound=_dtype[Any])
 # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
 
 _ScalarType = TypeVar("_ScalarType", bound=np.generic)
@@ -60,9 +81,9 @@ class _SupportsDType(Protocol[_DType_co]):
 
 
 _DTypeLike = Union[
-    np.dtype[_ScalarType],
+    _dtype[_ScalarType],
     type[_ScalarType],
-    _SupportsDType[np.dtype[_ScalarType]],
+    _SupportsDType[_dtype[_ScalarType]],
 ]
 
 # For unknown shapes Dask uses np.nan, array_api uses None:
@@ -216,7 +237,7 @@ duckarray = Union[
 ]
 
 # Corresponds to np.typing.NDArray:
-DuckArray = _arrayfunction[Any, np.dtype[_ScalarType_co]]
+DuckArray = _arrayfunction[Any, _dtype[_ScalarType_co]]
 
 
 @runtime_checkable
