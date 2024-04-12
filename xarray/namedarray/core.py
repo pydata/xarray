@@ -1129,7 +1129,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return expand_dims(self, dim=dim)
 
 
-_NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]
+_NamedArray = NamedArray[Any, _dtype[_ScalarType_co]]
 
 
 def _raise_if_any_duplicate_dimensions(
