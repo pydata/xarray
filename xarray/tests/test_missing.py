@@ -164,9 +164,10 @@ def test_interpolate_pd_compat_non_uniform_index():
             # for the linear methods. This next line inforces the xarray
             # fill_value convention on the pandas output. Therefore, this test
             # only checks that interpolated values are the same (not nans)
-            expected.values[pd.isnull(actual.values)] = np.nan
+            expected_values = expected.values.copy()
+            expected_values[pd.isnull(actual.values)] = np.nan
 
-            np.testing.assert_allclose(actual.values, expected.values)
+            np.testing.assert_allclose(actual.values, expected_values)
 
 
 @requires_scipy
