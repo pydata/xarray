@@ -139,10 +139,6 @@ around.__doc__ = str.replace(
 )
 
 
-def extract_dtype(dtype):
-    return getattr(dtype, "_np_dtype", dtype)
-
-
 def isnull(data):
     data = asarray(data)
 
