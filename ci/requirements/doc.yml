@@ -37,10 +37,10 @@ dependencies:
   - sphinx-copybutton
   - sphinx-design
   - sphinx-inline-tabs
+  - sphinxext-rediraffe
   - sphinx>=5.0
   - zarr>=2.10
   - pip:
-      - sphinxext-rediraffe
       - sphinxext-opengraph
       # relative to this file. Needs to be editable to be accepted.
       - -e ../..
