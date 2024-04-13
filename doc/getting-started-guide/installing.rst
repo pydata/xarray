@@ -6,7 +6,7 @@ Installation
 Required dependencies
 ---------------------
 
-- Python (3.9 or later)
+- Python (3.10 or later)
 - `numpy <https://www.numpy.org/>`__ (1.23 or later)
 - `packaging <https://packaging.pypa.io/en/latest/#>`__ (22 or later)
 - `pandas <https://pandas.pydata.org/>`__ (1.5 or later)
