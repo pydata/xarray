@@ -8862,9 +8862,7 @@ class Dataset(
         lhs = np.vander(x, order)
 
         if rcond is None:
-            rcond = (
-                x.shape[0] * np.core.finfo(x.dtype).eps  # type: ignore[attr-defined]
-            )
+            rcond = x.shape[0] * np.finfo(x.dtype).eps  # type: ignore[attr-defined]
 
         # Weights:
         if w is not None:
