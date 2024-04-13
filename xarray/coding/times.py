@@ -210,8 +210,8 @@ def _decode_cf_datetime_dtype(
     values = indexing.ImplicitToExplicitIndexingAdapter(data)
     example_value = np.concatenate(
         [
-            values[0] if values.shape > 0 else [0],
-            values[-1] if values.shape > 0 else [0],
+            values[0] if values.size > 0 else [0],
+            values[-1] if values.size > 0 else [0],
         ]
     )
 
