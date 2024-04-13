@@ -322,9 +322,12 @@ def summarize_variable(
     is_index: bool = False,
 ) -> str:
     """Summarize a variable in one line, e.g., for the Dataset.__repr__."""
-    from xarray.core.dataarray import DataArray
+    from xarray.core.variable import Variable
 
-    variable = var.variable if isinstance(var, DataArray) else var
+    if isinstance(var, Variable):
+        variable = var
+    else:
+        variable = var.variable
 
     if max_width is None:
         max_width_options = OPTIONS["display_width"]
