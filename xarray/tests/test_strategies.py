@@ -208,18 +208,17 @@ class TestVariablesStrategy:
         the user's choice of dtypes with non-API-compliant ones.
         """
         if Version(np.__version__) >= Version("2.0.0.dev0"):
-            np_array_api = np
+            nxp = np
         else:
-            from numpy import (
-                array_api as np_array_api,  # requires numpy>=1.26.0, and we expect a UserWarning to be raised
-            )
+            # requires numpy>=1.26.0, and we expect a UserWarning to be raised
+            from numpy import array_api as nxp  # type: ignore[no-redef,unused-ignore]
 
-        np_array_api_st = make_strategies_namespace(np_array_api)
+        nxp_st = make_strategies_namespace(nxp)
 
         data.draw(
             variables(
-                array_strategy_fn=np_array_api_st.arrays,
-                dtype=np_array_api_st.scalar_dtypes(),
+                array_strategy_fn=nxp_st.arrays,
+                dtype=nxp_st.scalar_dtypes(),
             )
         )
 
