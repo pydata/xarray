@@ -207,9 +207,12 @@ def _decode_cf_datetime_dtype(
     # Verify that at least the first and last date can be decoded
     # successfully. Otherwise, tracebacks end up swallowed by
     # Dataset.__repr__ when users try to view their lazily decoded array.
-    values = indexing.ImplicitToExplicitIndexingAdapter(indexing.as_indexable(data))
+    values = indexing.ImplicitToExplicitIndexingAdapter(data)
     example_value = np.concatenate(
-        [first_n_items(values, 1) or [0], last_item(values) or [0]]
+        [
+            values[0] if values.shape > 0 else [0],
+            values[-1] if values.shape > 0 else [0],
+        ]
     )
 
     try:
