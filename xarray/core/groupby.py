@@ -243,8 +243,8 @@ class _DummyGroup(Generic[T_Xarray]):
     def data(self) -> range:
         return range(self.size)
 
-    def __array__(self) -> np.ndarray:
-        return np.arange(self.size)
+    def __array__(self, dtype=None, copy=None) -> np.ndarray:
+        return np.arange(self.size, dtype=dtype)
 
     @property
     def shape(self) -> tuple[int]:

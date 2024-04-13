@@ -161,7 +161,9 @@ class AbstractArray:
     def __complex__(self: Any) -> complex:
         return complex(self.values)
 
-    def __array__(self: Any, dtype: DTypeLike | None = None) -> np.ndarray:
+    def __array__(
+        self: Any, dtype: DTypeLike | None = None, copy: bool | None = None
+    ) -> np.ndarray:
         return np.asarray(self.values, dtype=dtype)
 
     def __repr__(self) -> str:
