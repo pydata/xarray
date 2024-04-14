@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from datetime import timedelta
+from functools import partial
 from itertools import product
 
 import numpy as np
@@ -102,7 +103,7 @@ def _all_cftime_date_types():
     import cftime
 
     return {
-        "noleap": cftime.DatetimeNoLeap,
+        "noleap": partial(cftime.datetime, calendar="noleap"),
         "365_day": cftime.DatetimeNoLeap,
         "360_day": cftime.Datetime360Day,
         "julian": cftime.DatetimeJulian,

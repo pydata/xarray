@@ -77,7 +77,7 @@ if TYPE_CHECKING:
     from xarray.core.types import InclusiveOptions, SideOptions
 
 
-def get_date_type(calendar, use_cftime=True):
+def get_date_type(calendar, use_cftime=True, legacy=True):
     """Return the cftime date type for a given calendar name."""
     if cftime is None:
         raise ImportError("cftime is required for dates with non-standard calendars")
@@ -96,7 +96,10 @@ def get_date_type(calendar, use_cftime=True):
             "all_leap": cftime.DatetimeAllLeap,
             "standard": cftime.DatetimeGregorian,
         }
-        return calendars[calendar]
+        if legacy:
+            return calendars[calendar]
+        else:
+            return partial(cftime.datetime, calendar=calendar)
 
 
 class BaseCFTimeOffset:
