@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
+from types import ModuleType
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 import numpy as np
@@ -32,7 +33,7 @@ dask_available = module_available("dask")
 _T_DaskArray = TypeVar("_T_DaskArray", bound="DaskArray")
 
 
-class DaskManager(ChunkManagerEntrypoint):  # type: ignore[type-var]
+class DaskManager(ChunkManagerEntrypoint):
     # array_cls: type[DaskArray]
     available: bool = dask_available
 
@@ -47,26 +48,28 @@ class DaskManager(ChunkManagerEntrypoint):  # type: ignore[type-var]
         return is_duck_dask_array(data)
 
     def chunks(self, data: chunkedduckarray[Any, Any]) -> _Chunks:
-        return data.chunks  # type: ignore[no-any-return]
+        return data.chunks
 
     def normalize_chunks(
         self,
         chunks: _ChunksLike,
         shape: _Shape | None = None,
         limit: int | None = None,
-        dtype: _dtype | None = None,
+        dtype: _dtype[Any] | None = None,
         previous_chunks: _Chunks | None = None,
     ) -> _Chunks:
         """Called by open_dataset"""
         from dask.array.core import normalize_chunks
 
-        return normalize_chunks(
+        out: _Chunks
+        out = normalize_chunks(
             chunks,
             shape=shape,
             limit=limit,
             dtype=dtype,
             previous_chunks=previous_chunks,
         )  # type: ignore[no-untyped-call]
+        return out
 
     def from_array(
         self, data: duckarray[Any, _DType], chunks: _ChunksLike, **kwargs: Any
@@ -77,11 +80,13 @@ class DaskManager(ChunkManagerEntrypoint):  # type: ignore[type-var]
             # lazily loaded backend array classes should use NumPy array operations.
             kwargs["meta"] = np.ndarray
 
-        return from_array(
+        out: chunkedduckarray[Any, _DType]
+        out = from_array(
             data,
             chunks,
             **kwargs,
         )  # type: ignore[no-untyped-call]
+        return out
 
     def compute(
         self, *data: chunkedduckarray[Any, _DType] | Any, **kwargs: Any
@@ -91,7 +96,7 @@ class DaskManager(ChunkManagerEntrypoint):  # type: ignore[type-var]
         return compute(*data, **kwargs)  # type: ignore[no-untyped-call, no-any-return]
 
     @property
-    def array_api(self) -> Any:
+    def array_api(self) -> ModuleType:
         from dask import array as da
 
         return da
@@ -108,7 +113,8 @@ class DaskManager(ChunkManagerEntrypoint):  # type: ignore[type-var]
     ) -> chunkedduckarray[Any, _DType]:
         from dask.array.reductions import reduction
 
-        return reduction(
+        out: chunkedduckarray[Any, _DType]
+        out = reduction(
             arr,
             chunk=func,
             combine=combine_func,
@@ -117,6 +123,7 @@ class DaskManager(ChunkManagerEntrypoint):  # type: ignore[type-var]
             dtype=dtype,
             keepdims=keepdims,
         )  # type: ignore[no-untyped-call]
+        return out
 
     def scan(
         self,
@@ -130,7 +137,8 @@ class DaskManager(ChunkManagerEntrypoint):  # type: ignore[type-var]
     ) -> chunkedduckarray[Any, _DType]:
         from dask.array.reductions import cumreduction
 
-        return cumreduction(
+        out: chunkedduckarray[Any, _DType]
+        out = cumreduction(
             func,
             binop,
             ident,
@@ -139,6 +147,7 @@ class DaskManager(ChunkManagerEntrypoint):  # type: ignore[type-var]
             dtype=dtype,
             **kwargs,
         )  # type: ignore[no-untyped-call]
+        return out
 
     def apply_gufunc(
         self,
@@ -157,7 +166,8 @@ class DaskManager(ChunkManagerEntrypoint):  # type: ignore[type-var]
     ) -> chunkedduckarray[Any, _DType] | tuple[chunkedduckarray[Any, _DType], ...]:
         from dask.array.gufunc import apply_gufunc
 
-        return apply_gufunc(
+        out: chunkedduckarray[Any, _DType] | tuple[chunkedduckarray[Any, _DType], ...]
+        out = apply_gufunc(
             func,
             signature,
             *args,
@@ -171,6 +181,8 @@ class DaskManager(ChunkManagerEntrypoint):  # type: ignore[type-var]
             meta=meta,
             **kwargs,
         )  # type: ignore[no-untyped-call]
+
+        return out
 
     def map_blocks(
         self,
@@ -191,7 +203,8 @@ class DaskManager(ChunkManagerEntrypoint):  # type: ignore[type-var]
             drop_axis = []
 
         # pass through name, meta, token as kwargs
-        return map_blocks(
+        out: chunkedduckarray[Any, _DType]
+        out = map_blocks(
             func,
             *args,
             dtype=dtype,
@@ -200,6 +213,7 @@ class DaskManager(ChunkManagerEntrypoint):  # type: ignore[type-var]
             new_axis=new_axis,
             **kwargs,
         )  # type: ignore[no-untyped-call]
+        return out
 
     def blockwise(
         self,
@@ -218,7 +232,8 @@ class DaskManager(ChunkManagerEntrypoint):  # type: ignore[type-var]
     ) -> chunkedduckarray[Any, _DType]:
         from dask.array.blockwise import blockwise
 
-        return blockwise(
+        out: chunkedduckarray[Any, _DType]
+        out = blockwise(
             func,
             out_ind,
             *args,
@@ -232,6 +247,7 @@ class DaskManager(ChunkManagerEntrypoint):  # type: ignore[type-var]
             meta=meta,
             **kwargs,
         )  # type: ignore[no-untyped-call]
+        return out
 
     def unify_chunks(
         self,
@@ -240,7 +256,9 @@ class DaskManager(ChunkManagerEntrypoint):  # type: ignore[type-var]
     ) -> tuple[dict[str, _Chunks], list[chunkedduckarray[Any, Any]]]:
         from dask.array.core import unify_chunks
 
-        return unify_chunks(*args, **kwargs)  # type: ignore[no-any-return, no-untyped-call]
+        out: tuple[dict[str, _Chunks], list[chunkedduckarray[Any, Any]]]
+        out = unify_chunks(*args, **kwargs)  # type: ignore[no-untyped-call]
+        return out
 
     def store(
         self,

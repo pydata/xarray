@@ -11,6 +11,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 from importlib.metadata import EntryPoint, entry_points
+from types import ModuleType
 from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
@@ -349,7 +350,7 @@ class ChunkManagerEntrypoint(ABC):
         raise NotImplementedError()
 
     @property
-    def array_api(self) -> Any:
+    def array_api(self) -> ModuleType:
         """
         Return the array_api namespace following the python array API standard.
 

@@ -104,7 +104,7 @@ _Chunk = tuple[int, ...]
 _Chunks = tuple[_Chunk, ...]
 _NormalizedChunks = tuple[tuple[int, ...], ...]  # TODO: Same as Chunks.
 _ChunksLike = Union[
-    int, Literal["auto"], None, _chunk, _Chunks
+    int, Literal["auto"], None, _Chunk, _Chunks
 ]  # TODO: Literal["auto"]
 _ChunksType = TypeVar("_ChunksType", bound=_Chunks)
 

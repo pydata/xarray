@@ -27,9 +27,10 @@ from xarray.core.formatting import first_n_items, format_timestamp, last_item
 from xarray.core.pdcompat import nanosecond_precision_timestamp
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
-from xarray.namedarray.parallelcompat import T_ChunkedArray, get_chunked_array_type
+from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 from xarray.namedarray.utils import is_duck_dask_array
+from xarray.namedarray._typing import chunkedduckarray
 
 try:
     import cftime
@@ -816,11 +817,11 @@ def _encode_cf_datetime_within_map_blocks(
 
 
 def _lazily_encode_cf_datetime(
-    dates: T_ChunkedArray,
+    dates: chunkedduckarray,
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
-) -> tuple[T_ChunkedArray, str, str]:
+) -> tuple[chunkedduckarray, str, str]:
     if calendar is None:
         # This will only trigger minor compute if dates is an object dtype array.
         calendar = infer_calendar_name(dates)
@@ -929,8 +930,10 @@ def _encode_cf_timedelta_within_map_blocks(
 
 
 def _lazily_encode_cf_timedelta(
-    timedeltas: T_ChunkedArray, units: str | None = None, dtype: np.dtype | None = None
-) -> tuple[T_ChunkedArray, str]:
+    timedeltas: chunkedduckarray,
+    units: str | None = None,
+    dtype: np.dtype | None = None,
+) -> tuple[chunkedduckarray, str]:
     if units is None and dtype is None:
         units = "nanoseconds"
         dtype = np.dtype("int64")
