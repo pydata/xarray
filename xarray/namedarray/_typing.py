@@ -154,11 +154,13 @@ class _arrayfunction(
 
     @overload
     def __array__(
-        self, dtype: None = ..., copy: None = ..., /
+        self, dtype: None = ..., copy: bool | None = None, /
     ) -> np.ndarray[Any, _DType_co]: ...
 
     @overload
-    def __array__(self, dtype: _DType, copy: bool, /) -> np.ndarray[Any, _DType]: ...
+    def __array__(
+        self, dtype: _DType, copy: bool | None = None, /
+    ) -> np.ndarray[Any, _DType]: ...
 
     def __array__(
         self, dtype: _DType | None = ..., copy: bool | None = None, /
