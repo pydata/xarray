@@ -30,11 +30,8 @@ if TYPE_CHECKING:
 
 dask_available = module_available("dask")
 
-_T_DaskArray = TypeVar("_T_DaskArray", bound="DaskArray")
-
 
 class DaskManager(ChunkManagerEntrypoint):
-    # array_cls: type[DaskArray]
     available: bool = dask_available
 
     def __init__(self) -> None:
@@ -42,12 +39,13 @@ class DaskManager(ChunkManagerEntrypoint):
 
         from dask.array.core import Array
 
-        self.array_cls = Array
+        # TODO: error: Incompatible types in assignment (expression has type "type[Array]", variable has type "type[_chunkedarrayfunction[Any, Any]] | type[_chunkedarrayapi[Any, Any]]")  [assignment]
+        self.array_cls = Array  # type: ignore[assignment]
 
     def is_chunked_array(self, data: duckarray[Any, Any]) -> bool:
         return is_duck_dask_array(data)
 
-    def chunks(self, data: chunkedduckarray[Any, Any]) -> _Chunks:
+    def chunks(self, data: chunkedduckarray[Any, _dtype[Any]]) -> _Chunks:
         return data.chunks
 
     def normalize_chunks(
@@ -93,7 +91,7 @@ class DaskManager(ChunkManagerEntrypoint):
     ) -> tuple[duckarray[Any, _DType], ...]:
         from dask.base import compute
 
-        out: tuple[np.ndarray[Any, np.dtype[np.generic]], ...]
+        out: tuple[duckarray[Any, _DType], ...]
         out = compute(*data, **kwargs)  # type: ignore[no-untyped-call]
         return out
 
