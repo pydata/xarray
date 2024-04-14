@@ -100,8 +100,14 @@ _Axis = int
 _Axes = tuple[_Axis, ...]
 _AxisLike = Union[_Axis, _Axes]
 
-_Chunks = tuple[_Shape, ...]
-_NormalizedChunks = tuple[tuple[int, ...], ...]
+_Chunk = tuple[int, ...]
+_Chunks = tuple[_Chunk, ...]
+_NormalizedChunks = tuple[tuple[int, ...], ...]  # TODO: Same as Chunks.
+_ChunksLike = Union[
+    int, Literal["auto"], None, _chunk, _Chunks
+]  # TODO: Literal["auto"]
+_ChunksType = TypeVar("_ChunksType", bound=_Chunks)
+
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
@@ -264,6 +270,11 @@ class _chunkedarrayfunction(
     @property
     def chunks(self) -> _Chunks: ...
 
+    def rechunk(
+        self,
+        chunks: _ChunksLike,
+    ) -> _chunkedarrayfunction[_ShapeType_co, _DType_co]: ...
+
 
 @runtime_checkable
 class _chunkedarrayapi(
@@ -277,6 +288,11 @@ class _chunkedarrayapi(
 
     @property
     def chunks(self) -> _Chunks: ...
+
+    def rechunk(
+        self,
+        chunks: _ChunksLike,
+    ) -> _chunkedarrayapi[_ShapeType_co, _DType_co]: ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
