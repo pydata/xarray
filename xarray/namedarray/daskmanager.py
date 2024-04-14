@@ -90,10 +90,12 @@ class DaskManager(ChunkManagerEntrypoint):
 
     def compute(
         self, *data: chunkedduckarray[Any, _DType] | Any, **kwargs: Any
-    ) -> tuple[np.ndarray[Any, np.dtype[np.generic]], ...]:
+    ) -> tuple[duckarray[Any, _DType], ...]:
         from dask.base import compute
 
-        return compute(*data, **kwargs)  # type: ignore[no-untyped-call, no-any-return]
+        out: tuple[np.ndarray[Any, np.dtype[np.generic]], ...]
+        out = compute(*data, **kwargs)  # type: ignore[no-untyped-call]
+        return out
 
     @property
     def array_api(self) -> ModuleType:
