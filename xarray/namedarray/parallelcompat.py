@@ -324,7 +324,7 @@ class ChunkManagerEntrypoint(ABC):
     @abstractmethod
     def compute(
         self, *data: chunkedduckarray[Any, _DType] | Any, **kwargs: Any
-    ) -> tuple[np.ndarray[Any, np.dtype[np.generic]], ...]:
+    ) -> tuple[duckarray[Any, _DType], ...]:
         """
         Computes one or more chunked arrays, returning them as eager numpy arrays.
 
