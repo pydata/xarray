@@ -507,7 +507,7 @@ class ExplicitlyIndexed:
         self, dtype: np.typing.DTypeLike = None, copy: bool | None = None
     ) -> np.ndarray:
         # Leave casting to an array up to the underlying array type.
-        return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
+        return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def get_duck_array(self):
         return self.array
@@ -525,7 +525,7 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
     ) -> np.ndarray:
         # This is necessary because we apply the indexing key in self.get_duck_array()
         # Note this is the base class for all lazy indexing classes
-        return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
+        return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def _oindex_get(self, indexer: OuterIndexer):
         raise NotImplementedError(
@@ -575,7 +575,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
     def __array__(
         self, dtype: np.typing.DTypeLike = None, copy: bool | None = None
     ) -> np.ndarray:
-        return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
+        return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def get_duck_array(self):
         return self.array.get_duck_array()
@@ -835,7 +835,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
     def __array__(
         self, dtype: np.typing.DTypeLike = None, copy: bool | None = None
     ) -> np.ndarray:
-        return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
+        return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def get_duck_array(self):
         self._ensure_cached()
@@ -1685,7 +1685,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             with suppress(AttributeError):
                 # this might not be public API
                 array = array.astype("object")
-        return np.asarray(array.values, dtype=dtype, copy=copy)
+        return np.asarray(array.values, dtype=dtype)
 
     def get_duck_array(self) -> np.ndarray:
         return np.asarray(self)
@@ -1838,10 +1838,10 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
             dtype = self.dtype
         if self.level is not None:
             return np.asarray(
-                self.array.get_level_values(self.level).values, dtype=dtype, copy=copy
+                self.array.get_level_values(self.level).values, dtype=dtype
             )
         else:
-            return super().__array__(dtype, copy=copy)
+            return super().__array__(dtype)
 
     def _convert_scalar(self, item):
         if isinstance(item, tuple) and self.level is not None:

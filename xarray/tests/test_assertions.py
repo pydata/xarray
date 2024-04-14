@@ -149,7 +149,7 @@ def test_ensure_warnings_not_elevated(func) -> None:
             warnings.warn("warning in test")
             return super().dims
 
-        def __array__(self):
+        def __array__(self, dtype=None, copy=None):
             warnings.warn("warning in test")
             return super().__array__()
 
