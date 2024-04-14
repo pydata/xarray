@@ -27,10 +27,10 @@ from xarray.core.formatting import first_n_items, format_timestamp, last_item
 from xarray.core.pdcompat import nanosecond_precision_timestamp
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
+from xarray.namedarray._typing import chunkedduckarray
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 from xarray.namedarray.utils import is_duck_dask_array
-from xarray.namedarray._typing import chunkedduckarray
 
 try:
     import cftime
