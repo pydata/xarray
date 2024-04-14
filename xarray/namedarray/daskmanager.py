@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 import numpy as np
 from packaging.version import Version
@@ -12,16 +12,11 @@ from xarray.namedarray.utils import is_duck_dask_array, module_available
 
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
-        T_Chunks,
         _Chunks,
         _ChunksLike,
-        _ChunksType,
-        _dtype,
         _DType,
-        _DType_co,
-        _NormalizedChunks,
+        _dtype,
         _Shape,
-        _ShapeType,
         chunkedduckarray,
         duckarray,
     )

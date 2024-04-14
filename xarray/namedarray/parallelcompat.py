@@ -11,7 +11,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 from importlib.metadata import EntryPoint, entry_points
-from typing import TYPE_CHECKING, Any, Callable, Generic, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 
@@ -20,18 +20,13 @@ from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
+        _chunkedarrayfunction_or_api,
         _Chunks,
         _ChunksLike,
-        _ChunksType,
         _DType,
-        _DType_co,
-        _NormalizedChunks,
         _Shape,
-        _ShapeType,
-        _ShapeType_co,
-        duckarray,
-        _chunkedarrayfunction_or_api,
         chunkedduckarray,
+        duckarray,
     )
 
 
