@@ -154,16 +154,16 @@ class _arrayfunction(
 
     @overload
     def __array__(
-        self, dtype: None = ..., copy: bool | None = None, /
+        self, dtype: None = ..., copy: None | bool = ..., /
     ) -> np.ndarray[Any, _DType_co]: ...
 
     @overload
     def __array__(
-        self, dtype: _DType, copy: bool | None = None, /
+        self, dtype: _DType, copy: None | bool = ..., /
     ) -> np.ndarray[Any, _DType]: ...
 
     def __array__(
-        self, dtype: _DType | None = ..., copy: bool | None = None, /
+        self, dtype: _DType | None = ..., /, *, copy: None | bool = ...
     ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]: ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
