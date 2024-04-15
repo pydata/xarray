@@ -98,8 +98,6 @@ New Features
   By `Llorenç Lledó <https://github.com/lluritu>`_.
 - Accept the compression arguments new in netCDF 1.6.0 in the netCDF4 backend.
   See `netCDF4 documentation <https://unidata.github.io/netcdf4-python/#efficient-compression-of-netcdf-variables>`_ for details.
-  By `Markel García-Díez <https://github.com/markelg>`_. (:issue:`6929`, :pull:`7551`) Note that some
-  new compression filters needs plugins to be installed which may not be available in all netCDF distributions.
   Note that some new compression filters needs plugins to be installed which may not be available in all netCDF distributions.
   By `Markel García-Díez <https://github.com/markelg>`_. (:issue:`6929`, :pull:`7551`)
 - Add :py:meth:`DataArray.cumulative` & :py:meth:`Dataset.cumulative` to compute

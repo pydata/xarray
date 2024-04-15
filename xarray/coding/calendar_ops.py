@@ -245,7 +245,7 @@ def _interpolate_day_of_year(time, target_calendar, use_cftime):
     ).astype(int)
 
 
-def _random_day_of_year(time, target_calendar, use_cftime, rng=None):
+def _random_day_of_year(time, target_calendar, use_cftime):
     """Return a day of year in the new calendar.
 
     Removes Feb 29th and five other days chosen randomly within five sections of 72 days.
