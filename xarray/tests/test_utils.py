@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 from xarray.core import duck_array_ops, utils
-from xarray.core.utils import either_dict_or_kwargs, iterate_nested
+from xarray.core.utils import either_dict_or_kwargs, infix_dims, iterate_nested
 from xarray.tests import assert_array_equal, requires_dask
 
 
@@ -239,7 +239,7 @@ def test_either_dict_or_kwargs():
     ],
 )
 def test_infix_dims(supplied, all_, expected):
-    result = list(utils.infix_dims(supplied, all_))
+    result = list(infix_dims(supplied, all_))
     assert result == expected
 
 
@@ -248,7 +248,7 @@ def test_infix_dims(supplied, all_, expected):
 )
 def test_infix_dims_errors(supplied, all_):
     with pytest.raises(ValueError):
-        list(utils.infix_dims(supplied, all_))
+        list(infix_dims(supplied, all_))
 
 
 @pytest.mark.parametrize(

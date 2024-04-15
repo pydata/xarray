@@ -523,7 +523,6 @@ Datetimelike properties
    DataArray.dt.nanosecond
    DataArray.dt.dayofweek
    DataArray.dt.weekday
-   DataArray.dt.weekday_name
    DataArray.dt.dayofyear
    DataArray.dt.quarter
    DataArray.dt.days_in_month

@@ -34,13 +34,13 @@ from xarray.core.combine import (
     _nested_combine,
     combine_by_coords,
 )
-from xarray.core.daskmanager import DaskManager
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.indexes import Index
-from xarray.core.parallelcompat import guess_chunkmanager
 from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import is_remote_uri
+from xarray.namedarray.daskmanager import DaskManager
+from xarray.namedarray.parallelcompat import guess_chunkmanager
 
 if TYPE_CHECKING:
     try:
@@ -69,6 +69,7 @@ if TYPE_CHECKING:
     T_NetcdfTypes = Literal[
         "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
     ]
+    from xarray.core.datatree import DataTree
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
@@ -788,16 +789,46 @@ def open_dataarray(
     return data_array
 
 
+def open_datatree(
+    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    engine: T_Engine = None,
+    **kwargs,
+) -> DataTree:
+    """
+    Open and decode a DataTree from a file or file-like object, creating one tree node for each group in the file.
+
+    Parameters
+    ----------
+    filename_or_obj : str, Path, file-like, or DataStore
+        Strings and Path objects are interpreted as a path to a netCDF file or Zarr store.
+    engine : str, optional
+        Xarray backend engine to use. Valid options include `{"netcdf4", "h5netcdf", "zarr"}`.
+    **kwargs : dict
+        Additional keyword arguments passed to :py:func:`~xarray.open_dataset` for each group.
+    Returns
+    -------
+    xarray.DataTree
+    """
+    if engine is None:
+        engine = plugins.guess_engine(filename_or_obj)
+
+    backend = plugins.get_backend(engine)
+
+    return backend.open_datatree(filename_or_obj, **kwargs)
+
+
 def open_mfdataset(
     paths: str | NestedSequence[str | os.PathLike],
     chunks: T_Chunks | None = None,
-    concat_dim: str
-    | DataArray
-    | Index
-    | Sequence[str]
-    | Sequence[DataArray]
-    | Sequence[Index]
-    | None = None,
+    concat_dim: (
+        str
+        | DataArray
+        | Index
+        | Sequence[str]
+        | Sequence[DataArray]
+        | Sequence[Index]
+        | None
+    ) = None,
     compat: CompatOptions = "no_conflicts",
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_Engine | None = None,
@@ -1101,8 +1132,7 @@ def to_netcdf(
     *,
     multifile: Literal[True],
     invalid_netcdf: bool = False,
-) -> tuple[ArrayWriter, AbstractDataStore]:
-    ...
+) -> tuple[ArrayWriter, AbstractDataStore]: ...
 
 
 # path=None writes to bytes
@@ -1119,8 +1149,7 @@ def to_netcdf(
     compute: bool = True,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
-) -> bytes:
-    ...
+) -> bytes: ...
 
 
 # compute=False returns dask.Delayed
@@ -1138,8 +1167,7 @@ def to_netcdf(
     compute: Literal[False],
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
-) -> Delayed:
-    ...
+) -> Delayed: ...
 
 
 # default return None
@@ -1156,8 +1184,7 @@ def to_netcdf(
     compute: Literal[True] = True,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
-) -> None:
-    ...
+) -> None: ...
 
 
 # if compute cannot be evaluated at type check time
@@ -1175,8 +1202,7 @@ def to_netcdf(
     compute: bool = False,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
-) -> Delayed | None:
-    ...
+) -> Delayed | None: ...
 
 
 # if multifile cannot be evaluated at type check time
@@ -1194,8 +1220,7 @@ def to_netcdf(
     compute: bool = False,
     multifile: bool = False,
     invalid_netcdf: bool = False,
-) -> tuple[ArrayWriter, AbstractDataStore] | Delayed | None:
-    ...
+) -> tuple[ArrayWriter, AbstractDataStore] | Delayed | None: ...
 
 
 # Any
@@ -1212,8 +1237,7 @@ def to_netcdf(
     compute: bool = False,
     multifile: bool = False,
     invalid_netcdf: bool = False,
-) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
-    ...
+) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None: ...
 
 
 def to_netcdf(
@@ -1392,8 +1416,6 @@ def save_mfdataset(
         these locations will be overwritten.
     format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
               "NETCDF3_CLASSIC"}, optional
-    **kwargs : additional arguments are passed along to ``to_netcdf``
-
         File format for the resulting netCDF file:
 
         * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
@@ -1425,10 +1447,11 @@ def save_mfdataset(
     compute : bool
         If true compute immediately, otherwise return a
         ``dask.delayed.Delayed`` object that can be computed later.
+    **kwargs : dict, optional
+        Additional arguments are passed along to ``to_netcdf``.
 
     Examples
     --------
-
     Save a dataset into one netCDF per year of data:
 
     >>> ds = xr.Dataset(
@@ -1436,12 +1459,12 @@ def save_mfdataset(
     ...     coords={"time": pd.date_range("2010-01-01", freq="ME", periods=48)},
     ... )
     >>> ds
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 768B
     Dimensions:  (time: 48)
     Coordinates:
-      * time     (time) datetime64[ns] 2010-01-31 2010-02-28 ... 2013-12-31
+      * time     (time) datetime64[ns] 384B 2010-01-31 2010-02-28 ... 2013-12-31
     Data variables:
-        a        (time) float64 0.0 0.02128 0.04255 0.06383 ... 0.9574 0.9787 1.0
+        a        (time) float64 384B 0.0 0.02128 0.04255 ... 0.9574 0.9787 1.0
     >>> years, datasets = zip(*ds.groupby("time.year"))
     >>> paths = [f"{y}.nc" for y in years]
     >>> xr.save_mfdataset(datasets, paths)
@@ -1538,9 +1561,7 @@ def _auto_detect_regions(ds, region, open_kwargs):
     return region
 
 
-def _validate_and_autodetect_region(
-    ds, region, mode, open_kwargs
-) -> tuple[dict[str, slice], bool]:
+def _validate_and_autodetect_region(ds, region, mode, open_kwargs) -> dict[str, slice]:
     if region == "auto":
         region = {dim: "auto" for dim in ds.dims}
 
@@ -1548,14 +1569,11 @@ def _validate_and_autodetect_region(
         raise TypeError(f"``region`` must be a dict, got {type(region)}")
 
     if any(v == "auto" for v in region.values()):
-        region_was_autodetected = True
         if mode != "r+":
             raise ValueError(
                 f"``mode`` must be 'r+' when using ``region='auto'``, got {mode}"
             )
         region = _auto_detect_regions(ds, region, open_kwargs)
-    else:
-        region_was_autodetected = False
 
     for k, v in region.items():
         if k not in ds.dims:
@@ -1588,7 +1606,7 @@ def _validate_and_autodetect_region(
             f".drop_vars({non_matching_vars!r})"
         )
 
-    return region, region_was_autodetected
+    return region
 
 
 def _validate_datatypes_for_zarr_append(zstore, dataset):
@@ -1647,8 +1665,7 @@ def to_zarr(
     zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
-) -> backends.ZarrStore:
-    ...
+) -> backends.ZarrStore: ...
 
 
 # compute=False returns dask.Delayed
@@ -1671,8 +1688,7 @@ def to_zarr(
     zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
-) -> Delayed:
-    ...
+) -> Delayed: ...
 
 
 def to_zarr(
@@ -1762,12 +1778,9 @@ def to_zarr(
             storage_options=storage_options,
             zarr_version=zarr_version,
         )
-        region, region_was_autodetected = _validate_and_autodetect_region(
-            dataset, region, mode, open_kwargs
-        )
-        # drop indices to avoid potential race condition with auto region
-        if region_was_autodetected:
-            dataset = dataset.drop_vars(dataset.indexes)
+        region = _validate_and_autodetect_region(dataset, region, mode, open_kwargs)
+        # can't modify indexed with region writes
+        dataset = dataset.drop_vars(dataset.indexes)
         if append_dim is not None and append_dim in region:
             raise ValueError(
                 f"cannot list the same dimension in both ``append_dim`` and "

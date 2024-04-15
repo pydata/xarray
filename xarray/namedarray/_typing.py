@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from enum import Enum
 from types import ModuleType
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Final,
+    Literal,
     Protocol,
     SupportsIndex,
     TypeVar,
@@ -16,6 +19,17 @@ from typing import (
 )
 
 import numpy as np
+
+try:
+    if sys.version_info >= (3, 11):
+        from typing import TypeAlias
+    else:
+        from typing_extensions import TypeAlias
+except ImportError:
+    if TYPE_CHECKING:
+        raise
+    else:
+        Self: Any = None
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
@@ -42,8 +56,7 @@ _ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
 @runtime_checkable
 class _SupportsDType(Protocol[_DType_co]):
     @property
-    def dtype(self) -> _DType_co:
-        ...
+    def dtype(self) -> _DType_co: ...
 
 
 _DTypeLike = Union[
@@ -64,6 +77,11 @@ _Axes = tuple[_Axis, ...]
 _AxisLike = Union[_Axis, _Axes]
 
 _Chunks = tuple[_Shape, ...]
+_NormalizedChunks = tuple[tuple[int, ...], ...]
+# FYI in some cases we don't allow `None`, which this doesn't take account of.
+T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
+# We allow the tuple form of this (though arguably we could transition to named dims only)
+T_Chunks: TypeAlias = Union[T_ChunkDim, Mapping[Any, T_ChunkDim]]
 
 _Dim = Hashable
 _Dims = tuple[_Dim, ...]
@@ -83,14 +101,12 @@ _AttrsLike = Union[Mapping[Any, Any], None]
 
 class _SupportsReal(Protocol[_T_co]):
     @property
-    def real(self) -> _T_co:
-        ...
+    def real(self) -> _T_co: ...
 
 
 class _SupportsImag(Protocol[_T_co]):
     @property
-    def imag(self) -> _T_co:
-        ...
+    def imag(self) -> _T_co: ...
 
 
 @runtime_checkable
@@ -102,12 +118,10 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     """
 
     @property
-    def shape(self) -> _Shape:
-        ...
+    def shape(self) -> _Shape: ...
 
     @property
-    def dtype(self) -> _DType_co:
-        ...
+    def dtype(self) -> _DType_co: ...
 
 
 @runtime_checkable
@@ -123,34 +137,30 @@ class _arrayfunction(
     @overload
     def __getitem__(
         self, key: _arrayfunction[Any, Any] | tuple[_arrayfunction[Any, Any], ...], /
-    ) -> _arrayfunction[Any, _DType_co]:
-        ...
+    ) -> _arrayfunction[Any, _DType_co]: ...
 
     @overload
-    def __getitem__(self, key: _IndexKeyLike, /) -> Any:
-        ...
+    def __getitem__(self, key: _IndexKeyLike, /) -> Any: ...
 
     def __getitem__(
         self,
-        key: _IndexKeyLike
-        | _arrayfunction[Any, Any]
-        | tuple[_arrayfunction[Any, Any], ...],
+        key: (
+            _IndexKeyLike
+            | _arrayfunction[Any, Any]
+            | tuple[_arrayfunction[Any, Any], ...]
+        ),
         /,
-    ) -> _arrayfunction[Any, _DType_co] | Any:
-        ...
+    ) -> _arrayfunction[Any, _DType_co] | Any: ...
 
     @overload
-    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]:
-        ...
+    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]: ...
 
     @overload
-    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]:
-        ...
+    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]: ...
 
     def __array__(
         self, dtype: _DType | None = ..., /
-    ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]:
-        ...
+    ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]: ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
@@ -160,8 +170,7 @@ class _arrayfunction(
         method: Any,
         *inputs: Any,
         **kwargs: Any,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
@@ -171,16 +180,13 @@ class _arrayfunction(
         types: Iterable[type],
         args: Iterable[Any],
         kwargs: Mapping[str, Any],
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @property
-    def imag(self) -> _arrayfunction[_ShapeType_co, Any]:
-        ...
+    def imag(self) -> _arrayfunction[_ShapeType_co, Any]: ...
 
     @property
-    def real(self) -> _arrayfunction[_ShapeType_co, Any]:
-        ...
+    def real(self) -> _arrayfunction[_ShapeType_co, Any]: ...
 
 
 @runtime_checkable
@@ -193,14 +199,13 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
 
     def __getitem__(
         self,
-        key: _IndexKeyLike
-        | Any,  # TODO: Any should be _arrayapi[Any, _dtype[np.integer]]
+        key: (
+            _IndexKeyLike | Any
+        ),  # TODO: Any should be _arrayapi[Any, _dtype[np.integer]]
         /,
-    ) -> _arrayapi[Any, Any]:
-        ...
+    ) -> _arrayapi[Any, Any]: ...
 
-    def __array_namespace__(self) -> ModuleType:
-        ...
+    def __array_namespace__(self) -> ModuleType: ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
@@ -225,8 +230,7 @@ class _chunkedarray(
     """
 
     @property
-    def chunks(self) -> _Chunks:
-        ...
+    def chunks(self) -> _Chunks: ...
 
 
 @runtime_checkable
@@ -240,8 +244,7 @@ class _chunkedarrayfunction(
     """
 
     @property
-    def chunks(self) -> _Chunks:
-        ...
+    def chunks(self) -> _Chunks: ...
 
 
 @runtime_checkable
@@ -255,8 +258,7 @@ class _chunkedarrayapi(
     """
 
     @property
-    def chunks(self) -> _Chunks:
-        ...
+    def chunks(self) -> _Chunks: ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
@@ -277,8 +279,7 @@ class _sparsearray(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, _DType_co]:
-        ...
+    def todense(self) -> np.ndarray[Any, _DType_co]: ...
 
 
 @runtime_checkable
@@ -291,8 +292,7 @@ class _sparsearrayfunction(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, _DType_co]:
-        ...
+    def todense(self) -> np.ndarray[Any, _DType_co]: ...
 
 
 @runtime_checkable
@@ -305,14 +305,15 @@ class _sparsearrayapi(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, _DType_co]:
-        ...
+    def todense(self) -> np.ndarray[Any, _DType_co]: ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _sparsearrayfunction_or_api = (_sparsearrayfunction, _sparsearrayapi)
-
 sparseduckarray = Union[
     _sparsearrayfunction[_ShapeType_co, _DType_co],
     _sparsearrayapi[_ShapeType_co, _DType_co],
 ]
+
+ErrorOptions = Literal["raise", "ignore"]
+ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]

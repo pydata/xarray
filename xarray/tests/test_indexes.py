@@ -352,7 +352,7 @@ class TestPandasMultiIndex:
         # default level names
         pd_idx = pd.MultiIndex.from_arrays([foo_data, bar_data])
         index = PandasMultiIndex(pd_idx, "x")
-        assert index.index.names == ("x_level_0", "x_level_1")
+        assert list(index.index.names) == ["x_level_0", "x_level_1"]
 
     def test_from_variables(self) -> None:
         v_level1 = xr.Variable(
@@ -370,7 +370,7 @@ class TestPandasMultiIndex:
         assert index.dim == "x"
         assert index.index.equals(expected_idx)
         assert index.index.name == "x"
-        assert index.index.names == ["level1", "level2"]
+        assert list(index.index.names) == ["level1", "level2"]
 
         var = xr.Variable(("x", "y"), [[1, 2, 3], [4, 5, 6]])
         with pytest.raises(
@@ -413,7 +413,8 @@ class TestPandasMultiIndex:
         index = PandasMultiIndex.stack(prod_vars, "z")
 
         assert index.dim == "z"
-        assert index.index.names == ["x", "y"]
+        # TODO: change to tuple when pandas 3 is minimum
+        assert list(index.index.names) == ["x", "y"]
         np.testing.assert_array_equal(
             index.index.codes, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]]
         )
@@ -451,6 +452,15 @@ class TestPandasMultiIndex:
         assert new_indexes["one"].equals(PandasIndex(["a", "b"], "one"))
         assert new_indexes["two"].equals(PandasIndex([1, 2, 3], "two"))
         assert new_pd_idx.equals(pd_midx)
+
+    def test_unstack_requires_unique(self) -> None:
+        pd_midx = pd.MultiIndex.from_product([["a", "a"], [1, 2]], names=["one", "two"])
+        index = PandasMultiIndex(pd_midx, "x")
+
+        with pytest.raises(
+            ValueError, match="Cannot unstack MultiIndex containing duplicates"
+        ):
+            index.unstack()
 
     def test_create_variables(self) -> None:
         foo_data = np.array([0, 0, 1], dtype="int64")
@@ -522,12 +532,12 @@ class TestPandasMultiIndex:
         assert new_index is index
 
         new_index = index.rename({"two": "three"}, {})
-        assert new_index.index.names == ["one", "three"]
+        assert list(new_index.index.names) == ["one", "three"]
         assert new_index.dim == "x"
         assert new_index.level_coords_dtype == {"one": "<U1", "three": np.int32}
 
         new_index = index.rename({}, {"x": "y"})
-        assert new_index.index.names == ["one", "two"]
+        assert list(new_index.index.names) == ["one", "two"]
         assert new_index.dim == "y"
         assert new_index.level_coords_dtype == level_coords_dtype
 

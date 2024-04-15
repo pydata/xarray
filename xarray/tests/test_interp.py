@@ -747,7 +747,7 @@ def test_datetime_interp_noerror() -> None:
 @requires_cftime
 @requires_scipy
 def test_3641() -> None:
-    times = xr.cftime_range("0001", periods=3, freq="500Y")
+    times = xr.cftime_range("0001", periods=3, freq="500YE")
     da = xr.DataArray(range(3), dims=["time"], coords=[times])
     da.interp(time=["0002-05-01"])
 
@@ -833,7 +833,9 @@ def test_interpolate_chunk_1d(
 
                         dest[dim] = cast(
                             xr.DataArray,
-                            np.linspace(before, after, len(da.coords[dim]) * 13),
+                            np.linspace(
+                                before.item(), after.item(), len(da.coords[dim]) * 13
+                            ),
                         )
                         if chunked:
                             dest[dim] = xr.DataArray(data=dest[dim], dims=[dim])

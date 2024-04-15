@@ -4,14 +4,16 @@ channels:
   - nodefaults
 dependencies:
   - aiobotocore
+  - array-api-strict
   - boto3
   - bottleneck
   - cartopy
   - cftime
   - dask-core
+  - dask-expr # dask raises a deprecation warning without this, breaking doctests
   - distributed
   - flox
-  - fsspec!=2021.7.0
+  - fsspec
   - h5netcdf
   - h5py
   - hdf5
@@ -32,7 +34,7 @@ dependencies:
   - pip
   - pooch
   - pre-commit
-  - pyarrow # pandas makes a deprecation warning without this, breaking doctests
+  - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - pydap
   - pytest
   - pytest-cov

@@ -224,13 +224,13 @@ class Coordinates(AbstractCoordinates):
 
     >>> xr.Coordinates({"x": [1, 2]})
     Coordinates:
-      * x        (x) int64 1 2
+      * x        (x) int64 16B 1 2
 
     Create a dimension coordinate with no index:
 
     >>> xr.Coordinates(coords={"x": [1, 2]}, indexes={})
     Coordinates:
-        x        (x) int64 1 2
+        x        (x) int64 16B 1 2
 
     Create a new Coordinates object from existing dataset coordinates
     (indexes are passed):
@@ -238,27 +238,27 @@ class Coordinates(AbstractCoordinates):
     >>> ds = xr.Dataset(coords={"x": [1, 2]})
     >>> xr.Coordinates(ds.coords)
     Coordinates:
-      * x        (x) int64 1 2
+      * x        (x) int64 16B 1 2
 
     Create indexed coordinates from a ``pandas.MultiIndex`` object:
 
     >>> midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]])
     >>> xr.Coordinates.from_pandas_multiindex(midx, "x")
     Coordinates:
-      * x          (x) object MultiIndex
-      * x_level_0  (x) object 'a' 'a' 'b' 'b'
-      * x_level_1  (x) int64 0 1 0 1
+      * x          (x) object 32B MultiIndex
+      * x_level_0  (x) object 32B 'a' 'a' 'b' 'b'
+      * x_level_1  (x) int64 32B 0 1 0 1
 
     Create a new Dataset object by passing a Coordinates object:
 
     >>> midx_coords = xr.Coordinates.from_pandas_multiindex(midx, "x")
     >>> xr.Dataset(coords=midx_coords)
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 96B
     Dimensions:    (x: 4)
     Coordinates:
-      * x          (x) object MultiIndex
-      * x_level_0  (x) object 'a' 'a' 'b' 'b'
-      * x_level_1  (x) int64 0 1 0 1
+      * x          (x) object 32B MultiIndex
+      * x_level_0  (x) object 32B 'a' 'a' 'b' 'b'
+      * x_level_1  (x) int64 32B 0 1 0 1
     Data variables:
         *empty*
 
@@ -298,7 +298,7 @@ class Coordinates(AbstractCoordinates):
         else:
             variables = {}
             for name, data in coords.items():
-                var = as_variable(data, name=name)
+                var = as_variable(data, name=name, auto_convert=False)
                 if var.dims == (name,) and indexes is None:
                     index, index_vars = create_default_index_implicit(var, list(coords))
                     default_indexes.update({k: index for k in index_vars})
@@ -602,14 +602,14 @@ class Coordinates(AbstractCoordinates):
 
         >>> coords.assign(x=[1, 2])
         Coordinates:
-          * x        (x) int64 1 2
+          * x        (x) int64 16B 1 2
 
         >>> midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]])
         >>> coords.assign(xr.Coordinates.from_pandas_multiindex(midx, "y"))
         Coordinates:
-          * y          (y) object MultiIndex
-          * y_level_0  (y) object 'a' 'a' 'b' 'b'
-          * y_level_1  (y) int64 0 1 0 1
+          * y          (y) object 32B MultiIndex
+          * y_level_0  (y) object 32B 'a' 'a' 'b' 'b'
+          * y_level_1  (y) int64 32B 0 1 0 1
 
         """
         # TODO: this doesn't support a callable, which is inconsistent with `DataArray.assign_coords`
@@ -998,9 +998,12 @@ def create_coords_with_default_indexes(
         if isinstance(obj, DataArray):
             dataarray_coords.append(obj.coords)
 
-        variable = as_variable(obj, name=name)
+        variable = as_variable(obj, name=name, auto_convert=False)
 
         if variable.dims == (name,):
+            # still needed to convert to IndexVariable first due to some
+            # pandas multi-index edge cases.
+            variable = variable.to_index_variable()
             idx, idx_vars = create_default_index_implicit(variable, all_variables)
             indexes.update({k: idx for k in idx_vars})
             variables.update(idx_vars)

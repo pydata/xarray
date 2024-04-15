@@ -153,7 +153,7 @@ Creating a development environment
 ----------------------------------
 
 To test out code changes locally, you'll need to build *xarray* from source, which requires you to
-`create a local development environment <https://docs.xarray.dev/en/stable/contributing.html#creating-a-development-environment>`_.
+`create a local development environment <https://docs.xarray.dev/en/stable/contributing.html#contributing-dev-env>`_.
 
 Update the ``main`` branch
 --------------------------
@@ -670,8 +670,7 @@ typically find tests wrapped in a class.
 
 .. code-block:: python
 
-    class TestReallyCoolFeature:
-        ...
+    class TestReallyCoolFeature: ...
 
 Going forward, we are moving to a more *functional* style using the
 `pytest <http://doc.pytest.org/en/latest/>`__ framework, which offers a richer
@@ -680,8 +679,7 @@ writing test classes, we will write test functions like this:
 
 .. code-block:: python
 
-    def test_really_cool_feature():
-        ...
+    def test_really_cool_feature(): ...
 
 Using ``pytest``
 ~~~~~~~~~~~~~~~~

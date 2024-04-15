@@ -26,10 +26,13 @@ if TYPE_CHECKING:
     from xarray.namedarray._typing import (
         Default,
         _AttrsLike,
+        _Dim,
         _DimsLike,
         _DType,
         _IndexKeyLike,
+        _IntOrUnknown,
         _Shape,
+        _ShapeLike,
         duckarray,
     )
 
@@ -329,7 +332,7 @@ class TestNamedArray(NamedArraySubclassobjects):
         self,
     ) -> None:
         def test_duck_array_typevar(
-            a: duckarray[Any, _DType]
+            a: duckarray[Any, _DType],
         ) -> duckarray[Any, _DType]:
             # Mypy checks a is valid:
             b: duckarray[Any, _DType] = a
@@ -379,7 +382,6 @@ class TestNamedArray(NamedArraySubclassobjects):
         narr_int = narr_float._new(("x",), np.array([1, 3], dtype=dtype_int))
         assert narr_int.dtype == dtype_int
 
-        # Test with a subclass:
         class Variable(
             NamedArray[_ShapeType_co, _DType_co], Generic[_ShapeType_co, _DType_co]
         ):
@@ -389,8 +391,7 @@ class TestNamedArray(NamedArraySubclassobjects):
                 dims: _DimsLike | Default = ...,
                 data: duckarray[Any, _DType] = ...,
                 attrs: _AttrsLike | Default = ...,
-            ) -> Variable[Any, _DType]:
-                ...
+            ) -> Variable[Any, _DType]: ...
 
             @overload
             def _new(
@@ -398,8 +399,7 @@ class TestNamedArray(NamedArraySubclassobjects):
                 dims: _DimsLike | Default = ...,
                 data: Default = ...,
                 attrs: _AttrsLike | Default = ...,
-            ) -> Variable[_ShapeType_co, _DType_co]:
-                ...
+            ) -> Variable[_ShapeType_co, _DType_co]: ...
 
             def _new(
                 self,
@@ -417,9 +417,8 @@ class TestNamedArray(NamedArraySubclassobjects):
 
                 if data is _default:
                     return type(self)(dims_, copy.copy(self._data), attrs_)
-                else:
-                    cls_ = cast("type[Variable[Any, _DType]]", type(self))
-                    return cls_(dims_, data, attrs_)
+                cls_ = cast("type[Variable[Any, _DType]]", type(self))
+                return cls_(dims_, data, attrs_)
 
         var_float: Variable[Any, np.dtype[np.float32]]
         var_float = Variable(("x",), np.array([1.5, 3.2], dtype=dtype_float))
@@ -444,7 +443,6 @@ class TestNamedArray(NamedArraySubclassobjects):
         narr_float2 = NamedArray(("x",), np_val2)
         assert narr_float2.dtype == dtype_float
 
-        # Test with a subclass:
         class Variable(
             NamedArray[_ShapeType_co, _DType_co], Generic[_ShapeType_co, _DType_co]
         ):
@@ -454,8 +452,7 @@ class TestNamedArray(NamedArraySubclassobjects):
                 dims: _DimsLike | Default = ...,
                 data: duckarray[Any, _DType] = ...,
                 attrs: _AttrsLike | Default = ...,
-            ) -> Variable[Any, _DType]:
-                ...
+            ) -> Variable[Any, _DType]: ...
 
             @overload
             def _new(
@@ -463,8 +460,7 @@ class TestNamedArray(NamedArraySubclassobjects):
                 dims: _DimsLike | Default = ...,
                 data: Default = ...,
                 attrs: _AttrsLike | Default = ...,
-            ) -> Variable[_ShapeType_co, _DType_co]:
-                ...
+            ) -> Variable[_ShapeType_co, _DType_co]: ...
 
             def _new(
                 self,
@@ -482,9 +478,8 @@ class TestNamedArray(NamedArraySubclassobjects):
 
                 if data is _default:
                     return type(self)(dims_, copy.copy(self._data), attrs_)
-                else:
-                    cls_ = cast("type[Variable[Any, _DType]]", type(self))
-                    return cls_(dims_, data, attrs_)
+                cls_ = cast("type[Variable[Any, _DType]]", type(self))
+                return cls_(dims_, data, attrs_)
 
         var_float: Variable[Any, np.dtype[np.float32]]
         var_float = Variable(("x",), np_val)
@@ -493,6 +488,86 @@ class TestNamedArray(NamedArraySubclassobjects):
         var_float2: Variable[Any, np.dtype[np.float32]]
         var_float2 = var_float._replace(("x",), np_val2)
         assert var_float2.dtype == dtype_float
+
+    @pytest.mark.parametrize(
+        "dim,expected_ndim,expected_shape,expected_dims",
+        [
+            (None, 3, (1, 2, 5), (None, "x", "y")),
+            (_default, 3, (1, 2, 5), ("dim_2", "x", "y")),
+            ("z", 3, (1, 2, 5), ("z", "x", "y")),
+        ],
+    )
+    def test_expand_dims(
+        self,
+        target: NamedArray[Any, np.dtype[np.float32]],
+        dim: _Dim | Default,
+        expected_ndim: int,
+        expected_shape: _ShapeLike,
+        expected_dims: _DimsLike,
+    ) -> None:
+        result = target.expand_dims(dim=dim)
+        assert result.ndim == expected_ndim
+        assert result.shape == expected_shape
+        assert result.dims == expected_dims
+
+    @pytest.mark.parametrize(
+        "dims, expected_sizes",
+        [
+            ((), {"y": 5, "x": 2}),
+            (["y", "x"], {"y": 5, "x": 2}),
+            (["y", ...], {"y": 5, "x": 2}),
+        ],
+    )
+    def test_permute_dims(
+        self,
+        target: NamedArray[Any, np.dtype[np.float32]],
+        dims: _DimsLike,
+        expected_sizes: dict[_Dim, _IntOrUnknown],
+    ) -> None:
+        actual = target.permute_dims(*dims)
+        assert actual.sizes == expected_sizes
+
+    def test_permute_dims_errors(
+        self,
+        target: NamedArray[Any, np.dtype[np.float32]],
+    ) -> None:
+        with pytest.raises(ValueError, match=r"'y'.*permuted list"):
+            dims = ["y"]
+            target.permute_dims(*dims)
+
+    @pytest.mark.parametrize(
+        "broadcast_dims,expected_ndim",
+        [
+            ({"x": 2, "y": 5}, 2),
+            ({"x": 2, "y": 5, "z": 2}, 3),
+            ({"w": 1, "x": 2, "y": 5}, 3),
+        ],
+    )
+    def test_broadcast_to(
+        self,
+        target: NamedArray[Any, np.dtype[np.float32]],
+        broadcast_dims: Mapping[_Dim, int],
+        expected_ndim: int,
+    ) -> None:
+        expand_dims = set(broadcast_dims.keys()) - set(target.dims)
+        # loop over expand_dims and call .expand_dims(dim=dim) in a loop
+        for dim in expand_dims:
+            target = target.expand_dims(dim=dim)
+        result = target.broadcast_to(broadcast_dims)
+        assert result.ndim == expected_ndim
+        assert result.sizes == broadcast_dims
+
+    def test_broadcast_to_errors(
+        self, target: NamedArray[Any, np.dtype[np.float32]]
+    ) -> None:
+        with pytest.raises(
+            ValueError,
+            match=r"operands could not be broadcast together with remapped shapes",
+        ):
+            target.broadcast_to({"x": 2, "y": 2})
+
+        with pytest.raises(ValueError, match=r"Cannot add new dimensions"):
+            target.broadcast_to({"x": 2, "y": 2, "z": 2})
 
     def test_warn_on_repeated_dimension_names(self) -> None:
         with pytest.warns(UserWarning, match="Duplicate dimension names"):

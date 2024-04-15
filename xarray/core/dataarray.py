@@ -64,6 +64,7 @@ from xarray.core.utils import (
     _default,
     either_dict_or_kwargs,
     hashable,
+    infix_dims,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -84,7 +85,6 @@ if TYPE_CHECKING:
     from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.groupby import DataArrayGroupBy
-    from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DataArrayResample
     from xarray.core.rolling import DataArrayCoarsen, DataArrayRolling
     from xarray.core.types import (
@@ -107,6 +107,7 @@ if TYPE_CHECKING:
         T_Xarray,
     )
     from xarray.core.weighted import DataArrayWeighted
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
     T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
 
@@ -158,7 +159,9 @@ def _infer_coords_and_dims(
                 dims = list(coords.keys())
             else:
                 for n, (dim, coord) in enumerate(zip(dims, coords)):
-                    coord = as_variable(coord, name=dims[n]).to_index_variable()
+                    coord = as_variable(
+                        coord, name=dims[n], auto_convert=False
+                    ).to_index_variable()
                     dims[n] = coord.name
     dims_tuple = tuple(dims)
     if len(dims_tuple) != len(shape):
@@ -178,10 +181,12 @@ def _infer_coords_and_dims(
         new_coords = {}
         if utils.is_dict_like(coords):
             for k, v in coords.items():
-                new_coords[k] = as_variable(v, name=k)
+                new_coords[k] = as_variable(v, name=k, auto_convert=False)
+                if new_coords[k].dims == (k,):
+                    new_coords[k] = new_coords[k].to_index_variable()
         elif coords is not None:
             for dim, coord in zip(dims_tuple, coords):
-                var = as_variable(coord, name=dim)
+                var = as_variable(coord, name=dim, auto_convert=False)
                 var.dims = (dim,)
                 new_coords[dim] = var.to_index_variable()
 
@@ -203,11 +208,17 @@ def _check_data_shape(
                 return data
             else:
                 data_shape = tuple(
-                    as_variable(coords[k], k).size if k in coords.keys() else 1
+                    (
+                        as_variable(coords[k], k, auto_convert=False).size
+                        if k in coords.keys()
+                        else 1
+                    )
                     for k in dims
                 )
         else:
-            data_shape = tuple(as_variable(coord, "foo").size for coord in coords)
+            data_shape = tuple(
+                as_variable(coord, "foo", auto_convert=False).size for coord in coords
+            )
         data = np.full(data_shape, data)
     return data
 
@@ -347,17 +358,17 @@ class DataArray(
     ...     ),
     ... )
     >>> da
-    <xarray.DataArray (x: 2, y: 2, time: 3)>
+    <xarray.DataArray (x: 2, y: 2, time: 3)> Size: 96B
     array([[[29.11241877, 18.20125767, 22.82990387],
             [32.92714559, 29.94046392,  7.18177696]],
     <BLANKLINE>
            [[22.60070734, 13.78914233, 14.17424919],
             [18.28478802, 16.15234857, 26.63418806]]])
     Coordinates:
-        lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
-        lat             (x, y) float64 42.25 42.21 42.63 42.59
-      * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
-        reference_time  datetime64[ns] 2014-09-05
+        lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
+        lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
+      * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
+        reference_time  datetime64[ns] 8B 2014-09-05
     Dimensions without coordinates: x, y
     Attributes:
         description:  Ambient temperature.
@@ -366,13 +377,13 @@ class DataArray(
     Find out where the coldest temperature was:
 
     >>> da.isel(da.argmin(...))
-    <xarray.DataArray ()>
+    <xarray.DataArray ()> Size: 8B
     array(7.18177696)
     Coordinates:
-        lon             float64 -99.32
-        lat             float64 42.21
-        time            datetime64[ns] 2014-09-08
-        reference_time  datetime64[ns] 2014-09-05
+        lon             float64 8B -99.32
+        lat             float64 8B 42.21
+        time            datetime64[ns] 8B 2014-09-08
+        reference_time  datetime64[ns] 8B 2014-09-05
     Attributes:
         description:  Ambient temperature.
         units:        degC
@@ -760,11 +771,15 @@ class DataArray(
     @property
     def values(self) -> np.ndarray:
         """
-        The array's data as a numpy.ndarray.
+        The array's data converted to numpy.ndarray.
 
-        If the array's data is not a numpy.ndarray this will attempt to convert
-        it naively using np.array(), which will raise an error if the array
-        type does not support coercion like this (e.g. cupy).
+        This will attempt to convert the array naively using np.array(),
+        which will raise an error if the array type does not support
+        coercion like this (e.g. cupy).
+
+        Note that this array is not copied; operations on it follow
+        numpy's rules of what generates a view vs. a copy, and changes
+        to this array may be reflected in the DataArray as well.
         """
         return self.variable.values
 
@@ -971,8 +986,7 @@ class DataArray(
         names: Dims = None,
         *,
         drop: Literal[False] = False,
-    ) -> Dataset:
-        ...
+    ) -> Dataset: ...
 
     @overload
     def reset_coords(
@@ -980,8 +994,7 @@ class DataArray(
         names: Dims = None,
         *,
         drop: Literal[True],
-    ) -> Self:
-        ...
+    ) -> Self: ...
 
     @_deprecate_positional_args("v2023.10.0")
     def reset_coords(
@@ -1020,43 +1033,43 @@ class DataArray(
         ...     name="Temperature",
         ... )
         >>> da
-        <xarray.DataArray 'Temperature' (x: 5, y: 5)>
+        <xarray.DataArray 'Temperature' (x: 5, y: 5)> Size: 200B
         array([[ 0,  1,  2,  3,  4],
                [ 5,  6,  7,  8,  9],
                [10, 11, 12, 13, 14],
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
         Coordinates:
-            lon       (x) int64 10 11 12 13 14
-            lat       (y) int64 20 21 22 23 24
-            Pressure  (x, y) int64 50 51 52 53 54 55 56 57 ... 67 68 69 70 71 72 73 74
+            lon       (x) int64 40B 10 11 12 13 14
+            lat       (y) int64 40B 20 21 22 23 24
+            Pressure  (x, y) int64 200B 50 51 52 53 54 55 56 57 ... 68 69 70 71 72 73 74
         Dimensions without coordinates: x, y
 
         Return Dataset with target coordinate as a data variable rather than a coordinate variable:
 
         >>> da.reset_coords(names="Pressure")
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 480B
         Dimensions:      (x: 5, y: 5)
         Coordinates:
-            lon          (x) int64 10 11 12 13 14
-            lat          (y) int64 20 21 22 23 24
+            lon          (x) int64 40B 10 11 12 13 14
+            lat          (y) int64 40B 20 21 22 23 24
         Dimensions without coordinates: x, y
         Data variables:
-            Pressure     (x, y) int64 50 51 52 53 54 55 56 57 ... 68 69 70 71 72 73 74
-            Temperature  (x, y) int64 0 1 2 3 4 5 6 7 8 9 ... 16 17 18 19 20 21 22 23 24
+            Pressure     (x, y) int64 200B 50 51 52 53 54 55 56 ... 68 69 70 71 72 73 74
+            Temperature  (x, y) int64 200B 0 1 2 3 4 5 6 7 8 ... 17 18 19 20 21 22 23 24
 
         Return DataArray without targeted coordinate:
 
         >>> da.reset_coords(names="Pressure", drop=True)
-        <xarray.DataArray 'Temperature' (x: 5, y: 5)>
+        <xarray.DataArray 'Temperature' (x: 5, y: 5)> Size: 200B
         array([[ 0,  1,  2,  3,  4],
                [ 5,  6,  7,  8,  9],
                [10, 11, 12, 13, 14],
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
         Coordinates:
-            lon      (x) int64 10 11 12 13 14
-            lat      (y) int64 20 21 22 23 24
+            lon      (x) int64 40B 10 11 12 13 14
+            lat      (y) int64 40B 20 21 22 23 24
         Dimensions without coordinates: x, y
         """
         if names is None:
@@ -1071,7 +1084,7 @@ class DataArray(
         dataset[self.name] = self.variable
         return dataset
 
-    def __dask_tokenize__(self):
+    def __dask_tokenize__(self) -> object:
         from dask.base import normalize_token
 
         return normalize_token((type(self), self._variable, self._coords, self._name))
@@ -1113,6 +1126,8 @@ class DataArray(
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return this array.
 
+        Unlike compute, the original dataset is modified and returned.
+
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
         load data automatically. However, this method can be necessary when
@@ -1135,8 +1150,9 @@ class DataArray(
 
     def compute(self, **kwargs) -> Self:
         """Manually trigger loading of this array's data from disk or a
-        remote source into memory and return a new array. The original is
-        left unaltered.
+        remote source into memory and return a new array.
+
+        Unlike load, the original is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -1147,6 +1163,11 @@ class DataArray(
         ----------
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
+
+        Returns
+        -------
+        object : DataArray
+            New object with the data and all coordinates as in-memory arrays.
 
         See Also
         --------
@@ -1161,11 +1182,17 @@ class DataArray(
         This keeps them as dask arrays but encourages them to keep data in
         memory.  This is particularly useful when on a distributed machine.
         When on a single machine consider using ``.compute()`` instead.
+        Like compute (but unlike load), the original dataset is left unaltered.
 
         Parameters
         ----------
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.persist``.
+
+        Returns
+        -------
+        object : DataArray
+            New object with all dask-backed data and coordinates as persisted dask arrays.
 
         See Also
         --------
@@ -1206,37 +1233,37 @@ class DataArray(
 
         >>> array = xr.DataArray([1, 2, 3], dims="x", coords={"x": ["a", "b", "c"]})
         >>> array.copy()
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 24B
         array([1, 2, 3])
         Coordinates:
-          * x        (x) <U1 'a' 'b' 'c'
+          * x        (x) <U1 12B 'a' 'b' 'c'
         >>> array_0 = array.copy(deep=False)
         >>> array_0[0] = 7
         >>> array_0
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 24B
         array([7, 2, 3])
         Coordinates:
-          * x        (x) <U1 'a' 'b' 'c'
+          * x        (x) <U1 12B 'a' 'b' 'c'
         >>> array
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 24B
         array([7, 2, 3])
         Coordinates:
-          * x        (x) <U1 'a' 'b' 'c'
+          * x        (x) <U1 12B 'a' 'b' 'c'
 
         Changing the data using the ``data`` argument maintains the
         structure of the original object, but with the new data. Original
         object is unaffected.
 
         >>> array.copy(data=[0.1, 0.2, 0.3])
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 24B
         array([0.1, 0.2, 0.3])
         Coordinates:
-          * x        (x) <U1 'a' 'b' 'c'
+          * x        (x) <U1 12B 'a' 'b' 'c'
         >>> array
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 24B
         array([7, 2, 3])
         Coordinates:
-          * x        (x) <U1 'a' 'b' 'c'
+          * x        (x) <U1 12B 'a' 'b' 'c'
 
         See Also
         --------
@@ -1449,7 +1476,7 @@ class DataArray(
         --------
         >>> da = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"))
         >>> da
-        <xarray.DataArray (x: 5, y: 5)>
+        <xarray.DataArray (x: 5, y: 5)> Size: 200B
         array([[ 0,  1,  2,  3,  4],
                [ 5,  6,  7,  8,  9],
                [10, 11, 12, 13, 14],
@@ -1461,7 +1488,7 @@ class DataArray(
         >>> tgt_y = xr.DataArray(np.arange(0, 5), dims="points")
         >>> da = da.isel(x=tgt_x, y=tgt_y)
         >>> da
-        <xarray.DataArray (points: 5)>
+        <xarray.DataArray (points: 5)> Size: 40B
         array([ 0,  6, 12, 18, 24])
         Dimensions without coordinates: points
         """
@@ -1591,25 +1618,25 @@ class DataArray(
         ...     dims=("x", "y"),
         ... )
         >>> da
-        <xarray.DataArray (x: 5, y: 5)>
+        <xarray.DataArray (x: 5, y: 5)> Size: 200B
         array([[ 0,  1,  2,  3,  4],
                [ 5,  6,  7,  8,  9],
                [10, 11, 12, 13, 14],
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
         Coordinates:
-          * x        (x) int64 0 1 2 3 4
-          * y        (y) int64 0 1 2 3 4
+          * x        (x) int64 40B 0 1 2 3 4
+          * y        (y) int64 40B 0 1 2 3 4
 
         >>> tgt_x = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
         >>> tgt_y = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
         >>> da = da.sel(x=tgt_x, y=tgt_y, method="nearest")
         >>> da
-        <xarray.DataArray (points: 5)>
+        <xarray.DataArray (points: 5)> Size: 40B
         array([ 0,  6, 12, 18, 24])
         Coordinates:
-            x        (points) int64 0 1 2 3 4
-            y        (points) int64 0 1 2 3 4
+            x        (points) int64 40B 0 1 2 3 4
+            y        (points) int64 40B 0 1 2 3 4
         Dimensions without coordinates: points
         """
         ds = self._to_temp_dataset().sel(
@@ -1642,7 +1669,7 @@ class DataArray(
         ...     dims=("x", "y"),
         ... )
         >>> da
-        <xarray.DataArray (x: 5, y: 5)>
+        <xarray.DataArray (x: 5, y: 5)> Size: 200B
         array([[ 0,  1,  2,  3,  4],
                [ 5,  6,  7,  8,  9],
                [10, 11, 12, 13, 14],
@@ -1651,12 +1678,12 @@ class DataArray(
         Dimensions without coordinates: x, y
 
         >>> da.head(x=1)
-        <xarray.DataArray (x: 1, y: 5)>
+        <xarray.DataArray (x: 1, y: 5)> Size: 40B
         array([[0, 1, 2, 3, 4]])
         Dimensions without coordinates: x, y
 
         >>> da.head({"x": 2, "y": 2})
-        <xarray.DataArray (x: 2, y: 2)>
+        <xarray.DataArray (x: 2, y: 2)> Size: 32B
         array([[0, 1],
                [5, 6]])
         Dimensions without coordinates: x, y
@@ -1685,7 +1712,7 @@ class DataArray(
         ...     dims=("x", "y"),
         ... )
         >>> da
-        <xarray.DataArray (x: 5, y: 5)>
+        <xarray.DataArray (x: 5, y: 5)> Size: 200B
         array([[ 0,  1,  2,  3,  4],
                [ 5,  6,  7,  8,  9],
                [10, 11, 12, 13, 14],
@@ -1694,7 +1721,7 @@ class DataArray(
         Dimensions without coordinates: x, y
 
         >>> da.tail(y=1)
-        <xarray.DataArray (x: 5, y: 1)>
+        <xarray.DataArray (x: 5, y: 1)> Size: 40B
         array([[ 4],
                [ 9],
                [14],
@@ -1703,7 +1730,7 @@ class DataArray(
         Dimensions without coordinates: x, y
 
         >>> da.tail({"x": 2, "y": 2})
-        <xarray.DataArray (x: 2, y: 2)>
+        <xarray.DataArray (x: 2, y: 2)> Size: 32B
         array([[18, 19],
                [23, 24]])
         Dimensions without coordinates: x, y
@@ -1731,26 +1758,26 @@ class DataArray(
         ...     coords={"x": [0, 1], "y": np.arange(0, 13)},
         ... )
         >>> x
-        <xarray.DataArray (x: 2, y: 13)>
+        <xarray.DataArray (x: 2, y: 13)> Size: 208B
         array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12],
                [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]])
         Coordinates:
-          * x        (x) int64 0 1
-          * y        (y) int64 0 1 2 3 4 5 6 7 8 9 10 11 12
+          * x        (x) int64 16B 0 1
+          * y        (y) int64 104B 0 1 2 3 4 5 6 7 8 9 10 11 12
 
         >>>
         >>> x.thin(3)
-        <xarray.DataArray (x: 1, y: 5)>
+        <xarray.DataArray (x: 1, y: 5)> Size: 40B
         array([[ 0,  3,  6,  9, 12]])
         Coordinates:
-          * x        (x) int64 0
-          * y        (y) int64 0 3 6 9 12
+          * x        (x) int64 8B 0
+          * y        (y) int64 40B 0 3 6 9 12
         >>> x.thin({"x": 2, "y": 5})
-        <xarray.DataArray (x: 1, y: 3)>
+        <xarray.DataArray (x: 1, y: 3)> Size: 24B
         array([[ 0,  5, 10]])
         Coordinates:
-          * x        (x) int64 0
-          * y        (y) int64 0 5 10
+          * x        (x) int64 8B 0
+          * y        (y) int64 24B 0 5 10
 
         See Also
         --------
@@ -1806,28 +1833,28 @@ class DataArray(
         ...     coords={"x": ["a", "b", "c"], "y": ["a", "b"]},
         ... )
         >>> arr1
-        <xarray.DataArray (x: 2, y: 3)>
+        <xarray.DataArray (x: 2, y: 3)> Size: 48B
         array([[ 1.76405235,  0.40015721,  0.97873798],
                [ 2.2408932 ,  1.86755799, -0.97727788]])
         Coordinates:
-          * x        (x) <U1 'a' 'b'
-          * y        (y) <U1 'a' 'b' 'c'
+          * x        (x) <U1 8B 'a' 'b'
+          * y        (y) <U1 12B 'a' 'b' 'c'
         >>> arr2
-        <xarray.DataArray (x: 3, y: 2)>
+        <xarray.DataArray (x: 3, y: 2)> Size: 48B
         array([[ 0.95008842, -0.15135721],
                [-0.10321885,  0.4105985 ],
                [ 0.14404357,  1.45427351]])
         Coordinates:
-          * x        (x) <U1 'a' 'b' 'c'
-          * y        (y) <U1 'a' 'b'
+          * x        (x) <U1 12B 'a' 'b' 'c'
+          * y        (y) <U1 8B 'a' 'b'
         >>> arr1.broadcast_like(arr2)
-        <xarray.DataArray (x: 3, y: 3)>
+        <xarray.DataArray (x: 3, y: 3)> Size: 72B
         array([[ 1.76405235,  0.40015721,  0.97873798],
                [ 2.2408932 ,  1.86755799, -0.97727788],
                [        nan,         nan,         nan]])
         Coordinates:
-          * x        (x) <U1 'a' 'b' 'c'
-          * y        (y) <U1 'a' 'b' 'c'
+          * x        (x) <U1 12B 'a' 'b' 'c'
+          * y        (y) <U1 12B 'a' 'b' 'c'
         """
         if exclude is None:
             exclude = set()
@@ -1940,40 +1967,40 @@ class DataArray(
         ...     coords={"x": [10, 20, 30, 40], "y": [70, 80, 90]},
         ... )
         >>> da1
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 0,  1,  2],
                [ 3,  4,  5],
                [ 6,  7,  8],
                [ 9, 10, 11]])
         Coordinates:
-          * x        (x) int64 10 20 30 40
-          * y        (y) int64 70 80 90
+          * x        (x) int64 32B 10 20 30 40
+          * y        (y) int64 24B 70 80 90
         >>> da2 = xr.DataArray(
         ...     data=data,
         ...     dims=["x", "y"],
         ...     coords={"x": [40, 30, 20, 10], "y": [90, 80, 70]},
         ... )
         >>> da2
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 0,  1,  2],
                [ 3,  4,  5],
                [ 6,  7,  8],
                [ 9, 10, 11]])
         Coordinates:
-          * x        (x) int64 40 30 20 10
-          * y        (y) int64 90 80 70
+          * x        (x) int64 32B 40 30 20 10
+          * y        (y) int64 24B 90 80 70
 
         Reindexing with both DataArrays having the same coordinates set, but in different order:
 
         >>> da1.reindex_like(da2)
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[11, 10,  9],
                [ 8,  7,  6],
                [ 5,  4,  3],
                [ 2,  1,  0]])
         Coordinates:
-          * x        (x) int64 40 30 20 10
-          * y        (y) int64 90 80 70
+          * x        (x) int64 32B 40 30 20 10
+          * y        (y) int64 24B 90 80 70
 
         Reindexing with the other array having additional coordinates:
 
@@ -1983,68 +2010,68 @@ class DataArray(
         ...     coords={"x": [20, 10, 29, 39], "y": [70, 80, 90]},
         ... )
         >>> da1.reindex_like(da3)
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 3.,  4.,  5.],
                [ 0.,  1.,  2.],
                [nan, nan, nan],
                [nan, nan, nan]])
         Coordinates:
-          * x        (x) int64 20 10 29 39
-          * y        (y) int64 70 80 90
+          * x        (x) int64 32B 20 10 29 39
+          * y        (y) int64 24B 70 80 90
 
         Filling missing values with the previous valid index with respect to the coordinates' value:
 
         >>> da1.reindex_like(da3, method="ffill")
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[3, 4, 5],
                [0, 1, 2],
                [3, 4, 5],
                [6, 7, 8]])
         Coordinates:
-          * x        (x) int64 20 10 29 39
-          * y        (y) int64 70 80 90
+          * x        (x) int64 32B 20 10 29 39
+          * y        (y) int64 24B 70 80 90
 
         Filling missing values while tolerating specified error for inexact matches:
 
         >>> da1.reindex_like(da3, method="ffill", tolerance=5)
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 3.,  4.,  5.],
                [ 0.,  1.,  2.],
                [nan, nan, nan],
                [nan, nan, nan]])
         Coordinates:
-          * x        (x) int64 20 10 29 39
-          * y        (y) int64 70 80 90
+          * x        (x) int64 32B 20 10 29 39
+          * y        (y) int64 24B 70 80 90
 
         Filling missing values with manually specified values:
 
         >>> da1.reindex_like(da3, fill_value=19)
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 3,  4,  5],
                [ 0,  1,  2],
                [19, 19, 19],
                [19, 19, 19]])
         Coordinates:
-          * x        (x) int64 20 10 29 39
-          * y        (y) int64 70 80 90
+          * x        (x) int64 32B 20 10 29 39
+          * y        (y) int64 24B 70 80 90
 
         Note that unlike ``broadcast_like``, ``reindex_like`` doesn't create new dimensions:
 
         >>> da1.sel(x=20)
-        <xarray.DataArray (y: 3)>
+        <xarray.DataArray (y: 3)> Size: 24B
         array([3, 4, 5])
         Coordinates:
-            x        int64 20
-          * y        (y) int64 70 80 90
+            x        int64 8B 20
+          * y        (y) int64 24B 70 80 90
 
         ...so ``b`` in not added here:
 
         >>> da1.sel(x=20).reindex_like(da1)
-        <xarray.DataArray (y: 3)>
+        <xarray.DataArray (y: 3)> Size: 24B
         array([3, 4, 5])
         Coordinates:
-            x        int64 20
-          * y        (y) int64 70 80 90
+            x        int64 8B 20
+          * y        (y) int64 24B 70 80 90
 
         See Also
         --------
@@ -2129,15 +2156,15 @@ class DataArray(
         ...     dims="lat",
         ... )
         >>> da
-        <xarray.DataArray (lat: 4)>
+        <xarray.DataArray (lat: 4)> Size: 32B
         array([0, 1, 2, 3])
         Coordinates:
-          * lat      (lat) int64 90 89 88 87
+          * lat      (lat) int64 32B 90 89 88 87
         >>> da.reindex(lat=da.lat[::-1])
-        <xarray.DataArray (lat: 4)>
+        <xarray.DataArray (lat: 4)> Size: 32B
         array([3, 2, 1, 0])
         Coordinates:
-          * lat      (lat) int64 87 88 89 90
+          * lat      (lat) int64 32B 87 88 89 90
 
         See Also
         --------
@@ -2227,37 +2254,37 @@ class DataArray(
         ...     coords={"x": [0, 1, 2], "y": [10, 12, 14, 16]},
         ... )
         >>> da
-        <xarray.DataArray (x: 3, y: 4)>
+        <xarray.DataArray (x: 3, y: 4)> Size: 96B
         array([[ 1.,  4.,  2.,  9.],
                [ 2.,  7.,  6., nan],
                [ 6., nan,  5.,  8.]])
         Coordinates:
-          * x        (x) int64 0 1 2
-          * y        (y) int64 10 12 14 16
+          * x        (x) int64 24B 0 1 2
+          * y        (y) int64 32B 10 12 14 16
 
         1D linear interpolation (the default):
 
         >>> da.interp(x=[0, 0.75, 1.25, 1.75])
-        <xarray.DataArray (x: 4, y: 4)>
+        <xarray.DataArray (x: 4, y: 4)> Size: 128B
         array([[1.  , 4.  , 2.  ,  nan],
                [1.75, 6.25, 5.  ,  nan],
                [3.  ,  nan, 5.75,  nan],
                [5.  ,  nan, 5.25,  nan]])
         Coordinates:
-          * y        (y) int64 10 12 14 16
-          * x        (x) float64 0.0 0.75 1.25 1.75
+          * y        (y) int64 32B 10 12 14 16
+          * x        (x) float64 32B 0.0 0.75 1.25 1.75
 
         1D nearest interpolation:
 
         >>> da.interp(x=[0, 0.75, 1.25, 1.75], method="nearest")
-        <xarray.DataArray (x: 4, y: 4)>
+        <xarray.DataArray (x: 4, y: 4)> Size: 128B
         array([[ 1.,  4.,  2.,  9.],
                [ 2.,  7.,  6., nan],
                [ 2.,  7.,  6., nan],
                [ 6., nan,  5.,  8.]])
         Coordinates:
-          * y        (y) int64 10 12 14 16
-          * x        (x) float64 0.0 0.75 1.25 1.75
+          * y        (y) int64 32B 10 12 14 16
+          * x        (x) float64 32B 0.0 0.75 1.25 1.75
 
         1D linear extrapolation:
 
@@ -2266,26 +2293,26 @@ class DataArray(
         ...     method="linear",
         ...     kwargs={"fill_value": "extrapolate"},
         ... )
-        <xarray.DataArray (x: 4, y: 4)>
+        <xarray.DataArray (x: 4, y: 4)> Size: 128B
         array([[ 2. ,  7. ,  6. ,  nan],
                [ 4. ,  nan,  5.5,  nan],
                [ 8. ,  nan,  4.5,  nan],
                [12. ,  nan,  3.5,  nan]])
         Coordinates:
-          * y        (y) int64 10 12 14 16
-          * x        (x) float64 1.0 1.5 2.5 3.5
+          * y        (y) int64 32B 10 12 14 16
+          * x        (x) float64 32B 1.0 1.5 2.5 3.5
 
         2D linear interpolation:
 
         >>> da.interp(x=[0, 0.75, 1.25, 1.75], y=[11, 13, 15], method="linear")
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[2.5  , 3.   ,   nan],
                [4.   , 5.625,   nan],
                [  nan,   nan,   nan],
                [  nan,   nan,   nan]])
         Coordinates:
-          * x        (x) float64 0.0 0.75 1.25 1.75
-          * y        (y) int64 11 13 15
+          * x        (x) float64 32B 0.0 0.75 1.25 1.75
+          * y        (y) int64 24B 11 13 15
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
@@ -2356,52 +2383,52 @@ class DataArray(
         ...     coords={"x": [10, 20, 30, 40], "y": [70, 80, 90]},
         ... )
         >>> da1
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 0,  1,  2],
                [ 3,  4,  5],
                [ 6,  7,  8],
                [ 9, 10, 11]])
         Coordinates:
-          * x        (x) int64 10 20 30 40
-          * y        (y) int64 70 80 90
+          * x        (x) int64 32B 10 20 30 40
+          * y        (y) int64 24B 70 80 90
         >>> da2 = xr.DataArray(
         ...     data=data,
         ...     dims=["x", "y"],
         ...     coords={"x": [10, 20, 29, 39], "y": [70, 80, 90]},
         ... )
         >>> da2
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 0,  1,  2],
                [ 3,  4,  5],
                [ 6,  7,  8],
                [ 9, 10, 11]])
         Coordinates:
-          * x        (x) int64 10 20 29 39
-          * y        (y) int64 70 80 90
+          * x        (x) int64 32B 10 20 29 39
+          * y        (y) int64 24B 70 80 90
 
         Interpolate the values in the coordinates of the other DataArray with respect to the source's values:
 
         >>> da2.interp_like(da1)
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[0. , 1. , 2. ],
                [3. , 4. , 5. ],
                [6.3, 7.3, 8.3],
                [nan, nan, nan]])
         Coordinates:
-          * x        (x) int64 10 20 30 40
-          * y        (y) int64 70 80 90
+          * x        (x) int64 32B 10 20 30 40
+          * y        (y) int64 24B 70 80 90
 
         Could also extrapolate missing values:
 
         >>> da2.interp_like(da1, kwargs={"fill_value": "extrapolate"})
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 0. ,  1. ,  2. ],
                [ 3. ,  4. ,  5. ],
                [ 6.3,  7.3,  8.3],
                [ 9.3, 10.3, 11.3]])
         Coordinates:
-          * x        (x) int64 10 20 30 40
-          * y        (y) int64 70 80 90
+          * x        (x) int64 32B 10 20 30 40
+          * y        (y) int64 24B 70 80 90
 
         Notes
         -----
@@ -2496,25 +2523,25 @@ class DataArray(
         ...     coords={"x": ["a", "b"], "y": ("x", [0, 1])},
         ... )
         >>> arr
-        <xarray.DataArray (x: 2)>
+        <xarray.DataArray (x: 2)> Size: 16B
         array([0, 1])
         Coordinates:
-          * x        (x) <U1 'a' 'b'
-            y        (x) int64 0 1
+          * x        (x) <U1 8B 'a' 'b'
+            y        (x) int64 16B 0 1
 
         >>> arr.swap_dims({"x": "y"})
-        <xarray.DataArray (y: 2)>
+        <xarray.DataArray (y: 2)> Size: 16B
         array([0, 1])
         Coordinates:
-            x        (y) <U1 'a' 'b'
-          * y        (y) int64 0 1
+            x        (y) <U1 8B 'a' 'b'
+          * y        (y) int64 16B 0 1
 
         >>> arr.swap_dims({"x": "z"})
-        <xarray.DataArray (z: 2)>
+        <xarray.DataArray (z: 2)> Size: 16B
         array([0, 1])
         Coordinates:
-            x        (z) <U1 'a' 'b'
-            y        (z) int64 0 1
+            x        (z) <U1 8B 'a' 'b'
+            y        (z) int64 16B 0 1
         Dimensions without coordinates: z
 
         See Also
@@ -2573,20 +2600,20 @@ class DataArray(
         --------
         >>> da = xr.DataArray(np.arange(5), dims=("x"))
         >>> da
-        <xarray.DataArray (x: 5)>
+        <xarray.DataArray (x: 5)> Size: 40B
         array([0, 1, 2, 3, 4])
         Dimensions without coordinates: x
 
         Add new dimension of length 2:
 
         >>> da.expand_dims(dim={"y": 2})
-        <xarray.DataArray (y: 2, x: 5)>
+        <xarray.DataArray (y: 2, x: 5)> Size: 80B
         array([[0, 1, 2, 3, 4],
                [0, 1, 2, 3, 4]])
         Dimensions without coordinates: y, x
 
         >>> da.expand_dims(dim={"y": 2}, axis=1)
-        <xarray.DataArray (x: 5, y: 2)>
+        <xarray.DataArray (x: 5, y: 2)> Size: 80B
         array([[0, 0],
                [1, 1],
                [2, 2],
@@ -2597,14 +2624,14 @@ class DataArray(
         Add a new dimension with coordinates from array:
 
         >>> da.expand_dims(dim={"y": np.arange(5)}, axis=0)
-        <xarray.DataArray (y: 5, x: 5)>
+        <xarray.DataArray (y: 5, x: 5)> Size: 200B
         array([[0, 1, 2, 3, 4],
                [0, 1, 2, 3, 4],
                [0, 1, 2, 3, 4],
                [0, 1, 2, 3, 4],
                [0, 1, 2, 3, 4]])
         Coordinates:
-          * y        (y) int64 0 1 2 3 4
+          * y        (y) int64 40B 0 1 2 3 4
         Dimensions without coordinates: x
         """
         if isinstance(dim, int):
@@ -2660,20 +2687,20 @@ class DataArray(
         ...     coords={"x": range(2), "y": range(3), "a": ("x", [3, 4])},
         ... )
         >>> arr
-        <xarray.DataArray (x: 2, y: 3)>
+        <xarray.DataArray (x: 2, y: 3)> Size: 48B
         array([[1., 1., 1.],
                [1., 1., 1.]])
         Coordinates:
-          * x        (x) int64 0 1
-          * y        (y) int64 0 1 2
-            a        (x) int64 3 4
+          * x        (x) int64 16B 0 1
+          * y        (y) int64 24B 0 1 2
+            a        (x) int64 16B 3 4
         >>> arr.set_index(x="a")
-        <xarray.DataArray (x: 2, y: 3)>
+        <xarray.DataArray (x: 2, y: 3)> Size: 48B
         array([[1., 1., 1.],
                [1., 1., 1.]])
         Coordinates:
-          * x        (x) int64 3 4
-          * y        (y) int64 0 1 2
+          * x        (x) int64 16B 3 4
+          * y        (y) int64 24B 0 1 2
 
         See Also
         --------
@@ -2820,12 +2847,12 @@ class DataArray(
         ...     coords=[("x", ["a", "b"]), ("y", [0, 1, 2])],
         ... )
         >>> arr
-        <xarray.DataArray (x: 2, y: 3)>
+        <xarray.DataArray (x: 2, y: 3)> Size: 48B
         array([[0, 1, 2],
                [3, 4, 5]])
         Coordinates:
-          * x        (x) <U1 'a' 'b'
-          * y        (y) int64 0 1 2
+          * x        (x) <U1 8B 'a' 'b'
+          * y        (y) int64 24B 0 1 2
         >>> stacked = arr.stack(z=("x", "y"))
         >>> stacked.indexes["z"]
         MultiIndex([('a', 0),
@@ -2887,12 +2914,12 @@ class DataArray(
         ...     coords=[("x", ["a", "b"]), ("y", [0, 1, 2])],
         ... )
         >>> arr
-        <xarray.DataArray (x: 2, y: 3)>
+        <xarray.DataArray (x: 2, y: 3)> Size: 48B
         array([[0, 1, 2],
                [3, 4, 5]])
         Coordinates:
-          * x        (x) <U1 'a' 'b'
-          * y        (y) int64 0 1 2
+          * x        (x) <U1 8B 'a' 'b'
+          * y        (y) int64 24B 0 1 2
         >>> stacked = arr.stack(z=("x", "y"))
         >>> stacked.indexes["z"]
         MultiIndex([('a', 0),
@@ -2939,14 +2966,14 @@ class DataArray(
         ... )
         >>> data = xr.Dataset({"a": arr, "b": arr.isel(y=0)})
         >>> data
-        <xarray.Dataset>
+        <xarray.Dataset> Size: 96B
         Dimensions:  (x: 2, y: 3)
         Coordinates:
-          * x        (x) <U1 'a' 'b'
-          * y        (y) int64 0 1 2
+          * x        (x) <U1 8B 'a' 'b'
+          * y        (y) int64 24B 0 1 2
         Data variables:
-            a        (x, y) int64 0 1 2 3 4 5
-            b        (x) int64 0 3
+            a        (x, y) int64 48B 0 1 2 3 4 5
+            b        (x) int64 16B 0 3
         >>> stacked = data.to_stacked_array("z", ["x"])
         >>> stacked.indexes["z"]
         MultiIndex([('a',   0),
@@ -3017,7 +3044,7 @@ class DataArray(
         Dataset.transpose
         """
         if dims:
-            dims = tuple(utils.infix_dims(dims, self.dims, missing_dims))
+            dims = tuple(infix_dims(dims, self.dims, missing_dims))
         variable = self.variable.transpose(*dims)
         if transpose_coords:
             coords: dict[Hashable, Variable] = {}
@@ -3064,31 +3091,31 @@ class DataArray(
         ...     coords={"x": [10, 20, 30, 40], "y": [70, 80, 90]},
         ... )
         >>> da
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 0,  1,  2],
                [ 3,  4,  5],
                [ 6,  7,  8],
                [ 9, 10, 11]])
         Coordinates:
-          * x        (x) int64 10 20 30 40
-          * y        (y) int64 70 80 90
+          * x        (x) int64 32B 10 20 30 40
+          * y        (y) int64 24B 70 80 90
 
         Removing a single variable:
 
         >>> da.drop_vars("x")
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 0,  1,  2],
                [ 3,  4,  5],
                [ 6,  7,  8],
                [ 9, 10, 11]])
         Coordinates:
-          * y        (y) int64 70 80 90
+          * y        (y) int64 24B 70 80 90
         Dimensions without coordinates: x
 
         Removing a list of variables:
 
         >>> da.drop_vars(["x", "y"])
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 0,  1,  2],
                [ 3,  4,  5],
                [ 6,  7,  8],
@@ -3096,7 +3123,7 @@ class DataArray(
         Dimensions without coordinates: x, y
 
         >>> da.drop_vars(lambda x: x.coords)
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 0,  1,  2],
                [ 3,  4,  5],
                [ 6,  7,  8],
@@ -3186,34 +3213,34 @@ class DataArray(
         ...     dims=("x", "y"),
         ... )
         >>> da
-        <xarray.DataArray (x: 5, y: 5)>
+        <xarray.DataArray (x: 5, y: 5)> Size: 200B
         array([[ 0,  1,  2,  3,  4],
                [ 5,  6,  7,  8,  9],
                [10, 11, 12, 13, 14],
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
         Coordinates:
-          * x        (x) int64 0 2 4 6 8
-          * y        (y) int64 0 3 6 9 12
+          * x        (x) int64 40B 0 2 4 6 8
+          * y        (y) int64 40B 0 3 6 9 12
 
         >>> da.drop_sel(x=[0, 2], y=9)
-        <xarray.DataArray (x: 3, y: 4)>
+        <xarray.DataArray (x: 3, y: 4)> Size: 96B
         array([[10, 11, 12, 14],
                [15, 16, 17, 19],
                [20, 21, 22, 24]])
         Coordinates:
-          * x        (x) int64 4 6 8
-          * y        (y) int64 0 3 6 12
+          * x        (x) int64 24B 4 6 8
+          * y        (y) int64 32B 0 3 6 12
 
         >>> da.drop_sel({"x": 6, "y": [0, 3]})
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 2,  3,  4],
                [ 7,  8,  9],
                [12, 13, 14],
                [22, 23, 24]])
         Coordinates:
-          * x        (x) int64 0 2 4 8
-          * y        (y) int64 6 9 12
+          * x        (x) int64 32B 0 2 4 8
+          * y        (y) int64 24B 6 9 12
         """
         if labels_kwargs or isinstance(labels, dict):
             labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
@@ -3245,7 +3272,7 @@ class DataArray(
         --------
         >>> da = xr.DataArray(np.arange(25).reshape(5, 5), dims=("X", "Y"))
         >>> da
-        <xarray.DataArray (X: 5, Y: 5)>
+        <xarray.DataArray (X: 5, Y: 5)> Size: 200B
         array([[ 0,  1,  2,  3,  4],
                [ 5,  6,  7,  8,  9],
                [10, 11, 12, 13, 14],
@@ -3254,14 +3281,14 @@ class DataArray(
         Dimensions without coordinates: X, Y
 
         >>> da.drop_isel(X=[0, 4], Y=2)
-        <xarray.DataArray (X: 3, Y: 4)>
+        <xarray.DataArray (X: 3, Y: 4)> Size: 96B
         array([[ 5,  6,  8,  9],
                [10, 11, 13, 14],
                [15, 16, 18, 19]])
         Dimensions without coordinates: X, Y
 
         >>> da.drop_isel({"X": 3, "Y": 3})
-        <xarray.DataArray (X: 4, Y: 4)>
+        <xarray.DataArray (X: 4, Y: 4)> Size: 128B
         array([[ 0,  1,  2,  4],
                [ 5,  6,  7,  9],
                [10, 11, 12, 14],
@@ -3316,35 +3343,35 @@ class DataArray(
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (Y: 4, X: 4)>
+        <xarray.DataArray (Y: 4, X: 4)> Size: 128B
         array([[ 0.,  4.,  2.,  9.],
                [nan, nan, nan, nan],
                [nan,  4.,  2.,  0.],
                [ 3.,  1.,  0.,  0.]])
         Coordinates:
-            lat      (Y) float64 -20.0 -20.25 -20.5 -20.75
-            lon      (X) float64 10.0 10.25 10.5 10.75
+            lat      (Y) float64 32B -20.0 -20.25 -20.5 -20.75
+            lon      (X) float64 32B 10.0 10.25 10.5 10.75
         Dimensions without coordinates: Y, X
 
         >>> da.dropna(dim="Y", how="any")
-        <xarray.DataArray (Y: 2, X: 4)>
+        <xarray.DataArray (Y: 2, X: 4)> Size: 64B
         array([[0., 4., 2., 9.],
                [3., 1., 0., 0.]])
         Coordinates:
-            lat      (Y) float64 -20.0 -20.75
-            lon      (X) float64 10.0 10.25 10.5 10.75
+            lat      (Y) float64 16B -20.0 -20.75
+            lon      (X) float64 32B 10.0 10.25 10.5 10.75
         Dimensions without coordinates: Y, X
 
         Drop values only if all values along the dimension are NaN:
 
         >>> da.dropna(dim="Y", how="all")
-        <xarray.DataArray (Y: 3, X: 4)>
+        <xarray.DataArray (Y: 3, X: 4)> Size: 96B
         array([[ 0.,  4.,  2.,  9.],
                [nan,  4.,  2.,  0.],
                [ 3.,  1.,  0.,  0.]])
         Coordinates:
-            lat      (Y) float64 -20.0 -20.5 -20.75
-            lon      (X) float64 10.0 10.25 10.5 10.75
+            lat      (Y) float64 24B -20.0 -20.5 -20.75
+            lon      (X) float64 32B 10.0 10.25 10.5 10.75
         Dimensions without coordinates: Y, X
         """
         ds = self._to_temp_dataset().dropna(dim, how=how, thresh=thresh)
@@ -3380,29 +3407,29 @@ class DataArray(
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (Z: 6)>
+        <xarray.DataArray (Z: 6)> Size: 48B
         array([ 1.,  4., nan,  0.,  3., nan])
         Coordinates:
-          * Z        (Z) int64 0 1 2 3 4 5
-            height   (Z) int64 0 10 20 30 40 50
+          * Z        (Z) int64 48B 0 1 2 3 4 5
+            height   (Z) int64 48B 0 10 20 30 40 50
 
         Fill all NaN values with 0:
 
         >>> da.fillna(0)
-        <xarray.DataArray (Z: 6)>
+        <xarray.DataArray (Z: 6)> Size: 48B
         array([1., 4., 0., 0., 3., 0.])
         Coordinates:
-          * Z        (Z) int64 0 1 2 3 4 5
-            height   (Z) int64 0 10 20 30 40 50
+          * Z        (Z) int64 48B 0 1 2 3 4 5
+            height   (Z) int64 48B 0 10 20 30 40 50
 
         Fill NaN values with corresponding values in array:
 
         >>> da.fillna(np.array([2, 9, 4, 2, 8, 9]))
-        <xarray.DataArray (Z: 6)>
+        <xarray.DataArray (Z: 6)> Size: 48B
         array([1., 4., 4., 0., 3., 9.])
         Coordinates:
-          * Z        (Z) int64 0 1 2 3 4 5
-            height   (Z) int64 0 10 20 30 40 50
+          * Z        (Z) int64 48B 0 1 2 3 4 5
+            height   (Z) int64 48B 0 10 20 30 40 50
         """
         if utils.is_dict_like(value):
             raise TypeError(
@@ -3506,22 +3533,22 @@ class DataArray(
         ...     [np.nan, 2, 3, np.nan, 0], dims="x", coords={"x": [0, 1, 2, 3, 4]}
         ... )
         >>> da
-        <xarray.DataArray (x: 5)>
+        <xarray.DataArray (x: 5)> Size: 40B
         array([nan,  2.,  3., nan,  0.])
         Coordinates:
-          * x        (x) int64 0 1 2 3 4
+          * x        (x) int64 40B 0 1 2 3 4
 
         >>> da.interpolate_na(dim="x", method="linear")
-        <xarray.DataArray (x: 5)>
+        <xarray.DataArray (x: 5)> Size: 40B
         array([nan, 2. , 3. , 1.5, 0. ])
         Coordinates:
-          * x        (x) int64 0 1 2 3 4
+          * x        (x) int64 40B 0 1 2 3 4
 
         >>> da.interpolate_na(dim="x", method="linear", fill_value="extrapolate")
-        <xarray.DataArray (x: 5)>
+        <xarray.DataArray (x: 5)> Size: 40B
         array([1. , 2. , 3. , 1.5, 0. ])
         Coordinates:
-          * x        (x) int64 0 1 2 3 4
+          * x        (x) int64 40B 0 1 2 3 4
         """
         from xarray.core.missing import interp_na
 
@@ -3577,43 +3604,43 @@ class DataArray(
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (Y: 5, X: 3)>
+        <xarray.DataArray (Y: 5, X: 3)> Size: 120B
         array([[nan,  1.,  3.],
                [ 0., nan,  5.],
                [ 5., nan, nan],
                [ 3., nan, nan],
                [ 0.,  2.,  0.]])
         Coordinates:
-            lat      (Y) float64 -20.0 -20.25 -20.5 -20.75 -21.0
-            lon      (X) float64 10.0 10.25 10.5
+            lat      (Y) float64 40B -20.0 -20.25 -20.5 -20.75 -21.0
+            lon      (X) float64 24B 10.0 10.25 10.5
         Dimensions without coordinates: Y, X
 
         Fill all NaN values:
 
         >>> da.ffill(dim="Y", limit=None)
-        <xarray.DataArray (Y: 5, X: 3)>
+        <xarray.DataArray (Y: 5, X: 3)> Size: 120B
         array([[nan,  1.,  3.],
                [ 0.,  1.,  5.],
                [ 5.,  1.,  5.],
                [ 3.,  1.,  5.],
                [ 0.,  2.,  0.]])
         Coordinates:
-            lat      (Y) float64 -20.0 -20.25 -20.5 -20.75 -21.0
-            lon      (X) float64 10.0 10.25 10.5
+            lat      (Y) float64 40B -20.0 -20.25 -20.5 -20.75 -21.0
+            lon      (X) float64 24B 10.0 10.25 10.5
         Dimensions without coordinates: Y, X
 
         Fill only the first of consecutive NaN values:
 
         >>> da.ffill(dim="Y", limit=1)
-        <xarray.DataArray (Y: 5, X: 3)>
+        <xarray.DataArray (Y: 5, X: 3)> Size: 120B
         array([[nan,  1.,  3.],
                [ 0.,  1.,  5.],
                [ 5., nan,  5.],
                [ 3., nan, nan],
                [ 0.,  2.,  0.]])
         Coordinates:
-            lat      (Y) float64 -20.0 -20.25 -20.5 -20.75 -21.0
-            lon      (X) float64 10.0 10.25 10.5
+            lat      (Y) float64 40B -20.0 -20.25 -20.5 -20.75 -21.0
+            lon      (X) float64 24B 10.0 10.25 10.5
         Dimensions without coordinates: Y, X
         """
         from xarray.core.missing import ffill
@@ -3661,43 +3688,43 @@ class DataArray(
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (Y: 5, X: 3)>
+        <xarray.DataArray (Y: 5, X: 3)> Size: 120B
         array([[ 0.,  1.,  3.],
                [ 0., nan,  5.],
                [ 5., nan, nan],
                [ 3., nan, nan],
                [nan,  2.,  0.]])
         Coordinates:
-            lat      (Y) float64 -20.0 -20.25 -20.5 -20.75 -21.0
-            lon      (X) float64 10.0 10.25 10.5
+            lat      (Y) float64 40B -20.0 -20.25 -20.5 -20.75 -21.0
+            lon      (X) float64 24B 10.0 10.25 10.5
         Dimensions without coordinates: Y, X
 
         Fill all NaN values:
 
         >>> da.bfill(dim="Y", limit=None)
-        <xarray.DataArray (Y: 5, X: 3)>
+        <xarray.DataArray (Y: 5, X: 3)> Size: 120B
         array([[ 0.,  1.,  3.],
                [ 0.,  2.,  5.],
                [ 5.,  2.,  0.],
                [ 3.,  2.,  0.],
                [nan,  2.,  0.]])
         Coordinates:
-            lat      (Y) float64 -20.0 -20.25 -20.5 -20.75 -21.0
-            lon      (X) float64 10.0 10.25 10.5
+            lat      (Y) float64 40B -20.0 -20.25 -20.5 -20.75 -21.0
+            lon      (X) float64 24B 10.0 10.25 10.5
         Dimensions without coordinates: Y, X
 
         Fill only the first of consecutive NaN values:
 
         >>> da.bfill(dim="Y", limit=1)
-        <xarray.DataArray (Y: 5, X: 3)>
+        <xarray.DataArray (Y: 5, X: 3)> Size: 120B
         array([[ 0.,  1.,  3.],
                [ 0., nan,  5.],
                [ 5., nan, nan],
                [ 3.,  2.,  0.],
                [nan,  2.,  0.]])
         Coordinates:
-            lat      (Y) float64 -20.0 -20.25 -20.5 -20.75 -21.0
-            lon      (X) float64 10.0 10.25 10.5
+            lat      (Y) float64 40B -20.0 -20.25 -20.5 -20.75 -21.0
+            lon      (X) float64 24B 10.0 10.25 10.5
         Dimensions without coordinates: Y, X
         """
         from xarray.core.missing import bfill
@@ -3915,8 +3942,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> bytes:
-        ...
+    ) -> bytes: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -3932,8 +3958,7 @@ class DataArray(
         *,
         compute: Literal[False],
         invalid_netcdf: bool = False,
-    ) -> Delayed:
-        ...
+    ) -> Delayed: ...
 
     # default return None
     @overload
@@ -3948,8 +3973,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: Literal[True] = True,
         invalid_netcdf: bool = False,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     # if compute cannot be evaluated at type check time
     # we may get back either Delayed or None
@@ -3965,8 +3989,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> Delayed | None:
-        ...
+    ) -> Delayed | None: ...
 
     def to_netcdf(
         self,
@@ -4111,12 +4134,11 @@ class DataArray(
         compute: Literal[True] = True,
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
-        region: Mapping[str, slice] | None = None,
+        region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
-    ) -> ZarrStore:
-        ...
+    ) -> ZarrStore: ...
 
     # compute=False returns dask.Delayed
     @overload
@@ -4132,12 +4154,11 @@ class DataArray(
         compute: Literal[False],
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
-        region: Mapping[str, slice] | None = None,
+        region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
-    ) -> Delayed:
-        ...
+    ) -> Delayed: ...
 
     def to_zarr(
         self,
@@ -4151,7 +4172,7 @@ class DataArray(
         compute: bool = True,
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
-        region: Mapping[str, slice] | None = None,
+        region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
@@ -4230,6 +4251,12 @@ class DataArray(
               in with ``region``, use a separate call to ``to_zarr()`` with
               ``compute=False``. See "Appending to existing Zarr stores" in
               the reference documentation for full details.
+
+            Users are expected to ensure that the specified region aligns with
+            Zarr chunk boundaries, and that dask chunks are also aligned.
+            Xarray makes limited checks that these multiple chunk boundaries line up.
+            It is possible to write incomplete chunks and corrupt the data with this
+            option if you are not careful.
         safe_chunks : bool, default: True
             If True, only allow writes to when there is a many-to-one relationship
             between Zarr chunks (specified in encoding) and Dask chunks.
@@ -4368,7 +4395,7 @@ class DataArray(
         >>> d = {"dims": "t", "data": [1, 2, 3]}
         >>> da = xr.DataArray.from_dict(d)
         >>> da
-        <xarray.DataArray (t: 3)>
+        <xarray.DataArray (t: 3)> Size: 24B
         array([1, 2, 3])
         Dimensions without coordinates: t
 
@@ -4383,10 +4410,10 @@ class DataArray(
         ... }
         >>> da = xr.DataArray.from_dict(d)
         >>> da
-        <xarray.DataArray 'a' (t: 3)>
+        <xarray.DataArray 'a' (t: 3)> Size: 24B
         array([10, 20, 30])
         Coordinates:
-          * t        (t) int64 0 1 2
+          * t        (t) int64 24B 0 1 2
         Attributes:
             title:    air temperature
         """
@@ -4490,11 +4517,11 @@ class DataArray(
         >>> a = xr.DataArray([1, 2], dims="X")
         >>> b = xr.DataArray([[1, 1], [2, 2]], dims=["X", "Y"])
         >>> a
-        <xarray.DataArray (X: 2)>
+        <xarray.DataArray (X: 2)> Size: 16B
         array([1, 2])
         Dimensions without coordinates: X
         >>> b
-        <xarray.DataArray (X: 2, Y: 2)>
+        <xarray.DataArray (X: 2, Y: 2)> Size: 32B
         array([[1, 1],
                [2, 2]])
         Dimensions without coordinates: X, Y
@@ -4546,21 +4573,21 @@ class DataArray(
         >>> c = xr.DataArray([1, 2, 3], dims="Y")
         >>> d = xr.DataArray([3, 2, 1], dims="X")
         >>> a
-        <xarray.DataArray (X: 3)>
+        <xarray.DataArray (X: 3)> Size: 24B
         array([1, 2, 3])
         Dimensions without coordinates: X
         >>> b
-        <xarray.DataArray (X: 3)>
+        <xarray.DataArray (X: 3)> Size: 24B
         array([1, 2, 3])
         Dimensions without coordinates: X
         Attributes:
             units:    m
         >>> c
-        <xarray.DataArray (Y: 3)>
+        <xarray.DataArray (Y: 3)> Size: 24B
         array([1, 2, 3])
         Dimensions without coordinates: Y
         >>> d
-        <xarray.DataArray (X: 3)>
+        <xarray.DataArray (X: 3)> Size: 24B
         array([3, 2, 1])
         Dimensions without coordinates: X
 
@@ -4601,19 +4628,19 @@ class DataArray(
         >>> b = xr.DataArray([1, 2, 3], dims="X", attrs=dict(units="m"), name="Width")
         >>> c = xr.DataArray([1, 2, 3], dims="X", attrs=dict(units="ft"), name="Width")
         >>> a
-        <xarray.DataArray 'Width' (X: 3)>
+        <xarray.DataArray 'Width' (X: 3)> Size: 24B
         array([1, 2, 3])
         Dimensions without coordinates: X
         Attributes:
             units:    m
         >>> b
-        <xarray.DataArray 'Width' (X: 3)>
+        <xarray.DataArray 'Width' (X: 3)> Size: 24B
         array([1, 2, 3])
         Dimensions without coordinates: X
         Attributes:
             units:    m
         >>> c
-        <xarray.DataArray 'Width' (X: 3)>
+        <xarray.DataArray 'Width' (X: 3)> Size: 24B
         array([1, 2, 3])
         Dimensions without coordinates: X
         Attributes:
@@ -4787,15 +4814,15 @@ class DataArray(
         --------
         >>> arr = xr.DataArray([5, 5, 6, 6], [[1, 2, 3, 4]], ["x"])
         >>> arr.diff("x")
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 24B
         array([0, 1, 0])
         Coordinates:
-          * x        (x) int64 2 3 4
+          * x        (x) int64 24B 2 3 4
         >>> arr.diff("x", 2)
-        <xarray.DataArray (x: 2)>
+        <xarray.DataArray (x: 2)> Size: 16B
         array([ 1, -1])
         Coordinates:
-          * x        (x) int64 3 4
+          * x        (x) int64 16B 3 4
 
         See Also
         --------
@@ -4845,7 +4872,7 @@ class DataArray(
         --------
         >>> arr = xr.DataArray([5, 6, 7], dims="x")
         >>> arr.shift(x=1)
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 24B
         array([nan,  5.,  6.])
         Dimensions without coordinates: x
         """
@@ -4894,7 +4921,7 @@ class DataArray(
         --------
         >>> arr = xr.DataArray([5, 6, 7], dims="x")
         >>> arr.roll(x=1)
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 24B
         array([7, 5, 6])
         Dimensions without coordinates: x
         """
@@ -4982,10 +5009,12 @@ class DataArray(
 
     def sortby(
         self,
-        variables: Hashable
-        | DataArray
-        | Sequence[Hashable | DataArray]
-        | Callable[[Self], Hashable | DataArray | Sequence[Hashable | DataArray]],
+        variables: (
+            Hashable
+            | DataArray
+            | Sequence[Hashable | DataArray]
+            | Callable[[Self], Hashable | DataArray | Sequence[Hashable | DataArray]]
+        ),
         ascending: bool = True,
     ) -> Self:
         """Sort object by labels or values (along an axis).
@@ -5034,22 +5063,22 @@ class DataArray(
         ...     dims="time",
         ... )
         >>> da
-        <xarray.DataArray (time: 5)>
+        <xarray.DataArray (time: 5)> Size: 40B
         array([5, 4, 3, 2, 1])
         Coordinates:
-          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
+          * time     (time) datetime64[ns] 40B 2000-01-01 2000-01-02 ... 2000-01-05
 
         >>> da.sortby(da)
-        <xarray.DataArray (time: 5)>
+        <xarray.DataArray (time: 5)> Size: 40B
         array([1, 2, 3, 4, 5])
         Coordinates:
-          * time     (time) datetime64[ns] 2000-01-05 2000-01-04 ... 2000-01-01
+          * time     (time) datetime64[ns] 40B 2000-01-05 2000-01-04 ... 2000-01-01
 
         >>> da.sortby(lambda x: x)
-        <xarray.DataArray (time: 5)>
+        <xarray.DataArray (time: 5)> Size: 40B
         array([1, 2, 3, 4, 5])
         Coordinates:
-          * time     (time) datetime64[ns] 2000-01-05 2000-01-04 ... 2000-01-01
+          * time     (time) datetime64[ns] 40B 2000-01-05 2000-01-04 ... 2000-01-01
         """
         # We need to convert the callable here rather than pass it through to the
         # dataset method, since otherwise the dataset method would try to call the
@@ -5138,29 +5167,29 @@ class DataArray(
         ...     dims=("x", "y"),
         ... )
         >>> da.quantile(0)  # or da.quantile(0, dim=...)
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(0.7)
         Coordinates:
-            quantile  float64 0.0
+            quantile  float64 8B 0.0
         >>> da.quantile(0, dim="x")
-        <xarray.DataArray (y: 4)>
+        <xarray.DataArray (y: 4)> Size: 32B
         array([0.7, 4.2, 2.6, 1.5])
         Coordinates:
-          * y         (y) float64 1.0 1.5 2.0 2.5
-            quantile  float64 0.0
+          * y         (y) float64 32B 1.0 1.5 2.0 2.5
+            quantile  float64 8B 0.0
         >>> da.quantile([0, 0.5, 1])
-        <xarray.DataArray (quantile: 3)>
+        <xarray.DataArray (quantile: 3)> Size: 24B
         array([0.7, 3.4, 9.4])
         Coordinates:
-          * quantile  (quantile) float64 0.0 0.5 1.0
+          * quantile  (quantile) float64 24B 0.0 0.5 1.0
         >>> da.quantile([0, 0.5, 1], dim="x")
-        <xarray.DataArray (quantile: 3, y: 4)>
+        <xarray.DataArray (quantile: 3, y: 4)> Size: 96B
         array([[0.7 , 4.2 , 2.6 , 1.5 ],
                [3.6 , 5.75, 6.  , 1.7 ],
                [6.5 , 7.3 , 9.4 , 1.9 ]])
         Coordinates:
-          * y         (y) float64 1.0 1.5 2.0 2.5
-          * quantile  (quantile) float64 0.0 0.5 1.0
+          * y         (y) float64 32B 1.0 1.5 2.0 2.5
+          * quantile  (quantile) float64 24B 0.0 0.5 1.0
 
         References
         ----------
@@ -5217,7 +5246,7 @@ class DataArray(
         --------
         >>> arr = xr.DataArray([5, 6, 7], dims="x")
         >>> arr.rank("x")
-        <xarray.DataArray (x: 3)>
+        <xarray.DataArray (x: 3)> Size: 24B
         array([1., 2., 3.])
         Dimensions without coordinates: x
         """
@@ -5266,23 +5295,23 @@ class DataArray(
         ...     coords={"x": [0, 0.1, 1.1, 1.2]},
         ... )
         >>> da
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 0,  1,  2],
                [ 3,  4,  5],
                [ 6,  7,  8],
                [ 9, 10, 11]])
         Coordinates:
-          * x        (x) float64 0.0 0.1 1.1 1.2
+          * x        (x) float64 32B 0.0 0.1 1.1 1.2
         Dimensions without coordinates: y
         >>>
         >>> da.differentiate("x")
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[30.        , 30.        , 30.        ],
                [27.54545455, 27.54545455, 27.54545455],
                [27.54545455, 27.54545455, 27.54545455],
                [30.        , 30.        , 30.        ]])
         Coordinates:
-          * x        (x) float64 0.0 0.1 1.1 1.2
+          * x        (x) float64 32B 0.0 0.1 1.1 1.2
         Dimensions without coordinates: y
         """
         ds = self._to_temp_dataset().differentiate(coord, edge_order, datetime_unit)
@@ -5325,17 +5354,17 @@ class DataArray(
         ...     coords={"x": [0, 0.1, 1.1, 1.2]},
         ... )
         >>> da
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 0,  1,  2],
                [ 3,  4,  5],
                [ 6,  7,  8],
                [ 9, 10, 11]])
         Coordinates:
-          * x        (x) float64 0.0 0.1 1.1 1.2
+          * x        (x) float64 32B 0.0 0.1 1.1 1.2
         Dimensions without coordinates: y
         >>>
         >>> da.integrate("x")
-        <xarray.DataArray (y: 3)>
+        <xarray.DataArray (y: 3)> Size: 24B
         array([5.4, 6.6, 7.8])
         Dimensions without coordinates: y
         """
@@ -5382,23 +5411,23 @@ class DataArray(
         ...     coords={"x": [0, 0.1, 1.1, 1.2]},
         ... )
         >>> da
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[ 0,  1,  2],
                [ 3,  4,  5],
                [ 6,  7,  8],
                [ 9, 10, 11]])
         Coordinates:
-          * x        (x) float64 0.0 0.1 1.1 1.2
+          * x        (x) float64 32B 0.0 0.1 1.1 1.2
         Dimensions without coordinates: y
         >>>
         >>> da.cumulative_integrate("x")
-        <xarray.DataArray (x: 4, y: 3)>
+        <xarray.DataArray (x: 4, y: 3)> Size: 96B
         array([[0.  , 0.  , 0.  ],
                [0.15, 0.25, 0.35],
                [4.65, 5.75, 6.85],
                [5.4 , 6.6 , 7.8 ]])
         Coordinates:
-          * x        (x) float64 0.0 0.1 1.1 1.2
+          * x        (x) float64 32B 0.0 0.1 1.1 1.2
         Dimensions without coordinates: y
         """
         ds = self._to_temp_dataset().cumulative_integrate(coord, datetime_unit)
@@ -5499,15 +5528,15 @@ class DataArray(
         ...     coords={"time": time, "month": month},
         ... ).chunk()
         >>> array.map_blocks(calculate_anomaly, template=array).compute()
-        <xarray.DataArray (time: 24)>
+        <xarray.DataArray (time: 24)> Size: 192B
         array([ 0.12894847,  0.11323072, -0.0855964 , -0.09334032,  0.26848862,
                 0.12382735,  0.22460641,  0.07650108, -0.07673453, -0.22865714,
                -0.19063865,  0.0590131 , -0.12894847, -0.11323072,  0.0855964 ,
                 0.09334032, -0.26848862, -0.12382735, -0.22460641, -0.07650108,
                 0.07673453,  0.22865714,  0.19063865, -0.0590131 ])
         Coordinates:
-          * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
-            month    (time) int64 1 2 3 4 5 6 7 8 9 10 11 12 1 2 3 4 5 6 7 8 9 10 11 12
+          * time     (time) object 192B 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
+            month    (time) int64 192B 1 2 3 4 5 6 7 8 9 10 ... 3 4 5 6 7 8 9 10 11 12
 
         Note that one must explicitly use ``args=[]`` and ``kwargs={}`` to pass arguments
         to the function being applied in ``xr.map_blocks()``:
@@ -5515,11 +5544,11 @@ class DataArray(
         >>> array.map_blocks(
         ...     calculate_anomaly, kwargs={"groupby_type": "time.year"}, template=array
         ... )  # doctest: +ELLIPSIS
-        <xarray.DataArray (time: 24)>
+        <xarray.DataArray (time: 24)> Size: 192B
         dask.array<<this-array>-calculate_anomaly, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>
         Coordinates:
-          * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
-            month    (time) int64 dask.array<chunksize=(24,), meta=np.ndarray>
+          * time     (time) object 192B 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
+            month    (time) int64 192B dask.array<chunksize=(24,), meta=np.ndarray>
         """
         from xarray.core.parallel import map_blocks
 
@@ -5595,14 +5624,12 @@ class DataArray(
         self,
         pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
         mode: PadModeOptions = "constant",
-        stat_length: int
-        | tuple[int, int]
-        | Mapping[Any, tuple[int, int]]
-        | None = None,
-        constant_values: float
-        | tuple[float, float]
-        | Mapping[Any, tuple[float, float]]
-        | None = None,
+        stat_length: (
+            int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
+        ) = None,
+        constant_values: (
+            float | tuple[float, float] | Mapping[Any, tuple[float, float]] | None
+        ) = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
         keep_attrs: bool | None = None,
@@ -5712,10 +5739,10 @@ class DataArray(
         --------
         >>> arr = xr.DataArray([5, 6, 7], coords=[("x", [0, 1, 2])])
         >>> arr.pad(x=(1, 2), constant_values=0)
-        <xarray.DataArray (x: 6)>
+        <xarray.DataArray (x: 6)> Size: 48B
         array([0, 5, 6, 7, 0, 0])
         Coordinates:
-          * x        (x) float64 nan 0.0 1.0 2.0 nan nan
+          * x        (x) float64 48B nan 0.0 1.0 2.0 nan nan
 
         >>> da = xr.DataArray(
         ...     [[0, 1, 2, 3], [10, 11, 12, 13]],
@@ -5723,29 +5750,29 @@ class DataArray(
         ...     coords={"x": [0, 1], "y": [10, 20, 30, 40], "z": ("x", [100, 200])},
         ... )
         >>> da.pad(x=1)
-        <xarray.DataArray (x: 4, y: 4)>
+        <xarray.DataArray (x: 4, y: 4)> Size: 128B
         array([[nan, nan, nan, nan],
                [ 0.,  1.,  2.,  3.],
                [10., 11., 12., 13.],
                [nan, nan, nan, nan]])
         Coordinates:
-          * x        (x) float64 nan 0.0 1.0 nan
-          * y        (y) int64 10 20 30 40
-            z        (x) float64 nan 100.0 200.0 nan
+          * x        (x) float64 32B nan 0.0 1.0 nan
+          * y        (y) int64 32B 10 20 30 40
+            z        (x) float64 32B nan 100.0 200.0 nan
 
         Careful, ``constant_values`` are coerced to the data type of the array which may
         lead to a loss of precision:
 
         >>> da.pad(x=1, constant_values=1.23456789)
-        <xarray.DataArray (x: 4, y: 4)>
+        <xarray.DataArray (x: 4, y: 4)> Size: 128B
         array([[ 1,  1,  1,  1],
                [ 0,  1,  2,  3],
                [10, 11, 12, 13],
                [ 1,  1,  1,  1]])
         Coordinates:
-          * x        (x) float64 nan 0.0 1.0 nan
-          * y        (y) int64 10 20 30 40
-            z        (x) float64 nan 100.0 200.0 nan
+          * x        (x) float64 32B nan 0.0 1.0 nan
+          * y        (y) int64 32B 10 20 30 40
+            z        (x) float64 32B nan 100.0 200.0 nan
         """
         ds = self._to_temp_dataset().pad(
             pad_width=pad_width,
@@ -5814,13 +5841,13 @@ class DataArray(
         ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
         ... )
         >>> array.min()
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(-2)
         >>> array.argmin(...)
-        {'x': <xarray.DataArray ()>
+        {'x': <xarray.DataArray ()> Size: 8B
         array(4)}
         >>> array.idxmin()
-        <xarray.DataArray 'x' ()>
+        <xarray.DataArray 'x' ()> Size: 4B
         array('e', dtype='<U1')
 
         >>> array = xr.DataArray(
@@ -5833,20 +5860,20 @@ class DataArray(
         ...     coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},
         ... )
         >>> array.min(dim="x")
-        <xarray.DataArray (y: 3)>
+        <xarray.DataArray (y: 3)> Size: 24B
         array([-2., -4.,  1.])
         Coordinates:
-          * y        (y) int64 -1 0 1
+          * y        (y) int64 24B -1 0 1
         >>> array.argmin(dim="x")
-        <xarray.DataArray (y: 3)>
+        <xarray.DataArray (y: 3)> Size: 24B
         array([4, 0, 2])
         Coordinates:
-          * y        (y) int64 -1 0 1
+          * y        (y) int64 24B -1 0 1
         >>> array.idxmin(dim="x")
-        <xarray.DataArray 'x' (y: 3)>
+        <xarray.DataArray 'x' (y: 3)> Size: 24B
         array([16.,  0.,  4.])
         Coordinates:
-          * y        (y) int64 -1 0 1
+          * y        (y) int64 24B -1 0 1
         """
         return computation._calc_idxminmax(
             array=self,
@@ -5912,13 +5939,13 @@ class DataArray(
         ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
         ... )
         >>> array.max()
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(2)
         >>> array.argmax(...)
-        {'x': <xarray.DataArray ()>
+        {'x': <xarray.DataArray ()> Size: 8B
         array(1)}
         >>> array.idxmax()
-        <xarray.DataArray 'x' ()>
+        <xarray.DataArray 'x' ()> Size: 4B
         array('b', dtype='<U1')
 
         >>> array = xr.DataArray(
@@ -5931,20 +5958,20 @@ class DataArray(
         ...     coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},
         ... )
         >>> array.max(dim="x")
-        <xarray.DataArray (y: 3)>
+        <xarray.DataArray (y: 3)> Size: 24B
         array([2., 2., 1.])
         Coordinates:
-          * y        (y) int64 -1 0 1
+          * y        (y) int64 24B -1 0 1
         >>> array.argmax(dim="x")
-        <xarray.DataArray (y: 3)>
+        <xarray.DataArray (y: 3)> Size: 24B
         array([0, 2, 2])
         Coordinates:
-          * y        (y) int64 -1 0 1
+          * y        (y) int64 24B -1 0 1
         >>> array.idxmax(dim="x")
-        <xarray.DataArray 'x' (y: 3)>
+        <xarray.DataArray 'x' (y: 3)> Size: 24B
         array([0., 4., 4.])
         Coordinates:
-          * y        (y) int64 -1 0 1
+          * y        (y) int64 24B -1 0 1
         """
         return computation._calc_idxminmax(
             array=self,
@@ -6005,13 +6032,13 @@ class DataArray(
         --------
         >>> array = xr.DataArray([0, 2, -1, 3], dims="x")
         >>> array.min()
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(-1)
         >>> array.argmin(...)
-        {'x': <xarray.DataArray ()>
+        {'x': <xarray.DataArray ()> Size: 8B
         array(2)}
         >>> array.isel(array.argmin(...))
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(-1)
 
         >>> array = xr.DataArray(
@@ -6019,35 +6046,35 @@ class DataArray(
         ...     dims=("x", "y", "z"),
         ... )
         >>> array.min(dim="x")
-        <xarray.DataArray (y: 3, z: 3)>
+        <xarray.DataArray (y: 3, z: 3)> Size: 72B
         array([[ 1,  2,  1],
                [ 2, -5,  1],
                [ 2,  1,  1]])
         Dimensions without coordinates: y, z
         >>> array.argmin(dim="x")
-        <xarray.DataArray (y: 3, z: 3)>
+        <xarray.DataArray (y: 3, z: 3)> Size: 72B
         array([[1, 0, 0],
                [1, 1, 1],
                [0, 0, 1]])
         Dimensions without coordinates: y, z
         >>> array.argmin(dim=["x"])
-        {'x': <xarray.DataArray (y: 3, z: 3)>
+        {'x': <xarray.DataArray (y: 3, z: 3)> Size: 72B
         array([[1, 0, 0],
                [1, 1, 1],
                [0, 0, 1]])
         Dimensions without coordinates: y, z}
         >>> array.min(dim=("x", "z"))
-        <xarray.DataArray (y: 3)>
+        <xarray.DataArray (y: 3)> Size: 24B
         array([ 1, -5,  1])
         Dimensions without coordinates: y
         >>> array.argmin(dim=["x", "z"])
-        {'x': <xarray.DataArray (y: 3)>
+        {'x': <xarray.DataArray (y: 3)> Size: 24B
         array([0, 1, 0])
-        Dimensions without coordinates: y, 'z': <xarray.DataArray (y: 3)>
+        Dimensions without coordinates: y, 'z': <xarray.DataArray (y: 3)> Size: 24B
         array([2, 1, 1])
         Dimensions without coordinates: y}
         >>> array.isel(array.argmin(dim=["x", "z"]))
-        <xarray.DataArray (y: 3)>
+        <xarray.DataArray (y: 3)> Size: 24B
         array([ 1, -5,  1])
         Dimensions without coordinates: y
         """
@@ -6107,13 +6134,13 @@ class DataArray(
         --------
         >>> array = xr.DataArray([0, 2, -1, 3], dims="x")
         >>> array.max()
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(3)
         >>> array.argmax(...)
-        {'x': <xarray.DataArray ()>
+        {'x': <xarray.DataArray ()> Size: 8B
         array(3)}
         >>> array.isel(array.argmax(...))
-        <xarray.DataArray ()>
+        <xarray.DataArray ()> Size: 8B
         array(3)
 
         >>> array = xr.DataArray(
@@ -6121,35 +6148,35 @@ class DataArray(
         ...     dims=("x", "y", "z"),
         ... )
         >>> array.max(dim="x")
-        <xarray.DataArray (y: 3, z: 3)>
+        <xarray.DataArray (y: 3, z: 3)> Size: 72B
         array([[3, 3, 2],
                [3, 5, 2],
                [2, 3, 3]])
         Dimensions without coordinates: y, z
         >>> array.argmax(dim="x")
-        <xarray.DataArray (y: 3, z: 3)>
+        <xarray.DataArray (y: 3, z: 3)> Size: 72B
         array([[0, 1, 1],
                [0, 1, 0],
                [0, 1, 0]])
         Dimensions without coordinates: y, z
         >>> array.argmax(dim=["x"])
-        {'x': <xarray.DataArray (y: 3, z: 3)>
+        {'x': <xarray.DataArray (y: 3, z: 3)> Size: 72B
         array([[0, 1, 1],
                [0, 1, 0],
                [0, 1, 0]])
         Dimensions without coordinates: y, z}
         >>> array.max(dim=("x", "z"))
-        <xarray.DataArray (y: 3)>
+        <xarray.DataArray (y: 3)> Size: 24B
         array([3, 5, 3])
         Dimensions without coordinates: y
         >>> array.argmax(dim=["x", "z"])
-        {'x': <xarray.DataArray (y: 3)>
+        {'x': <xarray.DataArray (y: 3)> Size: 24B
         array([0, 1, 0])
-        Dimensions without coordinates: y, 'z': <xarray.DataArray (y: 3)>
+        Dimensions without coordinates: y, 'z': <xarray.DataArray (y: 3)> Size: 24B
         array([0, 1, 2])
         Dimensions without coordinates: y}
         >>> array.isel(array.argmax(dim=["x", "z"]))
-        <xarray.DataArray (y: 3)>
+        <xarray.DataArray (y: 3)> Size: 24B
         array([3, 5, 3])
         Dimensions without coordinates: y
         """
@@ -6219,11 +6246,11 @@ class DataArray(
         --------
         >>> da = xr.DataArray(np.arange(0, 5, 1), dims="x", name="a")
         >>> da
-        <xarray.DataArray 'a' (x: 5)>
+        <xarray.DataArray 'a' (x: 5)> Size: 40B
         array([0, 1, 2, 3, 4])
         Dimensions without coordinates: x
         >>> da.query(x="a > 2")
-        <xarray.DataArray 'a' (x: 2)>
+        <xarray.DataArray 'a' (x: 2)> Size: 16B
         array([3, 4])
         Dimensions without coordinates: x
         """
@@ -6331,7 +6358,7 @@ class DataArray(
         ...     coords={"x": [0, 1, 2], "time": t},
         ... )
         >>> da
-        <xarray.DataArray (x: 3, time: 11)>
+        <xarray.DataArray (x: 3, time: 11)> Size: 264B
         array([[ 0.1012573 ,  0.0354669 ,  0.01993775,  0.00602771, -0.00352513,
                  0.00428975,  0.01328788,  0.009562  , -0.00700381, -0.01264187,
                 -0.0062282 ],
@@ -6342,8 +6369,8 @@ class DataArray(
                  0.04744543,  0.03602333,  0.03129354,  0.01074885,  0.01284436,
                  0.00910995]])
         Coordinates:
-          * x        (x) int64 0 1 2
-          * time     (time) int64 0 1 2 3 4 5 6 7 8 9 10
+          * x        (x) int64 24B 0 1 2
+          * time     (time) int64 88B 0 1 2 3 4 5 6 7 8 9 10
 
         Fit the exponential decay function to the data along the ``time`` dimension:
 
@@ -6351,17 +6378,17 @@ class DataArray(
         >>> fit_result["curvefit_coefficients"].sel(
         ...     param="time_constant"
         ... )  # doctest: +NUMBER
-        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)> Size: 24B
         array([1.05692036, 1.73549638, 2.94215771])
         Coordinates:
-          * x        (x) int64 0 1 2
-            param    <U13 'time_constant'
+          * x        (x) int64 24B 0 1 2
+            param    <U13 52B 'time_constant'
         >>> fit_result["curvefit_coefficients"].sel(param="amplitude")
-        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)> Size: 24B
         array([0.1005489 , 0.19631423, 0.30003579])
         Coordinates:
-          * x        (x) int64 0 1 2
-            param    <U13 'amplitude'
+          * x        (x) int64 24B 0 1 2
+            param    <U13 52B 'amplitude'
 
         An initial guess can also be given with the ``p0`` arg (although it does not make much
         of a difference in this simple example). To have a different guess for different
@@ -6377,17 +6404,17 @@ class DataArray(
         ...     },
         ... )
         >>> fit_result["curvefit_coefficients"].sel(param="time_constant")
-        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)> Size: 24B
         array([1.0569213 , 1.73550052, 2.94215733])
         Coordinates:
-          * x        (x) int64 0 1 2
-            param    <U13 'time_constant'
+          * x        (x) int64 24B 0 1 2
+            param    <U13 52B 'time_constant'
         >>> fit_result["curvefit_coefficients"].sel(param="amplitude")
-        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)> Size: 24B
         array([0.10054889, 0.1963141 , 0.3000358 ])
         Coordinates:
-          * x        (x) int64 0 1 2
-            param    <U13 'amplitude'
+          * x        (x) int64 24B 0 1 2
+            param    <U13 52B 'amplitude'
 
         See Also
         --------
@@ -6442,47 +6469,47 @@ class DataArray(
         ...     coords={"x": np.array([0, 0, 1, 2, 3]), "y": np.array([0, 1, 2, 3, 3])},
         ... )
         >>> da
-        <xarray.DataArray (x: 5, y: 5)>
+        <xarray.DataArray (x: 5, y: 5)> Size: 200B
         array([[ 0,  1,  2,  3,  4],
                [ 5,  6,  7,  8,  9],
                [10, 11, 12, 13, 14],
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
         Coordinates:
-          * x        (x) int64 0 0 1 2 3
-          * y        (y) int64 0 1 2 3 3
+          * x        (x) int64 40B 0 0 1 2 3
+          * y        (y) int64 40B 0 1 2 3 3
 
         >>> da.drop_duplicates(dim="x")
-        <xarray.DataArray (x: 4, y: 5)>
+        <xarray.DataArray (x: 4, y: 5)> Size: 160B
         array([[ 0,  1,  2,  3,  4],
                [10, 11, 12, 13, 14],
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
         Coordinates:
-          * x        (x) int64 0 1 2 3
-          * y        (y) int64 0 1 2 3 3
+          * x        (x) int64 32B 0 1 2 3
+          * y        (y) int64 40B 0 1 2 3 3
 
         >>> da.drop_duplicates(dim="x", keep="last")
-        <xarray.DataArray (x: 4, y: 5)>
+        <xarray.DataArray (x: 4, y: 5)> Size: 160B
         array([[ 5,  6,  7,  8,  9],
                [10, 11, 12, 13, 14],
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
         Coordinates:
-          * x        (x) int64 0 1 2 3
-          * y        (y) int64 0 1 2 3 3
+          * x        (x) int64 32B 0 1 2 3
+          * y        (y) int64 40B 0 1 2 3 3
 
         Drop all duplicate dimension values:
 
         >>> da.drop_duplicates(dim=...)
-        <xarray.DataArray (x: 4, y: 4)>
+        <xarray.DataArray (x: 4, y: 4)> Size: 128B
         array([[ 0,  1,  2,  3],
                [10, 11, 12, 13],
                [15, 16, 17, 18],
                [20, 21, 22, 23]])
         Coordinates:
-          * x        (x) int64 0 1 2 3
-          * y        (y) int64 0 1 2 3
+          * x        (x) int64 32B 0 1 2 3
+          * y        (y) int64 32B 0 1 2 3
         """
         deduplicated = self._to_temp_dataset().drop_duplicates(dim, keep=keep)
         return self._from_temp_dataset(deduplicated)
@@ -6678,17 +6705,17 @@ class DataArray(
         ...     dims="time",
         ... )
         >>> da
-        <xarray.DataArray (time: 1827)>
+        <xarray.DataArray (time: 1827)> Size: 15kB
         array([0.000e+00, 1.000e+00, 2.000e+00, ..., 1.824e+03, 1.825e+03,
                1.826e+03])
         Coordinates:
-          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2004-12-31
+          * time     (time) datetime64[ns] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
         >>> da.groupby("time.dayofyear") - da.groupby("time.dayofyear").mean("time")
-        <xarray.DataArray (time: 1827)>
+        <xarray.DataArray (time: 1827)> Size: 15kB
         array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5])
         Coordinates:
-          * time       (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2004-12-31
-            dayofyear  (time) int64 1 2 3 4 5 6 7 8 ... 359 360 361 362 363 364 365 366
+          * time       (time) datetime64[ns] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
+            dayofyear  (time) int64 15kB 1 2 3 4 5 6 7 8 ... 360 361 362 363 364 365 366
 
         See Also
         --------
@@ -6711,13 +6738,13 @@ class DataArray(
         """
         from xarray.core.groupby import (
             DataArrayGroupBy,
-            ResolvedUniqueGrouper,
+            ResolvedGrouper,
             UniqueGrouper,
             _validate_groupby_squeeze,
         )
 
         _validate_groupby_squeeze(squeeze)
-        rgrouper = ResolvedUniqueGrouper(UniqueGrouper(), group, self)
+        rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
         return DataArrayGroupBy(
             self,
             (rgrouper,),
@@ -6796,7 +6823,7 @@ class DataArray(
         from xarray.core.groupby import (
             BinGrouper,
             DataArrayGroupBy,
-            ResolvedBinGrouper,
+            ResolvedGrouper,
             _validate_groupby_squeeze,
         )
 
@@ -6810,7 +6837,7 @@ class DataArray(
                 "include_lowest": include_lowest,
             },
         )
-        rgrouper = ResolvedBinGrouper(grouper, group, self)
+        rgrouper = ResolvedGrouper(grouper, group, self)
 
         return DataArrayGroupBy(
             self,
@@ -6899,23 +6926,23 @@ class DataArray(
         ...     dims="time",
         ... )
         >>> da
-        <xarray.DataArray (time: 12)>
+        <xarray.DataArray (time: 12)> Size: 96B
         array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
         >>> da.rolling(time=3, center=True).mean()
-        <xarray.DataArray (time: 12)>
+        <xarray.DataArray (time: 12)> Size: 96B
         array([nan,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
 
         Remove the NaNs using ``dropna()``:
 
         >>> da.rolling(time=3, center=True).mean().dropna("time")
-        <xarray.DataArray (time: 10)>
+        <xarray.DataArray (time: 10)> Size: 80B
         array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
         Coordinates:
-          * time     (time) datetime64[ns] 2000-01-15 2000-02-15 ... 2000-10-15
+          * time     (time) datetime64[ns] 80B 2000-01-15 2000-02-15 ... 2000-10-15
 
         See Also
         --------
@@ -6966,16 +6993,16 @@ class DataArray(
         ... )
 
         >>> da
-        <xarray.DataArray (time: 12)>
+        <xarray.DataArray (time: 12)> Size: 96B
         array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
 
         >>> da.cumulative("time").sum()
-        <xarray.DataArray (time: 12)>
+        <xarray.DataArray (time: 12)> Size: 96B
         array([ 0.,  1.,  3.,  6., 10., 15., 21., 28., 36., 45., 55., 66.])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
 
         See Also
         --------
@@ -7041,25 +7068,85 @@ class DataArray(
         ...     coords={"time": pd.date_range("1999-12-15", periods=364)},
         ... )
         >>> da  # +doctest: ELLIPSIS
-        <xarray.DataArray (time: 364)>
+        <xarray.DataArray (time: 364)> Size: 3kB
         array([  0.        ,   1.00275482,   2.00550964,   3.00826446,
                  4.01101928,   5.0137741 ,   6.01652893,   7.01928375,
                  8.02203857,   9.02479339,  10.02754821,  11.03030303,
+                12.03305785,  13.03581267,  14.03856749,  15.04132231,
+                16.04407713,  17.04683196,  18.04958678,  19.0523416 ,
+                20.05509642,  21.05785124,  22.06060606,  23.06336088,
+                24.0661157 ,  25.06887052,  26.07162534,  27.07438017,
+                28.07713499,  29.07988981,  30.08264463,  31.08539945,
+                32.08815427,  33.09090909,  34.09366391,  35.09641873,
+                36.09917355,  37.10192837,  38.1046832 ,  39.10743802,
+                40.11019284,  41.11294766,  42.11570248,  43.1184573 ,
+                44.12121212,  45.12396694,  46.12672176,  47.12947658,
+                48.1322314 ,  49.13498623,  50.13774105,  51.14049587,
+                52.14325069,  53.14600551,  54.14876033,  55.15151515,
+                56.15426997,  57.15702479,  58.15977961,  59.16253444,
+                60.16528926,  61.16804408,  62.1707989 ,  63.17355372,
+                64.17630854,  65.17906336,  66.18181818,  67.184573  ,
+                68.18732782,  69.19008264,  70.19283747,  71.19559229,
+                72.19834711,  73.20110193,  74.20385675,  75.20661157,
+                76.20936639,  77.21212121,  78.21487603,  79.21763085,
         ...
+               284.78236915, 285.78512397, 286.78787879, 287.79063361,
+               288.79338843, 289.79614325, 290.79889807, 291.80165289,
+               292.80440771, 293.80716253, 294.80991736, 295.81267218,
+               296.815427  , 297.81818182, 298.82093664, 299.82369146,
+               300.82644628, 301.8292011 , 302.83195592, 303.83471074,
+               304.83746556, 305.84022039, 306.84297521, 307.84573003,
+               308.84848485, 309.85123967, 310.85399449, 311.85674931,
+               312.85950413, 313.86225895, 314.86501377, 315.8677686 ,
+               316.87052342, 317.87327824, 318.87603306, 319.87878788,
+               320.8815427 , 321.88429752, 322.88705234, 323.88980716,
+               324.89256198, 325.8953168 , 326.89807163, 327.90082645,
+               328.90358127, 329.90633609, 330.90909091, 331.91184573,
+               332.91460055, 333.91735537, 334.92011019, 335.92286501,
+               336.92561983, 337.92837466, 338.93112948, 339.9338843 ,
+               340.93663912, 341.93939394, 342.94214876, 343.94490358,
+               344.9476584 , 345.95041322, 346.95316804, 347.95592287,
+               348.95867769, 349.96143251, 350.96418733, 351.96694215,
+               352.96969697, 353.97245179, 354.97520661, 355.97796143,
                356.98071625, 357.98347107, 358.9862259 , 359.98898072,
                360.99173554, 361.99449036, 362.99724518, 364.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-12-12
+          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-12-12
         >>> da.coarsen(time=3, boundary="trim").mean()  # +doctest: ELLIPSIS
-        <xarray.DataArray (time: 121)>
+        <xarray.DataArray (time: 121)> Size: 968B
         array([  1.00275482,   4.01101928,   7.01928375,  10.02754821,
                 13.03581267,  16.04407713,  19.0523416 ,  22.06060606,
                 25.06887052,  28.07713499,  31.08539945,  34.09366391,
-        ...
+                37.10192837,  40.11019284,  43.1184573 ,  46.12672176,
+                49.13498623,  52.14325069,  55.15151515,  58.15977961,
+                61.16804408,  64.17630854,  67.184573  ,  70.19283747,
+                73.20110193,  76.20936639,  79.21763085,  82.22589532,
+                85.23415978,  88.24242424,  91.25068871,  94.25895317,
+                97.26721763, 100.27548209, 103.28374656, 106.29201102,
+               109.30027548, 112.30853994, 115.31680441, 118.32506887,
+               121.33333333, 124.3415978 , 127.34986226, 130.35812672,
+               133.36639118, 136.37465565, 139.38292011, 142.39118457,
+               145.39944904, 148.4077135 , 151.41597796, 154.42424242,
+               157.43250689, 160.44077135, 163.44903581, 166.45730028,
+               169.46556474, 172.4738292 , 175.48209366, 178.49035813,
+               181.49862259, 184.50688705, 187.51515152, 190.52341598,
+               193.53168044, 196.5399449 , 199.54820937, 202.55647383,
+               205.56473829, 208.57300275, 211.58126722, 214.58953168,
+               217.59779614, 220.60606061, 223.61432507, 226.62258953,
+               229.63085399, 232.63911846, 235.64738292, 238.65564738,
+               241.66391185, 244.67217631, 247.68044077, 250.68870523,
+               253.6969697 , 256.70523416, 259.71349862, 262.72176309,
+               265.73002755, 268.73829201, 271.74655647, 274.75482094,
+               277.7630854 , 280.77134986, 283.77961433, 286.78787879,
+               289.79614325, 292.80440771, 295.81267218, 298.82093664,
+               301.8292011 , 304.83746556, 307.84573003, 310.85399449,
+               313.86225895, 316.87052342, 319.87878788, 322.88705234,
+               325.8953168 , 328.90358127, 331.91184573, 334.92011019,
+               337.92837466, 340.93663912, 343.94490358, 346.95316804,
                349.96143251, 352.96969697, 355.97796143, 358.9862259 ,
                361.99449036])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-16 1999-12-19 ... 2000-12-10
+          * time     (time) datetime64[ns] 968B 1999-12-16 1999-12-19 ... 2000-12-10
         >>>
 
         See Also
@@ -7172,36 +7259,96 @@ class DataArray(
         ...     dims="time",
         ... )
         >>> da
-        <xarray.DataArray (time: 12)>
+        <xarray.DataArray (time: 12)> Size: 96B
         array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
         >>> da.resample(time="QS-DEC").mean()
-        <xarray.DataArray (time: 4)>
+        <xarray.DataArray (time: 4)> Size: 32B
         array([ 1.,  4.,  7., 10.])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-01 2000-03-01 2000-06-01 2000-09-01
+          * time     (time) datetime64[ns] 32B 1999-12-01 2000-03-01 ... 2000-09-01
 
         Upsample monthly time-series data to daily data:
 
         >>> da.resample(time="1D").interpolate("linear")  # +doctest: ELLIPSIS
-        <xarray.DataArray (time: 337)>
+        <xarray.DataArray (time: 337)> Size: 3kB
         array([ 0.        ,  0.03225806,  0.06451613,  0.09677419,  0.12903226,
                 0.16129032,  0.19354839,  0.22580645,  0.25806452,  0.29032258,
                 0.32258065,  0.35483871,  0.38709677,  0.41935484,  0.4516129 ,
+                0.48387097,  0.51612903,  0.5483871 ,  0.58064516,  0.61290323,
+                0.64516129,  0.67741935,  0.70967742,  0.74193548,  0.77419355,
+                0.80645161,  0.83870968,  0.87096774,  0.90322581,  0.93548387,
+                0.96774194,  1.        ,  1.03225806,  1.06451613,  1.09677419,
+                1.12903226,  1.16129032,  1.19354839,  1.22580645,  1.25806452,
+                1.29032258,  1.32258065,  1.35483871,  1.38709677,  1.41935484,
+                1.4516129 ,  1.48387097,  1.51612903,  1.5483871 ,  1.58064516,
+                1.61290323,  1.64516129,  1.67741935,  1.70967742,  1.74193548,
+                1.77419355,  1.80645161,  1.83870968,  1.87096774,  1.90322581,
+                1.93548387,  1.96774194,  2.        ,  2.03448276,  2.06896552,
+                2.10344828,  2.13793103,  2.17241379,  2.20689655,  2.24137931,
+                2.27586207,  2.31034483,  2.34482759,  2.37931034,  2.4137931 ,
+                2.44827586,  2.48275862,  2.51724138,  2.55172414,  2.5862069 ,
+                2.62068966,  2.65517241,  2.68965517,  2.72413793,  2.75862069,
+                2.79310345,  2.82758621,  2.86206897,  2.89655172,  2.93103448,
+                2.96551724,  3.        ,  3.03225806,  3.06451613,  3.09677419,
+                3.12903226,  3.16129032,  3.19354839,  3.22580645,  3.25806452,
         ...
+                7.87096774,  7.90322581,  7.93548387,  7.96774194,  8.        ,
+                8.03225806,  8.06451613,  8.09677419,  8.12903226,  8.16129032,
+                8.19354839,  8.22580645,  8.25806452,  8.29032258,  8.32258065,
+                8.35483871,  8.38709677,  8.41935484,  8.4516129 ,  8.48387097,
+                8.51612903,  8.5483871 ,  8.58064516,  8.61290323,  8.64516129,
+                8.67741935,  8.70967742,  8.74193548,  8.77419355,  8.80645161,
+                8.83870968,  8.87096774,  8.90322581,  8.93548387,  8.96774194,
+                9.        ,  9.03333333,  9.06666667,  9.1       ,  9.13333333,
+                9.16666667,  9.2       ,  9.23333333,  9.26666667,  9.3       ,
+                9.33333333,  9.36666667,  9.4       ,  9.43333333,  9.46666667,
+                9.5       ,  9.53333333,  9.56666667,  9.6       ,  9.63333333,
+                9.66666667,  9.7       ,  9.73333333,  9.76666667,  9.8       ,
+                9.83333333,  9.86666667,  9.9       ,  9.93333333,  9.96666667,
+               10.        , 10.03225806, 10.06451613, 10.09677419, 10.12903226,
+               10.16129032, 10.19354839, 10.22580645, 10.25806452, 10.29032258,
+               10.32258065, 10.35483871, 10.38709677, 10.41935484, 10.4516129 ,
+               10.48387097, 10.51612903, 10.5483871 , 10.58064516, 10.61290323,
+               10.64516129, 10.67741935, 10.70967742, 10.74193548, 10.77419355,
                10.80645161, 10.83870968, 10.87096774, 10.90322581, 10.93548387,
                10.96774194, 11.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
 
         Limit scope of upsampling method
 
         >>> da.resample(time="1D").nearest(tolerance="1D")
-        <xarray.DataArray (time: 337)>
-        array([ 0.,  0., nan, ..., nan, 11., 11.])
+        <xarray.DataArray (time: 337)> Size: 3kB
+        array([ 0.,  0., nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan,  1.,  1.,  1., nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan,  2.,  2.,  2., nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,  3.,
+                3.,  3., nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan,  4.,  4.,  4., nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan,  5.,  5.,  5., nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+                6.,  6.,  6., nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan,  7.,  7.,  7., nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan,  8.,  8.,  8., nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan,  9.,  9.,  9., nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, 10., 10., 10., nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 11., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
 
         See Also
         --------

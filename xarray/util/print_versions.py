@@ -1,4 +1,5 @@
 """Utility functions for printing version information."""
+
 import importlib
 import locale
 import os

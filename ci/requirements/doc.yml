@@ -9,6 +9,7 @@ dependencies:
   - cartopy
   - cfgrib
   - dask-core>=2022.1
+  - dask-expr
   - hypothesis>=6.75.8
   - h5netcdf>=0.13
   - ipykernel
@@ -37,9 +38,9 @@ dependencies:
   - sphinx-design
   - sphinx-inline-tabs
   - sphinx>=5.0
+  - sphinxext-opengraph
+  - sphinxext-rediraffe
   - zarr>=2.10
   - pip:
-      - sphinxext-rediraffe
-      - sphinxext-opengraph
       # relative to this file. Needs to be editable to be accepted.
       - -e ../..
