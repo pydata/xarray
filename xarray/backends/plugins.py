@@ -5,8 +5,9 @@ import inspect
 import itertools
 import sys
 import warnings
+from collections.abc import Callable
 from importlib.metadata import entry_points
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 from xarray.core.utils import module_available

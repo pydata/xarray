@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from collections import abc
-from collections.abc import Iterator
-from typing import Callable
+from collections.abc import Callable, Iterator
 
 from xarray.core.treenode import Tree
 

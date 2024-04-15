@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import datetime as dt
 import warnings
-from collections.abc import Hashable, Sequence
+from collections.abc import Callable, Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, Callable, get_args
+from typing import TYPE_CHECKING, Any, get_args
 
 import numpy as np
 import pandas as pd
