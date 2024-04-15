@@ -229,7 +229,6 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
 
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
     else:
-        # arrays = [asarray(x, xp=xp) for x in scalars_or_arrays]
         arrays = [
             x if isinstance(x, (int, float, complex)) else asarray(x, xp=xp)
             for x in scalars_or_arrays
@@ -239,7 +238,6 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
     # Note that result_type() safely gets the dtype from dask arrays without
     # evaluating them.
     out_type = dtypes.result_type(*arrays)
-    # return [astype(x, out_type, copy=False) for x in arrays]
     return [
         astype(x, out_type, copy=False) if hasattr(x, "dtype") else x for x in arrays
     ]
