@@ -149,7 +149,7 @@ def convert_calendar(
       of the target. However, instead of having always the same missing days according
       the source and target years, here 5 days are chosen randomly, one for each fifth
       of the year. However, February 29th is always missing when converting to a leap year,
-      or its value is dropped when converting from a leap year. This is similar to method
+      or its value is dropped when converting from a leap year. This is similar to the method
       used in the LOCA dataset (see Pierce, Cayan, and Thrasher (2014). doi:10.1175/JHM-D-14-0082.1).
 
       This option is best used on daily data.
@@ -253,7 +253,7 @@ def _random_day_of_year(time, target_calendar, use_cftime, rng=None):
     year = int(time.dt.year[0])
     source_calendar = time.dt.calendar
     new_doy = np.arange(360) + 1
-    rm_idx = (rng or np.random.default_rng()).integers(0, 72, 5) + (np.arange(5) * 72)
+    rm_idx = np.random.default_rng().integers(0, 72, 5) + 72 * np.arange(5)
     if source_calendar == "360_day":
         for idx in rm_idx:
             new_doy[idx + 1 :] = new_doy[idx + 1 :] + 1
