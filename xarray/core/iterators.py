@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import abc
 from collections.abc import Iterator
 from typing import Callable
 
@@ -9,7 +8,7 @@ from xarray.core.treenode import Tree
 """These iterators are copied from anytree.iterators, with minor modifications."""
 
 
-class LevelOrderIter(abc.Iterator):
+class LevelOrderIter(Iterator):
     """Iterate over tree applying level-order strategy starting at `node`.
     This is the iterator used by `DataTree` to traverse nodes.
 
