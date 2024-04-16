@@ -1582,6 +1582,14 @@ class TestVariable(VariableSubclassobjects):
         print(v)  # should not error
         assert pd.api.types.is_extension_array_dtype(v.dtype)
 
+    def test_pandas_cateogrical_no_chunk(self):
+        data = pd.Categorical(np.arange(10, dtype="int64"))
+        v = self.cls("x", data)
+        with pytest.raises(
+            ValueError, match=r".*was found to be a Pandas ExtensionArray.*"
+        ):
+            v.chunk((5,))
+
     def test_squeeze(self):
         v = Variable(["x", "y"], [[1]])
         assert_identical(Variable([], 1), v.squeeze())
