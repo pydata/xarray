@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
-from pandas.api.types import is_extension_array_dtype
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
