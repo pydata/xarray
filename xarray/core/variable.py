@@ -2575,11 +2575,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dask.array.from_array
         """
 
-        if is_extension_array_dtype(self):
-            raise ValueError(
-                f"{self} was found to be a Pandas ExtensionArray.  Please convert to numpy first."
-            )
-
         if from_array_kwargs is None:
             from_array_kwargs = {}
 
