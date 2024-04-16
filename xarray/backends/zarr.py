@@ -195,7 +195,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
                         f"Writing this array in parallel with dask could lead to corrupted data."
                     )
                     if safe_chunks:
-                        raise NotImplementedError(
+                        raise ValueError(
                             base_error
                             + " Consider either rechunking using `chunk()`, deleting "
                             "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
@@ -623,7 +623,12 @@ class ZarrStore(AbstractWritableDataStore):
             # avoid needing to load index variables into memory.
             # TODO: consider making loading indexes lazy again?
             existing_vars, _, _ = conventions.decode_cf_variables(
-                self.get_variables(), self.get_attrs()
+                {
+                    k: v
+                    for k, v in self.get_variables().items()
+                    if k in existing_variable_names
+                },
+                self.get_attrs(),
             )
             # Modified variables must use the same encoding as the store.
             vars_with_encoding = {}
@@ -702,6 +707,17 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
+            # We need to do this for both new and existing variables to ensure we're not
+            # writing to a partial chunk, even though we don't use the `encoding` value
+            # when writing to an existing variable. See
+            # https://github.com/pydata/xarray/issues/8371 for details.
+            encoding = extract_zarr_variable_encoding(
+                v,
+                raise_on_invalid=check,
+                name=vn,
+                safe_chunks=self._safe_chunks,
+            )
+
             if name in existing_keys:
                 # existing variable
                 # TODO: if mode="a", consider overriding the existing variable
@@ -732,9 +748,6 @@ class ZarrStore(AbstractWritableDataStore):
                     zarr_array = self.zarr_group[name]
             else:
                 # new variable
-                encoding = extract_zarr_variable_encoding(
-                    v, raise_on_invalid=check, name=vn, safe_chunks=self._safe_chunks
-                )
                 encoded_attrs = {}
                 # the magic for storing the hidden dimension data
                 encoded_attrs[DIMENSION_KEY] = dims
