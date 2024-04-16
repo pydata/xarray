@@ -22,6 +22,8 @@ v2024.04.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- New "random" method for converting to and from 360_day calendars (:pull:`8603`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 
 Breaking changes
