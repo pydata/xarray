@@ -28,7 +28,7 @@ body.vscode-dark {
 
 .xr-wrap {
   display: block !important;
-  min-width: 700px;
+  min-width: 300px;
   max-width: 700px;
 }
 

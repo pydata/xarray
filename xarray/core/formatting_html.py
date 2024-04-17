@@ -367,7 +367,7 @@ def summarize_datatree_children(children: Mapping[str, DataTree]) -> str:
 
     return "".join(
         [
-            "<div style='display: inline-grid; grid-template-columns: 100%'>",
+            "<div style='display: inline-grid; grid-template-columns: 100%; grid-column: 1 / -1'>",
             children_html,
             "</div>",
         ]
@@ -441,7 +441,7 @@ def _wrap_datatree_repr(r: str, end: bool = False) -> str:
     height = "100%" if end is False else "1.2em"
     return "".join(
         [
-            "<div style='display: inline-grid;'>",
+            "<div style='display: inline-grid; grid-template-columns: 0px 20px auto; width: 100%;'>",
             "<div style='",
             "grid-column-start: 1;",
             "border-right: 0.2em solid;",
@@ -462,9 +462,8 @@ def _wrap_datatree_repr(r: str, end: bool = False) -> str:
             "<div style='",
             "grid-column-start: 3;",
             "'>",
-            "<ul class='xr-sections'>",
             r,
-            "</ul>" "</div>",
+            "</div>",
             "</div>",
         ]
     )
