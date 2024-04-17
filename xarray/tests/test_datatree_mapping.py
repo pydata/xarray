@@ -1,9 +1,13 @@
 import numpy as np
 import pytest
-import xarray as xr
 
+import xarray as xr
 from xarray.core.datatree import DataTree
-from xarray.datatree_.datatree.mapping import TreeIsomorphismError, check_isomorphic, map_over_subtree
+from xarray.core.datatree_mapping import (
+    TreeIsomorphismError,
+    check_isomorphic,
+    map_over_subtree,
+)
 from xarray.datatree_.datatree.testing import assert_equal
 
 empty = xr.Dataset()
@@ -12,7 +16,7 @@ empty = xr.Dataset()
 class TestCheckTreesIsomorphic:
     def test_not_a_tree(self):
         with pytest.raises(TypeError, match="not a tree"):
-            check_isomorphic("s", 1)
+            check_isomorphic("s", 1)  # type: ignore[arg-type]
 
     def test_different_widths(self):
         dt1 = DataTree.from_dict(d={"a": empty})
@@ -69,7 +73,7 @@ class TestCheckTreesIsomorphic:
     def test_checking_from_root(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
-        real_root = DataTree(name="real root")
+        real_root: DataTree = DataTree(name="real root")
         dt2.name = "not_real_root"
         dt2.parent = real_root
         with pytest.raises(TreeIsomorphismError):
