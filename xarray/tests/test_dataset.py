@@ -5463,18 +5463,22 @@ class TestDataset:
         assert list(actual) == expected
 
     def test_reduce_non_numeric(self) -> None:
-        data1 = create_test_data(seed=44)
+        data1 = create_test_data(seed=44, use_extension_array=True)
         data2 = create_test_data(seed=44)
-        add_vars = {"var4": ["dim1", "dim2"], "var5": ["dim1"]}
+        add_vars = {"var5": ["dim1", "dim2"], "var6": ["dim1"]}
         for v, dims in sorted(add_vars.items()):
             size = tuple(data1.sizes[d] for d in dims)
             data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {"foo": "variable"})
-
-        assert "var4" not in data1.mean() and "var5" not in data1.mean()
+        # var4 is extension array categorical and should be dropped
+        assert (
+            "var4" not in data1.mean()
+            and "var5" not in data1.mean()
+            and "var6" not in data1.mean()
+        )
         assert_equal(data1.mean(), data2.mean())
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
-        assert "var4" not in data1.mean(dim="dim2") and "var5" in data1.mean(dim="dim2")
+        assert "var5" not in data1.mean(dim="dim2") and "var6" in data1.mean(dim="dim2")
 
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"
