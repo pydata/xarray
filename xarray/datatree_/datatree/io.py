@@ -3,14 +3,14 @@ from xarray.core.datatree import DataTree
 
 def _get_nc_dataset_class(engine):
     if engine == "netcdf4":
-        from netCDF4 import Dataset  # type: ignore
+        from netCDF4 import Dataset
     elif engine == "h5netcdf":
-        from h5netcdf.legacyapi import Dataset  # type: ignore
+        from h5netcdf.legacyapi import Dataset
     elif engine is None:
         try:
             from netCDF4 import Dataset
         except ImportError:
-            from h5netcdf.legacyapi import Dataset  # type: ignore
+            from h5netcdf.legacyapi import Dataset
     else:
         raise ValueError(f"unsupported engine: {engine}")
     return Dataset
@@ -78,7 +78,7 @@ def _datatree_to_netcdf(
 
 
 def _create_empty_zarr_group(store, group, mode):
-    import zarr  # type: ignore
+    import zarr
 
     root = zarr.open_group(store, mode=mode)
     root.create_group(group, overwrite=True)
@@ -92,7 +92,7 @@ def _datatree_to_zarr(
     consolidated: bool = True,
     **kwargs,
 ):
-    from zarr.convenience import consolidate_metadata  # type: ignore
+    from zarr.convenience import consolidate_metadata
 
     if kwargs.get("group", None) is not None:
         raise NotImplementedError(

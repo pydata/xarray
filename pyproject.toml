@@ -86,21 +86,13 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 
 [tool.mypy]
 enable_error_code = "redundant-self"
-exclude = [
-  'xarray/util/generate_.*\.py',
-  'xarray/datatree_/.*\.py',
-]
+exclude = 'xarray/util/generate_.*\.py'
 files = "xarray"
 show_error_codes = true
 show_error_context = true
 warn_redundant_casts = true
 warn_unused_configs = true
 warn_unused_ignores = true
-
-# Ignore mypy errors for modules imported from datatree_.
-[[tool.mypy.overrides]]
-ignore_errors = true
-module = "xarray.datatree_.*"
 
 # Much of the numerical computing stack doesn't have type annotations yet.
 [[tool.mypy.overrides]]
