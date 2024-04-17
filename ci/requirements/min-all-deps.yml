@@ -7,7 +7,7 @@ dependencies:
   # Run ci/min_deps_check.py to verify that this file respects the policy.
   # When upgrading python, numpy, or pandas, must also change
   # doc/user-guide/installing.rst, doc/user-guide/plotting.rst and setup.py.
-  - python=3.9
+  - python=3.10
   - array-api-strict=1.0  # dependency for testing the array api compat
   - boto3=1.24
   - bottleneck=1.3

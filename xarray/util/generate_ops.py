@@ -13,7 +13,6 @@ Usage:
 from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
-from typing import Optional
 
 BINOPS_EQNE = (("__eq__", "nputils.array_eq"), ("__ne__", "nputils.array_ne"))
 BINOPS_CMP = (
@@ -129,7 +128,7 @@ unhashable = """
 # The type ignores might not be necessary anymore at some point.
 #
 # We require a "hack" to tell type checkers that e.g. Variable + DataArray = DataArray
-# In reality this returns NotImplementes, but this is not a valid type in python 3.9.
+# In reality this returns NotImplemented, but this is not a valid type in python 3.9.
 # Therefore, we return DataArray. In reality this would call DataArray.__add__(Variable)
 # TODO: change once python 3.10 is the minimum.
 #
@@ -141,7 +140,7 @@ def _type_ignore(ignore: str) -> str:
     return f"  # type:ignore[{ignore}]" if ignore else ""
 
 
-FuncType = Sequence[tuple[Optional[str], Optional[str]]]
+FuncType = Sequence[tuple[str | None, str | None]]
 OpsType = tuple[FuncType, str, dict[str, str]]
 
 

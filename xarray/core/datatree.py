@@ -2,12 +2,18 @@ from __future__ import annotations
 
 import copy
 import itertools
-from collections.abc import Hashable, Iterable, Iterator, Mapping, MutableMapping
+from collections.abc import (
+    Callable,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+)
 from html import escape
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     NoReturn,
     Union,

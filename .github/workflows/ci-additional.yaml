@@ -136,7 +136,7 @@ jobs:
           fail_ci_if_error: false
 
   mypy39:
-    name: Mypy 3.9
+    name: Mypy 3.10
     runs-on: "ubuntu-latest"
     needs: detect-ci-trigger
     defaults:
@@ -144,7 +144,7 @@ jobs:
         shell: bash -l {0}
     env:
       CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.9"
+      PYTHON_VERSION: "3.10"
 
     steps:
       - uses: actions/checkout@v4
@@ -251,7 +251,7 @@ jobs:
           fail_ci_if_error: false
 
   pyright39:
-    name: Pyright 3.9
+    name: Pyright 3.10
     runs-on: "ubuntu-latest"
     needs: detect-ci-trigger
     if: |
@@ -264,7 +264,7 @@ jobs:
         shell: bash -l {0}
     env:
       CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.9"
+      PYTHON_VERSION: "3.10"
 
     steps:
       - uses: actions/checkout@v4
