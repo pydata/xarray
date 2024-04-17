@@ -22,6 +22,8 @@ v2024.04.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- New "random" method for converting to and from 360_day calendars (:pull:`8603`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 
 Breaking changes
@@ -37,6 +39,9 @@ Internal Changes
 - Migrates ``formatting_html`` functionality for `DataTree` into ``xarray/core`` (:pull: `8930`)
   By `Eni Awowale <https://github.com/eni-awowale>`_, `Julia Signell <https://github.com/jsignell>`_
   and `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Migrates ``datatree_mapping`` functionality into ``xarray/core`` (:pull:`8948`)
+  By `Matt Savoie <https://github.com/flamingbear>`_ `Owen Littlejohns
+  <https://github.com/owenlittlejohns>` and `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 .. _whats-new.2024.03.0:
