@@ -3,6 +3,7 @@ from __future__ import annotations
 import enum
 import functools
 import operator
+import warnings
 from collections import Counter, defaultdict
 from collections.abc import Hashable, Iterable, Mapping
 from contextlib import suppress
@@ -564,6 +565,14 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
             return result
 
 
+BackendArray_fallback_warning_message = (
+    "The array `{0}` does not support indexing using the .vindex and .oindex properties. "
+    "The __getitem__ method is being used instead. This fallback behavior will be "
+    "removed in a future version. Please ensure that the backend array `{1}` implements "
+    "support for the .vindex and .oindex properties to avoid potential issues."
+)
+
+
 class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and outer indexing lazy."""
 
@@ -615,11 +624,18 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return tuple(shape)
 
     def get_duck_array(self):
-        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
+        try:
             array = apply_indexer(self.array, self.key)
-        else:
+        except NotImplementedError as _:
             # If the array is not an ExplicitlyIndexedNDArrayMixin,
-            # it may wrap a BackendArray so use its __getitem__
+            # it may wrap a BackendArray subclass that doesn't implement .oindex and .vindex. so use its __getitem__
+            warnings.warn(
+                BackendArray_fallback_warning_message.format(
+                    self.array.__class__.__name__, self.array.__class__.__name__
+                ),
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
             array = self.array[self.key]
 
         # self.array[self.key] is now a numpy array when
@@ -691,12 +707,20 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return np.broadcast(*self.key.tuple).shape
 
     def get_duck_array(self):
-        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
+        try:
             array = apply_indexer(self.array, self.key)
-        else:
+        except NotImplementedError as _:
             # If the array is not an ExplicitlyIndexedNDArrayMixin,
-            # it may wrap a BackendArray so use its __getitem__
+            # it may wrap a BackendArray subclass that doesn't implement .oindex and .vindex. so use its __getitem__
+            warnings.warn(
+                BackendArray_fallback_warning_message.format(
+                    self.array.__class__.__name__, self.array.__class__.__name__
+                ),
+                category=PendingDeprecationWarning,
+                stacklevel=2,
+            )
             array = self.array[self.key]
+
         # self.array[self.key] is now a numpy array when
         # self.array is a BackendArray subclass
         # and self.key is BasicIndexer((slice(None, None, None),))
