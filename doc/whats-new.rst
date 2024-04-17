@@ -179,6 +179,21 @@ Bug fixes
 - Ensure :py:meth:`DataArray.unstack` works when wrapping array API-compliant
   classes. (:issue:`8666`, :pull:`8668`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Avoid coercing to numpy arrays inside :py:func:`~xarray.core.duck_array_ops.as_shared_dtype`. (:pull:`8714`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Preserve chunks when writing time-like variables to zarr by enabling lazy CF
+  encoding of time-like variables (:issue:`7132`, :issue:`8230`, :issue:`8432`,
+  :pull:`8575`). By `Spencer Clark <https://github.com/spencerkclark>`_ and
+  `Mattia Almansi <https://github.com/malmans2>`_.
+- Preserve chunks when writing time-like variables to zarr by enabling their
+  lazy encoding (:issue:`7132`, :issue:`8230`, :issue:`8432`, :pull:`8253`,
+  :pull:`8575`; see also discussion in :pull:`8253`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_ and `Mattia Almansi
+  <https://github.com/malmans2>`_.
+- Raise an informative error if dtype encoding of time-like variables would
+  lead to integer overflow or unsafe conversion from floating point to integer
+  values (:issue:`8542`, :pull:`8575`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 - Fix negative slicing of Zarr arrays without dask installed. (:issue:`8252`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Preserve chunks when writing time-like variables to zarr by enabling lazy CF encoding of time-like

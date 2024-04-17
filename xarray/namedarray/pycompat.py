@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 from packaging.version import Version
 
-from xarray.core.utils import is_scalar
+from xarray.core.utils import is_scalar, module_available
 from xarray.namedarray.utils import is_duck_array, is_duck_dask_array
 
 integer_types = (int, np.integer)
@@ -88,6 +88,14 @@ def mod_version(mod: ModType) -> Version:
     return _get_cached_duck_array_module(mod).version
 
 
+def is_dask_collection(x) -> bool:
+    if module_available("dask"):
+        from dask.base import is_dask_collection
+
+        return is_dask_collection(x)
+    return False
+
+
 def is_chunked_array(x: duckarray[Any, Any]) -> bool:
     return is_duck_dask_array(x) or (is_duck_array(x) and hasattr(x, "chunks"))
 
@@ -121,8 +129,9 @@ def to_numpy(
     return data
 
 
-def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, _DType]:
-    from xarray.core.indexing import ExplicitlyIndexed
+def to_duck_array(
+    data: Any, xp=np, **kwargs: dict[str, Any]
+) -> duckarray[_ShapeType, _DType]:
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
     if is_chunked_array(data):
@@ -130,9 +139,26 @@ def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, 
         loaded_data, *_ = chunkmanager.compute(data, **kwargs)  # type: ignore[var-annotated]
         return loaded_data
 
+    return to_lazy_duck_array(data)
+
+
+def to_lazy_duck_array(
+    data: Any, xp=np, **kwargs: dict[str, Any]
+) -> duckarray[_ShapeType, _DType]:
+    """Doesn't compute chunked data."""
+    from xarray.core.indexing import ExplicitlyIndexed
+
     if isinstance(data, ExplicitlyIndexed):
         return data.get_duck_array()  # type: ignore[no-untyped-call, no-any-return]
     elif is_duck_array(data):
         return data
     else:
-        return np.asarray(data)  # type: ignore[return-value]
+        from xarray.core.duck_array_ops import asarray
+
+        array_type_cupy = array_type("cupy")
+        if array_type_cupy and any(isinstance(data, array_type_cupy)):
+            import cupy as cp
+
+            return asarray(data, xp=cp)
+        else:
+            return asarray(data, xp=xp)

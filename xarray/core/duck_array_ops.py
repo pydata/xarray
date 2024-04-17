@@ -35,10 +35,10 @@ from packaging.version import Version
 
 from xarray.core import dask_array_ops, dtypes, nputils
 from xarray.core.options import OPTIONS
-from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
+from xarray.core.utils import is_duck_array, module_available
 from xarray.namedarray import pycompat
-from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import array_type, is_chunked_array
+from xarray.namedarray.parallelcompat import get_chunked_array_type, is_chunked_array
+from xarray.namedarray.pycompat import is_duck_dask_array, to_lazy_duck_array
 
 # remove once numpy 2.0 is the oldest supported version
 if module_available("numpy", minversion="2.0.0.dev0"):
@@ -220,22 +220,10 @@ def asarray(data, xp=np):
 
 
 def as_shared_dtype(scalars_or_arrays, xp=np):
-    """Cast a arrays to a shared dtype using xarray's type promotion rules."""
-    array_type_cupy = array_type("cupy")
-    if array_type_cupy and any(
-        isinstance(x, array_type_cupy) for x in scalars_or_arrays
-    ):
-        import cupy as cp
-
-        arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
-    else:
-        arrays = [asarray(x, xp=xp) for x in scalars_or_arrays]
-    # Pass arrays directly instead of dtypes to result_type so scalars
-    # get handled properly.
-    # Note that result_type() safely gets the dtype from dask arrays without
-    # evaluating them.
-    out_type = dtypes.result_type(*arrays)
-    return [astype(x, out_type, copy=False) for x in arrays]
+    """Cast arrays to a shared dtype using xarray's type promotion rules."""
+    duckarrays = [to_lazy_duck_array(obj, xp=xp) for obj in scalars_or_arrays]
+    out_type = dtypes.result_type(*duckarrays)
+    return [astype(x, out_type, copy=False) for x in duckarrays]
 
 
 def broadcast_to(array, shape):

@@ -8,6 +8,7 @@ from textwrap import dedent
 from typing import Generic
 
 import numpy as np
+import numpy.testing as npt
 import pandas as pd
 import pytest
 import pytz
@@ -31,6 +32,7 @@ from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
+    ConcatenatableArray,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -550,6 +552,16 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         expected = Variable("x", np.array([0, 1, "two"], dtype=object))
         assert_identical(expected, actual)
         assert actual.dtype == object
+
+    def test_concat_without_access(self):
+        a = self.cls("x", ConcatenatableArray(np.array([0, 1])))
+        b = self.cls("x", ConcatenatableArray(np.array([2, 3])))
+        actual = Variable.concat([a, b], dim="x")
+        expected_arr = np.array([0, 1, 2, 3])
+        expected = Variable("x", ConcatenatableArray(expected_arr))
+        assert isinstance(actual.data, ConcatenatableArray)
+        assert expected.dims == ("x",)
+        npt.assert_equal(actual.data.array, expected_arr)
 
     @pytest.mark.parametrize("deep", [True, False])
     @pytest.mark.parametrize("astype", [float, int, str])
