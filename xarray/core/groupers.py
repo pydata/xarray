@@ -40,15 +40,20 @@ RESAMPLE_DIM = "__resample_dim__"
 class EncodedGroups:
     """
     Dataclass for storing intermediate values for GroupBy operation.
-    Returned by factorize method on Grouper objects.
+    Returned by the ``factorize`` method on Grouper objects.
 
-    Parameters
+    Attributes
     ----------
-    codes: integer codes for each group
-    full_index: pandas Index for the group coordinate
-    group_indices: optional, List of indices of array elements belonging
-                   to each group. Inferred if not provided.
-    unique_coord: Unique group values present in dataset. Inferred if not provided
+    codes: DataArray
+        Same shape as the DataArray to group by. Values consist of a unique integer code for each group.
+    full_index: pd.Index
+        Pandas Index for the group coordinate containing unique group labels.
+        This can differ from ``unique_coord`` in the case of resampling and binning,
+        where certain groups in the output need not be present in the input.
+    group_indices: list of int or slice or list of int, optional
+        List of indices of array elements belonging to each group. Inferred if not provided.
+    unique_coord: Variable, optional
+        Unique group values present in dataset. Inferred if not provided
     """
 
     codes: DataArray
@@ -68,33 +73,39 @@ class EncodedGroups:
 
 
 class Grouper(ABC):
-    """Base class for Grouper objects that allow specializing GroupBy instructions."""
+    """Abstract base class for Grouper objects that allow specializing GroupBy instructions."""
 
     @property
     def can_squeeze(self) -> bool:
-        """TODO: delete this when the `squeeze` kwarg is deprecated. Only `UniqueGrouper`
-        should override it."""
+        """
+        Do not use.
+
+        .. deprecated:: 2023.03.0
+            This is a deprecated method. It will be deleted this when the `squeeze` kwarg is deprecated.
+            Only ``UniqueGrouper`` should override it.
+        """
         return False
 
     @abstractmethod
-    def factorize(self, group) -> EncodedGroups:
+    def factorize(self, group: T_Group) -> EncodedGroups:
         """
-        Takes the group, and creates intermediates necessary for GroupBy.
-        These intermediates are
-        1. codes - Same shape as `group` containing a unique integer code for each group.
-        2. group_indices - Indexes that let us index out the members of each group.
-        3. unique_coord - Unique groups present in the dataset.
-        4. full_index - Unique groups in the output. This differs from `unique_coord` in the
-           case of resampling and binning, where certain groups in the output are not present in
-           the input.
+        Creates intermediates necessary for GroupBy.
 
-        Returns an instance of EncodedGroups.
+        Parameters
+        ----------
+        group: DataArray
+            DataArray we are grouping by.
+
+        Returns
+        -------
+        EncodedGroups
         """
         pass
 
 
 class Resampler(Grouper):
-    """Base class for Grouper objects that allow specializing resampling-type GroupBy instructions.
+    """
+    Abstract base class for Grouper objects that allow specializing resampling-type GroupBy instructions.
     Currently only used for TimeResampler, but could be used for SpaceResampler in the future.
     """
 
@@ -116,6 +127,7 @@ class UniqueGrouper(Grouper):
 
     @property
     def group_as_index(self) -> pd.Index:
+        """Caches the group DataArray as a pandas Index."""
         if self._group_as_index is None:
             self._group_as_index = self.group.to_index()
         return self._group_as_index
@@ -126,7 +138,7 @@ class UniqueGrouper(Grouper):
         is_dimension = self.group.dims == (self.group.name,)
         return is_dimension and self.is_unique_and_monotonic
 
-    def factorize(self, group1d) -> EncodedGroups:
+    def factorize(self, group1d: T_Group) -> EncodedGroups:
         self.group = group1d
 
         if self.can_squeeze:
@@ -178,18 +190,25 @@ class UniqueGrouper(Grouper):
 
 @dataclass
 class BinGrouper(Grouper):
-    """Grouper object for binning numeric data."""
+    """
+    Grouper object for binning numeric data.
+
+    Attributes
+    ----------
+    bins: int, sequence of scalars, or IntervalIndex
+        Speciication for bins either as integer, or as bin edges.
+    cut_kwargs: dict
+        Keyword arguments forwarded to :py:func:`pandas.cut`.
+    """
 
     bins: int | Sequence | pd.IntervalIndex
     cut_kwargs: Mapping = field(default_factory=dict)
-    binned: Any = None
-    name: Any = None
 
     def __post_init__(self) -> None:
         if duck_array_ops.isnull(self.bins).all():
             raise ValueError("All bin edges are NaN.")
 
-    def factorize(self, group) -> EncodedGroups:
+    def factorize(self, group: T_Group) -> EncodedGroups:
         from xarray.core.dataarray import DataArray
 
         data = group.data
@@ -221,7 +240,51 @@ class BinGrouper(Grouper):
 
 @dataclass
 class TimeResampler(Resampler):
-    """Grouper object specialized to resampling the time coordinate."""
+    """
+    Grouper object specialized to resampling the time coordinate.
+
+    Attributes
+    ----------
+    freq : str
+        Frequency to resample to. See `Pandas frequency
+        aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
+        for a list of possible values.
+    closed : {"left", "right"}, optional
+        Side of each interval to treat as closed.
+    label : {"left", "right"}, optional
+        Side of each interval to use for labeling.
+    base : int, optional
+        For frequencies that evenly subdivide 1 day, the "origin" of the
+        aggregated intervals. For example, for "24H" frequency, base could
+        range from 0 through 23.
+
+        .. deprecated:: 2023.03.0
+            Following pandas, the ``base`` parameter is deprecated in favor
+            of the ``origin`` and ``offset`` parameters, and will be removed
+            in a future version of xarray.
+
+    origin : {'epoch', 'start', 'start_day', 'end', 'end_day'}, pandas.Timestamp, datetime.datetime, numpy.datetime64, or cftime.datetime, default 'start_day'
+        The datetime on which to adjust the grouping. The timezone of origin
+        must match the timezone of the index.
+
+        If a datetime is not used, these values are also supported:
+        - 'epoch': `origin` is 1970-01-01
+        - 'start': `origin` is the first value of the timeseries
+        - 'start_day': `origin` is the first day at midnight of the timeseries
+        - 'end': `origin` is the last value of the timeseries
+        - 'end_day': `origin` is the ceiling midnight of the last day
+    offset : pd.Timedelta, datetime.timedelta, or str, default is None
+        An offset timedelta added to the origin.
+    loffset : timedelta or str, optional
+        Offset used to adjust the resampled time labels. Some pandas date
+        offset strings are supported.
+
+        .. deprecated:: 2023.03.0
+            Following pandas, the ``loffset`` parameter is deprecated in favor
+            of using time offset arithmetic, and will be removed in a future
+            version of xarray.
+
+    """
 
     freq: str
     closed: SideOptions | None = field(default=None)
@@ -321,7 +384,7 @@ class TimeResampler(Resampler):
                 _apply_loffset(self.loffset, first_items)
             return first_items, codes
 
-    def factorize(self, group) -> EncodedGroups:
+    def factorize(self, group: T_Group) -> EncodedGroups:
         self._init_properties(group)
         full_index, first_items, codes_ = self._get_index_and_items()
         sbins = first_items.values.astype(np.int64)

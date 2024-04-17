@@ -56,6 +56,7 @@ except Exception:
 # `mypy --strict` running in projects that import xarray.
 __all__ = (
     # Sub-packages
+    "groupers",
     "testing",
     "tutorial",
     # Top-level functions
@@ -95,8 +96,6 @@ __all__ = (
     "unify_chunks",
     "where",
     "zeros_like",
-    # Submodules
-    "groupers",
     # Classes
     "CFTimeIndex",
     "Context",

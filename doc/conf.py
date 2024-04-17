@@ -166,6 +166,7 @@ napoleon_type_aliases = {
     "CategoricalIndex": "~pandas.CategoricalIndex",
     "TimedeltaIndex": "~pandas.TimedeltaIndex",
     "DatetimeIndex": "~pandas.DatetimeIndex",
+    "IntervalIndex": "~pandas.IntervalIndex",
     "Series": "~pandas.Series",
     "DataFrame": "~pandas.DataFrame",
     "Categorical": "~pandas.Categorical",

@@ -1,3 +1,5 @@
+.. currentmodule:: xarray
+
 .. _groupby:
 
 GroupBy: Group and Bin Data
@@ -15,8 +17,8 @@ __ https://www.jstatsoft.org/v40/i01/paper
 - Apply some function to each group.
 - Combine your groups back into a single data object.
 
-Group by operations work on both :py:class:`~xarray.Dataset` and
-:py:class:`~xarray.DataArray` objects. Most of the examples focus on grouping by
+Group by operations work on both :py:class:`Dataset` and
+:py:class:`DataArray` objects. Most of the examples focus on grouping by
 a single one-dimensional variable, although support for grouping
 over a multi-dimensional variable has recently been implemented. Note that for
 one-dimensional data, it is usually faster to rely on pandas' implementation of
@@ -24,10 +26,11 @@ the same pipeline.
 
 .. tip::
 
-   To substantially improve the performance of GroupBy operations, particularly
-   with dask `install the flox package <https://flox.readthedocs.io>`_. flox
+   `Install the flox package <https://flox.readthedocs.io>`_ to substantially improve the performance
+   of GroupBy operations, particularly with dask. flox
    `extends Xarray's in-built GroupBy capabilities <https://flox.readthedocs.io/en/latest/xarray.html>`_
-   by allowing grouping by multiple variables, and lazy grouping by dask arrays. If installed, Xarray will automatically use flox by default.
+   by allowing grouping by multiple variables, and lazy grouping by dask arrays.
+   If installed, Xarray will automatically use flox by default.
 
 Split
 ~~~~~
@@ -87,7 +90,7 @@ Binning
 Sometimes you don't want to use all the unique values to determine the groups
 but instead want to "bin" the data into coarser groups. You could always create
 a customized coordinate, but xarray facilitates this via the
-:py:meth:`~xarray.Dataset.groupby_bins` method.
+:py:meth:`Dataset.groupby_bins` method.
 
 .. ipython:: python
 
@@ -110,7 +113,7 @@ Apply
 ~~~~~
 
 To apply a function to each group, you can use the flexible
-:py:meth:`~xarray.core.groupby.DatasetGroupBy.map` method. The resulting objects are automatically
+:py:meth:`core.groupby.DatasetGroupBy.map` method. The resulting objects are automatically
 concatenated back together along the group axis:
 
 .. ipython:: python
@@ -121,8 +124,8 @@ concatenated back together along the group axis:
 
     arr.groupby("letters").map(standardize)
 
-GroupBy objects also have a :py:meth:`~xarray.core.groupby.DatasetGroupBy.reduce` method and
-methods like :py:meth:`~xarray.core.groupby.DatasetGroupBy.mean` as shortcuts for applying an
+GroupBy objects also have a :py:meth:`core.groupby.DatasetGroupBy.reduce` method and
+methods like :py:meth:`core.groupby.DatasetGroupBy.mean` as shortcuts for applying an
 aggregation function:
 
 .. ipython:: python
@@ -183,7 +186,7 @@ Iterating and Squeezing
 Previously, Xarray defaulted to squeezing out dimensions of size one when iterating over
 a GroupBy object. This behaviour is being removed.
 You can always squeeze explicitly later with the Dataset or DataArray
-:py:meth:`~xarray.DataArray.squeeze` methods.
+:py:meth:`DataArray.squeeze` methods.
 
 .. ipython:: python
 
@@ -217,7 +220,7 @@ __ https://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dime
     da.groupby("lon").map(lambda x: x - x.mean(), shortcut=False)
 
 Because multidimensional groups have the ability to generate a very large
-number of bins, coarse-binning via :py:meth:`~xarray.Dataset.groupby_bins`
+number of bins, coarse-binning via :py:meth:`Dataset.groupby_bins`
 may be desirable:
 
 .. ipython:: python
@@ -232,3 +235,65 @@ applying your function, and then unstacking the result:
 
     stacked = da.stack(gridcell=["ny", "nx"])
     stacked.groupby("gridcell").sum(...).unstack("gridcell")
+
+.. _groupby.groupers:
+
+Grouper Objects
+~~~~~~~~~~~~~~~
+
+Both ``groupby_bins`` and ``resample`` are specializations of the core ``groupby`` operation for binning,
+and time resampling. Many problems demand more complex GroupBy application: for example, grouping by multiple
+variables with a combination of categorical grouping, binning, and resampling; or more specializations like
+spatial resampling; or more complex time grouping like special handling of seasons, or the ability to specify
+custom seasons. To handle these use-cases and more, Xarray is evolving to providing an
+extension point using ``Grouper`` objects.
+
+.. tip::
+
+   See the `grouper design`_ doc for more detail on the motivation and design ideas behind
+   Grouper objects.
+
+.. _grouper design: https://github.com/pydata/xarray/blob/main/design_notes/grouper_objects.md
+
+For now Xarray provides three specialized Grouper objects:
+
+1. :py:class:`groupers.UniqueGrouper` for categorical grouping
+2. :py:class:`groupers.BinGrouper` for binned grouping
+3. :py:class:`groupers.TimeResampler` for resampling along a datetime coordinate
+
+These provide functionality identical to the existing ``groupby``, ``groupby_bins``, and ``resample`` methods.
+That is,
+.. codeblock:: python
+
+    ds.groupby("x")
+
+is identical to
+.. codeblock:: python
+
+    from xarray.groupers import UniqueGrouper
+
+    ds.groupby(x=UniqueGrouper())
+
+; and
+.. codeblock:: python
+
+    ds.groupby_bins("x", bins=bins)
+
+is identical to
+.. codeblock:: python
+
+    from xarray.groupers import BinGrouper
+
+    ds.groupby(x=BinGrouper(bins))
+
+; and
+.. codeblock:: python
+
+    ds.resample(time="ME")
+
+is identical to
+.. codeblock:: python
+
+    from xarray.groupers import TimeResampler
+
+    ds.resample(time=TimeResampler("ME"))
