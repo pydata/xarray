@@ -266,7 +266,8 @@ class Test_summarize_datatree_children:
         """
         children: dict[str, DataTree] = {}
         assert self.func(children) == (
-            "<div style='display: inline-grid; grid-template-columns: 100%'>" "</div>"
+            "<div style='display: inline-grid; grid-template-columns: 100%; grid-column: 1 / -1'>"
+            "</div>"
         )
 
     def test_one_child(
@@ -286,7 +287,7 @@ class Test_summarize_datatree_children:
         first_line = f"a {id(children['a'])} end//"
 
         assert self.func(children) == (
-            "<div style='display: inline-grid; grid-template-columns: 100%'>"
+            "<div style='display: inline-grid; grid-template-columns: 100%; grid-column: 1 / -1'>"
             f"{first_line}"
             "</div>"
         )
@@ -313,7 +314,7 @@ class Test_summarize_datatree_children:
         second_line = f"b {id(children['b'])} end//"
 
         assert self.func(children) == (
-            "<div style='display: inline-grid; grid-template-columns: 100%'>"
+            "<div style='display: inline-grid; grid-template-columns: 100%; grid-column: 1 / -1'>"
             f"{first_line}"
             f"{second_line}"
             "</div>"
@@ -333,7 +334,7 @@ class Test__wrap_datatree_repr:
         """
         r = self.func(repr, end=True)
         assert r == (
-            "<div style='display: inline-grid;'>"
+            "<div style='display: inline-grid; grid-template-columns: 0px 20px auto; width: 100%;'>"
             "<div style='"
             "grid-column-start: 1;"
             "border-right: 0.2em solid;"
@@ -354,9 +355,7 @@ class Test__wrap_datatree_repr:
             "<div style='"
             "grid-column-start: 3;"
             "'>"
-            "<ul class='xr-sections'>"
             f"{repr}"
-            "</ul>"
             "</div>"
             "</div>"
         )
@@ -367,7 +366,7 @@ class Test__wrap_datatree_repr:
         """
         r = self.func(repr, end=False)
         assert r == (
-            "<div style='display: inline-grid;'>"
+            "<div style='display: inline-grid; grid-template-columns: 0px 20px auto; width: 100%;'>"
             "<div style='"
             "grid-column-start: 1;"
             "border-right: 0.2em solid;"
@@ -388,9 +387,7 @@ class Test__wrap_datatree_repr:
             "<div style='"
             "grid-column-start: 3;"
             "'>"
-            "<ul class='xr-sections'>"
             f"{repr}"
-            "</ul>"
             "</div>"
             "</div>"
         )

@@ -34,6 +34,9 @@ Bug fixes
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Migrates ``formatting_html`` functionality for `DataTree` into ``xarray/core`` (:pull: `8930`)
+  By `Eni Awowale <https://github.com/eni-awowale>`_, `Julia Signell <https://github.com/jsignell>`_
+  and `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 .. _whats-new.2024.03.0:
