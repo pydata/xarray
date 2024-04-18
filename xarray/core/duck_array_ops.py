@@ -237,7 +237,7 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
     # get handled properly.
     # Note that result_type() safely gets the dtype from dask arrays without
     # evaluating them.
-    out_type = dtypes.result_type(*arrays)
+    out_type = dtypes.result_type(*arrays, xp=xp)
     return [
         astype(x, out_type, copy=False) if hasattr(x, "dtype") else x for x in arrays
     ]
