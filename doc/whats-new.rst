@@ -40,6 +40,9 @@ Bug fixes
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Migrates ``datatree_mapping`` functionality into ``xarray/core`` (:pull:`8948`)
+  By `Matt Savoie <https://github.com/flamingbear>`_ `Owen Littlejohns
+  <https://github.com/owenlittlejohns>` and `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 .. _whats-new.2024.03.0:
