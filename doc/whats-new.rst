@@ -24,7 +24,11 @@ New Features
 ~~~~~~~~~~~~
 - New "random" method for converting to and from 360_day calendars (:pull:`8603`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
-
+- Xarray now makes a best attempt not to coerce :py:class:`pandas.api.extensions.ExtensionArray` to a numpy array
+  by supporting 1D `ExtensionArray` objects internally where possible.  Thus, `Dataset`s initialized with a `pd.Catgeorical`,
+  for example, will retain the object.  However, one cannot do operations that are not possible on the `ExtensionArray`
+  then, such as broadcasting.
+  By `Ilan Gold <https://github.com/ilan-gold>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
