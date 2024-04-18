@@ -168,7 +168,6 @@ def is_datetime_like(dtype):
 
 def result_type(
     *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
-    xp=np,
 ) -> np.dtype:
     """Like np.result_type, but with type promotion rules matching pandas.
 
@@ -185,13 +184,12 @@ def result_type(
     -------
     numpy.dtype for the result.
     """
-    types = {xp.result_type(t) for t in arrays_and_dtypes}
+    types = {np.result_type(t).type for t in arrays_and_dtypes}
 
-    if xp == np:
-        for left, right in PROMOTE_TO_OBJECT:
-            if any(issubclass(t.type, left) for t in types) and any(
-                issubclass(t.type, right) for t in types
-            ):
-                return np.dtype(object)
+    for left, right in PROMOTE_TO_OBJECT:
+        if any(issubclass(t, left) for t in types) and any(
+            issubclass(t, right) for t in types
+        ):
+            return np.dtype(object)
 
-    return xp.result_type(*arrays_and_dtypes)
+    return np.result_type(*arrays_and_dtypes)
