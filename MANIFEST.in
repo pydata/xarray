@@ -1,0 +1,2 @@
+prune xarray/datatree_*
+recursive-include xarray/datatree_/datatree*
