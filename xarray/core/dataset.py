@@ -24,6 +24,7 @@ from os import PathLike
 from typing import IO, TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
 
 import numpy as np
+from pandas.api.types import is_extension_array_dtype
 
 # remove once numpy 2.0 is the oldest supported version
 try:
@@ -6852,10 +6853,13 @@ class Dataset(
                 if (
                     # Some reduction functions (e.g. std, var) need to run on variables
                     # that don't have the reduce dims: PR5393
-                    not reduce_dims
-                    or not numeric_only
-                    or np.issubdtype(var.dtype, np.number)
-                    or (var.dtype == np.bool_)
+                    not is_extension_array_dtype(var.dtype)
+                    and (
+                        not reduce_dims
+                        or not numeric_only
+                        or np.issubdtype(var.dtype, np.number)
+                        or (var.dtype == np.bool_)
+                    )
                 ):
                     # prefer to aggregate over axis=None rather than
                     # axis=(0, 1) if they will be equivalent, because
@@ -7168,13 +7172,37 @@ class Dataset(
         )
 
     def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
-        columns = [k for k in self.variables if k not in self.dims]
+        columns_in_order = [k for k in self.variables if k not in self.dims]
+        non_extension_array_columns = [
+            k
+            for k in columns_in_order
+            if not is_extension_array_dtype(self.variables[k].data)
+        ]
+        extension_array_columns = [
+            k
+            for k in columns_in_order
+            if is_extension_array_dtype(self.variables[k].data)
+        ]
         data = [
             self._variables[k].set_dims(ordered_dims).values.reshape(-1)
-            for k in columns
+            for k in non_extension_array_columns
         ]
         index = self.coords.to_index([*ordered_dims])
-        return pd.DataFrame(dict(zip(columns, data)), index=index)
+        broadcasted_df = pd.DataFrame(
+            dict(zip(non_extension_array_columns, data)), index=index
+        )
+        for extension_array_column in extension_array_columns:
+            extension_array = self.variables[extension_array_column].data.array
+            index = self[self.variables[extension_array_column].dims[0]].data
+            extension_array_df = pd.DataFrame(
+                {extension_array_column: extension_array},
+                index=self[self.variables[extension_array_column].dims[0]].data,
+            )
+            extension_array_df.index.name = self.variables[extension_array_column].dims[
+                0
+            ]
+            broadcasted_df = broadcasted_df.join(extension_array_df)
+        return broadcasted_df[columns_in_order]
 
     def to_dataframe(self, dim_order: Sequence[Hashable] | None = None) -> pd.DataFrame:
         """Convert this dataset into a pandas.DataFrame.
@@ -7321,11 +7349,13 @@ class Dataset(
                 "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
             )
 
-        # Cast to a NumPy array first, in case the Series is a pandas Extension
-        # array (which doesn't have a valid NumPy dtype)
-        # TODO: allow users to control how this casting happens, e.g., by
-        # forwarding arguments to pandas.Series.to_numpy?
-        arrays = [(k, np.asarray(v)) for k, v in dataframe.items()]
+        arrays = []
+        extension_arrays = []
+        for k, v in dataframe.items():
+            if not is_extension_array_dtype(v):
+                arrays.append((k, np.asarray(v)))
+            else:
+                extension_arrays.append((k, v))
 
         indexes: dict[Hashable, Index] = {}
         index_vars: dict[Hashable, Variable] = {}
@@ -7339,6 +7369,8 @@ class Dataset(
                 xr_idx = PandasIndex(lev, dim)
                 indexes[dim] = xr_idx
                 index_vars.update(xr_idx.create_variables())
+            arrays += [(k, np.asarray(v)) for k, v in extension_arrays]
+            extension_arrays = []
         else:
             index_name = idx.name if idx.name is not None else "index"
             dims = (index_name,)
@@ -7352,7 +7384,9 @@ class Dataset(
             obj._set_sparse_data_from_dataframe(idx, arrays, dims)
         else:
             obj._set_numpy_data_from_dataframe(idx, arrays, dims)
-        return obj
+        for name, extension_array in extension_arrays:
+            obj[name] = (dims, extension_array)
+        return obj[dataframe.columns] if len(dataframe.columns) else obj
 
     def to_dask_dataframe(
         self, dim_order: Sequence[Hashable] | None = None, set_index: bool = False

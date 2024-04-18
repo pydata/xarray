@@ -32,6 +32,7 @@ from numpy import (  # noqa
 from numpy import concatenate as _concatenate
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 from packaging.version import Version
+from pandas.api.types import is_extension_array_dtype
 
 from xarray.core import dask_array_ops, dtypes, nputils
 from xarray.core.options import OPTIONS
@@ -156,7 +157,7 @@ def isnull(data):
         return full_like(data, dtype=bool, fill_value=False)
     else:
         # at this point, array should have dtype=object
-        if isinstance(data, np.ndarray):
+        if isinstance(data, np.ndarray) or is_extension_array_dtype(data):
             return pandas_isnull(data)
         else:
             # Not reachable yet, but intended for use with other duck array
@@ -221,9 +222,19 @@ def asarray(data, xp=np):
 
 def as_shared_dtype(scalars_or_arrays, xp=np):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
-    array_type_cupy = array_type("cupy")
-    if array_type_cupy and any(
-        isinstance(x, array_type_cupy) for x in scalars_or_arrays
+    if any(is_extension_array_dtype(x) for x in scalars_or_arrays):
+        extension_array_types = [
+            x.dtype for x in scalars_or_arrays if is_extension_array_dtype(x)
+        ]
+        if len(extension_array_types) == len(scalars_or_arrays) and all(
+            isinstance(x, type(extension_array_types[0])) for x in extension_array_types
+        ):
+            return scalars_or_arrays
+        raise ValueError(
+            f"Cannot cast arrays to shared type, found array types {[x.dtype for x in scalars_or_arrays]}"
+        )
+    elif array_type_cupy := array_type("cupy") and any(  # noqa: F841
+        isinstance(x, array_type_cupy) for x in scalars_or_arrays  # noqa: F821
     ):
         import cupy as cp
 

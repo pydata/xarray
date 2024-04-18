@@ -167,6 +167,9 @@ T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 # hopefully in the future we can narrow this down more:
 T_DuckArray = TypeVar("T_DuckArray", bound=Any, covariant=True)
 
+# For typing pandas extension arrays.
+T_ExtensionArray = TypeVar("T_ExtensionArray", bound=pd.api.extensions.ExtensionArray)
+
 
 ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
