@@ -230,6 +230,8 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
     else:
         arrays = [
+            # https://github.com/pydata/xarray/issues/8402
+            # https://github.com/pydata/xarray/issues/7721
             x if isinstance(x, (int, float, complex)) else asarray(x, xp=xp)
             for x in scalars_or_arrays
         ]
