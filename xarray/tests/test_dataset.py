@@ -3431,6 +3431,23 @@ class TestDataset:
         )
         assert_identical(other_way_expected, other_way)
 
+    def test_expand_dims_creates_indexvariable(self):
+        # data variables should not gain an index ever
+        ds = Dataset({"a": 0})
+        for flag in [True, False]:
+            expanded = ds.expand_dims("x", create_1d_index=flag)
+            expected = Dataset({"a": ("x", [0])})
+            assert_identical(expanded, expected)
+            assert expanded.indexes == {}
+
+        # coordinate variables should gain an index only if create_1d_index is True (the default)
+        ds = Dataset(coords={"x": 0})
+        expanded = ds.expand_dims("x")
+        expected = Dataset({"x": ("x", [0])})
+        assert_identical(expanded, expected)
+        expanded_no_index = ds.expand_dims("x", create_1d_index=False)
+        assert expanded_no_index.indexes == {}
+
     @requires_pandas_version_two
     def test_expand_dims_non_nanosecond_conversion(self) -> None:
         # Regression test for https://github.com/pydata/xarray/issues/7493#issuecomment-1953091000
