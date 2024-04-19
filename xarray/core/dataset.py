@@ -4497,6 +4497,7 @@ class Dataset(
         self,
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
         axis: None | int | Sequence[int] = None,
+        create_1d_index: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
         """Return a new object with an additional axis (or axes) inserted at
@@ -4506,6 +4507,8 @@ class Dataset(
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
 
+        The 
+        
         Parameters
         ----------
         dim : hashable, sequence of hashable, mapping, or None
@@ -4521,6 +4524,8 @@ class Dataset(
             multiple axes are inserted. In this case, dim arguments should be
             same length list. If axis=None is passed, all the axes will be
             inserted to the start of the result array.
+        create_1d_index : bool, default is True
+            Whether to create new PandasIndex objects for new 1D coordinate variables.
         **dim_kwargs : int or sequence or ndarray
             The keywords are arbitrary dimensions being inserted and the values
             are either the lengths of the new dims (if int is given), or their
@@ -4640,6 +4645,8 @@ class Dataset(
                 # save the coordinates to the variables dict, and set the
                 # value within the dim dict to the length of the iterable
                 # for later use.
+
+                # TODO should we have an option to not create a variable here?
                 index = PandasIndex(v, k)
                 indexes[k] = index
                 variables.update(index.create_variables())
@@ -4678,11 +4685,16 @@ class Dataset(
                     variables[k] = v.set_dims(dict(all_dims))
             else:
                 if k not in variables:
-                    # If dims includes a label of a non-dimension coordinate,
-                    # it will be promoted to a 1D coordinate with a single value.
-                    index, index_vars = create_default_index_implicit(v.set_dims(k))
-                    indexes[k] = index
-                    variables.update(index_vars)
+                    if create_1d_index:
+                        # If dims includes a label of a non-dimension coordinate,
+                        # it will be promoted to a 1D coordinate with a single value.
+                        index, index_vars = create_default_index_implicit(v.set_dims(k))
+                        indexes[k] = index
+                        variables.update(index_vars)
+                    else:
+                        # create 1D variable without creating a new index
+                        new_1d_var = v.set_dims(k)
+                        variables.update({k: new_1d_var})
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
