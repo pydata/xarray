@@ -18,6 +18,7 @@ import xarray.testing
 from xarray import Dataset
 from xarray.core import utils
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
 from xarray.core.variable import IndexVariable
@@ -52,7 +53,9 @@ def assert_writeable(ds):
     readonly = [
         name
         for name, var in ds.variables.items()
-        if not isinstance(var, IndexVariable) and not var.data.flags.writeable
+        if not isinstance(var, IndexVariable)
+        and not isinstance(var.data, PandasExtensionArray)
+        and not var.data.flags.writeable
     ]
     assert not readonly, readonly
 
@@ -112,6 +115,7 @@ has_zarr, requires_zarr = _importorskip("zarr")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg", "0.4.0")
+has_pyarrow, requires_pyarrow = _importorskip("pyarrow")
 with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
@@ -306,6 +310,7 @@ def create_test_data(
     seed: int | None = None,
     add_attrs: bool = True,
     dim_sizes: tuple[int, int, int] = _DEFAULT_TEST_DIM_SIZES,
+    use_extension_array: bool = False,
 ) -> Dataset:
     rs = np.random.RandomState(seed)
     _vars = {
@@ -328,7 +333,16 @@ def create_test_data(
         obj[v] = (dims, data)
         if add_attrs:
             obj[v].attrs = {"foo": "variable"}
-
+    if use_extension_array:
+        obj["var4"] = (
+            "dim1",
+            pd.Categorical(
+                np.random.choice(
+                    list(string.ascii_lowercase[: np.random.randint(5)]),
+                    size=dim_sizes[0],
+                )
+            ),
+        )
     if dim_sizes == _DEFAULT_TEST_DIM_SIZES:
         numbers_values = np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64")
     else:
