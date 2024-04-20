@@ -11,6 +11,7 @@ from textwrap import dedent
 from typing import Any, Literal
 
 import numpy as np
+import numpy.testing as npt
 import pandas as pd
 import pytest
 from pandas.core.indexes.datetimes import DatetimeIndex
@@ -3459,6 +3460,22 @@ class TestDataset:
         # TODO also can't just assert equivalence because it will fail internal invariants default indexes checks
         # assert_identical(expanded, expected)
         assert expanded_no_index.coords == {"x": Variable(data=[0], dims=["x"])}
+        assert expanded_no_index.indexes == {}
+
+    def test_expand_dims_create_index_from_iterable(self):
+        ds = Dataset(coords={"x": 0})
+        expanded = ds.expand_dims(x=[0, 1])
+        expected = Dataset({"x": ("x", [0, 1])})
+        assert_identical(expanded, expected)
+
+        expanded_no_index = ds.expand_dims(x=[0, 1], create_1d_index=False)
+        expected = Dataset(coords={"x": ("x", [0, 1])}).drop_indexes("x")
+
+        # TODO also can't just assert equivalence because it will fail internal invariants default indexes checks
+        # assert_identical(expanded, expected)
+        assert list(expanded_no_index.coords) == ["x"]
+        assert isinstance(expanded_no_index.coords["x"].variable, Variable)
+        npt.assert_array_equal(expanded_no_index.coords["x"].data, np.array([0, 1]))
         assert expanded_no_index.indexes == {}
 
     @requires_pandas_version_two
