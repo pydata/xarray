@@ -234,7 +234,7 @@ def concatenate(
     if any(not isinstance(arr, ConcatenatableArray) for arr in arrays):
         raise TypeError
 
-    result = np.concatenate([arr.array for arr in arrays], axis=axis)
+    result = np.concatenate([arr._array for arr in arrays], axis=axis)
     return ConcatenatableArray(result)
 
 
@@ -243,7 +243,7 @@ def stack(arrays: Iterable[ConcatenatableArray], /, *, axis=0) -> Concatenatable
     if any(not isinstance(arr, ConcatenatableArray) for arr in arrays):
         raise TypeError
 
-    result = np.stack([arr.array for arr in arrays], axis=axis)
+    result = np.stack([arr._array for arr in arrays], axis=axis)
     return ConcatenatableArray(result)
 
 
@@ -267,19 +267,33 @@ def broadcast_to(
     if not isinstance(x, ConcatenatableArray):
         raise TypeError
 
-    result = np.broadcast_to(x.array, shape=shape)
+    result = np.broadcast_to(x._array, shape=shape)
     return ConcatenatableArray(result)
 
 
-class ConcatenatableArray(utils.NDArrayMixin):
+class ConcatenatableArray:
     """Disallows loading or coercing to an index but does support concatenation / stacking."""
-
-    # TODO only reason this is different from InaccessibleArray is to avoid it being a subclass of ExplicitlyIndexed
 
     HANDLED_ARRAY_FUNCTIONS = [concatenate, stack, result_type]
 
     def __init__(self, array):
-        self.array = array
+        # use ._array instead of .array because we don't want this to be accessible even to xarray's internals (e.g. create_default_index_implicit)
+        self._array = array
+
+    @property
+    def dtype(self: Any) -> np.dtype:
+        return self._array.dtype
+
+    @property
+    def shape(self: Any) -> tuple[int, ...]:
+        return self._array.shape
+
+    @property
+    def ndim(self: Any) -> int:
+        return self._array.ndim
+
+    def __repr__(self: Any) -> str:
+        return f"{type(self).__name__}(array={self._array!r})"
 
     def get_duck_array(self):
         raise UnexpectedDataAccess("Tried accessing data")
@@ -287,8 +301,18 @@ class ConcatenatableArray(utils.NDArrayMixin):
     def __array__(self, dtype: np.typing.DTypeLike = None):
         raise UnexpectedDataAccess("Tried accessing data")
 
-    def __getitem__(self, key):
-        raise UnexpectedDataAccess("Tried accessing data.")
+    def __getitem__(self, key) -> ConcatenatableArray:
+        """Some cases of concat require supporting expanding dims by dimensions of size 1"""
+        # see https://data-apis.org/array-api/2022.12/API_specification/indexing.html#multi-axis-indexing
+        arr = self._array
+        for axis, indexer_1d in enumerate(key):
+            if indexer_1d is None:
+                arr = np.expand_dims(arr, axis)
+            elif indexer_1d is Ellipsis:
+                pass
+            else:
+                raise UnexpectedDataAccess("Tried accessing data.")
+        return arr
 
     def __array_function__(self, func, types, args, kwargs) -> Any:
         if func not in HANDLED_ARRAY_FUNCTIONS:
