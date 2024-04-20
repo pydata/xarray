@@ -14,6 +14,7 @@ from xarray.core.indexes import PandasIndex
 from xarray.tests import (
     ConcatenatableArray,
     InaccessibleArray,
+    UnexpectedDataAccess,
     assert_array_equal,
     assert_equal,
     assert_identical,
@@ -1028,6 +1029,22 @@ class TestConcatDataset:
         # nor have auto-created any indexes
         assert combined.indexes == {}
 
+    def test_concat_avoids_index_auto_creation_new_1d_coord(self) -> None:
+        # create 0D coordinates (without indexes)
+        datasets = [
+            Dataset(
+                coords={"x": ConcatenatableArray(np.array(0))},
+            )
+            for _ in range(2)
+        ]
+        
+        # should not raise on concat iff create_1d_index=False
+        combined = concat(datasets, dim="x", create_1d_index=False)
+        assert combined["x"].shape == (2,)
+        assert combined["x"].dims == ("x",)
+
+        # nor have auto-created any indexes
+        assert combined.indexes == {}
 
 class TestConcatDataArray:
     def test_concat(self) -> None:
