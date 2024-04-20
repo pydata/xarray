@@ -4647,10 +4647,13 @@ class Dataset(
                 # value within the dim dict to the length of the iterable
                 # for later use.
 
-                # TODO should we have an option to not create a variable here?
-                index = PandasIndex(v, k)
-                indexes[k] = index
-                variables.update(index.create_variables())
+                if create_1d_index:
+                    index = PandasIndex(v, k)
+                    indexes[k] = index
+                    name_and_new_1d_var = index.create_variables()
+                else:
+                    name_and_new_1d_var = {k: Variable(data=v, dims=k)}
+                variables.update(name_and_new_1d_var)
                 coord_names.add(k)
                 dim[k] = variables[k].size
             elif isinstance(v, int):
