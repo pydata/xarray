@@ -12,11 +12,8 @@ from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
-from xarray.core.groupby import (
-    BinGrouper,
-    UniqueGrouper,
-    _consolidate_slices,
-)
+from xarray.core.groupby import _consolidate_slices
+from xarray.core.groupers import BinGrouper, EncodedGroups, Grouper, UniqueGrouper
 from xarray.core.types import InterpOptions
 from xarray.tests import (
     InaccessibleArray,
@@ -2627,3 +2624,26 @@ def test_default_flox_method() -> None:
         assert kwargs["method"] == "cohorts"
     else:
         assert "method" not in kwargs
+
+
+def test_custom_grouper() -> None:
+    class YearGrouper(Grouper):
+        """
+        An example re-implementation of ``.groupby("time.year")``.
+        """
+
+        def factorize(self, group) -> EncodedGroups:
+            assert np.issubdtype(group.dtype, np.datetime64)
+            year = group.dt.year.data
+            codes_, uniques = pd.factorize(year)
+            codes = group.copy(data=codes_).rename("year")
+            return EncodedGroups(codes=codes, full_index=pd.Index(uniques))
+
+    ds = xr.DataArray(
+        dims="time",
+        data=np.arange(20),
+        coords={"time": ("time", pd.date_range("2000-01-01", freq="3ME", periods=20))},
+    )
+    actual = ds.groupby(time=YearGrouper()).mean()
+    expected = ds.groupby("time.year").mean()
+    assert_identical(expected, actual)
