@@ -33,6 +33,7 @@ accel = ["scipy", "bottleneck", "numbagg", "flox", "opt_einsum"]
 complete = ["xarray[accel,io,parallel,viz,dev]"]
 dev = [
   "hypothesis",
+  "mypy",
   "pre-commit",
   "pytest",
   "pytest-cov",
@@ -86,8 +87,8 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 [tool.mypy]
 enable_error_code = "redundant-self"
 exclude = [
-	'xarray/util/generate_.*\.py',
-	'xarray/datatree_/.*\.py',
+  'xarray/util/generate_.*\.py',
+  'xarray/datatree_/.*\.py',
 ]
 files = "xarray"
 show_error_codes = true
@@ -98,8 +99,8 @@ warn_unused_ignores = true
 
 # Ignore mypy errors for modules imported from datatree_.
 [[tool.mypy.overrides]]
-module = "xarray.datatree_.*"
 ignore_errors = true
+module = "xarray.datatree_.*"
 
 # Much of the numerical computing stack doesn't have type annotations yet.
 [[tool.mypy.overrides]]
@@ -129,6 +130,7 @@ module = [
   "opt_einsum.*",
   "pandas.*",
   "pooch.*",
+  "pyarrow.*",
   "pydap.*",
   "pytest.*",
   "scipy.*",
@@ -171,12 +173,10 @@ module = [
   "xarray.tests.test_dask",
   "xarray.tests.test_dataarray",
   "xarray.tests.test_duck_array_ops",
-  "xarray.tests.test_groupby",
   "xarray.tests.test_indexing",
   "xarray.tests.test_merge",
   "xarray.tests.test_missing",
   "xarray.tests.test_parallelcompat",
-  "xarray.tests.test_plot",
   "xarray.tests.test_sparse",
   "xarray.tests.test_ufuncs",
   "xarray.tests.test_units",
@@ -257,6 +257,9 @@ target-version = "py39"
 # E402: module level import not at top of file
 # E501: line too long - let black worry about that
 # E731: do not assign a lambda expression, use a def
+extend-safe-fixes = [
+  "TID252", # absolute imports
+]
 ignore = [
   "E402",
   "E501",
@@ -269,9 +272,6 @@ select = [
   "TID", # flake8-tidy-imports (absolute imports)
   "I", # isort
   "UP", # Pyupgrade
-]
-extend-safe-fixes = [
-  "TID252", # absolute imports
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -295,6 +295,7 @@ markers = [
   "flaky: flaky tests",
   "network: tests requiring a network connection",
   "slow: slow tests",
+  "slow_hypothesis: slow hypothesis tests",
 ]
 minversion = "7"
 python_files = "test_*.py"

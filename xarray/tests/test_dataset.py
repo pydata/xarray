@@ -11,6 +11,7 @@ from textwrap import dedent
 from typing import Any, Literal
 
 import numpy as np
+import numpy.testing as npt
 import pandas as pd
 import pytest
 from pandas.core.indexes.datetimes import DatetimeIndex
@@ -3431,21 +3432,50 @@ class TestDataset:
         )
         assert_identical(other_way_expected, other_way)
 
-    def test_expand_dims_creates_indexvariable(self):
+    @pytest.mark.parametrize("create_1d_index_flag", [True, False])
+    def test_expand_dims_create_index_data_variable(self, create_1d_index_flag):
         # data variables should not gain an index ever
-        ds = Dataset({"a": 0})
-        for flag in [True, False]:
-            expanded = ds.expand_dims("x", create_1d_index=flag)
-            expected = Dataset({"a": ("x", [0])})
-            assert_identical(expanded, expected)
-            assert expanded.indexes == {}
+        ds = Dataset({"x": 0})
+        expanded = ds.expand_dims("x", create_1d_index=create_1d_index_flag)
 
+        # TODO I can't just create the expected dataset directly using constructor because of GH issue 8959
+        # expected = Dataset(data_vars={"x": ("x", [0])})
+        expected = Dataset({"x": ("x", [0])}).drop_indexes("x").reset_coords("x")
+
+        # TODO also can't just assert equivalence because it will fail internal invariants default indexes checks
+        # assert_identical(expanded, expected)
+        assert expected.data_vars == {"x": Variable(data=[0], dims=["x"])}
+        assert expanded.indexes == {}
+
+    def test_expand_dims_create_index_coordinate_variable(self):
         # coordinate variables should gain an index only if create_1d_index is True (the default)
         ds = Dataset(coords={"x": 0})
         expanded = ds.expand_dims("x")
         expected = Dataset({"x": ("x", [0])})
         assert_identical(expanded, expected)
+
         expanded_no_index = ds.expand_dims("x", create_1d_index=False)
+        expected = Dataset(coords={"x": ("x", [0])}).drop_indexes("x")
+
+        # TODO also can't just assert equivalence because it will fail internal invariants default indexes checks
+        # assert_identical(expanded, expected)
+        assert expanded_no_index.coords == {"x": Variable(data=[0], dims=["x"])}
+        assert expanded_no_index.indexes == {}
+
+    def test_expand_dims_create_index_from_iterable(self):
+        ds = Dataset(coords={"x": 0})
+        expanded = ds.expand_dims(x=[0, 1])
+        expected = Dataset({"x": ("x", [0, 1])})
+        assert_identical(expanded, expected)
+
+        expanded_no_index = ds.expand_dims(x=[0, 1], create_1d_index=False)
+        expected = Dataset(coords={"x": ("x", [0, 1])}).drop_indexes("x")
+
+        # TODO also can't just assert equivalence because it will fail internal invariants default indexes checks
+        # assert_identical(expanded, expected)
+        assert list(expanded_no_index.coords) == ["x"]
+        assert isinstance(expanded_no_index.coords["x"].variable, Variable)
+        npt.assert_array_equal(expanded_no_index.coords["x"].data, np.array([0, 1]))
         assert expanded_no_index.indexes == {}
 
     @requires_pandas_version_two
@@ -4631,10 +4661,12 @@ class TestDataset:
         x = np.random.randn(10)
         y = np.random.randn(10)
         t = list("abcdefghij")
-        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
+        cat = pd.Categorical(["a", "b"] * 5)
+        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t), "cat": ("t", cat)})
         expected = pd.DataFrame(
             np.array([x, y]).T, columns=["a", "b"], index=pd.Index(t, name="t")
         )
+        expected["cat"] = cat
         actual = ds.to_dataframe()
         # use the .equals method to check all DataFrame metadata
         assert expected.equals(actual), (expected, actual)
@@ -4645,23 +4677,31 @@ class TestDataset:
 
         # check roundtrip
         assert_identical(ds, Dataset.from_dataframe(actual))
-
+        assert isinstance(ds["cat"].variable.data.dtype, pd.CategoricalDtype)
         # test a case with a MultiIndex
         w = np.random.randn(2, 3)
-        ds = Dataset({"w": (("x", "y"), w)})
+        cat = pd.Categorical(["a", "a", "c"])
+        ds = Dataset({"w": (("x", "y"), w), "cat": ("y", cat)})
         ds["y"] = ("y", list("abc"))
         exp_index = pd.MultiIndex.from_arrays(
             [[0, 0, 0, 1, 1, 1], ["a", "b", "c", "a", "b", "c"]], names=["x", "y"]
         )
-        expected = pd.DataFrame(w.reshape(-1), columns=["w"], index=exp_index)
+        expected = pd.DataFrame(
+            {"w": w.reshape(-1), "cat": pd.Categorical(["a", "a", "c", "a", "a", "c"])},
+            index=exp_index,
+        )
         actual = ds.to_dataframe()
         assert expected.equals(actual)
 
         # check roundtrip
+        # from_dataframe attempts to broadcast across because it doesn't know better, so cat must be converted
+        ds["cat"] = (("x", "y"), np.stack((ds["cat"].to_numpy(), ds["cat"].to_numpy())))
         assert_identical(ds.assign_coords(x=[0, 1]), Dataset.from_dataframe(actual))
 
         # Check multiindex reordering
         new_order = ["x", "y"]
+        # revert broadcasting fix above for 1d arrays
+        ds["cat"] = ("y", cat)
         actual = ds.to_dataframe(dim_order=new_order)
         assert expected.equals(actual)
 
@@ -4670,7 +4710,11 @@ class TestDataset:
             [["a", "a", "b", "b", "c", "c"], [0, 1, 0, 1, 0, 1]], names=["y", "x"]
         )
         expected = pd.DataFrame(
-            w.transpose().reshape(-1), columns=["w"], index=exp_index
+            {
+                "w": w.transpose().reshape(-1),
+                "cat": pd.Categorical(["a", "a", "a", "a", "c", "c"]),
+            },
+            index=exp_index,
         )
         actual = ds.to_dataframe(dim_order=new_order)
         assert expected.equals(actual)
@@ -4723,7 +4767,7 @@ class TestDataset:
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
-    def test_from_dataframe_categorical(self) -> None:
+    def test_from_dataframe_categorical_index(self) -> None:
         cat = pd.CategoricalDtype(
             categories=["foo", "bar", "baz", "qux", "quux", "corge"]
         )
@@ -4738,7 +4782,7 @@ class TestDataset:
         assert len(ds["i1"]) == 2
         assert len(ds["i2"]) == 2
 
-    def test_from_dataframe_categorical_string_categories(self) -> None:
+    def test_from_dataframe_categorical_index_string_categories(self) -> None:
         cat = pd.CategoricalIndex(
             pd.Categorical.from_codes(
                 np.array([1, 1, 0, 2]),
@@ -5466,18 +5510,22 @@ class TestDataset:
         assert list(actual) == expected
 
     def test_reduce_non_numeric(self) -> None:
-        data1 = create_test_data(seed=44)
+        data1 = create_test_data(seed=44, use_extension_array=True)
         data2 = create_test_data(seed=44)
-        add_vars = {"var4": ["dim1", "dim2"], "var5": ["dim1"]}
+        add_vars = {"var5": ["dim1", "dim2"], "var6": ["dim1"]}
         for v, dims in sorted(add_vars.items()):
             size = tuple(data1.sizes[d] for d in dims)
             data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {"foo": "variable"})
-
-        assert "var4" not in data1.mean() and "var5" not in data1.mean()
+        # var4 is extension array categorical and should be dropped
+        assert (
+            "var4" not in data1.mean()
+            and "var5" not in data1.mean()
+            and "var6" not in data1.mean()
+        )
         assert_equal(data1.mean(), data2.mean())
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
-        assert "var4" not in data1.mean(dim="dim2") and "var5" in data1.mean(dim="dim2")
+        assert "var5" not in data1.mean(dim="dim2") and "var6" in data1.mean(dim="dim2")
 
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"

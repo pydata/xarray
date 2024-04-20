@@ -153,6 +153,21 @@ def test_concat_missing_var() -> None:
     assert_identical(actual, expected)
 
 
+def test_concat_categorical() -> None:
+    data1 = create_test_data(use_extension_array=True)
+    data2 = create_test_data(use_extension_array=True)
+    concatenated = concat([data1, data2], dim="dim1")
+    assert (
+        concatenated["var4"]
+        == type(data2["var4"].variable.data.array)._concat_same_type(
+            [
+                data1["var4"].variable.data.array,
+                data2["var4"].variable.data.array,
+            ]
+        )
+    ).all()
+
+
 def test_concat_missing_multiple_consecutive_var() -> None:
     datasets = create_concat_datasets(3, seed=123)
     expected = concat(datasets, dim="day")
@@ -452,8 +467,11 @@ def test_concat_fill_missing_variables(
 
 class TestConcatDataset:
     @pytest.fixture
-    def data(self) -> Dataset:
-        return create_test_data().drop_dims("dim3")
+    def data(self, request) -> Dataset:
+        use_extension_array = request.param if hasattr(request, "param") else False
+        return create_test_data(use_extension_array=use_extension_array).drop_dims(
+            "dim3"
+        )
 
     def rectify_dim_order(self, data, dataset) -> Dataset:
         # return a new dataset with all variable dimensions transposed into
@@ -465,7 +483,9 @@ class TestConcatDataset:
         )
 
     @pytest.mark.parametrize("coords", ["different", "minimal"])
-    @pytest.mark.parametrize("dim", ["dim1", "dim2"])
+    @pytest.mark.parametrize(
+        "dim,data", [["dim1", True], ["dim2", False]], indirect=["data"]
+    )
     def test_concat_simple(self, data, dim, coords) -> None:
         datasets = [g for _, g in data.groupby(dim, squeeze=False)]
         assert_identical(data, concat(datasets, dim, coords=coords))
@@ -493,6 +513,7 @@ class TestConcatDataset:
         expected = data.copy().assign(foo=(["dim1", "bar"], foo))
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("data", [False], indirect=["data"])
     def test_concat_2(self, data) -> None:
         dim = "dim2"
         datasets = [g.squeeze(dim) for _, g in data.groupby(dim, squeeze=False)]

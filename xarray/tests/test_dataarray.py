@@ -3945,7 +3945,8 @@ class TestDataArray:
             dims=["a", "b", "c"],
         )
         da_cp = da.copy(deep)
-        da_cp["a"].data[0] = 999
+        new_a = np.array([999, 2])
+        da_cp.coords["a"] = da_cp["a"].copy(data=new_a)
 
         expected_cp = xr.DataArray(
             xr.IndexVariable("a", np.array([999, 2])),
@@ -4947,7 +4948,7 @@ class TestReduce1D(TestReduce):
         with pytest.raises(ValueError):
             xr.DataArray(5).idxmin()
 
-        coordarr0 = xr.DataArray(ar0.coords["x"], dims=["x"])
+        coordarr0 = xr.DataArray(ar0.coords["x"].data, dims=["x"])
         coordarr1 = coordarr0.copy()
 
         hasna = np.isnan(minindex)
@@ -5062,7 +5063,7 @@ class TestReduce1D(TestReduce):
         with pytest.raises(ValueError):
             xr.DataArray(5).idxmax()
 
-        coordarr0 = xr.DataArray(ar0.coords["x"], dims=["x"])
+        coordarr0 = xr.DataArray(ar0.coords["x"].data, dims=["x"])
         coordarr1 = coordarr0.copy()
 
         hasna = np.isnan(maxindex)
@@ -7167,3 +7168,13 @@ def test_nD_coord_dataarray() -> None:
     _assert_internal_invariants(da4, check_default_indexes=True)
     assert "x" not in da4.xindexes
     assert "x" in da4.coords
+
+
+def test_lazy_data_variable_not_loaded():
+    # GH8753
+    array = InaccessibleArray(np.array([1, 2, 3]))
+    v = Variable(data=array, dims="x")
+    # No data needs to be accessed, so no error should be raised
+    da = xr.DataArray(v)
+    # No data needs to be accessed, so no error should be raised
+    xr.DataArray(da)

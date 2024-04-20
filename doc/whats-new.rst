@@ -15,14 +15,59 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2024.03.0:
+.. _whats-new.2024.04.0:
 
-v2024.03.0 (unreleased)
+v2024.04.0 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
+- New "random" method for converting to and from 360_day calendars (:pull:`8603`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
+- Xarray now makes a best attempt not to coerce :py:class:`pandas.api.extensions.ExtensionArray` to a numpy array
+  by supporting 1D `ExtensionArray` objects internally where possible.  Thus, `Dataset`s initialized with a `pd.Catgeorical`,
+  for example, will retain the object.  However, one cannot do operations that are not possible on the `ExtensionArray`
+  then, such as broadcasting.
+  By `Ilan Gold <https://github.com/ilan-gold>`_.
+- Added the option to avoid automatically creating 1D pandas indexes in :py:meth:`Dataset.expand_dims()`, by passing the new kwarg
+  `create_1d_index=False`. (:pull:`8960`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Migrates ``formatting_html`` functionality for `DataTree` into ``xarray/core`` (:pull: `8930`)
+  By `Eni Awowale <https://github.com/eni-awowale>`_, `Julia Signell <https://github.com/jsignell>`_
+  and `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Migrates ``datatree_mapping`` functionality into ``xarray/core`` (:pull:`8948`)
+  By `Matt Savoie <https://github.com/flamingbear>`_ `Owen Littlejohns
+  <https://github.com/owenlittlejohns>` and `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+
+.. _whats-new.2024.03.0:
+
+v2024.03.0 (Mar 29, 2024)
+-------------------------
+
+This release brings performance improvements for grouped and resampled quantile calculations, CF decoding improvements,
+minor optimizations to distributed Zarr writes, and compatibility fixes for Numpy 2.0 and Pandas 3.0.
+
+Thanks to the 18 contributors to this release:
+Anderson Banihirwe, Christoph Hasse, Deepak Cherian, Etienne Schalk, Justus Magin, Kai Mühlbauer, Kevin Schwarzwald, Mark Harfouche, Martin, Matt Savoie, Maximilian Roos, Ray Bell, Roberto Chang, Spencer Clark, Tom Nicholas, crusaderky, owenlittlejohns, saschahofmann
+
+New Features
+~~~~~~~~~~~~
+- Partial writes to existing chunks with ``region`` or ``append_dim`` will now raise an error
+  (unless ``safe_chunks=False``); previously an error would only be raised on
+  new variables. (:pull:`8459`, :issue:`8371`, :issue:`8882`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Grouped and resampling quantile calculations now use the vectorized algorithm in ``flox>=0.9.4`` if present.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Do not broadcast in arithmetic operations when global option ``arithmetic_broadcast=False``
@@ -37,15 +82,13 @@ New Features
 - Allow creating :py:class:`xr.Coordinates` objects with no indexes (:pull:`8711`)
   By `Benoit Bovy <https://github.com/benbovy>`_ and `Tom Nicholas
   <https://github.com/TomNicholas>`_.
+- Enable plotting of ``datetime.dates``. (:issue:`8866`, :pull:`8873`)
+  By `Sascha Hofmann <https://github.com/saschahofmann>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
 - Don't allow overwriting index variables with ``to_zarr`` region writes. (:issue:`8589`, :pull:`8876`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
-Deprecations
-~~~~~~~~~~~~
 
 
 Bug fixes
@@ -77,17 +120,15 @@ Bug fixes
   (:issue:`8884`, :pull:`8886`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
-
-Documentation
-~~~~~~~~~~~~~
-
-
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Migrates ``treenode`` functionality into ``xarray/core`` (:pull:`8757`)
   By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
   <https://github.com/TomNicholas>`_.
 - Migrates ``datatree`` functionality into ``xarray/core``. (:pull: `8789`)
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
+  <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Migrates ``iterator`` functionality into ``xarray/core`` (:pull: `8879`)
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
   <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
 
