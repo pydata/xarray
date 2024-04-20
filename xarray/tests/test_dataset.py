@@ -3431,34 +3431,21 @@ class TestDataset:
         )
         assert_identical(other_way_expected, other_way)
 
-    @pytest.mark.parametrize("create_1d_index_flag", [True, False])
-    def test_expand_dims_create_index_data_variable(self, create_1d_index_flag):
+    def test_expand_dims_creates_indexvariable(self):
         # data variables should not gain an index ever
-        ds = Dataset({"x": 0})
-        expanded = ds.expand_dims("x", create_1d_index=create_1d_index_flag)
+        ds = Dataset({"a": 0})
+        for flag in [True, False]:
+            expanded = ds.expand_dims("x", create_1d_index=flag)
+            expected = Dataset({"a": ("x", [0])})
+            assert_identical(expanded, expected)
+            assert expanded.indexes == {}
 
-        # TODO I can't just create the expected dataset directly using constructor because of GH issue 8959
-        # expected = Dataset(data_vars={"x": ("x", [0])})
-        expected = Dataset({"x": ("x", [0])}).drop_indexes("x").reset_coords("x")
-
-        # TODO also can't just assert equivalence because it will fail internal invariants default indexes checks
-        # assert_identical(expanded, expected)
-        assert expected.data_vars == {"x": Variable(data=[0], dims=["x"])}
-        assert expanded.indexes == {}
-
-    def test_expand_dims_create_index_coordinate_variable(self):
         # coordinate variables should gain an index only if create_1d_index is True (the default)
         ds = Dataset(coords={"x": 0})
         expanded = ds.expand_dims("x")
         expected = Dataset({"x": ("x", [0])})
         assert_identical(expanded, expected)
-
         expanded_no_index = ds.expand_dims("x", create_1d_index=False)
-        expected = Dataset(coords={"x": ("x", [0])}).drop_indexes("x")
-
-        # TODO also can't just assert equivalence because it will fail internal invariants default indexes checks
-        # assert_identical(expanded, expected)
-        assert expanded_no_index.coords == {"x": Variable(data=[0], dims=["x"])}
         assert expanded_no_index.indexes == {}
 
     @requires_pandas_version_two
