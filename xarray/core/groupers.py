@@ -34,6 +34,8 @@ __all__ = [
     "TimeResampler",
 ]
 
+RESAMPLE_DIM = "__resample_dim__"
+
 
 @dataclass
 class EncodedGroups:
