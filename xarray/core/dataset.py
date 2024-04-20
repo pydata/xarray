@@ -4507,8 +4507,9 @@ class Dataset(
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
 
-        The 
-        
+        The automatic creation of indexes to back new 1D coordinate variables
+        controlled by the create_1d_index kwarg.
+
         Parameters
         ----------
         dim : hashable, sequence of hashable, mapping, or None
@@ -4525,7 +4526,7 @@ class Dataset(
             same length list. If axis=None is passed, all the axes will be
             inserted to the start of the result array.
         create_1d_index : bool, default is True
-            Whether to create new PandasIndex objects for new 1D coordinate variables.
+            Whether to create new PandasIndex objects for any new 1D coordinate variables.
         **dim_kwargs : int or sequence or ndarray
             The keywords are arbitrary dimensions being inserted and the values
             are either the lengths of the new dims (if int is given), or their
@@ -4685,7 +4686,7 @@ class Dataset(
                     variables[k] = v.set_dims(dict(all_dims))
             else:
                 if k not in variables:
-                    if create_1d_index:
+                    if k in coord_names and create_1d_index:
                         # If dims includes a label of a non-dimension coordinate,
                         # it will be promoted to a 1D coordinate with a single value.
                         index, index_vars = create_default_index_implicit(v.set_dims(k))
