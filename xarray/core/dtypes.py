@@ -183,13 +183,20 @@ def isdtype(dtype, kind, xp=None):
     }
     long_names = array_api_names | numpy_names
 
+    def issubdtype(dtype, kind):
+        if isinstance(dtype, np.dtype):
+            return np.issubdtype(dtype, kind)
+        else:
+            # TODO (keewis): find a better way to compare dtypes (like pandas extension dtypes)
+            return dtype == kind
+
     def compare_dtype(dtype, kind):
         if isinstance(kind, np.dtype):
             return dtype == kind
         elif isinstance(kind, str):
             return dtype.kind in long_names.get(kind, kind)
         elif isinstance(kind, type) and issubclass(kind, (np.dtype, np.generic)):
-            return np.issubdtype(dtype, kind)
+            return issubdtype(dtype, kind)
         else:
             raise TypeError(f"unknown dtype kind: {kind}")
 
