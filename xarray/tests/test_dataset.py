@@ -6040,6 +6040,11 @@ class TestDataset:
         expected.coords["numbers"] = ("dim3", ds["numbers"].values)
         assert_equal(expected, actual)
 
+    def teset_dataset_diff_dim_nonexist(self) -> None:
+        ds = create_test_data(seed=1)
+        with pytest.raises(KeyError, match=r"dim provided not present"):
+            ds.diff("dim4")
+
     def test_dataset_diff_exception_n_neg(self) -> None:
         ds = create_test_data(seed=1)
         with pytest.raises(ValueError, match=r"must be non-negative"):
