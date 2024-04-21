@@ -18,6 +18,14 @@ from xarray.core import utils
 from xarray.core.coordinates import DatasetCoordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, DataVariables
+from xarray.core.datatree_mapping import (
+    TreeIsomorphismError,
+    check_isomorphic,
+    map_over_subtree,
+)
+from xarray.core.formatting_html import (
+    datatree_repr as datatree_repr_html,
+)
 from xarray.core.indexes import Index, Indexes
 from xarray.core.merge import dataset_update_method
 from xarray.core.options import OPTIONS as XR_OPTS
@@ -33,14 +41,6 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 from xarray.datatree_.datatree.common import TreeAttrAccessMixin
 from xarray.datatree_.datatree.formatting import datatree_repr
-from xarray.datatree_.datatree.formatting_html import (
-    datatree_repr as datatree_repr_html,
-)
-from xarray.datatree_.datatree.mapping import (
-    TreeIsomorphismError,
-    check_isomorphic,
-    map_over_subtree,
-)
 from xarray.datatree_.datatree.ops import (
     DataTreeArithmeticMixin,
     MappedDatasetMethodsMixin,

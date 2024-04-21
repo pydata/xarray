@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 from xarray.core.formatting import _compat_to_str, diff_dataset_repr
 
-from xarray.datatree_.datatree.mapping import diff_treestructure
+from xarray.core.datatree_mapping import diff_treestructure
 from xarray.datatree_.datatree.render import RenderTree
 
 if TYPE_CHECKING:

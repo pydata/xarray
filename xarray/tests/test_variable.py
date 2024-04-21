@@ -1576,6 +1576,20 @@ class TestVariable(VariableSubclassobjects):
             actual = variable.transpose()
             assert_identical(actual, variable)
 
+    def test_pandas_cateogrical_dtype(self):
+        data = pd.Categorical(np.arange(10, dtype="int64"))
+        v = self.cls("x", data)
+        print(v)  # should not error
+        assert pd.api.types.is_extension_array_dtype(v.dtype)
+
+    def test_pandas_cateogrical_no_chunk(self):
+        data = pd.Categorical(np.arange(10, dtype="int64"))
+        v = self.cls("x", data)
+        with pytest.raises(
+            ValueError, match=r".*was found to be a Pandas ExtensionArray.*"
+        ):
+            v.chunk((5,))
+
     def test_squeeze(self):
         v = Variable(["x", "y"], [[1]])
         assert_identical(Variable([], 1), v.squeeze())
@@ -2372,6 +2386,11 @@ class TestVariableWithDask(VariableSubclassobjects):
     )
     def test_pad(self, mode, xr_arg, np_arg):
         super().test_pad(mode, xr_arg, np_arg)
+
+    def test_pandas_cateogrical_dtype(self):
+        data = pd.Categorical(np.arange(10, dtype="int64"))
+        with pytest.raises(ValueError, match="was found to be a Pandas ExtensionArray"):
+            self.cls("x", data)
 
 
 @requires_sparse
