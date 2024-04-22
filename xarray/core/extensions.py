@@ -4,6 +4,7 @@ import warnings
 
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
+from xarray.core.datatree import DataTree
 
 
 class AccessorRegistrationWarning(Warning):
@@ -121,3 +122,20 @@ def register_dataset_accessor(name):
     register_dataarray_accessor
     """
     return _register_accessor(name, Dataset)
+
+
+def register_datatree_accessor(name):
+    """Register a custom accessor on DataTree objects.
+
+    Parameters
+    ----------
+    name : str
+        Name under which the accessor should be registered. A warning is issued
+        if this name conflicts with a preexisting attribute.
+
+    See Also
+    --------
+    xarray.register_dataarray_accessor
+    xarray.register_dataset_accessor
+    """
+    return _register_accessor(name, DataTree)
