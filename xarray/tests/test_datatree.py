@@ -691,7 +691,7 @@ class TestPipe:
 class TestSubset:
     def test_match(self):
         # TODO is this example going to cause problems with case sensitivity?
-        dt = DataTree.from_dict(
+        dt: DataTree = DataTree.from_dict(
             {
                 "/a/A": None,
                 "/a/B": None,
@@ -709,7 +709,7 @@ class TestSubset:
         dtt.assert_identical(result, expected)
 
     def test_filter(self):
-        simpsons = DataTree.from_dict(
+        simpsons: DataTree = DataTree.from_dict(
             d={
                 "/": xr.Dataset({"age": 83}),
                 "/Herbert": xr.Dataset({"age": 40}),
@@ -730,3 +730,98 @@ class TestSubset:
         )
         elders = simpsons.filter(lambda node: node["age"].item() > 18)
         dtt.assert_identical(elders, expected)
+
+
+class TestDSMethodInheritance:
+    def test_dataset_method(self):
+        ds = xr.Dataset({"a": ("x", [1, 2, 3])})
+        dt: DataTree = DataTree(data=ds)
+        DataTree(name="results", parent=dt, data=ds)
+
+        expected: DataTree = DataTree(data=ds.isel(x=1))
+        DataTree(name="results", parent=expected, data=ds.isel(x=1))
+
+        result = dt.isel(x=1)
+        dtt.assert_equal(result, expected)
+
+    def test_reduce_method(self):
+        ds = xr.Dataset({"a": ("x", [False, True, False])})
+        dt: DataTree = DataTree(data=ds)
+        DataTree(name="results", parent=dt, data=ds)
+
+        expected: DataTree = DataTree(data=ds.any())
+        DataTree(name="results", parent=expected, data=ds.any())
+
+        result = dt.any()
+        dtt.assert_equal(result, expected)
+
+    def test_nan_reduce_method(self):
+        ds = xr.Dataset({"a": ("x", [1, 2, 3])})
+        dt: DataTree = DataTree(data=ds)
+        DataTree(name="results", parent=dt, data=ds)
+
+        expected: DataTree = DataTree(data=ds.mean())
+        DataTree(name="results", parent=expected, data=ds.mean())
+
+        result = dt.mean()
+        dtt.assert_equal(result, expected)
+
+    def test_cum_method(self):
+        ds = xr.Dataset({"a": ("x", [1, 2, 3])})
+        dt: DataTree = DataTree(data=ds)
+        DataTree(name="results", parent=dt, data=ds)
+
+        expected: DataTree = DataTree(data=ds.cumsum())
+        DataTree(name="results", parent=expected, data=ds.cumsum())
+
+        result = dt.cumsum()
+        dtt.assert_equal(result, expected)
+
+
+class TestOps:
+    def test_binary_op_on_int(self):
+        ds1 = xr.Dataset({"a": [5], "b": [3]})
+        ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
+        dt: DataTree = DataTree(data=ds1)
+        DataTree(name="subnode", data=ds2, parent=dt)
+
+        expected: DataTree = DataTree(data=ds1 * 5)
+        DataTree(name="subnode", data=ds2 * 5, parent=expected)
+
+        # TODO: Remove ignore when ops.py is migrated?
+        result: DataTree = dt * 5  # type: ignore[assignment,operator]
+        dtt.assert_equal(result, expected)
+
+    def test_binary_op_on_dataset(self):
+        ds1 = xr.Dataset({"a": [5], "b": [3]})
+        ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
+        dt: DataTree = DataTree(data=ds1)
+        DataTree(name="subnode", data=ds2, parent=dt)
+        other_ds = xr.Dataset({"z": ("z", [0.1, 0.2])})
+
+        expected: DataTree = DataTree(data=ds1 * other_ds)
+        DataTree(name="subnode", data=ds2 * other_ds, parent=expected)
+
+        result = dt * other_ds
+        dtt.assert_equal(result, expected)
+
+    def test_binary_op_on_datatree(self):
+        ds1 = xr.Dataset({"a": [5], "b": [3]})
+        ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
+        dt: DataTree = DataTree(data=ds1)
+        DataTree(name="subnode", data=ds2, parent=dt)
+
+        expected: DataTree = DataTree(data=ds1 * ds1)
+        DataTree(name="subnode", data=ds2 * ds2, parent=expected)
+
+        # TODO: Remove ignore when ops.py is migrated?
+        result: DataTree = dt * dt  # type: ignore[operator]
+        dtt.assert_equal(result, expected)
+
+
+class TestUFuncs:
+    def test_tree(self, create_test_datatree):
+        dt = create_test_datatree()
+        expected = create_test_datatree(modify=lambda ds: np.sin(ds))
+        result_tree = np.sin(dt)
+        dtt.assert_equal(result_tree, expected)
