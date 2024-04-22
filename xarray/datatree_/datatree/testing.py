@@ -1,7 +1,7 @@
 from xarray.testing.assertions import ensure_warnings
 
 from xarray.core.datatree import DataTree
-from .formatting import diff_tree_repr
+from xarray.core.formatting import diff_datatree_repr
 
 
 @ensure_warnings
@@ -41,7 +41,7 @@ def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
             a = a.root
             b = b.root
 
-        assert a.isomorphic(b, from_root=from_root), diff_tree_repr(a, b, "isomorphic")
+        assert a.isomorphic(b, from_root=from_root), diff_datatree_repr(a, b, "isomorphic")
     else:
         raise TypeError(f"{type(a)} not of type DataTree")
 
@@ -78,7 +78,7 @@ def assert_equal(a: DataTree, b: DataTree, from_root: bool = True):
             a = a.root
             b = b.root
 
-        assert a.equals(b, from_root=from_root), diff_tree_repr(a, b, "equals")
+        assert a.equals(b, from_root=from_root), diff_datatree_repr(a, b, "equals")
     else:
         raise TypeError(f"{type(a)} not of type DataTree")
 
@@ -115,6 +115,6 @@ def assert_identical(a: DataTree, b: DataTree, from_root: bool = True):
             a = a.root
             b = b.root
 
-        assert a.identical(b, from_root=from_root), diff_tree_repr(a, b, "identical")
+        assert a.identical(b, from_root=from_root), diff_datatree_repr(a, b, "identical")
     else:
         raise TypeError(f"{type(a)} not of type DataTree")

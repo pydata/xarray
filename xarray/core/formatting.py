@@ -11,6 +11,7 @@ from collections.abc import Collection, Hashable, Sequence
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
 from reprlib import recursive_repr
+from textwrap import dedent
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -19,12 +20,15 @@ from pandas.errors import OutOfBoundsDatetime
 
 from xarray.core.duck_array_ops import array_equiv, astype
 from xarray.core.indexing import MemoryCachedArray
+from xarray.core.iterators import LevelOrderIter
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.utils import is_duck_array
+from xarray.datatree_.datatree.render import RenderTree
 from xarray.namedarray.pycompat import array_type, to_duck_array, to_numpy
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import AbstractCoordinates
+    from xarray.core.datatree import DataTree
 
 UNITS = ("B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
 
@@ -926,6 +930,37 @@ def diff_array_repr(a, b, compat):
     return "\n".join(summary)
 
 
+def diff_treestructure(a: DataTree, b: DataTree, require_names_equal: bool) -> str:
+    """
+    Return a summary of why two trees are not isomorphic.
+    If they are isomorphic return an empty string.
+    """
+
+    # Walking nodes in "level-order" fashion means walking down from the root breadth-first.
+    # Checking for isomorphism by walking in this way implicitly assumes that the tree is an ordered tree
+    # (which it is so long as children are stored in a tuple or list rather than in a set).
+    for node_a, node_b in zip(LevelOrderIter(a), LevelOrderIter(b)):
+        path_a, path_b = node_a.path, node_b.path
+
+        if require_names_equal and node_a.name != node_b.name:
+            diff = dedent(
+                f"""\
+                Node '{path_a}' in the left object has name '{node_a.name}'
+                Node '{path_b}' in the right object has name '{node_b.name}'"""
+            )
+            return diff
+
+        if len(node_a.children) != len(node_b.children):
+            diff = dedent(
+                f"""\
+                Number of children on node '{path_a}' of the left object: {len(node_a.children)}
+                Number of children on node '{path_b}' of the right object: {len(node_b.children)}"""
+            )
+            return diff
+
+    return ""
+
+
 def diff_dataset_repr(a, b, compat):
     summary = [
         f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
@@ -943,6 +978,88 @@ def diff_dataset_repr(a, b, compat):
         summary.append(diff_attrs_repr(a.attrs, b.attrs, compat))
 
     return "\n".join(summary)
+
+
+def diff_nodewise_summary(a: DataTree, b: DataTree, compat):
+    """Iterates over all corresponding nodes, recording differences between data at each location."""
+
+    compat_str = _compat_to_str(compat)
+
+    summary = []
+    for node_a, node_b in zip(a.subtree, b.subtree):
+        a_ds, b_ds = node_a.ds, node_b.ds
+
+        if not a_ds._all_compat(b_ds, compat):
+            dataset_diff = diff_dataset_repr(a_ds, b_ds, compat_str)
+            data_diff = "\n".join(dataset_diff.split("\n", 1)[1:])
+
+            nodediff = (
+                f"\nData in nodes at position '{node_a.path}' do not match:"
+                f"{data_diff}"
+            )
+            summary.append(nodediff)
+
+    return "\n".join(summary)
+
+
+def diff_datatree_repr(a: DataTree, b: DataTree, compat):
+    summary = [
+        f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
+    ]
+
+    # TODO check root parents?
+
+    strict_names = True if compat in ["equals", "identical"] else False
+    treestructure_diff = diff_treestructure(a, b, strict_names)
+
+    # If the trees structures are different there is no point comparing each node
+    # TODO we could show any differences in nodes up to the first place that structure differs?
+    if treestructure_diff or compat == "isomorphic":
+        summary.append("\n" + treestructure_diff)
+    else:
+        nodewise_diff = diff_nodewise_summary(a, b, compat)
+        summary.append("\n" + nodewise_diff)
+
+    return "\n".join(summary)
+
+
+def _single_node_repr(node: DataTree) -> str:
+    """Information about this node, not including its relationships to other nodes."""
+    node_info = f"DataTree('{node.name}')"
+
+    if node.has_data or node.has_attrs:
+        ds_info = "\n" + repr(node.ds)
+    else:
+        ds_info = ""
+    return node_info + ds_info
+
+
+def datatree_repr(dt: DataTree):
+    """A printable representation of the structure of this entire tree."""
+    renderer = RenderTree(dt)
+
+    lines = []
+    for pre, fill, node in renderer:
+        node_repr = _single_node_repr(node)
+
+        node_line = f"{pre}{node_repr.splitlines()[0]}"
+        lines.append(node_line)
+
+        if node.has_data or node.has_attrs:
+            ds_repr = node_repr.splitlines()[2:]
+            for line in ds_repr:
+                if len(node.children) > 0:
+                    lines.append(f"{fill}{renderer.style.vertical}{line}")
+                else:
+                    lines.append(f"{fill}{' ' * len(renderer.style.vertical)}{line}")
+
+    # Tack on info about whether or not root node has a parent at the start
+    first_line = lines[0]
+    parent = f'"{dt.parent.name}"' if dt.parent is not None else "None"
+    first_line_with_parent = first_line[:-1] + f", parent={parent})"
+    lines[0] = first_line_with_parent
+
+    return "\n".join(lines)
 
 
 def shorten_list_repr(items: Sequence, max_items: int) -> str:
