@@ -107,8 +107,10 @@ def test_indexing(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
 
 def test_properties(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     np_arr, xp_arr = arrays
-    assert np_arr.nbytes == np_arr.data.nbytes
-    assert xp_arr.nbytes == np_arr.data.nbytes
+
+    expected = np_arr.data.nbytes
+    assert np_arr.nbytes == expected
+    assert xp_arr.nbytes == expected
 
 
 def test_reorganizing_operation(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
