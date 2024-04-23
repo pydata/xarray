@@ -18,12 +18,12 @@ import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
+from xarray.core.datatree_render import RenderDataTree
 from xarray.core.duck_array_ops import array_equiv, astype
 from xarray.core.indexing import MemoryCachedArray
 from xarray.core.iterators import LevelOrderIter
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.utils import is_duck_array
-from xarray.datatree_.datatree.render import RenderTree
 from xarray.namedarray.pycompat import array_type, to_duck_array, to_numpy
 
 if TYPE_CHECKING:
@@ -1036,7 +1036,7 @@ def _single_node_repr(node: DataTree) -> str:
 
 def datatree_repr(dt: DataTree):
     """A printable representation of the structure of this entire tree."""
-    renderer = RenderTree(dt)
+    renderer = RenderDataTree(dt)
 
     lines = []
     for pre, fill, node in renderer:
