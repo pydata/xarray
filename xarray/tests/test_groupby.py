@@ -35,6 +35,7 @@ def dataset() -> xr.Dataset:
         {
             "foo": (("x", "y", "z"), np.random.randn(3, 4, 2)),
             "baz": ("x", ["e", "f", "g"]),
+            "cat": ("y", pd.Categorical(["cat1", "cat2", "cat2", "cat1"])),
         },
         {"x": ("x", ["a", "b", "c"], {"name": "x"}), "y": [1, 2, 3, 4], "z": [1, 2]},
     )
@@ -79,6 +80,7 @@ def test_groupby_dims_property(dataset, recwarn) -> None:
     )
     assert len(recwarn) == 0
 
+    dataset = dataset.drop_vars(["cat"])
     stacked = dataset.stack({"xy": ("x", "y")})
     assert tuple(stacked.groupby("xy", squeeze=False).dims) == tuple(
         stacked.isel(xy=[0]).dims
@@ -91,7 +93,7 @@ def test_groupby_sizes_property(dataset) -> None:
         assert dataset.groupby("x").sizes == dataset.isel(x=1).sizes
     with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
         assert dataset.groupby("y").sizes == dataset.isel(y=1).sizes
-
+    dataset = dataset.drop("cat")
     stacked = dataset.stack({"xy": ("x", "y")})
     with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
         assert stacked.groupby("xy").sizes == stacked.isel(xy=0).sizes
@@ -760,6 +762,8 @@ def test_groupby_getitem(dataset) -> None:
         assert_identical(dataset.foo.sel(x="a"), dataset.foo.groupby("x")["a"])
     with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
         assert_identical(dataset.foo.sel(z=1), dataset.foo.groupby("z")[1])
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert_identical(dataset.cat.sel(y=1), dataset.cat.groupby("y")[1])
 
     assert_identical(dataset.sel(x=["a"]), dataset.groupby("x", squeeze=False)["a"])
     assert_identical(dataset.sel(z=[1]), dataset.groupby("z", squeeze=False)[1])
@@ -769,6 +773,12 @@ def test_groupby_getitem(dataset) -> None:
     )
     assert_identical(dataset.foo.sel(z=[1]), dataset.foo.groupby("z", squeeze=False)[1])
 
+    assert_identical(dataset.cat.sel(y=[1]), dataset.cat.groupby("y", squeeze=False)[1])
+    with pytest.raises(
+        NotImplementedError, match="Cannot broadcast 1d-only pandas categorical array."
+    ):
+        dataset.groupby("boo", squeeze=False)
+    dataset = dataset.drop_vars(["cat"])
     actual = (
         dataset.groupby("boo", squeeze=False)["f"].unstack().transpose("x", "y", "z")
     )
