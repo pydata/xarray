@@ -17,9 +17,9 @@ import inspect
 import os
 import sys
 
-import sphinx_autosummary_accessors
+import sphinx_autosummary_accessors # type: ignore
 
-import datatree
+import datatree # type: ignore
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -286,7 +286,7 @@ htmlhelp_basename = "datatree_doc"
 
 # -- Options for LaTeX output --------------------------------------------------
 
-latex_elements = {
+latex_elements: dict = {
     # The paper size ('letterpaper' or 'a4paper').
     # 'papersize': 'letterpaper',
     # The font size ('10pt', '11pt' or '12pt').
