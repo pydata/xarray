@@ -12,6 +12,8 @@ from xarray.core import duck_array_ops, formatting, utils
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
+from xarray.core.datatree import DataTree
+from xarray.core.formatting import diff_datatree_repr
 from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex, default_indexes
 from xarray.core.variable import IndexVariable, Variable
 
@@ -50,21 +52,72 @@ def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08, decode_bytes=Tru
 
 
 @ensure_warnings
-def assert_equal(a, b):
+def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
+    """
+    Two DataTrees are considered isomorphic if every node has the same number of children.
+
+    Nothing about the data in each node is checked.
+
+    Isomorphism is a necessary condition for two trees to be used in a nodewise binary operation,
+    such as tree1 + tree2.
+
+    By default this function does not check any part of the tree above the given node.
+    Therefore this function can be used as default to check that two subtrees are isomorphic.
+
+    Parameters
+    ----------
+    a : DataTree
+        The first object to compare.
+    b : DataTree
+        The second object to compare.
+    from_root : bool, optional, default is False
+        Whether or not to first traverse to the root of the trees before checking for isomorphism.
+        If a & b have no parents then this has no effect.
+
+    See Also
+    --------
+    DataTree.isomorphic
+    assert_equal
+    assert_identical
+    """
+    __tracebackhide__ = True
+    assert isinstance(a, type(b))
+
+    if isinstance(a, DataTree):
+        if from_root:
+            a = a.root
+            b = b.root
+
+        assert a.isomorphic(b, from_root=from_root), diff_datatree_repr(
+            a, b, "isomorphic"
+        )
+    else:
+        raise TypeError(f"{type(a)} not of type DataTree")
+
+
+@ensure_warnings
+def assert_equal(a, b, **kwargs):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
     objects.
 
     Raises an AssertionError if two objects are not equal. This will match
     data values, dimensions and coordinates, but not names or attributes
     (except for Dataset objects for which the variable names must match).
-    Arrays with NaN in the same location are considered equal.
+    Arrays with NaN in the same location are considered equal. DataTrees are
+    equal if they have isomorphic node structures, with matching node names,
+    and if they have matching variables and coordinates, all of which are
+    equal.
 
     Parameters
     ----------
-    a : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
-        The first object to compare.
-    b : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
-        The second object to compare.
+    a : xarray.Dataset, xarray.DataArray, xarray.Variable, xarray.Coordinates
+        or xarray.core.datatree.DataTree. The first object to compare.
+    b : xarray.Dataset, xarray.DataArray, xarray.Variable, xarray.Coordinates
+        or xarray.core.datatree.DataTree. The second object to compare.
+    **kwargs : dict
+        Additional keyword arguments passed on to DataTree.equals. Specifically,
+        from_root, which defaults True, and will check the whole tree above
+        the given node.
 
     See Also
     --------
@@ -81,12 +134,19 @@ def assert_equal(a, b):
         assert a.equals(b), formatting.diff_dataset_repr(a, b, "equals")
     elif isinstance(a, Coordinates):
         assert a.equals(b), formatting.diff_coords_repr(a, b, "equals")
+    elif isinstance(a, DataTree):
+        from_root = kwargs.get("from_root", True)
+        if from_root:
+            a = a.root
+            b = b.root
+
+        assert a.equals(b, from_root=from_root), diff_datatree_repr(a, b, "equals")
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
 
 @ensure_warnings
-def assert_identical(a, b):
+def assert_identical(a, b, **kwargs):
     """Like :py:func:`xarray.testing.assert_equal`, but also matches the
     objects' names and attributes.
 
@@ -98,6 +158,10 @@ def assert_identical(a, b):
         The first object to compare.
     b : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
         The second object to compare.
+    **kwargs : dict
+        Additional keyword arguments passed on to DataTree.identical. Specifically,
+        from_root, which defaults True, and will check the whole tree above
+        the given node.
 
     See Also
     --------
@@ -116,6 +180,15 @@ def assert_identical(a, b):
         assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")
     elif isinstance(a, Coordinates):
         assert a.identical(b), formatting.diff_coords_repr(a, b, "identical")
+    elif isinstance(a, DataTree):
+        from_root = kwargs.get("from_root", True)
+        if from_root:
+            a = a.root
+            b = b.root
+
+        assert a.identical(b, from_root=from_root), diff_datatree_repr(
+            a, b, "identical"
+        )
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
