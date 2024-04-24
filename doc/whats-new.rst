@@ -35,11 +35,11 @@ Breaking changes
 
 - The minimum versions of some dependencies were changed, in particular our minimum supported pandas version is now Pandas 2.
 
-  ===================== =========  ========
+  ===================== =========  =======
    Package                    Old      New
-  ===================== =========  ========
-   dask-core               2022.12   2023.4
-   distributed             2022.12   2023.4
+  ===================== =========  =======
+   dask-core              2022.12   2023.4
+   distributed            2022.12   2023.4
    matplotlib-base            3.6      3.7
    packaging                 22.0     23.1
    pandas                     1.5      2.0
