@@ -2935,7 +2935,7 @@ class TestNumpyCoercion:
 
 
 @pytest.mark.parametrize(
-    ("values", "warns_under_pandas_version_two"),
+    ("values", "warns"),
     [
         (np.datetime64("2000-01-01", "ns"), False),
         (np.datetime64("2000-01-01", "s"), True),
@@ -2954,9 +2954,9 @@ class TestNumpyCoercion:
     ],
     ids=lambda x: f"{x}",
 )
-def test_datetime_conversion_warning(values, warns_under_pandas_version_two) -> None:
+def test_datetime_conversion_warning(values, warns) -> None:
     dims = ["time"] if isinstance(values, (np.ndarray, pd.Index, pd.Series)) else []
-    if warns_under_pandas_version_two:
+    if warns:
         with pytest.warns(UserWarning, match="non-nanosecond precision datetime"):
             var = Variable(dims, values)
     else:
