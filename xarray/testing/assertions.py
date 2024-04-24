@@ -3,7 +3,7 @@
 import functools
 import warnings
 from collections.abc import Hashable
-from typing import Union
+from typing import Union, overload
 
 import numpy as np
 import pandas as pd
@@ -95,6 +95,14 @@ def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
         raise TypeError(f"{type(a)} not of type DataTree")
 
 
+@overload
+def assert_equal(a, b): ...
+
+
+@overload
+def assert_equal(a: DataTree, b: DataTree, from_root: bool = True): ...
+
+
 @ensure_warnings
 def assert_equal(a, b, from_root=True):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
@@ -143,6 +151,14 @@ def assert_equal(a, b, from_root=True):
         assert a.equals(b, from_root=from_root), diff_datatree_repr(a, b, "equals")
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
+
+
+@overload
+def assert_identical(a, b): ...
+
+
+@overload
+def assert_identical(a: DataTree, b: DataTree, from_root: bool = True): ...
 
 
 @ensure_warnings
