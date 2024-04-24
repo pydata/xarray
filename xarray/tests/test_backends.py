@@ -3824,25 +3824,22 @@ def skip_if_not_engine(engine):
 @requires_dask
 @pytest.mark.filterwarnings("ignore:use make_scale(name) instead")
 @pytest.mark.xfail(reason="Flaky test. Very open to contributions on fixing this")
+@pytest.mark.skipif(ON_WINDOWS, reason="Skipping on Windows")
 def test_open_mfdataset_manyfiles(
     readengine, nfiles, parallel, chunks, file_cache_maxsize
 ):
     # skip certain combinations
     skip_if_not_engine(readengine)
 
-    if ON_WINDOWS:
-        pytest.skip("Skipping on Windows")
-
     randdata = np.random.randn(nfiles)
     original = Dataset({"foo": ("x", randdata)})
     # test standard open_mfdataset approach with too many files
     with create_tmp_files(nfiles) as tmpfiles:
-        writeengine = readengine
         # split into multiple sets of temp files
         for ii in original.x.values:
             subds = original.isel(x=slice(ii, ii + 1))
-            if writeengine != "zarr":
-                subds.to_netcdf(tmpfiles[ii], engine=writeengine)
+            if readengine != "zarr":
+                subds.to_netcdf(tmpfiles[ii], engine=readengine)
             else:  # if writeengine == "zarr":
                 subds.to_zarr(store=tmpfiles[ii])
 
