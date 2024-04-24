@@ -1,7 +1,6 @@
 import textwrap
 
 from xarray.core.dataset import Dataset
-
 from xarray.core.datatree_mapping import map_over_subtree
 
 """
@@ -173,7 +172,7 @@ def _wrap_then_attach_to_cls(
     target_cls_dict, source_cls, methods_to_set, wrap_func=None
 ):
     """
-    Attach given methods on a class, and optionally wrap each method first. (i.e. with map_over_subtree)
+    Attach given methods on a class, and optionally wrap each method first. (i.e. with map_over_subtree).
 
     Result is like having written this in the classes' definition:
     ```
