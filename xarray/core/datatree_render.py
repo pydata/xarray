@@ -191,6 +191,7 @@ class RenderDataTree:
     def by_attr(self, attrname: str = "name") -> str:
         """
         Return rendered tree with node attribute `attrname`.
+        >>> from xarray import Dataset
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree
         >>> root = DataTree(name="root")
