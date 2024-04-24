@@ -26,7 +26,7 @@ dependencies:
   # for e.g. hdf5 1.12 conflicts with h5py=3.1
   # prioritize bumping other packages instead
   - h5py=3.8
-  - hdf5=1.14
+  - hdf5=1.12
   - hypothesis
   - iris=3.4
   - lxml=4.9  # Optional dep of pydap

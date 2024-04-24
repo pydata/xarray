@@ -41,7 +41,6 @@ Breaking changes
    dask-core              2022.12   2023.4
    distributed            2022.12   2023.4
    h5py                       3.7      3.8
-   hdf5                      1.12     1.14
    matplotlib-base            3.6      3.7
    packaging                 22.0     23.1
    pandas                     1.5      2.0
