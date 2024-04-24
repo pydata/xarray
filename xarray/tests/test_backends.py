@@ -75,7 +75,6 @@ from xarray.tests import (
     requires_netCDF4,
     requires_netCDF4_1_6_2_or_above,
     requires_pydap,
-    requires_pynio,
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
@@ -3769,7 +3768,7 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
             assert "Temperature" in list(actual)
 
 
-@pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "pynio", "zarr"])
+@pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "zarr"])
 def readengine(request):
     return request.param
 
@@ -3818,8 +3817,6 @@ def tmp_store(request, tmp_path):
 def skip_if_not_engine(engine):
     if engine == "netcdf4":
         pytest.importorskip("netCDF4")
-    elif engine == "pynio":
-        pytest.importorskip("Nio")
     else:
         pytest.importorskip(engine)
 
@@ -3840,7 +3837,7 @@ def test_open_mfdataset_manyfiles(
     original = Dataset({"foo": ("x", randdata)})
     # test standard open_mfdataset approach with too many files
     with create_tmp_files(nfiles) as tmpfiles:
-        writeengine = readengine if readengine != "pynio" else "netcdf4"
+        writeengine = readengine
         # split into multiple sets of temp files
         for ii in original.x.values:
             subds = original.isel(x=slice(ii, ii + 1))
@@ -4732,39 +4729,6 @@ class TestPydapOnline(TestPydap):
             output_grid=True,
             timeout=120,
         )
-
-
-@requires_scipy
-@requires_pynio
-class TestPyNio(CFEncodedBase, NetCDF3Only):
-    def test_write_store(self) -> None:
-        # pynio is read-only for now
-        pass
-
-    @contextlib.contextmanager
-    def open(self, path, **kwargs):
-        with open_dataset(path, engine="pynio", **kwargs) as ds:
-            yield ds
-
-    def test_kwargs(self) -> None:
-        kwargs = {"format": "grib"}
-        path = os.path.join(os.path.dirname(__file__), "data", "example")
-        with backends.NioDataStore(path, **kwargs) as store:
-            assert store._manager._kwargs["format"] == "grib"
-
-    def save(self, dataset, path, **kwargs):
-        return dataset.to_netcdf(path, engine="scipy", **kwargs)
-
-    def test_weakrefs(self) -> None:
-        example = Dataset({"foo": ("x", np.arange(5.0))})
-        expected = example.rename({"foo": "bar", "x": "y"})
-
-        with create_tmp_file() as tmp_file:
-            example.to_netcdf(tmp_file, engine="scipy")
-            on_disk = open_dataset(tmp_file, engine="pynio")
-            actual = on_disk.rename({"foo": "bar", "x": "y"})
-            del on_disk  # trigger garbage collection
-            assert_identical(actual, expected)
 
 
 class TestEncodingInvalid:

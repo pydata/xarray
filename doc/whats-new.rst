@@ -32,6 +32,8 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- The PyNIO backend has been deleted (:issue:`4491`, :pull:`7301`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Bug fixes
