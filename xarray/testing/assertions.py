@@ -56,7 +56,7 @@ def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
     """
     Two DataTrees are considered isomorphic if every node has the same number of children.
 
-    Nothing about the data in each node is checked.
+    Nothing about the data or attrs in each node is checked.
 
     Isomorphism is a necessary condition for two trees to be used in a nodewise binary operation,
     such as tree1 + tree2.
@@ -96,17 +96,18 @@ def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
 
 
 @ensure_warnings
-def assert_equal(a, b, **kwargs):
+def assert_equal(a, b, from_root=True):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
     objects.
 
     Raises an AssertionError if two objects are not equal. This will match
     data values, dimensions and coordinates, but not names or attributes
     (except for Dataset objects for which the variable names must match).
-    Arrays with NaN in the same location are considered equal. DataTrees are
-    equal if they have isomorphic node structures, with matching node names,
-    and if they have matching variables and coordinates, all of which are
-    equal.
+    Arrays with NaN in the same location are considered equal.
+
+    For DataTree objects, assert_equal is mapped over all Datasets on each node,
+    with the DataTrees being equal if both are isomorphic and the corresponding
+    Datasets at each node are themselves equal.
 
     Parameters
     ----------
@@ -114,10 +115,10 @@ def assert_equal(a, b, **kwargs):
         or xarray.core.datatree.DataTree. The first object to compare.
     b : xarray.Dataset, xarray.DataArray, xarray.Variable, xarray.Coordinates
         or xarray.core.datatree.DataTree. The second object to compare.
-    **kwargs : dict
-        Additional keyword arguments passed on to DataTree.equals. Specifically,
-        from_root, which defaults True, and will check the whole tree above
-        the given node.
+    from_root : bool, optional, default is True
+        Only used when comparing DataTree objects. Indicates whether or not to
+        first traverse to the root of the trees before checking for isomorphism.
+        If a & b have no parents then this has no effect.
 
     See Also
     --------
@@ -135,7 +136,6 @@ def assert_equal(a, b, **kwargs):
     elif isinstance(a, Coordinates):
         assert a.equals(b), formatting.diff_coords_repr(a, b, "equals")
     elif isinstance(a, DataTree):
-        from_root = kwargs.get("from_root", True)
         if from_root:
             a = a.root
             b = b.root
@@ -146,11 +146,15 @@ def assert_equal(a, b, **kwargs):
 
 
 @ensure_warnings
-def assert_identical(a, b, **kwargs):
+def assert_identical(a, b, from_root=True):
     """Like :py:func:`xarray.testing.assert_equal`, but also matches the
     objects' names and attributes.
 
     Raises an AssertionError if two objects are not identical.
+
+    For DataTree objects, assert_identical is mapped over all Datasets on each
+    node, with the DataTrees being identical if both are isomorphic and the
+    corresponding Datasets at each node are themselves identical.
 
     Parameters
     ----------
@@ -158,10 +162,10 @@ def assert_identical(a, b, **kwargs):
         The first object to compare.
     b : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
         The second object to compare.
-    **kwargs : dict
-        Additional keyword arguments passed on to DataTree.identical. Specifically,
-        from_root, which defaults True, and will check the whole tree above
-        the given node.
+    from_root : bool, optional, default is True
+        Only used when comparing DataTree objects. Indicates whether or not to
+        first traverse to the root of the trees before checking for isomorphism.
+        If a & b have no parents then this has no effect.
 
     See Also
     --------
@@ -181,7 +185,6 @@ def assert_identical(a, b, **kwargs):
     elif isinstance(a, Coordinates):
         assert a.identical(b), formatting.diff_coords_repr(a, b, "identical")
     elif isinstance(a, DataTree):
-        from_root = kwargs.get("from_root", True)
         if from_root:
             a = a.root
             b = b.root

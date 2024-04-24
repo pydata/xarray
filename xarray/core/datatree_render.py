@@ -50,15 +50,14 @@ class ContStyle(AbstractStyle):
         Continued style, without gaps.
 
         >>> from xarray.core.datatree import DataTree
-        >>> from xarray.core.render import RenderDataTree
+        >>> from xarray.core.datatree_render import RenderDataTree
         >>> root = DataTree(name="root")
         >>> s0 = DataTree(name="sub0", parent=root)
         >>> s0b = DataTree(name="sub0B", parent=s0)
         >>> s0a = DataTree(name="sub0A", parent=s0)
         >>> s1 = DataTree(name="sub1", parent=root)
         >>> print(RenderDataTree(root))
-
-        DataTree('/root', parent=None)
+        DataTree('root', parent=None)
         ├── DataTree('sub0')
         │   ├── DataTree('sub0B')
         │   └── DataTree('sub0A')
@@ -135,15 +134,18 @@ class RenderDataTree:
         │       g
         └── sub1
             h
+
         :any:`by_attr` simplifies attribute rendering and supports multiline:
-        >>> print(RenderTree(root).by_attr())
+        >>> print(RenderDataTree(root).by_attr())
         root
         ├── sub0
         │   ├── sub0B
         │   └── sub0A
         └── sub1
-        `maxlevel` limits the depth of the tree:
-        >>> print(RenderTree(root, maxlevel=1).by_attr("name"))
+
+        # `maxlevel` limits the depth of the tree:
+
+        >>> print(RenderDataTree(root, maxlevel=2).by_attr("name"))
         root
         ├── sub0
         └── sub1
@@ -184,8 +186,7 @@ class RenderDataTree:
             return Row(pre, fill, node)
 
     def __str__(self) -> str:
-        lines = [f"{pre}{node!r}" for pre, _, node in self]
-        return "\n".join(lines)
+        return str(self.node)
 
     def __repr__(self) -> str:
         classname = self.__class__.__name__
