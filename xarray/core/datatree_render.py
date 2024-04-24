@@ -91,6 +91,10 @@ class RenderDataTree:
         `node`
             :any:`NodeMixin` object.
         It is up to the user to assemble these parts to a whole.
+
+        Examples
+        --------
+
         >>> from xarray import Dataset
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree
@@ -99,7 +103,9 @@ class RenderDataTree:
         >>> s0b = DataTree(name="sub0B", parent=s0, data=Dataset({"e": 4}))
         >>> s0a = DataTree(name="sub0A", parent=s0, data=Dataset({"f": 5, "g": 6}))
         >>> s1 = DataTree(name="sub1", parent=root, data=Dataset({"h": 7}))
-        Simple one line:
+
+        # Simple one line:
+
         >>> for pre, _, node in RenderDataTree(root):
         ...     print(f"{pre}{node.name}")
         ...
@@ -108,7 +114,9 @@ class RenderDataTree:
         │   ├── sub0B
         │   └── sub0A
         └── sub1
-        Multiline:
+
+        # Multiline:
+
         >>> for pre, fill, node in RenderDataTree(root):
         ...     print(f"{pre}{node.name}")
         ...     for variable in node.variables:
@@ -191,6 +199,10 @@ class RenderDataTree:
     def by_attr(self, attrname: str = "name") -> str:
         """
         Return rendered tree with node attribute `attrname`.
+
+        Examples
+        --------
+
         >>> from xarray import Dataset
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree
