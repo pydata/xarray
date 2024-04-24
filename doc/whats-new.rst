@@ -46,8 +46,8 @@ Breaking changes
    pydap                      3.3      3.4
    sparse                    0.13     0.14
    typing_extensions          4.4      4.5
-   zarr                      2.14     2.14
-  ===================== =========  ========
+   zarr                      2.13     2.14
+  ===================== =========  =======
 
 
 Bug fixes
