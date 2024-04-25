@@ -591,12 +591,13 @@ class Dataset(
     --------
     In this example dataset, we will represent measurements of the temperature
     and pressure that were made under various conditions:
-     * the measurements were made on four different days;
-     * they were made at two separate locations, which we will represent using
-       their latitude and longitude; and
-     * they were made using three instrument developed by three different
-       manufacturers, which we will refer to using the strings `'manufac1'`,
-       `'manufac2'`, and `'manufac3'`.
+
+    * the measurements were made on four different days;
+    * they were made at two separate locations, which we will represent using
+      their latitude and longitude; and
+    * they were made using three instrument developed by three different
+      manufacturers, which we will refer to using the strings `'manufac1'`,
+      `'manufac2'`, and `'manufac3'`.
 
     >>> np.random.seed(0)
     >>> temperature = 15 + 8 * np.random.randn(2, 3, 4)

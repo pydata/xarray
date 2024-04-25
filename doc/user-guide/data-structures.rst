@@ -285,11 +285,12 @@ variables (``data_vars``), coordinates (``coords``) and attributes (``attrs``).
 Let's create some fake data for the example we show above. In this
 example dataset, we will represent measurements of the temperature and
 pressure that were made under various conditions:
+
 * the measurements were made on four different days;
 * they were made at two separate locations, which we will represent using
   their latitude and longitude; and
-* they were made using three different sets of instruments, which we will
-  refer to as `'inst1'`, `'inst2'`, and `'inst3'`.
+* they were made using instruments by three different manufacutrers, which we
+  will refer to as `'manufac1'`, `'manufac2'`, and `'manufac3'`.
 
 .. ipython:: python
 
@@ -298,7 +299,7 @@ pressure that were made under various conditions:
     precipitation = 10 * np.random.rand(2, 3, 4)
     lon = [-99.83, -99.32]
     lat = [42.25, 42.21]
-    instruments = ["inst1", "inst2", "inst3"]
+    instruments = ["manufac1", "manufac2", "manufac3"]
     time = pd.date_range("2014-09-06", periods=4)
     reference_time = pd.Timestamp("2014-09-05")
 
