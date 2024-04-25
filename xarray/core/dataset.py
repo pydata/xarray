@@ -8313,7 +8313,7 @@ class Dataset(
         edge_order: Literal[1, 2] = 1,
         datetime_unit: DatetimeUnitOptions | None = None,
     ) -> Self:
-        """ Differentiate with the second order accurate central
+        """Differentiate with the second order accurate central
         differences.
 
         .. note::

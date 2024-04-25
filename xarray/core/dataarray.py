@@ -5260,7 +5260,7 @@ class DataArray(
         edge_order: Literal[1, 2] = 1,
         datetime_unit: DatetimeUnitOptions = None,
     ) -> Self:
-        """ Differentiate the array with the second order accurate central
+        """Differentiate the array with the second order accurate central
         differences.
 
         .. note::
