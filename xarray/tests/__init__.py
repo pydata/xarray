@@ -99,7 +99,6 @@ with warnings.catch_warnings():
     )
 
     has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
-has_pynio, requires_pynio = _importorskip("Nio")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
 with warnings.catch_warnings():

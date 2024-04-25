@@ -16,7 +16,6 @@ from xarray.tests import (
     has_h5netcdf,
     has_netCDF4,
     has_pydap,
-    has_pynio,
     has_scipy,
     has_zarr,
 )
@@ -280,7 +279,6 @@ def test_list_engines() -> None:
     assert ("netcdf4" in engines) == has_netCDF4
     assert ("pydap" in engines) == has_pydap
     assert ("zarr" in engines) == has_zarr
-    assert ("pynio" in engines) == has_pynio
     assert "store" in engines
 
 
