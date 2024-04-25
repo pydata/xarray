@@ -3010,7 +3010,7 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
 
 
 @pytest.mark.parametrize(
-    ("values", "warns_under_pandas_version_two"),
+    ("values", "warns"),
     [
         (np.timedelta64(10, "ns"), False),
         (np.timedelta64(10, "s"), True),
@@ -3022,9 +3022,9 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
     ],
     ids=lambda x: f"{x}",
 )
-def test_timedelta_conversion_warning(values, warns_under_pandas_version_two) -> None:
+def test_timedelta_conversion_warning(values, warns) -> None:
     dims = ["time"] if isinstance(values, (np.ndarray, pd.Index)) else []
-    if warns_under_pandas_version_two:
+    if warns:
         with pytest.warns(UserWarning, match="non-nanosecond precision timedelta"):
             var = Variable(dims, values)
     else:
