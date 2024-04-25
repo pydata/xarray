@@ -56,10 +56,11 @@ jobs:
             os: ubuntu-latest
           # Latest python version:
           - env: "all-but-dask"
-            python-version: "3.10"
+            # Not 3.12 because of pint
+            python-version: "3.11"
             os: ubuntu-latest
           - env: "flaky"
-            python-version: "3.10"
+            python-version: "3.12"
             os: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
