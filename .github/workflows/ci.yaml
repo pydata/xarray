@@ -140,8 +140,6 @@ jobs:
           enableCrossOsArchive: true
           save-always: true
 
-      - run: echo          $PYTEST_EXTRA_FLAGS
-
       - name: Run tests
         run: python -m pytest -n 4
           --timeout 180
