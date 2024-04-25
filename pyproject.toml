@@ -123,6 +123,7 @@ module = [
   "netcdftime.*",
   "opt_einsum.*",
   "pandas.*",
+  "pint.*",
   "pooch.*",
   "pyarrow.*",
   "pydap.*",
