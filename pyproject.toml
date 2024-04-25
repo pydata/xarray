@@ -286,15 +286,15 @@ addopts = ["--strict-config", "--strict-markers"]
 # We want to forbid warnings from within xarray in our tests — instead we should
 # fix our own code, or mark the test itself as expecting a warning. So this:
 # - Converts any warning from xarray into an error
-# - Ignores warnings we already have; since it wasn't practical to fix them all
-#   before merging this config. We can remove these over time -- if you see a
-#   warning that we now handle, remove the line. If you are up for a small
-#   contribution, find the warning and fix it! The warnings are still reported
-#   in CI.
+# - Ignores warnings which the test suite currently raises; since it wasn't
+# - practical to fix them all before merging this config. We can remove these
+#   over time -- if you see a warning that we now handle, remove the exception.
+#   If you are up for a small contribution, find the warning and fix it! The
+#   warnings are still listed (`default`, not `ignore`).
 #
-# While we only raise an error on warnings from within xarray, if an dependency
-# raises with a stacklevel such that it looks like it raises from xarray, it's
-# very acceptable to ignore it here.
+# While we only raise an error on warnings from within xarray, if dependency
+# raises a warning with a stacklevel such that it's interpreted to be raised
+# from xarray, please feel free to ignore it here.
 #
 # If this gets in the way of making progress, it's also acceptable to
 # temporarily add additional ignores.
