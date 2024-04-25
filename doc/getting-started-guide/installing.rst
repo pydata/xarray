@@ -31,9 +31,6 @@ For netCDF and IO
 - `pydap <https://www.pydap.org>`__: used as a fallback for accessing OPeNDAP
 - `h5netcdf <https://github.com/h5netcdf/h5netcdf>`__: an alternative library for
   reading and writing netCDF4 files that does not use the netCDF-C libraries
-- `PyNIO <https://www.pyngl.ucar.edu/Nio.shtml>`__: for reading GRIB and other
-  geoscience specific file formats. Note that PyNIO is not available for Windows and
-  that the PyNIO backend may be moved outside of xarray in the future.
 - `zarr <https://zarr.readthedocs.io>`__: for chunked, compressed, N-dimensional arrays.
 - `cftime <https://unidata.github.io/cftime>`__: recommended if you
   want to encode/decode datetimes for non-standard calendars or dates before
