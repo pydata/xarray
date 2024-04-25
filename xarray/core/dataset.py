@@ -627,18 +627,18 @@ class Dataset(
     ...     attrs=dict(description="Weather related data."),
     ... )
     >>> ds
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 552B
     Dimensions:         (loc: 2, instrument: 3, time: 4)
     Coordinates:
-        lon             (loc) float64 -99.83 -99.32
-        lat             (loc) float64 42.25 42.21
-      * instrument      (instrument) <U8 'manufac1' 'manufac2' 'manufac3'
-      * time            (time) datetime64[ns] 2014-09-06 2014-09-07 ... 2014-09-09
-        reference_time  datetime64[ns] 2014-09-05
+        lon             (loc) float64 16B -99.83 -99.32
+        lat             (loc) float64 16B 42.25 42.21
+      * instrument      (instrument) <U8 96B 'manufac1' 'manufac2' 'manufac3'
+      * time            (time) datetime64[ns] 32B 2014-09-06 2014-09-07 ... 2014-09-09
+        reference_time  datetime64[ns] 8B 2014-09-05
     Dimensions without coordinates: loc
     Data variables:
-        temperature     (loc, instrument, time) float64 29.11 18.2 ... 21.92 9.063
-        precipitation   (loc, instrument, time) float64 4.562 5.684 ... 2.089 1.613
+        temperature     (loc, instrument, time) float64 192B 29.11 18.2 ... 21.92 9.063
+        precipitation   (loc, instrument, time) float64 192B 4.562 5.684 ... 2.089 1.613
     Attributes:
         description:  Weather related data.
 
@@ -646,17 +646,17 @@ class Dataset(
     other variables had:
 
     >>> ds.isel(ds.temperature.argmin(...))
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 80B
     Dimensions:         ()
     Coordinates:
-        lon             float64 -99.32
-        lat             float64 42.21
-        instrument      <U8 'manufac3'
-        time            datetime64[ns] 2014-09-06
-        reference_time  datetime64[ns] 2014-09-05
+        lon             float64 8B -99.32
+        lat             float64 8B 42.21
+        instrument      <U8 32B 'manufac3'
+        time            datetime64[ns] 8B 2014-09-06
+        reference_time  datetime64[ns] 8B 2014-09-05
     Data variables:
-        temperature     float64 -5.424
-        precipitation   float64 9.884
+        temperature     float64 8B -5.424
+        precipitation   float64 8B 9.884
     Attributes:
         description:  Weather related data.
 
