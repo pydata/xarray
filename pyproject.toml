@@ -282,9 +282,50 @@ ban-relative-imports = "all"
 
 [tool.pytest.ini_options]
 addopts = ["--strict-config", "--strict-markers"]
+
+# We want to forbid warnings from within xarray in our tests — instead we should
+# fix our own code, or mark the test itself as expecting a warning. So this:
+# - Converts any warning from xarray into an error
+# - Ignores warnings we already have; since it wasn't practical to fix them all
+#   before merging this config. We can remove these over time -- if you see a
+#   warning that we now handle, remove the line. If you are up for a small
+#   contribution, find the warning and fix it! The warnings are still reported
+#   in CI.
+#
+# While we only raise an error on warnings from within xarray, if an dependency
+# raises with a stacklevel such that it looks like it raises from xarray, it's
+# very acceptable to ignore it here.
+#
+# If this gets in the way of making progress, it's also acceptable to
+# temporarily add additional ignores.
+
 filterwarnings = [
-  "ignore:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
+  "error:::xarray.*",
+  "default::UserWarning:xarray.tests.test_coding_times",
+  "default::UserWarning:xarray.tests.test_computation",
+  "default::UserWarning:xarray.tests.test_dataset",
+  "default:`ancestors` has been deprecated:DeprecationWarning:xarray.core.treenode",
+  "default:`iter_lineage` has been deprecated:DeprecationWarning:xarray.core.treenode",
+  "default:`lineage` has been deprecated:DeprecationWarning:xarray.core.treenode",
+  "default:coords should be an ndarray:DeprecationWarning:xarray.tests.test_variable",
+  "default:deallocating CachingFileManager:RuntimeWarning:xarray.backends.*",
+  "default:deallocating CachingFileManager:RuntimeWarning:xarray.backends.netCDF4_",
+  "default:deallocating CachingFileManager:RuntimeWarning:xarray.core.indexing",
+  "default:Failed to decode variable.*NumPy will stop allowing conversion of out-of-bound Python integers to integer arrays:DeprecationWarning",
+  "default:dropping variables using `drop` is deprecated; use drop_vars:DeprecationWarning:xarray.tests.test_groupby",
+  "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning:xarray.*",
+  "default:invalid value encountered in cast:RuntimeWarning:xarray.core.duck_array_ops",
+  "default:invalid value encountered in cast:RuntimeWarning:xarray.conventions",
+  "default:invalid value encountered in cast:RuntimeWarning:xarray.tests.test_units",
+  "default:invalid value encountered in cast:RuntimeWarning:xarray.tests.test_array_api",
+  "default:NumPy will stop allowing conversion of:DeprecationWarning",
+  "default:shape should be provided:DeprecationWarning:xarray.tests.test_variable",
+  "default:the `pandas.MultiIndex` object:FutureWarning:xarray.tests.test_variable",
+  "default:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
+  "default:Duplicate dimension names present:UserWarning:xarray.namedarray.core",
+  "default:::xarray.tests.test_strategies",
 ]
+
 log_cli_level = "INFO"
 markers = [
   "flaky: flaky tests",
