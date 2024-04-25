@@ -399,9 +399,9 @@ example, to create this example dataset from scratch, we could have written:
 .. ipython:: python
 
     ds = xr.Dataset()
-    ds["temperature"] = (("loc", "instrument", "time"), temp)
-    ds["temperature_double"] = (("loc", "instrument", "time"), temp * 2)
-    ds["precipitation"] = (("loc", "instrument", "time"), precip)
+    ds["temperature"] = (("loc", "instrument", "time"), temperature)
+    ds["temperature_double"] = (("loc", "instrument", "time"), temperature * 2)
+    ds["precipitation"] = (("loc", "instrument", "time"), precipitation)
     ds.coords["lat"] = (("loc",), lat)
     ds.coords["lon"] = (("loc",), lon)
     ds.coords["time"] = pd.date_range("2014-09-06", periods=4)

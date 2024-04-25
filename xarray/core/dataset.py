@@ -633,12 +633,12 @@ class Dataset(
         lon             (loc) float64 16B -99.83 -99.32
         lat             (loc) float64 16B 42.25 42.21
       * instrument      (instrument) <U8 96B 'manufac1' 'manufac2' 'manufac3'
-      * time            (time) datetime64[ns] 32B 2014-09-06 2014-09-07 ... 2014-09-09
+      * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
         reference_time  datetime64[ns] 8B 2014-09-05
     Dimensions without coordinates: loc
     Data variables:
-        temperature     (loc, instrument, time) float64 192B 29.11 18.2 ... 21.92 9.063
-        precipitation   (loc, instrument, time) float64 192B 4.562 5.684 ... 2.089 1.613
+        temperature     (loc, instrument, time) float64 192B 29.11 18.2 ... 9.063
+        precipitation   (loc, instrument, time) float64 192B 4.562 5.684 ... 1.613
     Attributes:
         description:  Weather related data.
 
