@@ -603,7 +603,7 @@ class Dataset(
     >>> precipitation = 10 * np.random.rand(2, 3, 4)
     >>> lon = [-99.83, -99.32]
     >>> lat = [42.25, 42.21]
-    >>> instruments = ['manufac1', 'manufac2', 'manufac3']
+    >>> instruments = ["manufac1", "manufac2", "manufac3"]
     >>> time = pd.date_range("2014-09-06", periods=4)
     >>> reference_time = pd.Timestamp("2014-09-05")
 
