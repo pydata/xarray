@@ -81,7 +81,7 @@ jobs:
             if [[ "${{ matrix.env }}" == "flaky" ]] ;
             then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
-              echo "PYTEST_EXTRA_FLAGS=-m 'flaky or network' --run-flaky --run-network-tests" >> $GITHUB_ENV
+              echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests" >> $GITHUB_ENV
             else
               echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
             fi
@@ -141,7 +141,6 @@ jobs:
           --cov=xarray
           --cov-report=xml
           --junitxml=pytest.xml
-          $PYTEST_EXTRA_FLAGS
 
       - name: Upload test results
         if: always()
