@@ -2988,9 +2988,6 @@ class ZarrBase(CFEncodedBase):
                 assert original[name].chunks == actual_var.chunks
             assert original.chunks == actual.chunks
 
-    def test_vectorized_indexing_negative_step(self) -> None:
-        super().test_vectorized_indexing_negative_step()
-
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):
