@@ -661,11 +661,13 @@ def _dataset_concat(
             f"Variables {absent_coord_names!r} are coordinates in some datasets but not others."
         )
 
-    coord_vars = {
-        name: result_var
-        for name, result_var in result_vars.items()
-        if name in coord_names
-    }
+    result_data_vars = {}
+    coord_vars = {}
+    for name, result_var in result_vars.items():
+        if name in coord_names:
+            coord_vars[name] = result_var
+        else:
+            result_data_vars[name] = result_var
 
     if index is not None:
         if dim_var is not None:
@@ -679,12 +681,6 @@ def _dataset_concat(
 
     # TODO: add indexes at Dataset creation (when it is supported)
     coords = Coordinates(coord_vars, indexes=result_indexes)
-
-    result_data_vars = {
-        name: result_var
-        for name, result_var in result_vars.items()
-        if name not in coord_names
-    }
 
     result = type(datasets[0])(result_data_vars, coords=coords, attrs=result_attrs)
     result.encoding = result_encoding
