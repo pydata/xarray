@@ -216,7 +216,18 @@ def _wrap_then_attach_to_cls(
 
 
 def insert_doc_addendum(docstring, addendum):
-    """Insert addendum after first paragraph or at the end of the docstring."""
+    """Insert addendum after first paragraph or at the end of the docstring.
+
+    There are a number of Dataset's functions that are wrapped. These come from
+    Dataset directly as well as the mixins: DataWithCoords, DatasetAggregations, and DatasetOpsMixin.
+
+    The majority of the docstrings fall into a parseable pattern. Those that
+    don't, just have the addendum appeneded after. None values are returned.
+
+    """
+    if docstring is None:
+        return None
+
     pattern = re.compile(
         r"^(?P<start>(\S+)?(.*?))(?P<paragraph_break>\n\s*\n)(?P<whitespace>[ ]*)(?P<rest>.*)",
         re.DOTALL,
@@ -224,7 +235,15 @@ def insert_doc_addendum(docstring, addendum):
     capture = re.match(pattern, docstring)
     if capture is None:
         ### single line docstring.
-        return docstring + "\n\n" + addendum
+        return (
+            docstring
+            + "\n\n"
+            + textwrap.fill(
+                addendum,
+                subsequent_indent="    ",
+                width=79,
+            )
+        )
 
     if len(capture.groups()) == 6:
         return (
