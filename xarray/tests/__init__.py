@@ -311,7 +311,7 @@ class ConcatenatableArray:
                 pass
             else:
                 raise UnexpectedDataAccess("Tried accessing data.")
-        return arr
+        return ConcatenatableArray(arr)
 
     def __array_function__(self, func, types, args, kwargs) -> Any:
         if func not in HANDLED_ARRAY_FUNCTIONS:
