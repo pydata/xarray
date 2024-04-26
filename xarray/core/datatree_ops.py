@@ -1,3 +1,4 @@
+import re
 import textwrap
 
 from xarray.core.dataset import Dataset
@@ -11,11 +12,10 @@ xarray's internals directly, only the public-facing xarray.Dataset class.
 """
 
 
-_MAPPED_DOCSTRING_ADDENDUM = textwrap.fill(
+_MAPPED_DOCSTRING_ADDENDUM = (
     "This method was copied from xarray.Dataset, but has been altered to "
     "call the method on the Datasets stored in every node of the subtree. "
-    "See the `map_over_subtree` function for more details.",
-    width=117,
+    "See the `map_over_subtree` function for more details."
 )
 
 # TODO equals, broadcast_equals etc.
@@ -207,16 +207,41 @@ def _wrap_then_attach_to_cls(
         if wrap_func is map_over_subtree:
             # Add a paragraph to the method's docstring explaining how it's been mapped
             orig_method_docstring = orig_method.__doc__
-            # if orig_method_docstring is not None:
-            #     if "\n" in orig_method_docstring:
-            #         new_method_docstring = orig_method_docstring.replace(
-            #             "\n", _MAPPED_DOCSTRING_ADDENDUM, 1
-            #         )
-            #     else:
-            #         new_method_docstring = (
-            #             orig_method_docstring + f"\n\n{_MAPPED_DOCSTRING_ADDENDUM}"
-            #         )
-            setattr(target_cls_dict[method_name], "__doc__", orig_method_docstring)
+
+            if orig_method_docstring is not None:
+                new_method_docstring = insert_doc_addendum(
+                    orig_method_docstring, _MAPPED_DOCSTRING_ADDENDUM
+                )
+                setattr(target_cls_dict[method_name], "__doc__", new_method_docstring)
+
+
+def insert_doc_addendum(docstring, addendum):
+    """Insert addendum after first paragraph or at the end of the docstring."""
+    pattern = re.compile(r"^((\S+)?(.*?))(\n\s*\n)([ ]*)(.*)", re.DOTALL)
+    capture = re.match(pattern, docstring)
+    if capture is None:
+        ### single line docstring.
+        return docstring + "\n\n" + addendum
+
+    g = capture.groups()
+    if len(g) == 6:
+        whitespace = g[4]
+        paragraph_break = g[3]
+        return (
+            g[0]
+            + paragraph_break
+            + textwrap.fill(
+                addendum,
+                initial_indent=whitespace,
+                subsequent_indent=whitespace,
+                width=79,
+            )
+            + paragraph_break
+            + whitespace
+            + g[5]
+        )
+    else:
+        return docstring
 
 
 class MappedDatasetMethodsMixin:
