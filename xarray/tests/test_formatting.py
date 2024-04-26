@@ -597,10 +597,6 @@ class TestFormatting:
         printout = root.__str__()
         assert printout.splitlines()[2].startswith("    ")
 
-    def test_print_datatree(self, simple_datatree):
-        dt = simple_datatree
-        print(dt)
-
     def test_datatree_repr_of_node_with_data(self):
         dat = xr.Dataset({"a": [0, 2]})
         dt: DataTree = DataTree(name="root", data=dat)
