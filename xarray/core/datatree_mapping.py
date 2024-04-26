@@ -3,11 +3,11 @@ from __future__ import annotations
 import functools
 import sys
 from itertools import repeat
-from textwrap import dedent
 from typing import TYPE_CHECKING, Callable
 
-from xarray import DataArray, Dataset
-from xarray.core.iterators import LevelOrderIter
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
+from xarray.core.formatting import diff_treestructure
 from xarray.core.treenode import NodePath, TreeNode
 
 if TYPE_CHECKING:
@@ -69,37 +69,6 @@ def check_isomorphic(
 
     if diff:
         raise TreeIsomorphismError("DataTree objects are not isomorphic:\n" + diff)
-
-
-def diff_treestructure(a: DataTree, b: DataTree, require_names_equal: bool) -> str:
-    """
-    Return a summary of why two trees are not isomorphic.
-    If they are isomorphic return an empty string.
-    """
-
-    # Walking nodes in "level-order" fashion means walking down from the root breadth-first.
-    # Checking for isomorphism by walking in this way implicitly assumes that the tree is an ordered tree
-    # (which it is so long as children are stored in a tuple or list rather than in a set).
-    for node_a, node_b in zip(LevelOrderIter(a), LevelOrderIter(b)):
-        path_a, path_b = node_a.path, node_b.path
-
-        if require_names_equal and node_a.name != node_b.name:
-            diff = dedent(
-                f"""\
-                Node '{path_a}' in the left object has name '{node_a.name}'
-                Node '{path_b}' in the right object has name '{node_b.name}'"""
-            )
-            return diff
-
-        if len(node_a.children) != len(node_b.children):
-            diff = dedent(
-                f"""\
-                Number of children on node '{path_a}' of the left object: {len(node_a.children)}
-                Number of children on node '{path_b}' of the right object: {len(node_b.children)}"""
-            )
-            return diff
-
-    return ""
 
 
 def map_over_subtree(func: Callable) -> Callable:
