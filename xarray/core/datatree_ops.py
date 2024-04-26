@@ -217,28 +217,28 @@ def _wrap_then_attach_to_cls(
 
 def insert_doc_addendum(docstring, addendum):
     """Insert addendum after first paragraph or at the end of the docstring."""
-    pattern = re.compile(r"^((\S+)?(.*?))(\n\s*\n)([ ]*)(.*)", re.DOTALL)
+    pattern = re.compile(
+        r"^(?P<front>(\S+)?(.*?))(?P<paragraph_break>\n\s*\n)(?P<whitespace>[ ]*)(?P<rest>.*)",
+        re.DOTALL,
+    )
     capture = re.match(pattern, docstring)
     if capture is None:
         ### single line docstring.
         return docstring + "\n\n" + addendum
 
-    g = capture.groups()
-    if len(g) == 6:
-        whitespace = g[4]
-        paragraph_break = g[3]
+    if len(capture.groups()) == 6:
         return (
-            g[0]
-            + paragraph_break
+            capture["front"]
+            + capture["paragraph_break"]
             + textwrap.fill(
                 addendum,
-                initial_indent=whitespace,
-                subsequent_indent=whitespace,
+                initial_indent=capture["whitespace"],
+                subsequent_indent=capture["whitespace"],
                 width=79,
             )
-            + paragraph_break
-            + whitespace
-            + g[5]
+            + capture["paragraph_break"]
+            + capture["whitespace"]
+            + capture["rest"]
         )
     else:
         return docstring
