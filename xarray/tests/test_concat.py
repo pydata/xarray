@@ -1041,10 +1041,10 @@ class TestConcatDataset:
         # TODO this should raise an error, but it doesn't
         # It's somehow cheating it's way around the UnexpectedDataAccess error that should be raised
         with pytest.raises(UnexpectedDataAccess):
-            combined = concat(datasets, dim="x", create_1d_index=True)
+            combined = concat(datasets, dim="x", create_index=True)
 
-        # should not raise on concat iff create_1d_index=False
-        combined = concat(datasets, dim="x", create_1d_index=False)
+        # should not raise on concat iff create_index=False
+        combined = concat(datasets, dim="x", create_index=False)
         assert combined["x"].shape == (2,)
         assert combined["x"].dims == ("x",)
 

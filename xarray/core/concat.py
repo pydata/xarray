@@ -70,7 +70,7 @@ def concat(
     fill_value=dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-    create_1d_index: bool = True,
+    create_index: bool = True,
 ):
     """Concatenate xarray objects along a new or existing dimension.
 
@@ -164,7 +164,7 @@ def concat(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
-    create_1d_index : bool, default is True
+    create_index : bool, default is True
         Whether to create new PandasIndex objects for any new 1D coordinate variables.
 
     Returns
@@ -249,7 +249,7 @@ def concat(
             fill_value=fill_value,
             join=join,
             combine_attrs=combine_attrs,
-            create_1d_index=create_1d_index,
+            create_index=create_index,
         )
     elif isinstance(first_obj, Dataset):
         return _dataset_concat(
@@ -262,7 +262,7 @@ def concat(
             fill_value=fill_value,
             join=join,
             combine_attrs=combine_attrs,
-            create_1d_index=create_1d_index,
+            create_index=create_index,
         )
     else:
         raise TypeError(
@@ -462,7 +462,7 @@ def _dataset_concat(
     fill_value: Any = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-    create_1d_index: bool = True,
+    create_index: bool = True,
 ) -> T_Dataset:
     """
     Concatenate a sequence of datasets along a new or existing dimension
@@ -510,7 +510,7 @@ def _dataset_concat(
     # case where concat dimension is a coordinate or data_var but not a dimension
     if (dim in coord_names or dim in data_names) and dim not in dim_names:
         datasets = [
-            ds.expand_dims(dim, create_1d_index=create_1d_index) for ds in datasets
+            ds.expand_dims(dim, create_index=create_index) for ds in datasets
         ]
 
     # determine which variables to concatenate
@@ -704,7 +704,7 @@ def _dataarray_concat(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-    create_1d_index: bool = True,
+    create_index: bool = True,
 ) -> T_DataArray:
     from xarray.core.dataarray import DataArray
 
@@ -741,7 +741,7 @@ def _dataarray_concat(
         fill_value=fill_value,
         join=join,
         combine_attrs=combine_attrs,
-        create_1d_index=create_1d_index,
+        create_index=create_index,
     )
 
     merged_attrs = merge_attrs([da.attrs for da in arrays], combine_attrs)
