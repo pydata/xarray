@@ -680,9 +680,9 @@ def _dataset_concat(
         unlabeled_dims = unlabeled_dims - set([dim])
 
     # TODO: add indexes at Dataset creation (when it is supported)
-    coords = Coordinates(coord_vars, indexes=result_indexes)
+    coords_obj = Coordinates(coord_vars, indexes=result_indexes)
 
-    result = type(datasets[0])(result_data_vars, coords=coords, attrs=result_attrs)
+    result = type(datasets[0])(result_data_vars, coords=coords_obj, attrs=result_attrs)
     result.encoding = result_encoding
 
     result = result.drop_vars(unlabeled_dims, errors="ignore")
