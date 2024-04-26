@@ -509,9 +509,7 @@ def _dataset_concat(
 
     # case where concat dimension is a coordinate or data_var but not a dimension
     if (dim in coord_names or dim in data_names) and dim not in dim_names:
-        datasets = [
-            ds.expand_dims(dim, create_index=create_index) for ds in datasets
-        ]
+        datasets = [ds.expand_dims(dim, create_index=create_index) for ds in datasets]
 
     # determine which variables to concatenate
     concat_over, equals, concat_dim_lengths = _calc_concat_over(
