@@ -1,6 +1,6 @@
 import textwrap
 
-from xarray import Dataset
+from xarray.core.dataset import Dataset
 
 from xarray.core.datatree_mapping import map_over_subtree
 
