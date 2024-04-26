@@ -42,12 +42,17 @@ Bug fixes
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-- Migrates ``formatting_html`` functionality for `DataTree` into ``xarray/core`` (:pull: `8930`)
+- Migrates ``formatting_html`` functionality for ``DataTree`` into ``xarray/core`` (:pull: `8930`)
   By `Eni Awowale <https://github.com/eni-awowale>`_, `Julia Signell <https://github.com/jsignell>`_
   and `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Migrates ``datatree_mapping`` functionality into ``xarray/core`` (:pull:`8948`)
   By `Matt Savoie <https://github.com/flamingbear>`_ `Owen Littlejohns
-  <https://github.com/owenlittlejohns>` and `Tom Nicholas <https://github.com/TomNicholas>`_.
+  <https://github.com/owenlittlejohns>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Migrates ``extensions``, ``formatting`` and ``datatree_render`` functionality for
+  ``DataTree`` into ``xarray/core``. Also migrates ``testing`` functionality into
+  ``xarray/testing/assertions`` for ``DataTree``. (:pull:`8967`)
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 .. _whats-new.2024.03.0:
