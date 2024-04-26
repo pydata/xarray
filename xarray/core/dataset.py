@@ -4497,7 +4497,7 @@ class Dataset(
         self,
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
         axis: None | int | Sequence[int] = None,
-        create_1d_index: bool = True,
+        create_index: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
         """Return a new object with an additional axis (or axes) inserted at
@@ -4508,7 +4508,7 @@ class Dataset(
         coordinate consisting of a single value.
 
         The automatic creation of indexes to back new 1D coordinate variables
-        controlled by the create_1d_index kwarg.
+        controlled by the create_index kwarg.
 
         Parameters
         ----------
@@ -4525,7 +4525,7 @@ class Dataset(
             multiple axes are inserted. In this case, dim arguments should be
             same length list. If axis=None is passed, all the axes will be
             inserted to the start of the result array.
-        create_1d_index : bool, default is True
+        create_index : bool, default is True
             Whether to create new PandasIndex objects for any new 1D coordinate variables.
         **dim_kwargs : int or sequence or ndarray
             The keywords are arbitrary dimensions being inserted and the values
@@ -4647,7 +4647,7 @@ class Dataset(
                 # value within the dim dict to the length of the iterable
                 # for later use.
 
-                if create_1d_index:
+                if create_index:
                     index = PandasIndex(v, k)
                     indexes[k] = index
                     name_and_new_1d_var = index.create_variables()
@@ -4689,7 +4689,7 @@ class Dataset(
                     variables[k] = v.set_dims(dict(all_dims))
             else:
                 if k not in variables:
-                    if k in coord_names and create_1d_index:
+                    if k in coord_names and create_index:
                         # If dims includes a label of a non-dimension coordinate,
                         # it will be promoted to a 1D coordinate with a single value.
                         index, index_vars = create_default_index_implicit(v.set_dims(k))
