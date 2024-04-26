@@ -11,7 +11,6 @@ from textwrap import dedent
 from typing import Any, Literal
 
 import numpy as np
-import numpy.testing as npt
 import pandas as pd
 import pytest
 from pandas.core.indexes.datetimes import DatetimeIndex
@@ -3438,13 +3437,10 @@ class TestDataset:
         ds = Dataset({"x": 0})
         expanded = ds.expand_dims("x", create_1d_index=create_1d_index_flag)
 
-        # TODO I can't just create the expected dataset directly using constructor because of GH issue 8959
-        # expected = Dataset(data_vars={"x": ("x", [0])})
+        # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
         expected = Dataset({"x": ("x", [0])}).drop_indexes("x").reset_coords("x")
 
-        # TODO also can't just assert equivalence because it will fail internal invariants default indexes checks
-        # assert_identical(expanded, expected)
-        assert expected.data_vars == {"x": Variable(data=[0], dims=["x"])}
+        assert_identical(expanded, expected, check_default_indexes=False)
         assert expanded.indexes == {}
 
     def test_expand_dims_create_index_coordinate_variable(self):
@@ -3455,11 +3451,11 @@ class TestDataset:
         assert_identical(expanded, expected)
 
         expanded_no_index = ds.expand_dims("x", create_1d_index=False)
+
+        # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
         expected = Dataset(coords={"x": ("x", [0])}).drop_indexes("x")
 
-        # TODO also can't just assert equivalence because it will fail internal invariants default indexes checks
-        # assert_identical(expanded, expected)
-        assert expanded_no_index.coords == {"x": Variable(data=[0], dims=["x"])}
+        assert_identical(expanded_no_index, expected, check_default_indexes=False)
         assert expanded_no_index.indexes == {}
 
     def test_expand_dims_create_index_from_iterable(self):
@@ -3469,13 +3465,11 @@ class TestDataset:
         assert_identical(expanded, expected)
 
         expanded_no_index = ds.expand_dims(x=[0, 1], create_1d_index=False)
+
+        # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
         expected = Dataset(coords={"x": ("x", [0, 1])}).drop_indexes("x")
 
-        # TODO also can't just assert equivalence because it will fail internal invariants default indexes checks
-        # assert_identical(expanded, expected)
-        assert list(expanded_no_index.coords) == ["x"]
-        assert isinstance(expanded_no_index.coords["x"].variable, Variable)
-        npt.assert_array_equal(expanded_no_index.coords["x"].data, np.array([0, 1]))
+        assert_identical(expanded, expected, check_default_indexes=False)
         assert expanded_no_index.indexes == {}
 
     @requires_pandas_version_two
