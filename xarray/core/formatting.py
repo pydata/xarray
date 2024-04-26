@@ -1007,8 +1007,6 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
         f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
-    # TODO check root parents?
-
     strict_names = True if compat in ["equals", "identical"] else False
     treestructure_diff = diff_treestructure(a, b, strict_names)
 

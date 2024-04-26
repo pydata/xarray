@@ -601,8 +601,6 @@ class TestFormatting:
         dt = simple_datatree
         print(dt)
 
-        # TODO work out how to test something complex like this
-
     def test_datatree_repr_of_node_with_data(self):
         dat = xr.Dataset({"a": [0, 2]})
         dt: DataTree = DataTree(name="root", data=dat)
