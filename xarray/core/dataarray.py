@@ -2557,7 +2557,7 @@ class DataArray(
         self,
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
         axis: None | int | Sequence[int] = None,
-        create_1d_index: bool = True,
+        create_index: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
         """Return a new object with an additional axis (or axes) inserted at
@@ -2568,7 +2568,7 @@ class DataArray(
         coordinate consisting of a single value.
 
         The automatic creation of indexes to back new 1D coordinate variables
-        controlled by the create_1d_index kwarg.
+        controlled by the create_index kwarg.
 
         Parameters
         ----------
@@ -2585,7 +2585,7 @@ class DataArray(
             multiple axes are inserted. In this case, dim arguments should be
             same length list. If axis=None is passed, all the axes will be
             inserted to the start of the result array.
-        create_1d_index : bool, default is True
+        create_index : bool, default is True
             Whether to create new PandasIndex objects for any new 1D coordinate variables.
         **dim_kwargs : int or sequence or ndarray
             The keywords are arbitrary dimensions being inserted and the values
@@ -2650,9 +2650,7 @@ class DataArray(
             dim = {dim: 1}
 
         dim = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
-        ds = self._to_temp_dataset().expand_dims(
-            dim, axis, create_1d_index=create_1d_index
-        )
+        ds = self._to_temp_dataset().expand_dims(dim, axis, create_index=create_index)
         return self._from_temp_dataset(ds)
 
     def set_index(

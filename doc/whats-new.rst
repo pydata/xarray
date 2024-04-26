@@ -30,11 +30,13 @@ New Features
   then, such as broadcasting.
   By `Ilan Gold <https://github.com/ilan-gold>`_.
 - Added the option to avoid automatically creating 1D pandas indexes in :py:meth:`Dataset.expand_dims()`, by passing the new kwarg
-  `create_1d_index=False`. (:pull:`8960`)
+  `create_index=False`. (:pull:`8960`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- The PyNIO backend has been deleted (:issue:`4491`, :pull:`7301`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Bug fixes
@@ -6809,8 +6811,7 @@ Enhancements
       datasets with a MultiIndex to a netCDF file. User contributions in this
       area would be greatly appreciated.
 
-- Support for reading GRIB, HDF4 and other file formats via PyNIO_. See
-  :ref:`io.pynio` for more details.
+- Support for reading GRIB, HDF4 and other file formats via PyNIO_.
 - Better error message when a variable is supplied with the same name as
   one of its dimensions.
 - Plotting: more control on colormap parameters (:issue:`642`). ``vmin`` and
