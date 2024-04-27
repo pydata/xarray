@@ -61,7 +61,6 @@ from xarray.tests import (
     requires_cupy,
     requires_dask,
     requires_numexpr,
-    requires_pandas_version_two,
     requires_pint,
     requires_scipy,
     requires_sparse,
@@ -3477,7 +3476,6 @@ class TestDataset:
         assert_identical(expanded, expected, check_default_indexes=False)
         assert expanded_no_index.indexes == {}
 
-    @requires_pandas_version_two
     def test_expand_dims_non_nanosecond_conversion(self) -> None:
         # Regression test for https://github.com/pydata/xarray/issues/7493#issuecomment-1953091000
         with pytest.warns(UserWarning, match="non-nanosecond precision"):
