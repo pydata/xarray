@@ -3430,6 +3430,52 @@ class TestDataset:
         )
         assert_identical(other_way_expected, other_way)
 
+    @pytest.mark.parametrize("create_index_flag", [True, False])
+    def test_expand_dims_create_index_data_variable(self, create_index_flag):
+        # data variables should not gain an index ever
+        ds = Dataset({"x": 0})
+
+        if create_index_flag:
+            with pytest.warns(UserWarning, match="No index created"):
+                expanded = ds.expand_dims("x", create_index=create_index_flag)
+        else:
+            expanded = ds.expand_dims("x", create_index=create_index_flag)
+
+        # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
+        expected = Dataset({"x": ("x", [0])}).drop_indexes("x").reset_coords("x")
+
+        assert_identical(expanded, expected, check_default_indexes=False)
+        assert expanded.indexes == {}
+
+    def test_expand_dims_create_index_coordinate_variable(self):
+        # coordinate variables should gain an index only if create_index is True (the default)
+        ds = Dataset(coords={"x": 0})
+        expanded = ds.expand_dims("x")
+        expected = Dataset({"x": ("x", [0])})
+        assert_identical(expanded, expected)
+
+        expanded_no_index = ds.expand_dims("x", create_index=False)
+
+        # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
+        expected = Dataset(coords={"x": ("x", [0])}).drop_indexes("x")
+
+        assert_identical(expanded_no_index, expected, check_default_indexes=False)
+        assert expanded_no_index.indexes == {}
+
+    def test_expand_dims_create_index_from_iterable(self):
+        ds = Dataset(coords={"x": 0})
+        expanded = ds.expand_dims(x=[0, 1])
+        expected = Dataset({"x": ("x", [0, 1])})
+        assert_identical(expanded, expected)
+
+        expanded_no_index = ds.expand_dims(x=[0, 1], create_index=False)
+
+        # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
+        expected = Dataset(coords={"x": ("x", [0, 1])}).drop_indexes("x")
+
+        assert_identical(expanded, expected, check_default_indexes=False)
+        assert expanded_no_index.indexes == {}
+
     def test_expand_dims_non_nanosecond_conversion(self) -> None:
         # Regression test for https://github.com/pydata/xarray/issues/7493#issuecomment-1953091000
         with pytest.warns(UserWarning, match="non-nanosecond precision"):

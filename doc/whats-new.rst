@@ -29,6 +29,9 @@ New Features
   for example, will retain the object.  However, one cannot do operations that are not possible on the `ExtensionArray`
   then, such as broadcasting.
   By `Ilan Gold <https://github.com/ilan-gold>`_.
+- Added the option to avoid automatically creating 1D pandas indexes in :py:meth:`Dataset.expand_dims()`, by passing the new kwarg
+  `create_index=False`. (:pull:`8960`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
