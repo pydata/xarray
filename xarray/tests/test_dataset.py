@@ -61,7 +61,6 @@ from xarray.tests import (
     requires_cupy,
     requires_dask,
     requires_numexpr,
-    requires_pandas_version_two,
     requires_pint,
     requires_scipy,
     requires_sparse,
