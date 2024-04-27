@@ -4699,7 +4699,7 @@ class Dataset(
                         if create_index:
                             warnings.warn(
                                 f"No index created for dimension {k} because variable {k} is not a coordinate. "
-                                f"To create an index for {k}, please first call `.set_coords({k})` on this object.",
+                                f"To create an index for {k}, please first call `.set_coords('{k}')` on this object.",
                                 UserWarning,
                             )
 
