@@ -4696,6 +4696,13 @@ class Dataset(
                         indexes[k] = index
                         variables.update(index_vars)
                     else:
+                        if create_index:
+                            warnings.warn(
+                                f"No index created for dimension {k} because variable {k} is not a coordinate. "
+                                f"To create an index for {k}, please first call `.set_coords('{k}')` on this object.",
+                                UserWarning,
+                            )
+
                         # create 1D variable without creating a new index
                         new_1d_var = v.set_dims(k)
                         variables.update({k: new_1d_var})

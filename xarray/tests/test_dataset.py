@@ -3435,7 +3435,12 @@ class TestDataset:
     def test_expand_dims_create_index_data_variable(self, create_index_flag):
         # data variables should not gain an index ever
         ds = Dataset({"x": 0})
-        expanded = ds.expand_dims("x", create_index=create_index_flag)
+
+        if create_index_flag:
+            with pytest.warns(UserWarning, match="No index created"):
+                expanded = ds.expand_dims("x", create_index=create_index_flag)
+        else:
+            expanded = ds.expand_dims("x", create_index=create_index_flag)
 
         # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
         expected = Dataset({"x": ("x", [0])}).drop_indexes("x").reset_coords("x")
