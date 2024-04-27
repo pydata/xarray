@@ -35,6 +35,23 @@ Breaking changes
 - The PyNIO backend has been deleted (:issue:`4491`, :pull:`7301`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
+- The minimum versions of some dependencies were changed, in particular our minimum supported pandas version is now Pandas 2.
+
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+   dask-core              2022.12   2023.4
+   distributed            2022.12   2023.4
+   h5py                       3.7      3.8
+   matplotlib-base            3.6      3.7
+   packaging                 22.0     23.1
+   pandas                     1.5      2.0
+   pydap                      3.3      3.4
+   sparse                    0.13     0.14
+   typing_extensions          4.4      4.5
+   zarr                      2.13     2.14
+  ===================== =========  =======
+
 
 Bug fixes
 ~~~~~~~~~
