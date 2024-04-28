@@ -154,7 +154,7 @@ def _importorskip_h5netcdf_ros3():
 
     if not has_h5netcdf:
         return has_h5netcdf, pytest.mark.skipif(
-            has_h5netcdf, reason="requires h5netcdf"
+            not has_h5netcdf, reason="requires h5netcdf"
         )
 
     h5netcdf_with_ros3 = Version(h5netcdf.__version__) >= Version("1.3.0")
