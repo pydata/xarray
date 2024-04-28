@@ -10,6 +10,7 @@ from numpy.core import defchararray
 
 import xarray as xr
 from xarray.core import formatting
+from xarray.core.datatree import DataTree  # TODO: Remove when can do xr.DataTree
 from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
 
 ON_WINDOWS = sys.platform == "win32"
@@ -554,6 +555,108 @@ class TestFormatting:
         with pytest.raises(NotImplementedError) as excinfo:  # type: ignore
             format(var, ".2f")
         assert "Using format_spec is only supported" in str(excinfo.value)
+
+    def test_datatree_print_empty_node(self):
+        dt: DataTree = DataTree(name="root")
+        printout = dt.__str__()
+        assert printout == "DataTree('root', parent=None)"
+
+    def test_datatree_print_empty_node_with_attrs(self):
+        dat = xr.Dataset(attrs={"note": "has attrs"})
+        dt: DataTree = DataTree(name="root", data=dat)
+        printout = dt.__str__()
+        assert printout == dedent(
+            """\
+            DataTree('root', parent=None)
+                Dimensions:  ()
+                Data variables:
+                    *empty*
+                Attributes:
+                    note:     has attrs"""
+        )
+
+    def test_datatree_print_node_with_data(self):
+        dat = xr.Dataset({"a": [0, 2]})
+        dt: DataTree = DataTree(name="root", data=dat)
+        printout = dt.__str__()
+        expected = [
+            "DataTree('root', parent=None)",
+            "Dimensions",
+            "Coordinates",
+            "a",
+            "Data variables",
+            "*empty*",
+        ]
+        for expected_line, printed_line in zip(expected, printout.splitlines()):
+            assert expected_line in printed_line
+
+    def test_datatree_printout_nested_node(self):
+        dat = xr.Dataset({"a": [0, 2]})
+        root: DataTree = DataTree(name="root")
+        DataTree(name="results", data=dat, parent=root)
+        printout = root.__str__()
+        assert printout.splitlines()[2].startswith("    ")
+
+    def test_datatree_repr_of_node_with_data(self):
+        dat = xr.Dataset({"a": [0, 2]})
+        dt: DataTree = DataTree(name="root", data=dat)
+        assert "Coordinates" in repr(dt)
+
+    def test_diff_datatree_repr_structure(self):
+        dt_1: DataTree = DataTree.from_dict({"a": None, "a/b": None, "a/c": None})
+        dt_2: DataTree = DataTree.from_dict({"d": None, "d/e": None})
+
+        expected = dedent(
+            """\
+        Left and right DataTree objects are not isomorphic
+
+        Number of children on node '/a' of the left object: 2
+        Number of children on node '/d' of the right object: 1"""
+        )
+        actual = formatting.diff_datatree_repr(dt_1, dt_2, "isomorphic")
+        assert actual == expected
+
+    def test_diff_datatree_repr_node_names(self):
+        dt_1: DataTree = DataTree.from_dict({"a": None})
+        dt_2: DataTree = DataTree.from_dict({"b": None})
+
+        expected = dedent(
+            """\
+        Left and right DataTree objects are not identical
+
+        Node '/a' in the left object has name 'a'
+        Node '/b' in the right object has name 'b'"""
+        )
+        actual = formatting.diff_datatree_repr(dt_1, dt_2, "identical")
+        assert actual == expected
+
+    def test_diff_datatree_repr_node_data(self):
+        # casting to int64 explicitly ensures that int64s are created on all architectures
+        ds1 = xr.Dataset({"u": np.int64(0), "v": np.int64(1)})
+        ds3 = xr.Dataset({"w": np.int64(5)})
+        dt_1: DataTree = DataTree.from_dict({"a": ds1, "a/b": ds3})
+        ds2 = xr.Dataset({"u": np.int64(0)})
+        ds4 = xr.Dataset({"w": np.int64(6)})
+        dt_2: DataTree = DataTree.from_dict({"a": ds2, "a/b": ds4})
+
+        expected = dedent(
+            """\
+        Left and right DataTree objects are not equal
+
+
+        Data in nodes at position '/a' do not match:
+
+        Data variables only on the left object:
+            v        int64 8B 1
+
+        Data in nodes at position '/a/b' do not match:
+
+        Differing data variables:
+        L   w        int64 8B 5
+        R   w        int64 8B 6"""
+        )
+        actual = formatting.diff_datatree_repr(dt_1, dt_2, "equals")
+        assert actual == expected
 
 
 def test_inline_variable_array_repr_custom_repr() -> None:
