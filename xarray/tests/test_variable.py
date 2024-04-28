@@ -36,12 +36,10 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
-    has_pandas_version_two,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
     requires_dask,
-    requires_pandas_version_two,
     requires_pint,
     requires_sparse,
     source_ndarray,
@@ -2645,7 +2643,6 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         assert np.ndarray == type(actual)
         assert np.dtype("datetime64[ns]") == actual.dtype
 
-    @requires_pandas_version_two
     def test_tz_datetime(self) -> None:
         tz = pytz.timezone("America/New_York")
         times_ns = pd.date_range("2000", periods=1, tz=tz)
@@ -2938,7 +2935,7 @@ class TestNumpyCoercion:
 
 
 @pytest.mark.parametrize(
-    ("values", "warns_under_pandas_version_two"),
+    ("values", "warns"),
     [
         (np.datetime64("2000-01-01", "ns"), False),
         (np.datetime64("2000-01-01", "s"), True),
@@ -2957,9 +2954,9 @@ class TestNumpyCoercion:
     ],
     ids=lambda x: f"{x}",
 )
-def test_datetime_conversion_warning(values, warns_under_pandas_version_two) -> None:
+def test_datetime_conversion_warning(values, warns) -> None:
     dims = ["time"] if isinstance(values, (np.ndarray, pd.Index, pd.Series)) else []
-    if warns_under_pandas_version_two and has_pandas_version_two:
+    if warns:
         with pytest.warns(UserWarning, match="non-nanosecond precision datetime"):
             var = Variable(dims, values)
     else:
@@ -2979,7 +2976,6 @@ def test_datetime_conversion_warning(values, warns_under_pandas_version_two) -> 
         )
 
 
-@requires_pandas_version_two
 def test_pandas_two_only_datetime_conversion_warnings() -> None:
     # Note these tests rely on pandas features that are only present in pandas
     # 2.0.0 and above, and so for now cannot be parametrized.
@@ -3014,7 +3010,7 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
 
 
 @pytest.mark.parametrize(
-    ("values", "warns_under_pandas_version_two"),
+    ("values", "warns"),
     [
         (np.timedelta64(10, "ns"), False),
         (np.timedelta64(10, "s"), True),
@@ -3026,9 +3022,9 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
     ],
     ids=lambda x: f"{x}",
 )
-def test_timedelta_conversion_warning(values, warns_under_pandas_version_two) -> None:
+def test_timedelta_conversion_warning(values, warns) -> None:
     dims = ["time"] if isinstance(values, (np.ndarray, pd.Index)) else []
-    if warns_under_pandas_version_two and has_pandas_version_two:
+    if warns:
         with pytest.warns(UserWarning, match="non-nanosecond precision timedelta"):
             var = Variable(dims, values)
     else:
@@ -3039,7 +3035,6 @@ def test_timedelta_conversion_warning(values, warns_under_pandas_version_two) ->
     assert var.dtype == np.dtype("timedelta64[ns]")
 
 
-@requires_pandas_version_two
 def test_pandas_two_only_timedelta_conversion_warning() -> None:
     # Note this test relies on a pandas feature that is only present in pandas
     # 2.0.0 and above, and so for now cannot be parametrized.
@@ -3050,7 +3045,6 @@ def test_pandas_two_only_timedelta_conversion_warning() -> None:
     assert var.dtype == np.dtype("timedelta64[ns]")
 
 
-@requires_pandas_version_two
 @pytest.mark.parametrize(
     ("index", "dtype"),
     [
