@@ -31,7 +31,8 @@ python -m pip install \
     numpy \
     scipy \
     matplotlib \
-    pandas
+    pandas \
+    h5py
 # for some reason pandas depends on pyarrow already.
 # Remove once a `pyarrow` version compiled with `numpy>=2.0` is on `conda-forge`
 python -m pip install \
@@ -70,6 +71,6 @@ python -m pip install \
     git+https://github.com/intake/filesystem_spec \
     git+https://github.com/SciTools/nc-time-axis \
     git+https://github.com/xarray-contrib/flox \
+    git+https://github.com/h5netcdf/h5netcdf \
     git+https://github.com/dgasmith/opt_einsum
     # git+https://github.com/pydata/sparse
-    # git+https://github.com/h5netcdf/h5netcdf
