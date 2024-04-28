@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # install cython for building cftime without build isolation
-micromamba install "cython>=0.29.20" py-cpuinfo
+micromamba install "cython>=0.29.20" py-cpuinfo setuptools-scm
 # temporarily (?) remove numbagg and numba
 micromamba remove -y numba numbagg sparse
 # temporarily remove numexpr
