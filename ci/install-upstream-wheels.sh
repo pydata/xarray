@@ -7,7 +7,7 @@ micromamba remove -y numba numbagg sparse
 # temporarily remove numexpr
 micromamba remove -y numexpr
 # temporarily remove backends
-micromamba remove -y cf_units hdf5 h5py netcdf4
+micromamba remove -y cf_units hdf5 h5py netcdf4 pydap
 # forcibly remove packages to avoid artifacts
 micromamba remove -y --force \
     numpy \
