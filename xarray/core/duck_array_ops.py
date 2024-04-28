@@ -239,21 +239,23 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
         import cupy as cp
 
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
+        # Pass arrays directly instead of dtypes to result_type so scalars
+        # get handled properly.
+        # Note that result_type() safely gets the dtype from dask arrays without
+        # evaluating them.
+        out_type = dtypes.result_type(*arrays)
     else:
-        arrays = [
-            # https://github.com/pydata/xarray/issues/8402
-            # https://github.com/pydata/xarray/issues/7721
-            x if isinstance(x, (int, float, complex)) else asarray(x, xp=xp)
-            for x in scalars_or_arrays
-        ]
-    # Pass arrays directly instead of dtypes to result_type so scalars
-    # get handled properly.
-    # Note that result_type() safely gets the dtype from dask arrays without
-    # evaluating them.
-    out_type = dtypes.result_type(*arrays)
-    return [
-        astype(x, out_type, copy=False) if hasattr(x, "dtype") else x for x in arrays
-    ]
+        objs_with_dtype = [obj for obj in scalars_or_arrays if hasattr(obj, "dtype")]
+        if objs_with_dtype:
+            # Pass arrays directly instead of dtypes to result_type so scalars
+            # get handled properly.
+            # Note that result_type() safely gets the dtype from dask arrays without
+            # evaluating them.
+            out_type = dtypes.result_type(*objs_with_dtype)
+        else:
+            out_type = dtypes.result_type(*scalars_or_arrays)
+        arrays = [asarray(x, xp=xp) for x in scalars_or_arrays]
+    return [astype(x, out_type, copy=False) for x in arrays]
 
 
 def broadcast_to(array, shape):
