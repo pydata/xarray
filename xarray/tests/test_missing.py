@@ -421,6 +421,19 @@ def test_ffill():
     assert_equal(actual, expected)
 
 
+@requires_numbagg
+def test_ffill_datetime():
+    actual = xr.DataArray(
+        pd.date_range("2020-01-01", "2020-01-10").tolist() + [pd.NaT]
+    ).ffill("dim_0")
+
+    expected = xr.DataArray(
+        pd.date_range("2020-01-01", "2020-01-10").tolist()
+        + [pd.to_datetime("2020-01-10")]
+    )
+    assert_equal(actual, expected)
+
+
 def test_ffill_use_bottleneck_numbagg():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
     with xr.set_options(use_bottleneck=False, use_numbagg=False):

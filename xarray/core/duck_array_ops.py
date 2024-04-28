@@ -734,7 +734,15 @@ def _push(array, n: int | None = None, axis: int = -1):
                 f"numbagg >= 0.6.2 is required for bfill & ffill; {pycompat.mod_version('numbagg')} is installed. We'll attempt with bottleneck instead."
             )
         else:
-            return numbagg.ffill(array, limit=n, axis=axis)
+            original_type = array.dtype
+            # Datetimes
+            if array.dtype.kind in "M":
+                # We need to convert to float in order to allow ffill to work for
+                # datetimes, given floats are nullable. There are some potential
+                # accuracy issues with converting to float, but I can't observe them in
+                # tests.
+                array = array.astype(float)
+            return numbagg.ffill(array, limit=n, axis=axis).astype(original_type)
 
     # work around for bottleneck 178
     limit = n if n is not None else array.shape[axis]
