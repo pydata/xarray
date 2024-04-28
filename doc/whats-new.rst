@@ -55,6 +55,9 @@ Breaking changes
    zarr                      2.13     2.14
   ===================== =========  =======
 
+- Changed the return type of :py:meth:`Dataset.dims` and :py:meth:`DatasetGroupBy.dims` to a frozen set,
+  completing the deprecation cycle started in :pull:`8500`. (:pull:`8980`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Bug fixes
 ~~~~~~~~~
