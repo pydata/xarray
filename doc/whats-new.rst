@@ -29,9 +29,31 @@ New Features
   for example, will retain the object.  However, one cannot do operations that are not possible on the `ExtensionArray`
   then, such as broadcasting.
   By `Ilan Gold <https://github.com/ilan-gold>`_.
+- Added the option to avoid automatically creating 1D pandas indexes in :py:meth:`Dataset.expand_dims()`, by passing the new kwarg
+  `create_index=False`. (:pull:`8960`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- The PyNIO backend has been deleted (:issue:`4491`, :pull:`7301`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+- The minimum versions of some dependencies were changed, in particular our minimum supported pandas version is now Pandas 2.
+
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+   dask-core              2022.12   2023.4
+   distributed            2022.12   2023.4
+   h5py                       3.7      3.8
+   matplotlib-base            3.6      3.7
+   packaging                 22.0     23.1
+   pandas                     1.5      2.0
+   pydap                      3.3      3.4
+   sparse                    0.13     0.14
+   typing_extensions          4.4      4.5
+   zarr                      2.13     2.14
+  ===================== =========  =======
 
 
 Bug fixes
@@ -40,12 +62,17 @@ Bug fixes
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-- Migrates ``formatting_html`` functionality for `DataTree` into ``xarray/core`` (:pull: `8930`)
+- Migrates ``formatting_html`` functionality for ``DataTree`` into ``xarray/core`` (:pull: `8930`)
   By `Eni Awowale <https://github.com/eni-awowale>`_, `Julia Signell <https://github.com/jsignell>`_
   and `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Migrates ``datatree_mapping`` functionality into ``xarray/core`` (:pull:`8948`)
   By `Matt Savoie <https://github.com/flamingbear>`_ `Owen Littlejohns
-  <https://github.com/owenlittlejohns>` and `Tom Nicholas <https://github.com/TomNicholas>`_.
+  <https://github.com/owenlittlejohns>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Migrates ``extensions``, ``formatting`` and ``datatree_render`` functionality for
+  ``DataTree`` into ``xarray/core``. Also migrates ``testing`` functionality into
+  ``xarray/testing/assertions`` for ``DataTree``. (:pull:`8967`)
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 .. _whats-new.2024.03.0:
@@ -6806,8 +6833,7 @@ Enhancements
       datasets with a MultiIndex to a netCDF file. User contributions in this
       area would be greatly appreciated.
 
-- Support for reading GRIB, HDF4 and other file formats via PyNIO_. See
-  :ref:`io.pynio` for more details.
+- Support for reading GRIB, HDF4 and other file formats via PyNIO_.
 - Better error message when a variable is supplied with the same name as
   one of its dimensions.
 - Plotting: more control on colormap parameters (:issue:`642`). ``vmin`` and
