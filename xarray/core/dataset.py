@@ -99,7 +99,6 @@ from xarray.core.types import (
 from xarray.core.utils import (
     Default,
     Frozen,
-    FrozenMappingWarningOnValuesAccess,
     HybridMappingProxy,
     OrderedSet,
     _default,
@@ -766,22 +765,17 @@ class Dataset(
         return self._replace(variables=variables, encoding={})
 
     @property
-    def dims(self) -> Frozen[Hashable, int]:
-        """Mapping from dimension names to lengths.
+    def dims(self) -> frozenset[Hashable]:
+        """Set of dimension names.
 
         Cannot be modified directly, but is updated when adding new variables.
-
-        Note that type of this object differs from `DataArray.dims`.
-        See `Dataset.sizes` and `DataArray.sizes` for consistently named
-        properties. This property will be changed to return a type more consistent with
-        `DataArray.dims` in the future, i.e. a set of dimension names.
 
         See Also
         --------
         Dataset.sizes
         DataArray.dims
         """
-        return FrozenMappingWarningOnValuesAccess(self._dims)
+        return frozenset(self._dims.keys())
 
     @property
     def sizes(self) -> Frozen[Hashable, int]:
