@@ -166,7 +166,8 @@ def _importorskip_h5netcdf_ros3():
     has_h5netcdf_ros3 = h5netcdf_with_ros3 and h5py_with_ros3
 
     return has_h5netcdf_ros3, pytest.mark.skipif(
-        has_h5netcdf_ros3, reason="requires h5netcdf>=1.3.0 and h5py with ros3 support"
+        not has_h5netcdf_ros3,
+        reason="requires h5netcdf>=1.3.0 and h5py with ros3 support",
     )
 
 
