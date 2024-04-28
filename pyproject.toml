@@ -301,6 +301,7 @@ addopts = ["--strict-config", "--strict-markers"]
 
 filterwarnings = [
   "error:::xarray.*",
+  "default:No index created:UserWarning:xarray.core.dataset",
   "default::UserWarning:xarray.tests.test_coding_times",
   "default::UserWarning:xarray.tests.test_computation",
   "default::UserWarning:xarray.tests.test_dataset",
