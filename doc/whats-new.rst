@@ -36,7 +36,7 @@ New Features
 Deprecations
 ~~~~~~~~~~~~
 - Passing variables with the same name as their only dimension to the :py:class:`Dataset` constructor will now raise a `PendingDeprecationWarning`.
-  This is to deprecate the current behaviour of auto-promoting such variables to coordinates. To avoid the warning pass such variables explicitly via the `coords` kwarg. 
+  This is to deprecate the current behaviour of auto-promoting such variables to coordinates. To avoid the warning pass such variables explicitly via the `coords` kwarg.
   (:pull:`8979`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
