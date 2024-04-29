@@ -73,6 +73,10 @@ Internal Changes
   ``xarray/testing/assertions`` for ``DataTree``. (:pull:`8967`)
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
   `Tom Nicholas <https://github.com/TomNicholas>`_.
+- ``transpose``, ``set_dims``, ``stack`` & ``unstack`` now use a ``dim`` kwarg
+  rather than ``dims`` or ``dimensions``. This is the final change to make xarray methods
+  consistent with their use of ``dim``. Using the existing kwarg will raise a
+  warning. By `Maximilian Roos <https://github.com/max-sixty>`_
 
 
 .. _whats-new.2024.03.0:
