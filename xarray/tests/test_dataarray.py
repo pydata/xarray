@@ -2484,7 +2484,7 @@ class TestDataArray:
         assert_identical(orig, orig.unstack())
 
         # test GH3000
-        a = orig[:0, :1].stack(dim=("x", "y")).indexes["dim"]
+        a = orig[:0, :1].stack(new_dim=("x", "y")).indexes["new_dim"]
         b = pd.MultiIndex(
             levels=[pd.Index([], np.int64), pd.Index([0], np.int64)],
             codes=[[], []],
