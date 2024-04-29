@@ -7403,7 +7403,7 @@ def test_transpose_error() -> None:
     with pytest.raises(
         TypeError,
         match=re.escape(
-            "transpose requires dims to be passed as multiple arguments. Expected `'y', 'x'`. Received `['y', 'x']` instead"
+            "transpose requires dim to be passed as multiple arguments. Expected `'y', 'x'`. Received `['y', 'x']` instead"
         ),
     ):
         ds.transpose(["y", "x"])  # type: ignore

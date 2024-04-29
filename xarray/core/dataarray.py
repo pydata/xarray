@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import warnings
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
+from functools import partial
 from os import PathLike
 from typing import (
     TYPE_CHECKING,
@@ -2808,12 +2809,13 @@ class DataArray(
         ds = self._to_temp_dataset().reorder_levels(dim_order, **dim_order_kwargs)
         return self._from_temp_dataset(ds)
 
+    @partial(deprecate_dims, old_name="dimensions")
     def stack(
         self,
-        dimensions: Mapping[Any, Sequence[Hashable]] | None = None,
+        dim: Mapping[Any, Sequence[Hashable]] | None = None,
         create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
-        **dimensions_kwargs: Sequence[Hashable],
+        **dim_kwargs: Sequence[Hashable],
     ) -> Self:
         """
         Stack any number of existing dimensions into a single new dimension.
@@ -2823,7 +2825,7 @@ class DataArray(
 
         Parameters
         ----------
-        dimensions : mapping of Hashable to sequence of Hashable
+        dim : mapping of Hashable to sequence of Hashable
             Mapping of the form `new_name=(dim1, dim2, ...)`.
             Names of new dimensions, and the existing dimensions that they
             replace. An ellipsis (`...`) will be replaced by all unlisted dimensions.
@@ -2837,9 +2839,9 @@ class DataArray(
         index_cls: class, optional
             Can be used to pass a custom multi-index type. Must be an Xarray index that
             implements `.stack()`. By default, a pandas multi-index wrapper is used.
-        **dimensions_kwargs
-            The keyword arguments form of ``dimensions``.
-            One of dimensions or dimensions_kwargs must be provided.
+        **dim_kwargs
+            The keyword arguments form of ``dim``.
+            One of dim or dim_kwargs must be provided.
 
         Returns
         -------
@@ -2874,10 +2876,10 @@ class DataArray(
         DataArray.unstack
         """
         ds = self._to_temp_dataset().stack(
-            dimensions,
+            dim,
             create_index=create_index,
             index_cls=index_cls,
-            **dimensions_kwargs,
+            **dim_kwargs,
         )
         return self._from_temp_dataset(ds)
 
@@ -3011,9 +3013,10 @@ class DataArray(
         # unstacked dataset
         return Dataset(data_dict)
 
+    @deprecate_dims
     def transpose(
         self,
-        *dims: Hashable,
+        *dim: Hashable,
         transpose_coords: bool = True,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Self:
@@ -3021,7 +3024,7 @@ class DataArray(
 
         Parameters
         ----------
-        *dims : Hashable, optional
+        *dim : Hashable, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
         transpose_coords : bool, default: True
@@ -3049,13 +3052,13 @@ class DataArray(
         numpy.transpose
         Dataset.transpose
         """
-        if dims:
-            dims = tuple(infix_dims(dims, self.dims, missing_dims))
-        variable = self.variable.transpose(*dims)
+        if dim:
+            dim = tuple(infix_dims(dim, self.dims, missing_dims))
+        variable = self.variable.transpose(*dim)
         if transpose_coords:
             coords: dict[Hashable, Variable] = {}
             for name, coord in self.coords.items():
-                coord_dims = tuple(dim for dim in dims if dim in coord.dims)
+                coord_dims = tuple(d for d in dim if d in coord.dims)
                 coords[name] = coord.variable.transpose(*coord_dims)
             return self._replace(variable, coords)
         else:
