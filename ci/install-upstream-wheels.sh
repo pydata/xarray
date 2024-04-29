@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
 # install cython for building cftime without build isolation
-micromamba install "cython>=0.29.20" py-cpuinfo
+micromamba install "cython>=0.29.20" py-cpuinfo setuptools-scm
 # temporarily (?) remove numbagg and numba
 micromamba remove -y numba numbagg sparse
 # temporarily remove numexpr
 micromamba remove -y numexpr
 # temporarily remove backends
-micromamba remove -y cf_units hdf5 h5py netcdf4
+micromamba remove -y cf_units hdf5 h5py netcdf4 pydap
 # forcibly remove packages to avoid artifacts
 micromamba remove -y --force \
     numpy \
@@ -31,7 +31,8 @@ python -m pip install \
     numpy \
     scipy \
     matplotlib \
-    pandas
+    pandas \
+    h5py
 # for some reason pandas depends on pyarrow already.
 # Remove once a `pyarrow` version compiled with `numpy>=2.0` is on `conda-forge`
 python -m pip install \
@@ -70,6 +71,6 @@ python -m pip install \
     git+https://github.com/intake/filesystem_spec \
     git+https://github.com/SciTools/nc-time-axis \
     git+https://github.com/xarray-contrib/flox \
+    git+https://github.com/h5netcdf/h5netcdf \
     git+https://github.com/dgasmith/opt_einsum
     # git+https://github.com/pydata/sparse
-    # git+https://github.com/h5netcdf/h5netcdf
