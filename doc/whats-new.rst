@@ -32,8 +32,8 @@ New Features
 - Added the option to avoid automatically creating 1D pandas indexes in :py:meth:`Dataset.expand_dims()`, by passing the new kwarg
   `create_index=False`. (:pull:`8960`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-- Avoid automatically re-creating 1D pandas indexes in :py:func:`concat()`. Also optionally avoid creating 1D indexes for
-  new dimension coordinates by the new kwarg `create_index=False`. (:pull:`8872`)
+- Avoid automatically re-creating 1D pandas indexes in :py:func:`concat()`. Also added option to avoid creating 1D indexes for
+  new dimension coordinates by passing the new kwarg `create_index=False`. (:issue:`8871`, :pull:`8872`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
