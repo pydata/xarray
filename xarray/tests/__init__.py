@@ -99,7 +99,6 @@ with warnings.catch_warnings():
     )
 
     has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
-has_pynio, requires_pynio = _importorskip("Nio")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
 with warnings.catch_warnings():
@@ -142,14 +141,37 @@ has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
 requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
-# _importorskip does not work for development versions
-has_pandas_version_two = Version(pd.__version__).major >= 2
-requires_pandas_version_two = pytest.mark.skipif(
-    not has_pandas_version_two, reason="requires pandas 2.0.0"
-)
 has_numpy_array_api, requires_numpy_array_api = _importorskip("numpy", "1.26.0")
-has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip("h5netcdf", "1.3.0")
 
+
+def _importorskip_h5netcdf_ros3():
+    try:
+        import h5netcdf
+
+        has_h5netcdf = True
+    except ImportError:
+        has_h5netcdf = False
+
+    if not has_h5netcdf:
+        return has_h5netcdf, pytest.mark.skipif(
+            not has_h5netcdf, reason="requires h5netcdf"
+        )
+
+    h5netcdf_with_ros3 = Version(h5netcdf.__version__) >= Version("1.3.0")
+
+    import h5py
+
+    h5py_with_ros3 = h5py.get_config().ros3
+
+    has_h5netcdf_ros3 = h5netcdf_with_ros3 and h5py_with_ros3
+
+    return has_h5netcdf_ros3, pytest.mark.skipif(
+        not has_h5netcdf_ros3,
+        reason="requires h5netcdf>=1.3.0 and h5py with ros3 support",
+    )
+
+
+has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip_h5netcdf_ros3()
 has_netCDF4_1_6_2_or_above, requires_netCDF4_1_6_2_or_above = _importorskip(
     "netCDF4", "1.6.2"
 )
