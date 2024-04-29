@@ -1361,15 +1361,15 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if shape is None and is_dict_like(dim):
             shape = dim.values()
 
-        missing_dims = set(self.dim) - set(dim)
+        missing_dims = set(self.dims) - set(dim)
         if missing_dims:
             raise ValueError(
                 f"new dimensions {dim!r} must be a superset of "
-                f"existing dimensions {self.dim!r}"
+                f"existing dimensions {self.dims!r}"
             )
 
-        self_dims = set(self.dim)
-        expanded_dims = tuple(d for d in dim if d not in self_dims) + self.dim
+        self_dims = set(self.dims)
+        expanded_dims = tuple(d for d in dim if d not in self_dims) + self.dims
 
         if self.dims == expanded_dims:
             # don't use broadcast_to unless necessary so the result remains
