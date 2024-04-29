@@ -3970,6 +3970,25 @@ class TestDataset:
         x = y.to_unstacked_dataset("features")
         assert_identical(D, x)
 
+    def test_to_stacked_array_preserves_dtype(self) -> None:
+        # regression test for bug found in https://github.com/pydata/xarray/pull/8872#issuecomment-2081218616
+        ds = xr.Dataset(
+            data_vars={
+                "a": (("x", "y"), [[0, 1, 2], [3, 4, 5]]),
+                "b": ("x", [6, 7]),
+            },
+            coords={"y": ["u", "v", "w"]},
+        )
+        stacked = ds.to_stacked_array("z", sample_dims=["x"])
+
+        # coordinate created from variables names should be of string dtype
+        data = np.array(["a", "a", "a", "b"], dtype="<U1")
+        expected_stacked_variable = DataArray(name="variable", data=data, dims="z")
+        assert_identical(
+            stacked.coords["variable"].drop_vars(["z", "variable", "y"]),
+            expected_stacked_variable,
+        )
+
     def test_update(self) -> None:
         data = create_test_data(seed=0)
         expected = data.copy()
