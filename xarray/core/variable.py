@@ -45,6 +45,7 @@ from xarray.core.utils import (
 )
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.pycompat import integer_types, is_0d_dask_array, to_duck_array
+from xarray.util.deprecation_helpers import deprecate_dims
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -1283,16 +1284,17 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             result = result._roll_one_dim(dim, count)
         return result
 
+    @deprecate_dims
     def transpose(
         self,
-        *dims: Hashable | ellipsis,
+        *dim: Hashable | ellipsis,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Self:
         """Return a new Variable object with transposed dimensions.
 
         Parameters
         ----------
-        *dims : Hashable, optional
+        *dim : Hashable, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
@@ -1317,25 +1319,26 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         numpy.transpose
         """
-        if len(dims) == 0:
-            dims = self.dims[::-1]
+        if len(dim) == 0:
+            dim = self.dims[::-1]
         else:
-            dims = tuple(infix_dims(dims, self.dims, missing_dims))
+            dim = tuple(infix_dims(dim, self.dims, missing_dims))
 
-        if len(dims) < 2 or dims == self.dims:
+        if len(dim) < 2 or dim == self.dims:
             # no need to transpose if only one dimension
             # or dims are in same order
             return self.copy(deep=False)
 
-        axes = self.get_axis_num(dims)
+        axes = self.get_axis_num(dim)
         data = as_indexable(self._data).transpose(axes)
-        return self._replace(dims=dims, data=data)
+        return self._replace(dims=dim, data=data)
 
     @property
     def T(self) -> Self:
         return self.transpose()
 
-    def set_dims(self, dims, shape=None):
+    @deprecate_dims
+    def set_dims(self, dim, shape=None):
         """Return a new variable with given set of dimensions.
         This method might be used to attach new dimension(s) to variable.
 
@@ -1343,7 +1346,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         Parameters
         ----------
-        dims : str or sequence of str or dict
+        dim : str or sequence of str or dict
             Dimensions to include on the new variable. If a dict, values are
             used to provide the sizes of new dimensions; otherwise, new
             dimensions are inserted with length 1.
@@ -1352,28 +1355,28 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         -------
         Variable
         """
-        if isinstance(dims, str):
-            dims = [dims]
+        if isinstance(dim, str):
+            dim = [dim]
 
-        if shape is None and is_dict_like(dims):
-            shape = dims.values()
+        if shape is None and is_dict_like(dim):
+            shape = dim.values()
 
-        missing_dims = set(self.dims) - set(dims)
+        missing_dims = set(self.dim) - set(dim)
         if missing_dims:
             raise ValueError(
-                f"new dimensions {dims!r} must be a superset of "
-                f"existing dimensions {self.dims!r}"
+                f"new dimensions {dim!r} must be a superset of "
+                f"existing dimensions {self.dim!r}"
             )
 
-        self_dims = set(self.dims)
-        expanded_dims = tuple(d for d in dims if d not in self_dims) + self.dims
+        self_dims = set(self.dim)
+        expanded_dims = tuple(d for d in dim if d not in self_dims) + self.dim
 
         if self.dims == expanded_dims:
             # don't use broadcast_to unless necessary so the result remains
             # writeable if possible
             expanded_data = self.data
         elif shape is not None:
-            dims_map = dict(zip(dims, shape))
+            dims_map = dict(zip(dim, shape))
             tmp_shape = tuple(dims_map[d] for d in expanded_dims)
             expanded_data = duck_array_ops.broadcast_to(self.data, tmp_shape)
         else:
@@ -1383,11 +1386,11 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         expanded_var = Variable(
             expanded_dims, expanded_data, self._attrs, self._encoding, fastpath=True
         )
-        return expanded_var.transpose(*dims)
+        return expanded_var.transpose(*dim)
 
-    def _stack_once(self, dims: list[Hashable], new_dim: Hashable):
-        if not set(dims) <= set(self.dims):
-            raise ValueError(f"invalid existing dimensions: {dims}")
+    def _stack_once(self, dim: list[Hashable], new_dim: Hashable):
+        if not set(dim) <= set(self.dims):
+            raise ValueError(f"invalid existing dimensions: {dim}")
 
         if new_dim in self.dims:
             raise ValueError(
@@ -1395,12 +1398,12 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 "name as an existing dimension"
             )
 
-        if len(dims) == 0:
+        if len(dim) == 0:
             # don't stack
             return self.copy(deep=False)
 
-        other_dims = [d for d in self.dims if d not in dims]
-        dim_order = other_dims + list(dims)
+        other_dims = [d for d in self.dims if d not in dim]
+        dim_order = other_dims + list(dim)
         reordered = self.transpose(*dim_order)
 
         new_shape = reordered.shape[: len(other_dims)] + (-1,)
@@ -1411,22 +1414,23 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             new_dims, new_data, self._attrs, self._encoding, fastpath=True
         )
 
-    def stack(self, dimensions=None, **dimensions_kwargs):
+    @partial(deprecate_dims, old_name="dimensions")
+    def stack(self, dim=None, **dim_kwargs):
         """
-        Stack any number of existing dimensions into a single new dimension.
+        Stack any number of existing dim into a single new dimension.
 
-        New dimensions will be added at the end, and the order of the data
+        New dim will be added at the end, and the order of the data
         along each new dimension will be in contiguous (C) order.
 
         Parameters
         ----------
-        dimensions : mapping of hashable to tuple of hashable
+        dim : mapping of hashable to tuple of hashable
             Mapping of form new_name=(dim1, dim2, ...) describing the
-            names of new dimensions, and the existing dimensions that
+            names of new dim, and the existing dim that
             they replace.
-        **dimensions_kwargs
-            The keyword arguments form of ``dimensions``.
-            One of dimensions or dimensions_kwargs must be provided.
+        **dim_kwargs
+            The keyword arguments form of ``dim``.
+            One of dim or dim_kwargs must be provided.
 
         Returns
         -------
@@ -1437,9 +1441,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         Variable.unstack
         """
-        dimensions = either_dict_or_kwargs(dimensions, dimensions_kwargs, "stack")
+        dim = either_dict_or_kwargs(dim, dim_kwargs, "stack")
         result = self
-        for new_dim, dims in dimensions.items():
+        for new_dim, dims in dim.items():
             result = result._stack_once(dims, new_dim)
         return result
 
@@ -1548,7 +1552,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         return self._replace(dims=new_dims, data=data)
 
-    def unstack(self, dimensions=None, **dimensions_kwargs):
+    @partial(deprecate_dims, old_name="dimensions")
+    def unstack(self, dim=None, **dim_kwargs):
         """
         Unstack an existing dimension into multiple new dimensions.
 
@@ -1561,13 +1566,13 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         Parameters
         ----------
-        dimensions : mapping of hashable to mapping of hashable to int
+        dim : mapping of hashable to mapping of hashable to int
             Mapping of the form old_dim={dim1: size1, ...} describing the
             names of existing dimensions, and the new dimensions and sizes
             that they map to.
-        **dimensions_kwargs
-            The keyword arguments form of ``dimensions``.
-            One of dimensions or dimensions_kwargs must be provided.
+        **dim_kwargs
+            The keyword arguments form of ``dim``.
+            One of dim or dim_kwargs must be provided.
 
         Returns
         -------
@@ -1580,9 +1585,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         DataArray.unstack
         Dataset.unstack
         """
-        dimensions = either_dict_or_kwargs(dimensions, dimensions_kwargs, "unstack")
+        dim = either_dict_or_kwargs(dim, dim_kwargs, "unstack")
         result = self
-        for old_dim, dims in dimensions.items():
+        for old_dim, dims in dim.items():
             result = result._unstack_once_full(dims, old_dim)
         return result
 
