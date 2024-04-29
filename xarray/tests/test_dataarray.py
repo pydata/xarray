@@ -7135,7 +7135,7 @@ class TestStackEllipsis:
     def test_error_on_ellipsis_without_list(self) -> None:
         da = DataArray([[1, 2], [1, 2]], dims=("x", "y"))
         with pytest.raises(ValueError):
-            da.stack(flat=...)  # type: ignore
+            da.stack(flat=...)
 
 
 def test_nD_coord_dataarray() -> None:
