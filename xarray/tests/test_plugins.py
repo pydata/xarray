@@ -228,7 +228,6 @@ def test_lazy_import() -> None:
         "matplotlib",
         "nc_time_axis",
         "netCDF4",
-        "Nio",
         "numbagg",
         "pint",
         "pydap",
