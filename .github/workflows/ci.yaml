@@ -82,9 +82,14 @@ jobs:
             if [[ "${{ matrix.env }}" == "flaky" ]] ;
             then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
-              echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests" >> $GITHUB_ENV
+              echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests -W default" >> $GITHUB_ENV
             else
               echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
+            fi
+            if [[ "${{ matrix.env }}" == "min-all-deps" ]] ;
+            then
+              # Don't raise on warnings
+              echo "PYTEST_ADDOPTS=-W default" >> $GITHUB_ENV
             fi
           else
             if [[ ${{ matrix.python-version }} != "3.13" ]]; then
