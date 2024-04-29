@@ -576,7 +576,8 @@ def _dataset_concat(
                 var = ds._variables[name]
                 if not var.dims:
                     data = var.set_dims(dim).values
-                    yield PandasIndex(data, dim, coord_dtype=var.dtype)
+                    if create_index:
+                        yield PandasIndex(data, dim, coord_dtype=var.dtype)
 
     # create concatenation index, needed for later reindexing
     file_start_indexes = np.append(0, np.cumsum(concat_dim_lengths))
