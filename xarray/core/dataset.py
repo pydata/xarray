@@ -5383,7 +5383,7 @@ class Dataset(
                [3, 4, 5, 7]])
         Coordinates:
           * z         (z) object 32B MultiIndex
-          * variable  (z) object 32B 'a' 'a' 'a' 'b'
+          * variable  (z) <U1 16B 'a' 'a' 'a' 'b'
           * y         (z) object 32B 'u' 'v' 'w' nan
         Dimensions without coordinates: x
 
