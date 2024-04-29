@@ -1051,6 +1051,15 @@ class TestConcatDataset:
         # nor have auto-created any indexes
         assert combined.indexes == {}
 
+    def test_concat_promote_shape_without_creating_new_index(self) -> None:
+        # different shapes but neither have indexes
+        ds1 = Dataset(coords={"x": 0})
+        ds2 = Dataset(data_vars={"x": [1]}).drop_indexes("x")
+        actual = concat([ds1, ds2], dim="x", create_index=False)
+        expected = Dataset(data_vars={"x": [0, 1]}).drop_indexes("x")
+        assert_identical(actual, expected, check_default_indexes=False)
+        assert actual.indexes == {}
+
 
 class TestConcatDataArray:
     def test_concat(self) -> None:
