@@ -1038,10 +1038,8 @@ class TestConcatDataset:
             for _ in range(2)
         ]
 
-        # TODO this should raise an error, but it doesn't
-        # It's somehow cheating it's way around the UnexpectedDataAccess error that should be raised
         with pytest.raises(UnexpectedDataAccess):
-            combined = concat(datasets, dim="x", create_index=True)
+            concat(datasets, dim="x", create_index=True)
 
         # should not raise on concat iff create_index=False
         combined = concat(datasets, dim="x", create_index=False)
