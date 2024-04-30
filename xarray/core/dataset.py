@@ -17,6 +17,7 @@ from collections.abc import (
     MutableMapping,
     Sequence,
 )
+from functools import partial
 from html import escape
 from numbers import Number
 from operator import methodcaller
@@ -124,7 +125,7 @@ from xarray.core.variable import (
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.namedarray.pycompat import array_type, is_chunked_array
 from xarray.plot.accessor import DatasetPlotAccessor
-from xarray.util.deprecation_helpers import _deprecate_positional_args
+from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
     from dask.dataframe import DataFrame as DaskDataFrame
@@ -4497,6 +4498,7 @@ class Dataset(
         self,
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
         axis: None | int | Sequence[int] = None,
+        create_index: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
         """Return a new object with an additional axis (or axes) inserted at
@@ -4505,6 +4507,9 @@ class Dataset(
 
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
+
+        The automatic creation of indexes to back new 1D coordinate variables
+        controlled by the create_index kwarg.
 
         Parameters
         ----------
@@ -4521,6 +4526,8 @@ class Dataset(
             multiple axes are inserted. In this case, dim arguments should be
             same length list. If axis=None is passed, all the axes will be
             inserted to the start of the result array.
+        create_index : bool, default is True
+            Whether to create new PandasIndex objects for any new 1D coordinate variables.
         **dim_kwargs : int or sequence or ndarray
             The keywords are arbitrary dimensions being inserted and the values
             are either the lengths of the new dims (if int is given), or their
@@ -4640,9 +4647,14 @@ class Dataset(
                 # save the coordinates to the variables dict, and set the
                 # value within the dim dict to the length of the iterable
                 # for later use.
-                index = PandasIndex(v, k)
-                indexes[k] = index
-                variables.update(index.create_variables())
+
+                if create_index:
+                    index = PandasIndex(v, k)
+                    indexes[k] = index
+                    name_and_new_1d_var = index.create_variables()
+                else:
+                    name_and_new_1d_var = {k: Variable(data=v, dims=k)}
+                variables.update(name_and_new_1d_var)
                 coord_names.add(k)
                 dim[k] = variables[k].size
             elif isinstance(v, int):
@@ -4678,11 +4690,23 @@ class Dataset(
                     variables[k] = v.set_dims(dict(all_dims))
             else:
                 if k not in variables:
-                    # If dims includes a label of a non-dimension coordinate,
-                    # it will be promoted to a 1D coordinate with a single value.
-                    index, index_vars = create_default_index_implicit(v.set_dims(k))
-                    indexes[k] = index
-                    variables.update(index_vars)
+                    if k in coord_names and create_index:
+                        # If dims includes a label of a non-dimension coordinate,
+                        # it will be promoted to a 1D coordinate with a single value.
+                        index, index_vars = create_default_index_implicit(v.set_dims(k))
+                        indexes[k] = index
+                        variables.update(index_vars)
+                    else:
+                        if create_index:
+                            warnings.warn(
+                                f"No index created for dimension {k} because variable {k} is not a coordinate. "
+                                f"To create an index for {k}, please first call `.set_coords('{k}')` on this object.",
+                                UserWarning,
+                            )
+
+                        # create 1D variable without creating a new index
+                        new_1d_var = v.set_dims(k)
+                        variables.update({k: new_1d_var})
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
@@ -5241,12 +5265,13 @@ class Dataset(
             new_variables, coord_names=new_coord_names, indexes=indexes
         )
 
+    @partial(deprecate_dims, old_name="dimensions")
     def stack(
         self,
-        dimensions: Mapping[Any, Sequence[Hashable | ellipsis]] | None = None,
+        dim: Mapping[Any, Sequence[Hashable | ellipsis]] | None = None,
         create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
-        **dimensions_kwargs: Sequence[Hashable | ellipsis],
+        **dim_kwargs: Sequence[Hashable | ellipsis],
     ) -> Self:
         """
         Stack any number of existing dimensions into a single new dimension.
@@ -5256,7 +5281,7 @@ class Dataset(
 
         Parameters
         ----------
-        dimensions : mapping of hashable to sequence of hashable
+        dim : mapping of hashable to sequence of hashable
             Mapping of the form `new_name=(dim1, dim2, ...)`. Names of new
             dimensions, and the existing dimensions that they replace. An
             ellipsis (`...`) will be replaced by all unlisted dimensions.
@@ -5272,9 +5297,9 @@ class Dataset(
         index_cls: Index-class, default: PandasMultiIndex
             Can be used to pass a custom multi-index type (must be an Xarray index that
             implements `.stack()`). By default, a pandas multi-index wrapper is used.
-        **dimensions_kwargs
-            The keyword arguments form of ``dimensions``.
-            One of dimensions or dimensions_kwargs must be provided.
+        **dim_kwargs
+            The keyword arguments form of ``dim``.
+            One of dim or dim_kwargs must be provided.
 
         Returns
         -------
@@ -5285,9 +5310,9 @@ class Dataset(
         --------
         Dataset.unstack
         """
-        dimensions = either_dict_or_kwargs(dimensions, dimensions_kwargs, "stack")
+        dim = either_dict_or_kwargs(dim, dim_kwargs, "stack")
         result = self
-        for new_dim, dims in dimensions.items():
+        for new_dim, dims in dim.items():
             result = result._stack_once(dims, new_dim, index_cls, create_index)
         return result
 
@@ -6195,9 +6220,10 @@ class Dataset(
         drop_vars = {k for k, v in self._variables.items() if set(v.dims) & drop_dims}
         return self.drop_vars(drop_vars)
 
+    @deprecate_dims
     def transpose(
         self,
-        *dims: Hashable,
+        *dim: Hashable,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Self:
         """Return a new Dataset object with all array dimensions transposed.
@@ -6207,7 +6233,7 @@ class Dataset(
 
         Parameters
         ----------
-        *dims : hashable, optional
+        *dim : hashable, optional
             By default, reverse the dimensions on each array. Otherwise,
             reorder the dimensions to this order.
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
@@ -6234,20 +6260,20 @@ class Dataset(
         numpy.transpose
         DataArray.transpose
         """
-        # Raise error if list is passed as dims
-        if (len(dims) > 0) and (isinstance(dims[0], list)):
-            list_fix = [f"{repr(x)}" if isinstance(x, str) else f"{x}" for x in dims[0]]
+        # Raise error if list is passed as dim
+        if (len(dim) > 0) and (isinstance(dim[0], list)):
+            list_fix = [f"{repr(x)}" if isinstance(x, str) else f"{x}" for x in dim[0]]
             raise TypeError(
-                f'transpose requires dims to be passed as multiple arguments. Expected `{", ".join(list_fix)}`. Received `{dims[0]}` instead'
+                f'transpose requires dim to be passed as multiple arguments. Expected `{", ".join(list_fix)}`. Received `{dim[0]}` instead'
             )
 
         # Use infix_dims to check once for missing dimensions
-        if len(dims) != 0:
-            _ = list(infix_dims(dims, self.dims, missing_dims))
+        if len(dim) != 0:
+            _ = list(infix_dims(dim, self.dims, missing_dims))
 
         ds = self.copy()
         for name, var in self._variables.items():
-            var_dims = tuple(dim for dim in dims if dim in (var.dims + (...,)))
+            var_dims = tuple(d for d in dim if d in (var.dims + (...,)))
             ds._variables[name] = var.transpose(*var_dims)
         return ds
 
