@@ -1060,19 +1060,6 @@ class CompatIndexedTuple(tuple):
         return f"CompatIndexedTuple({super().__repr__()}, indexer_type='{self.indexer_type}')"
 
 
-# def _create_compat_indexed_tuple(indexer):
-#     if isinstance(indexer, BasicIndexer):
-#         return CompatIndexedTuple(indexer.tuple, "basic")
-#     elif isinstance(indexer, VectorizedIndexer):
-#         return CompatIndexedTuple(indexer.tuple, "vectorized")
-#     elif isinstance(indexer, OuterIndexer):
-#         return CompatIndexedTuple(indexer.tuple, "outer")
-#     else:
-#         raise TypeError(
-#             f"indexer must be a BasicIndexer, VectorizedIndexer, or OuterIndexer, not {type(indexer)}"
-#         )
-
-
 def apply_indexer(indexable, indexer: ExplicitIndexer):
     """Apply an indexer to an indexable object."""
     if isinstance(indexer, VectorizedIndexer):
