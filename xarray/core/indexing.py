@@ -575,9 +575,9 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
     def get_duck_array(self):
         return self.array.get_duck_array()
 
-    def __getitem__(self, key: _IndexerKey):
-        key = expanded_indexer(key, self.ndim)
-        indexer = self.indexer_cls(key)
+    def __getitem__(self, key: _IndexerKey | slice):
+        _key = expanded_indexer(key, self.ndim)
+        indexer = self.indexer_cls(_key)
 
         result = apply_indexer(self.array, indexer)
 
@@ -1053,7 +1053,7 @@ class CompatIndexedTuple(tuple):
 
     def __new__(cls, iterable, indexer_type: Literal["basic", "vectorized", "outer"]):
         obj = super().__new__(cls, iterable)
-        obj.indexer_type = indexer_type
+        obj.indexer_type = indexer_type  # type: ignore[attr-defined]
         return obj
 
     def __repr__(self):
@@ -1088,9 +1088,9 @@ def decompose_indexer(
     if isinstance(indexer, CompatIndexedTuple):
         # recreate the indexer object from the tuple and the type of indexing.
         # This is necessary to ensure that the backend array can correctly interpret the indexing operation.
-        if indexer.indexer_type == "vectorized":
+        if indexer.indexer_type == "vectorized":  # type: ignore[attr-defined]
             indexer = VectorizedIndexer(indexer)
-        elif indexer.indexer_type == "outer":
+        elif indexer.indexer_type == "outer":  # type: ignore[attr-defined]
             indexer = OuterIndexer(indexer)
         else:
             indexer = BasicIndexer(indexer)
