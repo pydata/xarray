@@ -19,13 +19,9 @@ import xarray as xr  # only for Dataset and DataArray
 from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
 from xarray.core.arithmetic import VariableArithmetic
 from xarray.core.common import AbstractArray
-from xarray.core.indexing import PandasIndexingAdapter, as_indexable
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
-    BasicIndexer,
-    OuterIndexer,
     PandasIndexingAdapter,
-    VectorizedIndexer,
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
@@ -49,8 +45,6 @@ from xarray.namedarray.core import (
     broadcast_namedarrays,
 )
 from xarray.namedarray.pycompat import to_duck_array
-from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
-from xarray.namedarray.pycompat import integer_types, is_0d_dask_array, to_duck_array
 from xarray.util.deprecation_helpers import deprecate_dims
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
