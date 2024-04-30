@@ -1294,27 +1294,6 @@ We recommend installing cfgrib via conda::
 
 .. _cfgrib: https://github.com/ecmwf/cfgrib
 
-.. _io.pynio:
-
-Formats supported by PyNIO
---------------------------
-
-.. warning::
-
-    The `PyNIO backend is deprecated`_. `PyNIO is no longer maintained`_.
-
-Xarray can also read GRIB, HDF4 and other file formats supported by PyNIO_,
-if PyNIO is installed. To use PyNIO to read such files, supply
-``engine='pynio'`` to :py:func:`open_dataset`.
-
-We recommend installing PyNIO via conda::
-
-    conda install -c conda-forge pynio
-
-.. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
-.. _PyNIO backend is deprecated: https://github.com/pydata/xarray/issues/4491
-.. _PyNIO is no longer maintained: https://github.com/NCAR/pynio/issues/53
-
 
 CSV and other formats supported by pandas
 -----------------------------------------
