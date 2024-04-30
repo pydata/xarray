@@ -20,8 +20,7 @@ micromamba remove -y --force \
     packaging \
     pint \
     bottleneck \
-    flox \
-    numcodecs
+    flox
 # to limit the runtime of Upstream CI
 python -m pip install \
     -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple \
