@@ -18,9 +18,9 @@ micromamba remove -y --force \
     zarr \
     cftime \
     packaging \
-    pint \
     bottleneck \
     flox
+    # pint
 # to limit the runtime of Upstream CI
 python -m pip install \
     -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple \
