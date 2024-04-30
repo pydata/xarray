@@ -2988,14 +2988,6 @@ class ZarrBase(CFEncodedBase):
                 assert original[name].chunks == actual_var.chunks
             assert original.chunks == actual.chunks
 
-    def test_vectorized_indexing_negative_step(self) -> None:
-        if not has_dask:
-            pytest.xfail(
-                reason="zarr without dask handles negative steps in slices incorrectly"
-            )
-
-        super().test_vectorized_indexing_negative_step()
-
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):
@@ -3821,6 +3813,7 @@ def skip_if_not_engine(engine):
         pytest.importorskip(engine)
 
 
+# Flaky test. Very open to contributions on fixing this
 @requires_dask
 @pytest.mark.filterwarnings("ignore:use make_scale(name) instead")
 @pytest.mark.xfail(reason="Flaky test. Very open to contributions on fixing this")
@@ -4523,7 +4516,8 @@ class TestDask(DatasetIOBase):
             ) as actual:
                 assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="Flaky test. Very open to contributions on fixing this")
+    # Flaky test. Very open to contributions on fixing this
+    @pytest.mark.flaky
     def test_dask_roundtrip(self) -> None:
         with create_tmp_file() as tmp:
             data = create_test_data()
