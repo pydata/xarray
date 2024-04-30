@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import Any
 
 import numpy as np
 
@@ -18,6 +17,7 @@ from xarray.coding.variables import (
 from xarray.core import indexing
 from xarray.core.utils import module_available
 from xarray.core.variable import Variable
+from xarray.namedarray._typing import _IndexerKey
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 
@@ -250,13 +250,13 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def __repr__(self):
         return f"{type(self).__name__}({self.array!r})"
 
-    def _vindex_get(self, key: tuple[Any, ...]):
+    def _vindex_get(self, key: _IndexerKey):
         return _numpy_char_to_bytes(self.array.vindex[key])
 
-    def _oindex_get(self, key: tuple[Any, ...]):
+    def _oindex_get(self, key: _IndexerKey):
         return _numpy_char_to_bytes(self.array.oindex[key])
 
-    def __getitem__(self, key: tuple[Any, ...]):
+    def __getitem__(self, key: _IndexerKey):
         # require slicing the last dimension completely
         indexer = indexing.expanded_indexer(key, self.array.ndim)
         if indexer[-1] != slice(None):
