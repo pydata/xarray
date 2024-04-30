@@ -301,7 +301,7 @@ addopts = ["--strict-config", "--strict-markers"]
 #   happens, please feel free to add a rule switching it to `default` here, and
 #   disabling the error.
 # - If these settings get in the way of making progress, it's also acceptable to
-#   temporarily add additional `default` rules. 
+#   temporarily add additional `default` rules.
 # - But we should only add `ignore` rules if we're confident that we'll never
 #   need to address a warning.
 
