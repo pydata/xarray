@@ -877,7 +877,7 @@ def test_lazy_array_wont_compute() -> None:
     from xarray.core.indexing import LazilyIndexedArray
 
     class LazilyIndexedArrayNotComputable(LazilyIndexedArray):
-        def __array__(self, dtype=None, copy=None):
+        def __array__(self, dtype=None):
             raise NotImplementedError("Computing this array is not possible.")
 
     arr = LazilyIndexedArrayNotComputable(np.array([1, 2]))

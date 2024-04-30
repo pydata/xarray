@@ -1509,7 +1509,7 @@ class Dataset(
 
     else:
 
-        def __array__(self, dtype=None, copy=None):
+        def __array__(self, dtype=None):
             raise TypeError(
                 "cannot directly convert an xarray.Dataset into a "
                 "numpy array. Instead, create an xarray.DataArray "
