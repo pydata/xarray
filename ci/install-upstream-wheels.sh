@@ -53,11 +53,6 @@ python -m pip install \
     --no-deps \
     --upgrade \
     --no-build-isolation \
-    git+https://github.com/zarr-developers/numcodecs
-python -m pip install \
-    --no-deps \
-    --upgrade \
-    --no-build-isolation \
     git+https://github.com/pydata/bottleneck
 python -m pip install \
     --no-deps \
