@@ -1162,10 +1162,10 @@ def _decompose_vectorized_indexer(
     >>> array = np.arange(36).reshape(6, 6)
     >>> backend_indexer = OuterIndexer((np.array([0, 1, 3]), np.array([2, 3])))
     >>> # load subslice of the array
-    ... array = NumpyIndexingAdapter(array).oindex[backend_indexer]
+    ... array = NumpyIndexingAdapter(array).oindex[backend_indexer.tuple]
     >>> np_indexer = VectorizedIndexer((np.array([0, 2, 1]), np.array([0, 1, 0])))
     >>> # vectorized indexing for on-memory np.ndarray.
-    ... NumpyIndexingAdapter(array).vindex[np_indexer]
+    ... NumpyIndexingAdapter(array).vindex[np_indexer.tuple]
     array([ 2, 21,  8])
     """
     assert isinstance(indexer, VectorizedIndexer)
@@ -1244,10 +1244,10 @@ def _decompose_outer_indexer(
     >>> array = np.arange(36).reshape(6, 6)
     >>> backend_indexer = BasicIndexer((slice(0, 3), slice(2, 4)))
     >>> # load subslice of the array
-    ... array = NumpyIndexingAdapter(array)[backend_indexer]
+    ... array = NumpyIndexingAdapter(array)[backend_indexer.tuple]
     >>> np_indexer = OuterIndexer((np.array([0, 2, 1]), np.array([0, 1, 0])))
     >>> # outer indexing for on-memory np.ndarray.
-    ... NumpyIndexingAdapter(array).oindex[np_indexer]
+    ... NumpyIndexingAdapter(array).oindex[np_indexer.tuple]
     array([[ 2,  3,  2],
            [14, 15, 14],
            [ 8,  9,  8]])

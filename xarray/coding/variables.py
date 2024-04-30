@@ -100,7 +100,7 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     dtype('int16')
 
     >>> indexer = indexing.BasicIndexer((slice(None),))
-    >>> NativeEndiannessArray(x)[indexer].dtype
+    >>> NativeEndiannessArray(x)[indexer.tuple].dtype
     dtype('int16')
     """
 
