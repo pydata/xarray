@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import textwrap
 
@@ -215,7 +217,7 @@ def _wrap_then_attach_to_cls(
                 setattr(target_cls_dict[method_name], "__doc__", new_method_docstring)
 
 
-def insert_doc_addendum(docstring, addendum):
+def insert_doc_addendum(docstring: str | None, addendum: str) -> str | None:
     """Insert addendum after first paragraph or at the end of the docstring.
 
     There are a number of Dataset's functions that are wrapped. These come from
