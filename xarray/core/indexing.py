@@ -3,13 +3,14 @@ from __future__ import annotations
 import enum
 import functools
 import operator
+import warnings
 from collections import Counter, defaultdict
 from collections.abc import Hashable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, overload
 
 import numpy as np
 import pandas as pd
@@ -236,14 +237,34 @@ def expanded_indexer(key, ndim):
     return tuple(new_key)
 
 
-def _expand_slice(slice_, size: int) -> np.ndarray:
-    return np.arange(*slice_.indices(size))
+def _normalize_slice(sl: slice, size: int) -> slice:
+    """
+    Ensure that given slice only contains positive start and stop values
+    (stop can be -1 for full-size slices with negative steps, e.g. [-10::-1])
 
-
-def _normalize_slice(sl: slice, size) -> slice:
-    """Ensure that given slice only contains positive start and stop values
-    (stop can be -1 for full-size slices with negative steps, e.g. [-10::-1])"""
+    Examples
+    --------
+    >>> _normalize_slice(slice(0, 9), 10)
+    slice(0, 9, 1)
+    >>> _normalize_slice(slice(0, -1), 10)
+    slice(0, 9, 1)
+    """
     return slice(*sl.indices(size))
+
+
+def _expand_slice(slice_: slice, size: int) -> np.ndarray[Any, np.dtype[np.integer]]:
+    """
+    Expand slice to an array containing only positive integers.
+
+    Examples
+    --------
+    >>> _expand_slice(slice(0, 9), 10)
+    array([0, 1, 2, 3, 4, 5, 6, 7, 8])
+    >>> _expand_slice(slice(0, -1), 10)
+    array([0, 1, 2, 3, 4, 5, 6, 7, 8])
+    """
+    sl = _normalize_slice(slice_, size)
+    return np.arange(sl.start, sl.stop, sl.step)
 
 
 def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
@@ -316,11 +337,15 @@ class ExplicitIndexer:
         return f"{type(self).__name__}({self.tuple})"
 
 
-def as_integer_or_none(value):
+@overload
+def as_integer_or_none(value: int) -> int: ...
+@overload
+def as_integer_or_none(value: None) -> None: ...
+def as_integer_or_none(value: int | None) -> int | None:
     return None if value is None else operator.index(value)
 
 
-def as_integer_slice(value):
+def as_integer_slice(value: slice) -> slice:
     start = as_integer_or_none(value.start)
     stop = as_integer_or_none(value.stop)
     step = as_integer_or_none(value.step)
@@ -564,6 +589,14 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
             return result
 
 
+BackendArray_fallback_warning_message = (
+    "The array `{0}` does not support indexing using the .vindex and .oindex properties. "
+    "The __getitem__ method is being used instead. This fallback behavior will be "
+    "removed in a future version. Please ensure that the backend array `{1}` implements "
+    "support for the .vindex and .oindex properties to avoid potential issues."
+)
+
+
 class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and outer indexing lazy."""
 
@@ -615,11 +648,18 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return tuple(shape)
 
     def get_duck_array(self):
-        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
+        try:
             array = apply_indexer(self.array, self.key)
-        else:
+        except NotImplementedError as _:
             # If the array is not an ExplicitlyIndexedNDArrayMixin,
-            # it may wrap a BackendArray so use its __getitem__
+            # it may wrap a BackendArray subclass that doesn't implement .oindex and .vindex. so use its __getitem__
+            warnings.warn(
+                BackendArray_fallback_warning_message.format(
+                    self.array.__class__.__name__, self.array.__class__.__name__
+                ),
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
             array = self.array[self.key.tuple]
 
         # self.array[self.key] is now a numpy array when
@@ -689,12 +729,20 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return np.broadcast(*self.key.tuple).shape
 
     def get_duck_array(self):
-        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
+        try:
             array = apply_indexer(self.array, self.key)
-        else:
+        except NotImplementedError as _:
             # If the array is not an ExplicitlyIndexedNDArrayMixin,
-            # it may wrap a BackendArray so use its __getitem__
+            # it may wrap a BackendArray subclass that doesn't implement .oindex and .vindex. so use its __getitem__
+            warnings.warn(
+                BackendArray_fallback_warning_message.format(
+                    self.array.__class__.__name__, self.array.__class__.__name__
+                ),
+                category=PendingDeprecationWarning,
+                stacklevel=2,
+            )
             array = self.array[self.key.tuple]
+
         # self.array[self.key] is now a numpy array when
         # self.array is a BackendArray subclass
         # and self.key is BasicIndexer((slice(None, None, None),))

@@ -75,7 +75,6 @@ from xarray.tests import (
     requires_netCDF4,
     requires_netCDF4_1_6_2_or_above,
     requires_pydap,
-    requires_pynio,
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
@@ -2989,14 +2988,6 @@ class ZarrBase(CFEncodedBase):
                 assert original[name].chunks == actual_var.chunks
             assert original.chunks == actual.chunks
 
-    def test_vectorized_indexing_negative_step(self) -> None:
-        if not has_dask:
-            pytest.xfail(
-                reason="zarr without dask handles negative steps in slices incorrectly"
-            )
-
-        super().test_vectorized_indexing_negative_step()
-
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):
@@ -3769,7 +3760,7 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
             assert "Temperature" in list(actual)
 
 
-@pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "pynio", "zarr"])
+@pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "zarr"])
 def readengine(request):
     return request.param
 
@@ -3818,34 +3809,30 @@ def tmp_store(request, tmp_path):
 def skip_if_not_engine(engine):
     if engine == "netcdf4":
         pytest.importorskip("netCDF4")
-    elif engine == "pynio":
-        pytest.importorskip("Nio")
     else:
         pytest.importorskip(engine)
 
 
+# Flaky test. Very open to contributions on fixing this
 @requires_dask
 @pytest.mark.filterwarnings("ignore:use make_scale(name) instead")
 @pytest.mark.xfail(reason="Flaky test. Very open to contributions on fixing this")
+@pytest.mark.skipif(ON_WINDOWS, reason="Skipping on Windows")
 def test_open_mfdataset_manyfiles(
     readengine, nfiles, parallel, chunks, file_cache_maxsize
 ):
     # skip certain combinations
     skip_if_not_engine(readengine)
 
-    if ON_WINDOWS:
-        pytest.skip("Skipping on Windows")
-
     randdata = np.random.randn(nfiles)
     original = Dataset({"foo": ("x", randdata)})
     # test standard open_mfdataset approach with too many files
     with create_tmp_files(nfiles) as tmpfiles:
-        writeengine = readengine if readengine != "pynio" else "netcdf4"
         # split into multiple sets of temp files
         for ii in original.x.values:
             subds = original.isel(x=slice(ii, ii + 1))
-            if writeengine != "zarr":
-                subds.to_netcdf(tmpfiles[ii], engine=writeengine)
+            if readengine != "zarr":
+                subds.to_netcdf(tmpfiles[ii], engine=readengine)
             else:  # if writeengine == "zarr":
                 subds.to_zarr(store=tmpfiles[ii])
 
@@ -4529,7 +4516,8 @@ class TestDask(DatasetIOBase):
             ) as actual:
                 assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="Flaky test. Very open to contributions on fixing this")
+    # Flaky test. Very open to contributions on fixing this
+    @pytest.mark.flaky
     def test_dask_roundtrip(self) -> None:
         with create_tmp_file() as tmp:
             data = create_test_data()
@@ -4732,39 +4720,6 @@ class TestPydapOnline(TestPydap):
             output_grid=True,
             timeout=120,
         )
-
-
-@requires_scipy
-@requires_pynio
-class TestPyNio(CFEncodedBase, NetCDF3Only):
-    def test_write_store(self) -> None:
-        # pynio is read-only for now
-        pass
-
-    @contextlib.contextmanager
-    def open(self, path, **kwargs):
-        with open_dataset(path, engine="pynio", **kwargs) as ds:
-            yield ds
-
-    def test_kwargs(self) -> None:
-        kwargs = {"format": "grib"}
-        path = os.path.join(os.path.dirname(__file__), "data", "example")
-        with backends.NioDataStore(path, **kwargs) as store:
-            assert store._manager._kwargs["format"] == "grib"
-
-    def save(self, dataset, path, **kwargs):
-        return dataset.to_netcdf(path, engine="scipy", **kwargs)
-
-    def test_weakrefs(self) -> None:
-        example = Dataset({"foo": ("x", np.arange(5.0))})
-        expected = example.rename({"foo": "bar", "x": "y"})
-
-        with create_tmp_file() as tmp_file:
-            example.to_netcdf(tmp_file, engine="scipy")
-            on_disk = open_dataset(tmp_file, engine="pynio")
-            actual = on_disk.rename({"foo": "bar", "x": "y"})
-            del on_disk  # trigger garbage collection
-            assert_identical(actual, expected)
 
 
 class TestEncodingInvalid:
@@ -5828,3 +5783,49 @@ def test_zarr_region_chunk_partial_offset(tmp_path):
     # This write is unsafe, and should raise an error, but does not.
     # with pytest.raises(ValueError):
     #     da.isel(x=slice(5, 25)).chunk(x=(10, 10)).to_zarr(store, region="auto")
+
+
+def test_backend_array_deprecation_warning(capsys):
+    class CustomBackendArray(xr.backends.common.BackendArray):
+        def __init__(self):
+            array = self.get_array()
+            self.shape = array.shape
+            self.dtype = array.dtype
+
+        def get_array(self):
+            return np.arange(10)
+
+        def __getitem__(self, key):
+            return xr.core.indexing.explicit_indexing_adapter(
+                key, self.shape, xr.core.indexing.IndexingSupport.BASIC, self._getitem
+            )
+
+        def _getitem(self, key):
+            array = self.get_array()
+            return array[key]
+
+    cba = CustomBackendArray()
+    indexer = xr.core.indexing.VectorizedIndexer(key=(np.array([0]),))
+
+    la = xr.core.indexing.LazilyIndexedArray(cba, indexer)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        la.vindex[indexer].get_duck_array()
+
+    captured = capsys.readouterr()
+    assert len(w) == 1
+    assert issubclass(w[-1].category, PendingDeprecationWarning)
+    assert (
+        "The array `CustomBackendArray` does not support indexing using the .vindex and .oindex properties."
+        in str(w[-1].message)
+    )
+    assert "The __getitem__ method is being used instead." in str(w[-1].message)
+    assert "This fallback behavior will be removed in a future version." in str(
+        w[-1].message
+    )
+    assert (
+        "Please ensure that the backend array `CustomBackendArray` implements support for the .vindex and .oindex properties to avoid potential issues."
+        in str(w[-1].message)
+    )
+    assert captured.out == ""
