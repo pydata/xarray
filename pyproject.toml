@@ -319,7 +319,6 @@ filterwarnings = [
   "default:deallocating CachingFileManager:RuntimeWarning:xarray.backends.netCDF4_",
   "default:deallocating CachingFileManager:RuntimeWarning:xarray.core.indexing",
   "default:Failed to decode variable.*NumPy will stop allowing conversion of out-of-bound Python integers to integer arrays:DeprecationWarning",
-  "default:dropping variables using `drop` is deprecated; use drop_vars:DeprecationWarning:xarray.tests.test_groupby",
   "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning:xarray.*",
   "default:invalid value encountered in cast:RuntimeWarning:xarray.core.duck_array_ops",
   "default:invalid value encountered in cast:RuntimeWarning:xarray.conventions",
