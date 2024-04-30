@@ -51,17 +51,13 @@ python -m pip install \
 python -m pip install \
     --no-deps \
     --upgrade \
-    --no-build-isolation \
-    git+https://github.com/pydata/bottleneck
-python -m pip install \
-    --no-deps \
-    --upgrade \
     git+https://github.com/dask/dask \
     git+https://github.com/dask/dask-expr \
     git+https://github.com/dask/distributed \
     git+https://github.com/zarr-developers/zarr \
     git+https://github.com/pypa/packaging \
     git+https://github.com/hgrecco/pint \
+    git+https://github.com/pydata/bottleneck \
     git+https://github.com/intake/filesystem_spec \
     git+https://github.com/SciTools/nc-time-axis \
     git+https://github.com/xarray-contrib/flox \
