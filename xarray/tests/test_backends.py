@@ -3211,6 +3211,15 @@ class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only):
             unpickled = pickle.loads(pickle.dumps(ds))
             assert_identical(unpickled, data)
 
+    def test_scipy_wrapper_array_oindex_vindex(self) -> None:
+        ds = xr.Dataset()
+        ds["A"] = xr.DataArray([[1, "a"], [2, "b"]], dims=["x", "y"])
+        with create_tmp_file(allow_cleanup_failure=False) as path:
+            ds.to_netcdf(path, engine="scipy")
+            with xr.open_dataset(path, engine="scipy") as ds2:
+                with create_tmp_file(allow_cleanup_failure=False) as path2:
+                    ds2.sel(y=[1]).to_netcdf(path2)
+
 
 @requires_scipy
 class TestScipyFileObject(CFEncodedBase, NetCDF3Only):
