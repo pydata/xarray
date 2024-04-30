@@ -150,10 +150,9 @@ def test_StackedBytesArray() -> None:
     assert len(actual) == len(expected)
     assert_array_equal(expected, actual)
 
-    B = IndexerMaker(indexing.BasicIndexer)
-    assert_array_equal(expected[:1], actual[B[:1].tuple])
+    assert_array_equal(expected[:1], actual[slice(1)])
     with pytest.raises(IndexError):
-        actual[B[:, :2].tuple]
+        actual[slice(None), slice(2)]
 
 
 def test_StackedBytesArray_scalar() -> None:

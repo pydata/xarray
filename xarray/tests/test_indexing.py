@@ -12,15 +12,12 @@ from xarray.core import indexing, nputils
 from xarray.core.indexes import PandasIndex, PandasMultiIndex
 from xarray.core.types import T_Xarray
 from xarray.tests import (
-    IndexerMaker,
     ReturnItem,
     assert_array_equal,
     assert_identical,
     raise_if_dask_computes,
     requires_dask,
 )
-
-B = IndexerMaker(indexing.BasicIndexer)
 
 
 class TestIndexCallable:
@@ -461,16 +458,16 @@ class TestCopyOnWriteArray:
     def test_setitem(self) -> None:
         original = np.arange(10)
         wrapped = indexing.CopyOnWriteArray(original)
-        wrapped[B[:].tuple] = 0
+        wrapped[(slice(None),)] = 0
         assert_array_equal(original, np.arange(10))
         assert_array_equal(wrapped, np.zeros(10))
 
     def test_sub_array(self) -> None:
         original = np.arange(10)
         wrapped = indexing.CopyOnWriteArray(original)
-        child = wrapped[B[:5].tuple]
+        child = wrapped[(slice(5),)]
         assert isinstance(child, indexing.CopyOnWriteArray)
-        child[B[:].tuple] = 0
+        child[(slice(None),)] = 0
         assert_array_equal(original, np.arange(10))
         assert_array_equal(wrapped, np.arange(10))
         assert_array_equal(child, np.zeros(5))
@@ -478,7 +475,7 @@ class TestCopyOnWriteArray:
     def test_index_scalar(self) -> None:
         # regression test for GH1374
         x = indexing.CopyOnWriteArray(np.array(["foo", "bar"]))
-        assert np.array(x[B[0].tuple][B[()].tuple]) == "foo"
+        assert np.array(x[(0,)][()]) == "foo"
 
 
 class TestMemoryCachedArray:
@@ -491,7 +488,7 @@ class TestMemoryCachedArray:
     def test_sub_array(self) -> None:
         original = indexing.LazilyIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
-        child = wrapped[B[:5].tuple]
+        child = wrapped[(slice(5),)]
         assert isinstance(child, indexing.MemoryCachedArray)
         assert_array_equal(child, np.arange(5))
         assert isinstance(child.array, indexing.NumpyIndexingAdapter)
@@ -500,13 +497,13 @@ class TestMemoryCachedArray:
     def test_setitem(self) -> None:
         original = np.arange(10)
         wrapped = indexing.MemoryCachedArray(original)
-        wrapped[B[:].tuple] = 0
+        wrapped[(slice(None),)] = 0
         assert_array_equal(original, np.zeros(10))
 
     def test_index_scalar(self) -> None:
         # regression test for GH1374
         x = indexing.MemoryCachedArray(np.array(["foo", "bar"]))
-        assert np.array(x[B[0].tuple][B[()].tuple]) == "foo"
+        assert np.array(x[(0,)][()]) == "foo"
 
 
 def test_base_explicit_indexer() -> None:
