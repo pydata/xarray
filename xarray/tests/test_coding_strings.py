@@ -179,9 +179,7 @@ def test_StackedBytesArray_vectorized_indexing() -> None:
     stacked = strings.StackedBytesArray(array)
     expected = np.array([[b"abc", b"def"], [b"def", b"abc"]])
 
-    V = IndexerMaker(indexing.VectorizedIndexer)
-    indexer = V[np.array([[0, 1], [1, 0]])]
-    actual = stacked.vindex[indexer.tuple]
+    actual = stacked.vindex[(np.array([[0, 1], [1, 0]]),)]
     assert_array_equal(actual, expected)
 
 

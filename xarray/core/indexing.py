@@ -516,8 +516,7 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
     __slots__ = ()
 
     def get_duck_array(self):
-        key = BasicIndexer((slice(None),) * self.ndim)
-        return self[key.tuple]
+        return self[(slice(None),) * self.ndim]
 
     def __array__(self, dtype: np.typing.DTypeLike = None) -> np.ndarray:
         # This is necessary because we apply the indexing key in self.get_duck_array()
@@ -1752,7 +1751,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         # a NumPy array.
         return to_0d_array(item)
 
-    def _prepare_key(self, key: _IndexerKey) -> _IndexerKey:
+    def _prepare_key(self, key: ExplicitIndexer | _IndexerKey) -> _IndexerKey:
         _key = key.tuple if isinstance(key, ExplicitIndexer) else key
         if isinstance(_key, tuple) and len(_key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index

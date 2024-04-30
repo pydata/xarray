@@ -221,8 +221,7 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessed, are automatically stacked along the last dimension.
 
-    >>> indexer = indexing.BasicIndexer((slice(None),))
-    >>> StackedBytesArray(np.array(["a", "b", "c"], dtype="S1"))[slice(None)]
+    >>> StackedBytesArray(np.array(["a", "b", "c"], dtype="S1"))[(slice(None),)]
     array(b'abc', dtype='|S3')
     """
 
