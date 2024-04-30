@@ -38,9 +38,9 @@ dependencies:
   - sphinx-design
   - sphinx-inline-tabs
   - sphinx>=5.0
+  - sphinxext-opengraph
+  - sphinxext-rediraffe
   - zarr>=2.10
   - pip:
-      - sphinxext-rediraffe
-      - sphinxext-opengraph
       # relative to this file. Needs to be editable to be accepted.
       - -e ../..
