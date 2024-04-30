@@ -257,8 +257,10 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return _numpy_char_to_bytes(self.array.oindex[key])
 
     def __getitem__(self, key: _IndexerKey):
+        from xarray.core.indexing import CompatIndexedTuple
+
         # require slicing the last dimension completely
         indexer = indexing.expanded_indexer(key, self.array.ndim)
         if indexer[-1] != slice(None):
             raise IndexError("too many indices")
-        return _numpy_char_to_bytes(self.array[indexer])
+        return _numpy_char_to_bytes(self.array[CompatIndexedTuple(indexer, "basic")])

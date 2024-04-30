@@ -10,7 +10,7 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
-from typing import TYPE_CHECKING, Any, Callable, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -660,7 +660,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
                 category=DeprecationWarning,
                 stacklevel=2,
             )
-            array = self.array[self.key.tuple]
+            array = self.array[self.key]
 
         # self.array[self.key] is now a numpy array when
         # self.array is a BackendArray subclass
@@ -681,7 +681,10 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return array.vindex[indexer]
 
     def __getitem__(self, indexer: _IndexerKey):
-        return type(self)(self.array, self._updated_key(BasicIndexer(indexer)))
+        key = BasicIndexer(
+            indexer.tuple if isinstance(indexer, ExplicitIndexer) else indexer
+        )
+        return type(self)(self.array, self._updated_key(key))
 
     def _vindex_set(self, key: _IndexerKey, value: Any) -> None:
         raise NotImplementedError(
@@ -741,7 +744,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
                 category=PendingDeprecationWarning,
                 stacklevel=2,
             )
-            array = self.array[self.key.tuple]
+            array = self.array[self.key]
 
         # self.array[self.key] is now a numpy array when
         # self.array is a BackendArray subclass
@@ -1034,14 +1037,50 @@ def explicit_indexing_adapter(
     return result
 
 
+class CompatIndexedTuple(tuple):
+    """
+    A tuple subclass used to transition existing backend implementations towards the use of raw tuples
+    for indexing by carrying additional metadata about the type of indexing being
+    performed ('basic', 'vectorized', or 'outer'). This class serves as a bridge, allowing
+    backend arrays that currently expect this metadata to function correctly while
+    maintaining the outward behavior of a regular tuple.
+
+    This class is particularly useful during the phase where the backend implementations are
+    not yet capable of directly accepting raw tuples without additional context about
+    the indexing type. It ensures that these backends can still correctly interpret and
+    process indexing operations by providing them with the necessary contextual information.
+    """
+
+    def __new__(cls, iterable, indexer_type: Literal["basic", "vectorized", "outer"]):
+        obj = super().__new__(cls, iterable)
+        obj.indexer_type = indexer_type
+        return obj
+
+    def __repr__(self):
+        return f"CompatIndexedTuple({super().__repr__()}, indexer_type='{self.indexer_type}')"
+
+
+# def _create_compat_indexed_tuple(indexer):
+#     if isinstance(indexer, BasicIndexer):
+#         return CompatIndexedTuple(indexer.tuple, "basic")
+#     elif isinstance(indexer, VectorizedIndexer):
+#         return CompatIndexedTuple(indexer.tuple, "vectorized")
+#     elif isinstance(indexer, OuterIndexer):
+#         return CompatIndexedTuple(indexer.tuple, "outer")
+#     else:
+#         raise TypeError(
+#             f"indexer must be a BasicIndexer, VectorizedIndexer, or OuterIndexer, not {type(indexer)}"
+#         )
+
+
 def apply_indexer(indexable, indexer: ExplicitIndexer):
     """Apply an indexer to an indexable object."""
     if isinstance(indexer, VectorizedIndexer):
-        return indexable.vindex[indexer.tuple]
+        return indexable.vindex[CompatIndexedTuple(indexer.tuple, "vectorized")]
     elif isinstance(indexer, OuterIndexer):
-        return indexable.oindex[indexer.tuple]
+        return indexable.oindex[CompatIndexedTuple(indexer.tuple, "outer")]
     else:
-        return indexable[indexer.tuple]
+        return indexable[CompatIndexedTuple(indexer.tuple, "basic")]
 
 
 def set_with_indexer(indexable, indexer: ExplicitIndexer, value: Any) -> None:
@@ -1055,8 +1094,19 @@ def set_with_indexer(indexable, indexer: ExplicitIndexer, value: Any) -> None:
 
 
 def decompose_indexer(
-    indexer: ExplicitIndexer, shape: _Shape, indexing_support: IndexingSupport
+    indexer: ExplicitIndexer | CompatIndexedTuple,
+    shape: _Shape,
+    indexing_support: IndexingSupport,
 ) -> tuple[ExplicitIndexer, ExplicitIndexer]:
+    if isinstance(indexer, CompatIndexedTuple):
+        # recreate the indexer object from the tuple and the type of indexing.
+        # This is necessary to ensure that the backend array can correctly interpret the indexing operation.
+        if indexer.indexer_type == "vectorized":
+            indexer = VectorizedIndexer(indexer)
+        elif indexer.indexer_type == "outer":
+            indexer = OuterIndexer(indexer)
+        else:
+            indexer = BasicIndexer(indexer)
     if isinstance(indexer, VectorizedIndexer):
         return _decompose_vectorized_indexer(indexer, shape, indexing_support)
     if isinstance(indexer, (BasicIndexer, OuterIndexer)):
@@ -1716,12 +1766,13 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return to_0d_array(item)
 
     def _prepare_key(self, key: _IndexerKey) -> _IndexerKey:
-        if isinstance(key, tuple) and len(key) == 1:
+        _key = key.tuple if isinstance(key, ExplicitIndexer) else key
+        if isinstance(_key, tuple) and len(_key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
             # objects don't like tuples)
-            (key,) = key
+            (_key,) = _key
 
-        return key
+        return _key
 
     def _handle_result(
         self, result: Any
