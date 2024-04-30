@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
-    from xarray.datatree_.datatree import DataTree
+    from xarray.core.datatree import DataTree
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -97,7 +97,17 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
             variable.set_auto_chartostring(False)
         return variable
 
-    def __getitem__(self, key):
+    def _oindex_get(self, key: indexing.OuterIndexer):
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.OUTER, self._getitem
+        )
+
+    def _vindex_get(self, key: indexing.VectorizedIndexer):
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.OUTER, self._getitem
+        )
+
+    def __getitem__(self, key: indexing.BasicIndexer):
         return indexing.explicit_indexing_adapter(
             key, self.shape, indexing.IndexingSupport.OUTER, self._getitem
         )

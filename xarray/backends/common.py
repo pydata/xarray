@@ -23,8 +23,8 @@ if TYPE_CHECKING:
     from netCDF4 import Dataset as ncDataset
 
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
     from xarray.core.types import NestedSequence
-    from xarray.datatree_.datatree import DataTree
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -137,8 +137,8 @@ def _open_datatree_netcdf(
     **kwargs,
 ) -> DataTree:
     from xarray.backends.api import open_dataset
+    from xarray.core.datatree import DataTree
     from xarray.core.treenode import NodePath
-    from xarray.datatree_.datatree import DataTree
 
     ds = open_dataset(filename_or_obj, **kwargs)
     tree_root = DataTree.from_dict({"/": ds})
@@ -209,6 +209,24 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     def get_duck_array(self, dtype: np.typing.DTypeLike = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return self[key]  # type: ignore [index]
+
+    def _oindex_get(self, key: indexing.OuterIndexer):
+        raise NotImplementedError(
+            f"{self.__class__.__name__}._oindex_get method should be overridden"
+        )
+
+    def _vindex_get(self, key: indexing.VectorizedIndexer):
+        raise NotImplementedError(
+            f"{self.__class__.__name__}._vindex_get method should be overridden"
+        )
+
+    @property
+    def oindex(self) -> indexing.IndexCallable:
+        return indexing.IndexCallable(self._oindex_get)
+
+    @property
+    def vindex(self) -> indexing.IndexCallable:
+        return indexing.IndexCallable(self._vindex_get)
 
 
 class AbstractDataStore:

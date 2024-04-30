@@ -3,9 +3,11 @@ on:
   push:
     branches:
       - "main"
+      - "backend-indexing"
   pull_request:
     branches:
       - "main"
+      - "backend-indexing"
   workflow_dispatch: # allows you to trigger manually
 
 concurrency:
@@ -44,7 +46,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.9", "3.11", "3.12"]
+        python-version: ["3.9",  "3.12"]
         env: [""]
         include:
           # Minimum python version:
@@ -56,10 +58,11 @@ jobs:
             os: ubuntu-latest
           # Latest python version:
           - env: "all-but-dask"
-            python-version: "3.10"
+            # Not 3.12 because of pint
+            python-version: "3.11"
             os: ubuntu-latest
           - env: "flaky"
-            python-version: "3.10"
+            python-version: "3.12"
             os: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,25 +74,30 @@ jobs:
 
           if [[ ${{ matrix.os }} == windows* ]] ;
           then
-            if [[ ${{ matrix.python-version }} != "3.12" ]]; then
+            if [[ ${{ matrix.python-version }} != "3.13" ]]; then
               echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
             else
-              echo "CONDA_ENV_FILE=ci/requirements/environment-windows-3.12.yml" >> $GITHUB_ENV
+              echo "CONDA_ENV_FILE=ci/requirements/environment-windows-3.13.yml" >> $GITHUB_ENV
             fi
           elif [[ "${{ matrix.env }}" != "" ]] ;
           then
             if [[ "${{ matrix.env }}" == "flaky" ]] ;
             then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
-              echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
+              echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests -W default" >> $GITHUB_ENV
             else
               echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
             fi
+            if [[ "${{ matrix.env }}" == "min-all-deps" ]] ;
+            then
+              # Don't raise on warnings
+              echo "PYTEST_ADDOPTS=-W default" >> $GITHUB_ENV
+            fi
           else
-            if [[ ${{ matrix.python-version }} != "3.12" ]]; then
+            if [[ ${{ matrix.python-version }} != "3.13" ]]; then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
             else
-              echo "CONDA_ENV_FILE=ci/requirements/environment-3.12.yml" >> $GITHUB_ENV
+              echo "CONDA_ENV_FILE=ci/requirements/environment-3.13.yml" >> $GITHUB_ENV
             fi
           fi
 
@@ -109,7 +117,7 @@ jobs:
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
       - name: Install error reporter
-        if: ${{ matrix.os }} == 'ubuntu-latest' and ${{ matrix.python-version }} == '3.10'
+        if: ${{ matrix.os }} == 'ubuntu-latest' and ${{ matrix.python-version }} == '3.12'
         run: |
           python -m pip install pytest-github-actions-annotate-failures
 
@@ -127,13 +135,20 @@ jobs:
         run: |
           python -c "import xarray"
 
+      - name: Restore cached hypothesis directory
+        uses: actions/cache@v4
+        with:
+          path: .hypothesis/
+          key: cache-hypothesis
+          enableCrossOsArchive: true
+          save-always: true
+
       - name: Run tests
         run: python -m pytest -n 4
           --timeout 180
           --cov=xarray
           --cov-report=xml
           --junitxml=pytest.xml
-          $PYTEST_EXTRA_FLAGS
 
       - name: Upload test results
         if: always()
@@ -143,7 +158,7 @@ jobs:
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v4.1.0
+        uses: codecov/codecov-action@v4.3.0
         with:
           file: ./coverage.xml
           flags: unittests

@@ -3,13 +3,14 @@ from __future__ import annotations
 import enum
 import functools
 import operator
+import warnings
 from collections import Counter, defaultdict
 from collections.abc import Hashable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, overload
 
 import numpy as np
 import pandas as pd
@@ -236,14 +237,34 @@ def expanded_indexer(key, ndim: int) -> tuple[Any, ...]:
     return tuple(new_key)
 
 
-def _expand_slice(slice_, size: int) -> np.ndarray:
-    return np.arange(*slice_.indices(size))
+def _normalize_slice(sl: slice, size: int) -> slice:
+    """
+    Ensure that given slice only contains positive start and stop values
+    (stop can be -1 for full-size slices with negative steps, e.g. [-10::-1])
 
-
-def _normalize_slice(sl: slice, size) -> slice:
-    """Ensure that given slice only contains positive start and stop values
-    (stop can be -1 for full-size slices with negative steps, e.g. [-10::-1])"""
+    Examples
+    --------
+    >>> _normalize_slice(slice(0, 9), 10)
+    slice(0, 9, 1)
+    >>> _normalize_slice(slice(0, -1), 10)
+    slice(0, 9, 1)
+    """
     return slice(*sl.indices(size))
+
+
+def _expand_slice(slice_: slice, size: int) -> np.ndarray[Any, np.dtype[np.integer]]:
+    """
+    Expand slice to an array containing only positive integers.
+
+    Examples
+    --------
+    >>> _expand_slice(slice(0, 9), 10)
+    array([0, 1, 2, 3, 4, 5, 6, 7, 8])
+    >>> _expand_slice(slice(0, -1), 10)
+    array([0, 1, 2, 3, 4, 5, 6, 7, 8])
+    """
+    sl = _normalize_slice(slice_, size)
+    return np.arange(sl.start, sl.stop, sl.step)
 
 
 def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
@@ -316,11 +337,15 @@ class ExplicitIndexer:
         return f"{type(self).__name__}({self.tuple})"
 
 
-def as_integer_or_none(value):
+@overload
+def as_integer_or_none(value: int) -> int: ...
+@overload
+def as_integer_or_none(value: None) -> None: ...
+def as_integer_or_none(value: int | None) -> int | None:
     return None if value is None else operator.index(value)
 
 
-def as_integer_slice(value):
+def as_integer_slice(value: slice) -> slice:
     start = as_integer_or_none(value.start)
     stop = as_integer_or_none(value.stop)
     step = as_integer_or_none(value.step)
@@ -564,6 +589,14 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
             return result
 
 
+BackendArray_fallback_warning_message = (
+    "The array `{0}` does not support indexing using the .vindex and .oindex properties. "
+    "The __getitem__ method is being used instead. This fallback behavior will be "
+    "removed in a future version. Please ensure that the backend array `{1}` implements "
+    "support for the .vindex and .oindex properties to avoid potential issues."
+)
+
+
 class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and outer indexing lazy."""
 
@@ -615,11 +648,18 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return tuple(shape)
 
     def get_duck_array(self):
-        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
+        try:
             array = apply_indexer(self.array, self.key)
-        else:
+        except NotImplementedError as _:
             # If the array is not an ExplicitlyIndexedNDArrayMixin,
-            # it may wrap a BackendArray so use its __getitem__
+            # it may wrap a BackendArray subclass that doesn't implement .oindex and .vindex. so use its __getitem__
+            warnings.warn(
+                BackendArray_fallback_warning_message.format(
+                    self.array.__class__.__name__, self.array.__class__.__name__
+                ),
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
             array = self.array[self.key]
 
         # self.array[self.key] is now a numpy array when
@@ -691,12 +731,20 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return np.broadcast(*self.key.tuple).shape
 
     def get_duck_array(self):
-        if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
+        try:
             array = apply_indexer(self.array, self.key)
-        else:
+        except NotImplementedError as _:
             # If the array is not an ExplicitlyIndexedNDArrayMixin,
-            # it may wrap a BackendArray so use its __getitem__
+            # it may wrap a BackendArray subclass that doesn't implement .oindex and .vindex. so use its __getitem__
+            warnings.warn(
+                BackendArray_fallback_warning_message.format(
+                    self.array.__class__.__name__, self.array.__class__.__name__
+                ),
+                category=PendingDeprecationWarning,
+                stacklevel=2,
+            )
             array = self.array[self.key]
+
         # self.array[self.key] is now a numpy array when
         # self.array is a BackendArray subclass
         # and self.key is BasicIndexer((slice(None, None, None),))
@@ -1680,11 +1728,65 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         # a NumPy array.
         return to_0d_array(item)
 
-    def _oindex_get(self, indexer: OuterIndexer):
-        return self.__getitem__(indexer)
+    def _prepare_key(self, key: tuple[Any, ...]) -> tuple[Any, ...]:
+        if isinstance(key, tuple) and len(key) == 1:
+            # unpack key so it can index a pandas.Index object (pandas.Index
+            # objects don't like tuples)
+            (key,) = key
 
-    def _vindex_get(self, indexer: VectorizedIndexer):
-        return self.__getitem__(indexer)
+        return key
+
+    def _handle_result(
+        self, result: Any
+    ) -> (
+        PandasIndexingAdapter
+        | NumpyIndexingAdapter
+        | np.ndarray
+        | np.datetime64
+        | np.timedelta64
+    ):
+        if isinstance(result, pd.Index):
+            return type(self)(result, dtype=self.dtype)
+        else:
+            return self._convert_scalar(result)
+
+    def _oindex_get(
+        self, indexer: OuterIndexer
+    ) -> (
+        PandasIndexingAdapter
+        | NumpyIndexingAdapter
+        | np.ndarray
+        | np.datetime64
+        | np.timedelta64
+    ):
+        key = self._prepare_key(indexer.tuple)
+
+        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
+            indexable = NumpyIndexingAdapter(np.asarray(self))
+            return indexable.oindex[indexer]
+
+        result = self.array[key]
+
+        return self._handle_result(result)
+
+    def _vindex_get(
+        self, indexer: VectorizedIndexer
+    ) -> (
+        PandasIndexingAdapter
+        | NumpyIndexingAdapter
+        | np.ndarray
+        | np.datetime64
+        | np.timedelta64
+    ):
+        key = self._prepare_key(indexer.tuple)
+
+        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
+            indexable = NumpyIndexingAdapter(np.asarray(self))
+            return indexable.vindex[indexer]
+
+        result = self.array[key]
+
+        return self._handle_result(result)
 
     def __getitem__(
         self, indexer: ExplicitIndexer
@@ -1695,22 +1797,15 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         | np.datetime64
         | np.timedelta64
     ):
-        key = indexer.tuple
-        if isinstance(key, tuple) and len(key) == 1:
-            # unpack key so it can index a pandas.Index object (pandas.Index
-            # objects don't like tuples)
-            (key,) = key
+        key = self._prepare_key(indexer.tuple)
 
         if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
             indexable = NumpyIndexingAdapter(np.asarray(self))
-            return apply_indexer(indexable, indexer)
+            return indexable[indexer]
 
         result = self.array[key]
 
-        if isinstance(result, pd.Index):
-            return type(self)(result, dtype=self.dtype)
-        else:
-            return self._convert_scalar(result)
+        return self._handle_result(result)
 
     def transpose(self, order) -> pd.Index:
         return self.array  # self.array should be always one-dimensional
@@ -1765,6 +1860,34 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
             idx = tuple(self.array.names).index(self.level)
             item = item[idx]
         return super()._convert_scalar(item)
+
+    def _oindex_get(
+        self, indexer: OuterIndexer
+    ) -> (
+        PandasIndexingAdapter
+        | NumpyIndexingAdapter
+        | np.ndarray
+        | np.datetime64
+        | np.timedelta64
+    ):
+        result = super()._oindex_get(indexer)
+        if isinstance(result, type(self)):
+            result.level = self.level
+        return result
+
+    def _vindex_get(
+        self, indexer: VectorizedIndexer
+    ) -> (
+        PandasIndexingAdapter
+        | NumpyIndexingAdapter
+        | np.ndarray
+        | np.datetime64
+        | np.timedelta64
+    ):
+        result = super()._vindex_get(indexer)
+        if isinstance(result, type(self)):
+            result.level = self.level
+        return result
 
     def __getitem__(self, indexer: ExplicitIndexer):
         result = super().__getitem__(indexer)

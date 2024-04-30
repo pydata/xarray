@@ -13,12 +13,12 @@ import sys
 import tempfile
 import uuid
 import warnings
-from collections.abc import Generator, Iterator
+from collections.abc import Generator, Iterator, Mapping
 from contextlib import ExitStack
 from io import BytesIO
 from os import listdir
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 from unittest.mock import patch
 
 import numpy as np
@@ -75,7 +75,6 @@ from xarray.tests import (
     requires_netCDF4,
     requires_netCDF4_1_6_2_or_above,
     requires_pydap,
-    requires_pynio,
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
@@ -2261,7 +2260,6 @@ class ZarrBase(CFEncodedBase):
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
         with self.roundtrip(original, open_kwargs={"chunks": {}}) as actual:
             for k, v in actual.data_vars.items():
-                print(k)
                 assert v.chunks == actual[k].chunks
 
     def test_chunk_encoding(self) -> None:
@@ -2305,7 +2303,7 @@ class ZarrBase(CFEncodedBase):
         # should fail if encoding["chunks"] clashes with dask_chunks
         badenc = ds.chunk({"x": 4})
         badenc.var1.encoding["chunks"] = (6,)
-        with pytest.raises(NotImplementedError, match=r"named 'var1' would overlap"):
+        with pytest.raises(ValueError, match=r"named 'var1' would overlap"):
             with self.roundtrip(badenc) as actual:
                 pass
 
@@ -2343,9 +2341,7 @@ class ZarrBase(CFEncodedBase):
         # but itermediate unaligned chunks are bad
         badenc = ds.chunk({"x": (3, 5, 3, 1)})
         badenc.var1.encoding["chunks"] = (3,)
-        with pytest.raises(
-            NotImplementedError, match=r"would overlap multiple dask chunks"
-        ):
+        with pytest.raises(ValueError, match=r"would overlap multiple dask chunks"):
             with self.roundtrip(badenc) as actual:
                 pass
 
@@ -2359,7 +2355,7 @@ class ZarrBase(CFEncodedBase):
         # TODO: remove this failure once synchronized overlapping writes are
         # supported by xarray
         ds_chunk4["var1"].encoding.update({"chunks": 5})
-        with pytest.raises(NotImplementedError, match=r"named 'var1' would overlap"):
+        with pytest.raises(ValueError, match=r"named 'var1' would overlap"):
             with self.roundtrip(ds_chunk4) as actual:
                 pass
         # override option
@@ -2467,6 +2463,27 @@ class ZarrBase(CFEncodedBase):
             original, save_kwargs={"group": group}, open_kwargs={"group": group}
         ) as actual:
             assert_identical(original, actual)
+
+    def test_zarr_mode_w_overwrites_encoding(self) -> None:
+        import zarr
+
+        data = Dataset({"foo": ("x", [1.0, 1.0, 1.0])})
+        with self.create_zarr_target() as store:
+            data.to_zarr(
+                store, **self.version_kwargs, encoding={"foo": {"add_offset": 1}}
+            )
+            np.testing.assert_equal(
+                zarr.open_group(store, **self.version_kwargs)["foo"], data.foo.data - 1
+            )
+            data.to_zarr(
+                store,
+                **self.version_kwargs,
+                encoding={"foo": {"add_offset": 0}},
+                mode="w",
+            )
+            np.testing.assert_equal(
+                zarr.open_group(store, **self.version_kwargs)["foo"], data.foo.data
+            )
 
     def test_encoding_kwarg_fixed_width_string(self) -> None:
         # not relevant for zarr, since we don't use EncodedStringCoder
@@ -2970,14 +2987,6 @@ class ZarrBase(CFEncodedBase):
             for name, actual_var in actual.variables.items():
                 assert original[name].chunks == actual_var.chunks
             assert original.chunks == actual.chunks
-
-    def test_vectorized_indexing_negative_step(self) -> None:
-        if not has_dask:
-            pytest.xfail(
-                reason="zarr without dask handles negative steps in slices incorrectly"
-            )
-
-        super().test_vectorized_indexing_negative_step()
 
 
 @requires_zarr
@@ -3560,6 +3569,16 @@ class TestH5NetCDFData(NetCDF4Base):
             assert actual.x.encoding["compression"] == "lzf"
             assert actual.x.encoding["compression_opts"] is None
 
+    def test_decode_utf8_warning(self) -> None:
+        title = b"\xc3"
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, "w") as f:
+                f.title = title
+            with pytest.warns(UnicodeWarning, match="returning bytes undecoded") as w:
+                ds = xr.load_dataset(tmp_file, engine="h5netcdf")
+                assert ds.title == title
+                assert "attribute 'title' of h5netcdf object '/'" in str(w[0].message)
+
 
 @requires_h5netcdf
 @requires_netCDF4
@@ -3741,7 +3760,7 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
             assert "Temperature" in list(actual)
 
 
-@pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "pynio", "zarr"])
+@pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "zarr"])
 def readengine(request):
     return request.param
 
@@ -3790,34 +3809,30 @@ def tmp_store(request, tmp_path):
 def skip_if_not_engine(engine):
     if engine == "netcdf4":
         pytest.importorskip("netCDF4")
-    elif engine == "pynio":
-        pytest.importorskip("Nio")
     else:
         pytest.importorskip(engine)
 
 
+# Flaky test. Very open to contributions on fixing this
 @requires_dask
 @pytest.mark.filterwarnings("ignore:use make_scale(name) instead")
 @pytest.mark.xfail(reason="Flaky test. Very open to contributions on fixing this")
+@pytest.mark.skipif(ON_WINDOWS, reason="Skipping on Windows")
 def test_open_mfdataset_manyfiles(
     readengine, nfiles, parallel, chunks, file_cache_maxsize
 ):
     # skip certain combinations
     skip_if_not_engine(readengine)
 
-    if ON_WINDOWS:
-        pytest.skip("Skipping on Windows")
-
     randdata = np.random.randn(nfiles)
     original = Dataset({"foo": ("x", randdata)})
     # test standard open_mfdataset approach with too many files
     with create_tmp_files(nfiles) as tmpfiles:
-        writeengine = readengine if readengine != "pynio" else "netcdf4"
         # split into multiple sets of temp files
         for ii in original.x.values:
             subds = original.isel(x=slice(ii, ii + 1))
-            if writeengine != "zarr":
-                subds.to_netcdf(tmpfiles[ii], engine=writeengine)
+            if readengine != "zarr":
+                subds.to_netcdf(tmpfiles[ii], engine=readengine)
             else:  # if writeengine == "zarr":
                 subds.to_zarr(store=tmpfiles[ii])
 
@@ -4501,7 +4516,8 @@ class TestDask(DatasetIOBase):
             ) as actual:
                 assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="Flaky test. Very open to contributions on fixing this")
+    # Flaky test. Very open to contributions on fixing this
+    @pytest.mark.flaky
     def test_dask_roundtrip(self) -> None:
         with create_tmp_file() as tmp:
             data = create_test_data()
@@ -4704,39 +4720,6 @@ class TestPydapOnline(TestPydap):
             output_grid=True,
             timeout=120,
         )
-
-
-@requires_scipy
-@requires_pynio
-class TestPyNio(CFEncodedBase, NetCDF3Only):
-    def test_write_store(self) -> None:
-        # pynio is read-only for now
-        pass
-
-    @contextlib.contextmanager
-    def open(self, path, **kwargs):
-        with open_dataset(path, engine="pynio", **kwargs) as ds:
-            yield ds
-
-    def test_kwargs(self) -> None:
-        kwargs = {"format": "grib"}
-        path = os.path.join(os.path.dirname(__file__), "data", "example")
-        with backends.NioDataStore(path, **kwargs) as store:
-            assert store._manager._kwargs["format"] == "grib"
-
-    def save(self, dataset, path, **kwargs):
-        return dataset.to_netcdf(path, engine="scipy", **kwargs)
-
-    def test_weakrefs(self) -> None:
-        example = Dataset({"foo": ("x", np.arange(5.0))})
-        expected = example.rename({"foo": "bar", "x": "y"})
-
-        with create_tmp_file() as tmp_file:
-            example.to_netcdf(tmp_file, engine="scipy")
-            on_disk = open_dataset(tmp_file, engine="pynio")
-            actual = on_disk.rename({"foo": "bar", "x": "y"})
-            del on_disk  # trigger garbage collection
-            assert_identical(actual, expected)
 
 
 class TestEncodingInvalid:
@@ -5641,24 +5624,27 @@ class TestZarrRegionAuto:
             }
         )
 
-        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+        region_slice = dict(x=slice(2, 4), y=slice(6, 8))
+        ds_region = 1 + ds.isel(region_slice)
 
         ds.to_zarr(tmp_path / "test.zarr")
 
-        with patch.object(
-            ZarrStore,
-            "set_variables",
-            side_effect=ZarrStore.set_variables,
-            autospec=True,
-        ) as mock:
-            ds_region.to_zarr(tmp_path / "test.zarr", region="auto", mode="r+")
+        region: Mapping[str, slice] | Literal["auto"]
+        for region in [region_slice, "auto"]:  # type: ignore
+            with patch.object(
+                ZarrStore,
+                "set_variables",
+                side_effect=ZarrStore.set_variables,
+                autospec=True,
+            ) as mock:
+                ds_region.to_zarr(tmp_path / "test.zarr", region=region, mode="r+")
 
-            # should write the data vars but never the index vars with auto mode
-            for call in mock.call_args_list:
-                written_variables = call.args[1].keys()
-                assert "test" in written_variables
-                assert "x" not in written_variables
-                assert "y" not in written_variables
+                # should write the data vars but never the index vars with auto mode
+                for call in mock.call_args_list:
+                    written_variables = call.args[1].keys()
+                    assert "test" in written_variables
+                    assert "x" not in written_variables
+                    assert "y" not in written_variables
 
     def test_zarr_region_append(self, tmp_path):
         x = np.arange(0, 50, 10)
@@ -5720,3 +5706,126 @@ def test_zarr_region(tmp_path):
 
     # Write without region
     ds_transposed.to_zarr(tmp_path / "test.zarr", mode="r+")
+
+
+@requires_zarr
+@requires_dask
+def test_zarr_region_chunk_partial(tmp_path):
+    """
+    Check that writing to partial chunks with `region` fails, assuming `safe_chunks=False`.
+    """
+    ds = (
+        xr.DataArray(np.arange(120).reshape(4, 3, -1), dims=list("abc"))
+        .rename("var1")
+        .to_dataset()
+    )
+
+    ds.chunk(5).to_zarr(tmp_path / "foo.zarr", compute=False, mode="w")
+    with pytest.raises(ValueError):
+        for r in range(ds.sizes["a"]):
+            ds.chunk(3).isel(a=[r]).to_zarr(
+                tmp_path / "foo.zarr", region=dict(a=slice(r, r + 1))
+            )
+
+
+@requires_zarr
+@requires_dask
+def test_zarr_append_chunk_partial(tmp_path):
+    t_coords = np.array([np.datetime64("2020-01-01").astype("datetime64[ns]")])
+    data = np.ones((10, 10))
+
+    da = xr.DataArray(
+        data.reshape((-1, 10, 10)),
+        dims=["time", "x", "y"],
+        coords={"time": t_coords},
+        name="foo",
+    )
+    da.to_zarr(tmp_path / "foo.zarr", mode="w", encoding={"foo": {"chunks": (5, 5, 1)}})
+
+    new_time = np.array([np.datetime64("2021-01-01").astype("datetime64[ns]")])
+
+    da2 = xr.DataArray(
+        data.reshape((-1, 10, 10)),
+        dims=["time", "x", "y"],
+        coords={"time": new_time},
+        name="foo",
+    )
+    with pytest.raises(ValueError, match="encoding was provided"):
+        da2.to_zarr(
+            tmp_path / "foo.zarr",
+            append_dim="time",
+            mode="a",
+            encoding={"foo": {"chunks": (1, 1, 1)}},
+        )
+
+    # chunking with dask sidesteps the encoding check, so we need a different check
+    with pytest.raises(ValueError, match="Specified zarr chunks"):
+        da2.chunk({"x": 1, "y": 1, "time": 1}).to_zarr(
+            tmp_path / "foo.zarr", append_dim="time", mode="a"
+        )
+
+
+@requires_zarr
+@requires_dask
+def test_zarr_region_chunk_partial_offset(tmp_path):
+    # https://github.com/pydata/xarray/pull/8459#issuecomment-1819417545
+    store = tmp_path / "foo.zarr"
+    data = np.ones((30,))
+    da = xr.DataArray(data, dims=["x"], coords={"x": range(30)}, name="foo").chunk(x=10)
+    da.to_zarr(store, compute=False)
+
+    da.isel(x=slice(10)).chunk(x=(10,)).to_zarr(store, region="auto")
+
+    da.isel(x=slice(5, 25)).chunk(x=(10, 10)).to_zarr(
+        store, safe_chunks=False, region="auto"
+    )
+
+    # This write is unsafe, and should raise an error, but does not.
+    # with pytest.raises(ValueError):
+    #     da.isel(x=slice(5, 25)).chunk(x=(10, 10)).to_zarr(store, region="auto")
+
+
+def test_backend_array_deprecation_warning(capsys):
+    class CustomBackendArray(xr.backends.common.BackendArray):
+        def __init__(self):
+            array = self.get_array()
+            self.shape = array.shape
+            self.dtype = array.dtype
+
+        def get_array(self):
+            return np.arange(10)
+
+        def __getitem__(self, key):
+            return xr.core.indexing.explicit_indexing_adapter(
+                key, self.shape, xr.core.indexing.IndexingSupport.BASIC, self._getitem
+            )
+
+        def _getitem(self, key):
+            array = self.get_array()
+            return array[key]
+
+    cba = CustomBackendArray()
+    indexer = xr.core.indexing.VectorizedIndexer(key=(np.array([0]),))
+
+    la = xr.core.indexing.LazilyIndexedArray(cba, indexer)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        la.vindex[indexer].get_duck_array()
+
+    captured = capsys.readouterr()
+    assert len(w) == 1
+    assert issubclass(w[-1].category, PendingDeprecationWarning)
+    assert (
+        "The array `CustomBackendArray` does not support indexing using the .vindex and .oindex properties."
+        in str(w[-1].message)
+    )
+    assert "The __getitem__ method is being used instead." in str(w[-1].message)
+    assert "This fallback behavior will be removed in a future version." in str(
+        w[-1].message
+    )
+    assert (
+        "Please ensure that the backend array `CustomBackendArray` implements support for the .vindex and .oindex properties to avoid potential issues."
+        in str(w[-1].message)
+    )
+    assert captured.out == ""

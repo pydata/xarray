@@ -1,8 +1,8 @@
 import textwrap
 
-from xarray import Dataset
+from xarray.core.dataset import Dataset
 
-from .mapping import map_over_subtree
+from xarray.core.datatree_mapping import map_over_subtree
 
 """
 Module which specifies the subset of xarray.Dataset's API which we wish to copy onto DataTree.

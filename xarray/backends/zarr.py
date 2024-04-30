@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
-    from xarray.datatree_.datatree import DataTree
+    from xarray.core.datatree import DataTree
 
 
 # need some special secret attributes to tell us the dimensions
@@ -84,25 +84,38 @@ class ZarrArrayWrapper(BackendArray):
     def get_array(self):
         return self._array
 
-    def _oindex(self, key):
-        return self._array.oindex[key]
+    def _oindex_get(self, key: indexing.OuterIndexer):
+        def raw_indexing_method(key):
+            return self._array.oindex[key]
 
-    def _vindex(self, key):
-        return self._array.vindex[key]
-
-    def _getitem(self, key):
-        return self._array[key]
-
-    def __getitem__(self, key):
-        array = self._array
-        if isinstance(key, indexing.BasicIndexer):
-            method = self._getitem
-        elif isinstance(key, indexing.VectorizedIndexer):
-            method = self._vindex
-        elif isinstance(key, indexing.OuterIndexer):
-            method = self._oindex
         return indexing.explicit_indexing_adapter(
-            key, array.shape, indexing.IndexingSupport.VECTORIZED, method
+            key,
+            self._array.shape,
+            indexing.IndexingSupport.VECTORIZED,
+            raw_indexing_method,
+        )
+
+    def _vindex_get(self, key: indexing.VectorizedIndexer):
+
+        def raw_indexing_method(key):
+            return self._array.vindex[key]
+
+        return indexing.explicit_indexing_adapter(
+            key,
+            self._array.shape,
+            indexing.IndexingSupport.VECTORIZED,
+            raw_indexing_method,
+        )
+
+    def __getitem__(self, key: indexing.BasicIndexer):
+        def raw_indexing_method(key):
+            return self._array[key]
+
+        return indexing.explicit_indexing_adapter(
+            key,
+            self._array.shape,
+            indexing.IndexingSupport.VECTORIZED,
+            raw_indexing_method,
         )
 
         # if self.ndim == 0:
@@ -195,7 +208,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
                         f"Writing this array in parallel with dask could lead to corrupted data."
                     )
                     if safe_chunks:
-                        raise NotImplementedError(
+                        raise ValueError(
                             base_error
                             + " Consider either rechunking using `chunk()`, deleting "
                             "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
@@ -623,7 +636,12 @@ class ZarrStore(AbstractWritableDataStore):
             # avoid needing to load index variables into memory.
             # TODO: consider making loading indexes lazy again?
             existing_vars, _, _ = conventions.decode_cf_variables(
-                self.get_variables(), self.get_attrs()
+                {
+                    k: v
+                    for k, v in self.get_variables().items()
+                    if k in existing_variable_names
+                },
+                self.get_attrs(),
             )
             # Modified variables must use the same encoding as the store.
             vars_with_encoding = {}
@@ -702,6 +720,17 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
+            # We need to do this for both new and existing variables to ensure we're not
+            # writing to a partial chunk, even though we don't use the `encoding` value
+            # when writing to an existing variable. See
+            # https://github.com/pydata/xarray/issues/8371 for details.
+            encoding = extract_zarr_variable_encoding(
+                v,
+                raise_on_invalid=check,
+                name=vn,
+                safe_chunks=self._safe_chunks,
+            )
+
             if name in existing_keys:
                 # existing variable
                 # TODO: if mode="a", consider overriding the existing variable
@@ -732,9 +761,6 @@ class ZarrStore(AbstractWritableDataStore):
                     zarr_array = self.zarr_group[name]
             else:
                 # new variable
-                encoding = extract_zarr_variable_encoding(
-                    v, raise_on_invalid=check, name=vn, safe_chunks=self._safe_chunks
-                )
                 encoded_attrs = {}
                 # the magic for storing the hidden dimension data
                 encoded_attrs[DIMENSION_KEY] = dims
@@ -1048,8 +1074,8 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         import zarr
 
         from xarray.backends.api import open_dataset
+        from xarray.core.datatree import DataTree
         from xarray.core.treenode import NodePath
-        from xarray.datatree_.datatree import DataTree
 
         zds = zarr.open_group(filename_or_obj, mode="r")
         ds = open_dataset(filename_or_obj, engine="zarr", **kwargs)

@@ -81,9 +81,7 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return self.func(self.array.get_duck_array())
 
     def __repr__(self) -> str:
-        return "{}({!r}, func={!r}, dtype={!r})".format(
-            type(self).__name__, self.array, self.func, self.dtype
-        )
+        return f"{type(self).__name__}({self.array!r}, func={self.func!r}, dtype={self.dtype!r})"
 
 
 class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
