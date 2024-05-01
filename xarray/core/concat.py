@@ -680,7 +680,6 @@ def _dataset_concat(
         result_indexes[dim] = index
         unlabeled_dims = unlabeled_dims - set([dim])
 
-    # TODO: add indexes at Dataset creation (when it is supported)
     coords_obj = Coordinates(coord_vars, indexes=result_indexes)
 
     result = type(datasets[0])(result_data_vars, coords=coords_obj, attrs=result_attrs)
