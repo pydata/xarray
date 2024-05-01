@@ -139,6 +139,10 @@ def assert_equal(a, b, from_root=True, check_dims="strict"):
         Only used when comparing DataTree objects. Indicates whether or not to
         first traverse to the root of the trees before checking for isomorphism.
         If a & b have no parents then this has no effect.
+    check_dims : {"strict", "transpose"}, optional
+        To what degree the dimensions must match
+          * "strict": a and b must have the same dimensions in the same order
+          * "transpose": a and b must have the same dimensions, not necessarily in the same order
 
     See Also
     --------
@@ -195,6 +199,10 @@ def assert_identical(a, b, from_root=True, check_dims="strict"):
         Only used when comparing DataTree objects. Indicates whether or not to
         first traverse to the root of the trees before checking for isomorphism.
         If a & b have no parents then this has no effect.
+    check_dims : {"strict", "transpose"}, optional
+        To what degree the dimensions must match
+          * "strict": a and b must have the same dimensions in the same order
+          * "transpose": a and b must have the same dimensions, not necessarily in the same order
 
     See Also
     --------
