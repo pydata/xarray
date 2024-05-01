@@ -447,7 +447,7 @@ def _parse_datasets(
             if dim in dims:
                 continue
 
-            if dim not in dim_coords:
+            if dim in ds.coords and dim not in dim_coords:
                 dim_coords[dim] = ds.coords[dim].variable
         dims = dims | set(ds.dims)
 
@@ -685,8 +685,6 @@ def _dataset_concat(
 
     result = type(datasets[0])(result_data_vars, coords=coords_obj, attrs=result_attrs)
     result.encoding = result_encoding
-
-    result = result.drop_vars(unlabeled_dims, errors="ignore")
 
     return result
 
