@@ -29,7 +29,7 @@ New Features
   for example, will retain the object.  However, one cannot do operations that are not possible on the `ExtensionArray`
   then, such as broadcasting.
   By `Ilan Gold <https://github.com/ilan-gold>`_.
-- `assert_allclose/assert_equal/assert_identical` now accept transposed inputs when `check_dims="transpose"`
+- :py:func:`testing.assert_allclose`/:py:func:`testing.assert_equal`/:py:func:`testing.assert_identical` now accept a new argument `check_dims="transpose"`, controlling whether a transposed array is considered equal. (:issue:`5733`, :pull:`8991`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
