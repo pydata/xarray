@@ -3813,11 +3813,11 @@ def skip_if_not_engine(engine):
         pytest.importorskip(engine)
 
 
-# Flaky test. Very open to contributions on fixing this
 @requires_dask
 @pytest.mark.filterwarnings("ignore:use make_scale(name) instead")
-@pytest.mark.xfail(reason="Flaky test. Very open to contributions on fixing this")
-@pytest.mark.skipif(ON_WINDOWS, reason="Skipping on Windows")
+@pytest.mark.skip(
+    reason="Flaky test which can cause the worker to crash (so don't xfail). Very open to contributions fixing this"
+)
 def test_open_mfdataset_manyfiles(
     readengine, nfiles, parallel, chunks, file_cache_maxsize
 ):
