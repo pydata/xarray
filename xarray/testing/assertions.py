@@ -98,8 +98,12 @@ def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
 def align_dims(a, b, check_dims):
     if check_dims not in ("strict", "transpose"):
         raise ValueError(f"Invalid value for check_dims: {check_dims}")
-    if check_dims == "transpose" and isinstance(a, (Variable, DataArray, Dataset)):
+    if not isinstance(a, (Variable, DataArray, Dataset)):
+        return b
+    if check_dims == "transpose":
+        assert set(a.dims) == set(b.dims), f"Dimensions differ: {a.dims} {b.dims}"
         return b.transpose(*a.dims)
+    assert a.dims == b.dims, f"Dimensions differ: {a.dims} {b.dims}"
     return b
 
 
