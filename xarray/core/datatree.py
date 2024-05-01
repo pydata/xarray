@@ -624,7 +624,7 @@ class DataTree(
     def __iter__(self) -> Iterator[Hashable]:
         return itertools.chain(self.ds.data_vars, self.children)
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype=None, copy=None):
         raise TypeError(
             "cannot directly convert a DataTree into a "
             "numpy array. Instead, create an xarray.DataArray "
