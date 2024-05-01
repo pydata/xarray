@@ -29,6 +29,7 @@ New Features
   for example, will retain the object.  However, one cannot do operations that are not possible on the `ExtensionArray`
   then, such as broadcasting.
   By `Ilan Gold <https://github.com/ilan-gold>`_.
+- `xarray.testing.assert_allclose` now accepts transposed inputs when `check_dims="transpose"`
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
