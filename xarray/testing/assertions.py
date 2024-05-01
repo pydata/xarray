@@ -95,6 +95,14 @@ def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
         raise TypeError(f"{type(a)} not of type DataTree")
 
 
+def align_dims(a, b, check_dims):
+    if check_dims not in ("strict", "transpose"):
+        raise ValueError(f"Invalid value for check_dims: {check_dims}")
+    if check_dims == "transpose" and isinstance(a, (Variable, DataArray, Dataset)):
+        return b.transpose(*a.dims)
+    return b
+
+
 @overload
 def assert_equal(a, b): ...
 
@@ -104,7 +112,7 @@ def assert_equal(a: DataTree, b: DataTree, from_root: bool = True): ...
 
 
 @ensure_warnings
-def assert_equal(a, b, from_root=True):
+def assert_equal(a, b, from_root=True, check_dims="strict"):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
     objects.
 
@@ -137,6 +145,7 @@ def assert_equal(a, b, from_root=True):
     assert (
         type(a) == type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
+    b = align_dims(a, b, check_dims)
     if isinstance(a, (Variable, DataArray)):
         assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
     elif isinstance(a, Dataset):
@@ -162,13 +171,13 @@ def assert_identical(a: DataTree, b: DataTree, from_root: bool = True): ...
 
 
 @ensure_warnings
-def assert_identical(a, b, from_root=True):
+def assert_identical(a, b, from_root=True, check_dims="strict"):
     """Like :py:func:`xarray.testing.assert_equal`, but also matches the
     objects' names and attributes.
 
     Raises an AssertionError if two objects are not identical.
 
-    For DataTree objects, assert_identical is mapped over all Datasets on each
+    For Dif ataTree objects, assert_identical is mapped over all Datasets on each
     node, with the DataTrees being identical if both are isomorphic and the
     corresponding Datasets at each node are themselves identical.
 
@@ -191,6 +200,7 @@ def assert_identical(a, b, from_root=True):
     assert (
         type(a) == type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
+    b = align_dims(a, b, check_dims)
     if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, DataArray):
@@ -246,6 +256,7 @@ def assert_allclose(
     """
     __tracebackhide__ = True
     assert type(a) == type(b)
+    b = align_dims(a, b, check_dims)
 
     equiv = functools.partial(
         _data_allclose_or_equiv, rtol=rtol, atol=atol, decode_bytes=decode_bytes
@@ -255,14 +266,7 @@ def assert_allclose(
     def compat_variable(a, b):
         a = getattr(a, "variable", a)
         b = getattr(b, "variable", b)
-        if check_dims == "strict":
-            return a.dims == b.dims and (a._data is b._data or equiv(a.data, b.data))
-        elif check_dims == "transpose":
-            return set(a.dims) == set(b.dims) and (
-                a._data is b._data or equiv(a.data, b.transpose(*a.dims).data)
-            )
-        else:
-            raise ValueError(f"Invalid value for check_dims: {check_dims}")
+        return a.dims == b.dims and (a._data is b._data or equiv(a.data, b.data))
 
     if isinstance(a, Variable):
         allclose = compat_variable(a, b)

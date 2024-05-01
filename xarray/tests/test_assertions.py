@@ -61,13 +61,16 @@ def test_assert_allclose(obj1, obj2) -> None:
         xr.testing.assert_allclose(obj1, obj2, check_dims="transpose")
 
 
-def test_assert_allclose_transpose() -> None:
+@pytest.mark.parametrize(
+    "func", ["assert_equal", "assert_allclose", "assert_identical"]
+)
+def test_assert_allclose_equal_identical_transpose(func) -> None:
     """Transposed DataArray raises assertion unless check_dims="transpose"."""
     obj1 = xr.DataArray([[0, 1, 2], [2, 3, 4]], dims=["a", "b"])
     obj2 = xr.DataArray([[0, 2], [1, 3], [2, 4]], dims=["b", "a"])
     with pytest.raises(AssertionError):
-        xr.testing.assert_allclose(obj1, obj2)
-    xr.testing.assert_allclose(obj1, obj2, check_dims="transpose")
+        getattr(xr.testing, func)(obj1, obj2)
+    getattr(xr.testing, func)(obj1, obj2, check_dims="transpose")
 
 
 @pytest.mark.filterwarnings("error")
@@ -132,6 +135,13 @@ def test_assert_duckarray_equal_failing(duckarray, obj1, obj2) -> None:
     ),
 )
 def test_assert_duckarray_equal(duckarray, obj1, obj2) -> None:
+    a = duckarray(obj1)
+    b = duckarray(obj2)
+
+    xr.testing.assert_duckarray_equal(a, b)
+
+
+def test_assert_equal_transpose(duckarray, obj1, obj2) -> None:
     a = duckarray(obj1)
     b = duckarray(obj2)
 
