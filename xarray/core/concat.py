@@ -498,7 +498,6 @@ def _dataset_concat(
         datasets
     )
     dim_names = set(dim_coords)
-    unlabeled_dims = dim_names - coord_names
 
     both_data_and_coords = coord_names & data_names
     if both_data_and_coords:
@@ -519,7 +518,7 @@ def _dataset_concat(
     )
 
     # determine which variables to merge, and then merge them according to compat
-    variables_to_merge = (coord_names | data_names) - concat_over - unlabeled_dims
+    variables_to_merge = (coord_names | data_names) - concat_over
 
     result_vars = {}
     result_indexes = {}
@@ -678,7 +677,6 @@ def _dataset_concat(
 
         coord_vars[dim] = index_vars[dim]
         result_indexes[dim] = index
-        unlabeled_dims = unlabeled_dims - set([dim])
 
     coords_obj = Coordinates(coord_vars, indexes=result_indexes)
 
