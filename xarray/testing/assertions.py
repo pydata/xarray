@@ -213,7 +213,9 @@ def assert_identical(a, b, from_root=True):
 
 
 @ensure_warnings
-def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
+def assert_allclose(
+    a, b, rtol=1e-05, atol=1e-08, decode_bytes=True, check_dims="strict"
+):
     """Like :py:func:`numpy.testing.assert_allclose`, but for xarray objects.
 
     Raises an AssertionError if two objects are not equal up to desired
@@ -233,6 +235,10 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
         Whether byte dtypes should be decoded to strings as UTF-8 or not.
         This is useful for testing serialization methods on Python 3 that
         return saved strings as bytes.
+    check_dims : {"strict", "transpose"}, optional
+        To what degree the dimensions must match
+          * "strict": a and b must have the same dimensions in the same order
+          * "transpose": a and b must have the same dimensions, not necessarily in the same order
 
     See Also
     --------
@@ -249,8 +255,14 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     def compat_variable(a, b):
         a = getattr(a, "variable", a)
         b = getattr(b, "variable", b)
-
-        return a.dims == b.dims and (a._data is b._data or equiv(a.data, b.data))
+        if check_dims == "strict":
+            return a.dims == b.dims and (a._data is b._data or equiv(a.data, b.data))
+        elif check_dims == "transpose":
+            return set(a.dims) == set(b.dims) and (
+                a._data is b._data or equiv(a.data, b.transpose(*a.dims).data)
+            )
+        else:
+            raise ValueError(f"Invalid value for check_dims: {check_dims}")
 
     if isinstance(a, Variable):
         allclose = compat_variable(a, b)
