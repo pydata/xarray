@@ -2508,7 +2508,7 @@ def test_polyfit_polyval_integration(
         [
             xr.DataArray([1, 2]),
             xr.DataArray([4, 5, 6]),
-            np.array([1, 2]),
+            np.array([1, 2, 0]),
             np.array([4, 5, 6]),
             "dim_0",
             -1,
@@ -2524,7 +2524,7 @@ def test_polyfit_polyval_integration(
         [
             xr.Variable(dims=["dim_0"], data=[1, 2]),
             xr.Variable(dims=["dim_0"], data=[4, 5, 6]),
-            np.array([1, 2]),
+            np.array([1, 2, 0]),
             np.array([4, 5, 6]),
             "dim_0",
             -1,
