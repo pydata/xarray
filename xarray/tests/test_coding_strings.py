@@ -7,9 +7,7 @@ import pytest
 
 from xarray import Variable
 from xarray.coding import strings
-from xarray.core import indexing
 from xarray.tests import (
-    IndexerMaker,
     assert_array_equal,
     assert_identical,
     requires_dask,
@@ -150,7 +148,7 @@ def test_StackedBytesArray() -> None:
     assert len(actual) == len(expected)
     assert_array_equal(expected, actual)
 
-    assert_array_equal(expected[:1], actual[slice(1)])
+    assert_array_equal(expected[:1], actual[(slice(1),)])
     with pytest.raises(IndexError):
         actual[slice(None), slice(2)]
 
@@ -167,10 +165,8 @@ def test_StackedBytesArray_scalar() -> None:
     with pytest.raises(TypeError):
         len(actual)
     np.testing.assert_array_equal(expected, actual)
-
-    B = IndexerMaker(indexing.BasicIndexer)
     with pytest.raises(IndexError):
-        actual[B[:2].tuple]
+        actual[(slice(2),)]
 
 
 def test_StackedBytesArray_vectorized_indexing() -> None:
