@@ -288,18 +288,22 @@ addopts = ["--strict-config", "--strict-markers"]
 # - Converts any warning from xarray into an error
 # - Allows some warnings ("default") which the test suite currently raises,
 #   since it wasn't practical to fix them all before merging this config. The
-#   arnings are still listed in CI (since it uses `default`, not `ignore`).
+#   warnings are reported in CI (since it uses `default`, not `ignore`).
 #
-# We can remove these rules allowing warnings; a valued contribution is removing
-# a line, seeing what breaks, and then fixing the library code or tests so that
-# it doesn't raise warnings.
+# Over time, we can remove these rules allowing warnings. A valued contribution
+# is removing a line, seeing what breaks, and then fixing the library code or
+# tests so that it doesn't raise warnings.
 #
-# While we only raise an error on warnings from within xarray, if dependency
-# raises a warning with a stacklevel such that it's interpreted to be raised
-# from xarray, please feel free to add a rule switching it to `default` here.
-#
-# If these settings get in the way of making progress, it's also acceptable to
-# temporarily add additional ignores.
+# There are some instance where we'll want to add to these rules:
+# - While we only raise errors on warnings from within xarray, a dependency can
+#   raise a warning with a stacklevel such that it's interpreted to be raised
+#   from xarray and this will mistakenly convert it to an error. If that
+#   happens, please feel free to add a rule switching it to `default` here, and
+#   disabling the error.
+# - If these settings get in the way of making progress, it's also acceptable to
+#   temporarily add additional `default` rules.
+# - But we should only add `ignore` rules if we're confident that we'll never
+#   need to address a warning.
 
 filterwarnings = [
   "error:::xarray.*",
@@ -315,7 +319,6 @@ filterwarnings = [
   "default:deallocating CachingFileManager:RuntimeWarning:xarray.backends.netCDF4_",
   "default:deallocating CachingFileManager:RuntimeWarning:xarray.core.indexing",
   "default:Failed to decode variable.*NumPy will stop allowing conversion of out-of-bound Python integers to integer arrays:DeprecationWarning",
-  "default:dropping variables using `drop` is deprecated; use drop_vars:DeprecationWarning:xarray.tests.test_groupby",
   "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning:xarray.*",
   "default:invalid value encountered in cast:RuntimeWarning:xarray.core.duck_array_ops",
   "default:invalid value encountered in cast:RuntimeWarning:xarray.conventions",
@@ -327,6 +330,8 @@ filterwarnings = [
   "default:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
   "default:Duplicate dimension names present:UserWarning:xarray.namedarray.core",
   "default:::xarray.tests.test_strategies",
+  # TODO: remove once we know how to deal with a changed signature in protocols
+  "ignore:__array__ implementation doesn't accept a copy keyword, so passing copy=False failed.",
 ]
 
 log_cli_level = "INFO"
