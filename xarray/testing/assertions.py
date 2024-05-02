@@ -95,12 +95,11 @@ def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
         raise TypeError(f"{type(a)} not of type DataTree")
 
 
-def align_dims(a, b, check_dims):
-    if check_dims not in ("strict", "transpose"):
-        raise ValueError(f"Invalid value for check_dims: {check_dims}")
+def maybe_transpose_dims(a, b, check_dim_order: bool):
+    """Helper for assert_equal/allclose/identical"""
     if not isinstance(a, (Variable, DataArray, Dataset)):
         return b
-    if check_dims == "transpose":
+    if not check_dim_order:
         assert set(a.dims) == set(b.dims), f"Dimensions differ: {a.dims} {b.dims}"
         return b.transpose(*a.dims)
     assert a.dims == b.dims, f"Dimensions differ: {a.dims} {b.dims}"
@@ -116,7 +115,7 @@ def assert_equal(a: DataTree, b: DataTree, from_root: bool = True): ...
 
 
 @ensure_warnings
-def assert_equal(a, b, from_root=True, check_dims="strict"):
+def assert_equal(a, b, from_root=True, check_dim_order: bool = True):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
     objects.
 
@@ -139,10 +138,8 @@ def assert_equal(a, b, from_root=True, check_dims="strict"):
         Only used when comparing DataTree objects. Indicates whether or not to
         first traverse to the root of the trees before checking for isomorphism.
         If a & b have no parents then this has no effect.
-    check_dims : {"strict", "transpose"}, optional
-        To what degree the dimensions must match
-          * "strict": a and b must have the same dimensions in the same order
-          * "transpose": a and b must have the same dimensions, not necessarily in the same order
+    check_dim_order : bool, optional, default is True
+        Whether dimensions must be in the same order.
 
     See Also
     --------
@@ -153,7 +150,7 @@ def assert_equal(a, b, from_root=True, check_dims="strict"):
     assert (
         type(a) == type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
-    b = align_dims(a, b, check_dims)
+    b = maybe_transpose_dims(a, b, check_dim_order)
     if isinstance(a, (Variable, DataArray)):
         assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
     elif isinstance(a, Dataset):
@@ -179,7 +176,7 @@ def assert_identical(a: DataTree, b: DataTree, from_root: bool = True): ...
 
 
 @ensure_warnings
-def assert_identical(a, b, from_root=True, check_dims="strict"):
+def assert_identical(a, b, from_root=True, check_dim_order: bool = True):
     """Like :py:func:`xarray.testing.assert_equal`, but also matches the
     objects' names and attributes.
 
@@ -199,10 +196,8 @@ def assert_identical(a, b, from_root=True, check_dims="strict"):
         Only used when comparing DataTree objects. Indicates whether or not to
         first traverse to the root of the trees before checking for isomorphism.
         If a & b have no parents then this has no effect.
-    check_dims : {"strict", "transpose"}, optional
-        To what degree the dimensions must match
-          * "strict": a and b must have the same dimensions in the same order
-          * "transpose": a and b must have the same dimensions, not necessarily in the same order
+    check_dim_order : bool, optional, default is True
+        Whether dimensions must be in the same order.
 
     See Also
     --------
@@ -212,7 +207,7 @@ def assert_identical(a, b, from_root=True, check_dims="strict"):
     assert (
         type(a) == type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
-    b = align_dims(a, b, check_dims)
+    b = maybe_transpose_dims(a, b, check_dim_order)
     if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, DataArray):
@@ -236,7 +231,7 @@ def assert_identical(a, b, from_root=True, check_dims="strict"):
 
 @ensure_warnings
 def assert_allclose(
-    a, b, rtol=1e-05, atol=1e-08, decode_bytes=True, check_dims="strict"
+    a, b, rtol=1e-05, atol=1e-08, decode_bytes=True, check_dim_order: bool = True
 ):
     """Like :py:func:`numpy.testing.assert_allclose`, but for xarray objects.
 
@@ -257,10 +252,8 @@ def assert_allclose(
         Whether byte dtypes should be decoded to strings as UTF-8 or not.
         This is useful for testing serialization methods on Python 3 that
         return saved strings as bytes.
-    check_dims : {"strict", "transpose"}, optional
-        To what degree the dimensions must match
-          * "strict": a and b must have the same dimensions in the same order
-          * "transpose": a and b must have the same dimensions, not necessarily in the same order
+    check_dim_order : bool, optional, default is True
+        Whether dimensions must be in the same order.
 
     See Also
     --------
@@ -268,7 +261,7 @@ def assert_allclose(
     """
     __tracebackhide__ = True
     assert type(a) == type(b)
-    b = align_dims(a, b, check_dims)
+    b = maybe_transpose_dims(a, b, check_dim_order)
 
     equiv = functools.partial(
         _data_allclose_or_equiv, rtol=rtol, atol=atol, decode_bytes=decode_bytes
