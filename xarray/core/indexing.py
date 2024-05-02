@@ -622,8 +622,13 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         self.array = as_indexable(array)
         self.key = key
 
-    def _updated_key(self, new_key: ExplicitIndexer) -> BasicIndexer | OuterIndexer:
-        iter_new_key = iter(expanded_indexer(new_key.tuple, self.ndim))
+    def _updated_key(
+        self, new_key: ExplicitIndexer | _IndexerKey
+    ) -> BasicIndexer | OuterIndexer:
+        _new_key_tuple = (
+            new_key.tuple if isinstance(new_key, ExplicitIndexer) else new_key
+        )
+        iter_new_key = iter(expanded_indexer(_new_key_tuple, self.ndim))
         full_key = []
         for size, k in zip(self.array.shape, self.key.tuple):
             if isinstance(k, integer_types):
@@ -673,17 +678,14 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return LazilyVectorizedIndexedArray(self.array, self.key).transpose(order)
 
     def _oindex_get(self, indexer: _IndexerKey):
-        return type(self)(self.array, self._updated_key(OuterIndexer(indexer)))
+        return type(self)(self.array, self._updated_key(indexer))
 
     def _vindex_get(self, indexer: _IndexerKey):
         array = LazilyVectorizedIndexedArray(self.array, self.key)
         return array.vindex[indexer]
 
     def __getitem__(self, indexer: _IndexerKey):
-        key = BasicIndexer(
-            indexer.tuple if isinstance(indexer, ExplicitIndexer) else indexer
-        )
-        return type(self)(self.array, self._updated_key(key))
+        return type(self)(self.array, self._updated_key(indexer))
 
     def _vindex_set(self, key: _IndexerKey, value: Any) -> None:
         raise NotImplementedError(
