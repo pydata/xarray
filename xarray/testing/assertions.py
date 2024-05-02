@@ -185,7 +185,7 @@ def assert_identical(a, b, from_root=True, check_dims="strict"):
 
     Raises an AssertionError if two objects are not identical.
 
-    For Dif ataTree objects, assert_identical is mapped over all Datasets on each
+    For DataTree objects, assert_identical is mapped over all Datasets on each
     node, with the DataTrees being identical if both are isomorphic and the
     corresponding Datasets at each node are themselves identical.
 
