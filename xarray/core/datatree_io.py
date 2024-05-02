@@ -1,7 +1,14 @@
+from __future__ import annotations
+
+from collections.abc import Mapping, MutableMapping
+from os import PathLike
+from typing import Any
+
 from xarray.core.datatree import DataTree
+from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 
 
-def _get_nc_dataset_class(engine):
+def _get_nc_dataset_class(engine: str | None):
     if engine == "netcdf4":
         from netCDF4 import Dataset
     elif engine == "h5netcdf":
@@ -16,7 +23,9 @@ def _get_nc_dataset_class(engine):
     return Dataset
 
 
-def _create_empty_netcdf_group(filename, group, mode, engine):
+def _create_empty_netcdf_group(
+    filename: str | PathLike, group: str, mode: NetcdfWriteModes, engine: str | None
+):
     ncDataset = _get_nc_dataset_class(engine)
 
     with ncDataset(filename, mode=mode) as rootgrp:
@@ -25,12 +34,18 @@ def _create_empty_netcdf_group(filename, group, mode, engine):
 
 def _datatree_to_netcdf(
     dt: DataTree,
-    filepath,
-    mode: str = "w",
-    encoding=None,
-    unlimited_dims=None,
+    filepath: str | PathLike,
+    mode: NetcdfWriteModes = "w",
+    encoding: Mapping[str, Any] | None = None,
+    unlimited_dims: Mapping | None = None,
     **kwargs,
 ):
+    """This function creates an appropriate datastore for writing a datatree to
+    disk as a netCDF file.
+
+    See `DataTree.to_netcdf` for full API docs.
+    """
+
     if kwargs.get("format", None) not in [None, "NETCDF4"]:
         raise ValueError("to_netcdf only supports the NETCDF4 format")
 
@@ -74,10 +89,12 @@ def _datatree_to_netcdf(
                 unlimited_dims=unlimited_dims.get(node.path),
                 **kwargs,
             )
-        mode = "r+"
+        mode = "a"
 
 
-def _create_empty_zarr_group(store, group, mode):
+def _create_empty_zarr_group(
+    store: MutableMapping | str | PathLike[str], group: str, mode: ZarrWriteModes
+):
     import zarr
 
     root = zarr.open_group(store, mode=mode)
@@ -86,12 +103,18 @@ def _create_empty_zarr_group(store, group, mode):
 
 def _datatree_to_zarr(
     dt: DataTree,
-    store,
-    mode: str = "w-",
-    encoding=None,
+    store: MutableMapping | str | PathLike[str],
+    mode: ZarrWriteModes = "w-",
+    encoding: Mapping[str, Any] | None = None,
     consolidated: bool = True,
     **kwargs,
 ):
+    """This function creates an appropriate datastore for writing a datatree
+    to a zarr store.
+
+    See `DataTree.to_zarr` for full API docs.
+    """
+
     from zarr.convenience import consolidate_metadata
 
     if kwargs.get("group", None) is not None:

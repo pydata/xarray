@@ -58,7 +58,7 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from xarray.core.merge import CoercibleValue
-    from xarray.core.types import ErrorOptions
+    from xarray.core.types import ErrorOptions, NetcdfWriteModes, ZarrWriteModes
 
 # """
 # DEVELOPERS' NOTE
@@ -1475,7 +1475,12 @@ class DataTree(
         return tuple(node.path for node in self.subtree)
 
     def to_netcdf(
-        self, filepath, mode: str = "w", encoding=None, unlimited_dims=None, **kwargs
+        self,
+        filepath,
+        mode: NetcdfWriteModes = "w",
+        encoding=None,
+        unlimited_dims=None,
+        **kwargs,
     ):
         """
         Write datatree contents to a netCDF file.
@@ -1502,7 +1507,7 @@ class DataTree(
         kwargs :
             Addional keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
         """
-        from xarray.datatree_.datatree.io import _datatree_to_netcdf
+        from xarray.core.datatree_io import _datatree_to_netcdf
 
         _datatree_to_netcdf(
             self,
@@ -1516,7 +1521,7 @@ class DataTree(
     def to_zarr(
         self,
         store,
-        mode: str = "w-",
+        mode: ZarrWriteModes = "w-",
         encoding=None,
         consolidated: bool = True,
         **kwargs,
@@ -1544,7 +1549,7 @@ class DataTree(
         kwargs :
             Additional keyword arguments to be passed to ``xarray.Dataset.to_zarr``
         """
-        from xarray.datatree_.datatree.io import _datatree_to_zarr
+        from xarray.core.datatree_io import _datatree_to_zarr
 
         _datatree_to_zarr(
             self,

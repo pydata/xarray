@@ -37,7 +37,7 @@ from xarray.core.combine import (
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.indexes import Index
-from xarray.core.types import ZarrWriteModes
+from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 from xarray.core.utils import is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
@@ -1121,7 +1121,7 @@ WRITEABLE_STORES: dict[T_NetcdfEngine, Callable] = {
 def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike | None = None,
-    mode: Literal["w", "a"] = "w",
+    mode: NetcdfWriteModes = "w",
     format: T_NetcdfTypes | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
@@ -1139,7 +1139,7 @@ def to_netcdf(
 def to_netcdf(
     dataset: Dataset,
     path_or_file: None = None,
-    mode: Literal["w", "a"] = "w",
+    mode: NetcdfWriteModes = "w",
     format: T_NetcdfTypes | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
@@ -1156,7 +1156,7 @@ def to_netcdf(
 def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike,
-    mode: Literal["w", "a"] = "w",
+    mode: NetcdfWriteModes = "w",
     format: T_NetcdfTypes | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
@@ -1174,7 +1174,7 @@ def to_netcdf(
 def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike,
-    mode: Literal["w", "a"] = "w",
+    mode: NetcdfWriteModes = "w",
     format: T_NetcdfTypes | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
@@ -1192,7 +1192,7 @@ def to_netcdf(
 def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike,
-    mode: Literal["w", "a"] = "w",
+    mode: NetcdfWriteModes = "w",
     format: T_NetcdfTypes | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
@@ -1210,7 +1210,7 @@ def to_netcdf(
 def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike,
-    mode: Literal["w", "a"] = "w",
+    mode: NetcdfWriteModes = "w",
     format: T_NetcdfTypes | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
@@ -1227,7 +1227,7 @@ def to_netcdf(
 def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike | None,
-    mode: Literal["w", "a"] = "w",
+    mode: NetcdfWriteModes = "w",
     format: T_NetcdfTypes | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
@@ -1242,7 +1242,7 @@ def to_netcdf(
 def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike | None = None,
-    mode: Literal["w", "a"] = "w",
+    mode: NetcdfWriteModes = "w",
     format: T_NetcdfTypes | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
