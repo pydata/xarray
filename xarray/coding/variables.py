@@ -136,8 +136,7 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     >>> BoolTypeArray(x).dtype
     dtype('bool')
 
-    >>> indexer = indexing.BasicIndexer((slice(None),))
-    >>> BoolTypeArray(x)[indexer.tuple].dtype
+    >>> BoolTypeArray(x)[(slice(None),)].dtype
     dtype('bool')
     """
 
