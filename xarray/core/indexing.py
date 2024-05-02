@@ -1558,13 +1558,17 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         array = NumpyVIndexAdapter(self.array)
         return array[indexer]
 
-    def __getitem__(self, indexer: _IndexerKey):
+    def __getitem__(self, indexer: _IndexerKey | ExplicitIndexer):
 
         array = self.array
         # We want 0d slices rather than scalars. This is achieved by
         # appending an ellipsis (see
         # https://numpy.org/doc/stable/reference/arrays.indexing.html#detailed-notes).
-        key = indexer + (Ellipsis,)
+        key = (
+            indexer.tuple
+            if isinstance(indexer, ExplicitIndexer)
+            else indexer + (Ellipsis,)
+        )
         return array[key]
 
     def _safe_setitem(self, array, key: _IndexerKey, value: Any) -> None:
@@ -1588,12 +1592,16 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         array = NumpyVIndexAdapter(self.array)
         self._safe_setitem(array, indexer, value)
 
-    def __setitem__(self, indexer: _IndexerKey, value: Any) -> None:
+    def __setitem__(self, indexer: _IndexerKey | ExplicitIndexer, value: Any) -> None:
         array = self.array
         # We want 0d slices rather than scalars. This is achieved by
         # appending an ellipsis (see
         # https://numpy.org/doc/stable/reference/arrays.indexing.html#detailed-notes).
-        key = indexer + (Ellipsis,)
+        key = (
+            indexer.tuple
+            if isinstance(indexer, ExplicitIndexer)
+            else indexer + (Ellipsis,)
+        )
         self._safe_setitem(array, key, value)
 
 
