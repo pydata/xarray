@@ -195,8 +195,20 @@ def isdtype(dtype, kind, xp=None):
 
         return numpy_kinds, non_numpy_kinds
 
+    def translate_kind(kind):
+        if isinstance(kind, str):
+            translated = long_names.get(kind)
+            if translated is None:
+                raise ValueError(f"unknown kind: {kind!r}")
+
+            return translated
+        elif isinstance(kind, type) and issubclass(kind, np.generic):
+            return kind
+        else:
+            raise TypeError(f"invalid type of kind: {kind!r}")
+
     def numpy_isdtype(dtype, kinds):
-        translated_kinds = [long_names.get(kind, kind) for kind in kinds]
+        translated_kinds = [translate_kind(kind) for kind in kinds]
         if isinstance(dtype, np.generic):
             return any(isinstance(dtype, kind) for kind in translated_kinds)
         else:
