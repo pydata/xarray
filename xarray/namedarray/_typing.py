@@ -95,6 +95,7 @@ _DimsLike = Union[str, Iterable[_Dim]]
 _IndexKey = Union[int, slice, "ellipsis"]
 _IndexKeys = tuple[Union[_IndexKey], ...]  #  tuple[Union[_IndexKey, None], ...]
 _IndexKeyLike = Union[_IndexKey, _IndexKeys]
+_IndexerKey = tuple[Any, ...]
 
 _AttrsLike = Union[Mapping[Any, Any], None]
 

@@ -17,6 +17,7 @@ from xarray.coding.variables import (
 from xarray.core import indexing
 from xarray.core.utils import module_available
 from xarray.core.variable import Variable
+from xarray.namedarray._typing import _IndexerKey
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 
@@ -220,8 +221,7 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessed, are automatically stacked along the last dimension.
 
-    >>> indexer = indexing.BasicIndexer((slice(None),))
-    >>> StackedBytesArray(np.array(["a", "b", "c"], dtype="S1"))[indexer]
+    >>> StackedBytesArray(np.array(["a", "b", "c"], dtype="S1"))[(slice(None),)]
     array(b'abc', dtype='|S3')
     """
 
@@ -240,7 +240,7 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
     @property
     def dtype(self):
-        return np.dtype("S" + str(self.array.shape[-1]))
+        return np.dtype(f"S{str(self.array.shape[-1])}")
 
     @property
     def shape(self) -> tuple[int, ...]:
@@ -249,15 +249,17 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def __repr__(self):
         return f"{type(self).__name__}({self.array!r})"
 
-    def _vindex_get(self, key):
+    def _vindex_get(self, key: _IndexerKey):
         return _numpy_char_to_bytes(self.array.vindex[key])
 
-    def _oindex_get(self, key):
+    def _oindex_get(self, key: _IndexerKey):
         return _numpy_char_to_bytes(self.array.oindex[key])
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: _IndexerKey):
+        from xarray.core.indexing import BasicIndexer
+
         # require slicing the last dimension completely
-        key = type(key)(indexing.expanded_indexer(key.tuple, self.array.ndim))
-        if key.tuple[-1] != slice(None):
+        indexer = indexing.expanded_indexer(key, self.array.ndim)
+        if indexer[-1] != slice(None):
             raise IndexError("too many indices")
-        return _numpy_char_to_bytes(self.array[key])
+        return _numpy_char_to_bytes(self.array[BasicIndexer(indexer)])
