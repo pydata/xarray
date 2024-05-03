@@ -61,7 +61,7 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     # N.B. these casting rules should match pandas
     dtype_: np.typing.DTypeLike
     fill_value: Any
-    if isdtype(dtype, "floating"):
+    if isdtype(dtype, "real floating"):
         dtype_ = dtype
         fill_value = np.nan
     elif isdtype(dtype, np.timedelta64):
@@ -70,7 +70,7 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
         # Check np.timedelta64 before np.integer
         fill_value = np.timedelta64("NaT")
         dtype_ = dtype
-    elif isdtype(dtype, "integer"):
+    elif isdtype(dtype, "integral"):
         dtype_ = np.float32 if dtype.itemsize <= 2 else np.float64
         fill_value = np.nan
     elif isdtype(dtype, "complex floating"):
@@ -119,10 +119,10 @@ def get_pos_infinity(dtype, max_for_int=False):
     -------
     fill_value : positive infinity value corresponding to this dtype.
     """
-    if isdtype(dtype, "floating"):
+    if isdtype(dtype, "real floating"):
         return np.inf
 
-    if isdtype(dtype, "integer"):
+    if isdtype(dtype, "integral"):
         if max_for_int:
             return np.iinfo(dtype).max
         else:
@@ -147,10 +147,10 @@ def get_neg_infinity(dtype, min_for_int=False):
     -------
     fill_value : positive infinity value corresponding to this dtype.
     """
-    if isdtype(dtype, "floating"):
+    if isdtype(dtype, "real floating"):
         return -np.inf
 
-    if isdtype(dtype, "integer"):
+    if isdtype(dtype, "integral"):
         if min_for_int:
             return np.iinfo(dtype).min
         else:
