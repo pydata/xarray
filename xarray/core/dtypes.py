@@ -4,6 +4,7 @@ import functools
 from typing import Any
 
 import numpy as np
+from pandas.api.types import is_extension_array_dtype
 
 from xarray.core import utils
 
@@ -168,37 +169,20 @@ def is_datetime_like(dtype):
 
 def isdtype(dtype, kind, xp=None):
     array_api_names = {
-        "bool": "b",
-        "signed integer": "i",
-        "unsigned integer": "u",
-        "integral": "ui",
-        "real floating": "f",
-        "complex floating": "c",
-        "numeric": "uifc",
+        "bool": np.bool_,
+        "signed integer": np.signedinteger,
+        "unsigned integer": np.unsignedinteger,
+        "integral": np.integer,
+        "real floating": np.floating,
+        "complex floating": np.complexfloating,
+        "numeric": np.number,
     }
     numpy_names = {
-        "object": "O",
-        "character": "U",
-        "string": "S",
+        "object": np.object_,
+        "character": np.character,
+        "string": np.str_,
     }
     long_names = array_api_names | numpy_names
-
-    def issubdtype(dtype, kind):
-        if isinstance(dtype, np.dtype):
-            return np.issubdtype(dtype, kind)
-        else:
-            # TODO (keewis): find a better way to compare dtypes (like pandas extension dtypes)
-            return dtype == kind
-
-    def compare_dtype(dtype, kind):
-        if isinstance(kind, np.dtype):
-            return dtype == kind
-        elif isinstance(kind, str):
-            return dtype.kind in long_names.get(kind, kind)
-        elif isinstance(kind, type) and issubclass(kind, (np.dtype, np.generic)):
-            return issubdtype(dtype, kind)
-        else:
-            raise TypeError(f"unknown dtype kind: {kind}")
 
     def is_numpy_kind(kind):
         return (isinstance(kind, str) and kind in numpy_names) or (
@@ -214,15 +198,32 @@ def isdtype(dtype, kind, xp=None):
 
         return numpy_kinds, non_numpy_kinds
 
-    numpy_kinds, non_numpy_kinds = split_numpy_kinds(kind)
-    if xp in (None, np) or not hasattr(xp, "isdtype"):
-        # need to take this path to allow checking for datetime/timedelta/strings
-        return any(compare_dtype(dtype, k) for k in (numpy_kinds + non_numpy_kinds))
-    elif non_numpy_kinds:
-        return xp.isdtype(dtype, non_numpy_kinds)
+    def numpy_isdtype(dtype, kinds):
+        translated_kinds = [long_names.get(kind, kind) for kind in kinds]
+        if isinstance(dtype, np.generic):
+            return any(isinstance(dtype, kind) for kind in translated_kinds)
+        else:
+            return any(np.issubdtype(dtype, kind) for kind in translated_kinds)
+
+    if xp is None:
+        xp = np
+
+    if not isinstance(kind, tuple):
+        kinds = (kind,)
     else:
-        # can't compare numpy kinds with non-numpy dtypes
-        return False
+        kinds = kind
+
+    if isinstance(dtype, np.dtype):
+        return numpy_isdtype(dtype, kinds)
+    elif is_extension_array_dtype(dtype):
+        return any(dtype == kind for kind in kinds)
+    else:
+        numpy_kinds, non_numpy_kinds = split_numpy_kinds(kind)
+
+        if not non_numpy_kinds:
+            return False
+
+        return xp.isdtype(dtype, non_numpy_kinds)
 
 
 def result_type(
