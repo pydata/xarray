@@ -61,22 +61,22 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     # N.B. these casting rules should match pandas
     dtype_: np.typing.DTypeLike
     fill_value: Any
-    if np.issubdtype(dtype, np.floating):
+    if isdtype(dtype, "floating"):
         dtype_ = dtype
         fill_value = np.nan
-    elif np.issubdtype(dtype, np.timedelta64):
+    elif isdtype(dtype, np.timedelta64):
         # See https://github.com/numpy/numpy/issues/10685
         # np.timedelta64 is a subclass of np.integer
         # Check np.timedelta64 before np.integer
         fill_value = np.timedelta64("NaT")
         dtype_ = dtype
-    elif np.issubdtype(dtype, np.integer):
+    elif isdtype(dtype, "integer"):
         dtype_ = np.float32 if dtype.itemsize <= 2 else np.float64
         fill_value = np.nan
-    elif np.issubdtype(dtype, np.complexfloating):
+    elif isdtype(dtype, "complex floating"):
         dtype_ = dtype
         fill_value = np.nan + np.nan * 1j
-    elif np.issubdtype(dtype, np.datetime64):
+    elif isdtype(dtype, np.datetime64):
         dtype_ = dtype
         fill_value = np.datetime64("NaT")
     else:
@@ -119,16 +119,16 @@ def get_pos_infinity(dtype, max_for_int=False):
     -------
     fill_value : positive infinity value corresponding to this dtype.
     """
-    if issubclass(dtype.type, np.floating):
+    if isdtype(dtype, "floating"):
         return np.inf
 
-    if issubclass(dtype.type, np.integer):
+    if isdtype(dtype, "integer"):
         if max_for_int:
             return np.iinfo(dtype).max
         else:
             return np.inf
 
-    if issubclass(dtype.type, np.complexfloating):
+    if isdtype(dtype, "complex floating"):
         return np.inf + 1j * np.inf
 
     return INF
@@ -147,16 +147,16 @@ def get_neg_infinity(dtype, min_for_int=False):
     -------
     fill_value : positive infinity value corresponding to this dtype.
     """
-    if issubclass(dtype.type, np.floating):
+    if isdtype(dtype, "floating"):
         return -np.inf
 
-    if issubclass(dtype.type, np.integer):
+    if isdtype(dtype, "integer"):
         if min_for_int:
             return np.iinfo(dtype).min
         else:
             return -np.inf
 
-    if issubclass(dtype.type, np.complexfloating):
+    if isdtype(dtype, "complex floating"):
         return -np.inf - 1j * np.inf
 
     return NINF
@@ -164,7 +164,7 @@ def get_neg_infinity(dtype, min_for_int=False):
 
 def is_datetime_like(dtype):
     """Check if a dtype is a subclass of the numpy datetime types"""
-    return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
+    return isdtype(dtype, (np.datetime64, np.timedelta64))
 
 
 def isdtype(dtype, kind, xp=None):
