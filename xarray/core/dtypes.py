@@ -190,9 +190,6 @@ def isdtype(dtype, kind, xp=None):
         )
 
     def split_numpy_kinds(kinds):
-        if not isinstance(kinds, tuple):
-            kinds = (kinds,)
-
         numpy_kinds = tuple(kind for kind in kinds if is_numpy_kind(kind))
         non_numpy_kinds = tuple(kind for kind in kinds if not is_numpy_kind(kind))
 
