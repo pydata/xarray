@@ -227,7 +227,7 @@ def isdtype(dtype, kind, xp=None):
     elif is_extension_array_dtype(dtype):
         return any(dtype == kind for kind in kinds)
     else:
-        numpy_kinds, non_numpy_kinds = split_numpy_kinds(kind)
+        numpy_kinds, non_numpy_kinds = split_numpy_kinds(kinds)
 
         if not non_numpy_kinds:
             return False
