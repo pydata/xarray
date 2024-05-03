@@ -244,7 +244,7 @@ class DuckBackendArrayWrapper(backends.common.BackendArray):
         return self.array
 
     def __getitem__(self, key):
-        return self.array[key.tuple]
+        return self.array[(key if isinstance(key, tuple) else key.tuple)]
 
 
 class AccessibleAsDuckArrayDataStore(backends.InMemoryDataStore):
@@ -5070,28 +5070,26 @@ class TestDataset:
             ds.isel(time=10)
             ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
 
-    def test_lazy_load_duck_array(self) -> None:
+    @pytest.mark.parametrize("decode_cf", [True, False])
+    def test_lazy_load_duck_array(self, decode_cf) -> None:
         store = AccessibleAsDuckArrayDataStore()
         create_test_data().dump_to_store(store)
 
-        for decode_cf in [True, False]:
-            ds = open_dataset(store, decode_cf=decode_cf)
-            with pytest.raises(UnexpectedDataAccess):
-                ds["var1"].values
+        ds = open_dataset(store, decode_cf=decode_cf)
+        with pytest.raises(UnexpectedDataAccess):
+            ds["var1"].values
 
-            # these should not raise UnexpectedDataAccess:
-            ds.var1.data
-            ds.isel(time=10)
-            ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
-            repr(ds)
+        # these should not raise UnexpectedDataAccess:
+        ds.var1.data
+        ds.isel(time=10)
+        ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
+        repr(ds)
 
-            # preserve the duck array type and don't cast to array
-            assert isinstance(ds["var1"].load().data, DuckArrayWrapper)
-            assert isinstance(
-                ds["var1"].isel(dim2=0, dim1=0).load().data, DuckArrayWrapper
-            )
+        # preserve the duck array type and don't cast to array
+        assert isinstance(ds["var1"].load().data, DuckArrayWrapper)
+        assert isinstance(ds["var1"].isel(dim2=0, dim1=0).load().data, DuckArrayWrapper)
 
-            ds.close()
+        ds.close()
 
     def test_dropna(self) -> None:
         x = np.random.randn(4, 4)

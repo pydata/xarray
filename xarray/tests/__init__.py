@@ -142,6 +142,7 @@ requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
 has_numpy_array_api, requires_numpy_array_api = _importorskip("numpy", "1.26.0")
+has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
 
 
 def _importorskip_h5netcdf_ros3():
@@ -262,16 +263,6 @@ class DuckArrayWrapper(utils.NDArrayMixin):
 class ReturnItem:
     def __getitem__(self, key):
         return key
-
-
-class IndexerMaker:
-    def __init__(self, indexer_cls):
-        self._indexer_cls = indexer_cls
-
-    def __getitem__(self, key):
-        if not isinstance(key, tuple):
-            key = (key,)
-        return self._indexer_cls(key)
 
 
 def source_ndarray(array):
