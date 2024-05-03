@@ -1711,7 +1711,7 @@ def to_zarr(
     )
 
     if region is not None:
-        zstore._validate_and_autodetect_region(dataset, region)
+        zstore._validate_and_autodetect_region(dataset)
         # can't modify indexed with region writes
         dataset = dataset.drop_vars(dataset.indexes)
         if append_dim is not None and append_dim in region:

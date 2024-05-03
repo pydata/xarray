@@ -832,7 +832,9 @@ class ZarrStore(AbstractWritableDataStore):
             region[dim] = slice(idxs[0], idxs[-1] + 1)
         return region
 
-    def _validate_and_autodetect_region(self, ds, region) -> None:
+    def _validate_and_autodetect_region(self, ds) -> None:
+        region = self._write_region
+
         if region == "auto":
             region = {dim: "auto" for dim in ds.dims}
 
