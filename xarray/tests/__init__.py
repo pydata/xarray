@@ -141,11 +141,6 @@ has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
 requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
-# _importorskip does not work for development versions
-has_pandas_version_two = Version(pd.__version__).major >= 2
-requires_pandas_version_two = pytest.mark.skipif(
-    not has_pandas_version_two, reason="requires pandas 2.0.0"
-)
 has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
 
 has_array_api_strict, requires_array_api_strict = _importorskip("array_api_strict")
