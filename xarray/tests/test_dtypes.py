@@ -58,7 +58,6 @@ def test_inf(obj) -> None:
 @pytest.mark.parametrize(
     "kind, expected",
     [
-        ("a", (np.dtype("O"), "nan")),  # dtype('S')
         ("b", (np.float32, "nan")),  # dtype('int8')
         ("B", (np.float32, "nan")),  # dtype('uint8')
         ("c", (np.dtype("O"), "nan")),  # dtype('S1')
