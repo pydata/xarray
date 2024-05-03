@@ -804,6 +804,11 @@ class ZarrStore(AbstractWritableDataStore):
             if val != "auto":
                 continue
 
+            if dim not in ds._variables:
+                # unindexed dimension
+                region[dim] = slice(0, ds.sizes[dim])
+                continue
+
             variable = conventions.decode_cf_variable(
                 dim, self.open_store_variable(dim).compute()
             )
