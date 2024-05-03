@@ -63,6 +63,7 @@ from xarray.tests import (
     assert_no_warnings,
     has_dask,
     has_netCDF4,
+    has_numpy_2,
     has_scipy,
     mock,
     network,
@@ -5088,6 +5089,9 @@ def test_use_cftime_true(calendar, units_year) -> None:
 
 @requires_scipy_or_netCDF4
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
+@pytest.mark.xfail(
+    has_numpy_2, reason="https://github.com/pandas-dev/pandas/issues/56996"
+)
 def test_use_cftime_false_standard_calendar_in_range(calendar) -> None:
     x = [0, 1]
     time = [0, 720]
