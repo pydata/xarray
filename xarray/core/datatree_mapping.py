@@ -98,10 +98,10 @@ def map_over_subtree(func: Callable) -> Callable:
         Function will not be applied to any nodes without datasets.
     *args : tuple, optional
         Positional arguments passed on to `func`. If DataTrees any data-containing nodes will be converted to Datasets
-        via .ds .
+        via `.ds`.
     **kwargs : Any
         Keyword arguments passed on to `func`. If DataTrees any data-containing nodes will be converted to Datasets
-        via .ds .
+        via `.ds`.
 
     Returns
     -------

@@ -147,6 +147,7 @@ requires_pandas_version_two = pytest.mark.skipif(
     not has_pandas_version_two, reason="requires pandas 2.0.0"
 )
 has_numpy_array_api, requires_numpy_array_api = _importorskip("numpy", "1.26.0")
+has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
 
 
 def _importorskip_h5netcdf_ros3():
