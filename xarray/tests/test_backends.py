@@ -5815,7 +5815,7 @@ def test_backend_array_deprecation_warning(capsys):
 
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
-        la.vindex[indexer].get_duck_array()
+        la.vindex[indexer.tuple].get_duck_array()
 
     captured = capsys.readouterr()
     assert len(w) == 1

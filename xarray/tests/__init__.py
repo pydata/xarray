@@ -226,16 +226,6 @@ class ReturnItem:
         return key
 
 
-class IndexerMaker:
-    def __init__(self, indexer_cls):
-        self._indexer_cls = indexer_cls
-
-    def __getitem__(self, key):
-        if not isinstance(key, tuple):
-            key = (key,)
-        return self._indexer_cls(key)
-
-
 def source_ndarray(array):
     """Given an ndarray, return the base object which holds its memory, or the
     object itself.
