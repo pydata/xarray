@@ -141,13 +141,6 @@ def test_assert_duckarray_equal(duckarray, obj1, obj2) -> None:
     xr.testing.assert_duckarray_equal(a, b)
 
 
-def test_assert_equal_transpose(duckarray, obj1, obj2) -> None:
-    a = duckarray(obj1)
-    b = duckarray(obj2)
-
-    xr.testing.assert_duckarray_equal(a, b)
-
-
 @pytest.mark.parametrize(
     "func",
     [
