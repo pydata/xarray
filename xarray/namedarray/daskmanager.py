@@ -6,16 +6,28 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 from packaging.version import Version
 
-from xarray.core.duck_array_ops import dask_available
 from xarray.core.indexing import ImplicitToExplicitIndexingAdapter
-from xarray.core.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray
-from xarray.core.pycompat import is_duck_dask_array
+from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray
+from xarray.namedarray.utils import is_duck_dask_array, module_available
 
 if TYPE_CHECKING:
-    from xarray.core.types import DaskArray, T_Chunks, T_NormalizedChunks
+    from xarray.namedarray._typing import (
+        T_Chunks,
+        _DType_co,
+        _NormalizedChunks,
+        duckarray,
+    )
+
+    try:
+        from dask.array import Array as DaskArray
+    except ImportError:
+        DaskArray = np.ndarray[Any, Any]  # type: ignore[assignment,  misc]
 
 
-class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
+dask_available = module_available("dask")
+
+
+class DaskManager(ChunkManagerEntrypoint["DaskArray"]):  # type: ignore[type-var]
     array_cls: type[DaskArray]
     available: bool = dask_available
 
@@ -26,20 +38,20 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
         self.array_cls = Array
 
-    def is_chunked_array(self, data: Any) -> bool:
+    def is_chunked_array(self, data: duckarray[Any, Any]) -> bool:
         return is_duck_dask_array(data)
 
-    def chunks(self, data: DaskArray) -> T_NormalizedChunks:
-        return data.chunks
+    def chunks(self, data: Any) -> _NormalizedChunks:
+        return data.chunks  # type: ignore[no-any-return]
 
     def normalize_chunks(
         self,
-        chunks: T_Chunks | T_NormalizedChunks,
+        chunks: T_Chunks | _NormalizedChunks,
         shape: tuple[int, ...] | None = None,
         limit: int | None = None,
-        dtype: np.dtype | None = None,
-        previous_chunks: T_NormalizedChunks | None = None,
-    ) -> T_NormalizedChunks:
+        dtype: _DType_co | None = None,
+        previous_chunks: _NormalizedChunks | None = None,
+    ) -> Any:
         """Called by open_dataset"""
         from dask.array.core import normalize_chunks
 
@@ -49,9 +61,11 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             limit=limit,
             dtype=dtype,
             previous_chunks=previous_chunks,
-        )
+        )  # type: ignore[no-untyped-call]
 
-    def from_array(self, data: Any, chunks, **kwargs) -> DaskArray:
+    def from_array(
+        self, data: Any, chunks: T_Chunks | _NormalizedChunks, **kwargs: Any
+    ) -> DaskArray | Any:
         import dask.array as da
 
         if isinstance(data, ImplicitToExplicitIndexingAdapter):
@@ -62,12 +76,14 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             data,
             chunks,
             **kwargs,
-        )
+        )  # type: ignore[no-untyped-call]
 
-    def compute(self, *data: DaskArray, **kwargs) -> tuple[np.ndarray, ...]:
+    def compute(
+        self, *data: Any, **kwargs: Any
+    ) -> tuple[np.ndarray[Any, _DType_co], ...]:
         from dask.array import compute
 
-        return compute(*data, **kwargs)
+        return compute(*data, **kwargs)  # type: ignore[no-untyped-call, no-any-return]
 
     @property
     def array_api(self) -> Any:
@@ -75,16 +91,16 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
         return da
 
-    def reduction(
+    def reduction(  # type: ignore[override]
         self,
         arr: T_ChunkedArray,
-        func: Callable,
-        combine_func: Callable | None = None,
-        aggregate_func: Callable | None = None,
+        func: Callable[..., Any],
+        combine_func: Callable[..., Any] | None = None,
+        aggregate_func: Callable[..., Any] | None = None,
         axis: int | Sequence[int] | None = None,
-        dtype: np.dtype | None = None,
+        dtype: _DType_co | None = None,
         keepdims: bool = False,
-    ) -> T_ChunkedArray:
+    ) -> DaskArray | Any:
         from dask.array import reduction
 
         return reduction(
@@ -95,23 +111,45 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             axis=axis,
             dtype=dtype,
             keepdims=keepdims,
-        )
+        )  # type: ignore[no-untyped-call]
+
+    def scan(  # type: ignore[override]
+        self,
+        func: Callable[..., Any],
+        binop: Callable[..., Any],
+        ident: float,
+        arr: T_ChunkedArray,
+        axis: int | None = None,
+        dtype: _DType_co | None = None,
+        **kwargs: Any,
+    ) -> DaskArray | Any:
+        from dask.array.reductions import cumreduction
+
+        return cumreduction(
+            func,
+            binop,
+            ident,
+            arr,
+            axis=axis,
+            dtype=dtype,
+            **kwargs,
+        )  # type: ignore[no-untyped-call]
 
     def apply_gufunc(
         self,
-        func: Callable,
+        func: Callable[..., Any],
         signature: str,
         *args: Any,
         axes: Sequence[tuple[int, ...]] | None = None,
         axis: int | None = None,
         keepdims: bool = False,
-        output_dtypes: Sequence[np.typing.DTypeLike] | None = None,
+        output_dtypes: Sequence[_DType_co] | None = None,
         output_sizes: dict[str, int] | None = None,
         vectorize: bool | None = None,
         allow_rechunk: bool = False,
-        meta: tuple[np.ndarray, ...] | None = None,
-        **kwargs,
-    ):
+        meta: tuple[np.ndarray[Any, _DType_co], ...] | None = None,
+        **kwargs: Any,
+    ) -> Any:
         from dask.array.gufunc import apply_gufunc
 
         return apply_gufunc(
@@ -127,18 +165,18 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             allow_rechunk=allow_rechunk,
             meta=meta,
             **kwargs,
-        )
+        )  # type: ignore[no-untyped-call]
 
     def map_blocks(
         self,
-        func: Callable,
+        func: Callable[..., Any],
         *args: Any,
-        dtype: np.typing.DTypeLike | None = None,
+        dtype: _DType_co | None = None,
         chunks: tuple[int, ...] | None = None,
         drop_axis: int | Sequence[int] | None = None,
         new_axis: int | Sequence[int] | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> Any:
         import dask
         from dask.array import map_blocks
 
@@ -156,24 +194,24 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             drop_axis=drop_axis,
             new_axis=new_axis,
             **kwargs,
-        )
+        )  # type: ignore[no-untyped-call]
 
     def blockwise(
         self,
-        func: Callable,
-        out_ind: Iterable,
+        func: Callable[..., Any],
+        out_ind: Iterable[Any],
         *args: Any,
         # can't type this as mypy assumes args are all same type, but dask blockwise args alternate types
         name: str | None = None,
-        token=None,
-        dtype: np.dtype | None = None,
-        adjust_chunks: dict[Any, Callable] | None = None,
+        token: Any | None = None,
+        dtype: _DType_co | None = None,
+        adjust_chunks: dict[Any, Callable[..., Any]] | None = None,
         new_axes: dict[Any, int] | None = None,
         align_arrays: bool = True,
         concatenate: bool | None = None,
-        meta=None,
-        **kwargs,
-    ):
+        meta: tuple[np.ndarray[Any, _DType_co], ...] | None = None,
+        **kwargs: Any,
+    ) -> DaskArray | Any:
         from dask.array import blockwise
 
         return blockwise(
@@ -189,23 +227,23 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             concatenate=concatenate,
             meta=meta,
             **kwargs,
-        )
+        )  # type: ignore[no-untyped-call]
 
     def unify_chunks(
         self,
         *args: Any,  # can't type this as mypy assumes args are all same type, but dask unify_chunks args alternate types
-        **kwargs,
-    ) -> tuple[dict[str, T_NormalizedChunks], list[DaskArray]]:
+        **kwargs: Any,
+    ) -> tuple[dict[str, _NormalizedChunks], list[DaskArray]]:
         from dask.array.core import unify_chunks
 
-        return unify_chunks(*args, **kwargs)
+        return unify_chunks(*args, **kwargs)  # type: ignore[no-any-return, no-untyped-call]
 
     def store(
         self,
-        sources: DaskArray | Sequence[DaskArray],
+        sources: Any | Sequence[Any],
         targets: Any,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> Any:
         from dask.array import store
 
         return store(

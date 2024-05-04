@@ -6,7 +6,6 @@ from typing import Callable, Literal
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 
 from xarray import CFTimeIndex
 from xarray.coding.cftime_offsets import (
@@ -26,6 +25,8 @@ from xarray.coding.cftime_offsets import (
     YearBegin,
     YearEnd,
     _days_in_month,
+    _legacy_to_new_freq,
+    _new_to_legacy_freq,
     cftime_range,
     date_range,
     date_range_like,
@@ -35,7 +36,13 @@ from xarray.coding.cftime_offsets import (
 )
 from xarray.coding.frequencies import infer_freq
 from xarray.core.dataarray import DataArray
-from xarray.tests import _CFTIME_CALENDARS, has_cftime, requires_cftime
+from xarray.tests import (
+    _CFTIME_CALENDARS,
+    assert_no_warnings,
+    has_cftime,
+    has_pandas_ge_2_2,
+    requires_cftime,
+)
 
 cftime = pytest.importorskip("cftime")
 
@@ -157,7 +164,7 @@ def test_year_offset_constructor_invalid_month(offset, invalid_month, exception)
         (MonthBegin(), "MS"),
         (MonthEnd(), "ME"),
         (YearBegin(), "YS-JAN"),
-        (YearEnd(), "Y-DEC"),
+        (YearEnd(), "YE-DEC"),
         (QuarterBegin(), "QS-MAR"),
         (QuarterEnd(), "QE-MAR"),
         (Day(), "D"),
@@ -225,6 +232,20 @@ def test_to_offset_offset_input(offset):
         ("2U", Microsecond(n=2)),
         ("us", Microsecond(n=1)),
         ("2us", Microsecond(n=2)),
+        # negative
+        ("-2M", MonthEnd(n=-2)),
+        ("-2ME", MonthEnd(n=-2)),
+        ("-2MS", MonthBegin(n=-2)),
+        ("-2D", Day(n=-2)),
+        ("-2H", Hour(n=-2)),
+        ("-2h", Hour(n=-2)),
+        ("-2T", Minute(n=-2)),
+        ("-2min", Minute(n=-2)),
+        ("-2S", Second(n=-2)),
+        ("-2L", Millisecond(n=-2)),
+        ("-2ms", Millisecond(n=-2)),
+        ("-2U", Microsecond(n=-2)),
+        ("-2us", Microsecond(n=-2)),
     ],
     ids=_id_func,
 )
@@ -233,13 +254,19 @@ def test_to_offset_sub_annual(freq, expected):
     assert to_offset(freq) == expected
 
 
-_ANNUAL_OFFSET_TYPES = {"A": YearEnd, "AS": YearBegin, "Y": YearEnd, "YS": YearBegin}
+_ANNUAL_OFFSET_TYPES = {
+    "A": YearEnd,
+    "AS": YearBegin,
+    "Y": YearEnd,
+    "YS": YearBegin,
+    "YE": YearEnd,
+}
 
 
 @pytest.mark.parametrize(
     ("month_int", "month_label"), list(_MONTH_ABBREVIATIONS.items()) + [(0, "")]
 )
-@pytest.mark.parametrize("multiple", [None, 2])
+@pytest.mark.parametrize("multiple", [None, 2, -1])
 @pytest.mark.parametrize("offset_str", ["AS", "A", "YS", "Y"])
 @pytest.mark.filterwarnings("ignore::FutureWarning")  # Deprecation of "A" etc.
 def test_to_offset_annual(month_label, month_int, multiple, offset_str):
@@ -268,7 +295,7 @@ _QUARTER_OFFSET_TYPES = {"Q": QuarterEnd, "QS": QuarterBegin, "QE": QuarterEnd}
 @pytest.mark.parametrize(
     ("month_int", "month_label"), list(_MONTH_ABBREVIATIONS.items()) + [(0, "")]
 )
-@pytest.mark.parametrize("multiple", [None, 2])
+@pytest.mark.parametrize("multiple", [None, 2, -1])
 @pytest.mark.parametrize("offset_str", ["QS", "Q", "QE"])
 @pytest.mark.filterwarnings("ignore::FutureWarning")  # Deprecation of "Q" etc.
 def test_to_offset_quarter(month_label, month_int, multiple, offset_str):
@@ -403,6 +430,7 @@ def test_eq(a, b):
 
 _MUL_TESTS = [
     (BaseCFTimeOffset(), 3, BaseCFTimeOffset(n=3)),
+    (BaseCFTimeOffset(), -3, BaseCFTimeOffset(n=-3)),
     (YearEnd(), 3, YearEnd(n=3)),
     (YearBegin(), 3, YearBegin(n=3)),
     (QuarterEnd(), 3, QuarterEnd(n=3)),
@@ -418,6 +446,7 @@ _MUL_TESTS = [
     (Microsecond(), 3, Microsecond(n=3)),
     (Day(), 0.5, Hour(n=12)),
     (Hour(), 0.5, Minute(n=30)),
+    (Hour(), -0.5, Minute(n=-30)),
     (Minute(), 0.5, Second(n=30)),
     (Second(), 0.5, Millisecond(n=500)),
     (Millisecond(), 0.5, Microsecond(n=500)),
@@ -1163,6 +1192,15 @@ _CFTIME_RANGE_TESTS = [
         [(10, 1, 1), (8, 1, 1), (6, 1, 1), (4, 1, 1)],
     ),
     (
+        "0010",
+        None,
+        4,
+        "-2YS",
+        "both",
+        False,
+        [(10, 1, 1), (8, 1, 1), (6, 1, 1), (4, 1, 1)],
+    ),
+    (
         "0001-01-01",
         "0001-01-04",
         4,
@@ -1179,6 +1217,24 @@ _CFTIME_RANGE_TESTS = [
         "both",
         False,
         [(1, 6, 1), (2, 3, 1), (2, 12, 1), (3, 9, 1)],
+    ),
+    (
+        "0001-06-01",
+        None,
+        4,
+        "-1MS",
+        "both",
+        False,
+        [(1, 6, 1), (1, 5, 1), (1, 4, 1), (1, 3, 1)],
+    ),
+    (
+        "0001-01-30",
+        None,
+        4,
+        "-1D",
+        "both",
+        False,
+        [(1, 1, 30), (1, 1, 29), (1, 1, 28), (1, 1, 27)],
     ),
 ]
 
@@ -1235,13 +1291,12 @@ def test_cftime_range_name():
 @pytest.mark.parametrize(
     ("start", "end", "periods", "freq", "inclusive"),
     [
-        (None, None, 5, "Y", None),
-        ("2000", None, None, "Y", None),
-        (None, "2000", None, "Y", None),
-        ("2000", "2001", None, None, None),
+        (None, None, 5, "YE", None),
+        ("2000", None, None, "YE", None),
+        (None, "2000", None, "YE", None),
         (None, None, None, None, None),
-        ("2000", "2001", None, "Y", "up"),
-        ("2000", "2001", 5, "Y", None),
+        ("2000", "2001", None, "YE", "up"),
+        ("2000", "2001", 5, "YE", None),
     ],
 )
 def test_invalid_cftime_range_inputs(
@@ -1259,33 +1314,53 @@ def test_invalid_cftime_arg() -> None:
     with pytest.warns(
         FutureWarning, match="Following pandas, the `closed` parameter is deprecated"
     ):
-        cftime_range("2000", "2001", None, "Y", closed="left")
+        cftime_range("2000", "2001", None, "YE", closed="left")
 
 
 _CALENDAR_SPECIFIC_MONTH_END_TESTS = [
-    ("2ME", "noleap", [(2, 28), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
-    ("2ME", "all_leap", [(2, 29), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
-    ("2ME", "360_day", [(2, 30), (4, 30), (6, 30), (8, 30), (10, 30), (12, 30)]),
-    ("2ME", "standard", [(2, 29), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
-    ("2ME", "gregorian", [(2, 29), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
-    ("2ME", "julian", [(2, 29), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
+    ("noleap", [(2, 28), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
+    ("all_leap", [(2, 29), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
+    ("360_day", [(2, 30), (4, 30), (6, 30), (8, 30), (10, 30), (12, 30)]),
+    ("standard", [(2, 29), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
+    ("gregorian", [(2, 29), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
+    ("julian", [(2, 29), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
 ]
 
 
 @pytest.mark.parametrize(
-    ("freq", "calendar", "expected_month_day"),
+    ("calendar", "expected_month_day"),
     _CALENDAR_SPECIFIC_MONTH_END_TESTS,
     ids=_id_func,
 )
 def test_calendar_specific_month_end(
-    freq: str, calendar: str, expected_month_day: list[tuple[int, int]]
+    calendar: str, expected_month_day: list[tuple[int, int]]
 ) -> None:
     year = 2000  # Use a leap-year to highlight calendar differences
     result = cftime_range(
-        start="2000-02", end="2001", freq=freq, calendar=calendar
+        start="2000-02", end="2001", freq="2ME", calendar=calendar
     ).values
     date_type = get_date_type(calendar)
     expected = [date_type(year, *args) for args in expected_month_day]
+    np.testing.assert_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("calendar", "expected_month_day"),
+    _CALENDAR_SPECIFIC_MONTH_END_TESTS,
+    ids=_id_func,
+)
+def test_calendar_specific_month_end_negative_freq(
+    calendar: str, expected_month_day: list[tuple[int, int]]
+) -> None:
+    year = 2000  # Use a leap-year to highlight calendar differences
+    result = cftime_range(
+        start="2000-12",
+        end="2000",
+        freq="-2ME",
+        calendar=calendar,
+    ).values
+    date_type = get_date_type(calendar)
+    expected = [date_type(year, *args) for args in expected_month_day[::-1]]
     np.testing.assert_equal(result, expected)
 
 
@@ -1313,16 +1388,20 @@ def test_calendar_year_length(
     assert len(result) == expected_number_of_days
 
 
-@pytest.mark.parametrize("freq", ["Y", "M", "D"])
+@pytest.mark.parametrize("freq", ["YE", "ME", "D"])
 def test_dayofweek_after_cftime_range(freq: str) -> None:
     result = cftime_range("2000-02-01", periods=3, freq=freq).dayofweek
+    # TODO: remove once requiring pandas 2.2+
+    freq = _new_to_legacy_freq(freq)
     expected = pd.date_range("2000-02-01", periods=3, freq=freq).dayofweek
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.parametrize("freq", ["Y", "M", "D"])
+@pytest.mark.parametrize("freq", ["YE", "ME", "D"])
 def test_dayofyear_after_cftime_range(freq: str) -> None:
     result = cftime_range("2000-02-01", periods=3, freq=freq).dayofyear
+    # TODO: remove once requiring pandas 2.2+
+    freq = _new_to_legacy_freq(freq)
     expected = pd.date_range("2000-02-01", periods=3, freq=freq).dayofyear
     np.testing.assert_array_equal(result, expected)
 
@@ -1384,37 +1463,16 @@ def test_date_range_errors() -> None:
         ("2020-02-01", "ME", "noleap", "gregorian", True, "2020-02-29", True),
         ("2020-02-01", "QE-DEC", "noleap", "gregorian", True, "2020-03-31", True),
         ("2020-02-01", "YS-FEB", "noleap", "gregorian", True, "2020-02-01", True),
-        ("2020-02-01", "Y-FEB", "noleap", "gregorian", True, "2020-02-29", True),
+        ("2020-02-01", "YE-FEB", "noleap", "gregorian", True, "2020-02-29", True),
+        ("2020-02-01", "-1YE-FEB", "noleap", "gregorian", True, "2020-02-29", True),
         ("2020-02-28", "3h", "all_leap", "gregorian", False, "2020-02-28", True),
         ("2020-03-30", "ME", "360_day", "gregorian", False, "2020-03-31", True),
         ("2020-03-31", "ME", "gregorian", "360_day", None, "2020-03-30", False),
+        ("2020-03-31", "-1ME", "gregorian", "360_day", None, "2020-03-30", False),
     ],
 )
 def test_date_range_like(start, freq, cal_src, cal_tgt, use_cftime, exp0, exp_pd):
-    expected_xarray_freq = freq
-
-    # pandas changed what is returned for infer_freq in version 2.2.  The
-    # development version of xarray follows this, but we need to adapt this test
-    # to still handle older versions of pandas.
-    if Version(pd.__version__) < Version("2.2"):
-        if "ME" in freq:
-            freq = freq.replace("ME", "M")
-            expected_pandas_freq = freq
-        elif "QE" in freq:
-            freq = freq.replace("QE", "Q")
-            expected_pandas_freq = freq
-        elif "YS" in freq:
-            freq = freq.replace("YS", "AS")
-            expected_pandas_freq = freq
-        elif "Y-" in freq:
-            freq = freq.replace("Y-", "A-")
-            expected_pandas_freq = freq
-        elif "h" in freq:
-            expected_pandas_freq = freq.replace("h", "H")
-        else:
-            raise ValueError(f"Test not implemented for freq {freq!r}")
-    else:
-        expected_pandas_freq = freq
+    expected_freq = freq
 
     source = date_range(start, periods=12, freq=freq, calendar=cal_src)
 
@@ -1422,10 +1480,7 @@ def test_date_range_like(start, freq, cal_src, cal_tgt, use_cftime, exp0, exp_pd
 
     assert len(out) == 12
 
-    if exp_pd:
-        assert infer_freq(out) == expected_pandas_freq
-    else:
-        assert infer_freq(out) == expected_xarray_freq
+    assert infer_freq(out) == expected_freq
 
     assert out[0].isoformat().startswith(exp0)
 
@@ -1434,6 +1489,21 @@ def test_date_range_like(start, freq, cal_src, cal_tgt, use_cftime, exp0, exp_pd
     else:
         assert isinstance(out, CFTimeIndex)
         assert out.calendar == cal_tgt
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    "freq", ("YE", "YS", "YE-MAY", "MS", "ME", "QS", "h", "min", "s")
+)
+@pytest.mark.parametrize("use_cftime", (True, False))
+def test_date_range_like_no_deprecation(freq, use_cftime):
+    # ensure no internal warnings
+    # TODO: remove once freq string deprecation is finished
+
+    source = date_range("2000", periods=3, freq=freq, use_cftime=False)
+
+    with assert_no_warnings():
+        date_range_like(source, "standard", use_cftime=use_cftime)
 
 
 def test_date_range_like_same_calendar():
@@ -1531,8 +1601,178 @@ def test_cftime_or_date_range_inclusive_None(function) -> None:
     np.testing.assert_equal(result_None.values, result_both.values)
 
 
-@pytest.mark.parametrize("freq", ["A", "AS", "Q", "M", "H", "T", "S", "L", "U"])
+@pytest.mark.parametrize(
+    "freq", ["A", "AS", "Q", "M", "H", "T", "S", "L", "U", "Y", "A-MAY"]
+)
 def test_to_offset_deprecation_warning(freq):
     # Test for deprecations outlined in GitHub issue #8394
     with pytest.warns(FutureWarning, match="is deprecated"):
         to_offset(freq)
+
+
+@pytest.mark.skipif(has_pandas_ge_2_2, reason="only relevant for pandas lt 2.2")
+@pytest.mark.parametrize(
+    "freq, expected",
+    (
+        ["Y", "YE"],
+        ["A", "YE"],
+        ["Q", "QE"],
+        ["M", "ME"],
+        ["AS", "YS"],
+        ["YE", "YE"],
+        ["QE", "QE"],
+        ["ME", "ME"],
+        ["YS", "YS"],
+    ),
+)
+@pytest.mark.parametrize("n", ("", "2"))
+def test_legacy_to_new_freq(freq, expected, n):
+    freq = f"{n}{freq}"
+    result = _legacy_to_new_freq(freq)
+
+    expected = f"{n}{expected}"
+
+    assert result == expected
+
+
+@pytest.mark.skipif(has_pandas_ge_2_2, reason="only relevant for pandas lt 2.2")
+@pytest.mark.parametrize("year_alias", ("YE", "Y", "A"))
+@pytest.mark.parametrize("n", ("", "2"))
+def test_legacy_to_new_freq_anchored(year_alias, n):
+    for month in _MONTH_ABBREVIATIONS.values():
+        freq = f"{n}{year_alias}-{month}"
+        result = _legacy_to_new_freq(freq)
+
+        expected = f"{n}YE-{month}"
+
+        assert result == expected
+
+
+@pytest.mark.skipif(has_pandas_ge_2_2, reason="only relevant for pandas lt 2.2")
+@pytest.mark.filterwarnings("ignore:'[AY]' is deprecated")
+@pytest.mark.parametrize(
+    "freq, expected",
+    (["A", "A"], ["YE", "A"], ["Y", "A"], ["QE", "Q"], ["ME", "M"], ["YS", "AS"]),
+)
+@pytest.mark.parametrize("n", ("", "2"))
+def test_new_to_legacy_freq(freq, expected, n):
+    freq = f"{n}{freq}"
+    result = _new_to_legacy_freq(freq)
+
+    expected = f"{n}{expected}"
+
+    assert result == expected
+
+
+@pytest.mark.skipif(has_pandas_ge_2_2, reason="only relevant for pandas lt 2.2")
+@pytest.mark.filterwarnings("ignore:'[AY]-.{3}' is deprecated")
+@pytest.mark.parametrize("year_alias", ("A", "Y", "YE"))
+@pytest.mark.parametrize("n", ("", "2"))
+def test_new_to_legacy_freq_anchored(year_alias, n):
+    for month in _MONTH_ABBREVIATIONS.values():
+        freq = f"{n}{year_alias}-{month}"
+        result = _new_to_legacy_freq(freq)
+
+        expected = f"{n}A-{month}"
+
+        assert result == expected
+
+
+@pytest.mark.skipif(has_pandas_ge_2_2, reason="only for pandas lt 2.2")
+@pytest.mark.parametrize(
+    "freq, expected",
+    (
+        # pandas-only freq strings are passed through
+        ("BH", "BH"),
+        ("CBH", "CBH"),
+        ("N", "N"),
+    ),
+)
+def test_legacy_to_new_freq_pd_freq_passthrough(freq, expected):
+
+    result = _legacy_to_new_freq(freq)
+    assert result == expected
+
+
+@pytest.mark.filterwarnings("ignore:'.' is deprecated ")
+@pytest.mark.skipif(has_pandas_ge_2_2, reason="only for pandas lt 2.2")
+@pytest.mark.parametrize(
+    "freq, expected",
+    (
+        # these are each valid in pandas lt 2.2
+        ("T", "T"),
+        ("min", "min"),
+        ("S", "S"),
+        ("s", "s"),
+        ("L", "L"),
+        ("ms", "ms"),
+        ("U", "U"),
+        ("us", "us"),
+        # pandas-only freq strings are passed through
+        ("bh", "bh"),
+        ("cbh", "cbh"),
+        ("ns", "ns"),
+    ),
+)
+def test_new_to_legacy_freq_pd_freq_passthrough(freq, expected):
+
+    result = _new_to_legacy_freq(freq)
+    assert result == expected
+
+
+@pytest.mark.filterwarnings("ignore:Converting a CFTimeIndex with:")
+@pytest.mark.parametrize("start", ("2000", "2001"))
+@pytest.mark.parametrize("end", ("2000", "2001"))
+@pytest.mark.parametrize(
+    "freq", ("MS", "-1MS", "YS", "-1YS", "ME", "-1ME", "YE", "-1YE")
+)
+def test_cftime_range_same_as_pandas(start, end, freq):
+    result = date_range(start, end, freq=freq, calendar="standard", use_cftime=True)
+    result = result.to_datetimeindex()
+    expected = date_range(start, end, freq=freq, use_cftime=False)
+
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.filterwarnings("ignore:Converting a CFTimeIndex with:")
+@pytest.mark.parametrize(
+    "start, end, periods",
+    [
+        ("2022-01-01", "2022-01-10", 2),
+        ("2022-03-01", "2022-03-31", 2),
+        ("2022-01-01", "2022-01-10", None),
+        ("2022-03-01", "2022-03-31", None),
+    ],
+)
+def test_cftime_range_no_freq(start, end, periods):
+    """
+    Test whether cftime_range produces the same result as Pandas
+    when freq is not provided, but start, end and periods are.
+    """
+    # Generate date ranges using cftime_range
+    result = cftime_range(start=start, end=end, periods=periods)
+    result = result.to_datetimeindex()
+    expected = pd.date_range(start=start, end=end, periods=periods)
+
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "start, end, periods",
+    [
+        ("2022-01-01", "2022-01-10", 2),
+        ("2022-03-01", "2022-03-31", 2),
+        ("2022-01-01", "2022-01-10", None),
+        ("2022-03-01", "2022-03-31", None),
+    ],
+)
+def test_date_range_no_freq(start, end, periods):
+    """
+    Test whether date_range produces the same result as Pandas
+    when freq is not provided, but start, end and periods are.
+    """
+    # Generate date ranges using date_range
+    result = date_range(start=start, end=end, periods=periods)
+    expected = pd.date_range(start=start, end=end, periods=periods)
+
+    np.testing.assert_array_equal(result, expected)

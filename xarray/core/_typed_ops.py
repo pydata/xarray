@@ -1,4 +1,5 @@
 """Mixin classes with arithmetic operators."""
+
 # This file was generated using xarray.util.generate_ops. Do not edit manually.
 
 from __future__ import annotations
@@ -454,199 +455,163 @@ class VariableOpsMixin:
         raise NotImplementedError
 
     @overload
-    def __add__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __add__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __add__(self, other: VarCompatible) -> Self:
-        ...
+    def __add__(self, other: VarCompatible) -> Self: ...
 
     def __add__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.add)
 
     @overload
-    def __sub__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __sub__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __sub__(self, other: VarCompatible) -> Self:
-        ...
+    def __sub__(self, other: VarCompatible) -> Self: ...
 
     def __sub__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.sub)
 
     @overload
-    def __mul__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __mul__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __mul__(self, other: VarCompatible) -> Self:
-        ...
+    def __mul__(self, other: VarCompatible) -> Self: ...
 
     def __mul__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.mul)
 
     @overload
-    def __pow__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __pow__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __pow__(self, other: VarCompatible) -> Self:
-        ...
+    def __pow__(self, other: VarCompatible) -> Self: ...
 
     def __pow__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.pow)
 
     @overload
-    def __truediv__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __truediv__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __truediv__(self, other: VarCompatible) -> Self:
-        ...
+    def __truediv__(self, other: VarCompatible) -> Self: ...
 
     def __truediv__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.truediv)
 
     @overload
-    def __floordiv__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __floordiv__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __floordiv__(self, other: VarCompatible) -> Self:
-        ...
+    def __floordiv__(self, other: VarCompatible) -> Self: ...
 
     def __floordiv__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.floordiv)
 
     @overload
-    def __mod__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __mod__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __mod__(self, other: VarCompatible) -> Self:
-        ...
+    def __mod__(self, other: VarCompatible) -> Self: ...
 
     def __mod__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.mod)
 
     @overload
-    def __and__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __and__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __and__(self, other: VarCompatible) -> Self:
-        ...
+    def __and__(self, other: VarCompatible) -> Self: ...
 
     def __and__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.and_)
 
     @overload
-    def __xor__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __xor__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __xor__(self, other: VarCompatible) -> Self:
-        ...
+    def __xor__(self, other: VarCompatible) -> Self: ...
 
     def __xor__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.xor)
 
     @overload
-    def __or__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __or__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __or__(self, other: VarCompatible) -> Self:
-        ...
+    def __or__(self, other: VarCompatible) -> Self: ...
 
     def __or__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.or_)
 
     @overload
-    def __lshift__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __lshift__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __lshift__(self, other: VarCompatible) -> Self:
-        ...
+    def __lshift__(self, other: VarCompatible) -> Self: ...
 
     def __lshift__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.lshift)
 
     @overload
-    def __rshift__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __rshift__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __rshift__(self, other: VarCompatible) -> Self:
-        ...
+    def __rshift__(self, other: VarCompatible) -> Self: ...
 
     def __rshift__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.rshift)
 
     @overload
-    def __lt__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __lt__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __lt__(self, other: VarCompatible) -> Self:
-        ...
+    def __lt__(self, other: VarCompatible) -> Self: ...
 
     def __lt__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.lt)
 
     @overload
-    def __le__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __le__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __le__(self, other: VarCompatible) -> Self:
-        ...
+    def __le__(self, other: VarCompatible) -> Self: ...
 
     def __le__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.le)
 
     @overload
-    def __gt__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __gt__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __gt__(self, other: VarCompatible) -> Self:
-        ...
+    def __gt__(self, other: VarCompatible) -> Self: ...
 
     def __gt__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.gt)
 
     @overload
-    def __ge__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __ge__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __ge__(self, other: VarCompatible) -> Self:
-        ...
+    def __ge__(self, other: VarCompatible) -> Self: ...
 
     def __ge__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, operator.ge)
 
     @overload  # type:ignore[override]
-    def __eq__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __eq__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __eq__(self, other: VarCompatible) -> Self:
-        ...
+    def __eq__(self, other: VarCompatible) -> Self: ...
 
     def __eq__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, nputils.array_eq)
 
     @overload  # type:ignore[override]
-    def __ne__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __ne__(self, other: T_DataArray) -> T_DataArray: ...
 
     @overload
-    def __ne__(self, other: VarCompatible) -> Self:
-        ...
+    def __ne__(self, other: VarCompatible) -> Self: ...
 
     def __ne__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, nputils.array_ne)

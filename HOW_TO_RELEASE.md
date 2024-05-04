@@ -52,7 +52,7 @@ upstream        https://github.com/pydata/xarray (push)
       ```sh
       pytest
       ```
- 8. Check that the ReadTheDocs build is passing on the `main` branch.
+ 8. Check that the [ReadTheDocs build](https://readthedocs.org/projects/xray/) is passing on the `latest` build version (which is built from the `main` branch).
  9. Issue the release on GitHub. Click on "Draft a new release" at
     <https://github.com/pydata/xarray/releases>. Type in the version number (with a "v")
     and paste the release summary in the notes.

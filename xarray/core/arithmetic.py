@@ -1,4 +1,5 @@
 """Base classes implementing arithmetic for xarray objects."""
+
 from __future__ import annotations
 
 import numbers
@@ -14,12 +15,9 @@ from xarray.core._typed_ops import (
     VariableOpsMixin,
 )
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
-from xarray.core.ops import (
-    IncludeNumpySameMethods,
-    IncludeReduceMethods,
-)
+from xarray.core.ops import IncludeNumpySameMethods, IncludeReduceMethods
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import is_duck_array
+from xarray.namedarray.utils import is_duck_array
 
 
 class SupportsArithmetic:
@@ -64,10 +62,10 @@ class SupportsArithmetic:
         if method != "__call__":
             # TODO: support other methods, e.g., reduce and accumulate.
             raise NotImplementedError(
-                "{} method for ufunc {} is not implemented on xarray objects, "
+                f"{method} method for ufunc {ufunc} is not implemented on xarray objects, "
                 "which currently only support the __call__ method. As an "
                 "alternative, consider explicitly converting xarray objects "
-                "to NumPy arrays (e.g., with `.values`).".format(method, ufunc)
+                "to NumPy arrays (e.g., with `.values`)."
             )
 
         if any(isinstance(o, SupportsArithmetic) for o in out):

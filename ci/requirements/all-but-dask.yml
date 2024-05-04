@@ -5,6 +5,7 @@ channels:
 dependencies:
   - black
   - aiobotocore
+  - array-api-strict
   - boto3
   - bottleneck
   - cartopy

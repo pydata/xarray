@@ -79,11 +79,13 @@ def explicit_chunks(chunks, shape):
     # Emulate `dask.array.core.normalize_chunks` but for simpler inputs.
     return tuple(
         (
-            (size // chunk) * (chunk,)
-            + ((size % chunk,) if size % chunk or size == 0 else ())
+            (
+                (size // chunk) * (chunk,)
+                + ((size % chunk,) if size % chunk or size == 0 else ())
+            )
+            if isinstance(chunk, Number)
+            else chunk
         )
-        if isinstance(chunk, Number)
-        else chunk
         for chunk, size in zip(chunks, shape)
     )
 

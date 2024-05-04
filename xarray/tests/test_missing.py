@@ -14,7 +14,7 @@ from xarray.core.missing import (
     _get_nan_block_lengths,
     get_clean_interp_index,
 )
-from xarray.core.pycompat import array_type
+from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     _CFTIME_CALENDARS,
     assert_allclose,
@@ -84,7 +84,7 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False
 
     if non_uniform:
         # construct a datetime index that has irregular spacing
-        deltas = pd.TimedeltaIndex(unit="d", data=rs.normal(size=shape[0], scale=10))
+        deltas = pd.to_timedelta(rs.normal(size=shape[0], scale=10), unit="d")
         coords = {"time": (pd.Timestamp("2000-01-01") + deltas).sort_values()}
     else:
         coords = {"time": pd.date_range("2000-01-01", freq="D", periods=shape[0])}
@@ -122,10 +122,13 @@ def test_interpolate_pd_compat(method, fill_value) -> None:
                 # for the numpy linear methods.
                 # see https://github.com/pandas-dev/pandas/issues/55144
                 # This aligns the pandas output with the xarray output
-                expected.values[pd.isnull(actual.values)] = np.nan
-                expected.values[actual.values == fill_value] = fill_value
+                fixed = expected.values.copy()
+                fixed[pd.isnull(actual.values)] = np.nan
+                fixed[actual.values == fill_value] = fill_value
+            else:
+                fixed = expected.values
 
-            np.testing.assert_allclose(actual.values, expected.values)
+            np.testing.assert_allclose(actual.values, fixed)
 
 
 @requires_scipy
@@ -161,9 +164,10 @@ def test_interpolate_pd_compat_non_uniform_index():
             # for the linear methods. This next line inforces the xarray
             # fill_value convention on the pandas output. Therefore, this test
             # only checks that interpolated values are the same (not nans)
-            expected.values[pd.isnull(actual.values)] = np.nan
+            expected_values = expected.values.copy()
+            expected_values[pd.isnull(actual.values)] = np.nan
 
-            np.testing.assert_allclose(actual.values, expected.values)
+            np.testing.assert_allclose(actual.values, expected_values)
 
 
 @requires_scipy
@@ -606,7 +610,7 @@ def test_get_clean_interp_index_cf_calendar(cf_da, calendar):
 
 @requires_cftime
 @pytest.mark.parametrize(
-    ("calendar", "freq"), zip(["gregorian", "proleptic_gregorian"], ["1D", "1M", "1Y"])
+    ("calendar", "freq"), zip(["gregorian", "proleptic_gregorian"], ["1D", "1ME", "1Y"])
 )
 def test_get_clean_interp_index_dt(cf_da, calendar, freq):
     """In the gregorian case, the index should be proportional to normal datetimes."""

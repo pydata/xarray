@@ -19,8 +19,6 @@ from xarray.backends.common import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
-from xarray.core.parallelcompat import guess_chunkmanager
-from xarray.core.pycompat import integer_types
 from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
@@ -28,12 +26,15 @@ from xarray.core.utils import (
     close_on_error,
 )
 from xarray.core.variable import Variable
+from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
 
 
 # need some special secret attributes to tell us the dimensions
@@ -86,19 +87,23 @@ class ZarrArrayWrapper(BackendArray):
     def _oindex(self, key):
         return self._array.oindex[key]
 
+    def _vindex(self, key):
+        return self._array.vindex[key]
+
+    def _getitem(self, key):
+        return self._array[key]
+
     def __getitem__(self, key):
         array = self._array
         if isinstance(key, indexing.BasicIndexer):
-            return array[key.tuple]
+            method = self._getitem
         elif isinstance(key, indexing.VectorizedIndexer):
-            return array.vindex[
-                indexing._arrayize_vectorized_indexer(key, self.shape).tuple
-            ]
-        else:
-            assert isinstance(key, indexing.OuterIndexer)
-            return indexing.explicit_indexing_adapter(
-                key, array.shape, indexing.IndexingSupport.VECTORIZED, self._oindex
-            )
+            method = self._vindex
+        elif isinstance(key, indexing.OuterIndexer):
+            method = self._oindex
+        return indexing.explicit_indexing_adapter(
+            key, array.shape, indexing.IndexingSupport.VECTORIZED, method
+        )
 
         # if self.ndim == 0:
         # could possibly have a work-around for 0d data here
@@ -190,7 +195,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
                         f"Writing this array in parallel with dask could lead to corrupted data."
                     )
                     if safe_chunks:
-                        raise NotImplementedError(
+                        raise ValueError(
                             base_error
                             + " Consider either rechunking using `chunk()`, deleting "
                             "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
@@ -618,7 +623,12 @@ class ZarrStore(AbstractWritableDataStore):
             # avoid needing to load index variables into memory.
             # TODO: consider making loading indexes lazy again?
             existing_vars, _, _ = conventions.decode_cf_variables(
-                self.get_variables(), self.get_attrs()
+                {
+                    k: v
+                    for k, v in self.get_variables().items()
+                    if k in existing_variable_names
+                },
+                self.get_attrs(),
             )
             # Modified variables must use the same encoding as the store.
             vars_with_encoding = {}
@@ -697,6 +707,17 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
+            # We need to do this for both new and existing variables to ensure we're not
+            # writing to a partial chunk, even though we don't use the `encoding` value
+            # when writing to an existing variable. See
+            # https://github.com/pydata/xarray/issues/8371 for details.
+            encoding = extract_zarr_variable_encoding(
+                v,
+                raise_on_invalid=check,
+                name=vn,
+                safe_chunks=self._safe_chunks,
+            )
+
             if name in existing_keys:
                 # existing variable
                 # TODO: if mode="a", consider overriding the existing variable
@@ -727,9 +748,6 @@ class ZarrStore(AbstractWritableDataStore):
                     zarr_array = self.zarr_group[name]
             else:
                 # new variable
-                encoding = extract_zarr_variable_encoding(
-                    v, raise_on_invalid=check, name=vn, safe_chunks=self._safe_chunks
-                )
                 encoded_attrs = {}
                 # the magic for storing the hidden dimension data
                 encoded_attrs[DIMENSION_KEY] = dims
@@ -1034,6 +1052,49 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 decode_timedelta=decode_timedelta,
             )
         return ds
+
+    def open_datatree(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        **kwargs,
+    ) -> DataTree:
+        import zarr
+
+        from xarray.backends.api import open_dataset
+        from xarray.core.datatree import DataTree
+        from xarray.core.treenode import NodePath
+
+        zds = zarr.open_group(filename_or_obj, mode="r")
+        ds = open_dataset(filename_or_obj, engine="zarr", **kwargs)
+        tree_root = DataTree.from_dict({"/": ds})
+        for path in _iter_zarr_groups(zds):
+            try:
+                subgroup_ds = open_dataset(
+                    filename_or_obj, engine="zarr", group=path, **kwargs
+                )
+            except zarr.errors.PathNotFoundError:
+                subgroup_ds = Dataset()
+
+            # TODO refactor to use __setitem__ once creation of new nodes by assigning Dataset works again
+            node_name = NodePath(path).name
+            new_node: DataTree = DataTree(name=node_name, data=subgroup_ds)
+            tree_root._set_item(
+                path,
+                new_node,
+                allow_overwrite=False,
+                new_nodes_along_path=True,
+            )
+        return tree_root
+
+
+def _iter_zarr_groups(root, parent="/"):
+    from xarray.core.treenode import NodePath
+
+    parent = NodePath(parent)
+    for path, group in root.groups():
+        gpath = parent / path
+        yield str(gpath)
+        yield from _iter_zarr_groups(group, parent=gpath)
 
 
 BACKEND_ENTRYPOINTS["zarr"] = ("zarr", ZarrBackendEntrypoint)

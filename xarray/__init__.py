@@ -41,6 +41,7 @@ from xarray.core.merge import Context, MergeError, merge
 from xarray.core.options import get_options, set_options
 from xarray.core.parallel import map_blocks
 from xarray.core.variable import IndexVariable, Variable, as_variable
+from xarray.namedarray.core import NamedArray
 from xarray.util.print_versions import show_versions
 
 try:
@@ -96,7 +97,6 @@ __all__ = (
     # Classes
     "CFTimeIndex",
     "Context",
-    "Coordinate",
     "Coordinates",
     "DataArray",
     "Dataset",
@@ -104,6 +104,7 @@ __all__ = (
     "IndexSelResult",
     "IndexVariable",
     "Variable",
+    "NamedArray",
     # Exceptions
     "MergeError",
     "SerializationWarning",
