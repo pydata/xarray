@@ -58,6 +58,12 @@ Breaking changes
 
 Bug fixes
 ~~~~~~~~~
+- Following `an upstream bug fix
+  <https://github.com/pandas-dev/pandas/issues/56147>`_ to
+  :py:func:`pandas.date_range`, date ranges produced by
+  :py:func:`xarray.cftime_range` with negative frequencies will now fall fully
+  within the bounds of the provided start and end dates (:pull:`8999`). By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 
 
 Internal Changes
