@@ -266,7 +266,7 @@ def assert_allclose(
     equiv = functools.partial(
         _data_allclose_or_equiv, rtol=rtol, atol=atol, decode_bytes=decode_bytes
     )
-    equiv.__name__ = "allclose"
+    equiv.__name__ = "allclose"  # type: ignore[attr-defined]
 
     def compat_variable(a, b):
         a = getattr(a, "variable", a)
