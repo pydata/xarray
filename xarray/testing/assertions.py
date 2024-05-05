@@ -97,6 +97,7 @@ def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
 
 def maybe_transpose_dims(a, b, check_dim_order: bool):
     """Helper for assert_equal/allclose/identical"""
+    __tracebackhide__ = True
     if not isinstance(a, (Variable, DataArray, Dataset)):
         return b
     if not check_dim_order and set(a.dims) == set(b.dims):
