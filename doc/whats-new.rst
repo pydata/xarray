@@ -29,6 +29,8 @@ New Features
   for example, will retain the object.  However, one cannot do operations that are not possible on the `ExtensionArray`
   then, such as broadcasting.
   By `Ilan Gold <https://github.com/ilan-gold>`_.
+- :py:func:`testing.assert_allclose`/:py:func:`testing.assert_equal` now accept a new argument `check_dims="transpose"`, controlling whether a transposed array is considered equal. (:issue:`5733`, :pull:`8991`)
+  By `Ignacio Martinez Vazquez <https://github.com/ignamv>`_.
 - Added the option to avoid automatically creating 1D pandas indexes in :py:meth:`Dataset.expand_dims()`, by passing the new kwarg
   `create_index=False`. (:pull:`8960`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
