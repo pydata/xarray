@@ -176,7 +176,7 @@ def assert_identical(a: DataTree, b: DataTree, from_root: bool = True): ...
 
 
 @ensure_warnings
-def assert_identical(a, b, from_root=True, check_dim_order: bool = True):
+def assert_identical(a, b, from_root=True):
     """Like :py:func:`xarray.testing.assert_equal`, but also matches the
     objects' names and attributes.
 
@@ -207,7 +207,6 @@ def assert_identical(a, b, from_root=True, check_dim_order: bool = True):
     assert (
         type(a) == type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
-    b = maybe_transpose_dims(a, b, check_dim_order)
     if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, DataArray):

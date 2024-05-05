@@ -61,9 +61,7 @@ def test_assert_allclose(obj1, obj2) -> None:
         xr.testing.assert_allclose(obj1, obj2, check_dim_order=False)
 
 
-@pytest.mark.parametrize(
-    "func", ["assert_equal", "assert_allclose", "assert_identical"]
-)
+@pytest.mark.parametrize("func", ["assert_equal", "assert_allclose"])
 def test_assert_allclose_equal_identical_transpose(func) -> None:
     """Transposed DataArray raises assertion unless check_dim_order=False."""
     obj1 = xr.DataArray([[0, 1, 2], [2, 3, 4]], dims=["a", "b"])
