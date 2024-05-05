@@ -99,10 +99,10 @@ def maybe_transpose_dims(a, b, check_dim_order: bool):
     """Helper for assert_equal/allclose/identical"""
     if not isinstance(a, (Variable, DataArray, Dataset)):
         return b
-    if not check_dim_order:
-        assert set(a.dims) == set(b.dims), f"Dimensions differ: {a.dims} {b.dims}"
+    if not check_dim_order and set(a.dims) == set(b.dims):
+        # Ensure transpose won't fail if a dimension is missing
+        # If this is the case, the difference will be caught by the caller
         return b.transpose(*a.dims)
-    assert a.dims == b.dims, f"Dimensions differ: {a.dims} {b.dims}"
     return b
 
 
