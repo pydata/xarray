@@ -63,6 +63,7 @@ from xarray.tests import (
     assert_no_warnings,
     has_dask,
     has_netCDF4,
+    has_numpy_2,
     has_scipy,
     mock,
     network,
@@ -2988,14 +2989,6 @@ class ZarrBase(CFEncodedBase):
                 assert original[name].chunks == actual_var.chunks
             assert original.chunks == actual.chunks
 
-    def test_vectorized_indexing_negative_step(self) -> None:
-        if not has_dask:
-            pytest.xfail(
-                reason="zarr without dask handles negative steps in slices incorrectly"
-            )
-
-        super().test_vectorized_indexing_negative_step()
-
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):
@@ -3823,8 +3816,9 @@ def skip_if_not_engine(engine):
 
 @requires_dask
 @pytest.mark.filterwarnings("ignore:use make_scale(name) instead")
-@pytest.mark.xfail(reason="Flaky test. Very open to contributions on fixing this")
-@pytest.mark.skipif(ON_WINDOWS, reason="Skipping on Windows")
+@pytest.mark.skip(
+    reason="Flaky test which can cause the worker to crash (so don't xfail). Very open to contributions fixing this"
+)
 def test_open_mfdataset_manyfiles(
     readengine, nfiles, parallel, chunks, file_cache_maxsize
 ):
@@ -4523,7 +4517,8 @@ class TestDask(DatasetIOBase):
             ) as actual:
                 assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="Flaky test. Very open to contributions on fixing this")
+    # Flaky test. Very open to contributions on fixing this
+    @pytest.mark.flaky
     def test_dask_roundtrip(self) -> None:
         with create_tmp_file() as tmp:
             data = create_test_data()
@@ -5094,6 +5089,9 @@ def test_use_cftime_true(calendar, units_year) -> None:
 
 @requires_scipy_or_netCDF4
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
+@pytest.mark.xfail(
+    has_numpy_2, reason="https://github.com/pandas-dev/pandas/issues/56996"
+)
 def test_use_cftime_false_standard_calendar_in_range(calendar) -> None:
     x = [0, 1]
     time = [0, 720]

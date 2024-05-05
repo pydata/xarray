@@ -1,7 +1,9 @@
+from __future__ import annotations
+
+import re
 import textwrap
 
 from xarray.core.dataset import Dataset
-
 from xarray.core.datatree_mapping import map_over_subtree
 
 """
@@ -12,11 +14,10 @@ xarray's internals directly, only the public-facing xarray.Dataset class.
 """
 
 
-_MAPPED_DOCSTRING_ADDENDUM = textwrap.fill(
+_MAPPED_DOCSTRING_ADDENDUM = (
     "This method was copied from xarray.Dataset, but has been altered to "
     "call the method on the Datasets stored in every node of the subtree. "
-    "See the `map_over_subtree` function for more details.",
-    width=117,
+    "See the `map_over_subtree` function for more details."
 )
 
 # TODO equals, broadcast_equals etc.
@@ -173,7 +174,7 @@ def _wrap_then_attach_to_cls(
     target_cls_dict, source_cls, methods_to_set, wrap_func=None
 ):
     """
-    Attach given methods on a class, and optionally wrap each method first. (i.e. with map_over_subtree)
+    Attach given methods on a class, and optionally wrap each method first. (i.e. with map_over_subtree).
 
     Result is like having written this in the classes' definition:
     ```
@@ -208,16 +209,62 @@ def _wrap_then_attach_to_cls(
         if wrap_func is map_over_subtree:
             # Add a paragraph to the method's docstring explaining how it's been mapped
             orig_method_docstring = orig_method.__doc__
-            # if orig_method_docstring is not None:
-            #     if "\n" in orig_method_docstring:
-            #         new_method_docstring = orig_method_docstring.replace(
-            #             "\n", _MAPPED_DOCSTRING_ADDENDUM, 1
-            #         )
-            #     else:
-            #         new_method_docstring = (
-            #             orig_method_docstring + f"\n\n{_MAPPED_DOCSTRING_ADDENDUM}"
-            #         )
-            setattr(target_cls_dict[method_name], "__doc__", orig_method_docstring)
+
+            if orig_method_docstring is not None:
+                new_method_docstring = insert_doc_addendum(
+                    orig_method_docstring, _MAPPED_DOCSTRING_ADDENDUM
+                )
+                setattr(target_cls_dict[method_name], "__doc__", new_method_docstring)
+
+
+def insert_doc_addendum(docstring: str | None, addendum: str) -> str | None:
+    """Insert addendum after first paragraph or at the end of the docstring.
+
+    There are a number of Dataset's functions that are wrapped. These come from
+    Dataset directly as well as the mixins: DataWithCoords, DatasetAggregations, and DatasetOpsMixin.
+
+    The majority of the docstrings fall into a parseable pattern. Those that
+    don't, just have the addendum appeneded after. None values are returned.
+
+    """
+    if docstring is None:
+        return None
+
+    pattern = re.compile(
+        r"^(?P<start>(\S+)?(.*?))(?P<paragraph_break>\n\s*\n)(?P<whitespace>[ ]*)(?P<rest>.*)",
+        re.DOTALL,
+    )
+    capture = re.match(pattern, docstring)
+    if capture is None:
+        ### single line docstring.
+        return (
+            docstring
+            + "\n\n"
+            + textwrap.fill(
+                addendum,
+                subsequent_indent="    ",
+                width=79,
+            )
+        )
+
+    if len(capture.groups()) == 6:
+        return (
+            capture["start"]
+            + capture["paragraph_break"]
+            + capture["whitespace"]
+            + ".. note::\n"
+            + textwrap.fill(
+                addendum,
+                initial_indent=capture["whitespace"] + "    ",
+                subsequent_indent=capture["whitespace"] + "    ",
+                width=79,
+            )
+            + capture["paragraph_break"]
+            + capture["whitespace"]
+            + capture["rest"]
+        )
+    else:
+        return docstring
 
 
 class MappedDatasetMethodsMixin:

@@ -22,7 +22,6 @@ from xarray.tests import (
     create_test_data,
     has_cftime,
     has_flox,
-    has_pandas_version_two,
     requires_dask,
     requires_flox,
     requires_scipy,
@@ -93,7 +92,7 @@ def test_groupby_sizes_property(dataset) -> None:
         assert dataset.groupby("x").sizes == dataset.isel(x=1).sizes
     with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
         assert dataset.groupby("y").sizes == dataset.isel(y=1).sizes
-    dataset = dataset.drop("cat")
+    dataset = dataset.drop_vars("cat")
     stacked = dataset.stack({"xy": ("x", "y")})
     with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
         assert stacked.groupby("xy").sizes == stacked.isel(xy=0).sizes
@@ -2172,7 +2171,6 @@ class TestDataArrayResample:
             # done here due to floating point arithmetic
             assert_allclose(expected, actual, rtol=1e-16)
 
-    @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
     def test_resample_base(self) -> None:
         times = pd.date_range("2000-01-01T02:03:01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
@@ -2204,11 +2202,10 @@ class TestDataArrayResample:
         expected = DataArray(array.to_series().resample("24h", origin=origin).mean())
         assert_identical(expected, actual)
 
-    @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
     @pytest.mark.parametrize(
         "loffset",
         [
-            "-12H",
+            "-12h",
             datetime.timedelta(hours=-12),
             pd.Timedelta(hours=-12),
             pd.DateOffset(hours=-12),
