@@ -6,8 +6,9 @@ The modifications are marked with # TODO comments.
 """
 
 import warnings
+from collections.abc import Hashable, Iterable, Mapping
 from contextlib import suppress
-from typing import Any, Hashable, Iterable, List, Mapping
+from typing import Any
 
 
 class TreeAttrAccessMixin:
@@ -83,16 +84,14 @@ class TreeAttrAccessMixin:
         except AttributeError as e:
             # Don't accidentally shadow custom AttributeErrors, e.g.
             # DataArray.dims.setter
-            if str(e) != "{!r} object has no attribute {!r}".format(
-                type(self).__name__, name
-            ):
+            if str(e) != f"{type(self).__name__!r} object has no attribute {name!r}":
                 raise
             raise AttributeError(
                 f"cannot set attribute {name!r} on a {type(self).__name__!r} object. Use __setitem__ style"
                 "assignment (e.g., `ds['name'] = ...`) instead of assigning variables."
             ) from e
 
-    def __dir__(self) -> List[str]:
+    def __dir__(self) -> list[str]:
         """Provide method name lookup and completion. Only provide 'public'
         methods.
         """

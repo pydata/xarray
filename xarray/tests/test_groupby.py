@@ -577,8 +577,8 @@ repr_da = xr.DataArray(
 def test_groupby_repr(obj, dim) -> None:
     actual = repr(obj.groupby(dim))
     expected = f"{obj.__class__.__name__}GroupBy"
-    expected += ", grouped over %r" % dim
-    expected += "\n%r groups with labels " % (len(np.unique(obj[dim])))
+    expected += f", grouped over {dim!r}"
+    expected += f"\n{len(np.unique(obj[dim]))!r} groups with labels "
     if dim == "x":
         expected += "1, 2, 3, 4, 5."
     elif dim == "y":
@@ -595,7 +595,7 @@ def test_groupby_repr_datetime(obj) -> None:
     actual = repr(obj.groupby("t.month"))
     expected = f"{obj.__class__.__name__}GroupBy"
     expected += ", grouped over 'month'"
-    expected += "\n%r groups with labels " % (len(np.unique(obj.t.dt.month)))
+    expected += f"\n{len(np.unique(obj.t.dt.month))!r} groups with labels "
     expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12."
     assert actual == expected
 
