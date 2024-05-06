@@ -133,7 +133,7 @@ def process_pkg(
     - publication date of version suggested by policy (YYYY-MM-DD)
     - status ("<", "=", "> (!)")
     """
-    print("Analyzing %s..." % pkg)
+    print(f"Analyzing {pkg}...")
     versions = query_conda(pkg)
 
     try:
