@@ -2983,20 +2983,30 @@ class Dataset(
         coord_names = self._coord_names.copy()
 
         indexes, index_variables = isel_indexes(self.xindexes, indexers)
+        all_keys = set(indexers.keys())
 
         for name, var in self._variables.items():
             # preserve variable order
             if name in index_variables:
                 var = index_variables[name]
-            else:
-                var_indexers = {k: v for k, v in indexers.items() if k in var.dims}
-                if var_indexers:
+                dims.update(zip(var.dims, var.shape))
+            # Fastpath, skip all of this for variables with no dimensions
+            # Keep the result cached for future dictionary update
+            elif var_dims := var.dims:
+                # Large datasets with alot of metadata may have many scalars
+                # without any relevant dimensions for slicing.
+                # Pick those out quickly and avoid paying the cost below
+                # of resolving the var_indexers variables
+                if var_indexer_keys := all_keys.intersection(var_dims):
+                    var_indexers = {k: indexers[k] for k in var_indexer_keys}
                     var = var.isel(var_indexers)
                     if drop and var.ndim == 0 and name in coord_names:
                         coord_names.remove(name)
                         continue
+                    # Update our reference to `var_dims` after the call to isel
+                    var_dims = var.dims
+                dims.update(zip(var_dims, var.shape))
             variables[name] = var
-            dims.update(zip(var.dims, var.shape))
 
         return self._construct_direct(
             variables=variables,
