@@ -235,9 +235,10 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
         raise ValueError(
             f"Cannot cast arrays to shared type, found array types {[x.dtype for x in scalars_or_arrays]}"
         )
-    elif array_type_cupy := array_type("cupy") and any(  # noqa: F841
-        isinstance(x, array_type_cupy) for x in scalars_or_arrays  # noqa: F821
-    ):
+
+    # Avoid calling array_type("cupy") repeatidely in the any check
+    array_type_cupy = array_type("cupy")
+    if any(isinstance(x, array_type_cupy) for x in scalars_or_arrays):
         import cupy as cp
 
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
