@@ -845,7 +845,12 @@ def _generate_range(start, end, periods, offset):
     A generator object
     """
     if start:
-        start = offset.rollforward(start)
+        # From pandas GH 56147 / 56832 to account for negative direction and
+        # range bounds
+        if offset.n >= 0:
+            start = offset.rollforward(start)
+        else:
+            start = offset.rollback(start)
 
     if periods is None and end < start and offset.n >= 0:
         end = None
