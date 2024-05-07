@@ -117,13 +117,13 @@ module = [
   "iris.*",
   "matplotlib.*",
   "mpl_toolkits.*",
-  "Nio.*",
   "nc_time_axis.*",
   "numbagg.*",
   "netCDF4.*",
   "netcdftime.*",
   "opt_einsum.*",
   "pandas.*",
+  "pint.*",
   "pooch.*",
   "pyarrow.*",
   "pydap.*",
@@ -282,9 +282,58 @@ ban-relative-imports = "all"
 
 [tool.pytest.ini_options]
 addopts = ["--strict-config", "--strict-markers"]
+
+# We want to forbid warnings from within xarray in our tests — instead we should
+# fix our own code, or mark the test itself as expecting a warning. So this:
+# - Converts any warning from xarray into an error
+# - Allows some warnings ("default") which the test suite currently raises,
+#   since it wasn't practical to fix them all before merging this config. The
+#   warnings are reported in CI (since it uses `default`, not `ignore`).
+#
+# Over time, we can remove these rules allowing warnings. A valued contribution
+# is removing a line, seeing what breaks, and then fixing the library code or
+# tests so that it doesn't raise warnings.
+#
+# There are some instance where we'll want to add to these rules:
+# - While we only raise errors on warnings from within xarray, a dependency can
+#   raise a warning with a stacklevel such that it's interpreted to be raised
+#   from xarray and this will mistakenly convert it to an error. If that
+#   happens, please feel free to add a rule switching it to `default` here, and
+#   disabling the error.
+# - If these settings get in the way of making progress, it's also acceptable to
+#   temporarily add additional `default` rules.
+# - But we should only add `ignore` rules if we're confident that we'll never
+#   need to address a warning.
+
 filterwarnings = [
-  "ignore:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
+  "error:::xarray.*",
+  "default:No index created:UserWarning:xarray.core.dataset",
+  "default::UserWarning:xarray.tests.test_coding_times",
+  "default::UserWarning:xarray.tests.test_computation",
+  "default::UserWarning:xarray.tests.test_dataset",
+  "default:`ancestors` has been deprecated:DeprecationWarning:xarray.core.treenode",
+  "default:`iter_lineage` has been deprecated:DeprecationWarning:xarray.core.treenode",
+  "default:`lineage` has been deprecated:DeprecationWarning:xarray.core.treenode",
+  "default:coords should be an ndarray:DeprecationWarning:xarray.tests.test_variable",
+  "default:deallocating CachingFileManager:RuntimeWarning:xarray.backends.*",
+  "default:deallocating CachingFileManager:RuntimeWarning:xarray.backends.netCDF4_",
+  "default:deallocating CachingFileManager:RuntimeWarning:xarray.core.indexing",
+  "default:Failed to decode variable.*NumPy will stop allowing conversion of out-of-bound Python integers to integer arrays:DeprecationWarning",
+  "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning:xarray.*",
+  "default:invalid value encountered in cast:RuntimeWarning:xarray.core.duck_array_ops",
+  "default:invalid value encountered in cast:RuntimeWarning:xarray.conventions",
+  "default:invalid value encountered in cast:RuntimeWarning:xarray.tests.test_units",
+  "default:invalid value encountered in cast:RuntimeWarning:xarray.tests.test_array_api",
+  "default:NumPy will stop allowing conversion of:DeprecationWarning",
+  "default:shape should be provided:DeprecationWarning:xarray.tests.test_variable",
+  "default:the `pandas.MultiIndex` object:FutureWarning:xarray.tests.test_variable",
+  "default:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
+  "default:Duplicate dimension names present:UserWarning:xarray.namedarray.core",
+  "default:::xarray.tests.test_strategies",
+  # TODO: remove once we know how to deal with a changed signature in protocols
+  "ignore:__array__ implementation doesn't accept a copy keyword, so passing copy=False failed.",
 ]
+
 log_cli_level = "INFO"
 markers = [
   "flaky: flaky tests",

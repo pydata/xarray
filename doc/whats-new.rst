@@ -29,6 +29,8 @@ New Features
   for example, will retain the object.  However, one cannot do operations that are not possible on the `ExtensionArray`
   then, such as broadcasting.
   By `Ilan Gold <https://github.com/ilan-gold>`_.
+- :py:func:`testing.assert_allclose`/:py:func:`testing.assert_equal` now accept a new argument `check_dims="transpose"`, controlling whether a transposed array is considered equal. (:issue:`5733`, :pull:`8991`)
+  By `Ignacio Martinez Vazquez <https://github.com/ignamv>`_.
 - Added the option to avoid automatically creating 1D pandas indexes in :py:meth:`Dataset.expand_dims()`, by passing the new kwarg
   `create_index=False`. (:pull:`8960`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
@@ -58,6 +60,12 @@ Breaking changes
 
 Bug fixes
 ~~~~~~~~~
+- Following `an upstream bug fix
+  <https://github.com/pandas-dev/pandas/issues/56147>`_ to
+  :py:func:`pandas.date_range`, date ranges produced by
+  :py:func:`xarray.cftime_range` with negative frequencies will now fall fully
+  within the bounds of the provided start and end dates (:pull:`8999`). By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 
 
 Internal Changes
@@ -73,6 +81,12 @@ Internal Changes
   ``xarray/testing/assertions`` for ``DataTree``. (:pull:`8967`)
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
   `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Migrates ``ops.py`` functionality into ``xarray/core/datatree_ops.py`` (:pull:`8976`)
+  By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
+- ``transpose``, ``set_dims``, ``stack`` & ``unstack`` now use a ``dim`` kwarg
+  rather than ``dims`` or ``dimensions``. This is the final change to make xarray methods
+  consistent with their use of ``dim``. Using the existing kwarg will raise a
+  warning. By `Maximilian Roos <https://github.com/max-sixty>`_
 
 
 .. _whats-new.2024.03.0:
