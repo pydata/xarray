@@ -722,7 +722,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-            DataTree(data=ds, name=group[1:], parent=tree_root)
+            DataTree(data=ds, name=group.replace("/", ""), parent=tree_root)
         return tree_root
 
 
