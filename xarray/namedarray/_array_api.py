@@ -62,7 +62,7 @@ def astype(
     >>> narr = NamedArray(("x",), np.asarray([1.5, 2.5]))
     >>> narr
     <xarray.NamedArray (x: 2)> Size: 16B
-    array([1.5, 2.5], dtype=float64)
+    array([1.5, 2.5])
     >>> astype(narr, np.dtype(np.int32))
     <xarray.NamedArray (x: 2)> Size: 8B
     array([1, 2], dtype=int32)
@@ -174,11 +174,11 @@ def expand_dims(
     >>> expand_dims(x)
     <xarray.NamedArray (dim_2: 1, x: 2, y: 2)> Size: 32B
     array([[[1., 2.],
-            [3., 4.]]], dtype=float64)
+            [3., 4.]]])
     >>> expand_dims(x, dim="z")
     <xarray.NamedArray (z: 1, x: 2, y: 2)> Size: 32B
     array([[[1., 2.],
-            [3., 4.]]], dtype=float64)
+            [3., 4.]]])
     """
     xp = _get_data_namespace(x)
     dims = x.dims
