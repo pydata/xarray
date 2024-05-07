@@ -16,7 +16,6 @@ from xarray.backends.common import (
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
-    _open_datatree_netcdf,
     find_root_and_group,
     robust_getitem,
 )
@@ -672,11 +671,59 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     def open_datatree(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group=None,
+        mode="r",
+        format="NETCDF4",
+        clobber=True,
+        diskless=False,
+        persist=False,
+        lock=None,
+        autoclose=False,
         **kwargs,
     ) -> DataTree:
-        from netCDF4 import Dataset as ncDataset
+        from xarray.backends.api import open_dataset
+        from xarray.backends.common import _iter_nc_groups
+        from xarray.core.datatree import DataTree
 
-        return _open_datatree_netcdf(ncDataset, filename_or_obj, **kwargs)
+        filename_or_obj = _normalize_path(filename_or_obj)
+        store = NetCDF4DataStore.open(
+            filename_or_obj,
+            mode=mode,
+            format=format,
+            group=group,
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            lock=lock,
+            autoclose=autoclose,
+        )
+        mgr = store._manager
+        ds = open_dataset(store, **kwargs)
+        tree_root = DataTree.from_dict({"/": ds})
+        for group in _iter_nc_groups(store.ds):
+            store = NetCDF4DataStore(mgr, group=group, **kwargs)
+            store_entrypoint = StoreBackendEntrypoint()
+            with close_on_error(store):
+                ds = store_entrypoint.open_dataset(
+                    store,
+                    mask_and_scale=mask_and_scale,
+                    decode_times=decode_times,
+                    concat_characters=concat_characters,
+                    decode_coords=decode_coords,
+                    drop_variables=drop_variables,
+                    use_cftime=use_cftime,
+                    decode_timedelta=decode_timedelta,
+                )
+            DataTree(data=ds, name=group[1:], parent=tree_root)
+        return tree_root
 
 
 BACKEND_ENTRYPOINTS["netcdf4"] = ("netCDF4", NetCDF4BackendEntrypoint)
