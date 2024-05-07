@@ -756,7 +756,6 @@ class ZarrStore(AbstractWritableDataStore):
 
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
-
             attrs = v.attrs.copy()
             dims = v.dims
             dtype = v.dtype
