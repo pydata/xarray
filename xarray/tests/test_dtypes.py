@@ -122,7 +122,7 @@ def test_nat_types_membership() -> None:
         (np.dtype("U"), "numeric", np, False),
         (np.dtype("int32"), "foo", np, ValueError("unknown kind: 'foo'")),
         (np.dtype("float64"), object(), np, TypeError("invalid type of kind: .+")),
-        (pd.CategoricalDtype, pd.CategoricalDtype, None, True),
+        (pd.CategoricalDtype([1, 2, 3]), pd.CategoricalDtype, None, True),
         pytest.param(
             array_api_strict.int32,
             "integral",
