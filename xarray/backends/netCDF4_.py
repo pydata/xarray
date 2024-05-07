@@ -692,6 +692,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         from xarray.backends.api import open_dataset
         from xarray.backends.common import _iter_nc_groups
         from xarray.core.datatree import DataTree
+        from xarray.core.treenode import NodePath
 
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
@@ -722,7 +723,14 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-            DataTree(data=ds, name=group[1:], parent=tree_root)
+                node_name = NodePath(group).name
+                new_node: DataTree = DataTree(name=node_name, data=ds)
+                tree_root._set_item(
+                    group,
+                    new_node,
+                    allow_overwrite=False,
+                    new_nodes_along_path=True,
+                )
         return tree_root
 
 
