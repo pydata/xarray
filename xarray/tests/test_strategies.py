@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -211,7 +213,13 @@ class TestVariablesStrategy:
             nxp = np
         else:
             # requires numpy>=1.26.0, and we expect a UserWarning to be raised
-            from numpy import array_api as nxp  # type: ignore[no-redef,unused-ignore]
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", category=UserWarning, message=".+See NEP 47."
+                )
+                from numpy import (  # type: ignore[no-redef,unused-ignore]
+                    array_api as nxp,
+                )
 
         nxp_st = make_strategies_namespace(nxp)
 
