@@ -88,7 +88,6 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 enable_error_code = "redundant-self"
 exclude = [
   'xarray/util/generate_.*\.py',
-  'xarray/datatree_/doc/.*\.py',
 ]
 files = "xarray"
 show_error_codes = true

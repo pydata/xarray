@@ -202,9 +202,8 @@ Tree-like data structure
 ++++++++++++++++++++++++
 
 .. note::
-   Work on developing a hierarchical data structure in xarray is just
-   beginning. See `Datatree <https://github.com/TomNicholas/datatree>`__
-   for an early prototype.
+   Work on merging `DataTree <https://github.com/TomNicholas/datatree>`__ into
+   xarray is currently underway.
 
 Xarray’s highest-level object is currently an ``xarray.Dataset``, whose data
 model echoes that of a single netCDF group. However real-world datasets are
@@ -226,8 +225,8 @@ multiple netCDF groups (see :issue:`4118`).
 
 Currently there are several libraries which have wrapped xarray in order to build
 domain-specific data structures (e.g. `xarray-multiscale <https://github.com/JaneliaSciComp/xarray-multiscale>`__.),
-but a general ``xarray.DataTree`` object would obviate the need for these and]
-consolidate effort in a single domain-agnostic tool, much as xarray has already achieved.
+but a general ``xarray.core.datatree.DataTree`` object obviates the need for these and]
+consolidates effort in a single domain-agnostic tool, much as xarray has already achieved.
 
 Labeled array without coordinates
 +++++++++++++++++++++++++++++++++

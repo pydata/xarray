@@ -153,6 +153,7 @@ napoleon_type_aliases = {
     "DataArray": "~xarray.DataArray",
     "Dataset": "~xarray.Dataset",
     "Variable": "~xarray.Variable",
+    "DataTree": "~xarray.core.datatree.DataTree",
     "DatasetGroupBy": "~xarray.core.groupby.DatasetGroupBy",
     "DataArrayGroupBy": "~xarray.core.groupby.DataArrayGroupBy",
     # objects without namespace: numpy
@@ -319,7 +320,6 @@ intersphinx_mapping = {
     "cftime": ("https://unidata.github.io/cftime", None),
     "cubed": ("https://cubed-dev.github.io/cubed/", None),
     "dask": ("https://docs.dask.org/en/latest", None),
-    "datatree": ("https://xarray-datatree.readthedocs.io/en/latest/", None),
     "flox": ("https://flox.readthedocs.io/en/latest/", None),
     "hypothesis": ("https://hypothesis.readthedocs.io/en/latest/", None),
     "iris": ("https://scitools-iris.readthedocs.io/en/latest", None),

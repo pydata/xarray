@@ -39,6 +39,11 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Migrate documentation for ``datatree`` into main ``xarray`` documentation.
+  For information on previous ``datatree`` releases, please see:
+  `datatree's historical release notes <https://xarray-datatree.readthedocs.io/en/latest/>`_.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -128,6 +133,10 @@ Internal Changes
   xarray functions to use ``dim``. Using the existing kwarg will raise a
   warning.
   By `Maximilian Roos <https://github.com/max-sixty>`_
+  rather than ``dims`` or ``dimensions``. This is the final change to make xarray methods
+  consistent with their use of ``dim``. Using the existing kwarg will raise a
+  warning. By `Maximilian Roos <https://github.com/max-sixty>`_
+
 
 .. _whats-new.2024.03.0:
 

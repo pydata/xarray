@@ -153,83 +153,31 @@ to the original netCDF file, regardless if they exist in the original dataset.
 Groups
 ~~~~~~
 
-NetCDF groups are not supported as part of the :py:class:`Dataset` data model.
-Instead, groups can be loaded individually as Dataset objects.
-To do so, pass a ``group`` keyword argument to the
-:py:func:`open_dataset` function. The group can be specified as a path-like
-string, e.g., to access subgroup ``'bar'`` within group ``'foo'`` pass
-``'/foo/bar'`` as the ``group`` argument.
+Whilst netCDF groups can only be loaded individually as ``Dataset`` objects, a
+whole file of many nested groups can be loaded as a single
+:py:class:`xarray.core.datatree.DataTree` object. To open a whole netCDF file as a tree of groups
+use the :py:func:`open_datatree` function. To save a DataTree object as a
+netCDF file containing many groups, use the :py:meth:`xarray.core.datatree.DataTree.to_netcdf` method.
 
-In a similar way, the ``group`` keyword argument can be given to the
-:py:meth:`Dataset.to_netcdf` method to write to a group
-in a netCDF file.
-When writing multiple groups in one file, pass ``mode='a'`` to
-:py:meth:`Dataset.to_netcdf` to ensure that each call does not delete the file.
-For example:
 
-.. ipython::
-    :verbatim:
+.. _netcdf.group.warning:
 
-    In [1]: ds1 = xr.Dataset({"a": 0})
+.. warning::
+    ``DataTree`` objects do not follow the exact same data model as netCDF
+    files, which means that perfect round-tripping is not always possible.
 
-    In [2]: ds2 = xr.Dataset({"b": 1})
+    In particular in the netCDF data model dimensions are entities that can
+    exist regardless of whether any variable possesses them. This is in contrast
+    to `xarray's data model <https://docs.xarray.dev/en/stable/user-guide/data-structures.html>`_
+    (and hence :ref:`datatree's data model <data structures>`) in which the
+    dimensions of a (Dataset/Tree) object are simply the set of dimensions
+    present across all variables in that dataset.
 
-    In [3]: ds1.to_netcdf("file.nc", group="A")
-
-    In [4]: ds2.to_netcdf("file.nc", group="B", mode="a")
-
-We can verify that two groups have been saved using the ncdump command-line utility.
-
-.. code:: bash
-
-    $ ncdump file.nc
-    netcdf file {
-
-    group: A {
-      variables:
-        int64 a ;
-      data:
-
-       a = 0 ;
-      } // group A
-
-    group: B {
-      variables:
-        int64 b ;
-      data:
-
-       b = 1 ;
-      } // group B
-    }
-
-Either of these groups can be loaded from the file as an independent :py:class:`Dataset` object:
-
-.. ipython::
-    :verbatim:
-
-    In [1]: group1 = xr.open_dataset("file.nc", group="A")
-
-    In [2]: group1
-    Out[2]:
-    <xarray.Dataset>
-    Dimensions:  ()
-    Data variables:
-        a        int64 ...
-
-    In [3]: group2 = xr.open_dataset("file.nc", group="B")
-
-    In [4]: group2
-    Out[4]:
-    <xarray.Dataset>
-    Dimensions:  ()
-    Data variables:
-        b        int64 ...
-
-.. note::
-
-    For native handling of multiple groups with xarray, including I/O, you might be interested in the experimental
-    `xarray-datatree <https://github.com/xarray-contrib/datatree>`_ package.
-
+    This means that if a netCDF file contains dimensions but no variables which
+    possess those dimensions, these dimensions will not be present when that
+    file is opened as a DataTree object.
+    Saving this DataTree object to file will therefore not preserve these
+    "unused" dimensions.
 
 .. _io.encoding:
 
@@ -606,13 +554,6 @@ Natively the xarray data structures can only handle one level of nesting, organi
 DataArrays inside of Datasets. If your HDF5 file has additional levels of hierarchy you
 can only access one group and a time and will need to specify group names.
 
-.. note::
-
-    For native handling of multiple HDF5 groups with xarray, including I/O, you might be
-    interested in the experimental
-    `xarray-datatree <https://github.com/xarray-contrib/datatree>`_ package.
-
-
 .. _HDF5: https://hdfgroup.github.io/hdf5/index.html
 .. _h5py: https://www.h5py.org/
 
@@ -973,6 +914,20 @@ length of each dimension by using the shorthand chunk size ``-1``:
 
 The number of chunks on Tair matches our dask chunks, while there is now only a single
 chunk in the directory stores of each coordinate.
+
+Groups
+~~~~~~
+
+Nested groups in zarr stores can be represented by loading the store as a
+:py:class:`xarray.core.datatree.DataTree` object, similarly to netCDF. To open a whole zarr store as
+a tree of groups use the :py:func:`open_datatree` function. To save a
+``DataTree`` object as a zarr store containing many groups, use the
+:py:meth:`xarray.core.datatree.DataTree.to_zarr()` method.
+
+.. note::
+    Note that perfect round-tripping should always be possible with a zarr
+    store (:ref:`unlike for netCDF files <netcdf.group.warning>`), as zarr does
+    not support "unused" dimensions.
 
 .. _io.iris:
 

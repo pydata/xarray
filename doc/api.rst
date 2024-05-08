@@ -588,6 +588,298 @@ Reshaping and reorganizing
    DataArray.sortby
    DataArray.broadcast_like
 
+DataTree
+========
+
+Creating a DataTree
+-------------------
+
+Methods of creating a ``DataTree``.
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.core.datatree.DataTree
+   xarray.core.datatree.DataTree.from_dict
+
+Tree Attributes
+---------------
+
+Attributes relating to the recursive tree-like structure of a ``DataTree``.
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.core.datatree.DataTree.parent
+   xarray.core.datatree.DataTree.children
+   xarray.core.datatree.DataTree.name
+   xarray.core.datatree.DataTree.path
+   xarray.core.datatree.DataTree.root
+   xarray.core.datatree.DataTree.is_root
+   xarray.core.datatree.DataTree.is_leaf
+   xarray.core.datatree.DataTree.leaves
+   xarray.core.datatree.DataTree.level
+   xarray.core.datatree.DataTree.depth
+   xarray.core.datatree.DataTree.width
+   xarray.core.datatree.DataTree.subtree
+   xarray.core.datatree.DataTree.descendants
+   xarray.core.datatree.DataTree.siblings
+   xarray.core.datatree.DataTree.lineage
+   xarray.core.datatree.DataTree.parents
+   xarray.core.datatree.DataTree.ancestors
+   xarray.core.datatree.DataTree.groups
+
+Data Contents
+-------------
+
+Interface to the data objects (optionally) stored inside a single ``DataTree`` node.
+This interface echoes that of ``xarray.Dataset``.
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.core.datatree.DataTree.dims
+   xarray.core.datatree.DataTree.sizes
+   xarray.core.datatree.DataTree.data_vars
+   xarray.core.datatree.DataTree.coords
+   xarray.core.datatree.DataTree.attrs
+   xarray.core.datatree.DataTree.encoding
+   xarray.core.datatree.DataTree.indexes
+   xarray.core.datatree.DataTree.nbytes
+   xarray.core.datatree.DataTree.ds
+   xarray.core.datatree.DataTree.to_dataset
+   xarray.core.datatree.DataTree.has_data
+   xarray.core.datatree.DataTree.has_attrs
+   xarray.core.datatree.DataTree.is_empty
+   xarray.core.datatree.DataTree.is_hollow
+
+Dictionary Interface
+--------------------
+
+``DataTree`` objects also have a dict-like interface mapping keys to either ``xarray.DataArray``s or to child ``DataTree`` nodes.
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.core.datatree.DataTree.__getitem__
+   xarray.core.datatree.DataTree.__setitem__
+   xarray.core.datatree.DataTree.__delitem__
+   xarray.core.datatree.DataTree.update
+   xarray.core.datatree.DataTree.get
+   xarray.core.datatree.DataTree.items
+   xarray.core.datatree.DataTree.keys
+   xarray.core.datatree.DataTree.values
+
+Tree Manipulation
+-----------------
+
+For manipulating, traversing, navigating, or mapping over the tree structure.
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.core.datatree.DataTree.orphan
+   xarray.core.datatree.DataTree.same_tree
+   xarray.core.datatree.DataTree.relative_to
+   xarray.core.datatree.DataTree.iter_lineage
+   xarray.core.datatree.DataTree.find_common_ancestor
+   xarray.core.datatree.DataTree.map_over_subtree
+   xarray.core.datatree.DataTree.pipe
+   xarray.core.datatree.DataTree.match
+   xarray.core.datatree.DataTree.filter
+
+Pathlib-like Interface
+----------------------
+
+``DataTree`` objects deliberately echo some of the API of :py:class:`pathlib.PurePath`.
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.core.datatree.DataTree.name
+   xarray.core.datatree.DataTree.parent
+   xarray.core.datatree.DataTree.parents
+   xarray.core.datatree.DataTree.relative_to
+
+Missing:
+
+..
+
+   ``DataTree.glob``
+   ``DataTree.joinpath``
+   ``DataTree.with_name``
+   ``DataTree.walk``
+   ``DataTree.rename``
+   ``DataTree.replace``
+
+DataTree Contents
+-----------------
+
+Manipulate the contents of all nodes in a ``DataTree`` simultaneously.
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.core.datatree.DataTree.copy
+   xarray.core.datatree.DataTree.assign_coords
+   xarray.core.datatree.DataTree.merge
+   xarray.core.datatree.DataTree.rename
+   xarray.core.datatree.DataTree.rename_vars
+   xarray.core.datatree.DataTree.rename_dims
+   xarray.core.datatree.DataTree.swap_dims
+   xarray.core.datatree.DataTree.expand_dims
+   xarray.core.datatree.DataTree.drop_vars
+   xarray.core.datatree.DataTree.drop_dims
+   xarray.core.datatree.DataTree.set_coords
+   xarray.core.datatree.DataTree.reset_coords
+
+DataTree Node Contents
+----------------------
+
+Manipulate the contents of a single ``DataTree`` node.
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.core.datatree.DataTree.assign
+   xarray.core.datatree.DataTree.drop_nodes
+
+Comparisons
+-----------
+
+Compare one ``DataTree`` object to another.
+
+.. autosummary::
+   :toctree: generated/
+
+    xarray.core.datatree.DataTree.isomorphic
+    xarray.core.datatree.DataTree.equals
+    xarray.core.datatree.DataTree.identical
+
+Indexing
+--------
+
+Index into all nodes in the subtree simultaneously.
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.core.datatree.DataTree.isel
+   xarray.core.datatree.DataTree.sel
+   xarray.core.datatree.DataTree.drop_sel
+   xarray.core.datatree.DataTree.drop_isel
+   xarray.core.datatree.DataTree.head
+   xarray.core.datatree.DataTree.tail
+   xarray.core.datatree.DataTree.thin
+   xarray.core.datatree.DataTree.squeeze
+   xarray.core.datatree.DataTree.interp
+   xarray.core.datatree.DataTree.interp_like
+   xarray.core.datatree.DataTree.reindex
+   xarray.core.datatree.DataTree.reindex_like
+   xarray.core.datatree.DataTree.set_index
+   xarray.core.datatree.DataTree.reset_index
+   xarray.core.datatree.DataTree.reorder_levels
+   xarray.core.datatree.DataTree.query
+
+..
+
+   Missing:
+   ``DataTree.loc``
+
+
+Missing Value Handling
+----------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.core.datatree.DataTree.isnull
+   xarray.core.datatree.DataTree.notnull
+   xarray.core.datatree.DataTree.combine_first
+   xarray.core.datatree.DataTree.dropna
+   xarray.core.datatree.DataTree.fillna
+   xarray.core.datatree.DataTree.ffill
+   xarray.core.datatree.DataTree.bfill
+   xarray.core.datatree.DataTree.interpolate_na
+   xarray.core.datatree.DataTree.where
+   xarray.core.datatree.DataTree.isin
+
+Computation
+-----------
+
+Apply a computation to the data in all nodes in the subtree simultaneously.
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.core.datatree.DataTree.map
+   xarray.core.datatree.DataTree.reduce
+   xarray.core.datatree.DataTree.diff
+   xarray.core.datatree.DataTree.quantile
+   xarray.core.datatree.DataTree.differentiate
+   xarray.core.datatree.DataTree.integrate
+   xarray.core.datatree.DataTree.map_blocks
+   xarray.core.datatree.DataTree.polyfit
+   xarray.core.datatree.DataTree.curvefit
+
+Aggregation
+-----------
+
+Aggregate data in all nodes in the subtree simultaneously.
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.core.datatree.DataTree.all
+   xarray.core.datatree.DataTree.any
+   xarray.core.datatree.DataTree.argmax
+   xarray.core.datatree.DataTree.argmin
+   xarray.core.datatree.DataTree.idxmax
+   xarray.core.datatree.DataTree.idxmin
+   xarray.core.datatree.DataTree.max
+   xarray.core.datatree.DataTree.min
+   xarray.core.datatree.DataTree.mean
+   xarray.core.datatree.DataTree.median
+   xarray.core.datatree.DataTree.prod
+   xarray.core.datatree.DataTree.sum
+   xarray.core.datatree.DataTree.std
+   xarray.core.datatree.DataTree.var
+   xarray.core.datatree.DataTree.cumsum
+   xarray.core.datatree.DataTree.cumprod
+
+ndarray methods
+---------------
+
+Methods copied from :py:class:`numpy.ndarray` objects, here applying to the data in all nodes in the subtree.
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.core.datatree.DataTree.argsort
+   xarray.core.datatree.DataTree.astype
+   xarray.core.datatree.DataTree.clip
+   xarray.core.datatree.DataTree.conj
+   xarray.core.datatree.DataTree.conjugate
+   xarray.core.datatree.DataTree.round
+   xarray.core.datatree.DataTree.rank
+
+Reshaping and reorganising
+--------------------------
+
+Reshape or reorganise the data in all nodes in the subtree.
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.core.datatree.DataTree.transpose
+   xarray.core.datatree.DataTree.stack
+   xarray.core.datatree.DataTree.unstack
+   xarray.core.datatree.DataTree.shift
+   xarray.core.datatree.DataTree.roll
+   xarray.core.datatree.DataTree.pad
+   xarray.core.datatree.DataTree.sortby
+   xarray.core.datatree.DataTree.broadcast_like
+
 IO / Conversion
 ===============
 
@@ -651,6 +943,22 @@ DataArray methods
    DataArray.persist
    DataArray.load
    DataArray.unify_chunks
+
+DataTree methods
+----------------
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.backends.api.open_datatree
+   xarray.core.datatree.DataTree.to_dict
+   xarray.core.datatree.DataTree.to_netcdf
+   xarray.core.datatree.DataTree.to_zarr
+
+..
+
+   Missing:
+   ``open_mfdatatree``
 
 Coordinates objects
 ===================
@@ -1071,6 +1379,15 @@ Testing
    testing.assert_allclose
    testing.assert_chunks_equal
 
+Test that two ``DataTree`` objects are similar.
+
+.. autosummary::
+   :toctree: generated/
+
+   testing.assertions.assert_isomorphic
+   testing.assert_equal
+   testing.assert_identical
+
 Hypothesis Testing Strategies
 =============================
 
@@ -1101,6 +1418,18 @@ Exceptions
    MergeError
    SerializationWarning
 
+DataTree
+--------
+
+Exceptions raised when manipulating trees.
+
+.. autosummary::
+   :toctree: generated/
+
+   xarray.core.datatree_mapping.TreeIsomorphismError
+   xarray.core.treenode.InvalidTreeError
+   xarray.core.treenode.NotFoundInTreeError
+
 Advanced API
 ============
 
@@ -1110,6 +1439,7 @@ Advanced API
    Coordinates
    Dataset.variables
    DataArray.variable
+   xarray.core.datatree.DataTree.variables
    Variable
    IndexVariable
    as_variable
@@ -1118,11 +1448,17 @@ Advanced API
    Context
    register_dataset_accessor
    register_dataarray_accessor
+   xarray.core.extensions.register_datatree_accessor
    Dataset.set_close
    backends.BackendArray
    backends.BackendEntrypoint
    backends.list_engines
    backends.refresh_engines
+
+..
+
+   Missing:
+   ``DataTree.set_close``
 
 Default, pandas-backed indexes built-in Xarray:
 

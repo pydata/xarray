@@ -4,6 +4,7 @@
     import numpy as np
     import pandas as pd
     import xarray as xr
+    from xarray.core.datatree import DataTree
 
     np.random.seed(123456)
     np.set_printoptions(threshold=20)
@@ -21,16 +22,15 @@ In order of increasing complexity, they are:
 - :py:class:`xarray.Variable`,
 - :py:class:`xarray.DataArray`,
 - :py:class:`xarray.Dataset`,
-- :py:class:`datatree.DataTree`.
+- :py:class:`xarray.core.datatree.DataTree`.
 
 The user guide lists only :py:class:`xarray.DataArray` and :py:class:`xarray.Dataset`,
 but :py:class:`~xarray.Variable` is the fundamental object internally,
-and :py:class:`~datatree.DataTree` is a natural generalisation of :py:class:`xarray.Dataset`.
+and :py:class:`~xarray.core.datatree.DataTree` is a natural generalisation of :py:class:`xarray.Dataset`.
 
 .. note::
 
-    Our :ref:`roadmap` includes plans both to document :py:class:`~xarray.Variable` as fully public API,
-    and to merge the `xarray-datatree <https://github.com/xarray-contrib/datatree>`_ package into xarray's main repository.
+    Our :ref:`roadmap` includes plans to document :py:class:`~xarray.Variable` as fully public API.
 
 Internally private :ref:`lazy indexing classes <internal design.lazy indexing>` are used to avoid loading more data than necessary,
 and flexible indexes classes (derived from :py:class:`~xarray.indexes.Index`) provide performant label-based lookups.
