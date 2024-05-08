@@ -166,7 +166,7 @@ def concat(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
-    create_index : bool, default is True
+    create_index : bool, default: True
         Whether to create new PandasIndex objects for any new 1D coordinate variables.
 
     Returns
