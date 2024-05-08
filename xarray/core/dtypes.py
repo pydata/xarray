@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 import functools
 from typing import Any
 
@@ -61,7 +62,7 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     # N.B. these casting rules should match pandas
     dtype_: np.typing.DTypeLike
     fill_value: Any
-    if isdtype(dtype, "real floating"):
+    if isdtype(dtype, DtypeKind.real_floating):
         dtype_ = dtype
         fill_value = np.nan
     elif isdtype(dtype, np.timedelta64):
@@ -70,10 +71,10 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
         # Check np.timedelta64 before np.integer
         fill_value = np.timedelta64("NaT")
         dtype_ = dtype
-    elif isdtype(dtype, "integral"):
+    elif isdtype(dtype, DtypeKind.integral):
         dtype_ = np.float32 if dtype.itemsize <= 2 else np.float64
         fill_value = np.nan
-    elif isdtype(dtype, "complex floating"):
+    elif isdtype(dtype, DtypeKind.complex_floating):
         dtype_ = dtype
         fill_value = np.nan + np.nan * 1j
     elif isdtype(dtype, np.datetime64):
@@ -119,16 +120,16 @@ def get_pos_infinity(dtype, max_for_int=False):
     -------
     fill_value : positive infinity value corresponding to this dtype.
     """
-    if isdtype(dtype, "real floating"):
+    if isdtype(dtype, DtypeKind.real_floating):
         return np.inf
 
-    if isdtype(dtype, "integral"):
+    if isdtype(dtype, DtypeKind.integral):
         if max_for_int:
             return np.iinfo(dtype).max
         else:
             return np.inf
 
-    if isdtype(dtype, "complex floating"):
+    if isdtype(dtype, DtypeKind.complex_floating):
         return np.inf + 1j * np.inf
 
     return INF
@@ -147,16 +148,16 @@ def get_neg_infinity(dtype, min_for_int=False):
     -------
     fill_value : positive infinity value corresponding to this dtype.
     """
-    if isdtype(dtype, "real floating"):
+    if isdtype(dtype, DtypeKind.real_floating):
         return -np.inf
 
-    if isdtype(dtype, "integral"):
+    if isdtype(dtype, DtypeKind.integral):
         if min_for_int:
             return np.iinfo(dtype).min
         else:
             return -np.inf
 
-    if isdtype(dtype, "complex floating"):
+    if isdtype(dtype, DtypeKind.complex_floating):
         return -np.inf - 1j * np.inf
 
     return NINF
@@ -165,6 +166,19 @@ def get_neg_infinity(dtype, min_for_int=False):
 def is_datetime_like(dtype):
     """Check if a dtype is a subclass of the numpy datetime types"""
     return isdtype(dtype, (np.datetime64, np.timedelta64))
+
+
+class DtypeKind(enum.Enum):
+    bool = "bool"
+    signed_integer = "signed_integer"
+    unsigned_integer = "unsigned integer"
+    integral = "integral"
+    real_floating = "real floating"
+    complex_floating = "complex floating"
+    numeric = "numeric"
+    object = "object"
+    character = "character"
+    string = "string"
 
 
 def isdtype(dtype, kind, xp=None):
@@ -227,6 +241,10 @@ def isdtype(dtype, kind, xp=None):
         kinds = (kind,)
     else:
         kinds = kind
+
+    kinds = tuple(
+        kind if not isinstance(kind, DtypeKind) else kind.value for kind in kinds
+    )
 
     if isinstance(dtype, np.dtype):
         # TODO (keewis): replace with `numpy.isdtype` once we drop `numpy<2.0`
