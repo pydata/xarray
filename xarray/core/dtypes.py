@@ -229,6 +229,7 @@ def isdtype(dtype, kind, xp=None):
         kinds = kind
 
     if isinstance(dtype, np.dtype):
+        # TODO (keewis): replace with `numpy.isdtype` once we drop `numpy<2.0`
         return numpy_isdtype(dtype, kinds)
     elif is_extension_array_dtype(dtype):
         return pandas_isdtype(dtype, kinds)
