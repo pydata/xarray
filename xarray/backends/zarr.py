@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+import pandas as pd
 
 from xarray import coding, conventions
 from xarray.backends.common import (
@@ -509,7 +510,9 @@ class ZarrStore(AbstractWritableDataStore):
         # TODO: consider deprecating this in favor of zarr_group
         return self.zarr_group
 
-    def open_store_variable(self, name, zarr_array):
+    def open_store_variable(self, name, zarr_array=None):
+        if zarr_array is None:
+            zarr_array = self.zarr_group[name]
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(zarr_array))
         try_nczarr = self._mode == "r"
         dimensions, attributes = _get_zarr_dims_and_attrs(
@@ -623,11 +626,7 @@ class ZarrStore(AbstractWritableDataStore):
             # avoid needing to load index variables into memory.
             # TODO: consider making loading indexes lazy again?
             existing_vars, _, _ = conventions.decode_cf_variables(
-                {
-                    k: v
-                    for k, v in self.get_variables().items()
-                    if k in existing_variable_names
-                },
+                {k: self.open_store_variable(name=k) for k in existing_variable_names},
                 self.get_attrs(),
             )
             # Modified variables must use the same encoding as the store.
@@ -796,9 +795,92 @@ class ZarrStore(AbstractWritableDataStore):
             region = tuple(write_region[dim] for dim in dims)
             writer.add(v.data, zarr_array, region)
 
-    def close(self):
+    def close(self) -> None:
         if self._close_store_on_close:
             self.zarr_group.store.close()
+
+    def _auto_detect_regions(self, ds, region):
+        for dim, val in region.items():
+            if val != "auto":
+                continue
+
+            if dim not in ds._variables:
+                # unindexed dimension
+                region[dim] = slice(0, ds.sizes[dim])
+                continue
+
+            variable = conventions.decode_cf_variable(
+                dim, self.open_store_variable(dim).compute()
+            )
+            assert variable.dims == (dim,)
+            index = pd.Index(variable.data)
+            idxs = index.get_indexer(ds[dim].data)
+            if any(idxs == -1):
+                raise KeyError(
+                    f"Not all values of coordinate '{dim}' in the new array were"
+                    " found in the original store. Writing to a zarr region slice"
+                    " requires that no dimensions or metadata are changed by the write."
+                )
+
+            if (np.diff(idxs) != 1).any():
+                raise ValueError(
+                    f"The auto-detected region of coordinate '{dim}' for writing new data"
+                    " to the original store had non-contiguous indices. Writing to a zarr"
+                    " region slice requires that the new data constitute a contiguous subset"
+                    " of the original store."
+                )
+            region[dim] = slice(idxs[0], idxs[-1] + 1)
+        return region
+
+    def _validate_and_autodetect_region(self, ds) -> None:
+        region = self._write_region
+
+        if region == "auto":
+            region = {dim: "auto" for dim in ds.dims}
+
+        if not isinstance(region, dict):
+            raise TypeError(f"``region`` must be a dict, got {type(region)}")
+        if any(v == "auto" for v in region.values()):
+            if self._mode != "r+":
+                raise ValueError(
+                    f"``mode`` must be 'r+' when using ``region='auto'``, got {self._mode!r}"
+                )
+            region = self._auto_detect_regions(ds, region)
+
+        # validate before attempting to auto-detect since the auto-detection
+        # should always return a valid slice.
+        for k, v in region.items():
+            if k not in ds.dims:
+                raise ValueError(
+                    f"all keys in ``region`` are not in Dataset dimensions, got "
+                    f"{list(region)} and {list(ds.dims)}"
+                )
+            if not isinstance(v, slice):
+                raise TypeError(
+                    "all values in ``region`` must be slice objects, got "
+                    f"region={region}"
+                )
+            if v.step not in {1, None}:
+                raise ValueError(
+                    "step on all slices in ``region`` must be 1 or None, got "
+                    f"region={region}"
+                )
+
+        non_matching_vars = [
+            k for k, v in ds.variables.items() if not set(region).intersection(v.dims)
+        ]
+        if non_matching_vars:
+            raise ValueError(
+                f"when setting `region` explicitly in to_zarr(), all "
+                f"variables in the dataset to write must have at least "
+                f"one dimension in common with the region's dimensions "
+                f"{list(region.keys())}, but that is not "
+                f"the case for some variables here. To drop these variables "
+                f"from this dataset before exporting to zarr, write: "
+                f".drop_vars({non_matching_vars!r})"
+            )
+
+        self._write_region = region
 
 
 def open_zarr(
