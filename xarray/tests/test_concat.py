@@ -12,7 +12,9 @@ from xarray.core import dtypes, merge
 from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import PandasIndex
 from xarray.tests import (
+    ConcatenatableArray,
     InaccessibleArray,
+    UnexpectedDataAccess,
     assert_array_equal,
     assert_equal,
     assert_identical,
@@ -999,6 +1001,63 @@ class TestConcatDataset:
 
         assert np.issubdtype(actual.x2.dtype, dtype)
 
+    def test_concat_avoids_index_auto_creation(self) -> None:
+        # TODO once passing indexes={} directly to Dataset constructor is allowed then no need to create coords first
+        coords = Coordinates(
+            {"x": ConcatenatableArray(np.array([1, 2, 3]))}, indexes={}
+        )
+        datasets = [
+            Dataset(
+                {"a": (["x", "y"], ConcatenatableArray(np.zeros((3, 3))))},
+                coords=coords,
+            )
+            for _ in range(2)
+        ]
+        # should not raise on concat
+        combined = concat(datasets, dim="x")
+        assert combined["a"].shape == (6, 3)
+        assert combined["a"].dims == ("x", "y")
+
+        # nor have auto-created any indexes
+        assert combined.indexes == {}
+
+        # should not raise on stack
+        combined = concat(datasets, dim="z")
+        assert combined["a"].shape == (2, 3, 3)
+        assert combined["a"].dims == ("z", "x", "y")
+
+        # nor have auto-created any indexes
+        assert combined.indexes == {}
+
+    def test_concat_avoids_index_auto_creation_new_1d_coord(self) -> None:
+        # create 0D coordinates (without indexes)
+        datasets = [
+            Dataset(
+                coords={"x": ConcatenatableArray(np.array(10))},
+            )
+            for _ in range(2)
+        ]
+
+        with pytest.raises(UnexpectedDataAccess):
+            concat(datasets, dim="x", create_index_for_new_dim=True)
+
+        # should not raise on concat iff create_index_for_new_dim=False
+        combined = concat(datasets, dim="x", create_index_for_new_dim=False)
+        assert combined["x"].shape == (2,)
+        assert combined["x"].dims == ("x",)
+
+        # nor have auto-created any indexes
+        assert combined.indexes == {}
+
+    def test_concat_promote_shape_without_creating_new_index(self) -> None:
+        # different shapes but neither have indexes
+        ds1 = Dataset(coords={"x": 0})
+        ds2 = Dataset(data_vars={"x": [1]}).drop_indexes("x")
+        actual = concat([ds1, ds2], dim="x", create_index_for_new_dim=False)
+        expected = Dataset(data_vars={"x": [0, 1]}).drop_indexes("x")
+        assert_identical(actual, expected, check_default_indexes=False)
+        assert actual.indexes == {}
+
 
 class TestConcatDataArray:
     def test_concat(self) -> None:
@@ -1071,6 +1130,35 @@ class TestConcatDataArray:
         combined = concat(arrays, dim="z")
         assert combined.shape == (2, 3, 3)
         assert combined.dims == ("z", "x", "y")
+
+    def test_concat_avoids_index_auto_creation(self) -> None:
+        # TODO once passing indexes={} directly to DataArray constructor is allowed then no need to create coords first
+        coords = Coordinates(
+            {"x": ConcatenatableArray(np.array([1, 2, 3]))}, indexes={}
+        )
+        arrays = [
+            DataArray(
+                ConcatenatableArray(np.zeros((3, 3))),
+                dims=["x", "y"],
+                coords=coords,
+            )
+            for _ in range(2)
+        ]
+        # should not raise on concat
+        combined = concat(arrays, dim="x")
+        assert combined.shape == (6, 3)
+        assert combined.dims == ("x", "y")
+
+        # nor have auto-created any indexes
+        assert combined.indexes == {}
+
+        # should not raise on stack
+        combined = concat(arrays, dim="z")
+        assert combined.shape == (2, 3, 3)
+        assert combined.dims == ("z", "x", "y")
+
+        # nor have auto-created any indexes
+        assert combined.indexes == {}
 
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
     def test_concat_fill_value(self, fill_value) -> None:
