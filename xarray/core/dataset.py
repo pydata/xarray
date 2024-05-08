@@ -4623,7 +4623,7 @@ class Dataset(
         Data variables:
             *empty*
 
-        >>> ds.expand_dims('x')
+        >>> ds.expand_dims("x")
         <xarray.Dataset> Size: 8B
         Dimensions:  (x: 1)
         Coordinates:
