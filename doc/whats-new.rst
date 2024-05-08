@@ -30,7 +30,7 @@ New Features
   then, such as broadcasting.
   By `Ilan Gold <https://github.com/ilan-gold>`_.
 - Added the option to avoid automatically creating 1D pandas indexes in :py:meth:`Dataset.expand_dims()`, by passing the new kwarg
-  `create_index=False`. (:pull:`8960`)
+  `create_index_for_new_dim=False`. (:pull:`8960`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Avoid automatically re-creating 1D pandas indexes in :py:func:`concat()`. Also added option to avoid creating 1D indexes for
   new dimension coordinates by passing the new kwarg `create_index_for_new_dim=False`. (:issue:`8871`, :pull:`8872`)

@@ -3430,16 +3430,22 @@ class TestDataset:
         )
         assert_identical(other_way_expected, other_way)
 
-    @pytest.mark.parametrize("create_index_flag", [True, False])
-    def test_expand_dims_create_index_data_variable(self, create_index_flag):
+    @pytest.mark.parametrize("create_index_for_new_dim_flag", [True, False])
+    def test_expand_dims_create_index_data_variable(
+        self, create_index_for_new_dim_flag
+    ):
         # data variables should not gain an index ever
         ds = Dataset({"x": 0})
 
-        if create_index_flag:
+        if create_index_for_new_dim_flag:
             with pytest.warns(UserWarning, match="No index created"):
-                expanded = ds.expand_dims("x", create_index=create_index_flag)
+                expanded = ds.expand_dims(
+                    "x", create_index_for_new_dim=create_index_for_new_dim_flag
+                )
         else:
-            expanded = ds.expand_dims("x", create_index=create_index_flag)
+            expanded = ds.expand_dims(
+                "x", create_index_for_new_dim=create_index_for_new_dim_flag
+            )
 
         # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
         expected = Dataset({"x": ("x", [0])}).drop_indexes("x").reset_coords("x")
@@ -3448,13 +3454,13 @@ class TestDataset:
         assert expanded.indexes == {}
 
     def test_expand_dims_create_index_coordinate_variable(self):
-        # coordinate variables should gain an index only if create_index is True (the default)
+        # coordinate variables should gain an index only if create_index_for_new_dim is True (the default)
         ds = Dataset(coords={"x": 0})
         expanded = ds.expand_dims("x")
         expected = Dataset({"x": ("x", [0])})
         assert_identical(expanded, expected)
 
-        expanded_no_index = ds.expand_dims("x", create_index=False)
+        expanded_no_index = ds.expand_dims("x", create_index_for_new_dim=False)
 
         # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
         expected = Dataset(coords={"x": ("x", [0])}).drop_indexes("x")
@@ -3468,7 +3474,7 @@ class TestDataset:
         expected = Dataset({"x": ("x", [0, 1])})
         assert_identical(expanded, expected)
 
-        expanded_no_index = ds.expand_dims(x=[0, 1], create_index=False)
+        expanded_no_index = ds.expand_dims(x=[0, 1], create_index_for_new_dim=False)
 
         # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
         expected = Dataset(coords={"x": ("x", [0, 1])}).drop_indexes("x")
