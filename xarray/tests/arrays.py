@@ -119,8 +119,11 @@ class ConcatenatableArray:
     """Disallows loading or coercing to an index but does support concatenation / stacking."""
 
     def __init__(self, array):
-        # use ._array instead of .array because we don't want this to be accessible even to xarray's internals (e.g. create_default_index_implicit)
         self._array = array
+
+    @property
+    def array(self: Any) -> None:
+        raise UnexpectedDataAccess("Tried accessing data via .array")
 
     @property
     def dtype(self: Any) -> np.dtype:
@@ -138,10 +141,10 @@ class ConcatenatableArray:
         return f"{type(self).__name__}(array={self._array!r})"
 
     def get_duck_array(self):
-        raise UnexpectedDataAccess("Tried accessing data")
+        raise UnexpectedDataAccess("Tried accessing data via get_duck_array")
 
     def __array__(self, dtype: np.typing.DTypeLike = None):
-        raise UnexpectedDataAccess("Tried accessing data")
+        raise UnexpectedDataAccess("Tried accessing data via __array__")
 
     def __getitem__(self, key) -> "ConcatenatableArray":
         """Some cases of concat require supporting expanding dims by dimensions of size 1"""
@@ -153,7 +156,7 @@ class ConcatenatableArray:
             elif indexer_1d is Ellipsis:
                 pass
             else:
-                raise UnexpectedDataAccess("Tried accessing data.")
+                raise UnexpectedDataAccess("Tried accessing data via __getitem__")
         return ConcatenatableArray(arr)
 
     def __array_function__(self, func, types, args, kwargs) -> Any:
@@ -161,7 +164,7 @@ class ConcatenatableArray:
             return NotImplemented
 
         # Note: this allows subclasses that don't override
-        # __array_function__ to handle ManifestArray objects
+        # __array_function__ to handle ConcatenatableArray objects
         if not all(issubclass(t, ConcatenatableArray) for t in types):
             return NotImplemented
 
