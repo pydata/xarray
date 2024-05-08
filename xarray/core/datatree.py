@@ -23,6 +23,11 @@ from xarray.core.datatree_mapping import (
     check_isomorphic,
     map_over_subtree,
 )
+from xarray.core.datatree_ops import (
+    DataTreeArithmeticMixin,
+    MappedDatasetMethodsMixin,
+    MappedDataWithCoords,
+)
 from xarray.core.datatree_render import RenderDataTree
 from xarray.core.formatting import datatree_repr
 from xarray.core.formatting_html import (
@@ -42,11 +47,6 @@ from xarray.core.utils import (
 )
 from xarray.core.variable import Variable
 from xarray.datatree_.datatree.common import TreeAttrAccessMixin
-from xarray.datatree_.datatree.ops import (
-    DataTreeArithmeticMixin,
-    MappedDatasetMethodsMixin,
-    MappedDataWithCoords,
-)
 
 try:
     from xarray.core.variable import calculate_dimensions

@@ -135,6 +135,7 @@ has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
 has_pandas_ge_2_2, __ = _importorskip("pandas", "2.2")
+has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0.dev0")
 
 
 # some special cases
@@ -147,6 +148,7 @@ requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
 has_numpy_array_api, requires_numpy_array_api = _importorskip("numpy", "1.26.0")
+has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
 
 
 def _importorskip_h5netcdf_ros3():
