@@ -513,7 +513,7 @@ def _dataset_concat(
     # case where concat dimension is a coordinate or data_var but not a dimension
     if (dim in coord_names or dim in data_names) and dim not in dim_names:
         datasets = [
-            ds.expand_dims(dim, create_index=create_index_for_new_dim)
+            ds.expand_dims(dim, create_index_for_new_dim=create_index_for_new_dim)
             for ds in datasets
         ]
 
