@@ -33,7 +33,7 @@ New Features
   `create_index=False`. (:pull:`8960`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Avoid automatically re-creating 1D pandas indexes in :py:func:`concat()`. Also added option to avoid creating 1D indexes for
-  new dimension coordinates by passing the new kwarg `create_index=False`. (:issue:`8871`, :pull:`8872`)
+  new dimension coordinates by passing the new kwarg `create_index_for_new_dim=False`. (:issue:`8871`, :pull:`8872`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes

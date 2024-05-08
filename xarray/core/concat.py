@@ -43,7 +43,7 @@ def concat(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-    create_index: bool = True,
+    create_index_for_new_dim: bool = True,
 ) -> T_Dataset: ...
 
 
@@ -58,7 +58,7 @@ def concat(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-    create_index: bool = True,
+    create_index_for_new_dim: bool = True,
 ) -> T_DataArray: ...
 
 
@@ -72,7 +72,7 @@ def concat(
     fill_value=dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-    create_index: bool = True,
+    create_index_for_new_dim: bool = True,
 ):
     """Concatenate xarray objects along a new or existing dimension.
 
@@ -166,8 +166,8 @@ def concat(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
-    create_index : bool, default: True
-        Whether to create new PandasIndex objects for any new 1D coordinate variables.
+    create_index_for_new_dim : bool, default is True
+        Whether to create a new ``PandasIndex`` object when the objects being concatenated contain scalar variables named ``dim``.
 
     Returns
     -------
@@ -223,6 +223,8 @@ def concat(
         x        (new_dim) <U1 8B 'a' 'b'
       * y        (y) int64 24B 10 20 30
       * new_dim  (new_dim) int64 16B -90 -100
+
+
     """
     # TODO: add ignore_index arguments copied from pandas.concat
     # TODO: support concatenating scalar coordinates even if the concatenated
@@ -251,7 +253,7 @@ def concat(
             fill_value=fill_value,
             join=join,
             combine_attrs=combine_attrs,
-            create_index=create_index,
+            create_index_for_new_dim=create_index_for_new_dim,
         )
     elif isinstance(first_obj, Dataset):
         return _dataset_concat(
@@ -264,7 +266,7 @@ def concat(
             fill_value=fill_value,
             join=join,
             combine_attrs=combine_attrs,
-            create_index=create_index,
+            create_index_for_new_dim=create_index_for_new_dim,
         )
     else:
         raise TypeError(
@@ -464,7 +466,7 @@ def _dataset_concat(
     fill_value: Any = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-    create_index: bool = True,
+    create_index_for_new_dim: bool = True,
 ) -> T_Dataset:
     """
     Concatenate a sequence of datasets along a new or existing dimension
@@ -510,7 +512,10 @@ def _dataset_concat(
 
     # case where concat dimension is a coordinate or data_var but not a dimension
     if (dim in coord_names or dim in data_names) and dim not in dim_names:
-        datasets = [ds.expand_dims(dim, create_index=create_index) for ds in datasets]
+        datasets = [
+            ds.expand_dims(dim, create_index=create_index_for_new_dim)
+            for ds in datasets
+        ]
 
     # determine which variables to concatenate
     concat_over, equals, concat_dim_lengths = _calc_concat_over(
@@ -575,7 +580,7 @@ def _dataset_concat(
                 var = ds._variables[name]
                 if not var.dims:
                     data = var.set_dims(dim).values
-                    if create_index:
+                    if create_index_for_new_dim:
                         yield PandasIndex(data, dim, coord_dtype=var.dtype)
 
     # create concatenation index, needed for later reindexing
@@ -696,7 +701,7 @@ def _dataarray_concat(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-    create_index: bool = True,
+    create_index_for_new_dim: bool = True,
 ) -> T_DataArray:
     from xarray.core.dataarray import DataArray
 
@@ -733,7 +738,7 @@ def _dataarray_concat(
         fill_value=fill_value,
         join=join,
         combine_attrs=combine_attrs,
-        create_index=create_index,
+        create_index_for_new_dim=create_index_for_new_dim,
     )
 
     merged_attrs = merge_attrs([da.attrs for da in arrays], combine_attrs)

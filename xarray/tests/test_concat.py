@@ -1039,10 +1039,10 @@ class TestConcatDataset:
         ]
 
         with pytest.raises(UnexpectedDataAccess):
-            concat(datasets, dim="x", create_index=True)
+            concat(datasets, dim="x", create_index_for_new_dim=True)
 
-        # should not raise on concat iff create_index=False
-        combined = concat(datasets, dim="x", create_index=False)
+        # should not raise on concat iff create_index_for_new_dim=False
+        combined = concat(datasets, dim="x", create_index_for_new_dim=False)
         assert combined["x"].shape == (2,)
         assert combined["x"].dims == ("x",)
 
@@ -1053,7 +1053,7 @@ class TestConcatDataset:
         # different shapes but neither have indexes
         ds1 = Dataset(coords={"x": 0})
         ds2 = Dataset(data_vars={"x": [1]}).drop_indexes("x")
-        actual = concat([ds1, ds2], dim="x", create_index=False)
+        actual = concat([ds1, ds2], dim="x", create_index_for_new_dim=False)
         expected = Dataset(data_vars={"x": [0, 1]}).drop_indexes("x")
         assert_identical(actual, expected, check_default_indexes=False)
         assert actual.indexes == {}
