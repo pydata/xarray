@@ -224,7 +224,24 @@ def concat(
       * y        (y) int64 24B 10 20 30
       * new_dim  (new_dim) int64 16B -90 -100
 
+    # Concatenate a scalar variable along a new dimension of the same name with and without creating a new index
 
+    >>> ds = xr.Dataset(coords={"x": 0})
+    >>> xr.concat([ds, ds], dim="x")
+    <xarray.Dataset> Size: 16B
+    Dimensions:  (x: 2)
+    Coordinates:
+    * x        (x) int64 16B 0 0
+    Data variables:
+        *empty*
+
+    >>> xr.concat([ds, ds], dim="x").indexes
+    Indexes:
+        x        Index([0, 0], dtype='int64', name='x')
+
+    >>> xr.concat([ds, ds], dim="x", create_index_for_new_dim=False).indexes
+    Indexes:
+        *empty*
     """
     # TODO: add ignore_index arguments copied from pandas.concat
     # TODO: support concatenating scalar coordinates even if the concatenated
