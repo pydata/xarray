@@ -214,6 +214,12 @@ def isdtype(dtype, kind, xp=None):
         else:
             return any(np.issubdtype(dtype, kind) for kind in translated_kinds)
 
+    def pandas_isdtype(dtype, kinds):
+        return any(
+            isinstance(dtype, kind) if isinstance(kind, type) else False
+            for kind in kinds
+        )
+
     if xp is None:
         xp = np
 
@@ -225,10 +231,7 @@ def isdtype(dtype, kind, xp=None):
     if isinstance(dtype, np.dtype):
         return numpy_isdtype(dtype, kinds)
     elif is_extension_array_dtype(dtype):
-        return any(
-            isinstance(dtype, kind) if isinstance(kind, type) else False
-            for kind in kinds
-        )
+        return pandas_isdtype(dtype, kinds)
     else:
         numpy_kinds, non_numpy_kinds = split_numpy_kinds(kinds)
 
