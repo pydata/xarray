@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import warnings
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
+from functools import partial
 from os import PathLike
 from typing import (
     TYPE_CHECKING,
@@ -159,7 +160,9 @@ def _infer_coords_and_dims(
                 dims = list(coords.keys())
             else:
                 for n, (dim, coord) in enumerate(zip(dims, coords)):
-                    coord = as_variable(coord, name=dims[n]).to_index_variable()
+                    coord = as_variable(
+                        coord, name=dims[n], auto_convert=False
+                    ).to_index_variable()
                     dims[n] = coord.name
     dims_tuple = tuple(dims)
     if len(dims_tuple) != len(shape):
@@ -179,10 +182,12 @@ def _infer_coords_and_dims(
         new_coords = {}
         if utils.is_dict_like(coords):
             for k, v in coords.items():
-                new_coords[k] = as_variable(v, name=k)
+                new_coords[k] = as_variable(v, name=k, auto_convert=False)
+                if new_coords[k].dims == (k,):
+                    new_coords[k] = new_coords[k].to_index_variable()
         elif coords is not None:
             for dim, coord in zip(dims_tuple, coords):
-                var = as_variable(coord, name=dim)
+                var = as_variable(coord, name=dim, auto_convert=False)
                 var.dims = (dim,)
                 new_coords[dim] = var.to_index_variable()
 
@@ -204,11 +209,17 @@ def _check_data_shape(
                 return data
             else:
                 data_shape = tuple(
-                    as_variable(coords[k], k).size if k in coords.keys() else 1
+                    (
+                        as_variable(coords[k], k, auto_convert=False).size
+                        if k in coords.keys()
+                        else 1
+                    )
                     for k in dims
                 )
         else:
-            data_shape = tuple(as_variable(coord, "foo").size for coord in coords)
+            data_shape = tuple(
+                as_variable(coord, "foo", auto_convert=False).size for coord in coords
+            )
         data = np.full(data_shape, data)
     return data
 
@@ -761,11 +772,15 @@ class DataArray(
     @property
     def values(self) -> np.ndarray:
         """
-        The array's data as a numpy.ndarray.
+        The array's data converted to numpy.ndarray.
 
-        If the array's data is not a numpy.ndarray this will attempt to convert
-        it naively using np.array(), which will raise an error if the array
-        type does not support coercion like this (e.g. cupy).
+        This will attempt to convert the array naively using np.array(),
+        which will raise an error if the array type does not support
+        coercion like this (e.g. cupy).
+
+        Note that this array is not copied; operations on it follow
+        numpy's rules of what generates a view vs. a copy, and changes
+        to this array may be reflected in the DataArray as well.
         """
         return self.variable.values
 
@@ -1112,6 +1127,8 @@ class DataArray(
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return this array.
 
+        Unlike compute, the original dataset is modified and returned.
+
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
         load data automatically. However, this method can be necessary when
@@ -1134,8 +1151,9 @@ class DataArray(
 
     def compute(self, **kwargs) -> Self:
         """Manually trigger loading of this array's data from disk or a
-        remote source into memory and return a new array. The original is
-        left unaltered.
+        remote source into memory and return a new array.
+
+        Unlike load, the original is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -1146,6 +1164,11 @@ class DataArray(
         ----------
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
+
+        Returns
+        -------
+        object : DataArray
+            New object with the data and all coordinates as in-memory arrays.
 
         See Also
         --------
@@ -1160,11 +1183,17 @@ class DataArray(
         This keeps them as dask arrays but encourages them to keep data in
         memory.  This is particularly useful when on a distributed machine.
         When on a single machine consider using ``.compute()`` instead.
+        Like compute (but unlike load), the original dataset is left unaltered.
 
         Parameters
         ----------
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.persist``.
+
+        Returns
+        -------
+        object : DataArray
+            New object with all dask-backed data and coordinates as persisted dask arrays.
 
         See Also
         --------
@@ -2529,6 +2558,7 @@ class DataArray(
         self,
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
         axis: None | int | Sequence[int] = None,
+        create_index: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
         """Return a new object with an additional axis (or axes) inserted at
@@ -2537,6 +2567,9 @@ class DataArray(
 
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
+
+        The automatic creation of indexes to back new 1D coordinate variables
+        controlled by the create_index kwarg.
 
         Parameters
         ----------
@@ -2553,6 +2586,8 @@ class DataArray(
             multiple axes are inserted. In this case, dim arguments should be
             same length list. If axis=None is passed, all the axes will be
             inserted to the start of the result array.
+        create_index : bool, default is True
+            Whether to create new PandasIndex objects for any new 1D coordinate variables.
         **dim_kwargs : int or sequence or ndarray
             The keywords are arbitrary dimensions being inserted and the values
             are either the lengths of the new dims (if int is given), or their
@@ -2616,7 +2651,7 @@ class DataArray(
             dim = {dim: 1}
 
         dim = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
-        ds = self._to_temp_dataset().expand_dims(dim, axis)
+        ds = self._to_temp_dataset().expand_dims(dim, axis, create_index=create_index)
         return self._from_temp_dataset(ds)
 
     def set_index(
@@ -2774,12 +2809,13 @@ class DataArray(
         ds = self._to_temp_dataset().reorder_levels(dim_order, **dim_order_kwargs)
         return self._from_temp_dataset(ds)
 
+    @partial(deprecate_dims, old_name="dimensions")
     def stack(
         self,
-        dimensions: Mapping[Any, Sequence[Hashable]] | None = None,
+        dim: Mapping[Any, Sequence[Hashable]] | None = None,
         create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
-        **dimensions_kwargs: Sequence[Hashable],
+        **dim_kwargs: Sequence[Hashable],
     ) -> Self:
         """
         Stack any number of existing dimensions into a single new dimension.
@@ -2789,7 +2825,7 @@ class DataArray(
 
         Parameters
         ----------
-        dimensions : mapping of Hashable to sequence of Hashable
+        dim : mapping of Hashable to sequence of Hashable
             Mapping of the form `new_name=(dim1, dim2, ...)`.
             Names of new dimensions, and the existing dimensions that they
             replace. An ellipsis (`...`) will be replaced by all unlisted dimensions.
@@ -2803,9 +2839,9 @@ class DataArray(
         index_cls: class, optional
             Can be used to pass a custom multi-index type. Must be an Xarray index that
             implements `.stack()`. By default, a pandas multi-index wrapper is used.
-        **dimensions_kwargs
-            The keyword arguments form of ``dimensions``.
-            One of dimensions or dimensions_kwargs must be provided.
+        **dim_kwargs
+            The keyword arguments form of ``dim``.
+            One of dim or dim_kwargs must be provided.
 
         Returns
         -------
@@ -2840,10 +2876,10 @@ class DataArray(
         DataArray.unstack
         """
         ds = self._to_temp_dataset().stack(
-            dimensions,
+            dim,
             create_index=create_index,
             index_cls=index_cls,
-            **dimensions_kwargs,
+            **dim_kwargs,
         )
         return self._from_temp_dataset(ds)
 
@@ -2977,9 +3013,10 @@ class DataArray(
         # unstacked dataset
         return Dataset(data_dict)
 
+    @deprecate_dims
     def transpose(
         self,
-        *dims: Hashable,
+        *dim: Hashable,
         transpose_coords: bool = True,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Self:
@@ -2987,7 +3024,7 @@ class DataArray(
 
         Parameters
         ----------
-        *dims : Hashable, optional
+        *dim : Hashable, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
         transpose_coords : bool, default: True
@@ -3015,13 +3052,13 @@ class DataArray(
         numpy.transpose
         Dataset.transpose
         """
-        if dims:
-            dims = tuple(infix_dims(dims, self.dims, missing_dims))
-        variable = self.variable.transpose(*dims)
+        if dim:
+            dim = tuple(infix_dims(dim, self.dims, missing_dims))
+        variable = self.variable.transpose(*dim)
         if transpose_coords:
             coords: dict[Hashable, Variable] = {}
             for name, coord in self.coords.items():
-                coord_dims = tuple(dim for dim in dims if dim in coord.dims)
+                coord_dims = tuple(d for d in dim if d in coord.dims)
                 coords[name] = coord.variable.transpose(*coord_dims)
             return self._replace(variable, coords)
         else:
@@ -4106,7 +4143,7 @@ class DataArray(
         compute: Literal[True] = True,
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
-        region: Mapping[str, slice] | None = None,
+        region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
@@ -4126,7 +4163,7 @@ class DataArray(
         compute: Literal[False],
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
-        region: Mapping[str, slice] | None = None,
+        region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
@@ -4144,7 +4181,7 @@ class DataArray(
         compute: bool = True,
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
-        region: Mapping[str, slice] | None = None,
+        region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
@@ -4223,6 +4260,12 @@ class DataArray(
               in with ``region``, use a separate call to ``to_zarr()`` with
               ``compute=False``. See "Appending to existing Zarr stores" in
               the reference documentation for full details.
+
+            Users are expected to ensure that the specified region aligns with
+            Zarr chunk boundaries, and that dask chunks are also aligned.
+            Xarray makes limited checks that these multiple chunk boundaries line up.
+            It is possible to write incomplete chunks and corrupt the data with this
+            option if you are not careful.
         safe_chunks : bool, default: True
             If True, only allow writes to when there is a many-to-one relationship
             between Zarr chunks (specified in encoding) and Dask chunks.
@@ -5226,7 +5269,7 @@ class DataArray(
         edge_order: Literal[1, 2] = 1,
         datetime_unit: DatetimeUnitOptions = None,
     ) -> Self:
-        """ Differentiate the array with the second order accurate central
+        """Differentiate the array with the second order accurate central
         differences.
 
         .. note::

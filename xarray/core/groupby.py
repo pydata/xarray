@@ -28,7 +28,7 @@ from xarray.core.indexes import (
     filter_indexes_from_coords,
     safe_cast_to_index,
 )
-from xarray.core.options import _get_keep_attrs
+from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Dims,
     QuantileMethods,
@@ -38,11 +38,13 @@ from xarray.core.types import (
 )
 from xarray.core.utils import (
     FrozenMappingWarningOnValuesAccess,
+    contains_only_chunked_or_numpy,
     either_dict_or_kwargs,
     emit_user_level_warning,
     hashable,
     is_scalar,
     maybe_wrap_array,
+    module_available,
     peek_at,
 )
 from xarray.core.variable import IndexVariable, Variable
@@ -1075,6 +1077,9 @@ class GroupBy(Generic[T_Xarray]):
                         result[var] = result[var].transpose(d, ...)
         return result
 
+    def _restore_dim_order(self, stacked):
+        raise NotImplementedError
+
     def _maybe_restore_empty_groups(self, combined):
         """Our index contained empty groups (e.g., from a resampling or binning). If we
         reduced on that dimension, we want to restore the full index.
@@ -1209,13 +1214,9 @@ class GroupBy(Generic[T_Xarray]):
                     (result.sizes[grouper.name],) + var.shape,
                 )
 
-        if isbin:
-            # Fix dimension order when binning a dimension coordinate
-            # Needed as long as we do a separate code path for pint;
-            # For some reason Datasets and DataArrays behave differently!
-            (group_dim,) = grouper.dims
-            if isinstance(self._obj, Dataset) and group_dim in self._obj.dims:
-                result = result.transpose(grouper.name, ...)
+        if not isinstance(result, Dataset):
+            # only restore dimension order for arrays
+            result = self._restore_dim_order(result)
 
         return result
 
@@ -1376,16 +1377,30 @@ class GroupBy(Generic[T_Xarray]):
             (grouper,) = self.groupers
             dim = grouper.group1d.dims
 
-        return self.map(
-            self._obj.__class__.quantile,
-            shortcut=False,
-            q=q,
-            dim=dim,
-            method=method,
-            keep_attrs=keep_attrs,
-            skipna=skipna,
-            interpolation=interpolation,
-        )
+        # Dataset.quantile does this, do it for flox to ensure same output.
+        q = np.asarray(q, dtype=np.float64)
+
+        if (
+            method == "linear"
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+            and module_available("flox", minversion="0.9.4")
+        ):
+            result = self._flox_reduce(
+                func="quantile", q=q, dim=dim, keep_attrs=keep_attrs, skipna=skipna
+            )
+            return result
+        else:
+            return self.map(
+                self._obj.__class__.quantile,
+                shortcut=False,
+                q=q,
+                dim=dim,
+                method=method,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                interpolation=interpolation,
+            )
 
     def where(self, cond, other=dtypes.NA) -> T_Xarray:
         """Return elements from `self` or `other` depending on `cond`.

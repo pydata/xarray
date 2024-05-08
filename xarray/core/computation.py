@@ -133,11 +133,7 @@ class _UFuncSignature:
         return not self == other
 
     def __repr__(self):
-        return "{}({!r}, {!r})".format(
-            type(self).__name__,
-            list(self.input_core_dims),
-            list(self.output_core_dims),
-        )
+        return f"{type(self).__name__}({list(self.input_core_dims)!r}, {list(self.output_core_dims)!r})"
 
     def __str__(self):
         lhs = ",".join("({})".format(",".join(dims)) for dims in self.input_core_dims)

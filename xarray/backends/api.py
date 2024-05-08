@@ -27,7 +27,6 @@ from xarray.backends.common import (
     _normalize_path,
 )
 from xarray.backends.locks import _get_scheduler
-from xarray.backends.zarr import open_zarr
 from xarray.core import indexing
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
@@ -61,7 +60,7 @@ if TYPE_CHECKING:
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
         T_NetcdfEngine,
-        Literal["pydap", "pynio", "zarr"],
+        Literal["pydap", "zarr"],
         type[BackendEntrypoint],
         str,  # no nice typing support for custom backends
         None,
@@ -69,7 +68,7 @@ if TYPE_CHECKING:
     T_NetcdfTypes = Literal[
         "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
     ]
-    from xarray.datatree_.datatree import DataTree
+    from xarray.core.datatree import DataTree
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
@@ -79,7 +78,6 @@ ENGINES = {
     "scipy": backends.ScipyDataStore,
     "pydap": backends.PydapDataStore.open,
     "h5netcdf": backends.H5NetCDFStore.open,
-    "pynio": backends.NioDataStore,
     "zarr": backends.ZarrStore.open_group,
 }
 
@@ -420,8 +418,8 @@ def open_dataset(
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
-        "zarr", None}, installed backend \
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "zarr", None}\
+        , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -523,7 +521,7 @@ def open_dataset(
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-          "scipy", "pynio".
+          "scipy".
 
         See engine open function for kwargs accepted by each specific engine.
 
@@ -627,8 +625,8 @@ def open_dataarray(
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
-        "zarr", None}, installed backend \
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "zarr", None}\
+        , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -728,7 +726,7 @@ def open_dataarray(
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-          "scipy", "pynio".
+          "scipy".
 
         See engine open function for kwargs accepted by each specific engine.
 
@@ -897,8 +895,8 @@ def open_mfdataset(
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in
         ``ds.encoding["source"]``.
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
-        "zarr", None}, installed backend \
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "zarr", None}\
+        , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -1416,8 +1414,6 @@ def save_mfdataset(
         these locations will be overwritten.
     format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
               "NETCDF3_CLASSIC"}, optional
-    **kwargs : additional arguments are passed along to ``to_netcdf``
-
         File format for the resulting netCDF file:
 
         * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
@@ -1449,10 +1445,11 @@ def save_mfdataset(
     compute : bool
         If true compute immediately, otherwise return a
         ``dask.delayed.Delayed`` object that can be computed later.
+    **kwargs : dict, optional
+        Additional arguments are passed along to ``to_netcdf``.
 
     Examples
     --------
-
     Save a dataset into one netCDF per year of data:
 
     >>> ds = xr.Dataset(
@@ -1522,97 +1519,6 @@ def save_mfdataset(
         return dask.delayed(
             [dask.delayed(_finalize_store)(w, s) for w, s in zip(writes, stores)]
         )
-
-
-def _auto_detect_region(ds_new, ds_orig, dim):
-    # Create a mapping array of coordinates to indices on the original array
-    coord = ds_orig[dim]
-    da_map = DataArray(np.arange(coord.size), coords={dim: coord})
-
-    try:
-        da_idxs = da_map.sel({dim: ds_new[dim]})
-    except KeyError as e:
-        if "not all values found" in str(e):
-            raise KeyError(
-                f"Not all values of coordinate '{dim}' in the new array were"
-                " found in the original store. Writing to a zarr region slice"
-                " requires that no dimensions or metadata are changed by the write."
-            )
-        else:
-            raise e
-
-    if (da_idxs.diff(dim) != 1).any():
-        raise ValueError(
-            f"The auto-detected region of coordinate '{dim}' for writing new data"
-            " to the original store had non-contiguous indices. Writing to a zarr"
-            " region slice requires that the new data constitute a contiguous subset"
-            " of the original store."
-        )
-
-    dim_slice = slice(da_idxs.values[0], da_idxs.values[-1] + 1)
-
-    return dim_slice
-
-
-def _auto_detect_regions(ds, region, open_kwargs):
-    ds_original = open_zarr(**open_kwargs)
-    for key, val in region.items():
-        if val == "auto":
-            region[key] = _auto_detect_region(ds, ds_original, key)
-    return region
-
-
-def _validate_and_autodetect_region(
-    ds, region, mode, open_kwargs
-) -> tuple[dict[str, slice], bool]:
-    if region == "auto":
-        region = {dim: "auto" for dim in ds.dims}
-
-    if not isinstance(region, dict):
-        raise TypeError(f"``region`` must be a dict, got {type(region)}")
-
-    if any(v == "auto" for v in region.values()):
-        region_was_autodetected = True
-        if mode != "r+":
-            raise ValueError(
-                f"``mode`` must be 'r+' when using ``region='auto'``, got {mode}"
-            )
-        region = _auto_detect_regions(ds, region, open_kwargs)
-    else:
-        region_was_autodetected = False
-
-    for k, v in region.items():
-        if k not in ds.dims:
-            raise ValueError(
-                f"all keys in ``region`` are not in Dataset dimensions, got "
-                f"{list(region)} and {list(ds.dims)}"
-            )
-        if not isinstance(v, slice):
-            raise TypeError(
-                "all values in ``region`` must be slice objects, got "
-                f"region={region}"
-            )
-        if v.step not in {1, None}:
-            raise ValueError(
-                "step on all slices in ``region`` must be 1 or None, got "
-                f"region={region}"
-            )
-
-    non_matching_vars = [
-        k for k, v in ds.variables.items() if not set(region).intersection(v.dims)
-    ]
-    if non_matching_vars:
-        raise ValueError(
-            f"when setting `region` explicitly in to_zarr(), all "
-            f"variables in the dataset to write must have at least "
-            f"one dimension in common with the region's dimensions "
-            f"{list(region.keys())}, but that is not "
-            f"the case for some variables here. To drop these variables "
-            f"from this dataset before exporting to zarr, write: "
-            f".drop_vars({non_matching_vars!r})"
-        )
-
-    return region, region_was_autodetected
 
 
 def _validate_datatypes_for_zarr_append(zstore, dataset):
@@ -1775,27 +1681,6 @@ def to_zarr(
     # validate Dataset keys, DataArray names
     _validate_dataset_names(dataset)
 
-    if region is not None:
-        open_kwargs = dict(
-            store=store,
-            synchronizer=synchronizer,
-            group=group,
-            consolidated=consolidated,
-            storage_options=storage_options,
-            zarr_version=zarr_version,
-        )
-        region, region_was_autodetected = _validate_and_autodetect_region(
-            dataset, region, mode, open_kwargs
-        )
-        # drop indices to avoid potential race condition with auto region
-        if region_was_autodetected:
-            dataset = dataset.drop_vars(dataset.indexes)
-        if append_dim is not None and append_dim in region:
-            raise ValueError(
-                f"cannot list the same dimension in both ``append_dim`` and "
-                f"``region`` with to_zarr(), got {append_dim} in both"
-            )
-
     if zarr_version is None:
         # default to 2 if store doesn't specify it's version (e.g. a path)
         zarr_version = int(getattr(store, "_store_version", 2))
@@ -1824,6 +1709,16 @@ def to_zarr(
         zarr_version=zarr_version,
         write_empty=write_empty_chunks,
     )
+
+    if region is not None:
+        zstore._validate_and_autodetect_region(dataset)
+        # can't modify indexed with region writes
+        dataset = dataset.drop_vars(dataset.indexes)
+        if append_dim is not None and append_dim in region:
+            raise ValueError(
+                f"cannot list the same dimension in both ``append_dim`` and "
+                f"``region`` with to_zarr(), got {append_dim} in both"
+            )
 
     if mode in ["a", "a-", "r+"]:
         _validate_datatypes_for_zarr_append(zstore, dataset)

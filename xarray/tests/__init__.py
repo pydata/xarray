@@ -18,8 +18,10 @@ import xarray.testing
 from xarray import Dataset
 from xarray.core import utils
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
+from xarray.core.variable import IndexVariable
 from xarray.testing import (  # noqa: F401
     assert_chunks_equal,
     assert_duckarray_allclose,
@@ -45,6 +47,17 @@ arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
     reason="expected failure on ARM",
 )
+
+
+def assert_writeable(ds):
+    readonly = [
+        name
+        for name, var in ds.variables.items()
+        if not isinstance(var, IndexVariable)
+        and not isinstance(var.data, PandasExtensionArray)
+        and not var.data.flags.writeable
+    ]
+    assert not readonly, readonly
 
 
 def _importorskip(
@@ -86,7 +99,6 @@ with warnings.catch_warnings():
     )
 
     has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
-has_pynio, requires_pynio = _importorskip("Nio")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
 with warnings.catch_warnings():
@@ -102,6 +114,7 @@ has_zarr, requires_zarr = _importorskip("zarr")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg", "0.4.0")
+has_pyarrow, requires_pyarrow = _importorskip("pyarrow")
 with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
@@ -117,6 +130,7 @@ has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
 has_pandas_ge_2_2, __ = _importorskip("pandas", "2.2")
+has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0.dev0")
 
 
 # some special cases
@@ -128,14 +142,38 @@ has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
 requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
-# _importorskip does not work for development versions
-has_pandas_version_two = Version(pd.__version__).major >= 2
-requires_pandas_version_two = pytest.mark.skipif(
-    not has_pandas_version_two, reason="requires pandas 2.0.0"
-)
 has_numpy_array_api, requires_numpy_array_api = _importorskip("numpy", "1.26.0")
-has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip("h5netcdf", "1.3.0")
+has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
 
+
+def _importorskip_h5netcdf_ros3():
+    try:
+        import h5netcdf
+
+        has_h5netcdf = True
+    except ImportError:
+        has_h5netcdf = False
+
+    if not has_h5netcdf:
+        return has_h5netcdf, pytest.mark.skipif(
+            not has_h5netcdf, reason="requires h5netcdf"
+        )
+
+    h5netcdf_with_ros3 = Version(h5netcdf.__version__) >= Version("1.3.0")
+
+    import h5py
+
+    h5py_with_ros3 = h5py.get_config().ros3
+
+    has_h5netcdf_ros3 = h5netcdf_with_ros3 and h5py_with_ros3
+
+    return has_h5netcdf_ros3, pytest.mark.skipif(
+        not has_h5netcdf_ros3,
+        reason="requires h5netcdf>=1.3.0 and h5py with ros3 support",
+    )
+
+
+has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip_h5netcdf_ros3()
 has_netCDF4_1_6_2_or_above, requires_netCDF4_1_6_2_or_above = _importorskip(
     "netCDF4", "1.6.2"
 )
@@ -297,6 +335,7 @@ def create_test_data(
     seed: int | None = None,
     add_attrs: bool = True,
     dim_sizes: tuple[int, int, int] = _DEFAULT_TEST_DIM_SIZES,
+    use_extension_array: bool = False,
 ) -> Dataset:
     rs = np.random.RandomState(seed)
     _vars = {
@@ -319,14 +358,23 @@ def create_test_data(
         obj[v] = (dims, data)
         if add_attrs:
             obj[v].attrs = {"foo": "variable"}
-
+    if use_extension_array:
+        obj["var4"] = (
+            "dim1",
+            pd.Categorical(
+                np.random.choice(
+                    list(string.ascii_lowercase[: np.random.randint(5)]),
+                    size=dim_sizes[0],
+                )
+            ),
+        )
     if dim_sizes == _DEFAULT_TEST_DIM_SIZES:
         numbers_values = np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64")
     else:
         numbers_values = np.random.randint(0, 3, _dims["dim3"], dtype="int64")
     obj.coords["numbers"] = ("dim3", numbers_values)
     obj.encoding = {"foo": "bar"}
-    assert all(obj.data.flags.writeable for obj in obj.variables.values())
+    assert_writeable(obj)
     return obj
 
 
