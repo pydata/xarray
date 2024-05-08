@@ -231,7 +231,7 @@ def concat(
     <xarray.Dataset> Size: 16B
     Dimensions:  (x: 2)
     Coordinates:
-    * x        (x) int64 16B 0 0
+      * x        (x) int64 16B 0 0
     Data variables:
         *empty*
 

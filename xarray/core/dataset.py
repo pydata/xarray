@@ -4627,7 +4627,7 @@ class Dataset(
         <xarray.Dataset> Size: 8B
         Dimensions:  (x: 1)
         Coordinates:
-        * x        (x) int64 8B 0
+          * x        (x) int64 8B 0
         Data variables:
             *empty*
 
