@@ -1,7 +1,8 @@
-from typing import Callable, Any
 from collections.abc import Iterable
+from typing import Any, Callable
 
 import numpy as np
+
 from xarray.core import utils
 from xarray.core.indexing import ExplicitlyIndexed
 
@@ -80,7 +81,9 @@ def concatenate(
 
 
 @implements(np.stack)
-def stack(arrays: Iterable["ConcatenatableArray"], /, *, axis=0) -> "ConcatenatableArray":
+def stack(
+    arrays: Iterable["ConcatenatableArray"], /, *, axis=0
+) -> "ConcatenatableArray":
     if any(not isinstance(arr, ConcatenatableArray) for arr in arrays):
         raise TypeError
 
