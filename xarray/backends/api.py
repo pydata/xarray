@@ -1684,7 +1684,7 @@ def to_zarr(
                 f"``region`` with to_zarr(), got {append_dim} in both"
             )
 
-    if mode in ["a", "a-", "r+"]:
+    if encoding and mode in ["a", "a-", "r+"]:
         existing_var_names = set(zstore.zarr_group.array_keys())
         for var_name in existing_var_names:
             if var_name in encoding:
