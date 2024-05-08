@@ -166,7 +166,7 @@ def concat(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
-    create_index_for_new_dim : bool, default is True
+    create_index_for_new_dim : bool, default: True
         Whether to create a new ``PandasIndex`` object when the objects being concatenated contain scalar variables named ``dim``.
 
     Returns
