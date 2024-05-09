@@ -2992,7 +2992,7 @@ class ZarrBase(CFEncodedBase):
 
 
 def attach_counter(f):
-    counter = Counter()
+    counter: Counter = Counter()
 
     def wrapper(self, *args):
         if f.__name__ in ["__contains__", "__getitem__"] and args[0] == "zarr.json":
@@ -3003,7 +3003,7 @@ def attach_counter(f):
             counter.update(args[slice(1)]) if args else counter.update(("foo",))
         return f(self, *args)
 
-    wrapper.counter = counter
+    wrapper.counter = counter  # type: ignore[attr-defined]
     return wrapper
 
 
