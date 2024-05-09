@@ -2994,68 +2994,67 @@ class ZarrBase(CFEncodedBase):
 def attach_counter(f):
     counter: Counter = Counter()
 
-    def wrapper(self, *args):
+    def wrapper(*args):
         if f.__name__ in ["__contains__", "__getitem__"] and args[0] == "zarr.json":
             # ignore this spam
             pass
         else:
             print(f"Calling {f.__name__} with {args}")
             counter.update(args[slice(1)]) if args else counter.update(("foo",))
-        return f(self, *args)
+        return f(*args)
 
     wrapper.counter = counter  # type: ignore[attr-defined]
     return wrapper
 
 
-class CountingStore(KVStoreV3):
-    def __init__(self):
-        super().__init__({})
-        self.instrumented_methods = [
-            "__iter__",
-            "__contains__",
-            "__setitem__",
-            "__getitem__",
-            "listdir",
-            "list_prefix",
-        ]
+if KVStoreV3 is not None:
 
-    @attach_counter
-    def __iter__(self):
-        return super().__iter__()
+    class CountingStore(KVStoreV3):
+        def __init__(self):
+            super().__init__({})
+            methods = [
+                "__iter__",
+                "__contains__",
+                "__setitem__",
+                "__getitem__",
+                "listdir",
+                "list_prefix",
+            ]
+            self.instrumented_methods = {
+                method: attach_counter(getattr(super(), method)) for method in methods
+            }
 
-    @attach_counter
-    def listdir(self, *args, **kwargs):
-        return super().listdir(*args, **kwargs)
+        def __iter__(self):
+            return self.instrumented_methods["__iter__"]()
 
-    @attach_counter
-    def list_prefix(self, *args, **kwargs):
-        return super().list_prefix(*args, **kwargs)
+        def listdir(self, *args, **kwargs):
+            return self.instrumented_methods["listdir"](*args, **kwargs)
 
-    @attach_counter
-    def __contains__(self, key) -> bool:
-        return super().__contains__(key)
+        def list_prefix(self, *args, **kwargs):
+            return self.instrumented_methods["list_prefix"](*args, **kwargs)
 
-    @attach_counter
-    def __getitem__(self, key):
-        return super().__getitem__(key)
+        def __contains__(self, key) -> bool:
+            return self.instrumented_methods["__contains__"](key)
 
-    @attach_counter
-    def __setitem__(self, *args, **kwargs):
-        return super().__setitem__(*args, **kwargs)
+        def __getitem__(self, key):
+            return self.instrumented_methods["__getitem__"](key)
 
-    def summarize(self):
-        summary = {}
-        for method in self.instrumented_methods:
-            name = method.strip("__")
-            if counter := getattr(self, method).counter:
-                summary[name] = sum(counter.values())
-            else:
-                summary[name] = 0
-        return summary
+        def __setitem__(self, *args, **kwargs):
+            return self.instrumented_methods["__setitem__"](*args, **kwargs)
 
-    def reset(self):
-        for method in self.instrumented_methods:
-            getattr(self, method).counter.clear()
+        def summarize(self):
+            summary = {}
+            for name, method in self.instrumented_methods.items():
+                name = name.strip("__")
+                if counter := method.counter:
+                    summary[name] = sum(counter.values())
+                else:
+                    summary[name] = 0
+            return summary
+
+        def reset(self):
+            for method in self.instrumented_methods.values():
+                method.counter.clear()
 
 
 @requires_zarr
@@ -3063,10 +3062,12 @@ class CountingStore(KVStoreV3):
 class TestInstrumentedZarrStore:
     @contextlib.contextmanager
     def create_zarr_target(self):
-        store = CountingStore()
-        # TODO: avoid the need for this.
-        store.reset()
-        yield store
+        import zarr
+
+        if Version(zarr.__version__) < Version("2.18.0"):
+            pytest.skip("Instrumented tests only work on latest Zarr.")
+
+        yield CountingStore()
 
     def check_requests(self, expected, store):
         summary = store.summarize()
