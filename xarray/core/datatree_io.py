@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from collections.abc import Mapping, MutableMapping
 from os import PathLike
-from typing import Any
+from typing import Any, Literal, get_args
 
 from xarray.core.datatree import DataTree
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 
+T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf"]
 
-def _get_nc_dataset_class(engine: str | None):
+
+def _get_nc_dataset_class(engine: T_DataTreeNetcdfEngine | None):
     if engine == "netcdf4":
         from netCDF4 import Dataset
     elif engine == "h5netcdf":
@@ -24,7 +26,10 @@ def _get_nc_dataset_class(engine: str | None):
 
 
 def _create_empty_netcdf_group(
-    filename: str | PathLike, group: str, mode: NetcdfWriteModes, engine: str | None
+    filename: str | PathLike,
+    group: str,
+    mode: NetcdfWriteModes,
+    engine: T_DataTreeNetcdfEngine | None,
 ):
     ncDataset = _get_nc_dataset_class(engine)
 
@@ -50,7 +55,7 @@ def _datatree_to_netcdf(
         raise ValueError("to_netcdf only supports the NETCDF4 format")
 
     engine = kwargs.get("engine", None)
-    if engine not in [None, "netcdf4", "h5netcdf"]:
+    if engine not in [None, *get_args(T_DataTreeNetcdfEngine)]:
         raise ValueError("to_netcdf only supports the netcdf4 and h5netcdf engines")
 
     if kwargs.get("group", None) is not None:
