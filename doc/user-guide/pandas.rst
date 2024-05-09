@@ -110,6 +110,11 @@ work even if not the hierarchical index is not a full tensor product:
     s[::2]
     s[::2].to_xarray()
 
+Lossless and reversible converter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
 Multi-dimensional data
 ~~~~~~~~~~~~~~~~~~~~~~
 
