@@ -113,7 +113,55 @@ work even if not the hierarchical index is not a full tensor product:
 Lossless and reversible converter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+The previous example shows that the conversion is not reversible (lossless roundtrip) and that the size of the ``datasets`` increases.
 
+Another approach is to use a lossless and reversible conversion (e.g Third party `ntv-pandas`__ libraries). A dataset can then be shared
+between several tools.
+
+__ https://github.com/loco-philippe/ntv-pandas/blob/main/README.md
+
+DataFrame to Dataset or DataArray
+---------------------------------
+
+The conversion is done without loss, by finding the multidimensional structure hidden by the tabular structure.
+
+By applying this conversion to the DataFame above, we find the initial ``Dataset``:
+
+.. ipython:: python
+
+    df.npd.to_xarray()  # ``npd`` is the ``ntv-pandas`` accessor
+ 
+Dataset or DataArray to Dataframe
+---------------------------------
+
+In the other direction, information that is not supported by the DataFrame must be transferred to the DataFrame (e.g. ``attrs`` data).
+
+For this, pandas provides the ``attrs`` attribute.
+
+.. ipython:: python
+
+    ds = xr.Dataset(
+        {"foo": (("x", "y"), np.random.randn(2, 3))},
+        coords={
+            "x": [10, 20],
+            "y": ["a", "b", "c"],
+            "along_x": ("x", np.random.randn(2)),
+            "scalar": 123},
+        attrs={"example": "test npd"}
+    )
+    ds
+
+After reverse conversion, we find the initial ``Dataset``:
+
+.. ipython:: python
+
+    df = npd.from_xarray(ds)
+
+    df.npd.to_xarray()
+
+.. note::
+
+    The pandas ``attrs`` attribute is still experimental (some operations remove it). The associated information must therefore be processed as a priority
 
 Multi-dimensional data
 ~~~~~~~~~~~~~~~~~~~~~~
