@@ -15,10 +15,16 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2024.04.0:
+.. _whats-new.2024.05.0:
 
-v2024.04.0 (unreleased)
------------------------
+v2024.05.0 (May 10, 2024)
+-------------------------
+
+This release brings support for pandas ExtensionArray objects, optimizations when reading Zarr, the ability to concatenate datasets without pandas indexes,
+and the migration of most of the xarray-datatree project code into xarray `main`!
+
+Thanks to the 18 contributors to this release:
+Aimilios Tsouvelekakis, Andrey Akinshin, Deepak Cherian, Eni Awowale, Ilan Gold, Illviljan, Justus Magin, Mark Harfouche, Matt Savoie, Maximilian Roos, Noah C. Benson, Pascal Bourgault, Ray Bell, Spencer Clark, Tom Nicholas, ignamv, owenlittlejohns, and saschahofmann.
 
 New Features
 ~~~~~~~~~~~~
@@ -42,7 +48,6 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 - The PyNIO backend has been deleted (:issue:`4491`, :pull:`7301`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
 - The minimum versions of some dependencies were changed, in particular our minimum supported pandas version is now Pandas 2.
 
   ===================== =========  =======
@@ -60,7 +65,6 @@ Breaking changes
    zarr                      2.13     2.14
   ===================== =========  =======
 
-
 Bug fixes
 ~~~~~~~~~
 - Following `an upstream bug fix
@@ -69,7 +73,6 @@ Bug fixes
   :py:func:`xarray.cftime_range` with negative frequencies will now fall fully
   within the bounds of the provided start and end dates (:pull:`8999`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
-
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -90,7 +93,6 @@ Internal Changes
   rather than ``dims`` or ``dimensions``. This is the final change to make xarray methods
   consistent with their use of ``dim``. Using the existing kwarg will raise a
   warning. By `Maximilian Roos <https://github.com/max-sixty>`_
-
 
 .. _whats-new.2024.03.0:
 
