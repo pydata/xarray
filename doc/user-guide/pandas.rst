@@ -130,7 +130,7 @@ By applying this conversion to the DataFame above, we find the initial ``Dataset
 .. ipython:: python
 
     df.npd.to_xarray()  # ``npd`` is the ``ntv-pandas`` accessor
- 
+
 Dataset or DataArray to Dataframe
 ---------------------------------
 
@@ -146,8 +146,9 @@ For this, pandas provides the ``attrs`` attribute.
             "x": [10, 20],
             "y": ["a", "b", "c"],
             "along_x": ("x", np.random.randn(2)),
-            "scalar": 123},
-        attrs={"example": "test npd"}
+            "scalar": 123,
+        },
+        attrs={"example": "test npd"},
     )
     ds
 
