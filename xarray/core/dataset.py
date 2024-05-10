@@ -4513,7 +4513,7 @@ class Dataset(
         self,
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
         axis: None | int | Sequence[int] = None,
-        create_index: bool = True,
+        create_index_for_new_dim: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
         """Return a new object with an additional axis (or axes) inserted at
@@ -4524,7 +4524,7 @@ class Dataset(
         coordinate consisting of a single value.
 
         The automatic creation of indexes to back new 1D coordinate variables
-        controlled by the create_index kwarg.
+        controlled by the create_index_for_new_dim kwarg.
 
         Parameters
         ----------
@@ -4541,8 +4541,8 @@ class Dataset(
             multiple axes are inserted. In this case, dim arguments should be
             same length list. If axis=None is passed, all the axes will be
             inserted to the start of the result array.
-        create_index : bool, default is True
-            Whether to create new PandasIndex objects for any new 1D coordinate variables.
+        create_index_for_new_dim : bool, default: True
+            Whether to create new ``PandasIndex`` objects when the object being expanded contains scalar variables with names in ``dim``.
         **dim_kwargs : int or sequence or ndarray
             The keywords are arbitrary dimensions being inserted and the values
             are either the lengths of the new dims (if int is given), or their
@@ -4612,6 +4612,33 @@ class Dataset(
         Data variables:
             temperature  (y, x, time) float64 96B 0.5488 0.7152 0.6028 ... 0.7917 0.5289
 
+        # Expand a scalar variable along a new dimension of the same name with and without creating a new index
+
+        >>> ds = xr.Dataset(coords={"x": 0})
+        >>> ds
+        <xarray.Dataset> Size: 8B
+        Dimensions:  ()
+        Coordinates:
+            x        int64 8B 0
+        Data variables:
+            *empty*
+
+        >>> ds.expand_dims("x")
+        <xarray.Dataset> Size: 8B
+        Dimensions:  (x: 1)
+        Coordinates:
+          * x        (x) int64 8B 0
+        Data variables:
+            *empty*
+
+        >>> ds.expand_dims("x").indexes
+        Indexes:
+            x        Index([0], dtype='int64', name='x')
+
+        >>> ds.expand_dims("x", create_index_for_new_dim=False).indexes
+        Indexes:
+            *empty*
+
         See Also
         --------
         DataArray.expand_dims
@@ -4663,7 +4690,7 @@ class Dataset(
                 # value within the dim dict to the length of the iterable
                 # for later use.
 
-                if create_index:
+                if create_index_for_new_dim:
                     index = PandasIndex(v, k)
                     indexes[k] = index
                     name_and_new_1d_var = index.create_variables()
@@ -4705,14 +4732,14 @@ class Dataset(
                     variables[k] = v.set_dims(dict(all_dims))
             else:
                 if k not in variables:
-                    if k in coord_names and create_index:
+                    if k in coord_names and create_index_for_new_dim:
                         # If dims includes a label of a non-dimension coordinate,
                         # it will be promoted to a 1D coordinate with a single value.
                         index, index_vars = create_default_index_implicit(v.set_dims(k))
                         indexes[k] = index
                         variables.update(index_vars)
                     else:
-                        if create_index:
+                        if create_index_for_new_dim:
                             warnings.warn(
                                 f"No index created for dimension {k} because variable {k} is not a coordinate. "
                                 f"To create an index for {k}, please first call `.set_coords('{k}')` on this object.",
@@ -5400,7 +5427,7 @@ class Dataset(
                [3, 4, 5, 7]])
         Coordinates:
           * z         (z) object 32B MultiIndex
-          * variable  (z) object 32B 'a' 'a' 'a' 'b'
+          * variable  (z) <U1 16B 'a' 'a' 'a' 'b'
           * y         (z) object 32B 'u' 'v' 'w' nan
         Dimensions without coordinates: x
 

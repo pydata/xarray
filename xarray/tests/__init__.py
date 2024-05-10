@@ -16,16 +16,21 @@ from pandas.testing import assert_frame_equal  # noqa: F401
 
 import xarray.testing
 from xarray import Dataset
-from xarray.core import utils
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.extension_array import PandasExtensionArray
-from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
 from xarray.core.variable import IndexVariable
 from xarray.testing import (  # noqa: F401
     assert_chunks_equal,
     assert_duckarray_allclose,
     assert_duckarray_equal,
+)
+from xarray.tests.arrays import (  # noqa: F401
+    ConcatenatableArray,
+    DuckArrayWrapper,
+    FirstElementAccessibleArray,
+    InaccessibleArray,
+    UnexpectedDataAccess,
 )
 
 # import mpl and change the backend before other mpl imports
@@ -130,6 +135,7 @@ has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
 has_pandas_ge_2_2, __ = _importorskip("pandas", "2.2")
+has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0.dev0")
 
 
 # some special cases
@@ -213,51 +219,6 @@ def raise_if_dask_computes(max_computes=0):
 
 flaky = pytest.mark.flaky
 network = pytest.mark.network
-
-
-class UnexpectedDataAccess(Exception):
-    pass
-
-
-class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
-    """Disallows any loading."""
-
-    def __init__(self, array):
-        self.array = array
-
-    def get_duck_array(self):
-        raise UnexpectedDataAccess("Tried accessing data")
-
-    def __array__(self, dtype: np.typing.DTypeLike = None):
-        raise UnexpectedDataAccess("Tried accessing data")
-
-    def __getitem__(self, key):
-        raise UnexpectedDataAccess("Tried accessing data.")
-
-
-class FirstElementAccessibleArray(InaccessibleArray):
-    def __getitem__(self, key):
-        tuple_idxr = key.tuple
-        if len(tuple_idxr) > 1:
-            raise UnexpectedDataAccess("Tried accessing more than one element.")
-        return self.array[tuple_idxr]
-
-
-class DuckArrayWrapper(utils.NDArrayMixin):
-    """Array-like that prevents casting to array.
-    Modeled after cupy."""
-
-    def __init__(self, array: np.ndarray):
-        self.array = array
-
-    def __getitem__(self, key):
-        return type(self)(self.array[key])
-
-    def __array__(self, dtype: np.typing.DTypeLike = None):
-        raise UnexpectedDataAccess("Tried accessing data")
-
-    def __array_namespace__(self):
-        """Present to satisfy is_duck_array test."""
 
 
 class ReturnItem:

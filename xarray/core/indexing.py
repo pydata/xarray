@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from xarray.core.indexes import Index
     from xarray.core.variable import Variable
     from xarray.namedarray._typing import _Chunks, _IndexerKey, _Shape, duckarray
+    from xarray.namedarray._typing import _IndexerKey, _Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 

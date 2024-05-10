@@ -874,7 +874,7 @@ and then calling ``to_zarr`` with ``compute=False`` to write only metadata
     # The values of this dask array are entirely irrelevant; only the dtype,
     # shape and chunks are used
     dummies = dask.array.zeros(30, chunks=10)
-    ds = xr.Dataset({"foo": ("x", dummies)})
+    ds = xr.Dataset({"foo": ("x", dummies)}, coords={"x": np.arange(30)})
     path = "path/to/directory.zarr"
     # Now we write the metadata without computing any array values
     ds.to_zarr(path, compute=False)
@@ -890,7 +890,7 @@ where the data should be written (in index space, not label space), e.g.,
 
     # For convenience, we'll slice a single dataset, but in the real use-case
     # we would create them separately possibly even from separate processes.
-    ds = xr.Dataset({"foo": ("x", np.arange(30))})
+    ds = xr.Dataset({"foo": ("x", np.arange(30))}, coords={"x": np.arange(30)})
     # Any of the following region specifications are valid
     ds.isel(x=slice(0, 10)).to_zarr(path, region="auto")
     ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": "auto"})
