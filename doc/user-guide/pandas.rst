@@ -129,8 +129,10 @@ By applying this conversion to the DataFame above, we find the initial ``Dataset
 
 .. ipython:: python
 
-    df.npd.to_xarray()  # ``npd`` is the ``ntv-pandas`` accessor
- 
+    import ntv_pandas as npd
+
+    df.npd.to_xarray()
+
 Dataset or DataArray to Dataframe
 ---------------------------------
 
