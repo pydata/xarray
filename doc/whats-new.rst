@@ -89,6 +89,9 @@ Internal Changes
   `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Migrates ``ops.py`` functionality into ``xarray/core/datatree_ops.py`` (:pull:`8976`)
   By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Migrates ``iterator`` functionality into ``xarray/core`` (:pull: `8879`)
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
+  <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
 - ``transpose``, ``set_dims``, ``stack`` & ``unstack`` now use a ``dim`` kwarg
   rather than ``dims`` or ``dimensions``. This is the final change to make xarray methods
   consistent with their use of ``dim``. Using the existing kwarg will raise a
@@ -169,9 +172,6 @@ Internal Changes
   By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
   <https://github.com/TomNicholas>`_.
 - Migrates ``datatree`` functionality into ``xarray/core``. (:pull: `8789`)
-  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
-  <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
-- Migrates ``iterator`` functionality into ``xarray/core`` (:pull: `8879`)
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
   <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
 
