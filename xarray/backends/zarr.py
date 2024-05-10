@@ -1274,9 +1274,8 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             if len(zarr_st) == 0:
                 raise KeyError("open_datatree() got unexpected group: " + group)
             if len(zarr_st) == 1:
-                return open_dataset(
-                    filename_or_obj, group=group, engine="zarr", **kwargs
-                )
+                ds = open_dataset(filename_or_obj, group=group, engine="zarr", **kwargs)
+                return DataTree.from_dict({"/": ds})
         else:
             zarr_st = list(
                 _iter_zarr_groups(zarr.open_group(filename_or_obj, **kwargs))
