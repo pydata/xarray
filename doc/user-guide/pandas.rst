@@ -148,8 +148,9 @@ For this, pandas provides the ``attrs`` attribute.
             "x": [10, 20],
             "y": ["a", "b", "c"],
             "along_x": ("x", np.random.randn(2)),
-            "scalar": 123},
-        attrs={"example": "test npd"}
+            "scalar": 123,
+        },
+        attrs={"example": "test npd"},
     )
     ds
 
