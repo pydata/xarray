@@ -13,7 +13,6 @@ import sys
 import tempfile
 import uuid
 import warnings
-from collections import Counter
 from collections.abc import Generator, Iterator, Mapping
 from contextlib import ExitStack
 from io import BytesIO
@@ -2991,75 +2990,18 @@ class ZarrBase(CFEncodedBase):
             assert original.chunks == actual.chunks
 
 
-def attach_counter(f):
-    counter: Counter = Counter()
-
-    def wrapper(*args):
-        if f.__name__ in ["__contains__", "__getitem__"] and args[0] == "zarr.json":
-            # ignore this spam
-            pass
-        else:
-            print(f"Calling {f.__name__} with {args}")
-            counter.update(args[slice(1)]) if args else counter.update(("foo",))
-        return f(*args)
-
-    wrapper.counter = counter  # type: ignore[attr-defined]
-    return wrapper
-
-
-if KVStoreV3 is not None:
-
-    class CountingStore(KVStoreV3):
-        def __init__(self):
-            super().__init__({})
-            methods = [
-                "__iter__",
-                "__contains__",
-                "__setitem__",
-                "__getitem__",
-                "listdir",
-                "list_prefix",
-            ]
-            self.instrumented_methods = {
-                method: attach_counter(getattr(super(), method)) for method in methods
-            }
-
-        def __iter__(self):
-            return self.instrumented_methods["__iter__"]()
-
-        def listdir(self, *args, **kwargs):
-            return self.instrumented_methods["listdir"](*args, **kwargs)
-
-        def list_prefix(self, *args, **kwargs):
-            return self.instrumented_methods["list_prefix"](*args, **kwargs)
-
-        def __contains__(self, key) -> bool:
-            return self.instrumented_methods["__contains__"](key)
-
-        def __getitem__(self, key):
-            return self.instrumented_methods["__getitem__"](key)
-
-        def __setitem__(self, *args, **kwargs):
-            return self.instrumented_methods["__setitem__"](*args, **kwargs)
-
-        def summarize(self):
-            summary = {}
-            for name, method in self.instrumented_methods.items():
-                name = name.strip("__")
-                if counter := method.counter:
-                    summary[name] = sum(counter.values())
-                else:
-                    summary[name] = 0
-            return summary
-
-        def reset(self):
-            for method in self.instrumented_methods.values():
-                method.counter.clear()
-
-
 @requires_zarr
 @pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
 class TestInstrumentedZarrStore:
+    methods = [
+        "__iter__",
+        "__contains__",
+        "__setitem__",
+        "__getitem__",
+        "listdir",
+        "list_prefix",
+    ]
+
     @contextlib.contextmanager
     def create_zarr_target(self):
         import zarr
@@ -3067,19 +3009,40 @@ class TestInstrumentedZarrStore:
         if Version(zarr.__version__) < Version("2.18.0"):
             pytest.skip("Instrumented tests only work on latest Zarr.")
 
-        yield CountingStore()
+        store = KVStoreV3({})
+        yield store
 
-    def check_requests(self, expected, store):
-        summary = store.summarize()
+    def make_patches(self, store):
+        from unittest.mock import MagicMock
+
+        return {
+            method: MagicMock(
+                f"KVStoreV3.{method}",
+                side_effect=getattr(store, method),
+                autospec=True,
+            )
+            for method in self.methods
+        }
+
+    def summarize(self, patches):
+        summary = {}
+        for name, patch_ in patches.items():
+            count = 0
+            for call in patch_.mock_calls:
+                if "zarr.json" not in call.args:
+                    count += 1
+            summary[name.strip("__")] = count
+        return summary
+
+    def check_requests(self, expected, patches):
+        summary = self.summarize(patches)
         for k in summary:
             assert summary[k] <= expected[k], (k, summary)
-        store.reset()
 
     def test_append(self) -> None:
         original = Dataset({"foo": ("x", [1])}, coords={"x": [0]})
         modified = Dataset({"foo": ("x", [2])}, coords={"x": [1]})
         with self.create_zarr_target() as store:
-            original.to_zarr(store)
             expected = {
                 "iter": 2,
                 "contains": 9,
@@ -3088,9 +3051,12 @@ class TestInstrumentedZarrStore:
                 "listdir": 2,
                 "list_prefix": 2,
             }
-            self.check_requests(expected, store)
+            patches = self.make_patches(store)
+            with patch.multiple(KVStoreV3, **patches):
+                original.to_zarr(store)
+            self.check_requests(expected, patches)
 
-            modified.to_zarr(store, mode="a", append_dim="x")
+            patches = self.make_patches(store)
             # v2024.03.0: {'iter': 6, 'contains': 2, 'setitem': 5, 'getitem': 10, 'listdir': 6, 'list_prefix': 0}
             # 6057128b: {'iter': 5, 'contains': 2, 'setitem': 5, 'getitem': 10, "listdir": 5, "list_prefix": 0}
             expected = {
@@ -3101,9 +3067,11 @@ class TestInstrumentedZarrStore:
                 "listdir": 2,
                 "list_prefix": 0,
             }
-            self.check_requests(expected, store)
+            with patch.multiple(KVStoreV3, **patches):
+                modified.to_zarr(store, mode="a", append_dim="x")
+            self.check_requests(expected, patches)
 
-            modified.to_zarr(store, mode="a-", append_dim="x")
+            patches = self.make_patches(store)
             expected = {
                 "iter": 2,
                 "contains": 2,
@@ -3112,7 +3080,9 @@ class TestInstrumentedZarrStore:
                 "listdir": 2,
                 "list_prefix": 0,
             }
-            self.check_requests(expected, store)
+            with patch.multiple(KVStoreV3, **patches):
+                modified.to_zarr(store, mode="a-", append_dim="x")
+            self.check_requests(expected, patches)
 
             with open_dataset(store, engine="zarr") as actual:
                 assert_identical(
@@ -3123,7 +3093,6 @@ class TestInstrumentedZarrStore:
     def test_region_write(self) -> None:
         ds = Dataset({"foo": ("x", [1, 2, 3])}, coords={"x": [0, 1, 2]}).chunk()
         with self.create_zarr_target() as store:
-            ds.to_zarr(store, mode="w", compute=False)
             expected = {
                 "iter": 2,
                 "contains": 7,
@@ -3132,9 +3101,11 @@ class TestInstrumentedZarrStore:
                 "listdir": 2,
                 "list_prefix": 4,
             }
-            self.check_requests(expected, store)
+            patches = self.make_patches(store)
+            with patch.multiple(KVStoreV3, **patches):
+                ds.to_zarr(store, mode="w", compute=False)
+            self.check_requests(expected, patches)
 
-            ds.to_zarr(store, region={"x": slice(None)})
             # v2024.03.0: {'iter': 5, 'contains': 2, 'setitem': 1, 'getitem': 6, 'listdir': 5, 'list_prefix': 0}
             # 6057128b: {'iter': 4, 'contains': 2, 'setitem': 1, 'getitem': 5, 'listdir': 4, 'list_prefix': 0}
             expected = {
@@ -3145,9 +3116,11 @@ class TestInstrumentedZarrStore:
                 "listdir": 2,
                 "list_prefix": 0,
             }
-            self.check_requests(expected, store)
+            patches = self.make_patches(store)
+            with patch.multiple(KVStoreV3, **patches):
+                ds.to_zarr(store, region={"x": slice(None)})
+            self.check_requests(expected, patches)
 
-            ds.to_zarr(store, region="auto")
             # v2024.03.0: {'iter': 6, 'contains': 4, 'setitem': 1, 'getitem': 11, 'listdir': 6, 'list_prefix': 0}
             # 6057128b: {'iter': 4, 'contains': 2, 'setitem': 1, 'getitem': 7, 'listdir': 4, 'list_prefix': 0}
             expected = {
@@ -3158,7 +3131,10 @@ class TestInstrumentedZarrStore:
                 "listdir": 2,
                 "list_prefix": 0,
             }
-            self.check_requests(expected, store)
+            patches = self.make_patches(store)
+            with patch.multiple(KVStoreV3, **patches):
+                ds.to_zarr(store, region="auto")
+            self.check_requests(expected, patches)
 
             expected = {
                 "iter": 1,
@@ -3168,9 +3144,11 @@ class TestInstrumentedZarrStore:
                 "listdir": 1,
                 "list_prefix": 0,
             }
-            with open_dataset(store, engine="zarr") as actual:
-                assert_identical(actual, ds)
-            self.check_requests(expected, store)
+            patches = self.make_patches(store)
+            with patch.multiple(KVStoreV3, **patches):
+                with open_dataset(store, engine="zarr") as actual:
+                    assert_identical(actual, ds)
+            self.check_requests(expected, patches)
 
 
 @requires_zarr
