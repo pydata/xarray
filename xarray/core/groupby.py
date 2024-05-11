@@ -37,7 +37,6 @@ from xarray.core.types import (
     T_Xarray,
 )
 from xarray.core.utils import (
-    FrozenMappingWarningOnValuesAccess,
     contains_only_chunked_or_numpy,
     either_dict_or_kwargs,
     emit_user_level_warning,
@@ -1775,7 +1774,18 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
     _dims: Frozen[Hashable, int] | None
 
     @property
-    def dims(self) -> Frozen[Hashable, int]:
+    def dims(self) -> frozenset[Hashable]:
+        """Set of dimension names.
+
+        Immutable.
+
+        See Also
+        --------
+        DataArray.dims
+        DataArray.sizes
+        Dataset.sizes
+        """
+
         if self._dims is None:
             (grouper,) = self.groupers
             index = _maybe_squeeze_indices(
@@ -1786,7 +1796,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
             )
             self._dims = self._obj.isel({self._group_dim: index}).dims
 
-        return FrozenMappingWarningOnValuesAccess(self._dims)
+        return frozenset(self._dims.keys())
 
     def map(
         self,
