@@ -76,6 +76,8 @@ Bug fixes
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Enforces failures on CI when tests raise warnings from within xarray (:pull:`8974`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Migrates ``formatting_html`` functionality for ``DataTree`` into ``xarray/core`` (:pull: `8930`)
   By `Eni Awowale <https://github.com/eni-awowale>`_, `Julia Signell <https://github.com/jsignell>`_
   and `Tom Nicholas <https://github.com/TomNicholas>`_.
@@ -93,9 +95,10 @@ Internal Changes
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
   <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
 - ``transpose``, ``set_dims``, ``stack`` & ``unstack`` now use a ``dim`` kwarg
-  rather than ``dims`` or ``dimensions``. This is the final change to make xarray methods
-  consistent with their use of ``dim``. Using the existing kwarg will raise a
-  warning. By `Maximilian Roos <https://github.com/max-sixty>`_
+  rather than ``dims`` or ``dimensions``. This is the final change to unify
+  xarray functions to use ``dim``. Using the existing kwarg will raise a
+  warning.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.2024.03.0:
 
