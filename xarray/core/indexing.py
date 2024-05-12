@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
     from xarray.core.indexes import Index
     from xarray.core.variable import Variable
-    from xarray.namedarray._typing import _IndexerKey, _Shape, duckarray
+    from xarray.namedarray._typing import _Chunks, _IndexerKey, _Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
@@ -218,22 +218,22 @@ def expanded_indexer(key, ndim: int) -> tuple[Any, ...]:
     if not isinstance(key, tuple):
         # numpy treats non-tuple keys equivalent to tuples of length 1
         key = (key,)
-    new_key = []
+    new_key = ()
     # handling Ellipsis right is a little tricky, see:
     # https://numpy.org/doc/stable/reference/arrays.indexing.html#advanced-indexing
     found_ellipsis = False
     for k in key:
         if k is Ellipsis:
             if not found_ellipsis:
-                new_key.extend((ndim + 1 - len(key)) * [slice(None)])
+                new_key += (slice(None),) * (ndim + 1 - len(key))
                 found_ellipsis = True
             else:
-                new_key.append(slice(None))
+                new_key += (slice(None),)
         else:
-            new_key.append(k)
+            new_key += (k,)
     if len(new_key) > ndim:
         raise IndexError("too many indices")
-    new_key.extend((ndim - len(new_key)) * [slice(None)])
+    new_key += (slice(None),) * (ndim - len(new_key))
     return tuple(new_key)
 
 
@@ -388,7 +388,7 @@ class BasicIndexer(ExplicitIndexer):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
-        new_key = []
+        new_key: tuple[int | np.integer | slice, ...] = ()
         for k in key:
             if isinstance(k, integer_types):
                 k = int(k)
@@ -398,9 +398,9 @@ class BasicIndexer(ExplicitIndexer):
                 raise TypeError(
                     f"unexpected indexer type for {type(self).__name__}: {k!r}"
                 )
-            new_key.append(k)
+            new_key += (k,)
 
-        super().__init__(tuple(new_key))
+        super().__init__(new_key)
 
 
 class OuterIndexer(ExplicitIndexer):
@@ -423,7 +423,9 @@ class OuterIndexer(ExplicitIndexer):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
-        new_key = []
+        new_key: tuple[
+            int | np.integer | slice | np.ndarray[Any, np.dtype[np.generic]], ...
+        ] = ()
         for k in key:
             if isinstance(k, integer_types):
                 k = int(k)
@@ -444,9 +446,9 @@ class OuterIndexer(ExplicitIndexer):
                 raise TypeError(
                     f"unexpected indexer type for {type(self).__name__}: {k!r}"
                 )
-            new_key.append(k)
+            new_key += (k,)
 
-        super().__init__(tuple(new_key))
+        super().__init__(new_key)
 
 
 class VectorizedIndexer(ExplicitIndexer):
@@ -465,7 +467,7 @@ class VectorizedIndexer(ExplicitIndexer):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
-        new_key = []
+        new_key: tuple[slice | np.ndarray[Any, np.dtype[np.generic]], ...] = ()
         ndim = None
         for k in key:
             if isinstance(k, slice):
@@ -494,9 +496,9 @@ class VectorizedIndexer(ExplicitIndexer):
                 raise TypeError(
                     f"unexpected indexer type for {type(self).__name__}: {k!r}"
                 )
-            new_key.append(k)
+            new_key += (k,)
 
-        super().__init__(tuple(new_key))
+        super().__init__(new_key)
 
 
 class ExplicitlyIndexed:
@@ -599,7 +601,7 @@ BackendArray_fallback_warning_message = (
 class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and outer indexing lazy."""
 
-    __slots__ = ("array", "key")
+    __slots__ = ("array", "key", "_shape")
 
     def __init__(self, array: Any, key: ExplicitIndexer | None = None):
         """
@@ -622,6 +624,14 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         self.array = as_indexable(array)
         self.key = key
 
+        shape: _Shape = ()
+        for size, k in zip(self.array.shape, self.key.tuple):
+            if isinstance(k, slice):
+                shape += (len(range(*k.indices(size))),)
+            elif isinstance(k, np.ndarray):
+                shape += (k.size,)
+        self._shape = shape
+
     def _updated_key(
         self, new_key: ExplicitIndexer | _IndexerKey
     ) -> BasicIndexer | OuterIndexer:
@@ -629,27 +639,20 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
             new_key.tuple if isinstance(new_key, ExplicitIndexer) else new_key
         )
         iter_new_key = iter(expanded_indexer(_new_key_tuple, self.ndim))
-        full_key = []
+        full_key: tuple[int | np.integer, ...] = ()
         for size, k in zip(self.array.shape, self.key.tuple):
             if isinstance(k, integer_types):
-                full_key.append(k)
+                full_key += (k,)
             else:
-                full_key.append(_index_indexer_1d(k, next(iter_new_key), size))
-        full_key_tuple = tuple(full_key)
+                full_key += (_index_indexer_1d(k, next(iter_new_key), size),)
 
-        if all(isinstance(k, integer_types + (slice,)) for k in full_key_tuple):
-            return BasicIndexer(full_key_tuple)
-        return OuterIndexer(full_key_tuple)
+        if all(isinstance(k, integer_types + (slice,)) for k in full_key):
+            return BasicIndexer(full_key)
+        return OuterIndexer(full_key)
 
     @property
     def shape(self) -> _Shape:
-        shape = []
-        for size, k in zip(self.array.shape, self.key.tuple):
-            if isinstance(k, slice):
-                shape.append(len(range(*k.indices(size))))
-            elif isinstance(k, np.ndarray):
-                shape.append(k.size)
-        return tuple(shape)
+        return self._shape
 
     def get_duck_array(self):
         try:
@@ -924,18 +927,18 @@ def _outer_to_vectorized_indexer(
 
     n_dim = len([k for k in key if not isinstance(k, integer_types)])
     i_dim = 0
-    new_key = []
+    new_key: tuple[slice | np.ndarray[Any, np.dtype[np.generic]], ...] = ()
     for k, size in zip(key, shape):
         if isinstance(k, integer_types):
-            new_key.append(np.array(k).reshape((1,) * n_dim))
+            new_key += (np.array(k).reshape((1,) * n_dim),)
         else:  # np.ndarray or slice
             if isinstance(k, slice):
                 k = np.arange(*k.indices(size))
             assert k.dtype.kind in {"i", "u"}
             new_shape = [(1,) * i_dim + (k.size,) + (1,) * (n_dim - i_dim - 1)]
-            new_key.append(k.reshape(*new_shape))
+            new_key += (k.reshape(*new_shape),)
             i_dim += 1
-    return VectorizedIndexer(tuple(new_key))
+    return VectorizedIndexer(new_key)
 
 
 def _outer_to_numpy_indexer(indexer: BasicIndexer | OuterIndexer, shape: _Shape):
@@ -1174,8 +1177,10 @@ def _decompose_vectorized_indexer(
     if indexing_support is IndexingSupport.VECTORIZED:
         return indexer, BasicIndexer(())
 
-    backend_indexer_elems = []
-    np_indexer_elems = []
+    backend_indexer_elems: tuple[
+        int | np.integer | slice | np.ndarray[Any, np.dtype[np.generic]], ...
+    ] = ()
+    np_indexer_elems: tuple[slice | np.ndarray[Any, np.dtype[np.generic]], ...] = ()
     # convert negative indices
     indexer_elems = [
         np.where(k < 0, k + s, k) if isinstance(k, np.ndarray) else k
@@ -1188,17 +1193,17 @@ def _decompose_vectorized_indexer(
             # (but make its step positive) in the backend,
             # and then use all of it (slice(None)) for the in-memory portion.
             bk_slice, np_slice = _decompose_slice(k, s)
-            backend_indexer_elems.append(bk_slice)
-            np_indexer_elems.append(np_slice)
+            backend_indexer_elems += (bk_slice,)
+            np_indexer_elems += (np_slice,)
         else:
             # If it is a (multidimensional) np.ndarray, just pickup the used
             # keys without duplication and store them as a 1d-np.ndarray.
             oind, vind = np.unique(k, return_inverse=True)
-            backend_indexer_elems.append(oind)
-            np_indexer_elems.append(vind.reshape(*k.shape))
+            backend_indexer_elems += (oind,)
+            np_indexer_elems += (vind.reshape(*k.shape),)
 
-    backend_indexer = OuterIndexer(tuple(backend_indexer_elems))
-    np_indexer = VectorizedIndexer(tuple(np_indexer_elems))
+    backend_indexer = OuterIndexer(backend_indexer_elems)
+    np_indexer = VectorizedIndexer(np_indexer_elems)
 
     if indexing_support is IndexingSupport.OUTER:
         return backend_indexer, np_indexer
@@ -1253,8 +1258,8 @@ def _decompose_outer_indexer(
            [14, 15, 14],
            [ 8,  9,  8]])
     """
-    backend_indexer: list[Any] = []
-    np_indexer: list[Any] = []
+    backend_indexer: tuple[Any, ...] = ()
+    np_indexer: tuple[Any, ...] = ()
 
     assert isinstance(indexer, (OuterIndexer, BasicIndexer))
 
@@ -1264,23 +1269,23 @@ def _decompose_outer_indexer(
                 # If it is a slice, then we will slice it as-is
                 # (but make its step positive) in the backend,
                 bk_slice, np_slice = _decompose_slice(k, s)
-                backend_indexer.append(bk_slice)
-                np_indexer.append(np_slice)
+                backend_indexer += (bk_slice,)
+                np_indexer += (np_slice,)
             else:
-                backend_indexer.append(k)
+                backend_indexer += (k,)
                 if not is_scalar(k):
-                    np_indexer.append(slice(None))
-        return type(indexer)(tuple(backend_indexer)), BasicIndexer(tuple(np_indexer))
+                    np_indexer += (slice(None),)
+        return type(indexer)(backend_indexer), BasicIndexer(np_indexer)
 
     # make indexer positive
-    pos_indexer: list[np.ndarray | int | np.number] = []
+    pos_indexer: tuple[np.ndarray | int | np.number, ...] = ()
     for k, s in zip(indexer.tuple, shape):
         if isinstance(k, np.ndarray):
-            pos_indexer.append(np.where(k < 0, k + s, k))
+            pos_indexer += (np.where(k < 0, k + s, k),)
         elif isinstance(k, integer_types) and k < 0:
-            pos_indexer.append(k + s)
+            pos_indexer += (k + s,)
         else:
-            pos_indexer.append(k)
+            pos_indexer += (k,)
     indexer_elems = pos_indexer
 
     if indexing_support is IndexingSupport.OUTER_1VECTOR:
@@ -1300,41 +1305,41 @@ def _decompose_outer_indexer(
             if isinstance(k, np.ndarray) and i != array_index:
                 # np.ndarray key is converted to slice that covers the entire
                 # entries of this key.
-                backend_indexer.append(slice(np.min(k), np.max(k) + 1))
-                np_indexer.append(k - np.min(k))
+                backend_indexer += (slice(np.min(k), np.max(k) + 1),)
+                np_indexer += (k - np.min(k),)
             elif isinstance(k, np.ndarray):
                 # Remove duplicates and sort them in the increasing order
                 pkey, ekey = np.unique(k, return_inverse=True)
-                backend_indexer.append(pkey)
-                np_indexer.append(ekey)
+                backend_indexer += (pkey,)
+                np_indexer += (ekey,)
             elif isinstance(k, integer_types):
-                backend_indexer.append(k)
+                backend_indexer += (k,)
             else:  # slice:  convert positive step slice for backend
                 bk_slice, np_slice = _decompose_slice(k, s)
-                backend_indexer.append(bk_slice)
-                np_indexer.append(np_slice)
+                backend_indexer += (bk_slice,)
+                np_indexer += (np_slice,)
 
-        return (OuterIndexer(tuple(backend_indexer)), OuterIndexer(tuple(np_indexer)))
+        return OuterIndexer(backend_indexer), OuterIndexer(np_indexer)
 
     if indexing_support == IndexingSupport.OUTER:
         for k, s in zip(indexer_elems, shape):
             if isinstance(k, slice):
                 # slice:  convert positive step slice for backend
                 bk_slice, np_slice = _decompose_slice(k, s)
-                backend_indexer.append(bk_slice)
-                np_indexer.append(np_slice)
+                backend_indexer += (bk_slice,)
+                np_indexer += (np_slice,)
             elif isinstance(k, integer_types):
-                backend_indexer.append(k)
+                backend_indexer += (k,)
             elif isinstance(k, np.ndarray) and (np.diff(k) >= 0).all():
-                backend_indexer.append(k)
-                np_indexer.append(slice(None))
+                backend_indexer += (k,)
+                np_indexer += (slice(None),)
             else:
                 # Remove duplicates and sort them in the increasing order
                 oind, vind = np.unique(k, return_inverse=True)
-                backend_indexer.append(oind)
-                np_indexer.append(vind.reshape(*k.shape))
+                backend_indexer += (oind,)
+                np_indexer += (vind.reshape(*k.shape),)
 
-        return (OuterIndexer(tuple(backend_indexer)), OuterIndexer(tuple(np_indexer)))
+        return OuterIndexer(backend_indexer), OuterIndexer(np_indexer)
 
     # basic indexer
     assert indexing_support == IndexingSupport.BASIC
@@ -1343,16 +1348,16 @@ def _decompose_outer_indexer(
         if isinstance(k, np.ndarray):
             # np.ndarray key is converted to slice that covers the entire
             # entries of this key.
-            backend_indexer.append(slice(np.min(k), np.max(k) + 1))
-            np_indexer.append(k - np.min(k))
+            backend_indexer += (slice(np.min(k), np.max(k) + 1),)
+            np_indexer += (k - np.min(k),)
         elif isinstance(k, integer_types):
-            backend_indexer.append(k)
+            backend_indexer += (k,)
         else:  # slice:  convert positive step slice for backend
             bk_slice, np_slice = _decompose_slice(k, s)
-            backend_indexer.append(bk_slice)
-            np_indexer.append(np_slice)
+            backend_indexer += (bk_slice,)
+            np_indexer += (np_slice,)
 
-    return (BasicIndexer(tuple(backend_indexer)), OuterIndexer(tuple(np_indexer)))
+    return BasicIndexer(backend_indexer), OuterIndexer(np_indexer)
 
 
 def _arrayize_vectorized_indexer(
@@ -1366,15 +1371,15 @@ def _arrayize_vectorized_indexer(
     arrays = [v for v in indexer.tuple if isinstance(v, np.ndarray)]
     n_dim = arrays[0].ndim if len(arrays) > 0 else 0
     i_dim = 0
-    new_key = []
+    new_key: tuple[slice | np.ndarray[Any, np.dtype[np.generic]], ...] = ()
     for v, size in zip(indexer.tuple, shape):
         if isinstance(v, np.ndarray):
-            new_key.append(np.reshape(v, v.shape + (1,) * len(slices)))
+            new_key += (np.reshape(v, v.shape + (1,) * len(slices)),)
         else:  # slice
             shape = (1,) * (n_dim + i_dim) + (-1,) + (1,) * (len(slices) - i_dim - 1)
-            new_key.append(np.arange(*v.indices(size)).reshape(shape))
+            new_key += (np.arange(*v.indices(size)).reshape(shape),)
             i_dim += 1
-    return VectorizedIndexer(tuple(new_key))
+    return VectorizedIndexer(new_key)
 
 
 def _chunked_array_with_chunks_hint(
@@ -1384,10 +1389,12 @@ def _chunked_array_with_chunks_hint(
 
     if len(chunks) < array.ndim:
         raise ValueError("not enough chunks in hint")
-    new_chunks = []
-    for chunk, size in zip(chunks, array.shape):
-        new_chunks.append(chunk if size > 1 else (1,))
-    return chunkmanager.from_array(array, new_chunks)  # type: ignore[arg-type]
+
+    new_chunks: _Chunks = tuple(
+        chunk if size > 1 else 1 for chunk, size in zip(chunks, array.shape)
+    )
+
+    return chunkmanager.from_array(array, new_chunks)
 
 
 def _logical_any(args):
@@ -1398,22 +1405,22 @@ def _masked_result_drop_slice(key, data: duckarray[Any, Any] | None = None):
     key = (k for k in key if not isinstance(k, slice))
     chunks_hint = getattr(data, "chunks", None)
 
-    new_keys = []
+    new_keys: tuple[Any, ...] = ()
     for k in key:
         if isinstance(k, np.ndarray):
             if is_chunked_array(data):  # type: ignore[arg-type]
                 chunkmanager = get_chunked_array_type(data)
-                new_keys.append(
-                    _chunked_array_with_chunks_hint(k, chunks_hint, chunkmanager)
+                new_keys += (
+                    _chunked_array_with_chunks_hint(k, chunks_hint, chunkmanager),
                 )
             elif isinstance(data, array_type("sparse")):
                 import sparse
 
-                new_keys.append(sparse.COO.from_numpy(k))
+                new_keys += (sparse.COO.from_numpy(k),)
             else:
-                new_keys.append(k)
+                new_keys += (k,)
         else:
-            new_keys.append(k)
+            new_keys += (k,)
 
     mask = _logical_any(k == -1 for k in new_keys)
     return mask
