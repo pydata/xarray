@@ -21,7 +21,7 @@ v2024.05.0 (May 10, 2024)
 -------------------------
 
 This release brings support for pandas ExtensionArray objects, optimizations when reading Zarr, the ability to concatenate datasets without pandas indexes,
-more compatibility fixed for upcoming numpy 2.0, and the migration of most of the xarray-datatree project code into xarray `main`!
+more compatibility fixes for the upcoming numpy 2.0, and the migration of most of the xarray-datatree project code into xarray ``main``!
 
 Thanks to the 18 contributors to this release:
 Aimilios Tsouvelekakis, Andrey Akinshin, Deepak Cherian, Eni Awowale, Ilan Gold, Illviljan, Justus Magin, Mark Harfouche, Matt Savoie, Maximilian Roos, Noah C. Benson, Pascal Bourgault, Ray Bell, Spencer Clark, Tom Nicholas, ignamv, owenlittlejohns, and saschahofmann.
@@ -31,8 +31,8 @@ New Features
 - New "random" method for converting to and from 360_day calendars (:pull:`8603`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Xarray now makes a best attempt not to coerce :py:class:`pandas.api.extensions.ExtensionArray` to a numpy array
-  by supporting 1D `ExtensionArray` objects internally where possible.  Thus, `Dataset`s initialized with a `pd.Categorical`,
-  for example, will retain the object.  However, one cannot do operations that are not possible on the `ExtensionArray`
+  by supporting 1D ``ExtensionArray`` objects internally where possible.  Thus, :py:class:`Dataset` objects initialized with a ``pd.Categorical``,
+  for example, will retain the object.  However, one cannot do operations that are not possible on the ``ExtensionArray``
   then, such as broadcasting. (:issue:`5287`, :issue:`8463`, :pull:`8723`)
   By `Ilan Gold <https://github.com/ilan-gold>`_.
 - :py:func:`testing.assert_allclose`/:py:func:`testing.assert_equal` now accept a new argument `check_dims="transpose"`, controlling whether a transposed array is considered equal. (:issue:`5733`, :pull:`8991`)
