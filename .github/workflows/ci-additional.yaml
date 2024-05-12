@@ -14,7 +14,7 @@ on:
       - '/*'  # covers files such as `pyproject.toml`
       - 'properties/**'
       - 'xarray/**'
-      - "backend-indexing"
+
   workflow_dispatch: # allows you to trigger manually
 
 concurrency:
