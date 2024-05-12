@@ -284,7 +284,7 @@ class TestDataset:
             Dimensions:  (dim2: 9, dim3: 10, time: 20, dim1: 8)
             Coordinates:
               * dim2     (dim2) float64 72B 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
-              * dim3     (dim3) %s 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+              * dim3     (dim3) {} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
               * time     (time) datetime64[ns] 160B 2000-01-01 2000-01-02 ... 2000-01-20
                 numbers  (dim3) int64 80B 0 1 2 0 0 1 1 2 2 3
             Dimensions without coordinates: dim1
@@ -293,8 +293,9 @@ class TestDataset:
                 var2     (dim1, dim2) float64 576B 1.162 -1.097 -2.123 ... 1.267 0.3328
                 var3     (dim3, dim1) float64 640B 0.5565 -0.2121 0.4563 ... -0.2452 -0.3616
             Attributes:
-                foo:      bar"""
-            % data["dim3"].dtype
+                foo:      bar""".format(
+                data["dim3"].dtype
+            )
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
         print(actual)
@@ -3430,16 +3431,22 @@ class TestDataset:
         )
         assert_identical(other_way_expected, other_way)
 
-    @pytest.mark.parametrize("create_index_flag", [True, False])
-    def test_expand_dims_create_index_data_variable(self, create_index_flag):
+    @pytest.mark.parametrize("create_index_for_new_dim_flag", [True, False])
+    def test_expand_dims_create_index_data_variable(
+        self, create_index_for_new_dim_flag
+    ):
         # data variables should not gain an index ever
         ds = Dataset({"x": 0})
 
-        if create_index_flag:
+        if create_index_for_new_dim_flag:
             with pytest.warns(UserWarning, match="No index created"):
-                expanded = ds.expand_dims("x", create_index=create_index_flag)
+                expanded = ds.expand_dims(
+                    "x", create_index_for_new_dim=create_index_for_new_dim_flag
+                )
         else:
-            expanded = ds.expand_dims("x", create_index=create_index_flag)
+            expanded = ds.expand_dims(
+                "x", create_index_for_new_dim=create_index_for_new_dim_flag
+            )
 
         # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
         expected = Dataset({"x": ("x", [0])}).drop_indexes("x").reset_coords("x")
@@ -3448,13 +3455,13 @@ class TestDataset:
         assert expanded.indexes == {}
 
     def test_expand_dims_create_index_coordinate_variable(self):
-        # coordinate variables should gain an index only if create_index is True (the default)
+        # coordinate variables should gain an index only if create_index_for_new_dim is True (the default)
         ds = Dataset(coords={"x": 0})
         expanded = ds.expand_dims("x")
         expected = Dataset({"x": ("x", [0])})
         assert_identical(expanded, expected)
 
-        expanded_no_index = ds.expand_dims("x", create_index=False)
+        expanded_no_index = ds.expand_dims("x", create_index_for_new_dim=False)
 
         # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
         expected = Dataset(coords={"x": ("x", [0])}).drop_indexes("x")
@@ -3468,7 +3475,7 @@ class TestDataset:
         expected = Dataset({"x": ("x", [0, 1])})
         assert_identical(expanded, expected)
 
-        expanded_no_index = ds.expand_dims(x=[0, 1], create_index=False)
+        expanded_no_index = ds.expand_dims(x=[0, 1], create_index_for_new_dim=False)
 
         # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
         expected = Dataset(coords={"x": ("x", [0, 1])}).drop_indexes("x")
@@ -3969,6 +3976,25 @@ class TestDataset:
         y = D.to_stacked_array("features", sample_dims)
         x = y.to_unstacked_dataset("features")
         assert_identical(D, x)
+
+    def test_to_stacked_array_preserves_dtype(self) -> None:
+        # regression test for bug found in https://github.com/pydata/xarray/pull/8872#issuecomment-2081218616
+        ds = xr.Dataset(
+            data_vars={
+                "a": (("x", "y"), [[0, 1, 2], [3, 4, 5]]),
+                "b": ("x", [6, 7]),
+            },
+            coords={"y": ["u", "v", "w"]},
+        )
+        stacked = ds.to_stacked_array("z", sample_dims=["x"])
+
+        # coordinate created from variables names should be of string dtype
+        data = np.array(["a", "a", "a", "b"], dtype="<U1")
+        expected_stacked_variable = DataArray(name="variable", data=data, dims="z")
+        assert_identical(
+            stacked.coords["variable"].drop_vars(["z", "variable", "y"]),
+            expected_stacked_variable,
+        )
 
     def test_update(self) -> None:
         data = create_test_data(seed=0)
