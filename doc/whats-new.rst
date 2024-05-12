@@ -17,7 +17,7 @@ What's New
 
 .. _whats-new.2024.05.0:
 
-v2024.05.0 (May 10, 2024)
+v2024.05.0 (May 12, 2024)
 -------------------------
 
 This release brings support for pandas ExtensionArray objects, optimizations when reading Zarr, the ability to concatenate datasets without pandas indexes,
