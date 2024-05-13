@@ -125,18 +125,30 @@ DataFrame to Dataset or DataArray
 
 The conversion is done without loss, by finding the multidimensional structure hidden by the tabular structure.
 
-By applying this conversion to the DataFame above, we find the initial ``Dataset``:
+By applying this conversion to the DataFame above, we find the initial ``Dataset`` (the DataSet precursor to the DataFrame):
 
 .. ipython:: python
 
     import ntv_pandas as npd
 
-    df.npd.to_xarray()
+    ds_roundtrip = df.npd.to_xarray()
+    ds_roundtrip
+
+.. note::
+
+    A `dataset=True` or `dataset=False` parameter is used to choose the conversion result (active only if the Dataframe contains a single variable)
 
 Dataset or DataArray to Dataframe
 ---------------------------------
 
-In the other direction, information that is not supported by the DataFrame must be transferred to the DataFrame (e.g. ``attrs`` data).
+In the other direction, the ``DataFrame`` created (df_roundtrip) is equivalent to the initial ``DataFrame`` (df).
+
+.. ipython:: python
+
+    df_roundtrip = npd.from_xarray(ds_roundtrip)
+    df_roundtrip
+
+To be lossless, the information that is not supported by the columns of the DataFrame (e.g. ``attrs`` data) must be transferred to the DataFrame.
 
 For this, pandas provides the ``attrs`` attribute.
 
@@ -154,7 +166,7 @@ For this, pandas provides the ``attrs`` attribute.
     )
     ds
 
-After reverse conversion, we find the initial ``Dataset``:
+After reverse conversion, ``attrs`` is still present in the ``Dataset``:
 
 .. ipython:: python
 
@@ -164,7 +176,7 @@ After reverse conversion, we find the initial ``Dataset``:
 
 .. note::
 
-    The pandas ``attrs`` attribute is still experimental (some operations remove it). The associated information must therefore be processed as a priority
+    The pandas ``attrs`` attribute is still experimental (some operations remove it). The associated information must therefore be processed as a priority.
 
 Multi-dimensional data
 ~~~~~~~~~~~~~~~~~~~~~~
