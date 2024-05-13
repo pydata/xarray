@@ -1521,42 +1521,6 @@ def save_mfdataset(
         )
 
 
-def _validate_datatypes_for_zarr_append(zstore, dataset):
-    """If variable exists in the store, confirm dtype of the data to append is compatible with
-    existing dtype.
-    """
-
-    existing_vars = zstore.get_variables()
-
-    def check_dtype(vname, var):
-        if (
-            vname not in existing_vars
-            or np.issubdtype(var.dtype, np.number)
-            or np.issubdtype(var.dtype, np.datetime64)
-            or np.issubdtype(var.dtype, np.bool_)
-            or var.dtype == object
-        ):
-            # We can skip dtype equality checks under two conditions: (1) if the var to append is
-            # new to the dataset, because in this case there is no existing var to compare it to;
-            # or (2) if var to append's dtype is known to be easy-to-append, because in this case
-            # we can be confident appending won't cause problems. Examples of dtypes which are not
-            # easy-to-append include length-specified strings of type `|S*` or `<U*` (where * is a
-            # positive integer character length). For these dtypes, appending dissimilar lengths
-            # can result in truncation of appended data. Therefore, variables which already exist
-            # in the dataset, and with dtypes which are not known to be easy-to-append, necessitate
-            # exact dtype equality, as checked below.
-            pass
-        elif not var.dtype == existing_vars[vname].dtype:
-            raise ValueError(
-                f"Mismatched dtypes for variable {vname} between Zarr store on disk "
-                f"and dataset to append. Store has dtype {existing_vars[vname].dtype} but "
-                f"dataset to append has dtype {var.dtype}."
-            )
-
-    for vname, var in dataset.data_vars.items():
-        check_dtype(vname, var)
-
-
 # compute=True returns ZarrStore
 @overload
 def to_zarr(
@@ -1712,7 +1676,7 @@ def to_zarr(
 
     if region is not None:
         zstore._validate_and_autodetect_region(dataset)
-        # can't modify indexed with region writes
+        # can't modify indexes with region writes
         dataset = dataset.drop_vars(dataset.indexes)
         if append_dim is not None and append_dim in region:
             raise ValueError(
@@ -1720,28 +1684,12 @@ def to_zarr(
                 f"``region`` with to_zarr(), got {append_dim} in both"
             )
 
-    if mode in ["a", "a-", "r+"]:
-        _validate_datatypes_for_zarr_append(zstore, dataset)
-        if append_dim is not None:
-            existing_dims = zstore.get_dimensions()
-            if append_dim not in existing_dims:
-                raise ValueError(
-                    f"append_dim={append_dim!r} does not match any existing "
-                    f"dataset dimensions {existing_dims}"
-                )
+    if encoding and mode in ["a", "a-", "r+"]:
         existing_var_names = set(zstore.zarr_group.array_keys())
         for var_name in existing_var_names:
-            if var_name in encoding.keys():
+            if var_name in encoding:
                 raise ValueError(
                     f"variable {var_name!r} already exists, but encoding was provided"
-                )
-        if mode == "r+":
-            new_names = [k for k in dataset.variables if k not in existing_var_names]
-            if new_names:
-                raise ValueError(
-                    f"dataset contains non-pre-existing variables {new_names}, "
-                    "which is not allowed in ``xarray.Dataset.to_zarr()`` with "
-                    "mode='r+'. To allow writing new variables, set mode='a'."
                 )
 
     writer = ArrayWriter()

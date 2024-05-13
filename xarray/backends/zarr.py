@@ -324,6 +324,34 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     return var
 
 
+def _validate_datatypes_for_zarr_append(vname, existing_var, new_var):
+    """If variable exists in the store, confirm dtype of the data to append is compatible with
+    existing dtype.
+    """
+    if (
+        np.issubdtype(new_var.dtype, np.number)
+        or np.issubdtype(new_var.dtype, np.datetime64)
+        or np.issubdtype(new_var.dtype, np.bool_)
+        or new_var.dtype == object
+    ):
+        # We can skip dtype equality checks under two conditions: (1) if the var to append is
+        # new to the dataset, because in this case there is no existing var to compare it to;
+        # or (2) if var to append's dtype is known to be easy-to-append, because in this case
+        # we can be confident appending won't cause problems. Examples of dtypes which are not
+        # easy-to-append include length-specified strings of type `|S*` or `<U*` (where * is a
+        # positive integer character length). For these dtypes, appending dissimilar lengths
+        # can result in truncation of appended data. Therefore, variables which already exist
+        # in the dataset, and with dtypes which are not known to be easy-to-append, necessitate
+        # exact dtype equality, as checked below.
+        pass
+    elif not new_var.dtype == existing_var.dtype:
+        raise ValueError(
+            f"Mismatched dtypes for variable {vname} between Zarr store on disk "
+            f"and dataset to append. Store has dtype {existing_var.dtype} but "
+            f"dataset to append has dtype {new_var.dtype}."
+        )
+
+
 def _validate_and_transpose_existing_dims(
     var_name, new_var, existing_var, region, append_dim
 ):
@@ -612,26 +640,58 @@ class ZarrStore(AbstractWritableDataStore):
         import zarr
 
         existing_keys = tuple(self.zarr_group.array_keys())
+
+        if self._mode == "r+":
+            new_names = [k for k in variables if k not in existing_keys]
+            if new_names:
+                raise ValueError(
+                    f"dataset contains non-pre-existing variables {new_names}, "
+                    "which is not allowed in ``xarray.Dataset.to_zarr()`` with "
+                    "``mode='r+'``. To allow writing new variables, set ``mode='a'``."
+                )
+
+        if self._append_dim is not None and self._append_dim not in existing_keys:
+            # For dimensions without coordinate values, we must parse
+            # the _ARRAY_DIMENSIONS attribute on *all* arrays to check if it
+            # is a valid existing dimension name.
+            # TODO: This `get_dimensions` method also does shape checking
+            # which isn't strictly necessary for our check.
+            existing_dims = self.get_dimensions()
+            if self._append_dim not in existing_dims:
+                raise ValueError(
+                    f"append_dim={self._append_dim!r} does not match any existing "
+                    f"dataset dimensions {existing_dims}"
+                )
+
         existing_variable_names = {
             vn for vn in variables if _encode_variable_name(vn) in existing_keys
         }
-        new_variables = set(variables) - existing_variable_names
-        variables_without_encoding = {vn: variables[vn] for vn in new_variables}
+        new_variable_names = set(variables) - existing_variable_names
         variables_encoded, attributes = self.encode(
-            variables_without_encoding, attributes
+            {vn: variables[vn] for vn in new_variable_names}, attributes
         )
 
         if existing_variable_names:
-            # Decode variables directly, without going via xarray.Dataset to
-            # avoid needing to load index variables into memory.
-            # TODO: consider making loading indexes lazy again?
+            # We make sure that values to be appended are encoded *exactly*
+            # as the current values in the store.
+            # To do so, we decode variables directly to access the proper encoding,
+            # without going via xarray.Dataset to avoid needing to load
+            # index variables into memory.
             existing_vars, _, _ = conventions.decode_cf_variables(
-                {k: self.open_store_variable(name=k) for k in existing_variable_names},
-                self.get_attrs(),
+                variables={
+                    k: self.open_store_variable(name=k) for k in existing_variable_names
+                },
+                # attributes = {} since we don't care about parsing the global
+                # "coordinates" attribute
+                attributes={},
             )
             # Modified variables must use the same encoding as the store.
             vars_with_encoding = {}
             for vn in existing_variable_names:
+                if self._mode in ["a", "a-", "r+"]:
+                    _validate_datatypes_for_zarr_append(
+                        vn, existing_vars[vn], variables[vn]
+                    )
                 vars_with_encoding[vn] = variables[vn].copy(deep=False)
                 vars_with_encoding[vn].encoding = existing_vars[vn].encoding
             vars_with_encoding, _ = self.encode(vars_with_encoding, {})
@@ -696,7 +756,6 @@ class ZarrStore(AbstractWritableDataStore):
 
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
-            check = vn in check_encoding_set
             attrs = v.attrs.copy()
             dims = v.dims
             dtype = v.dtype
@@ -712,7 +771,7 @@ class ZarrStore(AbstractWritableDataStore):
             # https://github.com/pydata/xarray/issues/8371 for details.
             encoding = extract_zarr_variable_encoding(
                 v,
-                raise_on_invalid=check,
+                raise_on_invalid=vn in check_encoding_set,
                 name=vn,
                 safe_chunks=self._safe_chunks,
             )
@@ -815,7 +874,7 @@ class ZarrStore(AbstractWritableDataStore):
             assert variable.dims == (dim,)
             index = pd.Index(variable.data)
             idxs = index.get_indexer(ds[dim].data)
-            if any(idxs == -1):
+            if (idxs == -1).any():
                 raise KeyError(
                     f"Not all values of coordinate '{dim}' in the new array were"
                     " found in the original store. Writing to a zarr region slice"
