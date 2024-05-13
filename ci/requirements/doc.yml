@@ -20,7 +20,7 @@ dependencies:
   - matplotlib-base
   - nbsphinx
   - netcdf4>=1.5
-  - ntv_pandas>=2.0.0
+  - ntv-pandas>=2.0.0
   - numba
   - numpy>=1.21
   - packaging>=21.3
