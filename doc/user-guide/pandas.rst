@@ -118,7 +118,7 @@ The previous example shows that the conversion is not reversible (lossy roundtri
 Another approach is to use a lossless and reversible conversion (e.g Third party `ntv-pandas`__ libraries). A dataset can then be shared
 between several tools.
 
-__ https://github.com/loco-philippe/ntv-pandas/blob/main/README.md
+__ https://github.com/loco-philippe/ntv-pandas
 
 DataFrame to Dataset or DataArray
 ---------------------------------
