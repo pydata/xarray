@@ -115,7 +115,7 @@ Lossless and reversible converter
 
 The previous example shows that the conversion is not reversible (lossy roundtrip) and that the size of the ``datasets`` increases.
 
-Another approach is to use a lossless and reversible conversion (e.g Third party `ntv-pandas`__ libraries). A dataset can then be shared
+Another approach is to use a lossless and reversible conversion (e.g with the third-party `ntv-pandas`__ library). A dataset can then be shared
 between several tools.
 
 __ https://github.com/loco-philippe/ntv-pandas
