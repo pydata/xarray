@@ -113,7 +113,7 @@ work even if not the hierarchical index is not a full tensor product:
 Lossless and reversible converter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The previous example shows that the conversion is not reversible (lossless roundtrip) and that the size of the ``datasets`` increases.
+The previous example shows that the conversion is not reversible (lossy roundtrip) and that the size of the ``datasets`` increases.
 
 Another approach is to use a lossless and reversible conversion (e.g Third party `ntv-pandas`__ libraries). A dataset can then be shared
 between several tools.
