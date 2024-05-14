@@ -45,4 +45,4 @@ dependencies:
       # relative to this file. Needs to be editable to be accepted.
       - -e ../..
       - ntv-pandas>=2.0.0
-      - python-tabulate
+      - python-tabulate>=0.9.0
