@@ -139,12 +139,12 @@ def to_duck_array(
 ) -> chunkedduckarray[_ShapeType, _DType]: ...
 @overload
 def to_duck_array(
-    data: duckarray[_ShapeType, _DType], **kwargs: dict[str, Any]
-) -> duckarray[_ShapeType, _DType]: ...
+    data: np.typing.ArrayLike, **kwargs: dict[str, Any]
+) -> np.ndarray[Any, np.dtype[np.generic]]: ...
 @overload
 def to_duck_array(
-    data: np.typing.ArrayLike, **kwargs: dict[str, Any]
-) -> duckarray[Any, _dtype[_generic]]: ...
+    data: duckarray[_ShapeType, _DType], **kwargs: dict[str, Any]
+) -> duckarray[_ShapeType, _DType]: ...
 def to_duck_array(
     data: (
         ExplicitlyIndexed
@@ -153,7 +153,11 @@ def to_duck_array(
         | np.typing.ArrayLike
     ),
     **kwargs: dict[str, Any],
-) -> duckarray[_ShapeType, _DType] | duckarray[Any, _dtype[_generic]]:
+) -> (
+    duckarray[_ShapeType, _DType]
+    | duckarray[Any, _dtype[_generic]]
+    | np.ndarray[Any, np.dtype[np.generic]]
+):
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 

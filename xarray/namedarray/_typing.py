@@ -70,6 +70,7 @@ class _DType2(Protocol[_T_co]):
 _dtype = _DType2
 _DType = TypeVar("_DType", bound=_dtype[_generic])
 _DType_co = TypeVar("_DType_co", covariant=True, bound=_dtype[_generic])
+_DType_np = TypeVar("_DType_np", bound=np.dtype[np.generic])
 # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
 
 _ScalarType = TypeVar("_ScalarType", bound=_generic)
@@ -171,20 +172,33 @@ class _arrayfunction(
 
     @overload
     def __getitem__(self, key: _IndexKeyLike, /) -> Any: ...
+    @overload
+    def __getitem__(self: Any, key: Any, /) -> Any: ...
 
-    def __getitem__(
-        self,
-        key: (
-            _IndexKeyLike
-            | _arrayfunction[Any, Any]
-            | tuple[_arrayfunction[Any, Any], ...]
-        ),
-        /,
-    ) -> _arrayfunction[Any, _DType_co] | Any: ...
+    # @overload
+    # def __getitem__(self: NDArray[void], key: str) -> NDArray[Any]: ...
+    # @overload
+    # def __getitem__(
+    #     self: NDArray[void], key: list[str]
+    # ) -> ndarray[_ShapeType, _dtype[void]]: ...
+
+    # def __getitem__(
+    #     self,
+    #     key: (
+    #         _IndexKeyLike
+    #         | _arrayfunction[Any, Any]
+    #         | tuple[_arrayfunction[Any, Any], ...]
+    #     ),
+    #     /,
+    # ) -> _arrayfunction[Any, _DType_co] | Any: ...
 
     def __array__(
-        self, dtype: _dtype[_generic] | None = ..., /
+        self, dtype: Any | None = ..., /
     ) -> np.ndarray[Any, np.dtype[np.generic]]: ...
+
+    # def __array__(
+    #     self, dtype: _dtype[_generic] | None = ..., /
+    # ) -> np.ndarray[Any, np.dtype[np.generic]]: ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
