@@ -124,9 +124,9 @@ def to_numpy(
         data = data.magnitude
     if isinstance(data, array_type("sparse")):
         data = data.todense()
-    data = np.asarray(data)
+    out = np.asarray(data)
 
-    return data
+    return out
 
 
 @overload
