@@ -590,43 +590,57 @@ class Dataset(
 
     Examples
     --------
-    Create data:
+    In this example dataset, we will represent measurements of the temperature
+    and pressure that were made under various conditions:
+
+    * the measurements were made on four different days;
+    * they were made at two separate locations, which we will represent using
+      their latitude and longitude; and
+    * they were made using three instrument developed by three different
+      manufacturers, which we will refer to using the strings `'manufac1'`,
+      `'manufac2'`, and `'manufac3'`.
 
     >>> np.random.seed(0)
-    >>> temperature = 15 + 8 * np.random.randn(2, 2, 3)
-    >>> precipitation = 10 * np.random.rand(2, 2, 3)
-    >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
-    >>> lat = [[42.25, 42.21], [42.63, 42.59]]
-    >>> time = pd.date_range("2014-09-06", periods=3)
+    >>> temperature = 15 + 8 * np.random.randn(2, 3, 4)
+    >>> precipitation = 10 * np.random.rand(2, 3, 4)
+    >>> lon = [-99.83, -99.32]
+    >>> lat = [42.25, 42.21]
+    >>> instruments = ["manufac1", "manufac2", "manufac3"]
+    >>> time = pd.date_range("2014-09-06", periods=4)
     >>> reference_time = pd.Timestamp("2014-09-05")
 
-    Initialize a dataset with multiple dimensions:
+    Here, we initialize the dataset with multiple dimensions. We use the string
+    `"loc"` to represent the location dimension of the data, the string
+    `"instrument"` to represent the instrument manufacturer dimension, and the
+    string `"time"` for the time dimension.
 
     >>> ds = xr.Dataset(
     ...     data_vars=dict(
-    ...         temperature=(["x", "y", "time"], temperature),
-    ...         precipitation=(["x", "y", "time"], precipitation),
+    ...         temperature=(["loc", "instrument", "time"], temperature),
+    ...         precipitation=(["loc", "instrument", "time"], precipitation),
     ...     ),
     ...     coords=dict(
-    ...         lon=(["x", "y"], lon),
-    ...         lat=(["x", "y"], lat),
+    ...         lon=("loc", lon),
+    ...         lat=("loc", lat),
+    ...         instrument=instruments,
     ...         time=time,
     ...         reference_time=reference_time,
     ...     ),
     ...     attrs=dict(description="Weather related data."),
     ... )
     >>> ds
-    <xarray.Dataset> Size: 288B
-    Dimensions:         (x: 2, y: 2, time: 3)
+    <xarray.Dataset> Size: 552B
+    Dimensions:         (loc: 2, instrument: 3, time: 4)
     Coordinates:
-        lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
-        lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-      * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
+        lon             (loc) float64 16B -99.83 -99.32
+        lat             (loc) float64 16B 42.25 42.21
+      * instrument      (instrument) <U8 96B 'manufac1' 'manufac2' 'manufac3'
+      * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
         reference_time  datetime64[ns] 8B 2014-09-05
-    Dimensions without coordinates: x, y
+    Dimensions without coordinates: loc
     Data variables:
-        temperature     (x, y, time) float64 96B 29.11 18.2 22.83 ... 16.15 26.63
-        precipitation   (x, y, time) float64 96B 5.68 9.256 0.7104 ... 4.615 7.805
+        temperature     (loc, instrument, time) float64 192B 29.11 18.2 ... 9.063
+        precipitation   (loc, instrument, time) float64 192B 4.562 5.684 ... 1.613
     Attributes:
         description:  Weather related data.
 
@@ -634,16 +648,17 @@ class Dataset(
     other variables had:
 
     >>> ds.isel(ds.temperature.argmin(...))
-    <xarray.Dataset> Size: 48B
+    <xarray.Dataset> Size: 80B
     Dimensions:         ()
     Coordinates:
         lon             float64 8B -99.32
         lat             float64 8B 42.21
-        time            datetime64[ns] 8B 2014-09-08
+        instrument      <U8 32B 'manufac3'
+        time            datetime64[ns] 8B 2014-09-06
         reference_time  datetime64[ns] 8B 2014-09-05
     Data variables:
-        temperature     float64 8B 7.182
-        precipitation   float64 8B 8.326
+        temperature     float64 8B -5.424
+        precipitation   float64 8B 9.884
     Attributes:
         description:  Weather related data.
 
@@ -1509,7 +1524,7 @@ class Dataset(
 
     else:
 
-        def __array__(self, dtype=None):
+        def __array__(self, dtype=None, copy=None):
             raise TypeError(
                 "cannot directly convert an xarray.Dataset into a "
                 "numpy array. Instead, create an xarray.DataArray "
@@ -4498,7 +4513,7 @@ class Dataset(
         self,
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
         axis: None | int | Sequence[int] = None,
-        create_index: bool = True,
+        create_index_for_new_dim: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
         """Return a new object with an additional axis (or axes) inserted at
@@ -4509,7 +4524,7 @@ class Dataset(
         coordinate consisting of a single value.
 
         The automatic creation of indexes to back new 1D coordinate variables
-        controlled by the create_index kwarg.
+        controlled by the create_index_for_new_dim kwarg.
 
         Parameters
         ----------
@@ -4526,8 +4541,8 @@ class Dataset(
             multiple axes are inserted. In this case, dim arguments should be
             same length list. If axis=None is passed, all the axes will be
             inserted to the start of the result array.
-        create_index : bool, default is True
-            Whether to create new PandasIndex objects for any new 1D coordinate variables.
+        create_index_for_new_dim : bool, default: True
+            Whether to create new ``PandasIndex`` objects when the object being expanded contains scalar variables with names in ``dim``.
         **dim_kwargs : int or sequence or ndarray
             The keywords are arbitrary dimensions being inserted and the values
             are either the lengths of the new dims (if int is given), or their
@@ -4597,6 +4612,33 @@ class Dataset(
         Data variables:
             temperature  (y, x, time) float64 96B 0.5488 0.7152 0.6028 ... 0.7917 0.5289
 
+        # Expand a scalar variable along a new dimension of the same name with and without creating a new index
+
+        >>> ds = xr.Dataset(coords={"x": 0})
+        >>> ds
+        <xarray.Dataset> Size: 8B
+        Dimensions:  ()
+        Coordinates:
+            x        int64 8B 0
+        Data variables:
+            *empty*
+
+        >>> ds.expand_dims("x")
+        <xarray.Dataset> Size: 8B
+        Dimensions:  (x: 1)
+        Coordinates:
+          * x        (x) int64 8B 0
+        Data variables:
+            *empty*
+
+        >>> ds.expand_dims("x").indexes
+        Indexes:
+            x        Index([0], dtype='int64', name='x')
+
+        >>> ds.expand_dims("x", create_index_for_new_dim=False).indexes
+        Indexes:
+            *empty*
+
         See Also
         --------
         DataArray.expand_dims
@@ -4648,7 +4690,7 @@ class Dataset(
                 # value within the dim dict to the length of the iterable
                 # for later use.
 
-                if create_index:
+                if create_index_for_new_dim:
                     index = PandasIndex(v, k)
                     indexes[k] = index
                     name_and_new_1d_var = index.create_variables()
@@ -4690,14 +4732,14 @@ class Dataset(
                     variables[k] = v.set_dims(dict(all_dims))
             else:
                 if k not in variables:
-                    if k in coord_names and create_index:
+                    if k in coord_names and create_index_for_new_dim:
                         # If dims includes a label of a non-dimension coordinate,
                         # it will be promoted to a 1D coordinate with a single value.
                         index, index_vars = create_default_index_implicit(v.set_dims(k))
                         indexes[k] = index
                         variables.update(index_vars)
                     else:
-                        if create_index:
+                        if create_index_for_new_dim:
                             warnings.warn(
                                 f"No index created for dimension {k} because variable {k} is not a coordinate. "
                                 f"To create an index for {k}, please first call `.set_coords('{k}')` on this object.",
@@ -5385,7 +5427,7 @@ class Dataset(
                [3, 4, 5, 7]])
         Coordinates:
           * z         (z) object 32B MultiIndex
-          * variable  (z) object 32B 'a' 'a' 'a' 'b'
+          * variable  (z) <U1 16B 'a' 'a' 'a' 'b'
           * y         (z) object 32B 'u' 'v' 'w' nan
         Dimensions without coordinates: x
 
@@ -8339,7 +8381,7 @@ class Dataset(
         edge_order: Literal[1, 2] = 1,
         datetime_unit: DatetimeUnitOptions | None = None,
     ) -> Self:
-        """ Differentiate with the second order accurate central
+        """Differentiate with the second order accurate central
         differences.
 
         .. note::
@@ -8922,9 +8964,7 @@ class Dataset(
         lhs = np.vander(x, order)
 
         if rcond is None:
-            rcond = (
-                x.shape[0] * np.core.finfo(x.dtype).eps  # type: ignore[attr-defined]
-            )
+            rcond = x.shape[0] * np.finfo(x.dtype).eps
 
         # Weights:
         if w is not None:
