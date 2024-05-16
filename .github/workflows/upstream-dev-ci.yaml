@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TERM: xterm-256color
+  FORCE_COLOR: 3
 
 jobs:
   detect-ci-trigger:

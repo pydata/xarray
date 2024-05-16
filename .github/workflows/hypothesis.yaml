@@ -12,7 +12,7 @@ on:
   workflow_dispatch: # allows you to trigger manually
 
 env:
-  TERM: xterm-256color
+  FORCE_COLOR: 3
 
 jobs:
   detect-ci-trigger:
