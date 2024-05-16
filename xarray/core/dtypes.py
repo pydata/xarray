@@ -205,11 +205,6 @@ def numpy_isdtype(dtype, kinds):
         return any(np.issubdtype(dtype, kind) for kind in translated_kinds)
 
 
-def pandas_isdtype(dtype, kinds):
-    # according to the comments in `extension_array.issubdtype` we don't want to match pandas dtypes
-    return False
-
-
 def isdtype(dtype, kind, xp=None):
     kinds = kind if isinstance(kind, tuple) else (kind,)
     unknown_dtypes = [kind for kind in kinds if kind not in dtype_kinds]
@@ -220,7 +215,8 @@ def isdtype(dtype, kind, xp=None):
         # TODO (keewis): replace with `numpy.isdtype` once we drop `numpy<2.0`
         return numpy_isdtype(dtype, kinds)
     elif is_extension_array_dtype(dtype):
-        return pandas_isdtype(dtype, kinds)
+        # we never want to match pandas extension array dtypes
+        return False
     else:
         return xp.isdtype(dtype, kinds)
 
