@@ -197,6 +197,10 @@ dtype_kinds = {
 
 
 def numpy_isdtype(dtype, kinds):
+    unknown_dtypes = [kind for kind in kinds if kind not in dtype_kinds]
+    if unknown_dtypes:
+        raise ValueError(f"unknown dtype kinds: {unknown_dtypes}")
+
     # verified the dtypes already, no need to check again
     translated_kinds = [dtype_kinds[kind] for kind in kinds]
     if isinstance(dtype, np.generic):
@@ -207,10 +211,6 @@ def numpy_isdtype(dtype, kinds):
 
 def isdtype(dtype, kind, xp=None):
     kinds = kind if isinstance(kind, tuple) else (kind,)
-    unknown_dtypes = [kind for kind in kinds if kind not in dtype_kinds]
-    if unknown_dtypes:
-        raise ValueError(f"unknown dtype kinds: {unknown_dtypes}")
-
     if isinstance(dtype, np.dtype):
         # TODO (keewis): replace with `numpy.isdtype` once we drop `numpy<2.0`
         return numpy_isdtype(dtype, kinds)
