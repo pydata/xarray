@@ -187,14 +187,14 @@ def _is_numpy_subdtype(dtype, kind) -> bool:
 
 def isdtype(dtype, kind: str, xp=None) -> bool:
     """Compatibility wrapper for isdtype() from the array API standard.
-    
+
     Unlike xp.isdtype(), kind must be a string.
     """
     # TODO(shoyer): remove this wrapper when Xarray requires
     # numpy>=2 and pandas extensions arrays are implemented in
     # Xarray via the array API
     if not isinstance(kind, str):
-        raise TypeError(f'kind must be a string: {kind}')
+        raise TypeError(f"kind must be a string: {kind}")
     if isinstance(dtype, np.dtype):
         return npcompat.isdtype(dtype, kind)
     elif is_extension_array_dtype(dtype):
