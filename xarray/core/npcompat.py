@@ -31,7 +31,7 @@
 
 try:
     # requires numpy>=2.0
-    from numpy import isdtype
+    from numpy import isdtype  # typing: ignore[attr-defined,unused-ignore]
 except ImportError:
     import numpy as np
 

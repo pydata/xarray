@@ -162,22 +162,22 @@ def get_neg_infinity(dtype, min_for_int=False):
     return NINF
 
 
-def is_datetime_like(dtype):
+def is_datetime_like(dtype) -> bool:
     """Check if a dtype is a subclass of the numpy datetime types"""
     return _is_numpy_subdtype(dtype, (np.datetime64, np.timedelta64))
 
 
-def is_object(dtype):
+def is_object(dtype) -> bool:
     """Check if a dtype is object"""
     return _is_numpy_subdtype(dtype, object)
 
 
-def is_string(dtype):
+def is_string(dtype) -> bool:
     """Check if a dtype is a string dtype"""
     return _is_numpy_subdtype(dtype, (np.str_, np.character))
 
 
-def _is_numpy_subdtype(dtype, kind):
+def _is_numpy_subdtype(dtype, kind) -> bool:
     if not isinstance(dtype, np.dtype):
         return False
 
@@ -185,7 +185,7 @@ def _is_numpy_subdtype(dtype, kind):
     return any(np.issubdtype(dtype, kind) for kind in kinds)
 
 
-def isdtype(dtype, kind, xp=None):
+def isdtype(dtype, kind: str, xp=None) -> bool:
     if isinstance(dtype, np.dtype):
         return npcompat.isdtype(dtype, kind)
     elif is_extension_array_dtype(dtype):
