@@ -206,6 +206,7 @@ def numpy_isdtype(dtype, kinds):
 
 
 def pandas_isdtype(dtype, kinds):
+    # according to the comments in `extension_array.issubdtype` we don't want to match pandas dtypes
     return False
 
 
