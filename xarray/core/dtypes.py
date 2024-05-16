@@ -218,6 +218,8 @@ def isdtype(dtype, kind, xp=None):
         # we never want to match pandas extension array dtypes
         return False
     else:
+        if xp is None:
+            xp = np
         return xp.isdtype(dtype, kinds)
 
 
