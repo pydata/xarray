@@ -6,7 +6,7 @@ from typing import Any
 import numpy as np
 from pandas.api.types import is_extension_array_dtype
 
-from xarray.core import utils
+from xarray.core import npcompat, utils
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject("<NA>")
@@ -185,42 +185,16 @@ def _is_numpy_subdtype(dtype, kind):
     return any(np.issubdtype(dtype, kind) for kind in kinds)
 
 
-dtype_kinds = {
-    "bool": np.bool_,
-    "signed integer": np.signedinteger,
-    "unsigned integer": np.unsignedinteger,
-    "integral": np.integer,
-    "real floating": np.floating,
-    "complex floating": np.complexfloating,
-    "numeric": np.number,
-}
-
-
-def numpy_isdtype(dtype, kinds):
-    unknown_dtypes = [kind for kind in kinds if kind not in dtype_kinds]
-    if unknown_dtypes:
-        raise ValueError(f"unknown dtype kinds: {unknown_dtypes}")
-
-    # verified the dtypes already, no need to check again
-    translated_kinds = [dtype_kinds[kind] for kind in kinds]
-    if isinstance(dtype, np.generic):
-        return any(isinstance(dtype, kind) for kind in translated_kinds)
-    else:
-        return any(np.issubdtype(dtype, kind) for kind in translated_kinds)
-
-
 def isdtype(dtype, kind, xp=None):
-    kinds = kind if isinstance(kind, tuple) else (kind,)
     if isinstance(dtype, np.dtype):
-        # TODO (keewis): replace with `numpy.isdtype` once we drop `numpy<2.0`
-        return numpy_isdtype(dtype, kinds)
+        return npcompat.isdtype(dtype, kind)
     elif is_extension_array_dtype(dtype):
         # we never want to match pandas extension array dtypes
         return False
     else:
         if xp is None:
             xp = np
-        return xp.isdtype(dtype, kinds)
+        return xp.isdtype(dtype, kind)
 
 
 def result_type(
