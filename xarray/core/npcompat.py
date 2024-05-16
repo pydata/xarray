@@ -50,7 +50,7 @@ except ImportError:
 
         unknown_dtypes = [kind for kind in kinds if kind not in dtype_kinds]
         if unknown_dtypes:
-            raise ValueError(f"unknown dtype kinds: {unknown_dtypes}")
+            raise TypeError(f"unknown dtype kinds: {unknown_dtypes}")
 
         # verified the dtypes already, no need to check again
         translated_kinds = [dtype_kinds[kind] for kind in kinds]
