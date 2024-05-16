@@ -193,8 +193,10 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
     # TODO(shoyer): remove this wrapper when Xarray requires
     # numpy>=2 and pandas extensions arrays are implemented in
     # Xarray via the array API
-    if not isinstance(kind, str):
-        raise TypeError(f"kind must be a string: {kind}")
+    if not isinstance(kind, str) or (
+        isinstance(kind, tuple) and not all(isinstance(k, str) for k in kind)
+    ):
+        raise TypeError(f"kind must be a string or a tuple of strings: {repr(kind)}")
 
     if isinstance(dtype, np.dtype):
         return npcompat.isdtype(dtype, kind)
