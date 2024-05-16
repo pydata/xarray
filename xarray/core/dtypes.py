@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import enum
 import functools
 from typing import Any
 
@@ -62,22 +61,22 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     # N.B. these casting rules should match pandas
     dtype_: np.typing.DTypeLike
     fill_value: Any
-    if isdtype(dtype, DtypeKind.real_floating):
+    if isdtype(dtype, "real floating"):
         dtype_ = dtype
         fill_value = np.nan
-    elif isdtype(dtype, np.timedelta64):
+    elif isinstance(dtype, np.dtype) and np.issubdtype(dtype, np.timedelta64):
         # See https://github.com/numpy/numpy/issues/10685
         # np.timedelta64 is a subclass of np.integer
         # Check np.timedelta64 before np.integer
         fill_value = np.timedelta64("NaT")
         dtype_ = dtype
-    elif isdtype(dtype, DtypeKind.integral):
+    elif isdtype(dtype, "integral"):
         dtype_ = np.float32 if dtype.itemsize <= 2 else np.float64
         fill_value = np.nan
-    elif isdtype(dtype, DtypeKind.complex_floating):
+    elif isdtype(dtype, "complex floating"):
         dtype_ = dtype
         fill_value = np.nan + np.nan * 1j
-    elif isdtype(dtype, np.datetime64):
+    elif isinstance(dtype, np.dtype) and np.issubdtype(dtype, np.datetime64):
         dtype_ = dtype
         fill_value = np.datetime64("NaT")
     else:
@@ -120,16 +119,16 @@ def get_pos_infinity(dtype, max_for_int=False):
     -------
     fill_value : positive infinity value corresponding to this dtype.
     """
-    if isdtype(dtype, DtypeKind.real_floating):
+    if isdtype(dtype, "real floating"):
         return np.inf
 
-    if isdtype(dtype, DtypeKind.integral):
+    if isdtype(dtype, "integral"):
         if max_for_int:
             return np.iinfo(dtype).max
         else:
             return np.inf
 
-    if isdtype(dtype, DtypeKind.complex_floating):
+    if isdtype(dtype, "complex floating"):
         return np.inf + 1j * np.inf
 
     return INF
@@ -148,16 +147,16 @@ def get_neg_infinity(dtype, min_for_int=False):
     -------
     fill_value : positive infinity value corresponding to this dtype.
     """
-    if isdtype(dtype, DtypeKind.real_floating):
+    if isdtype(dtype, "real floating"):
         return -np.inf
 
-    if isdtype(dtype, DtypeKind.integral):
+    if isdtype(dtype, "integral"):
         if min_for_int:
             return np.iinfo(dtype).min
         else:
             return -np.inf
 
-    if isdtype(dtype, DtypeKind.complex_floating):
+    if isdtype(dtype, "complex floating"):
         return -np.inf - 1j * np.inf
 
     return NINF
@@ -165,86 +164,56 @@ def get_neg_infinity(dtype, min_for_int=False):
 
 def is_datetime_like(dtype):
     """Check if a dtype is a subclass of the numpy datetime types"""
-    return isdtype(dtype, (np.datetime64, np.timedelta64))
+    return _is_numpy_subdtype(dtype, (np.datetime64, np.timedelta64))
 
 
-class DtypeKind(enum.Enum):
-    bool = "bool"
-    signed_integer = "signed_integer"
-    unsigned_integer = "unsigned integer"
-    integral = "integral"
-    real_floating = "real floating"
-    complex_floating = "complex floating"
-    numeric = "numeric"
-    object = "object"
-    character = "character"
-    string = "string"
+def is_object(dtype):
+    """Check if a dtype is object"""
+    return _is_numpy_subdtype(dtype, object)
+
+
+def is_string(dtype):
+    """Check if a dtype is a string dtype"""
+    return _is_numpy_subdtype(dtype, (np.str_, np.character))
+
+
+def _is_numpy_subdtype(dtype, kind):
+    if not isinstance(dtype, np.dtype):
+        return False
+
+    kinds = kind if isinstance(kind, tuple) else (kind,)
+    return any(np.issubdtype(dtype, kind) for kind in kinds)
+
+
+dtype_kinds = {
+    "bool": np.bool_,
+    "signed integer": np.signedinteger,
+    "unsigned integer": np.unsignedinteger,
+    "integral": np.integer,
+    "real floating": np.floating,
+    "complex floating": np.complexfloating,
+    "numeric": np.number,
+}
+
+
+def numpy_isdtype(dtype, kinds):
+    # verified the dtypes already, no need to check again
+    translated_kinds = [dtype_kinds[kind] for kind in kinds]
+    if isinstance(dtype, np.generic):
+        return any(isinstance(dtype, kind) for kind in translated_kinds)
+    else:
+        return any(np.issubdtype(dtype, kind) for kind in translated_kinds)
+
+
+def pandas_isdtype(dtype, kinds):
+    return False
 
 
 def isdtype(dtype, kind, xp=None):
-    array_api_names = {
-        "bool": np.bool_,
-        "signed integer": np.signedinteger,
-        "unsigned integer": np.unsignedinteger,
-        "integral": np.integer,
-        "real floating": np.floating,
-        "complex floating": np.complexfloating,
-        "numeric": np.number,
-    }
-    numpy_names = {
-        "object": np.object_,
-        "character": np.character,
-        "string": np.str_,
-    }
-    long_names = array_api_names | numpy_names
-
-    def is_numpy_kind(kind):
-        return (isinstance(kind, str) and kind in numpy_names) or (
-            isinstance(kind, type) and issubclass(kind, (np.dtype, np.generic))
-        )
-
-    def split_numpy_kinds(kinds):
-        numpy_kinds = tuple(kind for kind in kinds if is_numpy_kind(kind))
-        non_numpy_kinds = tuple(kind for kind in kinds if not is_numpy_kind(kind))
-
-        return numpy_kinds, non_numpy_kinds
-
-    def translate_kind(kind):
-        if isinstance(kind, str):
-            translated = long_names.get(kind)
-            if translated is None:
-                raise ValueError(f"unknown kind: {kind!r}")
-
-            return translated
-        elif isinstance(kind, type) and issubclass(kind, np.generic):
-            return kind
-        else:
-            raise TypeError(f"invalid type of kind: {kind!r}")
-
-    def numpy_isdtype(dtype, kinds):
-        translated_kinds = [translate_kind(kind) for kind in kinds]
-        if isinstance(dtype, np.generic):
-            return any(isinstance(dtype, kind) for kind in translated_kinds)
-        else:
-            return any(np.issubdtype(dtype, kind) for kind in translated_kinds)
-
-    def pandas_isdtype(dtype, kinds):
-        return any(
-            isinstance(dtype, kind) if isinstance(kind, type) else False
-            for kind in kinds
-        )
-
-    if xp is None:
-        xp = np
-
-    if not isinstance(kind, tuple):
-        kinds = (kind,)
-    else:
-        kinds = kind
-
-    kinds = tuple(
-        kind if not isinstance(kind, DtypeKind) else kind.value for kind in kinds
-    )
+    kinds = kind if isinstance(kind, tuple) else (kind,)
+    unknown_dtypes = [kind for kind in kinds if kind not in dtype_kinds]
+    if unknown_dtypes:
+        raise ValueError(f"unknown dtype kinds: {unknown_dtypes}")
 
     if isinstance(dtype, np.dtype):
         # TODO (keewis): replace with `numpy.isdtype` once we drop `numpy<2.0`
@@ -252,12 +221,7 @@ def isdtype(dtype, kind, xp=None):
     elif is_extension_array_dtype(dtype):
         return pandas_isdtype(dtype, kinds)
     else:
-        numpy_kinds, non_numpy_kinds = split_numpy_kinds(kinds)
-
-        if not non_numpy_kinds:
-            return False
-
-        return xp.isdtype(dtype, non_numpy_kinds)
+        return xp.isdtype(dtype, kinds)
 
 
 def result_type(
@@ -293,8 +257,8 @@ def result_type(
         # only check if there's numpy dtypes – the array API does not
         # define the types we're checking for
         for left, right in PROMOTE_TO_OBJECT:
-            if any(isdtype(t, left, xp=xp) for t in types) and any(
-                isdtype(t, right, xp=xp) for t in types
+            if any(np.issubdtype(t, left) for t in types) and any(
+                np.issubdtype(t, right) for t in types
             ):
                 return xp.dtype(object)
 

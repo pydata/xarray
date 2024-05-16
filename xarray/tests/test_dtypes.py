@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 import pytest
 
 from xarray.core import dtypes
@@ -118,11 +117,8 @@ def test_nat_types_membership() -> None:
         (np.dtype("int32"), "integral", np, True),
         (np.dtype("float16"), "real floating", np, True),
         (np.dtype("complex128"), "complex floating", np, True),
-        (np.dtype("datetime64[s]"), (np.datetime64, np.timedelta64), np, True),
         (np.dtype("U"), "numeric", np, False),
-        (np.dtype("int32"), "foo", np, ValueError("unknown kind: 'foo'")),
-        (np.dtype("float64"), object(), np, TypeError("invalid type of kind: .+")),
-        (pd.CategoricalDtype([1, 2, 3]), pd.CategoricalDtype, None, True),
+        (np.dtype("int32"), "foo", np, ValueError("unknown dtype kinds:.+'foo'")),
         pytest.param(
             array_api_strict.int32,
             "integral",
@@ -141,7 +137,7 @@ def test_nat_types_membership() -> None:
         ),
         pytest.param(
             array_api_strict.bool,
-            (np.datetime64, np.timedelta64),
+            "numeric",
             array_api_strict,
             False,
             marks=requires_array_api_strict,

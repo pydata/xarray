@@ -145,7 +145,7 @@ def isnull(data):
 
     xp = get_array_namespace(data)
     scalar_type = data.dtype
-    if dtypes.isdtype(scalar_type, (np.datetime64, np.timedelta64), xp=xp):
+    if dtypes.is_datetime_like(scalar_type):
         # datetime types use NaT for null
         # note: must check timedelta64 before integers, because currently
         # timedelta64 inherits from np.integer
@@ -154,7 +154,13 @@ def isnull(data):
         # float types use NaN for null
         xp = get_array_namespace(data)
         return xp.isnan(data)
-    elif dtypes.isdtype(scalar_type, ("bool", "integral", "character", np.void), xp=xp):
+    elif dtypes.isdtype(scalar_type, ("bool", "integral"), xp=xp) or (
+        isinstance(scalar_type, np.dtype)
+        and (
+            np.issubdtype(scalar_type, np.character)
+            or np.issubdtype(scalar_type, np.void)
+        )
+    ):
         # these types cannot represent missing values
         return full_like(data, dtype=bool, fill_value=False)
     else:
@@ -411,14 +417,17 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
         xp = get_array_namespace(values)
         values = asarray(values, xp=xp)
 
-        if coerce_strings and dtypes.isdtype(values.dtype, ("string", "character")):
+        if coerce_strings and dtypes.is_string(values.dtype):
             values = astype(values, object)
 
         func = None
         if skipna or (
             skipna is None
-            and dtypes.isdtype(
-                values.dtype, ("complex floating", "real floating", "object"), xp=xp
+            and (
+                dtypes.isdtype(
+                    values.dtype, ("complex floating", "real floating"), xp=xp
+                )
+                or dtypes.is_object(values.dtype)
             )
         ):
             nanname = "nan" + name
@@ -485,9 +494,8 @@ def _datetime_nanmin(array):
     - numpy nanmin() don't work on datetime64 (all versions at the moment of writing)
     - dask min() does not work on datetime64 (all versions at the moment of writing)
     """
-    # no need for `xp` since this is only datetime dtypes
-    assert dtypes.isdtype(array.dtype, (np.datetime64, np.timedelta64))
     dtype = array.dtype
+    assert dtypes.is_datetime_like(dtype)
     # (NaT).astype(float) does not produce NaN...
     array = where(pandas_isnull(array), np.nan, array.astype(float))
     array = min(array, skipna=True)
@@ -524,7 +532,7 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     """
     # Set offset to minimum if not given
     if offset is None:
-        if dtypes.isdtype(array.dtype, (np.datetime64, np.timedelta64)):
+        if dtypes.is_datetime_like(array.dtype):
             offset = _datetime_nanmin(array)
         else:
             offset = min(array)
@@ -536,7 +544,7 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     # This map_blocks call is for backwards compatibility.
     # dask == 2021.04.1 does not support subtracting object arrays
     # which is required for cftime
-    if is_duck_dask_array(array) and dtypes.isdtype(array.dtype, "object"):
+    if is_duck_dask_array(array) and dtypes.is_object(array.dtype):
         array = array.map_blocks(lambda a, b: a - b, offset, meta=array._meta)
     else:
         array = array - offset
@@ -546,11 +554,11 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
         array = np.array(array)
 
     # Convert timedelta objects to float by first converting to microseconds.
-    if dtypes.isdtype(array.dtype, "object"):
+    if dtypes.is_object(array.dtype):
         return py_timedelta_to_float(array, datetime_unit or "ns").astype(dtype)
 
     # Convert np.NaT to np.nan
-    elif dtypes.isdtype(array.dtype, (np.datetime64, np.timedelta64)):
+    elif dtypes.is_datetime_like(array.dtype):
         # Convert to specified timedelta units.
         if datetime_unit:
             array = array / np.timedelta64(1, datetime_unit)
@@ -650,7 +658,7 @@ def mean(array, axis=None, skipna=None, **kwargs):
     from xarray.core.common import _contains_cftime_datetimes
 
     array = asarray(array)
-    if dtypes.isdtype(array.dtype, (np.datetime64, np.timedelta64)):
+    if dtypes.is_datetime_like(array.dtype):
         offset = _datetime_nanmin(array)
 
         # xarray always uses np.datetime64[ns] for np.datetime64 data
@@ -698,8 +706,8 @@ def cumsum(array, axis=None, **kwargs):
 
 def first(values, axis, skipna=None):
     """Return the first non-NA elements in this array along the given axis"""
-    if (skipna or skipna is None) and not dtypes.isdtype(
-        values.dtype, ("signed integer", "string", "character")
+    if (skipna or skipna is None) and not (
+        dtypes.isdtype(values.dtype, "signed integer") or dtypes.is_string(values.dtype)
     ):
         # only bother for dtypes that can hold NaN
         if is_chunked_array(values):
@@ -711,8 +719,8 @@ def first(values, axis, skipna=None):
 
 def last(values, axis, skipna=None):
     """Return the last non-NA elements in this array along the given axis"""
-    if (skipna or skipna is None) and not dtypes.isdtype(
-        values.dtype, ("signed integer", "string", "character")
+    if (skipna or skipna is None) and not (
+        dtypes.isdtype(values.dtype, "signed integer") or dtypes.is_string(values.dtype)
     ):
         # only bother for dtypes that can hold NaN
         if is_chunked_array(values):
