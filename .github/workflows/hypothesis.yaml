@@ -90,6 +90,8 @@ jobs:
       - name: Run slow Hypothesis tests
         if: success()
         id: status
+        env:
+          TERM: xterm-256color
         run: |
            python -m pytest --hypothesis-show-statistics --run-slow-hypothesis properties/*.py \
              --report-log output-${{ matrix.python-version }}-log.jsonl

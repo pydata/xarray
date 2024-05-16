@@ -148,6 +148,8 @@ jobs:
           save-always: true
 
       - name: Run tests
+        env:
+          TERM: xterm-256color
         run: python -m pytest -n 4
           --timeout 180
           --cov=xarray
