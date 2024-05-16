@@ -18,6 +18,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  TERM: xterm-256color
+
 jobs:
   detect-ci-trigger:
     name: detect ci trigger
@@ -148,8 +151,6 @@ jobs:
           save-always: true
 
       - name: Run tests
-        env:
-          TERM: xterm-256color
         run: python -m pytest -n 4
           --timeout 180
           --cov=xarray

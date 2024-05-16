@@ -11,6 +11,9 @@ on:
     - cron: "0 0 * * *" # Daily “At 00:00” UTC
   workflow_dispatch: # allows you to trigger manually
 
+env:
+  TERM: xterm-256color
+
 jobs:
   detect-ci-trigger:
     name: detect ci trigger
@@ -90,8 +93,6 @@ jobs:
       - name: Run slow Hypothesis tests
         if: success()
         id: status
-        env:
-          TERM: xterm-256color
         run: |
            python -m pytest --hypothesis-show-statistics --run-slow-hypothesis properties/*.py \
              --report-log output-${{ matrix.python-version }}-log.jsonl
