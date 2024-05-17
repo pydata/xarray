@@ -18,6 +18,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_COLOR: 3
+
 jobs:
   detect-ci-trigger:
     name: detect ci trigger
