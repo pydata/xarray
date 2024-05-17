@@ -84,7 +84,7 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False
 
     if non_uniform:
         # construct a datetime index that has irregular spacing
-        deltas = pd.TimedeltaIndex(unit="d", data=rs.normal(size=shape[0], scale=10))
+        deltas = pd.to_timedelta(rs.normal(size=shape[0], scale=10), unit="d")
         coords = {"time": (pd.Timestamp("2000-01-01") + deltas).sort_values()}
     else:
         coords = {"time": pd.date_range("2000-01-01", freq="D", periods=shape[0])}
@@ -164,9 +164,10 @@ def test_interpolate_pd_compat_non_uniform_index():
             # for the linear methods. This next line inforces the xarray
             # fill_value convention on the pandas output. Therefore, this test
             # only checks that interpolated values are the same (not nans)
-            expected.values[pd.isnull(actual.values)] = np.nan
+            expected_values = expected.values.copy()
+            expected_values[pd.isnull(actual.values)] = np.nan
 
-            np.testing.assert_allclose(actual.values, expected.values)
+            np.testing.assert_allclose(actual.values, expected_values)
 
 
 @requires_scipy

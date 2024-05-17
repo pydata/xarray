@@ -333,9 +333,9 @@ class TreeNode(Generic[Tree]):
         --------
         DataTree.descendants
         """
-        from xarray.datatree_.datatree import iterators
+        from xarray.core.iterators import LevelOrderIter
 
-        return iterators.PreOrderIter(self)
+        return LevelOrderIter(self)
 
     @property
     def descendants(self: Tree) -> tuple[Tree, ...]:

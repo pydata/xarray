@@ -874,7 +874,7 @@ and then calling ``to_zarr`` with ``compute=False`` to write only metadata
     # The values of this dask array are entirely irrelevant; only the dtype,
     # shape and chunks are used
     dummies = dask.array.zeros(30, chunks=10)
-    ds = xr.Dataset({"foo": ("x", dummies)})
+    ds = xr.Dataset({"foo": ("x", dummies)}, coords={"x": np.arange(30)})
     path = "path/to/directory.zarr"
     # Now we write the metadata without computing any array values
     ds.to_zarr(path, compute=False)
@@ -890,7 +890,7 @@ where the data should be written (in index space, not label space), e.g.,
 
     # For convenience, we'll slice a single dataset, but in the real use-case
     # we would create them separately possibly even from separate processes.
-    ds = xr.Dataset({"foo": ("x", np.arange(30))})
+    ds = xr.Dataset({"foo": ("x", np.arange(30))}, coords={"x": np.arange(30)})
     # Any of the following region specifications are valid
     ds.isel(x=slice(0, 10)).to_zarr(path, region="auto")
     ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": "auto"})
@@ -1293,27 +1293,6 @@ We recommend installing cfgrib via conda::
     conda install -c conda-forge cfgrib
 
 .. _cfgrib: https://github.com/ecmwf/cfgrib
-
-.. _io.pynio:
-
-Formats supported by PyNIO
---------------------------
-
-.. warning::
-
-    The `PyNIO backend is deprecated`_. `PyNIO is no longer maintained`_.
-
-Xarray can also read GRIB, HDF4 and other file formats supported by PyNIO_,
-if PyNIO is installed. To use PyNIO to read such files, supply
-``engine='pynio'`` to :py:func:`open_dataset`.
-
-We recommend installing PyNIO via conda::
-
-    conda install -c conda-forge pynio
-
-.. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
-.. _PyNIO backend is deprecated: https://github.com/pydata/xarray/issues/4491
-.. _PyNIO is no longer maintained: https://github.com/NCAR/pynio/issues/53
 
 
 CSV and other formats supported by pandas
