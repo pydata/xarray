@@ -1731,11 +1731,6 @@ def _add_legend(
             lbl = lbl_[ind].tolist()
             hdl = np.array(hdl)[ind].tolist()
 
-            # u, ind = np.unique(lbl, return_index=True)
-            # ind = np.argsort(ind)
-            # lbl = u[ind].tolist()
-            # hdl = np.array(hdl)[ind].tolist()
-
             # Add a subtitle:
             hdl, lbl = _legend_add_subtitle(hdl, lbl, label_from_attrs(huesizeplt.data))
             handles += hdl

@@ -3344,21 +3344,9 @@ def test_plot1d_functions(
     plotfunc: str,
 ) -> None:
     """Test plot1d function. Merge with TestPlot1D eventually."""
-
     ds = xr.tutorial.scatter_example_dataset(seed=42)
 
-    # extra_coords = [v for v in [x, hue, _size] if v is not None]
-
-    # # Base coords:
-    # coords = dict(ds.coords)
-
-    # # Add extra coords to the DataArray:
-    # coords.update({v: ds[v] for v in extra_coords})
-
-    # darray = xr.DataArray(ds[y], coords=coords)
-
     with figure_context():
-        # plt.close("all")
         getattr(ds.plot, plotfunc)(
             x=x,
             y=y,
