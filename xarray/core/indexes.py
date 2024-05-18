@@ -1791,6 +1791,37 @@ def indexes_all_equal(
     return not not_equal
 
 
+def _apply_indexes_fast(indexes: Indexes[Index], args: Mapping[Any, Any], func: str):
+    # This function avoids the call to indexes.group_by_index
+    # which is really slow when repeatidly iterating through
+    # an array. However, it fails to return the correct ID for
+    # multi-index arrays
+    indexes_fast, coords = indexes._indexes, indexes._variables
+
+    new_indexes: dict[Hashable, Index] = {k: v for k, v in indexes_fast.items()}
+    new_index_variables: dict[Hashable, Variable] = {}
+    for name, index in indexes_fast.items():
+        coord = coords[name]
+        if hasattr(coord, "_indexes"):
+            index_vars = {n: coords[n] for n in coord._indexes}
+        else:
+            index_vars = {name: coord}
+        index_dims = {d for var in index_vars.values() for d in var.dims}
+        index_args = {k: v for k, v in args.items() if k in index_dims}
+
+        if index_args:
+            new_index = getattr(index, func)(index_args)
+            if new_index is not None:
+                new_indexes.update({k: new_index for k in index_vars})
+                new_index_vars = new_index.create_variables(index_vars, fastpath=True)
+                new_index_variables.update(new_index_vars)
+                new_index_variables.update(new_index_vars)
+            else:
+                for k in index_vars:
+                    new_indexes.pop(k, None)
+    return new_indexes, new_index_variables
+
+
 def _apply_indexes(
     indexes: Indexes[Index],
     args: Mapping[Any, Any],
@@ -1819,7 +1850,10 @@ def isel_indexes(
     indexes: Indexes[Index],
     indexers: Mapping[Any, Any],
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-    return _apply_indexes(indexes, indexers, "isel")
+    if any(isinstance(v, PandasMultiIndex) for v in indexes._indexes.values()):
+        return _apply_indexes(indexes, indexers, "isel")
+    else:
+        return _apply_indexes_fast(indexes, indexers, "isel")
 
 
 def roll_indexes(
