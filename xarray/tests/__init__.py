@@ -145,7 +145,7 @@ requires_scipy_or_netCDF4 = pytest.mark.skipif(
 )
 has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
 requires_numbagg_or_bottleneck = pytest.mark.skipif(
-    not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
+    not has_numbagg_or_bottleneck, reason="requires numbagg or bottlekneck"
 )
 has_numpy_array_api, requires_numpy_array_api = _importorskip("numpy", "1.26.0")
 has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
