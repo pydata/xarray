@@ -161,7 +161,10 @@ class Index:
         raise NotImplementedError()
 
     def create_variables(
-        self, variables: Mapping[Any, Variable] | None = None
+        self,
+        variables: Mapping[Any, Variable] | None = None,
+        *,
+        fastpath: bool = False,
     ) -> IndexVars:
         """Maybe create new coordinate variables from this index.
 
@@ -575,13 +578,24 @@ class PandasIndex(Index):
 
     __slots__ = ("index", "dim", "coord_dtype")
 
-    def __init__(self, array: Any, dim: Hashable, coord_dtype: Any = None):
-        # make a shallow copy: cheap and because the index name may be updated
-        # here or in other constructors (cannot use pd.Index.rename as this
-        # constructor is also called from PandasMultiIndex)
-        index = safe_cast_to_index(array).copy()
+    def __init__(
+        self,
+        array: Any,
+        dim: Hashable,
+        coord_dtype: Any = None,
+        *,
+        fastpath: bool = False,
+    ):
+        if fastpath:
+            index = array
+        else:
+            index = safe_cast_to_index(array)
 
         if index.name is None:
+            # make a shallow copy: cheap and because the index name may be updated
+            # here or in other constructors (cannot use pd.Index.rename as this
+            # constructor is also called from PandasMultiIndex)
+            index = index.copy()
             index.name = dim
 
         self.index = index
@@ -596,7 +610,7 @@ class PandasIndex(Index):
             dim = self.dim
         if coord_dtype is None:
             coord_dtype = self.coord_dtype
-        return type(self)(index, dim, coord_dtype)
+        return type(self)(index, dim, coord_dtype, fastpath=True)
 
     @classmethod
     def from_variables(
@@ -642,6 +656,8 @@ class PandasIndex(Index):
 
         obj = cls(data, dim, coord_dtype=var.dtype)
         assert not isinstance(obj.index, pd.MultiIndex)
+        # Rename safely
+        obj.index = obj.index.copy()
         obj.index.name = name
 
         return obj
@@ -685,7 +701,7 @@ class PandasIndex(Index):
         return cls(new_pd_index, dim=dim, coord_dtype=coord_dtype)
 
     def create_variables(
-        self, variables: Mapping[Any, Variable] | None = None
+        self, variables: Mapping[Any, Variable] | None = None, *, fastpath: bool = False
     ) -> IndexVars:
         from xarray.core.variable import IndexVariable
 
@@ -702,7 +718,9 @@ class PandasIndex(Index):
             encoding = None
 
         data = PandasIndexingAdapter(self.index, dtype=self.coord_dtype)
-        var = IndexVariable(self.dim, data, attrs=attrs, encoding=encoding)
+        var = IndexVariable(
+            self.dim, data, attrs=attrs, encoding=encoding, fastpath=fastpath
+        )
         return {name: var}
 
     def to_pandas_index(self) -> pd.Index:
@@ -1123,7 +1141,7 @@ class PandasMultiIndex(PandasIndex):
         return self._replace(index, level_coords_dtype=level_coords_dtype)
 
     def create_variables(
-        self, variables: Mapping[Any, Variable] | None = None
+        self, variables: Mapping[Any, Variable] | None = None, *, fastpath: bool = False
     ) -> IndexVars:
         from xarray.core.variable import IndexVariable
 
