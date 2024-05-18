@@ -39,7 +39,7 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- Migrate documentation for ``datatree`` into main ``xarray`` documentation.
+- Migrate documentation for ``datatree`` into main ``xarray`` documentation (:pull:`9033`).
   For information on previous ``datatree`` releases, please see:
   `datatree's historical release notes <https://xarray-datatree.readthedocs.io/en/latest/>`_.
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
