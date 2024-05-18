@@ -861,9 +861,10 @@ class TestDocInsertion:
                     Unlike compute, the original dataset is modified and returned.
 
                     .. note::
-                        This method was copied from xarray.Dataset, but has been altered to
-                        call the method on the Datasets stored in every node of the
-                        subtree. See the `map_over_subtree` function for more details.
+                        This method was copied from :py:class:`xarray.Dataset`, but has
+                        been altered to call the method on the Datasets stored in every
+                        node of the subtree. See the `map_over_subtree` function for more
+                        details.
 
                     Normally, it should not be necessary to call this method in user code,
                     because all xarray functions should either work on deferred data or
@@ -891,9 +892,9 @@ class TestDocInsertion:
             """\
             Same as abs(a).
 
-            This method was copied from xarray.Dataset, but has been altered to call the
-                method on the Datasets stored in every node of the subtree. See the
-                `map_over_subtree` function for more details."""
+            This method was copied from :py:class:`xarray.Dataset`, but has been altered to
+                call the method on the Datasets stored in every node of the subtree. See
+                the `map_over_subtree` function for more details."""
         )
 
         actual_doc = insert_doc_addendum(mixin_doc, _MAPPED_DOCSTRING_ADDENDUM)
