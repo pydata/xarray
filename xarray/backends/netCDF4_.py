@@ -706,11 +706,17 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             lock=lock,
             autoclose=autoclose,
         )
+        if group:
+            parent = NodePath("/") / NodePath(group)
+        else:
+            parent = NodePath("/")
+
         mgr = store._manager
         ds = open_dataset(store, **kwargs)
-        tree_root = DataTree.from_dict({"/": ds})
+        tree_root = DataTree.from_dict({str(parent): ds})
         for group in _iter_nc_groups(store.ds):
-            store = NetCDF4DataStore(mgr, group=group, **kwargs)
+            gpath = str(parent / group[1:])
+            store = NetCDF4DataStore(mgr, group=gpath, **kwargs)
             store_entrypoint = StoreBackendEntrypoint()
             with close_on_error(store):
                 ds = store_entrypoint.open_dataset(
@@ -723,10 +729,9 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-                node_name = NodePath(group).name
-                new_node: DataTree = DataTree(name=node_name, data=ds)
+                new_node: DataTree = DataTree(name=NodePath(group).name, data=ds)
                 tree_root._set_item(
-                    group,
+                    gpath,
                     new_node,
                     allow_overwrite=False,
                     new_nodes_along_path=True,
