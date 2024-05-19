@@ -110,73 +110,28 @@ work even if not the hierarchical index is not a full tensor product:
     s[::2]
     s[::2].to_xarray()
 
-Lossless and reversible converter
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Lossless and reversible conversion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The previous example shows that the conversion is not reversible (lossy roundtrip) and that the size of the ``datasets`` increases.
+The previous ``Dataset`` example shows that the conversion is not reversible (lossy roundtrip) and
+that the size of the ``Dataset`` increases.
 
-Another approach is to use a lossless and reversible conversion (e.g with the third-party `ntv-pandas`__ library). A dataset can then be shared
-between several tools.
+Particularly after a roundtrip, the following deviations are noted:
+
+- a non-dimension Dataset ``coordinate`` is converted into ``variable`` 
+- a non-dimension DataArray ``coordinate`` is not converted 
+- ``dtype`` is not allways the same (e.g. "str" is converted to "object")
+- ``attrs`` metadata is not converted
+
+To avoid these problems, the third-party `ntv-pandas`__ library offers lossless and reversible conversions between 
+``Dataset``/ ``DataArray`` and pandas ``DataFrame`` objects.
+
+This solution is particularly interesting for converting any ``DataFrame`` into a ``Dataset`` (the converter find the multidimensional structure hidden by the tabular structure).
+
+The `ntv-pandas examples`__ show how to improve the conversion for the previous ``Dataset`` example and for more complex examples.
 
 __ https://github.com/loco-philippe/ntv-pandas
-
-DataFrame to Dataset or DataArray
----------------------------------
-
-The conversion is done without loss, by finding the multidimensional structure hidden by the tabular structure.
-
-By applying this conversion to the DataFame above, we find the initial ``Dataset`` (the DataSet precursor to the DataFrame):
-
-.. ipython:: python
-
-    import ntv_pandas as npd
-
-    ds_roundtrip = df.npd.to_xarray()
-    ds_roundtrip
-
-.. note::
-
-    A `dataset=True` or `dataset=False` parameter is used to choose the conversion result (active only if the Dataframe contains a single variable)
-
-Dataset or DataArray to Dataframe
----------------------------------
-
-In the other direction, the ``DataFrame`` created (df_roundtrip) is equivalent to the initial ``DataFrame`` (df).
-
-.. ipython:: python
-
-    df_roundtrip = npd.from_xarray(ds_roundtrip)
-    df_roundtrip
-
-To be lossless, the information that is not supported by the columns of the DataFrame (e.g. ``attrs`` data) must be transferred to the DataFrame.
-
-For this, pandas provides the ``attrs`` attribute.
-
-.. ipython:: python
-
-    ds = xr.Dataset(
-        {"foo": (("x", "y"), np.random.randn(2, 3))},
-        coords={
-            "x": [10, 20],
-            "y": ["a", "b", "c"],
-            "along_x": ("x", np.random.randn(2)),
-            "scalar": 123,
-        },
-        attrs={"example": "test npd"},
-    )
-    ds
-
-After reverse conversion, ``attrs`` is still present in the ``Dataset``:
-
-.. ipython:: python
-
-    df = npd.from_xarray(ds)
-
-    df.npd.to_xarray()
-
-.. note::
-
-    The pandas ``attrs`` attribute is still experimental (some operations remove it). The associated information must therefore be processed as a priority.
+__ https://github.com/loco-philippe/ntv-pandas/tree/main/example
 
 Multi-dimensional data
 ~~~~~~~~~~~~~~~~~~~~~~
