@@ -11,6 +11,9 @@ on:
     - cron: "0 0 * * *" # Daily “At 00:00” UTC
   workflow_dispatch: # allows you to trigger manually
 
+env:
+  FORCE_COLOR: 3
+
 jobs:
   detect-ci-trigger:
     name: detect ci trigger
