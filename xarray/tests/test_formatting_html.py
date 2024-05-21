@@ -211,7 +211,7 @@ class Test_summarize_datatree_children:
     func = staticmethod(fh.summarize_datatree_children)
 
     @pytest.fixture(scope="class")
-    def childfree_tree_factory(self) -> xr.DataTree:
+    def childfree_tree_factory(self):
         """
         Fixture for a child-free DataTree factory.
         """
