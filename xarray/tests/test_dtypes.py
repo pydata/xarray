@@ -118,7 +118,7 @@ def test_nat_types_membership() -> None:
         (np.dtype("float16"), "real floating", np, True),
         (np.dtype("complex128"), "complex floating", np, True),
         (np.dtype("U"), "numeric", np, False),
-        (np.dtype("int32"), "foo", np, TypeError("kind")),
+        (np.dtype("int32"), "foo", np, ValueError("kind")),
         pytest.param(
             array_api_strict.int32,
             "integral",
