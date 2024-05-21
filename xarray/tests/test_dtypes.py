@@ -154,6 +154,7 @@ def test_isdtype(dtype, kinds, xp, expected) -> None:
     (
         (np.dtype("int32"), "foo", np, (TypeError, ValueError), "kind"),
         (np.dtype("int32"), np.signedinteger, np, TypeError, "kind"),
+        (np.dtype("float16"), 1, np, TypeError, "kind"),
     ),
 )
 def test_isdtype_error(dtype, kinds, xp, error, pattern):
