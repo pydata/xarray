@@ -27,5 +27,4 @@ examples that describe many common tasks that you can accomplish with xarray.
    options
    testing
    duckarrays
-   datatree
    hierarchical-data
