@@ -118,7 +118,6 @@ def test_nat_types_membership() -> None:
         (np.dtype("float16"), "real floating", np, True),
         (np.dtype("complex128"), "complex floating", np, True),
         (np.dtype("U"), "numeric", np, False),
-        (np.dtype("int32"), "foo", np, ValueError("kind")),
         pytest.param(
             array_api_strict.int32,
             "integral",
@@ -146,11 +145,17 @@ def test_nat_types_membership() -> None:
     ),
 )
 def test_isdtype(dtype, kinds, xp, expected) -> None:
-    if isinstance(expected, Exception):
-        with pytest.raises(type(expected), match=expected.args[0]):
-            dtypes.isdtype(dtype, kinds, xp=xp)
-
-        return
-
     actual = dtypes.isdtype(dtype, kinds, xp=xp)
     assert actual == expected
+
+
+@pytest.mark.parametrize(
+    ["dtype", "kinds", "xp", "error", "pattern"],
+    (
+        (np.dtype("int32"), "foo", np, (TypeError, ValueError), "kind"),
+        (np.dtype("int32"), np.signedinteger, np, TypeError, "kind"),
+    ),
+)
+def test_isdtype_error(dtype, kinds, xp, error, pattern):
+    with pytest.raises(error, match=pattern):
+        dtypes.isdtype(dtype, kinds, xp=xp)
