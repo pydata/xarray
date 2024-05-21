@@ -128,7 +128,7 @@ To avoid these problems, the third-party `ntv-pandas <https://github.com/loco-ph
 
 This solution is particularly interesting for converting any ``DataFrame`` into a ``Dataset`` (the converter find the multidimensional structure hidden by the tabular structure).
 
-The `ntv-pandas examples`__ show how to improve the conversion for the previous ``Dataset`` example and for more complex examples.
+The `ntv-pandas examples <https://github.com/loco-philippe/ntv-pandas/tree/main/example>`__ show how to improve the conversion for the previous ``Dataset`` example and for more complex examples.
 
 Multi-dimensional data
 ~~~~~~~~~~~~~~~~~~~~~~
