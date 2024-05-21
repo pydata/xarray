@@ -4,7 +4,6 @@
     import numpy as np
     import pandas as pd
     import xarray as xr
-    from xarray.core.datatree import DataTree
 
     np.random.seed(123456)
     np.set_printoptions(threshold=20)
@@ -22,11 +21,11 @@ In order of increasing complexity, they are:
 - :py:class:`xarray.Variable`,
 - :py:class:`xarray.DataArray`,
 - :py:class:`xarray.Dataset`,
-- :py:class:`xarray.core.datatree.DataTree`.
+- :py:class:`xarray.DataTree`.
 
 The user guide lists only :py:class:`xarray.DataArray` and :py:class:`xarray.Dataset`,
 but :py:class:`~xarray.Variable` is the fundamental object internally,
-and :py:class:`~xarray.core.datatree.DataTree` is a natural generalisation of :py:class:`xarray.Dataset`.
+and :py:class:`~xarray.DataTree` is a natural generalisation of :py:class:`xarray.Dataset`.
 
 .. note::
 

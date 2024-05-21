@@ -22,6 +22,12 @@ v2024.05.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- ``DataTree`` related functionality is now exposed in the main ``xarray`` public
+  API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``,
+  ``xarray.map_over_subtree``, ``xarray.register_datatree_accessor`` and
+  ``xarray.testing.assert_isomorphic``.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 Breaking changes

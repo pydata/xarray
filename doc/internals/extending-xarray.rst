@@ -42,7 +42,7 @@ Writing Custom Accessors
 To resolve this issue for more complex cases, xarray has the
 :py:func:`~xarray.register_dataset_accessor`,
 :py:func:`~xarray.register_dataarray_accessor` and
-:py:func:`~xarray.core.extensions.register_datatree_accessor` decorators for adding custom
+:py:func:`~xarray.register_datatree_accessor` decorators for adding custom
 "accessors" on xarray objects, thereby "extending" the functionality of your xarray object.
 
 Here's how you might use these decorators to

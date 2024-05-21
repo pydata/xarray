@@ -9,7 +9,6 @@ Working With Hierarchical Data
     import numpy as np
     import pandas as pd
     import xarray as xr
-    from xarray.core.datatree import DataTree
 
     np.random.seed(123456)
     np.set_printoptions(threshold=10)
@@ -33,9 +32,9 @@ or even any combination of the above.
 
 Often datasets like this cannot easily fit into a single :py:class:`xarray.Dataset` object,
 or are more usefully thought of as groups of related ``xarray.Dataset`` objects.
-For this purpose we provide the :py:class:`xarray.core.datatree.DataTree` class.
+For this purpose we provide the :py:class:`xarray.DataTree` class.
 
-This page explains in detail how to understand and use the different features of the :py:class:`xarray.core.datatree.DataTree` class for your own hierarchical data needs.
+This page explains in detail how to understand and use the different features of the :py:class:`xarray.DataTree` class for your own hierarchical data needs.
 
 .. _node relationships:
 
@@ -54,15 +53,15 @@ Let's start by defining nodes representing the two siblings, Bart and Lisa Simps
 
 .. ipython:: python
 
-    bart = DataTree(name="Bart")
-    lisa = DataTree(name="Lisa")
+    bart = xr.DataTree(name="Bart")
+    lisa = xr.DataTree(name="Lisa")
 
-Each of these node objects knows their own :py:class:`~xarray.core.datatree.DataTree.name`, but they currently have no relationship to one another.
+Each of these node objects knows their own :py:class:`~xarray.DataTree.name`, but they currently have no relationship to one another.
 We can connect them by creating another node representing a common parent, Homer Simpson:
 
 .. ipython:: python
 
-    homer = DataTree(name="Homer", children={"Bart": bart, "Lisa": lisa})
+    homer = xr.DataTree(name="Homer", children={"Bart": bart, "Lisa": lisa})
 
 Here we set the children of Homer in the node's constructor.
 We now have a small family tree
@@ -72,17 +71,17 @@ We now have a small family tree
     homer
 
 where we can see how these individual Simpson family members are related to one another.
-The nodes representing Bart and Lisa are now connected - we can confirm their sibling rivalry by examining the :py:class:`~xarray.core.datatree.DataTree.siblings` property:
+The nodes representing Bart and Lisa are now connected - we can confirm their sibling rivalry by examining the :py:class:`~xarray.DataTree.siblings` property:
 
 .. ipython:: python
 
     list(bart.siblings)
 
-But oops, we forgot Homer's third daughter, Maggie! Let's add her by updating Homer's :py:class:`~xarray.core.datatree.DataTree.children` property to include her:
+But oops, we forgot Homer's third daughter, Maggie! Let's add her by updating Homer's :py:class:`~xarray.DataTree.children` property to include her:
 
 .. ipython:: python
 
-    maggie = DataTree(name="Maggie")
+    maggie = xr.DataTree(name="Maggie")
     homer.children = {"Bart": bart, "Lisa": lisa, "Maggie": maggie}
     homer
 
@@ -99,14 +98,14 @@ That's good - updating the properties of our nodes does not break the internal c
     the fact that distant relatives can mate makes it a directed acyclic graph.
     Trees of ``DataTree`` objects cannot represent this.
 
-Homer is currently listed as having no parent (the so-called "root node" of this tree), but we can update his :py:class:`~xarray.core.datatree.DataTree.parent` property:
+Homer is currently listed as having no parent (the so-called "root node" of this tree), but we can update his :py:class:`~xarray.DataTree.parent` property:
 
 .. ipython:: python
 
-    abe = DataTree(name="Abe")
+    abe = xr.DataTree(name="Abe")
     homer.parent = abe
 
-Abe is now the "root" of this tree, which we can see by examining the :py:class:`~xarray.core.datatree.DataTree.root` property of any node in the tree
+Abe is now the "root" of this tree, which we can see by examining the :py:class:`~xarray.DataTree.root` property of any node in the tree
 
 .. ipython:: python
 
@@ -122,11 +121,11 @@ We can see the whole tree by printing Abe's node or just part of the tree by pri
 We can see that Homer is aware of his parentage, and we say that Homer and his children form a "subtree" of the larger Simpson family tree.
 
 In episode 28, Abe Simpson reveals that he had another son, Herbert "Herb" Simpson.
-We can add Herbert to the family tree without displacing Homer by :py:meth:`~xarray.core.datatree.DataTree.assign`-ing another child to Abe:
+We can add Herbert to the family tree without displacing Homer by :py:meth:`~xarray.DataTree.assign`-ing another child to Abe:
 
 .. ipython:: python
 
-    herbert = DataTree(name="Herb")
+    herbert = xr.DataTree(name="Herb")
     abe.assign({"Herbert": herbert})
 
 .. note::
@@ -154,7 +153,7 @@ Let's use a different example of a tree to discuss more complex relationships be
 
 .. ipython:: python
 
-    vertebrates = DataTree.from_dict(
+    vertebrates = xr.DataTree.from_dict(
         name="Vertebrae",
         d={
             "/Sharks": None,
@@ -172,7 +171,7 @@ Let's use a different example of a tree to discuss more complex relationships be
         "/Bony Skeleton/Four Limbs/Amniotic Egg/Two Fenestrae/Dinosaurs"
     ]
 
-We have used the :py:meth:`~xarray.core.datatree.DataTree.from_dict` constructor method as an alternate way to quickly create a whole tree,
+We have used the :py:meth:`~xarray.DataTree.from_dict` constructor method as an alternate way to quickly create a whole tree,
 and :ref:`filesystem paths` (to be explained shortly) to select two nodes of interest.
 
 .. ipython:: python
@@ -184,7 +183,7 @@ rather than an evolutionary tree).
 
 Here both the species and the features used to group them are represented by ``DataTree`` node objects - there is no distinction in types of node.
 We can however get a list of only the nodes we used to represent species by using the fact that all those nodes have no children - they are "leaf nodes".
-We can check if a node is a leaf with :py:meth:`~xarray.core.datatree.DataTree.is_leaf`, and get a list of all leaves with the :py:class:`~xarray.core.datatree.DataTree.leaves` property:
+We can check if a node is a leaf with :py:meth:`~xarray.DataTree.is_leaf`, and get a list of all leaves with the :py:class:`~xarray.DataTree.leaves` property:
 
 .. ipython:: python
 
@@ -208,7 +207,7 @@ an error will be raised.
 .. ipython:: python
     :okexcept:
 
-    alien = DataTree(name="Xenomorph")
+    alien = xr.DataTree(name="Xenomorph")
     primates.find_common_ancestor(alien)
 
 
@@ -222,7 +221,7 @@ There are various ways to access the different nodes in a tree.
 Properties
 ~~~~~~~~~~
 
-We can navigate trees using the :py:class:`~xarray.core.datatree.DataTree.parent` and :py:class:`~xarray.core.datatree.DataTree.children` properties of each node, for example:
+We can navigate trees using the :py:class:`~xarray.DataTree.parent` and :py:class:`~xarray.DataTree.children` properties of each node, for example:
 
 .. ipython:: python
 
@@ -234,24 +233,24 @@ Dictionary-like interface
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Children are stored on each node as a key-value mapping from name to child node.
-They can be accessed and altered via the :py:class:`~xarray.core.datatree.DataTree.__getitem__` and :py:class:`~xarray.core.datatree.DataTree.__setitem__` syntax.
-In general :py:class:`~xarray.core.datatree.DataTree.DataTree` objects support almost the entire set of dict-like methods,
-including :py:meth:`~xarray.core.datatree.DataTree.keys`, :py:class:`~xarray.core.datatree.DataTree.values`, :py:class:`~xarray.core.datatree.DataTree.items`,
-:py:meth:`~xarray.core.datatree.DataTree.__delitem__` and :py:meth:`~xarray.core.datatree.DataTree.update`.
+They can be accessed and altered via the :py:class:`~xarray.DataTree.__getitem__` and :py:class:`~xarray.DataTree.__setitem__` syntax.
+In general :py:class:`~xarray.DataTree.DataTree` objects support almost the entire set of dict-like methods,
+including :py:meth:`~xarray.DataTree.keys`, :py:class:`~xarray.DataTree.values`, :py:class:`~xarray.DataTree.items`,
+:py:meth:`~xarray.DataTree.__delitem__` and :py:meth:`~xarray.DataTree.update`.
 
 .. ipython:: python
 
     vertebrates["Bony Skeleton"]["Ray-finned Fish"]
 
 Note that the dict-like interface combines access to child ``DataTree`` nodes and stored ``DataArrays``,
-so if we have a node that contains both children and data, calling :py:meth:`~xarray.core.datatree.DataTree.keys` will list both names of child nodes and
+so if we have a node that contains both children and data, calling :py:meth:`~xarray.DataTree.keys` will list both names of child nodes and
 names of data variables:
 
 .. ipython:: python
 
-    dt = DataTree(
+    dt = xr.DataTree(
         data=xr.Dataset({"foo": 0, "bar": 1}),
-        children={"a": DataTree(), "b": DataTree()},
+        children={"a": xr.DataTree(), "b": xr.DataTree()},
     )
     print(dt)
     list(dt.keys())
@@ -279,8 +278,8 @@ Each node is like a directory, and each directory can contain both more sub-dire
 .. note::
 
     Future development will allow you to make the filesystem analogy concrete by
-    using :py:func:`~xarray.core.datatree.DataTree.open_mfdatatree` or
-    :py:func:`~xarray.core.datatree.DataTree.save_mfdatatree`.
+    using :py:func:`~xarray.DataTree.open_mfdatatree` or
+    :py:func:`~xarray.DataTree.save_mfdatatree`.
     (`See related issue in GitHub <https://github.com/xarray-contrib/datatree/issues/55>`_)
 
 Datatree objects support a syntax inspired by unix-like filesystems,
@@ -311,7 +310,7 @@ We can use this with ``__setitem__`` to add a missing entry to our evolutionary 
 
 .. ipython:: python
 
-    primates["../../Two Fenestrae/Crocodiles"] = DataTree()
+    primates["../../Two Fenestrae/Crocodiles"] = xr.DataTree()
     print(vertebrates)
 
 Given two nodes in a tree, we can also find their relative path:
@@ -332,21 +331,21 @@ we can construct a complex tree quickly using the alternative constructor :py:me
         "/a/b": xr.Dataset({"zed": np.NaN}),
         "a/c/d": None,
     }
-    dt = DataTree.from_dict(d)
+    dt = xr.DataTree.from_dict(d)
     dt
 
 .. note::
 
     Notice that using the path-like syntax will also create any intermediate empty nodes necessary to reach the end of the specified path
     (i.e. the node labelled `"c"` in this case.)
-    This is to help avoid lots of redundant entries when creating deeply-nested trees using :py:meth:`xarray.core.datatree.DataTree.from_dict`.
+    This is to help avoid lots of redundant entries when creating deeply-nested trees using :py:meth:`xarray.DataTree.from_dict`.
 
 .. _iterating over trees:
 
 Iterating over trees
 ~~~~~~~~~~~~~~~~~~~~
 
-You can iterate over every node in a tree using the subtree :py:class:`~xarray.core.datatree.DataTree.subtree` property.
+You can iterate over every node in a tree using the subtree :py:class:`~xarray.DataTree.subtree` property.
 This returns an iterable of nodes, which yields them in depth-first order.
 
 .. ipython:: python
@@ -354,11 +353,11 @@ This returns an iterable of nodes, which yields them in depth-first order.
     for node in vertebrates.subtree:
         print(node.path)
 
-A very useful pattern is to use :py:class:`~xarray.core.datatree.DataTree.subtree` conjunction with the :py:class:`~xarray.core.datatree.DataTree.path` property to manipulate the nodes however you wish,
-then rebuild a new tree using :py:meth:`xarray.core.datatree.DataTree.from_dict()`.
+A very useful pattern is to use :py:class:`~xarray.DataTree.subtree` conjunction with the :py:class:`~xarray.DataTree.path` property to manipulate the nodes however you wish,
+then rebuild a new tree using :py:meth:`xarray.DataTree.from_dict()`.
 
 For example, we could keep only the nodes containing data by looping over all nodes,
-checking if they contain any data using :py:class:`~xarray.core.datatree.DataTree.has_data`,
+checking if they contain any data using :py:class:`~xarray.DataTree.has_data`,
 then rebuilding a new tree using only the paths of those nodes:
 
 .. ipython:: python
@@ -381,11 +380,11 @@ Subsetting Tree Nodes
 We can subset our tree to select only nodes of interest in various ways.
 
 Similarly to on a real filesystem, matching nodes by common patterns in their paths is often useful.
-We can use :py:meth:`xarray.core.datatree.DataTree.match` for this:
+We can use :py:meth:`xarray.DataTree.match` for this:
 
 .. ipython:: python
 
-    dt = DataTree.from_dict(
+    dt = xr.DataTree.from_dict(
         {
             "/a/A": None,
             "/a/B": None,
@@ -397,13 +396,13 @@ We can use :py:meth:`xarray.core.datatree.DataTree.match` for this:
     result
 
 We can also subset trees by the contents of the nodes.
-:py:meth:`xarray.core.datatree.DataTree.filter` retains only the nodes of a tree that meet a certain condition.
+:py:meth:`xarray.DataTree.filter` retains only the nodes of a tree that meet a certain condition.
 For example, we could recreate the Simpson's family tree with the ages of each individual, then filter for only the adults:
 First lets recreate the tree but with an `age` data variable in every node:
 
 .. ipython:: python
 
-    simpsons = DataTree.from_dict(
+    simpsons = xr.DataTree.from_dict(
         d={
             "/": xr.Dataset({"age": 83}),
             "/Herbert": xr.Dataset({"age": 40}),
@@ -424,7 +423,7 @@ Now let's filter out the minors:
 
 The result is a new tree, containing only the nodes matching the condition.
 
-(Yes, under the hood :py:meth:`~xarray.core.datatree.DataTree.filter` is just syntactic sugar for the pattern we showed you in :ref:`iterating over trees` !)
+(Yes, under the hood :py:meth:`~xarray.DataTree.filter` is just syntactic sugar for the pattern we showed you in :ref:`iterating over trees` !)
 
 .. _Tree Contents:
 
@@ -437,7 +436,7 @@ Hollow Trees
 A concept that can sometimes be useful is that of a "Hollow Tree", which means a tree with data stored only at the leaf nodes.
 This is useful because certain useful tree manipulation operations only make sense for hollow trees.
 
-You can check if a tree is a hollow tree by using the :py:class:`~xarray.core.datatree.DataTree.is_hollow` property.
+You can check if a tree is a hollow tree by using the :py:class:`~xarray.DataTree.is_hollow` property.
 We can see that the Simpson's family is not hollow because the data variable ``"age"`` is present at some nodes which
 have children (i.e. Abe and Homer).
 
@@ -475,7 +474,7 @@ let's first create a example scientific dataset.
     time_stamps1 = time_stamps(n_samples=15, T=1.5)
     time_stamps2 = time_stamps(n_samples=10, T=1.0)
 
-    voltages = DataTree.from_dict(
+    voltages = xr.DataTree.from_dict(
         {
             "/oscilloscope1": xr.Dataset(
                 {
@@ -541,7 +540,7 @@ See that the same change (fast-forwarding by adding 10 years to the age of each 
 Mapping Custom Functions Over Trees
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can map custom computation over each node in a tree using :py:meth:`xarray.core.datatree.DataTree.map_over_subtree`.
+You can map custom computation over each node in a tree using :py:meth:`xarray.DataTree.map_over_subtree`.
 You can map any function, so long as it takes `xarray.Dataset` objects as one (or more) of the input arguments,
 and returns one (or more) xarray datasets.
 
@@ -585,14 +584,14 @@ We can check if any two trees are isomorphic using the :py:meth:`DataTree.isomor
 .. ipython:: python
     :okexcept:
 
-    dt1 = DataTree.from_dict({"a": None, "a/b": None})
-    dt2 = DataTree.from_dict({"a": None})
+    dt1 = xr.DataTree.from_dict({"a": None, "a/b": None})
+    dt2 = xr.DataTree.from_dict({"a": None})
     dt1.isomorphic(dt2)
 
-    dt3 = DataTree.from_dict({"a": None, "b": None})
+    dt3 = xr.DataTree.from_dict({"a": None, "b": None})
     dt1.isomorphic(dt3)
 
-    dt4 = DataTree.from_dict({"A": None, "A/B": xr.Dataset({"foo": 1})})
+    dt4 = xr.DataTree.from_dict({"A": None, "A/B": xr.Dataset({"foo": 1})})
     dt1.isomorphic(dt4)
 
 If the trees are not isomorphic a :py:class:`~TreeIsomorphismError` will be raised.
@@ -606,7 +605,7 @@ we can do arithmetic between them.
 
 .. ipython:: python
 
-    currents = DataTree.from_dict(
+    currents = xr.DataTree.from_dict(
         {
             "/oscilloscope1": xr.Dataset(
                 {

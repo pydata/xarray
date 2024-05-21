@@ -155,9 +155,9 @@ Groups
 
 Whilst netCDF groups can only be loaded individually as ``Dataset`` objects, a
 whole file of many nested groups can be loaded as a single
-:py:class:`xarray.core.datatree.DataTree` object. To open a whole netCDF file as a tree of groups
-use the :py:func:`open_datatree` function. To save a DataTree object as a
-netCDF file containing many groups, use the :py:meth:`xarray.core.datatree.DataTree.to_netcdf` method.
+:py:class:`xarray.DataTree` object. To open a whole netCDF file as a tree of groups
+use the :py:func:`xarray.open_datatree` function. To save a DataTree object as a
+netCDF file containing many groups, use the :py:meth:`xarray.DataTree.to_netcdf` method.
 
 
 .. _netcdf.group.warning:
@@ -919,10 +919,10 @@ Groups
 ~~~~~~
 
 Nested groups in zarr stores can be represented by loading the store as a
-:py:class:`xarray.core.datatree.DataTree` object, similarly to netCDF. To open a whole zarr store as
+:py:class:`xarray.DataTree` object, similarly to netCDF. To open a whole zarr store as
 a tree of groups use the :py:func:`open_datatree` function. To save a
 ``DataTree`` object as a zarr store containing many groups, use the
-:py:meth:`xarray.core.datatree.DataTree.to_zarr()` method.
+:py:meth:`xarray.DataTree.to_zarr()` method.
 
 .. note::
     Note that perfect round-tripping should always be possible with a zarr

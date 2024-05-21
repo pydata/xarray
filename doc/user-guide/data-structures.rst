@@ -574,10 +574,8 @@ Let's make a single datatree node with some example data in it:
 
 .. ipython:: python
 
-    from xarray.core.datatree import DataTree
-
     ds1 = xr.Dataset({"foo": "orange"})
-    dt = DataTree(name="root", data=ds1)  # create root node
+    dt = xr.DataTree(name="root", data=ds1)  # create root node
 
     dt
 
@@ -590,7 +588,7 @@ the constructor of the second:
 
     ds2 = xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])})
     # add a child by referring to the parent node
-    node2 = DataTree(name="a", parent=dt, data=ds2)
+    node2 = xr.DataTree(name="a", parent=dt, data=ds2)
 
 or by dynamically updating the attributes of one node to refer to another:
 
@@ -598,7 +596,7 @@ or by dynamically updating the attributes of one node to refer to another:
 
     # add a second child by first creating a new node ...
     ds3 = xr.Dataset({"zed": np.NaN})
-    node3 = DataTree(name="b", data=ds3)
+    node3 = xr.DataTree(name="b", data=ds3)
     # ... then updating its .parent property
     node3.parent = dt
 
@@ -620,7 +618,7 @@ Alternatively you can also create a ``DataTree`` object from
 
 - An ``xarray.Dataset`` using ``Dataset.to_node()`` (not yet implemented),
 - A dictionary mapping directory-like paths to either ``DataTree`` nodes or
-  data, using :py:meth:`DataTree.from_dict()`,
+  data, using :py:meth:`xarray.DataTree.from_dict()`,
 - A netCDF or Zarr file on disk with :py:func:`open_datatree()`. See
   :ref:`reading and writing files <io>`.
 
@@ -628,7 +626,7 @@ Alternatively you can also create a ``DataTree`` object from
 DataTree Contents
 ~~~~~~~~~~~~~~~~~
 
-Like ``xarray.Dataset``, ``DataTree`` implements the python mapping interface,
+Like ``xarray.Dataset``, ``xarray.DataTree`` implements the python mapping interface,
 but with values given by either ``xarray.DataArray`` objects or other
 ``DataTree`` objects.
 
@@ -649,7 +647,7 @@ This demonstrates the fact that the data in any one node is equivalent to the
 contents of a single ``xarray.Dataset`` object. The ``DataTree.ds`` property
 returns an immutable view, but we can instead extract the node's data contents
 as a new (and mutable) ``xarray.Dataset`` object via
-:py:meth:`xarray.core.datatree.DataTree.to_dataset()`:
+:py:meth:`xarray.DataTree.to_dataset()`:
 
 .. ipython:: python
 
@@ -673,21 +671,21 @@ datatree from scratch, we could have written:
 
 .. ipython:: python
 
-    dt = DataTree(name="root")
+    dt = xr.DataTree(name="root")
     dt["foo"] = "orange"
-    dt["a"] = DataTree(data=xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])}))
+    dt["a"] = xr.DataTree(data=xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])}))
     dt["a/b/zed"] = np.NaN
     dt
 
 To change the variables in a node of a ``DataTree``, you can use all the
 standard dictionary methods, including ``values``, ``items``, ``__delitem__``,
-``get`` and :py:meth:`xarray.core.datatree.DataTree.update`.
+``get`` and :py:meth:`xarray.DataTree.update`.
 Note that assigning a ``DataArray`` object to a ``DataTree`` variable using
 ``__setitem__`` or ``update`` will :ref:`automatically align <update>` the
 array(s) to the original node's indexes.
 
 If you copy a ``DataTree`` using the :py:func:`copy` function or the
-:py:meth:`xarray.core.datatree.DataTree.copy` method it will copy the subtree,
+:py:meth:`xarray.DataTree.copy` method it will copy the subtree,
 meaning that node and children below it, but no parents above it.
 Like for ``Dataset``, this copy is shallow by default, but you can copy all the
 underlying data arrays by calling ``dt.copy(deep=True)``.

@@ -225,7 +225,7 @@ multiple netCDF groups (see :issue:`4118`).
 
 Currently there are several libraries which have wrapped xarray in order to build
 domain-specific data structures (e.g. `xarray-multiscale <https://github.com/JaneliaSciComp/xarray-multiscale>`__.),
-but a general ``xarray.core.datatree.DataTree`` object obviates the need for these and]
+but a general ``xarray.DataTree`` object obviates the need for these and]
 consolidates effort in a single domain-agnostic tool, much as xarray has already achieved.
 
 Labeled array without coordinates

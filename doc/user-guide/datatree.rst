@@ -3,7 +3,7 @@
 DataTrees
 ---------
 
-:py:class:`xarray.core.datatree.DataTree` is a tree-like container of :py:class:`xarray.DataArray` objects, organised into multiple mutually allignable groups.
+:py:class:`xarray.DataTree` is a tree-like container of :py:class:`xarray.DataArray` objects, organised into multiple mutually allignable groups.
 You can think of it like a (recursive) ``dict`` of :py:class:`xarray.Dataset` objects.
 
 Let's first make some example xarray datasets (following on from xarray's
@@ -13,7 +13,6 @@ Let's first make some example xarray datasets (following on from xarray's
 
     import numpy as np
     import xarray as xr
-    from xarray.core.datatree import DataTree
 
     data = xr.DataArray(np.random.randn(2, 3), dims=("x", "y"), coords={"x": [10, 20]})
     ds = xr.Dataset(dict(foo=data, bar=("x", [1, 2]), baz=np.pi))
@@ -32,7 +31,9 @@ Now we'll put this data into a multi-group tree:
 
 .. ipython:: python
 
-    dt = DataTree.from_dict({"simulation/coarse": ds, "simulation/fine": ds2, "/": ds3})
+    dt = xr.DataTree.from_dict(
+        {"simulation/coarse": ds, "simulation/fine": ds2, "/": ds3}
+    )
     dt
 
 This creates a datatree with various groups. We have one root group, containing information about individual people.
@@ -76,4 +77,4 @@ This allows you to work with multiple groups of non-alignable variables at once.
 
     If all of your variables are mutually alignable
     (i.e. they live on the same grid, such that every common dimension name maps to the same length),
-    then you probably don't need :py:class:`xarray.core.datatree.DataTree`, and should consider just sticking with ``xarray.Dataset``.
+    then you probably don't need :py:class:`xarray.DataTree`, and should consider just sticking with ``xarray.Dataset``.

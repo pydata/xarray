@@ -6,6 +6,7 @@ from xarray.backends.api import (
     load_dataset,
     open_dataarray,
     open_dataset,
+    open_datatree,
     open_mfdataset,
     save_mfdataset,
 )
@@ -31,9 +32,12 @@ from xarray.core.concat import concat
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
+from xarray.core.datatree import DataTree
+from xarray.core.datatree_mapping import map_over_subtree
 from xarray.core.extensions import (
     register_dataarray_accessor,
     register_dataset_accessor,
+    register_datatree_accessor,
 )
 from xarray.core.indexes import Index
 from xarray.core.indexing import IndexSelResult
@@ -79,15 +83,18 @@ __all__ = (
     "load_dataarray",
     "load_dataset",
     "map_blocks",
+    "map_over_subtree",
     "merge",
     "ones_like",
     "open_dataarray",
     "open_dataset",
+    "open_datatree",
     "open_mfdataset",
     "open_zarr",
     "polyval",
     "register_dataarray_accessor",
     "register_dataset_accessor",
+    "register_datatree_accessor",
     "save_mfdataset",
     "set_options",
     "show_versions",
@@ -100,6 +107,7 @@ __all__ = (
     "Coordinates",
     "DataArray",
     "Dataset",
+    "DataTree",
     "Index",
     "IndexSelResult",
     "IndexVariable",
