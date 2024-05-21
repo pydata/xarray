@@ -8,6 +8,7 @@ dependencies:
   - cartopy
   - cftime
   - dask-core
+  - dask-expr
   - distributed
   - flox
   - fsspec
@@ -25,7 +26,7 @@ dependencies:
   - numpy
   - packaging
   - pandas
-  - pint>=0.22
+  # - pint>=0.22
   - pip
   - pre-commit
   - pydap

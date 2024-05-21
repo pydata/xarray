@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
-    from xarray.datatree_.datatree import DataTree
+    from xarray.core.datatree import DataTree
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.

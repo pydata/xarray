@@ -63,7 +63,13 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
         np.arange(10),
         {"units": "foobar", "missing_value": np.nan, "_FillValue": np.nan},
     )
-    actual = conventions.decode_cf_variable("t", var)
+
+    # the following code issues two warnings, so we need to check for both
+    with pytest.warns(SerializationWarning) as winfo:
+        actual = conventions.decode_cf_variable("t", var)
+    for aw in winfo:
+        assert "non-conforming" in str(aw.message)
+
     assert_identical(actual, expected)
 
     var = Variable(
@@ -75,7 +81,12 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
             "_FillValue": np.float32(np.nan),
         },
     )
-    actual = conventions.decode_cf_variable("t", var)
+
+    # the following code issues two warnings, so we need to check for both
+    with pytest.warns(SerializationWarning) as winfo:
+        actual = conventions.decode_cf_variable("t", var)
+    for aw in winfo:
+        assert "non-conforming" in str(aw.message)
     assert_identical(actual, expected)
 
 

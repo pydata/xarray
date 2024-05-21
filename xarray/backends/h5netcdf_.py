@@ -28,6 +28,7 @@ from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
 from xarray.core.utils import (
     FrozenDict,
+    emit_user_level_warning,
     is_remote_uri,
     read_magic_number_from_file,
     try_read_magic_number_from_file_or_path,
@@ -39,7 +40,7 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
-    from xarray.datatree_.datatree import DataTree
+    from xarray.core.datatree import DataTree
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -58,13 +59,6 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
             return array[key]
 
 
-def maybe_decode_bytes(txt):
-    if isinstance(txt, bytes):
-        return txt.decode("utf-8")
-    else:
-        return txt
-
-
 def _read_attributes(h5netcdf_var):
     # GH451
     # to ensure conventions decoding works properly on Python 3, decode all
@@ -72,7 +66,16 @@ def _read_attributes(h5netcdf_var):
     attrs = {}
     for k, v in h5netcdf_var.attrs.items():
         if k not in ["_FillValue", "missing_value"]:
-            v = maybe_decode_bytes(v)
+            if isinstance(v, bytes):
+                try:
+                    v = v.decode("utf-8")
+                except UnicodeDecodeError:
+                    emit_user_level_warning(
+                        f"'utf-8' codec can't decode bytes for attribute "
+                        f"{k!r} of h5netcdf object {h5netcdf_var.name!r}, "
+                        f"returning bytes undecoded.",
+                        UnicodeWarning,
+                    )
         attrs[k] = v
     return attrs
 

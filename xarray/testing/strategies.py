@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "supported_dtypes",
+    "pandas_index_dtypes",
     "names",
     "dimension_names",
     "dimension_sizes",
@@ -44,7 +45,7 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     Generates only those numpy dtypes which xarray can handle.
 
     Use instead of hypothesis.extra.numpy.scalar_dtypes in order to exclude weirder dtypes such as unicode, byte_string, array, or nested dtypes.
-    Also excludes datetimes, which dodges bugs with pandas non-nanosecond datetime overflows.
+    Also excludes datetimes, which dodges bugs with pandas non-nanosecond datetime overflows.  Checks only native endianness.
 
     Requires the hypothesis package to be installed.
 
@@ -55,10 +56,30 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     # TODO should this be exposed publicly?
     # We should at least decide what the set of numpy dtypes that xarray officially supports is.
     return (
-        npst.integer_dtypes()
-        | npst.unsigned_integer_dtypes()
-        | npst.floating_dtypes()
-        | npst.complex_number_dtypes()
+        npst.integer_dtypes(endianness="=")
+        | npst.unsigned_integer_dtypes(endianness="=")
+        | npst.floating_dtypes(endianness="=")
+        | npst.complex_number_dtypes(endianness="=")
+        # | npst.datetime64_dtypes()
+        # | npst.timedelta64_dtypes()
+        # | npst.unicode_string_dtypes()
+    )
+
+
+def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
+    """
+    Dtypes supported by pandas indexes.
+    Restrict datetime64 and timedelta64 to ns frequency till Xarray relaxes that.
+    """
+    return (
+        npst.integer_dtypes(endianness="=", sizes=(32, 64))
+        | npst.unsigned_integer_dtypes(endianness="=", sizes=(32, 64))
+        | npst.floating_dtypes(endianness="=", sizes=(32, 64))
+        # TODO: unset max_period
+        | npst.datetime64_dtypes(endianness="=", max_period="ns")
+        # TODO: set max_period="D"
+        | npst.timedelta64_dtypes(endianness="=", max_period="ns")
+        | npst.unicode_string_dtypes(endianness="=")
     )
 
 
@@ -87,6 +108,7 @@ def names() -> st.SearchStrategy[str]:
 
 def dimension_names(
     *,
+    name_strategy=names(),
     min_dims: int = 0,
     max_dims: int = 3,
 ) -> st.SearchStrategy[list[Hashable]]:
@@ -97,6 +119,8 @@ def dimension_names(
 
     Parameters
     ----------
+    name_strategy
+        Strategy for making names. Useful if we need to share this.
     min_dims
         Minimum number of dimensions in generated list.
     max_dims
@@ -104,7 +128,7 @@ def dimension_names(
     """
 
     return st.lists(
-        elements=names(),
+        elements=name_strategy,
         min_size=min_dims,
         max_size=max_dims,
         unique=True,
