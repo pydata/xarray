@@ -130,9 +130,6 @@ This solution is particularly interesting for converting any ``DataFrame`` into 
 
 The `ntv-pandas examples`__ show how to improve the conversion for the previous ``Dataset`` example and for more complex examples.
 
-__ https://github.com/loco-philippe/ntv-pandas
-__ https://github.com/loco-philippe/ntv-pandas/tree/main/example
-
 Multi-dimensional data
 ~~~~~~~~~~~~~~~~~~~~~~
 
