@@ -9,7 +9,6 @@ import pytest
 
 import xarray as xr
 from xarray.core import formatting
-from xarray.core.datatree import DataTree  # TODO: Remove when can do xr.DataTree
 from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
 
 ON_WINDOWS = sys.platform == "win32"
@@ -556,13 +555,13 @@ class TestFormatting:
         assert "Using format_spec is only supported" in str(excinfo.value)
 
     def test_datatree_print_empty_node(self):
-        dt: DataTree = DataTree(name="root")
+        dt: xr.DataTree = xr.DataTree(name="root")
         printout = dt.__str__()
         assert printout == "DataTree('root', parent=None)"
 
     def test_datatree_print_empty_node_with_attrs(self):
         dat = xr.Dataset(attrs={"note": "has attrs"})
-        dt: DataTree = DataTree(name="root", data=dat)
+        dt: xr.DataTree = xr.DataTree(name="root", data=dat)
         printout = dt.__str__()
         assert printout == dedent(
             """\
@@ -576,7 +575,7 @@ class TestFormatting:
 
     def test_datatree_print_node_with_data(self):
         dat = xr.Dataset({"a": [0, 2]})
-        dt: DataTree = DataTree(name="root", data=dat)
+        dt: xr.DataTree = xr.DataTree(name="root", data=dat)
         printout = dt.__str__()
         expected = [
             "DataTree('root', parent=None)",
@@ -591,19 +590,19 @@ class TestFormatting:
 
     def test_datatree_printout_nested_node(self):
         dat = xr.Dataset({"a": [0, 2]})
-        root: DataTree = DataTree(name="root")
-        DataTree(name="results", data=dat, parent=root)
+        root: xr.DataTree = xr.DataTree(name="root")
+        xr.DataTree(name="results", data=dat, parent=root)
         printout = root.__str__()
         assert printout.splitlines()[2].startswith("    ")
 
     def test_datatree_repr_of_node_with_data(self):
         dat = xr.Dataset({"a": [0, 2]})
-        dt: DataTree = DataTree(name="root", data=dat)
+        dt: xr.DataTree = xr.DataTree(name="root", data=dat)
         assert "Coordinates" in repr(dt)
 
     def test_diff_datatree_repr_structure(self):
-        dt_1: DataTree = DataTree.from_dict({"a": None, "a/b": None, "a/c": None})
-        dt_2: DataTree = DataTree.from_dict({"d": None, "d/e": None})
+        dt_1: xr.DataTree = xr.DataTree.from_dict({"a": None, "a/b": None, "a/c": None})
+        dt_2: xr.DataTree = xr.DataTree.from_dict({"d": None, "d/e": None})
 
         expected = dedent(
             """\
@@ -616,8 +615,8 @@ class TestFormatting:
         assert actual == expected
 
     def test_diff_datatree_repr_node_names(self):
-        dt_1: DataTree = DataTree.from_dict({"a": None})
-        dt_2: DataTree = DataTree.from_dict({"b": None})
+        dt_1: xr.DataTree = xr.DataTree.from_dict({"a": None})
+        dt_2: xr.DataTree = xr.DataTree.from_dict({"b": None})
 
         expected = dedent(
             """\
@@ -633,10 +632,10 @@ class TestFormatting:
         # casting to int64 explicitly ensures that int64s are created on all architectures
         ds1 = xr.Dataset({"u": np.int64(0), "v": np.int64(1)})
         ds3 = xr.Dataset({"w": np.int64(5)})
-        dt_1: DataTree = DataTree.from_dict({"a": ds1, "a/b": ds3})
+        dt_1: xr.DataTree = xr.DataTree.from_dict({"a": ds1, "a/b": ds3})
         ds2 = xr.Dataset({"u": np.int64(0)})
         ds4 = xr.Dataset({"w": np.int64(6)})
-        dt_2: DataTree = DataTree.from_dict({"a": ds2, "a/b": ds4})
+        dt_2: xr.DataTree = xr.DataTree.from_dict({"a": ds2, "a/b": ds4})
 
         expected = dedent(
             """\
