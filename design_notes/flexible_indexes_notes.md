@@ -133,7 +133,7 @@ A possible, more explicit solution to reuse a `pandas.MultiIndex` in a DataArray
 
 New indexes may also be built from existing sets of coordinates or variables in a Dataset/DataArray using the `.set_index()` method.
 
-The [current signature](http://xarray.pydata.org/en/stable/generated/xarray.DataArray.set_index.html#xarray.DataArray.set_index) of `.set_index()` is tailored to `pandas.MultiIndex` and tied to the concept of a dimension-index. It is therefore hardly reusable as-is in the context of flexible indexes proposed here.
+The [current signature](http://docs.xarray.dev/en/stable/generated/xarray.DataArray.set_index.html#xarray.DataArray.set_index) of `.set_index()` is tailored to `pandas.MultiIndex` and tied to the concept of a dimension-index. It is therefore hardly reusable as-is in the context of flexible indexes proposed here.
 
 The new signature may look like one of these:
 

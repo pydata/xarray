@@ -10,9 +10,9 @@ Weather and climate data
 
     import xarray as xr
 
-Xarray can leverage metadata that follows the `Climate and Forecast (CF) conventions`_ if present. Examples include automatic labelling of plots with descriptive names and units if proper metadata is present (see :ref:`plotting`) and support for non-standard calendars used in climate science through the ``cftime`` module (see :ref:`CFTimeIndex`). There are also a number of geosciences-focused projects that build on xarray (see :ref:`ecosystem`).
+Xarray can leverage metadata that follows the `Climate and Forecast (CF) conventions`_ if present. Examples include :ref:`automatic labelling of plots<plotting>` with descriptive names and units if proper metadata is present and support for non-standard calendars used in climate science through the ``cftime`` module(Explained in the :ref:`CFTimeIndex` section). There are also a number of :ref:`geosciences-focused projects that build on xarray<ecosystem>`.
 
-.. _Climate and Forecast (CF) conventions: http://cfconventions.org
+.. _Climate and Forecast (CF) conventions: https://cfconventions.org
 
 .. _cf_variables:
 
@@ -49,22 +49,22 @@ variable with the attribute, rather than with the dimensions.
 CF-compliant coordinate variables
 ---------------------------------
 
-`MetPy`_ adds a	``metpy`` accessor that allows accessing coordinates with appropriate CF metadata using generic names ``x``, ``y``, ``vertical`` and ``time``. There is also a `cartopy_crs` attribute that provides projection information, parsed from the appropriate CF metadata, as a `Cartopy`_ projection object. See `their documentation`_ for more information.
+`MetPy`_ adds a	``metpy`` accessor that allows accessing coordinates with appropriate CF metadata using generic names ``x``, ``y``, ``vertical`` and ``time``. There is also a `cartopy_crs` attribute that provides projection information, parsed from the appropriate CF metadata, as a `Cartopy`_ projection object. See the `metpy documentation`_ for more information.
 
 .. _`MetPy`: https://unidata.github.io/MetPy/dev/index.html
-.. _`their documentation`:	https://unidata.github.io/MetPy/dev/tutorials/xarray_tutorial.html#coordinates
+.. _`metpy documentation`:	https://unidata.github.io/MetPy/dev/tutorials/xarray_tutorial.html#coordinates
 .. _`Cartopy`: https://scitools.org.uk/cartopy/docs/latest/crs/projections.html
 
 .. _CFTimeIndex:
 
-Non-standard calendars and dates outside the Timestamp-valid range
-------------------------------------------------------------------
+Non-standard calendars and dates outside the nanosecond-precision range
+-----------------------------------------------------------------------
 
 Through the standalone ``cftime`` library and a custom subclass of
 :py:class:`pandas.Index`, xarray supports a subset of the indexing
 functionality enabled through the standard :py:class:`pandas.DatetimeIndex` for
 dates from non-standard calendars commonly used in climate science or dates
-using a standard calendar, but outside the `Timestamp-valid range`_
+using a standard calendar, but outside the `nanosecond-precision range`_
 (approximately between years 1678 and 2262).
 
 .. note::
@@ -75,12 +75,18 @@ using a standard calendar, but outside the `Timestamp-valid range`_
    any of the following are true:
 
    - The dates are from a non-standard calendar
-   - Any dates are outside the Timestamp-valid range.
+   - Any dates are outside the nanosecond-precision range.
 
    Otherwise pandas-compatible dates from a standard calendar will be
    represented with the ``np.datetime64[ns]`` data type, enabling the use of a
    :py:class:`pandas.DatetimeIndex` or arrays with dtype ``np.datetime64[ns]``
    and their full set of associated features.
+
+   As of pandas version 2.0.0, pandas supports non-nanosecond precision datetime
+   values.  For the time being, xarray still automatically casts datetime values
+   to nanosecond-precision for backwards compatibility with older pandas
+   versions; however, this is something we would like to relax going forward.
+   See :issue:`7493` for more discussion.
 
 For example, you can create a DataArray indexed by a time
 coordinate with dates from a no-leap calendar and a
@@ -127,6 +133,23 @@ using the same formatting as the standard `datetime.strftime`_ convention .
     dates.strftime("%c")
     da["time"].dt.strftime("%Y%m%d")
 
+Conversion between non-standard calendar and to/from pandas DatetimeIndexes is
+facilitated with the :py:meth:`xarray.Dataset.convert_calendar` method (also available as
+:py:meth:`xarray.DataArray.convert_calendar`). Here, like elsewhere in xarray, the ``use_cftime``
+argument controls which datetime backend is used in the output. The default (``None``) is to
+use `pandas` when possible, i.e. when the calendar is standard and dates are within 1678 and 2262.
+
+.. ipython:: python
+
+    dates = xr.cftime_range(start="2001", periods=24, freq="MS", calendar="noleap")
+    da_nl = xr.DataArray(np.arange(24), coords=[dates], dims=["time"], name="foo")
+    da_std = da.convert_calendar("standard", use_cftime=True)
+
+The data is unchanged, only the timestamps are modified. Further options are implemented
+for the special ``"360_day"`` calendar and for handling missing dates. There is also
+:py:meth:`xarray.Dataset.interp_calendar` (and :py:meth:`xarray.DataArray.interp_calendar`)
+for `interpolating` data between calendars.
+
 For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 - `Partial datetime string indexing`_:
@@ -150,7 +173,8 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 - Access of basic datetime components via the ``dt`` accessor (in this case
   just "year", "month", "day", "hour", "minute", "second", "microsecond",
-  "season", "dayofyear", "dayofweek", and "days_in_month"):
+  "season", "dayofyear", "dayofweek", and "days_in_month") with the addition
+  of "calendar", absent from pandas:
 
 .. ipython:: python
 
@@ -160,6 +184,7 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
     da.time.dt.dayofyear
     da.time.dt.dayofweek
     da.time.dt.days_in_month
+    da.time.dt.calendar
 
 - Rounding of datetimes to fixed frequencies via the ``dt`` accessor:
 
@@ -199,45 +224,23 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 .. ipython:: python
 
     da.to_netcdf("example-no-leap.nc")
-    xr.open_dataset("example-no-leap.nc")
+    reopened = xr.open_dataset("example-no-leap.nc")
+    reopened
 
 .. ipython:: python
     :suppress:
 
     import os
 
+    reopened.close()
     os.remove("example-no-leap.nc")
 
 - And resampling along the time dimension for data indexed by a :py:class:`~xarray.CFTimeIndex`:
 
 .. ipython:: python
 
-    da.resample(time="81T", closed="right", label="right", base=3).mean()
+    da.resample(time="81min", closed="right", label="right", offset="3min").mean()
 
-.. note::
-
-
-   For some use-cases it may still be useful to convert from
-   a :py:class:`~xarray.CFTimeIndex` to a :py:class:`pandas.DatetimeIndex`,
-   despite the difference in calendar types. The recommended way of doing this
-   is to use the built-in :py:meth:`~xarray.CFTimeIndex.to_datetimeindex`
-   method:
-
-   .. ipython:: python
-       :okwarning:
-
-       modern_times = xr.cftime_range("2000", periods=24, freq="MS", calendar="noleap")
-       da = xr.DataArray(range(24), [("time", modern_times)])
-       da
-       datetimeindex = da.indexes["time"].to_datetimeindex()
-       da["time"] = datetimeindex
-
-   However in this case one should use caution to only perform operations which
-   do not depend on differences between dates (e.g. differentiation,
-   interpolation, or upsampling with resample), as these could introduce subtle
-   and silent errors due to the difference in calendar types between the dates
-   encoded in your data and the dates stored in memory.
-
-.. _Timestamp-valid range: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamp-limitations
+.. _nanosecond-precision range: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamp-limitations
 .. _ISO 8601 standard: https://en.wikipedia.org/wiki/ISO_8601
 .. _partial datetime string indexing: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#partial-string-indexing

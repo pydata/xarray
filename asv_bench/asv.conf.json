@@ -7,7 +7,7 @@
     "project": "xarray",
 
     // The project's homepage
-    "project_url": "http://xarray.pydata.org/",
+    "project_url": "http://docs.xarray.dev/",
 
     // The URL or local path of the source code repository for the
     // project being benchmarked
@@ -29,7 +29,8 @@
     // If missing or the empty string, the tool will be automatically
     // determined by looking for tools on the PATH environment
     // variable.
-    "environment_type": "conda",
+    "environment_type": "mamba",
+    "conda_channels": ["conda-forge"],
 
     // timeout in seconds for installing any dependencies in environment
     // defaults to 10 min
@@ -40,7 +41,7 @@
 
     // The Pythons you'd like to test against.  If not provided, defaults
     // to the current version of Python used to run `asv`.
-    "pythons": ["3.8"],
+    "pythons": ["3.11"],
 
     // The matrix of dependencies to test.  Each key is the name of a
     // package (in PyPI) and the values are version numbers.  An empty
@@ -58,16 +59,25 @@
     //     "pip+emcee": [""],   // emcee is only available for install with pip.
     // },
     "matrix": {
+        "setuptools_scm": [""],  // GH6609
         "numpy": [""],
         "pandas": [""],
         "netcdf4": [""],
         "scipy": [""],
-        "bottleneck": ["", null],
+        "bottleneck": [""],
         "dask": [""],
         "distributed": [""],
+        "flox": [""],
+        "numpy_groupies": [""],
+        "sparse": [""],
+        "cftime": [""]
     },
-
-
+    // fix for bad builds
+    // https://github.com/airspeed-velocity/asv/issues/1389#issuecomment-2076131185
+    "build_command": [
+        "python -m build",
+        "python -mpip wheel --no-deps --no-build-isolation --no-index -w {build_cache_dir} {build_dir}"
+    ],
     // Combinations of libraries/python versions can be excluded/included
     // from the set to test. Each entry is a dictionary containing additional
     // key-value pairs to include/exclude.

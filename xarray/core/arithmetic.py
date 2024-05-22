@@ -1,20 +1,23 @@
 """Base classes implementing arithmetic for xarray objects."""
+
+from __future__ import annotations
+
 import numbers
 
 import numpy as np
 
 # _typed_ops.py is a generated file
-from ._typed_ops import (
+from xarray.core._typed_ops import (
     DataArrayGroupByOpsMixin,
     DataArrayOpsMixin,
     DatasetGroupByOpsMixin,
     DatasetOpsMixin,
     VariableOpsMixin,
 )
-from .common import ImplementsArrayReduce, ImplementsDatasetReduce
-from .ops import IncludeCumMethods, IncludeNumpySameMethods, IncludeReduceMethods
-from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_array_type
+from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
+from xarray.core.ops import IncludeNumpySameMethods, IncludeReduceMethods
+from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.namedarray.utils import is_duck_array
 
 
 class SupportsArithmetic:
@@ -31,37 +34,38 @@ class SupportsArithmetic:
 
     # TODO: allow extending this with some sort of registration system
     _HANDLED_TYPES = (
-        np.ndarray,
         np.generic,
         numbers.Number,
         bytes,
         str,
-    ) + dask_array_type
+    )
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        from .computation import apply_ufunc
+        from xarray.core.computation import apply_ufunc
 
         # See the docstring example for numpy.lib.mixins.NDArrayOperatorsMixin.
         out = kwargs.get("out", ())
         for x in inputs + out:
-            if not isinstance(x, self._HANDLED_TYPES + (SupportsArithmetic,)):
+            if not is_duck_array(x) and not isinstance(
+                x, self._HANDLED_TYPES + (SupportsArithmetic,)
+            ):
                 return NotImplemented
 
         if ufunc.signature is not None:
             raise NotImplementedError(
-                "{} not supported: xarray objects do not directly implement "
+                f"{ufunc} not supported: xarray objects do not directly implement "
                 "generalized ufuncs. Instead, use xarray.apply_ufunc or "
                 "explicitly convert to xarray objects to NumPy arrays "
-                "(e.g., with `.values`).".format(ufunc)
+                "(e.g., with `.values`)."
             )
 
         if method != "__call__":
             # TODO: support other methods, e.g., reduce and accumulate.
             raise NotImplementedError(
-                "{} method for ufunc {} is not implemented on xarray objects, "
+                f"{method} method for ufunc {ufunc} is not implemented on xarray objects, "
                 "which currently only support the __call__ method. As an "
                 "alternative, consider explicitly converting xarray objects "
-                "to NumPy arrays (e.g., with `.values`).".format(method, ufunc)
+                "to NumPy arrays (e.g., with `.values`)."
             )
 
         if any(isinstance(o, SupportsArithmetic) for o in out):
@@ -92,8 +96,6 @@ class SupportsArithmetic:
 
 class VariableArithmetic(
     ImplementsArrayReduce,
-    IncludeReduceMethods,
-    IncludeCumMethods,
     IncludeNumpySameMethods,
     SupportsArithmetic,
     VariableOpsMixin,
@@ -105,8 +107,6 @@ class VariableArithmetic(
 
 class DatasetArithmetic(
     ImplementsDatasetReduce,
-    IncludeReduceMethods,
-    IncludeCumMethods,
     SupportsArithmetic,
     DatasetOpsMixin,
 ):
@@ -116,8 +116,6 @@ class DatasetArithmetic(
 
 class DataArrayArithmetic(
     ImplementsArrayReduce,
-    IncludeReduceMethods,
-    IncludeCumMethods,
     IncludeNumpySameMethods,
     SupportsArithmetic,
     DataArrayOpsMixin,
@@ -128,8 +126,6 @@ class DataArrayArithmetic(
 
 
 class DataArrayGroupbyArithmetic(
-    ImplementsArrayReduce,
-    IncludeReduceMethods,
     SupportsArithmetic,
     DataArrayGroupByOpsMixin,
 ):
@@ -137,8 +133,6 @@ class DataArrayGroupbyArithmetic(
 
 
 class DatasetGroupbyArithmetic(
-    ImplementsDatasetReduce,
-    IncludeReduceMethods,
     SupportsArithmetic,
     DatasetGroupByOpsMixin,
 ):

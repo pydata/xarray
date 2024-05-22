@@ -69,7 +69,7 @@ Unlike positional indexing, label-based indexing frees us from having to know ho
 Attributes
 ----------
 
-While you're setting up your DataArray, it's often a good idea to set metadata attributes. A useful choice is to set ``data.attrs['long_name']`` and ``data.attrs['units']`` since xarray will use these, if present, to automatically label your plots. These special names were chosen following the `NetCDF Climate and Forecast (CF) Metadata Conventions <http://cfconventions.org/cf-conventions/cf-conventions.html>`_. ``attrs`` is just a Python dictionary, so you can assign anything you wish.
+While you're setting up your DataArray, it's often a good idea to set metadata attributes. A useful choice is to set ``data.attrs['long_name']`` and ``data.attrs['units']`` since xarray will use these, if present, to automatically label your plots. These special names were chosen following the `NetCDF Climate and Forecast (CF) Metadata Conventions <https://cfconventions.org/cf-conventions/cf-conventions.html>`_. ``attrs`` is just a Python dictionary, so you can assign anything you wish.
 
 .. ipython:: python
 
@@ -215,13 +215,15 @@ You can directly read and write xarray objects to disk using :py:meth:`~xarray.D
 .. ipython:: python
 
     ds.to_netcdf("example.nc")
-    xr.open_dataset("example.nc")
+    reopened = xr.open_dataset("example.nc")
+    reopened
 
 .. ipython:: python
     :suppress:
 
     import os
 
+    reopened.close()
     os.remove("example.nc")
 
 

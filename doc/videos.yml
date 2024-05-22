@@ -1,0 +1,38 @@
+- title: "Xdev Python Tutorial Seminar Series 2022 Thinking with Xarray : High-level computation patterns"
+  src: '<iframe width="100%" src="https://www.youtube.com/embed/TSw3GF_d2y8" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
+  authors:
+    - Deepak Cherian
+- title: "Xdev Python Tutorial Seminar Series 2021 seminar introducing xarray (2 of 2)"
+  src: '<iframe width="100%" src="https://www.youtube.com/embed/2H_4drBwORY" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
+  authors:
+    - Anderson Banihirwe
+
+- title: "Xdev Python Tutorial Seminar Series 2021 seminar introducing xarray (1 of 2)"
+  src: '<iframe width="100%" src="https://www.youtube.com/embed/Ss4ryKukhi4" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
+  authors:
+    - Anderson Banihirwe
+
+- title: "Xarray's 2020 virtual tutorial"
+  src: '<iframe width="100%" src="https://www.youtube.com/embed/a339Q5F48UQ" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
+  authors:
+    - Anderson Banihirwe
+    - Deepak Cherian
+    - Martin Durant
+
+- title: "Xarray's Tutorial presented at the 2020 SciPy Conference"
+  src: ' <iframe width="100%" src="https://www.youtube.com/embed/mecN-Ph_-78" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
+  authors:
+    - Joe Hamman
+    - Deepak Cherian
+    - Ryan Abernathey
+    - Stephan Hoyer
+
+- title: "Scipy 2015 talk introducing xarray to a general audience"
+  src: '<iframe width="100%" src="https://www.youtube.com/embed/X0pAhJgySxk" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
+  authors:
+    - Stephan Hoyer
+
+- title: " 2015 Unidata Users Workshop talk and tutorial with (`with answers`_) introducing xarray to users familiar with netCDF"
+  src: '<iframe width="100%" src="https://www.youtube.com/embed/J9ypQOnt5l8" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
+  authors:
+    - Stephan Hoyer

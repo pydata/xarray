@@ -9,12 +9,16 @@ to integrate any code in Xarray; all you need to do is:
 - Create a class that inherits from Xarray :py:class:`~xarray.backends.BackendEntrypoint`
   and implements the method ``open_dataset`` see :ref:`RST backend_entrypoint`
 
-- Declare this class as an external plugin in your ``setup.py``, see :ref:`RST backend_registration`
+- Declare this class as an external plugin in your project configuration, see :ref:`RST
+  backend_registration`
 
 If you also want to support lazy loading and dask see :ref:`RST lazy_loading`.
 
 Note that the new interface for backends is available from Xarray
 version >= 0.18 onwards.
+
+You can see what backends are currently available in your working environment
+with :py:class:`~xarray.backends.list_engines()`.
 
 .. _RST backend_entrypoint:
 
@@ -26,7 +30,9 @@ it should implement the following attributes and methods:
 
 - the ``open_dataset`` method (mandatory)
 - the ``open_dataset_parameters`` attribute (optional)
-- the ``guess_can_open`` method (optional).
+- the ``guess_can_open`` method (optional)
+- the ``description`` attribute (optional)
+- the ``url`` attribute (optional).
 
 This is what a ``BackendEntrypoint`` subclass should look like:
 
@@ -54,6 +60,10 @@ This is what a ``BackendEntrypoint`` subclass should look like:
             except TypeError:
                 return False
             return ext in {".my_format", ".my_fmt"}
+
+        description = "Use .my_format files in Xarray"
+
+        url = "https://link_to/your_backend/documentation"
 
 ``BackendEntrypoint`` subclass methods and attributes are detailed in the following.
 
@@ -119,7 +129,7 @@ should implement in its interface the following boolean keyword arguments, calle
 - ``decode_coords``
 
 Note: all the supported decoders shall be declared explicitly
-in backend ``open_dataset`` signature and adding a ``**kargs`` is not allowed.
+in backend ``open_dataset`` signature and adding a ``**kwargs`` is not allowed.
 
 These keyword arguments are explicitly defined in Xarray
 :py:func:`~xarray.open_dataset` signature. Xarray will pass them to the
@@ -168,10 +178,22 @@ that always returns ``False``.
 Backend ``guess_can_open`` takes as input the ``filename_or_obj`` parameter of
 Xarray :py:meth:`~xarray.open_dataset`, and returns a boolean.
 
+.. _RST properties:
+
+description and url
+^^^^^^^^^^^^^^^^^^^^
+
+``description`` is used to provide a short text description of the backend.
+``url`` is used to include a link to the backend's documentation or code.
+
+These attributes are surfaced when a user prints :py:class:`~xarray.backends.BackendEntrypoint`.
+If ``description`` or ``url`` are not defined, an empty string is returned.
+
 .. _RST decoders:
 
 Decoders
 ^^^^^^^^
+
 The decoders implement specific operations to transform data from on-disk
 representation to Xarray representation.
 
@@ -198,6 +220,11 @@ attributes no more applicable after the decoding, are dropped and stored in the
 performs the inverse transformation.
 
 In the following an example on how to use the coders ``decode`` method:
+
+.. ipython:: python
+    :suppress:
+
+    import xarray as xr
 
 .. ipython:: python
 
@@ -239,49 +266,65 @@ interface only the boolean keywords related to the supported decoders.
 .. _RST backend_registration:
 
 How to register a backend
-+++++++++++++++++++++++++++
++++++++++++++++++++++++++
 
-Define a new entrypoint in your ``setup.py`` (or ``setup.cfg``) with:
+Define a new entrypoint in your ``pyproject.toml`` (or ``setup.cfg/setup.py`` for older
+configurations), with:
 
 - group: ``xarray.backends``
 - name: the name to be passed to :py:meth:`~xarray.open_dataset`  as ``engine``
 - object reference: the reference of the class that you have implemented.
 
-You can declare the entrypoint in ``setup.py`` using the following syntax:
+You can declare the entrypoint in your project configuration like so:
 
-.. code-block::
+.. tab:: pyproject.toml
 
-    setuptools.setup(
-        entry_points={
-            "xarray.backends": ["my_engine=my_package.my_module:MyBackendEntryClass"],
-        },
-    )
+   .. code:: toml
 
-in ``setup.cfg``:
+      [project.entry-points."xarray.backends"]
+      my_engine = "my_package.my_module:MyBackendEntrypoint"
 
-.. code-block:: cfg
+.. tab:: pyproject.toml [Poetry]
 
-    [options.entry_points]
-    xarray.backends =
-        my_engine = my_package.my_module:MyBackendEntryClass
+   .. code-block:: toml
+
+       [tool.poetry.plugins."xarray.backends"]
+       my_engine = "my_package.my_module:MyBackendEntrypoint"
+
+.. tab:: setup.cfg
+
+   .. code-block:: cfg
+
+       [options.entry_points]
+       xarray.backends =
+           my_engine = my_package.my_module:MyBackendEntrypoint
+
+.. tab:: setup.py
+
+   .. code-block::
+
+       setuptools.setup(
+           entry_points={
+               "xarray.backends": [
+                   "my_engine=my_package.my_module:MyBackendEntrypoint"
+               ],
+           },
+       )
 
 
-See https://packaging.python.org/specifications/entry-points/#data-model
-for more information
+See the `Python Packaging User Guide
+<https://packaging.python.org/specifications/entry-points/#data-model>`_ for more
+information on entrypoints and details of the syntax.
 
-If you are using `Poetry <https://python-poetry.org/>`_ for your build system, you can accomplish the same thing using "plugins". In this case you would need to add the following to your ``pyproject.toml`` file:
-
-.. code-block:: toml
-
-    [tool.poetry.plugins."xarray_backends"]
-    "my_engine" = "my_package.my_module:MyBackendEntryClass"
-
-See https://python-poetry.org/docs/pyproject/#plugins for more information on Poetry plugins.
+If you're using Poetry, note that table name in ``pyproject.toml`` is slightly different.
+See `the Poetry docs <https://python-poetry.org/docs/pyproject/#plugins>`_ for more
+information on plugins.
 
 .. _RST lazy_loading:
 
-How to support Lazy Loading
+How to support lazy loading
 +++++++++++++++++++++++++++
+
 If you want to make your backend effective with big datasets, then you should
 support lazy loading.
 Basically, you shall replace the :py:class:`numpy.ndarray` inside the
@@ -311,15 +354,13 @@ The BackendArray subclass shall implement the following method and attributes:
 - the ``shape`` attribute
 - the ``dtype`` attribute.
 
-
-Xarray supports different type of
-`indexing <http://xarray.pydata.org/en/stable/indexing.html>`__, that can be
+Xarray supports different type of :doc:`/user-guide/indexing`, that can be
 grouped in three types of indexes
 :py:class:`~xarray.core.indexing.BasicIndexer`,
 :py:class:`~xarray.core.indexing.OuterIndexer` and
 :py:class:`~xarray.core.indexing.VectorizedIndexer`.
 This implies that the implementation of the method ``__getitem__`` can be tricky.
-In oder to simplify this task, Xarray provides a helper function,
+In order to simplify this task, Xarray provides a helper function,
 :py:func:`~xarray.core.indexing.explicit_indexing_adapter`, that transforms
 all the input  ``indexer`` types (`basic`, `outer`, `vectorized`) in a tuple
 which is interpreted correctly by your backend.
@@ -340,8 +381,8 @@ This is an example ``BackendArray`` subclass implementation:
             # other backend specific keyword arguments
         ):
             self.shape = shape
-            self.dtype = lock
-            self.lock = dtype
+            self.dtype = dtype
+            self.lock = lock
 
         def __getitem__(
             self, key: xarray.core.indexing.ExplicitIndexer
@@ -372,7 +413,7 @@ input the ``key``, the array ``shape`` and the following parameters:
 For more details see
 :py:class:`~xarray.core.indexing.IndexingSupport` and :ref:`RST indexing`.
 
-In order to support `Dask <http://dask.pydata.org/>`__ distributed and
+In order to support `Dask Distributed <https://distributed.dask.org/>`__ and
 :py:mod:`multiprocessing`, ``BackendArray`` subclass should be serializable
 either with :ref:`io.pickle` or
 `cloudpickle <https://github.com/cloudpipe/cloudpickle>`__.
@@ -382,8 +423,9 @@ opening files, we therefore suggest to use the helper class provided by Xarray
 
 .. _RST indexing:
 
-Indexing Examples
+Indexing examples
 ^^^^^^^^^^^^^^^^^
+
 **BASIC**
 
 In the ``BASIC`` indexing support, numbers and slices are supported.
@@ -428,32 +470,30 @@ The ``OUTER_1VECTOR`` indexing shall supports number, slices and at most one
 list. The behaviour with the list shall be the same of ``OUTER`` indexing.
 
 If you support more complex indexing as `explicit indexing` or
-`numpy indexing`, you can have a look to the implemetation of Zarr backend and Scipy backend,
+`numpy indexing`, you can have a look to the implementation of Zarr backend and Scipy backend,
 currently available in :py:mod:`~xarray.backends` module.
 
 .. _RST preferred_chunks:
 
-Backend preferred chunks
-^^^^^^^^^^^^^^^^^^^^^^^^
+Preferred chunk sizes
+^^^^^^^^^^^^^^^^^^^^^
 
-The backend is not directly involved in `Dask <http://dask.pydata.org/>`__
-chunking, since it is internally managed by Xarray. However, the backend can
-define the preferred chunk size inside the variable’s encoding
-``var.encoding["preferred_chunks"]``. The ``preferred_chunks`` may be useful
-to improve performances with lazy loading. ``preferred_chunks`` shall be a
-dictionary specifying chunk size per dimension like
-``{“dim1”: 1000, “dim2”: 2000}``  or
-``{“dim1”: [1000, 100], “dim2”: [2000, 2000, 2000]]}``.
+To potentially improve performance with lazy loading, the backend may define for each
+variable the chunk sizes that it prefers---that is, sizes that align with how the
+variable is stored. (Note that the backend is not directly involved in `Dask
+<https://dask.org/>`__ chunking, because Xarray internally manages chunking.) To define
+the preferred chunk sizes, store a mapping within the variable's encoding under the key
+``"preferred_chunks"`` (that is, ``var.encoding["preferred_chunks"]``). The mapping's
+keys shall be the names of dimensions with preferred chunk sizes, and each value shall
+be the corresponding dimension's preferred chunk sizes expressed as either an integer
+(such as ``{"dim1": 1000, "dim2": 2000}``) or a tuple of integers (such as ``{"dim1":
+(1000, 100), "dim2": (2000, 2000, 2000)}``).
 
-The ``preferred_chunks`` is used by Xarray to define the chunk size in some
-special cases:
-
-- if ``chunks`` along a dimension is ``None`` or not defined
-- if ``chunks`` is ``"auto"``.
-
-In the first case Xarray uses the chunks size specified in
-``preferred_chunks``.
-In the second case Xarray accommodates ideal chunk sizes, preserving if
-possible the "preferred_chunks". The ideal chunk size is computed using
-:py:func:`dask.array.core.normalize_chunks`, setting
-``previous_chunks = preferred_chunks``.
+Xarray uses the preferred chunk sizes in some special cases of the ``chunks`` argument
+of the :py:func:`~xarray.open_dataset` and :py:func:`~xarray.open_mfdataset` functions.
+If ``chunks`` is a ``dict``, then for any dimensions missing from the keys or whose
+value is ``None``, Xarray sets the chunk sizes to the preferred sizes. If ``chunks``
+equals ``"auto"``, then Xarray seeks ideal chunk sizes informed by the preferred chunk
+sizes. Specifically, it determines the chunk sizes using
+:py:func:`dask.array.core.normalize_chunks` with the ``previous_chunks`` argument set
+according to the preferred chunk sizes.

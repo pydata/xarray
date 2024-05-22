@@ -1,12 +1,15 @@
 *.py[cod]
 __pycache__
+.env
+.venv
 
 # example caches from Hypothesis
 .hypothesis/
 
 # temp files from docs build
+doc/*.nc
 doc/auto_gallery
-doc/example.nc
+doc/rasm.zarr
 doc/savefig
 
 # C extensions
@@ -47,7 +50,8 @@ nosetests.xml
 dask-worker-space/
 
 # asv environments
-.asv
+asv_bench/.asv
+asv_bench/pkgs
 
 # Translations
 *.mo
@@ -65,11 +69,14 @@ dask-worker-space/
 
 # xarray specific
 doc/_build
-generated/
+doc/generated/
 xarray/tests/data/*.grib.*.idx
 
 # Sync tools
 Icon*
 
 .ipynb_checkpoints
-doc/rasm.zarr
+doc/team-panel.txt
+doc/external-examples-gallery.txt
+doc/notebooks-examples-gallery.txt
+doc/videos-gallery.txt

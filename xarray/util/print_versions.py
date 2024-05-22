@@ -1,4 +1,5 @@
 """Utility functions for printing version information."""
+
 import importlib
 import locale
 import os
@@ -103,13 +104,9 @@ def show_versions(file=sys.stdout):
         ("pydap", lambda mod: mod.__version__),
         ("h5netcdf", lambda mod: mod.__version__),
         ("h5py", lambda mod: mod.__version__),
-        ("Nio", lambda mod: mod.__version__),
         ("zarr", lambda mod: mod.__version__),
         ("cftime", lambda mod: mod.__version__),
         ("nc_time_axis", lambda mod: mod.__version__),
-        ("PseudoNetCDF", lambda mod: mod.__version__),
-        ("rasterio", lambda mod: mod.__version__),
-        ("cfgrib", lambda mod: mod.__version__),
         ("iris", lambda mod: mod.__version__),
         ("bottleneck", lambda mod: mod.__version__),
         ("dask", lambda mod: mod.__version__),
@@ -122,18 +119,21 @@ def show_versions(file=sys.stdout):
         ("cupy", lambda mod: mod.__version__),
         ("pint", lambda mod: mod.__version__),
         ("sparse", lambda mod: mod.__version__),
+        ("flox", lambda mod: mod.__version__),
+        ("numpy_groupies", lambda mod: mod.__version__),
         # xarray setup/test
         ("setuptools", lambda mod: mod.__version__),
         ("pip", lambda mod: mod.__version__),
         ("conda", lambda mod: mod.__version__),
         ("pytest", lambda mod: mod.__version__),
+        ("mypy", lambda mod: importlib.metadata.version(mod.__name__)),
         # Misc.
         ("IPython", lambda mod: mod.__version__),
         ("sphinx", lambda mod: mod.__version__),
     ]
 
     deps_blob = []
-    for (modname, ver_f) in deps:
+    for modname, ver_f in deps:
         try:
             if modname in sys.modules:
                 mod = sys.modules[modname]

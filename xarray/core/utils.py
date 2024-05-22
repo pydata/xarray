@@ -1,37 +1,94 @@
-"""Internal utilties; not for external use
-"""
+"""Internal utilities; not for external use"""
+
+# Some functions in this module are derived from functions in pandas. For
+# reference, here is a copy of the pandas copyright notice:
+
+# BSD 3-Clause License
+
+# Copyright (c) 2008-2011, AQR Capital Management, LLC, Lambda Foundry, Inc. and PyData Development Team
+# All rights reserved.
+
+# Copyright (c) 2011-2022, Open source contributors.
+
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+
+# * Neither the name of the copyright holder nor the names of its
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from __future__ import annotations
+
 import contextlib
 import functools
+import inspect
 import io
 import itertools
+import math
 import os
 import re
 import sys
 import warnings
+from collections.abc import (
+    Collection,
+    Container,
+    Hashable,
+    ItemsView,
+    Iterable,
+    Iterator,
+    KeysView,
+    Mapping,
+    MutableMapping,
+    MutableSet,
+    ValuesView,
+)
 from enum import Enum
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Collection,
-    Container,
-    Dict,
-    Hashable,
-    Iterable,
-    Iterator,
-    Mapping,
-    MutableMapping,
-    MutableSet,
-    Optional,
-    Sequence,
-    Tuple,
+    Generic,
+    Literal,
     TypeVar,
-    Union,
-    cast,
+    overload,
 )
 
 import numpy as np
 import pandas as pd
+
+from xarray.namedarray.utils import (  # noqa: F401
+    ReprObject,
+    drop_missing_dims,
+    either_dict_or_kwargs,
+    infix_dims,
+    is_dask_collection,
+    is_dict_like,
+    is_duck_array,
+    is_duck_dask_array,
+    module_available,
+    to_0d_object_array,
+)
+
+if TYPE_CHECKING:
+    from xarray.core.types import Dims, ErrorOptionsWithWarn
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -60,22 +117,26 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
     return wrapper
 
 
-def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
-    from ..coding.cftimeindex import CFTimeIndex
+def get_valid_numpy_dtype(array: np.ndarray | pd.Index):
+    """Return a numpy compatible dtype from either
+    a numpy array or a pandas.Index.
 
-    if len(index) > 0 and index.dtype == "O":
-        try:
-            return CFTimeIndex(index)
-        except (ImportError, TypeError):
-            return index
+    Used for wrapping a pandas.Index as an xarray,Variable.
+
+    """
+    if isinstance(array, pd.PeriodIndex):
+        dtype = np.dtype("O")
+    elif hasattr(array, "categories"):
+        # category isn't a real numpy dtype
+        dtype = array.categories.dtype
+        if not is_valid_numpy_dtype(dtype):
+            dtype = np.dtype("O")
+    elif not is_valid_numpy_dtype(array.dtype):
+        dtype = np.dtype("O")
     else:
-        return index
+        dtype = array.dtype
 
-
-def maybe_cast_to_coords_dtype(label, coords_dtype):
-    if coords_dtype.kind == "f" and not isinstance(label, slice):
-        label = np.asarray(label, dtype=coords_dtype)
-    return label
+    return dtype
 
 
 def maybe_coerce_to_str(index, original_coords):
@@ -83,7 +144,7 @@ def maybe_coerce_to_str(index, original_coords):
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
     """
-    from . import dtypes
+    from xarray.core import dtypes
 
     try:
         result_type = dtypes.result_type(*original_coords)
@@ -94,56 +155,6 @@ def maybe_coerce_to_str(index, original_coords):
             index = np.asarray(index, dtype=result_type.type)
 
     return index
-
-
-def safe_cast_to_index(array: Any) -> pd.Index:
-    """Given an array, safely cast it to a pandas.Index.
-
-    If it is already a pandas.Index, return it unchanged.
-
-    Unlike pandas.Index, if the array has dtype=object or dtype=timedelta64,
-    this function will not attempt to do automatic type conversion but will
-    always return an index with dtype=object.
-    """
-    if isinstance(array, pd.Index):
-        index = array
-    elif hasattr(array, "to_index"):
-        index = array.to_index()
-    elif hasattr(array, "to_pandas_index"):
-        index = array.to_pandas_index()
-    else:
-        kwargs = {}
-        if hasattr(array, "dtype") and array.dtype.kind == "O":
-            kwargs["dtype"] = object
-        index = pd.Index(np.asarray(array), **kwargs)
-    return _maybe_cast_to_cftimeindex(index)
-
-
-def multiindex_from_product_levels(
-    levels: Sequence[pd.Index], names: Sequence[str] = None
-) -> pd.MultiIndex:
-    """Creating a MultiIndex from a product without refactorizing levels.
-
-    Keeping levels the same gives back the original labels when we unstack.
-
-    Parameters
-    ----------
-    levels : sequence of pd.Index
-        Values for each MultiIndex level.
-    names : sequence of str, optional
-        Names for each level.
-
-    Returns
-    -------
-    pandas.MultiIndex
-    """
-    if any(not isinstance(lev, pd.Index) for lev in levels):
-        raise TypeError("levels must be a list of pd.Index objects")
-
-    split_labels, levels = zip(*[lev.factorize() for lev in levels])
-    labels_mesh = np.meshgrid(*split_labels, indexing="ij")
-    labels = [x.ravel() for x in labels_mesh]
-    return pd.MultiIndex(levels, labels, sortorder=0, names=names)
 
 
 def maybe_wrap_array(original, new_array):
@@ -165,18 +176,15 @@ def equivalent(first: T, second: T) -> bool:
     equivalent is sequentially called on all the elements.
     """
     # TODO: refactor to avoid circular import
-    from . import duck_array_ops
+    from xarray.core import duck_array_ops
 
+    if first is second:
+        return True
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
-    elif isinstance(first, list) or isinstance(second, list):
+    if isinstance(first, list) or isinstance(second, list):
         return list_equiv(first, second)
-    else:
-        return (
-            (first is second)
-            or (first == second)
-            or (pd.isnull(first) and pd.isnull(second))
-        )
+    return (first == second) or (pd.isnull(first) and pd.isnull(second))
 
 
 def list_equiv(first, second):
@@ -189,7 +197,7 @@ def list_equiv(first, second):
     return equiv
 
 
-def peek_at(iterable: Iterable[T]) -> Tuple[T, Iterator[T]]:
+def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
     """Returns the first value from iterable, as well as a new iterator with
     the same content as the original iterable
     """
@@ -249,51 +257,16 @@ def remove_incompatible_items(
             del first_dict[k]
 
 
-def is_dict_like(value: Any) -> bool:
-    return hasattr(value, "keys") and hasattr(value, "__getitem__")
-
-
 def is_full_slice(value: Any) -> bool:
     return isinstance(value, slice) and value == slice(None)
 
 
-def is_list_like(value: Any) -> bool:
+def is_list_like(value: Any) -> TypeGuard[list | tuple]:
     return isinstance(value, (list, tuple))
 
 
-def is_duck_array(value: Any) -> bool:
-    if isinstance(value, np.ndarray):
-        return True
-    return (
-        hasattr(value, "ndim")
-        and hasattr(value, "shape")
-        and hasattr(value, "dtype")
-        and hasattr(value, "__array_function__")
-        and hasattr(value, "__array_ufunc__")
-    )
-
-
-def either_dict_or_kwargs(
-    pos_kwargs: Optional[Mapping[Any, T]],
-    kw_kwargs: Mapping[str, T],
-    func_name: str,
-) -> Mapping[Hashable, T]:
-    if pos_kwargs is None:
-        # Need an explicit cast to appease mypy due to invariance; see
-        # https://github.com/python/mypy/issues/6228
-        return cast(Mapping[Hashable, T], kw_kwargs)
-
-    if not is_dict_like(pos_kwargs):
-        raise ValueError(f"the first argument to .{func_name} must be a dictionary")
-    if kw_kwargs:
-        raise ValueError(
-            f"cannot specify both keyword and positional arguments to .{func_name}"
-        )
-    return pos_kwargs
-
-
 def _is_scalar(value, include_0d):
-    from .variable import NON_NUMPY_SUPPORTED_ARRAY_TYPES
+    from xarray.core.variable import NON_NUMPY_SUPPORTED_ARRAY_TYPES
 
     if include_0d:
         include_0d = getattr(value, "ndim", None) == 0
@@ -303,6 +276,7 @@ def _is_scalar(value, include_0d):
         or not (
             isinstance(value, (Iterable,) + NON_NUMPY_SUPPORTED_ARRAY_TYPES)
             or hasattr(value, "__array_function__")
+            or hasattr(value, "__array_namespace__")
         )
     )
 
@@ -327,7 +301,6 @@ except ImportError:
             """
             return _is_scalar(value, include_0d)
 
-
 else:
 
     def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
@@ -345,13 +318,6 @@ def is_valid_numpy_dtype(dtype: Any) -> bool:
         return False
     else:
         return True
-
-
-def to_0d_object_array(value: Any) -> np.ndarray:
-    """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
-    result = np.empty((), dtype=object)
-    result[()] = value
-    return result
 
 
 def to_0d_array(value: Any) -> np.ndarray:
@@ -470,11 +436,60 @@ class Frozen(Mapping[K, V]):
         return key in self.mapping
 
     def __repr__(self) -> str:
-        return "{}({!r})".format(type(self).__name__, self.mapping)
+        return f"{type(self).__name__}({self.mapping!r})"
 
 
 def FrozenDict(*args, **kwargs) -> Frozen:
     return Frozen(dict(*args, **kwargs))
+
+
+class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
+    """
+    Class which behaves like a Mapping but warns if the values are accessed.
+
+    Temporary object to aid in deprecation cycle of `Dataset.dims` (see GH issue #8496).
+    `Dataset.dims` is being changed from returning a mapping of dimension names to lengths to just
+    returning a frozen set of dimension names (to increase consistency with `DataArray.dims`).
+    This class retains backwards compatibility but raises a warning only if the return value
+    of ds.dims is used like a dictionary (i.e. it doesn't raise a warning if used in a way that
+    would also be valid for a FrozenSet, e.g. iteration).
+    """
+
+    __slots__ = ("mapping",)
+
+    def _warn(self) -> None:
+        emit_user_level_warning(
+            "The return type of `Dataset.dims` will be changed to return a set of dimension names in future, "
+            "in order to be more consistent with `DataArray.dims`. To access a mapping from dimension names to lengths, "
+            "please use `Dataset.sizes`.",
+            FutureWarning,
+        )
+
+    def __getitem__(self, key: K) -> V:
+        self._warn()
+        return super().__getitem__(key)
+
+    @overload
+    def get(self, key: K, /) -> V | None: ...
+
+    @overload
+    def get(self, key: K, /, default: V | T) -> V | T: ...
+
+    def get(self, key: K, default: T | None = None) -> V | T | None:
+        self._warn()
+        return super().get(key, default)
+
+    def keys(self) -> KeysView[K]:
+        self._warn()
+        return super().keys()
+
+    def items(self) -> ItemsView[K, V]:
+        self._warn()
+        return super().items()
+
+    def values(self) -> ValuesView[V]:
+        self._warn()
+        return super().values()
 
 
 class HybridMappingProxy(Mapping[K, V]):
@@ -513,11 +528,11 @@ class OrderedSet(MutableSet[T]):
     a dict. Note that, unlike in an OrderedDict, equality tests are not order-sensitive.
     """
 
-    _d: Dict[T, None]
+    _d: dict[T, None]
 
     __slots__ = ("_d",)
 
-    def __init__(self, values: Iterable[T] = None):
+    def __init__(self, values: Iterable[T] | None = None):
         self._d = {}
         if values is not None:
             self.update(values)
@@ -542,11 +557,10 @@ class OrderedSet(MutableSet[T]):
     # Additional methods
 
     def update(self, values: Iterable[T]) -> None:
-        for v in values:
-            self._d[v] = None
+        self._d.update(dict.fromkeys(values))
 
     def __repr__(self) -> str:
-        return "{}({!r})".format(type(self).__name__, list(self))
+        return f"{type(self).__name__}({list(self)!r})"
 
 
 class NdimSizeLenMixin:
@@ -558,12 +572,27 @@ class NdimSizeLenMixin:
 
     @property
     def ndim(self: Any) -> int:
+        """
+        Number of array dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.ndim
+        """
         return len(self.shape)
 
     @property
     def size(self: Any) -> int:
-        # cast to int so that shape = () gives size = 1
-        return int(np.prod(self.shape))
+        """
+        Number of elements in the array.
+
+        Equal to ``np.prod(a.shape)``, i.e., the product of the array’s dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.size
+        """
+        return math.prod(self.shape)
 
     def __len__(self: Any) -> int:
         try:
@@ -587,39 +616,14 @@ class NDArrayMixin(NdimSizeLenMixin):
         return self.array.dtype
 
     @property
-    def shape(self: Any) -> Tuple[int]:
+    def shape(self: Any) -> tuple[int, ...]:
         return self.array.shape
 
     def __getitem__(self: Any, key):
         return self.array[key]
 
     def __repr__(self: Any) -> str:
-        return "{}(array={!r})".format(type(self).__name__, self.array)
-
-
-class ReprObject:
-    """Object that prints as the given value, for use with sentinel values."""
-
-    __slots__ = ("_value",)
-
-    def __init__(self, value: str):
-        self._value = value
-
-    def __repr__(self) -> str:
-        return self._value
-
-    def __eq__(self, other) -> bool:
-        if isinstance(other, ReprObject):
-            return self._value == other._value
-        return False
-
-    def __hash__(self) -> int:
-        return hash((type(self), self._value))
-
-    def __dask_tokenize__(self):
-        from dask.base import normalize_token
-
-        return normalize_token((type(self), self._value))
+        return f"{type(self).__name__}(array={self.array!r})"
 
 
 @contextlib.contextmanager
@@ -649,19 +653,15 @@ def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
         magic_number = filename_or_obj[:count]
     elif isinstance(filename_or_obj, io.IOBase):
         if filename_or_obj.tell() != 0:
-            raise ValueError(
-                "cannot guess the engine, "
-                "file-like object read/write pointer not at the start of the file, "
-                "please close and reopen, or use a context manager"
-            )
-        magic_number = filename_or_obj.read(count)  # type: ignore
+            filename_or_obj.seek(0)
+        magic_number = filename_or_obj.read(count)
         filename_or_obj.seek(0)
     else:
-        raise TypeError(f"cannot read the magic number form {type(filename_or_obj)}")
+        raise TypeError(f"cannot read the magic number from {type(filename_or_obj)}")
     return magic_number
 
 
-def try_read_magic_number_from_path(pathlike, count=8) -> Optional[bytes]:
+def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
     if isinstance(pathlike, str) or hasattr(pathlike, "__fspath__"):
         path = os.fspath(pathlike)
         try:
@@ -672,9 +672,7 @@ def try_read_magic_number_from_path(pathlike, count=8) -> Optional[bytes]:
     return None
 
 
-def try_read_magic_number_from_file_or_path(
-    filename_or_obj, count=8
-) -> Optional[bytes]:
+def try_read_magic_number_from_file_or_path(filename_or_obj, count=8) -> bytes | None:
     magic_number = try_read_magic_number_from_path(filename_or_obj, count)
     if magic_number is None:
         try:
@@ -699,7 +697,7 @@ def is_uniform_spaced(arr, **kwargs) -> bool:
     return bool(np.isclose(diffs.min(), diffs.max(), **kwargs))
 
 
-def hashable(v: Any) -> bool:
+def hashable(v: Any) -> TypeGuard[Hashable]:
     """Determine whether `v` can be hashed."""
     try:
         hash(v)
@@ -708,7 +706,25 @@ def hashable(v: Any) -> bool:
     return True
 
 
-def decode_numpy_dict_values(attrs: Mapping[K, V]) -> Dict[K, V]:
+def iterable(v: Any) -> TypeGuard[Iterable[Any]]:
+    """Determine whether `v` is iterable."""
+    try:
+        iter(v)
+    except TypeError:
+        return False
+    return True
+
+
+def iterable_of_hashable(v: Any) -> TypeGuard[Iterable[Hashable]]:
+    """Determine whether `v` is an Iterable of Hashables."""
+    try:
+        it = iter(v)
+    except TypeError:
+        return False
+    return all(hashable(elm) for elm in it)
+
+
+def decode_numpy_dict_values(attrs: Mapping[K, V]) -> dict[K, V]:
     """Convert attribute values from numpy objects to native Python objects,
     for use in to_dict
     """
@@ -769,34 +785,6 @@ class HiddenKeyDict(MutableMapping[K, V]):
         return len(self._data) - num_hidden
 
 
-def infix_dims(
-    dims_supplied: Collection, dims_all: Collection, missing_dims: str = "raise"
-) -> Iterator:
-    """
-    Resolves a supplied list containing an ellipsis representing other items, to
-    a generator with the 'realized' list of all items
-    """
-    if ... in dims_supplied:
-        if len(set(dims_all)) != len(dims_all):
-            raise ValueError("Cannot use ellipsis with repeated dims")
-        if list(dims_supplied).count(...) > 1:
-            raise ValueError("More than one ellipsis supplied")
-        other_dims = [d for d in dims_all if d not in dims_supplied]
-        existing_dims = drop_missing_dims(dims_supplied, dims_all, missing_dims)
-        for d in existing_dims:
-            if d is ...:
-                yield from other_dims
-            else:
-                yield d
-    else:
-        existing_dims = drop_missing_dims(dims_supplied, dims_all, missing_dims)
-        if set(existing_dims) ^ set(dims_all):
-            raise ValueError(
-                f"{dims_supplied} must be a permuted list of {dims_all}, unless `...` is included"
-            )
-        yield from existing_dims
-
-
 def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
     """Get an new dimension name based on new_dim, that is not used in dims.
     If the same name exists, we add an underscore(s) in the head.
@@ -817,8 +805,8 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
 
 def drop_dims_from_indexers(
     indexers: Mapping[Any, Any],
-    dims: Union[list, Mapping[Any, int]],
-    missing_dims: str,
+    dims: Iterable[Hashable] | Mapping[Any, int],
+    missing_dims: ErrorOptionsWithWarn,
 ) -> Mapping[Hashable, Any]:
     """Depending on the setting of missing_dims, drop any dimensions from indexers that
     are not present in dims.
@@ -840,7 +828,6 @@ def drop_dims_from_indexers(
         return indexers
 
     elif missing_dims == "warn":
-
         # don't modify input
         indexers = dict(indexers)
 
@@ -863,49 +850,155 @@ def drop_dims_from_indexers(
         )
 
 
-def drop_missing_dims(
-    supplied_dims: Collection, dims: Collection, missing_dims: str
-) -> Collection:
-    """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
-    are not present in dims.
+@overload
+def parse_dims(
+    dim: Dims,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[True] = True,
+) -> tuple[Hashable, ...]: ...
+
+
+@overload
+def parse_dims(
+    dim: Dims,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[False],
+) -> tuple[Hashable, ...] | None | ellipsis: ...
+
+
+def parse_dims(
+    dim: Dims,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check_exists: bool = True,
+    replace_none: bool = True,
+) -> tuple[Hashable, ...] | None | ellipsis:
+    """Parse one or more dimensions.
+
+    A single dimension must be always a str, multiple dimensions
+    can be Hashables. This supports e.g. using a tuple as a dimension.
+    If you supply e.g. a set of dimensions the order cannot be
+    conserved, but for sequences it will be.
 
     Parameters
     ----------
-    supplied_dims : dict
-    dims : sequence
-    missing_dims : {"raise", "warn", "ignore"}
+    dim : str, Iterable of Hashable, "..." or None
+        Dimension(s) to parse.
+    all_dims : tuple of Hashable
+        All possible dimensions.
+    check_exists: bool, default: True
+        if True, check if dim is a subset of all_dims.
+    replace_none : bool, default: True
+        If True, return all_dims if dim is None or "...".
+
+    Returns
+    -------
+    parsed_dims : tuple of Hashable
+        Input dimensions as a tuple.
     """
+    if dim is None or dim is ...:
+        if replace_none:
+            return all_dims
+        return dim
+    if isinstance(dim, str):
+        dim = (dim,)
+    if check_exists:
+        _check_dims(set(dim), set(all_dims))
+    return tuple(dim)
 
-    if missing_dims == "raise":
-        supplied_dims_set = {val for val in supplied_dims if val is not ...}
-        invalid = supplied_dims_set - set(dims)
-        if invalid:
-            raise ValueError(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
-            )
 
-        return supplied_dims
+@overload
+def parse_ordered_dims(
+    dim: Dims,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[True] = True,
+) -> tuple[Hashable, ...]: ...
 
-    elif missing_dims == "warn":
 
-        invalid = set(supplied_dims) - set(dims)
-        if invalid:
-            warnings.warn(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
-            )
+@overload
+def parse_ordered_dims(
+    dim: Dims,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[False],
+) -> tuple[Hashable, ...] | None | ellipsis: ...
 
-        return [val for val in supplied_dims if val in dims or val is ...]
 
-    elif missing_dims == "ignore":
-        return [val for val in supplied_dims if val in dims or val is ...]
+def parse_ordered_dims(
+    dim: Dims,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check_exists: bool = True,
+    replace_none: bool = True,
+) -> tuple[Hashable, ...] | None | ellipsis:
+    """Parse one or more dimensions.
 
+    A single dimension must be always a str, multiple dimensions
+    can be Hashables. This supports e.g. using a tuple as a dimension.
+    An ellipsis ("...") in a sequence of dimensions will be
+    replaced with all remaining dimensions. This only makes sense when
+    the input is a sequence and not e.g. a set.
+
+    Parameters
+    ----------
+    dim : str, Sequence of Hashable or "...", "..." or None
+        Dimension(s) to parse. If "..." appears in a Sequence
+        it always gets replaced with all remaining dims
+    all_dims : tuple of Hashable
+        All possible dimensions.
+    check_exists: bool, default: True
+        if True, check if dim is a subset of all_dims.
+    replace_none : bool, default: True
+        If True, return all_dims if dim is None.
+
+    Returns
+    -------
+    parsed_dims : tuple of Hashable
+        Input dimensions as a tuple.
+    """
+    if dim is not None and dim is not ... and not isinstance(dim, str) and ... in dim:
+        dims_set: set[Hashable | ellipsis] = set(dim)
+        all_dims_set = set(all_dims)
+        if check_exists:
+            _check_dims(dims_set, all_dims_set)
+        if len(all_dims_set) != len(all_dims):
+            raise ValueError("Cannot use ellipsis with repeated dims")
+        dims = tuple(dim)
+        if dims.count(...) > 1:
+            raise ValueError("More than one ellipsis supplied")
+        other_dims = tuple(d for d in all_dims if d not in dims_set)
+        idx = dims.index(...)
+        return dims[:idx] + other_dims + dims[idx + 1 :]
     else:
-        raise ValueError(
-            f"Unrecognised option {missing_dims} for missing_dims argument"
+        # mypy cannot resolve that the sequence cannot contain "..."
+        return parse_dims(  # type: ignore[call-overload]
+            dim=dim,
+            all_dims=all_dims,
+            check_exists=check_exists,
+            replace_none=replace_none,
         )
 
 
-class UncachedAccessor:
+def _check_dims(dim: set[Hashable], all_dims: set[Hashable]) -> None:
+    wrong_dims = (dim - all_dims) - {...}
+    if wrong_dims:
+        wrong_dims_str = ", ".join(f"'{d!s}'" for d in wrong_dims)
+        raise ValueError(
+            f"Dimension(s) {wrong_dims_str} do not exist. Expected one or more of {all_dims}"
+        )
+
+
+_Accessor = TypeVar("_Accessor")
+
+
+class UncachedAccessor(Generic[_Accessor]):
     """Acts like a property, but on both classes and class instances
 
     This class is necessary because some tools (e.g. pydoc and sphinx)
@@ -913,14 +1006,20 @@ class UncachedAccessor:
     accessor.
     """
 
-    def __init__(self, accessor):
+    def __init__(self, accessor: type[_Accessor]) -> None:
         self._accessor = accessor
 
-    def __get__(self, obj, cls):
+    @overload
+    def __get__(self, obj: None, cls) -> type[_Accessor]: ...
+
+    @overload
+    def __get__(self, obj: object, cls) -> _Accessor: ...
+
+    def __get__(self, obj: None | object, cls) -> type[_Accessor] | _Accessor:
         if obj is None:
             return self._accessor
 
-        return self._accessor(obj)
+        return self._accessor(obj)  # type: ignore  # assume it is a valid accessor!
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
@@ -937,3 +1036,140 @@ def iterate_nested(nested_list):
             yield from iterate_nested(item)
         else:
             yield item
+
+
+def contains_only_chunked_or_numpy(obj) -> bool:
+    """Returns True if xarray object contains only numpy arrays or chunked arrays (i.e. pure dask or cubed).
+
+    Expects obj to be Dataset or DataArray"""
+    from xarray.core.dataarray import DataArray
+    from xarray.namedarray.pycompat import is_chunked_array
+
+    if isinstance(obj, DataArray):
+        obj = obj._to_temp_dataset()
+
+    return all(
+        [
+            isinstance(var.data, np.ndarray) or is_chunked_array(var.data)
+            for var in obj.variables.values()
+        ]
+    )
+
+
+def find_stack_level(test_mode=False) -> int:
+    """Find the first place in the stack that is not inside xarray or the Python standard library.
+
+    This is unless the code emanates from a test, in which case we would prefer
+    to see the xarray source.
+
+    This function is taken from pandas and modified to exclude standard library paths.
+
+    Parameters
+    ----------
+    test_mode : bool
+        Flag used for testing purposes to switch off the detection of test
+        directories in the stack trace.
+
+    Returns
+    -------
+    stacklevel : int
+        First level in the stack that is not part of xarray or the Python standard library.
+    """
+    import xarray as xr
+
+    pkg_dir = Path(xr.__file__).parent
+    test_dir = pkg_dir / "tests"
+
+    std_lib_init = sys.modules["os"].__file__
+    # Mostly to appease mypy; I don't think this can happen...
+    if std_lib_init is None:
+        return 0
+
+    std_lib_dir = Path(std_lib_init).parent
+
+    frame = inspect.currentframe()
+    n = 0
+    while frame:
+        fname = inspect.getfile(frame)
+        if (
+            fname.startswith(str(pkg_dir))
+            and (not fname.startswith(str(test_dir)) or test_mode)
+        ) or (
+            fname.startswith(str(std_lib_dir))
+            and "site-packages" not in fname
+            and "dist-packages" not in fname
+        ):
+            frame = frame.f_back
+            n += 1
+        else:
+            break
+    return n
+
+
+def emit_user_level_warning(message, category=None) -> None:
+    """Emit a warning at the user level by inspecting the stack trace."""
+    stacklevel = find_stack_level()
+    return warnings.warn(message, category=category, stacklevel=stacklevel)
+
+
+def consolidate_dask_from_array_kwargs(
+    from_array_kwargs: dict[Any, Any],
+    name: str | None = None,
+    lock: bool | None = None,
+    inline_array: bool | None = None,
+) -> dict[Any, Any]:
+    """
+    Merge dask-specific kwargs with arbitrary from_array_kwargs dict.
+
+    Temporary function, to be deleted once explicitly passing dask-specific kwargs to .chunk() is deprecated.
+    """
+
+    from_array_kwargs = _resolve_doubly_passed_kwarg(
+        from_array_kwargs,
+        kwarg_name="name",
+        passed_kwarg_value=name,
+        default=None,
+        err_msg_dict_name="from_array_kwargs",
+    )
+    from_array_kwargs = _resolve_doubly_passed_kwarg(
+        from_array_kwargs,
+        kwarg_name="lock",
+        passed_kwarg_value=lock,
+        default=False,
+        err_msg_dict_name="from_array_kwargs",
+    )
+    from_array_kwargs = _resolve_doubly_passed_kwarg(
+        from_array_kwargs,
+        kwarg_name="inline_array",
+        passed_kwarg_value=inline_array,
+        default=False,
+        err_msg_dict_name="from_array_kwargs",
+    )
+
+    return from_array_kwargs
+
+
+def _resolve_doubly_passed_kwarg(
+    kwargs_dict: dict[Any, Any],
+    kwarg_name: str,
+    passed_kwarg_value: str | bool | None,
+    default: bool | None,
+    err_msg_dict_name: str,
+) -> dict[Any, Any]:
+    # if in kwargs_dict but not passed explicitly then just pass kwargs_dict through unaltered
+    if kwarg_name in kwargs_dict and passed_kwarg_value is None:
+        pass
+    # if passed explicitly but not in kwargs_dict then use that
+    elif kwarg_name not in kwargs_dict and passed_kwarg_value is not None:
+        kwargs_dict[kwarg_name] = passed_kwarg_value
+    # if in neither then use default
+    elif kwarg_name not in kwargs_dict and passed_kwarg_value is None:
+        kwargs_dict[kwarg_name] = default
+    # if in both then raise
+    else:
+        raise ValueError(
+            f"argument {kwarg_name} cannot be passed both as a keyword argument and within "
+            f"the {err_msg_dict_name} dictionary"
+        )
+
+    return kwargs_dict

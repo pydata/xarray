@@ -1,42 +1,46 @@
+from __future__ import annotations
+
 import functools
 import io
 import os
-from distutils.version import LooseVersion
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
 
-import numpy as np
-
-from ..core import indexing
-from ..core.utils import (
-    FrozenDict,
-    is_remote_uri,
-    read_magic_number_from_file,
-    try_read_magic_number_from_file_or_path,
-)
-from ..core.variable import Variable
-from .common import (
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
+    _open_datatree_netcdf,
     find_root_and_group,
 )
-from .file_manager import CachingFileManager, DummyFileManager
-from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
-from .netCDF4_ import (
+from xarray.backends.file_manager import CachingFileManager, DummyFileManager
+from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
+from xarray.backends.netCDF4_ import (
     BaseNetCDF4Array,
     _encode_nc4_variable,
+    _ensure_no_forward_slash_in_name,
     _extract_nc4_variable_encoding,
     _get_datatype,
     _nc4_require_group,
 )
-from .store import StoreBackendEntrypoint
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.core import indexing
+from xarray.core.utils import (
+    FrozenDict,
+    emit_user_level_warning,
+    is_remote_uri,
+    read_magic_number_from_file,
+    try_read_magic_number_from_file_or_path,
+)
+from xarray.core.variable import Variable
 
-try:
-    import h5netcdf
+if TYPE_CHECKING:
+    from io import BufferedIOBase
 
-    has_h5netcdf = True
-except ModuleNotFoundError:
-    has_h5netcdf = False
+    from xarray.backends.common import AbstractDataStore
+    from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -50,19 +54,9 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
         )
 
     def _getitem(self, key):
-        # h5py requires using lists for fancy indexing:
-        # https://github.com/h5py/h5py/issues/992
-        key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in key)
         with self.datastore.lock:
             array = self.get_array(needs_lock=False)
             return array[key]
-
-
-def maybe_decode_bytes(txt):
-    if isinstance(txt, bytes):
-        return txt.decode("utf-8")
-    else:
-        return txt
 
 
 def _read_attributes(h5netcdf_var):
@@ -72,13 +66,26 @@ def _read_attributes(h5netcdf_var):
     attrs = {}
     for k, v in h5netcdf_var.attrs.items():
         if k not in ["_FillValue", "missing_value"]:
-            v = maybe_decode_bytes(v)
+            if isinstance(v, bytes):
+                try:
+                    v = v.decode("utf-8")
+                except UnicodeDecodeError:
+                    emit_user_level_warning(
+                        f"'utf-8' codec can't decode bytes for attribute "
+                        f"{k!r} of h5netcdf object {h5netcdf_var.name!r}, "
+                        f"returning bytes undecoded.",
+                        UnicodeWarning,
+                    )
         attrs[k] = v
     return attrs
 
 
 _extract_h5nc_encoding = functools.partial(
-    _extract_nc4_variable_encoding, lsd_okay=False, h5py_okay=True, backend="h5netcdf"
+    _extract_nc4_variable_encoding,
+    lsd_okay=False,
+    h5py_okay=True,
+    backend="h5netcdf",
+    unlimited_dims=None,
 )
 
 
@@ -101,6 +108,7 @@ class H5NetCDFStore(WritableCFDataStore):
     )
 
     def __init__(self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False):
+        import h5netcdf
 
         if isinstance(manager, (h5netcdf.File, h5netcdf.Group)):
             if group is None:
@@ -137,7 +145,10 @@ class H5NetCDFStore(WritableCFDataStore):
         invalid_netcdf=None,
         phony_dims=None,
         decode_vlen_strings=True,
+        driver=None,
+        driver_kwds=None,
     ):
+        import h5netcdf
 
         if isinstance(filename, bytes):
             raise ValueError(
@@ -154,19 +165,15 @@ class H5NetCDFStore(WritableCFDataStore):
         if format not in [None, "NETCDF4"]:
             raise ValueError("invalid format for h5netcdf backend")
 
-        kwargs = {"invalid_netcdf": invalid_netcdf}
+        kwargs = {
+            "invalid_netcdf": invalid_netcdf,
+            "decode_vlen_strings": decode_vlen_strings,
+            "driver": driver,
+        }
+        if driver_kwds is not None:
+            kwargs.update(driver_kwds)
         if phony_dims is not None:
-            if LooseVersion(h5netcdf.__version__) >= LooseVersion("0.8.0"):
-                kwargs["phony_dims"] = phony_dims
-            else:
-                raise ValueError(
-                    "h5netcdf backend keyword argument 'phony_dims' needs "
-                    "h5netcdf >= 0.8.0."
-                )
-        if LooseVersion(h5netcdf.__version__) >= LooseVersion(
-            "0.10.0"
-        ) and LooseVersion(h5netcdf.core.h5py.__version__) >= LooseVersion("3.0.0"):
-            kwargs["decode_vlen_strings"] = decode_vlen_strings
+            kwargs["phony_dims"] = phony_dims
 
         if lock is None:
             if mode == "r":
@@ -201,6 +208,8 @@ class H5NetCDFStore(WritableCFDataStore):
             "fletcher32": var.fletcher32,
             "shuffle": var.shuffle,
         }
+        if var.chunks:
+            encoding["preferred_chunks"] = dict(zip(var.dimensions, var.chunks))
         # Convert h5py-style compression options to NetCDF4-Python
         # style, if possible
         if var.compression == "gzip":
@@ -234,14 +243,17 @@ class H5NetCDFStore(WritableCFDataStore):
         return FrozenDict(_read_attributes(self.ds))
 
     def get_dimensions(self):
-        return self.ds.dimensions
+        return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
 
     def get_encoding(self):
         return {
-            "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}
+            "unlimited_dims": {
+                k for k, v in self.ds.dimensions.items() if v.isunlimited()
+            }
         }
 
     def set_dimension(self, name, length, is_unlimited=False):
+        _ensure_no_forward_slash_in_name(name)
         if is_unlimited:
             self.ds.dimensions[name] = None
             self.ds.resize_dimension(name, length)
@@ -259,19 +271,11 @@ class H5NetCDFStore(WritableCFDataStore):
     ):
         import h5py
 
+        _ensure_no_forward_slash_in_name(name)
         attrs = variable.attrs.copy()
         dtype = _get_datatype(variable, raise_on_invalid_encoding=check_encoding)
 
         fillvalue = attrs.pop("_FillValue", None)
-        if dtype is str and fillvalue is not None:
-            raise NotImplementedError(
-                "h5netcdf does not yet support setting a fill value for "
-                "variable-length strings "
-                "(https://github.com/shoyer/h5netcdf/issues/37). "
-                f"Either remove '_FillValue' from encoding on variable {name!r} "
-                "or set {'dtype': 'S1'} in encoding to use the fixed width "
-                "NC_CHAR type."
-            )
 
         if dtype is str:
             dtype = h5py.special_dtype(vlen=str)
@@ -337,29 +341,55 @@ class H5NetCDFStore(WritableCFDataStore):
 
 
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
-    available = has_h5netcdf
+    """
+    Backend for netCDF files based on the h5netcdf package.
 
-    def guess_can_open(self, filename_or_obj):
+    It can open ".nc", ".nc4", ".cdf" files but will only be
+    selected as the default if the "netcdf4" engine is not available.
+
+    Additionally it can open valid HDF5 files, see
+    https://h5netcdf.org/#invalid-netcdf-files for more info.
+    It will not be detected as valid backend for such files, so make
+    sure to specify ``engine="h5netcdf"`` in ``open_dataset``.
+
+    For more information about the underlying library, visit:
+    https://h5netcdf.org
+
+    See Also
+    --------
+    backends.H5NetCDFStore
+    backends.NetCDF4BackendEntrypoint
+    backends.ScipyBackendEntrypoint
+    """
+
+    description = (
+        "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using h5netcdf in Xarray"
+    )
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.H5netcdfBackendEntrypoint.html"
+
+    def guess_can_open(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    ) -> bool:
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None:
             return magic_number.startswith(b"\211HDF\r\n\032\n")
 
-        try:
+        if isinstance(filename_or_obj, (str, os.PathLike)):
             _, ext = os.path.splitext(filename_or_obj)
-        except TypeError:
-            return False
+            return ext in {".nc", ".nc4", ".cdf"}
 
-        return ext in {".nc", ".nc4", ".cdf"}
+        return False
 
-    def open_dataset(
+    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
         self,
-        filename_or_obj,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
-        drop_variables=None,
+        drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
         format=None,
@@ -368,8 +398,9 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         invalid_netcdf=None,
         phony_dims=None,
         decode_vlen_strings=True,
-    ):
-
+        driver=None,
+        driver_kwds=None,
+    ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
@@ -379,6 +410,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             invalid_netcdf=invalid_netcdf,
             phony_dims=phony_dims,
             decode_vlen_strings=decode_vlen_strings,
+            driver=driver,
+            driver_kwds=driver_kwds,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
@@ -395,5 +428,14 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         )
         return ds
 
+    def open_datatree(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        **kwargs,
+    ) -> DataTree:
+        from h5netcdf.legacyapi import Dataset as ncDataset
 
-BACKEND_ENTRYPOINTS["h5netcdf"] = H5netcdfBackendEntrypoint
+        return _open_datatree_netcdf(ncDataset, filename_or_obj, **kwargs)
+
+
+BACKEND_ENTRYPOINTS["h5netcdf"] = ("h5netcdf", H5netcdfBackendEntrypoint)

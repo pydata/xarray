@@ -1,6 +1,7 @@
 """
 Property-based tests for roundtripping between xarray and pandas objects.
 """
+
 from functools import partial
 
 import numpy as np
@@ -16,7 +17,9 @@ import hypothesis.strategies as st  # isort:skip
 from hypothesis import given  # isort:skip
 
 numeric_dtypes = st.one_of(
-    npst.unsigned_integer_dtypes(), npst.integer_dtypes(), npst.floating_dtypes()
+    npst.unsigned_integer_dtypes(endianness="="),
+    npst.integer_dtypes(endianness="="),
+    npst.floating_dtypes(endianness="="),
 )
 
 numeric_series = numeric_dtypes.flatmap(lambda dt: pdst.series(dtype=dt))

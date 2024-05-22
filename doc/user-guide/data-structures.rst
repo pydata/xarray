@@ -19,7 +19,8 @@ DataArray
 :py:class:`xarray.DataArray` is xarray's implementation of a labeled,
 multi-dimensional array. It has several key properties:
 
-- ``values``: a :py:class:`numpy.ndarray` holding the array's values
+- ``values``: a :py:class:`numpy.ndarray` or
+  :ref:`numpy-like array <userguide.duckarrays>` holding the array's values
 - ``dims``: dimension names for each axis (e.g., ``('x', 'y', 'z')``)
 - ``coords``: a dict-like container of arrays (*coordinates*) that label each
   point (e.g., 1-dimensional arrays of numbers, datetime objects or
@@ -46,7 +47,8 @@ Creating a DataArray
 The :py:class:`~xarray.DataArray` constructor takes:
 
 - ``data``: a multi-dimensional array of values (e.g., a numpy ndarray,
-  :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or ``pandas.Panel``)
+  a :ref:`numpy-like array <userguide.duckarrays>`, :py:class:`~pandas.Series`,
+  :py:class:`~pandas.DataFrame` or ``pandas.Panel``)
 - ``coords``: a list or dictionary of coordinates. If a list, it should be a
   list of tuples where the first element is the dimension name and the second
   element is the corresponding coordinate array_like object.
@@ -227,7 +229,7 @@ container of labeled arrays (:py:class:`~xarray.DataArray` objects) with aligned
 dimensions. It is designed as an in-memory representation of the data model
 from the `netCDF`__ file format.
 
-__ http://www.unidata.ucar.edu/software/netcdf/
+__ https://www.unidata.ucar.edu/software/netcdf/
 
 In addition to the dict-like interface of the dataset itself, which can be used
 to access any variable in a dataset, datasets have four key properties:
@@ -247,7 +249,7 @@ distinction for indexing and computations. Coordinates indicate
 constant/fixed/independent quantities, unlike the varying/measured/dependent
 quantities that belong in data.
 
-.. _CF conventions: http://cfconventions.org/
+.. _CF conventions: https://cfconventions.org/
 
 Here is an example of how we might structure a dataset for a weather forecast:
 
@@ -280,27 +282,40 @@ variables (``data_vars``), coordinates (``coords``) and attributes (``attrs``).
 
 - ``attrs`` should be a dictionary.
 
-Let's create some fake data for the example we show above:
+Let's create some fake data for the example we show above. In this
+example dataset, we will represent measurements of the temperature and
+pressure that were made under various conditions:
+
+* the measurements were made on four different days;
+* they were made at two separate locations, which we will represent using
+  their latitude and longitude; and
+* they were made using instruments by three different manufacutrers, which we
+  will refer to as `'manufac1'`, `'manufac2'`, and `'manufac3'`.
 
 .. ipython:: python
 
-    temp = 15 + 8 * np.random.randn(2, 2, 3)
-    precip = 10 * np.random.rand(2, 2, 3)
-    lon = [[-99.83, -99.32], [-99.79, -99.23]]
-    lat = [[42.25, 42.21], [42.63, 42.59]]
+    np.random.seed(0)
+    temperature = 15 + 8 * np.random.randn(2, 3, 4)
+    precipitation = 10 * np.random.rand(2, 3, 4)
+    lon = [-99.83, -99.32]
+    lat = [42.25, 42.21]
+    instruments = ["manufac1", "manufac2", "manufac3"]
+    time = pd.date_range("2014-09-06", periods=4)
+    reference_time = pd.Timestamp("2014-09-05")
 
     # for real use cases, its good practice to supply array attributes such as
     # units, but we won't bother here for the sake of brevity
     ds = xr.Dataset(
         {
-            "temperature": (["x", "y", "time"], temp),
-            "precipitation": (["x", "y", "time"], precip),
+            "temperature": (["loc", "instrument", "time"], temperature),
+            "precipitation": (["loc", "instrument", "time"], precipitation),
         },
         coords={
-            "lon": (["x", "y"], lon),
-            "lat": (["x", "y"], lat),
-            "time": pd.date_range("2014-09-06", periods=3),
-            "reference_time": pd.Timestamp("2014-09-05"),
+            "lon": (["loc"], lon),
+            "lat": (["loc"], lat),
+            "instrument": instruments,
+            "time": time,
+            "reference_time": reference_time,
         },
     )
     ds
@@ -385,12 +400,12 @@ example, to create this example dataset from scratch, we could have written:
 .. ipython:: python
 
     ds = xr.Dataset()
-    ds["temperature"] = (("x", "y", "time"), temp)
-    ds["temperature_double"] = (("x", "y", "time"), temp * 2)
-    ds["precipitation"] = (("x", "y", "time"), precip)
-    ds.coords["lat"] = (("x", "y"), lat)
-    ds.coords["lon"] = (("x", "y"), lon)
-    ds.coords["time"] = pd.date_range("2014-09-06", periods=3)
+    ds["temperature"] = (("loc", "instrument", "time"), temperature)
+    ds["temperature_double"] = (("loc", "instrument", "time"), temperature * 2)
+    ds["precipitation"] = (("loc", "instrument", "time"), precipitation)
+    ds.coords["lat"] = (("loc",), lat)
+    ds.coords["lon"] = (("loc",), lon)
+    ds.coords["time"] = pd.date_range("2014-09-06", periods=4)
     ds.coords["reference_time"] = pd.Timestamp("2014-09-05")
 
 To change the variables in a ``Dataset``, you can use all the standard dictionary
@@ -450,8 +465,8 @@ follow nested function calls:
 
     # these lines are equivalent, but with pipe we can make the logic flow
     # entirely from left to right
-    plt.plot((2 * ds.temperature.sel(x=0)).mean("y"))
-    (ds.temperature.sel(x=0).pipe(lambda x: 2 * x).mean("y").pipe(plt.plot))
+    plt.plot((2 * ds.temperature.sel(loc=0)).mean("instrument"))
+    (ds.temperature.sel(loc=0).pipe(lambda x: 2 * x).mean("instrument").pipe(plt.plot))
 
 Both ``pipe`` and ``assign`` replicate the pandas methods of the same names
 (:py:meth:`DataFrame.pipe <pandas.DataFrame.pipe>` and
@@ -477,7 +492,7 @@ dimension and non-dimension variables:
 
 .. ipython:: python
 
-    ds.coords["day"] = ("time", [6, 7, 8])
+    ds.coords["day"] = ("time", [6, 7, 8, 9])
     ds.swap_dims({"time": "day"})
 
 .. _coordinates:
@@ -520,7 +535,7 @@ in xarray:
   "non-dimension coordinates" are called "auxiliary coordinate variables"
   (see :issue:`1295` for more details).
 
-.. _CF terminology: http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#terminology
+.. _CF terminology: https://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#terminology
 
 
 Modifying coordinates
@@ -628,4 +643,4 @@ it is recommended that you explicitly set the names of the levels.
    at which the forecast was made, rather than ``time`` which is the valid time
    for which the forecast applies.
 
-__ http://en.wikipedia.org/wiki/Map_projection
+__ https://en.wikipedia.org/wiki/Map_projection

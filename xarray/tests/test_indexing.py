@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import itertools
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -6,10 +9,40 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable
 from xarray.core import indexing, nputils
-
-from . import IndexerMaker, ReturnItem, assert_array_equal
+from xarray.core.indexes import PandasIndex, PandasMultiIndex
+from xarray.core.types import T_Xarray
+from xarray.tests import (
+    IndexerMaker,
+    ReturnItem,
+    assert_array_equal,
+    assert_identical,
+    raise_if_dask_computes,
+    requires_dask,
+)
 
 B = IndexerMaker(indexing.BasicIndexer)
+
+
+class TestIndexCallable:
+    def test_getitem(self):
+        def getter(key):
+            return key * 2
+
+        indexer = indexing.IndexCallable(getter)
+        assert indexer[3] == 6
+        assert indexer[0] == 0
+        assert indexer[-1] == -2
+
+    def test_setitem(self):
+        def getter(key):
+            return key * 2
+
+        def setter(key, value):
+            raise NotImplementedError("Setter not implemented")
+
+        indexer = indexing.IndexCallable(getter, setter)
+        with pytest.raises(NotImplementedError):
+            indexer[3] = 6
 
 
 class TestIndexers:
@@ -62,31 +95,74 @@ class TestIndexers:
         )
         data.coords["y2"] = ("y", [2.0, 3.0])
 
-        indexes, grouped_indexers = indexing.group_indexers_by_index(
-            data, {"z": 0, "one": "a", "two": 1, "y": 0}
+        grouped_indexers = indexing.group_indexers_by_index(
+            data, {"z": 0, "one": "a", "two": 1, "y": 0}, {}
         )
-        assert indexes == {"x": data.xindexes["x"], "y": data.xindexes["y"]}
-        assert grouped_indexers == {
-            "x": {"one": "a", "two": 1},
-            "y": {"y": 0},
-            None: {"z": 0},
-        }
 
-        with pytest.raises(KeyError, match=r"no index found for coordinate y2"):
-            indexing.group_indexers_by_index(data, {"y2": 2.0})
-        with pytest.raises(KeyError, match=r"w is not a valid dimension or coordinate"):
-            indexing.group_indexers_by_index(data, {"w": "a"})
+        for idx, indexers in grouped_indexers:
+            if idx is None:
+                assert indexers == {"z": 0}
+            elif idx.equals(data.xindexes["x"]):
+                assert indexers == {"one": "a", "two": 1}
+            elif idx.equals(data.xindexes["y"]):
+                assert indexers == {"y": 0}
+        assert len(grouped_indexers) == 3
+
+        with pytest.raises(KeyError, match=r"no index found for coordinate 'y2'"):
+            indexing.group_indexers_by_index(data, {"y2": 2.0}, {})
+        with pytest.raises(
+            KeyError, match=r"'w' is not a valid dimension or coordinate"
+        ):
+            indexing.group_indexers_by_index(data, {"w": "a"}, {})
         with pytest.raises(ValueError, match=r"cannot supply.*"):
-            indexing.group_indexers_by_index(data, {"z": 1}, method="nearest")
+            indexing.group_indexers_by_index(data, {"z": 1}, {"method": "nearest"})
 
-    def test_remap_label_indexers(self) -> None:
-        def test_indexer(data, x, expected_pos, expected_idx=None) -> None:
-            pos, new_idx_vars = indexing.remap_label_indexers(data, {"x": x})
-            idx, _ = new_idx_vars.get("x", (None, None))
-            if idx is not None:
-                idx = idx.to_pandas_index()
-            assert_array_equal(pos.get("x"), expected_pos)
-            assert_array_equal(idx, expected_idx)
+    def test_map_index_queries(self) -> None:
+        def create_sel_results(
+            x_indexer,
+            x_index,
+            other_vars,
+            drop_coords,
+            drop_indexes,
+            rename_dims,
+        ):
+            dim_indexers = {"x": x_indexer}
+            index_vars = x_index.create_variables()
+            indexes = {k: x_index for k in index_vars}
+            variables = {}
+            variables.update(index_vars)
+            variables.update(other_vars)
+
+            return indexing.IndexSelResult(
+                dim_indexers=dim_indexers,
+                indexes=indexes,
+                variables=variables,
+                drop_coords=drop_coords,
+                drop_indexes=drop_indexes,
+                rename_dims=rename_dims,
+            )
+
+        def test_indexer(
+            data: T_Xarray,
+            x: Any,
+            expected: indexing.IndexSelResult,
+        ) -> None:
+            results = indexing.map_index_queries(data, {"x": x})
+
+            assert results.dim_indexers.keys() == expected.dim_indexers.keys()
+            assert_array_equal(results.dim_indexers["x"], expected.dim_indexers["x"])
+
+            assert results.indexes.keys() == expected.indexes.keys()
+            for k in results.indexes:
+                assert results.indexes[k].equals(expected.indexes[k])
+
+            assert results.variables.keys() == expected.variables.keys()
+            for k in results.variables:
+                assert_array_equal(results.variables[k], expected.variables[k])
+
+            assert set(results.drop_coords) == set(expected.drop_coords)
+            assert set(results.drop_indexes) == set(expected.drop_indexes)
+            assert results.rename_dims == expected.rename_dims
 
         data = Dataset({"x": ("x", [1, 2, 3])})
         mindex = pd.MultiIndex.from_product(
@@ -94,53 +170,98 @@ class TestIndexers:
         )
         mdata = DataArray(range(8), [("x", mindex)])
 
-        test_indexer(data, 1, 0)
-        test_indexer(data, np.int32(1), 0)
-        test_indexer(data, Variable([], 1), 0)
-        test_indexer(mdata, ("a", 1, -1), 0)
-        test_indexer(
-            mdata,
-            ("a", 1),
+        test_indexer(data, 1, indexing.IndexSelResult({"x": 0}))
+        test_indexer(data, np.int32(1), indexing.IndexSelResult({"x": 0}))
+        test_indexer(data, Variable([], 1), indexing.IndexSelResult({"x": 0}))
+        test_indexer(mdata, ("a", 1, -1), indexing.IndexSelResult({"x": 0}))
+
+        expected = create_sel_results(
             [True, True, False, False, False, False, False, False],
-            [-1, -2],
+            PandasIndex(pd.Index([-1, -2]), "three"),
+            {"one": Variable((), "a"), "two": Variable((), 1)},
+            ["x"],
+            ["one", "two"],
+            {"x": "three"},
         )
-        test_indexer(
-            mdata,
-            "a",
+        test_indexer(mdata, ("a", 1), expected)
+
+        expected = create_sel_results(
             slice(0, 4, None),
-            pd.MultiIndex.from_product([[1, 2], [-1, -2]]),
+            PandasMultiIndex(
+                pd.MultiIndex.from_product([[1, 2], [-1, -2]], names=("two", "three")),
+                "x",
+            ),
+            {"one": Variable((), "a")},
+            [],
+            ["one"],
+            {},
         )
-        test_indexer(
-            mdata,
-            ("a",),
+        test_indexer(mdata, "a", expected)
+
+        expected = create_sel_results(
             [True, True, True, True, False, False, False, False],
-            pd.MultiIndex.from_product([[1, 2], [-1, -2]]),
+            PandasMultiIndex(
+                pd.MultiIndex.from_product([[1, 2], [-1, -2]], names=("two", "three")),
+                "x",
+            ),
+            {"one": Variable((), "a")},
+            [],
+            ["one"],
+            {},
         )
-        test_indexer(mdata, [("a", 1, -1), ("b", 2, -2)], [0, 7])
-        test_indexer(mdata, slice("a", "b"), slice(0, 8, None))
-        test_indexer(mdata, slice(("a", 1), ("b", 1)), slice(0, 6, None))
-        test_indexer(mdata, {"one": "a", "two": 1, "three": -1}, 0)
+        test_indexer(mdata, ("a",), expected)
+
+        test_indexer(
+            mdata, [("a", 1, -1), ("b", 2, -2)], indexing.IndexSelResult({"x": [0, 7]})
+        )
+        test_indexer(
+            mdata, slice("a", "b"), indexing.IndexSelResult({"x": slice(0, 8, None)})
+        )
         test_indexer(
             mdata,
-            {"one": "a", "two": 1},
+            slice(("a", 1), ("b", 1)),
+            indexing.IndexSelResult({"x": slice(0, 6, None)}),
+        )
+        test_indexer(
+            mdata,
+            {"one": "a", "two": 1, "three": -1},
+            indexing.IndexSelResult({"x": 0}),
+        )
+
+        expected = create_sel_results(
             [True, True, False, False, False, False, False, False],
-            [-1, -2],
+            PandasIndex(pd.Index([-1, -2]), "three"),
+            {"one": Variable((), "a"), "two": Variable((), 1)},
+            ["x"],
+            ["one", "two"],
+            {"x": "three"},
         )
-        test_indexer(
-            mdata,
-            {"one": "a", "three": -1},
+        test_indexer(mdata, {"one": "a", "two": 1}, expected)
+
+        expected = create_sel_results(
             [True, False, True, False, False, False, False, False],
-            [1, 2],
+            PandasIndex(pd.Index([1, 2]), "two"),
+            {"one": Variable((), "a"), "three": Variable((), -1)},
+            ["x"],
+            ["one", "three"],
+            {"x": "two"},
         )
-        test_indexer(
-            mdata,
-            {"one": "a"},
+        test_indexer(mdata, {"one": "a", "three": -1}, expected)
+
+        expected = create_sel_results(
             [True, True, True, True, False, False, False, False],
-            pd.MultiIndex.from_product([[1, 2], [-1, -2]]),
+            PandasMultiIndex(
+                pd.MultiIndex.from_product([[1, 2], [-1, -2]], names=("two", "three")),
+                "x",
+            ),
+            {"one": Variable((), "a")},
+            [],
+            ["one"],
+            {},
         )
+        test_indexer(mdata, {"one": "a"}, expected)
 
     def test_read_only_view(self) -> None:
-
         arr = DataArray(
             np.random.rand(3, 3),
             coords={"x": np.arange(3), "y": np.arange(3)},
@@ -208,6 +329,7 @@ class TestLazyArray:
                         assert expected.shape == actual.shape
                         assert_array_equal(expected, actual)
                         assert isinstance(actual._data, indexing.LazilyIndexedArray)
+                        assert isinstance(v_lazy._data, indexing.LazilyIndexedArray)
 
                         # make sure actual.key is appropriate type
                         if all(
@@ -228,6 +350,7 @@ class TestLazyArray:
             ([0, 3, 5], arr[:2]),
         ]
         for i, j in indexers:
+
             expected_b = v[i][j]
             actual = v_lazy[i][j]
             assert expected_b.shape == actual.shape
@@ -297,6 +420,41 @@ class TestLazyArray:
             (Variable(["i", "j"], [[0, 1], [1, 2]]),),
         ]
         check_indexing(v_eager, v_lazy, indexers)
+
+    def test_lazily_indexed_array_vindex_setitem(self) -> None:
+
+        lazy = indexing.LazilyIndexedArray(np.random.rand(10, 20, 30))
+
+        # vectorized indexing
+        indexer = indexing.VectorizedIndexer(
+            (np.array([0, 1]), np.array([0, 1]), slice(None, None, None))
+        )
+        with pytest.raises(
+            NotImplementedError,
+            match=r"Lazy item assignment with the vectorized indexer is not yet",
+        ):
+            lazy.vindex[indexer] = 0
+
+    @pytest.mark.parametrize(
+        "indexer_class, key, value",
+        [
+            (indexing.OuterIndexer, (0, 1, slice(None, None, None)), 10),
+            (indexing.BasicIndexer, (0, 1, slice(None, None, None)), 10),
+        ],
+    )
+    def test_lazily_indexed_array_setitem(self, indexer_class, key, value) -> None:
+        original = np.random.rand(10, 20, 30)
+        x = indexing.NumpyIndexingAdapter(original)
+        lazy = indexing.LazilyIndexedArray(x)
+
+        if indexer_class is indexing.BasicIndexer:
+            indexer = indexer_class(key)
+            lazy[indexer] = value
+        elif indexer_class is indexing.OuterIndexer:
+            indexer = indexer_class(key)
+            lazy.oindex[indexer] = value
+
+        assert_array_equal(original[key], value)
 
 
 class TestCopyOnWriteArray:
@@ -456,7 +614,9 @@ class Test_vectorized_indexer:
             vindex_array = indexing._arrayize_vectorized_indexer(
                 vindex, self.data.shape
             )
-            np.testing.assert_array_equal(self.data[vindex], self.data[vindex_array])
+            np.testing.assert_array_equal(
+                self.data.vindex[vindex], self.data.vindex[vindex_array]
+            )
 
         actual = indexing._arrayize_vectorized_indexer(
             indexing.VectorizedIndexer((slice(None),)), shape=(5,)
@@ -567,16 +727,39 @@ def test_decompose_indexers(shape, indexer_mode, indexing_support) -> None:
     indexer = get_indexers(shape, indexer_mode)
 
     backend_ind, np_ind = indexing.decompose_indexer(indexer, shape, indexing_support)
+    indexing_adapter = indexing.NumpyIndexingAdapter(data)
 
-    expected = indexing.NumpyIndexingAdapter(data)[indexer]
-    array = indexing.NumpyIndexingAdapter(data)[backend_ind]
+    # Dispatch to appropriate indexing method
+    if indexer_mode.startswith("vectorized"):
+        expected = indexing_adapter.vindex[indexer]
+
+    elif indexer_mode.startswith("outer"):
+        expected = indexing_adapter.oindex[indexer]
+
+    else:
+        expected = indexing_adapter[indexer]  # Basic indexing
+
+    if isinstance(backend_ind, indexing.VectorizedIndexer):
+        array = indexing_adapter.vindex[backend_ind]
+    elif isinstance(backend_ind, indexing.OuterIndexer):
+        array = indexing_adapter.oindex[backend_ind]
+    else:
+        array = indexing_adapter[backend_ind]
+
     if len(np_ind.tuple) > 0:
-        array = indexing.NumpyIndexingAdapter(array)[np_ind]
+        array_indexing_adapter = indexing.NumpyIndexingAdapter(array)
+        if isinstance(np_ind, indexing.VectorizedIndexer):
+            array = array_indexing_adapter.vindex[np_ind]
+        elif isinstance(np_ind, indexing.OuterIndexer):
+            array = array_indexing_adapter.oindex[np_ind]
+        else:
+            array = array_indexing_adapter[np_ind]
     np.testing.assert_array_equal(expected, array)
 
     if not all(isinstance(k, indexing.integer_types) for k in np_ind.tuple):
         combined_ind = indexing._combine_indexers(backend_ind, shape, np_ind)
-        array = indexing.NumpyIndexingAdapter(data)[combined_ind]
+        assert isinstance(combined_ind, indexing.VectorizedIndexer)
+        array = indexing_adapter.vindex[combined_ind]
         np.testing.assert_array_equal(expected, array)
 
 
@@ -617,7 +800,6 @@ def test_outer_indexer_consistency_with_broadcast_indexes_vectorized() -> None:
         np.arange(10) < 5,
     ]
     for i, j, k in itertools.product(indexers, repeat=3):
-
         if isinstance(j, np.ndarray) and j.dtype.kind == "b":  # match size
             j = np.arange(20) < 4
         if isinstance(k, np.ndarray) and k.dtype.kind == "b":
@@ -698,7 +880,7 @@ def test_create_mask_dask() -> None:
 
 def test_create_mask_error() -> None:
     with pytest.raises(TypeError, match=r"unexpected key type"):
-        indexing.create_mask((1, 2), (3, 4))
+        indexing.create_mask((1, 2), (3, 4))  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -729,3 +911,65 @@ def test_indexing_1d_object_array() -> None:
     expected = DataArray(expected_data)
 
     assert [actual.data.item()] == [expected.data.item()]
+
+
+@requires_dask
+def test_indexing_dask_array():
+    import dask.array
+
+    da = DataArray(
+        np.ones(10 * 3 * 3).reshape((10, 3, 3)),
+        dims=("time", "x", "y"),
+    ).chunk(dict(time=-1, x=1, y=1))
+    with raise_if_dask_computes():
+        actual = da.isel(time=dask.array.from_array([9], chunks=(1,)))
+    expected = da.isel(time=[9])
+    assert_identical(actual, expected)
+
+
+@requires_dask
+def test_indexing_dask_array_scalar():
+    # GH4276
+    import dask.array
+
+    a = dask.array.from_array(np.linspace(0.0, 1.0))
+    da = DataArray(a, dims="x")
+    x_selector = da.argmax(dim=...)
+    with raise_if_dask_computes():
+        actual = da.isel(x_selector)
+    expected = da.isel(x=-1)
+    assert_identical(actual, expected)
+
+
+@requires_dask
+def test_vectorized_indexing_dask_array():
+    # https://github.com/pydata/xarray/issues/2511#issuecomment-563330352
+    darr = DataArray(data=[0.2, 0.4, 0.6], coords={"z": range(3)}, dims=("z",))
+    indexer = DataArray(
+        data=np.random.randint(0, 3, 8).reshape(4, 2).astype(int),
+        coords={"y": range(4), "x": range(2)},
+        dims=("y", "x"),
+    )
+    with pytest.raises(ValueError, match="Vectorized indexing with Dask arrays"):
+        darr[indexer.chunk({"y": 2})]
+
+
+@requires_dask
+def test_advanced_indexing_dask_array():
+    # GH4663
+    import dask.array as da
+
+    ds = Dataset(
+        dict(
+            a=("x", da.from_array(np.random.randint(0, 100, 100))),
+            b=(("x", "y"), da.random.random((100, 10))),
+        )
+    )
+    expected = ds.b.sel(x=ds.a.compute())
+    with raise_if_dask_computes():
+        actual = ds.b.sel(x=ds.a)
+    assert_identical(expected, actual)
+
+    with raise_if_dask_computes():
+        actual = ds.b.sel(x=ds.a.data)
+    assert_identical(expected, actual)

@@ -26,7 +26,10 @@ looked-up from the coordinate values.
 Dimensions of xarray objects have names, so you can also lookup the dimensions
 by name, instead of remembering their positional order.
 
-Thus in total, xarray supports four different kinds of indexing, as described
+Quick overview
+--------------
+
+In total, xarray supports four different kinds of indexing, as described
 below and summarized in this table:
 
 .. |br| raw:: html
@@ -92,12 +95,12 @@ In this example, the selected is a subpart of the array
 in the range '2000-01-01':'2000-01-02' along the first coordinate `time`
 and with 'IA' value from the second coordinate `space`.
 
-You can perform any of the label indexing operations `supported by pandas`__,
-including indexing with individual, slices and arrays of labels, as well as
+You can perform any of the `label indexing operations supported by pandas`__,
+including indexing with individual, slices and lists/arrays of labels, as well as
 indexing with boolean arrays. Like pandas, label based indexing in xarray is
 *inclusive* of both the start and stop bounds.
 
-__ http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-label
+__ https://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-label
 
 Setting values with label based indexing is also supported:
 
@@ -113,18 +116,7 @@ Indexing with dimension names
 With the dimension names, we do not have to rely on dimension order and can
 use them explicitly to slice data. There are two ways to do this:
 
-1. Use a dictionary as the argument for array positional or label based array
-   indexing:
-
-    .. ipython:: python
-
-        # index by integer array indices
-        da[dict(space=0, time=slice(None, 2))]
-
-        # index by dimension coordinate labels
-        da.loc[dict(time=slice("2000-01-01", "2000-01-02"))]
-
-2. Use the :py:meth:`~xarray.DataArray.sel` and :py:meth:`~xarray.DataArray.isel`
+1. Use the :py:meth:`~xarray.DataArray.sel` and :py:meth:`~xarray.DataArray.isel`
    convenience methods:
 
     .. ipython:: python
@@ -135,17 +127,29 @@ use them explicitly to slice data. There are two ways to do this:
         # index by dimension coordinate labels
         da.sel(time=slice("2000-01-01", "2000-01-02"))
 
+2. Use a dictionary as the argument for array positional or label based array
+   indexing:
+
+    .. ipython:: python
+
+        # index by integer array indices
+        da[dict(space=0, time=slice(None, 2))]
+
+        # index by dimension coordinate labels
+        da.loc[dict(time=slice("2000-01-01", "2000-01-02"))]
+
 The arguments to these methods can be any objects that could index the array
 along the dimension given by the keyword, e.g., labels for an individual value,
-Python :py:class:`slice` objects or 1-dimensional arrays.
+:py:class:`Python slice` objects or 1-dimensional arrays.
+
 
 .. note::
 
     We would love to be able to do indexing with labeled dimension names inside
-    brackets, but unfortunately, Python `does yet not support`__ indexing with
-    keyword arguments like ``da[space=0]``
+    brackets, but unfortunately, `Python does not yet support indexing with
+    keyword arguments`__ like ``da[space=0]``
 
-__ http://legacy.python.org/dev/peps/pep-0472/
+__ https://legacy.python.org/dev/peps/pep-0472/
 
 
 .. _nearest neighbor lookups:
@@ -348,7 +352,6 @@ dimensions:
     ind_x = xr.DataArray([0, 1], dims=["x"])
     ind_y = xr.DataArray([0, 1], dims=["y"])
     da[ind_x, ind_y]  # orthogonal indexing
-    da[ind_x, ind_x]  # vectorized indexing
 
 Slices or sequences/arrays without named-dimensions are treated as if they have
 the same dimension which is indexed along:
@@ -368,12 +371,12 @@ indexers' dimension:
     ind = xr.DataArray([[0, 1], [0, 1]], dims=["a", "b"])
     da[ind]
 
-Similar to how NumPy's `advanced indexing`_ works, vectorized
+Similar to how `NumPy's advanced indexing`_ works, vectorized
 indexing for xarray is based on our
 :ref:`broadcasting rules <compute.broadcasting>`.
 See :ref:`indexing.rules` for the complete specification.
 
-.. _advanced indexing: https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html
+.. _NumPy's advanced indexing: https://numpy.org/doc/stable/reference/arrays.indexing.html
 
 Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
 
@@ -395,6 +398,12 @@ These methods may also be applied to ``Dataset`` objects
 Vectorized indexing may be used to extract information from the nearest
 grid cells of interest, for example, the nearest climate model grid cells
 to a collection specified weather station latitudes and longitudes.
+To trigger vectorized indexing behavior
+you will need to provide the selection dimensions with a new
+shared output dimension name. In the example below, the selections
+of the closest latitude and longitude are renamed to an output
+dimension named "points":
+
 
 .. ipython:: python
 
@@ -503,7 +512,7 @@ This is because ``v[0] = v[0] - 1`` is called three times, rather than
 ``v[0] = v[0] - 1 - 1 - 1``.
 See `Assigning values to indexed arrays`__ for the details.
 
-__ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-to-indexed-arrays
+__ https://numpy.org/doc/stable/user/basics.indexing.html#assigning-values-to-indexed-arrays
 
 
 .. note::
@@ -524,6 +533,10 @@ __ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-t
     # DO NOT do this
     da.isel(space=0) = 0
 
+  Instead, values can be assigned using dictionary-based indexing::
+
+    da[dict(space=0)] = 0
+
   Assigning values with the chained indexing using ``.sel`` or ``.isel`` fails silently.
 
   .. ipython:: python
@@ -536,6 +549,7 @@ __ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-t
 You can also assign values to all variables of a :py:class:`Dataset` at once:
 
 .. ipython:: python
+    :okwarning:
 
     ds_org = xr.tutorial.open_dataset("eraint_uvz").isel(
         latitude=slice(56, 59), longitude=slice(255, 258), level=0
@@ -734,7 +748,7 @@ Whether array indexing returns a view or a copy of the underlying
 data depends on the nature of the labels.
 
 For positional (integer)
-indexing, xarray follows the same rules as NumPy:
+indexing, xarray follows the same `rules`_ as NumPy:
 
 * Positional indexing with only integers and slices returns a view.
 * Positional indexing with arrays or lists returns a copy.
@@ -751,8 +765,10 @@ Whether data is a copy or a view is more predictable in xarray than in pandas, s
 unlike pandas, xarray does not produce `SettingWithCopy warnings`_. However, you
 should still avoid assignment with chained indexing.
 
-.. _SettingWithCopy warnings: http://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
+Note that other operations (such as :py:meth:`~xarray.DataArray.values`) may also return views rather than copies.
 
+.. _SettingWithCopy warnings: https://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
+.. _rules: https://numpy.org/doc/stable/user/basics.copies.html
 
 .. _multi-level indexing:
 

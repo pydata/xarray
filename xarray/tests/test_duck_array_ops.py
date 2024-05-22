@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import datetime as dt
 import warnings
-from textwrap import dedent
 
 import numpy as np
 import pandas as pd
@@ -26,10 +27,10 @@ from xarray.core.duck_array_ops import (
     timedelta_to_numeric,
     where,
 )
-from xarray.core.pycompat import dask_array_type
+from xarray.core.extension_array import PandasExtensionArray
+from xarray.namedarray.pycompat import array_type
 from xarray.testing import assert_allclose, assert_equal, assert_identical
-
-from . import (
+from xarray.tests import (
     arm_xfail,
     assert_array_equal,
     has_dask,
@@ -38,7 +39,53 @@ from . import (
     requires_bottleneck,
     requires_cftime,
     requires_dask,
+    requires_pyarrow,
 )
+
+dask_array_type = array_type("dask")
+
+
+@pytest.fixture
+def categorical1():
+    return pd.Categorical(["cat1", "cat2", "cat2", "cat1", "cat2"])
+
+
+@pytest.fixture
+def categorical2():
+    return pd.Categorical(["cat2", "cat1", "cat2", "cat3", "cat1"])
+
+
+try:
+    import pyarrow as pa
+
+    @pytest.fixture
+    def arrow1():
+        return pd.arrays.ArrowExtensionArray(
+            pa.array([{"x": 1, "y": True}, {"x": 2, "y": False}])
+        )
+
+    @pytest.fixture
+    def arrow2():
+        return pd.arrays.ArrowExtensionArray(
+            pa.array([{"x": 3, "y": False}, {"x": 4, "y": True}])
+        )
+
+except ImportError:
+    pass
+
+
+@pytest.fixture
+def int1():
+    return pd.arrays.IntegerArray(
+        np.array([1, 2, 3, 4, 5]), np.array([True, False, False, True, True])
+    )
+
+
+@pytest.fixture
+def int2():
+    return pd.arrays.IntegerArray(
+        np.array([6, 7, 8, 9, 10]), np.array([True, True, False, True, False])
+    )
 
 
 class TestOps:
@@ -46,7 +93,11 @@ class TestOps:
     def setUp(self):
         self.x = array(
             [
-                [[nan, nan, 2.0, nan], [nan, 5.0, 6.0, nan], [8.0, 9.0, 10.0, nan]],
+                [
+                    [nan, nan, 2.0, nan],
+                    [nan, 5.0, 6.0, nan],
+                    [8.0, 9.0, 10.0, nan],
+                ],
                 [
                     [nan, 13.0, 14.0, 15.0],
                     [nan, 17.0, 18.0, nan],
@@ -113,6 +164,51 @@ class TestOps:
         assert result.dtype == np.float32
         assert_array_equal(result, np.array([1, np.nan], dtype=np.float32))
 
+    def test_where_extension_duck_array(self, categorical1, categorical2):
+        where_res = where(
+            np.array([True, False, True, False, False]),
+            PandasExtensionArray(categorical1),
+            PandasExtensionArray(categorical2),
+        )
+        assert isinstance(where_res, PandasExtensionArray)
+        assert (
+            where_res == pd.Categorical(["cat1", "cat1", "cat2", "cat3", "cat1"])
+        ).all()
+
+    def test_concatenate_extension_duck_array(self, categorical1, categorical2):
+        concate_res = concatenate(
+            [PandasExtensionArray(categorical1), PandasExtensionArray(categorical2)]
+        )
+        assert isinstance(concate_res, PandasExtensionArray)
+        assert (
+            concate_res
+            == type(categorical1)._concat_same_type((categorical1, categorical2))
+        ).all()
+
+    @requires_pyarrow
+    def test_duck_extension_array_pyarrow_concatenate(self, arrow1, arrow2):
+        concatenated = concatenate(
+            (PandasExtensionArray(arrow1), PandasExtensionArray(arrow2))
+        )
+        assert concatenated[2]["x"] == 3
+        assert concatenated[3]["y"]
+
+    def test___getitem__extension_duck_array(self, categorical1):
+        extension_duck_array = PandasExtensionArray(categorical1)
+        assert (extension_duck_array[0:2] == categorical1[0:2]).all()
+        assert isinstance(extension_duck_array[0:2], PandasExtensionArray)
+        assert extension_duck_array[0] == categorical1[0]
+        assert isinstance(extension_duck_array[0], PandasExtensionArray)
+        mask = [True, False, True, False, True]
+        assert (extension_duck_array[mask] == categorical1[mask]).all()
+
+    def test__setitem__extension_duck_array(self, categorical1):
+        extension_duck_array = PandasExtensionArray(categorical1)
+        extension_duck_array[2] = "cat1"  # already existing category
+        assert extension_duck_array[2] == "cat1"
+        with pytest.raises(TypeError, match="Cannot setitem on a Categorical"):
+            extension_duck_array[2] = "cat4"  # new category
+
     def test_stack_type_promotion(self):
         result = stack([1, "b"])
         assert_array_equal(result, np.array([1, "b"], dtype=object))
@@ -124,6 +220,29 @@ class TestOps:
     @pytest.mark.filterwarnings("error")
     def test_all_nan_arrays(self):
         assert np.isnan(mean([np.nan, np.nan]))
+
+
+@requires_dask
+class TestDaskOps(TestOps):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        import dask.array
+
+        self.x = dask.array.from_array(
+            [
+                [
+                    [nan, nan, 2.0, nan],
+                    [nan, 5.0, 6.0, nan],
+                    [8.0, 9.0, 10.0, nan],
+                ],
+                [
+                    [nan, 13.0, 14.0, 15.0],
+                    [nan, 17.0, 18.0, nan],
+                    [nan, 21.0, nan, nan],
+                ],
+            ],
+            chunks=(2, 1, 2),
+        )
 
 
 def test_cumsum_1d():
@@ -285,9 +404,9 @@ def assert_dask_array(da, dask):
 
 
 @arm_xfail
-@pytest.mark.filterwarnings("ignore::RuntimeWarning")
+@pytest.mark.filterwarnings("ignore:All-NaN .* encountered:RuntimeWarning")
 @pytest.mark.parametrize("dask", [False, True] if has_dask else [False])
-def test_datetime_mean(dask):
+def test_datetime_mean(dask: bool) -> None:
     # Note: only testing numpy, as dask is broken upstream
     da = DataArray(
         np.array(["2010-01-01", "NaT", "2010-01-03", "NaT", "NaT"], dtype="M8[ns]"),
@@ -322,18 +441,51 @@ def test_datetime_mean(dask):
 
 
 @requires_cftime
-def test_cftime_datetime_mean():
+@pytest.mark.parametrize("dask", [False, True])
+def test_cftime_datetime_mean(dask):
+    if dask and not has_dask:
+        pytest.skip("requires dask")
+
     times = cftime_range("2000", periods=4)
     da = DataArray(times, dims=["time"])
+    da_2d = DataArray(times.values.reshape(2, 2))
 
-    assert da.isel(time=0).mean() == da.isel(time=0)
+    if dask:
+        da = da.chunk({"time": 2})
+        da_2d = da_2d.chunk({"dim_0": 2})
 
-    expected = DataArray(times.date_type(2000, 1, 2, 12))
-    result = da.mean()
+    expected = da.isel(time=0)
+    # one compute needed to check the array contains cftime datetimes
+    with raise_if_dask_computes(max_computes=1):
+        result = da.isel(time=0).mean()
+    assert_dask_array(result, dask)
     assert_equal(result, expected)
 
-    da_2d = DataArray(times.values.reshape(2, 2))
-    result = da_2d.mean()
+    expected = DataArray(times.date_type(2000, 1, 2, 12))
+    with raise_if_dask_computes(max_computes=1):
+        result = da.mean()
+    assert_dask_array(result, dask)
+    assert_equal(result, expected)
+
+    with raise_if_dask_computes(max_computes=1):
+        result = da_2d.mean()
+    assert_dask_array(result, dask)
+    assert_equal(result, expected)
+
+
+@requires_cftime
+@requires_dask
+def test_mean_over_non_time_dim_of_dataset_with_dask_backed_cftime_data():
+    # Regression test for part two of GH issue 5897: averaging over a non-time
+    # dimension still fails if the time variable is dask-backed.
+    ds = Dataset(
+        {
+            "var1": (("time",), cftime_range("2021-10-31", periods=10, freq="D")),
+            "var2": (("x",), list(range(10))),
+        }
+    )
+    expected = ds.mean("x")
+    result = ds.chunk({}).mean("x")
     assert_equal(result, expected)
 
 
@@ -371,15 +523,6 @@ def test_cftime_datetime_mean_long_time_period():
     assert_equal(result, expected)
 
 
-@requires_cftime
-@requires_dask
-def test_cftime_datetime_mean_dask_error():
-    times = cftime_range("2000", periods=4)
-    da = DataArray(times, dims=["time"]).chunk()
-    with pytest.raises(NotImplementedError):
-        da.mean()
-
-
 def test_empty_axis_dtype():
     ds = Dataset()
     ds["pos"] = [1, 2, 3]
@@ -399,7 +542,6 @@ def test_empty_axis_dtype():
 @pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("aggdim", [None, "x"])
 def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
-
     if aggdim == "y" and dim_num < 2:
         pytest.skip("dim not in this test")
 
@@ -448,7 +590,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
         expected = getattr(da.compute(), func)(skipna=skipna, dim=aggdim)
         assert_allclose(actual, expected, rtol=rtol)
 
-        # make sure the compatiblility with pandas' results.
+        # make sure the compatibility with pandas' results.
         if func in ["var", "std"]:
             expected = series_reduce(da, func, skipna=skipna, dim=aggdim, ddof=0)
             assert_allclose(actual, expected, rtol=rtol)
@@ -525,17 +667,39 @@ def test_argmin_max_error():
 
 
 @pytest.mark.parametrize(
-    "array",
+    ["array", "expected"],
     [
-        np.array([np.datetime64("2000-01-01"), np.datetime64("NaT")]),
-        np.array([np.timedelta64(1, "h"), np.timedelta64("NaT")]),
-        np.array([0.0, np.nan]),
-        np.array([1j, np.nan]),
-        np.array(["foo", np.nan], dtype=object),
+        (
+            np.array([np.datetime64("2000-01-01"), np.datetime64("NaT")]),
+            np.array([False, True]),
+        ),
+        (
+            np.array([np.timedelta64(1, "h"), np.timedelta64("NaT")]),
+            np.array([False, True]),
+        ),
+        (
+            np.array([0.0, np.nan]),
+            np.array([False, True]),
+        ),
+        (
+            np.array([1j, np.nan]),
+            np.array([False, True]),
+        ),
+        (
+            np.array(["foo", np.nan], dtype=object),
+            np.array([False, True]),
+        ),
+        (
+            np.array([1, 2], dtype=int),
+            np.array([False, False]),
+        ),
+        (
+            np.array([True, False], dtype=bool),
+            np.array([False, False]),
+        ),
     ],
 )
-def test_isnull(array):
-    expected = np.array([False, True])
+def test_isnull(array, expected):
     actual = duck_array_ops.isnull(array)
     np.testing.assert_equal(expected, actual)
 
@@ -676,121 +840,80 @@ def test_multiple_dims(dtype, dask, skipna, func):
     assert_allclose(actual, expected)
 
 
-def test_docs():
-    # with min_count
-    actual = DataArray.sum.__doc__
-    expected = dedent(
-        """\
-        Reduce this DataArray's data by applying `sum` along some dimension(s).
+@pytest.mark.parametrize("dask", [True, False])
+def test_datetime_to_numeric_datetime64(dask):
+    if dask and not has_dask:
+        pytest.skip("requires dask")
 
-        Parameters
-        ----------
-        dim : str or sequence of str, optional
-            Dimension(s) over which to apply `sum`.
-        axis : int or sequence of int, optional
-            Axis(es) over which to apply `sum`. Only one of the 'dim'
-            and 'axis' arguments can be supplied. If neither are supplied, then
-            `sum` is calculated over axes.
-        skipna : bool, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or skipna=True has not been
-            implemented (object, datetime64 or timedelta64).
-        min_count : int, default: None
-            The required number of valid values to perform the operation. If
-            fewer than min_count non-NA values are present the result will be
-            NA. Only used if skipna is set to True or defaults to True for the
-            array's dtype. New in version 0.10.8: Added with the default being
-            None. Changed in version 0.17.0: if specified on an integer array
-            and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
-            object to the new one.  If False (default), the new object will be
-            returned without attributes.
-        **kwargs : dict
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating `sum` on this object's data.
-
-        Returns
-        -------
-        reduced : DataArray
-            New DataArray object with `sum` applied to its data and the
-            indicated dimension(s) removed.
-        """
-    )
-    assert actual == expected
-
-    # without min_count
-    actual = DataArray.std.__doc__
-    expected = dedent(
-        """\
-        Reduce this DataArray's data by applying `std` along some dimension(s).
-
-        Parameters
-        ----------
-        dim : str or sequence of str, optional
-            Dimension(s) over which to apply `std`.
-        axis : int or sequence of int, optional
-            Axis(es) over which to apply `std`. Only one of the 'dim'
-            and 'axis' arguments can be supplied. If neither are supplied, then
-            `std` is calculated over axes.
-        skipna : bool, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or skipna=True has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
-            object to the new one.  If False (default), the new object will be
-            returned without attributes.
-        **kwargs : dict
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating `std` on this object's data.
-
-        Returns
-        -------
-        reduced : DataArray
-            New DataArray object with `std` applied to its data and the
-            indicated dimension(s) removed.
-        """
-    )
-    assert actual == expected
-
-
-def test_datetime_to_numeric_datetime64():
     times = pd.date_range("2000", periods=5, freq="7D").values
-    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h")
+    if dask:
+        import dask.array
+
+        times = dask.array.from_array(times, chunks=-1)
+
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h")
     expected = 24 * np.arange(0, 35, 7)
     np.testing.assert_array_equal(result, expected)
 
     offset = times[1]
-    result = duck_array_ops.datetime_to_numeric(times, offset=offset, datetime_unit="h")
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(
+            times, offset=offset, datetime_unit="h"
+        )
     expected = 24 * np.arange(-7, 28, 7)
     np.testing.assert_array_equal(result, expected)
 
     dtype = np.float32
-    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=dtype)
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(
+            times, datetime_unit="h", dtype=dtype
+        )
     expected = 24 * np.arange(0, 35, 7).astype(dtype)
     np.testing.assert_array_equal(result, expected)
 
 
 @requires_cftime
-def test_datetime_to_numeric_cftime():
+@pytest.mark.parametrize("dask", [True, False])
+def test_datetime_to_numeric_cftime(dask):
+    if dask and not has_dask:
+        pytest.skip("requires dask")
+
     times = cftime_range("2000", periods=5, freq="7D", calendar="standard").values
-    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=int)
+    if dask:
+        import dask.array
+
+        times = dask.array.from_array(times, chunks=-1)
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=int)
     expected = 24 * np.arange(0, 35, 7)
     np.testing.assert_array_equal(result, expected)
 
     offset = times[1]
-    result = duck_array_ops.datetime_to_numeric(
-        times, offset=offset, datetime_unit="h", dtype=int
-    )
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(
+            times, offset=offset, datetime_unit="h", dtype=int
+        )
     expected = 24 * np.arange(-7, 28, 7)
     np.testing.assert_array_equal(result, expected)
 
     dtype = np.float32
-    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=dtype)
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(
+            times, datetime_unit="h", dtype=dtype
+        )
     expected = 24 * np.arange(0, 35, 7).astype(dtype)
+    np.testing.assert_array_equal(result, expected)
+
+    with raise_if_dask_computes():
+        if dask:
+            time = dask.array.asarray(times[1])
+        else:
+            time = np.asarray(times[1])
+        result = duck_array_ops.datetime_to_numeric(
+            time, offset=times[0], datetime_unit="h", dtype=int
+        )
+    expected = np.array(24 * 7).astype(int)
     np.testing.assert_array_equal(result, expected)
 
 
@@ -884,16 +1007,36 @@ def test_push_dask():
     import bottleneck
     import dask.array
 
-    array = np.array([np.nan, np.nan, np.nan, 1, 2, 3, np.nan, np.nan, 4, 5, np.nan, 6])
-    expected = bottleneck.push(array, axis=0)
-    for c in range(1, 11):
+    array = np.array([np.nan, 1, 2, 3, np.nan, np.nan, np.nan, np.nan, 4, 5, np.nan, 6])
+
+    for n in [None, 1, 2, 3, 4, 5, 11]:
+        expected = bottleneck.push(array, axis=0, n=n)
+        for c in range(1, 11):
+            with raise_if_dask_computes():
+                actual = push(dask.array.from_array(array, chunks=c), axis=0, n=n)
+            np.testing.assert_equal(actual, expected)
+
+        # some chunks of size-1 with NaN
         with raise_if_dask_computes():
-            actual = push(dask.array.from_array(array, chunks=c), axis=0, n=None)
+            actual = push(
+                dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)), axis=0, n=n
+            )
         np.testing.assert_equal(actual, expected)
 
-    # some chunks of size-1 with NaN
-    with raise_if_dask_computes():
-        actual = push(
-            dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)), axis=0, n=None
-        )
-    np.testing.assert_equal(actual, expected)
+
+def test_duck_extension_array_equality(categorical1, int1):
+    int_duck_array = PandasExtensionArray(int1)
+    categorical_duck_array = PandasExtensionArray(categorical1)
+    assert (int_duck_array != categorical_duck_array).all()
+    assert (categorical_duck_array == categorical1).all()
+    assert (int_duck_array[0:2] == int1[0:2]).all()
+
+
+def test_duck_extension_array_repr(int1):
+    int_duck_array = PandasExtensionArray(int1)
+    assert repr(int1) in repr(int_duck_array)
+
+
+def test_duck_extension_array_attr(int1):
+    int_duck_array = PandasExtensionArray(int1)
+    assert (~int_duck_array.fillna(10)).all()

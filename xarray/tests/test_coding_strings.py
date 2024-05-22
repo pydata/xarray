@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from contextlib import suppress
 
 import numpy as np
@@ -6,8 +8,12 @@ import pytest
 from xarray import Variable
 from xarray.coding import strings
 from xarray.core import indexing
-
-from . import IndexerMaker, assert_array_equal, assert_identical, requires_dask
+from xarray.tests import (
+    IndexerMaker,
+    assert_array_equal,
+    assert_identical,
+    requires_dask,
+)
 
 with suppress(ImportError):
     import dask.array as da
@@ -26,7 +32,17 @@ def test_vlen_dtype() -> None:
     assert strings.is_bytes_dtype(dtype)
     assert strings.check_vlen_dtype(dtype) is bytes
 
+    # check h5py variant ("vlen")
+    dtype = np.dtype("O", metadata={"vlen": str})  # type: ignore[call-overload,unused-ignore]
+    assert strings.check_vlen_dtype(dtype) is str
+
     assert strings.check_vlen_dtype(np.dtype(object)) is None
+
+
+@pytest.mark.parametrize("numpy_str_type", (np.str_, np.bytes_))
+def test_numpy_subclass_handling(numpy_str_type) -> None:
+    with pytest.raises(TypeError, match="unsupported type for vlen_dtype"):
+        strings.create_vlen_dtype(numpy_str_type)
 
 
 def test_EncodedStringCoder_decode() -> None:
@@ -165,7 +181,7 @@ def test_StackedBytesArray_vectorized_indexing() -> None:
 
     V = IndexerMaker(indexing.VectorizedIndexer)
     indexer = V[np.array([[0, 1], [1, 0]])]
-    actual = stacked[indexer]
+    actual = stacked.vindex[indexer]
     assert_array_equal(actual, expected)
 
 

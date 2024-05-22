@@ -1,38 +1,55 @@
+from __future__ import annotations
+
 import functools
 import inspect
 import itertools
+import sys
 import warnings
+from importlib.metadata import entry_points
+from typing import TYPE_CHECKING, Any, Callable
 
-import pkg_resources
+from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
+from xarray.core.utils import module_available
 
-from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
+if TYPE_CHECKING:
+    import os
+    from importlib.metadata import EntryPoint
+
+    if sys.version_info >= (3, 10):
+        from importlib.metadata import EntryPoints
+    else:
+        EntryPoints = list[EntryPoint]
+    from io import BufferedIOBase
+
+    from xarray.backends.common import AbstractDataStore
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
 
-def remove_duplicates(pkg_entrypoints):
-
+def remove_duplicates(entrypoints: EntryPoints) -> list[EntryPoint]:
     # sort and group entrypoints by name
-    pkg_entrypoints = sorted(pkg_entrypoints, key=lambda ep: ep.name)
-    pkg_entrypoints_grouped = itertools.groupby(pkg_entrypoints, key=lambda ep: ep.name)
+    entrypoints_sorted = sorted(entrypoints, key=lambda ep: ep.name)
+    entrypoints_grouped = itertools.groupby(entrypoints_sorted, key=lambda ep: ep.name)
     # check if there are multiple entrypoints for the same name
-    unique_pkg_entrypoints = []
-    for name, matches in pkg_entrypoints_grouped:
-        matches = list(matches)
-        unique_pkg_entrypoints.append(matches[0])
+    unique_entrypoints = []
+    for name, _matches in entrypoints_grouped:
+        # remove equal entrypoints
+        matches = list(set(_matches))
+        unique_entrypoints.append(matches[0])
         matches_len = len(matches)
         if matches_len > 1:
-            selected_module_name = matches[0].module_name
-            all_module_names = [e.module_name for e in matches]
+            all_module_names = [e.value.split(":")[0] for e in matches]
+            selected_module_name = all_module_names[0]
             warnings.warn(
                 f"Found {matches_len} entrypoints for the engine name {name}:"
-                f"\n {all_module_names}.\n It will be used: {selected_module_name}.",
+                f"\n {all_module_names}.\n "
+                f"The entrypoint {selected_module_name} will be used.",
                 RuntimeWarning,
             )
-    return unique_pkg_entrypoints
+    return unique_entrypoints
 
 
-def detect_parameters(open_dataset):
+def detect_parameters(open_dataset: Callable) -> tuple[str, ...]:
     signature = inspect.signature(open_dataset)
     parameters = signature.parameters
     parameters_list = []
@@ -50,26 +67,32 @@ def detect_parameters(open_dataset):
     return tuple(parameters_list)
 
 
-def backends_dict_from_pkg(pkg_entrypoints):
+def backends_dict_from_pkg(
+    entrypoints: list[EntryPoint],
+) -> dict[str, type[BackendEntrypoint]]:
     backend_entrypoints = {}
-    for pkg_ep in pkg_entrypoints:
-        name = pkg_ep.name
+    for entrypoint in entrypoints:
+        name = entrypoint.name
         try:
-            backend = pkg_ep.load()
+            backend = entrypoint.load()
             backend_entrypoints[name] = backend
         except Exception as ex:
             warnings.warn(f"Engine {name!r} loading failed:\n{ex}", RuntimeWarning)
     return backend_entrypoints
 
 
-def set_missing_parameters(backend_entrypoints):
-    for name, backend in backend_entrypoints.items():
+def set_missing_parameters(
+    backend_entrypoints: dict[str, type[BackendEntrypoint]]
+) -> None:
+    for _, backend in backend_entrypoints.items():
         if backend.open_dataset_parameters is None:
             open_dataset = backend.open_dataset
             backend.open_dataset_parameters = detect_parameters(open_dataset)
 
 
-def sort_backends(backend_entrypoints):
+def sort_backends(
+    backend_entrypoints: dict[str, type[BackendEntrypoint]]
+) -> dict[str, type[BackendEntrypoint]]:
     ordered_backends_entrypoints = {}
     for be_name in STANDARD_BACKENDS_ORDER:
         if backend_entrypoints.get(be_name, None) is not None:
@@ -80,13 +103,13 @@ def sort_backends(backend_entrypoints):
     return ordered_backends_entrypoints
 
 
-def build_engines(pkg_entrypoints):
-    backend_entrypoints = {}
-    for backend_name, backend in BACKEND_ENTRYPOINTS.items():
-        if backend.available:
+def build_engines(entrypoints: EntryPoints) -> dict[str, BackendEntrypoint]:
+    backend_entrypoints: dict[str, type[BackendEntrypoint]] = {}
+    for backend_name, (module_name, backend) in BACKEND_ENTRYPOINTS.items():
+        if module_name is None or module_available(module_name):
             backend_entrypoints[backend_name] = backend
-    pkg_entrypoints = remove_duplicates(pkg_entrypoints)
-    external_backend_entrypoints = backends_dict_from_pkg(pkg_entrypoints)
+    entrypoints_unique = remove_duplicates(entrypoints)
+    external_backend_entrypoints = backends_dict_from_pkg(entrypoints_unique)
     backend_entrypoints.update(external_backend_entrypoints)
     backend_entrypoints = sort_backends(backend_entrypoints)
     set_missing_parameters(backend_entrypoints)
@@ -94,23 +117,49 @@ def build_engines(pkg_entrypoints):
 
 
 @functools.lru_cache(maxsize=1)
-def list_engines():
-    pkg_entrypoints = pkg_resources.iter_entry_points("xarray.backends")
-    return build_engines(pkg_entrypoints)
+def list_engines() -> dict[str, BackendEntrypoint]:
+    """
+    Return a dictionary of available engines and their BackendEntrypoint objects.
+
+    Returns
+    -------
+    dictionary
+
+    Notes
+    -----
+    This function lives in the backends namespace (``engs=xr.backends.list_engines()``).
+    If available, more information is available about each backend via ``engs["eng_name"]``.
+
+    # New selection mechanism introduced with Python 3.10. See GH6514.
+    """
+    if sys.version_info >= (3, 10):
+        entrypoints = entry_points(group="xarray.backends")
+    else:
+        entrypoints = entry_points().get("xarray.backends", [])
+    return build_engines(entrypoints)
 
 
-def guess_engine(store_spec):
+def refresh_engines() -> None:
+    """Refreshes the backend engines based on installed packages."""
+    list_engines.cache_clear()
+
+
+def guess_engine(
+    store_spec: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+) -> str | type[BackendEntrypoint]:
     engines = list_engines()
 
     for engine, backend in engines.items():
         try:
             if backend.guess_can_open(store_spec):
                 return engine
+        except PermissionError:
+            raise
         except Exception:
             warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
 
     compatible_engines = []
-    for engine, backend_cls in BACKEND_ENTRYPOINTS.items():
+    for engine, (_, backend_cls) in BACKEND_ENTRYPOINTS.items():
         try:
             backend = backend_cls()
             if backend.guess_can_open(store_spec):
@@ -126,29 +175,29 @@ def guess_engine(store_spec):
                 f"backends {installed_engines}. Consider explicitly selecting one of the "
                 "installed engines via the ``engine`` parameter, or installing "
                 "additional IO dependencies, see:\n"
-                "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
-                "http://xarray.pydata.org/en/stable/user-guide/io.html"
+                "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html\n"
+                "https://docs.xarray.dev/en/stable/user-guide/io.html"
             )
         else:
             error_msg = (
                 "xarray is unable to open this file because it has no currently "
                 "installed IO backends. Xarray's read/write support requires "
                 "installing optional IO dependencies, see:\n"
-                "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
-                "http://xarray.pydata.org/en/stable/user-guide/io"
+                "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html\n"
+                "https://docs.xarray.dev/en/stable/user-guide/io"
             )
     else:
         error_msg = (
             "found the following matches with the input file in xarray's IO "
             f"backends: {compatible_engines}. But their dependencies may not be installed, see:\n"
-            "http://xarray.pydata.org/en/stable/user-guide/io.html \n"
-            "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html"
+            "https://docs.xarray.dev/en/stable/user-guide/io.html \n"
+            "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html"
         )
 
     raise ValueError(error_msg)
 
 
-def get_backend(engine):
+def get_backend(engine: str | type[BackendEntrypoint]) -> BackendEntrypoint:
     """Select open_dataset method based on current engine."""
     if isinstance(engine, str):
         engines = list_engines()
@@ -161,10 +210,8 @@ def get_backend(engine):
         backend = engine()
     else:
         raise TypeError(
-            (
-                "engine must be a string or a subclass of "
-                f"xarray.backends.BackendEntrypoint: {engine}"
-            )
+            "engine must be a string or a subclass of "
+            f"xarray.backends.BackendEntrypoint: {engine}"
         )
 
     return backend

@@ -1,12 +1,12 @@
-from distutils.version import LooseVersion
+from __future__ import annotations
 
 import numpy as np
 import pandas as pd
 import pytest
 
 import xarray as xr
-
-from . import (
+from xarray.tests import (
+    assert_allclose,
     assert_array_equal,
     assert_chunks_equal,
     assert_equal,
@@ -24,7 +24,7 @@ class TestDatetimeAccessor:
         data = np.random.rand(10, 10, nt)
         lons = np.linspace(0, 11, 10)
         lats = np.linspace(0, 20, 10)
-        self.times = pd.date_range(start="2000/01/01", freq="H", periods=nt)
+        self.times = pd.date_range(start="2000/01/01", freq="h", periods=nt)
 
         self.data = xr.DataArray(
             data,
@@ -60,6 +60,8 @@ class TestDatetimeAccessor:
             "quarter",
             "date",
             "time",
+            "daysinmonth",
+            "days_in_month",
             "is_month_start",
             "is_month_end",
             "is_quarter_start",
@@ -70,13 +72,23 @@ class TestDatetimeAccessor:
         ],
     )
     def test_field_access(self, field) -> None:
-
-        if LooseVersion(pd.__version__) >= "1.1.0" and field in ["week", "weekofyear"]:
+        if field in ["week", "weekofyear"]:
             data = self.times.isocalendar()["week"]
         else:
             data = getattr(self.times, field)
 
-        expected = xr.DataArray(data, name=field, coords=[self.times], dims=["time"])
+        if data.dtype.kind != "b" and field not in ("date", "time"):
+            # pandas 2.0 returns int32 for integer fields now
+            data = data.astype("int64")
+
+        translations = {
+            "weekday": "dayofweek",
+            "daysinmonth": "days_in_month",
+            "weekofyear": "week",
+        }
+        name = translations.get(field, field)
+
+        expected = xr.DataArray(data, name=name, coords=[self.times], dims=["time"])
 
         if field in ["week", "weekofyear"]:
             with pytest.warns(
@@ -86,7 +98,21 @@ class TestDatetimeAccessor:
         else:
             actual = getattr(self.data.time.dt, field)
 
-        assert_equal(expected, actual)
+        assert expected.dtype == actual.dtype
+        assert_identical(expected, actual)
+
+    def test_total_seconds(self) -> None:
+        # Subtract a value in the middle of the range to ensure that some values
+        # are negative
+        delta = self.data.time - np.datetime64("2000-01-03")
+        actual = delta.dt.total_seconds()
+        expected = xr.DataArray(
+            np.arange(-48, 52, dtype=np.float64) * 3600,
+            name="total_seconds",
+            coords=[self.data.time],
+        )
+        # This works with assert_identical when pandas is >=1.5.0.
+        assert_allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "field, pandas_field",
@@ -97,22 +123,18 @@ class TestDatetimeAccessor:
         ],
     )
     def test_isocalendar(self, field, pandas_field) -> None:
-
-        if LooseVersion(pd.__version__) < "1.1.0":
-            with pytest.raises(
-                AttributeError, match=r"'isocalendar' not available in pandas < 1.1.0"
-            ):
-                self.data.time.dt.isocalendar()[field]
-            return
-
         # pandas isocalendar has dtypy UInt32Dtype, convert to Int64
-        expected = pd.Int64Index(getattr(self.times.isocalendar(), pandas_field))
+        expected = pd.Index(getattr(self.times.isocalendar(), pandas_field).astype(int))
         expected = xr.DataArray(
             expected, name=field, coords=[self.times], dims=["time"]
         )
 
         actual = self.data.time.dt.isocalendar()[field]
         assert_equal(expected, actual)
+
+    def test_calendar(self) -> None:
+        cal = self.data.time.dt.calendar
+        assert cal == "proleptic_gregorian"
 
     def test_strftime(self) -> None:
         assert (
@@ -123,7 +145,7 @@ class TestDatetimeAccessor:
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype("int8")
         nontime_data = nontime_data.assign_coords(time=int_data)
-        with pytest.raises(TypeError, match=r"dt"):
+        with pytest.raises(AttributeError, match=r"dt"):
             nontime_data.time.dt
 
     @pytest.mark.filterwarnings("ignore:dt.weekofyear and dt.week have been deprecated")
@@ -185,13 +207,6 @@ class TestDatetimeAccessor:
     def test_isocalendar_dask(self, field) -> None:
         import dask.array as da
 
-        if LooseVersion(pd.__version__) < "1.1.0":
-            with pytest.raises(
-                AttributeError, match=r"'isocalendar' not available in pandas < 1.1.0"
-            ):
-                self.data.time.dt.isocalendar()[field]
-            return
-
         expected = getattr(self.times_data.dt.isocalendar(), field)
 
         dask_times_arr = da.from_array(self.times_arr, chunks=(5, 5, 50))
@@ -233,7 +248,10 @@ class TestDatetimeAccessor:
         assert_equal(actual.compute(), expected.compute())
 
     def test_seasons(self) -> None:
-        dates = pd.date_range(start="2000/01/01", freq="M", periods=12)
+        dates = xr.date_range(
+            start="2000/01/01", freq="ME", periods=12, use_cftime=False
+        )
+        dates = dates.append(pd.Index([np.datetime64("NaT")]))
         dates = xr.DataArray(dates)
         seasons = xr.DataArray(
             [
@@ -249,6 +267,7 @@ class TestDatetimeAccessor:
                 "SON",
                 "SON",
                 "DJF",
+                "nan",
             ]
         )
 
@@ -258,7 +277,7 @@ class TestDatetimeAccessor:
         "method, parameters", [("floor", "D"), ("ceil", "D"), ("round", "D")]
     )
     def test_accessor_method(self, method, parameters) -> None:
-        dates = pd.date_range("2014-01-01", "2014-05-01", freq="H")
+        dates = pd.date_range("2014-01-01", "2014-05-01", freq="h")
         xdates = xr.DataArray(dates, dims=["time"])
         expected = getattr(dates, method)(parameters)
         actual = getattr(xdates.dt, method)(parameters)
@@ -272,7 +291,7 @@ class TestTimedeltaAccessor:
         data = np.random.rand(10, 10, nt)
         lons = np.linspace(0, 11, 10)
         lats = np.linspace(0, 20, 10)
-        self.times = pd.timedelta_range(start="1 day", freq="6H", periods=nt)
+        self.times = pd.timedelta_range(start="1 day", freq="6h", periods=nt)
 
         self.data = xr.DataArray(
             data,
@@ -293,7 +312,7 @@ class TestTimedeltaAccessor:
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype("int8")
         nontime_data = nontime_data.assign_coords(time=int_data)
-        with pytest.raises(TypeError, match=r"dt"):
+        with pytest.raises(AttributeError, match=r"dt"):
             nontime_data.time.dt
 
     @pytest.mark.parametrize(
@@ -310,7 +329,7 @@ class TestTimedeltaAccessor:
         "method, parameters", [("floor", "D"), ("ceil", "D"), ("round", "D")]
     )
     def test_accessor_methods(self, method, parameters) -> None:
-        dates = pd.timedelta_range(start="1 day", end="30 days", freq="6H")
+        dates = pd.timedelta_range(start="1 day", end="30 days", freq="6h")
         xdates = xr.DataArray(dates, dims=["time"])
         expected = getattr(dates, method)(parameters)
         actual = getattr(xdates.dt, method)(parameters)
@@ -412,8 +431,6 @@ def times_3d(times):
     "field", ["year", "month", "day", "hour", "dayofyear", "dayofweek"]
 )
 def test_field_access(data, field) -> None:
-    if field == "dayofyear" or field == "dayofweek":
-        pytest.importorskip("cftime", minversion="1.0.2.1")
     result = getattr(data.time.dt, field)
     expected = xr.DataArray(
         getattr(xr.coding.cftimeindex.CFTimeIndex(data.time.values), field),
@@ -426,8 +443,47 @@ def test_field_access(data, field) -> None:
 
 
 @requires_cftime
-def test_isocalendar_cftime(data) -> None:
+def test_calendar_cftime(data) -> None:
+    expected = data.time.values[0].calendar
+    assert data.time.dt.calendar == expected
 
+
+def test_calendar_datetime64_2d() -> None:
+    data = xr.DataArray(np.zeros((4, 5), dtype="datetime64[ns]"), dims=("x", "y"))
+    assert data.dt.calendar == "proleptic_gregorian"
+
+
+@requires_dask
+def test_calendar_datetime64_3d_dask() -> None:
+    import dask.array as da
+
+    data = xr.DataArray(
+        da.zeros((4, 5, 6), dtype="datetime64[ns]"), dims=("x", "y", "z")
+    )
+    with raise_if_dask_computes():
+        assert data.dt.calendar == "proleptic_gregorian"
+
+
+@requires_dask
+@requires_cftime
+def test_calendar_dask_cftime() -> None:
+    from cftime import num2date
+
+    # 3D lazy dask
+    data = xr.DataArray(
+        num2date(
+            np.random.randint(1, 1000000, size=(4, 5, 6)),
+            "hours since 1970-01-01T00:00",
+            calendar="noleap",
+        ),
+        dims=("x", "y", "z"),
+    ).chunk()
+    with raise_if_dask_computes(max_computes=2):
+        assert data.dt.calendar == "noleap"
+
+
+@requires_cftime
+def test_isocalendar_cftime(data) -> None:
     with pytest.raises(
         AttributeError, match=r"'CFTimeIndex' object has no attribute 'isocalendar'"
     ):
@@ -436,7 +492,6 @@ def test_isocalendar_cftime(data) -> None:
 
 @requires_cftime
 def test_date_cftime(data) -> None:
-
     with pytest.raises(
         AttributeError,
         match=r"'CFTimeIndex' object has no attribute `date`. Consider using the floor method instead, for instance: `.time.dt.floor\('D'\)`.",
@@ -468,8 +523,6 @@ def test_cftime_strftime_access(data) -> None:
 def test_dask_field_access_1d(data, field) -> None:
     import dask.array as da
 
-    if field == "dayofyear" or field == "dayofweek":
-        pytest.importorskip("cftime", minversion="1.0.2.1")
     expected = xr.DataArray(
         getattr(xr.coding.cftimeindex.CFTimeIndex(data.time.values), field),
         name=field,
@@ -490,8 +543,6 @@ def test_dask_field_access_1d(data, field) -> None:
 def test_dask_field_access(times_3d, data, field) -> None:
     import dask.array as da
 
-    if field == "dayofyear" or field == "dayofweek":
-        pytest.importorskip("cftime", minversion="1.0.2.1")
     expected = xr.DataArray(
         getattr(
             xr.coding.cftimeindex.CFTimeIndex(times_3d.values.ravel()), field
@@ -509,7 +560,7 @@ def test_dask_field_access(times_3d, data, field) -> None:
 
 @pytest.fixture()
 def cftime_date_type(calendar):
-    from .test_coding_times import _all_cftime_date_types
+    from xarray.tests.test_coding_times import _all_cftime_date_types
 
     return _all_cftime_date_types()[calendar]
 

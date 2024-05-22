@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import math
 import pickle
 from textwrap import dedent
 
@@ -6,17 +9,16 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-import xarray.ufuncs as xu
 from xarray import DataArray, Variable
-from xarray.core.pycompat import sparse_array_type, sparse_version
-
-from . import assert_equal, assert_identical, requires_dask
+from xarray.namedarray.pycompat import array_type
+from xarray.tests import assert_equal, assert_identical, requires_dask
 
 filterwarnings = pytest.mark.filterwarnings
 param = pytest.param
 xfail = pytest.mark.xfail
 
 sparse = pytest.importorskip("sparse")
+sparse_array_type = array_type("sparse")
 
 
 def assert_sparse_equal(a, b):
@@ -26,7 +28,7 @@ def assert_sparse_equal(a, b):
 
 
 def make_ndarray(shape):
-    return np.arange(np.prod(shape)).reshape(shape)
+    return np.arange(math.prod(shape)).reshape(shape)
 
 
 def make_sparray(shape):
@@ -57,7 +59,6 @@ class do:
         self.kwargs = kwargs
 
     def __call__(self, obj):
-
         # cannot pass np.sum when using pytest-xdist
         kwargs = self.kwargs.copy()
         if "func" in self.kwargs:
@@ -108,11 +109,11 @@ def test_variable_property(prop):
         (do("notnull"), True),
         (do("roll"), True),
         (do("round"), True),
-        (do("set_dims", dims=("x", "y", "z")), True),
-        (do("stack", dimensions={"flat": ("x", "y")}), True),
+        (do("set_dims", dim=("x", "y", "z")), True),
+        (do("stack", dim={"flat": ("x", "y")}), True),
         (do("to_base_variable"), True),
         (do("transpose"), True),
-        (do("unstack", dimensions={"x": {"x1": 5, "x2": 2}}), True),
+        (do("unstack", dim={"x": {"x1": 5, "x2": 2}}), True),
         (do("broadcast_equals", make_xrvar({"x": 10, "y": 5})), False),
         (do("equals", make_xrvar({"x": 10, "y": 5})), False),
         (do("identical", make_xrvar({"x": 10, "y": 5})), False),
@@ -146,7 +147,6 @@ def test_variable_property(prop):
                 ],
             ),
             True,
-            marks=xfail(reason="Coercion to dense"),
         ),
         param(
             do("conjugate"),
@@ -200,7 +200,6 @@ def test_variable_property(prop):
         param(
             do("reduce", func="sum", dim="x"),
             True,
-            marks=xfail(reason="Coercion to dense"),
         ),
         param(
             do("rolling_window", dim="x", window=2, window_dim="x_win"),
@@ -217,7 +216,7 @@ def test_variable_property(prop):
         param(
             do("var"), False, marks=xfail(reason="Missing implementation for np.nanvar")
         ),
-        param(do("to_dict"), False, marks=xfail(reason="Coercion to dense")),
+        param(do("to_dict"), False),
         (do("where", cond=make_xrvar({"x": 10, "y": 5}) > 0.5), True),
     ],
     ids=repr,
@@ -236,7 +235,14 @@ def test_variable_method(func, sparse_output):
         assert isinstance(ret_s.data, sparse.SparseArray)
         assert np.allclose(ret_s.data.todense(), ret_d.data, equal_nan=True)
     else:
-        assert np.allclose(ret_s, ret_d, equal_nan=True)
+        if func.meth != "to_dict":
+            assert np.allclose(ret_s, ret_d)
+        else:
+            # pop the arrays from the dict
+            arr_s, arr_d = ret_s.pop("data"), ret_d.pop("data")
+
+            assert np.allclose(arr_s, arr_d)
+            assert ret_s == ret_d
 
 
 @pytest.mark.parametrize(
@@ -271,6 +277,9 @@ class TestSparseVariable:
         self.data = sparse.random((4, 6), random_state=0, density=0.5)
         self.var = xr.Variable(("x", "y"), self.data)
 
+    def test_nbytes(self):
+        assert self.var.nbytes == self.data.nbytes
+
     def test_unary_op(self):
         assert_sparse_equal(-self.var.data, -self.data)
         assert_sparse_equal(abs(self.var).data, abs(self.data))
@@ -278,17 +287,17 @@ class TestSparseVariable:
 
     @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_univariate_ufunc(self):
-        assert_sparse_equal(np.sin(self.data), xu.sin(self.var).data)
+        assert_sparse_equal(np.sin(self.data), np.sin(self.var).data)
 
     @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_bivariate_ufunc(self):
-        assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(self.var, 0).data)
-        assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(0, self.var).data)
+        assert_sparse_equal(np.maximum(self.data, 0), np.maximum(self.var, 0).data)
+        assert_sparse_equal(np.maximum(self.data, 0), np.maximum(0, self.var).data)
 
     def test_repr(self):
         expected = dedent(
             """\
-            <xarray.Variable (x: 4, y: 6)>
+            <xarray.Variable (x: 4, y: 6)> Size: 288B
             <COO: shape=(4, 6), dtype=float64, nnz=12, fill_value=0.0>"""
         )
         assert expected == repr(self.var)
@@ -569,7 +578,7 @@ class TestSparseDataArrayAndDataset:
 
     def test_to_dataset_roundtrip(self):
         x = self.sp_xr
-        assert_equal(x, x.to_dataset("x").to_array("x"))
+        assert_equal(x, x.to_dataset("x").to_dataarray("x"))
 
     def test_align(self):
         a1 = xr.DataArray(
@@ -664,11 +673,6 @@ class TestSparseDataArrayAndDataset:
         roundtripped = stacked.unstack()
         assert_identical(arr, roundtripped)
 
-    @pytest.mark.filterwarnings("ignore::FutureWarning")
-    def test_ufuncs(self):
-        x = self.sp_xr
-        assert_equal(np.sin(x), xu.sin(x))
-
     def test_dataarray_repr(self):
         a = xr.DataArray(
             sparse.COO.from_numpy(np.ones(4)),
@@ -677,10 +681,10 @@ class TestSparseDataArrayAndDataset:
         )
         expected = dedent(
             """\
-            <xarray.DataArray (x: 4)>
+            <xarray.DataArray (x: 4)> Size: 64B
             <COO: shape=(4,), dtype=float64, nnz=4, fill_value=0.0>
             Coordinates:
-                y        (x) int64 <COO: nnz=3, fill_value=0>
+                y        (x) int64 48B <COO: nnz=3, fill_value=0>
             Dimensions without coordinates: x"""
         )
         assert expected == repr(a)
@@ -692,28 +696,28 @@ class TestSparseDataArrayAndDataset:
         )
         expected = dedent(
             """\
-            <xarray.Dataset>
+            <xarray.Dataset> Size: 112B
             Dimensions:  (x: 4)
             Coordinates:
-                y        (x) int64 <COO: nnz=3, fill_value=0>
+                y        (x) int64 48B <COO: nnz=3, fill_value=0>
             Dimensions without coordinates: x
             Data variables:
-                a        (x) float64 <COO: nnz=4, fill_value=0.0>"""
+                a        (x) float64 64B <COO: nnz=4, fill_value=0.0>"""
         )
         assert expected == repr(ds)
 
+    @requires_dask
     def test_sparse_dask_dataset_repr(self):
-        pytest.importorskip("dask", minversion="2.0")
         ds = xr.Dataset(
             data_vars={"a": ("x", sparse.COO.from_numpy(np.ones(4)))}
         ).chunk()
         expected = dedent(
             """\
-            <xarray.Dataset>
+            <xarray.Dataset> Size: 32B
             Dimensions:  (x: 4)
             Dimensions without coordinates: x
             Data variables:
-                a        (x) float64 dask.array<chunksize=(4,), meta=sparse.COO>"""
+                a        (x) float64 32B dask.array<chunksize=(4,), meta=sparse.COO>"""
         )
         assert expected == repr(ds)
 
@@ -799,7 +803,7 @@ class TestSparseDataArrayAndDataset:
         t1 = xr.DataArray(
             np.linspace(0, 11, num=12),
             coords=[
-                pd.date_range("15/12/1999", periods=12, freq=pd.DateOffset(months=1))
+                pd.date_range("1999-12-15", periods=12, freq=pd.DateOffset(months=1))
             ],
             dims="time",
         )
@@ -826,7 +830,7 @@ class TestSparseDataArrayAndDataset:
     @pytest.mark.xfail
     def test_merge(self):
         x = self.sp_xr
-        y = xr.merge([x, x.rename("bar")]).to_array()
+        y = xr.merge([x, x.rename("bar")]).to_dataarray()
         assert isinstance(y, sparse.SparseArray)
 
     @pytest.mark.xfail
@@ -854,9 +858,6 @@ class TestSparseCoords:
         )
 
 
-@pytest.mark.xfail(
-    sparse_version < "0.13.0", reason="https://github.com/pydata/xarray/issues/5654"
-)
 @requires_dask
 def test_chunk():
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
@@ -877,10 +878,6 @@ def test_dask_token():
     import dask
 
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
-
-    # https://github.com/pydata/sparse/issues/300
-    s.__dask_tokenize__ = lambda: dask.base.normalize_token(s.__dict__)
-
     a = DataArray(s)
     t1 = dask.base.tokenize(a)
     t2 = dask.base.tokenize(a)

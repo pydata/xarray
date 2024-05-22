@@ -24,4 +24,6 @@ examples that describe many common tasks that you can accomplish with xarray.
    io
    dask
    plotting
+   options
+   testing
    duckarrays

@@ -4,46 +4,47 @@ channels:
   - nodefaults
 dependencies:
   - aiobotocore
+  - array-api-strict
   - boto3
   - bottleneck
   - cartopy
-  - cdms2
-  - cfgrib
   - cftime
-  - dask
+  - dask-core
+  - dask-expr # dask raises a deprecation warning without this, breaking doctests
   - distributed
-  - fsspec!=2021.7.0
+  - flox
+  - fsspec
   - h5netcdf
   - h5py
   - hdf5
   - hypothesis
   - iris
-  - lxml    # Optional dep of pydap
+  - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
   - numba
+  - numbagg
   - numexpr
   - numpy
+  - opt_einsum
+  - packaging
   - pandas
-  - pint
+  # - pint>=0.22
   - pip
   - pooch
   - pre-commit
-  - pseudonetcdf
+  - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - pydap
-  # - pynio: not compatible with netCDF4>1.5.3; only tested in py37-bare-minimum
   - pytest
   - pytest-cov
   - pytest-env
   - pytest-xdist
+  - pytest-timeout
   - rasterio
   - scipy
   - seaborn
-  - setuptools
   - sparse
   - toolz
   - typing_extensions
   - zarr
-  - pip:
-    - numbagg

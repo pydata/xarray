@@ -1,12 +1,18 @@
+from __future__ import annotations
+
 import pickle
 
 import pytest
 
 import xarray as xr
 
-from . import assert_identical
+# TODO: Remove imports in favour of xr.DataTree etc, once part of public API
+from xarray.core.datatree import DataTree
+from xarray.core.extensions import register_datatree_accessor
+from xarray.tests import assert_identical
 
 
+@register_datatree_accessor("example_accessor")
 @xr.register_dataset_accessor("example_accessor")
 @xr.register_dataarray_accessor("example_accessor")
 class ExampleAccessor:
@@ -18,6 +24,7 @@ class ExampleAccessor:
 
 class TestAccessor:
     def test_register(self) -> None:
+        @register_datatree_accessor("demo")
         @xr.register_dataset_accessor("demo")
         @xr.register_dataarray_accessor("demo")
         class DemoAccessor:
@@ -30,12 +37,14 @@ class TestAccessor:
             def foo(self):
                 return "bar"
 
+        dt: DataTree = DataTree()
+        assert dt.demo.foo == "bar"
+
         ds = xr.Dataset()
         assert ds.demo.foo == "bar"
 
         da = xr.DataArray(0)
         assert da.demo.foo == "bar"
-
         # accessor is cached
         assert ds.demo is ds.demo
 
@@ -43,7 +52,7 @@ class TestAccessor:
         assert ds.demo.__doc__ == "Demo accessor."
         # TODO: typing doesn't seem to work with accessors
         assert xr.Dataset.demo.__doc__ == "Demo accessor."  # type: ignore
-        assert isinstance(ds.demo, DemoAccessor)  # type: ignore
+        assert isinstance(ds.demo, DemoAccessor)
         assert xr.Dataset.demo is DemoAccessor  # type: ignore
 
         # ensure we can remove it

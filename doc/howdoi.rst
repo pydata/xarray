@@ -36,13 +36,13 @@ How do I ...
    * - rename a variable, dimension or coordinate
      - :py:meth:`Dataset.rename`, :py:meth:`DataArray.rename`, :py:meth:`Dataset.rename_vars`, :py:meth:`Dataset.rename_dims`,
    * - convert a DataArray to Dataset or vice versa
-     - :py:meth:`DataArray.to_dataset`, :py:meth:`Dataset.to_array`, :py:meth:`Dataset.to_stacked_array`, :py:meth:`DataArray.to_unstacked_dataset`
+     - :py:meth:`DataArray.to_dataset`, :py:meth:`Dataset.to_dataarray`, :py:meth:`Dataset.to_stacked_array`, :py:meth:`DataArray.to_unstacked_dataset`
    * - extract variables that have certain attributes
      - :py:meth:`Dataset.filter_by_attrs`
    * - extract the underlying array (e.g. NumPy or Dask arrays)
      - :py:attr:`DataArray.data`
    * - convert to and extract the underlying NumPy array
-     - :py:attr:`DataArray.values`
+     - :py:attr:`DataArray.to_numpy`
    * - convert to a pandas DataFrame
      - :py:attr:`Dataset.to_dataframe`
    * - sort values

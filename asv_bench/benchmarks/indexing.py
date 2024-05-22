@@ -12,12 +12,14 @@ ny = 1000
 nt = 500
 
 basic_indexes = {
+    "1scalar": {"x": 0},
     "1slice": {"x": slice(0, 3)},
     "1slice-1scalar": {"x": 0, "y": slice(None, None, 3)},
     "2slicess-1scalar": {"x": slice(3, -3, 3), "y": 1, "t": slice(None, -3, 3)},
 }
 
 basic_assignment_values = {
+    "1scalar": 0,
     "1slice": xr.DataArray(randn((3, ny), frac_nan=0.1), dims=["x", "y"]),
     "1slice-1scalar": xr.DataArray(randn(int(ny / 3) + 1, frac_nan=0.1), dims=["y"]),
     "2slicess-1scalar": xr.DataArray(
@@ -74,6 +76,10 @@ class Base:
                 "x_coords": ("x", np.linspace(1.1, 2.1, nx)),
             },
         )
+        # Benchmark how indexing is slowed down by adding many scalar variable
+        # to the dataset
+        # https://github.com/pydata/xarray/pull/9003
+        self.ds_large = self.ds.merge({f"extra_var{i}": i for i in range(400)})
 
 
 class Indexing(Base):
@@ -88,6 +94,11 @@ class Indexing(Base):
     @parameterized(["key"], [list(vectorized_indexes.keys())])
     def time_indexing_vectorized(self, key):
         self.ds.isel(**vectorized_indexes[key]).load()
+
+    @parameterized(["key"], [list(basic_indexes.keys())])
+    def time_indexing_basic_ds_large(self, key):
+        # https://github.com/pydata/xarray/pull/9003
+        self.ds_large.isel(**basic_indexes[key]).load()
 
 
 class Assignment(Base):
@@ -147,3 +158,18 @@ class HugeAxisSmallSliceIndexing:
 
     def cleanup(self):
         self.ds.close()
+
+
+class AssignmentOptimized:
+    # https://github.com/pydata/xarray/pull/7382
+    def setup(self):
+        self.ds = xr.Dataset(coords={"x": np.arange(500_000)})
+        self.da = xr.DataArray(np.arange(500_000), dims="x")
+
+    def time_assign_no_reindex(self):
+        # assign with non-indexed DataArray of same dimension size
+        self.ds.assign(foo=self.da)
+
+    def time_assign_identical_indexes(self):
+        # fastpath index comparison (same index object)
+        self.ds.assign(foo=self.ds.x)

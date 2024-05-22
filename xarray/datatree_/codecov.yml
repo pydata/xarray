@@ -1,0 +1,21 @@
+codecov:
+  require_ci_to_pass: false
+  max_report_age: off
+
+comment: false
+
+ignore:
+  - 'datatree/tests/*'
+  - 'setup.py'
+  - 'conftest.py'
+
+coverage:
+  precision: 2
+  round: down
+  status:
+    project:
+      default:
+        target: 95
+        informational: true
+    patch: off
+    changes: false
