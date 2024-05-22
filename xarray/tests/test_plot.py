@@ -3002,7 +3002,7 @@ class TestNcAxisNotInstalled(PlotTestCase):
         data = np.sin(2 * np.pi * month / 12.0)
         darray = DataArray(data, dims=["time"])
         darray.coords["time"] = xr.cftime_range(
-            start="2017", periods=12, freq="1M", calendar="noleap"
+            start="2017", periods=12, freq="1ME", calendar="noleap"
         )
 
         self.darray = darray
