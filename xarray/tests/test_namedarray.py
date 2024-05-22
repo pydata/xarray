@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-import warnings
 from abc import abstractmethod
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
@@ -77,6 +76,17 @@ class CustomArrayIndexable(
 
     def __array_namespace__(self) -> ModuleType:
         return np
+
+
+def check_duck_array_typevar(a: duckarray[Any, _DType]) -> duckarray[Any, _DType]:
+    # Mypy checks a is valid:
+    b: duckarray[Any, _DType] = a
+
+    # Runtime check if valid:
+    if isinstance(b, _arrayfunction_or_api):
+        return b
+    else:
+        raise TypeError(f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi")
 
 
 class NamedArraySubclassobjects:
@@ -328,48 +338,27 @@ class TestNamedArray(NamedArraySubclassobjects):
             named_array.dims = new_dims
             assert named_array.dims == tuple(new_dims)
 
-    def test_duck_array_class(
-        self,
-    ) -> None:
-        def test_duck_array_typevar(
-            a: duckarray[Any, _DType],
-        ) -> duckarray[Any, _DType]:
-            # Mypy checks a is valid:
-            b: duckarray[Any, _DType] = a
-
-            # Runtime check if valid:
-            if isinstance(b, _arrayfunction_or_api):
-                return b
-            else:
-                raise TypeError(
-                    f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi"
-                )
-
+    def test_duck_array_class(self) -> None:
         numpy_a: NDArray[np.int64]
         numpy_a = np.array([2.1, 4], dtype=np.dtype(np.int64))
-        test_duck_array_typevar(numpy_a)
+        check_duck_array_typevar(numpy_a)
 
         masked_a: np.ma.MaskedArray[Any, np.dtype[np.int64]]
         masked_a = np.ma.asarray([2.1, 4], dtype=np.dtype(np.int64))  # type: ignore[no-untyped-call]
-        test_duck_array_typevar(masked_a)
+        check_duck_array_typevar(masked_a)
 
         custom_a: CustomArrayIndexable[Any, np.dtype[np.int64]]
         custom_a = CustomArrayIndexable(numpy_a)
-        test_duck_array_typevar(custom_a)
+        check_duck_array_typevar(custom_a)
 
+    def test_duck_array_class_array_api(self) -> None:
         # Test numpy's array api:
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                r"The numpy.array_api submodule is still experimental",
-                category=UserWarning,
-            )
-            import numpy.array_api as nxp
+        nxp = pytest.importorskip("array_api_strict", minversion="1.0")
 
         # TODO: nxp doesn't use dtype typevars, so can only use Any for the moment:
         arrayapi_a: duckarray[Any, Any]  #  duckarray[Any, np.dtype[np.int64]]
-        arrayapi_a = nxp.asarray([2.1, 4], dtype=np.dtype(np.int64))
-        test_duck_array_typevar(arrayapi_a)
+        arrayapi_a = nxp.asarray([2.1, 4], dtype=nxp.int64)
+        check_duck_array_typevar(arrayapi_a)
 
     def test_new_namedarray(self) -> None:
         dtype_float = np.dtype(np.float32)

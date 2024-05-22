@@ -1,6 +1,9 @@
+import warnings
+
 import numpy as np
 import numpy.testing as npt
 import pytest
+from packaging.version import Version
 
 pytest.importorskip("hypothesis")
 # isort: split
@@ -19,7 +22,6 @@ from xarray.testing.strategies import (
     unique_subset_of,
     variables,
 )
-from xarray.tests import requires_numpy_array_api
 
 ALLOWED_ATTRS_VALUES_TYPES = (int, bool, str, np.ndarray)
 
@@ -199,7 +201,6 @@ class TestVariablesStrategy:
                 )
             )
 
-    @requires_numpy_array_api
     @given(st.data())
     def test_make_strategies_namespace(self, data):
         """
@@ -208,16 +209,24 @@ class TestVariablesStrategy:
         We still want to generate dtypes not in the array API by default, but this checks we don't accidentally override
         the user's choice of dtypes with non-API-compliant ones.
         """
-        from numpy import (
-            array_api as np_array_api,  # requires numpy>=1.26.0, and we expect a UserWarning to be raised
-        )
+        if Version(np.__version__) >= Version("2.0.0.dev0"):
+            nxp = np
+        else:
+            # requires numpy>=1.26.0, and we expect a UserWarning to be raised
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", category=UserWarning, message=".+See NEP 47."
+                )
+                from numpy import (  # type: ignore[no-redef,unused-ignore]
+                    array_api as nxp,
+                )
 
-        np_array_api_st = make_strategies_namespace(np_array_api)
+        nxp_st = make_strategies_namespace(nxp)
 
         data.draw(
             variables(
-                array_strategy_fn=np_array_api_st.arrays,
-                dtype=np_array_api_st.scalar_dtypes(),
+                array_strategy_fn=nxp_st.arrays,
+                dtype=nxp_st.scalar_dtypes(),
             )
         )
 
