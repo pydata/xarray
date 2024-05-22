@@ -15,31 +15,68 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2024.04.0:
+.. _whats-new.2024.05.1:
 
-v2024.04.0 (unreleased)
+v2024.05.1 (unreleased)
 -----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2024.05.0:
+
+v2024.05.0 (May 12, 2024)
+-------------------------
+
+This release brings support for pandas ExtensionArray objects, optimizations when reading Zarr, the ability to concatenate datasets without pandas indexes,
+more compatibility fixes for the upcoming numpy 2.0, and the migration of most of the xarray-datatree project code into xarray ``main``!
+
+Thanks to the 18 contributors to this release:
+Aimilios Tsouvelekakis, Andrey Akinshin, Deepak Cherian, Eni Awowale, Ilan Gold, Illviljan, Justus Magin, Mark Harfouche, Matt Savoie, Maximilian Roos, Noah C. Benson, Pascal Bourgault, Ray Bell, Spencer Clark, Tom Nicholas, ignamv, owenlittlejohns, and saschahofmann.
 
 New Features
 ~~~~~~~~~~~~
 - New "random" method for converting to and from 360_day calendars (:pull:`8603`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Xarray now makes a best attempt not to coerce :py:class:`pandas.api.extensions.ExtensionArray` to a numpy array
-  by supporting 1D `ExtensionArray` objects internally where possible.  Thus, `Dataset`s initialized with a `pd.Catgeorical`,
-  for example, will retain the object.  However, one cannot do operations that are not possible on the `ExtensionArray`
-  then, such as broadcasting.
+  by supporting 1D ``ExtensionArray`` objects internally where possible.  Thus, :py:class:`Dataset` objects initialized with a ``pd.Categorical``,
+  for example, will retain the object.  However, one cannot do operations that are not possible on the ``ExtensionArray``
+  then, such as broadcasting. (:issue:`5287`, :issue:`8463`, :pull:`8723`)
   By `Ilan Gold <https://github.com/ilan-gold>`_.
 - :py:func:`testing.assert_allclose`/:py:func:`testing.assert_equal` now accept a new argument `check_dims="transpose"`, controlling whether a transposed array is considered equal. (:issue:`5733`, :pull:`8991`)
   By `Ignacio Martinez Vazquez <https://github.com/ignamv>`_.
 - Added the option to avoid automatically creating 1D pandas indexes in :py:meth:`Dataset.expand_dims()`, by passing the new kwarg
-  `create_index=False`. (:pull:`8960`)
+  `create_index_for_new_dim=False`. (:pull:`8960`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Avoid automatically re-creating 1D pandas indexes in :py:func:`concat()`. Also added option to avoid creating 1D indexes for
+  new dimension coordinates by passing the new kwarg `create_index_for_new_dim=False`. (:issue:`8871`, :pull:`8872`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - The PyNIO backend has been deleted (:issue:`4491`, :pull:`7301`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
 - The minimum versions of some dependencies were changed, in particular our minimum supported pandas version is now Pandas 2.
 
   ===================== =========  =======
@@ -57,7 +94,6 @@ Breaking changes
    zarr                      2.13     2.14
   ===================== =========  =======
 
-
 Bug fixes
 ~~~~~~~~~
 - Following `an upstream bug fix
@@ -67,9 +103,10 @@ Bug fixes
   within the bounds of the provided start and end dates (:pull:`8999`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
 
-
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Enforces failures on CI when tests raise warnings from within xarray (:pull:`8974`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Migrates ``formatting_html`` functionality for ``DataTree`` into ``xarray/core`` (:pull: `8930`)
   By `Eni Awowale <https://github.com/eni-awowale>`_, `Julia Signell <https://github.com/jsignell>`_
   and `Tom Nicholas <https://github.com/TomNicholas>`_.
@@ -83,11 +120,14 @@ Internal Changes
   `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Migrates ``ops.py`` functionality into ``xarray/core/datatree_ops.py`` (:pull:`8976`)
   By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Migrates ``iterator`` functionality into ``xarray/core`` (:pull: `8879`)
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
+  <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
 - ``transpose``, ``set_dims``, ``stack`` & ``unstack`` now use a ``dim`` kwarg
-  rather than ``dims`` or ``dimensions``. This is the final change to make xarray methods
-  consistent with their use of ``dim``. Using the existing kwarg will raise a
-  warning. By `Maximilian Roos <https://github.com/max-sixty>`_
-
+  rather than ``dims`` or ``dimensions``. This is the final change to unify
+  xarray functions to use ``dim``. Using the existing kwarg will raise a
+  warning.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.2024.03.0:
 
@@ -164,9 +204,6 @@ Internal Changes
   By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
   <https://github.com/TomNicholas>`_.
 - Migrates ``datatree`` functionality into ``xarray/core``. (:pull: `8789`)
-  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
-  <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
-- Migrates ``iterator`` functionality into ``xarray/core`` (:pull: `8879`)
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
   <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
 
