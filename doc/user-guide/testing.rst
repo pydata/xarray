@@ -51,6 +51,10 @@ These strategies are accessible in the :py:mod:`xarray.testing.strategies` modul
    testing.strategies.dimension_sizes
    testing.strategies.attrs
    testing.strategies.variables
+   testing.strategies.coordinate_variables
+   testing.strategies.dataarrays
+   testing.strategies.data_variables
+   testing.strategies.datasets
    testing.strategies.unique_subset_of
 
 These build upon the numpy and array API strategies offered in :py:mod:`hypothesis.extra.numpy` and :py:mod:`hypothesis.extra.array_api`:
@@ -88,7 +92,6 @@ In your tests however you should not use ``.example()`` - instead you should par
     @given(xrst.variables())
     def test_function_that_acts_on_variables(var):
         assert func(var) == ...
-
 
 Chaining Strategies
 ~~~~~~~~~~~~~~~~~~~
@@ -145,6 +148,7 @@ objects your chained strategy will generate.
     fixed_x_variable_y_maybe_z = st.fixed_dictionaries(
         {"x": st.just(2), "y": st.integers(3, 4)}, optional={"z": st.just(2)}
     )
+
     fixed_x_variable_y_maybe_z.example()
 
     special_variables = xrst.variables(dims=fixed_x_variable_y_maybe_z)
@@ -156,6 +160,7 @@ Here we have used one of hypothesis' built-in strategies :py:func:`hypothesis.st
 strategy which generates mappings of dimension names to lengths (i.e. the ``size`` of the xarray object we want).
 This particular strategy will always generate an ``x`` dimension of length 2, and a ``y`` dimension of
 length either 3 or 4, and will sometimes also generate a ``z`` dimension of length 2.
+
 By feeding this strategy for dictionaries into the ``dims`` argument of xarray's :py:func:`~st.variables` strategy,
 we can generate arbitrary :py:class:`~xarray.Variable` objects whose dimensions will always match these specifications.
 
