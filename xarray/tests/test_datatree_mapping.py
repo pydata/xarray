@@ -8,7 +8,7 @@ from xarray.core.datatree_mapping import (
     check_isomorphic,
     map_over_subtree,
 )
-from xarray.datatree_.datatree.testing import assert_equal
+from xarray.testing import assert_equal
 
 empty = xr.Dataset()
 

@@ -6,20 +6,9 @@ import xarray as xr
 from xarray.testing import assert_equal
 
 np = pytest.importorskip("numpy", minversion="1.22")
+xp = pytest.importorskip("array_api_strict")
 
-try:
-    import warnings
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-
-        import numpy.array_api as xp
-        from numpy.array_api._array_object import Array
-except ImportError:
-    # for `numpy>=2.0`
-    xp = pytest.importorskip("array_api_strict")
-
-    from array_api_strict._array_object import Array  # type: ignore[no-redef]
+from array_api_strict._array_object import Array  # isort:skip # type: ignore[no-redef]
 
 
 @pytest.fixture
@@ -65,8 +54,8 @@ def test_aggregation_skipna(arrays) -> None:
 def test_astype(arrays) -> None:
     np_arr, xp_arr = arrays
     expected = np_arr.astype(np.int64)
-    actual = xp_arr.astype(np.int64)
-    assert actual.dtype == np.int64
+    actual = xp_arr.astype(xp.int64)
+    assert actual.dtype == xp.int64
     assert isinstance(actual.data, Array)
     assert_equal(actual, expected)
 
@@ -118,8 +107,10 @@ def test_indexing(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
 
 def test_properties(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     np_arr, xp_arr = arrays
-    assert np_arr.nbytes == np_arr.data.nbytes
-    assert xp_arr.nbytes == np_arr.data.nbytes
+
+    expected = np_arr.data.nbytes
+    assert np_arr.nbytes == expected
+    assert xp_arr.nbytes == expected
 
 
 def test_reorganizing_operation(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:

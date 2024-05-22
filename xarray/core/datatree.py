@@ -23,6 +23,16 @@ from xarray.core.datatree_mapping import (
     check_isomorphic,
     map_over_subtree,
 )
+from xarray.core.datatree_ops import (
+    DataTreeArithmeticMixin,
+    MappedDatasetMethodsMixin,
+    MappedDataWithCoords,
+)
+from xarray.core.datatree_render import RenderDataTree
+from xarray.core.formatting import datatree_repr
+from xarray.core.formatting_html import (
+    datatree_repr as datatree_repr_html,
+)
 from xarray.core.indexes import Index, Indexes
 from xarray.core.merge import dataset_update_method
 from xarray.core.options import OPTIONS as XR_OPTS
@@ -37,16 +47,6 @@ from xarray.core.utils import (
 )
 from xarray.core.variable import Variable
 from xarray.datatree_.datatree.common import TreeAttrAccessMixin
-from xarray.datatree_.datatree.formatting import datatree_repr
-from xarray.datatree_.datatree.formatting_html import (
-    datatree_repr as datatree_repr_html,
-)
-from xarray.datatree_.datatree.ops import (
-    DataTreeArithmeticMixin,
-    MappedDatasetMethodsMixin,
-    MappedDataWithCoords,
-)
-from xarray.datatree_.datatree.render import RenderTree
 
 try:
     from xarray.core.variable import calculate_dimensions
@@ -624,7 +624,7 @@ class DataTree(
     def __iter__(self) -> Iterator[Hashable]:
         return itertools.chain(self.ds.data_vars, self.children)
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype=None, copy=None):
         raise TypeError(
             "cannot directly convert a DataTree into a "
             "numpy array. Instead, create an xarray.DataArray "
@@ -1451,7 +1451,7 @@ class DataTree(
 
     def render(self):
         """Print tree structure, including any data stored at each node."""
-        for pre, fill, node in RenderTree(self):
+        for pre, fill, node in RenderDataTree(self):
             print(f"{pre}DataTree('{self.name}')")
             for ds_line in repr(node.ds)[1:]:
                 print(f"{fill}{ds_line}")

@@ -1,3 +1,4 @@
+# TODO: Add assert_isomorphic when making DataTree API public
 from xarray.testing.assertions import (  # noqa: F401
     _assert_dataarray_invariants,
     _assert_dataset_invariants,

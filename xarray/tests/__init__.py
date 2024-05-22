@@ -16,16 +16,21 @@ from pandas.testing import assert_frame_equal  # noqa: F401
 
 import xarray.testing
 from xarray import Dataset
-from xarray.core import utils
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.extension_array import PandasExtensionArray
-from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
 from xarray.core.variable import IndexVariable
 from xarray.testing import (  # noqa: F401
     assert_chunks_equal,
     assert_duckarray_allclose,
     assert_duckarray_equal,
+)
+from xarray.tests.arrays import (  # noqa: F401
+    ConcatenatableArray,
+    DuckArrayWrapper,
+    FirstElementAccessibleArray,
+    InaccessibleArray,
+    UnexpectedDataAccess,
 )
 
 # import mpl and change the backend before other mpl imports
@@ -99,7 +104,6 @@ with warnings.catch_warnings():
     )
 
     has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
-has_pynio, requires_pynio = _importorskip("Nio")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
 with warnings.catch_warnings():
@@ -131,6 +135,7 @@ has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
 has_pandas_ge_2_2, __ = _importorskip("pandas", "2.2")
+has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0.dev0")
 
 
 # some special cases
@@ -140,16 +145,41 @@ requires_scipy_or_netCDF4 = pytest.mark.skipif(
 )
 has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
 requires_numbagg_or_bottleneck = pytest.mark.skipif(
-    not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
+    not has_numbagg_or_bottleneck, reason="requires numbagg or bottlekneck"
 )
-# _importorskip does not work for development versions
-has_pandas_version_two = Version(pd.__version__).major >= 2
-requires_pandas_version_two = pytest.mark.skipif(
-    not has_pandas_version_two, reason="requires pandas 2.0.0"
-)
-has_numpy_array_api, requires_numpy_array_api = _importorskip("numpy", "1.26.0")
-has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip("h5netcdf", "1.3.0")
+has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
 
+has_array_api_strict, requires_array_api_strict = _importorskip("array_api_strict")
+
+
+def _importorskip_h5netcdf_ros3():
+    try:
+        import h5netcdf
+
+        has_h5netcdf = True
+    except ImportError:
+        has_h5netcdf = False
+
+    if not has_h5netcdf:
+        return has_h5netcdf, pytest.mark.skipif(
+            not has_h5netcdf, reason="requires h5netcdf"
+        )
+
+    h5netcdf_with_ros3 = Version(h5netcdf.__version__) >= Version("1.3.0")
+
+    import h5py
+
+    h5py_with_ros3 = h5py.get_config().ros3
+
+    has_h5netcdf_ros3 = h5netcdf_with_ros3 and h5py_with_ros3
+
+    return has_h5netcdf_ros3, pytest.mark.skipif(
+        not has_h5netcdf_ros3,
+        reason="requires h5netcdf>=1.3.0 and h5py with ros3 support",
+    )
+
+
+has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip_h5netcdf_ros3()
 has_netCDF4_1_6_2_or_above, requires_netCDF4_1_6_2_or_above = _importorskip(
     "netCDF4", "1.6.2"
 )
@@ -190,51 +220,6 @@ def raise_if_dask_computes(max_computes=0):
 
 flaky = pytest.mark.flaky
 network = pytest.mark.network
-
-
-class UnexpectedDataAccess(Exception):
-    pass
-
-
-class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
-    """Disallows any loading."""
-
-    def __init__(self, array):
-        self.array = array
-
-    def get_duck_array(self):
-        raise UnexpectedDataAccess("Tried accessing data")
-
-    def __array__(self, dtype: np.typing.DTypeLike = None):
-        raise UnexpectedDataAccess("Tried accessing data")
-
-    def __getitem__(self, key):
-        raise UnexpectedDataAccess("Tried accessing data.")
-
-
-class FirstElementAccessibleArray(InaccessibleArray):
-    def __getitem__(self, key):
-        tuple_idxr = key.tuple
-        if len(tuple_idxr) > 1:
-            raise UnexpectedDataAccess("Tried accessing more than one element.")
-        return self.array[tuple_idxr]
-
-
-class DuckArrayWrapper(utils.NDArrayMixin):
-    """Array-like that prevents casting to array.
-    Modeled after cupy."""
-
-    def __init__(self, array: np.ndarray):
-        self.array = array
-
-    def __getitem__(self, key):
-        return type(self)(self.array[key])
-
-    def __array__(self, dtype: np.typing.DTypeLike = None):
-        raise UnexpectedDataAccess("Tried accessing data")
-
-    def __array_namespace__(self):
-        """Present to satisfy is_duck_array test."""
 
 
 class ReturnItem:
