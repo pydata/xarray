@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import datetime as dt
 import functools
 from typing import Any
 
 import numpy as np
+import pandas as pd
 from pandas.api.types import is_extension_array_dtype
 
 from xarray.core import npcompat, utils
@@ -211,6 +213,8 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
 
 def result_type(
     *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
+    weakly_dtyped=None,
+    xp=None,
 ) -> np.dtype:
     """Like np.result_type, but with type promotion rules matching pandas.
 
@@ -227,19 +231,16 @@ def result_type(
     -------
     numpy.dtype for the result.
     """
-    from xarray.core.duck_array_ops import get_array_namespace
+    from xarray.core.duck_array_ops import asarray, get_array_namespace
 
-    # TODO(shoyer): consider moving this logic into get_array_namespace()
-    # or another helper function.
-    namespaces = {get_array_namespace(t) for t in arrays_and_dtypes}
-    non_numpy = namespaces - {np}
-    if non_numpy:
-        [xp] = non_numpy
-    else:
-        xp = np
+    if xp is None:
+        xp = get_array_namespace(arrays_and_dtypes)
+
+    if not arrays_and_dtypes:
+        arrays_and_dtypes = [asarray(x, xp=xp) for x in weakly_dtyped]
+        weakly_dtyped = None
 
     types = {xp.result_type(t) for t in arrays_and_dtypes}
-
     if any(isinstance(t, np.dtype) for t in types):
         # only check if there's numpy dtypes – the array API does not
         # define the types we're checking for
@@ -249,4 +250,27 @@ def result_type(
             ):
                 return xp.dtype(object)
 
-    return xp.result_type(*arrays_and_dtypes)
+    dtype = xp.result_type(*arrays_and_dtypes)
+    if weakly_dtyped is None or is_object(dtype):
+        return dtype
+
+    checks = {
+        bool: functools.partial(
+            isdtype, kind=("bool", "integral", "real floating", "complex floating")
+        ),
+        int: functools.partial(
+            isdtype, kind=("integral", "real floating", "complex floating")
+        ),
+        float: functools.partial(isdtype, kind=("real floating", "complex floating")),
+        complex: functools.partial(isdtype, kind="complex floating"),
+        str: is_string,
+        dt.datetime: functools.partial(_is_numpy_subdtype, kind=np.datetime64),
+        pd.Timestamp: functools.partial(_is_numpy_subdtype, kind=np.datetime64),
+        dt.timedelta: functools.partial(_is_numpy_subdtype, kind=np.timedelta64),
+        pd.Timedelta: functools.partial(_is_numpy_subdtype, kind=np.timedelta64),
+    }
+
+    if any(not checks.get(type(x), is_object)(dtype) for x in weakly_dtyped):
+        return xp.dtype(object)
+
+    return dtype
