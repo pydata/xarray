@@ -55,11 +55,26 @@ else:
 dask_available = module_available("dask")
 
 
-def get_array_namespace(x):
-    if hasattr(x, "__array_namespace__"):
-        return x.__array_namespace__()
+def get_array_namespace(*values):
+    def _get_array_namespace(x):
+        if hasattr(x, "__array_namespace__"):
+            return x.__array_namespace__()
+        else:
+            return np
+
+    namespaces = {_get_array_namespace(t) for t in values}
+    non_numpy = namespaces - {np}
+
+    if len(non_numpy) > 1:
+        raise TypeError(
+            "cannot deal with more than one type supporting the array API at the same time"
+        )
+    elif non_numpy:
+        [xp] = non_numpy
     else:
-        return np
+        xp = np
+
+    return xp
 
 
 def einsum(*args, **kwargs):
