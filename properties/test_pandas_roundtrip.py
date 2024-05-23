@@ -30,6 +30,16 @@ an_array = npst.arrays(
 )
 
 
+datetime_with_tz_strategy = st.datetimes(timezones=st.timezones())
+dataframe_strategy = pdst.data_frames(
+    [
+        pdst.column("datetime_col", elements=datetime_with_tz_strategy),
+        pdst.column("other_col", elements=st.integers()),
+    ],
+    index=pdst.range_indexes(min_size=1, max_size=10),
+)
+
+
 @st.composite
 def datasets_1d_vars(draw) -> xr.Dataset:
     """Generate datasets with only 1D variables
@@ -98,3 +108,15 @@ def test_roundtrip_pandas_dataframe(df) -> None:
     roundtripped = arr.to_pandas()
     pd.testing.assert_frame_equal(df, roundtripped)
     xr.testing.assert_identical(arr, roundtripped.to_xarray())
+
+
+@given(df=dataframe_strategy)
+def test_roundtrip_pandas_dataframe_datetime(df) -> None:
+    # Need to name the indexes, otherwise Xarray names them 'dim_0', 'dim_1'.
+    df.index.name = "rows"
+    df.columns.name = "cols"
+    dataset = xr.Dataset.from_dataframe(df)
+    roundtripped = dataset.to_dataframe()
+    roundtripped.columns.name = "cols"  # why?
+    pd.testing.assert_frame_equal(df, roundtripped)
+    xr.testing.assert_identical(dataset, roundtripped.to_xarray())

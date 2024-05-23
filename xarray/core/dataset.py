@@ -7420,7 +7420,9 @@ class Dataset(
         arrays = []
         extension_arrays = []
         for k, v in dataframe.items():
-            if not is_extension_array_dtype(v):
+            if not is_extension_array_dtype(v) or isinstance(
+                v, (pd.DatetimeIndex, pd.TimedeltaIndex)
+            ):
                 arrays.append((k, np.asarray(v)))
             else:
                 extension_arrays.append((k, v))
