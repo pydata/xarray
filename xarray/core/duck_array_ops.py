@@ -271,24 +271,21 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
     if any(isinstance(x, array_type_cupy) for x in scalars_or_arrays):
         import cupy as cp
 
-        arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
-        # Pass arrays directly instead of dtypes to result_type so scalars
-        # get handled properly.
-        # Note that result_type() safely gets the dtype from dask arrays without
-        # evaluating them.
-        out_type = dtypes.result_type(*arrays)
-    else:
-        objs_with_dtype = [obj for obj in scalars_or_arrays if hasattr(obj, "dtype")]
-        if objs_with_dtype:
-            # Pass arrays directly instead of dtypes to result_type so scalars
-            # get handled properly.
-            # Note that result_type() safely gets the dtype from dask arrays without
-            # evaluating them.
-            out_type = dtypes.result_type(*objs_with_dtype)
-        else:
-            out_type = dtypes.result_type(*scalars_or_arrays)
-        arrays = [asarray(x, xp=xp) for x in scalars_or_arrays]
-    return [astype(x, out_type, copy=False) for x in arrays]
+        xp = cp
+
+    # split into weakly and strongly dtyped
+    # TODO (keewis): remove this and the `weakly_dtyped` parameter to
+    # result_type once we can require a version of the Array API that allows
+    # passing scalars to `xp.result_type`
+    weakly_dtyped = [x for x in scalars_or_arrays if not hasattr(x, "dtype")]
+    strongly_dtyped = [x for x in scalars_or_arrays if hasattr(x, "dtype")]
+    dtype = dtypes.result_type(*strongly_dtyped, weakly_dtyped=weakly_dtyped, xp=xp)
+
+    # Pass arrays directly instead of dtypes to result_type so scalars
+    # get handled properly.
+    # Note that result_type() safely gets the dtype from dask arrays without
+    # evaluating them.
+    return tuple(asarray(x, dtype=dtype, xp=xp) for x in scalars_or_arrays)
 
 
 def broadcast_to(array, shape):
