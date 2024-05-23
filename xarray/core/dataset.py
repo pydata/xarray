@@ -9087,7 +9087,7 @@ class Dataset(
             int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
         ) = None,
         constant_values: (
-            float | tuple[float, float] | Mapping[Any, tuple[float, float]] | None
+            float | tuple[float, float] | Mapping[Any, float  | tuple[float, float] | Mapping[Any, tuple[float, float]]] | None
         ) = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
@@ -9144,9 +9144,11 @@ class Dataset(
             (stat_length,) or int is a shortcut for before = after = statistic
             length for all axes.
             Default is ``None``, to use the entire axis.
-        constant_values : scalar, tuple or mapping of hashable to tuple, default: 0
-            Used in 'constant'.  The values to set the padded values for each
-            axis.
+        constant_values : scalar, tuple, mapping of hashable to tuple or 
+            mapping of hashable to mapping of hashable to tuple, default: 0
+            Used in 'constant'. The values to set the padded values for each data variable / axis.
+            ``{var_1: {dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}, 
+            var_2: (before, after)  ... "*": constant}`` unique pad constants per data variable.
             ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
             pad constants along each dimension.
             ``((before, after),)`` yields same before and after constants for each
@@ -9231,17 +9233,27 @@ class Dataset(
         for k, idx in xindexes.items():
             if not pad_dims.intersection(xindexes.get_all_dims(k)):
                 indexes[k] = idx
+                
+        per_data_var_constant_values = {}
+        if isinstance(constant_values, Mapping):
+            for k in self.data_vars:
+                if v := constant_values.pop(k, None):
+                    per_data_var_constant_values[k] = v
+            if global_constant_values := constant_values.pop("*", None):
+                assert constant_values == {}, "Conflicting constant values"
+                constant_values = global_constant_values
+                
 
         for name, var in self.variables.items():
             var_pad_width = {k: v for k, v in pad_width.items() if k in var.dims}
             if not var_pad_width:
                 variables[name] = var
-            elif name in self.data_vars:
+            elif name in self.data_vars:  
                 variables[name] = var.pad(
                     pad_width=var_pad_width,
                     mode=mode,
                     stat_length=stat_length,
-                    constant_values=constant_values,
+                    constant_values=per_data_var_constant_values.get(name, constant_values),
                     end_values=end_values,
                     reflect_type=reflect_type,
                     keep_attrs=keep_attrs,
