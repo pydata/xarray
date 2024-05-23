@@ -35,6 +35,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Allow in-memory arrays with :py:func:`xarray.open_mfdataset` by passing ``chunks=None``. (:pull:`5704`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -2285,8 +2287,6 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-- Allow in-memory arrays with :py:func:`xarray.open_mfdataset` by passing ``chunks=None``. (:pull:`5704`).
-  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 - Fix ZeroDivisionError from saving dask array with empty dimension (:issue: `5741`).
   By `Joseph K Aicher <https://github.com/jaicher>`_.
