@@ -254,7 +254,8 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
         ):
             return scalars_or_arrays
         raise ValueError(
-            f"Cannot cast arrays to shared type, found array types {[x.dtype for x in scalars_or_arrays]}"
+            "Cannot cast arrays to shared type, found"
+            f" array types {[x.dtype for x in scalars_or_arrays]}"
         )
 
     # Avoid calling array_type("cupy") repeatidely in the any check
