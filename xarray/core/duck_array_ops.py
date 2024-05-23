@@ -239,8 +239,16 @@ def astype(data, dtype, **kwargs):
     return data.astype(dtype, **kwargs)
 
 
-def asarray(data, xp=np):
-    return data if is_duck_array(data) else xp.asarray(data)
+def asarray(data, xp=np, dtype=None):
+    converted = data if is_duck_array(data) else xp.asarray(data)
+
+    if dtype is None or converted.dtype == dtype:
+        return converted
+
+    if xp is np:
+        return converted.astype(dtype)
+    else:
+        return xp.astype(converted, dtype)
 
 
 def as_shared_dtype(scalars_or_arrays, xp=np):
