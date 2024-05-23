@@ -527,9 +527,9 @@ A single datatree object is known as a "node", and its position relative to
 other nodes is defined by two more key properties:
 
 - ``children``: An ordered dictionary mapping from names to other ``DataTree``
-  objects, known as its' "child nodes".
+  objects, known as its "child nodes".
 - ``parent``: The single ``DataTree`` object whose children this datatree is a
-  member of, known as its' "parent node".
+  member of, known as its "parent node".
 
 Each child automatically knows about its parent node, and a node without a
 parent is known as a "root" node (represented by the ``parent`` attribute
@@ -607,7 +607,8 @@ Our tree now has three nodes within it:
     dt
 
 It is at tree construction time that consistency checks are enforced. For
-instance, if we try to create a `cycle` the constructor will raise an error:
+instance, if we try to create a `cycle` the constructor will raise an error
+(``InvalidTreeError``):
 
 .. ipython:: python
     :okexcept:
@@ -616,7 +617,6 @@ instance, if we try to create a `cycle` the constructor will raise an error:
 
 Alternatively you can also create a ``DataTree`` object from
 
-- An ``xarray.Dataset`` using ``Dataset.to_node()`` (not yet implemented),
 - A dictionary mapping directory-like paths to either ``DataTree`` nodes or
   data, using :py:meth:`xarray.DataTree.from_dict()`,
 - A netCDF or Zarr file on disk with :py:func:`open_datatree()`. See

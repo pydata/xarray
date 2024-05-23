@@ -235,8 +235,7 @@ DataTrees
 :py:class:`xarray.DataTree` is a tree-like container of :py:class:`xarray.DataArray` objects, organised into multiple mutually allignable groups.
 You can think of it like a (recursive) ``dict`` of :py:class:`xarray.Dataset` objects.
 
-Let's first make some example xarray datasets (following on from xarray's
-`quick overview <https://docs.xarray.dev/en/stable/getting-started-guide/quick-overview.html>`_ page):
+Let's first make some example xarray datasets:
 
 .. ipython:: python
 
@@ -274,7 +273,7 @@ The (sub-)sub-groups ``fine`` and ``coarse`` contain two very similar datasets.
 They both have an ``"x"`` dimension, but the dimension is of different lengths in each group, which makes the data in each group unalignable.
 In the root group we placed some completely unrelated information, showing how we can use a tree to store heterogenous data.
 
-The constraints on each group are therefore the same as the constraint on dataarrays within a single dataset.
+The constraints on each group are therefore the same as the constraint on DataArrays within a single dataset.
 
 We created the sub-groups using a filesystem-like syntax, and accessing groups works the same way.
 We can access individual dataarrays in a similar fashion
@@ -283,7 +282,7 @@ We can access individual dataarrays in a similar fashion
 
     dt["simulation/coarse/foo"]
 
-and we can also pull out the data in a particular group as a ``Dataset`` object using ``.ds``:
+and we can also view the data in a particular group as a ``Dataset`` object using ``.ds``:
 
 .. ipython:: python
 

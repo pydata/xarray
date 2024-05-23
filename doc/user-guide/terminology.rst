@@ -259,9 +259,9 @@ complete examples, please consult the relevant documentation.*
     DataTree
         A tree-like collection of ``Dataset`` objects. A *tree* is made up of one or more *nodes*,
         each of which can store the same information as a single ``Dataset`` (accessed via ``.ds``).
-        This data is stored in the same way as in a ``Dataset``, i.e. in the form of data variables
-        (see **Variable** in the `corresponding xarray terminology page <https://docs.xarray.dev/en/stable/user-guide/terminology.html>`_),
-        dimensions, coordinates, and attributes.
+        This data is stored in the same way as in a ``Dataset``, i.e. in the form of data
+        :term:`variables<Variable>`, :term:`dimensions<Dimension>`, :term:`coordinates<Coordinate>`,
+        and attributes.
 
         The nodes in a tree are linked to one another, and each node is it's own instance of
         ``DataTree`` object. Each node can have zero or more *children* (stored in a dictionary-like
