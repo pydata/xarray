@@ -4701,9 +4701,9 @@ class TestDask(DatasetIOBase):
         with create_tmp_file() as tmp:
             data = create_test_data()
             data.to_netcdf(tmp)
-            with open_mfdataset(tmp, combine="by_coords", chunks={}) as ds:
+            with open_mfdataset(tmp, combine="by_coords") as ds:
                 original_names = {k: v.data.name for k, v in ds.data_vars.items()}
-            with open_mfdataset(tmp, combine="by_coords", chunks={}) as ds:
+            with open_mfdataset(tmp, combine="by_coords") as ds:
                 repeat_names = {k: v.data.name for k, v in ds.data_vars.items()}
             for var_name, dask_name in original_names.items():
                 assert var_name in dask_name
