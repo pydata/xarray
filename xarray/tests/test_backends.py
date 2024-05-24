@@ -4369,7 +4369,6 @@ class TestDask(DatasetIOBase):
                             [[tmp1, tmp2], [tmp3, tmp4]],
                             combine="nested",
                             concat_dim=["y", "x"],
-                            chunks={},
                         ) as actual:
                             assert isinstance(actual.foo.variable.data, da.Array)
                             assert actual.foo.variable.data.chunks == ((5, 5), (4, 4))
