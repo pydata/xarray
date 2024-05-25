@@ -241,14 +241,21 @@ def result_type(
         weakly_dtyped = None
 
     types = {xp.result_type(t) for t in arrays_and_dtypes}
-    if any(isinstance(t, np.dtype) for t in types):
-        # only check if there's numpy dtypes – the array API does not
-        # define the types we're checking for
-        for left, right in PROMOTE_TO_OBJECT:
-            if any(np.issubdtype(t, left) for t in types) and any(
-                np.issubdtype(t, right) for t in types
-            ):
-                return xp.dtype(object)
+
+    def custom_rules(*types):
+        if any(isinstance(t, np.dtype) for t in types):
+            # only check if there's numpy dtypes – the array API does not
+            # define the types we're checking for
+            for left, right in PROMOTE_TO_OBJECT:
+                if any(np.issubdtype(t, left) for t in types) and any(
+                    np.issubdtype(t, right) for t in types
+                ):
+                    return np.dtype(object)
+
+        return None
+
+    if (dtype := custom_rules(*types)) is not None:
+        return dtype
 
     dtype = xp.result_type(*arrays_and_dtypes)
     if weakly_dtyped is None or is_object(dtype):
@@ -267,5 +274,8 @@ def result_type(
     }
     dtypes = [possible_dtypes.get(type(x), "object") for x in weakly_dtyped]
     common_dtype = xp.result_type(dtype, *dtypes)
+
+    if (dtype := custom_rules(common_dtype, *dtypes)) is not None:
+        return dtype
 
     return common_dtype
