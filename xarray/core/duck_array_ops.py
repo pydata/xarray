@@ -245,7 +245,7 @@ def asarray(data, xp=np, dtype=None):
     if dtype is None or converted.dtype == dtype:
         return converted
 
-    if xp is np:
+    if xp is np or not hasattr(xp, "astype"):
         return converted.astype(dtype)
     else:
         return xp.astype(converted, dtype)
