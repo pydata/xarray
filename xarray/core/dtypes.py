@@ -255,17 +255,17 @@ def result_type(
         return dtype
 
     possible_dtypes = {
-        complex: np.complex64,
-        float: np.float16,
-        int: np.int8,
-        bool: np.bool_,
-        str: xp.dtype(object),
-        dt.datetime: xp.dtype("datetime64[ns]"),
-        pd.Timestamp: xp.dtype("datetime64[ns]"),
-        dt.timedelta: xp.dtype("timedelta64[ns]"),
-        pd.Timedelta: xp.dtype("timedelta64[ns]"),
+        complex: "complex64",
+        float: "float32",
+        int: "int8",
+        bool: "bool",
+        str: "str",
+        dt.datetime: "datetime64[ns]",
+        pd.Timestamp: "datetime64[ns]",
+        dt.timedelta: "timedelta64[ns]",
+        pd.Timedelta: "timedelta64[ns]",
     }
-    dtypes = [possible_dtypes.get(type(x), xp.dtype(object)) for x in weakly_dtyped]
+    dtypes = [possible_dtypes.get(type(x), "object") for x in weakly_dtyped]
     common_dtype = xp.result_type(dtype, *dtypes)
 
     return common_dtype
