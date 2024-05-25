@@ -254,23 +254,18 @@ def result_type(
     if weakly_dtyped is None or is_object(dtype):
         return dtype
 
-    checks = {
-        bool: functools.partial(
-            isdtype, kind=("bool", "integral", "real floating", "complex floating")
-        ),
-        int: functools.partial(
-            isdtype, kind=("integral", "real floating", "complex floating")
-        ),
-        float: functools.partial(isdtype, kind=("real floating", "complex floating")),
-        complex: functools.partial(isdtype, kind="complex floating"),
-        str: is_string,
-        dt.datetime: functools.partial(_is_numpy_subdtype, kind=np.datetime64),
-        pd.Timestamp: functools.partial(_is_numpy_subdtype, kind=np.datetime64),
-        dt.timedelta: functools.partial(_is_numpy_subdtype, kind=np.timedelta64),
-        pd.Timedelta: functools.partial(_is_numpy_subdtype, kind=np.timedelta64),
+    possible_dtypes = {
+        complex: np.complex64,
+        float: np.float16,
+        int: np.int8,
+        bool: np.bool_,
+        str: xp.dtype(object),
+        dt.datetime: xp.dtype("datetime64[ns]"),
+        pd.Timestamp: xp.dtype("datetime64[ns]"),
+        dt.timedelta: xp.dtype("timedelta64[ns]"),
+        pd.Timedelta: xp.dtype("timedelta64[ns]"),
     }
+    dtypes = [possible_dtypes.get(type(x), xp.dtype(object)) for x in weakly_dtyped]
+    common_dtype = xp.result_type(dtype, *dtypes)
 
-    if any(not checks.get(type(x), is_object)(dtype) for x in weakly_dtyped):
-        return xp.dtype(object)
-
-    return dtype
+    return common_dtype
