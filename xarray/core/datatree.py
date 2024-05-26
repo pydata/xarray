@@ -9,6 +9,7 @@ from typing import (
     Any,
     Callable,
     Generic,
+    Literal,
     NoReturn,
     Union,
     overload,
@@ -57,6 +58,7 @@ except ImportError:
 if TYPE_CHECKING:
     import pandas as pd
 
+    from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
     from xarray.core.merge import CoercibleValue
     from xarray.core.types import ErrorOptions, NetcdfWriteModes, ZarrWriteModes
 
@@ -1480,6 +1482,10 @@ class DataTree(
         mode: NetcdfWriteModes = "w",
         encoding=None,
         unlimited_dims=None,
+        format: T_DataTreeNetcdfTypes | None = None,
+        engine: T_DataTreeNetcdfEngine | None = None,
+        group: str | None = None,
+        compute: bool = True,
         **kwargs,
     ):
         """
@@ -1504,6 +1510,21 @@ class DataTree(
             By default, no dimensions are treated as unlimited dimensions.
             Note that unlimited_dims may also be set via
             ``dataset.encoding["unlimited_dims"]``.
+        format : {"NETCDF4", }, optional
+            File format for the resulting netCDF file:
+
+            * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API features.
+        engine : {"netcdf4", "h5netcdf"}, optional
+            Engine to use when writing netCDF files. If not provided, the
+            default engine is chosen based on available dependencies, with a
+            preference for "netcdf4" if writing to a file on disk.
+        group : str, optional
+            Path to the netCDF4 group in the given file to open as the root group
+            of the ``DataTree``. Currently, specifying a group is not supported.
+        compute : bool, default: True
+            If true compute immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed later.
+            Currently, ``compute=False`` is not supported.
         kwargs :
             Addional keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
         """
@@ -1515,6 +1536,10 @@ class DataTree(
             mode=mode,
             encoding=encoding,
             unlimited_dims=unlimited_dims,
+            format=format,
+            engine=engine,
+            group=group,
+            compute=compute,
             **kwargs,
         )
 
@@ -1524,6 +1549,8 @@ class DataTree(
         mode: ZarrWriteModes = "w-",
         encoding=None,
         consolidated: bool = True,
+        group: str | None = None,
+        compute: Literal[True] = True,
         **kwargs,
     ):
         """
@@ -1557,6 +1584,8 @@ class DataTree(
             mode=mode,
             encoding=encoding,
             consolidated=consolidated,
+            group=group,
+            compute=compute,
             **kwargs,
         )
 

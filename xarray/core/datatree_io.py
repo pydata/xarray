@@ -8,6 +8,7 @@ from xarray.core.datatree import DataTree
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 
 T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf"]
+T_DataTreeNetcdfTypes = Literal["NETCDF4"]
 
 
 def _get_nc_dataset_class(engine: T_DataTreeNetcdfEngine | None):
@@ -43,6 +44,10 @@ def _datatree_to_netcdf(
     mode: NetcdfWriteModes = "w",
     encoding: Mapping[str, Any] | None = None,
     unlimited_dims: Mapping | None = None,
+    format: T_DataTreeNetcdfTypes | None = None,
+    engine: T_DataTreeNetcdfEngine | None = None,
+    group: str | None = None,
+    compute: bool = True,
     **kwargs,
 ):
     """This function creates an appropriate datastore for writing a datatree to
@@ -51,19 +56,18 @@ def _datatree_to_netcdf(
     See `DataTree.to_netcdf` for full API docs.
     """
 
-    if kwargs.get("format", None) not in [None, "NETCDF4"]:
+    if format not in [None, *get_args(T_DataTreeNetcdfTypes)]:
         raise ValueError("to_netcdf only supports the NETCDF4 format")
 
-    engine = kwargs.get("engine", None)
     if engine not in [None, *get_args(T_DataTreeNetcdfEngine)]:
         raise ValueError("to_netcdf only supports the netcdf4 and h5netcdf engines")
 
-    if kwargs.get("group", None) is not None:
+    if group is not None:
         raise NotImplementedError(
             "specifying a root group for the tree has not been implemented"
         )
 
-    if not kwargs.get("compute", True):
+    if not compute:
         raise NotImplementedError("compute=False has not been implemented yet")
 
     if encoding is None:
@@ -92,6 +96,9 @@ def _datatree_to_netcdf(
                 mode=mode,
                 encoding=encoding.get(node.path),
                 unlimited_dims=unlimited_dims.get(node.path),
+                engine=engine,
+                format=format,
+                compute=compute,
                 **kwargs,
             )
         mode = "a"
@@ -112,6 +119,8 @@ def _datatree_to_zarr(
     mode: ZarrWriteModes = "w-",
     encoding: Mapping[str, Any] | None = None,
     consolidated: bool = True,
+    group: str | None = None,
+    compute: Literal[True] = True,
     **kwargs,
 ):
     """This function creates an appropriate datastore for writing a datatree
@@ -122,12 +131,12 @@ def _datatree_to_zarr(
 
     from zarr.convenience import consolidate_metadata
 
-    if kwargs.get("group", None) is not None:
+    if group is not None:
         raise NotImplementedError(
             "specifying a root group for the tree has not been implemented"
         )
 
-    if not kwargs.get("compute", True):
+    if not compute:
         raise NotImplementedError("compute=False has not been implemented yet")
 
     if encoding is None:
