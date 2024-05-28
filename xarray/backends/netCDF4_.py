@@ -715,8 +715,8 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         ds = open_dataset(store, **kwargs)
         tree_root = DataTree.from_dict({str(parent): ds})
         for group in _iter_nc_groups(store.ds):
-            gpath = str(parent / group[1:])
-            store = NetCDF4DataStore(mgr, group=gpath, **kwargs)
+            group_path = str(parent / group[1:])
+            store = NetCDF4DataStore(manager, group=group_path, **kwargs)
             store_entrypoint = StoreBackendEntrypoint()
             with close_on_error(store):
                 ds = store_entrypoint.open_dataset(
@@ -731,7 +731,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                 )
                 new_node: DataTree = DataTree(name=NodePath(group).name, data=ds)
                 tree_root._set_item(
-                    gpath,
+                    group_path,
                     new_node,
                     allow_overwrite=False,
                     new_nodes_along_path=True,
