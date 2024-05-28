@@ -2021,7 +2021,6 @@ def _line(
     ):
         edgecolors = edgecolors.data
 
-
     # load default linestyle from rcParams
     if linestyle is None:
         linestyle = rcParams["lines.linestyle"]
