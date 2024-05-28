@@ -711,7 +711,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         else:
             parent = NodePath("/")
 
-        mgr = store._manager
+        manager = store._manager
         ds = open_dataset(store, **kwargs)
         tree_root = DataTree.from_dict({str(parent): ds})
         for group in _iter_nc_groups(store.ds):
