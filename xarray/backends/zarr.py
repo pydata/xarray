@@ -446,10 +446,10 @@ class ZarrStore(AbstractWritableDataStore):
             stacklevel=stacklevel,
             zarr_version=zarr_version,
         )
-        gpaths = [str(group / i[1:]) for i in list(_iter_zarr_groups(zarr_group))]
+        group_paths = [str(group / i[1:]) for i in list(_iter_zarr_groups(zarr_group))]
         return {
-            grp: cls(
-                zarr_group.get(grp),
+            group: cls(
+                zarr_group.get(group),
                 mode,
                 consolidate_on_close,
                 append_dim,
@@ -458,7 +458,7 @@ class ZarrStore(AbstractWritableDataStore):
                 write_empty,
                 close_store_on_close,
             )
-            for grp in gpaths
+            for group in group_paths
         }
 
     @classmethod
