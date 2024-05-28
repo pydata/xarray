@@ -1573,6 +1573,13 @@ class DataTree(
         consolidated : bool
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing metadata for all groups.
+        group : str, optional
+            Group path. (a.k.a. `path` in zarr terminology.)
+        compute : bool, default: True
+            If true compute immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed later. Metadata
+            is always updated eagerly. Currently, ``compute=False`` is not
+            supported.
         kwargs :
             Additional keyword arguments to be passed to ``xarray.Dataset.to_zarr``
         """
