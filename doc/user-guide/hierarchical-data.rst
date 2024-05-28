@@ -137,7 +137,7 @@ We can add Herbert to the family tree without displacing Homer by :py:meth:`~xar
 
 Certain manipulations of our tree are forbidden, if they would create an inconsistent result.
 In episode 51 of the show Futurama, Philip J. Fry travels back in time and accidentally becomes his own Grandfather.
-If we try similar time-travelling hijinks with Homer, we get a :py:class:`InvalidTreeError` raised:
+If we try similar time-travelling hijinks with Homer, we get a :py:class:`~xarray.InvalidTreeError` raised:
 
 .. ipython:: python
     :okexcept:

@@ -608,7 +608,7 @@ Our tree now has three nodes within it:
 
 It is at tree construction time that consistency checks are enforced. For
 instance, if we try to create a `cycle` the constructor will raise an error
-(``InvalidTreeError``):
+(:py:class:`~xarray.InvalidTreeError`):
 
 .. ipython:: python
     :okexcept:

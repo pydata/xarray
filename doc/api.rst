@@ -1426,9 +1426,9 @@ Exceptions raised when manipulating trees.
 .. autosummary::
    :toctree: generated/
 
-   xarray.core.datatree_mapping.TreeIsomorphismError
-   xarray.core.treenode.InvalidTreeError
-   xarray.core.treenode.NotFoundInTreeError
+   xarray.TreeIsomorphismError
+   xarray.InvalidTreeError
+   xarray.NotFoundInTreeError
 
 Advanced API
 ============
