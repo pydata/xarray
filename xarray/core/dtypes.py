@@ -238,7 +238,7 @@ def result_type(
 
     if not arrays_and_dtypes:
         # no explicit dtypes, so we simply convert to 0-d arrays using default dtypes
-        arrays_and_dtypes = [asarray(x, xp=xp) for x in weakly_dtyped]
+        arrays_and_dtypes = [asarray(x, xp=xp) for x in weakly_dtyped]  # type: ignore
         weakly_dtyped = None
 
     types = {xp.result_type(t) for t in arrays_and_dtypes}
