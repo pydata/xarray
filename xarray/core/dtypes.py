@@ -237,6 +237,7 @@ def result_type(
         xp = get_array_namespace(arrays_and_dtypes)
 
     if not arrays_and_dtypes:
+        # no explicit dtypes, so we simply convert to 0-d arrays using default dtypes
         arrays_and_dtypes = [asarray(x, xp=xp) for x in weakly_dtyped]
         weakly_dtyped = None
 
