@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import io
 import os
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Any
 
 from xarray.backends.common import (
@@ -430,6 +430,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     def open_datatree(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
@@ -438,7 +439,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         use_cftime=None,
         decode_timedelta=None,
         format=None,
-        group=None,
+        group: str | Iterable[str] | Callable | None = None,
         lock=None,
         invalid_netcdf=None,
         phony_dims=None,
@@ -473,9 +474,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         manager = store._manager
         ds = open_dataset(store, **kwargs)
         tree_root = DataTree.from_dict({str(parent): ds})
-        for group in _iter_nc_groups(store.ds):
-            group_path = str(parent / group[1:])
-            group_store = H5NetCDFStore(manager, group=group_path, **kwargs)
+        for path_group in _iter_nc_groups(store.ds, parent=parent):
+            group_store = H5NetCDFStore(manager, group=path_group, **kwargs)
             store_entrypoint = StoreBackendEntrypoint()
             with close_on_error(group_store):
                 ds = store_entrypoint.open_dataset(
@@ -488,9 +488,9 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-                new_node: DataTree = DataTree(name=NodePath(group).name, data=ds)
+                new_node: DataTree = DataTree(name=NodePath(path_group).name, data=ds)
                 tree_root._set_item(
-                    group_path,
+                    path_group,
                     new_node,
                     allow_overwrite=False,
                     new_nodes_along_path=True,
