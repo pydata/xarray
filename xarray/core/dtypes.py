@@ -273,9 +273,9 @@ def result_type(
         pd.Timedelta: "timedelta64[ns]",
     }
     dtypes = [possible_dtypes.get(type(x), "object") for x in weakly_dtyped]
+
+    if (fallback_dtype := custom_rules(dtype, *dtypes)) is not None:
+        return fallback_dtype
+
     common_dtype = xp.result_type(dtype, *dtypes)
-
-    if (dtype := custom_rules(common_dtype, *dtypes)) is not None:
-        return dtype
-
     return common_dtype
