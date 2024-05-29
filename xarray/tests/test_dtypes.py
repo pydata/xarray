@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import datetime as dt
+
 import numpy as np
+import pandas as pd
 import pytest
 
 from xarray.core import dtypes
@@ -35,9 +38,42 @@ def test_result_type(args, expected) -> None:
     assert actual == expected
 
 
-def test_result_type_scalar() -> None:
-    actual = dtypes.result_type(np.arange(3, dtype=np.float32), np.nan)
-    assert actual == np.float32
+@pytest.mark.parametrize(
+    ["explicitly_dtyped", "weakly_dtyped", "expected"],
+    (
+        ([np.arange(3, dtype="float32")], [np.nan], np.float32),
+        ([np.arange(3, dtype="int8")], [1], np.int8),
+        ([np.array(["a", "b"], dtype=str)], [np.nan], object),
+        (
+            [np.array(["2012-01-01"], dtype="datetime64[ns]")],
+            [dt.datetime(2020, 1, 1)],
+            np.dtype("datetime64[ns]"),
+        ),
+        (
+            [np.array(["2012-01-01"], dtype="datetime64[ns]")],
+            [pd.Timestamp(2020, 1, 1)],
+            np.dtype("datetime64[ns]"),
+        ),
+        (
+            [np.array([1], dtype="timedelta64[ns]")],
+            [dt.timedelta(milliseconds=3)],
+            np.dtype("timedelta64[ns]"),
+        ),
+        (
+            [np.array([1], dtype="timedelta64[ns]")],
+            [pd.Timedelta(milliseconds=3)],
+            np.dtype("timedelta64[ns]"),
+        ),
+        ([np.array([b"a", b"b"], dtype=np.bytes_)], [True], object),
+        ([np.array([b"a", b"b"], dtype=np.bytes_)], ["c"], object),
+        ([np.array(["a", "b"], dtype=str)], ["c"], np.dtype(str)),
+        ([np.array(["a", "b"], dtype=str)], [None], object),
+    ),
+)
+def test_result_type_scalars(explicitly_dtyped, weakly_dtyped, expected) -> None:
+    actual = dtypes.result_type(*explicitly_dtyped, weakly_dtyped=weakly_dtyped)
+
+    assert np.issubdtype(actual, expected)
 
 
 def test_result_type_dask_array() -> None:
