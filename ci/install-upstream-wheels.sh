@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
 
+if which micromamba >/dev/null; then
+    conda=micromamba
+elif which mamba >/dev/null; then
+    conda=mamba
+else
+    conda=conda
+fi
+
 # temporarily (?) remove numbagg and numba
-micromamba remove -y numba numbagg sparse
+$conda remove -y numba numbagg sparse
 # temporarily remove numexpr
-micromamba remove -y numexpr
+$conda remove -y numexpr
 # temporarily remove backends
-micromamba remove -y cf_units hdf5 h5py netcdf4 pydap
+$conda remove -y cf_units hdf5 h5py netcdf4 pydap
 # forcibly remove packages to avoid artifacts
-micromamba remove -y --force \
+$conda remove -y --force \
     numpy \
     scipy \
     pandas \
@@ -21,7 +29,7 @@ micromamba remove -y --force \
     # pint
 
 # dependencies new in nightly versions
-micromamba install donfig zstandard typing-extensions crc32c
+$conda install donfig zstandard typing-extensions crc32c
 
 # to limit the runtime of Upstream CI
 python -m pip install \
