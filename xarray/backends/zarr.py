@@ -446,9 +446,7 @@ class ZarrStore(AbstractWritableDataStore):
             stacklevel=stacklevel,
             zarr_version=zarr_version,
         )
-        group_paths = [
-            str(group / node[1:]) for node in list(_iter_zarr_groups(zarr_group))
-        ]
+        group_paths = [str(group / node[1:]) for node in _iter_zarr_groups(zarr_group)]
         return {
             group: cls(
                 zarr_group.get(group),
