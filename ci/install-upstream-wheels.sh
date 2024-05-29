@@ -28,9 +28,6 @@ $conda remove -y --force \
     flox
     # pint
 
-# dependencies new in nightly versions
-$conda install donfig zstandard typing-extensions crc32c
-
 # to limit the runtime of Upstream CI
 python -m pip install \
     -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple \
@@ -57,7 +54,7 @@ python -m pip install \
     git+https://github.com/dask/dask \
     git+https://github.com/dask/dask-expr \
     git+https://github.com/dask/distributed \
-    git+https://github.com/zarr-developers/zarr \
+    git+https://github.com/zarr-developers/zarr.git@main \
     git+https://github.com/Unidata/cftime \
     git+https://github.com/pypa/packaging \
     git+https://github.com/hgrecco/pint \
