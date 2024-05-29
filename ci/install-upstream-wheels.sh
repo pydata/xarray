@@ -19,6 +19,10 @@ micromamba remove -y --force \
     bottleneck \
     flox
     # pint
+
+# dependencies new in nightly versions
+micromamba install donfig zstandard typing-extensions crc32c
+
 # to limit the runtime of Upstream CI
 python -m pip install \
     -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple \
