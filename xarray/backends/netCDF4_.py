@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import os
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
@@ -679,7 +679,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        group=None,
+        group: str | Iterable[str] | Callable | None = None,
         mode="r",
         format="NETCDF4",
         clobber=True,
@@ -714,9 +714,8 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         manager = store._manager
         ds = open_dataset(store, **kwargs)
         tree_root = DataTree.from_dict({str(parent): ds})
-        for group in _iter_nc_groups(store.ds):
-            group_path = str(parent / group[1:])
-            group_store = NetCDF4DataStore(manager, group=group_path, **kwargs)
+        for path_group in _iter_nc_groups(store.ds, parent=parent):
+            group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
             store_entrypoint = StoreBackendEntrypoint()
             with close_on_error(group_store):
                 ds = store_entrypoint.open_dataset(
@@ -729,9 +728,9 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-                new_node: DataTree = DataTree(name=NodePath(group).name, data=ds)
+                new_node: DataTree = DataTree(name=NodePath(path_group).name, data=ds)
                 tree_root._set_item(
-                    group_path,
+                    path_group,
                     new_node,
                     allow_overwrite=False,
                     new_nodes_along_path=True,
