@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import warnings
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -1202,7 +1202,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        group=None,
+        group: str | Iterable[str] | Callable | None = None,
         mode="r",
         synchronizer=None,
         consolidated=None,
@@ -1230,13 +1230,13 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             stores = ZarrStore.open_store(filename_or_obj, group=parent)
         ds = open_dataset(filename_or_obj, group=parent, engine="zarr", **kwargs)
         tree_root = DataTree.from_dict({str(parent): ds})
-        for group, store in stores.items():
+        for path_group, store in stores.items():
             ds = open_dataset(
-                filename_or_obj, store=store, group=group, engine="zarr", **kwargs
+                filename_or_obj, store=store, group=path_group, engine="zarr", **kwargs
             )
-            new_node: DataTree = DataTree(name=NodePath(group).name, data=ds)
+            new_node: DataTree = DataTree(name=NodePath(path_group).name, data=ds)
             tree_root._set_item(
-                group,
+                path_group,
                 new_node,
                 allow_overwrite=False,
                 new_nodes_along_path=True,
