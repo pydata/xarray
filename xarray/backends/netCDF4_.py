@@ -716,11 +716,11 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         tree_root = DataTree.from_dict({str(parent): ds})
         for group in _iter_nc_groups(store.ds):
             group_path = str(parent / group[1:])
-            store = NetCDF4DataStore(manager, group=group_path, **kwargs)
+            group_store = NetCDF4DataStore(manager, group=group_path, **kwargs)
             store_entrypoint = StoreBackendEntrypoint()
-            with close_on_error(store):
+            with close_on_error(group_store):
                 ds = store_entrypoint.open_dataset(
-                    store,
+                    group_store,
                     mask_and_scale=mask_and_scale,
                     decode_times=decode_times,
                     concat_characters=concat_characters,
