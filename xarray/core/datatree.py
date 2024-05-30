@@ -34,7 +34,7 @@ from xarray.core.formatting_html import (
     datatree_repr as datatree_repr_html,
 )
 from xarray.core.indexes import Index, Indexes
-from xarray.core.merge import dataset_update_method
+from xarray.core.merge import dataset_update_method, merge_core
 from xarray.core.options import OPTIONS as XR_OPTS
 from xarray.core.treenode import NamedNode, NodePath, Tree
 from xarray.core.utils import (
@@ -966,6 +966,50 @@ class DataTree(
         self._replace(
             inplace=True, children=merged_children, **vars_merge_result._asdict()
         )
+
+    @property
+    def inherit(self) -> DataTree:
+        """
+        Returns a copy of this node additionally containing all coordinates that can be inherited from parent nodes.
+       
+        Inspired by the CF conventions' "search by proximity" [1]_.
+
+        References
+        ----------
+        .. [1] https://cfconventions.org/Data/cf-conventions/cf-conventions-1.9/cf-conventions.html#_search_by_proximity
+        """
+
+        def find_compatible_variables(
+            candidate_variables: Mapping[str, Variable],
+            existing_variables: Mapping[str, Variable],
+        ) -> Mapping[str, Variable]:
+            """Check variables for compatibility as inherited variables."""
+
+            # To be compatible, candidate variables must be both new and alignable.
+            # This should drop candidate variables which are duplicated or not mergeable.
+            return merge_core(
+                [existing_variables, candidate_variables],
+                priority_arg=1,
+                explicit_coords=list(candidate_variables.keys())
+                combine_attrs="override",
+            )
+        
+        # TODO this will call merge for every parent up to the root. Is there an alternative design which only calls merge once?
+
+        # TODO use _MergeResult instead?
+
+        local_variables = self._variables
+        all_inherited_variables: Mapping[str, Variable] = {}
+        for parent in self.parents:
+            # Update inherited_variables mapping at each node when new variables are encountered
+            inheritable_variables = find_compatible_variables(
+                parent.coords, local_variables | all_inherited_variables
+            )
+
+            # TODO should we be keeping track of which variables were coordinates?
+            all_inherited_variables.update(**inheritable_variables)
+
+        return DataTree.copy().update(all_inherited_variables)
 
     def assign(
         self, items: Mapping[Any, Any] | None = None, **items_kwargs: Any
