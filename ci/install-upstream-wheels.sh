@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
 
+if which micromamba >/dev/null; then
+    conda=micromamba
+elif which mamba >/dev/null; then
+    conda=mamba
+else
+    conda=conda
+fi
+
 # temporarily (?) remove numbagg and numba
-micromamba remove -y numba numbagg sparse
+$conda remove -y numba numbagg sparse
 # temporarily remove numexpr
-micromamba remove -y numexpr
+$conda remove -y numexpr
 # temporarily remove backends
-micromamba remove -y cf_units hdf5 h5py netcdf4 pydap
+$conda remove -y cf_units hdf5 h5py netcdf4 pydap
 # forcibly remove packages to avoid artifacts
-micromamba remove -y --force \
+$conda remove -y --force \
     numpy \
     scipy \
     pandas \
@@ -19,6 +27,7 @@ micromamba remove -y --force \
     bottleneck \
     flox
     # pint
+
 # to limit the runtime of Upstream CI
 python -m pip install \
     -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple \
@@ -45,7 +54,7 @@ python -m pip install \
     git+https://github.com/dask/dask \
     git+https://github.com/dask/dask-expr \
     git+https://github.com/dask/distributed \
-    git+https://github.com/zarr-developers/zarr \
+    git+https://github.com/zarr-developers/zarr.git@main \
     git+https://github.com/Unidata/cftime \
     git+https://github.com/pypa/packaging \
     git+https://github.com/hgrecco/pint \
