@@ -109,6 +109,12 @@ string, e.g., to access subgroup 'bar' within group 'foo' pass
 pass ``mode='a'`` to ``to_netcdf`` to ensure that each call does not delete the
 file.
 
+.. tip::
+
+    It is recommended to use :py:class:`~xarray.DataTree` to represent
+    hierarchical data, and to use the :py:meth:`xarray.DataTree.to_netcdf` method
+    when writing hierarchical data to a netCDF file.
+
 Data is *always* loaded lazily from netCDF files. You can manipulate, slice and subset
 Dataset and DataArray objects, and no array values are loaded into memory until
 you try to perform some sort of actual computation. For an example of how these
