@@ -276,7 +276,7 @@ In the root group we placed some completely unrelated information, showing how w
 The constraints on each group are therefore the same as the constraint on DataArrays within a single dataset.
 
 We created the sub-groups using a filesystem-like syntax, and accessing groups works the same way.
-We can access individual dataarrays in a similar fashion
+We can access individual DataArrays in a similar fashion
 
 .. ipython:: python
 
