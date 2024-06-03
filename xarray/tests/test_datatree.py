@@ -623,6 +623,28 @@ class TestAccess:
         dt.sel(dim_0=0)
 
 
+class TestRepr:
+    def test_repr(self):
+        dt: DataTree = DataTree(
+            data=xr.Dataset({"a": 1}),
+            children={"b": DataTree(), "c": DataTree(xr.Dataset({"d": 2}))},
+        )
+        result = repr(dt)
+        expected = dedent(
+            """\
+            DataTree(name=None, parent=None)
+            │   Dimensions:  ()
+            │   Data variables:
+            │       a        int64 8B 1
+            ├── DataTree(name='b')
+            └── DataTree(name='c')
+                    Dimensions:  ()
+                    Data variables:
+                        d        int64 8B 2"""
+        )
+        assert result == expected
+
+
 class TestRestructuring:
     def test_drop_nodes(self):
         sue = DataTree.from_dict({"Mary": None, "Kate": None, "Ashley": None})
