@@ -9,11 +9,12 @@ on:
       - "main"
       - "backend-indexing"
     paths:
-      - 'ci/**'
-      - '.github/**'
-      - '/*'  # covers files such as `pyproject.toml`
-      - 'properties/**'
-      - 'xarray/**'
+      - "ci/**"
+      - ".github/**"
+      - "/*" # covers files such as `pyproject.toml`
+      - "/.*" # ...and dotfiles in the root such as `.pre-commit-config.yaml`
+      - "properties/**"
+      - "xarray/**"
   workflow_dispatch: # allows you to trigger manually
 
 concurrency:
@@ -55,7 +56,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.9",  "3.12"]
+        python-version: ["3.9", "3.12"]
         env: [""]
         include:
           # Minimum python version:
