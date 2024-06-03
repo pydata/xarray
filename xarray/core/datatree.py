@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import itertools
 from collections.abc import Hashable, Iterable, Iterator, Mapping, MutableMapping
 from html import escape
@@ -15,6 +14,7 @@ from typing import (
 )
 
 from xarray.core import utils
+from xarray.core.alignment import align
 from xarray.core.coordinates import DatasetCoordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, DataVariables
@@ -91,14 +91,35 @@ def _coerce_to_dataset(data: Dataset | DataArray | None) -> Dataset:
     return ds
 
 
-def _check_for_name_collisions(
-    children: Iterable[str], variables: Iterable[Hashable]
+def _collect_data_and_coord_variables(
+    data: Dataset,
+) -> tuple[dict[Hashable, Variable], dict[Hashable, Variable]]:
+    data_variables = {}
+    coord_variables = {}
+    for k, v in data.variables.items():
+        if k in data._coord_names:
+            coord_variables[k] = v
+        else:
+            data_variables[k] = v
+    return data_variables, coord_variables
+
+
+def _check_alignment(
+    node_ds: Dataset,
+    parent_ds: Dataset | None,
+    children: Mapping[Hashable, DataTree],
 ) -> None:
-    colliding_names = set(children).intersection(set(variables))
-    if colliding_names:
-        raise KeyError(
-            f"Some names would collide between variables and children: {list(colliding_names)}"
-        )
+    if parent_ds is not None:
+        try:
+            align(node_ds, parent_ds, join="exact")
+        except ValueError as e:
+            raise ValueError(
+                "inconsistent alignment between node and parent datasets:\n"
+                f"{node_ds}\nvs\n{parent_ds}"
+            ) from e
+
+    for child in children.values():
+        _check_alignment(child.ds, node_ds, child.children)
 
 
 class DatasetView(Dataset):
@@ -116,7 +137,7 @@ class DatasetView(Dataset):
 
     __slots__ = (
         "_attrs",
-        "_cache",
+        "_cache",  # is this used?
         "_coord_names",
         "_dims",
         "_encoding",
@@ -335,27 +356,35 @@ class DataTree(
     _name: str | None
     _parent: DataTree | None
     _children: dict[str, DataTree]
-    _attrs: dict[Hashable, Any] | None
-    _cache: dict[str, Any]
+    _cache: dict[str, Any]  # is this used?
+    _node_data_variables: dict[Hashable, Variable]
+    _node_coord_variables: dict[Hashable, Variable]
+    _node_dims: dict[Hashable, int]
+    _node_indexes: dict[Hashable, Index]
+    _variables: dict[Hashable, Variable]
     _coord_names: set[Hashable]
     _dims: dict[Hashable, int]
+    _indexes: dict[Hashable, Index]
+    _attrs: dict[Hashable, Any] | None
     _encoding: dict[Hashable, Any] | None
     _close: Callable[[], None] | None
-    _indexes: dict[Hashable, Index]
-    _variables: dict[Hashable, Variable]
 
     __slots__ = (
         "_name",
         "_parent",
         "_children",
-        "_attrs",
         "_cache",
+        "_node_data_variables",
+        "_node_coord_variables",
+        "_node_dims",
+        "_node_indexes",
+        "_variables",
         "_coord_names",
         "_dims",
+        "_indexes",
+        "_attrs",
         "_encoding",
         "_close",
-        "_indexes",
-        "_variables",
     )
 
     def __init__(
@@ -368,14 +397,15 @@ class DataTree(
         """
         Create a single node of a DataTree.
 
-        The node may optionally contain data in the form of data and coordinate variables, stored in the same way as
-        data is stored in an xarray.Dataset.
+        The node may optionally contain data in the form of data and coordinate
+        variables, stored in the same way as data is stored in an
+        xarray.Dataset.
 
         Parameters
         ----------
         data : Dataset, DataArray, or None, optional
-            Data to store under the .ds attribute of this node. DataArrays will be promoted to Datasets.
-            Default is None.
+            Data to store under the .ds attribute of this node. DataArrays will
+            be promoted to Datasets. Default is None.
         parent : DataTree, optional
             Parent node to this node. Default is None.
         children : Mapping[str, DataTree], optional
@@ -391,30 +421,62 @@ class DataTree(
         --------
         DataTree.from_dict
         """
-
-        # validate input
         if children is None:
             children = {}
-        ds = _coerce_to_dataset(data)
-        _check_for_name_collisions(children, ds.variables)
 
         super().__init__(name=name)
 
-        # set data attributes
-        self._replace(
-            inplace=True,
-            variables=ds._variables,
-            coord_names=ds._coord_names,
-            dims=ds._dims,
-            indexes=ds._indexes,
-            attrs=ds._attrs,
-            encoding=ds._encoding,
-        )
+        # set tree attributes
+        self._children = {}
+        self._parent = None
+        self._set_node_data(data)
+
+        # finalize tree attributes
+        self.children = children  # must set first
+        self.parent = parent
+
+    def _set_node_data(self, data: Dataset | DataArray | None) -> None:
+        ds = _coerce_to_dataset(data)
+        data_vars, coord_vars = _collect_data_and_coord_variables(ds)
+
+        # set node data attributes
+        self._data_variables = data_vars
+        self._node_coord_variables = coord_vars
+        self._node_dims = ds._dims
+        self._node_indexes = ds._indexes
+        self._attrs = ds._attrs
+        self._encoding = ds._encoding
         self._close = ds._close
 
-        # set tree attributes (must happen after variables set to avoid initialization errors)
-        self.children = children
-        self.parent = parent
+        # setup inherited node attributes (finalized by _post_attach)
+        self._variables = dict(data_vars)
+        self._variables.update(coord_vars)
+        self._coord_names = set(coord_vars)
+        self._dims = dict(ds._dims)
+        self._indexes = dict(ds._indexes)
+
+    def _pre_attach(self: DataTree, parent: DataTree) -> None:
+        super()._pre_attach(parent)
+        if self.name in parent.ds.variables:
+            raise KeyError(
+                f"parent {parent.name} already contains a variable named {self.name}"
+            )
+        _check_alignment(self.ds, parent.ds, self.children)
+
+    def _post_attach_recursively(self: DataTree, parent: DataTree) -> None:
+        for k in parent._coord_names:
+            if k not in self._variables:
+                self._variables[k] = parent._variables[k]
+                self._coord_names.add(k)
+        self._dims.update(parent._dims)
+        self._indexes.update(parent._indexes)
+
+        for child in self._children.values():
+            child._post_attach_recursively(self)
+
+    def _post_attach(self: DataTree, parent: DataTree) -> None:
+        super()._post_attach(parent)
+        self._post_attach_recursively(parent)
 
     @property
     def parent(self: DataTree) -> DataTree | None:
@@ -442,33 +504,8 @@ class DataTree(
 
     @ds.setter
     def ds(self, data: Dataset | DataArray | None = None) -> None:
-        # Known mypy issue for setters with different type to property:
-        # https://github.com/python/mypy/issues/3004
         ds = _coerce_to_dataset(data)
-
-        _check_for_name_collisions(self.children, ds.variables)
-
-        self._replace(
-            inplace=True,
-            variables=ds._variables,
-            coord_names=ds._coord_names,
-            dims=ds._dims,
-            indexes=ds._indexes,
-            attrs=ds._attrs,
-            encoding=ds._encoding,
-        )
-        self._close = ds._close
-
-    def _pre_attach(self: DataTree, parent: DataTree) -> None:
-        """
-        Method which superclass calls before setting parent, here used to prevent having two
-        children with duplicate names (or a data variable with the same name as a child).
-        """
-        super()._pre_attach(parent)
-        if self.name in list(parent.ds.variables):
-            raise KeyError(
-                f"parent {parent.name} already contains a data variable named {self.name}"
-            )
+        self._replace_node(ds)
 
     def to_dataset(self) -> Dataset:
         """
@@ -478,6 +515,7 @@ class DataTree(
         --------
         DataTree.ds
         """
+        # TODO: copy these container objects?
         return Dataset._construct_direct(
             self._variables,
             self._coord_names,
@@ -644,122 +682,31 @@ class DataTree(
             return f"<pre>{escape(repr(self))}</pre>"
         return datatree_repr_html(self)
 
-    @classmethod
-    def _construct_direct(
-        cls,
-        variables: dict[Any, Variable],
-        coord_names: set[Hashable],
-        dims: dict[Any, int] | None = None,
-        attrs: dict | None = None,
-        indexes: dict[Any, Index] | None = None,
-        encoding: dict | None = None,
-        name: str | None = None,
-        parent: DataTree | None = None,
-        children: dict[str, DataTree] | None = None,
-        close: Callable[[], None] | None = None,
-    ) -> DataTree:
-        """Shortcut around __init__ for internal use when we want to skip costly validation."""
-
-        # data attributes
-        if dims is None:
-            dims = calculate_dimensions(variables)
-        if indexes is None:
-            indexes = {}
-        if children is None:
-            children = dict()
-
-        obj: DataTree = object.__new__(cls)
-        obj._variables = variables
-        obj._coord_names = coord_names
-        obj._dims = dims
-        obj._indexes = indexes
-        obj._attrs = attrs
-        obj._close = close
-        obj._encoding = encoding
-
-        # tree attributes
-        obj._name = name
-        obj._children = children
-        obj._parent = parent
-
-        return obj
-
-    def _replace(
+    def _replace_node(
         self: DataTree,
-        variables: dict[Hashable, Variable] | None = None,
-        coord_names: set[Hashable] | None = None,
-        dims: dict[Any, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
-        indexes: dict[Hashable, Index] | None = None,
-        encoding: dict | None | Default = _default,
-        name: str | None | Default = _default,
-        parent: DataTree | None | Default = _default,
-        children: dict[str, DataTree] | None = None,
-        inplace: bool = False,
-    ) -> DataTree:
-        """
-        Fastpath constructor for internal use.
+        data: Dataset | Default = _default,
+        children: Mapping[str, DataTree] | Default = _default,
+    ) -> None:
+        if data is _default:
+            data = self.ds
+        if children is _default:
+            children = self.children
 
-        Returns an object with optionally replaced attributes.
+        for child_name, child in children.items():
+            if child_name in data.variables:
+                raise ValueError(f"node already contains a variable named {child_name}")
 
-        Explicitly passed arguments are *not* copied when placed on the new
-        datatree. It is up to the caller to ensure that they have the right type
-        and are not used elsewhere.
-        """
-        # TODO Adding new children inplace using this method will cause bugs.
-        # You will end up with an inconsistency between the name of the child node and the key the child is stored under.
-        # Use ._set() instead for now
-        if inplace:
-            if variables is not None:
-                self._variables = variables
-            if coord_names is not None:
-                self._coord_names = coord_names
-            if dims is not None:
-                self._dims = dims
-            if attrs is not _default:
-                self._attrs = attrs
-            if indexes is not None:
-                self._indexes = indexes
-            if encoding is not _default:
-                self._encoding = encoding
-            if name is not _default:
-                self._name = name
-            if parent is not _default:
-                self._parent = parent
-            if children is not None:
-                self._children = children
-            obj = self
+        parent_ds = self.parent.ds if self.parent is not None else None
+        _check_alignment(data, parent_ds, children)
+
+        self._children = children
+        self._set_node_data(data)
+
+        if self.parent is not None:
+            self._post_attach(self.parent)
         else:
-            if variables is None:
-                variables = self._variables.copy()
-            if coord_names is None:
-                coord_names = self._coord_names.copy()
-            if dims is None:
-                dims = self._dims.copy()
-            if attrs is _default:
-                attrs = copy.copy(self._attrs)
-            if indexes is None:
-                indexes = self._indexes.copy()
-            if encoding is _default:
-                encoding = copy.copy(self._encoding)
-            if name is _default:
-                name = self._name  # no need to copy str objects or None
-            if parent is _default:
-                parent = copy.copy(self._parent)
-            if children is _default:
-                children = copy.copy(self._children)
-            obj = self._construct_direct(
-                variables,
-                coord_names,
-                dims,
-                attrs,
-                indexes,
-                encoding,
-                name,
-                parent,
-                children,
-            )
-        return obj
+            for child in children.values():
+                child._post_attach_recursively(self)
 
     def copy(
         self: DataTree,
@@ -811,9 +758,8 @@ class DataTree(
         deep: bool = False,
     ) -> DataTree:
         """Copy just one node of a tree"""
-        new_node: DataTree = DataTree()
-        new_node.name = self.name
-        new_node.ds = self.to_dataset().copy(deep=deep)  # type: ignore[assignment]
+        data = self.ds.copy(deep=deep)
+        new_node = DataTree(data, name=self.name)
         return new_node
 
     def __copy__(self: DataTree) -> DataTree:
@@ -961,11 +907,12 @@ class DataTree(
                 raise TypeError(f"Type {type(v)} cannot be assigned to a DataTree")
 
         vars_merge_result = dataset_update_method(self.to_dataset(), new_variables)
+        data = Dataset._construct_direct(**vars_merge_result._asdict())
+
         # TODO are there any subtleties with preserving order of children like this?
         merged_children = {**self.children, **new_children}
-        self._replace(
-            inplace=True, children=merged_children, **vars_merge_result._asdict()
-        )
+
+        self._replace_node(data, children=merged_children)
 
     def assign(
         self, items: Mapping[Any, Any] | None = None, **items_kwargs: Any
@@ -1040,10 +987,12 @@ class DataTree(
             if extra:
                 raise KeyError(f"Cannot drop all nodes - nodes {extra} not present")
 
+        result = self.copy()
         children_to_keep = {
-            name: child for name, child in self.children.items() if name not in names
+            name: child for name, child in result.children.items() if name not in names
         }
-        return self._replace(children=children_to_keep)
+        result._replace_node(children=children_to_keep)
+        return result
 
     @classmethod
     def from_dict(

@@ -152,19 +152,19 @@ class TestStoreDatasets:
 class TestVariablesChildrenNameCollisions:
     def test_parent_already_has_variable_with_childs_name(self):
         dt: DataTree = DataTree(data=xr.Dataset({"a": [0], "b": 1}))
-        with pytest.raises(KeyError, match="already contains a data variable named a"):
+        with pytest.raises(KeyError, match="already contains a variable named a"):
             DataTree(name="a", data=None, parent=dt)
 
     def test_assign_when_already_child_with_variables_name(self):
         dt: DataTree = DataTree(data=None)
         DataTree(name="a", data=None, parent=dt)
-        with pytest.raises(KeyError, match="names would collide"):
+        with pytest.raises(ValueError, match="node already contains a variable"):
             dt.ds = xr.Dataset({"a": 0})  # type: ignore[assignment]
 
         dt.ds = xr.Dataset()  # type: ignore[assignment]
 
         new_ds = dt.to_dataset().assign(a=xr.DataArray(0))
-        with pytest.raises(KeyError, match="names would collide"):
+        with pytest.raises(ValueError, match="node already contains a variable"):
             dt.ds = new_ds  # type: ignore[assignment]
 
 
@@ -621,6 +621,77 @@ class TestAccess:
         dt = DataTree.from_dict({"node1": xs, "node2": xs})
         dt.attrs["test_key"] = 1  # sel works fine without this line
         dt.sel(dim_0=0)
+
+
+class TestInheritance:
+    def test_inherited_dims(self):
+        dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"d": (("x",), [1, 2])}),
+                "/b": xr.Dataset({"e": (("y",), [3])}),
+                "/c": xr.Dataset({"f": (("y",), [3, 4, 5])}),
+            }
+        )
+        assert dt.sizes == {"x": 2}
+        assert dt.b.sizes == {"x": 2, "y": 1}
+        assert dt.c.sizes == {"x": 2, "y": 3}
+
+    def test_inherited_coords_index(self):
+        dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"d": (("x",), [1, 2])}, coords={"x": [2, 3]}),
+                "/b": xr.Dataset({"e": (("y",), [3])}),
+            }
+        )
+        assert "x" in dt["/b"].indexes
+        assert "x" in dt["/b"].coords
+        xr.testing.assert_identical(dt["/x"], dt["/b/x"])
+
+    def test_inherited_coords_override(self):
+        dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": 1, "y": 2}),
+                "/b": xr.Dataset(coords={"x": 4, "z": 3}),
+            }
+        )
+        assert dt.coords.keys() == {"x", "y"}
+        root_coords = {"x": 1, "y": 2}
+        sub_coords = {"x": 4, "y": 2, "z": 3}
+        xr.testing.assert_equal(dt["/x"], xr.DataArray(1, coords=root_coords))
+        xr.testing.assert_equal(dt["/y"], xr.DataArray(2, coords=root_coords))
+        assert dt["/b"].coords.keys() == {"x", "y", "z"}
+        xr.testing.assert_equal(dt["/b/x"], xr.DataArray(4, coords=sub_coords))
+        xr.testing.assert_equal(dt["/b/y"], xr.DataArray(2, coords=sub_coords))
+        xr.testing.assert_equal(dt["/b/z"], xr.DataArray(3, coords=sub_coords))
+
+    def test_inconsistent_dims(self):
+        with pytest.raises(
+            ValueError, match="inconsistent alignment between node and parent datasets"
+        ):
+            DataTree.from_dict(
+                {
+                    "/": xr.Dataset({"a": (("x",), [1, 2])}),
+                    "/b": xr.Dataset({"c": (("x",), [3])}),
+                }
+            )
+
+        dt = DataTree()
+        dt["/a"] = xr.DataArray([1, 2], dims=["x"])
+        with pytest.raises(
+            ValueError, match="cannot reindex or align along dimension 'x'"
+        ):
+            dt["/b/c"] = xr.DataArray([3], dims=["x"])
+
+    def test_inconsistent_indexes(self):
+        with pytest.raises(
+            ValueError, match="inconsistent alignment between node and parent datasets"
+        ):
+            DataTree.from_dict(
+                {
+                    "/": xr.Dataset({"a": (("x",), [1])}, coords={"x": [1]}),
+                    "/b": xr.Dataset({"c": (("x",), [2])}, coords={"x": [2]}),
+                }
+            )
 
 
 class TestRestructuring:
