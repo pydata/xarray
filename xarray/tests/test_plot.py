@@ -3409,13 +3409,14 @@ def test_plot1d_filtered_nulls() -> None:
         assert expected == actual
 
 
+@requires_matplotlib
 @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.parametrize("plotfunc", ["lines", "scatter"])
 def test_plot1d_datetime_hue(plotfunc: str) -> None:
     time = np.arange(
         np.datetime64("2020-01-01"),
         np.datetime64("2021-01-01"),
-        np.timedelta64(1, "ns"),
+        np.timedelta64(1, "D"),
     )
     data = np.arange(time.size)
     darray = xr.DataArray(data=data, dims=("time",), coords={"time": time})
