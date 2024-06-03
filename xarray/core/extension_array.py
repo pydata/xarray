@@ -123,8 +123,6 @@ class PandasExtensionArray(Generic[T_ExtensionArray]):
         self.array[key] = val
 
     def __eq__(self, other):
-        if np.isscalar(other):
-            other = type(self)(type(self.array)([other]))
         if isinstance(other, PandasExtensionArray):
             return self.array == other.array
         return self.array == other
