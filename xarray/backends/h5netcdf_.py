@@ -458,6 +458,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
+            mode=mode,
             format=format,
             group=group,
             lock=lock,
