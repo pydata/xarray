@@ -454,7 +454,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         pop_to(attributes, encoding, "least_significant_digit")
         # save source so __repr__ can detect if it's local or not
         encoding["source"] = self._filename
-        encoding["original_shape"] = var.shape
+        encoding["original_shape"] = data.shape
 
         return Variable(dimensions, data, attributes, encoding)
 
