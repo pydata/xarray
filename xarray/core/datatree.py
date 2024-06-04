@@ -971,7 +971,7 @@ class DataTree(
     def inherit(self) -> DataTree:
         """
         Returns a copy of this node additionally containing all coordinates that can be inherited from parent nodes.
-       
+
         Inspired by the CF conventions' "search by proximity" [1]_.
 
         References
@@ -993,7 +993,7 @@ class DataTree(
                 explicit_coords=list(candidate_variables.keys())
                 combine_attrs="override",
             )
-        
+
         # TODO this will call merge for every parent up to the root. Is there an alternative design which only calls merge once?
 
         # TODO use _MergeResult instead?
