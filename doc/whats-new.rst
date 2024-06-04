@@ -23,6 +23,12 @@ v2024.05.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+Performance
+~~~~~~~~~~~
+
+- Small optimization to the netCDF4 backend (:issue:`9058`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
