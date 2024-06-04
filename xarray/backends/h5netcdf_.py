@@ -438,6 +438,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
+        mode="r",
         format=None,
         group: str | Iterable[str] | Callable | None = None,
         lock=None,
