@@ -238,9 +238,9 @@ def _protect_dataset_variables_inplace(dataset: T_Dataset, cache: bool) -> None:
             # no need to protect IndexVariable objects
             data = indexing.CopyOnWriteArray(variable._data)
             if cache:
-                variable.data = indexing.MemoryCachedArray(data)
+                variable._data = indexing.MemoryCachedArray(data)
             else:
-                variable.data = data
+                variable._data = data
 
 
 def _finalize_store(write, store):
