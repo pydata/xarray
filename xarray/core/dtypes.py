@@ -229,6 +229,8 @@ def _future_array_api_result_type(*arrays_and_dtypes, weakly_dtyped, xp):
 def determine_types(t, xp):
     if isinstance(t, str):
         return np.dtype("U")
+    elif isinstance(t, bytes):
+        return np.dtype("S")
     elif isinstance(t, (AlwaysGreaterThan, AlwaysLessThan, utils.ReprObject)):
         return object
     else:
@@ -279,15 +281,19 @@ def result_type(
                 return np.dtype(object)
 
     filtered = [
-        v
+        v if not isinstance(v, (str, bytes)) else type(v)
         for v in weakly_dtyped
         if not isinstance(v, (AlwaysLessThan, AlwaysGreaterThan, utils.ReprObject))
     ]
+
     if xp is np or any(
         isinstance(getattr(t, "dtype", t), np.dtype) for t in arrays_and_dtypes
     ):
-        return xp.result_type(*arrays_and_dtypes, *filtered)
-
-    return _future_array_api_result_type(
-        *arrays_and_dtypes, weakly_dtyped=filtered, xp=xp
-    )
+        print("result_type: numpy")
+        result = xp.result_type(*arrays_and_dtypes, *filtered)
+        print("result_type:", result)
+        return result
+    else:
+        return _future_array_api_result_type(
+            *arrays_and_dtypes, weakly_dtyped=filtered, xp=xp
+        )
