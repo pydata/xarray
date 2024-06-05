@@ -41,6 +41,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Preserve order of variables in :py:func:`xarray.combine_by_coords` (:issue:`8828`, :pull:`9070`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
