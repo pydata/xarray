@@ -278,11 +278,16 @@ def result_type(
             ):
                 return np.dtype(object)
 
+    filtered = [
+        v
+        for v in weakly_dtyped
+        if not isinstance(v, (AlwaysLessThan, AlwaysGreaterThan, utils.ReprObject))
+    ]
     if xp is np or any(
         isinstance(getattr(t, "dtype", t), np.dtype) for t in arrays_and_dtypes
     ):
-        return xp.result_type(*arrays_and_dtypes, *weakly_dtyped)
+        return xp.result_type(*arrays_and_dtypes, *filtered)
 
     return _future_array_api_result_type(
-        *arrays_and_dtypes, weakly_dtyped=weakly_dtyped, xp=xp
+        *arrays_and_dtypes, weakly_dtyped=filtered, xp=xp
     )
