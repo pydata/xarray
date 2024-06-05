@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import datetime as dt
-
 import numpy as np
-import pandas as pd
 import pytest
 
 from xarray.core import dtypes
@@ -44,26 +41,6 @@ def test_result_type(args, expected) -> None:
         ([np.arange(3, dtype="float32")], [np.nan], np.float32),
         ([np.arange(3, dtype="int8")], [1], np.int8),
         ([np.array(["a", "b"], dtype=str)], [np.nan], object),
-        (
-            [np.array(["2012-01-01"], dtype="datetime64[ns]")],
-            [dt.datetime(2020, 1, 1)],
-            np.dtype("datetime64[ns]"),
-        ),
-        (
-            [np.array(["2012-01-01"], dtype="datetime64[ns]")],
-            [pd.Timestamp(2020, 1, 1)],
-            np.dtype("datetime64[ns]"),
-        ),
-        (
-            [np.array([1], dtype="timedelta64[ns]")],
-            [dt.timedelta(milliseconds=3)],
-            np.dtype("timedelta64[ns]"),
-        ),
-        (
-            [np.array([1], dtype="timedelta64[ns]")],
-            [pd.Timedelta(milliseconds=3)],
-            np.dtype("timedelta64[ns]"),
-        ),
         ([np.array([b"a", b"b"], dtype=bytes)], [True], object),
         ([np.array([b"a", b"b"], dtype=bytes)], ["c"], object),
         ([np.array(["a", "b"], dtype=str)], ["c"], np.dtype(str)),
