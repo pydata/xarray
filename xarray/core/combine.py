@@ -950,8 +950,7 @@ def combine_by_coords(
         ]
 
         # Group by data vars
-        sorted_datasets = sorted(data_objects, key=vars_as_keys)
-        grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
+        grouped_by_vars = itertools.groupby(data_objects, key=vars_as_keys)
 
         # Perform the multidimensional combine on each group of data variables
         # before merging back together
