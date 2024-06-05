@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import datetime as dt
 import functools
 from typing import Any
 
 import numpy as np
-import pandas as pd
 from pandas.api.types import is_extension_array_dtype
 
 from xarray.core import npcompat, utils
@@ -211,6 +209,32 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
         return xp.isdtype(dtype, kind)
 
 
+def _future_array_api_result_type(*arrays_and_dtypes, weakly_dtyped, xp):
+    dtype = xp.result_type(*arrays_and_dtypes, *weakly_dtyped)
+    if weakly_dtyped is None:
+        return dtype
+
+    possible_dtypes = {
+        complex: "complex64",
+        float: "float32",
+        int: "int8",
+        bool: "bool",
+        str: "str",
+    }
+    dtypes = [possible_dtypes.get(type(x), "object") for x in weakly_dtyped]
+
+    return xp.result_type(dtype, *dtypes)
+
+
+def determine_types(t, xp):
+    if isinstance(t, str):
+        return np.dtype("U")
+    elif isinstance(t, (AlwaysGreaterThan, AlwaysLessThan, utils.ReprObject)):
+        return object
+    else:
+        return xp.result_type(t)
+
+
 def result_type(
     *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
     weakly_dtyped=None,
@@ -236,47 +260,29 @@ def result_type(
     if xp is None:
         xp = get_array_namespace(arrays_and_dtypes)
 
+    if weakly_dtyped is None:
+        weakly_dtyped = []
+
     if not arrays_and_dtypes:
         # no explicit dtypes, so we simply convert to 0-d arrays using default dtypes
         arrays_and_dtypes = [asarray(x, xp=xp) for x in weakly_dtyped]  # type: ignore
-        weakly_dtyped = None
+        weakly_dtyped = []
 
-    types = {xp.result_type(t) for t in arrays_and_dtypes}
+    types = {determine_types(t, xp=xp) for t in [*arrays_and_dtypes, *weakly_dtyped]}
+    if any(isinstance(t, np.dtype) for t in types):
+        # only check if there's numpy dtypes – the array API does not
+        # define the types we're checking for
+        for left, right in PROMOTE_TO_OBJECT:
+            if any(np.issubdtype(t, left) for t in types) and any(
+                np.issubdtype(t, right) for t in types
+            ):
+                return np.dtype(object)
 
-    def custom_rules(*types):
-        if any(isinstance(t, np.dtype) for t in types):
-            # only check if there's numpy dtypes – the array API does not
-            # define the types we're checking for
-            for left, right in PROMOTE_TO_OBJECT:
-                if any(np.issubdtype(t, left) for t in types) and any(
-                    np.issubdtype(t, right) for t in types
-                ):
-                    return np.dtype(object)
+    if xp is np or any(
+        isinstance(getattr(t, "dtype", t), np.dtype) for t in arrays_and_dtypes
+    ):
+        return xp.result_type(*arrays_and_dtypes, *weakly_dtyped)
 
-        return None
-
-    if (dtype := custom_rules(*types)) is not None:
-        return dtype
-
-    dtype = xp.result_type(*arrays_and_dtypes)
-    if weakly_dtyped is None or is_object(dtype):
-        return dtype
-
-    possible_dtypes = {
-        complex: "complex64",
-        float: "float32",
-        int: "int8",
-        bool: "bool",
-        str: "str",
-        dt.datetime: "datetime64[ns]",
-        pd.Timestamp: "datetime64[ns]",
-        dt.timedelta: "timedelta64[ns]",
-        pd.Timedelta: "timedelta64[ns]",
-    }
-    dtypes = [possible_dtypes.get(type(x), "object") for x in weakly_dtyped]
-
-    if (fallback_dtype := custom_rules(dtype, *dtypes)) is not None:
-        return fallback_dtype
-
-    common_dtype = xp.result_type(dtype, *dtypes)
-    return common_dtype
+    return _future_array_api_result_type(
+        *arrays_and_dtypes, weakly_dtyped=weakly_dtyped, xp=xp
+    )
