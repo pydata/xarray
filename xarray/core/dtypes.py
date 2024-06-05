@@ -289,10 +289,7 @@ def result_type(
     if xp is np or any(
         isinstance(getattr(t, "dtype", t), np.dtype) for t in arrays_and_dtypes
     ):
-        print("result_type: numpy")
-        result = xp.result_type(*arrays_and_dtypes, *filtered)
-        print("result_type:", result)
-        return result
+        return xp.result_type(*arrays_and_dtypes, *filtered)
     else:
         return _future_array_api_result_type(
             *arrays_and_dtypes, weakly_dtyped=filtered, xp=xp
