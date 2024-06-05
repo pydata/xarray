@@ -221,7 +221,7 @@ class H5NetCDFStore(WritableCFDataStore):
 
         # save source so __repr__ can detect if it's local or not
         encoding["source"] = self._filename
-        encoding["original_shape"] = var.shape
+        encoding["original_shape"] = data.shape
 
         vlen_dtype = h5py.check_dtype(vlen=var.dtype)
         if vlen_dtype is str:
