@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Literal, Union
 
@@ -591,6 +591,15 @@ def vars_as_keys(ds):
     return tuple(sorted(ds))
 
 
+def groupby_defaultdict(iter, key=lambda x: x):
+    """replacement for itertools.groupby"""
+    idx = defaultdict(list)
+    for i, obj in enumerate(iter):
+        idx[key(obj)].append(i)
+    for k, ix in idx.items():
+        yield k, (iter[i] for i in ix)
+
+
 def _combine_single_variable_hypercube(
     datasets,
     fill_value=dtypes.NA,
@@ -950,7 +959,7 @@ def combine_by_coords(
         ]
 
         # Group by data vars
-        grouped_by_vars = itertools.groupby(data_objects, key=vars_as_keys)
+        grouped_by_vars = groupby_defaultdict(data_objects, key=vars_as_keys)
 
         # Perform the multidimensional combine on each group of data variables
         # before merging back together
