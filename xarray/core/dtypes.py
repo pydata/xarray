@@ -131,7 +131,10 @@ def get_pos_infinity(dtype, max_for_int=False):
     if isdtype(dtype, "complex floating"):
         return np.inf + 1j * np.inf
 
-    return INF
+    if isdtype(dtype, "bool"):
+        return True
+
+    return np.array(INF, dtype=object)
 
 
 def get_neg_infinity(dtype, min_for_int=False):
@@ -159,7 +162,10 @@ def get_neg_infinity(dtype, min_for_int=False):
     if isdtype(dtype, "complex floating"):
         return -np.inf - 1j * np.inf
 
-    return NINF
+    if isdtype(dtype, "bool"):
+        return False
+
+    return np.array(NINF, dtype=object)
 
 
 def is_datetime_like(dtype) -> bool:
