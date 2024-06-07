@@ -1306,7 +1306,15 @@ def test_asi8_empty_cftimeindex():
 
 @requires_cftime
 def test_infer_freq_valid_types():
+    import cftime
+
     cf_indx = xr.cftime_range("2000-01-01", periods=3, freq="D")
+    assert xr.infer_freq(cf_indx) == "D"
+    assert xr.infer_freq(xr.DataArray(cf_indx)) == "D"
+
+    cf_indx = xr.cftime_range(
+        cftime.datetime(2000, 1, 1, calendar="noleap"), periods=3, freq="D"
+    )
     assert xr.infer_freq(cf_indx) == "D"
     assert xr.infer_freq(xr.DataArray(cf_indx)) == "D"
 
