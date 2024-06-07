@@ -89,7 +89,7 @@ class DaskManager(ChunkManagerEntrypoint):
     def compute(
         self, *data: chunkedduckarray[Any, _DType] | Any, **kwargs: Any
     ) -> tuple[duckarray[Any, _DType], ...]:
-        from dask.base import compute
+        from dask.array import compute
 
         out: tuple[duckarray[Any, _DType], ...]
         out = compute(*data, **kwargs)  # type: ignore[no-untyped-call]
