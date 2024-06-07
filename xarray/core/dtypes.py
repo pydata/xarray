@@ -215,9 +215,16 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
         return xp.isdtype(dtype, kind)
 
 
-def _future_array_api_result_type(*arrays_and_dtypes, weakly_dtyped, xp):
-    dtype = xp.result_type(*arrays_and_dtypes, *weakly_dtyped)
-    if weakly_dtyped is None:
+def is_scalar_type(t):
+    return isinstance(t, (bool, int, float, complex, str, bytes))
+
+
+def _future_array_api_result_type(*arrays_and_dtypes, xp):
+    strongly_dtyped = [t for t in arrays_and_dtypes if not is_scalar_type(t)]
+    weakly_dtyped = [t for t in arrays_and_dtypes if is_scalar_type(t)]
+
+    dtype = xp.result_type(*strongly_dtyped)
+    if not weakly_dtyped:
         return dtype
 
     possible_dtypes = {
@@ -226,26 +233,22 @@ def _future_array_api_result_type(*arrays_and_dtypes, weakly_dtyped, xp):
         int: "int8",
         bool: "bool",
         str: "str",
+        bytes: "bytes",
     }
     dtypes = [possible_dtypes.get(type(x), "object") for x in weakly_dtyped]
 
     return xp.result_type(dtype, *dtypes)
 
 
-def determine_types(t, xp):
-    if isinstance(t, str):
-        return np.dtype("U")
-    elif isinstance(t, bytes):
-        return np.dtype("S")
-    elif isinstance(t, (AlwaysGreaterThan, AlwaysLessThan, utils.ReprObject)):
-        return object
+def preprocess_scalar_types(t):
+    if isinstance(t, (str, bytes)):
+        return type(t)
     else:
-        return xp.result_type(t)
+        return t
 
 
 def result_type(
     *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
-    weakly_dtyped=None,
     xp=None,
 ) -> np.dtype:
     """Like np.result_type, but with type promotion rules matching pandas.
@@ -263,20 +266,12 @@ def result_type(
     -------
     numpy.dtype for the result.
     """
-    from xarray.core.duck_array_ops import asarray, get_array_namespace
+    from xarray.core.duck_array_ops import get_array_namespace
 
     if xp is None:
         xp = get_array_namespace(arrays_and_dtypes)
 
-    if weakly_dtyped is None:
-        weakly_dtyped = []
-
-    if not arrays_and_dtypes:
-        # no explicit dtypes, so we simply convert to 0-d arrays using default dtypes
-        arrays_and_dtypes = [asarray(x, xp=xp) for x in weakly_dtyped]  # type: ignore
-        weakly_dtyped = []
-
-    types = {determine_types(t, xp=xp) for t in [*arrays_and_dtypes, *weakly_dtyped]}
+    types = {xp.result_type(preprocess_scalar_types(t)) for t in arrays_and_dtypes}
     if any(isinstance(t, np.dtype) for t in types):
         # only check if there's numpy dtypes – the array API does not
         # define the types we're checking for
@@ -286,17 +281,9 @@ def result_type(
             ):
                 return np.dtype(object)
 
-    filtered = [
-        v if not isinstance(v, (str, bytes)) else type(v)
-        for v in weakly_dtyped
-        if not isinstance(v, (AlwaysLessThan, AlwaysGreaterThan, utils.ReprObject))
-    ]
-
     if xp is np or any(
         isinstance(getattr(t, "dtype", t), np.dtype) for t in arrays_and_dtypes
     ):
-        return xp.result_type(*arrays_and_dtypes, *filtered)
+        return xp.result_type(*map(preprocess_scalar_types, arrays_and_dtypes))
     else:
-        return _future_array_api_result_type(
-            *arrays_and_dtypes, weakly_dtyped=filtered, xp=xp
-        )
+        return _future_array_api_result_type(*arrays_and_dtypes, xp=xp)

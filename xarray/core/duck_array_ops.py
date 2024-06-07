@@ -277,9 +277,7 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
     # TODO (keewis): remove this and the `weakly_dtyped` parameter to
     # result_type once we can require a version of the Array API that allows
     # passing scalars to `xp.result_type`
-    weakly_dtyped = [x for x in scalars_or_arrays if not hasattr(x, "dtype")]
-    strongly_dtyped = [x for x in scalars_or_arrays if hasattr(x, "dtype")]
-    dtype = dtypes.result_type(*strongly_dtyped, weakly_dtyped=weakly_dtyped, xp=xp)
+    dtype = dtypes.result_type(*scalars_or_arrays, xp=xp)
 
     # Pass arrays directly instead of dtypes to result_type so scalars
     # get handled properly.

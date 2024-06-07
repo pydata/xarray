@@ -36,20 +36,20 @@ def test_result_type(args, expected) -> None:
 
 
 @pytest.mark.parametrize(
-    ["explicitly_dtyped", "weakly_dtyped", "expected"],
+    ["values", "expected"],
     (
-        ([np.arange(3, dtype="float32")], [np.nan], np.float32),
-        ([np.arange(3, dtype="int8")], [1], np.int8),
-        ([np.array(["a", "b"], dtype=str)], [np.nan], object),
-        ([np.array([b"a", b"b"], dtype=bytes)], [True], object),
-        ([np.array([b"a", b"b"], dtype=bytes)], ["c"], object),
-        ([np.array(["a", "b"], dtype=str)], ["c"], np.dtype(str)),
-        ([np.array(["a", "b"], dtype=str)], [None], object),
-        ([], [0, 1], np.int64),
+        ([np.arange(3, dtype="float32"), np.nan], np.float32),
+        ([np.arange(3, dtype="int8"), 1], np.int8),
+        ([np.array(["a", "b"], dtype=str), np.nan], object),
+        ([np.array([b"a", b"b"], dtype=bytes), True], object),
+        ([np.array([b"a", b"b"], dtype=bytes), "c"], object),
+        ([np.array(["a", "b"], dtype=str), "c"], np.dtype(str)),
+        ([np.array(["a", "b"], dtype=str), None], object),
+        ([0, 1], np.int64),
     ),
 )
-def test_result_type_scalars(explicitly_dtyped, weakly_dtyped, expected) -> None:
-    actual = dtypes.result_type(*explicitly_dtyped, weakly_dtyped=weakly_dtyped)
+def test_result_type_scalars(values, expected) -> None:
+    actual = dtypes.result_type(*values)
 
     assert np.issubdtype(actual, expected)
 
