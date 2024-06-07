@@ -480,7 +480,7 @@ class TestFormatting:
 
         expected = dedent(
             """\
-        <xarray.DataArray (1, 2) (test: 1)> Size: 8B
+        <xarray.DataArray (1, 2) (test: 1)> 8B
         array([0], dtype=uint64)
         Dimensions without coordinates: test"""
         )
@@ -499,7 +499,7 @@ class TestFormatting:
             actual = formatting.array_repr(ds[(1, 2)])
             expected = dedent(
                 """\
-            <xarray.DataArray (1, 2) (test: 1)> Size: 8B
+            <xarray.DataArray (1, 2) (test: 1)> 8B
             0
             Dimensions without coordinates: test"""
             )
@@ -744,7 +744,7 @@ def test_repr_file_collapsed(tmp_path) -> None:
         actual = repr(arr)
         expected = dedent(
             """\
-        <xarray.DataArray (test: 300)> Size: 2kB
+        <xarray.DataArray (test: 300)> 2kB
         [300 values with dtype=int64]
         Dimensions without coordinates: test"""
         )
@@ -755,7 +755,7 @@ def test_repr_file_collapsed(tmp_path) -> None:
         actual = arr_loaded.__repr__()
         expected = dedent(
             """\
-        <xarray.DataArray (test: 300)> Size: 2kB
+        <xarray.DataArray (test: 300)> 2kB
         0 1 2 3 4 5 6 7 8 9 10 11 12 ... 288 289 290 291 292 293 294 295 296 297 298 299
         Dimensions without coordinates: test"""
         )
@@ -821,7 +821,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
         )
         expected_size = "1kB"
         expected = f"""\
-<xarray.Dataset> Size: {expected_size}
+<xarray.Dataset> {expected_size}
 {dims_start}({dims_values})
 Coordinates: ({n_vars})
 Data variables: ({n_vars})
@@ -946,7 +946,7 @@ def test_display_nbytes() -> None:
 
     actual = repr(xds)
     expected = """
-<xarray.Dataset> Size: 3kB
+<xarray.Dataset> 3kB
 Dimensions:  (foo: 1200, bar: 111)
 Coordinates:
   * foo      (foo) int16 2kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
@@ -958,7 +958,7 @@ Data variables:
 
     actual = repr(xds["foo"])
     expected = """
-<xarray.DataArray 'foo' (foo: 1200)> Size: 2kB
+<xarray.DataArray 'foo' (foo: 1200)> 2kB
 array([   0,    1,    2, ..., 1197, 1198, 1199], dtype=int16)
 Coordinates:
   * foo      (foo) int16 2kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
@@ -967,7 +967,6 @@ Coordinates:
 
 
 def test_array_repr_dtypes():
-
     # These dtypes are expected to be represented similarly
     # on Ubuntu, macOS and Windows environments of the CI.
     # Unsigned integer could be used as easy replacements
@@ -980,7 +979,7 @@ def test_array_repr_dtypes():
     ds = xr.DataArray(np.array([0], dtype="int8"), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 1B
+<xarray.DataArray (x: 1)> 1B
 array([0], dtype=int8)
 Dimensions without coordinates: x
         """.strip()
@@ -989,7 +988,7 @@ Dimensions without coordinates: x
     ds = xr.DataArray(np.array([0], dtype="int16"), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 2B
+<xarray.DataArray (x: 1)> 2B
 array([0], dtype=int16)
 Dimensions without coordinates: x
         """.strip()
@@ -1000,7 +999,7 @@ Dimensions without coordinates: x
     ds = xr.DataArray(np.array([0], dtype="uint8"), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 1B
+<xarray.DataArray (x: 1)> 1B
 array([0], dtype=uint8)
 Dimensions without coordinates: x
         """.strip()
@@ -1009,7 +1008,7 @@ Dimensions without coordinates: x
     ds = xr.DataArray(np.array([0], dtype="uint16"), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 2B
+<xarray.DataArray (x: 1)> 2B
 array([0], dtype=uint16)
 Dimensions without coordinates: x
         """.strip()
@@ -1018,7 +1017,7 @@ Dimensions without coordinates: x
     ds = xr.DataArray(np.array([0], dtype="uint32"), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 4B
+<xarray.DataArray (x: 1)> 4B
 array([0], dtype=uint32)
 Dimensions without coordinates: x
         """.strip()
@@ -1027,7 +1026,7 @@ Dimensions without coordinates: x
     ds = xr.DataArray(np.array([0], dtype="uint64"), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 8B
+<xarray.DataArray (x: 1)> 8B
 array([0], dtype=uint64)
 Dimensions without coordinates: x
         """.strip()
@@ -1038,7 +1037,7 @@ Dimensions without coordinates: x
     ds = xr.DataArray(np.array([0.0]), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 8B
+<xarray.DataArray (x: 1)> 8B
 array([0.])
 Dimensions without coordinates: x
         """.strip()
@@ -1047,7 +1046,7 @@ Dimensions without coordinates: x
     ds = xr.DataArray(np.array([0], dtype="float16"), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 2B
+<xarray.DataArray (x: 1)> 2B
 array([0.], dtype=float16)
 Dimensions without coordinates: x
         """.strip()
@@ -1056,7 +1055,7 @@ Dimensions without coordinates: x
     ds = xr.DataArray(np.array([0], dtype="float32"), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 4B
+<xarray.DataArray (x: 1)> 4B
 array([0.], dtype=float32)
 Dimensions without coordinates: x
         """.strip()
@@ -1065,7 +1064,7 @@ Dimensions without coordinates: x
     ds = xr.DataArray(np.array([0], dtype="float64"), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 8B
+<xarray.DataArray (x: 1)> 8B
 array([0.])
 Dimensions without coordinates: x
         """.strip()
@@ -1077,13 +1076,12 @@ Dimensions without coordinates: x
     reason="Default numpy's dtypes vary according to OS",
 )
 def test_array_repr_dtypes_unix() -> None:
-
     # Signed integer dtypes
 
     ds = xr.DataArray(np.array([0]), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 8B
+<xarray.DataArray (x: 1)> 8B
 array([0])
 Dimensions without coordinates: x
         """.strip()
@@ -1092,7 +1090,7 @@ Dimensions without coordinates: x
     ds = xr.DataArray(np.array([0], dtype="int32"), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 4B
+<xarray.DataArray (x: 1)> 4B
 array([0], dtype=int32)
 Dimensions without coordinates: x
         """.strip()
@@ -1101,7 +1099,7 @@ Dimensions without coordinates: x
     ds = xr.DataArray(np.array([0], dtype="int64"), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 8B
+<xarray.DataArray (x: 1)> 8B
 array([0])
 Dimensions without coordinates: x
         """.strip()
@@ -1113,13 +1111,12 @@ Dimensions without coordinates: x
     reason="Default numpy's dtypes vary according to OS",
 )
 def test_array_repr_dtypes_on_windows() -> None:
-
     # Integer dtypes
 
     ds = xr.DataArray(np.array([0]), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 4B
+<xarray.DataArray (x: 1)> 4B
 array([0])
 Dimensions without coordinates: x
         """.strip()
@@ -1128,7 +1125,7 @@ Dimensions without coordinates: x
     ds = xr.DataArray(np.array([0], dtype="int32"), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 4B
+<xarray.DataArray (x: 1)> 4B
 array([0])
 Dimensions without coordinates: x
         """.strip()
@@ -1137,7 +1134,7 @@ Dimensions without coordinates: x
     ds = xr.DataArray(np.array([0], dtype="int64"), dims="x")
     actual = repr(ds)
     expected = """
-<xarray.DataArray (x: 1)> Size: 8B
+<xarray.DataArray (x: 1)> 8B
 array([0], dtype=int64)
 Dimensions without coordinates: x
         """.strip()

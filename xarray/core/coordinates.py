@@ -253,7 +253,7 @@ class Coordinates(AbstractCoordinates):
 
     >>> midx_coords = xr.Coordinates.from_pandas_multiindex(midx, "x")
     >>> xr.Dataset(coords=midx_coords)
-    <xarray.Dataset> Size: 96B
+    <xarray.Dataset> 96B
     Dimensions:    (x: 4)
     Coordinates:
       * x          (x) object 32B MultiIndex

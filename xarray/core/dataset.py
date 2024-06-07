@@ -291,7 +291,6 @@ def _maybe_chunk(
     chunked_array_type: str | ChunkManagerEntrypoint | None = None,
     from_array_kwargs=None,
 ):
-
     from xarray.namedarray.daskmanager import DaskManager
 
     if chunks is not None:
@@ -629,7 +628,7 @@ class Dataset(
     ...     attrs=dict(description="Weather related data."),
     ... )
     >>> ds
-    <xarray.Dataset> Size: 552B
+    <xarray.Dataset> 552B
     Dimensions:         (loc: 2, instrument: 3, time: 4)
     Coordinates:
         lon             (loc) float64 16B -99.83 -99.32
@@ -648,7 +647,7 @@ class Dataset(
     other variables had:
 
     >>> ds.isel(ds.temperature.argmin(...))
-    <xarray.Dataset> Size: 80B
+    <xarray.Dataset> 80B
     Dimensions:         ()
     Coordinates:
         lon             float64 8B -99.32
@@ -1301,7 +1300,7 @@ class Dataset(
         ...     coords={"x": ["one", "two"]},
         ... )
         >>> ds.copy()
-        <xarray.Dataset> Size: 88B
+        <xarray.Dataset> 88B
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
           * x        (x) <U3 24B 'one' 'two'
@@ -1313,7 +1312,7 @@ class Dataset(
         >>> ds_0 = ds.copy(deep=False)
         >>> ds_0["foo"][0, 0] = 7
         >>> ds_0
-        <xarray.Dataset> Size: 88B
+        <xarray.Dataset> 88B
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
           * x        (x) <U3 24B 'one' 'two'
@@ -1323,7 +1322,7 @@ class Dataset(
             bar      (x) int64 16B -1 2
 
         >>> ds
-        <xarray.Dataset> Size: 88B
+        <xarray.Dataset> 88B
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
           * x        (x) <U3 24B 'one' 'two'
@@ -1337,7 +1336,7 @@ class Dataset(
         object is unaffected.
 
         >>> ds.copy(data={"foo": np.arange(6).reshape(2, 3), "bar": ["a", "b"]})
-        <xarray.Dataset> Size: 80B
+        <xarray.Dataset> 80B
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
           * x        (x) <U3 24B 'one' 'two'
@@ -1347,7 +1346,7 @@ class Dataset(
             bar      (x) <U1 8B 'a' 'b'
 
         >>> ds
-        <xarray.Dataset> Size: 88B
+        <xarray.Dataset> 88B
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
           * x        (x) <U3 24B 'one' 'two'
@@ -1762,7 +1761,7 @@ class Dataset(
         ...     coords={"space": [0], "time": [0, 1, 2]},
         ... )
         >>> a
-        <xarray.Dataset> Size: 56B
+        <xarray.Dataset> 56B
         Dimensions:        (space: 1, time: 3)
         Coordinates:
           * space          (space) int64 8B 0
@@ -1778,7 +1777,7 @@ class Dataset(
         ...     coords={"time": [0, 1, 2], "space": [0]},
         ... )
         >>> b
-        <xarray.Dataset> Size: 56B
+        <xarray.Dataset> 56B
         Dimensions:        (time: 3, space: 1)
         Coordinates:
           * time           (time) int64 24B 0 1 2
@@ -1831,7 +1830,7 @@ class Dataset(
         ...     coords={"space": [0], "time": [0, 1, 2]},
         ... )
         >>> dataset1
-        <xarray.Dataset> Size: 56B
+        <xarray.Dataset> 56B
         Dimensions:        (space: 1, time: 3)
         Coordinates:
           * space          (space) int64 8B 0
@@ -1847,7 +1846,7 @@ class Dataset(
         ...     coords={"time": [0, 1, 2], "space": [0]},
         ... )
         >>> dataset2
-        <xarray.Dataset> Size: 56B
+        <xarray.Dataset> 56B
         Dimensions:        (time: 3, space: 1)
         Coordinates:
           * time           (time) int64 24B 0 1 2
@@ -1914,7 +1913,7 @@ class Dataset(
         ...     attrs={"units": "ft"},
         ... )
         >>> a
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (X: 3)
         Coordinates:
           * X        (X) int64 24B 1 2 3
@@ -1924,7 +1923,7 @@ class Dataset(
             units:    m
 
         >>> b
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (X: 3)
         Coordinates:
           * X        (X) int64 24B 1 2 3
@@ -1934,7 +1933,7 @@ class Dataset(
             units:    m
 
         >>> c
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (X: 3)
         Coordinates:
           * X        (X) int64 24B 1 2 3
@@ -2021,7 +2020,7 @@ class Dataset(
         ...     }
         ... )
         >>> dataset
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:   (time: 3)
         Coordinates:
           * time      (time) datetime64[ns] 24B 2023-01-01 2023-01-02 2023-01-03
@@ -2029,7 +2028,7 @@ class Dataset(
             pressure  (time) float64 24B 1.013 1.2 3.5
 
         >>> dataset.set_coords("pressure")
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:   (time: 3)
         Coordinates:
             pressure  (time) float64 24B 1.013 1.2 3.5
@@ -2101,7 +2100,7 @@ class Dataset(
         # Dataset before resetting coordinates
 
         >>> dataset
-        <xarray.Dataset> Size: 184B
+        <xarray.Dataset> 184B
         Dimensions:        (time: 2, lat: 2, lon: 2)
         Coordinates:
           * time           (time) datetime64[ns] 16B 2023-01-01 2023-01-02
@@ -2119,7 +2118,7 @@ class Dataset(
         # Dataset after resetting coordinates
 
         >>> dataset_reset
-        <xarray.Dataset> Size: 184B
+        <xarray.Dataset> 184B
         Dimensions:        (time: 2, lat: 2, lon: 2)
         Coordinates:
           * time           (time) datetime64[ns] 16B 2023-01-01 2023-01-02
@@ -2921,7 +2920,7 @@ class Dataset(
         # A specific element from the dataset is selected
 
         >>> dataset.isel(student=1, test=0)
-        <xarray.Dataset> Size: 68B
+        <xarray.Dataset> 68B
         Dimensions:         ()
         Coordinates:
             student         <U7 28B 'Bob'
@@ -2934,7 +2933,7 @@ class Dataset(
 
         >>> slice_of_data = dataset.isel(student=slice(0, 2), test=slice(0, 2))
         >>> slice_of_data
-        <xarray.Dataset> Size: 168B
+        <xarray.Dataset> 168B
         Dimensions:         (student: 2, test: 2)
         Coordinates:
           * student         (student) <U7 56B 'Alice' 'Bob'
@@ -2946,7 +2945,7 @@ class Dataset(
         >>> index_array = xr.DataArray([0, 2], dims="student")
         >>> indexed_data = dataset.isel(student=index_array)
         >>> indexed_data
-        <xarray.Dataset> Size: 224B
+        <xarray.Dataset> 224B
         Dimensions:         (student: 2, test: 3)
         Coordinates:
           * student         (student) <U7 56B 'Alice' 'Charlie'
@@ -3171,7 +3170,7 @@ class Dataset(
         ... )
         >>> busiest_days = dataset.sortby("pageviews", ascending=False)
         >>> busiest_days.head()
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:    (date: 5)
         Coordinates:
           * date       (date) datetime64[ns] 40B 2023-01-05 2023-01-04 ... 2023-01-03
@@ -3182,7 +3181,7 @@ class Dataset(
         # Retrieve the 3 most busiest days in terms of pageviews
 
         >>> busiest_days.head(3)
-        <xarray.Dataset> Size: 72B
+        <xarray.Dataset> 72B
         Dimensions:    (date: 3)
         Coordinates:
           * date       (date) datetime64[ns] 24B 2023-01-05 2023-01-04 2023-01-02
@@ -3193,7 +3192,7 @@ class Dataset(
         # Using a dictionary to specify the number of elements for specific dimensions
 
         >>> busiest_days.head({"date": 3})
-        <xarray.Dataset> Size: 72B
+        <xarray.Dataset> 72B
         Dimensions:    (date: 3)
         Coordinates:
           * date       (date) datetime64[ns] 24B 2023-01-05 2023-01-04 2023-01-02
@@ -3261,7 +3260,7 @@ class Dataset(
         ... )
         >>> sorted_dataset = dataset.sortby("energy_expenditure", ascending=False)
         >>> sorted_dataset
-        <xarray.Dataset> Size: 240B
+        <xarray.Dataset> 240B
         Dimensions:             (activity: 5)
         Coordinates:
           * activity            (activity) <U8 160B 'Swimming' 'Running' ... 'Yoga'
@@ -3272,7 +3271,7 @@ class Dataset(
         # Activities with the least energy expenditures using tail()
 
         >>> sorted_dataset.tail(3)
-        <xarray.Dataset> Size: 144B
+        <xarray.Dataset> 144B
         Dimensions:             (activity: 3)
         Coordinates:
           * activity            (activity) <U8 96B 'Cycling' 'Walking' 'Yoga'
@@ -3281,7 +3280,7 @@ class Dataset(
             energy_expenditure  (activity) int64 24B 250 150 100
 
         >>> sorted_dataset.tail({"activity": 3})
-        <xarray.Dataset> Size: 144B
+        <xarray.Dataset> 144B
         Dimensions:             (activity: 3)
         Coordinates:
           * activity            (activity) <U8 96B 'Cycling' 'Walking' 'Yoga'
@@ -3351,7 +3350,7 @@ class Dataset(
         ... )
         >>> x_ds = xr.Dataset({"foo": x})
         >>> x_ds
-        <xarray.Dataset> Size: 328B
+        <xarray.Dataset> 328B
         Dimensions:  (x: 2, y: 13)
         Coordinates:
           * x        (x) int64 16B 0 1
@@ -3360,7 +3359,7 @@ class Dataset(
             foo      (x, y) int64 208B 0 1 2 3 4 5 6 7 8 ... 17 18 19 20 21 22 23 24 25
 
         >>> x_ds.thin(3)
-        <xarray.Dataset> Size: 88B
+        <xarray.Dataset> 88B
         Dimensions:  (x: 1, y: 5)
         Coordinates:
           * x        (x) int64 8B 0
@@ -3368,7 +3367,7 @@ class Dataset(
         Data variables:
             foo      (x, y) int64 40B 0 3 6 9 12
         >>> x.thin({"x": 2, "y": 5})
-        <xarray.DataArray (x: 1, y: 3)> Size: 24B
+        <xarray.DataArray (x: 1, y: 3)> 24B
         array([[ 0,  5, 10]])
         Coordinates:
           * x        (x) int64 8B 0
@@ -3636,7 +3635,7 @@ class Dataset(
         ...     coords={"station": ["boston", "nyc", "seattle", "denver"]},
         ... )
         >>> x
-        <xarray.Dataset> Size: 176B
+        <xarray.Dataset> 176B
         Dimensions:      (station: 4)
         Coordinates:
           * station      (station) <U7 112B 'boston' 'nyc' 'seattle' 'denver'
@@ -3652,7 +3651,7 @@ class Dataset(
 
         >>> new_index = ["boston", "austin", "seattle", "lincoln"]
         >>> x.reindex({"station": new_index})
-        <xarray.Dataset> Size: 176B
+        <xarray.Dataset> 176B
         Dimensions:      (station: 4)
         Coordinates:
           * station      (station) <U7 112B 'boston' 'austin' 'seattle' 'lincoln'
@@ -3663,7 +3662,7 @@ class Dataset(
         We can fill in the missing values by passing a value to the keyword `fill_value`.
 
         >>> x.reindex({"station": new_index}, fill_value=0)
-        <xarray.Dataset> Size: 176B
+        <xarray.Dataset> 176B
         Dimensions:      (station: 4)
         Coordinates:
           * station      (station) <U7 112B 'boston' 'austin' 'seattle' 'lincoln'
@@ -3676,7 +3675,7 @@ class Dataset(
         >>> x.reindex(
         ...     {"station": new_index}, fill_value={"temperature": 0, "pressure": 100}
         ... )
-        <xarray.Dataset> Size: 176B
+        <xarray.Dataset> 176B
         Dimensions:      (station: 4)
         Coordinates:
           * station      (station) <U7 112B 'boston' 'austin' 'seattle' 'lincoln'
@@ -3707,7 +3706,7 @@ class Dataset(
         ...     coords={"time": pd.date_range("01/01/2019", periods=6, freq="D")},
         ... )
         >>> x2
-        <xarray.Dataset> Size: 144B
+        <xarray.Dataset> 144B
         Dimensions:      (time: 6)
         Coordinates:
           * time         (time) datetime64[ns] 48B 2019-01-01 2019-01-02 ... 2019-01-06
@@ -3719,7 +3718,7 @@ class Dataset(
 
         >>> time_index2 = pd.date_range("12/29/2018", periods=10, freq="D")
         >>> x2.reindex({"time": time_index2})
-        <xarray.Dataset> Size: 240B
+        <xarray.Dataset> 240B
         Dimensions:      (time: 10)
         Coordinates:
           * time         (time) datetime64[ns] 80B 2018-12-29 2018-12-30 ... 2019-01-07
@@ -3735,7 +3734,7 @@ class Dataset(
 
         >>> x3 = x2.reindex({"time": time_index2}, method="bfill")
         >>> x3
-        <xarray.Dataset> Size: 240B
+        <xarray.Dataset> 240B
         Dimensions:      (time: 10)
         Coordinates:
           * time         (time) datetime64[ns] 80B 2018-12-29 2018-12-30 ... 2019-01-07
@@ -3747,7 +3746,7 @@ class Dataset(
         will not be filled by any of the value propagation schemes.
 
         >>> x2.where(x2.temperature.isnull(), drop=True)
-        <xarray.Dataset> Size: 24B
+        <xarray.Dataset> 24B
         Dimensions:      (time: 1)
         Coordinates:
           * time         (time) datetime64[ns] 8B 2019-01-03
@@ -3755,7 +3754,7 @@ class Dataset(
             temperature  (time) float64 8B nan
             pressure     (time) float64 8B 395.9
         >>> x3.where(x3.temperature.isnull(), drop=True)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:      (time: 2)
         Coordinates:
           * time         (time) datetime64[ns] 16B 2019-01-03 2019-01-07
@@ -3888,7 +3887,7 @@ class Dataset(
         ...     coords={"x": [0, 1, 2], "y": [10, 12, 14, 16]},
         ... )
         >>> ds
-        <xarray.Dataset> Size: 176B
+        <xarray.Dataset> 176B
         Dimensions:  (x: 3, y: 4)
         Coordinates:
           * x        (x) int64 24B 0 1 2
@@ -3900,7 +3899,7 @@ class Dataset(
         1D interpolation with the default method (linear):
 
         >>> ds.interp(x=[0, 0.75, 1.25, 1.75])
-        <xarray.Dataset> Size: 224B
+        <xarray.Dataset> 224B
         Dimensions:  (x: 4, y: 4)
         Coordinates:
           * y        (y) int64 32B 10 12 14 16
@@ -3912,7 +3911,7 @@ class Dataset(
         1D interpolation with a different method:
 
         >>> ds.interp(x=[0, 0.75, 1.25, 1.75], method="nearest")
-        <xarray.Dataset> Size: 224B
+        <xarray.Dataset> 224B
         Dimensions:  (x: 4, y: 4)
         Coordinates:
           * y        (y) int64 32B 10 12 14 16
@@ -3928,7 +3927,7 @@ class Dataset(
         ...     method="linear",
         ...     kwargs={"fill_value": "extrapolate"},
         ... )
-        <xarray.Dataset> Size: 224B
+        <xarray.Dataset> 224B
         Dimensions:  (x: 4, y: 4)
         Coordinates:
           * y        (y) int64 32B 10 12 14 16
@@ -3940,7 +3939,7 @@ class Dataset(
         2D interpolation:
 
         >>> ds.interp(x=[0, 0.75, 1.25, 1.75], y=[11, 13, 15], method="linear")
-        <xarray.Dataset> Size: 184B
+        <xarray.Dataset> 184B
         Dimensions:  (x: 4, y: 3)
         Coordinates:
           * x        (x) float64 32B 0.0 0.75 1.25 1.75
@@ -4428,7 +4427,7 @@ class Dataset(
         ...     coords={"x": ["a", "b"], "y": ("x", [0, 1])},
         ... )
         >>> ds
-        <xarray.Dataset> Size: 56B
+        <xarray.Dataset> 56B
         Dimensions:  (x: 2)
         Coordinates:
           * x        (x) <U1 8B 'a' 'b'
@@ -4438,7 +4437,7 @@ class Dataset(
             b        (x) float64 16B 0.1 2.4
 
         >>> ds.swap_dims({"x": "y"})
-        <xarray.Dataset> Size: 56B
+        <xarray.Dataset> 56B
         Dimensions:  (y: 2)
         Coordinates:
             x        (y) <U1 8B 'a' 'b'
@@ -4448,7 +4447,7 @@ class Dataset(
             b        (y) float64 16B 0.1 2.4
 
         >>> ds.swap_dims({"x": "z"})
-        <xarray.Dataset> Size: 56B
+        <xarray.Dataset> 56B
         Dimensions:  (z: 2)
         Coordinates:
             x        (z) <U1 8B 'a' 'b'
@@ -4558,7 +4557,7 @@ class Dataset(
         --------
         >>> dataset = xr.Dataset({"temperature": ([], 25.0)})
         >>> dataset
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:      ()
         Data variables:
             temperature  float64 8B 25.0
@@ -4566,7 +4565,7 @@ class Dataset(
         # Expand the dataset with a new dimension called "time"
 
         >>> dataset.expand_dims(dim="time")
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:      (time: 1)
         Dimensions without coordinates: time
         Data variables:
@@ -4577,7 +4576,7 @@ class Dataset(
         >>> temperature_1d = xr.DataArray([25.0, 26.5, 24.8], dims="x")
         >>> dataset_1d = xr.Dataset({"temperature": temperature_1d})
         >>> dataset_1d
-        <xarray.Dataset> Size: 24B
+        <xarray.Dataset> 24B
         Dimensions:      (x: 3)
         Dimensions without coordinates: x
         Data variables:
@@ -4586,7 +4585,7 @@ class Dataset(
         # Expand the dataset with a new dimension called "time" using axis argument
 
         >>> dataset_1d.expand_dims(dim="time", axis=0)
-        <xarray.Dataset> Size: 24B
+        <xarray.Dataset> 24B
         Dimensions:      (time: 1, x: 3)
         Dimensions without coordinates: time, x
         Data variables:
@@ -4597,7 +4596,7 @@ class Dataset(
         >>> temperature_2d = xr.DataArray(np.random.rand(3, 4), dims=("y", "x"))
         >>> dataset_2d = xr.Dataset({"temperature": temperature_2d})
         >>> dataset_2d
-        <xarray.Dataset> Size: 96B
+        <xarray.Dataset> 96B
         Dimensions:      (y: 3, x: 4)
         Dimensions without coordinates: y, x
         Data variables:
@@ -4606,7 +4605,7 @@ class Dataset(
         # Expand the dataset with a new dimension called "time" using axis argument
 
         >>> dataset_2d.expand_dims(dim="time", axis=2)
-        <xarray.Dataset> Size: 96B
+        <xarray.Dataset> 96B
         Dimensions:      (y: 3, x: 4, time: 1)
         Dimensions without coordinates: y, x, time
         Data variables:
@@ -4616,7 +4615,7 @@ class Dataset(
 
         >>> ds = xr.Dataset(coords={"x": 0})
         >>> ds
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Coordinates:
             x        int64 8B 0
@@ -4624,7 +4623,7 @@ class Dataset(
             *empty*
 
         >>> ds.expand_dims("x")
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  (x: 1)
         Coordinates:
           * x        (x) int64 8B 0
@@ -4795,7 +4794,7 @@ class Dataset(
         ... )
         >>> ds = xr.Dataset({"v": arr})
         >>> ds
-        <xarray.Dataset> Size: 104B
+        <xarray.Dataset> 104B
         Dimensions:  (x: 2, y: 3)
         Coordinates:
           * x        (x) int64 16B 0 1
@@ -4804,7 +4803,7 @@ class Dataset(
         Data variables:
             v        (x, y) float64 48B 1.0 1.0 1.0 1.0 1.0 1.0
         >>> ds.set_index(x="a")
-        <xarray.Dataset> Size: 88B
+        <xarray.Dataset> 88B
         Dimensions:  (x: 2, y: 3)
         Coordinates:
           * x        (x) int64 16B 3 4
@@ -5412,7 +5411,7 @@ class Dataset(
         ... )
 
         >>> data
-        <xarray.Dataset> Size: 76B
+        <xarray.Dataset> 76B
         Dimensions:  (x: 2, y: 3)
         Coordinates:
           * y        (y) <U1 12B 'u' 'v' 'w'
@@ -5422,7 +5421,7 @@ class Dataset(
             b        (x) int64 16B 6 7
 
         >>> data.to_stacked_array("z", sample_dims=["x"])
-        <xarray.DataArray 'a' (x: 2, z: 4)> Size: 64B
+        <xarray.DataArray 'a' (x: 2, z: 4)> 64B
         array([[0, 1, 2, 6],
                [3, 4, 5, 7]])
         Coordinates:
@@ -5856,7 +5855,7 @@ class Dataset(
         ...     },
         ... )
         >>> dataset
-        <xarray.Dataset> Size: 136B
+        <xarray.Dataset> 136B
         Dimensions:      (time: 1, latitude: 2, longitude: 2)
         Coordinates:
           * time         (time) datetime64[ns] 8B 2023-07-01
@@ -5870,7 +5869,7 @@ class Dataset(
         Drop the 'humidity' variable
 
         >>> dataset.drop_vars(["humidity"])
-        <xarray.Dataset> Size: 104B
+        <xarray.Dataset> 104B
         Dimensions:      (time: 1, latitude: 2, longitude: 2)
         Coordinates:
           * time         (time) datetime64[ns] 8B 2023-07-01
@@ -5883,7 +5882,7 @@ class Dataset(
         Drop the 'humidity', 'temperature' variables
 
         >>> dataset.drop_vars(["humidity", "temperature"])
-        <xarray.Dataset> Size: 72B
+        <xarray.Dataset> 72B
         Dimensions:     (time: 1, latitude: 2, longitude: 2)
         Coordinates:
           * time        (time) datetime64[ns] 8B 2023-07-01
@@ -5895,7 +5894,7 @@ class Dataset(
         Drop all indexes
 
         >>> dataset.drop_vars(lambda x: x.indexes)
-        <xarray.Dataset> Size: 96B
+        <xarray.Dataset> 96B
         Dimensions:      (time: 1, latitude: 2, longitude: 2)
         Dimensions without coordinates: time, latitude, longitude
         Data variables:
@@ -5906,7 +5905,7 @@ class Dataset(
         Attempt to drop non-existent variable with errors="ignore"
 
         >>> dataset.drop_vars(["pressure"], errors="ignore")
-        <xarray.Dataset> Size: 136B
+        <xarray.Dataset> 136B
         Dimensions:      (time: 1, latitude: 2, longitude: 2)
         Coordinates:
           * time         (time) datetime64[ns] 8B 2023-07-01
@@ -6112,7 +6111,7 @@ class Dataset(
         >>> labels = ["a", "b", "c"]
         >>> ds = xr.Dataset({"A": (["x", "y"], data), "y": labels})
         >>> ds
-        <xarray.Dataset> Size: 60B
+        <xarray.Dataset> 60B
         Dimensions:  (x: 2, y: 3)
         Coordinates:
           * y        (y) <U1 12B 'a' 'b' 'c'
@@ -6120,7 +6119,7 @@ class Dataset(
         Data variables:
             A        (x, y) int64 48B 0 1 2 3 4 5
         >>> ds.drop_sel(y=["a", "c"])
-        <xarray.Dataset> Size: 20B
+        <xarray.Dataset> 20B
         Dimensions:  (x: 2, y: 1)
         Coordinates:
           * y        (y) <U1 4B 'b'
@@ -6128,7 +6127,7 @@ class Dataset(
         Data variables:
             A        (x, y) int64 16B 1 4
         >>> ds.drop_sel(y="b")
-        <xarray.Dataset> Size: 40B
+        <xarray.Dataset> 40B
         Dimensions:  (x: 2, y: 2)
         Coordinates:
           * y        (y) <U1 8B 'a' 'c'
@@ -6180,7 +6179,7 @@ class Dataset(
         >>> labels = ["a", "b", "c"]
         >>> ds = xr.Dataset({"A": (["x", "y"], data), "y": labels})
         >>> ds
-        <xarray.Dataset> Size: 60B
+        <xarray.Dataset> 60B
         Dimensions:  (x: 2, y: 3)
         Coordinates:
           * y        (y) <U1 12B 'a' 'b' 'c'
@@ -6188,7 +6187,7 @@ class Dataset(
         Data variables:
             A        (x, y) int64 48B 0 1 2 3 4 5
         >>> ds.drop_isel(y=[0, 2])
-        <xarray.Dataset> Size: 20B
+        <xarray.Dataset> 20B
         Dimensions:  (x: 2, y: 1)
         Coordinates:
           * y        (y) <U1 4B 'b'
@@ -6196,7 +6195,7 @@ class Dataset(
         Data variables:
             A        (x, y) int64 16B 1 4
         >>> ds.drop_isel(y=1)
-        <xarray.Dataset> Size: 40B
+        <xarray.Dataset> 40B
         Dimensions:  (x: 2, y: 2)
         Coordinates:
           * y        (y) <U1 8B 'a' 'c'
@@ -6358,7 +6357,7 @@ class Dataset(
         ...     coords={"time": [1, 2, 3, 4], "location": ["A", "B"]},
         ... )
         >>> dataset
-        <xarray.Dataset> Size: 104B
+        <xarray.Dataset> 104B
         Dimensions:      (time: 4, location: 2)
         Coordinates:
           * time         (time) int64 32B 1 2 3 4
@@ -6369,7 +6368,7 @@ class Dataset(
         # Drop NaN values from the dataset
 
         >>> dataset.dropna(dim="time")
-        <xarray.Dataset> Size: 80B
+        <xarray.Dataset> 80B
         Dimensions:      (time: 3, location: 2)
         Coordinates:
           * time         (time) int64 24B 1 3 4
@@ -6380,7 +6379,7 @@ class Dataset(
         # Drop labels with any NAN values
 
         >>> dataset.dropna(dim="time", how="any")
-        <xarray.Dataset> Size: 80B
+        <xarray.Dataset> 80B
         Dimensions:      (time: 3, location: 2)
         Coordinates:
           * time         (time) int64 24B 1 3 4
@@ -6391,7 +6390,7 @@ class Dataset(
         # Drop labels with all NAN values
 
         >>> dataset.dropna(dim="time", how="all")
-        <xarray.Dataset> Size: 104B
+        <xarray.Dataset> 104B
         Dimensions:      (time: 4, location: 2)
         Coordinates:
           * time         (time) int64 32B 1 2 3 4
@@ -6402,7 +6401,7 @@ class Dataset(
         # Drop labels with less than 2 non-NA values
 
         >>> dataset.dropna(dim="time", thresh=2)
-        <xarray.Dataset> Size: 80B
+        <xarray.Dataset> 80B
         Dimensions:      (time: 3, location: 2)
         Coordinates:
           * time         (time) int64 24B 1 3 4
@@ -6482,7 +6481,7 @@ class Dataset(
         ...     coords={"x": [0, 1, 2, 3]},
         ... )
         >>> ds
-        <xarray.Dataset> Size: 160B
+        <xarray.Dataset> 160B
         Dimensions:  (x: 4)
         Coordinates:
           * x        (x) int64 32B 0 1 2 3
@@ -6495,7 +6494,7 @@ class Dataset(
         Replace all `NaN` values with 0s.
 
         >>> ds.fillna(0)
-        <xarray.Dataset> Size: 160B
+        <xarray.Dataset> 160B
         Dimensions:  (x: 4)
         Coordinates:
           * x        (x) int64 32B 0 1 2 3
@@ -6509,7 +6508,7 @@ class Dataset(
 
         >>> values = {"A": 0, "B": 1, "C": 2, "D": 3}
         >>> ds.fillna(value=values)
-        <xarray.Dataset> Size: 160B
+        <xarray.Dataset> 160B
         Dimensions:  (x: 4)
         Coordinates:
           * x        (x) int64 32B 0 1 2 3
@@ -6623,7 +6622,7 @@ class Dataset(
         ...     coords={"x": [0, 1, 2, 3, 4]},
         ... )
         >>> ds
-        <xarray.Dataset> Size: 200B
+        <xarray.Dataset> 200B
         Dimensions:  (x: 5)
         Coordinates:
           * x        (x) int64 40B 0 1 2 3 4
@@ -6634,7 +6633,7 @@ class Dataset(
             D        (x) float64 40B nan 3.0 nan -1.0 4.0
 
         >>> ds.interpolate_na(dim="x", method="linear")
-        <xarray.Dataset> Size: 200B
+        <xarray.Dataset> 200B
         Dimensions:  (x: 5)
         Coordinates:
           * x        (x) int64 40B 0 1 2 3 4
@@ -6645,7 +6644,7 @@ class Dataset(
             D        (x) float64 40B nan 3.0 1.0 -1.0 4.0
 
         >>> ds.interpolate_na(dim="x", method="linear", fill_value="extrapolate")
-        <xarray.Dataset> Size: 200B
+        <xarray.Dataset> 200B
         Dimensions:  (x: 5)
         Coordinates:
           * x        (x) int64 40B 0 1 2 3 4
@@ -6693,7 +6692,7 @@ class Dataset(
         ... )
         >>> dataset = xr.Dataset({"data": (("time",), data)}, coords={"time": time})
         >>> dataset
-        <xarray.Dataset> Size: 160B
+        <xarray.Dataset> 160B
         Dimensions:  (time: 10)
         Coordinates:
           * time     (time) datetime64[ns] 80B 2023-01-01 2023-01-02 ... 2023-01-10
@@ -6703,7 +6702,7 @@ class Dataset(
         # Perform forward fill (ffill) on the dataset
 
         >>> dataset.ffill(dim="time")
-        <xarray.Dataset> Size: 160B
+        <xarray.Dataset> 160B
         Dimensions:  (time: 10)
         Coordinates:
           * time     (time) datetime64[ns] 80B 2023-01-01 2023-01-02 ... 2023-01-10
@@ -6713,7 +6712,7 @@ class Dataset(
         # Limit the forward filling to a maximum of 2 consecutive NaN values
 
         >>> dataset.ffill(dim="time", limit=2)
-        <xarray.Dataset> Size: 160B
+        <xarray.Dataset> 160B
         Dimensions:  (time: 10)
         Coordinates:
           * time     (time) datetime64[ns] 80B 2023-01-01 2023-01-02 ... 2023-01-10
@@ -6758,7 +6757,7 @@ class Dataset(
         ... )
         >>> dataset = xr.Dataset({"data": (("time",), data)}, coords={"time": time})
         >>> dataset
-        <xarray.Dataset> Size: 160B
+        <xarray.Dataset> 160B
         Dimensions:  (time: 10)
         Coordinates:
           * time     (time) datetime64[ns] 80B 2023-01-01 2023-01-02 ... 2023-01-10
@@ -6768,7 +6767,7 @@ class Dataset(
         # filled dataset, fills NaN values by propagating values backward
 
         >>> dataset.bfill(dim="time")
-        <xarray.Dataset> Size: 160B
+        <xarray.Dataset> 160B
         Dimensions:  (time: 10)
         Coordinates:
           * time     (time) datetime64[ns] 80B 2023-01-01 2023-01-02 ... 2023-01-10
@@ -6778,7 +6777,7 @@ class Dataset(
         # Limit the backward filling to a maximum of 2 consecutive NaN values
 
         >>> dataset.bfill(dim="time", limit=2)
-        <xarray.Dataset> Size: 160B
+        <xarray.Dataset> 160B
         Dimensions:  (time: 10)
         Coordinates:
           * time     (time) datetime64[ns] 80B 2023-01-01 2023-01-02 ... 2023-01-10
@@ -6881,7 +6880,7 @@ class Dataset(
 
         >>> percentile_scores = dataset.reduce(np.percentile, q=75, dim="test")
         >>> percentile_scores
-        <xarray.Dataset> Size: 132B
+        <xarray.Dataset> 132B
         Dimensions:         (student: 3)
         Coordinates:
           * student         (student) <U7 84B 'Alice' 'Bob' 'Charlie'
@@ -6987,14 +6986,14 @@ class Dataset(
         >>> da = xr.DataArray(np.random.randn(2, 3))
         >>> ds = xr.Dataset({"foo": da, "bar": ("x", [-1, 2])})
         >>> ds
-        <xarray.Dataset> Size: 64B
+        <xarray.Dataset> 64B
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Dimensions without coordinates: dim_0, dim_1, x
         Data variables:
             foo      (dim_0, dim_1) float64 48B 1.764 0.4002 0.9787 2.241 1.868 -0.9773
             bar      (x) int64 16B -1 2
         >>> ds.map(np.fabs)
-        <xarray.Dataset> Size: 64B
+        <xarray.Dataset> 64B
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Dimensions without coordinates: dim_0, dim_1, x
         Data variables:
@@ -7088,7 +7087,7 @@ class Dataset(
         ...     coords={"lat": [10, 20], "lon": [150, 160]},
         ... )
         >>> x
-        <xarray.Dataset> Size: 96B
+        <xarray.Dataset> 96B
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
           * lat            (lat) int64 16B 10 20
@@ -7100,7 +7099,7 @@ class Dataset(
         Where the value is a callable, evaluated on dataset:
 
         >>> x.assign(temperature_f=lambda x: x.temperature_c * 9 / 5 + 32)
-        <xarray.Dataset> Size: 128B
+        <xarray.Dataset> 128B
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
           * lat            (lat) int64 16B 10 20
@@ -7113,7 +7112,7 @@ class Dataset(
         Alternatively, the same behavior can be achieved by directly referencing an existing dataarray:
 
         >>> x.assign(temperature_f=x["temperature_c"] * 9 / 5 + 32)
-        <xarray.Dataset> Size: 128B
+        <xarray.Dataset> 128B
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
           * lat            (lat) int64 16B 10 20
@@ -7622,7 +7621,7 @@ class Dataset(
         ... }
         >>> ds = xr.Dataset.from_dict(d)
         >>> ds
-        <xarray.Dataset> Size: 60B
+        <xarray.Dataset> 60B
         Dimensions:  (t: 3)
         Coordinates:
           * t        (t) int64 24B 0 1 2
@@ -7643,7 +7642,7 @@ class Dataset(
         ... }
         >>> ds = xr.Dataset.from_dict(d)
         >>> ds
-        <xarray.Dataset> Size: 60B
+        <xarray.Dataset> 60B
         Dimensions:  (t: 3)
         Coordinates:
           * t        (t) int64 24B 0 1 2
@@ -7822,13 +7821,13 @@ class Dataset(
         --------
         >>> ds = xr.Dataset({"foo": ("x", [5, 5, 6, 6])})
         >>> ds.diff("x")
-        <xarray.Dataset> Size: 24B
+        <xarray.Dataset> 24B
         Dimensions:  (x: 3)
         Dimensions without coordinates: x
         Data variables:
             foo      (x) int64 24B 0 1 0
         >>> ds.diff("x", 2)
-        <xarray.Dataset> Size: 16B
+        <xarray.Dataset> 16B
         Dimensions:  (x: 2)
         Dimensions without coordinates: x
         Data variables:
@@ -7918,7 +7917,7 @@ class Dataset(
         --------
         >>> ds = xr.Dataset({"foo": ("x", list("abcde"))})
         >>> ds.shift(x=2)
-        <xarray.Dataset> Size: 40B
+        <xarray.Dataset> 40B
         Dimensions:  (x: 5)
         Dimensions without coordinates: x
         Data variables:
@@ -7987,7 +7986,7 @@ class Dataset(
         --------
         >>> ds = xr.Dataset({"foo": ("x", list("abcde"))}, coords={"x": np.arange(5)})
         >>> ds.roll(x=2)
-        <xarray.Dataset> Size: 60B
+        <xarray.Dataset> 60B
         Dimensions:  (x: 5)
         Coordinates:
           * x        (x) int64 40B 0 1 2 3 4
@@ -7995,7 +7994,7 @@ class Dataset(
             foo      (x) <U1 20B 'd' 'e' 'a' 'b' 'c'
 
         >>> ds.roll(x=2, roll_coords=True)
-        <xarray.Dataset> Size: 60B
+        <xarray.Dataset> 60B
         Dimensions:  (x: 5)
         Coordinates:
           * x        (x) int64 40B 3 4 0 1 2
@@ -8092,7 +8091,7 @@ class Dataset(
         ...     coords={"x": ["b", "a"], "y": [1, 0]},
         ... )
         >>> ds.sortby("x")
-        <xarray.Dataset> Size: 88B
+        <xarray.Dataset> 88B
         Dimensions:  (x: 2, y: 2)
         Coordinates:
           * x        (x) <U1 8B 'a' 'b'
@@ -8101,7 +8100,7 @@ class Dataset(
             A        (x, y) int64 32B 3 4 1 2
             B        (x, y) int64 32B 7 8 5 6
         >>> ds.sortby(lambda x: -x["y"])
-        <xarray.Dataset> Size: 88B
+        <xarray.Dataset> 88B
         Dimensions:  (x: 2, y: 2)
         Coordinates:
           * x        (x) <U1 8B 'b' 'a'
@@ -8217,14 +8216,14 @@ class Dataset(
         ...     coords={"x": [7, 9], "y": [1, 1.5, 2, 2.5]},
         ... )
         >>> ds.quantile(0)  # or ds.quantile(0, dim=...)
-        <xarray.Dataset> Size: 16B
+        <xarray.Dataset> 16B
         Dimensions:   ()
         Coordinates:
             quantile  float64 8B 0.0
         Data variables:
             a         float64 8B 0.7
         >>> ds.quantile(0, dim="x")
-        <xarray.Dataset> Size: 72B
+        <xarray.Dataset> 72B
         Dimensions:   (y: 4)
         Coordinates:
           * y         (y) float64 32B 1.0 1.5 2.0 2.5
@@ -8232,14 +8231,14 @@ class Dataset(
         Data variables:
             a         (y) float64 32B 0.7 4.2 2.6 1.5
         >>> ds.quantile([0, 0.5, 1])
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:   (quantile: 3)
         Coordinates:
           * quantile  (quantile) float64 24B 0.0 0.5 1.0
         Data variables:
             a         (quantile) float64 24B 0.7 3.4 9.4
         >>> ds.quantile([0, 0.5, 1], dim="x")
-        <xarray.Dataset> Size: 152B
+        <xarray.Dataset> 152B
         Dimensions:   (quantile: 3, y: 4)
         Coordinates:
           * y         (y) float64 32B 1.0 1.5 2.0 2.5
@@ -8482,7 +8481,7 @@ class Dataset(
         ...     coords={"x": [0, 1, 2, 3], "y": ("x", [1, 7, 3, 5])},
         ... )
         >>> ds
-        <xarray.Dataset> Size: 128B
+        <xarray.Dataset> 128B
         Dimensions:  (x: 4)
         Coordinates:
           * x        (x) int64 32B 0 1 2 3
@@ -8491,13 +8490,13 @@ class Dataset(
             a        (x) int64 32B 5 5 6 6
             b        (x) int64 32B 1 2 1 0
         >>> ds.integrate("x")
-        <xarray.Dataset> Size: 16B
+        <xarray.Dataset> 16B
         Dimensions:  ()
         Data variables:
             a        float64 8B 16.5
             b        float64 8B 3.5
         >>> ds.integrate("y")
-        <xarray.Dataset> Size: 16B
+        <xarray.Dataset> 16B
         Dimensions:  ()
         Data variables:
             a        float64 8B 20.0
@@ -8605,7 +8604,7 @@ class Dataset(
         ...     coords={"x": [0, 1, 2, 3], "y": ("x", [1, 7, 3, 5])},
         ... )
         >>> ds
-        <xarray.Dataset> Size: 128B
+        <xarray.Dataset> 128B
         Dimensions:  (x: 4)
         Coordinates:
           * x        (x) int64 32B 0 1 2 3
@@ -8614,7 +8613,7 @@ class Dataset(
             a        (x) int64 32B 5 5 6 6
             b        (x) int64 32B 1 2 1 0
         >>> ds.cumulative_integrate("x")
-        <xarray.Dataset> Size: 128B
+        <xarray.Dataset> 128B
         Dimensions:  (x: 4)
         Coordinates:
           * x        (x) int64 32B 0 1 2 3
@@ -8623,7 +8622,7 @@ class Dataset(
             a        (x) float64 32B 0.0 5.0 10.5 16.5
             b        (x) float64 32B 0.0 1.5 3.0 3.5
         >>> ds.cumulative_integrate("y")
-        <xarray.Dataset> Size: 128B
+        <xarray.Dataset> 128B
         Dimensions:  (x: 4)
         Coordinates:
           * x        (x) int64 32B 0 1 2 3
@@ -8718,7 +8717,7 @@ class Dataset(
         Get variables matching a specific standard_name:
 
         >>> ds.filter_by_attrs(standard_name="convective_precipitation_flux")
-        <xarray.Dataset> Size: 192B
+        <xarray.Dataset> 192B
         Dimensions:         (x: 2, y: 2, time: 3)
         Coordinates:
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
@@ -8733,7 +8732,7 @@ class Dataset(
 
         >>> standard_name = lambda v: v is not None
         >>> ds.filter_by_attrs(standard_name=standard_name)
-        <xarray.Dataset> Size: 288B
+        <xarray.Dataset> 288B
         Dimensions:         (x: 2, y: 2, time: 3)
         Coordinates:
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
@@ -8857,7 +8856,7 @@ class Dataset(
         ... ).chunk()
         >>> ds = xr.Dataset({"a": array})
         >>> ds.map_blocks(calculate_anomaly, template=ds).compute()
-        <xarray.Dataset> Size: 576B
+        <xarray.Dataset> 576B
         Dimensions:  (time: 24)
         Coordinates:
           * time     (time) object 192B 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
@@ -8873,7 +8872,7 @@ class Dataset(
         ...     kwargs={"groupby_type": "time.year"},
         ...     template=ds,
         ... )
-        <xarray.Dataset> Size: 576B
+        <xarray.Dataset> 576B
         Dimensions:  (time: 24)
         Coordinates:
           * time     (time) object 192B 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
@@ -9199,7 +9198,7 @@ class Dataset(
         --------
         >>> ds = xr.Dataset({"foo": ("x", range(5))})
         >>> ds.pad(x=(1, 2))
-        <xarray.Dataset> Size: 64B
+        <xarray.Dataset> 64B
         Dimensions:  (x: 8)
         Dimensions without coordinates: x
         Data variables:
@@ -9329,7 +9328,7 @@ class Dataset(
         ... )
         >>> ds = xr.Dataset({"int": array1, "float": array2})
         >>> ds.min(dim="x")
-        <xarray.Dataset> Size: 56B
+        <xarray.Dataset> 56B
         Dimensions:  (y: 3)
         Coordinates:
           * y        (y) int64 24B -1 0 1
@@ -9337,7 +9336,7 @@ class Dataset(
             int      int64 8B -2
             float    (y) float64 24B -2.0 -4.0 1.0
         >>> ds.argmin(dim="x")
-        <xarray.Dataset> Size: 56B
+        <xarray.Dataset> 56B
         Dimensions:  (y: 3)
         Coordinates:
           * y        (y) int64 24B -1 0 1
@@ -9345,7 +9344,7 @@ class Dataset(
             int      int64 8B 4
             float    (y) int64 24B 4 0 2
         >>> ds.idxmin(dim="x")
-        <xarray.Dataset> Size: 52B
+        <xarray.Dataset> 52B
         Dimensions:  (y: 3)
         Coordinates:
           * y        (y) int64 24B -1 0 1
@@ -9428,7 +9427,7 @@ class Dataset(
         ... )
         >>> ds = xr.Dataset({"int": array1, "float": array2})
         >>> ds.max(dim="x")
-        <xarray.Dataset> Size: 56B
+        <xarray.Dataset> 56B
         Dimensions:  (y: 3)
         Coordinates:
           * y        (y) int64 24B -1 0 1
@@ -9436,7 +9435,7 @@ class Dataset(
             int      int64 8B 2
             float    (y) float64 24B 2.0 2.0 1.0
         >>> ds.argmax(dim="x")
-        <xarray.Dataset> Size: 56B
+        <xarray.Dataset> 56B
         Dimensions:  (y: 3)
         Coordinates:
           * y        (y) int64 24B -1 0 1
@@ -9444,7 +9443,7 @@ class Dataset(
             int      int64 8B 1
             float    (y) int64 24B 0 2 2
         >>> ds.idxmax(dim="x")
-        <xarray.Dataset> Size: 52B
+        <xarray.Dataset> 52B
         Dimensions:  (y: 3)
         Coordinates:
           * y        (y) int64 24B -1 0 1
@@ -9517,7 +9516,7 @@ class Dataset(
         ...     student=argmin_indices["math_scores"]
         ... )
         >>> min_score_in_math
-        <xarray.DataArray 'student' (test: 3)> Size: 84B
+        <xarray.DataArray 'student' (test: 3)> 84B
         array(['Bob', 'Bob', 'Alice'], dtype='<U7')
         Coordinates:
             student  (test) <U7 84B 'Bob' 'Bob' 'Alice'
@@ -9527,7 +9526,7 @@ class Dataset(
         ...     student=argmin_indices["english_scores"]
         ... )
         >>> min_score_in_english
-        <xarray.DataArray 'student' (test: 3)> Size: 84B
+        <xarray.DataArray 'student' (test: 3)> 84B
         array(['Charlie', 'Bob', 'Charlie'], dtype='<U7')
         Coordinates:
             student  (test) <U7 84B 'Charlie' 'Bob' 'Charlie'
@@ -9618,7 +9617,7 @@ class Dataset(
         >>> argmax_indices = dataset.argmax(dim="test")
 
         >>> argmax_indices
-        <xarray.Dataset> Size: 132B
+        <xarray.Dataset> 132B
         Dimensions:         (student: 3)
         Coordinates:
           * student         (student) <U7 84B 'Alice' 'Bob' 'Charlie'
@@ -9688,7 +9687,7 @@ class Dataset(
         ...     {"a": ("x", np.arange(0, 5, 1)), "b": ("x", np.linspace(0, 1, 5))}
         ... )
         >>> ds
-        <xarray.Dataset> Size: 80B
+        <xarray.Dataset> 80B
         Dimensions:  (x: 5)
         Dimensions without coordinates: x
         Data variables:
@@ -9696,12 +9695,12 @@ class Dataset(
             b        (x) float64 40B 0.0 0.25 0.5 0.75 1.0
 
         >>> ds.eval("a + b")
-        <xarray.DataArray (x: 5)> Size: 40B
+        <xarray.DataArray (x: 5)> 40B
         array([0.  , 1.25, 2.5 , 3.75, 5.  ])
         Dimensions without coordinates: x
 
         >>> ds.eval("c = a + b")
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (x: 5)
         Dimensions without coordinates: x
         Data variables:
@@ -9783,14 +9782,14 @@ class Dataset(
         >>> b = np.linspace(0, 1, 5)
         >>> ds = xr.Dataset({"a": ("x", a), "b": ("x", b)})
         >>> ds
-        <xarray.Dataset> Size: 80B
+        <xarray.Dataset> 80B
         Dimensions:  (x: 5)
         Dimensions without coordinates: x
         Data variables:
             a        (x) int64 40B 0 1 2 3 4
             b        (x) float64 40B 0.0 0.25 0.5 0.75 1.0
         >>> ds.query(x="a > 2")
-        <xarray.Dataset> Size: 32B
+        <xarray.Dataset> 32B
         Dimensions:  (x: 2)
         Dimensions without coordinates: x
         Data variables:

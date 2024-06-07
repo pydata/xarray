@@ -1247,7 +1247,7 @@ class TestVariable(VariableSubclassobjects):
         v = v.astype(np.uint64)
         expected = dedent(
             """
-        <xarray.Variable (time: 2, x: 3)> Size: 48B
+        <xarray.Variable (time: 2, x: 3)> 48B
         array([[1, 2, 3],
                [4, 5, 6]], dtype=uint64)
         Attributes:

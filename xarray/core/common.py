@@ -526,12 +526,12 @@ class DataWithCoords(AttrAccessMixin):
         ...     dims="lon",
         ... )
         >>> da
-        <xarray.DataArray (lon: 4)> Size: 32B
+        <xarray.DataArray (lon: 4)> 32B
         array([0.5488135 , 0.71518937, 0.60276338, 0.54488318])
         Coordinates:
           * lon      (lon) int64 32B 358 359 0 1
         >>> da.assign_coords(lon=(((da.lon + 180) % 360) - 180))
-        <xarray.DataArray (lon: 4)> Size: 32B
+        <xarray.DataArray (lon: 4)> 32B
         array([0.5488135 , 0.71518937, 0.60276338, 0.54488318])
         Coordinates:
           * lon      (lon) int64 32B -2 -1 0 1
@@ -539,7 +539,7 @@ class DataWithCoords(AttrAccessMixin):
         The function also accepts dictionary arguments:
 
         >>> da.assign_coords({"lon": (((da.lon + 180) % 360) - 180)})
-        <xarray.DataArray (lon: 4)> Size: 32B
+        <xarray.DataArray (lon: 4)> 32B
         array([0.5488135 , 0.71518937, 0.60276338, 0.54488318])
         Coordinates:
           * lon      (lon) int64 32B -2 -1 0 1
@@ -548,7 +548,7 @@ class DataWithCoords(AttrAccessMixin):
 
         >>> lon_2 = np.array([300, 289, 0, 1])
         >>> da.assign_coords(lon_2=("lon", lon_2))
-        <xarray.DataArray (lon: 4)> Size: 32B
+        <xarray.DataArray (lon: 4)> 32B
         array([0.5488135 , 0.71518937, 0.60276338, 0.54488318])
         Coordinates:
           * lon      (lon) int64 32B 358 359 0 1
@@ -578,7 +578,7 @@ class DataWithCoords(AttrAccessMixin):
         ...     attrs=dict(description="Weather-related data"),
         ... )
         >>> ds
-        <xarray.Dataset> Size: 360B
+        <xarray.Dataset> 360B
         Dimensions:         (x: 2, y: 2, time: 4)
         Coordinates:
             lon             (x, y) float64 32B 260.2 260.7 260.2 260.8
@@ -592,7 +592,7 @@ class DataWithCoords(AttrAccessMixin):
         Attributes:
             description:  Weather-related data
         >>> ds.assign_coords(lon=(((ds.lon + 180) % 360) - 180))
-        <xarray.Dataset> Size: 360B
+        <xarray.Dataset> 360B
         Dimensions:         (x: 2, y: 2, time: 4)
         Coordinates:
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
@@ -642,7 +642,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         >>> dataset = xr.Dataset({"temperature": [25, 30, 27]})
         >>> dataset
-        <xarray.Dataset> Size: 24B
+        <xarray.Dataset> 24B
         Dimensions:      (temperature: 3)
         Coordinates:
           * temperature  (temperature) int64 24B 25 30 27
@@ -653,7 +653,7 @@ class DataWithCoords(AttrAccessMixin):
         ...     units="Celsius", description="Temperature data"
         ... )
         >>> new_dataset
-        <xarray.Dataset> Size: 24B
+        <xarray.Dataset> 24B
         Dimensions:      (temperature: 3)
         Coordinates:
           * temperature  (temperature) int64 24B 25 30 27
@@ -746,7 +746,7 @@ class DataWithCoords(AttrAccessMixin):
         ...     coords={"lat": [10, 20], "lon": [150, 160]},
         ... )
         >>> x
-        <xarray.Dataset> Size: 96B
+        <xarray.Dataset> 96B
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
           * lat            (lat) int64 16B 10 20
@@ -765,7 +765,7 @@ class DataWithCoords(AttrAccessMixin):
         ...     return (data * mult_arg) - sub_arg
         ...
         >>> x.pipe(adder, 2)
-        <xarray.Dataset> Size: 96B
+        <xarray.Dataset> 96B
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
           * lat            (lat) int64 16B 10 20
@@ -775,7 +775,7 @@ class DataWithCoords(AttrAccessMixin):
             precipitation  (lat, lon) float64 32B 2.424 2.646 2.438 2.892
 
         >>> x.pipe(adder, arg=2)
-        <xarray.Dataset> Size: 96B
+        <xarray.Dataset> 96B
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
           * lat            (lat) int64 16B 10 20
@@ -789,7 +789,7 @@ class DataWithCoords(AttrAccessMixin):
         ...     .pipe(div, arg=2)
         ...     .pipe(sub_mult, sub_arg=2, mult_arg=2)
         ... )
-        <xarray.Dataset> Size: 96B
+        <xarray.Dataset> 96B
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
           * lat            (lat) int64 16B 10 20
@@ -946,12 +946,12 @@ class DataWithCoords(AttrAccessMixin):
         ...     dims="time",
         ... )
         >>> da
-        <xarray.DataArray (time: 12)> Size: 96B
+        <xarray.DataArray (time: 12)> 96B
         array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
         Coordinates:
           * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
         >>> da.resample(time="QS-DEC").mean()
-        <xarray.DataArray (time: 4)> Size: 32B
+        <xarray.DataArray (time: 4)> 32B
         array([ 1.,  4.,  7., 10.])
         Coordinates:
           * time     (time) datetime64[ns] 32B 1999-12-01 2000-03-01 ... 2000-09-01
@@ -959,7 +959,7 @@ class DataWithCoords(AttrAccessMixin):
         Upsample monthly time-series data to daily data:
 
         >>> da.resample(time="1D").interpolate("linear")  # +doctest: ELLIPSIS
-        <xarray.DataArray (time: 337)> Size: 3kB
+        <xarray.DataArray (time: 337)> 3kB
         array([ 0.        ,  0.03225806,  0.06451613,  0.09677419,  0.12903226,
                 0.16129032,  0.19354839,  0.22580645,  0.25806452,  0.29032258,
                 0.32258065,  0.35483871,  0.38709677,  0.41935484,  0.4516129 ,
@@ -1007,7 +1007,7 @@ class DataWithCoords(AttrAccessMixin):
         Limit scope of upsampling method
 
         >>> da.resample(time="1D").nearest(tolerance="1D")
-        <xarray.DataArray (time: 337)> Size: 3kB
+        <xarray.DataArray (time: 337)> 3kB
         array([ 0.,  0., nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
                nan, nan, nan, nan,  1.,  1.,  1., nan, nan, nan, nan, nan, nan,
@@ -1131,7 +1131,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         >>> a = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"))
         >>> a
-        <xarray.DataArray (x: 5, y: 5)> Size: 200B
+        <xarray.DataArray (x: 5, y: 5)> 200B
         array([[ 0,  1,  2,  3,  4],
                [ 5,  6,  7,  8,  9],
                [10, 11, 12, 13, 14],
@@ -1140,7 +1140,7 @@ class DataWithCoords(AttrAccessMixin):
         Dimensions without coordinates: x, y
 
         >>> a.where(a.x + a.y < 4)
-        <xarray.DataArray (x: 5, y: 5)> Size: 200B
+        <xarray.DataArray (x: 5, y: 5)> 200B
         array([[ 0.,  1.,  2.,  3., nan],
                [ 5.,  6.,  7., nan, nan],
                [10., 11., nan, nan, nan],
@@ -1149,7 +1149,7 @@ class DataWithCoords(AttrAccessMixin):
         Dimensions without coordinates: x, y
 
         >>> a.where(a.x + a.y < 5, -1)
-        <xarray.DataArray (x: 5, y: 5)> Size: 200B
+        <xarray.DataArray (x: 5, y: 5)> 200B
         array([[ 0,  1,  2,  3,  4],
                [ 5,  6,  7,  8, -1],
                [10, 11, 12, -1, -1],
@@ -1158,7 +1158,7 @@ class DataWithCoords(AttrAccessMixin):
         Dimensions without coordinates: x, y
 
         >>> a.where(a.x + a.y < 4, drop=True)
-        <xarray.DataArray (x: 4, y: 4)> Size: 128B
+        <xarray.DataArray (x: 4, y: 4)> 128B
         array([[ 0.,  1.,  2.,  3.],
                [ 5.,  6.,  7., nan],
                [10., 11., nan, nan],
@@ -1166,7 +1166,7 @@ class DataWithCoords(AttrAccessMixin):
         Dimensions without coordinates: x, y
 
         >>> a.where(lambda x: x.x + x.y < 4, lambda x: -x)
-        <xarray.DataArray (x: 5, y: 5)> Size: 200B
+        <xarray.DataArray (x: 5, y: 5)> 200B
         array([[  0,   1,   2,   3,  -4],
                [  5,   6,   7,  -8,  -9],
                [ 10,  11, -12, -13, -14],
@@ -1175,7 +1175,7 @@ class DataWithCoords(AttrAccessMixin):
         Dimensions without coordinates: x, y
 
         >>> a.where(a.x + a.y < 4, drop=True)
-        <xarray.DataArray (x: 4, y: 4)> Size: 128B
+        <xarray.DataArray (x: 4, y: 4)> 128B
         array([[ 0.,  1.,  2.,  3.],
                [ 5.,  6.,  7., nan],
                [10., 11., nan, nan],
@@ -1272,11 +1272,11 @@ class DataWithCoords(AttrAccessMixin):
         --------
         >>> array = xr.DataArray([1, np.nan, 3], dims="x")
         >>> array
-        <xarray.DataArray (x: 3)> Size: 24B
+        <xarray.DataArray (x: 3)> 24B
         array([ 1., nan,  3.])
         Dimensions without coordinates: x
         >>> array.isnull()
-        <xarray.DataArray (x: 3)> Size: 3B
+        <xarray.DataArray (x: 3)> 3B
         array([False,  True, False])
         Dimensions without coordinates: x
         """
@@ -1315,11 +1315,11 @@ class DataWithCoords(AttrAccessMixin):
         --------
         >>> array = xr.DataArray([1, np.nan, 3], dims="x")
         >>> array
-        <xarray.DataArray (x: 3)> Size: 24B
+        <xarray.DataArray (x: 3)> 24B
         array([ 1., nan,  3.])
         Dimensions without coordinates: x
         >>> array.notnull()
-        <xarray.DataArray (x: 3)> Size: 3B
+        <xarray.DataArray (x: 3)> 3B
         array([ True, False,  True])
         Dimensions without coordinates: x
         """
@@ -1354,7 +1354,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         >>> array = xr.DataArray([1, 2, 3], dims="x")
         >>> array.isin([1, 3])
-        <xarray.DataArray (x: 3)> Size: 3B
+        <xarray.DataArray (x: 3)> 3B
         array([ True, False,  True])
         Dimensions without coordinates: x
 
@@ -1584,7 +1584,7 @@ def full_like(
     ...     coords={"lat": [1, 2], "lon": [0, 1, 2]},
     ... )
     >>> x
-    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
+    <xarray.DataArray (lat: 2, lon: 3)> 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
@@ -1592,7 +1592,7 @@ def full_like(
       * lon      (lon) int64 24B 0 1 2
 
     >>> xr.full_like(x, 1)
-    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
+    <xarray.DataArray (lat: 2, lon: 3)> 48B
     array([[1, 1, 1],
            [1, 1, 1]])
     Coordinates:
@@ -1600,7 +1600,7 @@ def full_like(
       * lon      (lon) int64 24B 0 1 2
 
     >>> xr.full_like(x, 0.5)
-    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
+    <xarray.DataArray (lat: 2, lon: 3)> 48B
     array([[0, 0, 0],
            [0, 0, 0]])
     Coordinates:
@@ -1608,7 +1608,7 @@ def full_like(
       * lon      (lon) int64 24B 0 1 2
 
     >>> xr.full_like(x, 0.5, dtype=np.double)
-    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
+    <xarray.DataArray (lat: 2, lon: 3)> 48B
     array([[0.5, 0.5, 0.5],
            [0.5, 0.5, 0.5]])
     Coordinates:
@@ -1616,7 +1616,7 @@ def full_like(
       * lon      (lon) int64 24B 0 1 2
 
     >>> xr.full_like(x, np.nan, dtype=np.double)
-    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
+    <xarray.DataArray (lat: 2, lon: 3)> 48B
     array([[nan, nan, nan],
            [nan, nan, nan]])
     Coordinates:
@@ -1627,7 +1627,7 @@ def full_like(
     ...     {"a": ("x", [3, 5, 2]), "b": ("x", [9, 1, 0])}, coords={"x": [2, 4, 6]}
     ... )
     >>> ds
-    <xarray.Dataset> Size: 72B
+    <xarray.Dataset> 72B
     Dimensions:  (x: 3)
     Coordinates:
       * x        (x) int64 24B 2 4 6
@@ -1635,7 +1635,7 @@ def full_like(
         a        (x) int64 24B 3 5 2
         b        (x) int64 24B 9 1 0
     >>> xr.full_like(ds, fill_value={"a": 1, "b": 2})
-    <xarray.Dataset> Size: 72B
+    <xarray.Dataset> 72B
     Dimensions:  (x: 3)
     Coordinates:
       * x        (x) int64 24B 2 4 6
@@ -1643,7 +1643,7 @@ def full_like(
         a        (x) int64 24B 1 1 1
         b        (x) int64 24B 2 2 2
     >>> xr.full_like(ds, fill_value={"a": 1, "b": 2}, dtype={"a": bool, "b": float})
-    <xarray.Dataset> Size: 51B
+    <xarray.Dataset> 51B
     Dimensions:  (x: 3)
     Coordinates:
       * x        (x) int64 24B 2 4 6
@@ -1858,7 +1858,7 @@ def zeros_like(
     ...     coords={"lat": [1, 2], "lon": [0, 1, 2]},
     ... )
     >>> x
-    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
+    <xarray.DataArray (lat: 2, lon: 3)> 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
@@ -1866,7 +1866,7 @@ def zeros_like(
       * lon      (lon) int64 24B 0 1 2
 
     >>> xr.zeros_like(x)
-    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
+    <xarray.DataArray (lat: 2, lon: 3)> 48B
     array([[0, 0, 0],
            [0, 0, 0]])
     Coordinates:
@@ -1874,7 +1874,7 @@ def zeros_like(
       * lon      (lon) int64 24B 0 1 2
 
     >>> xr.zeros_like(x, dtype=float)
-    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
+    <xarray.DataArray (lat: 2, lon: 3)> 48B
     array([[0., 0., 0.],
            [0., 0., 0.]])
     Coordinates:
@@ -1995,7 +1995,7 @@ def ones_like(
     ...     coords={"lat": [1, 2], "lon": [0, 1, 2]},
     ... )
     >>> x
-    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
+    <xarray.DataArray (lat: 2, lon: 3)> 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
@@ -2003,7 +2003,7 @@ def ones_like(
       * lon      (lon) int64 24B 0 1 2
 
     >>> xr.ones_like(x)
-    <xarray.DataArray (lat: 2, lon: 3)> Size: 48B
+    <xarray.DataArray (lat: 2, lon: 3)> 48B
     array([[1, 1, 1],
            [1, 1, 1]])
     Coordinates:

@@ -84,7 +84,7 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -93,7 +93,7 @@ class DatasetAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.count()
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       int64 8B 5
@@ -156,7 +156,7 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 78B
+        <xarray.Dataset> 78B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -165,7 +165,7 @@ class DatasetAggregations:
             da       (time) bool 6B True True True True True False
 
         >>> ds.all()
-        <xarray.Dataset> Size: 1B
+        <xarray.Dataset> 1B
         Dimensions:  ()
         Data variables:
             da       bool 1B False
@@ -228,7 +228,7 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 78B
+        <xarray.Dataset> 78B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -237,7 +237,7 @@ class DatasetAggregations:
             da       (time) bool 6B True True True True True False
 
         >>> ds.any()
-        <xarray.Dataset> Size: 1B
+        <xarray.Dataset> 1B
         Dimensions:  ()
         Data variables:
             da       bool 1B True
@@ -306,7 +306,7 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -315,7 +315,7 @@ class DatasetAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.max()
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B 3.0
@@ -323,7 +323,7 @@ class DatasetAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.max(skipna=False)
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B nan
@@ -393,7 +393,7 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -402,7 +402,7 @@ class DatasetAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.min()
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B 0.0
@@ -410,7 +410,7 @@ class DatasetAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.min(skipna=False)
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B nan
@@ -484,7 +484,7 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -493,7 +493,7 @@ class DatasetAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.mean()
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B 1.6
@@ -501,7 +501,7 @@ class DatasetAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.mean(skipna=False)
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B nan
@@ -582,7 +582,7 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -591,7 +591,7 @@ class DatasetAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.prod()
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B 0.0
@@ -599,7 +599,7 @@ class DatasetAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.prod(skipna=False)
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B nan
@@ -607,7 +607,7 @@ class DatasetAggregations:
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.prod(skipna=True, min_count=2)
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B 0.0
@@ -689,7 +689,7 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -698,7 +698,7 @@ class DatasetAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.sum()
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B 8.0
@@ -706,7 +706,7 @@ class DatasetAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.sum(skipna=False)
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B nan
@@ -714,7 +714,7 @@ class DatasetAggregations:
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.sum(skipna=True, min_count=2)
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B 8.0
@@ -793,7 +793,7 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -802,7 +802,7 @@ class DatasetAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.std()
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B 1.02
@@ -810,7 +810,7 @@ class DatasetAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.std(skipna=False)
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B nan
@@ -818,7 +818,7 @@ class DatasetAggregations:
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.std(skipna=True, ddof=1)
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B 1.14
@@ -897,7 +897,7 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -906,7 +906,7 @@ class DatasetAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.var()
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B 1.04
@@ -914,7 +914,7 @@ class DatasetAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.var(skipna=False)
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B nan
@@ -922,7 +922,7 @@ class DatasetAggregations:
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.var(skipna=True, ddof=1)
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B 1.3
@@ -997,7 +997,7 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -1006,7 +1006,7 @@ class DatasetAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.median()
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B 2.0
@@ -1014,7 +1014,7 @@ class DatasetAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.median(skipna=False)
-        <xarray.Dataset> Size: 8B
+        <xarray.Dataset> 8B
         Dimensions:  ()
         Data variables:
             da       float64 8B nan
@@ -1088,7 +1088,7 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -1097,7 +1097,7 @@ class DatasetAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.cumsum()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
@@ -1106,7 +1106,7 @@ class DatasetAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.cumsum(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
@@ -1181,7 +1181,7 @@ class DatasetAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -1190,7 +1190,7 @@ class DatasetAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.cumprod()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
@@ -1199,7 +1199,7 @@ class DatasetAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.cumprod(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
@@ -1279,14 +1279,14 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.count()
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(5)
         """
         return self.reduce(
@@ -1345,14 +1345,14 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 6B
+        <xarray.DataArray (time: 6)> 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.all()
-        <xarray.DataArray ()> Size: 1B
+        <xarray.DataArray ()> 1B
         array(False)
         """
         return self.reduce(
@@ -1411,14 +1411,14 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 6B
+        <xarray.DataArray (time: 6)> 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.any()
-        <xarray.DataArray ()> Size: 1B
+        <xarray.DataArray ()> 1B
         array(True)
         """
         return self.reduce(
@@ -1483,20 +1483,20 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.max()
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(3.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.max(skipna=False)
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(nan)
         """
         return self.reduce(
@@ -1562,20 +1562,20 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.min()
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(0.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.min(skipna=False)
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(nan)
         """
         return self.reduce(
@@ -1645,20 +1645,20 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.mean()
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(1.6)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.mean(skipna=False)
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(nan)
         """
         return self.reduce(
@@ -1735,26 +1735,26 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.prod()
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(0.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.prod(skipna=False)
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(nan)
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.prod(skipna=True, min_count=2)
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(0.)
         """
         return self.reduce(
@@ -1832,26 +1832,26 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.sum()
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(8.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.sum(skipna=False)
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(nan)
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.sum(skipna=True, min_count=2)
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(8.)
         """
         return self.reduce(
@@ -1926,26 +1926,26 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.std()
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(1.0198039)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.std(skipna=False)
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(nan)
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.std(skipna=True, ddof=1)
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(1.14017543)
         """
         return self.reduce(
@@ -2020,26 +2020,26 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.var()
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(1.04)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.var(skipna=False)
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(nan)
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.var(skipna=True, ddof=1)
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(1.3)
         """
         return self.reduce(
@@ -2110,20 +2110,20 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.median()
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(2.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.median(skipna=False)
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(nan)
         """
         return self.reduce(
@@ -2193,14 +2193,14 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.cumsum()
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([1., 3., 6., 6., 8., 8.])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -2209,7 +2209,7 @@ class DataArrayAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.cumsum(skipna=False)
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  3.,  6.,  6.,  8., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -2282,14 +2282,14 @@ class DataArrayAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.cumprod()
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([1., 2., 6., 0., 0., 0.])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -2298,7 +2298,7 @@ class DataArrayAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.cumprod(skipna=False)
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  6.,  0.,  0., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -2406,7 +2406,7 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -2415,7 +2415,7 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").count()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -2502,7 +2502,7 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 78B
+        <xarray.Dataset> 78B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -2511,7 +2511,7 @@ class DatasetGroupByAggregations:
             da       (time) bool 6B True True True True True False
 
         >>> ds.groupby("labels").all()
-        <xarray.Dataset> Size: 27B
+        <xarray.Dataset> 27B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -2598,7 +2598,7 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 78B
+        <xarray.Dataset> 78B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -2607,7 +2607,7 @@ class DatasetGroupByAggregations:
             da       (time) bool 6B True True True True True False
 
         >>> ds.groupby("labels").any()
-        <xarray.Dataset> Size: 27B
+        <xarray.Dataset> 27B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -2700,7 +2700,7 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -2709,7 +2709,7 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").max()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -2719,7 +2719,7 @@ class DatasetGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").max(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -2814,7 +2814,7 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -2823,7 +2823,7 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").min()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -2833,7 +2833,7 @@ class DatasetGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").min(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -2930,7 +2930,7 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -2939,7 +2939,7 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").mean()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -2949,7 +2949,7 @@ class DatasetGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").mean(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -3053,7 +3053,7 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -3062,7 +3062,7 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").prod()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -3072,7 +3072,7 @@ class DatasetGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").prod(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -3082,7 +3082,7 @@ class DatasetGroupByAggregations:
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.groupby("labels").prod(skipna=True, min_count=2)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -3188,7 +3188,7 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -3197,7 +3197,7 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").sum()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -3207,7 +3207,7 @@ class DatasetGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").sum(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -3217,7 +3217,7 @@ class DatasetGroupByAggregations:
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.groupby("labels").sum(skipna=True, min_count=2)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -3320,7 +3320,7 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -3329,7 +3329,7 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").std()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -3339,7 +3339,7 @@ class DatasetGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").std(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -3349,7 +3349,7 @@ class DatasetGroupByAggregations:
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.groupby("labels").std(skipna=True, ddof=1)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -3452,7 +3452,7 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -3461,7 +3461,7 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").var()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -3471,7 +3471,7 @@ class DatasetGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").var(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -3481,7 +3481,7 @@ class DatasetGroupByAggregations:
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.groupby("labels").var(skipna=True, ddof=1)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -3580,7 +3580,7 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -3589,7 +3589,7 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").median()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -3599,7 +3599,7 @@ class DatasetGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").median(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -3681,7 +3681,7 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -3690,7 +3690,7 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").cumsum()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
@@ -3699,7 +3699,7 @@ class DatasetGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").cumsum(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
@@ -3780,7 +3780,7 @@ class DatasetGroupByAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -3789,7 +3789,7 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").cumprod()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
@@ -3798,7 +3798,7 @@ class DatasetGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").cumprod(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
@@ -3907,7 +3907,7 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -3916,7 +3916,7 @@ class DatasetResampleAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").count()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4003,7 +4003,7 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 78B
+        <xarray.Dataset> 78B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -4012,7 +4012,7 @@ class DatasetResampleAggregations:
             da       (time) bool 6B True True True True True False
 
         >>> ds.resample(time="3ME").all()
-        <xarray.Dataset> Size: 27B
+        <xarray.Dataset> 27B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4099,7 +4099,7 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 78B
+        <xarray.Dataset> 78B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -4108,7 +4108,7 @@ class DatasetResampleAggregations:
             da       (time) bool 6B True True True True True False
 
         >>> ds.resample(time="3ME").any()
-        <xarray.Dataset> Size: 27B
+        <xarray.Dataset> 27B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4201,7 +4201,7 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -4210,7 +4210,7 @@ class DatasetResampleAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").max()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4220,7 +4220,7 @@ class DatasetResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").max(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4315,7 +4315,7 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -4324,7 +4324,7 @@ class DatasetResampleAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").min()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4334,7 +4334,7 @@ class DatasetResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").min(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4431,7 +4431,7 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -4440,7 +4440,7 @@ class DatasetResampleAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").mean()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4450,7 +4450,7 @@ class DatasetResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").mean(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4554,7 +4554,7 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -4563,7 +4563,7 @@ class DatasetResampleAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").prod()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4573,7 +4573,7 @@ class DatasetResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").prod(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4583,7 +4583,7 @@ class DatasetResampleAggregations:
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.resample(time="3ME").prod(skipna=True, min_count=2)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4689,7 +4689,7 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -4698,7 +4698,7 @@ class DatasetResampleAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").sum()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4708,7 +4708,7 @@ class DatasetResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").sum(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4718,7 +4718,7 @@ class DatasetResampleAggregations:
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.resample(time="3ME").sum(skipna=True, min_count=2)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4821,7 +4821,7 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -4830,7 +4830,7 @@ class DatasetResampleAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").std()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4840,7 +4840,7 @@ class DatasetResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").std(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4850,7 +4850,7 @@ class DatasetResampleAggregations:
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.resample(time="3ME").std(skipna=True, ddof=1)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4953,7 +4953,7 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -4962,7 +4962,7 @@ class DatasetResampleAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").var()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4972,7 +4972,7 @@ class DatasetResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").var(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -4982,7 +4982,7 @@ class DatasetResampleAggregations:
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.resample(time="3ME").var(skipna=True, ddof=1)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -5081,7 +5081,7 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -5090,7 +5090,7 @@ class DatasetResampleAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").median()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -5100,7 +5100,7 @@ class DatasetResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").median(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -5182,7 +5182,7 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -5191,7 +5191,7 @@ class DatasetResampleAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").cumsum()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
@@ -5200,7 +5200,7 @@ class DatasetResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").cumsum(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
@@ -5281,7 +5281,7 @@ class DatasetResampleAggregations:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset> Size: 120B
+        <xarray.Dataset> 120B
         Dimensions:  (time: 6)
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -5290,7 +5290,7 @@ class DatasetResampleAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").cumprod()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
@@ -5299,7 +5299,7 @@ class DatasetResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").cumprod(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> 48B
         Dimensions:  (time: 6)
         Dimensions without coordinates: time
         Data variables:
@@ -5407,14 +5407,14 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").count()
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([1, 2, 2])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -5496,14 +5496,14 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 6B
+        <xarray.DataArray (time: 6)> 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").all()
-        <xarray.DataArray (labels: 3)> Size: 3B
+        <xarray.DataArray (labels: 3)> 3B
         array([False,  True,  True])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -5585,14 +5585,14 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 6B
+        <xarray.DataArray (time: 6)> 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").any()
-        <xarray.DataArray (labels: 3)> Size: 3B
+        <xarray.DataArray (labels: 3)> 3B
         array([ True,  True,  True])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -5680,14 +5680,14 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").max()
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([1., 2., 3.])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -5695,7 +5695,7 @@ class DataArrayGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").max(skipna=False)
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([nan,  2.,  3.])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -5785,14 +5785,14 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").min()
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([1., 2., 0.])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -5800,7 +5800,7 @@ class DataArrayGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").min(skipna=False)
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([nan,  2.,  0.])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -5892,14 +5892,14 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").mean()
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([1. , 2. , 1.5])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -5907,7 +5907,7 @@ class DataArrayGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").mean(skipna=False)
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([nan, 2. , 1.5])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -6006,14 +6006,14 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").prod()
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([1., 4., 0.])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -6021,7 +6021,7 @@ class DataArrayGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").prod(skipna=False)
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([nan,  4.,  0.])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -6029,7 +6029,7 @@ class DataArrayGroupByAggregations:
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.groupby("labels").prod(skipna=True, min_count=2)
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([nan,  4.,  0.])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -6130,14 +6130,14 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").sum()
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([1., 4., 3.])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -6145,7 +6145,7 @@ class DataArrayGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").sum(skipna=False)
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([nan,  4.,  3.])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -6153,7 +6153,7 @@ class DataArrayGroupByAggregations:
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.groupby("labels").sum(skipna=True, min_count=2)
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([nan,  4.,  3.])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -6251,14 +6251,14 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").std()
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([0. , 0. , 1.5])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -6266,7 +6266,7 @@ class DataArrayGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").std(skipna=False)
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([nan, 0. , 1.5])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -6274,7 +6274,7 @@ class DataArrayGroupByAggregations:
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.groupby("labels").std(skipna=True, ddof=1)
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([       nan, 0.        , 2.12132034])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -6372,14 +6372,14 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").var()
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([0.  , 0.  , 2.25])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -6387,7 +6387,7 @@ class DataArrayGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").var(skipna=False)
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([ nan, 0.  , 2.25])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -6395,7 +6395,7 @@ class DataArrayGroupByAggregations:
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.groupby("labels").var(skipna=True, ddof=1)
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([nan, 0. , 4.5])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -6489,14 +6489,14 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").median()
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([1. , 2. , 1.5])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -6504,7 +6504,7 @@ class DataArrayGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").median(skipna=False)
-        <xarray.DataArray (labels: 3)> Size: 24B
+        <xarray.DataArray (labels: 3)> 24B
         array([nan, 2. , 1.5])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
@@ -6582,14 +6582,14 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").cumsum()
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([1., 2., 3., 3., 4., 1.])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -6598,7 +6598,7 @@ class DataArrayGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").cumsum(skipna=False)
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  3.,  4., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -6677,14 +6677,14 @@ class DataArrayGroupByAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").cumprod()
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([1., 2., 3., 0., 4., 1.])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -6693,7 +6693,7 @@ class DataArrayGroupByAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").cumprod(skipna=False)
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  4., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
@@ -6800,14 +6800,14 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").count()
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([1, 3, 1])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -6889,14 +6889,14 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 6B
+        <xarray.DataArray (time: 6)> 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").all()
-        <xarray.DataArray (time: 3)> Size: 3B
+        <xarray.DataArray (time: 3)> 3B
         array([ True,  True, False])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -6978,14 +6978,14 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 6B
+        <xarray.DataArray (time: 6)> 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").any()
-        <xarray.DataArray (time: 3)> Size: 3B
+        <xarray.DataArray (time: 3)> 3B
         array([ True,  True,  True])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7073,14 +7073,14 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").max()
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([1., 3., 2.])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7088,7 +7088,7 @@ class DataArrayResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").max(skipna=False)
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([ 1.,  3., nan])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7178,14 +7178,14 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").min()
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([1., 0., 2.])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7193,7 +7193,7 @@ class DataArrayResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").min(skipna=False)
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([ 1.,  0., nan])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7285,14 +7285,14 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").mean()
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([1.        , 1.66666667, 2.        ])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7300,7 +7300,7 @@ class DataArrayResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").mean(skipna=False)
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([1.        , 1.66666667,        nan])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7399,14 +7399,14 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").prod()
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([1., 0., 2.])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7414,7 +7414,7 @@ class DataArrayResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").prod(skipna=False)
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([ 1.,  0., nan])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7422,7 +7422,7 @@ class DataArrayResampleAggregations:
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.resample(time="3ME").prod(skipna=True, min_count=2)
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([nan,  0., nan])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7523,14 +7523,14 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").sum()
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([1., 5., 2.])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7538,7 +7538,7 @@ class DataArrayResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").sum(skipna=False)
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([ 1.,  5., nan])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7546,7 +7546,7 @@ class DataArrayResampleAggregations:
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.resample(time="3ME").sum(skipna=True, min_count=2)
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([nan,  5., nan])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7644,14 +7644,14 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").std()
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([0.        , 1.24721913, 0.        ])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7659,7 +7659,7 @@ class DataArrayResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").std(skipna=False)
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([0.        , 1.24721913,        nan])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7667,7 +7667,7 @@ class DataArrayResampleAggregations:
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.resample(time="3ME").std(skipna=True, ddof=1)
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([       nan, 1.52752523,        nan])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7765,14 +7765,14 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").var()
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([0.        , 1.55555556, 0.        ])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7780,7 +7780,7 @@ class DataArrayResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").var(skipna=False)
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([0.        , 1.55555556,        nan])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7788,7 +7788,7 @@ class DataArrayResampleAggregations:
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.resample(time="3ME").var(skipna=True, ddof=1)
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([       nan, 2.33333333,        nan])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7882,14 +7882,14 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").median()
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([1., 2., 2.])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7897,7 +7897,7 @@ class DataArrayResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").median(skipna=False)
-        <xarray.DataArray (time: 3)> Size: 24B
+        <xarray.DataArray (time: 3)> 24B
         array([ 1.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
@@ -7975,14 +7975,14 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").cumsum()
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([1., 2., 5., 5., 2., 2.])
         Coordinates:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
@@ -7991,7 +7991,7 @@ class DataArrayResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").cumsum(skipna=False)
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  5.,  5.,  2., nan])
         Coordinates:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
@@ -8070,14 +8070,14 @@ class DataArrayResampleAggregations:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").cumprod()
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([1., 2., 6., 0., 2., 2.])
         Coordinates:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
@@ -8086,7 +8086,7 @@ class DataArrayResampleAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").cumprod(skipna=False)
-        <xarray.DataArray (time: 6)> Size: 48B
+        <xarray.DataArray (time: 6)> 48B
         array([ 1.,  2.,  6.,  0.,  2., nan])
         Coordinates:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'

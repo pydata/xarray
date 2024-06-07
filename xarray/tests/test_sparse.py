@@ -297,7 +297,7 @@ class TestSparseVariable:
     def test_repr(self):
         expected = dedent(
             """\
-            <xarray.Variable (x: 4, y: 6)> Size: 288B
+            <xarray.Variable (x: 4, y: 6)> 288B
             <COO: shape=(4, 6), dtype=float64, nnz=12, fill_value=0.0>"""
         )
         assert expected == repr(self.var)
@@ -681,7 +681,7 @@ class TestSparseDataArrayAndDataset:
         )
         expected = dedent(
             """\
-            <xarray.DataArray (x: 4)> Size: 64B
+            <xarray.DataArray (x: 4)> 64B
             <COO: shape=(4,), dtype=float64, nnz=4, fill_value=0.0>
             Coordinates:
                 y        (x) int64 48B <COO: nnz=3, fill_value=0>
@@ -696,7 +696,7 @@ class TestSparseDataArrayAndDataset:
         )
         expected = dedent(
             """\
-            <xarray.Dataset> Size: 112B
+            <xarray.Dataset> 112B
             Dimensions:  (x: 4)
             Coordinates:
                 y        (x) int64 48B <COO: nnz=3, fill_value=0>
@@ -713,7 +713,7 @@ class TestSparseDataArrayAndDataset:
         ).chunk()
         expected = dedent(
             """\
-            <xarray.Dataset> Size: 32B
+            <xarray.Dataset> 32B
             Dimensions:  (x: 4)
             Dimensions without coordinates: x
             Data variables:

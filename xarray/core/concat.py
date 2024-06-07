@@ -183,7 +183,7 @@ def concat(
     ...     np.arange(6).reshape(2, 3), [("x", ["a", "b"]), ("y", [10, 20, 30])]
     ... )
     >>> da
-    <xarray.DataArray (x: 2, y: 3)> Size: 48B
+    <xarray.DataArray (x: 2, y: 3)> 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
@@ -191,7 +191,7 @@ def concat(
       * y        (y) int64 24B 10 20 30
 
     >>> xr.concat([da.isel(y=slice(0, 1)), da.isel(y=slice(1, None))], dim="y")
-    <xarray.DataArray (x: 2, y: 3)> Size: 48B
+    <xarray.DataArray (x: 2, y: 3)> 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
@@ -199,7 +199,7 @@ def concat(
       * y        (y) int64 24B 10 20 30
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], "x")
-    <xarray.DataArray (x: 2, y: 3)> Size: 48B
+    <xarray.DataArray (x: 2, y: 3)> 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
@@ -207,7 +207,7 @@ def concat(
       * y        (y) int64 24B 10 20 30
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], "new_dim")
-    <xarray.DataArray (new_dim: 2, y: 3)> Size: 48B
+    <xarray.DataArray (new_dim: 2, y: 3)> 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
@@ -216,7 +216,7 @@ def concat(
     Dimensions without coordinates: new_dim
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], pd.Index([-90, -100], name="new_dim"))
-    <xarray.DataArray (new_dim: 2, y: 3)> Size: 48B
+    <xarray.DataArray (new_dim: 2, y: 3)> 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
@@ -228,7 +228,7 @@ def concat(
 
     >>> ds = xr.Dataset(coords={"x": 0})
     >>> xr.concat([ds, ds], dim="x")
-    <xarray.Dataset> Size: 16B
+    <xarray.Dataset> 16B
     Dimensions:  (x: 2)
     Coordinates:
       * x        (x) int64 16B 0 0

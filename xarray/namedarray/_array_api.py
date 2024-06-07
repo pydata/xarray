@@ -61,10 +61,10 @@ def astype(
     --------
     >>> narr = NamedArray(("x",), np.asarray([1.5, 2.5]))
     >>> narr
-    <xarray.NamedArray (x: 2)> Size: 16B
+    <xarray.NamedArray (x: 2)> 16B
     array([1.5, 2.5])
     >>> astype(narr, np.dtype(np.int32))
-    <xarray.NamedArray (x: 2)> Size: 8B
+    <xarray.NamedArray (x: 2)> 8B
     array([1, 2], dtype=int32)
     """
     if isinstance(x._data, _arrayapi):
@@ -79,7 +79,8 @@ def astype(
 
 
 def imag(
-    x: NamedArray[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]], /  # type: ignore[type-var]
+    x: NamedArray[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]],
+    /,  # type: ignore[type-var]
 ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
     """
     Returns the imaginary component of a complex number for each element x_i of the
@@ -102,7 +103,7 @@ def imag(
     --------
     >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))
     >>> imag(narr)
-    <xarray.NamedArray (x: 2)> Size: 16B
+    <xarray.NamedArray (x: 2)> 16B
     array([2., 4.])
     """
     xp = _get_data_namespace(x)
@@ -111,7 +112,8 @@ def imag(
 
 
 def real(
-    x: NamedArray[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]], /  # type: ignore[type-var]
+    x: NamedArray[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]],
+    /,  # type: ignore[type-var]
 ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
     """
     Returns the real component of a complex number for each element x_i of the
@@ -134,7 +136,7 @@ def real(
     --------
     >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))
     >>> real(narr)
-    <xarray.NamedArray (x: 2)> Size: 16B
+    <xarray.NamedArray (x: 2)> 16B
     array([1., 2.])
     """
     xp = _get_data_namespace(x)
@@ -172,11 +174,11 @@ def expand_dims(
     --------
     >>> x = NamedArray(("x", "y"), np.asarray([[1.0, 2.0], [3.0, 4.0]]))
     >>> expand_dims(x)
-    <xarray.NamedArray (dim_2: 1, x: 2, y: 2)> Size: 32B
+    <xarray.NamedArray (dim_2: 1, x: 2, y: 2)> 32B
     array([[[1., 2.],
             [3., 4.]]])
     >>> expand_dims(x, dim="z")
-    <xarray.NamedArray (z: 1, x: 2, y: 2)> Size: 32B
+    <xarray.NamedArray (z: 1, x: 2, y: 2)> 32B
     array([[[1., 2.],
             [3., 4.]]])
     """

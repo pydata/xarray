@@ -306,7 +306,7 @@ def map_blocks(
     ...     coords={"time": time, "month": month},
     ... ).chunk()
     >>> array.map_blocks(calculate_anomaly, template=array).compute()
-    <xarray.DataArray (time: 24)> Size: 192B
+    <xarray.DataArray (time: 24)> 192B
     array([ 0.12894847,  0.11323072, -0.0855964 , -0.09334032,  0.26848862,
             0.12382735,  0.22460641,  0.07650108, -0.07673453, -0.22865714,
            -0.19063865,  0.0590131 , -0.12894847, -0.11323072,  0.0855964 ,
@@ -324,7 +324,7 @@ def map_blocks(
     ...     kwargs={"groupby_type": "time.year"},
     ...     template=array,
     ... )  # doctest: +ELLIPSIS
-    <xarray.DataArray (time: 24)> Size: 192B
+    <xarray.DataArray (time: 24)> 192B
     dask.array<<this-array>-calculate_anomaly, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>
     Coordinates:
       * time     (time) object 192B 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
@@ -372,7 +372,8 @@ def map_blocks(
 
             # ChainMap wants MutableMapping, but xindexes is Mapping
             merged_indexes = collections.ChainMap(
-                expected["indexes"], merged_coordinates.xindexes  # type: ignore[arg-type]
+                expected["indexes"],
+                merged_coordinates.xindexes,  # type: ignore[arg-type]
             )
             expected_index = merged_indexes.get(name, None)
             if expected_index is not None and not index.equals(expected_index):

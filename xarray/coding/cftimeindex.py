@@ -383,7 +383,7 @@ class CFTimeIndex(pd.Index):
         ...     dims=["time"],
         ... )
         >>> da.sel(time="2001-01-01")
-        <xarray.DataArray (time: 1)> Size: 8B
+        <xarray.DataArray (time: 1)> 8B
         array([1])
         Coordinates:
           * time     (time) object 8B 2001-01-01 00:00:00
@@ -393,7 +393,7 @@ class CFTimeIndex(pd.Index):
         ...     dims=["time"],
         ... )
         >>> da.sel(time="2001-01-01")
-        <xarray.DataArray ()> Size: 8B
+        <xarray.DataArray ()> 8B
         array(1)
         Coordinates:
             time     datetime64[ns] 8B 2001-01-01
@@ -403,7 +403,7 @@ class CFTimeIndex(pd.Index):
         ...     dims=["time"],
         ... )
         >>> da.sel(time="2001-01-01")
-        <xarray.DataArray (time: 1)> Size: 8B
+        <xarray.DataArray (time: 1)> 8B
         array([1])
         Coordinates:
           * time     (time) datetime64[ns] 8B 2001-01-01T01:00:00

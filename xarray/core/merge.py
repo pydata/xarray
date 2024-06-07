@@ -819,7 +819,7 @@ def merge(
     ... )
 
     >>> x
-    <xarray.DataArray 'var1' (lat: 2, lon: 2)> Size: 32B
+    <xarray.DataArray 'var1' (lat: 2, lon: 2)> 32B
     array([[1., 2.],
            [3., 5.]])
     Coordinates:
@@ -827,7 +827,7 @@ def merge(
       * lon      (lon) float64 16B 100.0 120.0
 
     >>> y
-    <xarray.DataArray 'var2' (lat: 2, lon: 2)> Size: 32B
+    <xarray.DataArray 'var2' (lat: 2, lon: 2)> 32B
     array([[5., 6.],
            [7., 8.]])
     Coordinates:
@@ -835,7 +835,7 @@ def merge(
       * lon      (lon) float64 16B 100.0 150.0
 
     >>> z
-    <xarray.DataArray 'var3' (time: 2, lon: 2)> Size: 32B
+    <xarray.DataArray 'var3' (time: 2, lon: 2)> 32B
     array([[0., 3.],
            [4., 9.]])
     Coordinates:
@@ -843,7 +843,7 @@ def merge(
       * lon      (lon) float64 16B 100.0 150.0
 
     >>> xr.merge([x, y, z])
-    <xarray.Dataset> Size: 256B
+    <xarray.Dataset> 256B
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
       * lat      (lat) float64 24B 35.0 40.0 42.0
@@ -855,7 +855,7 @@ def merge(
         var3     (time, lon) float64 48B 0.0 nan 3.0 4.0 nan 9.0
 
     >>> xr.merge([x, y, z], compat="identical")
-    <xarray.Dataset> Size: 256B
+    <xarray.Dataset> 256B
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
       * lat      (lat) float64 24B 35.0 40.0 42.0
@@ -867,7 +867,7 @@ def merge(
         var3     (time, lon) float64 48B 0.0 nan 3.0 4.0 nan 9.0
 
     >>> xr.merge([x, y, z], compat="equals")
-    <xarray.Dataset> Size: 256B
+    <xarray.Dataset> 256B
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
       * lat      (lat) float64 24B 35.0 40.0 42.0
@@ -879,7 +879,7 @@ def merge(
         var3     (time, lon) float64 48B 0.0 nan 3.0 4.0 nan 9.0
 
     >>> xr.merge([x, y, z], compat="equals", fill_value=-999.0)
-    <xarray.Dataset> Size: 256B
+    <xarray.Dataset> 256B
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
       * lat      (lat) float64 24B 35.0 40.0 42.0
@@ -891,7 +891,7 @@ def merge(
         var3     (time, lon) float64 48B 0.0 -999.0 3.0 4.0 -999.0 9.0
 
     >>> xr.merge([x, y, z], join="override")
-    <xarray.Dataset> Size: 144B
+    <xarray.Dataset> 144B
     Dimensions:  (lat: 2, lon: 2, time: 2)
     Coordinates:
       * lat      (lat) float64 16B 35.0 40.0
@@ -903,7 +903,7 @@ def merge(
         var3     (time, lon) float64 32B 0.0 3.0 4.0 9.0
 
     >>> xr.merge([x, y, z], join="inner")
-    <xarray.Dataset> Size: 64B
+    <xarray.Dataset> 64B
     Dimensions:  (lat: 1, lon: 1, time: 2)
     Coordinates:
       * lat      (lat) float64 8B 35.0
@@ -915,7 +915,7 @@ def merge(
         var3     (time, lon) float64 16B 0.0 4.0
 
     >>> xr.merge([x, y, z], compat="identical", join="inner")
-    <xarray.Dataset> Size: 64B
+    <xarray.Dataset> 64B
     Dimensions:  (lat: 1, lon: 1, time: 2)
     Coordinates:
       * lat      (lat) float64 8B 35.0
@@ -927,7 +927,7 @@ def merge(
         var3     (time, lon) float64 16B 0.0 4.0
 
     >>> xr.merge([x, y, z], compat="broadcast_equals", join="outer")
-    <xarray.Dataset> Size: 256B
+    <xarray.Dataset> 256B
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
       * lat      (lat) float64 24B 35.0 40.0 42.0

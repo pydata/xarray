@@ -280,7 +280,7 @@ class TestDataset:
         # need to insert str dtype at runtime to handle different endianness
         expected = dedent(
             """\
-            <xarray.Dataset> Size: 2kB
+            <xarray.Dataset> 2kB
             Dimensions:  (dim2: 9, dim3: 10, time: 20, dim1: 8)
             Coordinates:
               * dim2     (dim2) float64 72B 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
@@ -307,7 +307,7 @@ class TestDataset:
 
         expected = dedent(
             """\
-            <xarray.Dataset> Size: 0B
+            <xarray.Dataset> 0B
             Dimensions:  ()
             Data variables:
                 *empty*"""
@@ -320,7 +320,7 @@ class TestDataset:
         data = Dataset({"foo": ("x", np.ones(10))}).mean()
         expected = dedent(
             """\
-            <xarray.Dataset> Size: 8B
+            <xarray.Dataset> 8B
             Dimensions:  ()
             Data variables:
                 foo      float64 8B 1.0"""
@@ -337,7 +337,7 @@ class TestDataset:
         data = create_test_multiindex()
         expected = dedent(
             """\
-            <xarray.Dataset> Size: 96B
+            <xarray.Dataset> 96B
             Dimensions:  (x: 4)
             Coordinates:
               * x        (x) object 32B MultiIndex
@@ -358,7 +358,7 @@ class TestDataset:
         data = Dataset({}, midx_coords)
         expected = dedent(
             """\
-            <xarray.Dataset> Size: 96B
+            <xarray.Dataset> 96B
             Dimensions:                  (x: 4)
             Coordinates:
               * x                        (x) object 32B MultiIndex
@@ -386,7 +386,7 @@ class TestDataset:
         byteorder = "<" if sys.byteorder == "little" else ">"
         expected = dedent(
             """\
-            <xarray.Dataset> Size: 12B
+            <xarray.Dataset> 12B
             Dimensions:  (foø: 1)
             Coordinates:
               * foø      (foø) %cU3 12B %r
@@ -418,7 +418,7 @@ class TestDataset:
         dataset = Dataset({"foo": ("x", Array())})
         expected = dedent(
             """\
-            <xarray.Dataset> Size: 16B
+            <xarray.Dataset> 16B
             Dimensions:  (x: 2)
             Dimensions without coordinates: x
             Data variables:

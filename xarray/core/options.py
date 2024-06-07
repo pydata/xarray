@@ -261,7 +261,7 @@ class set_options:
     >>> with xr.set_options(display_width=40):
     ...     print(ds)
     ...
-    <xarray.Dataset> Size: 8kB
+    <xarray.Dataset> 8kB
     Dimensions:  (x: 1000)
     Coordinates:
       * x        (x) int64 8kB 0 1 ... 999

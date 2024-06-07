@@ -752,7 +752,7 @@ def align(
     ... )
 
     >>> x
-    <xarray.DataArray (lat: 2, lon: 2)> Size: 32B
+    <xarray.DataArray (lat: 2, lon: 2)> 32B
     array([[25, 35],
            [10, 24]])
     Coordinates:
@@ -760,7 +760,7 @@ def align(
       * lon      (lon) float64 16B 100.0 120.0
 
     >>> y
-    <xarray.DataArray (lat: 2, lon: 2)> Size: 32B
+    <xarray.DataArray (lat: 2, lon: 2)> 32B
     array([[20,  5],
            [ 7, 13]])
     Coordinates:
@@ -769,13 +769,13 @@ def align(
 
     >>> a, b = xr.align(x, y)
     >>> a
-    <xarray.DataArray (lat: 1, lon: 2)> Size: 16B
+    <xarray.DataArray (lat: 1, lon: 2)> 16B
     array([[25, 35]])
     Coordinates:
       * lat      (lat) float64 8B 35.0
       * lon      (lon) float64 16B 100.0 120.0
     >>> b
-    <xarray.DataArray (lat: 1, lon: 2)> Size: 16B
+    <xarray.DataArray (lat: 1, lon: 2)> 16B
     array([[20,  5]])
     Coordinates:
       * lat      (lat) float64 8B 35.0
@@ -783,7 +783,7 @@ def align(
 
     >>> a, b = xr.align(x, y, join="outer")
     >>> a
-    <xarray.DataArray (lat: 3, lon: 2)> Size: 48B
+    <xarray.DataArray (lat: 3, lon: 2)> 48B
     array([[25., 35.],
            [10., 24.],
            [nan, nan]])
@@ -791,7 +791,7 @@ def align(
       * lat      (lat) float64 24B 35.0 40.0 42.0
       * lon      (lon) float64 16B 100.0 120.0
     >>> b
-    <xarray.DataArray (lat: 3, lon: 2)> Size: 48B
+    <xarray.DataArray (lat: 3, lon: 2)> 48B
     array([[20.,  5.],
            [nan, nan],
            [ 7., 13.]])
@@ -801,7 +801,7 @@ def align(
 
     >>> a, b = xr.align(x, y, join="outer", fill_value=-999)
     >>> a
-    <xarray.DataArray (lat: 3, lon: 2)> Size: 48B
+    <xarray.DataArray (lat: 3, lon: 2)> 48B
     array([[  25,   35],
            [  10,   24],
            [-999, -999]])
@@ -809,7 +809,7 @@ def align(
       * lat      (lat) float64 24B 35.0 40.0 42.0
       * lon      (lon) float64 16B 100.0 120.0
     >>> b
-    <xarray.DataArray (lat: 3, lon: 2)> Size: 48B
+    <xarray.DataArray (lat: 3, lon: 2)> 48B
     array([[  20,    5],
            [-999, -999],
            [   7,   13]])
@@ -819,14 +819,14 @@ def align(
 
     >>> a, b = xr.align(x, y, join="left")
     >>> a
-    <xarray.DataArray (lat: 2, lon: 2)> Size: 32B
+    <xarray.DataArray (lat: 2, lon: 2)> 32B
     array([[25, 35],
            [10, 24]])
     Coordinates:
       * lat      (lat) float64 16B 35.0 40.0
       * lon      (lon) float64 16B 100.0 120.0
     >>> b
-    <xarray.DataArray (lat: 2, lon: 2)> Size: 32B
+    <xarray.DataArray (lat: 2, lon: 2)> 32B
     array([[20.,  5.],
            [nan, nan]])
     Coordinates:
@@ -835,14 +835,14 @@ def align(
 
     >>> a, b = xr.align(x, y, join="right")
     >>> a
-    <xarray.DataArray (lat: 2, lon: 2)> Size: 32B
+    <xarray.DataArray (lat: 2, lon: 2)> 32B
     array([[25., 35.],
            [nan, nan]])
     Coordinates:
       * lat      (lat) float64 16B 35.0 42.0
       * lon      (lon) float64 16B 100.0 120.0
     >>> b
-    <xarray.DataArray (lat: 2, lon: 2)> Size: 32B
+    <xarray.DataArray (lat: 2, lon: 2)> 32B
     array([[20,  5],
            [ 7, 13]])
     Coordinates:
@@ -856,14 +856,14 @@ def align(
 
     >>> a, b = xr.align(x, y, join="override")
     >>> a
-    <xarray.DataArray (lat: 2, lon: 2)> Size: 32B
+    <xarray.DataArray (lat: 2, lon: 2)> 32B
     array([[25, 35],
            [10, 24]])
     Coordinates:
       * lat      (lat) float64 16B 35.0 40.0
       * lon      (lon) float64 16B 100.0 120.0
     >>> b
-    <xarray.DataArray (lat: 2, lon: 2)> Size: 32B
+    <xarray.DataArray (lat: 2, lon: 2)> 32B
     array([[20,  5],
            [ 7, 13]])
     Coordinates:
@@ -1173,22 +1173,22 @@ def broadcast(
     >>> a = xr.DataArray([1, 2, 3], dims="x")
     >>> b = xr.DataArray([5, 6], dims="y")
     >>> a
-    <xarray.DataArray (x: 3)> Size: 24B
+    <xarray.DataArray (x: 3)> 24B
     array([1, 2, 3])
     Dimensions without coordinates: x
     >>> b
-    <xarray.DataArray (y: 2)> Size: 16B
+    <xarray.DataArray (y: 2)> 16B
     array([5, 6])
     Dimensions without coordinates: y
     >>> a2, b2 = xr.broadcast(a, b)
     >>> a2
-    <xarray.DataArray (x: 3, y: 2)> Size: 48B
+    <xarray.DataArray (x: 3, y: 2)> 48B
     array([[1, 1],
            [2, 2],
            [3, 3]])
     Dimensions without coordinates: x, y
     >>> b2
-    <xarray.DataArray (x: 3, y: 2)> Size: 48B
+    <xarray.DataArray (x: 3, y: 2)> 48B
     array([[5, 6],
            [5, 6],
            [5, 6]])
@@ -1199,7 +1199,7 @@ def broadcast(
     >>> ds = xr.Dataset({"a": a, "b": b})
     >>> (ds2,) = xr.broadcast(ds)  # use tuple unpacking to extract one dataset
     >>> ds2
-    <xarray.Dataset> Size: 96B
+    <xarray.Dataset> 96B
     Dimensions:  (x: 3, y: 2)
     Dimensions without coordinates: x, y
     Data variables:

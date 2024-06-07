@@ -1457,7 +1457,7 @@ def save_mfdataset(
     ...     coords={"time": pd.date_range("2010-01-01", freq="ME", periods=48)},
     ... )
     >>> ds
-    <xarray.Dataset> Size: 768B
+    <xarray.Dataset> 768B
     Dimensions:  (time: 48)
     Coordinates:
       * time     (time) datetime64[ns] 384B 2010-01-31 2010-02-28 ... 2013-12-31

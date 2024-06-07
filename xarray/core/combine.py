@@ -484,7 +484,7 @@ def combine_nested(
     ...     }
     ... )
     >>> x1y1
-    <xarray.Dataset> Size: 64B
+    <xarray.Dataset> 64B
     Dimensions:        (x: 2, y: 2)
     Dimensions without coordinates: x, y
     Data variables:
@@ -513,7 +513,7 @@ def combine_nested(
     >>> ds_grid = [[x1y1, x1y2], [x2y1, x2y2]]
     >>> combined = xr.combine_nested(ds_grid, concat_dim=["x", "y"])
     >>> combined
-    <xarray.Dataset> Size: 256B
+    <xarray.Dataset> 256B
     Dimensions:        (x: 4, y: 4)
     Dimensions without coordinates: x, y
     Data variables:
@@ -528,7 +528,7 @@ def combine_nested(
 
     >>> t1temp = xr.Dataset({"temperature": ("t", np.random.randn(5))})
     >>> t1temp
-    <xarray.Dataset> Size: 40B
+    <xarray.Dataset> 40B
     Dimensions:      (t: 5)
     Dimensions without coordinates: t
     Data variables:
@@ -536,7 +536,7 @@ def combine_nested(
 
     >>> t1precip = xr.Dataset({"precipitation": ("t", np.random.randn(5))})
     >>> t1precip
-    <xarray.Dataset> Size: 40B
+    <xarray.Dataset> 40B
     Dimensions:        (t: 5)
     Dimensions without coordinates: t
     Data variables:
@@ -549,7 +549,7 @@ def combine_nested(
     >>> ds_grid = [[t1temp, t1precip], [t2temp, t2precip]]
     >>> combined = xr.combine_nested(ds_grid, concat_dim=["t", None])
     >>> combined
-    <xarray.Dataset> Size: 160B
+    <xarray.Dataset> 160B
     Dimensions:        (t: 10)
     Dimensions without coordinates: t
     Data variables:
@@ -797,7 +797,7 @@ def combine_by_coords(
     ... )
 
     >>> x1
-    <xarray.Dataset> Size: 136B
+    <xarray.Dataset> 136B
     Dimensions:        (y: 2, x: 3)
     Coordinates:
       * y              (y) int64 16B 0 1
@@ -807,7 +807,7 @@ def combine_by_coords(
         precipitation  (y, x) float64 48B 0.4376 0.8918 0.9637 0.3834 0.7917 0.5289
 
     >>> x2
-    <xarray.Dataset> Size: 136B
+    <xarray.Dataset> 136B
     Dimensions:        (y: 2, x: 3)
     Coordinates:
       * y              (y) int64 16B 2 3
@@ -817,7 +817,7 @@ def combine_by_coords(
         precipitation  (y, x) float64 48B 0.7782 0.87 0.9786 0.7992 0.4615 0.7805
 
     >>> x3
-    <xarray.Dataset> Size: 136B
+    <xarray.Dataset> 136B
     Dimensions:        (y: 2, x: 3)
     Coordinates:
       * y              (y) int64 16B 2 3
@@ -827,7 +827,7 @@ def combine_by_coords(
         precipitation  (y, x) float64 48B 0.2646 0.7742 0.4562 0.5684 0.01879 0.6176
 
     >>> xr.combine_by_coords([x2, x1])
-    <xarray.Dataset> Size: 248B
+    <xarray.Dataset> 248B
     Dimensions:        (y: 4, x: 3)
     Coordinates:
       * y              (y) int64 32B 0 1 2 3
@@ -837,7 +837,7 @@ def combine_by_coords(
         precipitation  (y, x) float64 96B 0.4376 0.8918 0.9637 ... 0.4615 0.7805
 
     >>> xr.combine_by_coords([x3, x1])
-    <xarray.Dataset> Size: 464B
+    <xarray.Dataset> 464B
     Dimensions:        (y: 4, x: 6)
     Coordinates:
       * y              (y) int64 32B 0 1 2 3
@@ -847,7 +847,7 @@ def combine_by_coords(
         precipitation  (y, x) float64 192B 0.4376 0.8918 0.9637 ... 0.01879 0.6176
 
     >>> xr.combine_by_coords([x3, x1], join="override")
-    <xarray.Dataset> Size: 256B
+    <xarray.Dataset> 256B
     Dimensions:        (y: 2, x: 6)
     Coordinates:
       * y              (y) int64 16B 0 1
@@ -857,7 +857,7 @@ def combine_by_coords(
         precipitation  (y, x) float64 96B 0.4376 0.8918 0.9637 ... 0.01879 0.6176
 
     >>> xr.combine_by_coords([x1, x2, x3])
-    <xarray.Dataset> Size: 464B
+    <xarray.Dataset> 464B
     Dimensions:        (y: 4, x: 6)
     Coordinates:
       * y              (y) int64 32B 0 1 2 3
@@ -875,7 +875,7 @@ def combine_by_coords(
     ...     name="a", data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x"
     ... )
     >>> named_da1
-    <xarray.DataArray 'a' (x: 2)> Size: 16B
+    <xarray.DataArray 'a' (x: 2)> 16B
     array([1., 2.])
     Coordinates:
       * x        (x) int64 16B 0 1
@@ -884,13 +884,13 @@ def combine_by_coords(
     ...     name="a", data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x"
     ... )
     >>> named_da2
-    <xarray.DataArray 'a' (x: 2)> Size: 16B
+    <xarray.DataArray 'a' (x: 2)> 16B
     array([3., 4.])
     Coordinates:
       * x        (x) int64 16B 2 3
 
     >>> xr.combine_by_coords([named_da1, named_da2])
-    <xarray.Dataset> Size: 64B
+    <xarray.Dataset> 64B
     Dimensions:  (x: 4)
     Coordinates:
       * x        (x) int64 32B 0 1 2 3
@@ -902,7 +902,7 @@ def combine_by_coords(
     >>> unnamed_da1 = xr.DataArray(data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
     >>> unnamed_da2 = xr.DataArray(data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x")
     >>> xr.combine_by_coords([unnamed_da1, unnamed_da2])
-    <xarray.DataArray (x: 4)> Size: 32B
+    <xarray.DataArray (x: 4)> 32B
     array([1., 2., 3., 4.])
     Coordinates:
       * x        (x) int64 32B 0 1 2 3
