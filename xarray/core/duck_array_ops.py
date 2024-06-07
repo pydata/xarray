@@ -273,13 +273,12 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
 
         xp = cp
 
-    # split into weakly and strongly dtyped
-    dtype = dtypes.result_type(*scalars_or_arrays, xp=xp)
-
     # Pass arrays directly instead of dtypes to result_type so scalars
     # get handled properly.
     # Note that result_type() safely gets the dtype from dask arrays without
     # evaluating them.
+    dtype = dtypes.result_type(*scalars_or_arrays, xp=xp)
+
     return tuple(asarray(x, dtype=dtype, xp=xp) for x in scalars_or_arrays)
 
 
