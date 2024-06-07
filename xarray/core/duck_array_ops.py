@@ -279,7 +279,7 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
     # evaluating them.
     dtype = dtypes.result_type(*scalars_or_arrays, xp=xp)
 
-    return tuple(asarray(x, dtype=dtype, xp=xp) for x in scalars_or_arrays)
+    return [asarray(x, dtype=dtype, xp=xp) for x in scalars_or_arrays]
 
 
 def broadcast_to(array, shape):
