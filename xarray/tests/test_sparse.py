@@ -717,7 +717,7 @@ class TestSparseDataArrayAndDataset:
             Dimensions:  (x: 4)
             Dimensions without coordinates: x
             Data variables:
-                a        (x) float64 dask.array<chunksize=(4,), meta=sparse.COO>"""
+                a        (x) float64 32B dask.array<chunksize=(4,), meta=sparse.COO>"""
         )
         assert expected == repr(ds)
 
