@@ -546,9 +546,9 @@ class TestFormatting:
                 <xarray.Dataset> 27B
                 Dimensions:  (x: 3)
                 Coordinates:
-                * x        (x) float64 10.0 20.0 30.0
+                  * x        (x) float64 24B 10.0 20.0 30.0
                 Data variables:
-                    myvar    (x) uint8 11 22 33"""
+                    myvar    (x) uint8 3B 11 22 33"""
             )
 
         with xr.set_options(display_variables_nbytes=False):
@@ -558,7 +558,7 @@ class TestFormatting:
                 <xarray.Dataset> 27B
                 Dimensions:  (x: 3)
                 Coordinates:
-                * x        (x) float64 10.0 20.0 30.0
+                  * x        (x) float64 10.0 20.0 30.0
                 Data variables:
                     myvar    (x) uint8 11 22 33"""
             )
@@ -570,7 +570,7 @@ class TestFormatting:
                 <xarray.Dataset> 27B
                 Dimensions:  (x: 3)
                 Coordinates:
-                * x        (x) float64 10.0 20.0 30.0
+                  * x        (x) float64 10.0 20.0 30.0
                 Data variables:
                     myvar    (x) uint8 11 22 33"""
             )
@@ -592,9 +592,9 @@ class TestFormatting:
                 <xarray.Dataset> 27B
                 Dimensions:  (x: 3)
                 Coordinates:
-                * x        (x) float64 10.0 20.0 30.0
+                  * x        (x) float64 24B 10.0 20.0 30.0
                 Data variables:
-                    myvar    (x) uint8 dask.array<chunksize=(3,), meta=np.ndarray>"""
+                    myvar    (x) uint8 3B dask.array<chunksize=(3,), meta=np.ndarray>"""
             )
 
         with xr.set_options(display_variables_nbytes=False):
@@ -604,7 +604,7 @@ class TestFormatting:
                 <xarray.Dataset> 27B
                 Dimensions:  (x: 3)
                 Coordinates:
-                * x        (x) float64 10.0 20.0 30.0
+                  * x        (x) float64 10.0 20.0 30.0
                 Data variables:
                     myvar    (x) uint8 dask.array<chunksize=(3,), meta=np.ndarray>"""
             )
@@ -616,9 +616,9 @@ class TestFormatting:
                 <xarray.Dataset> 27B
                 Dimensions:  (x: 3)
                 Coordinates:
-                * x        (x) float64 10.0 20.0 30.0
+                  * x        (x) float64 10.0 20.0 30.0
                 Data variables:
-                    myvar    (x) uint8 dask.array<chunksize=(3,), meta=np.ndarray>"""
+                    myvar    (x) uint8 3B dask.array<chunksize=(3,), meta=np.ndarray>"""
             )
 
     @requires_dask
@@ -1038,8 +1038,8 @@ def test_display_nbytes() -> None:
 <xarray.Dataset> 3kB
 Dimensions:  (foo: 1200, bar: 111)
 Coordinates:
-  * foo      (foo) int16 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
-  * bar      (bar) int16 0 1 2 3 4 5 6 7 ... 104 105 106 107 108 109 110
+  * foo      (foo) int16 0 1 2 3 4 5 6 7 ... 1193 1194 1195 1196 1197 1198 1199
+  * bar      (bar) int16 0 1 2 3 4 5 6 7 8 ... 103 104 105 106 107 108 109 110
 Data variables:
     *empty*
     """.strip()
@@ -1050,7 +1050,7 @@ Data variables:
 <xarray.DataArray 'foo' (foo: 1200)> 2kB
 array([   0,    1,    2, ..., 1197, 1198, 1199], dtype=int16)
 Coordinates:
-  * foo      (foo) int16 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
+  * foo      (foo) int16 0 1 2 3 4 5 6 7 ... 1193 1194 1195 1196 1197 1198 1199
 """.strip()
     assert actual == expected
 

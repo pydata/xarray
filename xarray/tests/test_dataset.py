@@ -284,18 +284,16 @@ class TestDataset:
             Dimensions:  (dim2: 9, dim3: 10, time: 20, dim1: 8)
             Coordinates:
               * dim2     (dim2) float64 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
-              * dim3     (dim3) {} 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+              * dim3     (dim3) <U1 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
               * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-20
                 numbers  (dim3) int64 0 1 2 0 0 1 1 2 2 3
             Dimensions without coordinates: dim1
             Data variables:
-                var1     (dim1, dim2) float64 -1.086 0.9973 0.283 ... 0.4684 -0.8312
-                var2     (dim1, dim2) float64 1.162 -1.097 -2.123 ... 1.267 0.3328
+                var1     (dim1, dim2) float64 -1.086 0.9973 0.283 ... 0.1995 0.4684 -0.8312
+                var2     (dim1, dim2) float64 1.162 -1.097 -2.123 ... 0.1302 1.267 0.3328
                 var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 ... -0.2452 -0.3616
             Attributes:
-                foo:      bar""".format(
-                data["dim3"].dtype
-            )
+                foo:      bar""".format()
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
         print(actual)
