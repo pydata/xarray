@@ -1345,6 +1345,7 @@ class TestDictSerialization:
         data: ToDictDataOptions,
         absolute_details: bool,
     ):
+        # Test conversion of a DataTree with default parameters of the `to_dict_nested` method.
         original_xdt = TestDictSerialization.create_test_data()
 
         expected_basic_dict = {
@@ -1487,6 +1488,7 @@ class TestDictSerialization:
         data: ToDictDataOptions,
         absolute_details: bool,
     ) -> None:
+        # Test roundtrip for all the parameter space permitted by the `to_dict_nested` method.
         original_xdt = TestDictSerialization.create_test_data()
 
         actual_dict = original_xdt.to_dict_nested(
