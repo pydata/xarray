@@ -29,7 +29,7 @@ New Features
   * ``True`` : to always show the nbytes for variables
   * ``False`` : to always hide the nbytes for variables
   * ``default`` : to only show the nbytes for lazy variables (e.g. dask arrays)
-  (:issue:`8690`, :pull:`TODO`).
+  (:issue:`8690`, :pull:`9078`).
   By `Etienne Schalk <https://github.com/etienneschalk>`_.
 
 Performance
