@@ -1243,8 +1243,8 @@ class DataTree(
         └── DataTree('satellite_image')
                 Dimensions:     (x: 3, y: 3, time: 2)
                 Coordinates:
-                * x           (x) int64 24B 10 20 30
-                * y           (y) int64 24B 90 80 70
+                  * x           (x) int64 24B 10 20 30
+                  * y           (y) int64 24B 90 80 70
                 Dimensions without coordinates: time
                 Data variables:
                     infrared    (time, y, x) float64 144B 5.0 5.0 5.0 5.0 ... 5.0 5.0 5.0 5.0
