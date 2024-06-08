@@ -1002,7 +1002,7 @@ class DataWithCoords(AttrAccessMixin):
                10.80645161, 10.83870968, 10.87096774, 10.90322581, 10.93548387,
                10.96774194, 11.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
 
         Limit scope of upsampling method
 
@@ -1035,7 +1035,7 @@ class DataWithCoords(AttrAccessMixin):
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 11., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
 
         See Also
         --------

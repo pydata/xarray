@@ -274,7 +274,7 @@ class set_options:
     <xarray.Dataset> 8kB
     Dimensions:  (x: 1000)
     Coordinates:
-      * x        (x) int64 8kB 0 1 ... 999
+      * x        (x) int64 0 1 ... 999
     Data variables:
         *empty*
 

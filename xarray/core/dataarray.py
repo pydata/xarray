@@ -6720,13 +6720,13 @@ class DataArray(
         array([0.000e+00, 1.000e+00, 2.000e+00, ..., 1.824e+03, 1.825e+03,
                1.826e+03])
         Coordinates:
-          * time     (time) datetime64[ns] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
+          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2004-12-31
         >>> da.groupby("time.dayofyear") - da.groupby("time.dayofyear").mean("time")
         <xarray.DataArray (time: 1827)> 15kB
         array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5])
         Coordinates:
-          * time       (time) datetime64[ns] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
-            dayofyear  (time) int64 15kB 1 2 3 4 5 6 7 8 ... 360 361 362 363 364 365 366
+          * time       (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2004-12-31
+            dayofyear  (time) int64 1 2 3 4 5 6 7 8 ... 360 361 362 363 364 365 366
 
         See Also
         --------
@@ -7122,7 +7122,7 @@ class DataArray(
                356.98071625, 357.98347107, 358.9862259 , 359.98898072,
                360.99173554, 361.99449036, 362.99724518, 364.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-12-12
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-12-12
         >>> da.coarsen(time=3, boundary="trim").mean()  # +doctest: ELLIPSIS
         <xarray.DataArray (time: 121)> 968B
         array([  1.00275482,   4.01101928,   7.01928375,  10.02754821,
@@ -7326,7 +7326,7 @@ class DataArray(
                10.80645161, 10.83870968, 10.87096774, 10.90322581, 10.93548387,
                10.96774194, 11.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
 
         Limit scope of upsampling method
 
@@ -7359,7 +7359,7 @@ class DataArray(
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 11., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
 
         See Also
         --------
