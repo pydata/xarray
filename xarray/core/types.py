@@ -299,3 +299,4 @@ GroupIndices = tuple[GroupIndex, ...]
 Bins = Union[
     int, Sequence[int], Sequence[float], Sequence[pd.Timestamp], np.ndarray, pd.Index
 ]
+ToDictDataOptions = bool | Literal["list", "array"]

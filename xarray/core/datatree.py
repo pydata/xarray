@@ -62,7 +62,12 @@ if TYPE_CHECKING:
 
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
     from xarray.core.merge import CoercibleMapping, CoercibleValue
-    from xarray.core.types import ErrorOptions, NetcdfWriteModes, ZarrWriteModes
+    from xarray.core.types import (
+        ErrorOptions,
+        NetcdfWriteModes,
+        ZarrWriteModes,
+        ToDictDataOptions,
+    )
 
 # """
 # DEVELOPERS' NOTE
@@ -1065,6 +1070,42 @@ class DataTree(
         return result
 
     @classmethod
+    def from_dict_nested(cls, node_dict: Mapping[Any, Any]) -> DataTree[Any]:
+        """Convert a dictionary into an xarray.Dataset.
+
+        Parameters
+        ----------
+        d : dict-like
+            Mapping with a minimum structure of
+                ``{"var_0": {"dims": [..], "data": [..]}, \
+                            ...}``
+
+        Returns
+        -------
+        obj : Dataset
+
+        See also
+        --------
+        DataTree.to_dict_nested
+        DataTree.to_dict
+        Dataset.to_dict
+        DataArray.from_dict
+
+        Examples
+        --------
+        """
+
+        obj = cls(
+            name=node_dict["name"],
+            data=Dataset.from_dict(node_dict),
+            children={
+                child_name: cls.from_dict(child_node_dict)
+                for child_name, child_node_dict in node_dict["children"].items()
+            },
+        )
+        return obj
+
+    @classmethod
     def from_dict(
         cls,
         d: MutableMapping[str, Dataset | DataArray | DataTree | None],
@@ -1120,6 +1161,95 @@ class DataTree(
                 )
 
         return obj
+
+    def to_dict_nested(
+        self,
+        data: ToDictDataOptions = "list",
+        encoding: bool = False,
+        absolute_details: bool = False,
+    ) -> dict[str, Any]:
+        """
+        Convert this DataTree to a dictionary following xarray naming conventions.
+
+        The iteration over the tree is effectuated with :py:meth:`DataTree.subtree`.
+
+        The initial creation of node dictionaries is delegated to :py:meth:`Dataset.to_dict`,
+        using the immutable Dataset-like view provided by :py:attr:`Datatree.ds`.
+
+        If this method is used with the final aim of dumping the tree to JSON, be cautious
+        that while Python dictionaries are ordered, their equivalent JSON objects are not.
+        Thus, the order of children nodes as well as data variables is not guaranteed
+        with the JSON representation.
+
+        The children key will be associated to the children nodes, while the data_vars
+        key will be associated to data variables. The ``data_vars`` associated lists will
+        be empty if the tree is hollow, ie. if only leaves carry data.
+
+        The ``name`` attribute is an addition to the Dataset dict serialization.
+        Like a Dataset contains named DataArrays, each Dataset is enriched by becoming
+        a named node in the DataTree. ``children`` is to DataTree as
+        ``data_vars`` is to Dataset.
+
+        Parameters
+        ----------
+        data : bool or {"list", "array"}, default: "list"
+            Whether to include the actual data in the dictionary. When set to
+            False, returns just the schema. If set to "array", returns data as
+            underlying array type. If set to "list" (or True for backwards
+            compatibility), returns data in lists of Python data types. Note
+            that for obtaining the "list" output efficiently, use
+            ``ds.compute().to_dict(data="list")``.
+
+        encoding : bool, default: False
+            Whether to include the Dataset's encoding in the dictionary.
+
+        absolute_details : bool, default: False
+            Whether to include additional absolute details: ``path``, ``level``,
+            ``depth``, `width`, ``is_root`` and ``is_leaf`` in the dictionary.
+            Absolute is in the sense that such information contribute to situating
+            a node in the root-tree hierarchy. These are not mandatory information
+            to reconstruct the root DataTree. Disable if the nodes must remain
+            agnostic of their surrounding hierarchy.
+
+        Returns
+        -------
+        d : dict
+            Recursive dictionary inherited key from :py:meth:`Dataset.to_dict`:
+            "coords", "attrs", "dims", "data_vars" and optionally "encoding", as
+            well as DataTree-specific keys: "name", "children" and optionally
+            "path", "is_root", "is_leaf", "level", "depth", "width"
+
+        See Also
+        --------
+        DataTree.from_dict_nested
+        DataTree.from_dict
+        Dataset.from_dict
+        Dataset.to_dict
+        """
+
+        super_root_dict = {"children": {}}
+        for node in self.subtree:
+            node_dict = node.ds.to_dict(data=data, encoding=encoding)
+            node_dict["name"] = node.name
+            if absolute_details:
+                node_dict.update(
+                    {
+                        "path": node.path,
+                        "is_root": node.is_root,
+                        "is_leaf": node.is_leaf,
+                        "level": node.level,
+                        "depth": node.depth,
+                        "width": node.width,
+                    }
+                )
+            node_dict["children"] = {}
+            parts = NodePath(node.path).parts
+            current_dict = super_root_dict
+            for part in parts[:-1]:
+                current_dict = current_dict["children"].get(part, {})
+            current_dict["children"][parts[-1]] = node_dict
+        root_dict = super_root_dict["children"]["/"]
+        return root_dict
 
     def to_dict(self) -> dict[str, Dataset]:
         """
