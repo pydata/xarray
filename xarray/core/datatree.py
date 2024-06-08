@@ -1096,11 +1096,11 @@ class DataTree(
         """
 
         obj = cls(
-            name=node_dict["name"],
+            name=node_dict.get("name", "<UNNAMED>"),
             data=Dataset.from_dict(node_dict),
             children={
-                child_name: cls.from_dict(child_node_dict)
-                for child_name, child_node_dict in node_dict["children"].items()
+                child_name: cls.from_dict_nested(child_node_dict)
+                for child_name, child_node_dict in node_dict.get("children", {}).items()
             },
         )
         return obj
