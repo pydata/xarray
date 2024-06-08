@@ -341,7 +341,17 @@ def summarize_variable(
     else:
         dims_str = ""
 
-    nbytes_str = f" {render_human_readable_nbytes(variable.nbytes)}"
+    display_variables_nbytes = OPTIONS["display_variables_nbytes"]
+    if display_variables_nbytes == "default":
+        show_nbytes = variable.chunks is not None
+    else:
+        show_nbytes = display_variables_nbytes
+
+    if show_nbytes:
+        nbytes_str = f" {render_human_readable_nbytes(variable.nbytes)}"
+    else:
+        nbytes_str = ""
+
     front_str = f"{first_col}{dims_str}{variable.dtype}{nbytes_str} "
 
     values_width = max_width - len(front_str)

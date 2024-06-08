@@ -15,6 +15,7 @@ Xarray offers a small number of configuration options through :py:func:`set_opti
    - ``display_expand_data_vars``
    - ``display_max_rows``
    - ``display_style``
+   - ``display_variables_nbytes``
 
 2. Control behaviour during operations: ``arithmetic_join``, ``keep_attrs``, ``use_bottleneck``.
 3. Control colormaps for plots:``cmap_divergent``, ``cmap_sequential``.
