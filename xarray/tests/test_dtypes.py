@@ -45,7 +45,7 @@ def test_result_type(args, expected) -> None:
         ([np.array([b"a", b"b"], dtype=bytes), "c"], object),
         ([np.array(["a", "b"], dtype=str), "c"], np.dtype(str)),
         ([np.array(["a", "b"], dtype=str), None], object),
-        ([0, 1], np.int64),
+        ([0, 1], np.dtype("int")),
     ),
 )
 def test_result_type_scalars(values, expected) -> None:
