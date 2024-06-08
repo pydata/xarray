@@ -1383,7 +1383,7 @@ class DataTree(
         Dataset.to_dict
         """
 
-        super_root_dict = {"children": {}}
+        super_root_dict: dict[str, Any] = {"children": {}}
         for node in self.subtree:
             node_dict = node.ds.to_dict(data=data, encoding=encoding)
             node_dict["name"] = node.name
