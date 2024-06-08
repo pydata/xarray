@@ -1071,18 +1071,16 @@ class DataTree(
 
     @classmethod
     def from_dict_nested(cls, node_dict: Mapping[Any, Any]) -> DataTree[Any]:
-        """Convert a dictionary into an xarray.Dataset.
+        """Convert a dictionary into a DataTree.
 
         Parameters
         ----------
         d : dict-like
-            Mapping with a minimum structure of
-                ``{"var_0": {"dims": [..], "data": [..]}, \
-                            ...}``
+            Mapping representing a serialized DataTree
 
         Returns
         -------
-        obj : Dataset
+        obj : DataTree
 
         See also
         --------
@@ -1093,6 +1091,164 @@ class DataTree(
 
         Examples
         --------
+        >>> import xarray.core.datatree as dt
+        >>> basic_dict = {
+        ...     "coords": {
+        ...         "time": {
+        ...             "dims": ("time",),
+        ...             "attrs": {"units": "date", "long_name": "Time of acquisition"},
+        ...             "data": ["2020-12-01", "2020-12-02"],
+        ...         }
+        ...     },
+        ...     "attrs": {
+        ...         "description": "Root Hypothetical DataTree with heterogeneous data: weather and satellite"
+        ...     },
+        ...     "dims": {"time": 2},
+        ...     "data_vars": {},
+        ...     "name": "(root)",
+        ...     "children": {
+        ...         "weather_data": {
+        ...             "coords": {
+        ...                 "station": {
+        ...                     "dims": ("station",),
+        ...                     "attrs": {
+        ...                         "units": "dl",
+        ...                         "long_name": "Station of acquisition",
+        ...                     },
+        ...                     "data": ["a", "b", "c", "d", "e", "f"],
+        ...                 }
+        ...             },
+        ...             "attrs": {
+        ...                 "description": "Weather data node, inheriting the 'time' dimension"
+        ...             },
+        ...             "dims": {"station": 6, "time": 2},
+        ...             "data_vars": {
+        ...                 "wind_speed": {
+        ...                     "dims": ("time", "station"),
+        ...                     "attrs": {
+        ...                         "units": "meter/sec",
+        ...                         "long_name": "Wind speed",
+        ...                     },
+        ...                     "data": [
+        ...                         [2.0, 2.0, 2.0, 2.0, 2.0, 2.0],
+        ...                         [2.0, 2.0, 2.0, 2.0, 2.0, 2.0],
+        ...                     ],
+        ...                 },
+        ...                 "pressure": {
+        ...                     "dims": ("time", "station"),
+        ...                     "attrs": {
+        ...                         "units": "hectopascals",
+        ...                         "long_name": "Time of acquisition",
+        ...                     },
+        ...                     "data": [
+        ...                         [3.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+        ...                         [3.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+        ...                     ],
+        ...                 },
+        ...             },
+        ...             "name": "weather_data",
+        ...             "children": {
+        ...                 "temperature": {
+        ...                     "coords": {},
+        ...                     "attrs": {
+        ...                         "description": "Temperature, subnode of the weather data node, inheriting the 'time' dimension from root and 'station' dimension from the Temperature group."
+        ...                     },
+        ...                     "dims": {"time": 2, "station": 6},
+        ...                     "data_vars": {
+        ...                         "air_temperature": {
+        ...                             "dims": ("time", "station"),
+        ...                             "attrs": {
+        ...                                 "units": "kelvin",
+        ...                                 "long_name": "Air temperature",
+        ...                             },
+        ...                             "data": [
+        ...                                 [3.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+        ...                                 [3.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+        ...                             ],
+        ...                         },
+        ...                         "dewpoint_temp": {
+        ...                             "dims": ("time", "station"),
+        ...                             "attrs": {
+        ...                                 "units": "kelvin",
+        ...                                 "long_name": "Dew point temperature",
+        ...                             },
+        ...                             "data": [
+        ...                                 [4.0, 4.0, 4.0, 4.0, 4.0, 4.0],
+        ...                                 [4.0, 4.0, 4.0, 4.0, 4.0, 4.0],
+        ...                             ],
+        ...                         },
+        ...                     },
+        ...                     "name": "temperature",
+        ...                     "children": {},
+        ...                 }
+        ...             },
+        ...         },
+        ...         "satellite_image": {
+        ...             "coords": {
+        ...                 "x": {"dims": ("x",), "attrs": {}, "data": [10, 20, 30]},
+        ...                 "y": {"dims": ("y",), "attrs": {}, "data": [90, 80, 70]},
+        ...             },
+        ...             "attrs": {},
+        ...             "dims": {"x": 3, "y": 3, "time": 2},
+        ...             "data_vars": {
+        ...                 "infrared": {
+        ...                     "dims": ("time", "y", "x"),
+        ...                     "attrs": {},
+        ...                     "data": [
+        ...                         [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+        ...                         [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+        ...                     ],
+        ...                 },
+        ...                 "true_color": {
+        ...                     "dims": ("time", "y", "x"),
+        ...                     "attrs": {},
+        ...                     "data": [
+        ...                         [[6.0, 6.0, 6.0], [6.0, 6.0, 6.0], [6.0, 6.0, 6.0]],
+        ...                         [[6.0, 6.0, 6.0], [6.0, 6.0, 6.0], [6.0, 6.0, 6.0]],
+        ...                     ],
+        ...                 },
+        ...             },
+        ...             "name": "satellite_image",
+        ...             "children": {},
+        ...         },
+        ...     },
+        ... }
+        >>> dt.DataTree.from_dict_nested(basic_dict)
+        DataTree('(root)', parent=None)
+        │   Dimensions:  (time: 2)
+        │   Coordinates:
+        │     * time     (time) <U10 80B '2020-12-01' '2020-12-02'
+        │   Data variables:
+        │       *empty*
+        │   Attributes:
+        │       description:  Root Hypothetical DataTree with heterogeneous data: weather...
+        ├── DataTree('weather_data')
+        │   │   Dimensions:     (station: 6, time: 2)
+        │   │   Coordinates:
+        │   │     * station     (station) <U1 24B 'a' 'b' 'c' 'd' 'e' 'f'
+        │   │   Dimensions without coordinates: time
+        │   │   Data variables:
+        │   │       wind_speed  (time, station) float64 96B 2.0 2.0 2.0 2.0 ... 2.0 2.0 2.0 2.0
+        │   │       pressure    (time, station) float64 96B 3.0 3.0 3.0 3.0 ... 3.0 3.0 3.0 3.0
+        │   │   Attributes:
+        │   │       description:  Weather data node, inheriting the 'time' dimension
+        │   └── DataTree('temperature')
+        │           Dimensions:          (time: 2, station: 6)
+        │           Dimensions without coordinates: time, station
+        │           Data variables:
+        │               air_temperature  (time, station) float64 96B 3.0 3.0 3.0 3.0 ... 3.0 3.0 3.0
+        │               dewpoint_temp    (time, station) float64 96B 4.0 4.0 4.0 4.0 ... 4.0 4.0 4.0
+        │           Attributes:
+        │               description:  Temperature, subnode of the weather data node, inheriting t...
+        └── DataTree('satellite_image')
+                Dimensions:     (x: 3, y: 3, time: 2)
+                Coordinates:
+                * x           (x) int64 24B 10 20 30
+                * y           (y) int64 24B 90 80 70
+                Dimensions without coordinates: time
+                Data variables:
+                    infrared    (time, y, x) float64 144B 5.0 5.0 5.0 5.0 ... 5.0 5.0 5.0 5.0
+                    true_color  (time, y, x) float64 144B 6.0 6.0 6.0 6.0 ... 6.0 6.0 6.0 6.0
         """
 
         obj = cls(
