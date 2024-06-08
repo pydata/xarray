@@ -174,7 +174,7 @@ class Resample(GroupBy[T_Xarray]):
         """Apply scipy.interpolate.interp1d along resampling dimension."""
         obj = self._drop_coords()
         (grouper,) = self.groupers
-        kwargs.update({"bounds_error": False})
+        kwargs.update({"bounds_error": False}) 
         return obj.interp(
             coords={self._dim: grouper.full_index},
             assume_sorted=True,
