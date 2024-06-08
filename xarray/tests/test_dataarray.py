@@ -101,8 +101,8 @@ class TestDataArray:
             array([[1, 2, 3],
                    [4, 5, 6]], dtype=uint64)
             Coordinates:
-              * x        (x) uint64 24B 0 1 2
-                other    uint64 8B 0
+              * x        (x) uint64 0 1 2
+                other    uint64 0
             Dimensions without coordinates: time
             Attributes:
                 foo:      bar"""
@@ -115,9 +115,9 @@ class TestDataArray:
             <xarray.DataArray (x: 4)> 32B
             array([0, 1, 2, 3], dtype=uint64)
             Coordinates:
-              * x        (x) object 32B MultiIndex
-              * level_1  (x) object 32B 'a' 'a' 'b' 'b'
-              * level_2  (x) int64 32B 1 2 1 2"""
+              * x        (x) object MultiIndex
+              * level_1  (x) object 'a' 'a' 'b' 'b'
+              * level_2  (x) int64 1 2 1 2"""
         )
         assert expected == repr(self.mda)
 
@@ -136,9 +136,9 @@ class TestDataArray:
                    17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31],
                   dtype=uint64)
             Coordinates:
-              * x        (x) object 256B MultiIndex
-              * level_1  (x) object 256B 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
-              * level_2  (x) int64 256B 1 2 3 4 5 6 7 8 1 2 3 4 ... 5 6 7 8 1 2 3 4 5 6 7 8"""
+              * x        (x) object MultiIndex
+              * level_1  (x) object 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
+              * level_2  (x) int64 1 2 3 4 5 6 7 8 1 2 3 4 ... 5 6 7 8 1 2 3 4 5 6 7 8"""
         )
         assert expected == repr(mda_long)
 
@@ -1451,8 +1451,8 @@ class TestDataArray:
         expected_repr = dedent(
             """\
         Coordinates:
-          * x        (x) int64 16B -1 -2
-          * y        (y) int64 24B 0 1 2"""
+          * x        (x) int64 -1 -2
+          * y        (y) int64 0 1 2"""
         )
         actual = repr(da.coords)
         assert expected_repr == actual

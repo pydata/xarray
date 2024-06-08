@@ -283,15 +283,15 @@ class TestDataset:
             <xarray.Dataset> 2kB
             Dimensions:  (dim2: 9, dim3: 10, time: 20, dim1: 8)
             Coordinates:
-              * dim2     (dim2) float64 72B 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
-              * dim3     (dim3) {} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
-              * time     (time) datetime64[ns] 160B 2000-01-01 2000-01-02 ... 2000-01-20
-                numbers  (dim3) int64 80B 0 1 2 0 0 1 1 2 2 3
+              * dim2     (dim2) float64 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
+              * dim3     (dim3) {} 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+              * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-20
+                numbers  (dim3) int64 0 1 2 0 0 1 1 2 2 3
             Dimensions without coordinates: dim1
             Data variables:
-                var1     (dim1, dim2) float64 576B -1.086 0.9973 0.283 ... 0.4684 -0.8312
-                var2     (dim1, dim2) float64 576B 1.162 -1.097 -2.123 ... 1.267 0.3328
-                var3     (dim3, dim1) float64 640B 0.5565 -0.2121 0.4563 ... -0.2452 -0.3616
+                var1     (dim1, dim2) float64 -1.086 0.9973 0.283 ... 0.4684 -0.8312
+                var2     (dim1, dim2) float64 1.162 -1.097 -2.123 ... 1.267 0.3328
+                var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 ... -0.2452 -0.3616
             Attributes:
                 foo:      bar""".format(
                 data["dim3"].dtype
@@ -323,7 +323,7 @@ class TestDataset:
             <xarray.Dataset> 8B
             Dimensions:  ()
             Data variables:
-                foo      float64 8B 1.0"""
+                foo      float64 1.0"""
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
         print(actual)
@@ -340,9 +340,9 @@ class TestDataset:
             <xarray.Dataset> 96B
             Dimensions:  (x: 4)
             Coordinates:
-              * x        (x) object 32B MultiIndex
-              * level_1  (x) object 32B 'a' 'a' 'b' 'b'
-              * level_2  (x) int64 32B 1 2 1 2
+              * x        (x) object MultiIndex
+              * level_1  (x) object 'a' 'a' 'b' 'b'
+              * level_2  (x) int64 1 2 1 2
             Data variables:
                 *empty*"""
         )
@@ -361,9 +361,9 @@ class TestDataset:
             <xarray.Dataset> 96B
             Dimensions:                  (x: 4)
             Coordinates:
-              * x                        (x) object 32B MultiIndex
-              * a_quite_long_level_name  (x) object 32B 'a' 'a' 'b' 'b'
-              * level_2                  (x) int64 32B 1 2 1 2
+              * x                        (x) object MultiIndex
+              * a_quite_long_level_name  (x) object 'a' 'a' 'b' 'b'
+              * level_2                  (x) int64 1 2 1 2
             Data variables:
                 *empty*"""
         )
@@ -389,7 +389,7 @@ class TestDataset:
             <xarray.Dataset> 12B
             Dimensions:  (foø: 1)
             Coordinates:
-              * foø      (foø) %cU3 12B %r
+              * foø      (foø) %cU3 %r
             Data variables:
                 *empty*
             Attributes:
@@ -422,7 +422,7 @@ class TestDataset:
             Dimensions:  (x: 2)
             Dimensions without coordinates: x
             Data variables:
-                foo      (x) float64 16B Custom Array"""
+                foo      (x) float64 Custom Array"""
         )
         assert expected == repr(dataset)
 
@@ -866,10 +866,10 @@ class TestDataset:
         expected = dedent(
             """\
         Coordinates:
-          * x        (x) int64 16B -1 -2
-          * y        (y) int64 24B 0 1 2
-            a        (x) int64 16B 4 5
-            b        int64 8B -10"""
+          * x        (x) int64 -1 -2
+          * y        (y) int64 0 1 2
+            a        (x) int64 4 5
+            b        int64 -10"""
         )
         actual = repr(coords)
         assert expected == actual
@@ -1059,8 +1059,8 @@ class TestDataset:
         expected = dedent(
             """\
         Data variables:
-            foo      (x) float64 8B 1.0
-            bar      float64 8B 2.0"""
+            foo      (x) float64 1.0
+            bar      float64 2.0"""
         )
         actual = repr(ds.data_vars)
         assert expected == actual

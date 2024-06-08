@@ -187,32 +187,32 @@ def concat(
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-      * x        (x) <U1 8B 'a' 'b'
-      * y        (y) int64 24B 10 20 30
+      * x        (x) <U1 'a' 'b'
+      * y        (y) int64 10 20 30
 
     >>> xr.concat([da.isel(y=slice(0, 1)), da.isel(y=slice(1, None))], dim="y")
     <xarray.DataArray (x: 2, y: 3)> 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-      * x        (x) <U1 8B 'a' 'b'
-      * y        (y) int64 24B 10 20 30
+      * x        (x) <U1 'a' 'b'
+      * y        (y) int64 10 20 30
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], "x")
     <xarray.DataArray (x: 2, y: 3)> 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-      * x        (x) <U1 8B 'a' 'b'
-      * y        (y) int64 24B 10 20 30
+      * x        (x) <U1 'a' 'b'
+      * y        (y) int64 10 20 30
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], "new_dim")
     <xarray.DataArray (new_dim: 2, y: 3)> 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-        x        (new_dim) <U1 8B 'a' 'b'
-      * y        (y) int64 24B 10 20 30
+        x        (new_dim) <U1 'a' 'b'
+      * y        (y) int64 10 20 30
     Dimensions without coordinates: new_dim
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], pd.Index([-90, -100], name="new_dim"))
@@ -220,9 +220,9 @@ def concat(
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-        x        (new_dim) <U1 8B 'a' 'b'
-      * y        (y) int64 24B 10 20 30
-      * new_dim  (new_dim) int64 16B -90 -100
+        x        (new_dim) <U1 'a' 'b'
+      * y        (y) int64 10 20 30
+      * new_dim  (new_dim) int64 -90 -100
 
     # Concatenate a scalar variable along a new dimension of the same name with and without creating a new index
 
@@ -231,7 +231,7 @@ def concat(
     <xarray.Dataset> 16B
     Dimensions:  (x: 2)
     Coordinates:
-      * x        (x) int64 16B 0 0
+      * x        (x) int64 0 0
     Data variables:
         *empty*
 

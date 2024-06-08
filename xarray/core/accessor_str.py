@@ -2817,7 +2817,7 @@ class StringAccessor(Generic[T_DataArray]):
                 [False, False,  True, False,  True],
                 [ True, False, False, False, False]]])
         Coordinates:
-          * dummies  (dummies) <U6 120B 'a' 'ab' 'abc' 'abcd' 'ab~abc'
+          * dummies  (dummies) <U6 'a' 'ab' 'abc' 'abcd' 'ab~abc'
         Dimensions without coordinates: X, Y
 
         See Also

@@ -1460,9 +1460,9 @@ def save_mfdataset(
     <xarray.Dataset> 768B
     Dimensions:  (time: 48)
     Coordinates:
-      * time     (time) datetime64[ns] 384B 2010-01-31 2010-02-28 ... 2013-12-31
+      * time     (time) datetime64[ns] 2010-01-31 2010-02-28 ... 2013-12-31
     Data variables:
-        a        (time) float64 384B 0.0 0.02128 0.04255 ... 0.9574 0.9787 1.0
+        a        (time) float64 0.0 0.02128 0.04255 ... 0.9574 0.9787 1.0
     >>> years, datasets = zip(*ds.groupby("time.year"))
     >>> paths = [f"{y}.nc" for y in years]
     >>> xr.save_mfdataset(datasets, paths)

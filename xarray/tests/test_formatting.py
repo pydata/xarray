@@ -318,12 +318,12 @@ class TestFormatting:
         R
             array([1, 2], dtype=int64)
         Differing coordinates:
-        L * x        (x) %cU1 8B 'a' 'b'
-        R * x        (x) %cU1 8B 'a' 'c'
+        L * x        (x) %cU1 'a' 'b'
+        R * x        (x) %cU1 'a' 'c'
         Coordinates only on the left object:
-          * y        (y) int64 24B 1 2 3
+          * y        (y) int64 1 2 3
         Coordinates only on the right object:
-            label    (x) int64 16B 1 2
+            label    (x) int64 1 2
         Differing attributes:
         L   units: m
         R   units: kg
@@ -438,22 +438,22 @@ class TestFormatting:
         Differing dimensions:
             (x: 2, y: 3) != (x: 2)
         Differing coordinates:
-        L * x        (x) %cU1 8B 'a' 'b'
+        L * x        (x) %cU1 'a' 'b'
             Differing variable attributes:
                 foo: bar
-        R * x        (x) %cU1 8B 'a' 'c'
+        R * x        (x) %cU1 'a' 'c'
             Differing variable attributes:
                 source: 0
                 foo: baz
         Coordinates only on the left object:
-          * y        (y) int64 24B 1 2 3
+          * y        (y) int64 1 2 3
         Coordinates only on the right object:
-            label    (x) int64 16B 1 2
+            label    (x) int64 1 2
         Differing data variables:
-        L   var1     (x, y) int64 48B 1 2 3 4 5 6
-        R   var1     (x) int64 16B 1 2
+        L   var1     (x, y) int64 1 2 3 4 5 6
+        R   var1     (x) int64 1 2
         Data variables only on the left object:
-            var2     (x) int64 16B 3 4
+            var2     (x) int64 3 4
         Differing attributes:
         L   title: mytitle
         R   title: newtitle
@@ -546,9 +546,9 @@ class TestFormatting:
                 <xarray.Dataset> 27B
                 Dimensions:  (x: 3)
                 Coordinates:
-                * x        (x) float64 24B 10.0 20.0 30.0
+                * x        (x) float64 10.0 20.0 30.0
                 Data variables:
-                    myvar    (x) uint8 3B 11 22 33"""
+                    myvar    (x) uint8 11 22 33"""
             )
 
         with xr.set_options(display_variables_nbytes=False):
@@ -592,9 +592,9 @@ class TestFormatting:
                 <xarray.Dataset> 27B
                 Dimensions:  (x: 3)
                 Coordinates:
-                * x        (x) float64 24B 10.0 20.0 30.0
+                * x        (x) float64 10.0 20.0 30.0
                 Data variables:
-                    myvar    (x) uint8 3B dask.array<chunksize=(3,), meta=np.ndarray>"""
+                    myvar    (x) uint8 dask.array<chunksize=(3,), meta=np.ndarray>"""
             )
 
         with xr.set_options(display_variables_nbytes=False):
@@ -618,7 +618,7 @@ class TestFormatting:
                 Coordinates:
                 * x        (x) float64 10.0 20.0 30.0
                 Data variables:
-                    myvar    (x) uint8 3B dask.array<chunksize=(3,), meta=np.ndarray>"""
+                    myvar    (x) uint8 dask.array<chunksize=(3,), meta=np.ndarray>"""
             )
 
     @requires_dask
@@ -735,13 +735,13 @@ class TestFormatting:
         Data in nodes at position '/a' do not match:
 
         Data variables only on the left object:
-            v        int64 8B 1
+            v        int64 1
 
         Data in nodes at position '/a/b' do not match:
 
         Differing data variables:
-        L   w        int64 8B 5
-        R   w        int64 8B 6"""
+        L   w        int64 5
+        R   w        int64 6"""
         )
         actual = formatting.diff_datatree_repr(dt_1, dt_2, "equals")
         assert actual == expected
@@ -1039,7 +1039,7 @@ def test_display_nbytes() -> None:
 Dimensions:  (foo: 1200, bar: 111)
 Coordinates:
   * foo      (foo) int16 2kB 0 1 2 3 4 5 6 ... 1194 1195 1196 1197 1198 1199
-  * bar      (bar) int16 222B 0 1 2 3 4 5 6 7 ... 104 105 106 107 108 109 110
+  * bar      (bar) int16 0 1 2 3 4 5 6 7 ... 104 105 106 107 108 109 110
 Data variables:
     *empty*
     """.strip()

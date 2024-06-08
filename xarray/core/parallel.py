@@ -313,8 +313,8 @@ def map_blocks(
             0.09334032, -0.26848862, -0.12382735, -0.22460641, -0.07650108,
             0.07673453,  0.22865714,  0.19063865, -0.0590131 ])
     Coordinates:
-      * time     (time) object 192B 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
-        month    (time) int64 192B 1 2 3 4 5 6 7 8 9 10 ... 3 4 5 6 7 8 9 10 11 12
+      * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
+        month    (time) int64 1 2 3 4 5 6 7 8 9 10 ... 3 4 5 6 7 8 9 10 11 12
 
     Note that one must explicitly use ``args=[]`` and ``kwargs={}`` to pass arguments
     to the function being applied in ``xr.map_blocks()``:
@@ -327,8 +327,8 @@ def map_blocks(
     <xarray.DataArray (time: 24)> 192B
     dask.array<<this-array>-calculate_anomaly, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>
     Coordinates:
-      * time     (time) object 192B 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
-        month    (time) int64 192B dask.array<chunksize=(24,), meta=np.ndarray>
+      * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
+        month    (time) int64 dask.array<chunksize=(24,), meta=np.ndarray>
     """
 
     def _wrapper(

@@ -1058,7 +1058,7 @@ def apply_ufunc(
     <xarray.DataArray (x: 3)> 24B
     array([1.41421356, 2.82842712, 4.24264069])
     Coordinates:
-      * x        (x) float64 24B 0.1 0.2 0.3
+      * x        (x) float64 0.1 0.2 0.3
 
     Plain scalars, numpy arrays and a mix of these with xarray objects is also
     supported:
@@ -1071,7 +1071,7 @@ def apply_ufunc(
     <xarray.DataArray (x: 3)> 24B
     array([1., 2., 3.])
     Coordinates:
-      * x        (x) float64 24B 0.1 0.2 0.3
+      * x        (x) float64 0.1 0.2 0.3
 
     Other examples of how you could use ``apply_ufunc`` to write functions to
     (very nearly) replicate existing xarray functionality:
@@ -1329,8 +1329,8 @@ def cov(
            [0.1, 0.2, 0.3],
            [3.2, 0.6, 1.8]])
     Coordinates:
-      * space    (space) <U2 24B 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * space    (space) <U2 'IA' 'IL' 'IN'
+      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
     >>> da_b = DataArray(
     ...     np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
     ...     dims=("space", "time"),
@@ -1345,8 +1345,8 @@ def cov(
            [15. , 10. ,  5. ],
            [ 3.2,  0.6,  1.8]])
     Coordinates:
-      * space    (space) <U2 24B 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * space    (space) <U2 'IA' 'IL' 'IN'
+      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
     >>> xr.cov(da_a, da_b)
     <xarray.DataArray ()> 8B
     array(-3.53055556)
@@ -1354,7 +1354,7 @@ def cov(
     <xarray.DataArray (space: 3)> 24B
     array([ 0.2       , -0.5       ,  1.69333333])
     Coordinates:
-      * space    (space) <U2 24B 'IA' 'IL' 'IN'
+      * space    (space) <U2 'IA' 'IL' 'IN'
     >>> weights = DataArray(
     ...     [4, 2, 1],
     ...     dims=("space"),
@@ -1366,12 +1366,12 @@ def cov(
     <xarray.DataArray (space: 3)> 24B
     array([4, 2, 1])
     Coordinates:
-      * space    (space) <U2 24B 'IA' 'IL' 'IN'
+      * space    (space) <U2 'IA' 'IL' 'IN'
     >>> xr.cov(da_a, da_b, dim="space", weights=weights)
     <xarray.DataArray (time: 3)> 24B
     array([-4.69346939, -4.49632653, -3.37959184])
     Coordinates:
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
     """
     from xarray.core.dataarray import DataArray
 
@@ -1433,8 +1433,8 @@ def corr(
            [0.1, 0.2, 0.3],
            [3.2, 0.6, 1.8]])
     Coordinates:
-      * space    (space) <U2 24B 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * space    (space) <U2 'IA' 'IL' 'IN'
+      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
     >>> da_b = DataArray(
     ...     np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
     ...     dims=("space", "time"),
@@ -1449,8 +1449,8 @@ def corr(
            [15. , 10. ,  5. ],
            [ 3.2,  0.6,  1.8]])
     Coordinates:
-      * space    (space) <U2 24B 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * space    (space) <U2 'IA' 'IL' 'IN'
+      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
     >>> xr.corr(da_a, da_b)
     <xarray.DataArray ()> 8B
     array(-0.57087777)
@@ -1458,7 +1458,7 @@ def corr(
     <xarray.DataArray (space: 3)> 24B
     array([ 1., -1.,  1.])
     Coordinates:
-      * space    (space) <U2 24B 'IA' 'IL' 'IN'
+      * space    (space) <U2 'IA' 'IL' 'IN'
     >>> weights = DataArray(
     ...     [4, 2, 1],
     ...     dims=("space"),
@@ -1470,12 +1470,12 @@ def corr(
     <xarray.DataArray (space: 3)> 24B
     array([4, 2, 1])
     Coordinates:
-      * space    (space) <U2 24B 'IA' 'IL' 'IN'
+      * space    (space) <U2 'IA' 'IL' 'IN'
     >>> xr.corr(da_a, da_b, dim="space", weights=weights)
     <xarray.DataArray (time: 3)> 24B
     array([-0.50240504, -0.83215028, -0.99057446])
     Coordinates:
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
     """
     from xarray.core.dataarray import DataArray
 
@@ -1620,7 +1620,7 @@ def cross(
     <xarray.DataArray (cartesian: 3)> 24B
     array([12, -6, -3])
     Coordinates:
-      * cartesian  (cartesian) <U1 12B 'x' 'y' 'z'
+      * cartesian  (cartesian) <U1 'x' 'y' 'z'
 
     One vector with dimension 2 but coords in other positions:
 
@@ -1638,7 +1638,7 @@ def cross(
     <xarray.DataArray (cartesian: 3)> 24B
     array([-10,   2,   5])
     Coordinates:
-      * cartesian  (cartesian) <U1 12B 'x' 'y' 'z'
+      * cartesian  (cartesian) <U1 'x' 'y' 'z'
 
     Multiple vector cross-products. Note that the direction of the
     cross product vector is defined by the right-hand rule:
@@ -1664,8 +1664,8 @@ def cross(
     array([[-3,  6, -3],
            [ 3, -6,  3]])
     Coordinates:
-      * time       (time) int64 16B 0 1
-      * cartesian  (cartesian) <U1 12B 'x' 'y' 'z'
+      * time       (time) int64 0 1
+      * cartesian  (cartesian) <U1 'x' 'y' 'z'
 
     Cross can be called on Datasets by converting to DataArrays and later
     back to a Dataset:
@@ -1682,9 +1682,9 @@ def cross(
     Dimensions:  (dim_0: 1)
     Dimensions without coordinates: dim_0
     Data variables:
-        x        (dim_0) int64 8B -3
-        y        (dim_0) int64 8B 6
-        z        (dim_0) int64 8B -3
+        x        (dim_0) int64 -3
+        y        (dim_0) int64 6
+        z        (dim_0) int64 -3
 
     See Also
     --------
@@ -1958,13 +1958,13 @@ def where(cond, x, y, keep_attrs=None):
     <xarray.DataArray 'sst' (lat: 10)> 80B
     array([0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
     Coordinates:
-      * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+      * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
 
     >>> xr.where(x < 0.5, x, x * 100)
     <xarray.DataArray 'sst' (lat: 10)> 80B
     array([ 0. ,  0.1,  0.2,  0.3,  0.4, 50. , 60. , 70. , 80. , 90. ])
     Coordinates:
-      * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+      * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
 
     >>> y = xr.DataArray(
     ...     0.1 * np.arange(9).reshape(3, 3),
@@ -1978,8 +1978,8 @@ def where(cond, x, y, keep_attrs=None):
            [0.3, 0.4, 0.5],
            [0.6, 0.7, 0.8]])
     Coordinates:
-      * lat      (lat) int64 24B 0 1 2
-      * lon      (lon) int64 24B 10 11 12
+      * lat      (lat) int64 0 1 2
+      * lon      (lon) int64 10 11 12
 
     >>> xr.where(y.lat < 1, y, -1)
     <xarray.DataArray (lat: 3, lon: 3)> 72B
@@ -1987,8 +1987,8 @@ def where(cond, x, y, keep_attrs=None):
            [-1. , -1. , -1. ],
            [-1. , -1. , -1. ]])
     Coordinates:
-      * lat      (lat) int64 24B 0 1 2
-      * lon      (lon) int64 24B 10 11 12
+      * lat      (lat) int64 0 1 2
+      * lon      (lon) int64 10 11 12
 
     >>> cond = xr.DataArray([True, False], dims=["x"])
     >>> x = xr.DataArray([1, 2], dims=["y"])

@@ -386,7 +386,7 @@ class CFTimeIndex(pd.Index):
         <xarray.DataArray (time: 1)> 8B
         array([1])
         Coordinates:
-          * time     (time) object 8B 2001-01-01 00:00:00
+          * time     (time) object 2001-01-01 00:00:00
         >>> da = xr.DataArray(
         ...     [1, 2],
         ...     coords=[[pd.Timestamp(2001, 1, 1), pd.Timestamp(2001, 2, 1)]],
@@ -396,7 +396,7 @@ class CFTimeIndex(pd.Index):
         <xarray.DataArray ()> 8B
         array(1)
         Coordinates:
-            time     datetime64[ns] 8B 2001-01-01
+            time     datetime64[ns] 2001-01-01
         >>> da = xr.DataArray(
         ...     [1, 2],
         ...     coords=[[pd.Timestamp(2001, 1, 1, 1), pd.Timestamp(2001, 2, 1)]],
@@ -406,7 +406,7 @@ class CFTimeIndex(pd.Index):
         <xarray.DataArray (time: 1)> 8B
         array([1])
         Coordinates:
-          * time     (time) datetime64[ns] 8B 2001-01-01T01:00:00
+          * time     (time) datetime64[ns] 2001-01-01T01:00:00
         """
         start, end = _parsed_string_to_bounds(self.date_type, resolution, parsed)
 
