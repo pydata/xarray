@@ -36,11 +36,11 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    has_pandas_3,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
     requires_dask,
-    requires_pandas_3,
     requires_pint,
     requires_sparse,
     source_ndarray,
@@ -2945,8 +2945,8 @@ class TestNumpyCoercion:
         (np.array([np.datetime64("2000-01-01", "ns")]), False),
         (np.array([np.datetime64("2000-01-01", "s")]), True),
         (pd.date_range("2000", periods=1), False),
-        pytest.param(datetime(2000, 1, 1), True, marks=requires_pandas_3),
-        pytest.param(np.array([datetime(2000, 1, 1)]), True, marks=requires_pandas_3),
+        (datetime(2000, 1, 1), has_pandas_3),
+        (np.array([datetime(2000, 1, 1)]), has_pandas_3),
         (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), False),
         (
             pd.Series(
