@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 from itertools import product
 
 import numpy as np
@@ -229,8 +228,22 @@ class TestTileIDsFromCoords:
         assert concat_dims == ["simulation"]
 
     def test_datetime_coords(self):
-        ds0 = Dataset({"time": [datetime(2000, 3, 6), datetime(2001, 3, 7)]})
-        ds1 = Dataset({"time": [datetime(1999, 1, 1), datetime(1999, 2, 4)]})
+        ds0 = Dataset(
+            {
+                "time": [
+                    np.datetime64("2000-03-06", "ns"),
+                    np.datetime64("2000-03-07", "ns"),
+                ]
+            }
+        )
+        ds1 = Dataset(
+            {
+                "time": [
+                    np.datetime64("1999-01-01", "ns"),
+                    np.datetime64("1999-02-04", "ns"),
+                ]
+            }
+        )
 
         expected = {(0,): ds1, (1,): ds0}
         actual, concat_dims = _infer_concat_order_from_coords([ds0, ds1])
