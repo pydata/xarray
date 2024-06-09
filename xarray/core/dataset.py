@@ -7586,7 +7586,7 @@ class Dataset(
         Returns
         -------
         d : dict
-            Tree of dicts with keys: "coords", "attrs", "dims", "data_vars" and optionally
+            Dict with keys: "coords", "attrs", "dims", "data_vars" and optionally
             "encoding".
 
         See Also
