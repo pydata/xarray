@@ -2912,7 +2912,7 @@ class TestDatetimePlot(PlotTestCase):
         """
         month = np.arange(1, 13, 1)
         data = np.sin(2 * np.pi * month / 12.0)
-        times = pd.date_range(start="2017-01-01", freq="ME", periods=12)
+        times = pd.date_range(start="2017-01-01", freq="MS", periods=12)
         darray = DataArray(data, dims=["time"], coords=[times])
 
         self.darray = darray
