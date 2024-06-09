@@ -3647,7 +3647,9 @@ class TestDataArray:
         t = pd.date_range("20130101", periods=10)
         lat = [77.7, 83.2, 76]
         da = DataArray(x, {"t": t, "lat": lat}, dims=["t", "lat"])
-        roundtripped = DataArray.from_dict(da.to_dict())
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="Converting non-nanosecond")
+            roundtripped = DataArray.from_dict(da.to_dict())
         assert_identical(da, roundtripped)
 
     def test_to_and_from_dict_with_nan_nat(self) -> None:
@@ -3657,7 +3659,9 @@ class TestDataArray:
         t[2] = np.nan
         lat = [77.7, 83.2, 76]
         da = DataArray(y, {"t": t, "lat": lat}, dims=["t", "lat"])
-        roundtripped = DataArray.from_dict(da.to_dict())
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="Converting non-nanosecond")
+            roundtripped = DataArray.from_dict(da.to_dict())
         assert_identical(da, roundtripped)
 
     def test_to_dict_with_numpy_attrs(self) -> None:

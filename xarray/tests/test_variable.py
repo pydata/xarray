@@ -40,6 +40,7 @@ from xarray.tests import (
     requires_bottleneck,
     requires_cupy,
     requires_dask,
+    requires_pandas_3,
     requires_pint,
     requires_sparse,
     source_ndarray,
@@ -256,7 +257,9 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         # regression test for #125
         date_range = pd.date_range("2011-09-01", periods=10)
         for dates in [date_range, date_range.values, date_range.to_pydatetime()]:
-            expected = self.cls("t", dates)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", message="Converting non-nanosecond")
+                expected = self.cls("t", dates)
             for times in [
                 [expected[i] for i in range(10)],
                 [expected[i : (i + 1)] for i in range(10)],
@@ -2942,8 +2945,8 @@ class TestNumpyCoercion:
         (np.array([np.datetime64("2000-01-01", "ns")]), False),
         (np.array([np.datetime64("2000-01-01", "s")]), True),
         (pd.date_range("2000", periods=1), False),
-        (datetime(2000, 1, 1), False),
-        (np.array([datetime(2000, 1, 1)]), False),
+        pytest.param(datetime(2000, 1, 1), True, marks=requires_pandas_3),
+        pytest.param(np.array([datetime(2000, 1, 1)]), True, marks=requires_pandas_3),
         (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), False),
         (
             pd.Series(
