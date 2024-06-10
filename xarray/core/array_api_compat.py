@@ -6,6 +6,9 @@ def is_weak_scalar_type(t):
 
 
 def _future_array_api_result_type(*arrays_and_dtypes, xp):
+    # fallback implementation for `xp.result_type` with python scalars. Can be removed once a
+    # version of the Array API that includes https://github.com/data-apis/array-api/issues/805
+    # can be required
     strongly_dtyped = [t for t in arrays_and_dtypes if not is_weak_scalar_type(t)]
     weakly_dtyped = [t for t in arrays_and_dtypes if is_weak_scalar_type(t)]
 
