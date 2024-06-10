@@ -3541,7 +3541,7 @@ class DataArray(
             - "inside": Only fill NaNs surrounded by valid values (interpolate).
             - "outside": Only fill NaNs outside valid values (extrapolate).
 
-        limit_use_coordinate : bool or Hashable, default: True
+        limit_use_coordinate : bool or Hashable, default: False
             Specifies which index to use for the ``limit`` distance.
 
             - False: a consecutive integer index is created along ``dim`` (0, 1, 2, ...).
