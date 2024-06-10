@@ -139,8 +139,7 @@ def test_groupby_da_datetime() -> None:
     times = pd.date_range("2000-01-01", periods=4)
     foo = xr.DataArray([1, 2, 3, 4], coords=dict(time=times), dims="time")
     # create test index
-    dd = times.to_pydatetime()
-    reference_dates = [dd[0], dd[2]]
+    reference_dates = [times[0], times[2]]
     labels = reference_dates[0:1] * 2 + reference_dates[1:2] * 2
     ind = xr.DataArray(
         labels, coords=dict(time=times), dims="time", name="reference_date"
@@ -1881,7 +1880,7 @@ class TestDataArrayResample:
         array = Dataset({"time": times})["time"]
         actual = array.resample(time="1D").last()
         expected_times = pd.to_datetime(
-            ["2000-01-01T18", "2000-01-02T18", "2000-01-03T06"]
+            ["2000-01-01T18", "2000-01-02T18", "2000-01-03T06"], unit="ns"
         )
         expected = DataArray(expected_times, [("time", times[::4])], name="time")
         assert_identical(expected, actual)

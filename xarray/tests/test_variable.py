@@ -36,6 +36,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    has_pandas_3,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -252,6 +253,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         assert_array_equal(x[0].data, listarray.squeeze())
         assert_array_equal(x.squeeze().data, listarray.squeeze())
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_index_and_concat_datetime(self):
         # regression test for #125
         date_range = pd.date_range("2011-09-01", periods=10)
@@ -2942,8 +2944,8 @@ class TestNumpyCoercion:
         (np.array([np.datetime64("2000-01-01", "ns")]), False),
         (np.array([np.datetime64("2000-01-01", "s")]), True),
         (pd.date_range("2000", periods=1), False),
-        (datetime(2000, 1, 1), False),
-        (np.array([datetime(2000, 1, 1)]), False),
+        (datetime(2000, 1, 1), has_pandas_3),
+        (np.array([datetime(2000, 1, 1)]), has_pandas_3),
         (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), False),
         (
             pd.Series(
