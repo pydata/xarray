@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, get_args
 import numpy as np
 import pandas as pd
 
-from xarray.core.common import _contains_datetime_like_objects, ones_like
+from xarray.core.common import _contains_datetime_like_objects
 from xarray.core.computation import apply_ufunc
 from xarray.core.duck_array_ops import (
     datetime_to_numeric,
@@ -53,8 +53,7 @@ if TYPE_CHECKING:
 def _get_gap_left_edge(
     obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable, outside=False
 ):
-    arange = ones_like(obj) * index
-    left = arange.where(~obj.isnull()).ffill(dim)
+    left = index.where(~obj.isnull()).ffill(dim).transpose(*obj.dims)
     if outside:
         return left.fillna(index[0])
     return left
@@ -63,8 +62,7 @@ def _get_gap_left_edge(
 def _get_gap_right_edge(
     obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable, outside=False
 ):
-    arange = ones_like(obj) * index
-    right = arange.where(~obj.isnull()).bfill(dim)
+    right = index.where(~obj.isnull()).bfill(dim).transpose(*obj.dims)
     if outside:
         return right.fillna(index[-1])
     return right
@@ -73,15 +71,13 @@ def _get_gap_right_edge(
 def _get_gap_dist_to_left_edge(
     obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable
 ):
-    arange = ones_like(obj) * index
-    return arange - _get_gap_left_edge(obj, dim, index)
+    return (index - _get_gap_left_edge(obj, dim, index)).transpose(*obj.dims)
 
 
 def _get_gap_dist_to_right_edge(
     obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable
 ):
-    arange = ones_like(obj) * index
-    return _get_gap_right_edge(obj, dim, index) - arange
+    return (_get_gap_right_edge(obj, dim, index) - index).transpose(*obj.dims)
 
 
 def _get_limit_fill_mask(
@@ -189,22 +185,32 @@ def _get_gap_masks(
                 raise TypeError(
                     f"Expected integer or floating point max_gap since use_coordinate=False. Received {type(max_gap).__name__}."
                 )
+    # Which masks are really needed?
+    need_limit_mask = limit != np.inf or limit_direction != "both"
+    need_area_mask = limit_area is not None
+    need_max_gap_mask = max_gap is not None
     # Calculate indexes
-    index_limit = get_clean_interp_index(obj, dim, use_coordinate=limit_use_coordinate)
-    index_max_gap = get_clean_interp_index(
-        obj, dim, use_coordinate=max_gap_use_coordinate
-    )
+    if need_limit_mask or need_area_mask:
+        index_limit = get_clean_interp_index(
+            obj, dim, use_coordinate=limit_use_coordinate
+        )
+        # index_limit = ones_like(obj) * index_limit
+    if need_max_gap_mask:
+        index_max_gap = get_clean_interp_index(
+            obj, dim, use_coordinate=max_gap_use_coordinate
+        )
+        # index_max_gap = ones_like(obj) * index_max_gap
     # Calculate fill masks
     limit_mask = None
-    if limit != np.inf or limit_direction != "both":
+    if need_limit_mask:
         limit_mask = _get_limit_fill_mask(obj, dim, index_limit, limit, limit_direction)
 
     limit_area_mask = None
-    if limit_area is not None:
+    if need_area_mask:
         limit_area_mask = _get_limit_area_mask(obj, dim, index_limit, limit_area)
 
     max_gap_mask = None
-    if max_gap is not None:
+    if need_max_gap_mask:
         max_gap_mask = _get_max_gap_mask(obj, dim, index_max_gap, max_gap)
     return limit_mask, limit_area_mask, max_gap_mask
 
