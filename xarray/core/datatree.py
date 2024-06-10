@@ -1070,7 +1070,7 @@ class DataTree(
         return result
 
     @classmethod
-    def from_nested_dict(cls, node_dict: Mapping[Any, Any]) -> DataTree[Any]:
+    def from_dict(cls, node_dict: Mapping[Any, Any]) -> DataTree[Any]:
         """Convert a dictionary into a DataTree.
 
         Parameters
@@ -1084,7 +1084,7 @@ class DataTree(
 
         See also
         --------
-        DataTree.to_nested_dict
+        DataTree.to_dict
         DataTree.to_paths_dict
         Dataset.to_paths_dict
         DataArray.from_dict
@@ -1213,7 +1213,7 @@ class DataTree(
         ...         },
         ...     },
         ... }
-        >>> dt.DataTree.from_nested_dict(basic_dict)
+        >>> dt.DataTree.from_dict(basic_dict)
         DataTree('(root)', parent=None)
         │   Dimensions:  (time: 2)
         │   Coordinates:
@@ -1255,70 +1255,13 @@ class DataTree(
             name=node_dict.get("name", None),
             data=Dataset.from_dict(node_dict),
             children={
-                child_name: cls.from_nested_dict(child_node_dict)
+                child_name: cls.from_dict(child_node_dict)
                 for child_name, child_node_dict in node_dict.get("children", {}).items()
             },
         )
         return obj
 
-    @classmethod
-    def from_dict(
-        cls,
-        d: MutableMapping[str, Dataset | DataArray | DataTree | None],
-        name: str | None = None,
-    ) -> DataTree:
-        """
-        Create a datatree from a dictionary of data objects, organised by paths into the tree.
-
-        Parameters
-        ----------
-        d : dict-like
-            A mapping from path names to xarray.Dataset, xarray.DataArray, or DataTree objects.
-
-            Path names are to be given as unix-like path. If path names containing more than one part are given, new
-            tree nodes will be constructed as necessary.
-
-            To assign data to the root node of the tree use "/" as the path.
-        name : Hashable | None, optional
-            Name for the root node of the tree. Default is None.
-
-        Returns
-        -------
-        DataTree
-
-        Notes
-        -----
-        If your dictionary is nested you will need to flatten it before using this method.
-        """
-
-        # First create the root node
-        root_data = d.pop("/", None)
-        if isinstance(root_data, DataTree):
-            obj = root_data.copy()
-            obj.orphan()
-        else:
-            obj = cls(name=name, data=root_data, parent=None, children=None)
-
-        if d:
-            # Populate tree with children determined from data_objects mapping
-            for path, data in d.items():
-                # Create and set new node
-                node_name = NodePath(path).name
-                if isinstance(data, DataTree):
-                    new_node = data.copy()
-                    new_node.orphan()
-                else:
-                    new_node = cls(name=node_name, data=data)
-                obj._set_item(
-                    path,
-                    new_node,
-                    allow_overwrite=False,
-                    new_nodes_along_path=True,
-                )
-
-        return obj
-
-    def to_nested_dict(
+    def to_dict(
         self,
         data: ToDictDataOptions = "list",
         encoding: bool = False,
@@ -1377,7 +1320,7 @@ class DataTree(
 
         See Also
         --------
-        DataTree.from_nested_dict
+        DataTree.from_dict
         DataTree.from_paths_dict
         Dataset.from_dict
         Dataset.to_paths_dict
@@ -1406,6 +1349,63 @@ class DataTree(
             current_dict["children"][parts[-1]] = node_dict
         root_dict = super_root_dict["children"]["/"]
         return root_dict
+
+    @classmethod
+    def from_paths_dict(
+        cls,
+        d: MutableMapping[str, Dataset | DataArray | DataTree | None],
+        name: str | None = None,
+    ) -> DataTree:
+        """
+        Create a datatree from a dictionary of data objects, organised by paths into the tree.
+
+        Parameters
+        ----------
+        d : dict-like
+            A mapping from path names to xarray.Dataset, xarray.DataArray, or DataTree objects.
+
+            Path names are to be given as unix-like path. If path names containing more than one part are given, new
+            tree nodes will be constructed as necessary.
+
+            To assign data to the root node of the tree use "/" as the path.
+        name : Hashable | None, optional
+            Name for the root node of the tree. Default is None.
+
+        Returns
+        -------
+        DataTree
+
+        Notes
+        -----
+        If your dictionary is nested you will need to flatten it before using this method.
+        """
+
+        # First create the root node
+        root_data = d.pop("/", None)
+        if isinstance(root_data, DataTree):
+            obj = root_data.copy()
+            obj.orphan()
+        else:
+            obj = cls(name=name, data=root_data, parent=None, children=None)
+
+        if d:
+            # Populate tree with children determined from data_objects mapping
+            for path, data in d.items():
+                # Create and set new node
+                node_name = NodePath(path).name
+                if isinstance(data, DataTree):
+                    new_node = data.copy()
+                    new_node.orphan()
+                else:
+                    new_node = cls(name=node_name, data=data)
+                obj._set_item(
+                    path,
+                    new_node,
+                    allow_overwrite=False,
+                    new_nodes_along_path=True,
+                )
+
+        return obj
 
     def to_paths_dict(self) -> dict[str, Dataset]:
         """

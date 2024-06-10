@@ -40,8 +40,8 @@ New Features
   variables' ``attrs`` are also dropped.
   By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
 
-- New ``DataTree`` methods :py:meth:`xarray.core.datatree.DataTree.to_nested_dict`
-  and :py:meth:`xarray.core.datatree.DataTree.from_nested_dict` to allow easy conversion between
+- New ``DataTree`` methods :py:meth:`xarray.core.datatree.DataTree.to_dict`
+  and :py:meth:`xarray.core.datatree.DataTree.from_dict` to allow easy conversion between
   dictionaries and xarray objects
   (:issue:`9074`, :pull:`9080`).
   By `Etienne Schalk <https://github.com/etienneschalk>`_

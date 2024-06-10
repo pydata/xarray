@@ -1345,7 +1345,7 @@ class TestDictSerialization:
         data: ToDictDataOptions,
         absolute_details: bool,
     ):
-        # Test conversion of a DataTree with default parameters of the `to_nested_dict` method.
+        # Test conversion of a DataTree with default parameters of the `to_dict` method.
         original_xdt = TestDictSerialization.create_test_data()
 
         expected_basic_dict = {
@@ -1470,7 +1470,7 @@ class TestDictSerialization:
             },
         }
 
-        actual_dict = original_xdt.to_nested_dict(
+        actual_dict = original_xdt.to_dict(
             data=data, encoding=encoding, absolute_details=absolute_details
         )
 
@@ -1488,13 +1488,13 @@ class TestDictSerialization:
         data: ToDictDataOptions,
         absolute_details: bool,
     ) -> None:
-        # Test roundtrip for all the parameter space permitted by the `to_nested_dict` method.
+        # Test roundtrip for all the parameter space permitted by the `to_dict` method.
         original_xdt = TestDictSerialization.create_test_data()
 
-        actual_dict = original_xdt.to_nested_dict(
+        actual_dict = original_xdt.to_dict(
             data=data, encoding=encoding, absolute_details=absolute_details
         )
 
         # Check the roundtrip: DataTree -> dict -> DataTree
-        roundtripped_xdt = DataTree.from_nested_dict(actual_dict)
+        roundtripped_xdt = DataTree.from_dict(actual_dict)
         assert_identical(original_xdt, roundtripped_xdt)
