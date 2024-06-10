@@ -208,6 +208,8 @@ Interp1dOptions = Literal[
 ]
 InterpolantOptions = Literal["barycentric", "krogh", "pchip", "spline", "akima"]
 InterpOptions = Union[Interp1dOptions, InterpolantOptions]
+LimitDirectionOptions = Literal["forward", "backward", "both"]
+LimitAreaOptions = Literal["inside", "outside"]
 
 DatetimeUnitOptions = Literal[
     "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
