@@ -538,11 +538,14 @@ def test_infer_datetime_units(freq, units) -> None:
     ["dates", "expected"],
     [
         (
-            pd.to_datetime(["1900-01-01", "1900-01-02", "NaT"]),
+            pd.to_datetime(["1900-01-01", "1900-01-02", "NaT"], unit="ns"),
             "days since 1900-01-01 00:00:00",
         ),
-        (pd.to_datetime(["NaT", "1900-01-01"]), "days since 1900-01-01 00:00:00"),
-        (pd.to_datetime(["NaT"]), "days since 1970-01-01 00:00:00"),
+        (
+            pd.to_datetime(["NaT", "1900-01-01"], unit="ns"),
+            "days since 1900-01-01 00:00:00",
+        ),
+        (pd.to_datetime(["NaT"], unit="ns"), "days since 1970-01-01 00:00:00"),
     ],
 )
 def test_infer_datetime_units_with_NaT(dates, expected) -> None:
