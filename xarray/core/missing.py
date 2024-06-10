@@ -495,13 +495,9 @@ def interp_na(
     dim: Hashable | None = None,
     method: InterpOptions = "linear",
     use_coordinate: bool | str = True,
-    limit: int
-    | float
-    | str
-    | pd.Timedelta
-    | np.timedelta64
-    | dt.timedelta
-    | None = None,
+    limit: (
+        int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta | None
+    ) = None,
     limit_direction: LimitDirectionOptions = "forward",
     limit_area: LimitAreaOptions | None = None,
     limit_use_coordinate: bool
