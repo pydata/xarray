@@ -6,12 +6,6 @@ on:
   pull_request:
     branches:
       - "main"
-    paths:
-      - 'ci/**'
-      - '.github/**'
-      - '/*'  # covers files such as `pyproject.toml`
-      - 'properties/**'
-      - 'xarray/**'
   workflow_dispatch: # allows you to trigger manually
 
 concurrency:
