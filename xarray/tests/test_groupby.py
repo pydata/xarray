@@ -2606,7 +2606,3 @@ def test_default_flox_method() -> None:
         assert kwargs["method"] == "cohorts"
     else:
         assert "method" not in kwargs
-
-
-if __name__ == "__main__":
-    TestDataArrayResample().test_upsample_interpolate()
