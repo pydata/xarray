@@ -58,3 +58,28 @@ except ImportError:
             return any(isinstance(dtype, kind) for kind in translated_kinds)
         else:
             return any(np.issubdtype(dtype, kind) for kind in translated_kinds)
+
+
+def is_scalar_type(t):
+    return isinstance(t, (bool, int, float, complex, str, bytes))
+
+
+def _future_array_api_result_type(*arrays_and_dtypes, xp):
+    strongly_dtyped = [t for t in arrays_and_dtypes if not is_scalar_type(t)]
+    weakly_dtyped = [t for t in arrays_and_dtypes if is_scalar_type(t)]
+
+    dtype = xp.result_type(*strongly_dtyped)
+    if not weakly_dtyped:
+        return dtype
+
+    possible_dtypes = {
+        complex: "complex64",
+        float: "float32",
+        int: "int8",
+        bool: "bool",
+        str: "str",
+        bytes: "bytes",
+    }
+    dtypes = [possible_dtypes.get(type(x), "object") for x in weakly_dtyped]
+
+    return xp.result_type(dtype, *dtypes)
