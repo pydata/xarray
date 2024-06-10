@@ -1855,6 +1855,9 @@ def isel_indexes(
     indexes: Indexes[Index],
     indexers: Mapping[Any, Any],
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
+    # TODO: remove if clause in the future. It should be unnecessary.
+    # See failure introduced when removed
+    # https://github.com/pydata/xarray/pull/9002#discussion_r1590443756
     if any(isinstance(v, PandasMultiIndex) for v in indexes._indexes.values()):
         return _apply_indexes(indexes, indexers, "isel")
     else:
