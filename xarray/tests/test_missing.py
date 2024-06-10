@@ -769,7 +769,7 @@ def test_get_gap_dist_to_right_edge():
         ],
     ],
 )
-def test_interpolate_na_nan_block_lengths(y, lengths_expected):
+def test_get_nan_block_lengths(y, lengths_expected):
     arr = [
         [np.nan, 1, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 4],
         [np.nan, np.nan, np.nan, 1, np.nan, np.nan, 4, np.nan, np.nan],
@@ -779,6 +779,42 @@ def test_interpolate_na_nan_block_lengths(y, lengths_expected):
     actual = _get_nan_block_lengths(da, dim="y", index=index)
     expected = da.copy(data=lengths_expected)
     assert_equal(actual, expected)
+
+
+def test_get_nan_block_lengths_2d():
+    n = np.nan
+    da = xr.DataArray(
+        [
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+        ],
+        dims=["x", "y"],
+        coords={"x": np.arange(4), "y": np.arange(12) ** 2},
+    )
+    index = get_clean_interp_index(da, dim="y", use_coordinate=False)
+    actual = _get_nan_block_lengths(da, dim="y", index=index)
+    expected_y = da.copy(
+        data=[
+            [0, 0, 0, 0, 2, 0, 4, 4, 4, 0, 0, 1],
+            [2, 2, 0, 3, 3, 0, 4, 4, 4, 0, 2, 2],
+            [2, 2, 0, 3, 3, 0, 4, 4, 4, 0, 2, 2],
+            [1, 0, 0, 0, 2, 0, 4, 4, 4, 0, 0, 1],
+        ]
+    )
+    assert_equal(actual, expected_y)
+    index = get_clean_interp_index(da, dim="y", use_coordinate=True)
+    actual = _get_nan_block_lengths(da, dim="y", index=index)
+    expected_y = da.copy(
+        data=[
+            [0, 0, 0, 0, 16, 0, 56, 56, 56, 0, 0, 21],
+            [4, 4, 0, 21, 21, 0, 56, 56, 56, 0, 40, 40],
+            [4, 4, 0, 21, 21, 0, 56, 56, 56, 0, 40, 40],
+            [1, 0, 0, 0, 16, 0, 56, 56, 56, 0, 0, 21],
+        ]
+    )
+    assert_equal(actual, expected_y)
 
 
 def test_get_limit_fill_mask():
