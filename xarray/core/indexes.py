@@ -1818,7 +1818,7 @@ def _apply_indexes_fast(indexes: Indexes[Index], args: Mapping[Any, Any], func: 
             new_index = getattr(index, func)(index_args)
             if new_index is not None:
                 new_indexes.update({k: new_index for k in index_vars})
-                new_index_vars = new_index.create_variables(index_vars, fastpath=True)
+                new_index_vars = new_index.create_variables(index_vars)
                 new_index_variables.update(new_index_vars)
                 new_index_variables.update(new_index_vars)
             else:
