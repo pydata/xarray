@@ -384,12 +384,7 @@ class BasicIndexer(ExplicitIndexer):
 
     __slots__ = ()
 
-    def __init__(
-        self, key: tuple[int | np.integer | slice, ...], *, fastpath: bool = False
-    ):
-        if fastpath:
-            super().__init__(key)
-            return
+    def __init__(self, key: tuple[int | np.integer | slice, ...]):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
