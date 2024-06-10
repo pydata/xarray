@@ -6,7 +6,7 @@ from typing import Any
 import numpy as np
 from pandas.api.types import is_extension_array_dtype
 
-from xarray.core import npcompat, utils
+from xarray.core import array_api_compat, npcompat, utils
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject("<NA>")
@@ -249,7 +249,7 @@ def result_type(
         xp = get_array_namespace(arrays_and_dtypes)
 
     types = {
-        npcompat.result_type(preprocess_scalar_types(t), xp=xp)
+        array_api_compat.result_type(preprocess_scalar_types(t), xp=xp)
         for t in arrays_and_dtypes
     }
     if any(isinstance(t, np.dtype) for t in types):
@@ -261,4 +261,6 @@ def result_type(
             ):
                 return np.dtype(object)
 
-    return npcompat.result_type(*map(preprocess_scalar_types, arrays_and_dtypes), xp=xp)
+    return array_api_compat.result_type(
+        *map(preprocess_scalar_types, arrays_and_dtypes), xp=xp
+    )
