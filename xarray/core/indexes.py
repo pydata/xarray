@@ -655,6 +655,9 @@ class PandasIndex(Index):
         obj = cls(data, dim, coord_dtype=var.dtype)
         assert not isinstance(obj.index, pd.MultiIndex)
         # Rename safely
+        # make a shallow copy: cheap and because the index name may be updated
+        # here or in other constructors (cannot use pd.Index.rename as this
+        # constructor is also called from PandasMultiIndex)
         obj.index = obj.index.copy()
         obj.index.name = name
 
