@@ -246,7 +246,10 @@ def result_type(
     if xp is None:
         xp = get_array_namespace(arrays_and_dtypes)
 
-    types = {xp.result_type(preprocess_scalar_types(t)) for t in arrays_and_dtypes}
+    types = {
+        npcompat.result_type(preprocess_scalar_types(t), xp=xp)
+        for t in arrays_and_dtypes
+    }
     if any(isinstance(t, np.dtype) for t in types):
         # only check if there's numpy dtypes – the array API does not
         # define the types we're checking for
@@ -256,9 +259,4 @@ def result_type(
             ):
                 return np.dtype(object)
 
-    if xp is np or any(
-        isinstance(getattr(t, "dtype", t), np.dtype) for t in arrays_and_dtypes
-    ):
-        return xp.result_type(*map(preprocess_scalar_types, arrays_and_dtypes))
-    else:
-        return npcompat._future_array_api_result_type(*arrays_and_dtypes, xp=xp)
+    return npcompat.result_type(*map(preprocess_scalar_types, arrays_and_dtypes), xp=xp)

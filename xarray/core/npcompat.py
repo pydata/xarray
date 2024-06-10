@@ -29,11 +29,12 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import numpy as np
+
 try:
     # requires numpy>=2.0
     from numpy import isdtype  # type: ignore[attr-defined,unused-ignore]
 except ImportError:
-    import numpy as np
 
     dtype_kinds = {
         "bool": np.bool_,
@@ -83,3 +84,12 @@ def _future_array_api_result_type(*arrays_and_dtypes, xp):
     dtypes = [possible_dtypes.get(type(x), "object") for x in weakly_dtyped]
 
     return xp.result_type(dtype, *dtypes)
+
+
+def result_type(*arrays_and_dtypes, xp) -> np.dtype:
+    if xp is np or any(
+        isinstance(getattr(t, "dtype", t), np.dtype) for t in arrays_and_dtypes
+    ):
+        return xp.result_type(*arrays_and_dtypes)
+    else:
+        return _future_array_api_result_type(*arrays_and_dtypes, xp=xp)
