@@ -163,8 +163,6 @@ class Index:
     def create_variables(
         self,
         variables: Mapping[Any, Variable] | None = None,
-        *,
-        fastpath: bool = False,
     ) -> IndexVars:
         """Maybe create new coordinate variables from this index.
 
@@ -701,7 +699,7 @@ class PandasIndex(Index):
         return cls(new_pd_index, dim=dim, coord_dtype=coord_dtype)
 
     def create_variables(
-        self, variables: Mapping[Any, Variable] | None = None, *, fastpath: bool = False
+        self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
         from xarray.core.variable import IndexVariable
 
@@ -718,8 +716,12 @@ class PandasIndex(Index):
             encoding = None
 
         data = PandasIndexingAdapter(self.index, dtype=self.coord_dtype)
+
+        # dcherian / hmaarrfk - June 2024
+        # we can get away fastpath=True this since we know that data is already
+        # wrapped and can be stuck in an IndexVariable.
         var = IndexVariable(
-            self.dim, data, attrs=attrs, encoding=encoding, fastpath=fastpath
+            self.dim, data, attrs=attrs, encoding=encoding, fastpath=True
         )
         return {name: var}
 
@@ -1141,7 +1143,7 @@ class PandasMultiIndex(PandasIndex):
         return self._replace(index, level_coords_dtype=level_coords_dtype)
 
     def create_variables(
-        self, variables: Mapping[Any, Variable] | None = None, *, fastpath: bool = False
+        self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
         from xarray.core.variable import IndexVariable
 

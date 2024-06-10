@@ -2624,6 +2624,10 @@ class IndexVariable(Variable):
         if self.ndim != 1:
             raise ValueError(f"{type(self).__name__} objects must be 1-dimensional")
 
+        # Avoid further checks if fastpath is True
+        if fastpath:
+            return
+
         # Unlike in Variable, always eagerly load values into memory
         if not isinstance(self._data, PandasIndexingAdapter):
             self._data = PandasIndexingAdapter(self._data)
