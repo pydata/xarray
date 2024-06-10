@@ -76,6 +76,9 @@ authors:
 - family-names: "Wolfram"
   given-names: "Phillip J."
   orcid: "https://orcid.org/0000-0001-5971-4241"
+- family-names: "Henderson"
+  given-names: "Scott"
+  orcid: "https://orcid.org/0000-0003-0624-4965"
 title: "xarray"
 abstract: "N-D labeled arrays and datasets in Python."
 license: Apache-2.0
