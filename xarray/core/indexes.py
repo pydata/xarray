@@ -161,8 +161,7 @@ class Index:
         raise NotImplementedError()
 
     def create_variables(
-        self,
-        variables: Mapping[Any, Variable] | None = None,
+        self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
         """Maybe create new coordinate variables from this index.
 
