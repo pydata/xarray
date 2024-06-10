@@ -660,7 +660,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dims = tuple(
             dim for k, dim in zip(key, self.dims) if not isinstance(k, integer_types)
         )
-        return dims, BasicIndexer(key, fastpath=True), None
+        return dims, BasicIndexer(key), None
 
     def _validate_indexers(self, key):
         """Make sanity checks"""
