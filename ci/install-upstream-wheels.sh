@@ -48,8 +48,8 @@ python -m pip install \
     --pre \
     --upgrade \
     pyarrow
-# manually install pint deps. These will be pulled in by the next released version, but for now we have to install them (since we use `--no-deps` pip will not pull them in the install).
-python -m pip install --upgrade 'flexcache>=0.3' 'flexparser>=0.3' 'appdirs>=1.4.4' typing_extensions
+# manually install `pint` to pull in new dependencies
+python -m pip install --upgrade pint
 python -m pip install \
     --no-deps \
     --upgrade \
