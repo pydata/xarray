@@ -41,9 +41,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
-- Following `DataArrayResample.interpolate and passing kwargs
-  <https://github.com/pydata/xarray/issues/8762>`_ interpolate method now
-  supports kwargs such as order for producing the polynomial interpolation.
+- Following :py:meth`DataArrayResample.interpolate` and`DatasetResample.interpolate` method now
+  support aribtrary kwargs such as ``order`` for polynomial interpolation.
  (:issue:`8762`). By
   `Nicolas Karasiak <https://github.com/nkarasiak>`_.
 
