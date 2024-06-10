@@ -2075,9 +2075,13 @@ class TestDataArrayResample:
             "slinear",
             "quadratic",
             "cubic",
+            "polynomial"
         ]
         for kind in kinds:
             actual = array.resample(time="1h").interpolate(kind)
+            kwargs = {}
+            if kind == "polynomial":
+                kwargs['order'] = 1
             f = interp1d(
                 np.arange(len(times)),
                 data,
@@ -2085,6 +2089,7 @@ class TestDataArrayResample:
                 axis=-1,
                 bounds_error=True,
                 assume_sorted=True,
+                **kwargs
             )
             expected_data = f(new_times_idx)
             expected = DataArray(
@@ -2148,10 +2153,14 @@ class TestDataArrayResample:
             "slinear",
             "quadratic",
             "cubic",
+            "polynomial"
         ]
         for kind in kinds:
             actual = array.chunk(chunks).resample(time="1h").interpolate(kind)
             actual = actual.compute()
+            kwargs = {}
+            if kind == "polynomial":
+                kwargs["order"] = 1
             f = interp1d(
                 np.arange(len(times)),
                 data,
@@ -2159,6 +2168,7 @@ class TestDataArrayResample:
                 axis=-1,
                 bounds_error=True,
                 assume_sorted=True,
+                **kwargs
             )
             expected_data = f(new_times_idx)
             expected = DataArray(
