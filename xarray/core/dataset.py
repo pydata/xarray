@@ -6366,7 +6366,7 @@ class Dataset(
         Data variables:
             temperature  (time, location) float64 64B 23.4 24.1 nan ... 24.2 20.5 25.3
 
-        # Drop NaN values from the dataset
+        Drop NaN values from the dataset
 
         >>> dataset.dropna(dim="time")
         <xarray.Dataset> Size: 80B
@@ -6377,7 +6377,7 @@ class Dataset(
         Data variables:
             temperature  (time, location) float64 48B 23.4 24.1 21.8 24.2 20.5 25.3
 
-        # Drop labels with any NAN values
+        Drop labels with any NaN values
 
         >>> dataset.dropna(dim="time", how="any")
         <xarray.Dataset> Size: 80B
@@ -6388,7 +6388,7 @@ class Dataset(
         Data variables:
             temperature  (time, location) float64 48B 23.4 24.1 21.8 24.2 20.5 25.3
 
-        # Drop labels with all NAN values
+        Drop labels with all NAN values
 
         >>> dataset.dropna(dim="time", how="all")
         <xarray.Dataset> Size: 104B
@@ -6399,7 +6399,7 @@ class Dataset(
         Data variables:
             temperature  (time, location) float64 64B 23.4 24.1 nan ... 24.2 20.5 25.3
 
-        # Drop labels with less than 2 non-NA values
+        Drop labels with less than 2 non-NA values
 
         >>> dataset.dropna(dim="time", thresh=2)
         <xarray.Dataset> Size: 80B
@@ -6413,6 +6413,11 @@ class Dataset(
         Returns
         -------
         Dataset
+
+        See Also
+        --------
+        DataArray.dropna
+        pandas.DataFrame.dropna
         """
         # TODO: consider supporting multiple dimensions? Or not, given that
         # there are some ugly edge cases, e.g., pandas's dropna differs
