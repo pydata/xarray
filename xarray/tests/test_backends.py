@@ -529,7 +529,7 @@ class DatasetIOBase:
             assert actual["x"].encoding["_Encoding"] == "ascii"
 
     def test_roundtrip_numpy_datetime_data(self) -> None:
-        times = pd.to_datetime(["2000-01-01", "2000-01-02", "NaT"])
+        times = pd.to_datetime(["2000-01-01", "2000-01-02", "NaT"], unit="ns")
         expected = Dataset({"t": ("t", times), "t0": times[0]})
         kwargs = {"encoding": {"t0": {"units": "days since 1950-01-01"}}}
         with self.roundtrip(expected, save_kwargs=kwargs) as actual:
