@@ -1086,7 +1086,7 @@ class DataTree(
         --------
         DataTree.to_dict
         DataTree.to_paths_dict
-        Dataset.to_paths_dict
+        Dataset.to_dict
         DataArray.from_dict
 
         Examples
@@ -1272,7 +1272,7 @@ class DataTree(
 
         The iteration over the tree is effectuated with :py:meth:`DataTree.subtree`.
 
-        The initial creation of node dictionaries is delegated to :py:meth:`Dataset.to_paths_dict`,
+        The initial creation of node dictionaries is delegated to :py:meth:`Dataset.to_dict`,
         using the immutable Dataset-like view provided by :py:attr:`Datatree.ds`.
 
         If this method is used with the final aim of dumping the tree to JSON, be cautious
@@ -1297,7 +1297,7 @@ class DataTree(
             underlying array type. If set to "list" (or True for backwards
             compatibility), returns data in lists of Python data types. Note
             that for obtaining the "list" output efficiently, use
-            ``ds.compute().to_paths_dict(data="list")``.
+            ``ds.compute().to_dict(data="list")``.
 
         encoding : bool, default: False
             Whether to include the Dataset's encoding in the dictionary.
@@ -1313,7 +1313,7 @@ class DataTree(
         Returns
         -------
         d : dict
-            Recursive dictionary inherited key from :py:meth:`Dataset.to_paths_dict`:
+            Recursive dictionary inherited key from :py:meth:`Dataset.to_dict`:
             "coords", "attrs", "dims", "data_vars" and optionally "encoding", as
             well as DataTree-specific keys: "name", "children" and optionally
             "path", "is_root", "is_leaf", "level", "depth", "width"
@@ -1323,12 +1323,12 @@ class DataTree(
         DataTree.from_dict
         DataTree.from_paths_dict
         Dataset.from_dict
-        Dataset.to_paths_dict
+        Dataset.to_dict
         """
 
         super_root_dict: dict[str, Any] = {"children": {}}
         for node in self.subtree:
-            node_dict = node.ds.to_paths_dict(data=data, encoding=encoding)
+            node_dict = node.ds.to_dict(data=data, encoding=encoding)
             node_dict["name"] = node.name
             if absolute_details:
                 node_dict.update(
