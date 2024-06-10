@@ -253,13 +253,12 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         assert_array_equal(x[0].data, listarray.squeeze())
         assert_array_equal(x.squeeze().data, listarray.squeeze())
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_index_and_concat_datetime(self):
         # regression test for #125
         date_range = pd.date_range("2011-09-01", periods=10)
         for dates in [date_range, date_range.values, date_range.to_pydatetime()]:
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", message="Converting non-nanosecond")
-                expected = self.cls("t", dates)
+            expected = self.cls("t", dates)
             for times in [
                 [expected[i] for i in range(10)],
                 [expected[i : (i + 1)] for i in range(10)],

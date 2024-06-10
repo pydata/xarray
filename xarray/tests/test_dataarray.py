@@ -3642,16 +3642,16 @@ class TestDataArray:
         actual_no_data = da.to_dict(data=False, encoding=encoding)
         assert expected_no_data == actual_no_data
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_to_and_from_dict_with_time_dim(self) -> None:
         x = np.random.randn(10, 3)
         t = pd.date_range("20130101", periods=10)
         lat = [77.7, 83.2, 76]
         da = DataArray(x, {"t": t, "lat": lat}, dims=["t", "lat"])
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message="Converting non-nanosecond")
-            roundtripped = DataArray.from_dict(da.to_dict())
+        roundtripped = DataArray.from_dict(da.to_dict())
         assert_identical(da, roundtripped)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_to_and_from_dict_with_nan_nat(self) -> None:
         y = np.random.randn(10, 3)
         y[2] = np.nan
@@ -3659,9 +3659,7 @@ class TestDataArray:
         t[2] = np.nan
         lat = [77.7, 83.2, 76]
         da = DataArray(y, {"t": t, "lat": lat}, dims=["t", "lat"])
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message="Converting non-nanosecond")
-            roundtripped = DataArray.from_dict(da.to_dict())
+        roundtripped = DataArray.from_dict(da.to_dict())
         assert_identical(da, roundtripped)
 
     def test_to_dict_with_numpy_attrs(self) -> None:
