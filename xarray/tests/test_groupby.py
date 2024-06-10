@@ -2161,6 +2161,7 @@ class TestDataArrayResample:
                 kwargs["order"] = 1
             actual = array.chunk(chunks).resample(time="1h").interpolate(kind, **kwargs)
             actual = actual.compute()
+            # using interp1d, polynomial order is to set directly in kind using int
             f = interp1d(
                 np.arange(len(times)),
                 data,
