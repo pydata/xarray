@@ -251,7 +251,7 @@ def asarray(data, xp=np, dtype=None):
         return xp.astype(converted, dtype)
 
 
-def as_shared_dtype(scalars_or_arrays, xp=np):
+def as_shared_dtype(scalars_or_arrays, xp=None):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
     if any(is_extension_array_dtype(x) for x in scalars_or_arrays):
         extension_array_types = [
@@ -272,6 +272,8 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
         import cupy as cp
 
         xp = cp
+    elif xp is None:
+        xp = get_array_namespace(scalars_or_arrays)
 
     # Pass arrays directly instead of dtypes to result_type so scalars
     # get handled properly.
