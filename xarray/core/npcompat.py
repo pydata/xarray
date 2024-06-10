@@ -69,6 +69,12 @@ def _future_array_api_result_type(*arrays_and_dtypes, xp):
     strongly_dtyped = [t for t in arrays_and_dtypes if not is_weak_scalar_type(t)]
     weakly_dtyped = [t for t in arrays_and_dtypes if is_weak_scalar_type(t)]
 
+    if not strongly_dtyped:
+        strongly_dtyped = [
+            xp.asarray(x) if not isinstance(x, type) else x for x in weakly_dtyped
+        ]
+        weakly_dtyped = []
+
     dtype = xp.result_type(*strongly_dtyped)
     if not weakly_dtyped:
         return dtype
