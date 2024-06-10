@@ -229,20 +229,10 @@ class TestTileIDsFromCoords:
 
     def test_datetime_coords(self):
         ds0 = Dataset(
-            {
-                "time": [
-                    np.datetime64("2000-03-06", "ns"),
-                    np.datetime64("2000-03-07", "ns"),
-                ]
-            }
+            {"time": np.array(["2000-03-06", "2000-03-07"], dtype="datetime64[ns]")}
         )
         ds1 = Dataset(
-            {
-                "time": [
-                    np.datetime64("1999-01-01", "ns"),
-                    np.datetime64("1999-02-04", "ns"),
-                ]
-            }
+            {"time": np.array(["1999-01-01", "1999-02-04"], dtype="datetime64[ns]")}
         )
 
         expected = {(0,): ds1, (1,): ds0}
