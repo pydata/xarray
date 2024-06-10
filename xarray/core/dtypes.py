@@ -241,6 +241,8 @@ def result_type(
     -------
     numpy.dtype for the result.
     """
+    # TODO (keewis): replace `npcompat.result_type` with `xp.result_type` once we can
+    # require a version of the Array API that supports passing scalars to it.
     from xarray.core.duck_array_ops import get_array_namespace
 
     if xp is None:
