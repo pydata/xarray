@@ -16,8 +16,8 @@ Methods of creating a datatree.
    :toctree: generated/
 
    DataTree
-   DataTree.from_dict
-   DataTree.from_dict_nested
+   DataTree.from_paths_dict
+   DataTree.from_nested_dict
 
 Tree Attributes
 ---------------
@@ -311,7 +311,7 @@ Open a datatree from an on-disk store or serialize the tree.
 
    open_datatree
    DataTree.to_dict
-   DataTree.to_dict_nested
+   DataTree.to_nested_dict
    DataTree.to_netcdf
    DataTree.to_zarr
 

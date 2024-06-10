@@ -132,7 +132,7 @@ It is at tree construction time that consistency checks are enforced. For instan
 Alternatively you can also create a ``DataTree`` object from
 
 - An ``xarray.Dataset`` using ``Dataset.to_node()`` (not yet implemented),
-- A dictionary mapping directory-like paths to either ``DataTree`` nodes or data, using :py:meth:`DataTree.from_dict()`,
+- A dictionary mapping directory-like paths to either ``DataTree`` nodes or data, using :py:meth:`DataTree.from_paths_dict()`,
 - A netCDF or Zarr file on disk with :py:func:`open_datatree()`. See :ref:`reading and writing files <io>`.
 
 

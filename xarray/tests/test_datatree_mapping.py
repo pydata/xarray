@@ -19,8 +19,8 @@ class TestCheckTreesIsomorphic:
             check_isomorphic("s", 1)  # type: ignore[arg-type]
 
     def test_different_widths(self):
-        dt1 = DataTree.from_dict(d={"a": empty})
-        dt2 = DataTree.from_dict(d={"b": empty, "c": empty})
+        dt1 = DataTree.from_paths_dict(d={"a": empty})
+        dt2 = DataTree.from_paths_dict(d={"b": empty, "c": empty})
         expected_err_str = (
             "Number of children on node '/' of the left object: 1\n"
             "Number of children on node '/' of the right object: 2"
@@ -29,8 +29,8 @@ class TestCheckTreesIsomorphic:
             check_isomorphic(dt1, dt2)
 
     def test_different_heights(self):
-        dt1 = DataTree.from_dict({"a": empty})
-        dt2 = DataTree.from_dict({"b": empty, "b/c": empty})
+        dt1 = DataTree.from_paths_dict({"a": empty})
+        dt2 = DataTree.from_paths_dict({"b": empty, "b/c": empty})
         expected_err_str = (
             "Number of children on node '/a' of the left object: 0\n"
             "Number of children on node '/b' of the right object: 1"
@@ -39,8 +39,8 @@ class TestCheckTreesIsomorphic:
             check_isomorphic(dt1, dt2)
 
     def test_names_different(self):
-        dt1 = DataTree.from_dict({"a": xr.Dataset()})
-        dt2 = DataTree.from_dict({"b": empty})
+        dt1 = DataTree.from_paths_dict({"a": xr.Dataset()})
+        dt2 = DataTree.from_paths_dict({"b": empty})
         expected_err_str = (
             "Node '/a' in the left object has name 'a'\n"
             "Node '/b' in the right object has name 'b'"
@@ -49,18 +49,30 @@ class TestCheckTreesIsomorphic:
             check_isomorphic(dt1, dt2, require_names_equal=True)
 
     def test_isomorphic_names_equal(self):
-        dt1 = DataTree.from_dict({"a": empty, "b": empty, "b/c": empty, "b/d": empty})
-        dt2 = DataTree.from_dict({"a": empty, "b": empty, "b/c": empty, "b/d": empty})
+        dt1 = DataTree.from_paths_dict(
+            {"a": empty, "b": empty, "b/c": empty, "b/d": empty}
+        )
+        dt2 = DataTree.from_paths_dict(
+            {"a": empty, "b": empty, "b/c": empty, "b/d": empty}
+        )
         check_isomorphic(dt1, dt2, require_names_equal=True)
 
     def test_isomorphic_ordering(self):
-        dt1 = DataTree.from_dict({"a": empty, "b": empty, "b/d": empty, "b/c": empty})
-        dt2 = DataTree.from_dict({"a": empty, "b": empty, "b/c": empty, "b/d": empty})
+        dt1 = DataTree.from_paths_dict(
+            {"a": empty, "b": empty, "b/d": empty, "b/c": empty}
+        )
+        dt2 = DataTree.from_paths_dict(
+            {"a": empty, "b": empty, "b/c": empty, "b/d": empty}
+        )
         check_isomorphic(dt1, dt2, require_names_equal=False)
 
     def test_isomorphic_names_not_equal(self):
-        dt1 = DataTree.from_dict({"a": empty, "b": empty, "b/c": empty, "b/d": empty})
-        dt2 = DataTree.from_dict({"A": empty, "B": empty, "B/C": empty, "B/D": empty})
+        dt1 = DataTree.from_paths_dict(
+            {"a": empty, "b": empty, "b/c": empty, "b/d": empty}
+        )
+        dt2 = DataTree.from_paths_dict(
+            {"A": empty, "B": empty, "B/C": empty, "B/D": empty}
+        )
         check_isomorphic(dt1, dt2)
 
     def test_not_isomorphic_complex_tree(self, create_test_datatree):
@@ -312,7 +324,7 @@ class TestMutableOperations:
             dims=["x", "y", "time"],
             coords={"area": (["x", "y"], np.random.rand(2, 6))},
         ).to_dataset(name="data")
-        dt = DataTree.from_dict({"a": a, "b": b})
+        dt = DataTree.from_paths_dict({"a": a, "b": b})
 
         def weighted_mean(ds):
             return ds.weighted(ds.area).mean(["x", "y"])
@@ -320,7 +332,7 @@ class TestMutableOperations:
         dt.map_over_subtree(weighted_mean)
 
     def test_alter_inplace_forbidden(self):
-        simpsons = DataTree.from_dict(
+        simpsons = DataTree.from_paths_dict(
             d={
                 "/": xr.Dataset({"age": 83}),
                 "/Herbert": xr.Dataset({"age": 40}),

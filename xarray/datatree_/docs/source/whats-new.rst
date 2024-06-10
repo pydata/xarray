@@ -221,7 +221,7 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
-- Allow ``Datatree`` objects as values in :py:meth:`DataTree.from_dict` (:pull:`159`).
+- Allow ``Datatree`` objects as values in :py:meth:`DataTree.from_paths_dict` (:pull:`159`).
   By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation

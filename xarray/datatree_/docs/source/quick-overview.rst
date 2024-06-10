@@ -37,7 +37,7 @@ Now we'll put this data into a multi-group tree:
 
     from datatree import DataTree
 
-    dt = DataTree.from_dict({"simulation/coarse": ds, "simulation/fine": ds2, "/": ds3})
+    dt = DataTree.from_paths_dict({"simulation/coarse": ds, "simulation/fine": ds2, "/": ds3})
     dt
 
 This creates a datatree with various groups. We have one root group, containing information about individual people.
