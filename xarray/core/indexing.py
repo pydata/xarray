@@ -297,15 +297,16 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
 
 
 def _index_indexer_1d(old_indexer, applied_indexer, size: int):
-    assert isinstance(applied_indexer, integer_types + (slice, np.ndarray))
     if isinstance(applied_indexer, slice) and applied_indexer == slice(None):
         # shortcut for the usual case
         return old_indexer
     if isinstance(old_indexer, slice):
         if isinstance(applied_indexer, slice):
             indexer = slice_slice(old_indexer, applied_indexer, size)
+        elif isinstance(applied_indexer, integer_types):
+            indexer = range(*old_indexer.indices(size))[applied_indexer]  # type: ignore[assignment]
         else:
-            indexer = _expand_slice(old_indexer, size)[applied_indexer]  # type: ignore[assignment]
+            indexer = _expand_slice(old_indexer, size)[applied_indexer]
     else:
         indexer = old_indexer[applied_indexer]
     return indexer
