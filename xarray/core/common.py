@@ -356,23 +356,13 @@ class TreeAttrAccessMixin(AttrAccessMixin):
     __slots__ = ()
 
     def __init_subclass__(cls, **kwargs):
-        """Verify that all subclasses explicitly define ``__slots__``. If they don't,
-        raise error in the core xarray module and a FutureWarning in third-party
-        extensions.
+        """This method overrides the check from ``AttrAccessMixin`` that ensures
+        ``__dict__`` is absent in a class, with ``__slots__`` used instead.
+        ``DataTree`` has some dynamically defined attributes in addition to those
+        defined in ``__slots__``. (GH9068)
         """
         if not hasattr(object.__new__(cls), "__dict__"):
             pass
-        # TODO Rework DataTree to avoid __dict__.
-        # elif cls.__module__.startswith("xarray."):
-        #     raise AttributeError(f"{cls.__name__} must explicitly define __slots__")
-        # else:
-        #     cls.__setattr__ = cls._setattr_dict
-        #     warnings.warn(
-        #         f"xarray subclass {cls.__name__} should explicitly define __slots__",
-        #         FutureWarning,
-        #         stacklevel=2,
-        #     )
-        # super().__init_subclass__(**kwargs)
 
 
 def get_squeeze_dims(
