@@ -1656,15 +1656,10 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     __slots__ = ("array", "_dtype")
 
-    def __init__(
-        self, array: pd.Index, dtype: DTypeLike = None, *, fastpath: bool = False
-    ):
+    def __init__(self, array: pd.Index, dtype: DTypeLike = None):
         from xarray.core.indexes import safe_cast_to_index
 
-        if fastpath:
-            self.array = array
-        else:
-            self.array = safe_cast_to_index(array)
+        self.array = safe_cast_to_index(array)
 
         if dtype is None:
             self._dtype = get_valid_numpy_dtype(array)
