@@ -19,6 +19,10 @@ What's New
 
 v2024.06.0 (unreleased)
 -----------------------
+This release speeds up opening of netcdf files with lots of variables, and brings compatibility with the upcoming numpy 2.0 release.
+
+Thanks to the 13 contributors to this release:
+Deepak Cherian, Ilan Gold, Justus Magin, Kai Mühlbauer, Mark Harfouche, Mathias Hauser, Maximilian Roos, Mike Thramann, Paul Ockenfuß, Philippe Thomy, Scott Henderson, Spencer Clark and Tom Nicholas
 
 New Features
 ~~~~~~~~~~~~
