@@ -718,13 +718,7 @@ class PandasIndex(Index):
             encoding = None
 
         data = PandasIndexingAdapter(self.index, dtype=self.coord_dtype)
-
-        # dcherian / hmaarrfk - June 2024
-        # we can get away fastpath=True this since we know that data is already
-        # wrapped and can be stuck in an IndexVariable.
-        var = IndexVariable(
-            self.dim, data, attrs=attrs, encoding=encoding, fastpath=True
-        )
+        var = IndexVariable(self.dim, data, attrs=attrs, encoding=encoding)
         return {name: var}
 
     def to_pandas_index(self) -> pd.Index:
