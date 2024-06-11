@@ -40,6 +40,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Preserve conversion of timezone-aware pandas Datetime arrays to numpy object arrays
+  (:issue:`9026`, :pull:`9042`).
+  By `Ilan Gold <https://github.com/ilan-gold>`_.
 
 
 Documentation
