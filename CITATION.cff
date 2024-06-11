@@ -79,6 +79,8 @@ authors:
 - family-names: "Henderson"
   given-names: "Scott"
   orcid: "https://orcid.org/0000-0003-0624-4965"
+- family-names: "Awowale"
+  given-names: "Eniola Olufunke"
 title: "xarray"
 abstract: "N-D labeled arrays and datasets in Python."
 license: Apache-2.0
