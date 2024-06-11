@@ -48,6 +48,8 @@ python -m pip install \
     --pre \
     --upgrade \
     pyarrow
+# manually install `pint` to pull in new dependencies
+python -m pip install --upgrade pint
 python -m pip install \
     --no-deps \
     --upgrade \
