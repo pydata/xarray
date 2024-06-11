@@ -23,6 +23,12 @@ v2024.05.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+Performance
+~~~~~~~~~~~
+
+- Small optimization to the netCDF4 and h5netcdf backends (:issue:`9058`, :pull:`9067`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -35,9 +41,15 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- :py:meth:`DataArrayResample.interpolate` and :py:meth:`DatasetResample.interpolate` method now
+  support aribtrary kwargs such as ``order`` for polynomial interpolation. (:issue:`8762`).
+  By `Nicolas Karasiak <https://github.com/nkarasiak>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
+- Add link to CF Conventions on packed data and sentence on type determination in doc/user-guide/io.rst (:issue:`9041`, :pull:`9045`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Internal Changes

@@ -6,12 +6,6 @@ on:
   pull_request:
     branches:
       - "main"
-    paths:
-      - 'ci/**'
-      - '.github/**'
-      - '/*'  # covers files such as `pyproject.toml`
-      - 'properties/**'
-      - 'xarray/**'
   workflow_dispatch: # allows you to trigger manually
 
 concurrency:
@@ -165,7 +159,7 @@ jobs:
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v4.4.0
+        uses: codecov/codecov-action@v4.4.1
         with:
           file: ./coverage.xml
           flags: unittests
