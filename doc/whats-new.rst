@@ -24,9 +24,6 @@ This release speeds up opening of netcdf files with lots of variables, and bring
 Thanks to the 13 contributors to this release:
 Deepak Cherian, Ilan Gold, Justus Magin, Kai Mühlbauer, Mark Harfouche, Mathias Hauser, Maximilian Roos, Mike Thramann, Paul Ockenfuß, Philippe Thomy, Scott Henderson, Spencer Clark and Tom Nicholas
 
-New Features
-~~~~~~~~~~~~
-
 Performance
 ~~~~~~~~~~~
 
@@ -34,14 +31,6 @@ Performance
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Small optimizations to help reduce indexing speed of datasets (:pull:`9002`).
   By `Mark Harfouche <https://github.com/hmaarrfk>`_.
-
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
 
 
 Bug fixes
