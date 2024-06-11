@@ -5209,7 +5209,7 @@ class TestDataset:
         actual6 = ds.fillna(expected)
         assert_identical(expected, actual6)
 
-        actual7 = ds.fillna(range(4))
+        actual7 = ds.fillna(np.arange(4))
         assert_identical(expected, actual7)
 
         actual8 = ds.fillna(b[:3])

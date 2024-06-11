@@ -3004,7 +3004,7 @@ class TestDataArray:
         expected = b.copy()
         assert_identical(expected, actual)
 
-        actual = a.fillna(range(4))
+        actual = a.fillna(np.arange(4))
         assert_identical(expected, actual)
 
         actual = a.fillna(b[:3])
@@ -3017,7 +3017,7 @@ class TestDataArray:
             a.fillna({0: 0})
 
         with pytest.raises(ValueError, match=r"broadcast"):
-            a.fillna([1, 2])
+            a.fillna(np.array([1, 2]))
 
     def test_align(self) -> None:
         array = DataArray(
