@@ -2905,7 +2905,7 @@ Bug fixes
   process (:issue:`4045`, :pull:`4684`). It also enables encoding and decoding standard
   calendar dates with time units of nanoseconds (:pull:`4400`).
   By `Spencer Clark <https://github.com/spencerkclark>`_ and `Mark Harfouche
-  <http://github.com/hmaarrfk>`_.
+  <https://github.com/hmaarrfk>`_.
 - :py:meth:`DataArray.astype`, :py:meth:`Dataset.astype` and :py:meth:`Variable.astype` support
   the ``order`` and ``subok`` parameters again. This fixes a regression introduced in version 0.16.1
   (:issue:`4644`, :pull:`4683`).
