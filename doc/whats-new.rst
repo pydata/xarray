@@ -17,7 +17,7 @@ What's New
 
 .. _whats-new.2024.05.1:
 
-v2024.05.1 (unreleased)
+v2024.06 (unreleased)
 -----------------------
 
 New Features
