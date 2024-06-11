@@ -81,6 +81,9 @@ authors:
   orcid: "https://orcid.org/0000-0003-0624-4965"
 - family-names: "Awowale"
   given-names: "Eniola Olufunke"
+- family-names: "Scheick"
+  given-names: "Jessica"
+  orcid: "https://orcid.org/0000-0002-3421-4459"
 title: "xarray"
 abstract: "N-D labeled arrays and datasets in Python."
 license: Apache-2.0
