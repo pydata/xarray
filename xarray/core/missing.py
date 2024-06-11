@@ -50,6 +50,37 @@ if TYPE_CHECKING:
     T = TypeVar("T")
 
 
+class MaskedDataArray:
+    def __init__(self, da: DataArray, mask: np.ndarray):
+        self.da = da
+        self.mask = mask
+
+
+def mask_gaps(
+    self,
+    dim: Hashable | None = None,
+    use_coordinate: bool | str = True,
+    limit: (
+        int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta | None
+    ) = None,
+    limit_direction: LimitDirectionOptions = "forward",
+    limit_area: LimitAreaOptions | None = None,
+    max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta = None,
+):
+    """Mask continues gaps in the data, providing functionality to control gap length and offsets"""
+
+    masks = _get_gap_masks(
+        self,
+        dim,
+        limit,
+        limit_direction,
+        limit_area,
+        max_gap,
+        use_coordinate,
+    )
+    return masks  # tbd
+
+
 def _get_gap_left_edge(
     obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable, outside=False
 ):
@@ -88,12 +119,12 @@ def _get_limit_fill_mask(
     limit_direction,
 ):
     if limit_direction == "forward":
-        limit_mask = _get_gap_dist_to_left_edge(obj, dim, index) <= limit
+        limit_mask = _get_gap_dist_to_left_edge(obj, dim, index) > limit
     elif limit_direction == "backward":
-        limit_mask = _get_gap_dist_to_right_edge(obj, dim, index) <= limit
+        limit_mask = _get_gap_dist_to_right_edge(obj, dim, index) > limit
     elif limit_direction == "both":
-        limit_mask = (_get_gap_dist_to_left_edge(obj, dim, index) <= limit) | (
-            _get_gap_dist_to_right_edge(obj, dim, index) <= limit
+        limit_mask = (_get_gap_dist_to_left_edge(obj, dim, index) > limit) & (
+            _get_gap_dist_to_right_edge(obj, dim, index) > limit
         )
     else:
         raise ValueError(
@@ -107,16 +138,15 @@ def _get_limit_area_mask(
 ):
     if limit_area == "inside":
         area_mask = (
-            _get_gap_left_edge(obj, dim, index).notnull()
-            & _get_gap_right_edge(obj, dim, index).notnull()
-        )
-        area_mask = area_mask | obj.notnull()
-    elif limit_area == "outside":
-        area_mask = (
             _get_gap_left_edge(obj, dim, index).isnull()
             | _get_gap_right_edge(obj, dim, index).isnull()
         )
-        area_mask = area_mask | obj.notnull()
+    elif limit_area == "outside":
+        area_mask = (
+            _get_gap_left_edge(obj, dim, index).notnull()
+            & _get_gap_right_edge(obj, dim, index).notnull()
+        )
+        area_mask = area_mask & obj.isnull()
     else:
         raise ValueError(
             f"limit_area must be one of 'inside', 'outside' or None. Got {limit_area}"
@@ -143,7 +173,7 @@ def _get_max_gap_mask(
     max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta,
 ):
     nan_block_lengths = _get_nan_block_lengths(obj, dim, index)
-    return nan_block_lengths <= max_gap
+    return nan_block_lengths > max_gap
 
 
 def _get_gap_masks(
