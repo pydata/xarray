@@ -41,9 +41,15 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- :py:meth:`DataArrayResample.interpolate` and :py:meth:`DatasetResample.interpolate` method now
+  support aribtrary kwargs such as ``order`` for polynomial interpolation. (:issue:`8762`).
+  By `Nicolas Karasiak <https://github.com/nkarasiak>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
+- Add link to CF Conventions on packed data and sentence on type determination in doc/user-guide/io.rst (:issue:`9041`, :pull:`9045`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Internal Changes
