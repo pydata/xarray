@@ -162,7 +162,6 @@ if TYPE_CHECKING:
         QueryParserOptions,
         ReindexMethodOptions,
         SideOptions,
-        T_NormalizedChunks,
         T_Xarray,
     )
     from xarray.core.weighted import DatasetWeighted
@@ -284,18 +283,17 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
 
 
 def _maybe_chunk(
-    name,
-    var,
-    chunks,
+    name: Hashable,
+    var: Variable,
+    chunks: Mapping[Any, T_ChunkDim] | None,
     token=None,
     lock=None,
-    name_prefix="xarray-",
-    overwrite_encoded_chunks=False,
-    inline_array=False,
+    name_prefix: str = "xarray-",
+    overwrite_encoded_chunks: bool = False,
+    inline_array: bool = False,
     chunked_array_type: str | ChunkManagerEntrypoint | None = None,
     from_array_kwargs=None,
-):
-
+) -> Variable:
     from xarray.namedarray.daskmanager import DaskManager
 
     if chunks is not None:
@@ -2736,7 +2734,7 @@ class Dataset(
                 f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.sizes.keys())}"
             )
 
-        def _resolve_frequency(name: Hashable, freq: str) -> tuple[int]:
+        def _resolve_frequency(name: Hashable, freq: str) -> tuple[int, ...]:
             variable = self._variables.get(name, None)
             if variable is None:
                 raise ValueError(
@@ -2748,7 +2746,7 @@ class Dataset(
                     f"Received variable {name!r} with dtype {variable.dtype!r} instead."
                 )
 
-            chunks = tuple(
+            chunks: tuple[int, ...] = tuple(
                 DataArray(
                     np.ones(variable.shape, dtype=int),
                     dims=(name,),
@@ -2762,7 +2760,7 @@ class Dataset(
             )
             return chunks
 
-        chunks_mapping_ints: T_NormalizedChunks = {
+        chunks_mapping_ints: Mapping[Any, T_ChunkDim] = {
             name: (
                 _resolve_frequency(name, chunks)
                 if isinstance(chunks, str) and chunks != "auto"
