@@ -296,6 +296,11 @@ loaded into Dask or not:
 Automatic parallelization with ``apply_ufunc`` and ``map_blocks``
 -----------------------------------------------------------------
 
+.. tip::
+
+   Some problems can become embarassingly parallel and thus easy to parallelize automatically
+   by rechunk to a frequency: e.g. ``ds.chunk(time="YE")``. See :py:meth:`Dataset.chunk` for more.
+
 Almost all of xarray's built-in operations work on Dask arrays. If you want to
 use a function that isn't wrapped by xarray, and have it applied in parallel on
 each block of your xarray object, you have three options:
