@@ -25,6 +25,15 @@ New Features
 - Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
 
+Performance
+~~~~~~~~~~~
+
+- Small optimization to the netCDF4 and h5netcdf backends (:issue:`9058`, :pull:`9067`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Small optimizations to help reduce indexing speed of datasets (:pull:`9002`, :pull:`9003`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
+
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
