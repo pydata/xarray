@@ -1234,6 +1234,9 @@ class TestDataset:
         ds["x"] = ("x", [1, 2, 3])
         with pytest.raises(ValueError, match="datetime variables"):
             ds.chunk(x="YE")
+        ds["x"] = ("x", xr.date_range("2001-01-01", periods=3, freq="D"))
+        with pytest.raises(ValueError, match="Invalid frequency"):
+            ds.chunk(x="foo")
 
     @requires_dask
     def test_dask_is_lazy(self) -> None:

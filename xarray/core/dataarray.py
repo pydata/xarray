@@ -1371,11 +1371,13 @@ class DataArray(
         sizes along that dimension will not be updated; non-dask arrays will be
         converted into dask arrays with a single block.
 
+        Along datetime-like dimensions, a pandas frequency string is also accepted.
+
         Parameters
         ----------
-        chunks : int, "auto", tuple of int or mapping of Hashable to int, optional
+        chunks : int, "auto", tuple of int or mapping of hashable to int or a pandas frequency string, optional
             Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, ``(5, 5)`` or
-            ``{"x": 5, "y": 5}``.
+            ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": "YE"}``.
         name_prefix : str, optional
             Prefix for the name of the new dask array.
         token : str, optional

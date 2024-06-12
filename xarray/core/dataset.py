@@ -162,6 +162,7 @@ if TYPE_CHECKING:
         QueryParserOptions,
         ReindexMethodOptions,
         SideOptions,
+        T_NormalizedChunks,
         T_Xarray,
     )
     from xarray.core.weighted import DatasetWeighted
@@ -2761,9 +2762,11 @@ class Dataset(
             )
             return chunks
 
-        chunks_mapping_ints = {
+        chunks_mapping_ints: T_NormalizedChunks = {
             name: (
-                _resolve_frequency(name, chunks) if isinstance(chunks, str) else chunks
+                _resolve_frequency(name, chunks)
+                if isinstance(chunks, str) and chunks != "auto"
+                else chunks
             )
             for name, chunks in chunks_mapping.items()
         }
