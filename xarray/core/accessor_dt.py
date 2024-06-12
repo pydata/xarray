@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from xarray.coding.times import infer_calendar_name
+from xarray.coding.calendar_ops import _days_in_year, _datetime_to_decimal_year
 from xarray.core import duck_array_ops
 from xarray.core.common import (
     _contains_datetime_like_objects,
@@ -532,6 +533,26 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         returns "proleptic_gregorian" for arrays of :py:class:`numpy.datetime64` values.
         """
         return infer_calendar_name(self._obj.data)
+
+    @property
+    def days_in_year(self) -> T_DataArray:
+        """The number of days in the year."""
+        obj_type = type(self._obj)
+        result = _days_in_year(self.year, self.calendar)
+        return obj_type(
+            result, name="days_in_year", coords=self._obj.coords,
+            dims=self._obj.dims, attrs=self._obj.attrs
+        )
+
+    @property
+    def to_decimal_year(self) -> T_DataArray:
+        """Convert the dates as a fractional year."""
+        obj_type = type(self._obj)
+        result = _datetime_to_decimal_year(self._obj)
+        return obj_type(
+            result, name="decimal_year", coords=self._obj.coords,
+            dims=self._obj.dims, attrs=self._obj.attrs
+        )
 
 
 class TimedeltaAccessor(TimeAccessor[T_DataArray]):

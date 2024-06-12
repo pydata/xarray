@@ -3,6 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from xarray.core.common import full_like
+from xarray.core.computation import where
 from xarray.coding.cftime_offsets import date_range_like, get_date_type
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.times import _should_cftime_be_used, convert_times
@@ -22,14 +24,35 @@ _CALENDARS_WITHOUT_YEAR_ZERO = [
 ]
 
 
-def _days_in_year(year, calendar, use_cftime=True):
-    """Return the number of days in the input year according to the input calendar."""
-    date_type = get_date_type(calendar, use_cftime=use_cftime)
-    if year == -1 and calendar in _CALENDARS_WITHOUT_YEAR_ZERO:
-        difference = date_type(year + 2, 1, 1) - date_type(year, 1, 1)
+def _leap_gregorian(years):
+    # A year is a leap year if either (i) it is divisible by 4 but not by 100 or (ii) it is divisible by 400
+    return ((years % 4 == 0) & (years % 100 != 0)) | (years % 400 == 0)
+
+
+def _leap_julian(years):
+    # A year is a leap year if it is divisible by 4, even if it is also divisible by 100
+    return years % 4 == 0
+
+
+def _days_in_year(years, calendar):
+    """The number of days in each year for the corresponding calendar."""
+    if calendar == 'standard':
+        return 365 + where(years < 1582, _leap_julian(years), _leap_gregorian(years)) * 1
+    if calendar == 'proleptic_gregorian':
+        return 365 + _leap_gregorian(years) * 1
+    if calendar == 'julian':
+        return 365 + _leap_julian(years) * 1
+    if calendar in ['noleap', '365_day']:
+        const = 365
+    elif calendar in ['all_leap', '366_day']:
+        const = 366
+    elif calendar == '360_day':
+        const = 360
     else:
-        difference = date_type(year + 1, 1, 1) - date_type(year, 1, 1)
-    return difference.days
+        raise ValueError(f'Calendar {calendar} not recognized.')
+    if isinstance(years, (float, int)):
+        return const
+    return full_like(years, const)
 
 
 def convert_calendar(
@@ -188,11 +211,7 @@ def convert_calendar(
         # Special case for conversion involving 360_day calendar
         if align_on == "year":
             # Instead of translating dates directly, this tries to keep the position within a year similar.
-            new_doy = time.groupby(f"{dim}.year").map(
-                _interpolate_day_of_year,
-                target_calendar=calendar,
-                use_cftime=use_cftime,
-            )
+            new_doy = _interpolate_day_of_year(time, target_calendar=calendar)
         elif align_on == "random":
             # The 5 days to remove are randomly chosen, one for each of the five 72-days periods of the year.
             new_doy = time.groupby(f"{dim}.year").map(
@@ -232,16 +251,13 @@ def convert_calendar(
     return out
 
 
-def _interpolate_day_of_year(time, target_calendar, use_cftime):
-    """Returns the nearest day in the target calendar of the corresponding
-    "decimal year" in the source calendar.
-    """
-    year = int(time.dt.year[0])
-    source_calendar = time.dt.calendar
+def _interpolate_day_of_year(times, target_calendar):
+    """Returns the nearest day in the target calendar of the corresponding "decimal year" in the source calendar."""
+    source_calendar = times.dt.calendar
     return np.round(
-        _days_in_year(year, target_calendar, use_cftime)
-        * time.dt.dayofyear
-        / _days_in_year(year, source_calendar, use_cftime)
+        _days_in_year(times.dt.year, target_calendar)
+        * times.dt.dayofyear
+        / _days_in_year(times.dt.year, source_calendar)
     ).astype(int)
 
 
@@ -250,18 +266,18 @@ def _random_day_of_year(time, target_calendar, use_cftime):
 
     Removes Feb 29th and five other days chosen randomly within five sections of 72 days.
     """
-    year = int(time.dt.year[0])
+    year = time.dt.year[0]
     source_calendar = time.dt.calendar
     new_doy = np.arange(360) + 1
     rm_idx = np.random.default_rng().integers(0, 72, 5) + 72 * np.arange(5)
     if source_calendar == "360_day":
         for idx in rm_idx:
             new_doy[idx + 1 :] = new_doy[idx + 1 :] + 1
-        if _days_in_year(year, target_calendar, use_cftime) == 366:
+        if _days_in_year(year, target_calendar) == 366:
             new_doy[new_doy >= 60] = new_doy[new_doy >= 60] + 1
     elif target_calendar == "360_day":
         new_doy = np.insert(new_doy, rm_idx - np.arange(5), -1)
-        if _days_in_year(year, source_calendar, use_cftime) == 366:
+        if _days_in_year(year, source_calendar) == 366:
             new_doy = np.insert(new_doy, 60, -1)
     return new_doy[time.dt.dayofyear - 1]
 
@@ -304,10 +320,11 @@ def _datetime_to_decimal_year(times, dim="time", calendar=None):
     """
     from xarray.core.dataarray import DataArray
 
-    calendar = calendar or times.dt.calendar
+    if calendar is None:
+        calendar = times.dt.calendar
 
     if is_np_datetime_like(times.dtype):
-        times = times.copy(data=convert_times(times.values, get_date_type("standard")))
+        times = times.copy(data=convert_times(times.values, get_date_type("proleptic_gregorian")))
 
     def _make_index(time):
         year = int(time.dt.year[0])

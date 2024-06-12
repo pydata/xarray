@@ -141,6 +141,19 @@ class TestDatetimeAccessor:
             "2000-01-01 01:00:00" == self.data.time.dt.strftime("%Y-%m-%d %H:%M:%S")[1]
         )
 
+    @pytest.mark.parametrize("calendar,expected", [('standard', 366), ('noleap', 365), ('360_day', 360), ('all_leap', 366)])
+    def test_days_in_year(self, calendar, expected) -> None:
+        assert (
+            self.data.convert_calendar(calendar, align_on='year').time.dt.days_in_year == expected
+        ).all()
+
+    def test_decimal_year(self) -> None:
+        h_per_yr = 366 * 24
+        np.testing.assert_array_equal(
+            self.data.time.dt.to_decimal_year[0:3],
+            [2000, 2000 + 1 / h_per_yr, 2000 + 2 / h_per_yr]
+        )
+
     def test_not_datetime_type(self) -> None:
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype("int8")
