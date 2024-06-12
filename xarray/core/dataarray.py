@@ -107,7 +107,8 @@ if TYPE_CHECKING:
         ReindexMethodOptions,
         Self,
         SideOptions,
-        T_Chunks,
+        T_ChunkDimFreq,
+        T_ChunksFreq,
         T_Xarray,
     )
     from xarray.core.weighted import DataArrayWeighted
@@ -1351,7 +1352,7 @@ class DataArray(
     @_deprecate_positional_args("v2023.10.0")
     def chunk(
         self,
-        chunks: T_Chunks = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        chunks: T_ChunksFreq = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         *,
         name_prefix: str = "xarray-",
         token: str | None = None,
@@ -1359,7 +1360,7 @@ class DataArray(
         inline_array: bool = False,
         chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs=None,
-        **chunks_kwargs: Any,
+        **chunks_kwargs: T_ChunkDimFreq,
     ) -> Self:
         """Coerce this array's data into a dask arrays with the given chunks.
 
