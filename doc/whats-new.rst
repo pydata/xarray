@@ -30,7 +30,7 @@ Performance
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Small optimizations to help reduce indexing speed of datasets (:pull:`9002`).
   By `Mark Harfouche <https://github.com/hmaarrfk>`_.
-- Optimization in `open_datatree` method for Zarr, netCDF4 and h5netcdf backends (:issue:`8994`, :pull:`9014`).
+- Performance improvement in `open_datatree` method for Zarr, netCDF4 and h5netcdf backends (:issue:`8994`, :pull:`9014`).
   By `Alfonso Ladino <https://github.com/aladinor>`_.
 
 
