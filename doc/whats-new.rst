@@ -39,7 +39,7 @@ Bug fixes
   (:issue:`9026`, :pull:`9042`).
   By `Ilan Gold <https://github.com/ilan-gold>`_.
 - :py:meth:`DataArrayResample.interpolate` and :py:meth:`DatasetResample.interpolate` method now
-  support aribtrary kwargs such as ``order`` for polynomial interpolation. (:issue:`8762`).
+  support arbitrary kwargs such as ``order`` for polynomial interpolation (:issue:`8762`).
   By `Nicolas Karasiak <https://github.com/nkarasiak>`_.
 
 
