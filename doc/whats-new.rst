@@ -53,7 +53,7 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Migrates remainder of ``io.py`` to ``xarray/core/datatree_io.py`` and
-  ``TreeAttrAccessMixin`` into ``xarray/core/common.py`` (:pull: `9011`)
+  ``TreeAttrAccessMixin`` into ``xarray/core/common.py`` (:pull: `9011`).
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
   `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Compatibility with numpy 2 (:issue:`8844`, :pull:`8854`, :pull:`8946`).
