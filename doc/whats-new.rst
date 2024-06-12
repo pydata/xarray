@@ -21,8 +21,8 @@ v2024.06.0 (unreleased)
 -----------------------
 This release brings various performance optimizations and compatibility with the upcoming numpy 2.0 release.
 
-Thanks to the 18 contributors to this release:
-David Hoese, Deepak Cherian, Eni Awowale, Ilan Gold, Jessica Scheick, Justus Magin, Kai Mühlbauer, Mark Harfouche, Mathias Hauser, Maximilian Roos, Mike Thramann, Nicolas Karasiak, Owen Littlejohns, Paul Ockenfuß, Philippe THOMY, Scott Henderson, Spencer Clark and Tom Nicholas
+Thanks to the 19 contributors to this release:
+David Hoese, Deepak Cherian, Eni Awowale, Ilan Gold, Jessica Scheick, Justus Magin, Kai Mühlbauer, Mark Harfouche, Mathias Hauser, Maximilian Roos, Mike Thramann, Nicolas Karasiak, Owen Littlejohns, Paul Ockenfuß, Philippe THOMY, Scott Henderson, Spencer Clark, Stephan Hoyer and Tom Nicholas
 
 Performance
 ~~~~~~~~~~~
@@ -56,6 +56,8 @@ Internal Changes
   ``TreeAttrAccessMixin`` into ``xarray/core/common.py`` (:pull: `9011`)
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
   `Tom Nicholas <https://github.com/TomNicholas>`_.
+- More changes for compatibility with numpy 2 (:issue:`8844`, :pull:`8854`, :pull:`8946`).
+  By `Justus Magin <https://github.com/keewis>`_ and `Stephan Hoyer <https://github.com/shoyer>`_.
 
 
 .. _whats-new.2024.05.0:
