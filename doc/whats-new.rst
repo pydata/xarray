@@ -45,7 +45,7 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-- Add link to CF Conventions on packed data and sentence on type determination in doc/user-guide/io.rst (:issue:`9041`, :pull:`9045`).
+- Add link to CF Conventions on packed data and sentence on type determination in the I/O user guide (:issue:`9041`, :pull:`9045`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
