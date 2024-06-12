@@ -449,8 +449,7 @@ class DataTree(
         self._close = ds._close
 
         # setup inherited node attributes (finalized by _post_attach)
-        self._variables = dict(data_vars)
-        self._variables.update(coord_vars)
+        self._variables = data_vars | coord_vars
         self._coord_names = set(coord_vars)
         self._dims = dict(ds._dims)
         self._indexes = dict(ds._indexes)
