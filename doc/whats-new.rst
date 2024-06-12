@@ -114,8 +114,8 @@ Bug fixes
   <https://github.com/pandas-dev/pandas/issues/56147>`_ to
   :py:func:`pandas.date_range`, date ranges produced by
   :py:func:`xarray.cftime_range` with negative frequencies will now fall fully
-  within the bounds of the provided start and end dates (:pull:`8999`). By
-  `Spencer Clark <https://github.com/spencerkclark>`_.
+  within the bounds of the provided start and end dates (:pull:`8999`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -140,7 +140,8 @@ Internal Changes
 - ``transpose``, ``set_dims``, ``stack`` & ``unstack`` now use a ``dim`` kwarg
   rather than ``dims`` or ``dimensions``. This is the final change to make xarray methods
   consistent with their use of ``dim``. Using the existing kwarg will raise a
-  warning. By `Maximilian Roos <https://github.com/max-sixty>`_
+  warning.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.2024.03.0:
 
