@@ -28,6 +28,8 @@ Performance
 
 - Small optimization to the netCDF4 and h5netcdf backends (:issue:`9058`, :pull:`9067`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Small optimizations to help reduce indexing speed of datasets (:pull:`9002`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
 
 
 Breaking changes
@@ -40,10 +42,19 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Preserve conversion of timezone-aware pandas Datetime arrays to numpy object arrays
+  (:issue:`9026`, :pull:`9042`).
+  By `Ilan Gold <https://github.com/ilan-gold>`_.
+
+- :py:meth:`DataArrayResample.interpolate` and :py:meth:`DatasetResample.interpolate` method now
+  support aribtrary kwargs such as ``order`` for polynomial interpolation. (:issue:`8762`).
+  By `Nicolas Karasiak <https://github.com/nkarasiak>`_.
 
 
 Documentation
 ~~~~~~~~~~~~~
+- Add link to CF Conventions on packed data and sentence on type determination in doc/user-guide/io.rst (:issue:`9041`, :pull:`9045`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Internal Changes
@@ -2897,7 +2908,7 @@ Bug fixes
   process (:issue:`4045`, :pull:`4684`). It also enables encoding and decoding standard
   calendar dates with time units of nanoseconds (:pull:`4400`).
   By `Spencer Clark <https://github.com/spencerkclark>`_ and `Mark Harfouche
-  <http://github.com/hmaarrfk>`_.
+  <https://github.com/hmaarrfk>`_.
 - :py:meth:`DataArray.astype`, :py:meth:`Dataset.astype` and :py:meth:`Variable.astype` support
   the ``order`` and ``subok`` parameters again. This fixes a regression introduced in version 0.16.1
   (:issue:`4644`, :pull:`4683`).
