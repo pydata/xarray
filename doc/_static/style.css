@@ -222,8 +222,6 @@ main *:target::before {
 }
 
 body {
-  /* Add padding to body to avoid overlap with navbar. */
-  padding-top: var(--navbar-height);
   width: 100%;
 }
 
