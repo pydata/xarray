@@ -1023,13 +1023,11 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
 
 def _single_node_repr(node: DataTree) -> str:
     """Information about this node, not including its relationships to other nodes."""
-    node_info = f"DataTree(name={node.name!r})"
-
     if node.has_data or node.has_attrs:
         ds_info = "\n" + repr(node.ds)
     else:
         ds_info = ""
-    return node_info + ds_info
+    return f"DataTree: {node.path}{ds_info}"
 
 
 def datatree_repr(dt: DataTree):
@@ -1051,11 +1049,8 @@ def datatree_repr(dt: DataTree):
                 else:
                     lines.append(f"{fill}{' ' * len(renderer.style.vertical)}{line}")
 
-    # Tack on info about whether or not root node has a parent at the start
-    first_line = lines[0]
-    parent = dt.parent.name if dt.parent is not None else None
-    first_line_with_parent = first_line[:-1] + f", parent={parent!r})"
-    lines[0] = first_line_with_parent
+    # add xarray prefix to top level node
+    lines[0] = f"xarray.{lines[0]}"
 
     return "\n".join(lines)
 

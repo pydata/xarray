@@ -625,23 +625,53 @@ class TestAccess:
 
 class TestRepr:
     def test_repr(self):
-        dt: DataTree = DataTree(
-            data=xr.Dataset({"a": 1}),
-            children={"b": DataTree(), "c": DataTree(xr.Dataset({"d": 2}))},
+        dt: DataTree = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"e": (("x",), [1, 2])}, coords={"x": [2, 3]}),
+                "/b": xr.Dataset({"f": (("y",), [3])}),
+                "/b/c": xr.Dataset(),
+                "/b/d": xr.Dataset({"g": 4}),
+            }
         )
+
         result = repr(dt)
         expected = dedent(
-            """\
-            DataTree(name=None, parent=None)
-            │   Dimensions:  ()
+            """
+            xarray.DataTree: /
+            │   Dimensions:  (x: 2)
+            │   Coordinates:
+            │     * x        (x) int64 16B 2 3
             │   Data variables:
-            │       a        int64 8B 1
-            ├── DataTree(name='b')
-            └── DataTree(name='c')
+            │       e        (x) int64 16B 1 2
+            └── DataTree: /b
+                │   Dimensions:  (y: 1)
+                │   Dimensions without coordinates: y
+                │   Data variables:
+                │       f        (y) int64 8B 3
+                ├── DataTree: /b/c
+                └── DataTree: /b/d
+                        Dimensions:  ()
+                        Data variables:
+                            g        int64 8B 4
+            """
+        ).strip()
+        assert result == expected
+
+        result = repr(dt.b)
+        expected = dedent(
+            """
+            xarray.DataTree: /b
+            │   Dimensions:  (y: 1)
+            │   Dimensions without coordinates: y
+            │   Data variables:
+            │       f        (y) int64 8B 3
+            ├── DataTree: /b/c
+            └── DataTree: /b/d
                     Dimensions:  ()
                     Data variables:
-                        d        int64 8B 2"""
-        )
+                        g        int64 8B 4
+            """
+        ).strip()
         assert result == expected
 
 
