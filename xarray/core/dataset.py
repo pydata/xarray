@@ -2990,8 +2990,18 @@ class Dataset(
             if name in index_variables:
                 var = index_variables[name]
                 dims.update(zip(var.dims, var.shape))
-            # Fastpath, skip all of this for variables with no dimensions
-            # Keep the result cached for future dictionary update
+            # Fastpath, skip all this metadata analysis for variables
+            # with no dimensions
+            # Keep the result of var.dims cached for future accesss to it
+            #
+            # Optimization Note from hmaarrfk - 2024/06
+            #     https://github.com/pydata/xarray/pull/9003#discussion_r1592767493
+            # It was found that accessing var.dims is faster than
+            # using var.shape or var.ndim since resolving both is typically
+            # left to the underlying array that each Xarray structure wraps.
+            # By using var.dims, we can avoid the cost of resolving the
+            # underlying array's shape and ndim since the dims are already
+            # cached by the Variable
             elif len(var_dims := var.dims):
                 # Large datasets with alot of metadata may have many scalars
                 # without any relevant dimensions for slicing.
