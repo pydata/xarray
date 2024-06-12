@@ -21,8 +21,8 @@ v2024.06.0 (unreleased)
 -----------------------
 This release speeds up opening of netcdf files with lots of variables, and brings compatibility with the upcoming numpy 2.0 release.
 
-Thanks to the 13 contributors to this release:
-Deepak Cherian, Ilan Gold, Justus Magin, Kai Mühlbauer, Mark Harfouche, Mathias Hauser, Maximilian Roos, Mike Thramann, Paul Ockenfuß, Philippe Thomy, Scott Henderson, Spencer Clark and Tom Nicholas
+Thanks to the 18 contributors to this release:
+David Hoese, Deepak Cherian, Eni Awowale, Ilan Gold, Jessica Scheick, Justus Magin, Kai Mühlbauer, Mark Harfouche, Mathias Hauser, Maximilian Roos, Mike Thramann, Nicolas Karasiak, owenlittlejohns, Paul Ockenfuß, Philippe THOMY, Scott Henderson, Spencer Clark and Tom Nicholas
 
 Performance
 ~~~~~~~~~~~
