@@ -36,7 +36,7 @@ def _leap_julian(years):
 
 def _days_in_year(years, calendar):
     """The number of days in each year for the corresponding calendar."""
-    if calendar == 'standard':
+    if calendar in ['standard', 'gregorian']:
         return 365 + where(years < 1582, _leap_julian(years), _leap_gregorian(years)) * 1
     if calendar == 'proleptic_gregorian':
         return 365 + _leap_gregorian(years) * 1

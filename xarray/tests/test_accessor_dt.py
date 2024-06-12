@@ -150,7 +150,7 @@ class TestDatetimeAccessor:
     def test_decimal_year(self) -> None:
         h_per_yr = 366 * 24
         np.testing.assert_array_equal(
-            self.data.time.dt.to_decimal_year[0:3],
+            self.data.time.dt.decimal_year[0:3],
             [2000, 2000 + 1 / h_per_yr, 2000 + 2 / h_per_yr]
         )
 
