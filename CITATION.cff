@@ -87,6 +87,8 @@ authors:
 - family-names: "Savoie"
   given-names: "Matthew"
   orcid: "https://orcid.org/0000-0002-8881-2550"
+- family-names: "Littlejohns"
+  given-names: "Owen"
 title: "xarray"
 abstract: "N-D labeled arrays and datasets in Python."
 license: Apache-2.0
