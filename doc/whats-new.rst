@@ -56,7 +56,7 @@ Internal Changes
   ``TreeAttrAccessMixin`` into ``xarray/core/common.py`` (:pull: `9011`)
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
   `Tom Nicholas <https://github.com/TomNicholas>`_.
-- More changes for compatibility with numpy 2 (:issue:`8844`, :pull:`8854`, :pull:`8946`).
+- Compatibility with numpy 2 (:issue:`8844`, :pull:`8854`, :pull:`8946`).
   By `Justus Magin <https://github.com/keewis>`_ and `Stephan Hoyer <https://github.com/shoyer>`_.
 
 
