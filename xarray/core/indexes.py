@@ -575,13 +575,24 @@ class PandasIndex(Index):
 
     __slots__ = ("index", "dim", "coord_dtype")
 
-    def __init__(self, array: Any, dim: Hashable, coord_dtype: Any = None):
-        # make a shallow copy: cheap and because the index name may be updated
-        # here or in other constructors (cannot use pd.Index.rename as this
-        # constructor is also called from PandasMultiIndex)
-        index = safe_cast_to_index(array).copy()
+    def __init__(
+        self,
+        array: Any,
+        dim: Hashable,
+        coord_dtype: Any = None,
+        *,
+        fastpath: bool = False,
+    ):
+        if fastpath:
+            index = array
+        else:
+            index = safe_cast_to_index(array)
 
         if index.name is None:
+            # make a shallow copy: cheap and because the index name may be updated
+            # here or in other constructors (cannot use pd.Index.rename as this
+            # constructor is also called from PandasMultiIndex)
+            index = index.copy()
             index.name = dim
 
         self.index = index
@@ -596,7 +607,7 @@ class PandasIndex(Index):
             dim = self.dim
         if coord_dtype is None:
             coord_dtype = self.coord_dtype
-        return type(self)(index, dim, coord_dtype)
+        return type(self)(index, dim, coord_dtype, fastpath=True)
 
     @classmethod
     def from_variables(
@@ -642,6 +653,11 @@ class PandasIndex(Index):
 
         obj = cls(data, dim, coord_dtype=var.dtype)
         assert not isinstance(obj.index, pd.MultiIndex)
+        # Rename safely
+        # make a shallow copy: cheap and because the index name may be updated
+        # here or in other constructors (cannot use pd.Index.rename as this
+        # constructor is also called from PandasMultiIndex)
+        obj.index = obj.index.copy()
         obj.index.name = name
 
         return obj
@@ -1773,6 +1789,36 @@ def indexes_all_equal(
     return not not_equal
 
 
+def _apply_indexes_fast(indexes: Indexes[Index], args: Mapping[Any, Any], func: str):
+    # This function avoids the call to indexes.group_by_index
+    # which is really slow when repeatidly iterating through
+    # an array. However, it fails to return the correct ID for
+    # multi-index arrays
+    indexes_fast, coords = indexes._indexes, indexes._variables
+
+    new_indexes: dict[Hashable, Index] = {k: v for k, v in indexes_fast.items()}
+    new_index_variables: dict[Hashable, Variable] = {}
+    for name, index in indexes_fast.items():
+        coord = coords[name]
+        if hasattr(coord, "_indexes"):
+            index_vars = {n: coords[n] for n in coord._indexes}
+        else:
+            index_vars = {name: coord}
+        index_dims = {d for var in index_vars.values() for d in var.dims}
+        index_args = {k: v for k, v in args.items() if k in index_dims}
+
+        if index_args:
+            new_index = getattr(index, func)(index_args)
+            if new_index is not None:
+                new_indexes.update({k: new_index for k in index_vars})
+                new_index_vars = new_index.create_variables(index_vars)
+                new_index_variables.update(new_index_vars)
+            else:
+                for k in index_vars:
+                    new_indexes.pop(k, None)
+    return new_indexes, new_index_variables
+
+
 def _apply_indexes(
     indexes: Indexes[Index],
     args: Mapping[Any, Any],
@@ -1801,7 +1847,13 @@ def isel_indexes(
     indexes: Indexes[Index],
     indexers: Mapping[Any, Any],
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-    return _apply_indexes(indexes, indexers, "isel")
+    # TODO: remove if clause in the future. It should be unnecessary.
+    # See failure introduced when removed
+    # https://github.com/pydata/xarray/pull/9002#discussion_r1590443756
+    if any(isinstance(v, PandasMultiIndex) for v in indexes._indexes.values()):
+        return _apply_indexes(indexes, indexers, "isel")
+    else:
+        return _apply_indexes_fast(indexes, indexers, "isel")
 
 
 def roll_indexes(
