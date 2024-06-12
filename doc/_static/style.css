@@ -7,9 +7,8 @@ table.docutils td {
     word-wrap: break-word;
 }
 
-div.bd-header-announcement {
-  background-color: unset;
-  color: #000;
+.bd-header-announcement {
+  background-color: var(--pst-color-info-bg);
 }
 
 /* Reduce left and right margins */
