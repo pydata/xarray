@@ -1,7 +1,17 @@
+from __future__ import annotations
+
+from collections.abc import Mapping, MutableMapping
+from os import PathLike
+from typing import Any, Literal, get_args
+
 from xarray.core.datatree import DataTree
+from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
+
+T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf"]
+T_DataTreeNetcdfTypes = Literal["NETCDF4"]
 
 
-def _get_nc_dataset_class(engine):
+def _get_nc_dataset_class(engine: T_DataTreeNetcdfEngine | None):
     if engine == "netcdf4":
         from netCDF4 import Dataset
     elif engine == "h5netcdf":
@@ -16,7 +26,12 @@ def _get_nc_dataset_class(engine):
     return Dataset
 
 
-def _create_empty_netcdf_group(filename, group, mode, engine):
+def _create_empty_netcdf_group(
+    filename: str | PathLike,
+    group: str,
+    mode: NetcdfWriteModes,
+    engine: T_DataTreeNetcdfEngine | None,
+):
     ncDataset = _get_nc_dataset_class(engine)
 
     with ncDataset(filename, mode=mode) as rootgrp:
@@ -25,25 +40,34 @@ def _create_empty_netcdf_group(filename, group, mode, engine):
 
 def _datatree_to_netcdf(
     dt: DataTree,
-    filepath,
-    mode: str = "w",
-    encoding=None,
-    unlimited_dims=None,
+    filepath: str | PathLike,
+    mode: NetcdfWriteModes = "w",
+    encoding: Mapping[str, Any] | None = None,
+    unlimited_dims: Mapping | None = None,
+    format: T_DataTreeNetcdfTypes | None = None,
+    engine: T_DataTreeNetcdfEngine | None = None,
+    group: str | None = None,
+    compute: bool = True,
     **kwargs,
 ):
-    if kwargs.get("format", None) not in [None, "NETCDF4"]:
+    """This function creates an appropriate datastore for writing a datatree to
+    disk as a netCDF file.
+
+    See `DataTree.to_netcdf` for full API docs.
+    """
+
+    if format not in [None, *get_args(T_DataTreeNetcdfTypes)]:
         raise ValueError("to_netcdf only supports the NETCDF4 format")
 
-    engine = kwargs.get("engine", None)
-    if engine not in [None, "netcdf4", "h5netcdf"]:
+    if engine not in [None, *get_args(T_DataTreeNetcdfEngine)]:
         raise ValueError("to_netcdf only supports the netcdf4 and h5netcdf engines")
 
-    if kwargs.get("group", None) is not None:
+    if group is not None:
         raise NotImplementedError(
             "specifying a root group for the tree has not been implemented"
         )
 
-    if not kwargs.get("compute", True):
+    if not compute:
         raise NotImplementedError("compute=False has not been implemented yet")
 
     if encoding is None:
@@ -72,12 +96,17 @@ def _datatree_to_netcdf(
                 mode=mode,
                 encoding=encoding.get(node.path),
                 unlimited_dims=unlimited_dims.get(node.path),
+                engine=engine,
+                format=format,
+                compute=compute,
                 **kwargs,
             )
-        mode = "r+"
+        mode = "a"
 
 
-def _create_empty_zarr_group(store, group, mode):
+def _create_empty_zarr_group(
+    store: MutableMapping | str | PathLike[str], group: str, mode: ZarrWriteModes
+):
     import zarr
 
     root = zarr.open_group(store, mode=mode)
@@ -86,20 +115,28 @@ def _create_empty_zarr_group(store, group, mode):
 
 def _datatree_to_zarr(
     dt: DataTree,
-    store,
-    mode: str = "w-",
-    encoding=None,
+    store: MutableMapping | str | PathLike[str],
+    mode: ZarrWriteModes = "w-",
+    encoding: Mapping[str, Any] | None = None,
     consolidated: bool = True,
+    group: str | None = None,
+    compute: Literal[True] = True,
     **kwargs,
 ):
+    """This function creates an appropriate datastore for writing a datatree
+    to a zarr store.
+
+    See `DataTree.to_zarr` for full API docs.
+    """
+
     from zarr.convenience import consolidate_metadata
 
-    if kwargs.get("group", None) is not None:
+    if group is not None:
         raise NotImplementedError(
             "specifying a root group for the tree has not been implemented"
         )
 
-    if not kwargs.get("compute", True):
+    if not compute:
         raise NotImplementedError("compute=False has not been implemented yet")
 
     if encoding is None:

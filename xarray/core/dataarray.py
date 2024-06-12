@@ -54,6 +54,7 @@ from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     DaCompatible,
+    NetcdfWriteModes,
     T_DataArray,
     T_DataArrayOrSet,
     ZarrWriteModes,
@@ -3945,7 +3946,7 @@ class DataArray(
     def to_netcdf(
         self,
         path: None = None,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -3960,7 +3961,7 @@ class DataArray(
     def to_netcdf(
         self,
         path: str | PathLike,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -3976,7 +3977,7 @@ class DataArray(
     def to_netcdf(
         self,
         path: str | PathLike,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -3992,7 +3993,7 @@ class DataArray(
     def to_netcdf(
         self,
         path: str | PathLike,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -4005,7 +4006,7 @@ class DataArray(
     def to_netcdf(
         self,
         path: str | PathLike | None = None,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
