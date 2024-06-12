@@ -2992,7 +2992,7 @@ class Dataset(
                 dims.update(zip(var.dims, var.shape))
             # Fastpath, skip all of this for variables with no dimensions
             # Keep the result cached for future dictionary update
-            elif var_dims := var.dims:
+            elif len(var_dims := var.dims):
                 # Large datasets with alot of metadata may have many scalars
                 # without any relevant dimensions for slicing.
                 # Pick those out quickly and avoid paying the cost below
