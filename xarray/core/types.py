@@ -281,4 +281,5 @@ QuantileMethods = Literal[
 ]
 
 
+NetcdfWriteModes = Literal["w", "a"]
 ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]
