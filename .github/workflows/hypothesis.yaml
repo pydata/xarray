@@ -40,7 +40,7 @@ jobs:
         always()
         && (
             (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-            || needs.detect-ci-trigger.outputs.triggered == 'true'
+            || needs.detect-ci-trigger.outputs.triggered == 'false'
             || contains( github.event.pull_request.labels.*.name, 'run-slow-hypothesis')
         )
     defaults:
