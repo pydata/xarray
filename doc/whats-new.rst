@@ -32,6 +32,8 @@ Performance
 
 - Small optimization to the netCDF4 and h5netcdf backends (:issue:`9058`, :pull:`9067`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Small optimizations to help reduce indexing speed of datasets (:pull:`9002`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
 
 
 Breaking changes
@@ -44,6 +46,13 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Preserve conversion of timezone-aware pandas Datetime arrays to numpy object arrays
+  (:issue:`9026`, :pull:`9042`).
+  By `Ilan Gold <https://github.com/ilan-gold>`_.
+
+- :py:meth:`DataArrayResample.interpolate` and :py:meth:`DatasetResample.interpolate` method now
+  support aribtrary kwargs such as ``order`` for polynomial interpolation. (:issue:`8762`).
+  By `Nicolas Karasiak <https://github.com/nkarasiak>`_.
 
 
 Documentation
@@ -54,6 +63,10 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Migrates remainder of ``io.py`` to ``xarray/core/datatree_io.py`` and
+  ``TreeAttrAccessMixin`` into ``xarray/core/common.py`` (:pull: `9011`)
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 .. _whats-new.2024.05.0:
@@ -136,10 +149,9 @@ Internal Changes
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
   <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
 - ``transpose``, ``set_dims``, ``stack`` & ``unstack`` now use a ``dim`` kwarg
-  rather than ``dims`` or ``dimensions``. This is the final change to unify
-  xarray functions to use ``dim``. Using the existing kwarg will raise a
-  warning.
-  By `Maximilian Roos <https://github.com/max-sixty>`_
+  rather than ``dims`` or ``dimensions``. This is the final change to make xarray methods
+  consistent with their use of ``dim``. Using the existing kwarg will raise a
+  warning. By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.2024.03.0:
 
@@ -2903,7 +2915,7 @@ Bug fixes
   process (:issue:`4045`, :pull:`4684`). It also enables encoding and decoding standard
   calendar dates with time units of nanoseconds (:pull:`4400`).
   By `Spencer Clark <https://github.com/spencerkclark>`_ and `Mark Harfouche
-  <http://github.com/hmaarrfk>`_.
+  <https://github.com/hmaarrfk>`_.
 - :py:meth:`DataArray.astype`, :py:meth:`Dataset.astype` and :py:meth:`Variable.astype` support
   the ``order`` and ``subok`` parameters again. This fixes a regression introduced in version 0.16.1
   (:issue:`4644`, :pull:`4683`).
