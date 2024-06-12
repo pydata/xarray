@@ -88,6 +88,7 @@ from xarray.core.merge import (
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
+    NetcdfWriteModes,
     QuantileMethods,
     Self,
     T_ChunkDim,
@@ -2171,7 +2172,7 @@ class Dataset(
     def to_netcdf(
         self,
         path: None = None,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -2186,7 +2187,7 @@ class Dataset(
     def to_netcdf(
         self,
         path: str | PathLike,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -2202,7 +2203,7 @@ class Dataset(
     def to_netcdf(
         self,
         path: str | PathLike,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -2218,7 +2219,7 @@ class Dataset(
     def to_netcdf(
         self,
         path: str | PathLike,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -2231,7 +2232,7 @@ class Dataset(
     def to_netcdf(
         self,
         path: str | PathLike | None = None,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
