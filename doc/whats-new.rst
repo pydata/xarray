@@ -17,7 +17,7 @@ What's New
 
 .. _whats-new.2024.05.1:
 
-v2024.05.1 (unreleased)
+v2024.06 (unreleased)
 -----------------------
 
 New Features
@@ -59,6 +59,10 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Migrates remainder of ``io.py`` to ``xarray/core/datatree_io.py`` and
+  ``TreeAttrAccessMixin`` into ``xarray/core/common.py`` (:pull: `9011`)
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 .. _whats-new.2024.05.0:
@@ -141,10 +145,9 @@ Internal Changes
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
   <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
 - ``transpose``, ``set_dims``, ``stack`` & ``unstack`` now use a ``dim`` kwarg
-  rather than ``dims`` or ``dimensions``. This is the final change to unify
-  xarray functions to use ``dim``. Using the existing kwarg will raise a
-  warning.
-  By `Maximilian Roos <https://github.com/max-sixty>`_
+  rather than ``dims`` or ``dimensions``. This is the final change to make xarray methods
+  consistent with their use of ``dim``. Using the existing kwarg will raise a
+  warning. By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.2024.03.0:
 

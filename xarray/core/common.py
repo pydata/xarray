@@ -347,6 +347,24 @@ class AttrAccessMixin:
         return list(items)
 
 
+class TreeAttrAccessMixin(AttrAccessMixin):
+    """Mixin class that allows getting keys with attribute access"""
+
+    # TODO: Ensure ipython tab completion can include both child datatrees and
+    # variables from Dataset objects on relevant nodes.
+
+    __slots__ = ()
+
+    def __init_subclass__(cls, **kwargs):
+        """This method overrides the check from ``AttrAccessMixin`` that ensures
+        ``__dict__`` is absent in a class, with ``__slots__`` used instead.
+        ``DataTree`` has some dynamically defined attributes in addition to those
+        defined in ``__slots__``. (GH9068)
+        """
+        if not hasattr(object.__new__(cls), "__dict__"):
+            pass
+
+
 def get_squeeze_dims(
     xarray_obj,
     dim: Hashable | Iterable[Hashable] | None = None,
