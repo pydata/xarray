@@ -23,7 +23,7 @@ v2024.05.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
-- Add :py:property:`~core.accessor_dt.DatetimeAccessor.days_in_year` and :py:property:`~core.accessor_dt.DatetimeAccessor.decimal_year` to the Datetime accessor on DataArrays. (:pull:` `).
+- Add :py:property:`~core.accessor_dt.DatetimeAccessor.days_in_year` and :py:property:`~core.accessor_dt.DatetimeAccessor.decimal_year` to the Datetime accessor on DataArrays. (:pull:`9105`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 Performance
