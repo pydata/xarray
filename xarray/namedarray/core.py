@@ -812,7 +812,11 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         if is_dict_like(chunks):
-            chunks = {self.get_axis_num(dim): chunk for dim, chunk in chunks.items()}
+            _numbered_chunks = {}
+            for dim_number, dim in enumerate(self.dims):
+                if dim in chunks:
+                    _numbered_chunks[dim_number] = chunks[dim]
+            chunks = _numbered_chunks
 
         chunkmanager = guess_chunkmanager(chunked_array_type)
 
