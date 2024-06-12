@@ -1197,6 +1197,45 @@ class TestDataset:
             data.chunk({"foo": 10})
 
     @requires_dask
+    @pytest.mark.parametrize(
+        "calendar",
+        (
+            "standard",
+            pytest.param(
+                "gregorian",
+                marks=pytest.mark.skipif(not has_cftime, reason="needs cftime"),
+            ),
+        ),
+    )
+    @pytest.mark.parametrize("freq", ["D", "W", "5ME", "YE"])
+    def test_chunk_by_frequency(self, freq, calendar) -> None:
+        import dask.array
+
+        N = 365 * 2
+        ds = Dataset(
+            {
+                "pr": ("time", dask.array.random.random((N), chunks=(20))),
+                "ones": ("time", np.ones((N,))),
+            },
+            coords={
+                "time": xr.date_range(
+                    "2001-01-01", periods=N, freq="D", calendar=calendar
+                )
+            },
+        )
+        actual = ds.chunk(time=freq).chunksizes["time"]
+        expected = tuple(ds.ones.resample(time=freq).sum().data.tolist())
+        assert expected == actual
+
+    def test_chunk_by_frequecy_errors(self):
+        ds = Dataset({"foo": ("x", [1, 2, 3])})
+        with pytest.raises(ValueError, match="virtual variable"):
+            ds.chunk(x="YE")
+        ds["x"] = ("x", [1, 2, 3])
+        with pytest.raises(ValueError, match="datetime variables"):
+            ds.chunk(x="YE")
+
+    @requires_dask
     def test_dask_is_lazy(self) -> None:
         store = InaccessibleVariableDataStore()
         create_test_data().dump_to_store(store)

@@ -2667,11 +2667,13 @@ class Dataset(
         sizes along that dimension will not be updated; non-dask arrays will be
         converted into dask arrays with a single block.
 
+        Along datetime-like dimensions, a :py:class:`groupers.TimeResampler` object is also accepted.
+
         Parameters
         ----------
-        chunks : int, tuple of int, "auto" or mapping of hashable to int, optional
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
             Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
-            ``{"x": 5, "y": 5}``.
+            ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": TimeResampler(freq="YE")}``.
         name_prefix : str, default: "xarray-"
             Prefix for the name of any new dask arrays.
         token : str, optional
@@ -2706,6 +2708,8 @@ class Dataset(
         xarray.unify_chunks
         dask.array.from_array
         """
+        from xarray.core.dataarray import DataArray
+
         if chunks is None and not chunks_kwargs:
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
@@ -2731,6 +2735,39 @@ class Dataset(
                 f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.sizes.keys())}"
             )
 
+        def _resolve_frequency(name: Hashable, freq: str) -> tuple[int]:
+            variable = self._variables.get(name, None)
+            if variable is None:
+                raise ValueError(
+                    f"Cannot chunk by frequency string {freq!r} for virtual variables."
+                )
+            elif not _contains_datetime_like_objects(variable):
+                raise ValueError(
+                    f"chunks={freq!r} only supported for datetime variables. "
+                    f"Received variable {name!r} with dtype {variable.dtype!r} instead."
+                )
+
+            chunks = tuple(
+                DataArray(
+                    np.ones(variable.shape, dtype=int),
+                    dims=(name,),
+                    coords={name: variable},
+                )
+                # TODO: This could be generalized to `freq` being a `Resampler` object,
+                # and using `groupby` instead of `resample`
+                .resample({name: freq})
+                .sum()
+                .data.tolist()
+            )
+            return chunks
+
+        chunks_mapping_ints = {
+            name: (
+                _resolve_frequency(name, chunks) if isinstance(chunks, str) else chunks
+            )
+            for name, chunks in chunks_mapping.items()
+        }
+
         chunkmanager = guess_chunkmanager(chunked_array_type)
         if from_array_kwargs is None:
             from_array_kwargs = {}
@@ -2739,7 +2776,7 @@ class Dataset(
             k: _maybe_chunk(
                 k,
                 v,
-                chunks_mapping,
+                chunks_mapping_ints,
                 token,
                 lock,
                 name_prefix,
