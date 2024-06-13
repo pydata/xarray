@@ -2610,6 +2610,7 @@ def test_default_flox_method() -> None:
 
 
 @requires_cftime
+@pytest.mark.filterwarnings("ignore")
 def test_cftime_resample_gh_9108():
     ds = Dataset(
         {"pr": ("time", np.random.random((10,)))},
