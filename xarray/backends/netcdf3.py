@@ -42,6 +42,21 @@ _nc3_dtype_coercions = {
 
 # encode all strings as UTF-8
 STRING_ENCODING = "utf-8"
+COERCION_VALUE_ERROR = (
+    "could not safely cast array from {dtype} to {new_dtype}. While it is not "
+    "always the case, a common reason for this is that xarray has deemed it "
+    "safest to encode np.datetime64[ns] or np.timedelta64[ns] values with "
+    "int64 values representing units of 'nanoseconds'. This is either due to "
+    "the fact that the times are known to require nanosecond precision for an "
+    "accurate round trip, or that the times are unknown prior to writing due "
+    "to being contained in a chunked array. Ways to work around this are "
+    "either to use a backend that supports writing int64 values, or to "
+    "manually specify the encoding['units'] and encoding['dtype'] (e.g. "
+    "'seconds since 1970-01-01' and np.dtype('int32')) on the time "
+    "variable(s) such that the times can be serialized in a netCDF3 file "
+    "(note that depending on the situation, however, this latter option may "
+    "result in an inaccurate round trip)."
+)
 
 
 def coerce_nc3_dtype(arr):
@@ -66,7 +81,7 @@ def coerce_nc3_dtype(arr):
         cast_arr = arr.astype(new_dtype)
         if not (cast_arr == arr).all():
             raise ValueError(
-                f"could not safely cast array from dtype {dtype} to {new_dtype}"
+                COERCION_VALUE_ERROR.format(dtype=dtype, new_dtype=new_dtype)
             )
         arr = cast_arr
     return arr

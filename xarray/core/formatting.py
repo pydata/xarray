@@ -1,29 +1,36 @@
 """String formatting routines for __repr__.
 """
+
 from __future__ import annotations
 
 import contextlib
 import functools
 import math
 from collections import defaultdict
-from collections.abc import Collection, Hashable
+from collections.abc import Collection, Hashable, Sequence
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
 from reprlib import recursive_repr
+from textwrap import dedent
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
+from xarray.core.datatree_render import RenderDataTree
 from xarray.core.duck_array_ops import array_equiv, astype
 from xarray.core.indexing import MemoryCachedArray
+from xarray.core.iterators import LevelOrderIter
 from xarray.core.options import OPTIONS, _get_boolean_with_default
-from xarray.core.pycompat import array_type, to_duck_array, to_numpy
 from xarray.core.utils import is_duck_array
+from xarray.namedarray.pycompat import array_type, to_duck_array, to_numpy
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import AbstractCoordinates
+    from xarray.core.datatree import DataTree
+
+UNITS = ("B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
 
 
 def pretty_print(x, numchars: int):
@@ -286,8 +293,8 @@ def inline_sparse_repr(array):
     """Similar to sparse.COO.__repr__, but without the redundant shape/dtype."""
     sparse_array_type = array_type("sparse")
     assert isinstance(array, sparse_array_type), array
-    return "<{}: nnz={:d}, fill_value={!s}>".format(
-        type(array).__name__, array.nnz, array.fill_value
+    return (
+        f"<{type(array).__name__}: nnz={array.nnz:d}, fill_value={array.fill_value!s}>"
     )
 
 
@@ -333,7 +340,9 @@ def summarize_variable(
         dims_str = "({}) ".format(", ".join(map(str, variable.dims)))
     else:
         dims_str = ""
-    front_str = f"{first_col}{dims_str}{variable.dtype} "
+
+    nbytes_str = f" {render_human_readable_nbytes(variable.nbytes)}"
+    front_str = f"{first_col}{dims_str}{variable.dtype}{nbytes_str} "
 
     values_width = max_width - len(front_str)
     values_str = inline_variable_array_repr(variable, values_width)
@@ -357,7 +366,7 @@ EMPTY_REPR = "    *empty*"
 
 
 def _calculate_col_width(col_items):
-    max_name_length = max(len(str(s)) for s in col_items) if col_items else 0
+    max_name_length = max((len(str(s)) for s in col_items), default=0)
     col_width = max(max_name_length, 7) + 6
     return col_width
 
@@ -668,11 +677,11 @@ def array_repr(arr):
 
     start = f"<xarray.{type(arr).__name__} {name_str}"
     dims = dim_summary_limited(arr, col_width=len(start) + 1, max_rows=max_rows)
+    nbytes_str = render_human_readable_nbytes(arr.nbytes)
     summary = [
-        f"{start}({dims})>",
+        f"{start}({dims})> Size: {nbytes_str}",
         data_repr,
     ]
-
     if hasattr(arr, "coords"):
         if arr.coords:
             col_width = _calculate_col_width(arr.coords)
@@ -705,7 +714,8 @@ def array_repr(arr):
 
 @recursive_repr("<recursive Dataset>")
 def dataset_repr(ds):
-    summary = [f"<xarray.{type(ds).__name__}>"]
+    nbytes_str = render_human_readable_nbytes(ds.nbytes)
+    summary = [f"<xarray.{type(ds).__name__}> Size: {nbytes_str}"]
 
     col_width = _calculate_col_width(ds.variables)
     max_rows = OPTIONS["display_max_rows"]
@@ -739,7 +749,7 @@ def dataset_repr(ds):
 
 
 def diff_dim_summary(a, b):
-    if a.dims != b.dims:
+    if a.sizes != b.sizes:
         return f"Differing dimensions:\n    ({dim_summary(a)}) != ({dim_summary(b)})"
     else:
         return ""
@@ -920,6 +930,37 @@ def diff_array_repr(a, b, compat):
     return "\n".join(summary)
 
 
+def diff_treestructure(a: DataTree, b: DataTree, require_names_equal: bool) -> str:
+    """
+    Return a summary of why two trees are not isomorphic.
+    If they are isomorphic return an empty string.
+    """
+
+    # Walking nodes in "level-order" fashion means walking down from the root breadth-first.
+    # Checking for isomorphism by walking in this way implicitly assumes that the tree is an ordered tree
+    # (which it is so long as children are stored in a tuple or list rather than in a set).
+    for node_a, node_b in zip(LevelOrderIter(a), LevelOrderIter(b)):
+        path_a, path_b = node_a.path, node_b.path
+
+        if require_names_equal and node_a.name != node_b.name:
+            diff = dedent(
+                f"""\
+                Node '{path_a}' in the left object has name '{node_a.name}'
+                Node '{path_b}' in the right object has name '{node_b.name}'"""
+            )
+            return diff
+
+        if len(node_a.children) != len(node_b.children):
+            diff = dedent(
+                f"""\
+                Number of children on node '{path_a}' of the left object: {len(node_a.children)}
+                Number of children on node '{path_b}' of the right object: {len(node_b.children)}"""
+            )
+            return diff
+
+    return ""
+
+
 def diff_dataset_repr(a, b, compat):
     summary = [
         f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
@@ -937,3 +978,139 @@ def diff_dataset_repr(a, b, compat):
         summary.append(diff_attrs_repr(a.attrs, b.attrs, compat))
 
     return "\n".join(summary)
+
+
+def diff_nodewise_summary(a: DataTree, b: DataTree, compat):
+    """Iterates over all corresponding nodes, recording differences between data at each location."""
+
+    compat_str = _compat_to_str(compat)
+
+    summary = []
+    for node_a, node_b in zip(a.subtree, b.subtree):
+        a_ds, b_ds = node_a.ds, node_b.ds
+
+        if not a_ds._all_compat(b_ds, compat):
+            dataset_diff = diff_dataset_repr(a_ds, b_ds, compat_str)
+            data_diff = "\n".join(dataset_diff.split("\n", 1)[1:])
+
+            nodediff = (
+                f"\nData in nodes at position '{node_a.path}' do not match:"
+                f"{data_diff}"
+            )
+            summary.append(nodediff)
+
+    return "\n".join(summary)
+
+
+def diff_datatree_repr(a: DataTree, b: DataTree, compat):
+    summary = [
+        f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
+    ]
+
+    strict_names = True if compat in ["equals", "identical"] else False
+    treestructure_diff = diff_treestructure(a, b, strict_names)
+
+    # If the trees structures are different there is no point comparing each node
+    # TODO we could show any differences in nodes up to the first place that structure differs?
+    if treestructure_diff or compat == "isomorphic":
+        summary.append("\n" + treestructure_diff)
+    else:
+        nodewise_diff = diff_nodewise_summary(a, b, compat)
+        summary.append("\n" + nodewise_diff)
+
+    return "\n".join(summary)
+
+
+def _single_node_repr(node: DataTree) -> str:
+    """Information about this node, not including its relationships to other nodes."""
+    node_info = f"DataTree('{node.name}')"
+
+    if node.has_data or node.has_attrs:
+        ds_info = "\n" + repr(node.ds)
+    else:
+        ds_info = ""
+    return node_info + ds_info
+
+
+def datatree_repr(dt: DataTree):
+    """A printable representation of the structure of this entire tree."""
+    renderer = RenderDataTree(dt)
+
+    lines = []
+    for pre, fill, node in renderer:
+        node_repr = _single_node_repr(node)
+
+        node_line = f"{pre}{node_repr.splitlines()[0]}"
+        lines.append(node_line)
+
+        if node.has_data or node.has_attrs:
+            ds_repr = node_repr.splitlines()[2:]
+            for line in ds_repr:
+                if len(node.children) > 0:
+                    lines.append(f"{fill}{renderer.style.vertical}{line}")
+                else:
+                    lines.append(f"{fill}{' ' * len(renderer.style.vertical)}{line}")
+
+    # Tack on info about whether or not root node has a parent at the start
+    first_line = lines[0]
+    parent = f'"{dt.parent.name}"' if dt.parent is not None else "None"
+    first_line_with_parent = first_line[:-1] + f", parent={parent})"
+    lines[0] = first_line_with_parent
+
+    return "\n".join(lines)
+
+
+def shorten_list_repr(items: Sequence, max_items: int) -> str:
+    if len(items) <= max_items:
+        return repr(items)
+    else:
+        first_half = repr(items[: max_items // 2])[
+            1:-1
+        ]  # Convert to string and remove brackets
+        second_half = repr(items[-max_items // 2 :])[
+            1:-1
+        ]  # Convert to string and remove brackets
+        return f"[{first_half}, ..., {second_half}]"
+
+
+def render_human_readable_nbytes(
+    nbytes: int,
+    /,
+    *,
+    attempt_constant_width: bool = False,
+) -> str:
+    """Renders simple human-readable byte count representation
+
+    This is only a quick representation that should not be relied upon for precise needs.
+
+    To get the exact byte count, please use the ``nbytes`` attribute directly.
+
+    Parameters
+    ----------
+    nbytes
+        Byte count
+    attempt_constant_width
+        For reasonable nbytes sizes, tries to render a fixed-width representation.
+
+    Returns
+    -------
+        Human-readable representation of the byte count
+    """
+    dividend = float(nbytes)
+    divisor = 1000.0
+    last_unit_available = UNITS[-1]
+
+    for unit in UNITS:
+        if dividend < divisor or unit == last_unit_available:
+            break
+        dividend /= divisor
+
+    dividend_str = f"{dividend:.0f}"
+    unit_str = f"{unit}"
+
+    if attempt_constant_width:
+        dividend_str = dividend_str.rjust(3)
+        unit_str = unit_str.ljust(2)
+
+    string = f"{dividend_str}{unit_str}"
+    return string

@@ -6,6 +6,7 @@ Usage:
     python xarray/util/generate_ops.py > xarray/core/_typed_ops.py
 
 """
+
 # Note: the comments in https://github.com/pydata/xarray/pull/4904 provide some
 # background to some of the design choices made here.
 

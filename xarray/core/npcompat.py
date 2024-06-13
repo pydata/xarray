@@ -28,3 +28,33 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+try:
+    # requires numpy>=2.0
+    from numpy import isdtype  # type: ignore[attr-defined,unused-ignore]
+except ImportError:
+    import numpy as np
+
+    dtype_kinds = {
+        "bool": np.bool_,
+        "signed integer": np.signedinteger,
+        "unsigned integer": np.unsignedinteger,
+        "integral": np.integer,
+        "real floating": np.floating,
+        "complex floating": np.complexfloating,
+        "numeric": np.number,
+    }
+
+    def isdtype(dtype, kind):
+        kinds = kind if isinstance(kind, tuple) else (kind,)
+
+        unknown_dtypes = [kind for kind in kinds if kind not in dtype_kinds]
+        if unknown_dtypes:
+            raise ValueError(f"unknown dtype kinds: {unknown_dtypes}")
+
+        # verified the dtypes already, no need to check again
+        translated_kinds = [dtype_kinds[kind] for kind in kinds]
+        if isinstance(dtype, np.generic):
+            return any(isinstance(dtype, kind) for kind in translated_kinds)
+        else:
+            return any(np.issubdtype(dtype, kind) for kind in translated_kinds)

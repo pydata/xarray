@@ -416,7 +416,8 @@ read the data.
 Scaling and type conversions
 ............................
 
-These encoding options work on any version of the netCDF file format:
+These encoding options (based on `CF Conventions on packed data`_) work on any
+version of the netCDF file format:
 
 - ``dtype``: Any valid NumPy dtype or string convertible to a dtype, e.g., ``'int16'``
   or ``'float32'``. This controls the type of the data written on disk.
@@ -427,13 +428,16 @@ These encoding options work on any version of the netCDF file format:
   output file, unless explicitly disabled with an encoding ``{'_FillValue': None}``.
 - ``scale_factor`` and ``add_offset``: Used to convert from encoded data on disk to
   to the decoded data in memory, according to the formula
-  ``decoded = scale_factor * encoded + add_offset``.
+  ``decoded = scale_factor * encoded + add_offset``. Please note that ``scale_factor``
+  and ``add_offset`` must be of same type and determine the type of the decoded data.
 
 These parameters can be fruitfully combined to compress discretized data on disk. For
 example, to save the variable ``foo`` with a precision of 0.1 in 16-bit integers while
 converting ``NaN`` to ``-9999``, we would use
 ``encoding={'foo': {'dtype': 'int16', 'scale_factor': 0.1, '_FillValue': -9999}}``.
 Compression and decompression with such discretization is extremely fast.
+
+.. _CF Conventions on packed data: https://cfconventions.org/cf-conventions/cf-conventions.html#packed-data
 
 .. _io.string-encoding:
 
@@ -804,7 +808,7 @@ store. These options are useful for scenarios when it is infeasible or
 undesirable to write your entire dataset at once.
 
 1. Use ``mode='a'`` to add or overwrite entire variables,
-2. Use ``append_dim`` to resize and append to exiting variables, and
+2. Use ``append_dim`` to resize and append to existing variables, and
 3. Use ``region`` to write to limited regions of existing arrays.
 
 .. tip::
@@ -874,7 +878,7 @@ and then calling ``to_zarr`` with ``compute=False`` to write only metadata
     # The values of this dask array are entirely irrelevant; only the dtype,
     # shape and chunks are used
     dummies = dask.array.zeros(30, chunks=10)
-    ds = xr.Dataset({"foo": ("x", dummies)})
+    ds = xr.Dataset({"foo": ("x", dummies)}, coords={"x": np.arange(30)})
     path = "path/to/directory.zarr"
     # Now we write the metadata without computing any array values
     ds.to_zarr(path, compute=False)
@@ -890,7 +894,7 @@ where the data should be written (in index space, not label space), e.g.,
 
     # For convenience, we'll slice a single dataset, but in the real use-case
     # we would create them separately possibly even from separate processes.
-    ds = xr.Dataset({"foo": ("x", np.arange(30))})
+    ds = xr.Dataset({"foo": ("x", np.arange(30))}, coords={"x": np.arange(30)})
     # Any of the following region specifications are valid
     ds.isel(x=slice(0, 10)).to_zarr(path, region="auto")
     ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": "auto"})
@@ -1293,27 +1297,6 @@ We recommend installing cfgrib via conda::
     conda install -c conda-forge cfgrib
 
 .. _cfgrib: https://github.com/ecmwf/cfgrib
-
-.. _io.pynio:
-
-Formats supported by PyNIO
---------------------------
-
-.. warning::
-
-    The `PyNIO backend is deprecated`_. `PyNIO is no longer maintained`_.
-
-Xarray can also read GRIB, HDF4 and other file formats supported by PyNIO_,
-if PyNIO is installed. To use PyNIO to read such files, supply
-``engine='pynio'`` to :py:func:`open_dataset`.
-
-We recommend installing PyNIO via conda::
-
-    conda install -c conda-forge pynio
-
-.. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
-.. _PyNIO backend is deprecated: https://github.com/pydata/xarray/issues/4491
-.. _PyNIO is no longer maintained: https://github.com/NCAR/pynio/issues/53
 
 
 CSV and other formats supported by pandas

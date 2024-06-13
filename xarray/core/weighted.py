@@ -9,8 +9,8 @@ from numpy.typing import ArrayLike
 from xarray.core import duck_array_ops, utils
 from xarray.core.alignment import align, broadcast
 from xarray.core.computation import apply_ufunc, dot
-from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.types import Dims, T_Xarray
+from xarray.core.types import Dims, T_DataArray, T_Xarray
+from xarray.namedarray.utils import is_duck_dask_array
 from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 # Weighted quantile methods are a subset of the numpy supported quantile methods.
@@ -84,7 +84,7 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     method supported by this weighted version corresponds to the default "linear"
     option of ``numpy.quantile``. This is "Type 7" option, described in Hyndman
     and Fan (1996) [2]_. The implementation is largely inspired by a blog post
-    from A. Akinshin's [3]_.
+    from A. Akinshin's (2023) [3]_.
 
     Parameters
     ----------
@@ -122,7 +122,8 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     .. [1] https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/
     .. [2] Hyndman, R. J. & Fan, Y. (1996). Sample Quantiles in Statistical Packages.
            The American Statistician, 50(4), 361–365. https://doi.org/10.2307/2684934
-    .. [3] https://aakinshin.net/posts/weighted-quantiles
+    .. [3] Akinshin, A. (2023) "Weighted quantile estimators" arXiv:2304.07265 [stat.ME]
+           https://arxiv.org/abs/2304.07265
     """
 
 
@@ -145,7 +146,7 @@ class Weighted(Generic[T_Xarray]):
 
     __slots__ = ("obj", "weights")
 
-    def __init__(self, obj: T_Xarray, weights: DataArray) -> None:
+    def __init__(self, obj: T_Xarray, weights: T_DataArray) -> None:
         """
         Create a Weighted object
 
@@ -189,7 +190,7 @@ class Weighted(Generic[T_Xarray]):
             _weight_check(weights.data)
 
         self.obj: T_Xarray = obj
-        self.weights: DataArray = weights
+        self.weights: T_DataArray = weights
 
     def _check_dim(self, dim: Dims):
         """raise an error if any dimension is missing"""
@@ -208,11 +209,11 @@ class Weighted(Generic[T_Xarray]):
 
     @staticmethod
     def _reduce(
-        da: DataArray,
-        weights: DataArray,
+        da: T_DataArray,
+        weights: T_DataArray,
         dim: Dims = None,
         skipna: bool | None = None,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """reduce using dot; equivalent to (da * weights).sum(dim, skipna)
 
         for internal use only
@@ -228,9 +229,9 @@ class Weighted(Generic[T_Xarray]):
 
         # `dot` does not broadcast arrays, so this avoids creating a large
         # DataArray (if `weights` has additional dimensions)
-        return dot(da, weights, dims=dim)
+        return dot(da, weights, dim=dim)
 
-    def _sum_of_weights(self, da: DataArray, dim: Dims = None) -> DataArray:
+    def _sum_of_weights(self, da: T_DataArray, dim: Dims = None) -> T_DataArray:
         """Calculate the sum of weights, accounting for missing values"""
 
         # we need to mask data values that are nan; else the weights are wrong
@@ -255,10 +256,10 @@ class Weighted(Generic[T_Xarray]):
 
     def _sum_of_squares(
         self,
-        da: DataArray,
+        da: T_DataArray,
         dim: Dims = None,
         skipna: bool | None = None,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``sum_of_squares`` along some dimension(s)."""
 
         demeaned = da - da.weighted(self.weights).mean(dim=dim)
@@ -267,20 +268,20 @@ class Weighted(Generic[T_Xarray]):
 
     def _weighted_sum(
         self,
-        da: DataArray,
+        da: T_DataArray,
         dim: Dims = None,
         skipna: bool | None = None,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``sum`` along some dimension(s)."""
 
         return self._reduce(da, self.weights, dim=dim, skipna=skipna)
 
     def _weighted_mean(
         self,
-        da: DataArray,
+        da: T_DataArray,
         dim: Dims = None,
         skipna: bool | None = None,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``mean`` along some dimension(s)."""
 
         weighted_sum = self._weighted_sum(da, dim=dim, skipna=skipna)
@@ -291,10 +292,10 @@ class Weighted(Generic[T_Xarray]):
 
     def _weighted_var(
         self,
-        da: DataArray,
+        da: T_DataArray,
         dim: Dims = None,
         skipna: bool | None = None,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``var`` along some dimension(s)."""
 
         sum_of_squares = self._sum_of_squares(da, dim=dim, skipna=skipna)
@@ -305,21 +306,21 @@ class Weighted(Generic[T_Xarray]):
 
     def _weighted_std(
         self,
-        da: DataArray,
+        da: T_DataArray,
         dim: Dims = None,
         skipna: bool | None = None,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``std`` along some dimension(s)."""
 
-        return cast("DataArray", np.sqrt(self._weighted_var(da, dim, skipna)))
+        return cast("T_DataArray", np.sqrt(self._weighted_var(da, dim, skipna)))
 
     def _weighted_quantile(
         self,
-        da: DataArray,
+        da: T_DataArray,
         q: ArrayLike,
         dim: Dims = None,
         skipna: bool | None = None,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Apply a weighted ``quantile`` to a DataArray along some dimension(s)."""
 
         def _get_h(n: float, q: np.ndarray, method: QUANTILE_METHODS) -> np.ndarray:

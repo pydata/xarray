@@ -20,6 +20,7 @@ if TYPE_CHECKING:
         "display_expand_coords",
         "display_expand_data_vars",
         "display_expand_data",
+        "display_expand_groups",
         "display_expand_indexes",
         "display_default_indexes",
         "enable_cftimeindex",
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
     ]
 
     class T_Options(TypedDict):
+        arithmetic_broadcast: bool
         arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
         cmap_divergent: str | Colormap
         cmap_sequential: str | Colormap
@@ -44,6 +46,7 @@ if TYPE_CHECKING:
         display_expand_coords: Literal["default", True, False]
         display_expand_data_vars: Literal["default", True, False]
         display_expand_data: Literal["default", True, False]
+        display_expand_groups: Literal["default", True, False]
         display_expand_indexes: Literal["default", True, False]
         display_default_indexes: Literal["default", True, False]
         enable_cftimeindex: bool
@@ -57,6 +60,7 @@ if TYPE_CHECKING:
 
 
 OPTIONS: T_Options = {
+    "arithmetic_broadcast": True,
     "arithmetic_join": "inner",
     "cmap_divergent": "RdBu_r",
     "cmap_sequential": "viridis",
@@ -68,6 +72,7 @@ OPTIONS: T_Options = {
     "display_expand_coords": "default",
     "display_expand_data_vars": "default",
     "display_expand_data": "default",
+    "display_expand_groups": "default",
     "display_expand_indexes": "default",
     "display_default_indexes": False,
     "enable_cftimeindex": True,
@@ -89,6 +94,7 @@ def _positive_integer(value: int) -> bool:
 
 
 _VALIDATORS = {
+    "arithmetic_broadcast": lambda value: isinstance(value, bool),
     "arithmetic_join": _JOIN_OPTIONS.__contains__,
     "display_max_rows": _positive_integer,
     "display_values_threshold": _positive_integer,
@@ -255,10 +261,10 @@ class set_options:
     >>> with xr.set_options(display_width=40):
     ...     print(ds)
     ...
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 8kB
     Dimensions:  (x: 1000)
     Coordinates:
-      * x        (x) int64 0 1 2 ... 998 999
+      * x        (x) int64 8kB 0 1 ... 999
     Data variables:
         *empty*
 

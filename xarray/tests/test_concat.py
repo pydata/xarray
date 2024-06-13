@@ -12,7 +12,9 @@ from xarray.core import dtypes, merge
 from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import PandasIndex
 from xarray.tests import (
+    ConcatenatableArray,
     InaccessibleArray,
+    UnexpectedDataAccess,
     assert_array_equal,
     assert_equal,
     assert_identical,
@@ -150,6 +152,21 @@ def test_concat_missing_var() -> None:
 
     assert list(actual.data_vars.keys()) == ["temperature", "pressure"]
     assert_identical(actual, expected)
+
+
+def test_concat_categorical() -> None:
+    data1 = create_test_data(use_extension_array=True)
+    data2 = create_test_data(use_extension_array=True)
+    concatenated = concat([data1, data2], dim="dim1")
+    assert (
+        concatenated["var4"]
+        == type(data2["var4"].variable.data.array)._concat_same_type(
+            [
+                data1["var4"].variable.data.array,
+                data2["var4"].variable.data.array,
+            ]
+        )
+    ).all()
 
 
 def test_concat_missing_multiple_consecutive_var() -> None:
@@ -451,8 +468,11 @@ def test_concat_fill_missing_variables(
 
 class TestConcatDataset:
     @pytest.fixture
-    def data(self) -> Dataset:
-        return create_test_data().drop_dims("dim3")
+    def data(self, request) -> Dataset:
+        use_extension_array = request.param if hasattr(request, "param") else False
+        return create_test_data(use_extension_array=use_extension_array).drop_dims(
+            "dim3"
+        )
 
     def rectify_dim_order(self, data, dataset) -> Dataset:
         # return a new dataset with all variable dimensions transposed into
@@ -464,7 +484,9 @@ class TestConcatDataset:
         )
 
     @pytest.mark.parametrize("coords", ["different", "minimal"])
-    @pytest.mark.parametrize("dim", ["dim1", "dim2"])
+    @pytest.mark.parametrize(
+        "dim,data", [["dim1", True], ["dim2", False]], indirect=["data"]
+    )
     def test_concat_simple(self, data, dim, coords) -> None:
         datasets = [g for _, g in data.groupby(dim, squeeze=False)]
         assert_identical(data, concat(datasets, dim, coords=coords))
@@ -492,9 +514,10 @@ class TestConcatDataset:
         expected = data.copy().assign(foo=(["dim1", "bar"], foo))
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("data", [False], indirect=["data"])
     def test_concat_2(self, data) -> None:
         dim = "dim2"
-        datasets = [g for _, g in data.groupby(dim, squeeze=True)]
+        datasets = [g.squeeze(dim) for _, g in data.groupby(dim, squeeze=False)]
         concat_over = [k for k, v in data.coords.items() if dim in v.dims and k != dim]
         actual = concat(datasets, data[dim], coords=concat_over)
         assert_identical(data, self.rectify_dim_order(data, actual))
@@ -505,11 +528,11 @@ class TestConcatDataset:
         data = data.copy(deep=True)
         # make sure the coords argument behaves as expected
         data.coords["extra"] = ("dim4", np.arange(3))
-        datasets = [g for _, g in data.groupby(dim, squeeze=True)]
+        datasets = [g.squeeze() for _, g in data.groupby(dim, squeeze=False)]
 
         actual = concat(datasets, data[dim], coords=coords)
         if coords == "all":
-            expected = np.array([data["extra"].values for _ in range(data.dims[dim])])
+            expected = np.array([data["extra"].values for _ in range(data.sizes[dim])])
             assert_array_equal(actual["extra"].values, expected)
 
         else:
@@ -978,6 +1001,63 @@ class TestConcatDataset:
 
         assert np.issubdtype(actual.x2.dtype, dtype)
 
+    def test_concat_avoids_index_auto_creation(self) -> None:
+        # TODO once passing indexes={} directly to Dataset constructor is allowed then no need to create coords first
+        coords = Coordinates(
+            {"x": ConcatenatableArray(np.array([1, 2, 3]))}, indexes={}
+        )
+        datasets = [
+            Dataset(
+                {"a": (["x", "y"], ConcatenatableArray(np.zeros((3, 3))))},
+                coords=coords,
+            )
+            for _ in range(2)
+        ]
+        # should not raise on concat
+        combined = concat(datasets, dim="x")
+        assert combined["a"].shape == (6, 3)
+        assert combined["a"].dims == ("x", "y")
+
+        # nor have auto-created any indexes
+        assert combined.indexes == {}
+
+        # should not raise on stack
+        combined = concat(datasets, dim="z")
+        assert combined["a"].shape == (2, 3, 3)
+        assert combined["a"].dims == ("z", "x", "y")
+
+        # nor have auto-created any indexes
+        assert combined.indexes == {}
+
+    def test_concat_avoids_index_auto_creation_new_1d_coord(self) -> None:
+        # create 0D coordinates (without indexes)
+        datasets = [
+            Dataset(
+                coords={"x": ConcatenatableArray(np.array(10))},
+            )
+            for _ in range(2)
+        ]
+
+        with pytest.raises(UnexpectedDataAccess):
+            concat(datasets, dim="x", create_index_for_new_dim=True)
+
+        # should not raise on concat iff create_index_for_new_dim=False
+        combined = concat(datasets, dim="x", create_index_for_new_dim=False)
+        assert combined["x"].shape == (2,)
+        assert combined["x"].dims == ("x",)
+
+        # nor have auto-created any indexes
+        assert combined.indexes == {}
+
+    def test_concat_promote_shape_without_creating_new_index(self) -> None:
+        # different shapes but neither have indexes
+        ds1 = Dataset(coords={"x": 0})
+        ds2 = Dataset(data_vars={"x": [1]}).drop_indexes("x")
+        actual = concat([ds1, ds2], dim="x", create_index_for_new_dim=False)
+        expected = Dataset(data_vars={"x": [0, 1]}).drop_indexes("x")
+        assert_identical(actual, expected, check_default_indexes=False)
+        assert actual.indexes == {}
+
 
 class TestConcatDataArray:
     def test_concat(self) -> None:
@@ -1000,7 +1080,7 @@ class TestConcatDataArray:
         actual = concat([foo, bar], "w")
         assert_equal(expected, actual)
         # from iteration:
-        grouped = [g for _, g in foo.groupby("x")]
+        grouped = [g.squeeze() for _, g in foo.groupby("x", squeeze=False)]
         stacked = concat(grouped, ds["x"])
         assert_identical(foo, stacked)
         # with an index as the 'dim' argument
@@ -1050,6 +1130,35 @@ class TestConcatDataArray:
         combined = concat(arrays, dim="z")
         assert combined.shape == (2, 3, 3)
         assert combined.dims == ("z", "x", "y")
+
+    def test_concat_avoids_index_auto_creation(self) -> None:
+        # TODO once passing indexes={} directly to DataArray constructor is allowed then no need to create coords first
+        coords = Coordinates(
+            {"x": ConcatenatableArray(np.array([1, 2, 3]))}, indexes={}
+        )
+        arrays = [
+            DataArray(
+                ConcatenatableArray(np.zeros((3, 3))),
+                dims=["x", "y"],
+                coords=coords,
+            )
+            for _ in range(2)
+        ]
+        # should not raise on concat
+        combined = concat(arrays, dim="x")
+        assert combined.shape == (6, 3)
+        assert combined.dims == ("x", "y")
+
+        # nor have auto-created any indexes
+        assert combined.indexes == {}
+
+        # should not raise on stack
+        combined = concat(arrays, dim="z")
+        assert combined.shape == (2, 3, 3)
+        assert combined.dims == ("z", "x", "y")
+
+        # nor have auto-created any indexes
+        assert combined.indexes == {}
 
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
     def test_concat_fill_value(self, fill_value) -> None:
@@ -1214,7 +1323,7 @@ def test_concat_preserve_coordinate_order() -> None:
     # check dimension order
     for act, exp in zip(actual.dims, expected.dims):
         assert act == exp
-        assert actual.dims[act] == expected.dims[exp]
+        assert actual.sizes[act] == expected.sizes[exp]
 
     # check coordinate order
     for act, exp in zip(actual.coords, expected.coords):

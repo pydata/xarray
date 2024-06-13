@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import os
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
@@ -44,11 +44,11 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
 _endian_lookup = {"=": "native", ">": "big", "<": "little", "|": "native"}
-
 
 NETCDF4_PYTHON_LOCK = combine_locks([NETCDFC_LOCK, HDF5_LOCK])
 
@@ -141,7 +141,9 @@ def _check_encoding_dtype_is_vlen_string(dtype):
         )
 
 
-def _get_datatype(var, nc_format="NETCDF4", raise_on_invalid_encoding=False):
+def _get_datatype(
+    var, nc_format="NETCDF4", raise_on_invalid_encoding=False
+) -> np.dtype:
     if nc_format == "NETCDF4":
         return _nc4_dtype(var)
     if "dtype" in var.encoding:
@@ -234,13 +236,13 @@ def _force_native_endianness(var):
 
 
 def _extract_nc4_variable_encoding(
-    variable,
+    variable: Variable,
     raise_on_invalid=False,
     lsd_okay=True,
     h5py_okay=False,
     backend="netCDF4",
     unlimited_dims=None,
-):
+) -> dict[str, Any]:
     if unlimited_dims is None:
         unlimited_dims = ()
 
@@ -257,6 +259,12 @@ def _extract_nc4_variable_encoding(
         "_FillValue",
         "dtype",
         "compression",
+        "significant_digits",
+        "quantize_mode",
+        "blosc_shuffle",
+        "szip_coding",
+        "szip_pixels_per_block",
+        "endian",
     }
     if lsd_okay:
         valid_encodings.add("least_significant_digit")
@@ -302,7 +310,7 @@ def _extract_nc4_variable_encoding(
     return encoding
 
 
-def _is_list_of_strings(value):
+def _is_list_of_strings(value) -> bool:
     arr = np.asarray(value)
     return arr.dtype.kind in ["U", "S"] and arr.size > 1
 
@@ -408,13 +416,25 @@ class NetCDF4DataStore(WritableCFDataStore):
     def ds(self):
         return self._acquire()
 
-    def open_store_variable(self, name, var):
+    def open_store_variable(self, name: str, var):
+        import netCDF4
+
         dimensions = var.dimensions
-        data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
         attributes = {k: var.getncattr(k) for k in var.ncattrs()}
+        data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
+        encoding: dict[str, Any] = {}
+        if isinstance(var.datatype, netCDF4.EnumType):
+            encoding["dtype"] = np.dtype(
+                data.dtype,
+                metadata={
+                    "enum": var.datatype.enum_dict,
+                    "enum_name": var.datatype.name,
+                },
+            )
+        else:
+            encoding["dtype"] = var.dtype
         _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later
-        encoding = {}
         filters = var.filters()
         if filters is not None:
             encoding.update(filters)
@@ -433,8 +453,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         pop_to(attributes, encoding, "least_significant_digit")
         # save source so __repr__ can detect if it's local or not
         encoding["source"] = self._filename
-        encoding["original_shape"] = var.shape
-        encoding["dtype"] = var.dtype
+        encoding["original_shape"] = data.shape
 
         return Variable(dimensions, data, attributes, encoding)
 
@@ -479,44 +498,77 @@ class NetCDF4DataStore(WritableCFDataStore):
         return variable
 
     def prepare_variable(
-        self, name, variable, check_encoding=False, unlimited_dims=None
+        self, name, variable: Variable, check_encoding=False, unlimited_dims=None
     ):
         _ensure_no_forward_slash_in_name(name)
-
+        attrs = variable.attrs.copy()
+        fill_value = attrs.pop("_FillValue", None)
         datatype = _get_datatype(
             variable, self.format, raise_on_invalid_encoding=check_encoding
         )
-        attrs = variable.attrs.copy()
-
-        fill_value = attrs.pop("_FillValue", None)
-
+        # check enum metadata and use netCDF4.EnumType
+        if (
+            (meta := np.dtype(datatype).metadata)
+            and (e_name := meta.get("enum_name"))
+            and (e_dict := meta.get("enum"))
+        ):
+            datatype = self._build_and_get_enum(name, datatype, e_name, e_dict)
         encoding = _extract_nc4_variable_encoding(
             variable, raise_on_invalid=check_encoding, unlimited_dims=unlimited_dims
         )
-
         if name in self.ds.variables:
             nc4_var = self.ds.variables[name]
         else:
-            nc4_var = self.ds.createVariable(
+            default_args = dict(
                 varname=name,
                 datatype=datatype,
                 dimensions=variable.dims,
-                zlib=encoding.get("zlib", False),
-                complevel=encoding.get("complevel", 4),
-                shuffle=encoding.get("shuffle", True),
-                fletcher32=encoding.get("fletcher32", False),
-                contiguous=encoding.get("contiguous", False),
-                chunksizes=encoding.get("chunksizes"),
+                zlib=False,
+                complevel=4,
+                shuffle=True,
+                fletcher32=False,
+                contiguous=False,
+                chunksizes=None,
                 endian="native",
-                least_significant_digit=encoding.get("least_significant_digit"),
+                least_significant_digit=None,
                 fill_value=fill_value,
             )
+            default_args.update(encoding)
+            default_args.pop("_FillValue", None)
+            nc4_var = self.ds.createVariable(**default_args)
 
         nc4_var.setncatts(attrs)
 
         target = NetCDF4ArrayWrapper(name, self)
 
         return target, variable.data
+
+    def _build_and_get_enum(
+        self, var_name: str, dtype: np.dtype, enum_name: str, enum_dict: dict[str, int]
+    ) -> Any:
+        """
+        Add or get the netCDF4 Enum based on the dtype in encoding.
+        The return type should be ``netCDF4.EnumType``,
+        but we avoid importing netCDF4 globally for performances.
+        """
+        if enum_name not in self.ds.enumtypes:
+            return self.ds.createEnumType(
+                dtype,
+                enum_name,
+                enum_dict,
+            )
+        datatype = self.ds.enumtypes[enum_name]
+        if datatype.enum_dict != enum_dict:
+            error_msg = (
+                f"Cannot save variable `{var_name}` because an enum"
+                f" `{enum_name}` already exists in the Dataset but have"
+                " a different definition. To fix this error, make sure"
+                " each variable have a uniquely named enum in their"
+                " `encoding['dtype'].metadata` or, if they should share"
+                " the same enum type, make sure the enums are identical."
+            )
+            raise ValueError(error_msg)
+        return datatype
 
     def sync(self):
         self.ds.sync()
@@ -615,6 +667,61 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                 decode_timedelta=decode_timedelta,
             )
         return ds
+
+    def open_datatree(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group: str | Iterable[str] | Callable | None = None,
+        **kwargs,
+    ) -> DataTree:
+        from xarray.backends.api import open_dataset
+        from xarray.backends.common import _iter_nc_groups
+        from xarray.core.datatree import DataTree
+        from xarray.core.treenode import NodePath
+
+        filename_or_obj = _normalize_path(filename_or_obj)
+        store = NetCDF4DataStore.open(
+            filename_or_obj,
+            group=group,
+        )
+        if group:
+            parent = NodePath("/") / NodePath(group)
+        else:
+            parent = NodePath("/")
+
+        manager = store._manager
+        ds = open_dataset(store, **kwargs)
+        tree_root = DataTree.from_dict({str(parent): ds})
+        for path_group in _iter_nc_groups(store.ds, parent=parent):
+            group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
+            store_entrypoint = StoreBackendEntrypoint()
+            with close_on_error(group_store):
+                ds = store_entrypoint.open_dataset(
+                    group_store,
+                    mask_and_scale=mask_and_scale,
+                    decode_times=decode_times,
+                    concat_characters=concat_characters,
+                    decode_coords=decode_coords,
+                    drop_variables=drop_variables,
+                    use_cftime=use_cftime,
+                    decode_timedelta=decode_timedelta,
+                )
+                new_node: DataTree = DataTree(name=NodePath(path_group).name, data=ds)
+                tree_root._set_item(
+                    path_group,
+                    new_node,
+                    allow_overwrite=False,
+                    new_nodes_along_path=True,
+                )
+        return tree_root
 
 
 BACKEND_ENTRYPOINTS["netcdf4"] = ("netCDF4", NetCDF4BackendEntrypoint)

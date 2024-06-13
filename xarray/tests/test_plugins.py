@@ -16,7 +16,6 @@ from xarray.tests import (
     has_h5netcdf,
     has_netCDF4,
     has_pydap,
-    has_pynio,
     has_scipy,
     has_zarr,
 )
@@ -218,28 +217,28 @@ def test_lazy_import() -> None:
     When importing xarray these should not be imported as well.
     Only when running code for the first time that requires them.
     """
-    blacklisted = [
-        "h5netcdf",
-        "netCDF4",
-        "pydap",
-        "Nio",
-        "scipy",
-        "zarr",
-        "matplotlib",
-        "nc_time_axis",
-        "flox",
+    deny_list = [
+        "cubed",
+        "cupy",
         # "dask",  # TODO: backends.locks is not lazy yet :(
         "dask.array",
         "dask.distributed",
-        "sparse",
-        "cupy",
+        "flox",
+        "h5netcdf",
+        "matplotlib",
+        "nc_time_axis",
+        "netCDF4",
+        "numbagg",
         "pint",
-        "cubed",
+        "pydap",
+        "scipy",
+        "sparse",
+        "zarr",
     ]
     # ensure that none of the above modules has been imported before
     modules_backup = {}
     for pkg in list(sys.modules.keys()):
-        for mod in blacklisted + ["xarray"]:
+        for mod in deny_list + ["xarray"]:
             if pkg.startswith(mod):
                 modules_backup[pkg] = sys.modules[pkg]
                 del sys.modules[pkg]
@@ -255,7 +254,7 @@ def test_lazy_import() -> None:
         # lazy loaded are loaded when importing xarray
         is_imported = set()
         for pkg in sys.modules:
-            for mod in blacklisted:
+            for mod in deny_list:
                 if pkg.startswith(mod):
                     is_imported.add(mod)
                     break
@@ -279,7 +278,6 @@ def test_list_engines() -> None:
     assert ("netcdf4" in engines) == has_netCDF4
     assert ("pydap" in engines) == has_pydap
     assert ("zarr" in engines) == has_zarr
-    assert ("pynio" in engines) == has_pynio
     assert "store" in engines
 
 

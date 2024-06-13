@@ -1,30 +1,25 @@
 # https://pre-commit.com/
 ci:
     autoupdate_schedule: monthly
+exclude: 'xarray/datatree_.*'
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v4.6.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
       - id: debug-statements
       - id: mixed-line-ending
-  - repo: https://github.com/MarcoGorelli/absolufy-imports
-    rev: v0.3.1
-    hooks:
-      - id: absolufy-imports
-        name: absolufy-imports
-        files: ^xarray/
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: 'v0.1.4'
+    rev: 'v0.4.7'
     hooks:
       - id: ruff
-        args: ["--fix"]
+        args: ["--fix", "--show-fixes"]
   # https://github.com/python/black#version-control-integration
-  - repo: https://github.com/psf/black
-    rev: 23.10.1
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 24.4.2
     hooks:
       - id: black-jupyter
   - repo: https://github.com/keewis/blackdoc
@@ -32,10 +27,10 @@ repos:
     hooks:
       - id: blackdoc
         exclude: "generate_aggregations.py"
-        additional_dependencies: ["black==23.10.1"]
+        additional_dependencies: ["black==24.4.2"]
       - id: blackdoc-autoupdate-black
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.6.1
+    rev: v1.10.0
     hooks:
       - id: mypy
         # Copied from setup.cfg

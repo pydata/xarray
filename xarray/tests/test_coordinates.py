@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -8,6 +9,7 @@ from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import PandasIndex, PandasMultiIndex
+from xarray.core.variable import IndexVariable, Variable
 from xarray.tests import assert_identical, source_ndarray
 
 
@@ -23,10 +25,12 @@ class TestCoordinates:
         assert_identical(coords.to_dataset(), expected)
         assert "x" in coords.xindexes
 
+    @pytest.mark.filterwarnings("error:IndexVariable")
     def test_init_no_default_index(self) -> None:
         # dimension coordinate with no default index (explicit)
         coords = Coordinates(coords={"x": [1, 2]}, indexes={})
         assert "x" not in coords.xindexes
+        assert not isinstance(coords["x"], IndexVariable)
 
     def test_init_from_coords(self) -> None:
         expected = Dataset(coords={"foo": ("x", [0, 1, 2])})
@@ -79,9 +83,10 @@ class TestCoordinates:
         for name in ("x", "one", "two"):
             assert_identical(expected[name], coords.variables[name])
 
+    @pytest.mark.filterwarnings("ignore:return type")
     def test_dims(self) -> None:
         coords = Coordinates(coords={"x": [0, 1, 2]})
-        assert coords.dims == {"x": 3}
+        assert set(coords.dims) == {"x"}
 
     def test_sizes(self) -> None:
         coords = Coordinates(coords={"x": [0, 1, 2]})
@@ -170,3 +175,10 @@ class TestCoordinates:
         left2, right2 = align(left, right, join="override")
         assert_identical(left2, left)
         assert_identical(left2, right2)
+
+    def test_dataset_from_coords_with_multidim_var_same_name(self):
+        # regression test for GH #8883
+        var = Variable(data=np.arange(6).reshape(2, 3), dims=["x", "y"])
+        coords = Coordinates(coords={"x": var}, indexes={})
+        ds = Dataset(coords=coords)
+        assert ds.coords["x"].dims == ("x", "y")

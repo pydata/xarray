@@ -281,7 +281,7 @@ You can declare the entrypoint in your project configuration like so:
 
    .. code:: toml
 
-      [project.entry-points."xarray-backends"]
+      [project.entry-points."xarray.backends"]
       my_engine = "my_package.my_module:MyBackendEntrypoint"
 
 .. tab:: pyproject.toml [Poetry]
