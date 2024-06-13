@@ -638,18 +638,19 @@ class TestRepr:
         expected = dedent(
             """
             <xarray.DataTree>
+            Group: /
             │   Dimensions:  (x: 2)
             │   Coordinates:
             │     * x        (x) int64 16B 2 3
             │   Data variables:
             │       e        (x) int64 16B 1 2
-            └── DataTree: /b
+            └── Group: /b
                 │   Dimensions:  (y: 1)
                 │   Dimensions without coordinates: y
                 │   Data variables:
                 │       f        (y) int64 8B 3
-                ├── DataTree: /b/c
-                └── DataTree: /b/d
+                ├── Group: /b/c
+                └── Group: /b/d
                         Dimensions:  ()
                         Data variables:
                             g        int64 8B 4
@@ -661,12 +662,13 @@ class TestRepr:
         expected = dedent(
             """
             <xarray.DataTree 'b'>
+            Group: /b
             │   Dimensions:  (y: 1)
             │   Dimensions without coordinates: y
             │   Data variables:
             │       f        (y) int64 8B 3
-            ├── DataTree: /b/c
-            └── DataTree: /b/d
+            ├── Group: /b/c
+            └── Group: /b/d
                     Dimensions:  ()
                     Data variables:
                         g        int64 8B 4

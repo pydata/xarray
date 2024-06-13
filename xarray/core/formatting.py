@@ -1027,14 +1027,17 @@ def _single_node_repr(node: DataTree) -> str:
         ds_info = "\n" + repr(node.ds)
     else:
         ds_info = ""
-    return f"DataTree: {node.path}{ds_info}"
+    return f"Group: {node.path}{ds_info}"
 
 
 def datatree_repr(dt: DataTree):
     """A printable representation of the structure of this entire tree."""
     renderer = RenderDataTree(dt)
 
-    lines = []
+    name_info = "" if dt.name is None else f" {dt.name!r}"
+    header = f"<xarray.DataTree{name_info}>"
+
+    lines = [header]
     for pre, fill, node in renderer:
         node_repr = _single_node_repr(node)
 
@@ -1048,10 +1051,6 @@ def datatree_repr(dt: DataTree):
                     lines.append(f"{fill}{renderer.style.vertical}{line}")
                 else:
                     lines.append(f"{fill}{' ' * len(renderer.style.vertical)}{line}")
-
-    # replace first line
-    name_info = "" if dt.name is None else f" {dt.name!r}"
-    lines[0] = f"<xarray.DataTree{name_info}>"
 
     return "\n".join(lines)
 
