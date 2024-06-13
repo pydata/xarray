@@ -637,7 +637,7 @@ class TestRepr:
         result = repr(dt)
         expected = dedent(
             """
-            xarray.DataTree: /
+            <xarray.DataTree>
             │   Dimensions:  (x: 2)
             │   Coordinates:
             │     * x        (x) int64 16B 2 3
@@ -660,7 +660,7 @@ class TestRepr:
         result = repr(dt.b)
         expected = dedent(
             """
-            xarray.DataTree: /b
+            <xarray.DataTree 'b'>
             │   Dimensions:  (y: 1)
             │   Dimensions without coordinates: y
             │   Data variables:

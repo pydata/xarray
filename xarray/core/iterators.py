@@ -39,15 +39,15 @@ class LevelOrderIter(Iterator):
     >>> i = DataTree(name="i", parent=g)
     >>> h = DataTree(name="h", parent=i)
     >>> print(f)
-    DataTree('f', parent=None)
-    ├── DataTree('b')
-    │   ├── DataTree('a')
-    │   └── DataTree('d')
-    │       ├── DataTree('c')
-    │       └── DataTree('e')
-    └── DataTree('g')
-        └── DataTree('i')
-            └── DataTree('h')
+    <xarray.DataTree 'f'>
+    ├── DataTree: /b
+    │   ├── DataTree: /b/a
+    │   └── DataTree: /b/d
+    │       ├── DataTree: /b/d/c
+    │       └── DataTree: /b/d/e
+    └── DataTree: /g
+        └── DataTree: /g/i
+            └── DataTree: /g/i/h
     >>> [node.name for node in LevelOrderIter(f)]
     ['f', 'b', 'g', 'a', 'd', 'i', 'c', 'e', 'h']
     >>> [node.name for node in LevelOrderIter(f, maxlevel=3)]

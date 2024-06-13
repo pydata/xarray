@@ -1049,8 +1049,9 @@ def datatree_repr(dt: DataTree):
                 else:
                     lines.append(f"{fill}{' ' * len(renderer.style.vertical)}{line}")
 
-    # add xarray prefix to top level node
-    lines[0] = f"xarray.{lines[0]}"
+    # replace first line
+    name_info = "" if dt.name is None else f" {dt.name!r}"
+    lines[0] = f"<xarray.DataTree{name_info}>"
 
     return "\n".join(lines)
 
