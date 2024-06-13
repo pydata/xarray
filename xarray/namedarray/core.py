@@ -812,6 +812,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         if is_dict_like(chunks):
+            # This method of iteration allows for duplicated dimension names, GH8579
             chunks = {
                 dim_number: chunks[dim]
                 for dim_number, dim in enumerate(self.dims)
