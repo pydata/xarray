@@ -97,12 +97,12 @@ class TestDataArray:
         data_array = DataArray(v, coords, name="my_variable")
         expected = dedent(
             """\
-            <xarray.DataArray 'my_variable' (time: 2, x: 3)> Size: 48B
+            <xarray.DataArray 'my_variable' (time: 2, x: 3)> 48B
             array([[1, 2, 3],
                    [4, 5, 6]], dtype=uint64)
             Coordinates:
-              * x        (x) uint64 24B 0 1 2
-                other    uint64 8B 0
+              * x        (x) uint64 0 1 2
+                other    uint64 0
             Dimensions without coordinates: time
             Attributes:
                 foo:      bar"""
@@ -112,12 +112,12 @@ class TestDataArray:
     def test_repr_multiindex(self) -> None:
         expected = dedent(
             """\
-            <xarray.DataArray (x: 4)> Size: 32B
+            <xarray.DataArray (x: 4)> 32B
             array([0, 1, 2, 3], dtype=uint64)
             Coordinates:
-              * x        (x) object 32B MultiIndex
-              * level_1  (x) object 32B 'a' 'a' 'b' 'b'
-              * level_2  (x) int64 32B 1 2 1 2"""
+              * x        (x) object MultiIndex
+              * level_1  (x) object 'a' 'a' 'b' 'b'
+              * level_2  (x) int64 1 2 1 2"""
         )
         assert expected == repr(self.mda)
 
@@ -131,14 +131,14 @@ class TestDataArray:
         ).astype(np.uint64)
         expected = dedent(
             """\
-            <xarray.DataArray (x: 32)> Size: 256B
+            <xarray.DataArray (x: 32)> 256B
             array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
                    17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31],
                   dtype=uint64)
             Coordinates:
-              * x        (x) object 256B MultiIndex
-              * level_1  (x) object 256B 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
-              * level_2  (x) int64 256B 1 2 3 4 5 6 7 8 1 2 3 4 ... 5 6 7 8 1 2 3 4 5 6 7 8"""
+              * x        (x) object MultiIndex
+              * level_1  (x) object 'a' 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
+              * level_2  (x) int64 1 2 3 4 5 6 7 8 1 2 3 4 5 6 ... 4 5 6 7 8 1 2 3 4 5 6 7 8"""
         )
         assert expected == repr(mda_long)
 
@@ -1451,8 +1451,8 @@ class TestDataArray:
         expected_repr = dedent(
             """\
         Coordinates:
-          * x        (x) int64 16B -1 -2
-          * y        (y) int64 24B 0 1 2"""
+          * x        (x) int64 -1 -2
+          * y        (y) int64 0 1 2"""
         )
         actual = repr(da.coords)
         assert expected_repr == actual

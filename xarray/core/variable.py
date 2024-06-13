@@ -823,7 +823,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
 
         if self.size:
-
             if is_duck_dask_array(self._data):
                 # dask's indexing is faster this way; also vindex does not
                 # support negative indices yet:
@@ -2027,7 +2026,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         >>> v = Variable(("a", "b"), np.arange(8).reshape((2, 4)))
         >>> v.rolling_window("b", 3, "window_dim")
-        <xarray.Variable (a: 2, b: 4, window_dim: 3)> Size: 192B
+        <xarray.Variable (a: 2, b: 4, window_dim: 3)> 192B
         array([[[nan, nan,  0.],
                 [nan,  0.,  1.],
                 [ 0.,  1.,  2.],
@@ -2039,7 +2038,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 [ 5.,  6.,  7.]]])
 
         >>> v.rolling_window("b", 3, "window_dim", center=True)
-        <xarray.Variable (a: 2, b: 4, window_dim: 3)> Size: 192B
+        <xarray.Variable (a: 2, b: 4, window_dim: 3)> 192B
         array([[[nan,  0.,  1.],
                 [ 0.,  1.,  2.],
                 [ 1.,  2.,  3.],
@@ -2216,10 +2215,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         >>> var = xr.Variable("x", [1, np.nan, 3])
         >>> var
-        <xarray.Variable (x: 3)> Size: 24B
+        <xarray.Variable (x: 3)> 24B
         array([ 1., nan,  3.])
         >>> var.isnull()
-        <xarray.Variable (x: 3)> Size: 3B
+        <xarray.Variable (x: 3)> 3B
         array([False,  True, False])
         """
         from xarray.core.computation import apply_ufunc
@@ -2250,10 +2249,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         >>> var = xr.Variable("x", [1, np.nan, 3])
         >>> var
-        <xarray.Variable (x: 3)> Size: 24B
+        <xarray.Variable (x: 3)> 24B
         array([ 1., nan,  3.])
         >>> var.notnull()
-        <xarray.Variable (x: 3)> Size: 3B
+        <xarray.Variable (x: 3)> 3B
         array([ True, False,  True])
         """
         from xarray.core.computation import apply_ufunc

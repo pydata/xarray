@@ -23,6 +23,15 @@ v2024.06 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Removed the "Size: " prefix before the ``nbytes`` in the ``DataArray`` and ``Dataset`` representations,
+  and added a ``display_variables_nbytes`` option to show or hide the ``nbytes`` of individual variables
+  in the ``DataArray`` and ``Dataset`` representations. The option can take one of those values:
+  * ``True`` : to always show the nbytes for variables
+  * ``False`` : to always hide the nbytes for variables
+  * ``default`` : to only show the nbytes for lazy variables (e.g. dask arrays)
+  (:issue:`8690`, :pull:`9078`).
+  By `Etienne Schalk <https://github.com/etienneschalk>`_.
+
 Performance
 ~~~~~~~~~~~
 

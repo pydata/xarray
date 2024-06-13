@@ -194,7 +194,7 @@ class TestVariable(DaskTestCase):
     def test_repr(self):
         expected = dedent(
             f"""\
-            <xarray.Variable (x: 4, y: 6)> Size: 192B
+            <xarray.Variable (x: 4, y: 6)> 192B
             {self.lazy_var.data!r}"""
         )
         assert expected == repr(self.lazy_var)
@@ -655,7 +655,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(data, dims=["x"], coords={"y": ("x", nonindex_coord)})
         expected = dedent(
             f"""\
-            <xarray.DataArray 'data' (x: 1)> Size: 8B
+            <xarray.DataArray 'data' (x: 1)> 8B
             {data!r}
             Coordinates:
                 y        (x) int64 8B dask.array<chunksize=(1,), meta=np.ndarray>
@@ -670,7 +670,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         ds = Dataset(data_vars={"a": ("x", data)}, coords={"y": ("x", nonindex_coord)})
         expected = dedent(
             """\
-            <xarray.Dataset> Size: 16B
+            <xarray.Dataset> 16B
             Dimensions:  (x: 1)
             Coordinates:
                 y        (x) int64 8B dask.array<chunksize=(1,), meta=np.ndarray>

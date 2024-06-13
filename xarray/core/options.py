@@ -23,6 +23,7 @@ if TYPE_CHECKING:
         "display_expand_groups",
         "display_expand_indexes",
         "display_default_indexes",
+        "display_variables_nbytes",
         "enable_cftimeindex",
         "file_cache_maxsize",
         "keep_attrs",
@@ -49,6 +50,7 @@ if TYPE_CHECKING:
         display_expand_groups: Literal["default", True, False]
         display_expand_indexes: Literal["default", True, False]
         display_default_indexes: Literal["default", True, False]
+        display_variables_nbytes: Literal["default", True, False]
         enable_cftimeindex: bool
         file_cache_maxsize: int
         keep_attrs: Literal["default", True, False]
@@ -75,6 +77,7 @@ OPTIONS: T_Options = {
     "display_expand_groups": "default",
     "display_expand_indexes": "default",
     "display_default_indexes": False,
+    "display_variables_nbytes": "default",
     "enable_cftimeindex": True,
     "file_cache_maxsize": 128,
     "keep_attrs": "default",
@@ -106,6 +109,7 @@ _VALIDATORS = {
     "display_expand_data": lambda choice: choice in [True, False, "default"],
     "display_expand_indexes": lambda choice: choice in [True, False, "default"],
     "display_default_indexes": lambda choice: choice in [True, False, "default"],
+    "display_variables_nbytes": lambda choice: choice in [True, False, "default"],
     "enable_cftimeindex": lambda value: isinstance(value, bool),
     "file_cache_maxsize": _positive_integer,
     "keep_attrs": lambda choice: choice in [True, False, "default"],
@@ -216,7 +220,13 @@ class set_options:
         * ``True`` : to always expand indexes
         * ``False`` : to always collapse indexes
         * ``default`` : to expand unless over a pre-defined limit (always collapse for html style)
-    display_max_rows : int, default: 12
+    display_variables_nbytes : {"default", True, False}
+        Whether to show the nbytes of individual variables for the representation of
+        ``DataArray`` or ``Dataset``. Can be
+
+        * ``True`` : to always show the nbytes for variables
+        * ``False`` : to always hide the nbytes for variables
+        * ``default`` : to only show the nbytes for lazy variables (e.g. dask arrays)
         Maximum display rows.
     display_values_threshold : int, default: 200
         Total number of array elements which trigger summarization rather
@@ -261,10 +271,10 @@ class set_options:
     >>> with xr.set_options(display_width=40):
     ...     print(ds)
     ...
-    <xarray.Dataset> Size: 8kB
+    <xarray.Dataset> 8kB
     Dimensions:  (x: 1000)
     Coordinates:
-      * x        (x) int64 8kB 0 1 ... 999
+      * x        (x) int64 0 1 ... 999
     Data variables:
         *empty*
 

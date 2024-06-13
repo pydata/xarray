@@ -341,7 +341,17 @@ def summarize_variable(
     else:
         dims_str = ""
 
-    nbytes_str = f" {render_human_readable_nbytes(variable.nbytes)}"
+    display_variables_nbytes = OPTIONS["display_variables_nbytes"]
+    if display_variables_nbytes == "default":
+        show_nbytes = variable.chunks is not None
+    else:
+        show_nbytes = display_variables_nbytes
+
+    if show_nbytes:
+        nbytes_str = f" {render_human_readable_nbytes(variable.nbytes)}"
+    else:
+        nbytes_str = ""
+
     front_str = f"{first_col}{dims_str}{variable.dtype}{nbytes_str} "
 
     values_width = max_width - len(front_str)
@@ -679,7 +689,7 @@ def array_repr(arr):
     dims = dim_summary_limited(arr, col_width=len(start) + 1, max_rows=max_rows)
     nbytes_str = render_human_readable_nbytes(arr.nbytes)
     summary = [
-        f"{start}({dims})> Size: {nbytes_str}",
+        f"{start}({dims})> {nbytes_str}",
         data_repr,
     ]
     if hasattr(arr, "coords"):
@@ -715,7 +725,7 @@ def array_repr(arr):
 @recursive_repr("<recursive Dataset>")
 def dataset_repr(ds):
     nbytes_str = render_human_readable_nbytes(ds.nbytes)
-    summary = [f"<xarray.{type(ds).__name__}> Size: {nbytes_str}"]
+    summary = [f"<xarray.{type(ds).__name__}> {nbytes_str}"]
 
     col_width = _calculate_col_width(ds.variables)
     max_rows = OPTIONS["display_max_rows"]
