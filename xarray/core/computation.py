@@ -1141,7 +1141,7 @@ def apply_ufunc(
     numba.guvectorize
     dask.array.apply_gufunc
     xarray.map_blocks
-    
+
     Notes
     -----
     :ref:`dask.automatic-parallelization`
