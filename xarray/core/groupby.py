@@ -299,7 +299,7 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
     codes: DataArray = field(init=False)
     full_index: pd.Index = field(init=False)
     group_indices: T_GroupIndices = field(init=False)
-    unique_coord: IndexVariable | _DummyGroup = field(init=False)
+    unique_coord: Variable | _DummyGroup = field(init=False)
 
     # _ensure_1d:
     group1d: T_Group = field(init=False)
@@ -328,14 +328,18 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
 
     @property
     def name(self) -> Hashable:
+        """Name for the grouped coordinate after reduction."""
         # the name has to come from unique_coord because we need `_bins` suffix for BinGrouper
-        return self.unique_coord.name
+        (name,) = self.unique_coord.dims
+        return name
 
     @property
     def size(self) -> int:
+        """Number of groups."""
         return len(self)
 
     def __len__(self) -> int:
+        """Number of groups."""
         return len(self.full_index)
 
     @property
@@ -358,8 +362,8 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
             ]
         if encoded.unique_coord is None:
             unique_values = self.full_index[np.unique(encoded.codes)]
-            self.unique_coord = IndexVariable(
-                self.codes.name, unique_values, attrs=self.group.attrs
+            self.unique_coord = Variable(
+                dims=self.codes.name, data=unique_values, attrs=self.group.attrs
             )
         else:
             self.unique_coord = encoded.unique_coord
@@ -620,6 +624,8 @@ class GroupBy(Generic[T_Xarray]):
             yield self._obj.isel({self._group_dim: indices})
 
     def _infer_concat_args(self, applied_example):
+        from xarray.core.groupers import BinGrouper
+
         (grouper,) = self.groupers
         if self._group_dim in applied_example.dims:
             coord = grouper.group1d
@@ -628,7 +634,10 @@ class GroupBy(Generic[T_Xarray]):
             coord = grouper.unique_coord
             positions = None
         (dim,) = coord.dims
-        if isinstance(coord, _DummyGroup):
+        if isinstance(grouper.group, _DummyGroup) and not isinstance(
+            grouper.grouper, BinGrouper
+        ):
+            # When binning we actually do set the index
             coord = None
         coord = getattr(coord, "variable", coord)
         return coord, dim, positions
@@ -645,12 +654,20 @@ class GroupBy(Generic[T_Xarray]):
         codes = self._codes
         dims = group.dims
 
-        if isinstance(group, _DummyGroup):
+        if isinstance(grouper.group, _DummyGroup):
             group = coord = group.to_dataarray()
         else:
             coord = grouper.unique_coord
-            if not isinstance(coord, DataArray):
-                coord = DataArray(grouper.unique_coord)
+            if isinstance(coord, Variable):
+                assert coord.ndim == 1
+                (coord_dim,) = coord.dims
+                # TODO: explicitly create Index here
+                coord = DataArray(
+                    dims=coord_dim,
+                    data=coord.data,
+                    attrs=coord.attrs,
+                    coords={coord_dim: coord.data},
+                )
         name = grouper.name
 
         if not isinstance(other, (Dataset, DataArray)):
@@ -848,7 +865,10 @@ class GroupBy(Generic[T_Xarray]):
         # in the grouped variable
         group_dims = grouper.group.dims
         if set(group_dims).issubset(set(parsed_dim)):
-            result[grouper.name] = output_index
+            new_coord = Variable(
+                dims=grouper.name, data=np.array(output_index), attrs=self._codes.attrs
+            )
+            result = result.assign_coords({grouper.name: new_coord})
             result = result.drop_vars(unindexed_dims)
 
         # broadcast and restore non-numeric data variables (backcompat)
