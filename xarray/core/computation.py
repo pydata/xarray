@@ -1142,6 +1142,8 @@ def apply_ufunc(
     dask.array.apply_gufunc
     xarray.map_blocks
 
+    Notes
+    -----
     :ref:`dask.automatic-parallelization`
         User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
 
