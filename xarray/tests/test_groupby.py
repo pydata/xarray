@@ -22,6 +22,7 @@ from xarray.tests import (
     create_test_data,
     has_cftime,
     has_flox,
+    requires_cftime,
     requires_dask,
     requires_flox,
     requires_scipy,
@@ -2606,3 +2607,12 @@ def test_default_flox_method() -> None:
         assert kwargs["method"] == "cohorts"
     else:
         assert "method" not in kwargs
+
+
+@requires_cftime
+def test_cftime_resample_gh_9108():
+    ds = Dataset(
+        {"pr": ("time", np.random.random((10,)))},
+        coords={"time": xr.date_range("0001-01-01", periods=10, freq="D")},
+    )
+    ds.resample(time="ME")
