@@ -17,8 +17,8 @@ What's New
 
 .. _whats-new.2024.06.0:
 
-v2024.06.0 (unreleased)
------------------------
+v2024.06.0 (Jun 13, 2024)
+-------------------------
 This release brings various performance optimizations and compatibility with the upcoming numpy 2.0 release.
 
 Thanks to the 22 contributors to this release:
