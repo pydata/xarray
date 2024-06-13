@@ -137,6 +137,7 @@ if TYPE_CHECKING:
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
+    from xarray.core.groupers import Grouper, Resampler
     from xarray.core.merge import CoercibleMapping, CoercibleValue, _MergeResult
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
@@ -10256,9 +10257,10 @@ class Dataset(
 
     def groupby(
         self,
-        group: Hashable | DataArray | IndexVariable,
+        group: Hashable | DataArray | IndexVariable | None = None,
         squeeze: bool | None = None,
         restore_coord_dims: bool = False,
+        **groupers: Grouper,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
 
@@ -10274,6 +10276,10 @@ class Dataset(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
+        **groupers : Mapping of hashable to Grouper or Resampler
+            Mapping of variable name to group by to ``Grouper`` or ``Resampler`` object.
+            One of ``group`` or ``groupers`` must be provided.
+            Only a single ``grouper`` is allowed at present.
 
         Returns
         -------
@@ -10308,7 +10314,16 @@ class Dataset(
         from xarray.core.groupers import UniqueGrouper
 
         _validate_groupby_squeeze(squeeze)
-        rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
+        if group is not None:
+            assert not groupers
+            rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
+        else:
+            if len(groupers) > 1:
+                raise ValueError("grouping by multiple variables is not supported yet.")
+            if not groupers:
+                raise ValueError
+            for group, grouper in groupers.items():
+                rgrouper = ResolvedGrouper(grouper, group, self)
 
         return DatasetGroupBy(
             self,
@@ -10587,7 +10602,7 @@ class Dataset(
 
     def resample(
         self,
-        indexer: Mapping[Any, str] | None = None,
+        indexer: Mapping[Hashable, str | Resampler] | None = None,
         skipna: bool | None = None,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
@@ -10596,7 +10611,7 @@ class Dataset(
         origin: str | DatetimeLike = "start_day",
         loffset: datetime.timedelta | str | None = None,
         restore_coord_dims: bool | None = None,
-        **indexer_kwargs: str,
+        **indexer_kwargs: str | Resampler,
     ) -> DatasetResample:
         """Returns a Resample object for performing resampling operations.
 
