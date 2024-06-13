@@ -21,7 +21,7 @@ v2024.06.0 (unreleased)
 -----------------------
 This release brings various performance optimizations and compatibility with the upcoming numpy 2.0 release.
 
-Thanks to the 21 contributors to this release:
+Thanks to the 22 contributors to this release:
 Alfonso Ladino, David Hoese, Deepak Cherian, Eni Awowale, Ilan Gold, Jessica Scheick, Joe Hamman, Justus Magin, Kai Mühlbauer, Mark Harfouche, Mathias Hauser, Matt Savoie, Maximilian Roos, Mike Thramann, Nicolas Karasiak, Owen Littlejohns, Paul Ockenfuß, Philippe THOMY, Scott Henderson, Spencer Clark, Stephan Hoyer and Tom Nicholas
 
 Performance
