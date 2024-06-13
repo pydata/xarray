@@ -24,6 +24,9 @@ This release brings various performance optimizations and compatibility with the
 Thanks to the 22 contributors to this release:
 Alfonso Ladino, David Hoese, Deepak Cherian, Eni Awowale, Ilan Gold, Jessica Scheick, Joe Hamman, Justus Magin, Kai Mühlbauer, Mark Harfouche, Mathias Hauser, Matt Savoie, Maximilian Roos, Mike Thramann, Nicolas Karasiak, Owen Littlejohns, Paul Ockenfuß, Philippe THOMY, Scott Henderson, Spencer Clark, Stephan Hoyer and Tom Nicholas
 
+- Add :py:property:`~core.accessor_dt.DatetimeAccessor.days_in_year` and :py:property:`~core.accessor_dt.DatetimeAccessor.decimal_year` to the Datetime accessor on DataArrays. (:pull:`9105`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
+
 Performance
 ~~~~~~~~~~~
 
