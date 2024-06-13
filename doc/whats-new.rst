@@ -50,6 +50,9 @@ Bug fixes
   support aribtrary kwargs such as ``order`` for polynomial interpolation. (:issue:`8762`).
   By `Nicolas Karasiak <https://github.com/nkarasiak>`_.
 
+- Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
+  By `Martin Raspaud <https://github.com/mraspaud>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~

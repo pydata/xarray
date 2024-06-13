@@ -638,7 +638,8 @@ class TestDataArrayAndDataset(DaskTestCase):
     def test_duplicate_dims(self):
         data = np.random.normal(size=(4, 4))
         arr = DataArray(data, dims=("x", "x"))
-        arr.chunk({"x": 2})
+        chunked_array = arr.chunk({"x": 2})
+        assert chunked_array.chunks == ((2, 2), (2, 2))
 
     def test_stack(self):
         data = da.random.normal(size=(2, 3, 4), chunks=(1, 3, 4))
