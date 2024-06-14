@@ -40,12 +40,15 @@ from xarray.namedarray._typing import (
     _SupportsImag,
     _SupportsReal,
 )
+from xarray.namedarray.indexing import BASIC_INDEXING_TYPES
 from xarray.namedarray.parallelcompat import guess_chunkmanager
-from xarray.namedarray.pycompat import to_numpy
+from xarray.namedarray.pycompat import integer_types, is_0d_dask_array, to_numpy
 from xarray.namedarray.utils import (
+    OrderedSet,
     either_dict_or_kwargs,
     infix_dims,
     is_dict_like,
+    is_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
 )
@@ -1146,6 +1149,244 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         return expand_dims(self, dim=dim)
 
+    @property
+    def _in_memory(self) -> bool:
+        """Return whether the data is in memory."""
+        # TODO: Remove the import once the indexing adapters are moved to namedarray
+        from xarray.core import indexing
+
+        return isinstance(
+            self._data, (np.ndarray, np.number, indexing.PandasIndexingAdapter)
+        ) or (
+            isinstance(self._data, indexing.MemoryCachedArray)
+            and isinstance(self._data.array, indexing.NumpyIndexingAdapter)
+        )
+
+    def _item_key_to_tuple(self, key: Any) -> tuple[Any, ...]:
+        if is_dict_like(key):
+            return tuple(key.get(dim, slice(None)) for dim in self.dims)
+        else:
+            return key if isinstance(key, tuple) else (key,)
+
+    def _validate_indexers(self, key: Any) -> None:
+        """Make sanity checks"""
+        for dim, k in zip(self.dims, key):
+            if not isinstance(k, BASIC_INDEXING_TYPES):
+                if not isinstance(k, NamedArray):
+                    if not is_duck_array(k):
+                        k = np.asarray(k)
+                    if k.ndim > 1:
+                        raise IndexError(
+                            "Unlabeled multi-dimensional array cannot be "
+                            f"used for indexing: {k}"
+                        )
+                if k.dtype.kind == "b":
+                    if self.shape[self.get_axis_num(dim)] != len(k):
+                        raise IndexError(
+                            f"Boolean array size {len(k):d} is used to index array "
+                            f"with shape {str(self.shape):s}."
+                        )
+                    if k.ndim > 1:
+                        raise IndexError(
+                            f"{k.ndim}-dimensional boolean indexing is "
+                            "not supported. "
+                        )
+                    if is_duck_dask_array(k.data):
+                        raise KeyError(
+                            "Indexing with a boolean dask array is not allowed. "
+                            "This will result in a dask array of unknown shape. "
+                            "Such arrays are unsupported by Xarray."
+                            "Please compute the indexer first using .compute()"
+                        )
+                    if getattr(k, "dims", (dim,)) != (dim,):
+                        raise IndexError(
+                            "Boolean indexer should be unlabeled or on the "
+                            "same dimension to the indexed array. Indexer is "
+                            f"on {str(k.dims):s} but the target dimension is {dim:s}."
+                        )
+
+    def _broadcast_indexes(self, key: Any) -> tuple[Any, Any, Any]:
+        """Prepare an indexing key for an indexing operation.
+
+        Parameters
+        ----------
+        key : int, slice, array-like, dict or tuple of integer, slice and array-like
+            Any valid input for indexing.
+
+        Returns
+        -------
+        dims : tuple
+            Dimension of the resultant variable.
+        indexers : IndexingTuple subclass
+            Tuple of integer, array-like, or slices to use when indexing
+            self._data. The type of this argument indicates the type of
+            indexing to perform, either basic, outer or vectorized.
+        new_order : Optional[Sequence[int]]
+            Optional reordering to do on the result of indexing. If not None,
+            the first len(new_order) indexing should be moved to these
+            positions.
+        """
+        from xarray.core import indexing
+
+        key = self._item_key_to_tuple(key)  # key is a tuple
+        # key is a tuple of full size
+        key = indexing.expanded_indexer(key, self.ndim)
+        # Convert a scalar Variable to a 0d-array
+        key = tuple(
+            k.data if isinstance(k, NamedArray) and k.ndim == 0 else k for k in key
+        )
+        # Convert a 0d numpy arrays to an integer
+        # dask 0d arrays are passed through
+        key = tuple(
+            k.item() if isinstance(k, np.ndarray) and k.ndim == 0 else k for k in key
+        )
+
+        if all(isinstance(k, BASIC_INDEXING_TYPES) for k in key):
+            return self._broadcast_indexes_basic(key)
+
+        self._validate_indexers(key)
+        # Detect it can be mapped as an outer indexer
+        # If all key is unlabeled, or
+        # key can be mapped as an OuterIndexer.
+        if all(not isinstance(k, NamedArray) for k in key):
+            return self._broadcast_indexes_outer(key)
+
+        # If all key is 1-dimensional and there are no duplicate labels,
+        # key can be mapped as an OuterIndexer.
+        dims = []
+        for k, d in zip(key, self.dims):
+            if isinstance(k, NamedArray):
+                if len(k.dims) > 1:
+                    return self._broadcast_indexes_vectorized(key)
+                dims.append(k.dims[0])
+            elif not isinstance(k, integer_types):
+                dims.append(d)
+        if len(set(dims)) == len(dims):
+            return self._broadcast_indexes_outer(key)
+
+        return self._broadcast_indexes_vectorized(key)
+
+    def _broadcast_indexes_basic(self, key: Any) -> tuple[Any, Any, Any]:
+        from xarray.core.indexing import BasicIndexer
+
+        dims = tuple(
+            dim for k, dim in zip(key, self.dims) if not isinstance(k, integer_types)
+        )
+        return dims, BasicIndexer(key), None
+
+    def _broadcast_indexes_outer(self, key: Any) -> tuple[Any, Any, Any]:
+        from xarray.core.indexing import OuterIndexer
+
+        # drop dim if k is integer or if k is a 0d dask array
+        dims = tuple(
+            k.dims[0] if isinstance(k, NamedArray) else dim
+            for k, dim in zip(key, self.dims)
+            if (not isinstance(k, integer_types) and not is_0d_dask_array(k))
+        )
+
+        new_key = []
+        for k in key:
+            if isinstance(k, NamedArray):
+                k = k.data
+            if not isinstance(k, BASIC_INDEXING_TYPES):
+                if not is_duck_array(k):
+                    k = np.asarray(k)
+                if k.size == 0:
+                    # Slice by empty list; numpy could not infer the dtype
+                    k = k.astype(int)
+                elif k.dtype.kind == "b":
+                    (k,) = np.nonzero(k)
+            new_key.append(k)
+
+        return dims, OuterIndexer(tuple(new_key)), None
+
+    def _broadcast_indexes_vectorized(self, key: Any) -> tuple[Any, Any, Any]:
+        from xarray.core.indexing import VectorizedIndexer
+        from xarray.core.variable import as_variable
+
+        variables = []
+        out_dims_set: OrderedSet[Hashable] = OrderedSet()
+        for dim, value in zip(self.dims, key):
+            if isinstance(value, slice):
+                out_dims_set.add(dim)
+            else:
+                variable = (
+                    value
+                    if isinstance(value, NamedArray)
+                    else as_variable(value, name=dim)
+                )
+                if variable.dtype.kind == "b":  # boolean indexing case
+                    (variable,) = variable._nonzero()
+
+                variables.append(variable)
+                out_dims_set.update(variable.dims)
+
+        variable_dims: set[Hashable] = set()
+        for variable in variables:
+            variable_dims.update(variable.dims)
+
+        slices = []
+        for i, (dim, value) in enumerate(zip(self.dims, key)):
+            if isinstance(value, slice):
+                if dim in variable_dims:
+                    # We only convert slice objects to variables if they share
+                    # a dimension with at least one other variable. Otherwise,
+                    # we can equivalently leave them as slices aknd transpose
+                    # the result. This is significantly faster/more efficient
+                    # for most array backends.
+                    values = np.arange(*value.indices(self.sizes[dim]))
+                    variables.insert(i - len(slices), NamedArray((dim,), values))
+                else:
+                    slices.append((i, value))
+
+        try:
+            variables = _broadcast_compat_namedarrays(*variables)
+        except ValueError:
+            raise IndexError(f"Dimensions of indexers mismatch: {key}")
+
+        out_key = [variable.data for variable in variables]
+        out_dims = tuple(out_dims_set)
+        slice_positions = set()
+        for i, value in slices:
+            out_key.insert(i, value)
+            new_position = out_dims.index(self.dims[i])
+            slice_positions.add(new_position)
+
+        if slice_positions:
+            new_order = [i for i in range(len(out_dims)) if i not in slice_positions]
+        else:
+            new_order = None
+
+        return out_dims, VectorizedIndexer(tuple(out_key)), new_order
+
+    def _finalize_indexing_result(self, dims: _Dims, data: duckarray[Any, Any]) -> Self:
+        """xarray.core.variable.IndexVariable overrides the implementation of this method to return  to return IndexVariable objects when possible."""
+        return self._replace(dims=dims, data=data)
+
+    def __getitem__(self, key: Any) -> Self:
+        """Return a new Variable object whose contents are consistent with
+        getting the provided key from the underlying data.
+
+        NB. __getitem__ and __setitem__ implement xarray-style indexing,
+        where if keys are unlabeled arrays, we index the array orthogonally
+        with them. If keys are labeled array (such as Variables), they are
+        broadcasted with our usual scheme and then the array is indexed with
+        the broadcasted key, like numpy's fancy indexing.
+
+        If you really want to do indexing like `x[x > 0]`, manipulate the numpy
+        array `x.values` directly.
+        """
+        from xarray.core.indexing import apply_indexer, as_indexable
+
+        dims, indexer, new_order = self._broadcast_indexes(key)
+        indexable = as_indexable(self._data)
+
+        data = apply_indexer(indexable, indexer)
+
+        if new_order:
+            data = np.moveaxis(data, range(len(new_order)), new_order)
+        return self._finalize_indexing_result(dims, data)
+
 
 _NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]
 
@@ -1158,3 +1399,98 @@ def _raise_if_any_duplicate_dimensions(
         raise ValueError(
             f"{err_context} cannot handle duplicate dimensions, but dimensions {repeated_dims} appear more than once on this object's dims: {dims}"
         )
+
+
+def _unified_dims(
+    namedarrays: tuple[NamedArray[Any, _DType_co], ...],
+) -> Mapping[_Dim, int]:
+    # validate dimensions
+    all_dims = {}
+    for var in namedarrays:
+        var_dims = var.dims
+        _raise_if_any_duplicate_dimensions(var_dims, err_context="Broadcasting")
+
+        for d, s in zip(var_dims, var.shape):
+            if d not in all_dims:
+                all_dims[d] = s
+            elif all_dims[d] != s:
+                raise ValueError(
+                    "operands cannot be broadcast together "
+                    f"with mismatched lengths for dimension {d!r}: {(all_dims[d], s)}"
+                )
+    return all_dims
+
+
+def _broadcast_compat_namedarrays(
+    *namedarrays: NamedArray[Any, _DType_co],
+) -> tuple[NamedArray[Any, _DType_co], ...]:
+    """Create broadcast compatible variables, with the same dimensions.
+
+    Unlike the result of broadcast_namedarrays(), some variables may have
+    dimensions of size 1 instead of the size of the broadcast dimension.
+    """
+    dims_map = _unified_dims(namedarrays)
+    dims_tuple = tuple(dims_map)
+    result = []
+    for var in namedarrays:
+        if var.dims != dims_tuple:
+            if hasattr(var, "set_dims"):
+                result.append(var.set_dims(dims_map))
+            else:
+                additional_dims = set(dims_map) - set(var.dims)
+                expanded_var = var
+                for dim in additional_dims:
+                    expanded_var = expanded_var.expand_dims(dim=dim)
+                result.append(expanded_var.permute_dims(*dims_tuple))
+        else:
+            result.append(var)
+
+    return tuple(result)
+
+
+def broadcast_namedarrays(
+    *namedarrays: NamedArray[Any, _DType_co],
+) -> tuple[NamedArray[Any, _DType_co], ...]:
+    """Given any number of namedarrays, return namedarrays with matching dimensions
+    and broadcast data.
+
+    The data on the returned namedarrays will be a view of the data on the
+    corresponding original arrays, but dimensions will be reordered and
+    inserted so that both broadcast arrays have the same dimensions. The new
+    dimensions are sorted in order of appearance in the first variable's
+    dimensions followed by the second variable's dimensions.
+    """
+    dims_map = _unified_dims(namedarrays)
+    dims_tuple = tuple(dims_map)
+    return tuple(
+        var.set_dims(dims_map) if var.dims != dims_tuple else var for var in namedarrays
+    )
+
+
+def _broadcast_compat_data(
+    self: NamedArray[Any, _DType_co], other: NamedArray[Any, _DType_co]
+) -> tuple[Any, Any, _Dims]:
+    from xarray.core.options import OPTIONS
+
+    if not OPTIONS["arithmetic_broadcast"]:
+        if (isinstance(other, NamedArray) and self.dims != other.dims) or (
+            is_duck_array(other) and self.ndim != other.ndim  # type: ignore[union-attr]
+        ):
+            raise ValueError(
+                "Broadcasting is necessary but automatic broadcasting is disabled via "
+                "global option `'arithmetic_broadcast'`. "
+                "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
+            )
+
+    if all(hasattr(other, attr) for attr in ["dims", "data", "shape", "encoding"]):
+        # `other` satisfies the necessary Variable API for broadcast_namedarrays
+        new_self, new_other = _broadcast_compat_namedarrays(self, other)
+        self_data = new_self.data
+        other_data = new_other.data
+        dims = new_self.dims
+    else:
+        # rely on numpy broadcasting rules
+        self_data = self.data
+        other_data = other
+        dims = self.dims
+    return self_data, other_data, dims

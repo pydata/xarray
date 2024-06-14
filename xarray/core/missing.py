@@ -22,7 +22,7 @@ from xarray.core.duck_array_ops import (
 from xarray.core.options import _get_keep_attrs
 from xarray.core.types import Interp1dOptions, InterpOptions
 from xarray.core.utils import OrderedSet, is_scalar
-from xarray.core.variable import Variable, broadcast_variables
+from xarray.core.variable import Variable, broadcast_namedarrays
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 
@@ -623,7 +623,7 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
         # target dimensions
         dims = list(indexes_coords)
         x, new_x = zip(*[indexes_coords[d] for d in dims])
-        destination = broadcast_variables(*new_x)
+        destination = broadcast_namedarrays(*new_x)
 
         # transpose to make the interpolated axis to the last position
         broadcast_dims = [d for d in var.dims if d not in dims]

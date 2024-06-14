@@ -56,7 +56,6 @@ from collections.abc import (
     KeysView,
     Mapping,
     MutableMapping,
-    MutableSet,
     ValuesView,
 )
 from enum import Enum
@@ -75,6 +74,7 @@ import numpy as np
 import pandas as pd
 
 from xarray.namedarray.utils import (  # noqa: F401
+    OrderedSet,
     ReprObject,
     drop_missing_dims,
     either_dict_or_kwargs,
@@ -519,48 +519,6 @@ class HybridMappingProxy(Mapping[K, V]):
 
     def __len__(self) -> int:
         return len(self._keys)
-
-
-class OrderedSet(MutableSet[T]):
-    """A simple ordered set.
-
-    The API matches the builtin set, but it preserves insertion order of elements, like
-    a dict. Note that, unlike in an OrderedDict, equality tests are not order-sensitive.
-    """
-
-    _d: dict[T, None]
-
-    __slots__ = ("_d",)
-
-    def __init__(self, values: Iterable[T] | None = None):
-        self._d = {}
-        if values is not None:
-            self.update(values)
-
-    # Required methods for MutableSet
-
-    def __contains__(self, value: Hashable) -> bool:
-        return value in self._d
-
-    def __iter__(self) -> Iterator[T]:
-        return iter(self._d)
-
-    def __len__(self) -> int:
-        return len(self._d)
-
-    def add(self, value: T) -> None:
-        self._d[value] = None
-
-    def discard(self, value: T) -> None:
-        del self._d[value]
-
-    # Additional methods
-
-    def update(self, values: Iterable[T]) -> None:
-        self._d.update(dict.fromkeys(values))
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}({list(self)!r})"
 
 
 class NdimSizeLenMixin:
