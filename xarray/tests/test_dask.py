@@ -337,13 +337,16 @@ class TestDataArrayAndDataset(DaskTestCase):
             self.data, coords={"x": range(4)}, dims=("x", "y"), name="foo"
         )
 
-    def test_chunk(self):
+    def test_chunk(self) -> None:
         for chunks, expected in [
             ({}, ((2, 2), (2, 2, 2))),
             (3, ((3, 1), (3, 3))),
             ({"x": 3, "y": 3}, ((3, 1), (3, 3))),
             ({"x": 3}, ((3, 1), (2, 2, 2))),
             ({"x": (3, 1)}, ((3, 1), (2, 2, 2))),
+            ({"x": "16B"}, ((1, 1, 1, 1), (2, 2, 2))),
+            ("16B", ((1, 1, 1, 1), (1,) * 6)),
+            ("16MB", ((4,), (6,))),
         ]:
             # Test DataArray
             rechunked = self.lazy_array.chunk(chunks)
