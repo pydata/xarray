@@ -370,7 +370,8 @@ read the data.
 Scaling and type conversions
 ............................
 
-These encoding options work on any version of the netCDF file format:
+These encoding options (based on `CF Conventions on packed data`_) work on any
+version of the netCDF file format:
 
 - ``dtype``: Any valid NumPy dtype or string convertible to a dtype, e.g., ``'int16'``
   or ``'float32'``. This controls the type of the data written on disk.
@@ -381,13 +382,16 @@ These encoding options work on any version of the netCDF file format:
   output file, unless explicitly disabled with an encoding ``{'_FillValue': None}``.
 - ``scale_factor`` and ``add_offset``: Used to convert from encoded data on disk to
   to the decoded data in memory, according to the formula
-  ``decoded = scale_factor * encoded + add_offset``.
+  ``decoded = scale_factor * encoded + add_offset``. Please note that ``scale_factor``
+  and ``add_offset`` must be of same type and determine the type of the decoded data.
 
 These parameters can be fruitfully combined to compress discretized data on disk. For
 example, to save the variable ``foo`` with a precision of 0.1 in 16-bit integers while
 converting ``NaN`` to ``-9999``, we would use
 ``encoding={'foo': {'dtype': 'int16', 'scale_factor': 0.1, '_FillValue': -9999}}``.
 Compression and decompression with such discretization is extremely fast.
+
+.. _CF Conventions on packed data: https://cfconventions.org/cf-conventions/cf-conventions.html#packed-data
 
 .. _io.string-encoding:
 
