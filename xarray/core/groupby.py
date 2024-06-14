@@ -68,31 +68,6 @@ def check_reduce_dims(reduce_dims, dimensions):
             )
 
 
-def _create_unique_grouper(
-    group: T_Group, groupers, obj: T_DataWithCoords
-) -> ResolvedGrouper:
-    from xarray.core.groupby import ResolvedGrouper
-    from xarray.core.groupers import UniqueGrouper
-
-    if group is not None:
-        if groupers:
-            raise ValueError(
-                "Cannot pass both `group` and `**groupers` at the same time."
-            )
-        grouper = UniqueGrouper()
-    else:
-        if len(groupers) > 1:
-            raise ValueError("Grouping by multiple variables is not supported yet.")
-        if not groupers:
-            raise ValueError(
-                "If not passing `group`, must pass `groupers` as a dict mapping "
-                "name of variable to group by to a Grouper object."
-            )
-        group, grouper = next(iter(groupers.items()))
-
-    return ResolvedGrouper(grouper, group, obj)
-
-
 def _maybe_squeeze_indices(
     indices, squeeze: bool | None, grouper: ResolvedGrouper, warn: bool
 ):
