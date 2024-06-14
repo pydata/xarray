@@ -84,13 +84,19 @@ if TYPE_CHECKING:
         # anything with a dtype attribute
         _SupportsDType[np.dtype[Any]],
     ]
-    try:
-        from cftime import datetime as CFTimeDatetime
-    except ImportError:
-        CFTimeDatetime = Any
-    DatetimeLike = Union[pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime]
+
 else:
     DTypeLikeSave: Any = None
+
+# https://mypy.readthedocs.io/en/stable/common_issues.html#variables-vs-type-aliases
+try:
+    from cftime import datetime as CFTimeDatetime
+except ImportError:
+    CFTimeDatetime = np.datetime64
+
+DatetimeLike: TypeAlias = Union[
+    pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime
+]
 
 
 class Alignable(Protocol):
@@ -284,3 +290,7 @@ QuantileMethods = Literal[
 
 NetcdfWriteModes = Literal["w", "a"]
 ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]
+
+GroupKey = Any
+GroupIndex = Union[int, slice, list[int]]
+T_GroupIndices = list[GroupIndex]
