@@ -1080,29 +1080,32 @@ def test_array_repr_dtypes_unix() -> None:
 
     # Signed integer dtypes
 
-    ds = xr.DataArray(np.array([0]), dims="x")
+    array = np.array([0])
+    ds = xr.DataArray(array, dims="x")
     actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 8B
-array([0])
+    expected = f"""
+<xarray.DataArray (x: 1)> Size: {array.dtype.itemsize}B
+{repr(array)}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
-    ds = xr.DataArray(np.array([0], dtype="int32"), dims="x")
+    array = np.array([0], dtype="int32")
+    ds = xr.DataArray(array, dims="x")
     actual = repr(ds)
-    expected = """
+    expected = f"""
 <xarray.DataArray (x: 1)> Size: 4B
-array([0], dtype=int32)
+{repr(array)}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
-    ds = xr.DataArray(np.array([0], dtype="int64"), dims="x")
+    array = np.array([0], dtype="int64")
+    ds = xr.DataArray(array, dims="x")
     actual = repr(ds)
-    expected = """
+    expected = f"""
 <xarray.DataArray (x: 1)> Size: 8B
-array([0])
+{repr(array)}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
