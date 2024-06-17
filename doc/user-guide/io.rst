@@ -746,15 +746,16 @@ instance and pass this, as follows:
 Distributed writes
 ~~~~~~~~~~~~~~~~~~
 
-Xarray will natively use dask to write in parallel to a zarr store. For more
-flexible parallelization, we can use ``region`` to write to limited regions of
-existing arrays in an existing Zarr store.
+Xarray will natively use dask to write in parallel to a zarr store, which should
+satisfy most moderately sized datasets. For more flexible parallelization, we
+can use ``region`` to write to limited regions of arrays in an existing Zarr
+store.
 
-To scale this up to writing large datasets, the first step is creating an
-initial Zarr store without writing all of its array data. This can be done by
-first creating a ``Dataset`` with dummy values stored in :ref:`dask <dask>`,
-and then calling ``to_zarr`` with ``compute=False`` to write only metadata
-(including ``attrs``) to Zarr:
+To scale this up to writing large datasets, first create an initial Zarr store
+without writing all of its array data. This can be done by first creating a
+``Dataset`` with dummy values stored in :ref:`dask <dask>`, and then calling
+``to_zarr`` with ``compute=False`` to write only metadata (including ``attrs``)
+to Zarr:
 
 .. ipython:: python
     :suppress:
@@ -776,7 +777,7 @@ and then calling ``to_zarr`` with ``compute=False`` to write only metadata
 Now, a Zarr store with the correct variable shapes and attributes exists that
 can be filled out by subsequent calls to ``to_zarr``.
 Setting ``region="auto"`` will open the existing store and determine the
-correct alignment of the new data with the existing coordinates, or as an
+correct alignment of the new data with the existing dimensions, or as an
 explicit mapping from dimension names to Python ``slice`` objects indicating
 where the data should be written (in index space, not label space), e.g.,
 
