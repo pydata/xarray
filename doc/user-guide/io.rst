@@ -856,7 +856,10 @@ order, e.g., for time-stepping a simulation:
     )
     ds2.to_zarr("path/to/directory.zarr", append_dim="t")
 
-Finally, you can use ``region`` to write to limited regions of existing arrays
+Distributed writes
+~~~~~~~~~~~~~~~~~~
+
+You can use ``region`` to write to limited regions of existing arrays
 in an existing Zarr store. This is a good option for writing data in parallel
 from independent processes.
 
