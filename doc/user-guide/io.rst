@@ -746,9 +746,9 @@ instance and pass this, as follows:
 Distributed writes
 ~~~~~~~~~~~~~~~~~~
 
-You can use ``region`` to write to limited regions of existing arrays
-in an existing Zarr store. This is a good option for writing data in parallel
-from independent processes.
+Xarray will natively use dask to write in parallel to a zarr store. For more
+flexible parallelization, we can use ``region`` to write to limited regions of
+existing arrays in an existing Zarr store.
 
 To scale this up to writing large datasets, the first step is creating an
 initial Zarr store without writing all of its array data. This can be done by
