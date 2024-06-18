@@ -22,13 +22,15 @@ v2024.06.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+
+- Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
+  By `Martin Raspaud <https://github.com/mraspaud>`_.
 - ``DataTree`` related functionality is now exposed in the main ``xarray`` public
   API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``,
   ``xarray.map_over_subtree``, ``xarray.register_datatree_accessor`` and
   ``xarray.testing.assert_isomorphic``.
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
   `Tom Nicholas <https://github.com/TomNicholas>`_.
-
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -83,7 +85,6 @@ Bug fixes
 - :py:meth:`DataArrayResample.interpolate` and :py:meth:`DatasetResample.interpolate` method now
   support arbitrary kwargs such as ``order`` for polynomial interpolation (:issue:`8762`).
   By `Nicolas Karasiak <https://github.com/nkarasiak>`_.
-
 
 Documentation
 ~~~~~~~~~~~~~

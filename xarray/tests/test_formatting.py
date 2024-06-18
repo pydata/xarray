@@ -11,8 +11,6 @@ import xarray as xr
 from xarray.core import formatting
 from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
 
-ON_WINDOWS = sys.platform == "win32"
-
 
 class TestFormatting:
     def test_get_indexer_at_least_n_items(self) -> None:
@@ -1070,74 +1068,34 @@ Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
-
-@pytest.mark.skipif(
-    ON_WINDOWS,
-    reason="Default numpy's dtypes vary according to OS",
-)
-def test_array_repr_dtypes_unix() -> None:
-
     # Signed integer dtypes
 
-    ds = xr.DataArray(np.array([0]), dims="x")
+    array = np.array([0])
+    ds = xr.DataArray(array, dims="x")
     actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 8B
-array([0])
+    expected = f"""
+<xarray.DataArray (x: 1)> Size: {array.dtype.itemsize}B
+{repr(array)}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
-    ds = xr.DataArray(np.array([0], dtype="int32"), dims="x")
+    array = np.array([0], dtype="int32")
+    ds = xr.DataArray(array, dims="x")
     actual = repr(ds)
-    expected = """
+    expected = f"""
 <xarray.DataArray (x: 1)> Size: 4B
-array([0], dtype=int32)
+{repr(array)}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
-    ds = xr.DataArray(np.array([0], dtype="int64"), dims="x")
+    array = np.array([0], dtype="int64")
+    ds = xr.DataArray(array, dims="x")
     actual = repr(ds)
-    expected = """
+    expected = f"""
 <xarray.DataArray (x: 1)> Size: 8B
-array([0])
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
-
-@pytest.mark.skipif(
-    not ON_WINDOWS,
-    reason="Default numpy's dtypes vary according to OS",
-)
-def test_array_repr_dtypes_on_windows() -> None:
-
-    # Integer dtypes
-
-    ds = xr.DataArray(np.array([0]), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 4B
-array([0])
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
-    ds = xr.DataArray(np.array([0], dtype="int32"), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 4B
-array([0])
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
-    ds = xr.DataArray(np.array([0], dtype="int64"), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 8B
-array([0], dtype=int64)
+{repr(array)}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
