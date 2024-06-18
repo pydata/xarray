@@ -15,7 +15,7 @@ xarray's internals directly, only the public-facing xarray.Dataset class.
 
 
 _MAPPED_DOCSTRING_ADDENDUM = (
-    "This method was copied from xarray.Dataset, but has been altered to "
+    "This method was copied from :py:class:`xarray.Dataset`, but has been altered to "
     "call the method on the Datasets stored in every node of the subtree. "
     "See the `map_over_subtree` function for more details."
 )

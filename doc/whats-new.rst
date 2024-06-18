@@ -22,8 +22,15 @@ v2024.06.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+
 - Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
+- ``DataTree`` related functionality is now exposed in the main ``xarray`` public
+  API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``,
+  ``xarray.map_over_subtree``, ``xarray.register_datatree_accessor`` and
+  ``xarray.testing.assert_isomorphic``.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -40,6 +47,11 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Migrate documentation for ``datatree`` into main ``xarray`` documentation (:pull:`9033`).
+  For information on previous ``datatree`` releases, please see:
+  `datatree's historical release notes <https://xarray-datatree.readthedocs.io/en/latest/>`_.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -174,6 +186,10 @@ Internal Changes
   consistent with their use of ``dim``. Using the existing kwarg will raise a
   warning.
   By `Maximilian Roos <https://github.com/max-sixty>`_
+  rather than ``dims`` or ``dimensions``. This is the final change to make xarray methods
+  consistent with their use of ``dim``. Using the existing kwarg will raise a
+  warning. By `Maximilian Roos <https://github.com/max-sixty>`_
+
 
 .. _whats-new.2024.03.0:
 
