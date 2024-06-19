@@ -130,7 +130,7 @@ jobs:
           python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report xarray/
 
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v4.4.1
+        uses: codecov/codecov-action@v4.5.0
         with:
           file: mypy_report/cobertura.xml
           flags: mypy
@@ -184,7 +184,7 @@ jobs:
           python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report xarray/
 
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v4.4.1
+        uses: codecov/codecov-action@v4.5.0
         with:
           file: mypy_report/cobertura.xml
           flags: mypy39
@@ -245,7 +245,7 @@ jobs:
           python -m pyright xarray/
 
       - name: Upload pyright coverage to Codecov
-        uses: codecov/codecov-action@v4.4.1
+        uses: codecov/codecov-action@v4.5.0
         with:
           file: pyright_report/cobertura.xml
           flags: pyright
@@ -304,7 +304,7 @@ jobs:
           python -m pyright xarray/
 
       - name: Upload pyright coverage to Codecov
-        uses: codecov/codecov-action@v4.4.1
+        uses: codecov/codecov-action@v4.5.0
         with:
           file: pyright_report/cobertura.xml
           flags: pyright39

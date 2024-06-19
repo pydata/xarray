@@ -1067,7 +1067,8 @@ class DataWithCoords(AttrAccessMixin):
         # TODO support non-string indexer after removing the old API.
 
         from xarray.core.dataarray import DataArray
-        from xarray.core.groupby import ResolvedGrouper, TimeResampler
+        from xarray.core.groupby import ResolvedGrouper
+        from xarray.core.groupers import TimeResampler
         from xarray.core.resample import RESAMPLE_DIM
 
         # note: the second argument (now 'skipna') use to be 'dim'

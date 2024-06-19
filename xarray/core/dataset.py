@@ -10301,9 +10301,9 @@ class Dataset(
         from xarray.core.groupby import (
             DatasetGroupBy,
             ResolvedGrouper,
-            UniqueGrouper,
             _validate_groupby_squeeze,
         )
+        from xarray.core.groupers import UniqueGrouper
 
         _validate_groupby_squeeze(squeeze)
         rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
@@ -10384,11 +10384,11 @@ class Dataset(
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
         from xarray.core.groupby import (
-            BinGrouper,
             DatasetGroupBy,
             ResolvedGrouper,
             _validate_groupby_squeeze,
         )
+        from xarray.core.groupers import BinGrouper
 
         _validate_groupby_squeeze(squeeze)
         grouper = BinGrouper(
