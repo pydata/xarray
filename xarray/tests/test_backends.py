@@ -4285,7 +4285,7 @@ class TestDask(DatasetIOBase):
     def test_roundtrip_numpy_datetime_data(self) -> None:
         # Override method in DatasetIOBase - remove not applicable
         # save_kwargs
-        times = pd.to_datetime(["2000-01-01", "2000-01-02", "NaT"])
+        times = pd.to_datetime(["2000-01-01", "2000-01-02", "NaT"], unit="ns")
         expected = Dataset({"t": ("t", times), "t0": times[0]})
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
