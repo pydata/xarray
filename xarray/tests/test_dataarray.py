@@ -110,13 +110,14 @@ class TestDataArray:
         assert expected == repr(data_array)
 
     def test_repr_multiindex(self) -> None:
+        obj_size = np.dtype("O").itemsize
         expected = dedent(
-            """\
+            f"""\
             <xarray.DataArray (x: 4)> Size: 32B
             array([0, 1, 2, 3], dtype=uint64)
             Coordinates:
-              * x        (x) object 32B MultiIndex
-              * level_1  (x) object 32B 'a' 'a' 'b' 'b'
+              * x        (x) object {4 * obj_size}B MultiIndex
+              * level_1  (x) object {4 * obj_size}B 'a' 'a' 'b' 'b'
               * level_2  (x) int64 32B 1 2 1 2"""
         )
         assert expected == repr(self.mda)
@@ -129,15 +130,16 @@ class TestDataArray:
         mda_long = DataArray(
             list(range(32)), coords={"x": mindex_long}, dims="x"
         ).astype(np.uint64)
+        obj_size = np.dtype("O").itemsize
         expected = dedent(
-            """\
+            f"""\
             <xarray.DataArray (x: 32)> Size: 256B
             array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
                    17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31],
                   dtype=uint64)
             Coordinates:
-              * x        (x) object 256B MultiIndex
-              * level_1  (x) object 256B 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
+              * x        (x) object {32 * obj_size}B MultiIndex
+              * level_1  (x) object {32 * obj_size}B 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
               * level_2  (x) int64 256B 1 2 3 4 5 6 7 8 1 2 3 4 ... 5 6 7 8 1 2 3 4 5 6 7 8"""
         )
         assert expected == repr(mda_long)
@@ -3004,7 +3006,7 @@ class TestDataArray:
         expected = b.copy()
         assert_identical(expected, actual)
 
-        actual = a.fillna(range(4))
+        actual = a.fillna(np.arange(4))
         assert_identical(expected, actual)
 
         actual = a.fillna(b[:3])
@@ -3017,7 +3019,7 @@ class TestDataArray:
             a.fillna({0: 0})
 
         with pytest.raises(ValueError, match=r"broadcast"):
-            a.fillna([1, 2])
+            a.fillna(np.array([1, 2]))
 
     def test_align(self) -> None:
         array = DataArray(
@@ -3642,6 +3644,7 @@ class TestDataArray:
         actual_no_data = da.to_dict(data=False, encoding=encoding)
         assert expected_no_data == actual_no_data
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_to_and_from_dict_with_time_dim(self) -> None:
         x = np.random.randn(10, 3)
         t = pd.date_range("20130101", periods=10)
@@ -3650,6 +3653,7 @@ class TestDataArray:
         roundtripped = DataArray.from_dict(da.to_dict())
         assert_identical(da, roundtripped)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_to_and_from_dict_with_nan_nat(self) -> None:
         y = np.random.randn(10, 3)
         y[2] = np.nan

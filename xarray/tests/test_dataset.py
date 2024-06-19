@@ -335,13 +335,14 @@ class TestDataset:
 
     def test_repr_multiindex(self) -> None:
         data = create_test_multiindex()
+        obj_size = np.dtype("O").itemsize
         expected = dedent(
-            """\
-            <xarray.Dataset> Size: 96B
+            f"""\
+            <xarray.Dataset> Size: {8 * obj_size + 32}B
             Dimensions:  (x: 4)
             Coordinates:
-              * x        (x) object 32B MultiIndex
-              * level_1  (x) object 32B 'a' 'a' 'b' 'b'
+              * x        (x) object {4 * obj_size}B MultiIndex
+              * level_1  (x) object {4 * obj_size}B 'a' 'a' 'b' 'b'
               * level_2  (x) int64 32B 1 2 1 2
             Data variables:
                 *empty*"""
@@ -357,12 +358,12 @@ class TestDataset:
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         data = Dataset({}, midx_coords)
         expected = dedent(
-            """\
-            <xarray.Dataset> Size: 96B
+            f"""\
+            <xarray.Dataset> Size: {8 * obj_size + 32}B
             Dimensions:                  (x: 4)
             Coordinates:
-              * x                        (x) object 32B MultiIndex
-              * a_quite_long_level_name  (x) object 32B 'a' 'a' 'b' 'b'
+              * x                        (x) object {4 * obj_size}B MultiIndex
+              * a_quite_long_level_name  (x) object {4 * obj_size}B 'a' 'a' 'b' 'b'
               * level_2                  (x) int64 32B 1 2 1 2
             Data variables:
                 *empty*"""
@@ -5209,7 +5210,7 @@ class TestDataset:
         actual6 = ds.fillna(expected)
         assert_identical(expected, actual6)
 
-        actual7 = ds.fillna(range(4))
+        actual7 = ds.fillna(np.arange(4))
         assert_identical(expected, actual7)
 
         actual8 = ds.fillna(b[:3])

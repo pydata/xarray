@@ -88,6 +88,7 @@ from xarray.core.merge import (
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
+    NetcdfWriteModes,
     QuantileMethods,
     Self,
     T_ChunkDim,
@@ -2171,7 +2172,7 @@ class Dataset(
     def to_netcdf(
         self,
         path: None = None,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -2186,7 +2187,7 @@ class Dataset(
     def to_netcdf(
         self,
         path: str | PathLike,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -2202,7 +2203,7 @@ class Dataset(
     def to_netcdf(
         self,
         path: str | PathLike,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -2218,7 +2219,7 @@ class Dataset(
     def to_netcdf(
         self,
         path: str | PathLike,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -2231,7 +2232,7 @@ class Dataset(
     def to_netcdf(
         self,
         path: str | PathLike | None = None,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -7420,7 +7421,9 @@ class Dataset(
         arrays = []
         extension_arrays = []
         for k, v in dataframe.items():
-            if not is_extension_array_dtype(v):
+            if not is_extension_array_dtype(v) or isinstance(
+                v.array, (pd.arrays.DatetimeArray, pd.arrays.TimedeltaArray)
+            ):
                 arrays.append((k, np.asarray(v)))
             else:
                 extension_arrays.append((k, v))
@@ -10298,9 +10301,9 @@ class Dataset(
         from xarray.core.groupby import (
             DatasetGroupBy,
             ResolvedGrouper,
-            UniqueGrouper,
             _validate_groupby_squeeze,
         )
+        from xarray.core.groupers import UniqueGrouper
 
         _validate_groupby_squeeze(squeeze)
         rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
@@ -10381,11 +10384,11 @@ class Dataset(
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
         from xarray.core.groupby import (
-            BinGrouper,
             DatasetGroupBy,
             ResolvedGrouper,
             _validate_groupby_squeeze,
         )
+        from xarray.core.groupers import BinGrouper
 
         _validate_groupby_squeeze(squeeze)
         grouper = BinGrouper(
