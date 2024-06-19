@@ -77,13 +77,21 @@ if TYPE_CHECKING:
     from xarray.core.types import InclusiveOptions, SideOptions
 
 
+def _nanosecond_precision_timestamp(*args, **kwargs):
+    # As of pandas version 3.0, pd.to_datetime(Timestamp(...)) will try to
+    # infer the appropriate datetime precision. Until xarray supports
+    # non-nanosecond precision times, we will use this constructor wrapper to
+    # explicitly create nanosecond-precision Timestamp objects.
+    return pd.Timestamp(*args, **kwargs).as_unit("ns")
+
+
 def get_date_type(calendar, use_cftime=True):
     """Return the cftime date type for a given calendar name."""
     if cftime is None:
         raise ImportError("cftime is required for dates with non-standard calendars")
     else:
         if _is_standard_calendar(calendar) and not use_cftime:
-            return pd.Timestamp
+            return _nanosecond_precision_timestamp
 
         calendars = {
             "noleap": cftime.DatetimeNoLeap,
@@ -845,7 +853,12 @@ def _generate_range(start, end, periods, offset):
     A generator object
     """
     if start:
-        start = offset.rollforward(start)
+        # From pandas GH 56147 / 56832 to account for negative direction and
+        # range bounds
+        if offset.n >= 0:
+            start = offset.rollforward(start)
+        else:
+            start = offset.rollback(start)
 
     if periods is None and end < start and offset.n >= 0:
         end = None

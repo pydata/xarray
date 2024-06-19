@@ -22,7 +22,6 @@ from xarray.tests import (
     create_test_data,
     has_cftime,
     has_flox,
-    has_pandas_version_two,
     requires_dask,
     requires_flox,
     requires_scipy,
@@ -93,7 +92,7 @@ def test_groupby_sizes_property(dataset) -> None:
         assert dataset.groupby("x").sizes == dataset.isel(x=1).sizes
     with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
         assert dataset.groupby("y").sizes == dataset.isel(y=1).sizes
-    dataset = dataset.drop("cat")
+    dataset = dataset.drop_vars("cat")
     stacked = dataset.stack({"xy": ("x", "y")})
     with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
         assert stacked.groupby("xy").sizes == stacked.isel(xy=0).sizes
@@ -140,8 +139,7 @@ def test_groupby_da_datetime() -> None:
     times = pd.date_range("2000-01-01", periods=4)
     foo = xr.DataArray([1, 2, 3, 4], coords=dict(time=times), dims="time")
     # create test index
-    dd = times.to_pydatetime()
-    reference_dates = [dd[0], dd[2]]
+    reference_dates = [times[0], times[2]]
     labels = reference_dates[0:1] * 2 + reference_dates[1:2] * 2
     ind = xr.DataArray(
         labels, coords=dict(time=times), dims="time", name="reference_date"
@@ -578,8 +576,8 @@ repr_da = xr.DataArray(
 def test_groupby_repr(obj, dim) -> None:
     actual = repr(obj.groupby(dim))
     expected = f"{obj.__class__.__name__}GroupBy"
-    expected += ", grouped over %r" % dim
-    expected += "\n%r groups with labels " % (len(np.unique(obj[dim])))
+    expected += f", grouped over {dim!r}"
+    expected += f"\n{len(np.unique(obj[dim]))!r} groups with labels "
     if dim == "x":
         expected += "1, 2, 3, 4, 5."
     elif dim == "y":
@@ -596,7 +594,7 @@ def test_groupby_repr_datetime(obj) -> None:
     actual = repr(obj.groupby("t.month"))
     expected = f"{obj.__class__.__name__}GroupBy"
     expected += ", grouped over 'month'"
-    expected += "\n%r groups with labels " % (len(np.unique(obj.t.dt.month)))
+    expected += f"\n{len(np.unique(obj.t.dt.month))!r} groups with labels "
     expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12."
     assert actual == expected
 
@@ -1882,7 +1880,7 @@ class TestDataArrayResample:
         array = Dataset({"time": times})["time"]
         actual = array.resample(time="1D").last()
         expected_times = pd.to_datetime(
-            ["2000-01-01T18", "2000-01-02T18", "2000-01-03T06"]
+            ["2000-01-01T18", "2000-01-02T18", "2000-01-03T06"], unit="ns"
         )
         expected = DataArray(expected_times, [("time", times[::4])], name="time")
         assert_identical(expected, actual)
@@ -2076,13 +2074,18 @@ class TestDataArrayResample:
             "slinear",
             "quadratic",
             "cubic",
+            "polynomial",
         ]
         for kind in kinds:
-            actual = array.resample(time="1h").interpolate(kind)
+            kwargs = {}
+            if kind == "polynomial":
+                kwargs["order"] = 1
+            actual = array.resample(time="1h").interpolate(kind, **kwargs)
+            # using interp1d, polynomial order is to set directly in kind using int
             f = interp1d(
                 np.arange(len(times)),
                 data,
-                kind=kind,
+                kind=kwargs["order"] if kind == "polynomial" else kind,
                 axis=-1,
                 bounds_error=True,
                 assume_sorted=True,
@@ -2149,14 +2152,19 @@ class TestDataArrayResample:
             "slinear",
             "quadratic",
             "cubic",
+            "polynomial",
         ]
         for kind in kinds:
-            actual = array.chunk(chunks).resample(time="1h").interpolate(kind)
+            kwargs = {}
+            if kind == "polynomial":
+                kwargs["order"] = 1
+            actual = array.chunk(chunks).resample(time="1h").interpolate(kind, **kwargs)
             actual = actual.compute()
+            # using interp1d, polynomial order is to set directly in kind using int
             f = interp1d(
                 np.arange(len(times)),
                 data,
-                kind=kind,
+                kind=kwargs["order"] if kind == "polynomial" else kind,
                 axis=-1,
                 bounds_error=True,
                 assume_sorted=True,
@@ -2172,7 +2180,6 @@ class TestDataArrayResample:
             # done here due to floating point arithmetic
             assert_allclose(expected, actual, rtol=1e-16)
 
-    @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
     def test_resample_base(self) -> None:
         times = pd.date_range("2000-01-01T02:03:01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
@@ -2204,11 +2211,10 @@ class TestDataArrayResample:
         expected = DataArray(array.to_series().resample("24h", origin=origin).mean())
         assert_identical(expected, actual)
 
-    @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
     @pytest.mark.parametrize(
         "loffset",
         [
-            "-12H",
+            "-12h",
             datetime.timedelta(hours=-12),
             pd.Timedelta(hours=-12),
             pd.DateOffset(hours=-12),

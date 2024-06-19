@@ -9,12 +9,14 @@ from typing import (
     Any,
     Callable,
     Generic,
+    Literal,
     NoReturn,
     Union,
     overload,
 )
 
 from xarray.core import utils
+from xarray.core.common import TreeAttrAccessMixin
 from xarray.core.coordinates import DatasetCoordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, DataVariables
@@ -23,6 +25,13 @@ from xarray.core.datatree_mapping import (
     check_isomorphic,
     map_over_subtree,
 )
+from xarray.core.datatree_ops import (
+    DataTreeArithmeticMixin,
+    MappedDatasetMethodsMixin,
+    MappedDataWithCoords,
+)
+from xarray.core.datatree_render import RenderDataTree
+from xarray.core.formatting import datatree_repr
 from xarray.core.formatting_html import (
     datatree_repr as datatree_repr_html,
 )
@@ -39,14 +48,6 @@ from xarray.core.utils import (
     maybe_wrap_array,
 )
 from xarray.core.variable import Variable
-from xarray.datatree_.datatree.common import TreeAttrAccessMixin
-from xarray.datatree_.datatree.formatting import datatree_repr
-from xarray.datatree_.datatree.ops import (
-    DataTreeArithmeticMixin,
-    MappedDatasetMethodsMixin,
-    MappedDataWithCoords,
-)
-from xarray.datatree_.datatree.render import RenderTree
 
 try:
     from xarray.core.variable import calculate_dimensions
@@ -57,8 +58,9 @@ except ImportError:
 if TYPE_CHECKING:
     import pandas as pd
 
+    from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
     from xarray.core.merge import CoercibleValue
-    from xarray.core.types import ErrorOptions
+    from xarray.core.types import ErrorOptions, NetcdfWriteModes, ZarrWriteModes
 
 # """
 # DEVELOPERS' NOTE
@@ -624,7 +626,7 @@ class DataTree(
     def __iter__(self) -> Iterator[Hashable]:
         return itertools.chain(self.ds.data_vars, self.children)
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype=None, copy=None):
         raise TypeError(
             "cannot directly convert a DataTree into a "
             "numpy array. Instead, create an xarray.DataArray "
@@ -1451,7 +1453,7 @@ class DataTree(
 
     def render(self):
         """Print tree structure, including any data stored at each node."""
-        for pre, fill, node in RenderTree(self):
+        for pre, fill, node in RenderDataTree(self):
             print(f"{pre}DataTree('{self.name}')")
             for ds_line in repr(node.ds)[1:]:
                 print(f"{fill}{ds_line}")
@@ -1475,7 +1477,16 @@ class DataTree(
         return tuple(node.path for node in self.subtree)
 
     def to_netcdf(
-        self, filepath, mode: str = "w", encoding=None, unlimited_dims=None, **kwargs
+        self,
+        filepath,
+        mode: NetcdfWriteModes = "w",
+        encoding=None,
+        unlimited_dims=None,
+        format: T_DataTreeNetcdfTypes | None = None,
+        engine: T_DataTreeNetcdfEngine | None = None,
+        group: str | None = None,
+        compute: bool = True,
+        **kwargs,
     ):
         """
         Write datatree contents to a netCDF file.
@@ -1499,10 +1510,25 @@ class DataTree(
             By default, no dimensions are treated as unlimited dimensions.
             Note that unlimited_dims may also be set via
             ``dataset.encoding["unlimited_dims"]``.
+        format : {"NETCDF4", }, optional
+            File format for the resulting netCDF file:
+
+            * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API features.
+        engine : {"netcdf4", "h5netcdf"}, optional
+            Engine to use when writing netCDF files. If not provided, the
+            default engine is chosen based on available dependencies, with a
+            preference for "netcdf4" if writing to a file on disk.
+        group : str, optional
+            Path to the netCDF4 group in the given file to open as the root group
+            of the ``DataTree``. Currently, specifying a group is not supported.
+        compute : bool, default: True
+            If true compute immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed later.
+            Currently, ``compute=False`` is not supported.
         kwargs :
             Addional keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
         """
-        from xarray.datatree_.datatree.io import _datatree_to_netcdf
+        from xarray.core.datatree_io import _datatree_to_netcdf
 
         _datatree_to_netcdf(
             self,
@@ -1510,15 +1536,21 @@ class DataTree(
             mode=mode,
             encoding=encoding,
             unlimited_dims=unlimited_dims,
+            format=format,
+            engine=engine,
+            group=group,
+            compute=compute,
             **kwargs,
         )
 
     def to_zarr(
         self,
         store,
-        mode: str = "w-",
+        mode: ZarrWriteModes = "w-",
         encoding=None,
         consolidated: bool = True,
+        group: str | None = None,
+        compute: Literal[True] = True,
         **kwargs,
     ):
         """
@@ -1541,10 +1573,17 @@ class DataTree(
         consolidated : bool
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing metadata for all groups.
+        group : str, optional
+            Group path. (a.k.a. `path` in zarr terminology.)
+        compute : bool, default: True
+            If true compute immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed later. Metadata
+            is always updated eagerly. Currently, ``compute=False`` is not
+            supported.
         kwargs :
             Additional keyword arguments to be passed to ``xarray.Dataset.to_zarr``
         """
-        from xarray.datatree_.datatree.io import _datatree_to_zarr
+        from xarray.core.datatree_io import _datatree_to_zarr
 
         _datatree_to_zarr(
             self,
@@ -1552,6 +1591,8 @@ class DataTree(
             mode=mode,
             encoding=encoding,
             consolidated=consolidated,
+            group=group,
+            compute=compute,
             **kwargs,
         )
 

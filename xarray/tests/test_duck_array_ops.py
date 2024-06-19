@@ -157,7 +157,7 @@ class TestOps:
         assert 1 == count(np.datetime64("2000-01-01"))
 
     def test_where_type_promotion(self):
-        result = where([True, False], [1, 2], ["a", "b"])
+        result = where(np.array([True, False]), np.array([1, 2]), np.array(["a", "b"]))
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
         result = where([True, False], np.array([1, 2], np.float32), np.nan)
@@ -186,7 +186,7 @@ class TestOps:
         ).all()
 
     @requires_pyarrow
-    def test_duck_extension_array_pyarrow_concatenate(self, arrow1, arrow2):
+    def test_extension_array_pyarrow_concatenate(self, arrow1, arrow2):
         concatenated = concatenate(
             (PandasExtensionArray(arrow1), PandasExtensionArray(arrow2))
         )
@@ -214,7 +214,7 @@ class TestOps:
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
     def test_concatenate_type_promotion(self):
-        result = concatenate([[1], ["b"]])
+        result = concatenate([np.array([1]), np.array(["b"])])
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
     @pytest.mark.filterwarnings("error")
@@ -1024,7 +1024,7 @@ def test_push_dask():
         np.testing.assert_equal(actual, expected)
 
 
-def test_duck_extension_array_equality(categorical1, int1):
+def test_extension_array_equality(categorical1, int1):
     int_duck_array = PandasExtensionArray(int1)
     categorical_duck_array = PandasExtensionArray(categorical1)
     assert (int_duck_array != categorical_duck_array).all()
@@ -1032,11 +1032,16 @@ def test_duck_extension_array_equality(categorical1, int1):
     assert (int_duck_array[0:2] == int1[0:2]).all()
 
 
-def test_duck_extension_array_repr(int1):
+def test_extension_array_singleton_equality(categorical1):
+    categorical_duck_array = PandasExtensionArray(categorical1)
+    assert (categorical_duck_array != "cat3").all()
+
+
+def test_extension_array_repr(int1):
     int_duck_array = PandasExtensionArray(int1)
     assert repr(int1) in repr(int_duck_array)
 
 
-def test_duck_extension_array_attr(int1):
+def test_extension_array_attr(int1):
     int_duck_array = PandasExtensionArray(int1)
     assert (~int_duck_array.fillna(10)).all()

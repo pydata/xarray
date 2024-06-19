@@ -15,38 +15,165 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2024.04.0:
+.. _whats-new.2024.06.1:
 
-v2024.04.0 (unreleased)
+v2024.06.1 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
-- New "random" method for converting to and from 360_day calendars (:pull:`8603`).
-  By `Pascal Bourgault <https://github.com/aulemahal>`_.
-- Xarray now makes a best attempt not to coerce :py:class:`pandas.api.extensions.ExtensionArray` to a numpy array
-  by supporting 1D `ExtensionArray` objects internally where possible.  Thus, `Dataset`s initialized with a `pd.Catgeorical`,
-  for example, will retain the object.  However, one cannot do operations that are not possible on the `ExtensionArray`
-  then, such as broadcasting.
-  By `Ilan Gold <https://github.com/ilan-gold>`_.
+- Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
+  By `Martin Raspaud <https://github.com/mraspaud>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
 
 
 Bug fixes
 ~~~~~~~~~
 
 
+Documentation
+~~~~~~~~~~~~~
+
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
-- Migrates ``formatting_html`` functionality for `DataTree` into ``xarray/core`` (:pull: `8930`)
+
+
+.. _whats-new.2024.06.0:
+
+v2024.06.0 (Jun 13, 2024)
+-------------------------
+This release brings various performance optimizations and compatibility with the upcoming numpy 2.0 release.
+
+Thanks to the 22 contributors to this release:
+Alfonso Ladino, David Hoese, Deepak Cherian, Eni Awowale, Ilan Gold, Jessica Scheick, Joe Hamman, Justus Magin, Kai Mühlbauer, Mark Harfouche, Mathias Hauser, Matt Savoie, Maximilian Roos, Mike Thramann, Nicolas Karasiak, Owen Littlejohns, Paul Ockenfuß, Philippe THOMY, Scott Henderson, Spencer Clark, Stephan Hoyer and Tom Nicholas
+
+Performance
+~~~~~~~~~~~
+
+- Small optimization to the netCDF4 and h5netcdf backends (:issue:`9058`, :pull:`9067`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Small optimizations to help reduce indexing speed of datasets (:pull:`9002`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
+- Performance improvement in `open_datatree` method for Zarr, netCDF4 and h5netcdf backends (:issue:`8994`, :pull:`9014`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
+
+
+Bug fixes
+~~~~~~~~~
+- Preserve conversion of timezone-aware pandas Datetime arrays to numpy object arrays
+  (:issue:`9026`, :pull:`9042`).
+  By `Ilan Gold <https://github.com/ilan-gold>`_.
+- :py:meth:`DataArrayResample.interpolate` and :py:meth:`DatasetResample.interpolate` method now
+  support arbitrary kwargs such as ``order`` for polynomial interpolation (:issue:`8762`).
+  By `Nicolas Karasiak <https://github.com/nkarasiak>`_.
+
+Documentation
+~~~~~~~~~~~~~
+- Add link to CF Conventions on packed data and sentence on type determination in the I/O user guide (:issue:`9041`, :pull:`9045`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Migrates remainder of ``io.py`` to ``xarray/core/datatree_io.py`` and
+  ``TreeAttrAccessMixin`` into ``xarray/core/common.py`` (:pull:`9011`).
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Compatibility with numpy 2 (:issue:`8844`, :pull:`8854`, :pull:`8946`).
+  By `Justus Magin <https://github.com/keewis>`_ and `Stephan Hoyer <https://github.com/shoyer>`_.
+
+
+.. _whats-new.2024.05.0:
+
+v2024.05.0 (May 12, 2024)
+-------------------------
+
+This release brings support for pandas ExtensionArray objects, optimizations when reading Zarr, the ability to concatenate datasets without pandas indexes,
+more compatibility fixes for the upcoming numpy 2.0, and the migration of most of the xarray-datatree project code into xarray ``main``!
+
+Thanks to the 18 contributors to this release:
+Aimilios Tsouvelekakis, Andrey Akinshin, Deepak Cherian, Eni Awowale, Ilan Gold, Illviljan, Justus Magin, Mark Harfouche, Matt Savoie, Maximilian Roos, Noah C. Benson, Pascal Bourgault, Ray Bell, Spencer Clark, Tom Nicholas, ignamv, owenlittlejohns, and saschahofmann.
+
+New Features
+~~~~~~~~~~~~
+- New "random" method for converting to and from 360_day calendars (:pull:`8603`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
+- Xarray now makes a best attempt not to coerce :py:class:`pandas.api.extensions.ExtensionArray` to a numpy array
+  by supporting 1D ``ExtensionArray`` objects internally where possible.  Thus, :py:class:`Dataset` objects initialized with a ``pd.Categorical``,
+  for example, will retain the object.  However, one cannot do operations that are not possible on the ``ExtensionArray``
+  then, such as broadcasting. (:issue:`5287`, :issue:`8463`, :pull:`8723`)
+  By `Ilan Gold <https://github.com/ilan-gold>`_.
+- :py:func:`testing.assert_allclose`/:py:func:`testing.assert_equal` now accept a new argument `check_dims="transpose"`, controlling whether a transposed array is considered equal. (:issue:`5733`, :pull:`8991`)
+  By `Ignacio Martinez Vazquez <https://github.com/ignamv>`_.
+- Added the option to avoid automatically creating 1D pandas indexes in :py:meth:`Dataset.expand_dims()`, by passing the new kwarg
+  `create_index_for_new_dim=False`. (:pull:`8960`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Avoid automatically re-creating 1D pandas indexes in :py:func:`concat()`. Also added option to avoid creating 1D indexes for
+  new dimension coordinates by passing the new kwarg `create_index_for_new_dim=False`. (:issue:`8871`, :pull:`8872`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+- The PyNIO backend has been deleted (:issue:`4491`, :pull:`7301`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- The minimum versions of some dependencies were changed, in particular our minimum supported pandas version is now Pandas 2.
+
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+   dask-core              2022.12   2023.4
+   distributed            2022.12   2023.4
+   h5py                       3.7      3.8
+   matplotlib-base            3.6      3.7
+   packaging                 22.0     23.1
+   pandas                     1.5      2.0
+   pydap                      3.3      3.4
+   sparse                    0.13     0.14
+   typing_extensions          4.4      4.5
+   zarr                      2.13     2.14
+  ===================== =========  =======
+
+Bug fixes
+~~~~~~~~~
+- Following `an upstream bug fix
+  <https://github.com/pandas-dev/pandas/issues/56147>`_ to
+  :py:func:`pandas.date_range`, date ranges produced by
+  :py:func:`xarray.cftime_range` with negative frequencies will now fall fully
+  within the bounds of the provided start and end dates (:pull:`8999`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Enforces failures on CI when tests raise warnings from within xarray (:pull:`8974`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- Migrates ``formatting_html`` functionality for ``DataTree`` into ``xarray/core`` (:pull: `8930`)
   By `Eni Awowale <https://github.com/eni-awowale>`_, `Julia Signell <https://github.com/jsignell>`_
   and `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Migrates ``datatree_mapping`` functionality into ``xarray/core`` (:pull:`8948`)
   By `Matt Savoie <https://github.com/flamingbear>`_ `Owen Littlejohns
-  <https://github.com/owenlittlejohns>` and `Tom Nicholas <https://github.com/TomNicholas>`_.
-
+  <https://github.com/owenlittlejohns>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Migrates ``extensions``, ``formatting`` and ``datatree_render`` functionality for
+  ``DataTree`` into ``xarray/core``. Also migrates ``testing`` functionality into
+  ``xarray/testing/assertions`` for ``DataTree``. (:pull:`8967`)
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Migrates ``ops.py`` functionality into ``xarray/core/datatree_ops.py`` (:pull:`8976`)
+  By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Migrates ``iterator`` functionality into ``xarray/core`` (:pull: `8879`)
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
+  <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
+- ``transpose``, ``set_dims``, ``stack`` & ``unstack`` now use a ``dim`` kwarg
+  rather than ``dims`` or ``dimensions``. This is the final change to make xarray methods
+  consistent with their use of ``dim``. Using the existing kwarg will raise a
+  warning.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 .. _whats-new.2024.03.0:
 
@@ -123,9 +250,6 @@ Internal Changes
   By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
   <https://github.com/TomNicholas>`_.
 - Migrates ``datatree`` functionality into ``xarray/core``. (:pull: `8789`)
-  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
-  <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
-- Migrates ``iterator`` functionality into ``xarray/core`` (:pull: `8879`)
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
   <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
 
@@ -2813,7 +2937,7 @@ Bug fixes
   process (:issue:`4045`, :pull:`4684`). It also enables encoding and decoding standard
   calendar dates with time units of nanoseconds (:pull:`4400`).
   By `Spencer Clark <https://github.com/spencerkclark>`_ and `Mark Harfouche
-  <http://github.com/hmaarrfk>`_.
+  <https://github.com/hmaarrfk>`_.
 - :py:meth:`DataArray.astype`, :py:meth:`Dataset.astype` and :py:meth:`Variable.astype` support
   the ``order`` and ``subok`` parameters again. This fixes a regression introduced in version 0.16.1
   (:issue:`4644`, :pull:`4683`).
@@ -6806,8 +6930,7 @@ Enhancements
       datasets with a MultiIndex to a netCDF file. User contributions in this
       area would be greatly appreciated.
 
-- Support for reading GRIB, HDF4 and other file formats via PyNIO_. See
-  :ref:`io.pynio` for more details.
+- Support for reading GRIB, HDF4 and other file formats via PyNIO_.
 - Better error message when a variable is supplied with the same name as
   one of its dimensions.
 - Plotting: more control on colormap parameters (:issue:`642`). ``vmin`` and
