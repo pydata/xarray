@@ -107,6 +107,7 @@ def _collect_data_and_coord_variables(
 
 
 def _check_alignment(
+    path: str,
     node_ds: Dataset,
     parent_ds: Dataset | None,
     children: Mapping[Hashable, DataTree],
@@ -116,12 +117,12 @@ def _check_alignment(
             align(node_ds, parent_ds, join="exact")
         except ValueError as e:
             raise ValueError(
-                "inconsistent alignment between node and parent datasets:\n"
-                f"{node_ds}\nvs\n{parent_ds}"
+                f"group {path!r} is not aligned with its parent:\n"
+                f"Group: {node_ds}\nvs\nParent: {parent_ds}"
             ) from e
 
     for child in children.values():
-        _check_alignment(child.ds, node_ds, child.children)
+        _check_alignment(child.path, child.ds, node_ds, child.children)
 
 
 class DatasetView(Dataset):
@@ -462,7 +463,9 @@ class DataTree(
             raise KeyError(
                 f"parent {parent.name} already contains a variable named {self.name}"
             )
-        _check_alignment(self.ds, parent.ds, self.children)
+        name = self.name if self.name is not None else ""
+        path = parent.path.rstrip("/") + "/" + name
+        _check_alignment(path, self.ds, parent.ds, self.children)
 
     def _post_attach_recursively(self: DataTree, parent: DataTree) -> None:
         for k in parent._coord_names:
@@ -698,7 +701,7 @@ class DataTree(
                 raise ValueError(f"node already contains a variable named {child_name}")
 
         parent_ds = self.parent.ds if self.parent is not None else None
-        _check_alignment(data, parent_ds, children)
+        _check_alignment(self.path, data, parent_ds, children)
 
         self._children = children
         self._set_node_data(data)

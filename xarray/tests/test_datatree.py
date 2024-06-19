@@ -666,7 +666,7 @@ class TestInheritance:
 
     def test_inconsistent_dims(self):
         with pytest.raises(
-            ValueError, match="inconsistent alignment between node and parent datasets"
+            ValueError, match="group '/b' is not aligned with its parent"
         ):
             DataTree.from_dict(
                 {
@@ -684,7 +684,7 @@ class TestInheritance:
 
     def test_inconsistent_indexes(self):
         with pytest.raises(
-            ValueError, match="inconsistent alignment between node and parent datasets"
+            ValueError, match="group '/b' is not aligned with its parent"
         ):
             DataTree.from_dict(
                 {
