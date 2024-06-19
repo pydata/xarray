@@ -13,7 +13,7 @@ $conda remove -y numba numbagg sparse
 # temporarily remove numexpr
 $conda remove -y numexpr
 # temporarily remove backends
-$conda remove -y cf_units h5py pydap
+$conda remove -y cf_units pydap
 # forcibly remove packages to avoid artifacts
 $conda remove -y --force \
     numpy \
