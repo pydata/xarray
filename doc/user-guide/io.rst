@@ -984,6 +984,42 @@ reads. Because this fall-back option is so much slower, xarray issues a
     3. Explicitly setting ``consolidated=True``, to raise an error in this case
        instead of falling back to try reading non-consolidated metadata.
 
+.. _io.kerchunk:
+
+Kerchunk
+--------
+
+`Kerchunk <https://fsspec.github.io/kerchunk/index.html>`_ is a Python library that allows you to access chunked and compressed data formats (such as NetCDF3, NetCDF4, HDF5, GRIB2, TIFF & FITS), many of which are primary data formats for many data archives, as if they were in ARCO formats such as `Zarr`_ which allows for parallel, chunk-specific access. Instead of creating a new copy of the dataset in the Zarr spec/format, Kerchunk reads through the data archive and extracts the byte range and compression information of each chunk, then writes that information to a ``.json`` file, which is later used as an ephemeral ``zarr`` dataset.
+
+Reading these data archives becomes really easy with ``kerchunk`` in combination with ``xarray``, especially when these archives are large in size. You can view a large archive of a particular data format at once.
+
+The following example demonstrates generating ``references`` from a single grib file, stored in a variable and using ``kerchunk`` as a backend engine to view it.
+
+.. ipython:: python
+
+    import xarray as xr
+    from kerchunk.grib2 import scan_grib
+    from kerchunk.combine import MultiZarrToZarr
+
+    references = scan_grib("example.grb")
+
+    # The references are then written as jsons locally or to a cloud platform to use it later without generating references again from ``scan_grib`` function.
+
+    mzz = MultiZarrToZarr(
+        references,
+        concat_dims=["valid_time"],
+        identical_dims=["latitude", "longitude", "heightAboveGround", "step"],
+    )
+
+    d = mzz.translate()
+
+    ds = xr.open_dataset(d, engine="kerchunk")
+
+    ds
+
+.. note::
+
+    You can refer this `project pythia kerchunk cookbook <https://projectpythia.org/kerchunk-cookbook/README.html>`_ for more information.
 
 .. _io.iris:
 
