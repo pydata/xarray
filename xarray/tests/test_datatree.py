@@ -627,10 +627,13 @@ class TestRepr:
     def test_repr(self):
         dt: DataTree = DataTree.from_dict(
             {
-                "/": xr.Dataset({"e": (("x",), [1, 2])}, coords={"x": [2, 3]}),
-                "/b": xr.Dataset({"f": (("y",), [3])}),
+                "/": xr.Dataset(
+                    {"e": (("x",), [1.0, 2.0])},
+                    coords={"x": [2.0, 3.0]},
+                ),
+                "/b": xr.Dataset({"f": (("y",), [3.0])}),
                 "/b/c": xr.Dataset(),
-                "/b/d": xr.Dataset({"g": 4}),
+                "/b/d": xr.Dataset({"g": 4.0}),
             }
         )
 
@@ -641,19 +644,19 @@ class TestRepr:
             Group: /
             │   Dimensions:  (x: 2)
             │   Coordinates:
-            │     * x        (x) int64 16B 2 3
+            │     * x        (x) float64 16B 2.0 3.0
             │   Data variables:
-            │       e        (x) int64 16B 1 2
+            │       e        (x) float64 16B 1.0 2.0
             └── Group: /b
                 │   Dimensions:  (y: 1)
                 │   Dimensions without coordinates: y
                 │   Data variables:
-                │       f        (y) int64 8B 3
+                │       f        (y) float64 8B 3.0
                 ├── Group: /b/c
                 └── Group: /b/d
                         Dimensions:  ()
                         Data variables:
-                            g        int64 8B 4
+                            g        float64 8B 4.0
             """
         ).strip()
         assert result == expected
@@ -666,12 +669,12 @@ class TestRepr:
             │   Dimensions:  (y: 1)
             │   Dimensions without coordinates: y
             │   Data variables:
-            │       f        (y) int64 8B 3
+            │       f        (y) float64 8B 3.0
             ├── Group: /b/c
             └── Group: /b/d
                     Dimensions:  ()
                     Data variables:
-                        g        int64 8B 4
+                        g        float64 8B 4.0
             """
         ).strip()
         assert result == expected
