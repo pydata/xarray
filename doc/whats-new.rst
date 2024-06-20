@@ -39,7 +39,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- Adds a flow-chart diagram to help users navigate help resources (:discussion:`8990`).
+  By `Jessica Scheick <https://github.com/jessicas11>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
