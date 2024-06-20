@@ -6,11 +6,10 @@ We've created this flow chart to help guide you towards the best way to get help
 The links to each resource are provided below the diagram.
 Regardless of how you interact with us, we're always thrilled to hear from you!
 
-```mermaid
+.. mermaid::
 ---
 title: Navigating Xarray Resources
 ---
-
 
 flowchart TD
     intro[Welcome to Xarray! How can we help?]:::quesNodefmt
@@ -65,7 +64,6 @@ flowchart TD
 
     linkStyle default font-size:20pt,color:#206C89
 
-```
 
 - `Xarray Tutorials <https://tutorial.xarray.dev/>`__
 - `Xarray Docs <https://docs.xarray.dev/en/stable/>`__

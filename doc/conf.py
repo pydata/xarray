@@ -85,6 +85,7 @@ extensions = [
     "sphinxext.rediraffe",
     "sphinx_design",
     "sphinx_inline_tabs",
+    "sphinxcontrib.mermaid",
 ]
 
 
