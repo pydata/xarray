@@ -83,7 +83,7 @@ def _coerce_to_dataset(data: Dataset | DataArray | None) -> Dataset:
     if isinstance(data, DataArray):
         ds = data.to_dataset()
     elif isinstance(data, Dataset):
-        ds = data
+        ds = data.copy(deep=False)
     elif data is None:
         ds = Dataset()
     else:
@@ -91,19 +91,6 @@ def _coerce_to_dataset(data: Dataset | DataArray | None) -> Dataset:
             f"data object is not an xarray Dataset, DataArray, or None, it is of type {type(data)}"
         )
     return ds
-
-
-def _collect_data_and_coord_variables(
-    data: Dataset,
-) -> tuple[dict[Hashable, Variable], dict[Hashable, Variable]]:
-    data_variables = {}
-    coord_variables = {}
-    for k, v in data.variables.items():
-        if k in data._coord_names:
-            coord_variables[k] = v
-        else:
-            data_variables[k] = v
-    return data_variables, coord_variables
 
 
 def _check_alignment(
@@ -140,7 +127,7 @@ class DatasetView(Dataset):
 
     __slots__ = (
         "_attrs",
-        "_cache",  # is this used?
+        "_cache",  # used by _CachedAccessor
         "_coord_names",
         "_dims",
         "_encoding",
@@ -359,11 +346,7 @@ class DataTree(
     _name: str | None
     _parent: DataTree | None
     _children: dict[str, DataTree]
-    _cache: dict[str, Any]  # is this used?
-    _node_data_variables: dict[Hashable, Variable]
-    _node_coord_variables: dict[Hashable, Variable]
-    _node_dims: dict[Hashable, int]
-    _node_indexes: dict[Hashable, Index]
+    _cache: dict[str, Any]  # used by _CachedAccessor
     _variables: dict[Hashable, Variable]
     _coord_names: set[Hashable]
     _dims: dict[Hashable, int]
@@ -376,11 +359,7 @@ class DataTree(
         "_name",
         "_parent",
         "_children",
-        "_cache",
-        "_node_data_variables",
-        "_node_coord_variables",
-        "_node_dims",
-        "_node_indexes",
+        "_cache",  # used by _CachedAccessor
         "_variables",
         "_coord_names",
         "_dims",
@@ -432,30 +411,21 @@ class DataTree(
         # set tree attributes
         self._children = {}
         self._parent = None
-        self._set_node_data(data)
+        self._set_node_data(_coerce_to_dataset(data))
 
         # finalize tree attributes
         self.children = children  # must set first
         self.parent = parent
 
-    def _set_node_data(self, data: Dataset | DataArray | None) -> None:
-        ds = _coerce_to_dataset(data)
-        data_vars, coord_vars = _collect_data_and_coord_variables(ds)
-
-        # set node data attributes
-        self._data_variables = data_vars
-        self._node_coord_variables = coord_vars
-        self._node_dims = ds._dims
-        self._node_indexes = ds._indexes
-        self._attrs = ds._attrs
+    def _set_node_data(self, ds: Dataset) -> None:
+        # these node data attributes are finalized by _post_attach
+        self._variables = ds._variables
+        self._coord_names = ds._coord_names
+        self._dims = ds._dims
+        self._indexes = ds._indexes
         self._encoding = ds._encoding
+        self._attrs = ds._attrs
         self._close = ds._close
-
-        # setup inherited node attributes (finalized by _post_attach)
-        self._variables = data_vars | coord_vars
-        self._coord_names = set(coord_vars)
-        self._dims = dict(ds._dims)
-        self._indexes = dict(ds._indexes)
 
     def _pre_attach(self: DataTree, parent: DataTree) -> None:
         super()._pre_attach(parent)
