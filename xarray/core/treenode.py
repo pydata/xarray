@@ -567,6 +567,9 @@ class TreeNode(Generic[Tree]):
         return self.root is other.root
 
 
+AnyNamedNode = TypeVar("AnyNamedNode", bound="NamedNode")
+
+
 class NamedNode(TreeNode, Generic[Tree]):
     """
     A TreeNode which knows its own name.
@@ -606,7 +609,7 @@ class NamedNode(TreeNode, Generic[Tree]):
     def __str__(self) -> str:
         return f"NamedNode('{self.name}')" if self.name else "NamedNode()"
 
-    def _post_attach(self: NamedNode, parent: NamedNode) -> None:
+    def _post_attach(self: AnyNamedNode, parent: AnyNamedNode) -> None:
         """Ensures child has name attribute corresponding to key under which it has been stored."""
         key = next(k for k, v in parent.children.items() if v is self)
         self.name = key
