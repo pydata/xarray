@@ -34,7 +34,7 @@ flowchart TD
 
     intro -->|How do I use Xarray?| usage
     usage -->|"with extensions (like Dask)"| API
-    
+
     usage -->|I'd like some more help| help
     intro -->|I found a bug or typo| bug
     subgraph bugcontrib[Bugs and Contributions]
@@ -42,11 +42,11 @@ flowchart TD
         contrib
         bug -->|I just wanted to tell you| report
         bug<-->|I'd like to fix the bug!| contrib
-        bug<-->|my plan was approved!| contrib        
-        
+        bug<-->|my plan was approved!| contrib
+
     end
-    
-    
+
+
     intro -->|I wish Xarray could...| bug
 
     pr -->|my PR was approved| merged
