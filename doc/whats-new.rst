@@ -39,7 +39,7 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-- Adds a flow-chart diagram to help users navigate help resources (:discussion:`8990`).
+- Adds a flow-chart diagram to help users navigate help resources (`Discussion #8990 <https://github.com/pydata/xarray/discussions/8990>`_).
   By `Jessica Scheick <https://github.com/jessicas11>`_.
 
 Internal Changes
