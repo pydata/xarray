@@ -110,7 +110,7 @@ def _check_alignment(
     path: str,
     node_ds: Dataset,
     parent_ds: Dataset | None,
-    children: Mapping[Hashable, DataTree],
+    children: Mapping[str, DataTree],
 ) -> None:
     if parent_ds is not None:
         try:
@@ -689,12 +689,12 @@ class DataTree(
     def _replace_node(
         self: DataTree,
         data: Dataset | Default = _default,
-        children: Mapping[str, DataTree] | Default = _default,
+        children: dict[str, DataTree] | Default = _default,
     ) -> None:
         if data is _default:
             data = self.ds
         if children is _default:
-            children = self.children
+            children = self._children
 
         for child_name, child in children.items():
             if child_name in data.variables:
@@ -763,7 +763,7 @@ class DataTree(
     ) -> DataTree:
         """Copy just one node of a tree"""
         data = self.ds.copy(deep=deep)
-        new_node = DataTree(data, name=self.name)
+        new_node: DataTree = DataTree(data, name=self.name)
         return new_node
 
     def __copy__(self: DataTree) -> DataTree:

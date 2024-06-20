@@ -675,7 +675,7 @@ class TestInheritance:
                 }
             )
 
-        dt = DataTree()
+        dt: DataTree = DataTree()
         dt["/a"] = xr.DataArray([1, 2], dims=["x"])
         with pytest.raises(
             ValueError, match="cannot reindex or align along dimension 'x'"
