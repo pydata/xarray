@@ -2642,7 +2642,7 @@ def test_custom_grouper() -> None:
     ds = xr.DataArray(
         dims="time",
         data=np.arange(20),
-        coords={"time": ("time", pd.date_range("2000-01-01", freq="3ME", periods=20))},
+        coords={"time": ("time", pd.date_range("2000-01-01", freq="3MS", periods=20))},
     )
     actual = ds.groupby(time=YearGrouper()).mean()
     expected = ds.groupby("time.year").mean()
