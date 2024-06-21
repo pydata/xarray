@@ -49,7 +49,7 @@ Regardless of how you interact with us, we're always thrilled to hear from you!
 
         intro -->|I wish Xarray could...| bug
 
-        
+
         pr <-->|my PR is quiet| dev
         contrib -->pr
 
