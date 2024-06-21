@@ -7,9 +7,7 @@ The links to each resource are provided below the diagram.
 Regardless of how you interact with us, we're always thrilled to hear from you!
 
 .. mermaid::
-    ---
-    title: Navigating Xarray Resources
-    ---
+    :alt: Flowchart illustrating the different ways to access help using or contributing to Xarray.
 
     flowchart TD
         intro[Welcome to Xarray! How can we help?]:::quesNodefmt
@@ -43,9 +41,7 @@ Regardless of how you interact with us, we're always thrilled to hear from you!
             bug -->|I just wanted to tell you| report
             bug<-->|I'd like to fix the bug!| contrib
             bug<-->|my plan was approved!| contrib
-
         end
-
 
         intro -->|I wish Xarray could...| bug
 
