@@ -6774,7 +6774,7 @@ class DataArray(
 
         grouper: Grouper
         if group is not None:
-            if not groupers:
+            if groupers:
                 raise ValueError(
                     "Providing a combination of `group` and **groupers is not supported."
                 )
