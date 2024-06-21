@@ -59,7 +59,7 @@ except ImportError:
     )
 
 nbsphinx_allow_errors = False
-nbsphinx_requirejs_path = ''
+nbsphinx_requirejs_path = ""
 
 # -- General configuration ------------------------------------------------
 
