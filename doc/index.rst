@@ -66,6 +66,7 @@ efficient, and fun!
    Tutorials & Videos <tutorials-and-videos>
    API Reference <api>
    How do I ... <howdoi>
+   Getting Help <help-diagram>
    Ecosystem <ecosystem>
 
 .. toctree::
