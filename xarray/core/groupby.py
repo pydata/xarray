@@ -19,8 +19,10 @@ from xarray.core.alignment import align
 from xarray.core.arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
 from xarray.core.concat import concat
+from xarray.core.coordinates import Coordinates
 from xarray.core.formatting import format_array_flat
 from xarray.core.indexes import (
+    PandasIndex,
     create_default_index_implicit,
     filter_indexes_from_coords,
 )
@@ -650,11 +652,12 @@ class GroupBy(Generic[T_Xarray]):
 
         (grouper,) = self.groupers
         obj = self._original_obj
+        name = grouper.name
         group = grouper.group
         codes = self._codes
         dims = group.dims
 
-        if isinstance(grouper.group, _DummyGroup):
+        if isinstance(group, _DummyGroup):
             group = coord = group.to_dataarray()
         else:
             coord = grouper.unique_coord
@@ -662,12 +665,7 @@ class GroupBy(Generic[T_Xarray]):
                 assert coord.ndim == 1
                 (coord_dim,) = coord.dims
                 # TODO: explicitly create Index here
-                coord = DataArray(
-                    dims=coord_dim,
-                    data=coord.data,
-                    attrs=coord.attrs,
-                    coords={coord_dim: coord.data},
-                )
+                coord = DataArray(coord, coords={coord_dim: coord.data})
         name = grouper.name
 
         if not isinstance(other, (Dataset, DataArray)):
@@ -783,6 +781,7 @@ class GroupBy(Generic[T_Xarray]):
 
         obj = self._original_obj
         (grouper,) = self.groupers
+        name = grouper.name
         isbin = isinstance(grouper.grouper, BinGrouper)
 
         if keep_attrs is None:
@@ -814,14 +813,14 @@ class GroupBy(Generic[T_Xarray]):
         # weird backcompat
         # reducing along a unique indexed dimension with squeeze=True
         # should raise an error
-        if (dim is None or dim == grouper.name) and grouper.name in obj.xindexes:
-            index = obj.indexes[grouper.name]
+        if (dim is None or dim == name) and grouper.name in obj.xindexes:
+            index = obj.indexes[name]
             if index.is_unique and self._squeeze:
-                raise ValueError(f"cannot reduce over dimensions {grouper.name!r}")
+                raise ValueError(f"cannot reduce over dimensions {name!r}")
 
         unindexed_dims: tuple[Hashable, ...] = tuple()
         if isinstance(grouper.group, _DummyGroup) and not isbin:
-            unindexed_dims = (grouper.name,)
+            unindexed_dims = (name,)
 
         parsed_dim: tuple[Hashable, ...]
         if isinstance(dim, str):
@@ -865,10 +864,12 @@ class GroupBy(Generic[T_Xarray]):
         # in the grouped variable
         group_dims = grouper.group.dims
         if set(group_dims).issubset(set(parsed_dim)):
-            new_coord = Variable(
-                dims=grouper.name, data=np.array(output_index), attrs=self._codes.attrs
+            result = result.assign_coords(
+                Coordinates(
+                    coords={name: (name, np.array(output_index))},
+                    indexes={name: PandasIndex(output_index, dim=name)},
+                )
             )
-            result = result.assign_coords({grouper.name: new_coord})
             result = result.drop_vars(unindexed_dims)
 
         # broadcast and restore non-numeric data variables (backcompat)

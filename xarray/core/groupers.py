@@ -166,7 +166,7 @@ class UniqueGrouper(Grouper):
             full_index = pd.RangeIndex(self.group.size)
         else:
             codes = self.group.copy(data=size_range)
-            unique_coord = self.group.variable
+            unique_coord = self.group.variable.to_base_variable()
             full_index = pd.Index(unique_coord.data)
 
         return EncodedGroups(
