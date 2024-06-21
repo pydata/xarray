@@ -68,7 +68,10 @@ nbsphinx_allow_errors = False
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+
+# sphinxcontrib.mermaid should go first or the diagram will not render (https://github.com/mgaitan/sphinxcontrib-mermaid/issues/124)
 extensions = [
+    "sphinxcontrib.mermaid",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
@@ -85,7 +88,6 @@ extensions = [
     "sphinxext.rediraffe",
     "sphinx_design",
     "sphinx_inline_tabs",
-    "sphinxcontrib.mermaid",
 ]
 
 
