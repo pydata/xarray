@@ -1,5 +1,5 @@
-Getting help-diagram
-====================
+Getting Help
+============
 
 Navigating the wealth of resources available for Xarray can be overwhelming.
 We've created this flow chart to help guide you towards the best way to get help, depending on what you're working towards.
@@ -11,9 +11,10 @@ Regardless of how you interact with us, we're always thrilled to hear from you!
 
     flowchart TD
         intro[Welcome to Xarray! How can we help?]:::quesNodefmt
-        usage([fa:fa-chalkboard-user Xarray Tutorials
+        usage(["fa:fa-chalkboard-user Xarray Tutorials
             fab:fa-readme Xarray Docs
-            fab:fa-google Google/fab:fa-stack-overflow Stack Exchange]):::ansNodefmt
+            fab:fa-google Google/fab:fa-stack-overflow Stack Exchange
+            fa:fa-robot Ask AI/a Language Learning Model (LLM)"]):::ansNodefmt
         API([fab:fa-readme Xarray Docs
             fab:fa-readme extension's docs]):::ansNodefmt
         help([fab:fa-github Xarray Discussions
@@ -24,31 +25,32 @@ Regardless of how you interact with us, we're always thrilled to hear from you!
             fab:fa-github Xarray Issues]):::ansNodefmt
         contrib([fa:fa-book-open Xarray Contributor's Guide]):::ansNodefmt
         pr(["fab:fa-github Pull Request (PR)"]):::ansNodefmt
-        dev([fab:fa-github '@' Ping a Maintainer
+        dev([fab:fa-github Comment on your PR
             fa:fa-users Developer's Meeting]):::ansNodefmt
         report[Thanks for letting us know!]:::quesNodefmt
-        merged[Woohoo! Your PR was merged!]:::quesNodefmt
+        merged[fa:fa-hands-clapping Your PR was merged.
+            Thanks for contributing to Xarray!]:::quesNodefmt
 
 
         intro -->|How do I use Xarray?| usage
         usage -->|"with extensions (like Dask)"| API
 
         usage -->|I'd like some more help| help
-        intro -->|I found a bug or typo| bug
+        intro -->|I found a bug| bug
+        intro -->|I'd like to make a small change| contrib
         subgraph bugcontrib[Bugs and Contributions]
             bug
             contrib
             bug -->|I just wanted to tell you| report
             bug<-->|I'd like to fix the bug!| contrib
-            bug<-->|my plan was approved!| contrib
+            pr -->|my PR was approved| merged
         end
+
 
         intro -->|I wish Xarray could...| bug
 
-        pr -->|my PR was approved| merged
-
-        pr -->|my PR is quiet| dev
-        bug -->|my issue is quiet| dev
+        
+        pr <-->|my PR is quiet| dev
         contrib -->pr
 
         classDef quesNodefmt fill:#9DEEF4,stroke:#206C89
