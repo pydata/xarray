@@ -13,4 +13,3 @@ It is designed as an entry point for new users, and it provided an introduction 
    installing
    quick-overview
    faq
-   help-diagram

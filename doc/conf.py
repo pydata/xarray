@@ -59,6 +59,7 @@ except ImportError:
     )
 
 nbsphinx_allow_errors = False
+nbsphinx_requirejs_path = ''
 
 # -- General configuration ------------------------------------------------
 
@@ -69,7 +70,6 @@ nbsphinx_allow_errors = False
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 
-# sphinxcontrib.mermaid should go first or the diagram will not render (https://github.com/mgaitan/sphinxcontrib-mermaid/issues/124)
 extensions = [
     "sphinxcontrib.mermaid",
     "sphinx.ext.autodoc",
