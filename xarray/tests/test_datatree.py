@@ -149,6 +149,20 @@ class TestStoreDatasets:
         assert not eve.is_hollow
 
 
+class TestToDataset:
+    def test_to_dataset(self):
+        base = xr.Dataset(coords={"a": 1})
+        sub = xr.Dataset(coords={"b": 2})
+        dt = DataTree.from_dict({"/": base, "/sub": sub})
+
+        assert_identical(dt.to_dataset(local=True), base)
+        assert_identical(dt["sub"].to_dataset(local=True), sub)
+
+        sub2 = xr.Dataset(coords={"a": 1, "b": 2})
+        assert_identical(dt.to_dataset(local=False), base)
+        assert_identical(dt["sub"].to_dataset(local=False), sub2)
+
+
 class TestVariablesChildrenNameCollisions:
     def test_parent_already_has_variable_with_childs_name(self):
         dt: DataTree = DataTree(data=xr.Dataset({"a": [0], "b": 1}))

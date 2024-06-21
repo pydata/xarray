@@ -347,6 +347,10 @@ class DataTree(
     _parent: DataTree | None
     _children: dict[str, DataTree]
     _cache: dict[str, Any]  # used by _CachedAccessor
+    _local_variables: dict[Hashable, Variable]
+    _local_coord_names: set[Hashable]
+    _local_dims: dict[Hashable, int]
+    _local_indexes: dict[Hashable, Index]
     _variables: dict[Hashable, Variable]
     _coord_names: set[Hashable]
     _dims: dict[Hashable, int]
@@ -360,6 +364,10 @@ class DataTree(
         "_parent",
         "_children",
         "_cache",  # used by _CachedAccessor
+        "_local_variables",
+        "_local_coord_names",
+        "_local_dims",
+        "_local_indexes",
         "_variables",
         "_coord_names",
         "_dims",
@@ -418,11 +426,16 @@ class DataTree(
         self.parent = parent
 
     def _set_node_data(self, ds: Dataset) -> None:
-        # these node data attributes are finalized by _post_attach
-        self._variables = ds._variables
-        self._coord_names = ds._coord_names
-        self._dims = ds._dims
-        self._indexes = ds._indexes
+        # local data attributes for to_dataset(local=True)
+        self._local_variables = ds._variables
+        self._local_coord_names = ds._coord_names
+        self._local_dims = ds._dims
+        self._local_indexes = ds._indexes
+        # these data attributes with inheritance are finalized by _post_attach
+        self._variables = dict(ds._variables)
+        self._coord_names = set(ds._coord_names)
+        self._dims = dict(ds._dims)
+        self._indexes = dict(ds._indexes)
         self._encoding = ds._encoding
         self._attrs = ds._attrs
         self._close = ds._close
@@ -481,22 +494,27 @@ class DataTree(
         ds = _coerce_to_dataset(data)
         self._replace_node(ds)
 
-    def to_dataset(self) -> Dataset:
+    def to_dataset(self, local: bool = False) -> Dataset:
         """
         Return the data in this node as a new xarray.Dataset object.
+
+        Parameters
+        ----------
+        local : bool, optional
+            If True, only include coordinates, indexes and dimensions defined
+            at the level of this DataTree node, excluding inherited coordinates.
 
         See Also
         --------
         DataTree.ds
         """
-        # TODO: copy these container objects?
         return Dataset._construct_direct(
-            self._variables,
-            self._coord_names,
-            self._dims,
-            self._attrs,
-            self._indexes,
-            self._encoding,
+            dict(self._local_variables if local else self._variables),
+            set(self._local_coord_names if local else self._coord_names),
+            dict(self._local_dims if local else self._dims),
+            None if self._attrs is None else dict(self._attrs),
+            self._local_indexes if local else self._indexes,
+            None if self._encoding is None else dict(self._encoding),
             self._close,
         )
 
