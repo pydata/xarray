@@ -666,7 +666,6 @@ class GroupBy(Generic[T_Xarray]):
                 (coord_dim,) = coord.dims
                 # TODO: explicitly create Index here
                 coord = DataArray(coord, coords={coord_dim: coord.data})
-        name = grouper.name
 
         if not isinstance(other, (Dataset, DataArray)):
             raise TypeError(
@@ -813,7 +812,7 @@ class GroupBy(Generic[T_Xarray]):
         # weird backcompat
         # reducing along a unique indexed dimension with squeeze=True
         # should raise an error
-        if (dim is None or dim == name) and grouper.name in obj.xindexes:
+        if (dim is None or dim == name) and name in obj.xindexes:
             index = obj.indexes[name]
             if index.is_unique and self._squeeze:
                 raise ValueError(f"cannot reduce over dimensions {name!r}")
@@ -876,8 +875,7 @@ class GroupBy(Generic[T_Xarray]):
         for name, var in non_numeric.items():
             if all(d not in var.dims for d in parsed_dim):
                 result[name] = var.variable.set_dims(
-                    (grouper.name,) + var.dims,
-                    (result.sizes[grouper.name],) + var.shape,
+                    (name,) + var.dims, (result.sizes[name],) + var.shape
                 )
 
         if not isinstance(result, Dataset):
