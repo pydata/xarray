@@ -213,7 +213,7 @@ class BinGrouper(Grouper):
             binned_codes, getattr(group, "coords", None), name=new_dim_name
         )
         unique_coord = Variable(
-            dims=new_dim_name, data=pd.Index(unique_values), attrs=group.attrs
+            dims=new_dim_name, data=unique_values, attrs=group.attrs
         )
         return EncodedGroups(
             codes=codes, full_index=full_index, unique_coord=unique_coord

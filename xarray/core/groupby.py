@@ -246,7 +246,7 @@ class _DummyGroup(Generic[T_Xarray]):
         return self.to_dataarray()
 
 
-T_Group = Union["T_DataArray", "IndexVariable", _DummyGroup]
+T_Group = Union["T_DataArray", _DummyGroup]
 
 
 def _ensure_1d(group: T_Group, obj: T_DataWithCoords) -> tuple[
@@ -256,7 +256,7 @@ def _ensure_1d(group: T_Group, obj: T_DataWithCoords) -> tuple[
     list[Hashable],
 ]:
     # 1D cases: do nothing
-    if isinstance(group, (IndexVariable, _DummyGroup)) or group.ndim == 1:
+    if isinstance(group, _DummyGroup) or group.ndim == 1:
         return group, obj, None, []
 
     from xarray.core.dataarray import DataArray
@@ -271,9 +271,7 @@ def _ensure_1d(group: T_Group, obj: T_DataWithCoords) -> tuple[
         newobj = obj.stack({stacked_dim: orig_dims})
         return newgroup, newobj, stacked_dim, inserted_dims
 
-    raise TypeError(
-        f"group must be DataArray, IndexVariable or _DummyGroup, got {type(group)!r}."
-    )
+    raise TypeError(f"group must be DataArray or _DummyGroup, got {type(group)!r}.")
 
 
 @dataclass
@@ -315,7 +313,7 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
         # might be used multiple times.
         self.grouper = copy.deepcopy(self.grouper)
 
-        self.group: T_Group = _resolve_group(self.obj, self.group)
+        self.group = _resolve_group(self.obj, self.group)
 
         (
             self.group1d,
@@ -382,7 +380,9 @@ def _validate_groupby_squeeze(squeeze: bool | None) -> None:
         )
 
 
-def _resolve_group(obj: T_DataWithCoords, group: T_Group | Hashable) -> T_Group:
+def _resolve_group(
+    obj: T_DataWithCoords, group: T_Group | Hashable | IndexVariable
+) -> T_Group:
     from xarray.core.dataarray import DataArray
 
     error_msg = (
