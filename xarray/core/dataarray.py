@@ -6772,14 +6772,18 @@ class DataArray(
 
         _validate_groupby_squeeze(squeeze)
 
+        grouper: Grouper
         if group is not None:
-            assert not groupers
+            if not groupers:
+                raise ValueError(
+                    "Providing a combination of `group` and **groupers is not supported."
+                )
             grouper = UniqueGrouper()
         else:
             if len(groupers) > 1:
                 raise ValueError("grouping by multiple variables is not supported yet.")
             if not groupers:
-                raise ValueError
+                raise ValueError("**groupers must be provided if `group` is not.")
             group, grouper = next(iter(groupers.items()))
 
         rgrouper = ResolvedGrouper(grouper, group, self)
