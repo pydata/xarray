@@ -166,7 +166,7 @@ def create_encoded_masked_and_scaled_data(dtype: np.dtype) -> Dataset:
 
 def create_unsigned_masked_scaled_data(dtype: np.dtype) -> Dataset:
     encoding = {
-        "_FillValue": 255,
+        "_FillValue": -1,
         "_Unsigned": "true",
         "dtype": "i1",
         "add_offset": dtype.type(10),

@@ -535,10 +535,11 @@ class UnsignedIntegerCoder(VariableCoder):
                 if unsigned == "true":
                     unsigned_dtype = np.dtype(f"u{data.dtype.itemsize}")
                     transform = partial(np.asarray, dtype=unsigned_dtype)
-                    data = lazy_elemwise_func(data, transform, unsigned_dtype)
                     if "_FillValue" in attrs:
-                        new_fill = unsigned_dtype.type(attrs["_FillValue"])
-                        attrs["_FillValue"] = new_fill
+                        # use view here to prevent OverflowError
+                        new_fill = np.array(attrs["_FillValue"], dtype=data.dtype)
+                        attrs["_FillValue"] = new_fill.view(unsigned_dtype)
+                    data = lazy_elemwise_func(data, transform, unsigned_dtype)
             elif data.dtype.kind == "u":
                 if unsigned == "false":
                     signed_dtype = np.dtype(f"i{data.dtype.itemsize}")
