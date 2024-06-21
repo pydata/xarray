@@ -296,15 +296,16 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
 
 
 def _index_indexer_1d(old_indexer, applied_indexer, size: int):
-    assert isinstance(applied_indexer, integer_types + (slice, np.ndarray))
     if isinstance(applied_indexer, slice) and applied_indexer == slice(None):
         # shortcut for the usual case
         return old_indexer
     if isinstance(old_indexer, slice):
         if isinstance(applied_indexer, slice):
             indexer = slice_slice(old_indexer, applied_indexer, size)
+        elif isinstance(applied_indexer, integer_types):
+            indexer = range(*old_indexer.indices(size))[applied_indexer]  # type: ignore[assignment]
         else:
-            indexer = _expand_slice(old_indexer, size)[applied_indexer]  # type: ignore[assignment]
+            indexer = _expand_slice(old_indexer, size)[applied_indexer]
     else:
         indexer = old_indexer[applied_indexer]
     return indexer
@@ -591,7 +592,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
 class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and outer indexing lazy."""
 
-    __slots__ = ("array", "key")
+    __slots__ = ("array", "key", "_shape")
 
     def __init__(self, array: Any, key: ExplicitIndexer | None = None):
         """
@@ -614,6 +615,14 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         self.array = as_indexable(array)
         self.key = key
 
+        shape: _Shape = ()
+        for size, k in zip(self.array.shape, self.key.tuple):
+            if isinstance(k, slice):
+                shape += (len(range(*k.indices(size))),)
+            elif isinstance(k, np.ndarray):
+                shape += (k.size,)
+        self._shape = shape
+
     def _updated_key(self, new_key: ExplicitIndexer) -> BasicIndexer | OuterIndexer:
         iter_new_key = iter(expanded_indexer(new_key.tuple, self.ndim))
         full_key = []
@@ -630,13 +639,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
     @property
     def shape(self) -> _Shape:
-        shape = []
-        for size, k in zip(self.array.shape, self.key.tuple):
-            if isinstance(k, slice):
-                shape.append(len(range(*k.indices(size))))
-            elif isinstance(k, np.ndarray):
-                shape.append(k.size)
-        return tuple(shape)
+        return self._shape
 
     def get_duck_array(self):
         if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
