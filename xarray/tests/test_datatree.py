@@ -1,3 +1,4 @@
+import typing
 from copy import copy, deepcopy
 from textwrap import dedent
 
@@ -153,14 +154,15 @@ class TestToDataset:
     def test_to_dataset(self):
         base = xr.Dataset(coords={"a": 1})
         sub = xr.Dataset(coords={"b": 2})
-        dt = DataTree.from_dict({"/": base, "/sub": sub})
+        tree = DataTree.from_dict({"/": base, "/sub": sub})
+        subtree = typing.cast(DataTree, tree["sub"])
 
-        assert_identical(dt.to_dataset(local=True), base)
-        assert_identical(dt["sub"].to_dataset(local=True), sub)
+        assert_identical(tree.to_dataset(local=True), base)
+        assert_identical(subtree.to_dataset(local=True), sub)
 
-        sub2 = xr.Dataset(coords={"a": 1, "b": 2})
-        assert_identical(dt.to_dataset(local=False), base)
-        assert_identical(dt["sub"].to_dataset(local=False), sub2)
+        sub_and_base = xr.Dataset(coords={"a": 1, "b": 2})
+        assert_identical(tree.to_dataset(local=False), base)
+        assert_identical(subtree.to_dataset(local=False), sub_and_base)
 
 
 class TestVariablesChildrenNameCollisions:
