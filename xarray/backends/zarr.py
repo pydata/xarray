@@ -1230,12 +1230,12 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 ds = open_dataset(
                     filename_or_obj, group=parent, engine="zarr", **kwargs
                 )
-                return DataTree.from_native_dict({str(parent): ds})
+                return DataTree.from_dict({str(parent): ds})
         else:
             parent = NodePath("/")
             stores = ZarrStore.open_store(filename_or_obj, group=parent)
         ds = open_dataset(filename_or_obj, group=parent, engine="zarr", **kwargs)
-        tree_root = DataTree.from_native_dict({str(parent): ds})
+        tree_root = DataTree.from_dict({str(parent): ds})
         for path_group, store in stores.items():
             ds = open_dataset(
                 filename_or_obj, store=store, group=path_group, engine="zarr", **kwargs

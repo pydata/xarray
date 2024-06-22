@@ -459,7 +459,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         manager = store._manager
         ds = open_dataset(store, **kwargs)
-        tree_root = DataTree.from_native_dict({str(parent): ds})
+        tree_root = DataTree.from_dict({str(parent): ds})
         for path_group in _iter_nc_groups(store.ds, parent=parent):
             group_store = H5NetCDFStore(manager, group=path_group, **kwargs)
             store_entrypoint = StoreBackendEntrypoint()
