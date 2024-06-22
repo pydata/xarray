@@ -428,13 +428,14 @@ def open_dataset(
     chunks : int, dict, 'auto' or None, default: None
         If provided, used to load the data into dask arrays.
 
-        - ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
+        - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
         - ``chunks=None`` skips using dask, which is generally faster for
           small arrays.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
-        - ``chunks={}`` loads the data with dask using engine preferred chunks if
-          exposed by the backend, otherwise with a single chunk for all arrays.
+        - ``chunks={}`` loads the data with dask using the engine's preferred chunk
+          size, generally identical to the format's chunk size. If not available, a
+          single chunk for all arrays.
 
         See dask chunking for more details.
     cache : bool, optional
