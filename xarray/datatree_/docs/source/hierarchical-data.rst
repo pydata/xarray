@@ -156,7 +156,7 @@ Let's use a different example of a tree to discuss more complex relationships be
 
 .. ipython:: python
 
-    vertebrates = DataTree.from_paths_dict(
+    vertebrates = DataTree.from_dict(
         name="Vertebrae",
         d={
             "/Sharks": None,
@@ -174,7 +174,7 @@ Let's use a different example of a tree to discuss more complex relationships be
         "/Bony Skeleton/Four Limbs/Amniotic Egg/Two Fenestrae/Dinosaurs"
     ]
 
-We have used the :py:meth:`~DataTree.from_paths_dict` constructor method as an alternate way to quickly create a whole tree,
+We have used the :py:meth:`~DataTree.from_dict` constructor method as an alternate way to quickly create a whole tree,
 and :ref:`filesystem paths` (to be explained shortly) to select two nodes of interest.
 
 .. ipython:: python
@@ -321,7 +321,7 @@ Given two nodes in a tree, we can also find their relative path:
 
 You can use this filepath feature to build a nested tree from a dictionary of filesystem-like paths and corresponding ``xarray.Dataset`` objects in a single step.
 If we have a dictionary where each key is a valid path, and each value is either valid data or ``None``,
-we can construct a complex tree quickly using the alternative constructor :py:meth:`DataTree.from_paths_dict()`:
+we can construct a complex tree quickly using the alternative constructor :py:meth:`DataTree.from_dict()`:
 
 .. ipython:: python
 
@@ -331,14 +331,14 @@ we can construct a complex tree quickly using the alternative constructor :py:me
         "/a/b": xr.Dataset({"zed": np.NaN}),
         "a/c/d": None,
     }
-    dt = DataTree.from_paths_dict(d)
+    dt = DataTree.from_dict(d)
     dt
 
 .. note::
 
     Notice that using the path-like syntax will also create any intermediate empty nodes necessary to reach the end of the specified path
     (i.e. the node labelled `"c"` in this case.)
-    This is to help avoid lots of redundant entries when creating deeply-nested trees using :py:meth:`DataTree.from_paths_dict`.
+    This is to help avoid lots of redundant entries when creating deeply-nested trees using :py:meth:`DataTree.from_dict`.
 
 .. _iterating over trees:
 
@@ -354,7 +354,7 @@ This returns an iterable of nodes, which yields them in depth-first order.
         print(node.path)
 
 A very useful pattern is to use :py:class:`~DataTree.subtree` conjunction with the :py:class:`~DataTree.path` property to manipulate the nodes however you wish,
-then rebuild a new tree using :py:meth:`DataTree.from_paths_dict()`.
+then rebuild a new tree using :py:meth:`DataTree.from_dict()`.
 
 For example, we could keep only the nodes containing data by looping over all nodes,
 checking if they contain any data using :py:class:`~DataTree.has_data`,
@@ -363,11 +363,11 @@ then rebuilding a new tree using only the paths of those nodes:
 .. ipython:: python
 
     non_empty_nodes = {node.path: node.ds for node in dt.subtree if node.has_data}
-    DataTree.from_paths_dict(non_empty_nodes)
+    DataTree.from_dict(non_empty_nodes)
 
 You can see this tree is similar to the ``dt`` object above, except that it is missing the empty nodes ``a/c`` and ``a/c/d``.
 
-(If you want to keep the name of the root node, you will need to add the ``name`` kwarg to :py:class:`from_dict`, i.e. ``DataTree.from_paths_dict(non_empty_nodes, name=dt.root.name)``.)
+(If you want to keep the name of the root node, you will need to add the ``name`` kwarg to :py:class:`from_dict`, i.e. ``DataTree.from_dict(non_empty_nodes, name=dt.root.name)``.)
 
 .. _manipulating trees:
 
@@ -384,7 +384,7 @@ We can use :py:meth:`DataTree.match` for this:
 
 .. ipython:: python
 
-    dt = DataTree.from_paths_dict(
+    dt = DataTree.from_dict(
         {
             "/a/A": None,
             "/a/B": None,
@@ -402,7 +402,7 @@ First lets recreate the tree but with an `age` data variable in every node:
 
 .. ipython:: python
 
-    simpsons = DataTree.from_paths_dict(
+    simpsons = DataTree.from_dict(
         d={
             "/": xr.Dataset({"age": 83}),
             "/Herbert": xr.Dataset({"age": 40}),
@@ -474,7 +474,7 @@ let's first create a example scientific dataset.
     time_stamps1 = time_stamps(n_samples=15, T=1.5)
     time_stamps2 = time_stamps(n_samples=10, T=1.0)
 
-    voltages = DataTree.from_paths_dict(
+    voltages = DataTree.from_dict(
         {
             "/oscilloscope1": xr.Dataset(
                 {
@@ -584,14 +584,14 @@ We can check if any two trees are isomorphic using the :py:meth:`DataTree.isomor
 .. ipython:: python
     :okexcept:
 
-    dt1 = DataTree.from_paths_dict({"a": None, "a/b": None})
-    dt2 = DataTree.from_paths_dict({"a": None})
+    dt1 = DataTree.from_dict({"a": None, "a/b": None})
+    dt2 = DataTree.from_dict({"a": None})
     dt1.isomorphic(dt2)
 
-    dt3 = DataTree.from_paths_dict({"a": None, "b": None})
+    dt3 = DataTree.from_dict({"a": None, "b": None})
     dt1.isomorphic(dt3)
 
-    dt4 = DataTree.from_paths_dict({"A": None, "A/B": xr.Dataset({"foo": 1})})
+    dt4 = DataTree.from_dict({"A": None, "A/B": xr.Dataset({"foo": 1})})
     dt1.isomorphic(dt4)
 
 If the trees are not isomorphic a :py:class:`~TreeIsomorphismError` will be raised.
@@ -605,7 +605,7 @@ we can do arithmetic between them.
 
 .. ipython:: python
 
-    currents = DataTree.from_paths_dict(
+    currents = DataTree.from_dict(
         {
             "/oscilloscope1": xr.Dataset(
                 {

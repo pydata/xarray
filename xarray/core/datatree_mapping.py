@@ -211,7 +211,7 @@ def map_over_subtree(func: Callable) -> Callable:
                 relative_path = "/" if relative_path == "." else relative_path
                 out_tree_contents[relative_path] = output_node_data
 
-            new_tree = DataTree.from_paths_dict(
+            new_tree = DataTree.from_dict(
                 out_tree_contents,
                 name=first_tree.name,
             )

@@ -64,7 +64,7 @@ You can create a `DataTree` object in 3 ways:
 2. Using the init method of `DataTree`, which creates an individual node.
    You can then specify the nodes' relationships to one other, either by setting `.parent` and `.children` attributes,
    or through `__get/setitem__` access, e.g. `dt['path/to/node'] = DataTree()`.
-3. Create a tree from a dictionary of paths to datasets using `DataTree.from_paths_dict()`.
+3. Create a tree from a dictionary of paths to datasets using `DataTree.from_dict()`.
 
 ### Development Roadmap
 

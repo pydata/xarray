@@ -668,8 +668,8 @@ class TestFormatting:
         assert "Coordinates" in repr(dt)
 
     def test_diff_datatree_repr_structure(self):
-        dt_1: DataTree = DataTree.from_paths_dict({"a": None, "a/b": None, "a/c": None})
-        dt_2: DataTree = DataTree.from_paths_dict({"d": None, "d/e": None})
+        dt_1: DataTree = DataTree.from_dict({"a": None, "a/b": None, "a/c": None})
+        dt_2: DataTree = DataTree.from_dict({"d": None, "d/e": None})
 
         expected = dedent(
             """\
@@ -682,8 +682,8 @@ class TestFormatting:
         assert actual == expected
 
     def test_diff_datatree_repr_node_names(self):
-        dt_1: DataTree = DataTree.from_paths_dict({"a": None})
-        dt_2: DataTree = DataTree.from_paths_dict({"b": None})
+        dt_1: DataTree = DataTree.from_dict({"a": None})
+        dt_2: DataTree = DataTree.from_dict({"b": None})
 
         expected = dedent(
             """\
@@ -699,10 +699,10 @@ class TestFormatting:
         # casting to int64 explicitly ensures that int64s are created on all architectures
         ds1 = xr.Dataset({"u": np.int64(0), "v": np.int64(1)})
         ds3 = xr.Dataset({"w": np.int64(5)})
-        dt_1: DataTree = DataTree.from_paths_dict({"a": ds1, "a/b": ds3})
+        dt_1: DataTree = DataTree.from_dict({"a": ds1, "a/b": ds3})
         ds2 = xr.Dataset({"u": np.int64(0)})
         ds4 = xr.Dataset({"w": np.int64(6)})
-        dt_2: DataTree = DataTree.from_paths_dict({"a": ds2, "a/b": ds4})
+        dt_2: DataTree = DataTree.from_dict({"a": ds2, "a/b": ds4})
 
         expected = dedent(
             """\

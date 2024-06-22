@@ -264,7 +264,7 @@ class TestUpdate:
         assert child.name == "a"
 
     def test_update_overwrite(self):
-        actual = DataTree.from_paths_dict({"a": DataTree(xr.Dataset({"x": 1}))})
+        actual = DataTree.from_dict({"a": DataTree(xr.Dataset({"x": 1}))})
         actual.update({"a": DataTree(xr.Dataset({"x": 2}))})
         expected = DataTree.from_dict({"a": DataTree(xr.Dataset({"x": 2}))})
         assert_equal(actual, expected)
@@ -326,10 +326,10 @@ class TestCopy:
                 assert node.attrs["Test"] is copied_node.attrs["Test"]
 
     def test_copy_subtree(self):
-        dt = DataTree.from_paths_dict({"/level1/level2/level3": xr.Dataset()})
+        dt = DataTree.from_dict({"/level1/level2/level3": xr.Dataset()})
 
         actual = dt["/level1/level2"].copy()
-        expected = DataTree.from_paths_dict({"/level3": xr.Dataset()}, name="level2")
+        expected = DataTree.from_dict({"/level3": xr.Dataset()}, name="level2")
 
         assert_identical(actual, expected)
 
@@ -498,7 +498,7 @@ class TestDictionaryInterface: ...
 class TestTreeFromDict:
     def test_data_in_root(self):
         dat = xr.Dataset()
-        dt = DataTree.from_paths_dict({"/": dat})
+        dt = DataTree.from_dict({"/": dat})
         assert dt.name is None
         assert dt.parent is None
         assert dt.children == {}
@@ -506,7 +506,7 @@ class TestTreeFromDict:
 
     def test_one_layer(self):
         dat1, dat2 = xr.Dataset({"a": 1}), xr.Dataset({"b": 2})
-        dt = DataTree.from_paths_dict({"run1": dat1, "run2": dat2})
+        dt = DataTree.from_dict({"run1": dat1, "run2": dat2})
         assert_identical(dt.to_dataset(), xr.Dataset())
         assert dt.name is None
         assert_identical(dt["run1"].to_dataset(), dat1)
@@ -516,14 +516,14 @@ class TestTreeFromDict:
 
     def test_two_layers(self):
         dat1, dat2 = xr.Dataset({"a": 1}), xr.Dataset({"a": [1, 2]})
-        dt = DataTree.from_paths_dict({"highres/run": dat1, "lowres/run": dat2})
+        dt = DataTree.from_dict({"highres/run": dat1, "lowres/run": dat2})
         assert "highres" in dt.children
         assert "lowres" in dt.children
         highres_run = dt["highres/run"]
         assert_identical(highres_run.to_dataset(), dat1)
 
     def test_nones(self):
-        dt = DataTree.from_paths_dict({"d": None, "d/e": None})
+        dt = DataTree.from_dict({"d": None, "d/e": None})
         assert [node.name for node in dt.subtree] == [None, "d", "e"]
         assert [node.path for node in dt.subtree] == ["/", "/d", "/d/e"]
         assert_identical(dt["d/e"].to_dataset(), xr.Dataset())
@@ -546,13 +546,13 @@ class TestTreeFromDict:
         expected: DataTree = DataTree()
         expected["a"] = dat1
 
-        actual = DataTree.from_paths_dict({"a": dat1})
+        actual = DataTree.from_dict({"a": dat1})
 
         assert_identical(actual, expected)
 
     def test_roundtrip(self, simple_datatree):
         dt = simple_datatree
-        roundtrip = DataTree.from_paths_dict(dt.to_paths_dict())
+        roundtrip = DataTree.from_dict(dt.to_dict())
         assert roundtrip.equals(dt)
 
     @pytest.mark.xfail
@@ -561,7 +561,7 @@ class TestTreeFromDict:
 
         dt = simple_datatree
         dt.name = "root"
-        roundtrip = DataTree.from_paths_dict(dt.to_paths_dict())
+        roundtrip = DataTree.from_dict(dt.to_dict())
         assert roundtrip.equals(dt)
 
 
@@ -659,7 +659,7 @@ class TestAccess:
     def test_operation_with_attrs_but_no_data(self):
         # tests bug from xarray-datatree GH262
         xs = xr.Dataset({"testvar": xr.DataArray(np.ones((2, 3)))})
-        dt = DataTree.from_paths_dict({"node1": xs, "node2": xs})
+        dt = DataTree.from_dict({"node1": xs, "node2": xs})
         dt.attrs["test_key"] = 1  # sel works fine without this line
         dt.sel(dim_0=0)
 
@@ -919,7 +919,7 @@ class TestInheritance:
 
 class TestRestructuring:
     def test_drop_nodes(self):
-        sue = DataTree.from_paths_dict({"Mary": None, "Kate": None, "Ashley": None})
+        sue = DataTree.from_dict({"Mary": None, "Kate": None, "Ashley": None})
 
         # test drop just one node
         dropped_one = sue.drop_nodes(names="Mary")
@@ -940,7 +940,7 @@ class TestRestructuring:
 
     def test_assign(self):
         dt: DataTree = DataTree()
-        expected = DataTree.from_paths_dict({"/": xr.Dataset({"foo": 0}), "/a": None})
+        expected = DataTree.from_dict({"/": xr.Dataset({"foo": 0}), "/a": None})
 
         # kwargs form
         result = dt.assign(foo=xr.DataArray(0), a=DataTree())
@@ -986,7 +986,7 @@ class TestPipe:
 class TestSubset:
     def test_match(self):
         # TODO is this example going to cause problems with case sensitivity?
-        dt: DataTree = DataTree.from_paths_dict(
+        dt: DataTree = DataTree.from_dict(
             {
                 "/a/A": None,
                 "/a/B": None,
@@ -995,7 +995,7 @@ class TestSubset:
             }
         )
         result = dt.match("*/B")
-        expected = DataTree.from_paths_dict(
+        expected = DataTree.from_dict(
             {
                 "/a/B": None,
                 "/b/B": None,
@@ -1004,7 +1004,7 @@ class TestSubset:
         assert_identical(result, expected)
 
     def test_filter(self):
-        simpsons: DataTree = DataTree.from_paths_dict(
+        simpsons: DataTree = DataTree.from_dict(
             d={
                 "/": xr.Dataset({"age": 83}),
                 "/Herbert": xr.Dataset({"age": 40}),
@@ -1015,7 +1015,7 @@ class TestSubset:
             },
             name="Abe",
         )
-        expected = DataTree.from_paths_dict(
+        expected = DataTree.from_dict(
             d={
                 "/": xr.Dataset({"age": 83}),
                 "/Herbert": xr.Dataset({"age": 40}),
@@ -1238,7 +1238,7 @@ class TestDictSerialization:
         #             infrared    (time, y, x) float64 144B 5.0 5.0 5.0 5.0 ... 5.0 5.0 5.0 5.0
         #             true_color  (time, y, x) float64 144B 6.0 6.0 6.0 6.0 ... 6.0 6.0 6.0 6.0
 
-        xdt = DataTree.from_paths_dict(
+        xdt = DataTree.from_dict(
             name="(root)",
             d={
                 "/": xr.Dataset(
@@ -1339,7 +1339,7 @@ class TestDictSerialization:
     @pytest.mark.parametrize("absolute_details", [False])
     @pytest.mark.parametrize("encoding", [False])
     @pytest.mark.parametrize("data", ["list"])
-    def test_to_dict_basic(
+    def test_to_native_dict_basic(
         self,
         encoding: bool,
         data: ToDictDataOptions,
@@ -1470,7 +1470,7 @@ class TestDictSerialization:
             },
         }
 
-        actual_dict = original_xdt.to_dict(
+        actual_dict = original_xdt.to_native_dict(
             data=data, encoding=encoding, absolute_details=absolute_details
         )
 
@@ -1482,7 +1482,7 @@ class TestDictSerialization:
     @pytest.mark.parametrize("encoding", [True, False])
     @pytest.mark.parametrize("data", [True, "list", "array"])
     @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")  # when data="array"
-    def test_to_and_from_dict_roundtrip(
+    def test_to_and_from_native_dict_roundtrip(
         self,
         encoding: bool,
         data: ToDictDataOptions,
@@ -1491,10 +1491,10 @@ class TestDictSerialization:
         # Test roundtrip for all the parameter space permitted by the `to_dict` method.
         original_xdt = TestDictSerialization.create_test_data()
 
-        actual_dict = original_xdt.to_dict(
+        actual_dict = original_xdt.to_native_dict(
             data=data, encoding=encoding, absolute_details=absolute_details
         )
 
         # Check the roundtrip: DataTree -> dict -> DataTree
-        roundtripped_xdt = DataTree.from_dict(actual_dict)
+        roundtripped_xdt = DataTree.from_native_dict(actual_dict)
         assert_identical(original_xdt, roundtripped_xdt)
