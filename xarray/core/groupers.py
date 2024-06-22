@@ -238,7 +238,7 @@ class BinGrouper(Grouper):
         )
 
 
-@dataclass
+@dataclass(repr=False)
 class TimeResampler(Resampler):
     """
     Grouper object specialized to resampling the time coordinate.
@@ -296,6 +296,13 @@ class TimeResampler(Resampler):
 
     index_grouper: CFTimeGrouper | pd.Grouper = field(init=False)
     group_as_index: pd.Index = field(init=False)
+
+    def __repr__(self):
+        return (
+            f"<TimeResampler freq={self.freq!r}, closed={self.closed!r}, "
+            f"label={self.label!r}, origin={self.origin!r}, "
+            f"offset={self.offset!r}, loffset={self.loffset!r}, base={self.base!r}>"
+        )
 
     def __post_init__(self):
         if self.loffset is not None:
