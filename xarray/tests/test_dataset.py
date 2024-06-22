@@ -38,6 +38,7 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
+from xarray.core.groupers import TimeResampler
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.types import ArrayLike
 from xarray.core.utils import is_scalar
@@ -1223,20 +1224,20 @@ class TestDataset:
                 )
             },
         )
-        actual = ds.chunk(time=freq).chunksizes["time"]
+        actual = ds.chunk(time=TimeResampler(freq)).chunksizes["time"]
         expected = tuple(ds.ones.resample(time=freq).sum().data.tolist())
         assert expected == actual
 
     def test_chunk_by_frequecy_errors(self):
         ds = Dataset({"foo": ("x", [1, 2, 3])})
         with pytest.raises(ValueError, match="virtual variable"):
-            ds.chunk(x="YE")
+            ds.chunk(x=TimeResampler("YE"))
         ds["x"] = ("x", [1, 2, 3])
         with pytest.raises(ValueError, match="datetime variables"):
-            ds.chunk(x="YE")
+            ds.chunk(x=TimeResampler("YE"))
         ds["x"] = ("x", xr.date_range("2001-01-01", periods=3, freq="D"))
         with pytest.raises(ValueError, match="Invalid frequency"):
-            ds.chunk(x="foo")
+            ds.chunk(x=TimeResampler("foo"))
 
     @requires_dask
     def test_dask_is_lazy(self) -> None:

@@ -2709,6 +2709,7 @@ class Dataset(
         dask.array.from_array
         """
         from xarray.core.dataarray import DataArray
+        from xarray.core.groupers import TimeResampler
 
         if chunks is None and not chunks_kwargs:
             warnings.warn(
@@ -2735,27 +2736,28 @@ class Dataset(
                 f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.sizes.keys())}"
             )
 
-        def _resolve_frequency(name: Hashable, freq: str) -> tuple[int, ...]:
+        def _resolve_frequency(
+            name: Hashable, resampler: TimeResampler
+        ) -> tuple[int, ...]:
             variable = self._variables.get(name, None)
             if variable is None:
                 raise ValueError(
-                    f"Cannot chunk by frequency string {freq!r} for virtual variables."
+                    f"Cannot chunk by resampler {resampler!r} for virtual variables."
                 )
             elif not _contains_datetime_like_objects(variable):
                 raise ValueError(
-                    f"chunks={freq!r} only supported for datetime variables. "
+                    f"chunks={resampler!r} only supported for datetime variables. "
                     f"Received variable {name!r} with dtype {variable.dtype!r} instead."
                 )
 
+            assert variable.ndim == 1
             chunks: tuple[int, ...] = tuple(
                 DataArray(
                     np.ones(variable.shape, dtype=int),
                     dims=(name,),
                     coords={name: variable},
                 )
-                # TODO: This could be generalized to `freq` being a `Resampler` object,
-                # and using `groupby` instead of `resample`
-                .resample({name: freq})
+                .resample({name: resampler})
                 .sum()
                 .data.tolist()
             )
@@ -2764,7 +2766,7 @@ class Dataset(
         chunks_mapping_ints: Mapping[Any, T_ChunkDim] = {
             name: (
                 _resolve_frequency(name, chunks)
-                if isinstance(chunks, str) and chunks != "auto"
+                if isinstance(chunks, TimeResampler)
                 else chunks
             )
             for name, chunks in chunks_mapping.items()
