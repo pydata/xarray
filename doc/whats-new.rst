@@ -41,6 +41,7 @@ Documentation
 ~~~~~~~~~~~~~
 
 - Improvements to Zarr & chunking docs (:pull:`9139`, :pull:`9140`, :pull:`9132`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
