@@ -1212,7 +1212,7 @@ class DataTree(
         ...         },
         ...     },
         ... }
-        >>> dt.DataTree.from_dict(basic_dict)
+        >>> dt.DataTree.from_native_dict(basic_dict)
         DataTree('(root)', parent=None)
         │   Dimensions:  (time: 2)
         │   Coordinates:
