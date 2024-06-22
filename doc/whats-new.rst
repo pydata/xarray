@@ -35,6 +35,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- ``numpy>=2`` compatibility in the ``netcdf4`` backend (:pull:`9136`).
+  By `Justus Magin <https://github.com/keewis>`_ and `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Documentation
