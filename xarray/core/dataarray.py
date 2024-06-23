@@ -6751,9 +6751,9 @@ class DataArray(
         from xarray.core.groupby import (
             DataArrayGroupBy,
             ResolvedGrouper,
-            UniqueGrouper,
             _validate_groupby_squeeze,
         )
+        from xarray.core.groupers import UniqueGrouper
 
         _validate_groupby_squeeze(squeeze)
         rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
@@ -6833,11 +6833,11 @@ class DataArray(
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
         from xarray.core.groupby import (
-            BinGrouper,
             DataArrayGroupBy,
             ResolvedGrouper,
             _validate_groupby_squeeze,
         )
+        from xarray.core.groupers import BinGrouper
 
         _validate_groupby_squeeze(squeeze)
         grouper = BinGrouper(
