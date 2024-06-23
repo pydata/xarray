@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
+from xarray.backends.api import open_datatree
+from xarray.core.datatree import DataTree
 
 from . import _skip_slow, parameterized, randint, randn, requires_dask
 
@@ -15,7 +17,6 @@ try:
     import dask.multiprocessing
 except ImportError:
     pass
-
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
@@ -467,6 +468,116 @@ def create_delayed_write():
     vals = da.random.random(300, chunks=(1,))
     ds = xr.Dataset({"vals": (["a"], vals)})
     return ds.to_netcdf("file.nc", engine="netcdf4", compute=False)
+
+
+class IONestedDataTree:
+    """
+    A few examples that benchmark reading/writing a heavily nested netCDF datatree with
+    xarray
+    """
+
+    timeout = 300.0
+    repeat = 1
+    number = 5
+
+    def make_datatree(self, nchildren=10):
+        # multiple Dataset
+        self.ds = xr.Dataset()
+        self.nt = 1000
+        self.nx = 90
+        self.ny = 45
+        self.nchildren = nchildren
+
+        self.block_chunks = {
+            "time": self.nt / 4,
+            "lon": self.nx / 3,
+            "lat": self.ny / 3,
+        }
+
+        self.time_chunks = {"time": int(self.nt / 36)}
+
+        times = pd.date_range("1970-01-01", periods=self.nt, freq="D")
+        lons = xr.DataArray(
+            np.linspace(0, 360, self.nx),
+            dims=("lon",),
+            attrs={"units": "degrees east", "long_name": "longitude"},
+        )
+        lats = xr.DataArray(
+            np.linspace(-90, 90, self.ny),
+            dims=("lat",),
+            attrs={"units": "degrees north", "long_name": "latitude"},
+        )
+        self.ds["foo"] = xr.DataArray(
+            randn((self.nt, self.nx, self.ny), frac_nan=0.2),
+            coords={"lon": lons, "lat": lats, "time": times},
+            dims=("time", "lon", "lat"),
+            name="foo",
+            attrs={"units": "foo units", "description": "a description"},
+        )
+        self.ds["bar"] = xr.DataArray(
+            randn((self.nt, self.nx, self.ny), frac_nan=0.2),
+            coords={"lon": lons, "lat": lats, "time": times},
+            dims=("time", "lon", "lat"),
+            name="bar",
+            attrs={"units": "bar units", "description": "a description"},
+        )
+        self.ds["baz"] = xr.DataArray(
+            randn((self.nx, self.ny), frac_nan=0.2).astype(np.float32),
+            coords={"lon": lons, "lat": lats},
+            dims=("lon", "lat"),
+            name="baz",
+            attrs={"units": "baz units", "description": "a description"},
+        )
+
+        self.ds.attrs = {"history": "created for xarray benchmarking"}
+
+        self.oinds = {
+            "time": randint(0, self.nt, 120),
+            "lon": randint(0, self.nx, 20),
+            "lat": randint(0, self.ny, 10),
+        }
+        self.vinds = {
+            "time": xr.DataArray(randint(0, self.nt, 120), dims="x"),
+            "lon": xr.DataArray(randint(0, self.nx, 120), dims="x"),
+            "lat": slice(3, 20),
+        }
+        root = {f"group_{group}": self.ds for group in range(self.nchildren)}
+        nested_tree1 = {
+            f"group_{group}/subgroup_1": xr.Dataset() for group in range(self.nchildren)
+        }
+        nested_tree2 = {
+            f"group_{group}/subgroup_2": xr.DataArray(np.arange(1, 10)).to_dataset(
+                name="a"
+            )
+            for group in range(self.nchildren)
+        }
+        nested_tree3 = {
+            f"group_{group}/subgroup_2/sub-subgroup_1": self.ds
+            for group in range(self.nchildren)
+        }
+        dtree = root | nested_tree1 | nested_tree2 | nested_tree3
+        self.dtree = DataTree.from_dict(dtree)
+
+
+class IOReadDataTreeNetCDF4(IONestedDataTree):
+    def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
+
+        requires_dask()
+
+        self.make_datatree()
+        self.format = "NETCDF4"
+        self.filepath = "datatree.nc4.nc"
+        dtree = self.dtree
+        dtree.to_netcdf(filepath=self.filepath)
+
+    def time_load_datatree_netcdf4(self):
+        open_datatree(self.filepath, engine="netcdf4").load()
+
+    def time_open_datatree_netcdf4(self):
+        open_datatree(self.filepath, engine="netcdf4")
 
 
 class IOWriteNetCDFDask:
