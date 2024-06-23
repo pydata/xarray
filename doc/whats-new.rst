@@ -24,6 +24,10 @@ New Features
 ~~~~~~~~~~~~
 - Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
+- Added new plot method `lines` which allows creating line plots efficiently in
+  a similiar manner to `scatter`. (:pull:`7173`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
