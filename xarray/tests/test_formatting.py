@@ -10,6 +10,7 @@ import pytest
 import xarray as xr
 from xarray.core import formatting
 from xarray.core.datatree import DataTree  # TODO: Remove when can do xr.DataTree
+from xarray.core.indexes import Index
 from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
 
 
@@ -219,8 +220,6 @@ class TestFormatting:
         assert "\t" not in tabs
 
     def test_index_repr(self) -> None:
-        from xarray.core.indexes import Index
-
         class CustomIndex(Index):
             names: tuple[str, ...]
 
@@ -336,6 +335,60 @@ class TestFormatting:
         except AssertionError:
             # depending on platform, dtype may not be shown in numpy array repr
             assert actual == expected.replace(", dtype=int64", "")
+
+        class CustomIndex(Index):
+            names: tuple[str, ...]
+
+            def __init__(self, names: tuple[str, ...]):
+                self.names = names
+
+            def __repr__(self):
+                return f"CustomIndex(coords={self.names})"
+
+        da_a = xr.DataArray(
+            np.array([[1, 2, 3], [4, 5, 6]], dtype="int8"),
+            dims=("x", "y"),
+            coords=xr.Coordinates(
+                {
+                    "x": np.array([True, False], dtype="bool"),
+                    "y": np.array([1, 2, 3], dtype="int16"),
+                },
+                indexes={"y": CustomIndex(("y",))},
+            ),
+        )
+
+        da_b = xr.DataArray(
+            np.array([1, 2], dtype="int8"),
+            dims="x",
+            coords=xr.Coordinates(
+                {
+                    "x": np.array([True, False], dtype="bool"),
+                    "label": ("x", np.array([1, 2], dtype="int16")),
+                },
+                indexes={"label": CustomIndex(("label",))},
+            ),
+        )
+
+        expected = dedent(
+            """\
+            Left and right DataArray objects are not equal
+            Differing dimensions:
+                (x: 2, y: 3) != (x: 2)
+            Differing values:
+            L
+                array([[1, 2, 3],
+                       [4, 5, 6]], dtype=int8)
+            R
+                array([1, 2], dtype=int8)
+            Coordinates only on the left object:
+              * y        (y) int16 6B 1 2 3
+            Coordinates only on the right object:
+              * label    (x) int16 4B 1 2
+            """.rstrip()
+        )
+
+        actual = formatting.diff_array_repr(da_a, da_b, "equals")
+        assert actual == expected
 
         va = xr.Variable(
             "x", np.array([1, 2, 3], dtype="int64"), {"title": "test Variable"}
