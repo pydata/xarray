@@ -14,6 +14,16 @@ from xarray.core.indexes import Index
 from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
 
 
+class CustomIndex(Index):
+    names: tuple[str, ...]
+
+    def __init__(self, names: tuple[str, ...]):
+        self.names = names
+
+    def __repr__(self):
+        return f"CustomIndex(coords={self.names})"
+
+
 class TestFormatting:
     def test_get_indexer_at_least_n_items(self) -> None:
         cases = [
@@ -220,15 +230,6 @@ class TestFormatting:
         assert "\t" not in tabs
 
     def test_index_repr(self) -> None:
-        class CustomIndex(Index):
-            names: tuple[str, ...]
-
-            def __init__(self, names: tuple[str, ...]):
-                self.names = names
-
-            def __repr__(self):
-                return f"CustomIndex(coords={self.names})"
-
         coord_names = ("x", "y")
         index = CustomIndex(coord_names)
         names = ("x",)
@@ -257,15 +258,6 @@ class TestFormatting:
         ),
     )
     def test_index_repr_grouping(self, names) -> None:
-        from xarray.core.indexes import Index
-
-        class CustomIndex(Index):
-            def __init__(self, names):
-                self.names = names
-
-            def __repr__(self):
-                return f"CustomIndex(coords={self.names})"
-
         index = CustomIndex(names)
 
         normal = formatting.summarize_index(names, index, col_width=20)
@@ -335,15 +327,6 @@ class TestFormatting:
         except AssertionError:
             # depending on platform, dtype may not be shown in numpy array repr
             assert actual == expected.replace(", dtype=int64", "")
-
-        class CustomIndex(Index):
-            names: tuple[str, ...]
-
-            def __init__(self, names: tuple[str, ...]):
-                self.names = names
-
-            def __repr__(self):
-                return f"CustomIndex(coords={self.names})"
 
         da_a = xr.DataArray(
             np.array([[1, 2, 3], [4, 5, 6]], dtype="int8"),
