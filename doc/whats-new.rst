@@ -35,7 +35,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Don't convert custom indexes to ``pandas`` indexes when computing a diff (:pull:``)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
