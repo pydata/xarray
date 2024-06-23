@@ -5,7 +5,7 @@ import inspect
 import math
 from collections.abc import Generator, Hashable
 from copy import copy
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Any, Callable, Literal
 
 import numpy as np
@@ -2963,9 +2963,8 @@ class TestDatetimePlot(PlotTestCase):
         """
         month = np.arange(1, 13, 1)
         data = np.sin(2 * np.pi * month / 12.0)
-
-        darray = DataArray(data, dims=["time"])
-        darray.coords["time"] = np.array([datetime(2017, m, 1) for m in month])
+        times = pd.date_range(start="2017-01-01", freq="MS", periods=12)
+        darray = DataArray(data, dims=["time"], coords=[times])
 
         self.darray = darray
 
