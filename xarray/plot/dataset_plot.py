@@ -1079,7 +1079,8 @@ def lines(
     Line plot Dataset data variables against each other.
 
     Wraps :func:`matplotlib:matplotlib.collections.LineCollection` which allows
-    efficient plotting of many lines.
+    efficient plotting of many lines in a similar fashion to
+    :py:func:`xarray.plot.scatter`.
     """
     locals_ = locals()
     del locals_["ds"]

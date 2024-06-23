@@ -486,6 +486,10 @@ def line(
     primitive : list of Line3D or FacetGrid
         When either col or row is given, returns a FacetGrid, otherwise
         a list of matplotlib Line3D objects.
+
+    See also
+    --------
+    Use :py:func:`xarray.plot.lines` for efficient plotting of many lines.
     """
     # Handle facetgrids first
     if row or col:
@@ -1252,7 +1256,8 @@ def lines(
     Line plot of DataArray values.
 
     Wraps :func:`matplotlib:matplotlib.collections.LineCollection` which allows
-    efficient plotting of many lines.
+    efficient plotting of many lines in a similar fashion to
+    :py:func:`xarray.plot.scatter`.
     """
     if "u" in kwargs or "v" in kwargs:
         raise ValueError("u, v are not allowed in lines plots.")
