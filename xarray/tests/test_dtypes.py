@@ -11,9 +11,9 @@ try:
 except ImportError:
 
     class DummyArrayAPINamespace:
-        bool = None  # type: ignore[misc,var-annotated]
-        int32 = None  # type: ignore[misc,var-annotated]
-        float64 = None  # type: ignore[misc,var-annotated]
+        bool = None  # type: ignore[unused-ignore,var-annotated]
+        int32 = None  # type: ignore[unused-ignore,var-annotated]
+        float64 = None  # type: ignore[unused-ignore,var-annotated]
 
     array_api_strict = DummyArrayAPINamespace
 
