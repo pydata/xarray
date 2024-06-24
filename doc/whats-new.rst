@@ -35,7 +35,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Allow diffing objects with array attributes on variables (:issue:`9153`, :pull:`9169`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
