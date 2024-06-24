@@ -1021,7 +1021,7 @@ The following example shows opening a combined references generated from a ``.hd
         "remote_protocol": "s3",
         "skip_instance_cache": True,
         "target_protocol": "file",
-    }  
+    }
 
     ds = xr.open_dataset(
         "./combined.json",
