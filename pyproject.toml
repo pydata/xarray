@@ -118,7 +118,6 @@ module = [
   "matplotlib.*",
   "mpl_toolkits.*",
   "nc_time_axis.*",
-  "numbagg.*",
   "netCDF4.*",
   "netcdftime.*",
   "opt_einsum.*",
@@ -329,8 +328,7 @@ filterwarnings = [
   "default:the `pandas.MultiIndex` object:FutureWarning:xarray.tests.test_variable",
   "default:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
   "default:Duplicate dimension names present:UserWarning:xarray.namedarray.core",
-  "default:::xarray.tests.test_strategies",
-  # TODO: remove once we know how to deal with a changed signature in protocols
+  "default:::xarray.tests.test_strategies", # TODO: remove once we know how to deal with a changed signature in protocols
   "ignore:__array__ implementation doesn't accept a copy keyword, so passing copy=False failed.",
 ]
 
