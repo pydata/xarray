@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
-RESAMPLE_DIM = "__resample_dim__"
+from xarray.core.groupers import RESAMPLE_DIM
 
 
 class Resample(GroupBy[T_Xarray]):
@@ -140,7 +140,7 @@ class Resample(GroupBy[T_Xarray]):
             {self._dim: grouper.full_index}, method="nearest", tolerance=tolerance
         )
 
-    def interpolate(self, kind: InterpOptions = "linear") -> T_Xarray:
+    def interpolate(self, kind: InterpOptions = "linear", **kwargs) -> T_Xarray:
         """Interpolate up-sampled data using the original data as knots.
 
         Parameters
@@ -168,17 +168,18 @@ class Resample(GroupBy[T_Xarray]):
         scipy.interpolate.interp1d
 
         """
-        return self._interpolate(kind=kind)
+        return self._interpolate(kind=kind, **kwargs)
 
-    def _interpolate(self, kind="linear") -> T_Xarray:
+    def _interpolate(self, kind="linear", **kwargs) -> T_Xarray:
         """Apply scipy.interpolate.interp1d along resampling dimension."""
         obj = self._drop_coords()
         (grouper,) = self.groupers
+        kwargs.setdefault("bounds_error", False)
         return obj.interp(
             coords={self._dim: grouper.full_index},
             assume_sorted=True,
             method=kind,
-            kwargs={"bounds_error": False},
+            kwargs=kwargs,
         )
 
 

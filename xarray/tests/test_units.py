@@ -34,6 +34,7 @@ DimensionalityError = pint.errors.DimensionalityError
 # always be treated like ndarrays
 unit_registry = pint.UnitRegistry(force_ndarray_like=True)
 Quantity = unit_registry.Quantity
+no_unit_values = ("none", None)
 
 
 pytestmark = [
@@ -91,17 +92,13 @@ def array_strip_units(array):
 
 
 def array_attach_units(data, unit):
-    if isinstance(data, Quantity):
+    if isinstance(data, Quantity) and data.units != unit:
         raise ValueError(f"cannot attach unit {unit} to quantity {data}")
 
-    try:
-        quantity = data * unit
-    except np.core._exceptions.UFuncTypeError:
-        if isinstance(unit, unit_registry.Unit):
-            raise
+    if unit in no_unit_values or (isinstance(unit, int) and unit == 1):
+        return data
 
-        quantity = data
-
+    quantity = unit_registry.Quantity(data, unit)
     return quantity
 
 
