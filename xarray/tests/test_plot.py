@@ -3412,6 +3412,7 @@ def test_plot1d_filtered_nulls() -> None:
 def test_9155() -> None:
     # A test for types from issue #9155
 
-    data = xr.DataArray([1, 2, 3], dims=["x"])
-    fig, ax = plt.subplots(ncols=1, nrows=1)
-    data.plot(ax=ax)
+    with figure_context():
+        data = xr.DataArray([1, 2, 3], dims=["x"])
+        fig, ax = plt.subplots(ncols=1, nrows=1)
+        data.plot(ax=ax)
