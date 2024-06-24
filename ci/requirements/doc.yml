@@ -8,6 +8,8 @@ dependencies:
   - bottleneck
   - cartopy
   - cfgrib
+  - kerchunk
+  - s3fs
   - dask-core>=2022.1
   - dask-expr
   - hypothesis>=6.75.8

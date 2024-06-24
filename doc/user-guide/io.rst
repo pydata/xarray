@@ -985,6 +985,57 @@ reads. Because this fall-back option is so much slower, xarray issues a
        instead of falling back to try reading non-consolidated metadata.
 
 
+.. _io.kerchunk:
+
+Kerchunk
+--------
+
+`Kerchunk <https://fsspec.github.io/kerchunk/index.html>`_ is a Python library
+that allows you to access chunked and compressed data formats (such as NetCDF3, NetCDF4, HDF5, GRIB2, TIFF & FITS),
+many of which are primary data formats for many data archives, by viewing the
+whole archive as an ephemeral `Zarr`_ dataset which allows for parallel, chunk-specific access.
+
+Instead of creating a new copy of the dataset in the Zarr spec/format or
+downloading the files locally, Kerchunk reads through the data archive and extracts the
+byte range and compression information of each chunk and saves as a ``reference``.
+These references are then saved as ``json`` files or ``parquet`` (more efficient)
+for later use. You can view some of these stored in the **references**
+directory `here <https://github.com/pydata/xarray-data>`_.
+
+
+.. note::
+    These references follow this `specification <https://fsspec.github.io/kerchunk/spec.html>`_.
+    Packages like `kerchunk`_ and `virtualizarr <https://github.com/zarr-developers/VirtualiZarr>`_
+    help in creating and reading these references.
+
+Reading these data archives becomes really easy with ``kerchunk`` in combination
+with ``xarray``, especially when these archives are large in size. A single combined
+reference can refer to thousands of the original data files present in these archives.
+You can view the whole dataset with from this `combined reference` using the above packages.
+
+The following example shows opening a combined references generated from a ``.hdf`` file.
+
+.. ipython:: python
+
+    storage_options = {
+        "remote_protocol": "s3",
+        "skip_instance_cache": True,
+        "target_protocol": "file",
+    }  # options passed to fsspec
+
+    ds = xr.open_dataset(
+        "./combined.json",
+        engine="kerchunk",
+        storage_options=storage_options,
+    )
+
+    ds
+
+.. note::
+
+    You can refer this `project pythia kerchunk cookbook <https://projectpythia.org/kerchunk-cookbook/README.html>`_ for more information.
+
+
 .. _io.iris:
 
 Iris
@@ -1151,6 +1202,7 @@ The simplest way to serialize an xarray object is to use Python's built-in pickl
 module:
 
 .. ipython:: python
+    :okexcept:
 
     import pickle
 
