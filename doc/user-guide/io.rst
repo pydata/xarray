@@ -1020,16 +1020,17 @@ The following example shows opening a combined references generated from a ``.hd
 
     storage_options = {
         "target_protocol": "file",
-        "remote_protocol": "s3",  # assuming you're working with a file in AWS
     }
 
-    ds = xr.open_dataset(
+    # add **remote_protocol** key in ``storage_options`` if you're accessing a file remotely
+
+    ds1 = xr.open_dataset(
         "./combined.json",
         engine="kerchunk",
         storage_options=storage_options,
     )
 
-    ds
+    ds1
 
 .. note::
 
