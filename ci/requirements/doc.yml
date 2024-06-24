@@ -41,6 +41,4 @@ dependencies:
   - sphinxext-opengraph
   - sphinxext-rediraffe
   - zarr>=2.10
-  - pip:
-      # relative to this file. Needs to be editable to be accepted.
-      - -e ../..
+  - xarray
