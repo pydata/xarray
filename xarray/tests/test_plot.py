@@ -3407,6 +3407,7 @@ def test_plot1d_filtered_nulls() -> None:
 
         assert expected == actual
 
+
 @requires_matplotlib
 def test_9155() -> None:
     # A test for types from issue #9155
