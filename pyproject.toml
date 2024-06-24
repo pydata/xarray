@@ -115,7 +115,6 @@ module = [
   "h5netcdf.*",
   "h5py.*",
   "iris.*",
-  "matplotlib.*",
   "mpl_toolkits.*",
   "nc_time_axis.*",
   "numbagg.*",
