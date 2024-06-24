@@ -5162,7 +5162,7 @@ def test_source_encoding_always_present_with_fsspec() -> None:
         original.to_netcdf(tmp)
 
         fs = fsspec.filesystem("file")
-        with open_dataset(fs.open(tmp)) as ds:
+        with fs.open(tmp) as f, open_dataset(f) as ds:
             assert ds.encoding["source"] == tmp
 
 
