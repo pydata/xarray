@@ -1008,19 +1008,19 @@ directory `here <https://github.com/pydata/xarray-data>`_.
     Packages like `kerchunk`_ and `virtualizarr <https://github.com/zarr-developers/VirtualiZarr>`_
     help in creating and reading these references.
 
+
 Reading these data archives becomes really easy with ``kerchunk`` in combination
 with ``xarray``, especially when these archives are large in size. A single combined
 reference can refer to thousands of the original data files present in these archives.
 You can view the whole dataset with from this `combined reference` using the above packages.
 
-The following example shows opening a combined references generated from a ``.hdf`` file.
+The following example shows opening a combined references generated from a ``.hdf`` file stored locally.
 
 .. ipython:: python
 
     storage_options = {
-        "remote_protocol": "s3",
-        "skip_instance_cache": True,
         "target_protocol": "file",
+        "remote_protocol": "s3",  # assuming you're working with a file in AWS
     }
 
     ds = xr.open_dataset(
@@ -1202,7 +1202,6 @@ The simplest way to serialize an xarray object is to use Python's built-in pickl
 module:
 
 .. ipython:: python
-    :okexcept:
 
     import pickle
 
