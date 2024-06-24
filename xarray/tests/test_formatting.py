@@ -399,6 +399,36 @@ class TestFormatting:
         actual = formatting.diff_attrs_repr(attrs_a, attrs_c, "equals")
         assert expected == actual
 
+    def test__diff_mapping_repr_array_attrs_on_variables(self) -> None:
+        a = {
+            "a": xr.DataArray(
+                dims="x",
+                data=np.array([1], dtype="int16"),
+                attrs={"b": np.array([1, 2], dtype="int8")},
+            )
+        }
+        b = {
+            "a": xr.DataArray(
+                dims="x",
+                data=np.array([1], dtype="int16"),
+                attrs={"b": np.array([2, 3], dtype="int8")},
+            )
+        }
+        actual = formatting.diff_data_vars_repr(a, b, compat="identical", col_width=8)
+        expected = dedent(
+            """\
+            Differing data variables:
+            L   a   (x) int16 2B 1
+                Differing variable attributes:
+                    b: [1 2]
+            R   a   (x) int16 2B 1
+                Differing variable attributes:
+                    b: [2 3]
+            """.rstrip()
+        )
+
+        assert actual == expected
+
     def test_diff_dataset_repr(self) -> None:
         ds_a = xr.Dataset(
             data_vars={
