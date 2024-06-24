@@ -307,9 +307,7 @@ addopts = ["--strict-config", "--strict-markers"]
 
 filterwarnings = [
   "error:::xarray.*",
-  "default:No index created:UserWarning:xarray.core.dataset",
   "default::UserWarning:xarray.tests.test_coding_times",
-  "default::UserWarning:xarray.tests.test_computation",
   "default::UserWarning:xarray.tests.test_dataset",
   "default:`ancestors` has been deprecated:DeprecationWarning:xarray.core.treenode",
   "default:`iter_lineage` has been deprecated:DeprecationWarning:xarray.core.treenode",
@@ -319,7 +317,6 @@ filterwarnings = [
   "default:deallocating CachingFileManager:RuntimeWarning:xarray.backends.netCDF4_",
   "default:deallocating CachingFileManager:RuntimeWarning:xarray.core.indexing",
   "default:Failed to decode variable.*NumPy will stop allowing conversion of out-of-bound Python integers to integer arrays:DeprecationWarning",
-  "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning:xarray.*",
   "default:invalid value encountered in cast:RuntimeWarning:xarray.core.duck_array_ops",
   "default:invalid value encountered in cast:RuntimeWarning:xarray.conventions",
   "default:invalid value encountered in cast:RuntimeWarning:xarray.tests.test_units",
@@ -327,7 +324,6 @@ filterwarnings = [
   "default:NumPy will stop allowing conversion of:DeprecationWarning",
   "default:shape should be provided:DeprecationWarning:xarray.tests.test_variable",
   "default:the `pandas.MultiIndex` object:FutureWarning:xarray.tests.test_variable",
-  "default:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
   "default:Duplicate dimension names present:UserWarning:xarray.namedarray.core",
   "default:::xarray.tests.test_strategies",
   # TODO: remove once we know how to deal with a changed signature in protocols
