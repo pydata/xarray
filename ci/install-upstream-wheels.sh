@@ -8,25 +8,27 @@ else
     conda=conda
 fi
 
-# temporarily (?) remove numbagg and numba
-$conda remove -y numba numbagg sparse
+# temporarily (?) remove sparse
+$conda remove -y sparse
 # temporarily remove numexpr
 $conda remove -y numexpr
 # temporarily remove backends
 $conda remove -y cf_units hdf5 h5py netcdf4 pydap
 # forcibly remove packages to avoid artifacts
 $conda remove -y --force \
-    numpy \
-    scipy \
-    pandas \
-    distributed \
-    fsspec \
-    zarr \
-    cftime \
-    packaging \
     bottleneck \
-    flox
-    # pint
+    cftime \
+    distributed \
+    flox \
+    fsspec \
+    numba \
+    numbagg \
+    numpy \
+    packaging \
+    pandas \
+    scipy \
+    zarr
+# pint
 
 # to limit the runtime of Upstream CI
 python -m pip install \
@@ -56,14 +58,16 @@ python -m pip install \
     git+https://github.com/dask/dask \
     git+https://github.com/dask/dask-expr \
     git+https://github.com/dask/distributed \
-    git+https://github.com/zarr-developers/zarr.git@main \
-    git+https://github.com/Unidata/cftime \
-    git+https://github.com/pypa/packaging \
-    git+https://github.com/hgrecco/pint \
-    git+https://github.com/pydata/bottleneck \
-    git+https://github.com/intake/filesystem_spec \
-    git+https://github.com/SciTools/nc-time-axis \
-    git+https://github.com/xarray-contrib/flox \
+    git+https://github.com/dgasmith/opt_einsum \
     git+https://github.com/h5netcdf/h5netcdf \
-    git+https://github.com/dgasmith/opt_einsum
-    # git+https://github.com/pydata/sparse
+    git+https://github.com/hgrecco/pint \
+    git+https://github.com/intake/filesystem_spec \
+    git+https://github.com/numba/numba \
+    git+https://github.com/numbagg/numbagg \
+    git+https://github.com/pydata/bottleneck \
+    git+https://github.com/pypa/packaging \
+    git+https://github.com/SciTools/nc-time-axis \
+    git+https://github.com/Unidata/cftime \
+    git+https://github.com/xarray-contrib/flox \
+    git+https://github.com/zarr-developers/zarr.git@main
+# git+https://github.com/pydata/sparse
