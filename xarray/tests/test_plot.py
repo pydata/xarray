@@ -3406,3 +3406,10 @@ def test_plot1d_filtered_nulls() -> None:
         actual = pc.get_offsets().shape[0]
 
         assert expected == actual
+
+
+import matplotlib.pyplot as plt
+
+data = xr.DataArray([1, 2, 3], dims=["x"])
+fig, ax = plt.subplots(ncols=1, nrows=1)
+data.plot(ax=ax)
