@@ -9,7 +9,6 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray.tests import has_pandas_3
 
 pytest.importorskip("hypothesis")
 import hypothesis.extra.numpy as npst  # isort:skip
@@ -123,10 +122,6 @@ def test_roundtrip_pandas_dataframe(df) -> None:
     xr.testing.assert_identical(arr, roundtripped.to_xarray())
 
 
-@pytest.mark.skipif(
-    has_pandas_3,
-    reason="fails to roundtrip on pandas 3 (see https://github.com/pydata/xarray/issues/9098)",
-)
 @given(df=dataframe_strategy())
 def test_roundtrip_pandas_dataframe_datetime(df) -> None:
     # Need to name the indexes, otherwise Xarray names them 'dim_0', 'dim_1'.
