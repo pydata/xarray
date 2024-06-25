@@ -85,7 +85,7 @@ def _datatree_to_netcdf(
         unlimited_dims = {}
 
     for node in dt.subtree:
-        ds = node.ds
+        ds = node.to_dataset(local=True)
         group_path = node.path
         if ds is None:
             _create_empty_netcdf_group(filepath, group_path, mode, engine)
