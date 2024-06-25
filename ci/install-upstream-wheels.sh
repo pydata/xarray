@@ -52,6 +52,10 @@ python -m pip install \
     pyarrow
 # manually install `pint` to pull in new dependencies
 python -m pip install --upgrade pint
+
+# Install llvmlite so numba can install
+python -m pip install git+https://github.com/numba/llvmlite
+
 python -m pip install \
     --no-deps \
     --upgrade \
