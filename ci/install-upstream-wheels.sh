@@ -21,7 +21,6 @@ $conda remove -y --force \
     distributed \
     flox \
     fsspec \
-    numba \
     numbagg \
     numpy \
     packaging \
@@ -53,9 +52,6 @@ python -m pip install \
 # manually install `pint` to pull in new dependencies
 python -m pip install --upgrade pint
 
-# Install llvmlite so numba can install
-python -m pip install git+https://github.com/numba/llvmlite
-
 python -m pip install \
     --no-deps \
     --upgrade \
@@ -66,7 +62,6 @@ python -m pip install \
     git+https://github.com/h5netcdf/h5netcdf \
     git+https://github.com/hgrecco/pint \
     git+https://github.com/intake/filesystem_spec \
-    git+https://github.com/numba/numba \
     git+https://github.com/numbagg/numbagg \
     git+https://github.com/pydata/bottleneck \
     git+https://github.com/pypa/packaging \
