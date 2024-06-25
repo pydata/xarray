@@ -52,6 +52,11 @@ def test_allclose_regression() -> None:
             xr.Dataset({"a": ("x", [0, 2]), "b": ("y", [0, 1])}),
             id="Dataset",
         ),
+        pytest.param(
+            xr.DataArray(np.array("a", dtype="|S1")),
+            xr.DataArray(np.array("b", dtype="|S1")),
+            id="DataArray_dtypeS",
+        ),
     ),
 )
 def test_assert_allclose(obj1, obj2) -> None:
