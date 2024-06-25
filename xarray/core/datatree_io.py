@@ -151,7 +151,7 @@ def _datatree_to_zarr(
         )
 
     for node in dt.subtree:
-        ds = node.ds
+        ds = node.to_dataset(local=True)
         group_path = node.path
         if ds is None:
             _create_empty_zarr_group(store, group_path, mode)

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
+import xarray as xr
 from xarray.backends.api import open_datatree
+from xarray.core.datatree import DataTree
 from xarray.testing import assert_equal
 from xarray.tests import (
     requires_h5netcdf,
@@ -119,3 +121,18 @@ class TestZarrDatatreeIO:
         # with default settings, to_zarr should not overwrite an existing dir
         with pytest.raises(zarr.errors.ContainsGroupError):
             simple_datatree.to_zarr(tmpdir)
+
+    def test_to_zarr_inherited_coords(self, tmpdir):
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"a": (("x",), [1, 2])}, coords={"x": [3, 4]}),
+                "/sub": xr.Dataset({"b": (("x",), [5, 6])}),
+            }
+        )
+        filepath = tmpdir / "test.zarr"
+        original_dt.to_zarr(filepath)
+
+        roundtrip_dt = open_datatree(filepath, engine="zarr")
+        assert_equal(original_dt, roundtrip_dt)
+        subtree = cast(DataTree, roundtrip_dt["/sub"])
+        assert "x" not in subtree.to_dataset(local=True).coords
