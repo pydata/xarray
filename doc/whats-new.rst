@@ -40,7 +40,9 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- Adds a flow-chart diagram to help users navigate help resources (`Discussion #8990 <https://github.com/pydata/xarray/discussions/8990>`_).
+- Adds intro to backend section of docs, including a flow-chart to navigate types of backends (:pull:`9175`).
+  By `Jessica Scheick <https://github.com/jessicas11>`_.
+- Adds a flow-chart diagram to help users navigate help resources (`Discussion #8990 <https://github.com/pydata/xarray/discussions/8990>`_, :pull:`9147`).
   By `Jessica Scheick <https://github.com/jessicas11>`_.
 - Improvements to Zarr & chunking docs (:pull:`9139`, :pull:`9140`, :pull:`9132`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
