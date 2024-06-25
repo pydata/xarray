@@ -42,5 +42,6 @@ dependencies:
   - sphinxext-rediraffe
   - zarr>=2.10
   - pip:
+      - sphinxcontrib-mermaid
       # relative to this file. Needs to be editable to be accepted.
       - -e ../..
