@@ -1,3 +1,7 @@
+import pytest
+
+pytest.importorskip("hypothesis")
+
 from hypothesis import given
 
 import xarray as xr
