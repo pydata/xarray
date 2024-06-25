@@ -84,7 +84,7 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False
 
     if non_uniform:
         # construct a datetime index that has irregular spacing
-        deltas = pd.to_timedelta(rs.normal(size=shape[0], scale=10), unit="d")
+        deltas = pd.to_timedelta(rs.normal(size=shape[0], scale=10), unit="D")
         coords = {"time": (pd.Timestamp("2000-01-01") + deltas).sort_values()}
     else:
         coords = {"time": pd.date_range("2000-01-01", freq="D", periods=shape[0])}
