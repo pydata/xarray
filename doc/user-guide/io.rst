@@ -19,7 +19,7 @@ format (recommended).
 
     np.random.seed(123456)
 
-You can [read different types of files](https://docs.xarray.dev/en/stable/user-guide/io.html)
+You can `read different types of files <https://docs.xarray.dev/en/stable/user-guide/io.html>`_
 in `xr.open_dataset` by specifying the engine to be used:
 
 ```python
@@ -32,7 +32,7 @@ to read the data and pack them into a `dataset` (or `dataarray`).
 These instructions are stored in an underlying "backend".
 
 Xarray comes with several backends that cover many common data formats.
-Many more backends are available via external libraries, or you can write your own.
+Many more backends are available via external libraries, or you can `write your own <https://docs.xarray.dev/en/stable/internals/how-to-add-new-backend.html>`_.
 This diagram aims to help you determine - based on the format of the file you'd like to read -
 which type of backend you're using and how to use it.
 
