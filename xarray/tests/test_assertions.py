@@ -55,7 +55,7 @@ def test_allclose_regression() -> None:
         pytest.param(
             xr.DataArray(np.array("a", dtype="|S1")),
             xr.DataArray(np.array("b", dtype="|S1")),
-            id="DataArray_dtypeS",
+            id="DataArray_with_character_dtype",
         ),
     ),
 )
