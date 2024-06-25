@@ -36,7 +36,7 @@ def ensure_warnings(func):
 
 def _decode_string_data(data):
     if data.dtype.kind == "S":
-        return np.char.chararray.decode(data, "utf-8", "replace")
+        return np.char.decode(data, "utf-8", "replace")
     return data
 
 
