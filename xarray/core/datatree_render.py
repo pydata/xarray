@@ -57,11 +57,12 @@ class ContStyle(AbstractStyle):
         >>> s0a = DataTree(name="sub0A", parent=s0)
         >>> s1 = DataTree(name="sub1", parent=root)
         >>> print(RenderDataTree(root))
-        DataTree('root', parent=None)
-        ├── DataTree('sub0')
-        │   ├── DataTree('sub0B')
-        │   └── DataTree('sub0A')
-        └── DataTree('sub1')
+        <xarray.DataTree 'root'>
+        Group: /
+        ├── Group: /sub0
+        │   ├── Group: /sub0/sub0B
+        │   └── Group: /sub0/sub0A
+        └── Group: /sub1
         """
         super().__init__("\u2502   ", "\u251c\u2500\u2500 ", "\u2514\u2500\u2500 ")
 
