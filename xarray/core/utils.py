@@ -563,6 +563,50 @@ class OrderedSet(MutableSet[T]):
         return f"{type(self).__name__}({list(self)!r})"
 
 
+class ChainSet(MutableSet[T]):
+    """A chained set, based on the design of collections.ChainMap."""
+
+    sets: list[set[T]]
+    __slots__ = ("sets",)
+
+    def __init__(self, *sets):
+        self.sets = list(sets) or [set()]
+
+    # Required methods for MutableSet
+
+    def __contains__(self, value: Hashable) -> bool:
+        return any(value in s for s in self.sets)
+
+    def __iter__(self) -> Iterator[T]:
+        return iter(set().union(*self.sets))
+
+    def __len__(self) -> int:
+        return len(set().union(*self.sets))
+
+    def add(self, value: T) -> None:
+        self.sets[0].add(value)
+
+    def discard(self, value: T) -> None:
+        for s in self.sets:
+            s.discard(value)
+
+    # Additional methods
+
+    def new_child(self, s: set[T] | None = None) -> ChainSet[T]:
+        """New ChainSet with a new set followed by all previous sets."""
+        if s is None:
+            s = set()
+        return self.__class__(s, *self.sets)
+
+    @property
+    def parents(self) -> ChainSet[T]:
+        """New ChainSet from sets[1:]."""
+        return self.__class__(*self.sets[1:])
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}({", ".join(map(repr, self.sets))})'
+
+
 class NdimSizeLenMixin:
     """Mixin class that extends a class that defines a ``shape`` property to
     one that also defines ``ndim``, ``size`` and ``__len__``.
