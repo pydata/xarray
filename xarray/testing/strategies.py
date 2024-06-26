@@ -198,6 +198,8 @@ _small_arrays = npst.arrays(
 )
 _attr_values = st.none() | st.booleans() | _readable_strings | _small_arrays
 
+simple_attrs = st.dictionaries(_attr_keys, _attr_values)
+
 
 def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
     """
