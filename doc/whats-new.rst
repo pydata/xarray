@@ -36,7 +36,7 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 - Make :py:func:`testing.assert_allclose` work with numpy 2.0 (:issue:`9165`, :pull:`9166`).
-  By `Pontus Lurcock <https://github.com/pont-us>`_
+  By `Pontus Lurcock <https://github.com/pont-us>`_.
 
 
 Documentation
