@@ -44,25 +44,25 @@ You can learn more about using and developing backends in the
 .. mermaid::
     :alt: Flowchart illustrating how to choose the right backend engine to read your data
 
-    flowchart TD
-        built-in-eng[Is your data stored in one of these formats?
-            netCDF4 (**netcdf4**)
-            netCDF3 (**scipy**)
-            Zarr (**zarr**)
-            DODS/OPeNDAP (**pydap**)
-            HDF5 (**h5netcdf**)
-            ]
+    flowchart LR
+        built-in-eng["`Is your data stored in one of these formats?
+            fa:fa-check-square netCDF4 (**netcdf4**)
+            fa:fa-check-square netCDF3 (**scipy**)
+            fa:fa-check-square Zarr (**zarr**)
+            fa:fa-check-square DODS/OPeNDAP (**pydap**)
+            fa:fa-check-square HDF5 (**h5netcdf**)
+            `"]
 
         built-in("`You're in luck! Xarray bundles a backend for this format.
             Open data using *xr.open_dataset()*. We recommend
             always setting the engine you want to use.`")
 
-        installed-eng["`One of these formats (this list is not inclusive)?
-            GRIB (**cfgrib**)
-            TileDB (**tiledb**)
-            GeoTIFF, JPEG-2000, ESRI-hdf (**rioxarray**, via GDAL)
-            Sentinel-1 SAFE (**xarray-sentinel**)
-            ...
+        installed-eng["`One of these formats?
+            fa:fa-check-square GRIB (**cfgrib**)
+            fa:fa-check-square TileDB (**tiledb**)
+            fa:fa-check-square GeoTIFF, JPEG-2000, ESRI-hdf (**rioxarray**, via GDAL)
+            fa:fa-check-square Sentinel-1 SAFE (**xarray-sentinel**)
+            fa:fa-check-square ...
             `"]
 
         installed("`Install the package indicated in parentheses
@@ -84,10 +84,10 @@ You can learn more about using and developing backends in the
         click installed-eng "https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray"
         click other "https://docs.xarray.dev/en/stable/internals/how-to-add-new-backend.html"
 
-        classDef quesNodefmt fill:#9DEEF4,stroke:#206C89
+        classDef quesNodefmt fill:#9DEEF4,stroke:#206C89,text-align:left
         class built-in-eng,installed-eng quesNodefmt
 
-        classDef ansNodefmt fill:#FFAA05,stroke:#E37F17
+        classDef ansNodefmt fill:#FFAA05,stroke:#E37F17,text-align:left,white-space:nowrap
         class built-in,installed,other ansNodefmt
 
         linkStyle default font-size:20pt,color:#206C89
