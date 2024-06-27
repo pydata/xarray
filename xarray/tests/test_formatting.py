@@ -585,16 +585,17 @@ class TestFormatting:
 
     def test_datatree_print_empty_node(self):
         dt: DataTree = DataTree(name="root")
-        printout = dt.__str__()
-        assert printout == "DataTree('root', parent=None)"
+        printout = str(dt)
+        assert printout == "<xarray.DataTree 'root'>\nGroup: /"
 
     def test_datatree_print_empty_node_with_attrs(self):
         dat = xr.Dataset(attrs={"note": "has attrs"})
         dt: DataTree = DataTree(name="root", data=dat)
-        printout = dt.__str__()
+        printout = str(dt)
         assert printout == dedent(
             """\
-            DataTree('root', parent=None)
+            <xarray.DataTree 'root'>
+            Group: /
                 Dimensions:  ()
                 Data variables:
                     *empty*
@@ -605,9 +606,10 @@ class TestFormatting:
     def test_datatree_print_node_with_data(self):
         dat = xr.Dataset({"a": [0, 2]})
         dt: DataTree = DataTree(name="root", data=dat)
-        printout = dt.__str__()
+        printout = str(dt)
         expected = [
-            "DataTree('root', parent=None)",
+            "<xarray.DataTree 'root'>",
+            "Group: /",
             "Dimensions",
             "Coordinates",
             "a",
@@ -621,8 +623,8 @@ class TestFormatting:
         dat = xr.Dataset({"a": [0, 2]})
         root: DataTree = DataTree(name="root")
         DataTree(name="results", data=dat, parent=root)
-        printout = root.__str__()
-        assert printout.splitlines()[2].startswith("    ")
+        printout = str(root)
+        assert printout.splitlines()[3].startswith("    ")
 
     def test_datatree_repr_of_node_with_data(self):
         dat = xr.Dataset({"a": [0, 2]})
