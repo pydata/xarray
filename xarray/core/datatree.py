@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import itertools
+import textwrap
+from collections import ChainMap
 from collections.abc import Hashable, Iterable, Iterator, Mapping, MutableMapping
 from html import escape
 from typing import (
@@ -79,6 +81,19 @@ if TYPE_CHECKING:
 T_Path = Union[str, NodePath]
 
 
+def _collect_data_and_coord_variables(
+    data: Dataset,
+) -> tuple[dict[Hashable, Variable], dict[Hashable, Variable]]:
+    data_variables = {}
+    coord_variables = {}
+    for k, v in data.variables.items():
+        if k in data._coord_names:
+            coord_variables[k] = v
+        else:
+            data_variables[k] = v
+    return data_variables, coord_variables
+
+
 def _coerce_to_dataset(data: Dataset | DataArray | None) -> Dataset:
     if isinstance(data, DataArray):
         ds = data.to_dataset()
@@ -93,6 +108,23 @@ def _coerce_to_dataset(data: Dataset | DataArray | None) -> Dataset:
     return ds
 
 
+def _join_path(root: str, name: str) -> str:
+    return root.rstrip("/") + "/" + name
+
+
+def _inherited_dataset(ds: Dataset, parent: Dataset) -> Dataset:
+    parent_coord_variables = {k: parent._variables[k] for k in parent._coord_names}
+    return Dataset._construct_direct(
+        variables=parent_coord_variables | ds._variables,
+        coord_names=parent._coord_names | ds._coord_names,
+        dims=parent._dims | ds._dims,
+        attrs=ds._attrs,
+        indexes=parent._indexes | ds._indexes,
+        encoding=ds._encoding,
+        close=ds._close,
+    )
+
+
 def _check_alignment(
     path: str,
     node_ds: Dataset,
@@ -103,13 +135,23 @@ def _check_alignment(
         try:
             align(node_ds, parent_ds, join="exact")
         except ValueError as e:
+            node_repr = textwrap.indent(repr(node_ds), prefix="    ")
+            parent_repr = textwrap.indent(repr(parent_ds), prefix="    ")
             raise ValueError(
                 f"group {path!r} is not aligned with its parent:\n"
-                f"Group: {node_ds}\nvs\nParent: {parent_ds}"
+                f"Group:\n{node_repr}\nParent:\n{parent_repr}"
             ) from e
 
-    for child in children.values():
-        _check_alignment(child.path, child.ds, node_ds, child.children)
+    if children:
+        if parent_ds is not None:
+            base_ds = _inherited_dataset(node_ds, parent_ds)
+        else:
+            base_ds = node_ds
+
+        for child_name, child in children.items():
+            child_path = _join_path(path, child_name)
+            child_ds = child.to_dataset(local=True)
+            _check_alignment(child_path, child_ds, base_ds, child.children)
 
 
 class DatasetView(Dataset):
@@ -145,21 +187,25 @@ class DatasetView(Dataset):
         raise AttributeError("DatasetView objects are not to be initialized directly")
 
     @classmethod
-    def _from_node(
+    def _from_dataset_state(
         cls,
-        wrapping_node: DataTree,
+        variables: dict[Any, Variable],
+        coord_names: set[Hashable],
+        dims: dict[Any, int],
+        attrs: dict | None,
+        indexes: dict[Any, Index],
+        encoding: dict | None,
+        close: Callable[[], None] | None,
     ) -> DatasetView:
         """Constructor, using dataset attributes from wrapping node"""
-
         obj: DatasetView = object.__new__(cls)
-        obj._variables = wrapping_node._variables
-        obj._coord_names = wrapping_node._coord_names
-        obj._dims = wrapping_node._dims
-        obj._indexes = wrapping_node._indexes
-        obj._attrs = wrapping_node._attrs
-        obj._close = wrapping_node._close
-        obj._encoding = wrapping_node._encoding
-
+        obj._variables = variables
+        obj._coord_names = coord_names
+        obj._dims = dims
+        obj._indexes = indexes
+        obj._attrs = attrs
+        obj._close = close
+        obj._encoding = encoding
         return obj
 
     def __setitem__(self, key, val) -> None:
@@ -347,14 +393,10 @@ class DataTree(
     _parent: DataTree | None
     _children: dict[str, DataTree]
     _cache: dict[str, Any]  # used by _CachedAccessor
-    _local_variables: dict[Hashable, Variable]
-    _local_coord_names: set[Hashable]
-    _local_dims: dict[Hashable, int]
-    _local_indexes: dict[Hashable, Index]
-    _variables: dict[Hashable, Variable]
-    _coord_names: set[Hashable]
-    _dims: dict[Hashable, int]
-    _indexes: dict[Hashable, Index]
+    _data_variables: dict[Hashable, Variable]
+    _coord_variables: ChainMap[Hashable, Variable]
+    _dims: ChainMap[Hashable, int]
+    _indexes: ChainMap[Hashable, Index]
     _attrs: dict[Hashable, Any] | None
     _encoding: dict[Hashable, Any] | None
     _close: Callable[[], None] | None
@@ -364,12 +406,8 @@ class DataTree(
         "_parent",
         "_children",
         "_cache",  # used by _CachedAccessor
-        "_local_variables",
-        "_local_coord_names",
-        "_local_dims",
-        "_local_indexes",
-        "_variables",
-        "_coord_names",
+        "_data_variables",
+        "_coord_variables",
         "_dims",
         "_indexes",
         "_attrs",
@@ -419,51 +457,47 @@ class DataTree(
         # set tree attributes
         self._children = {}
         self._parent = None
+
+        # set data attributes
+        self._coord_variables: ChainMap[Hashable, Variable] = ChainMap()
+        self._dims = ChainMap()
+        self._indexes = ChainMap()
         self._set_node_data(_coerce_to_dataset(data))
 
         # finalize tree attributes
         self.children = children  # must set first
         self.parent = parent
 
-    def _set_node_data(self, ds: Dataset) -> None:
-        # local data attributes for to_dataset(local=True)
-        self._local_variables = ds._variables
-        self._local_coord_names = ds._coord_names
-        self._local_dims = ds._dims
-        self._local_indexes = ds._indexes
-        # these data attributes with inheritance are finalized by _post_attach
-        self._variables = dict(ds._variables)
-        self._coord_names = set(ds._coord_names)
-        self._dims = dict(ds._dims)
-        self._indexes = dict(ds._indexes)
+    def _set_node_data(self, ds: Dataset):
+        data_vars, coord_vars = _collect_data_and_coord_variables(ds)
+        self._data_variables = data_vars
+        self._coord_variables.maps[0] = coord_vars
+        self._dims.maps[0] = ds._dims
+        self._indexes.maps[0] = ds._indexes
         self._encoding = ds._encoding
         self._attrs = ds._attrs
         self._close = ds._close
 
-    def _pre_attach(self: DataTree, parent: DataTree) -> None:
-        super()._pre_attach(parent)
-        if self.name in parent.ds.variables:
+    def _pre_attach(self: DataTree, parent: DataTree, name: str) -> None:
+        super()._pre_attach(parent, name)
+        if name in parent.ds.variables:
             raise KeyError(
-                f"parent {parent.name} already contains a variable named {self.name}"
+                f"parent {parent.name} already contains a variable named {name}"
             )
-        name = self.name if self.name is not None else ""
-        path = parent.path.rstrip("/") + "/" + name
-        _check_alignment(path, self.ds, parent.ds, self.children)
+        path = _join_path(parent.path, name)
+        node_ds = self.to_dataset(local=True)
+        _check_alignment(path, node_ds, parent.ds, self.children)
 
-    def _post_attach_recursively(self: DataTree, parent: DataTree) -> None:
-        for k in parent._coord_names:
-            if k not in self._variables:
-                self._variables[k] = parent._variables[k]
-                self._coord_names.add(k)
-        self._dims.update(parent._dims)
-        self._indexes.update(parent._indexes)
-
+    def _add_parent_maps(self: DataTree, parent: DataTree) -> None:
+        self._coord_variables.maps.extend(parent._coord_variables.maps)
+        self._dims.maps.extend(parent._dims.maps)
+        self._indexes.maps.extend(parent._indexes.maps)
         for child in self._children.values():
-            child._post_attach_recursively(self)
+            child._add_parent_maps(self)
 
-    def _post_attach(self: DataTree, parent: DataTree) -> None:
-        super()._post_attach(parent)
-        self._post_attach_recursively(parent)
+    def _post_attach(self: DataTree, parent: DataTree, name: str) -> None:
+        super()._post_attach(parent, name)
+        self._add_parent_maps(parent)
 
     @property
     def parent(self: DataTree) -> DataTree | None:
@@ -481,13 +515,22 @@ class DataTree(
         """
         An immutable Dataset-like view onto the data in this node.
 
-        For a mutable Dataset containing the same data as in this node, use `.to_dataset()` instead.
+        For a mutable Dataset containing the same data as in this node, use
+        `.to_dataset()` instead.
 
         See Also
         --------
         DataTree.to_dataset
         """
-        return DatasetView._from_node(self)
+        return DatasetView._from_dataset_state(
+            variables=self._data_variables | self._coord_variables,
+            coord_names=set(self._coord_variables),
+            dims=dict(self._dims),  # always includes inherited dimensions
+            attrs=self._attrs,
+            indexes=dict(self._indexes),
+            encoding=self._encoding,
+            close=self._close,
+        )
 
     @ds.setter
     def ds(self, data: Dataset | DataArray | None = None) -> None:
@@ -501,27 +544,30 @@ class DataTree(
         Parameters
         ----------
         local : bool, optional
-            If True, only include coordinates, indexes and dimensions defined
-            at the level of this DataTree node, excluding inherited coordinates.
+            If True, only include coordinates and indexes defined at the level
+            of this DataTree node, excluding inherited coordinates.
 
         See Also
         --------
         DataTree.ds
         """
+        coord_vars = self._coord_variables.maps[0] if local else self._coord_variables
+        variables = self._data_variables | coord_vars
+        dims = dict(self._dims.maps[0]) if local else calculate_dimensions(variables)
         return Dataset._construct_direct(
-            dict(self._local_variables if local else self._variables),
-            set(self._local_coord_names if local else self._coord_names),
-            dict(self._local_dims if local else self._dims),
+            variables,
+            set(coord_vars),
+            dims,
             None if self._attrs is None else dict(self._attrs),
-            self._local_indexes if local else self._indexes,
+            dict(self._indexes.maps[0] if local else self._indexes),
             None if self._encoding is None else dict(self._encoding),
             self._close,
         )
 
     @property
-    def has_data(self):
-        """Whether or not there are any data variables in this node."""
-        return len(self._variables) > 0
+    def has_data(self) -> bool:
+        """Whether or not there are any variables in this node."""
+        return bool(self._data_variables or self._coord_variables.maps[0])
 
     @property
     def has_attrs(self) -> bool:
@@ -546,7 +592,7 @@ class DataTree(
         Dataset invariants. It contains all variable objects constituting this
         DataTree node, including both data variables and coordinates.
         """
-        return Frozen(self._variables)
+        return Frozen(self._data_variables | self._coord_variables)
 
     @property
     def attrs(self) -> dict[Hashable, Any]:
@@ -607,7 +653,7 @@ class DataTree(
     def _item_sources(self) -> Iterable[Mapping[Any, Any]]:
         """Places to look-up items for key-completion"""
         yield self.data_vars
-        yield HybridMappingProxy(keys=self._coord_names, mapping=self.coords)
+        yield HybridMappingProxy(keys=self._coord_variables, mapping=self.coords)
 
         # virtual coordinates
         yield HybridMappingProxy(keys=self.dims, mapping=self)
@@ -649,10 +695,10 @@ class DataTree(
         return key in self.variables or key in self.children
 
     def __bool__(self) -> bool:
-        return bool(self.ds.data_vars) or bool(self.children)
+        return bool(self._data_variables) or bool(self._children)
 
     def __iter__(self) -> Iterator[Hashable]:
-        return itertools.chain(self.ds.data_vars, self.children)
+        return itertools.chain(self._data_variables, self._children)
 
     def __array__(self, dtype=None, copy=None):
         raise TypeError(
@@ -679,26 +725,30 @@ class DataTree(
         data: Dataset | Default = _default,
         children: dict[str, DataTree] | Default = _default,
     ) -> None:
-        if data is _default:
-            data = self.ds
+
+        ds = self.to_dataset(local=True) if data is _default else data
+
         if children is _default:
             children = self._children
 
-        for child_name, child in children.items():
-            if child_name in data.variables:
+        for child_name in children:
+            if child_name in ds.variables:
                 raise ValueError(f"node already contains a variable named {child_name}")
 
         parent_ds = self.parent.ds if self.parent is not None else None
-        _check_alignment(self.path, data, parent_ds, children)
+        _check_alignment(self.path, ds, parent_ds, children)
+
+        if data is not _default:
+            self._set_node_data(ds)
 
         self._children = children
-        self._set_node_data(data)
 
         if self.parent is not None:
-            self._post_attach(self.parent)
+            assert self.name is not None
+            self._post_attach(self.parent, self.name)
         else:
             for child in children.values():
-                child._post_attach_recursively(self)
+                child._add_parent_maps(self)
 
     def copy(
         self: DataTree,
@@ -1076,7 +1126,9 @@ class DataTree(
     @property
     def xindexes(self) -> Indexes[Index]:
         """Mapping of xarray Index objects used for label based indexing."""
-        return Indexes(self._indexes, {k: self._variables[k] for k in self._indexes})
+        return Indexes(
+            self._indexes, {k: self._coord_variables[k] for k in self._indexes}
+        )
 
     @property
     def coords(self) -> DatasetCoordinates:

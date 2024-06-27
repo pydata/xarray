@@ -577,7 +577,9 @@ class TestDatasetView:
 
     def test_arithmetic(self, create_test_datatree):
         dt = create_test_datatree()
-        expected = create_test_datatree(modify=lambda ds: 10.0 * ds)["set1"]
+        expected = create_test_datatree(modify=lambda ds: 10.0 * ds)[
+            "set1"
+        ].to_dataset()
         result = 10.0 * dt["set1"].ds
         assert result.identical(expected)
 
@@ -651,6 +653,10 @@ class TestInheritance:
         assert dt.sizes == {"x": 2}
         assert dt.b.sizes == {"x": 2, "y": 1}
         assert dt.c.sizes == {"x": 2, "y": 3}
+        # .ds should also include inherit dims (used for alignment checking)
+        assert dt.b.ds.sizes == {"x": 2, "y": 1}
+        # .to_dataset() should not
+        assert dt.b.to_dataset().sizes == {"y": 1}
 
     def test_inherited_coords_index(self):
         dt = DataTree.from_dict(
@@ -694,20 +700,75 @@ class TestInheritance:
         dt: DataTree = DataTree()
         dt["/a"] = xr.DataArray([1, 2], dims=["x"])
         with pytest.raises(
-            ValueError, match="cannot reindex or align along dimension 'x'"
+            ValueError, match="group '/b' is not aligned with its parent"
         ):
             dt["/b/c"] = xr.DataArray([3], dims=["x"])
 
-    def test_inconsistent_indexes(self):
+        b: DataTree = DataTree(data=xr.Dataset({"c": (("x",), [3])}))
+        with pytest.raises(
+            ValueError, match="group '/b' is not aligned with its parent"
+        ):
+            DataTree(
+                data=xr.Dataset({"a": (("x",), [1, 2])}),
+                children={"b": b},
+            )
+
+    def test_inconsistent_child_indexes(self):
         with pytest.raises(
             ValueError, match="group '/b' is not aligned with its parent"
         ):
             DataTree.from_dict(
                 {
-                    "/": xr.Dataset({"a": (("x",), [1])}, coords={"x": [1]}),
-                    "/b": xr.Dataset({"c": (("x",), [2])}, coords={"x": [2]}),
+                    "/": xr.Dataset(coords={"x": [1]}),
+                    "/b": xr.Dataset(coords={"x": [2]}),
                 }
             )
+
+        # TODO: figure out how to set coordinates only on a node via mutation
+
+        b: DataTree = DataTree(xr.Dataset(coords={"x": [2]}))
+        with pytest.raises(
+            ValueError, match="group '/b' is not aligned with its parent"
+        ):
+            DataTree(data=xr.Dataset(coords={"x": [1]}), children={"b": b})
+
+    def test_inconsistent_grandchild_indexes(self):
+        with pytest.raises(
+            ValueError, match="group '/b/c' is not aligned with its parent"
+        ):
+            DataTree.from_dict(
+                {
+                    "/": xr.Dataset(coords={"x": [1]}),
+                    "/b/c": xr.Dataset(coords={"x": [2]}),
+                }
+            )
+
+        # TODO: figure out how to set coordinates only on a node via mutation
+
+        c: DataTree = DataTree(xr.Dataset(coords={"x": [2]}))
+        b: DataTree = DataTree(children={"c": c})
+        with pytest.raises(
+            ValueError, match="group '/b/c' is not aligned with its parent"
+        ):
+            DataTree(data=xr.Dataset(coords={"x": [1]}), children={"b": b})
+
+    def test_inconsistent_grandchild_dims(self):
+        with pytest.raises(
+            ValueError, match="group '/b/c' is not aligned with its parent"
+        ):
+            DataTree.from_dict(
+                {
+                    "/": xr.Dataset({"a": (("x",), [1, 2])}),
+                    "/b/c": xr.Dataset({"d": (("x",), [3])}),
+                }
+            )
+
+        dt: DataTree = DataTree()
+        dt["/a"] = xr.DataArray([1, 2], dims=["x"])
+        with pytest.raises(
+            ValueError, match="group '/b/c' is not aligned with its parent"
+        ):
+            dt["/b/c/d"] = xr.DataArray([3], dims=["x"])
 
 
 class TestRestructuring:

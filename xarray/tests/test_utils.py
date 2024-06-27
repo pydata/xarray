@@ -8,7 +8,6 @@ import pytest
 
 from xarray.core import duck_array_ops, utils
 from xarray.core.utils import (
-    ChainSet,
     either_dict_or_kwargs,
     infix_dims,
     iterate_nested,
@@ -361,26 +360,3 @@ def test_find_stack_level():
         return utils.find_stack_level(test_mode=True)
 
     assert f() == 3
-
-
-def test_chain_set():
-    chain_set = ChainSet({1, 2}, {2, 3})
-    assert chain_set.sets == [{1, 2}, {2, 3}]
-    assert 1 in chain_set
-    assert 3 in chain_set
-    assert 4 not in chain_set
-    assert set(chain_set) == {1, 2, 3}
-    assert len(chain_set) == 3
-    chain_set.add(0)
-    assert chain_set == {0, 1, 2, 3}
-    assert chain_set.sets[0] == {0, 1, 2}
-    assert chain_set.sets[1] == {2, 3}  # unchanged
-    chain_set.discard(0)
-    assert chain_set == {1, 2, 3}
-    empty_child = chain_set.new_child()
-    assert empty_child.sets == [set(), {1, 2}, {2, 3}]
-    filled_child = chain_set.new_child({0})
-    assert filled_child.sets == [{0}, {1, 2}, {2, 3}]
-    child_parent = filled_child.parents
-    assert child_parent == chain_set
-    assert repr(chain_set) == "ChainSet({1, 2}, {2, 3})"
