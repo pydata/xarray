@@ -23,8 +23,10 @@ You can `read different types of files <https://docs.xarray.dev/en/stable/user-g
 in `xr.open_dataset` by specifying the engine to be used:
 
 .. ipython:: python
+
     import xarray as xr
-    xr.open_dataset("my_file.grib" , engine="cfgrib")
+
+    xr.open_dataset("my_file.grib", engine="cfgrib")
 
 The "engine" provides a set of instructions that tells xarray how
 to read the data and pack them into a `dataset` (or `dataarray`).
