@@ -22,10 +22,9 @@ format (recommended).
 You can `read different types of files <https://docs.xarray.dev/en/stable/user-guide/io.html>`_
 in `xr.open_dataset` by specifying the engine to be used:
 
-```python
-import xarray as xr
-xr.open_dataset("my_file.grib" , engine="cfgrib")
-```
+.. ipython:: python
+    import xarray as xr
+    xr.open_dataset("my_file.grib" , engine="cfgrib")
 
 The "engine" provides a set of instructions that tells xarray how
 to read the data and pack them into a `dataset` (or `dataarray`).
@@ -39,7 +38,7 @@ which type of backend you're using and how to use it.
 The rectangular boxes are clickable for more information.
 Following the diagram is detailed information on many popular backends.
 You can learn more about using and developing backends in the
-`Xarray tutorial JupyterBook <https://tutorial.xarray.dev/advanced/backends/backends.html>_`.
+`Xarray tutorial JupyterBook <https://tutorial.xarray.dev/advanced/backends/backends.html>`_.
 
 .. mermaid::
     :alt: Flowchart illustrating how to choose the right backend engine to read your data
