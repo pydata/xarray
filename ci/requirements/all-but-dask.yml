@@ -22,7 +22,7 @@ dependencies:
   - netcdf4
   - numba
   - numbagg
-  - numpy
+  - numpy<2
   - packaging
   - pandas
   - pint>=0.22
