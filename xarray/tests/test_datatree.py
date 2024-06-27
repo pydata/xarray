@@ -791,7 +791,13 @@ class TestInheritance:
                 }
             )
 
-        # TODO: figure out how to set coordinates only on a node via mutation
+        dt: DataTree = DataTree()
+        dt.ds = xr.Dataset(coords={"x": [1]})  # type: ignore
+        dt["/b"] = DataTree()
+        with pytest.raises(
+            ValueError, match="group '/b' is not aligned with its parent"
+        ):
+            dt["/b"].ds = xr.Dataset(coords={"x": [2]})
 
         b: DataTree = DataTree(xr.Dataset(coords={"x": [2]}))
         with pytest.raises(
@@ -810,7 +816,13 @@ class TestInheritance:
                 }
             )
 
-        # TODO: figure out how to set coordinates only on a node via mutation
+        dt: DataTree = DataTree()
+        dt.ds = xr.Dataset(coords={"x": [1]})  # type: ignore
+        dt["/b/c"] = DataTree()
+        with pytest.raises(
+            ValueError, match="group '/b/c' is not aligned with its parent"
+        ):
+            dt["/b/c"].ds = xr.Dataset(coords={"x": [2]})
 
         c: DataTree = DataTree(xr.Dataset(coords={"x": [2]}))
         b: DataTree = DataTree(children={"c": c})
