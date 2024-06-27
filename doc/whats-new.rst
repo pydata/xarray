@@ -35,6 +35,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Make :py:func:`testing.assert_allclose` work with numpy 2.0 (:issue:`9165`, :pull:`9166`).
+  By `Pontus Lurcock <https://github.com/pont-us>`_.
 - ``numpy>=2`` compatibility in the ``netcdf4`` backend (:pull:`9136`).
   By `Justus Magin <https://github.com/keewis>`_ and `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
@@ -42,8 +44,11 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Adds a flow-chart diagram to help users navigate help resources (`Discussion #8990 <https://github.com/pydata/xarray/discussions/8990>`_).
+  By `Jessica Scheick <https://github.com/jessicas11>`_.
 - Improvements to Zarr & chunking docs (:pull:`9139`, :pull:`9140`, :pull:`9132`)
-  By `Maximilian Roos <https://github.com/max-sixty>`_
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
