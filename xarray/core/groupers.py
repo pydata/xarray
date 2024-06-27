@@ -23,7 +23,7 @@ from xarray.core.indexes import safe_cast_to_index
 from xarray.core.resample_cftime import CFTimeGrouper
 from xarray.core.types import DatetimeLike, SideOptions, T_GroupIndices
 from xarray.core.utils import emit_user_level_warning
-from xarray.core.variable import IndexVariable
+from xarray.core.variable import Variable
 
 __all__ = [
     "EncodedGroups",
@@ -55,7 +55,17 @@ class EncodedGroups:
     codes: DataArray
     full_index: pd.Index
     group_indices: T_GroupIndices | None = field(default=None)
-    unique_coord: IndexVariable | _DummyGroup | None = field(default=None)
+    unique_coord: Variable | _DummyGroup | None = field(default=None)
+
+    def __post_init__(self):
+        assert isinstance(self.codes, DataArray)
+        if self.codes.name is None:
+            raise ValueError("Please set a name on the array you are grouping by.")
+        assert isinstance(self.full_index, pd.Index)
+        assert (
+            isinstance(self.unique_coord, (Variable, _DummyGroup))
+            or self.unique_coord is None
+        )
 
 
 class Grouper(ABC):
@@ -134,10 +144,10 @@ class UniqueGrouper(Grouper):
                 "Failed to group data. Are you grouping by a variable that is all NaN?"
             )
         codes = self.group.copy(data=codes_)
-        unique_coord = IndexVariable(
-            self.group.name, unique_values, attrs=self.group.attrs
+        unique_coord = Variable(
+            dims=codes.name, data=unique_values, attrs=self.group.attrs
         )
-        full_index = unique_coord
+        full_index = pd.Index(unique_values)
 
         return EncodedGroups(
             codes=codes, full_index=full_index, unique_coord=unique_coord
@@ -152,12 +162,13 @@ class UniqueGrouper(Grouper):
         size_range = np.arange(size)
         if isinstance(self.group, _DummyGroup):
             codes = self.group.to_dataarray().copy(data=size_range)
+            unique_coord = self.group
+            full_index = pd.RangeIndex(self.group.size)
         else:
             codes = self.group.copy(data=size_range)
-        unique_coord = self.group
-        full_index = IndexVariable(
-            self.group.name, unique_coord.values, self.group.attrs
-        )
+            unique_coord = self.group.variable.to_base_variable()
+            full_index = pd.Index(unique_coord.data)
+
         return EncodedGroups(
             codes=codes,
             group_indices=group_indices,
@@ -201,7 +212,9 @@ class BinGrouper(Grouper):
         codes = DataArray(
             binned_codes, getattr(group, "coords", None), name=new_dim_name
         )
-        unique_coord = IndexVariable(new_dim_name, pd.Index(unique_values), group.attrs)
+        unique_coord = Variable(
+            dims=new_dim_name, data=unique_values, attrs=group.attrs
+        )
         return EncodedGroups(
             codes=codes, full_index=full_index, unique_coord=unique_coord
         )
@@ -318,7 +331,9 @@ class TimeResampler(Resampler):
         ]
         group_indices += [slice(sbins[-1], None)]
 
-        unique_coord = IndexVariable(group.name, first_items.index, group.attrs)
+        unique_coord = Variable(
+            dims=group.name, data=first_items.index, attrs=group.attrs
+        )
         codes = group.copy(data=codes_)
 
         return EncodedGroups(

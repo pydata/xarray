@@ -641,6 +641,73 @@ class TestAccess:
         dt.sel(dim_0=0)
 
 
+class TestRepr:
+    def test_repr(self):
+        dt: DataTree = DataTree.from_dict(
+            {
+                "/": xr.Dataset(
+                    {"e": (("x",), [1.0, 2.0])},
+                    coords={"x": [2.0, 3.0]},
+                ),
+                "/b": xr.Dataset({"f": (("y",), [3.0])}),
+                "/b/c": xr.Dataset(),
+                "/b/d": xr.Dataset({"g": 4.0}),
+            }
+        )
+
+        result = repr(dt)
+        expected = dedent(
+            """
+            <xarray.DataTree>
+            Group: /
+            │   Dimensions:  (x: 2)
+            │   Coordinates:
+            │     * x        (x) float64 16B 2.0 3.0
+            │   Data variables:
+            │       e        (x) float64 16B 1.0 2.0
+            └── Group: /b
+                │   Dimensions:  (x: 2, y: 1)
+                │   Coordinates:
+                │     * x        (x) float64 16B 2.0 3.0
+                │   Dimensions without coordinates: y
+                │   Data variables:
+                │       f        (y) float64 8B 3.0
+                ├── Group: /b/c
+                └── Group: /b/d
+                        Dimensions:  (x: 2, y: 1)
+                        Coordinates:
+                          * x        (x) float64 16B 2.0 3.0
+                        Dimensions without coordinates: y
+                        Data variables:
+                            g        float64 8B 4.0
+            """
+        ).strip()
+        assert result == expected
+
+        result = repr(dt.b)
+        expected = dedent(
+            """
+            <xarray.DataTree 'b'>
+            Group: /b
+            │   Dimensions:  (x: 2, y: 1)
+            │   Coordinates:
+            │     * x        (x) float64 16B 2.0 3.0
+            │   Dimensions without coordinates: y
+            │   Data variables:
+            │       f        (y) float64 8B 3.0
+            ├── Group: /b/c
+            └── Group: /b/d
+                    Dimensions:  (x: 2, y: 1)
+                    Coordinates:
+                      * x        (x) float64 16B 2.0 3.0
+                    Dimensions without coordinates: y
+                    Data variables:
+                        g        float64 8B 4.0
+            """
+        ).strip()
+        assert result == expected
+
+
 class TestInheritance:
     def test_inherited_dims(self):
         dt = DataTree.from_dict(

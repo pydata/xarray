@@ -1305,11 +1305,12 @@ class DataTree(
         ...     }
         ... )
         >>> dt.match("*/B")
-        DataTree('None', parent=None)
-        ├── DataTree('a')
-        │   └── DataTree('B')
-        └── DataTree('b')
-            └── DataTree('B')
+        <xarray.DataTree>
+        Group: /
+        ├── Group: /a
+        │   └── Group: /a/B
+        └── Group: /b
+            └── Group: /b/B
         """
         matching_nodes = {
             node.path: node.ds
