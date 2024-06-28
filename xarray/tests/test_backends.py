@@ -166,7 +166,7 @@ def create_encoded_masked_and_scaled_data(dtype: np.dtype) -> Dataset:
 
 def create_unsigned_masked_scaled_data(dtype: np.dtype) -> Dataset:
     encoding = {
-        "_FillValue": -1,
+        "_FillValue": np.int8(-1),
         "_Unsigned": "true",
         "dtype": "i1",
         "add_offset": dtype.type(10),
@@ -924,6 +924,35 @@ class CFEncodedBase(DatasetIOBase):
             for k in decoded.variables:
                 assert decoded.variables[k].dtype == actual.variables[k].dtype
             assert_allclose(decoded, actual, decode_bytes=False)
+
+    @pytest.mark.parametrize("fillvalue", [np.int8(-1), np.uint8(255)])
+    def test_roundtrip_unsigned(self, fillvalue):
+        # regression/numpy2 test for
+        encoding = {
+            "_FillValue": fillvalue,
+            "_Unsigned": "true",
+            "dtype": "i1",
+        }
+        x = np.array([0, 1, 127, 128, 254, np.nan], dtype=np.float32)
+        decoded = Dataset({"x": ("t", x, {}, encoding)})
+
+        attributes = {
+            "_FillValue": fillvalue,
+            "_Unsigned": "true",
+        }
+        # Create unsigned data corresponding to [0, 1, 127, 128, 255] unsigned
+        sb = np.asarray([0, 1, 127, -128, -2, -1], dtype="i1")
+        encoded = Dataset({"x": ("t", sb, attributes)})
+
+        with self.roundtrip(decoded) as actual:
+            for k in decoded.variables:
+                assert decoded.variables[k].dtype == actual.variables[k].dtype
+            assert_allclose(decoded, actual, decode_bytes=False)
+
+        with self.roundtrip(decoded, open_kwargs=dict(decode_cf=False)) as actual:
+            for k in encoded.variables:
+                assert encoded.variables[k].dtype == actual.variables[k].dtype
+            assert_allclose(encoded, actual, decode_bytes=False)
 
     @staticmethod
     def _create_cf_dataset():
