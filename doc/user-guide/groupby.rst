@@ -263,36 +263,42 @@ For now Xarray provides three specialized Grouper objects:
 
 These provide functionality identical to the existing ``groupby``, ``groupby_bins``, and ``resample`` methods.
 That is,
-.. codeblock:: python
+
+.. code-block:: python
 
     ds.groupby("x")
 
 is identical to
-.. codeblock:: python
+
+.. code-block:: python
 
     from xarray.groupers import UniqueGrouper
 
     ds.groupby(x=UniqueGrouper())
 
 ; and
-.. codeblock:: python
+
+.. code-block:: python
 
     ds.groupby_bins("x", bins=bins)
 
 is identical to
-.. codeblock:: python
+
+.. code-block:: python
 
     from xarray.groupers import BinGrouper
 
     ds.groupby(x=BinGrouper(bins))
 
 ; and
-.. codeblock:: python
+
+.. code-block:: python
 
     ds.resample(time="ME")
 
 is identical to
-.. codeblock:: python
+
+.. code-block:: python
 
     from xarray.groupers import TimeResampler
 

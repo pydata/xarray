@@ -6842,7 +6842,7 @@ class DataArray(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
-        duplicates : {default 'raise', 'drop'}, optional
+        duplicates : {"raise", "drop"}, optional
             If bin edges are not unique, raise ValueError or drop non-uniques.
 
         Returns
