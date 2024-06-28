@@ -517,7 +517,7 @@ class UnsignedIntegerCoder(VariableCoder):
 
             pop_to(encoding, attrs, "_Unsigned")
             # we need the on-disk type here
-            # trying to get it from encoding, resort to data.dtype if not available
+            # trying to get it from encoding, resort to an int with the same precision as data.dtype if not available
             signed_dtype = np.dtype(encoding.get("dtype", f"i{data.dtype.itemsize}"))
             if "_FillValue" in attrs:
                 new_fill = np.array(attrs["_FillValue"])
