@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import textwrap
 from collections.abc import Hashable, Iterable, Iterator, Mapping, MutableMapping
 from html import escape
 from typing import (
@@ -91,7 +92,27 @@ def _coerce_to_dataset(data: Dataset | DataArray | None) -> Dataset:
     return ds
 
 
+def _join_path(root: str, name: str) -> str:
+    return root.rstrip("/") + "/" + name
+
+
+def _indented_without_header(text: str) -> str:
+    return textwrap.indent("\n".join(text.split("\n")[1:]), prefix="    ")
+
+
+def _drop_data_vars_and_attrs_sections(text: str) -> str:
+    lines = text.split("\n")
+    outputs = []
+    match = "Data variables:"
+    for line in lines:
+        if line[: len(match)] == match:
+            break
+        outputs.append(line)
+    return "\n".join(outputs)
+
+
 def _check_alignment(
+    path: str,
     node_ds: Dataset,
     parent_ds: Dataset | None,
     children: Mapping[Hashable, DataTree],
@@ -100,13 +121,20 @@ def _check_alignment(
         try:
             align(node_ds, parent_ds, join="exact")
         except ValueError as e:
+            node_repr = _indented_without_header(repr(node_ds))
+            parent_repr = _indented_without_header(
+                _drop_data_vars_and_attrs_sections(repr(parent_ds))
+            )
             raise ValueError(
-                "inconsistent alignment between node and parent datasets:\n"
-                f"{node_ds}\nvs\n{parent_ds}"
+                f"group {path!r} is not aligned with its parent:\n"
+                f"Group:\n{node_repr}\nParent:\n{parent_repr}"
             ) from e
 
-    for child in children.values():
-        _check_alignment(child.ds, node_ds, child.children)
+    if children:
+        for child_name, child in children.items():
+            child_path = _join_path(path, child_name)
+            child_ds = child.to_dataset(inherited=False)
+            _check_alignment(child_path, child_ds, node_ds, child.children)
 
 
 class DatasetView(Dataset):
@@ -607,13 +635,19 @@ class DataTree(
         self._encoding = dict(value)
 
     @property
-    def _dims(self: DataTree) -> set[Hashable]:
-        """Names of all dimensions, including those on inherited coordinate variables."""
-        inherited_dims = calculate_dimensions(self._inherited_variables)
-        return self._local_dims | inherited_dims
+    def _sizes(self: DataTree) -> Mapping[Hashable, int]:
+        """Sizes of all dimensions, including those on inherited coordinate variables."""
+        inherited_sizes = calculate_dimensions(self._inherited_variables)
+        return self._local_dims | inherited_sizes
 
     @property
-    def dims(self) -> Mapping[Hashable, int]:
+    def _dims(self: DataTree) -> set[Hashable]:
+        """Sizes of all dimensions, including those on inherited coordinate variables."""
+        inherited_sizes = calculate_dimensions(self._inherited_variables)
+        return self._local_dims | inherited_sizes
+
+    @property
+    def dims(self) -> set[Hashable]:
         """Mapping from dimension names to lengths.
 
         Cannot be modified directly, but is updated when adding new variables.
@@ -622,7 +656,7 @@ class DataTree(
         See `DataTree.sizes`, `Dataset.sizes`, and `DataArray.sizes` for consistently named
         properties.
         """
-        return Frozen(self._dims)
+        return Frozen(set(self._dims))
 
     @property
     def sizes(self) -> Mapping[Hashable, int]:
@@ -637,7 +671,7 @@ class DataTree(
         --------
         DataArray.sizes
         """
-        return self.dims
+        return Frozen(self._dims)
 
     def __contains__(self, key: object) -> bool:
         """The 'in' operator will return true or false depending on whether
@@ -747,9 +781,8 @@ class DataTree(
         deep: bool = False,
     ) -> DataTree:
         """Copy just one node of a tree"""
-        new_node: DataTree = DataTree()
-        new_node.name = self.name
-        new_node.ds = self.to_dataset().copy(deep=deep)  # type: ignore[assignment]
+        data = self.ds.copy(deep=deep)
+        new_node = DataTree(data, name=self.name)
         return new_node
 
     def __copy__(self: DataTree) -> DataTree:
