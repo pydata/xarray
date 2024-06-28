@@ -1,3 +1,4 @@
+import re
 import typing
 from copy import copy, deepcopy
 from textwrap import dedent
@@ -157,12 +158,12 @@ class TestToDataset:
         tree = DataTree.from_dict({"/": base, "/sub": sub})
         subtree = typing.cast(DataTree, tree["sub"])
 
-        assert_identical(tree.to_dataset(local=True), base)
-        assert_identical(subtree.to_dataset(local=True), sub)
+        assert_identical(tree.to_dataset(inherited=False), base)
+        assert_identical(subtree.to_dataset(inherited=False), sub)
 
         sub_and_base = xr.Dataset(coords={"a": 1, "b": 2})
-        assert_identical(tree.to_dataset(local=False), base)
-        assert_identical(subtree.to_dataset(local=False), sub_and_base)
+        assert_identical(tree.to_dataset(inherited=True), base)
+        assert_identical(subtree.to_dataset(inherited=True), sub_and_base)
 
 
 class TestVariablesChildrenNameCollisions:
@@ -718,12 +719,13 @@ class TestInheritance:
             }
         )
         assert dt.sizes == {"x": 2}
+        # nodes should include inherited dimensions
         assert dt.b.sizes == {"x": 2, "y": 1}
         assert dt.c.sizes == {"x": 2, "y": 3}
-        # .ds should also include inherit dims (used for alignment checking)
-        assert dt.b.ds.sizes == {"x": 2, "y": 1}
-        # .to_dataset() should not
-        assert dt.b.to_dataset().sizes == {"y": 1}
+        # dataset objects created from nodes should not
+        assert dt.b.ds.sizes == {"y": 1}
+        assert dt.b.to_dataset(inherited=True).sizes == {"y": 1}
+        assert dt.b.to_dataset(inherited=False).sizes == {"y": 1}
 
     def test_inherited_coords_index(self):
         dt = DataTree.from_dict(
@@ -754,9 +756,27 @@ class TestInheritance:
         xr.testing.assert_equal(dt["/b/z"], xr.DataArray(3, coords=sub_coords))
 
     def test_inconsistent_dims(self):
-        with pytest.raises(
-            ValueError, match="group '/b' is not aligned with its parent"
-        ):
+        expected_msg = (
+            "^"
+            + re.escape(
+                dedent(
+                    """
+                group '/b' is not aligned with its parent:
+                Group:
+                    Dimensions:  (x: 1)
+                    Dimensions without coordinates: x
+                    Data variables:
+                        c        (x) int64 8B 3
+                Parent:
+                    Dimensions:  (x: 2)
+                    Dimensions without coordinates: x
+                """
+                ).strip()
+            )
+            + "$"
+        )
+
+        with pytest.raises(ValueError, match=expected_msg):
             DataTree.from_dict(
                 {
                     "/": xr.Dataset({"a": (("x",), [1, 2])}),
@@ -766,24 +786,40 @@ class TestInheritance:
 
         dt: DataTree = DataTree()
         dt["/a"] = xr.DataArray([1, 2], dims=["x"])
-        with pytest.raises(
-            ValueError, match="group '/b' is not aligned with its parent"
-        ):
+        with pytest.raises(ValueError, match=expected_msg):
             dt["/b/c"] = xr.DataArray([3], dims=["x"])
 
         b: DataTree = DataTree(data=xr.Dataset({"c": (("x",), [3])}))
-        with pytest.raises(
-            ValueError, match="group '/b' is not aligned with its parent"
-        ):
+        with pytest.raises(ValueError, match=expected_msg):
             DataTree(
                 data=xr.Dataset({"a": (("x",), [1, 2])}),
                 children={"b": b},
             )
 
     def test_inconsistent_child_indexes(self):
-        with pytest.raises(
-            ValueError, match="group '/b' is not aligned with its parent"
-        ):
+        expected_msg = (
+            "^"
+            + re.escape(
+                dedent(
+                    """
+                group '/b' is not aligned with its parent:
+                Group:
+                    Dimensions:  (x: 1)
+                    Coordinates:
+                      * x        (x) int64 8B 2
+                    Data variables:
+                        *empty*
+                Parent:
+                    Dimensions:  (x: 1)
+                    Coordinates:
+                      * x        (x) int64 8B 1
+                """
+                ).strip()
+            )
+            + "$"
+        )
+
+        with pytest.raises(ValueError, match=expected_msg):
             DataTree.from_dict(
                 {
                     "/": xr.Dataset(coords={"x": [1]}),
@@ -794,21 +830,37 @@ class TestInheritance:
         dt: DataTree = DataTree()
         dt.ds = xr.Dataset(coords={"x": [1]})  # type: ignore
         dt["/b"] = DataTree()
-        with pytest.raises(
-            ValueError, match="group '/b' is not aligned with its parent"
-        ):
+        with pytest.raises(ValueError, match=expected_msg):
             dt["/b"].ds = xr.Dataset(coords={"x": [2]})
 
         b: DataTree = DataTree(xr.Dataset(coords={"x": [2]}))
-        with pytest.raises(
-            ValueError, match="group '/b' is not aligned with its parent"
-        ):
+        with pytest.raises(ValueError, match=expected_msg):
             DataTree(data=xr.Dataset(coords={"x": [1]}), children={"b": b})
 
     def test_inconsistent_grandchild_indexes(self):
-        with pytest.raises(
-            ValueError, match="group '/b/c' is not aligned with its parent"
-        ):
+        expected_msg = (
+            "^"
+            + re.escape(
+                dedent(
+                    """
+                group '/b/c' is not aligned with its parent:
+                Group:
+                    Dimensions:  (x: 1)
+                    Coordinates:
+                      * x        (x) int64 8B 2
+                    Data variables:
+                        *empty*
+                Parent:
+                    Dimensions:  (x: 1)
+                    Coordinates:
+                      * x        (x) int64 8B 1
+                """
+                ).strip()
+            )
+            + "$"
+        )
+
+        with pytest.raises(ValueError, match=expected_msg):
             DataTree.from_dict(
                 {
                     "/": xr.Dataset(coords={"x": [1]}),
@@ -819,22 +871,36 @@ class TestInheritance:
         dt: DataTree = DataTree()
         dt.ds = xr.Dataset(coords={"x": [1]})  # type: ignore
         dt["/b/c"] = DataTree()
-        with pytest.raises(
-            ValueError, match="group '/b/c' is not aligned with its parent"
-        ):
+        with pytest.raises(ValueError, match=expected_msg):
             dt["/b/c"].ds = xr.Dataset(coords={"x": [2]})
 
         c: DataTree = DataTree(xr.Dataset(coords={"x": [2]}))
         b: DataTree = DataTree(children={"c": c})
-        with pytest.raises(
-            ValueError, match="group '/b/c' is not aligned with its parent"
-        ):
+        with pytest.raises(ValueError, match=expected_msg):
             DataTree(data=xr.Dataset(coords={"x": [1]}), children={"b": b})
 
     def test_inconsistent_grandchild_dims(self):
-        with pytest.raises(
-            ValueError, match="group '/b/c' is not aligned with its parent"
-        ):
+        expected_msg = (
+            "^"
+            + re.escape(
+                dedent(
+                    """
+                group '/b/c' is not aligned with its parent:
+                Group:
+                    Dimensions:  (x: 1)
+                    Dimensions without coordinates: x
+                    Data variables:
+                        d        (x) int64 8B 3
+                Parent:
+                    Dimensions:  (x: 2)
+                    Dimensions without coordinates: x
+                """
+                ).strip()
+            )
+            + "$"
+        )
+
+        with pytest.raises(ValueError, match=expected_msg):
             DataTree.from_dict(
                 {
                     "/": xr.Dataset({"a": (("x",), [1, 2])}),
@@ -844,9 +910,7 @@ class TestInheritance:
 
         dt: DataTree = DataTree()
         dt["/a"] = xr.DataArray([1, 2], dims=["x"])
-        with pytest.raises(
-            ValueError, match="group '/b/c' is not aligned with its parent"
-        ):
+        with pytest.raises(ValueError, match=expected_msg):
             dt["/b/c/d"] = xr.DataArray([3], dims=["x"])
 
 

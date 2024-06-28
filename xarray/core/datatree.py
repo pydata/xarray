@@ -113,9 +113,8 @@ def _join_path(root: str, name: str) -> str:
 
 
 def _inherited_dataset(ds: Dataset, parent: Dataset) -> Dataset:
-    parent_coord_variables = {k: parent._variables[k] for k in parent._coord_names}
     return Dataset._construct_direct(
-        variables=parent_coord_variables | ds._variables,
+        variables=parent._variables | ds._variables,
         coord_names=parent._coord_names | ds._coord_names,
         dims=parent._dims | ds._dims,
         attrs=ds._attrs,
@@ -123,6 +122,21 @@ def _inherited_dataset(ds: Dataset, parent: Dataset) -> Dataset:
         encoding=ds._encoding,
         close=ds._close,
     )
+
+
+def _indented_without_header(text: str) -> str:
+    return textwrap.indent("\n".join(text.split("\n")[1:]), prefix="    ")
+
+
+def _drop_data_vars_and_attrs_sections(text: str) -> str:
+    lines = text.split("\n")
+    outputs = []
+    match = "Data variables:"
+    for line in lines:
+        if line[: len(match)] == match:
+            break
+        outputs.append(line)
+    return "\n".join(outputs)
 
 
 def _check_alignment(
@@ -135,8 +149,10 @@ def _check_alignment(
         try:
             align(node_ds, parent_ds, join="exact")
         except ValueError as e:
-            node_repr = textwrap.indent(repr(node_ds), prefix="    ")
-            parent_repr = textwrap.indent(repr(parent_ds), prefix="    ")
+            node_repr = _indented_without_header(repr(node_ds))
+            parent_repr = _indented_without_header(
+                _drop_data_vars_and_attrs_sections(repr(parent_ds))
+            )
             raise ValueError(
                 f"group {path!r} is not aligned with its parent:\n"
                 f"Group:\n{node_repr}\nParent:\n{parent_repr}"
@@ -150,7 +166,7 @@ def _check_alignment(
 
         for child_name, child in children.items():
             child_path = _join_path(path, child_name)
-            child_ds = child.to_dataset(local=True)
+            child_ds = child.to_dataset(inherited=False)
             _check_alignment(child_path, child_ds, base_ds, child.children)
 
 
@@ -485,8 +501,9 @@ class DataTree(
                 f"parent {parent.name} already contains a variable named {name}"
             )
         path = _join_path(parent.path, name)
-        node_ds = self.to_dataset(local=True)
-        _check_alignment(path, node_ds, parent.ds, self.children)
+        node_ds = self.to_dataset(inherited=False)
+        parent_ds = parent._to_dataset_view(rebuild_dims=False)
+        _check_alignment(path, node_ds, parent_ds, self.children)
 
     def _add_parent_maps(self: DataTree, parent: DataTree) -> None:
         self._coord_variables.maps.extend(parent._coord_variables.maps)
@@ -510,6 +527,33 @@ class DataTree(
             raise ValueError("Cannot set an unnamed node as a child of another node")
         self._set_parent(new_parent, self.name)
 
+    def _to_dataset_view(self, rebuild_dims: bool) -> DatasetView:
+        variables = self._data_variables | self._coord_variables
+        if rebuild_dims:
+            dims = calculate_dimensions(variables)
+        else:
+            # Note: rebuild_dims=False can create technically invalid Dataset
+            # objects because it may not contain all dimensions on its direct
+            # member variables, e.g., consider:
+            #     tree = DataTree.from_dict(
+            #         {
+            #             "/": xr.Dataset({"a": (("x",), [1, 2])}),  # x has size 2
+            #             "/b/c": xr.Dataset({"d": (("x",), [3])}),  # x has size1
+            #         }
+            #     )
+            # However, they are fine for internal use cases, for align() or
+            # building a repr().
+            dims = dict(self._dims)
+        return DatasetView._from_dataset_state(
+            variables=variables,
+            coord_names=set(self._coord_variables),
+            dims=dims,
+            attrs=self._attrs,
+            indexes=dict(self._indexes),
+            encoding=self._encoding,
+            close=None,
+        )
+
     @property
     def ds(self) -> DatasetView:
         """
@@ -522,44 +566,40 @@ class DataTree(
         --------
         DataTree.to_dataset
         """
-        return DatasetView._from_dataset_state(
-            variables=self._data_variables | self._coord_variables,
-            coord_names=set(self._coord_variables),
-            dims=dict(self._dims),  # always includes inherited dimensions
-            attrs=self._attrs,
-            indexes=dict(self._indexes),
-            encoding=self._encoding,
-            close=self._close,
-        )
+        return self._to_dataset_view(rebuild_dims=True)
 
     @ds.setter
     def ds(self, data: Dataset | DataArray | None = None) -> None:
         ds = _coerce_to_dataset(data)
         self._replace_node(ds)
 
-    def to_dataset(self, local: bool = False) -> Dataset:
+    def to_dataset(self, inherited: bool = True) -> Dataset:
         """
         Return the data in this node as a new xarray.Dataset object.
 
         Parameters
         ----------
-        local : bool, optional
-            If True, only include coordinates and indexes defined at the level
+        inherited : bool, optional
+            If False, only include coordinates and indexes defined at the level
             of this DataTree node, excluding inherited coordinates.
 
         See Also
         --------
         DataTree.ds
         """
-        coord_vars = self._coord_variables.maps[0] if local else self._coord_variables
+        coord_vars = (
+            self._coord_variables if inherited else self._coord_variables.maps[0]
+        )
         variables = self._data_variables | coord_vars
-        dims = dict(self._dims.maps[0]) if local else calculate_dimensions(variables)
+        dims = (
+            calculate_dimensions(variables) if inherited else dict(self._dims.maps[0])
+        )
         return Dataset._construct_direct(
             variables,
             set(coord_vars),
             dims,
             None if self._attrs is None else dict(self._attrs),
-            dict(self._indexes.maps[0] if local else self._indexes),
+            dict(self._indexes if inherited else self._indexes.maps[0]),
             None if self._encoding is None else dict(self._encoding),
             self._close,
         )
@@ -726,7 +766,7 @@ class DataTree(
         children: dict[str, DataTree] | Default = _default,
     ) -> None:
 
-        ds = self.to_dataset(local=True) if data is _default else data
+        ds = self.to_dataset(inherited=False) if data is _default else data
 
         if children is _default:
             children = self._children
@@ -735,7 +775,11 @@ class DataTree(
             if child_name in ds.variables:
                 raise ValueError(f"node already contains a variable named {child_name}")
 
-        parent_ds = self.parent.ds if self.parent is not None else None
+        parent_ds = (
+            self.parent._to_dataset_view(rebuild_dims=False)
+            if self.parent is not None
+            else None
+        )
         _check_alignment(self.path, ds, parent_ds, children)
 
         if data is not _default:

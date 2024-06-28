@@ -1024,7 +1024,7 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
 def _single_node_repr(node: DataTree) -> str:
     """Information about this node, not including its relationships to other nodes."""
     if node.has_data or node.has_attrs:
-        ds_info = "\n" + repr(node.ds)
+        ds_info = "\n" + repr(node._to_dataset_view(rebuild_dims=False))
     else:
         ds_info = ""
     return f"Group: {node.path}{ds_info}"
