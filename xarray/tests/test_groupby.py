@@ -21,6 +21,7 @@ from xarray.groupers import (
     Grouper,
     TimeResampler,
     UniqueGrouper,
+    season_to_month_tuple,
 )
 from xarray.tests import (
     InaccessibleArray,
@@ -2915,12 +2916,6 @@ def test_gappy_resample_reductions(reduction):
     assert_identical(expected, actual)
 
 
-# Possible property tests
-# 1. lambda x: x
-# 2. grouped-reduce on unique coords is identical to array
-# 3. group_over == groupby-reduce along other dimensions
-
-
 def test_groupby_transpose():
     # GH5361
     data = xr.DataArray(
@@ -2932,3 +2927,24 @@ def test_groupby_transpose():
     second = data.groupby("x").sum()
 
     assert_identical(first, second.transpose(*first.dims))
+
+
+def test_season_to_month_tuple():
+    assert season_to_month_tuple(["JF", "MAM", "JJAS", "OND"]) == (
+        (1, 2),
+        (3, 4, 5),
+        (6, 7, 8, 9),
+        (10, 11, 12),
+    )
+    assert season_to_month_tuple(["DJFM", "AM", "JJAS", "ON"]) == (
+        (12, 1, 2, 3),
+        (4, 5),
+        (6, 7, 8, 9),
+        (10, 11),
+    )
+
+
+# Possible property tests
+# 1. lambda x: x
+# 2. grouped-reduce on unique coords is identical to array
+# 3. group_over == groupby-reduce along other dimensions
