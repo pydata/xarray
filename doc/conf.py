@@ -59,6 +59,7 @@ except ImportError:
     )
 
 nbsphinx_allow_errors = False
+nbsphinx_requirejs_path = ""
 
 # -- General configuration ------------------------------------------------
 
@@ -68,7 +69,9 @@ nbsphinx_allow_errors = False
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+
 extensions = [
+    "sphinxcontrib.mermaid",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
@@ -176,6 +179,8 @@ napoleon_type_aliases = {
     "pd.NaT": "~pandas.NaT",
 }
 
+# mermaid config
+mermaid_version = "10.9.1"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
