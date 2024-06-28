@@ -16,7 +16,6 @@ from typing import (
 
 from xarray.core import utils
 from xarray.core.alignment import align
-from xarray.core.common import TreeAttrAccessMixin
 from xarray.core.coordinates import DatasetCoordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, DataVariables
@@ -42,7 +41,6 @@ from xarray.core.treenode import NamedNode, NodePath, Tree
 from xarray.core.utils import (
     Default,
     Frozen,
-    HybridMappingProxy,
     _default,
     either_dict_or_kwargs,
     maybe_wrap_array,
@@ -316,7 +314,6 @@ class DataTree(
     MappedDatasetMethodsMixin,
     MappedDataWithCoords,
     DataTreeArithmeticMixin,
-    TreeAttrAccessMixin,
     Generic[Tree],
     Mapping,
 ):
@@ -481,43 +478,28 @@ class DataTree(
         # Known mypy issue for setters with different type to property:
         # https://github.com/python/mypy/issues/3004
         ds = _coerce_to_dataset(data)
+        self._replace_node(ds)
 
-        self._replace(
-            inplace=True,
-            variables=ds._variables,
-            coord_names=ds._coord_names,
-            dims=ds._dims,
-            indexes=ds._indexes,
-            attrs=ds._attrs,
-            encoding=ds._encoding,
-        )
-        self._close = ds._close
-
-    def _pre_attach(self: DataTree, parent: DataTree) -> None:
-        """
-        Method which superclass calls before setting parent, here used to prevent having two
-        children with duplicate names (or a data variable with the same name as a child).
-        """
-        super()._pre_attach(parent)
-        if self.name in list(parent.ds.variables):
-            raise KeyError(
-                f"parent {parent.name} already contains a data variable named {self.name}"
-            )
-
-    def to_dataset(self) -> Dataset:
+    def to_dataset(self, inherited: bool = True) -> Dataset:
         """
         Return the data in this node as a new xarray.Dataset object.
+
+        Parameters
+        ----------
+        inherited : bool, optional
+            If False, only include coordinates and indexes defined at the level
+            of this DataTree node, excluding inherited coordinates.
 
         See Also
         --------
         DataTree.ds
         """
         return Dataset._construct_direct(
-            self._variables,
-            self._coord_names,
-            self._dims,
+            self._variables if inherited else self._local_variables,
+            self._coord_names if inherited else self._local_coord_names,
+            self._dims if inherited else self._local_dims,
             self._attrs,
-            self._indexes,
+            self._indexes if inherited else self._local_indexes,
             self._encoding,
             self._close,
         )
@@ -542,6 +524,26 @@ class DataTree(
         """True if only leaf nodes contain data."""
         return not any(node.has_data for node in self.subtree if not node.is_leaf)
 
+    def _get_inherited_coord_var(self: DataTree, key: str) -> Variable:
+        for node in self.parents:
+            if key in node._local_coord_names:
+                return node._local_variables[key]
+
+        raise Exception(
+            "should never get here - means we didn't do our alignment / construction properly"
+        )
+
+    @property
+    def _inherited_variables(self: DataTree) -> Mapping[Hashable, Variable]:
+        return {
+            k: self._get_inherited_coord_var(k) for k in self._inherited_coord_names
+        }
+
+    @property
+    def _variables(self: DataTree) -> Mapping[Hashable, Variable]:
+        """All variables, including inherited coordinate variables."""
+        return {**self._local_variables, **self._inherited_variables}
+
     @property
     def variables(self) -> Mapping[Hashable, Variable]:
         """Low level interface to node contents as dict of Variable objects.
@@ -551,6 +553,36 @@ class DataTree(
         DataTree node, including both data variables and coordinates.
         """
         return Frozen(self._variables)
+
+    @property
+    def _coord_names(self: DataTree) -> set[Hashable]:
+        """Names of all coordinate variables, including inherited coordinate variables."""
+        return self._local_coord_names | self._inherited_coord_names
+
+    def _maybe_get_inherited_index(self: DataTree, key: str) -> Index | None:
+        for node in self.parents:
+            if key in node._local_indexes:
+                return node._local_indexes[key]
+
+        # it's possible that an inherited coordinate might not have a corresponding index
+        return None
+
+    @property
+    def _inherited_indexes(self: DataTree) -> Mapping[Hashable, Index]:
+        # TODO this whole method is kinda smelly
+
+        inherited_indexes: Mapping[Hashable, Index] = {}
+        for k in self._inherited_coord_names:
+            maybe_inherited_index = self._maybe_get_inherited_index(k)
+            if maybe_inherited_index is not None:
+                inherited_indexes[k] = maybe_inherited_index
+
+        return inherited_indexes
+
+    @property
+    def _indexes(self: DataTree) -> Mapping[Hashable, Index]:
+        """All indexes, including those stored under inherited coordinate variables."""
+        return {**self._local_indexes, **self._inherited_indexes}
 
     @property
     def attrs(self) -> dict[Hashable, Any]:
@@ -573,6 +605,12 @@ class DataTree(
     @encoding.setter
     def encoding(self, value: Mapping) -> None:
         self._encoding = dict(value)
+
+    @property
+    def _dims(self: DataTree) -> set[Hashable]:
+        """Names of all dimensions, including those on inherited coordinate variables."""
+        inherited_dims = calculate_dimensions(self._inherited_variables)
+        return self._local_dims | inherited_dims
 
     @property
     def dims(self) -> Mapping[Hashable, int]:
@@ -600,51 +638,6 @@ class DataTree(
         DataArray.sizes
         """
         return self.dims
-
-    @property
-    def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
-        """Places to look-up items for attribute-style access"""
-        yield from self._item_sources
-        yield self.attrs
-
-    @property
-    def _item_sources(self) -> Iterable[Mapping[Any, Any]]:
-        """Places to look-up items for key-completion"""
-        yield self.data_vars
-        yield HybridMappingProxy(keys=self._coord_names, mapping=self.coords)
-
-        # virtual coordinates
-        yield HybridMappingProxy(keys=self.dims, mapping=self)
-
-        # immediate child nodes
-        yield self.children
-
-    def _ipython_key_completions_(self) -> list[str]:
-        """Provide method for the key-autocompletions in IPython.
-        See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
-        For the details.
-        """
-
-        # TODO allow auto-completing relative string paths, e.g. `dt['path/to/../ <tab> node'`
-        # Would require changes to ipython's autocompleter, see https://github.com/ipython/ipython/issues/12420
-        # Instead for now we only list direct paths to all node in subtree explicitly
-
-        items_on_this_node = self._item_sources
-        full_file_like_paths_to_all_nodes_in_subtree = {
-            node.path[1:]: node for node in self.subtree
-        }
-
-        all_item_sources = itertools.chain(
-            items_on_this_node, [full_file_like_paths_to_all_nodes_in_subtree]
-        )
-
-        items = {
-            item
-            for source in all_item_sources
-            for item in source
-            if isinstance(item, str)
-        }
-        return list(items)
 
     def __contains__(self, key: object) -> bool:
         """The 'in' operator will return true or false depending on whether
