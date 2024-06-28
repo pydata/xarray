@@ -1034,9 +1034,7 @@ def test_groupby_bins_cut_kwargs(use_flox: bool) -> None:
 
     with xr.set_options(use_flox=use_flox):
         actual = da.groupby(
-            x=BinGrouper(
-                bins=x_bins, cut_kwargs=dict(include_lowest=True, right=False)
-            ),
+            x=BinGrouper(bins=x_bins, include_lowest=True, right=False),
         ).mean()
     assert_identical(expected, actual)
 

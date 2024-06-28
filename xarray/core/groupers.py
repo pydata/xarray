@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import datetime
 from abc import ABC, abstractmethod
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -195,14 +196,46 @@ class BinGrouper(Grouper):
 
     Attributes
     ----------
-    bins: int, sequence of scalars, or IntervalIndex
-        Speciication for bins either as integer, or as bin edges.
-    cut_kwargs: dict
-        Keyword arguments forwarded to :py:func:`pandas.cut`.
+    bins : int, sequence of scalars, or IntervalIndex
+        The criteria to bin by.
+
+        * int : Defines the number of equal-width bins in the range of `x`. The
+          range of `x` is extended by .1% on each side to include the minimum
+          and maximum values of `x`.
+        * sequence of scalars : Defines the bin edges allowing for non-uniform
+          width. No extension of the range of `x` is done.
+        * IntervalIndex : Defines the exact bins to be used. Note that
+          IntervalIndex for `bins` must be non-overlapping.
+
+    right : bool, default True
+        Indicates whether `bins` includes the rightmost edge or not. If
+        ``right == True`` (the default), then the `bins` ``[1, 2, 3, 4]``
+        indicate (1,2], (2,3], (3,4]. This argument is ignored when
+        `bins` is an IntervalIndex.
+    labels : array or False, default None
+        Specifies the labels for the returned bins. Must be the same length as
+        the resulting bins. If False, returns only integer indicators of the
+        bins. This affects the type of the output container (see below).
+        This argument is ignored when `bins` is an IntervalIndex. If True,
+        raises an error. When `ordered=False`, labels must be provided.
+    retbins : bool, default False
+        Whether to return the bins or not. Useful when bins is provided
+        as a scalar.
+    precision : int, default 3
+        The precision at which to store and display the bins labels.
+    include_lowest : bool, default False
+        Whether the first interval should be left-inclusive or not.
+    duplicates : {default 'raise', 'drop'}, optional
+        If bin edges are not unique, raise ValueError or drop non-uniques.
     """
 
     bins: int | Sequence | pd.IntervalIndex
-    cut_kwargs: Mapping = field(default_factory=dict)
+    # The rest are copied from pandas
+    right: bool = True
+    labels: Any = None
+    precision: int = 3
+    include_lowest: bool = False
+    duplicates: Literal["raise", "drop"] = "raise"
 
     def __post_init__(self) -> None:
         if duck_array_ops.isnull(self.bins).all():
@@ -213,7 +246,16 @@ class BinGrouper(Grouper):
 
         data = group.data
 
-        binned, self.bins = pd.cut(data, self.bins, **self.cut_kwargs, retbins=True)
+        binned, self.bins = pd.cut(
+            data,
+            bins=self.bins,
+            right=self.right,
+            labels=self.labels,
+            precision=self.precision,
+            include_lowest=self.include_lowest,
+            duplicates=self.duplicates,
+            retbins=True,
+        )
 
         binned_codes = binned.codes
         if (binned_codes == -1).all():

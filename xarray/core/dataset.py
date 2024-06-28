@@ -10342,6 +10342,7 @@ class Dataset(
         include_lowest: bool = False,
         squeeze: bool | None = None,
         restore_coord_dims: bool = False,
+        duplicates: Literal["raise", "drop"] = "raise",
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
 
@@ -10378,6 +10379,8 @@ class Dataset(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
+        duplicates : {default 'raise', 'drop'}, optional
+            If bin edges are not unique, raise ValueError or drop non-uniques.
 
         Returns
         -------
@@ -10410,12 +10413,10 @@ class Dataset(
         _validate_groupby_squeeze(squeeze)
         grouper = BinGrouper(
             bins=bins,
-            cut_kwargs={
-                "right": right,
-                "labels": labels,
-                "precision": precision,
-                "include_lowest": include_lowest,
-            },
+            right=right,
+            labels=labels,
+            precision=precision,
+            include_lowest=include_lowest,
         )
         rgrouper = ResolvedGrouper(grouper, group, self)
 
