@@ -716,7 +716,7 @@ class DataTree(
         if data is _default:
             data = self.ds
         if children is _default:
-            children = self.children
+            children = self._children
 
         for child_name, child in children.items():
             if child_name in data.variables:
