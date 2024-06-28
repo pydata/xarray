@@ -457,13 +457,16 @@ class DataTree(
         # setup inherited node attributes (finalized by _post_attach)
         self._inherited_coord_names = set()
 
-    def _pre_attach(self: DataTree, parent: DataTree) -> None:
-        super()._pre_attach(parent)
+    def _pre_attach(self: DataTree, parent: DataTree, name: str) -> None:
+        super()._pre_attach(parent, name)
         if self.name in parent.ds.variables:
             raise KeyError(
                 f"parent {parent.name} already contains a variable named {self.name}"
             )
-        _check_alignment(self.ds, parent.ds, self.children)
+        path = _join_path(parent.path, name)
+        node_ds = self.to_dataset(inherited=False)
+        parent_ds = parent.to_dataset(inherited=False)
+        _check_alignment(path, node_ds, parent_ds, self.children)
 
     def _post_attach_recursively(self: DataTree, parent: DataTree) -> None:
         for k in parent._coord_names:
@@ -473,8 +476,8 @@ class DataTree(
         for child in self._children.values():
             child._post_attach_recursively(self)
 
-    def _post_attach(self: DataTree, parent: DataTree) -> None:
-        super()._post_attach(parent)
+    def _post_attach(self: DataTree, parent: DataTree, name: str) -> None:
+        super()._post_attach(parent, name)
         self._post_attach_recursively(parent)
 
     @property
@@ -720,7 +723,7 @@ class DataTree(
                 raise ValueError(f"node already contains a variable named {child_name}")
 
         parent_ds = self.parent.ds if self.parent is not None else None
-        _check_alignment(data, parent_ds, children)
+        _check_alignment(self.path, data, parent_ds, children)
 
         self._children = children
         self._set_node_data(data)
