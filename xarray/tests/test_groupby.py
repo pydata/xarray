@@ -22,6 +22,7 @@ from xarray.groupers import (
     Grouper,
     TimeResampler,
     UniqueGrouper,
+    season_to_month_tuple,
 )
 from xarray.namedarray.pycompat import is_chunked_array
 from xarray.tests import (
@@ -3147,3 +3148,22 @@ def test_groupby_dask_eager_load_warnings():
 # 2. grouped-reduce on unique coords is identical to array
 # 3. group_over == groupby-reduce along other dimensions
 # 4. result is equivalent for transposed input
+def test_season_to_month_tuple():
+    assert season_to_month_tuple(["JF", "MAM", "JJAS", "OND"]) == (
+        (1, 2),
+        (3, 4, 5),
+        (6, 7, 8, 9),
+        (10, 11, 12),
+    )
+    assert season_to_month_tuple(["DJFM", "AM", "JJAS", "ON"]) == (
+        (12, 1, 2, 3),
+        (4, 5),
+        (6, 7, 8, 9),
+        (10, 11),
+    )
+
+
+# Possible property tests
+# 1. lambda x: x
+# 2. grouped-reduce on unique coords is identical to array
+# 3. group_over == groupby-reduce along other dimensions
