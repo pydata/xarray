@@ -39,6 +39,8 @@ Bug fixes
   By `Pontus Lurcock <https://github.com/pont-us>`_.
 - ``numpy>=2`` compatibility in the ``netcdf4`` backend (:pull:`9136`).
   By `Justus Magin <https://github.com/keewis>`_ and `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Promote floating-point numeric datetimes before decoding (:issue:`9179`, :pull:`9182`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 Documentation
