@@ -278,6 +278,8 @@ def _decode_datetime_with_pandas(
     # timedelta64 value, and therefore would raise an error in the lines above.
     if flat_num_dates.dtype.kind in "iu":
         flat_num_dates = flat_num_dates.astype(np.int64)
+    elif flat_num_dates.dtype.kind in "f":
+        flat_num_dates = flat_num_dates.astype(np.float64)
 
     # Cast input ordinals to integers of nanoseconds because pd.to_timedelta
     # works much faster when dealing with integers (GH 1399).
