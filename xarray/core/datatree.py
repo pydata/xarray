@@ -117,6 +117,7 @@ def _check_alignment(
     parent_ds: Dataset | None,
     children: Mapping[Hashable, DataTree],
 ) -> None:
+    """Recursively check alignment all the way down the tree from the current node."""
     if parent_ds is not None:
         try:
             align(node_ds, parent_ds, join="exact")
@@ -714,7 +715,7 @@ class DataTree(
         children: Mapping[str, DataTree] | Default = _default,
     ) -> None:
         if data is _default:
-            data = self.ds
+            data = self.to_dataset(inherited=False)
         if children is _default:
             children = self._children
 
@@ -722,7 +723,9 @@ class DataTree(
             if child_name in data.variables:
                 raise ValueError(f"node already contains a variable named {child_name}")
 
-        parent_ds = self.parent.ds if self.parent is not None else None
+        parent_ds = (
+            self.parent.to_dataset(inherited=True) if self.parent is not None else None
+        )
         _check_alignment(self.path, data, parent_ds, children)
 
         self._children = children
