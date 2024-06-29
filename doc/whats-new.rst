@@ -39,6 +39,9 @@ Bug fixes
   By `Pontus Lurcock <https://github.com/pont-us>`_.
 - Promote floating-point numeric datetimes before decoding (:issue:`9179`, :pull:`9182`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Address regression introduced in :pull:`9002` that caused inability to access
+  cftime indexes in certain senerios. (:issue:`9138`, :pull:`9192`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
 
 
 Documentation
