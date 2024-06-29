@@ -468,7 +468,7 @@ class TreeNode(Generic[Tree]):
                     current_node = current_node.get(part)
         return current_node
 
-    def _set(self: Tree, key: str, val: Tree) -> None:
+    def _set(self: Tree, key: str, val: Tree, *, copy: bool = True) -> None:
         """
         Set the child node with the specified key to value.
 
@@ -484,7 +484,7 @@ class TreeNode(Generic[Tree]):
         new_nodes_along_path: bool = False,
         allow_overwrite: bool = True,
         *,
-        copy: bool = False,
+        copy: bool = True,
     ) -> None:
         """
         Set a new item in the tree, overwriting anything already present at that path.
