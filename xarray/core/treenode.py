@@ -502,6 +502,8 @@ class TreeNode(Generic[Tree]):
         allow_overwrite : bool
             Whether or not to overwrite any existing node at the location given
             by path.
+        copy : bool, optional
+            Whether to make a shallow copy of the values in the node. Default is True.
 
         Raises
         ------

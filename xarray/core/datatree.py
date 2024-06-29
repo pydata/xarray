@@ -1071,6 +1071,8 @@ class DataTree(
             To assign data to the root node of the tree use "/" as the path.
         name : Hashable | None, optional
             Name for the root node of the tree. Default is None.
+        copy : bool, optional
+            Whether to make a shallow copy of the values in the dict. Default is True.
 
         Returns
         -------
