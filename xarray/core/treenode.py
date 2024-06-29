@@ -483,6 +483,8 @@ class TreeNode(Generic[Tree]):
         item: Tree | T_DataArray,
         new_nodes_along_path: bool = False,
         allow_overwrite: bool = True,
+        *,
+        copy: bool = False,
     ) -> None:
         """
         Set a new item in the tree, overwriting anything already present at that path.
@@ -539,7 +541,7 @@ class TreeNode(Generic[Tree]):
                     elif new_nodes_along_path:
                         # Want child classes (i.e. DataTree) to populate tree with their own types
                         new_node = type(self)()
-                        current_node._set(part, new_node)
+                        current_node._set(part, new_node, copy=copy)
                         current_node = current_node.children[part]
                     else:
                         raise KeyError(f"Could not reach node at path {path}")
@@ -547,11 +549,11 @@ class TreeNode(Generic[Tree]):
         if name in current_node.children:
             # Deal with anything already existing at this location
             if allow_overwrite:
-                current_node._set(name, item)
+                current_node._set(name, item, copy=copy)
             else:
                 raise KeyError(f"Already a node object at path {path}")
         else:
-            current_node._set(name, item)
+            current_node._set(name, item, copy=copy)
 
     def __delitem__(self: Tree, key: str):
         """Remove a child node from this tree object."""
