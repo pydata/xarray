@@ -989,6 +989,22 @@ def test_cftimeindex_calendar_property(calendar, expected):
 
 
 @requires_cftime
+def test_cftime_noleap_with_str():
+    # https://github.com/pydata/xarray/issues/9138
+    time = pd.date_range("2000-01-01", "2006-01-01", freq="D")
+    temperature = np.ones(len(time))
+    da = xr.DataArray(
+        data=temperature,
+        dims=["time"],
+        coords=dict(
+            time=time,
+        ),
+    )
+    da_noleap = da.convert_calendar("noleap")
+    da_noleap.sel(time=slice("2001", "2002"))
+
+
+@requires_cftime
 def test_empty_cftimeindex_calendar_property():
     index = CFTimeIndex([])
     assert index.calendar is None
