@@ -8,8 +8,7 @@ from . import parameterized
 
 class Datatree:
     def setup(self):
-        dat1 = xr.Dataset({"a": 1})
-        run1 = DataTree.from_dict({"run1": dat1})
+        run1 = DataTree.from_dict({"run1": xr.Dataset({"a": 1})})
         self.d = {"run1": run1}
 
     @parameterized(["copy"], [(True, False)])
