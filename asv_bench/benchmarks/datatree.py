@@ -1,5 +1,3 @@
-import numpy as np
-
 import xarray as xr
 from xarray.core.datatree import DataTree
 
