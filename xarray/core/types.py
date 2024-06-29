@@ -294,3 +294,4 @@ ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]
 GroupKey = Any
 GroupIndex = Union[int, slice, list[int]]
 T_GroupIndices = list[GroupIndex]
+ToDictDataOptions = Literal["list", "array", True, False]

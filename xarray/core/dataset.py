@@ -161,6 +161,7 @@ if TYPE_CHECKING:
         ReindexMethodOptions,
         SideOptions,
         T_Xarray,
+        ToDictDataOptions,
     )
     from xarray.core.weighted import DatasetWeighted
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
@@ -292,7 +293,6 @@ def _maybe_chunk(
     chunked_array_type: str | ChunkManagerEntrypoint | None = None,
     from_array_kwargs=None,
 ):
-
     from xarray.namedarray.daskmanager import DaskManager
 
     if chunks is not None:
@@ -7546,7 +7546,7 @@ class Dataset(
         return df
 
     def to_dict(
-        self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
+        self, data: ToDictDataOptions = "list", encoding: bool = False
     ) -> dict[str, Any]:
         """
         Convert this dataset to a dictionary following xarray naming

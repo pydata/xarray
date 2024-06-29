@@ -24,6 +24,12 @@ New Features
 ~~~~~~~~~~~~
 - Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
+- New ``DataTree`` methods :py:meth:`xarray.core.datatree.DataTree.to_native_dict`
+  and :py:meth:`xarray.core.datatree.DataTree.from_native_dict` to allow easy conversion between
+  dictionaries and xarray objects
+  (:issue:`9074`, :pull:`9080`).
+  By `Etienne Schalk <https://github.com/etienneschalk>`_
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

@@ -107,6 +107,7 @@ if TYPE_CHECKING:
         SideOptions,
         T_Chunks,
         T_Xarray,
+        ToDictDataOptions,
     )
     from xarray.core.weighted import DataArrayWeighted
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
@@ -4344,7 +4345,7 @@ class DataArray(
         )
 
     def to_dict(
-        self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
+        self, data: ToDictDataOptions = "list", encoding: bool = False
     ) -> dict[str, Any]:
         """
         Convert this xarray.DataArray into a dictionary following xarray
