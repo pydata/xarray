@@ -475,8 +475,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if hasattr(self._data, "nbytes"):
             return self._data.nbytes  # type: ignore[no-any-return]
 
-        if hasattr(self.dtype, "itemsize"):
-            itemsize = self.dtype.itemsize
+        if hasattr(np.dtype(self.dtype), "itemsize"):
+            itemsize = np.dtype(self.dtype).itemsize
         elif isinstance(self._data, _arrayapi):
             xp = _get_data_namespace(self)
 
