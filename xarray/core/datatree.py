@@ -639,13 +639,7 @@ class DataTree(
         self._encoding = dict(value)
 
     @property
-    def _sizes(self: DataTree) -> Mapping[Hashable, int]:
-        """Sizes of all dimensions, including those on inherited coordinate variables."""
-        inherited_sizes = calculate_dimensions(self._inherited_variables)
-        return self._local_dims | inherited_sizes
-
-    @property
-    def _dims(self: DataTree) -> set[Hashable]:
+    def _dims(self: DataTree) -> Mapping[Hashable, int]:
         """Sizes of all dimensions, including those on inherited coordinate variables."""
         inherited_sizes = calculate_dimensions(self._inherited_variables)
         return self._local_dims | inherited_sizes
@@ -656,9 +650,9 @@ class DataTree(
 
         Cannot be modified directly, but is updated when adding new variables.
 
-        Note that type of this object differs from `DataArray.dims`.
-        See `DataTree.sizes`, `Dataset.sizes`, and `DataArray.sizes` for consistently named
-        properties.
+        See Also
+        --------
+        DataTree.sizes
         """
         return Frozen(set(self._dims))
 
@@ -668,12 +662,9 @@ class DataTree(
 
         Cannot be modified directly, but is updated when adding new variables.
 
-        This is an alias for `DataTree.dims` provided for the benefit of
-        consistency with `DataArray.sizes`.
-
         See Also
         --------
-        DataArray.sizes
+        DataTree.dims
         """
         return Frozen(self._dims)
 
