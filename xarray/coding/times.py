@@ -23,7 +23,7 @@ from xarray.coding.variables import (
 from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
 from xarray.core.duck_array_ops import asarray
-from xarray.core.formatting import first_n_items, format_timestamp, last_item
+from xarray.core.formatting import format_timestamp
 from xarray.core.pdcompat import nanosecond_precision_timestamp
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
@@ -207,9 +207,12 @@ def _decode_cf_datetime_dtype(
     # Verify that at least the first and last date can be decoded
     # successfully. Otherwise, tracebacks end up swallowed by
     # Dataset.__repr__ when users try to view their lazily decoded array.
-    values = indexing.ImplicitToExplicitIndexingAdapter(indexing.as_indexable(data))
+    values = indexing.ImplicitToExplicitIndexingAdapter(data)
     example_value = np.concatenate(
-        [first_n_items(values, 1) or [0], last_item(values) or [0]]
+        [
+            values[0] if values.size > 0 else [0],
+            values[-1] if values.size > 0 else [0],
+        ]
     )
 
     try:
