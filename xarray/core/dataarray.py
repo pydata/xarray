@@ -1909,7 +1909,7 @@ class DataArray(
         other: T_DataArrayOrSet,
         *,
         method: ReindexMethodOptions = None,
-        tolerance: int | float | Iterable[int | float] | None = None,
+        tolerance: float | Iterable[float] | str | None = None,
         copy: bool = True,
         fill_value=dtypes.NA,
     ) -> Self:
@@ -1936,7 +1936,7 @@ class DataArray(
             - backfill / bfill: propagate next valid index value backward
             - nearest: use nearest valid index value
 
-        tolerance : optional
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
@@ -2096,7 +2096,7 @@ class DataArray(
         indexers: Mapping[Any, Any] | None = None,
         *,
         method: ReindexMethodOptions = None,
-        tolerance: float | Iterable[float] | None = None,
+        tolerance: float | Iterable[float] | str | None = None,
         copy: bool = True,
         fill_value=dtypes.NA,
         **indexers_kwargs: Any,
@@ -2126,7 +2126,7 @@ class DataArray(
             - backfill / bfill: propagate next valid index value backward
             - nearest: use nearest valid index value
 
-        tolerance : float | Iterable[float] | None, default: None
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
