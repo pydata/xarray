@@ -24,6 +24,8 @@ New Features
 ~~~~~~~~~~~~
 - Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
+- Extract the source url from fsspec objects (:issue:`9142`, :pull:`8923`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -39,6 +41,9 @@ Bug fixes
   By `Pontus Lurcock <https://github.com/pont-us>`_.
 - Allow diffing objects with array attributes on variables (:issue:`9153`, :pull:`9169`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Promote floating-point numeric datetimes before decoding (:issue:`9179`, :pull:`9182`).
+  By `Justus Magin <https://github.com/keewis>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
