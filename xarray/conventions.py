@@ -794,24 +794,4 @@ def cf_encoder(variables: T_Variables, attributes: T_Attrs):
 
     new_vars = {k: encode_cf_variable(v, name=k) for k, v in variables.items()}
 
-    # Remove attrs from bounds variables (issue #2921)
-    for var in new_vars.values():
-        bounds = var.attrs["bounds"] if "bounds" in var.attrs else None
-        if bounds and bounds in new_vars:
-            # see http://cfconventions.org/cf-conventions/cf-conventions.html#cell-boundaries
-            for attr in [
-                "units",
-                "standard_name",
-                "axis",
-                "positive",
-                "calendar",
-                "long_name",
-                "leap_month",
-                "leap_year",
-                "month_lengths",
-            ]:
-                if attr in new_vars[bounds].attrs and attr in var.attrs:
-                    if new_vars[bounds].attrs[attr] == var.attrs[attr]:
-                        new_vars[bounds].attrs.pop(attr)
-
     return new_vars, attributes
