@@ -42,6 +42,8 @@ Bug fixes
 - Promote floating-point numeric datetimes before decoding (:issue:`9179`, :pull:`9182`).
   By `Justus Magin <https://github.com/keewis>`_.
 
+- Allow in-memory arrays with :py:func:`xarray.open_mfdataset` by passing ``chunks=None``. (:pull:`5704`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Documentation
 ~~~~~~~~~~~~~
