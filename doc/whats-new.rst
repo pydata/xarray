@@ -43,7 +43,8 @@ Bug fixes
   By `Justus Magin <https://github.com/keewis>`_.
 - Promote floating-point numeric datetimes before decoding (:issue:`9179`, :pull:`9182`).
   By `Justus Magin <https://github.com/keewis>`_.
-
+- Fiy static typing of tolerance arguments by allowing `str` type (:issue:`8892`, :pull:`9194`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
