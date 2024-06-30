@@ -709,6 +709,11 @@ class TestRepr:
         assert result == expected
 
 
+def _exact_match(message: str) -> str:
+    return re.escape(dedent(message).strip())
+    return "^" + re.escape(dedent(message.rstrip())) + "$"
+
+
 class TestInheritance:
     def test_inherited_dims(self):
         dt = DataTree.from_dict(
@@ -756,24 +761,18 @@ class TestInheritance:
         xr.testing.assert_equal(dt["/b/z"], xr.DataArray(3, coords=sub_coords))
 
     def test_inconsistent_dims(self):
-        expected_msg = (
-            "^"
-            + re.escape(
-                dedent(
-                    """
-                group '/b' is not aligned with its parent:
-                Group:
-                    Dimensions:  (x: 1)
-                    Dimensions without coordinates: x
-                    Data variables:
-                        c        (x) int64 8B 3
-                Parent:
-                    Dimensions:  (x: 2)
-                    Dimensions without coordinates: x
-                """
-                ).strip()
-            )
-            + "$"
+        expected_msg = _exact_match(
+            """
+            group '/b' is not aligned with its parents:
+            Group:
+                Dimensions:  (x: 1)
+                Dimensions without coordinates: x
+                Data variables:
+                    c        (x) int64 8B 3
+            From parents:
+                Dimensions:  (x: 2)
+                Dimensions without coordinates: x
+            """
         )
 
         with pytest.raises(ValueError, match=expected_msg):
@@ -797,26 +796,20 @@ class TestInheritance:
             )
 
     def test_inconsistent_child_indexes(self):
-        expected_msg = (
-            "^"
-            + re.escape(
-                dedent(
-                    """
-                group '/b' is not aligned with its parent:
-                Group:
-                    Dimensions:  (x: 1)
-                    Coordinates:
-                      * x        (x) int64 8B 2
-                    Data variables:
-                        *empty*
-                Parent:
-                    Dimensions:  (x: 1)
-                    Coordinates:
-                      * x        (x) int64 8B 1
-                """
-                ).strip()
-            )
-            + "$"
+        expected_msg = _exact_match(
+            """
+            group '/b' is not aligned with its parents:
+            Group:
+                Dimensions:  (x: 1)
+                Coordinates:
+                  * x        (x) int64 8B 2
+                Data variables:
+                    *empty*
+            From parents:
+                Dimensions:  (x: 1)
+                Coordinates:
+                  * x        (x) int64 8B 1
+            """
         )
 
         with pytest.raises(ValueError, match=expected_msg):
@@ -838,26 +831,20 @@ class TestInheritance:
             DataTree(data=xr.Dataset(coords={"x": [1]}), children={"b": b})
 
     def test_inconsistent_grandchild_indexes(self):
-        expected_msg = (
-            "^"
-            + re.escape(
-                dedent(
-                    """
-                group '/b/c' is not aligned with its parent:
-                Group:
-                    Dimensions:  (x: 1)
-                    Coordinates:
-                      * x        (x) int64 8B 2
-                    Data variables:
-                        *empty*
-                Parent:
-                    Dimensions:  (x: 1)
-                    Coordinates:
-                      * x        (x) int64 8B 1
-                """
-                ).strip()
-            )
-            + "$"
+        expected_msg = _exact_match(
+            """
+            group '/b/c' is not aligned with its parents:
+            Group:
+                Dimensions:  (x: 1)
+                Coordinates:
+                  * x        (x) int64 8B 2
+                Data variables:
+                    *empty*
+            From parents:
+                Dimensions:  (x: 1)
+                Coordinates:
+                  * x        (x) int64 8B 1
+            """
         )
 
         with pytest.raises(ValueError, match=expected_msg):
@@ -880,24 +867,18 @@ class TestInheritance:
             DataTree(data=xr.Dataset(coords={"x": [1]}), children={"b": b})
 
     def test_inconsistent_grandchild_dims(self):
-        expected_msg = (
-            "^"
-            + re.escape(
-                dedent(
-                    """
-                group '/b/c' is not aligned with its parent:
-                Group:
-                    Dimensions:  (x: 1)
-                    Dimensions without coordinates: x
-                    Data variables:
-                        d        (x) int64 8B 3
-                Parent:
-                    Dimensions:  (x: 2)
-                    Dimensions without coordinates: x
-                """
-                ).strip()
-            )
-            + "$"
+        expected_msg = _exact_match(
+            """
+            group '/b/c' is not aligned with its parents:
+            Group:
+                Dimensions:  (x: 1)
+                Dimensions without coordinates: x
+                Data variables:
+                    d        (x) int64 8B 3
+            From parents:
+                Dimensions:  (x: 2)
+                Dimensions without coordinates: x
+            """
         )
 
         with pytest.raises(ValueError, match=expected_msg):

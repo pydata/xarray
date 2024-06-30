@@ -154,8 +154,8 @@ def _check_alignment(
                 _drop_data_vars_and_attrs_sections(repr(parent_ds))
             )
             raise ValueError(
-                f"group {path!r} is not aligned with its parent:\n"
-                f"Group:\n{node_repr}\nParent:\n{parent_repr}"
+                f"group {path!r} is not aligned with its parents:\n"
+                f"Group:\n{node_repr}\nFrom parents:\n{parent_repr}"
             ) from e
 
     if children:
