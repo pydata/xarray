@@ -44,6 +44,9 @@ Bug fixes
 - Promote floating-point numeric datetimes before decoding (:issue:`9179`, :pull:`9182`).
   By `Justus Magin <https://github.com/keewis>`_.
 
+- Preserve order of variables in :py:func:`xarray.combine_by_coords` (:issue:`8828`, :pull:`9070`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
