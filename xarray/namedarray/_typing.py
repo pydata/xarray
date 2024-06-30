@@ -43,13 +43,38 @@ _default = Default.token
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
-_dtype = np.dtype
-_DType = TypeVar("_DType", bound=np.dtype[Any])
-_DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
+_generic = Any
+
+
+class _DType2(Protocol[_T_co]):
+    def __eq__(self, other: _DType2[_generic], /) -> bool:
+        """
+        Computes the truth value of ``self == other`` in order to test for data type object equality.
+
+        Parameters
+        ----------
+        self: dtype
+            data type instance. May be any supported data type.
+        other: dtype
+            other data type instance. May be any supported data type.
+
+        Returns
+        -------
+        out: bool
+            a boolean indicating whether the data type objects are equal.
+        """
+        ...
+
+
+# _dtype = np.dtype
+_dtype = _DType2
+_DType = TypeVar("_DType", bound=_dtype[_generic])
+_DType_co = TypeVar("_DType_co", covariant=True, bound=_dtype[_generic])
+_DType_np = TypeVar("_DType_np", bound=np.dtype[np.generic])
 # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
 
-_ScalarType = TypeVar("_ScalarType", bound=np.generic)
-_ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
+_ScalarType = TypeVar("_ScalarType", bound=_generic)
+_ScalarType_co = TypeVar("_ScalarType_co", bound=_generic, covariant=True)
 
 
 # A protocol for anything with the dtype attribute
@@ -60,9 +85,9 @@ class _SupportsDType(Protocol[_DType_co]):
 
 
 _DTypeLike = Union[
-    np.dtype[_ScalarType],
+    _dtype[_ScalarType],
     type[_ScalarType],
-    _SupportsDType[np.dtype[_ScalarType]],
+    _SupportsDType[_dtype[_ScalarType]],
 ]
 
 # For unknown shapes Dask uses np.nan, array_api uses None:
@@ -76,8 +101,14 @@ _Axis = int
 _Axes = tuple[_Axis, ...]
 _AxisLike = Union[_Axis, _Axes]
 
-_Chunks = tuple[_Shape, ...]
-_NormalizedChunks = tuple[tuple[int, ...], ...]
+_Chunk = tuple[int, ...]
+_Chunks = tuple[_Chunk, ...]
+_NormalizedChunks = tuple[tuple[int, ...], ...]  # TODO: Same as Chunks.
+_ChunksLike = Union[
+    int, Literal["auto"], None, _Chunk, _Chunks
+]  # TODO: Literal["auto"]
+_ChunksType = TypeVar("_ChunksType", bound=_Chunks)
+
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
@@ -141,26 +172,33 @@ class _arrayfunction(
 
     @overload
     def __getitem__(self, key: _IndexKeyLike, /) -> Any: ...
-
-    def __getitem__(
-        self,
-        key: (
-            _IndexKeyLike
-            | _arrayfunction[Any, Any]
-            | tuple[_arrayfunction[Any, Any], ...]
-        ),
-        /,
-    ) -> _arrayfunction[Any, _DType_co] | Any: ...
-
     @overload
-    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]: ...
+    def __getitem__(self: Any, key: Any, /) -> Any: ...
 
-    @overload
-    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]: ...
+    # @overload
+    # def __getitem__(self: NDArray[void], key: str) -> NDArray[Any]: ...
+    # @overload
+    # def __getitem__(
+    #     self: NDArray[void], key: list[str]
+    # ) -> ndarray[_ShapeType, _dtype[void]]: ...
+
+    # def __getitem__(
+    #     self,
+    #     key: (
+    #         _IndexKeyLike
+    #         | _arrayfunction[Any, Any]
+    #         | tuple[_arrayfunction[Any, Any], ...]
+    #     ),
+    #     /,
+    # ) -> _arrayfunction[Any, _DType_co] | Any: ...
 
     def __array__(
-        self, dtype: _DType | None = ..., /
-    ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]: ...
+        self, dtype: Any | None = ..., /
+    ) -> np.ndarray[Any, np.dtype[np.generic]]: ...
+
+    # def __array__(
+    #     self, dtype: _dtype[_generic] | None = ..., /
+    # ) -> np.ndarray[Any, np.dtype[np.generic]]: ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
@@ -216,7 +254,7 @@ duckarray = Union[
 ]
 
 # Corresponds to np.typing.NDArray:
-DuckArray = _arrayfunction[Any, np.dtype[_ScalarType_co]]
+DuckArray = _arrayfunction[Any, _dtype[_ScalarType_co]]
 
 
 @runtime_checkable
@@ -246,6 +284,11 @@ class _chunkedarrayfunction(
     @property
     def chunks(self) -> _Chunks: ...
 
+    def rechunk(
+        self,
+        chunks: _ChunksLike,
+    ) -> _chunkedarrayfunction[_ShapeType_co, _DType_co]: ...
+
 
 @runtime_checkable
 class _chunkedarrayapi(
@@ -259,6 +302,11 @@ class _chunkedarrayapi(
 
     @property
     def chunks(self) -> _Chunks: ...
+
+    def rechunk(
+        self,
+        chunks: _ChunksLike,
+    ) -> _chunkedarrayapi[_ShapeType_co, _DType_co]: ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
@@ -279,7 +327,7 @@ class _sparsearray(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, _DType_co]: ...
+    def todense(self) -> np.ndarray[Any, np.dtype[np.generic]]: ...
 
 
 @runtime_checkable
@@ -292,7 +340,7 @@ class _sparsearrayfunction(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, _DType_co]: ...
+    def todense(self) -> np.ndarray[Any, np.dtype[np.generic]]: ...
 
 
 @runtime_checkable
@@ -305,7 +353,7 @@ class _sparsearrayapi(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, _DType_co]: ...
+    def todense(self) -> np.ndarray[Any, np.dtype[np.generic]]: ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
