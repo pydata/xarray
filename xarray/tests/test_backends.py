@@ -5151,6 +5151,21 @@ def test_source_encoding_always_present_with_pathlib() -> None:
             assert ds.encoding["source"] == tmp
 
 
+@requires_h5netcdf
+@requires_fsspec
+def test_source_encoding_always_present_with_fsspec() -> None:
+    import fsspec
+
+    rnddata = np.random.randn(10)
+    original = Dataset({"foo": ("x", rnddata)})
+    with create_tmp_file() as tmp:
+        original.to_netcdf(tmp)
+
+        fs = fsspec.filesystem("file")
+        with fs.open(tmp) as f, open_dataset(f) as ds:
+            assert ds.encoding["source"] == tmp
+
+
 def _assert_no_dates_out_of_range_warning(record):
     undesired_message = "dates out of range"
     for warning in record:
