@@ -1038,7 +1038,9 @@ class TestConcatDataset:
             for _ in range(2)
         ]
 
-        with pytest.raises(UnexpectedDataAccess):
+        with pytest.raises(
+            UnexpectedDataAccess, match="Tried accessing data via __array__"
+        ):
             concat(datasets, dim="x", create_index_for_new_dim=True)
 
         # should not raise on concat iff create_index_for_new_dim=False
