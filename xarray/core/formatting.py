@@ -765,6 +765,12 @@ def _diff_mapping_repr(
     a_indexes=None,
     b_indexes=None,
 ):
+    def compare_attr(a, b):
+        if is_duck_array(a) or is_duck_array(b):
+            return array_equiv(a, b)
+        else:
+            return a == b
+
     def extra_items_repr(extra_keys, mapping, ab_side, kwargs):
         extra_repr = [
             summarizer(k, mapping[k], col_width, **kwargs[k]) for k in extra_keys
@@ -801,11 +807,7 @@ def _diff_mapping_repr(
             is_variable = True
         except AttributeError:
             # compare attribute value
-            if is_duck_array(a_mapping[k]) or is_duck_array(b_mapping[k]):
-                compatible = array_equiv(a_mapping[k], b_mapping[k])
-            else:
-                compatible = a_mapping[k] == b_mapping[k]
-
+            compatible = compare_attr(a_mapping[k], b_mapping[k])
             is_variable = False
 
         if not compatible:
@@ -821,7 +823,11 @@ def _diff_mapping_repr(
 
                 attrs_to_print = set(a_attrs) ^ set(b_attrs)
                 attrs_to_print.update(
-                    {k for k in set(a_attrs) & set(b_attrs) if a_attrs[k] != b_attrs[k]}
+                    {
+                        k
+                        for k in set(a_attrs) & set(b_attrs)
+                        if not compare_attr(a_attrs[k], b_attrs[k])
+                    }
                 )
                 for m in (a_mapping, b_mapping):
                     attr_s = "\n".join(
