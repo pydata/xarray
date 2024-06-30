@@ -14,7 +14,8 @@ efficient, and fun!
 `Releases <https://github.com/pydata/xarray/releases>`__ |
 `Stack Overflow <https://stackoverflow.com/questions/tagged/python-xarray>`__ |
 `Mailing List <https://groups.google.com/g/xarray>`__ |
-`Blog <https://xarray.dev/blog>`__
+`Blog <https://xarray.dev/blog>`__ |
+`Tutorials <https://tutorial.xarray.dev/>`__
 
 
 .. grid:: 1 1 2 2
@@ -65,6 +66,7 @@ efficient, and fun!
    Tutorials & Videos <tutorials-and-videos>
    API Reference <api>
    How do I ... <howdoi>
+   Getting Help <help-diagram>
    Ecosystem <ecosystem>
 
 .. toctree::

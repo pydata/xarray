@@ -382,8 +382,11 @@ def _dataset_from_backend_dataset(
     ds.set_close(backend_ds._close)
 
     # Ensure source filename always stored in dataset object
-    if "source" not in ds.encoding and isinstance(filename_or_obj, (str, os.PathLike)):
-        ds.encoding["source"] = _normalize_path(filename_or_obj)
+    if "source" not in ds.encoding:
+        path = getattr(filename_or_obj, "path", filename_or_obj)
+
+        if isinstance(path, (str, os.PathLike)):
+            ds.encoding["source"] = _normalize_path(path)
 
     return ds
 
@@ -425,15 +428,19 @@ def open_dataset(
         is chosen based on available dependencies, with a preference for
         "netcdf4". A custom backend class (a subclass of ``BackendEntrypoint``)
         can also be used.
-    chunks : int, dict, 'auto' or None, optional
-        If chunks is provided, it is used to load the new dataset into dask
-        arrays. ``chunks=-1`` loads the dataset with dask using a single
-        chunk for all arrays. ``chunks={}`` loads the dataset with dask using
-        engine preferred chunks if exposed by the backend, otherwise with
-        a single chunk for all arrays. In order to reproduce the default behavior
-        of ``xr.open_zarr(...)`` use ``xr.open_dataset(..., engine='zarr', chunks={})``.
-        ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
-        engine preferred chunks. See dask chunking for more details.
+    chunks : int, dict, 'auto' or None, default: None
+        If provided, used to load the data into dask arrays.
+
+        - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
+          engine preferred chunks.
+        - ``chunks=None`` skips using dask, which is generally faster for
+          small arrays.
+        - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
+        - ``chunks={}`` loads the data with dask using the engine's preferred chunk
+          size, generally identical to the format's chunk size. If not available, a
+          single chunk for all arrays.
+
+        See dask chunking for more details.
     cache : bool, optional
         If True, cache data loaded from the underlying datastore in memory as
         NumPy arrays when accessed to avoid reading from the underlying data-
@@ -631,14 +638,19 @@ def open_dataarray(
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         "netcdf4".
-    chunks : int, dict, 'auto' or None, optional
-        If chunks is provided, it is used to load the new dataset into dask
-        arrays. ``chunks=-1`` loads the dataset with dask using a single
-        chunk for all arrays. `chunks={}`` loads the dataset with dask using
-        engine preferred chunks if exposed by the backend, otherwise with
-        a single chunk for all arrays.
-        ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
-        engine preferred chunks. See dask chunking for more details.
+    chunks : int, dict, 'auto' or None, default: None
+        If provided, used to load the data into dask arrays.
+
+        - ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
+          engine preferred chunks.
+        - ``chunks=None`` skips using dask, which is generally faster for
+          small arrays.
+        - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
+        - ``chunks={}`` loads the data with dask using engine preferred chunks if
+          exposed by the backend, otherwise with a single chunk for all arrays.
+
+        See dask chunking for more details.
+
     cache : bool, optional
         If True, cache data loaded from the underlying datastore in memory as
         NumPy arrays when accessed to avoid reading from the underlying data-

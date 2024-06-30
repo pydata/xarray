@@ -24,6 +24,8 @@ New Features
 ~~~~~~~~~~~~
 - Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
+- Extract the source url from fsspec objects (:issue:`9142`, :pull:`8923`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -37,9 +39,21 @@ Bug fixes
 ~~~~~~~~~
 - Don't convert custom indexes to ``pandas`` indexes when computing a diff (:pull:`9157`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Make :py:func:`testing.assert_allclose` work with numpy 2.0 (:issue:`9165`, :pull:`9166`).
+  By `Pontus Lurcock <https://github.com/pont-us>`_.
+- Allow diffing objects with array attributes on variables (:issue:`9153`, :pull:`9169`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Promote floating-point numeric datetimes before decoding (:issue:`9179`, :pull:`9182`).
+  By `Justus Magin <https://github.com/keewis>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
+
+- Adds a flow-chart diagram to help users navigate help resources (`Discussion #8990 <https://github.com/pydata/xarray/discussions/8990>`_).
+  By `Jessica Scheick <https://github.com/jessicas11>`_.
+- Improvements to Zarr & chunking docs (:pull:`9139`, :pull:`9140`, :pull:`9132`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 
 Internal Changes
