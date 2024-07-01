@@ -22,17 +22,6 @@ v2024.06.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
-Performance
-~~~~~~~~~~~
-
-- Small optimization to the netCDF4 and h5netcdf backends (:issue:`9058`, :pull:`9067`).
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-- Small optimizations to help reduce indexing speed of datasets (:pull:`9002`).
-  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
-- Performance improvement in `open_datatree` method for Zarr, netCDF4 and h5netcdf backends (:issue:`8994`, :pull:`9014`).
-  By `Alfonso Ladino <https://github.com/aladinor>`_.
-
 - Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
 - Extract the source url from fsspec objects (:issue:`9142`, :pull:`8923`).
