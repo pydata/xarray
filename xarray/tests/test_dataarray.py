@@ -2491,7 +2491,7 @@ class TestDataArray:
         # test GH3000
         a = orig[:0, :1].stack(new_dim=("x", "y")).indexes["new_dim"]
         b = pd.MultiIndex(
-            levels=[pd.Index([], np.int64), pd.Index([0], np.int64)],
+            levels=[pd.Index([], dtype=np.int64), pd.Index([0], dtype=np.int64)],
             codes=[[], []],
             names=["x", "y"],
         )
@@ -3329,28 +3329,28 @@ class TestDataArray:
 
     def test_to_pandas(self) -> None:
         # 0d
-        actual = DataArray(42).to_pandas()
+        actual_xr = DataArray(42).to_pandas()
         expected = np.array(42)
-        assert_array_equal(actual, expected)
+        assert_array_equal(actual_xr, expected)
 
         # 1d
         values = np.random.randn(3)
         index = pd.Index(["a", "b", "c"], name="x")
         da = DataArray(values, coords=[index])
-        actual = da.to_pandas()
-        assert_array_equal(actual.values, values)
-        assert_array_equal(actual.index, index)
-        assert_array_equal(actual.index.name, "x")
+        actual_s = da.to_pandas()
+        assert_array_equal(np.asarray(actual_s.values), values)
+        assert_array_equal(actual_s.index, index)
+        assert_array_equal(actual_s.index.name, "x")
 
         # 2d
         values = np.random.randn(3, 2)
         da = DataArray(
             values, coords=[("x", ["a", "b", "c"]), ("y", [0, 1])], name="foo"
         )
-        actual = da.to_pandas()
-        assert_array_equal(actual.values, values)
-        assert_array_equal(actual.index, ["a", "b", "c"])
-        assert_array_equal(actual.columns, [0, 1])
+        actual_df = da.to_pandas()
+        assert_array_equal(np.asarray(actual_df.values), values)
+        assert_array_equal(actual_df.index, ["a", "b", "c"])
+        assert_array_equal(actual_df.columns, [0, 1])
 
         # roundtrips
         for shape in [(3,), (3, 4)]:
@@ -3367,24 +3367,24 @@ class TestDataArray:
         arr_np = np.random.randn(3, 4)
 
         arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
-        expected = arr.to_series()
-        actual = arr.to_dataframe()["foo"]
-        assert_array_equal(expected.values, actual.values)
-        assert_array_equal(expected.name, actual.name)
-        assert_array_equal(expected.index.values, actual.index.values)
+        expected_s = arr.to_series()
+        actual_s = arr.to_dataframe()["foo"]
+        assert_array_equal(np.asarray(expected_s.values), np.asarray(actual_s.values))
+        assert_array_equal(np.asarray(expected_s.name), np.asarray(actual_s.name))
+        assert_array_equal(expected_s.index.values, actual_s.index.values)
 
-        actual = arr.to_dataframe(dim_order=["A", "B"])["foo"]
-        assert_array_equal(arr_np.transpose().reshape(-1), actual.values)
+        actual_s = arr.to_dataframe(dim_order=["A", "B"])["foo"]
+        assert_array_equal(arr_np.transpose().reshape(-1), np.asarray(actual_s.values))
 
         # regression test for coords with different dimensions
         arr.coords["C"] = ("B", [-1, -2, -3])
-        expected = arr.to_series().to_frame()
-        expected["C"] = [-1] * 4 + [-2] * 4 + [-3] * 4
-        expected = expected[["C", "foo"]]
-        actual = arr.to_dataframe()
-        assert_array_equal(expected.values, actual.values)
-        assert_array_equal(expected.columns.values, actual.columns.values)
-        assert_array_equal(expected.index.values, actual.index.values)
+        expected_df = arr.to_series().to_frame()
+        expected_df["C"] = [-1] * 4 + [-2] * 4 + [-3] * 4
+        expected_df = expected_df[["C", "foo"]]
+        actual_df = arr.to_dataframe()
+        assert_array_equal(np.asarray(expected_df.values), np.asarray(actual_df.values))
+        assert_array_equal(expected_df.columns.values, actual_df.columns.values)
+        assert_array_equal(expected_df.index.values, actual_df.index.values)
 
         with pytest.raises(ValueError, match="does not match the set of dimensions"):
             arr.to_dataframe(dim_order=["B", "A", "C"])
@@ -3405,11 +3405,13 @@ class TestDataArray:
         arr = DataArray(arr_np, [("MI", mindex), ("C", [5, 6, 7])], name="foo")
 
         actual = arr.to_dataframe()
-        assert_array_equal(actual["foo"].values, arr_np.flatten())
-        assert_array_equal(actual.index.names, list("ABC"))
-        assert_array_equal(actual.index.levels[0], [1, 2])
-        assert_array_equal(actual.index.levels[1], ["a", "b"])
-        assert_array_equal(actual.index.levels[2], [5, 6, 7])
+        index_pd = actual.index
+        assert isinstance(index_pd, pd.MultiIndex)
+        assert_array_equal(np.asarray(actual["foo"].values), arr_np.flatten())
+        assert_array_equal(index_pd.names, list("ABC"))
+        assert_array_equal(index_pd.levels[0], [1, 2])
+        assert_array_equal(index_pd.levels[1], ["a", "b"])
+        assert_array_equal(index_pd.levels[2], [5, 6, 7])
 
     def test_to_dataframe_0length(self) -> None:
         # regression test for #3008
@@ -3429,10 +3431,10 @@ class TestDataArray:
     def test_to_dask_dataframe(self) -> None:
         arr_np = np.arange(3 * 4).reshape(3, 4)
         arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
-        expected = arr.to_series()
+        expected_s = arr.to_series()
         actual = arr.to_dask_dataframe()["foo"]
 
-        assert_array_equal(actual.values, expected.values)
+        assert_array_equal(actual.values, np.asarray(expected_s.values))
 
         actual = arr.to_dask_dataframe(dim_order=["A", "B"])["foo"]
         assert_array_equal(arr_np.transpose().reshape(-1), actual.values)
@@ -3440,13 +3442,15 @@ class TestDataArray:
         # regression test for coords with different dimensions
 
         arr.coords["C"] = ("B", [-1, -2, -3])
-        expected = arr.to_series().to_frame()
-        expected["C"] = [-1] * 4 + [-2] * 4 + [-3] * 4
-        expected = expected[["C", "foo"]]
+        expected_df = arr.to_series().to_frame()
+        expected_df["C"] = [-1] * 4 + [-2] * 4 + [-3] * 4
+        expected_df = expected_df[["C", "foo"]]
         actual = arr.to_dask_dataframe()[["C", "foo"]]
 
-        assert_array_equal(expected.values, actual.values)
-        assert_array_equal(expected.columns.values, actual.columns.values)
+        assert_array_equal(expected_df.values, np.asarray(actual.values))
+        assert_array_equal(
+            expected_df.columns.values, np.asarray(actual.columns.values)
+        )
 
         with pytest.raises(ValueError, match="does not match the set of dimensions"):
             arr.to_dask_dataframe(dim_order=["B", "A", "C"])
@@ -3462,8 +3466,8 @@ class TestDataArray:
         # coordinate with same name as array
         arr = DataArray([1, 2, 3], dims="x", name="x")
         series = arr.to_series()
-        assert_array_equal([1, 2, 3], series.values)
-        assert_array_equal([0, 1, 2], series.index.values)
+        assert_array_equal([1, 2, 3], list(series.values))
+        assert_array_equal([0, 1, 2], list(series.index.values))
         assert "x" == series.name
         assert "x" == series.index.name
 
