@@ -296,16 +296,16 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
     obj: T_DataWithCoords
 
     # returned by factorize:
-    codes: DataArray = field(init=False)
-    full_index: pd.Index = field(init=False)
-    group_indices: T_GroupIndices = field(init=False)
-    unique_coord: Variable | _DummyGroup = field(init=False)
+    codes: DataArray = field(init=False, repr=False)
+    full_index: pd.Index = field(init=False, repr=False)
+    group_indices: T_GroupIndices = field(init=False, repr=False)
+    unique_coord: Variable | _DummyGroup = field(init=False, repr=False)
 
     # _ensure_1d:
-    group1d: T_Group = field(init=False)
-    stacked_obj: T_DataWithCoords = field(init=False)
-    stacked_dim: Hashable | None = field(init=False)
-    inserted_dims: list[Hashable] = field(init=False)
+    group1d: T_Group = field(init=False, repr=False)
+    stacked_obj: T_DataWithCoords = field(init=False, repr=False)
+    stacked_dim: Hashable | None = field(init=False, repr=False)
+    inserted_dims: list[Hashable] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         # This copy allows the BinGrouper.factorize() method
