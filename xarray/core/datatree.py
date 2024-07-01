@@ -528,7 +528,8 @@ class DataTree(
         self._set_parent(new_parent, self.name)
 
     def _to_dataset_view(self, rebuild_dims: bool) -> DatasetView:
-        variables = self._data_variables | self._coord_variables
+        variables = dict(self._data_variables)
+        variables |= self._coord_variables
         if rebuild_dims:
             dims = calculate_dimensions(variables)
         else:
@@ -588,7 +589,8 @@ class DataTree(
         DataTree.ds
         """
         coord_vars = self._coord_variables if inherited else self._node_coord_variables
-        variables = self._data_variables | coord_vars
+        variables = dict(self._data_variables)
+        variables |= coord_vars
         dims = calculate_dimensions(variables) if inherited else dict(self._node_dims)
         return Dataset._construct_direct(
             variables,
