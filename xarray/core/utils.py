@@ -117,26 +117,27 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
     return wrapper
 
 
-def get_valid_numpy_dtype(array: np.ndarray | pd.Index):
+def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
     """Return a numpy compatible dtype from either
     a numpy array or a pandas.Index.
 
-    Used for wrapping a pandas.Index as an xarray,Variable.
+    Used for wrapping a pandas.Index as an xarray.Variable.
 
     """
     if isinstance(array, pd.PeriodIndex):
-        dtype = np.dtype("O")
-    elif hasattr(array, "categories"):
+        return np.dtype("O")
+
+    if hasattr(array, "categories"):
         # category isn't a real numpy dtype
         dtype = array.categories.dtype
         if not is_valid_numpy_dtype(dtype):
             dtype = np.dtype("O")
-    elif not is_valid_numpy_dtype(array.dtype):
-        dtype = np.dtype("O")
-    else:
-        dtype = array.dtype
+        return dtype
 
-    return dtype
+    if not is_valid_numpy_dtype(array.dtype):
+        return np.dtype("O")
+
+    return array.dtype
 
 
 def maybe_coerce_to_str(index, original_coords):

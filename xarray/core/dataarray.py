@@ -413,7 +413,9 @@ class DataArray(
     def __init__(
         self,
         data: Any = dtypes.NA,
-        coords: Sequence[Sequence | pd.Index | DataArray] | Mapping | None = None,
+        coords: (
+            Sequence[Sequence | pd.Index | DataArray | np.ndarray] | Mapping | None
+        ) = None,
         dims: str | Iterable[Hashable] | None = None,
         name: Hashable | None = None,
         attrs: Mapping | None = None,
