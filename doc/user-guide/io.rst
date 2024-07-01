@@ -45,34 +45,33 @@ You can learn more about using and developing backends in the
     :alt: Flowchart illustrating how to choose the right backend engine to read your data
 
     flowchart LR
-        built-in-eng["`Is your data stored in one of these formats?
-            fa:fa-check-square netCDF4 (**netcdf4**)
-            fa:fa-check-square netCDF3 (**scipy**)
-            fa:fa-check-square Zarr (**zarr**)
-            fa:fa-check-square DODS/OPeNDAP (**pydap**)
-            fa:fa-check-square HDF5 (**h5netcdf**)
-            `"]
+        built-in-eng["""Is your data stored in one of these formats?
+            - netCDF4 (<code>netcdf4</code>)
+            - netCDF3 (<code>scipy</code>)
+            - Zarr (<code>zarr</code>)
+            - DODS/OPeNDAP (<code>pydap</code>)
+            - HDF5 (<code>h5netcdf</code>)
+            """]
 
-        built-in("`You're in luck! Xarray bundles a backend for this format.
-            Open data using *xr.open_dataset()*. We recommend
-            always setting the engine you want to use.`")
+        built-in("""You're in luck! Xarray bundles a backend for this format.
+            Open data using <code>xr.open_dataset()</code>. We recommend
+            always setting the engine you want to use.""")
 
-        installed-eng["`One of these formats?
-            fa:fa-check-square GRIB (**cfgrib**)
-            fa:fa-check-square TileDB (**tiledb**)
-            fa:fa-check-square GeoTIFF, JPEG-2000, ESRI-hdf (**rioxarray**, via GDAL)
-            fa:fa-check-square Sentinel-1 SAFE (**xarray-sentinel**)
-            fa:fa-check-square ...
-            `"]
+        installed-eng["""One of these formats?
+            - GRIB (<code>cfgrib</code>)
+            - TileDB (<code>tiledb</code>)
+            - GeoTIFF, JPEG-2000, ESRI-hdf (<code>rioxarray</code>, via GDAL)
+            - Sentinel-1 SAFE (<code>xarray-sentinel</code>)
+            """]
 
-        installed("`Install the package indicated in parentheses
-            to your Python environment. Restart the kernel
-            and use *xr.open_dataset(files, engine='rioxarray')*`")
+        installed("""Install the package indicated in parentheses to your
+            Python environment. Restart the kernel and use
+            <code>xr.open_dataset(files, engine='rioxarray')</code>.""")
 
-        other("`Ask around to see if someone in your data community
+        other("""Ask around to see if someone in your data community
             has created an Xarray backend for your data type.
             If not, you may need to create your own or consider
-            exporting your data to a more common format.`")
+            exporting your data to a more common format.""")
 
         built-in-eng -->|Yes| built-in
         built-in-eng -->|No| installed-eng
