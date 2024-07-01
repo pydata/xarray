@@ -768,7 +768,7 @@ class TestInheritance:
                 Dimensions:  (x: 1)
                 Dimensions without coordinates: x
                 Data variables:
-                    c        (x) int64 8B 3
+                    c        (x) float64 8B 3.0
             From parents:
                 Dimensions:  (x: 2)
                 Dimensions without coordinates: x
@@ -778,20 +778,20 @@ class TestInheritance:
         with pytest.raises(ValueError, match=expected_msg):
             DataTree.from_dict(
                 {
-                    "/": xr.Dataset({"a": (("x",), [1, 2])}),
-                    "/b": xr.Dataset({"c": (("x",), [3])}),
+                    "/": xr.Dataset({"a": (("x",), [1.0, 2.0])}),
+                    "/b": xr.Dataset({"c": (("x",), [3.0])}),
                 }
             )
 
         dt: DataTree = DataTree()
-        dt["/a"] = xr.DataArray([1, 2], dims=["x"])
+        dt["/a"] = xr.DataArray([1.0, 2.0], dims=["x"])
         with pytest.raises(ValueError, match=expected_msg):
-            dt["/b/c"] = xr.DataArray([3], dims=["x"])
+            dt["/b/c"] = xr.DataArray([3.0], dims=["x"])
 
-        b: DataTree = DataTree(data=xr.Dataset({"c": (("x",), [3])}))
+        b: DataTree = DataTree(data=xr.Dataset({"c": (("x",), [3.0])}))
         with pytest.raises(ValueError, match=expected_msg):
             DataTree(
-                data=xr.Dataset({"a": (("x",), [1, 2])}),
+                data=xr.Dataset({"a": (("x",), [1.0, 2.0])}),
                 children={"b": b},
             )
 
@@ -802,33 +802,33 @@ class TestInheritance:
             Group:
                 Dimensions:  (x: 1)
                 Coordinates:
-                  * x        (x) int64 8B 2
+                  * x        (x) float64 8B 2.0
                 Data variables:
                     *empty*
             From parents:
                 Dimensions:  (x: 1)
                 Coordinates:
-                  * x        (x) int64 8B 1
+                  * x        (x) float64 8B 1.0
             """
         )
 
         with pytest.raises(ValueError, match=expected_msg):
             DataTree.from_dict(
                 {
-                    "/": xr.Dataset(coords={"x": [1]}),
-                    "/b": xr.Dataset(coords={"x": [2]}),
+                    "/": xr.Dataset(coords={"x": [1.0]}),
+                    "/b": xr.Dataset(coords={"x": [2.0]}),
                 }
             )
 
         dt: DataTree = DataTree()
-        dt.ds = xr.Dataset(coords={"x": [1]})  # type: ignore
+        dt.ds = xr.Dataset(coords={"x": [1.0]})  # type: ignore
         dt["/b"] = DataTree()
         with pytest.raises(ValueError, match=expected_msg):
-            dt["/b"].ds = xr.Dataset(coords={"x": [2]})
+            dt["/b"].ds = xr.Dataset(coords={"x": [2.0]})
 
-        b: DataTree = DataTree(xr.Dataset(coords={"x": [2]}))
+        b: DataTree = DataTree(xr.Dataset(coords={"x": [2.0]}))
         with pytest.raises(ValueError, match=expected_msg):
-            DataTree(data=xr.Dataset(coords={"x": [1]}), children={"b": b})
+            DataTree(data=xr.Dataset(coords={"x": [1.0]}), children={"b": b})
 
     def test_inconsistent_grandchild_indexes(self):
         expected_msg = _exact_match(
@@ -837,34 +837,34 @@ class TestInheritance:
             Group:
                 Dimensions:  (x: 1)
                 Coordinates:
-                  * x        (x) int64 8B 2
+                  * x        (x) float64 8B 2.0
                 Data variables:
                     *empty*
             From parents:
                 Dimensions:  (x: 1)
                 Coordinates:
-                  * x        (x) int64 8B 1
+                  * x        (x) float64 8B 1.0
             """
         )
 
         with pytest.raises(ValueError, match=expected_msg):
             DataTree.from_dict(
                 {
-                    "/": xr.Dataset(coords={"x": [1]}),
-                    "/b/c": xr.Dataset(coords={"x": [2]}),
+                    "/": xr.Dataset(coords={"x": [1.0]}),
+                    "/b/c": xr.Dataset(coords={"x": [2.0]}),
                 }
             )
 
         dt: DataTree = DataTree()
-        dt.ds = xr.Dataset(coords={"x": [1]})  # type: ignore
+        dt.ds = xr.Dataset(coords={"x": [1.0]})  # type: ignore
         dt["/b/c"] = DataTree()
         with pytest.raises(ValueError, match=expected_msg):
-            dt["/b/c"].ds = xr.Dataset(coords={"x": [2]})
+            dt["/b/c"].ds = xr.Dataset(coords={"x": [2.0]})
 
-        c: DataTree = DataTree(xr.Dataset(coords={"x": [2]}))
+        c: DataTree = DataTree(xr.Dataset(coords={"x": [2.0]}))
         b: DataTree = DataTree(children={"c": c})
         with pytest.raises(ValueError, match=expected_msg):
-            DataTree(data=xr.Dataset(coords={"x": [1]}), children={"b": b})
+            DataTree(data=xr.Dataset(coords={"x": [1.0]}), children={"b": b})
 
     def test_inconsistent_grandchild_dims(self):
         expected_msg = _exact_match(
@@ -874,7 +874,7 @@ class TestInheritance:
                 Dimensions:  (x: 1)
                 Dimensions without coordinates: x
                 Data variables:
-                    d        (x) int64 8B 3
+                    d        (x) float64 8B 3.0
             From parents:
                 Dimensions:  (x: 2)
                 Dimensions without coordinates: x
@@ -884,15 +884,15 @@ class TestInheritance:
         with pytest.raises(ValueError, match=expected_msg):
             DataTree.from_dict(
                 {
-                    "/": xr.Dataset({"a": (("x",), [1, 2])}),
-                    "/b/c": xr.Dataset({"d": (("x",), [3])}),
+                    "/": xr.Dataset({"a": (("x",), [1.0, 2.0])}),
+                    "/b/c": xr.Dataset({"d": (("x",), [3.0])}),
                 }
             )
 
         dt: DataTree = DataTree()
-        dt["/a"] = xr.DataArray([1, 2], dims=["x"])
+        dt["/a"] = xr.DataArray([1.0, 2.0], dims=["x"])
         with pytest.raises(ValueError, match=expected_msg):
-            dt["/b/c/d"] = xr.DataArray([3], dims=["x"])
+            dt["/b/c/d"] = xr.DataArray([3.0], dims=["x"])
 
 
 class TestRestructuring:
