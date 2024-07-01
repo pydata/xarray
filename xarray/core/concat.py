@@ -32,10 +32,11 @@ if TYPE_CHECKING:
     T_DataVars = Union[ConcatOptions, Iterable[Hashable]]
 
 
+# TODO: replace dim: Any by 1D array_likes
 @overload
 def concat(
     objs: Iterable[T_Dataset],
-    dim: Hashable | T_Variable | T_DataArray | pd.Index,
+    dim: Hashable | T_Variable | T_DataArray | pd.Index | Any,
     data_vars: T_DataVars = "all",
     coords: ConcatOptions | list[Hashable] = "different",
     compat: CompatOptions = "equals",
@@ -50,7 +51,7 @@ def concat(
 @overload
 def concat(
     objs: Iterable[T_DataArray],
-    dim: Hashable | T_Variable | T_DataArray | pd.Index,
+    dim: Hashable | T_Variable | T_DataArray | pd.Index | Any,
     data_vars: T_DataVars = "all",
     coords: ConcatOptions | list[Hashable] = "different",
     compat: CompatOptions = "equals",
