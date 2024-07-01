@@ -33,7 +33,7 @@ from xarray.core.datatree_ops import (
     MappedDataWithCoords,
 )
 from xarray.core.datatree_render import RenderDataTree
-from xarray.core.formatting import datatree_repr
+from xarray.core.formatting import datatree_repr, dims_and_coords_repr
 from xarray.core.formatting_html import (
     datatree_repr as datatree_repr_html,
 )
@@ -109,7 +109,7 @@ def _coerce_to_dataset(data: Dataset | DataArray | None) -> Dataset:
 
 
 def _join_path(root: str, name: str) -> str:
-    return root.rstrip("/") + "/" + name
+    return str(NodePath(root) / name)
 
 
 def _inherited_dataset(ds: Dataset, parent: Dataset) -> Dataset:
@@ -124,19 +124,12 @@ def _inherited_dataset(ds: Dataset, parent: Dataset) -> Dataset:
     )
 
 
-def _indented_without_header(text: str) -> str:
-    return textwrap.indent("\n".join(text.split("\n")[1:]), prefix="    ")
+def _without_header(text: str) -> str:
+    return "\n".join(text.split("\n")[1:])
 
 
-def _drop_data_vars_and_attrs_sections(text: str) -> str:
-    lines = text.split("\n")
-    outputs = []
-    match = "Data variables:"
-    for line in lines:
-        if line[: len(match)] == match:
-            break
-        outputs.append(line)
-    return "\n".join(outputs)
+def _indented(text: str) -> str:
+    return textwrap.indent(text, prefix="    ")
 
 
 def _check_alignment(
@@ -149,10 +142,8 @@ def _check_alignment(
         try:
             align(node_ds, parent_ds, join="exact")
         except ValueError as e:
-            node_repr = _indented_without_header(repr(node_ds))
-            parent_repr = _indented_without_header(
-                _drop_data_vars_and_attrs_sections(repr(parent_ds))
-            )
+            node_repr = _indented(_without_header(repr(node_ds)))
+            parent_repr = _indented(dims_and_coords_repr(parent_ds))
             raise ValueError(
                 f"group {path!r} is not aligned with its parents:\n"
                 f"Group:\n{node_repr}\nFrom parents:\n{parent_repr}"
@@ -165,7 +156,7 @@ def _check_alignment(
             base_ds = node_ds
 
         for child_name, child in children.items():
-            child_path = _join_path(path, child_name)
+            child_path = str(NodePath(path) / child_name)
             child_ds = child.to_dataset(inherited=False)
             _check_alignment(child_path, child_ds, base_ds, child.children)
 
@@ -203,7 +194,7 @@ class DatasetView(Dataset):
         raise AttributeError("DatasetView objects are not to be initialized directly")
 
     @classmethod
-    def _from_dataset_state(
+    def _constructor(
         cls,
         variables: dict[Any, Variable],
         coord_names: set[Hashable],
@@ -213,7 +204,9 @@ class DatasetView(Dataset):
         encoding: dict | None,
         close: Callable[[], None] | None,
     ) -> DatasetView:
-        """Constructor, using dataset attributes from wrapping node"""
+        """Private constructor, from Dataset attributes."""
+        # We override Dataset._construct_direct below, so we need a new
+        # constructor for creating DatasetView objects.
         obj: DatasetView = object.__new__(cls)
         obj._variables = variables
         obj._coord_names = coord_names
@@ -469,17 +462,9 @@ class DataTree(
             children = {}
 
         super().__init__(name=name)
-
-        # set tree attributes
-        self._children = {}
-        self._parent = None
-
-        # set data attributes
         self._set_node_data(_coerce_to_dataset(data))
-
-        # finalize tree attributes
-        self.children = children  # must set first
         self.parent = parent
+        self.children = children
 
     def _set_node_data(self, ds: Dataset):
         data_vars, coord_vars = _collect_data_and_coord_variables(ds)
@@ -497,7 +482,7 @@ class DataTree(
             raise KeyError(
                 f"parent {parent.name} already contains a variable named {name}"
             )
-        path = _join_path(parent.path, name)
+        path = str(NodePath(parent.path) / name)
         node_ds = self.to_dataset(inherited=False)
         parent_ds = parent._to_dataset_view(rebuild_dims=False)
         _check_alignment(path, node_ds, parent_ds, self.children)
@@ -545,7 +530,7 @@ class DataTree(
             # However, they are fine for internal use cases, for align() or
             # building a repr().
             dims = dict(self._dims)
-        return DatasetView._from_dataset_state(
+        return DatasetView._constructor(
             variables=variables,
             coord_names=set(self._coord_variables),
             dims=dims,
