@@ -27,6 +27,13 @@ New Features
 - Extract the source url from fsspec objects (:issue:`9142`, :pull:`8923`).
   By `Justus Magin <https://github.com/keewis>`_.
 
+Performance
+~~~~~~~~~~~
+
+- Small optimizations to help reduce indexing speed of datasets (:pull:`9003`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
+
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
