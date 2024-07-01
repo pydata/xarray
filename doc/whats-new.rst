@@ -45,6 +45,8 @@ Bug fixes
   By `Justus Magin <https://github.com/keewis>`_.
 - Fiy static typing of tolerance arguments by allowing `str` type (:issue:`8892`, :pull:`9194`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Dark themes are now properly detected for ``html[data-theme=dark]``-tags (:pull:`9200`).
+  By `Dieter Werthmüller <https://github.com/prisae>`_.
 
 Documentation
 ~~~~~~~~~~~~~
