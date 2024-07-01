@@ -249,15 +249,20 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def __repr__(self):
         return f"{type(self).__name__}({self.array!r})"
 
-    def _vindex_get(self, key):
-        return _numpy_char_to_bytes(self.array.vindex[key])
-
-    def _oindex_get(self, key):
-        return _numpy_char_to_bytes(self.array.oindex[key])
+    def _check_and_raise_if_non_basic_indexer(self, indexer) -> None:
+        ...
+        # TODO: this is a temporary fix until BackendArray supports vindex and oindex
 
     def __getitem__(self, key):
         # require slicing the last dimension completely
         key = type(key)(indexing.expanded_indexer(key.tuple, self.array.ndim))
         if key.tuple[-1] != slice(None):
             raise IndexError("too many indices")
-        return _numpy_char_to_bytes(self.array[key])
+        # TODO: this is a temporary fix until BackendArray supports vindex and oindex
+        if isinstance(key, indexing.OuterIndexer):
+            data = self.array.oindex[key]
+        elif isinstance(key, indexing.VectorizedIndexer):
+            data = self.array.vindex[key]
+        else:
+            data = self.array[key]
+        return _numpy_char_to_bytes(data)
