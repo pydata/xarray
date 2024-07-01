@@ -66,12 +66,12 @@ class Resample(GroupBy[T_Xarray]):
                 obj = obj.drop_vars([k])
         return obj
 
-    def pad(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
+    def pad(self, tolerance: float | Iterable[float] | str | None = None) -> T_Xarray:
         """Forward fill new values at up-sampled frequency.
 
         Parameters
         ----------
-        tolerance : float | Iterable[float] | None, default: None
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels to limit
             the up-sampling method.
             Up-sampled data with indices that satisfy the equation
@@ -91,12 +91,14 @@ class Resample(GroupBy[T_Xarray]):
 
     ffill = pad
 
-    def backfill(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
+    def backfill(
+        self, tolerance: float | Iterable[float] | str | None = None
+    ) -> T_Xarray:
         """Backward fill new values at up-sampled frequency.
 
         Parameters
         ----------
-        tolerance : float | Iterable[float] | None, default: None
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels to limit
             the up-sampling method.
             Up-sampled data with indices that satisfy the equation
@@ -116,13 +118,15 @@ class Resample(GroupBy[T_Xarray]):
 
     bfill = backfill
 
-    def nearest(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
+    def nearest(
+        self, tolerance: float | Iterable[float] | str | None = None
+    ) -> T_Xarray:
         """Take new values from nearest original coordinate to up-sampled
         frequency coordinates.
 
         Parameters
         ----------
-        tolerance : float | Iterable[float] | None, default: None
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels to limit
             the up-sampling method.
             Up-sampled data with indices that satisfy the equation

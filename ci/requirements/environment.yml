@@ -26,7 +26,7 @@ dependencies:
   - numba
   - numbagg
   - numexpr
-  - numpy
+  - numpy<2
   - opt_einsum
   - packaging
   - pandas
@@ -35,7 +35,7 @@ dependencies:
   - pooch
   - pre-commit
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
-  - pydap
+  # - pydap
   - pytest
   - pytest-cov
   - pytest-env

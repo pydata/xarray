@@ -1182,6 +1182,22 @@ def test_decode_0size_datetime(use_cftime):
     np.testing.assert_equal(expected, actual)
 
 
+def test_decode_float_datetime():
+    num_dates = np.array([1867128, 1867134, 1867140], dtype="float32")
+    units = "hours since 1800-01-01"
+    calendar = "standard"
+
+    expected = np.array(
+        ["2013-01-01T00:00:00", "2013-01-01T06:00:00", "2013-01-01T12:00:00"],
+        dtype="datetime64[ns]",
+    )
+
+    actual = decode_cf_datetime(
+        num_dates, units=units, calendar=calendar, use_cftime=False
+    )
+    np.testing.assert_equal(actual, expected)
+
+
 @requires_cftime
 def test_scalar_unit() -> None:
     # test that a scalar units (often NaN when using to_netcdf) does not raise an error
