@@ -748,6 +748,27 @@ def dataset_repr(ds):
     return "\n".join(summary)
 
 
+def dims_and_coords_repr(ds) -> str:
+    """Partial Dataset repr for use inside DataTree inheritance errors."""
+    summary = []
+
+    col_width = _calculate_col_width(ds.coords)
+    max_rows = OPTIONS["display_max_rows"]
+
+    dims_start = pretty_print("Dimensions:", col_width)
+    dims_values = dim_summary_limited(ds, col_width=col_width + 1, max_rows=max_rows)
+    summary.append(f"{dims_start}({dims_values})")
+
+    if ds.coords:
+        summary.append(coords_repr(ds.coords, col_width=col_width, max_rows=max_rows))
+
+    unindexed_dims_str = unindexed_dims_repr(ds.dims, ds.coords, max_rows=max_rows)
+    if unindexed_dims_str:
+        summary.append(unindexed_dims_str)
+
+    return "\n".join(summary)
+
+
 def diff_dim_summary(a, b):
     if a.sizes != b.sizes:
         return f"Differing dimensions:\n    ({dim_summary(a)}) != ({dim_summary(b)})"
@@ -1030,7 +1051,7 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
 def _single_node_repr(node: DataTree) -> str:
     """Information about this node, not including its relationships to other nodes."""
     if node.has_data or node.has_attrs:
-        ds_info = "\n" + repr(node.ds)
+        ds_info = "\n" + repr(node._to_dataset_view(rebuild_dims=False))
     else:
         ds_info = ""
     return f"Group: {node.path}{ds_info}"
