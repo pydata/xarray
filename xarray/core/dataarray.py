@@ -87,6 +87,7 @@ if TYPE_CHECKING:
     from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.groupby import DataArrayGroupBy
+    from xarray.core.groupers import Grouper, Resampler
     from xarray.core.resample import DataArrayResample
     from xarray.core.rolling import DataArrayCoarsen, DataArrayRolling
     from xarray.core.types import (
@@ -105,7 +106,8 @@ if TYPE_CHECKING:
         ReindexMethodOptions,
         Self,
         SideOptions,
-        T_Chunks,
+        T_ChunkDimFreq,
+        T_ChunksFreq,
         T_Xarray,
     )
     from xarray.core.weighted import DataArrayWeighted
@@ -1337,7 +1339,7 @@ class DataArray(
     @_deprecate_positional_args("v2023.10.0")
     def chunk(
         self,
-        chunks: T_Chunks = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        chunks: T_ChunksFreq = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         *,
         name_prefix: str = "xarray-",
         token: str | None = None,
@@ -1345,7 +1347,7 @@ class DataArray(
         inline_array: bool = False,
         chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs=None,
-        **chunks_kwargs: Any,
+        **chunks_kwargs: T_ChunkDimFreq,
     ) -> Self:
         """Coerce this array's data into a dask arrays with the given chunks.
 
@@ -1357,11 +1359,13 @@ class DataArray(
         sizes along that dimension will not be updated; non-dask arrays will be
         converted into dask arrays with a single block.
 
+        Along datetime-like dimensions, a pandas frequency string is also accepted.
+
         Parameters
         ----------
-        chunks : int, "auto", tuple of int or mapping of Hashable to int, optional
+        chunks : int, "auto", tuple of int or mapping of hashable to int or a pandas frequency string, optional
             Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, ``(5, 5)`` or
-            ``{"x": 5, "y": 5}``.
+            ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": "YE"}``.
         name_prefix : str, optional
             Prefix for the name of the new dask array.
         token : str, optional
@@ -1396,29 +1400,30 @@ class DataArray(
         xarray.unify_chunks
         dask.array.from_array
         """
+        chunk_mapping: T_ChunksFreq
         if chunks is None:
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
                 category=FutureWarning,
             )
-            chunks = {}
+            chunk_mapping = {}
 
         if isinstance(chunks, (float, str, int)):
             # ignoring type; unclear why it won't accept a Literal into the value.
-            chunks = dict.fromkeys(self.dims, chunks)
+            chunk_mapping = dict.fromkeys(self.dims, chunks)
         elif isinstance(chunks, (tuple, list)):
             utils.emit_user_level_warning(
                 "Supplying chunks as dimension-order tuples is deprecated. "
                 "It will raise an error in the future. Instead use a dict with dimension names as keys.",
                 category=DeprecationWarning,
             )
-            chunks = dict(zip(self.dims, chunks))
+            chunk_mapping = dict(zip(self.dims, chunks))
         else:
-            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+            chunk_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         ds = self._to_temp_dataset().chunk(
-            chunks,
+            chunk_mapping,
             name_prefix=name_prefix,
             token=token,
             lock=lock,
@@ -6682,9 +6687,10 @@ class DataArray(
 
     def groupby(
         self,
-        group: Hashable | DataArray | IndexVariable,
+        group: Hashable | DataArray | IndexVariable | None = None,
         squeeze: bool | None = None,
         restore_coord_dims: bool = False,
+        **groupers: Grouper,
     ) -> DataArrayGroupBy:
         """Returns a DataArrayGroupBy object for performing grouped operations.
 
@@ -6700,6 +6706,10 @@ class DataArray(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
+        **groupers : Mapping of hashable to Grouper or Resampler
+            Mapping of variable name to group by to ``Grouper`` or ``Resampler`` object.
+            One of ``group`` or ``groupers`` must be provided.
+            Only a single ``grouper`` is allowed at present.
 
         Returns
         -------
@@ -6729,6 +6739,15 @@ class DataArray(
           * time       (time) datetime64[ns] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
             dayofyear  (time) int64 15kB 1 2 3 4 5 6 7 8 ... 360 361 362 363 364 365 366
 
+        Use a ``Grouper`` object to be more explicit
+
+        >>> da.coords["dayofyear"] = da.time.dt.dayofyear
+        >>> da.groupby(dayofyear=xr.groupers.UniqueGrouper()).mean()
+        <xarray.DataArray (dayofyear: 366)> Size: 3kB
+        array([ 730.8,  731.8,  732.8, ..., 1093.8, 1094.8, 1095.5])
+        Coordinates:
+          * dayofyear  (dayofyear) int64 3kB 1 2 3 4 5 6 7 ... 361 362 363 364 365 366
+
         See Also
         --------
         :ref:`groupby`
@@ -6756,7 +6775,23 @@ class DataArray(
         from xarray.core.groupers import UniqueGrouper
 
         _validate_groupby_squeeze(squeeze)
-        rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
+
+        grouper: Grouper
+        if group is not None:
+            if groupers:
+                raise ValueError(
+                    "Providing a combination of `group` and **groupers is not supported."
+                )
+            grouper = UniqueGrouper()
+        else:
+            if len(groupers) > 1:
+                raise ValueError("grouping by multiple variables is not supported yet.")
+            if not groupers:
+                raise ValueError("**groupers must be provided if `group` is not.")
+            group, grouper = next(iter(groupers.items()))
+
+        rgrouper = ResolvedGrouper(grouper, group, self)
+
         return DataArrayGroupBy(
             self,
             (rgrouper,),
@@ -7189,7 +7224,7 @@ class DataArray(
 
     def resample(
         self,
-        indexer: Mapping[Any, str] | None = None,
+        indexer: Mapping[Hashable, str | Resampler] | None = None,
         skipna: bool | None = None,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
@@ -7198,7 +7233,7 @@ class DataArray(
         origin: str | DatetimeLike = "start_day",
         loffset: datetime.timedelta | str | None = None,
         restore_coord_dims: bool | None = None,
-        **indexer_kwargs: str,
+        **indexer_kwargs: str | Resampler,
     ) -> DataArrayResample:
         """Returns a Resample object for performing resampling operations.
 
@@ -7291,28 +7326,7 @@ class DataArray(
                 0.48387097,  0.51612903,  0.5483871 ,  0.58064516,  0.61290323,
                 0.64516129,  0.67741935,  0.70967742,  0.74193548,  0.77419355,
                 0.80645161,  0.83870968,  0.87096774,  0.90322581,  0.93548387,
-                0.96774194,  1.        ,  1.03225806,  1.06451613,  1.09677419,
-                1.12903226,  1.16129032,  1.19354839,  1.22580645,  1.25806452,
-                1.29032258,  1.32258065,  1.35483871,  1.38709677,  1.41935484,
-                1.4516129 ,  1.48387097,  1.51612903,  1.5483871 ,  1.58064516,
-                1.61290323,  1.64516129,  1.67741935,  1.70967742,  1.74193548,
-                1.77419355,  1.80645161,  1.83870968,  1.87096774,  1.90322581,
-                1.93548387,  1.96774194,  2.        ,  2.03448276,  2.06896552,
-                2.10344828,  2.13793103,  2.17241379,  2.20689655,  2.24137931,
-                2.27586207,  2.31034483,  2.34482759,  2.37931034,  2.4137931 ,
-                2.44827586,  2.48275862,  2.51724138,  2.55172414,  2.5862069 ,
-                2.62068966,  2.65517241,  2.68965517,  2.72413793,  2.75862069,
-                2.79310345,  2.82758621,  2.86206897,  2.89655172,  2.93103448,
-                2.96551724,  3.        ,  3.03225806,  3.06451613,  3.09677419,
-                3.12903226,  3.16129032,  3.19354839,  3.22580645,  3.25806452,
-        ...
-                7.87096774,  7.90322581,  7.93548387,  7.96774194,  8.        ,
-                8.03225806,  8.06451613,  8.09677419,  8.12903226,  8.16129032,
-                8.19354839,  8.22580645,  8.25806452,  8.29032258,  8.32258065,
-                8.35483871,  8.38709677,  8.41935484,  8.4516129 ,  8.48387097,
-                8.51612903,  8.5483871 ,  8.58064516,  8.61290323,  8.64516129,
-                8.67741935,  8.70967742,  8.74193548,  8.77419355,  8.80645161,
-                8.83870968,  8.87096774,  8.90322581,  8.93548387,  8.96774194,
+                0.96774194,  1.        ,  ...,
                 9.        ,  9.03333333,  9.06666667,  9.1       ,  9.13333333,
                 9.16666667,  9.2       ,  9.23333333,  9.26666667,  9.3       ,
                 9.33333333,  9.36666667,  9.4       ,  9.43333333,  9.46666667,
@@ -7342,19 +7356,7 @@ class DataArray(
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,  3.,
                 3.,  3., nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
-               nan, nan, nan, nan,  4.,  4.,  4., nan, nan, nan, nan, nan, nan,
-               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
-               nan, nan, nan, nan, nan, nan, nan, nan,  5.,  5.,  5., nan, nan,
-               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
-               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
-                6.,  6.,  6., nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
-               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
-               nan, nan, nan, nan,  7.,  7.,  7., nan, nan, nan, nan, nan, nan,
-               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
-               nan, nan, nan, nan, nan, nan, nan, nan, nan,  8.,  8.,  8., nan,
-               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
-               nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
-               nan,  9.,  9.,  9., nan, nan, nan, nan, nan, nan, nan, nan, nan,
+               nan, nan, nan, nan,  4.,  4.,  4., nan, nan, nan, nan, nan, ...,
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
                nan, nan, nan, nan, nan, 10., 10., 10., nan, nan, nan, nan, nan,
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
