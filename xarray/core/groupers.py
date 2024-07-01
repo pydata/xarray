@@ -45,15 +45,15 @@ class EncodedGroups:
 
     Attributes
     ----------
-    codes: DataArray
+    codes : DataArray
         Same shape as the DataArray to group by. Values consist of a unique integer code for each group.
-    full_index: pd.Index
+    full_index : pd.Index
         Pandas Index for the group coordinate containing unique group labels.
         This can differ from ``unique_coord`` in the case of resampling and binning,
         where certain groups in the output need not be present in the input.
-    group_indices: list of int or slice or list of int, optional
+    group_indices : list of int or slice or list of int, optional
         List of indices of array elements belonging to each group. Inferred if not provided.
-    unique_coord: Variable, optional
+    unique_coord : Variable, optional
         Unique group values present in dataset. Inferred if not provided
     """
 
@@ -82,7 +82,7 @@ class Grouper(ABC):
         Do not use.
 
         .. deprecated:: 2023.03.0
-            This is a deprecated method. It will be deleted this when the `squeeze` kwarg is deprecated.
+            This is a deprecated method. It will be deleted when the `squeeze` kwarg is deprecated.
             Only ``UniqueGrouper`` should override it.
         """
         return False
@@ -94,7 +94,7 @@ class Grouper(ABC):
 
         Parameters
         ----------
-        group: DataArray
+        group : DataArray
             DataArray we are grouping by.
 
         Returns
