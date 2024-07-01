@@ -6683,7 +6683,9 @@ class DataArray(
 
     def groupby(
         self,
-        group: Hashable | DataArray | IndexVariable | None = None,
+        group: (
+            Hashable | DataArray | IndexVariable | Mapping[Hashable, Grouper] | None
+        ) = None,
         squeeze: bool | None = None,
         restore_coord_dims: bool = False,
         **groupers: Grouper,
@@ -6771,6 +6773,10 @@ class DataArray(
         from xarray.core.groupers import UniqueGrouper
 
         _validate_groupby_squeeze(squeeze)
+
+        if isinstance(group, Mapping):
+            groupers = either_dict_or_kwargs(group, groupers, "groupby")
+            group = None
 
         grouper: Grouper
         if group is not None:

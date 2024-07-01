@@ -10257,7 +10257,9 @@ class Dataset(
 
     def groupby(
         self,
-        group: Hashable | DataArray | IndexVariable | None = None,
+        group: (
+            Hashable | DataArray | IndexVariable | Mapping[Hashable, Grouper] | None
+        ) = None,
         squeeze: bool | None = None,
         restore_coord_dims: bool = False,
         **groupers: Grouper,
@@ -10314,8 +10316,16 @@ class Dataset(
         from xarray.core.groupers import UniqueGrouper
 
         _validate_groupby_squeeze(squeeze)
+
+        if isinstance(group, Mapping):
+            groupers = either_dict_or_kwargs(group, groupers, "groupby")
+            group = None
+
         if group is not None:
-            assert not groupers
+            if groupers:
+                raise ValueError(
+                    "Providing a combination of `group` and **groupers is not supported."
+                )
             rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
         else:
             if len(groupers) > 1:

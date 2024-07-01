@@ -2637,11 +2637,30 @@ def test_custom_grouper() -> None:
             codes = group.copy(data=codes_).rename("year")
             return EncodedGroups(codes=codes, full_index=pd.Index(uniques))
 
-    ds = xr.DataArray(
+    da = xr.DataArray(
         dims="time",
         data=np.arange(20),
         coords={"time": ("time", pd.date_range("2000-01-01", freq="3MS", periods=20))},
+        name="foo",
     )
-    actual = ds.groupby(time=YearGrouper()).mean()
+    ds = da.to_dataset()
+
     expected = ds.groupby("time.year").mean()
+    actual = ds.groupby(time=YearGrouper()).mean()
     assert_identical(expected, actual)
+
+    actual = ds.groupby({"time": YearGrouper()}).mean()
+    assert_identical(expected, actual)
+
+    expected = ds.foo.groupby("time.year").mean()
+    actual = ds.foo.groupby(time=YearGrouper()).mean()
+    assert_identical(expected, actual)
+
+    actual = ds.foo.groupby({"time": YearGrouper()}).mean()
+    assert_identical(expected, actual)
+
+    for obj in [ds, ds.foo]:
+        with pytest.raises(ValueError):
+            obj.groupby("time.year", time=YearGrouper())
+        with pytest.raises(ValueError):
+            obj.groupby()
