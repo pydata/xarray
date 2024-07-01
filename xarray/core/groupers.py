@@ -51,7 +51,7 @@ class EncodedGroups:
         Pandas Index for the group coordinate containing unique group labels.
         This can differ from ``unique_coord`` in the case of resampling and binning,
         where certain groups in the output need not be present in the input.
-    group_indices : list of int or slice or list of int, optional
+    group_indices : tuple of int or slice or list of int, optional
         List of indices of array elements belonging to each group. Inferred if not provided.
     unique_coord : Variable, optional
         Unique group values present in dataset. Inferred if not provided
@@ -170,7 +170,7 @@ class UniqueGrouper(Grouper):
         # no need to factorize
         # use slices to do views instead of fancy indexing
         # equivalent to: group_indices = group_indices.reshape(-1, 1)
-        group_indices: T_GroupIndices = [slice(i, i + 1) for i in range(size)]
+        group_indices: T_GroupIndices = tuple(slice(i, i + 1) for i in range(size))
         size_range = np.arange(size)
         if isinstance(self.group, _DummyGroup):
             codes = self.group.to_dataarray().copy(data=size_range)
@@ -430,10 +430,10 @@ class TimeResampler(Resampler):
         self._init_properties(group)
         full_index, first_items, codes_ = self._get_index_and_items()
         sbins = first_items.values.astype(np.int64)
-        group_indices: T_GroupIndices = [
-            slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])
-        ]
-        group_indices += [slice(sbins[-1], None)]
+        group_indices: T_GroupIndices = tuple(
+            [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])]
+            + [slice(sbins[-1], None)]
+        )
 
         unique_coord = Variable(
             dims=group.name, data=first_items.index, attrs=group.attrs
