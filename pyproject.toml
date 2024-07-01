@@ -119,7 +119,6 @@ module = [
   "netCDF4.*",
   "netcdftime.*",
   "opt_einsum.*",
-  "pandas.*",
   "pint.*",
   "pooch.*",
   "pyarrow.*",
