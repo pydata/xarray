@@ -1064,7 +1064,7 @@ def apply_ufunc(
     supported:
 
     >>> magnitude(3, 4)
-    5.0
+    np.float64(5.0)
     >>> magnitude(3, np.array([0, 4]))
     array([3., 5.])
     >>> magnitude(array, 0)

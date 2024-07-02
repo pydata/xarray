@@ -426,7 +426,7 @@ However, the functions also take missing values in the data into account:
 
 .. ipython:: python
 
-    data = xr.DataArray([np.NaN, 2, 4])
+    data = xr.DataArray([np.nan, 2, 4])
     weights = xr.DataArray([8, 1, 1])
 
     data.weighted(weights).mean()
@@ -444,7 +444,7 @@ If the weights add up to to 0, ``sum`` returns 0:
 
     data.weighted(weights).sum()
 
-and ``mean``, ``std`` and ``var`` return ``NaN``:
+and ``mean``, ``std`` and ``var`` return ``nan``:
 
 .. ipython:: python
 
