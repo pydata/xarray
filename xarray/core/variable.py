@@ -298,7 +298,7 @@ def as_compatible_data(
 
     # we don't want nested self-described arrays
     if isinstance(data, (pd.Series, pd.DataFrame)):
-        data = data.values
+        data = data.values  # type: ignore[assignment]
 
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)

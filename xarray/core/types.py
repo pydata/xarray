@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     try:
         from dask.array import Array as DaskArray
     except ImportError:
-        DaskArray = np.ndarray  # type: ignore
+        DaskArray = np.ndarray
 
     try:
         from cubed import Array as CubedArray

@@ -57,19 +57,12 @@ from collections.abc import (
     Mapping,
     MutableMapping,
     MutableSet,
+    Sequence,
     ValuesView,
 )
 from enum import Enum
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Literal,
-    TypeVar,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -137,7 +130,7 @@ def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
     if not is_valid_numpy_dtype(array.dtype):
         return np.dtype("O")
 
-    return array.dtype
+    return array.dtype  # type: ignore[return-value]
 
 
 def maybe_coerce_to_str(index, original_coords):
@@ -184,18 +177,17 @@ def equivalent(first: T, second: T) -> bool:
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
     if isinstance(first, list) or isinstance(second, list):
-        return list_equiv(first, second)
-    return (first == second) or (pd.isnull(first) and pd.isnull(second))
+        return list_equiv(first, second)  # type: ignore[arg-type]
+    return (first == second) or (pd.isnull(first) and pd.isnull(second))  # type: ignore[call-overload]
 
 
-def list_equiv(first, second):
-    equiv = True
+def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    else:
-        for f, s in zip(first, second):
-            equiv = equiv and equivalent(f, s)
-    return equiv
+    for f, s in zip(first, second):
+        if not equivalent(f, s):
+            return False
+    return True
 
 
 def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
