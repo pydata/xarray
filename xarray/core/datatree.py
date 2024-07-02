@@ -545,6 +545,8 @@ class DataTree(
         """
         An immutable Dataset-like view onto the data in this node.
 
+        Includes inherited coordinates and indexes from parent nodes.
+
         For a mutable Dataset containing the same data as in this node, use
         `.to_dataset()` instead.
 
