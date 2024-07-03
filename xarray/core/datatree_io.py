@@ -85,7 +85,7 @@ def _datatree_to_netcdf(
         unlimited_dims = {}
 
     for node in dt.subtree:
-        ds = node.ds
+        ds = node.to_dataset(inherited=False)
         group_path = node.path
         if ds is None:
             _create_empty_netcdf_group(filepath, group_path, mode, engine)
@@ -151,7 +151,7 @@ def _datatree_to_zarr(
         )
 
     for node in dt.subtree:
-        ds = node.ds
+        ds = node.to_dataset(inherited=False)
         group_path = node.path
         if ds is None:
             _create_empty_zarr_group(store, group_path, mode)
