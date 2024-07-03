@@ -759,16 +759,16 @@ def _emit_freq_deprecation_warning(deprecated_freq):
     emit_user_level_warning(message, FutureWarning)
 
 
-def to_offset(freq, warn=True):
+def to_offset(freq: BaseCFTimeOffset | str, warn: bool = True) -> BaseCFTimeOffset:
     """Convert a frequency string to the appropriate subclass of
     BaseCFTimeOffset."""
     if isinstance(freq, BaseCFTimeOffset):
         return freq
-    else:
-        try:
-            freq_data = re.match(_PATTERN, freq).groupdict()
-        except AttributeError:
-            raise ValueError("Invalid frequency string provided")
+
+    match = re.match(_PATTERN, freq)
+    if match is None:
+        raise ValueError("Invalid frequency string provided")
+    freq_data = match.groupdict()
 
     freq = freq_data["freq"]
     if warn and freq in _DEPRECATED_FREQUENICES:
@@ -909,7 +909,9 @@ def _translate_closed_to_inclusive(closed):
     return inclusive
 
 
-def _infer_inclusive(closed, inclusive):
+def _infer_inclusive(
+    closed: NoDefault | SideOptions, inclusive: InclusiveOptions | None
+) -> InclusiveOptions:
     """Follows code added in pandas #43504."""
     if closed is not no_default and inclusive is not None:
         raise ValueError(
@@ -917,9 +919,9 @@ def _infer_inclusive(closed, inclusive):
             "passed if argument `inclusive` is not None."
         )
     if closed is not no_default:
-        inclusive = _translate_closed_to_inclusive(closed)
-    elif inclusive is None:
-        inclusive = "both"
+        return _translate_closed_to_inclusive(closed)
+    if inclusive is None:
+        return "both"
     return inclusive
 
 

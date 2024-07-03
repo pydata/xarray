@@ -219,6 +219,7 @@ InterpOptions = Union[Interp1dOptions, InterpolantOptions]
 DatetimeUnitOptions = Literal[
     "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
 ]
+NPDatetimeUnitOptions = Literal["D", "h", "m", "s", "ms", "us", "ns"]
 
 QueryEngineOptions = Literal["python", "numexpr", None]
 QueryParserOptions = Literal["pandas", "python"]
