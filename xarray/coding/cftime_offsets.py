@@ -935,7 +935,7 @@ def cftime_range(
     closed: NoDefault | SideOptions = no_default,
     inclusive: None | InclusiveOptions = None,
     calendar="standard",
-):
+) -> CFTimeIndex:
     """Return a fixed frequency CFTimeIndex.
 
     Parameters
