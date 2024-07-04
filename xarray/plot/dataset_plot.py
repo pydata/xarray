@@ -732,9 +732,10 @@ def _temp_dataarray(ds: Dataset, y: Hashable, locals_: dict[str, Any]) -> DataAr
     coord_kwargs = locals_.keys() & valid_coord_kwargs
     for k in coord_kwargs:
         key = locals_[k]
-        if key is not None:
-            coords[key] = ds[key]
-            for d in ds[key].dims:
+        darray = ds.get(key)
+        if darray is not None:
+            coords[key] = darray
+            for d in darray.dims:
                 dims[d] = None
 
     # Trim dataset from unneccessary dims:
