@@ -28,10 +28,11 @@ except ImportError:
     else:
         Self: Any = None
 
-if TYPE_CHECKING:
-    from numpy._typing import _SupportsDType
-    from numpy.typing import ArrayLike
 
+from numpy._typing import _SupportsDType
+from numpy.typing import ArrayLike
+
+if TYPE_CHECKING:
     from xarray.backends.common import BackendEntrypoint
     from xarray.core.alignment import Aligner
     from xarray.core.common import AbstractArray, DataWithCoords

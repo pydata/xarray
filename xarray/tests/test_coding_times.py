@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from datetime import timedelta
 from itertools import product
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -1236,7 +1237,7 @@ def test_contains_cftime_lazy() -> None:
 )
 def test_roundtrip_datetime64_nanosecond_precision(
     timestr: str,
-    timeunit: str,
+    timeunit: Literal["ns", "us"],
     dtype: np.typing.DTypeLike,
     fill_value: int | float | None,
     use_encoding: bool,
@@ -1483,8 +1484,8 @@ def test_encode_cf_datetime_cftime_datetime_via_dask(units, dtype) -> None:
     import dask.array
 
     calendar = "standard"
-    times = cftime_range(start="1700", freq="D", periods=3, calendar=calendar)
-    times = dask.array.from_array(times, chunks=1)
+    times_idx = cftime_range(start="1700", freq="D", periods=3, calendar=calendar)
+    times = dask.array.from_array(times_idx, chunks=1)
     encoded_times, encoding_units, encoding_calendar = encode_cf_datetime(
         times, units, None, dtype
     )

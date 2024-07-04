@@ -427,7 +427,7 @@ class TestDataArray:
             DataArray(np.random.rand(4, 4), [("x", self.mindex), ("level_1", range(4))])
 
     def test_constructor_from_self_described(self) -> None:
-        data = [[-0.1, 21], [0, 2]]
+        data: list[list[float]] = [[-0.1, 21], [0, 2]]
         expected = DataArray(
             data,
             coords={"x": ["a", "b"], "y": [-1, -2]},

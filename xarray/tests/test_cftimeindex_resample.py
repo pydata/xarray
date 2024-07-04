@@ -10,6 +10,7 @@ from packaging.version import Version
 
 import xarray as xr
 from xarray.coding.cftime_offsets import _new_to_legacy_freq
+from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core.pdcompat import _convert_base_to_offset
 from xarray.core.resample_cftime import CFTimeGrouper
 
@@ -204,7 +205,9 @@ def test_calendars(calendar: str) -> None:
         .mean()
     )
     # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
-    da_cftime["time"] = da_cftime.xindexes["time"].to_pandas_index().to_datetimeindex()
+    new_pd_index = da_cftime.xindexes["time"].to_pandas_index()
+    assert isinstance(new_pd_index, CFTimeIndex)  # shouldn't that be a pd.Index?
+    da_cftime["time"] = new_pd_index.to_datetimeindex()
     xr.testing.assert_identical(da_cftime, da_datetime)
 
 
