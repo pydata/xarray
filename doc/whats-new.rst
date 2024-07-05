@@ -37,6 +37,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Fix scatter plot broadcasting unneccesarily. (:issue:`9129`, :pull:`9206`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Make :py:func:`testing.assert_allclose` work with numpy 2.0 (:issue:`9165`, :pull:`9166`).
   By `Pontus Lurcock <https://github.com/pont-us>`_.
 - Allow diffing objects with array attributes on variables (:issue:`9153`, :pull:`9169`).
