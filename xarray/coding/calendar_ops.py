@@ -6,7 +6,6 @@ import pandas as pd
 from xarray.coding.cftime_offsets import date_range_like, get_date_type
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.times import (
-    _STANDARD_CALENDARS,
     _should_cftime_be_used,
     convert_times,
 )
@@ -226,7 +225,7 @@ def convert_calendar(
         # Remove NaN that where put on invalid dates in target calendar
         out = out.where(out[dim].notnull(), drop=True)
 
-        if use_cftime or calendar not in _STANDARD_CALENDARS:
+        if use_cftime:
             # Reassign times to ensure time index of output is a CFTimeIndex
             # (previously it was an Index due to the presence of NaN values).
             # Note this is not needed in the case that the output time index is
