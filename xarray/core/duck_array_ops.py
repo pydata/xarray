@@ -275,7 +275,7 @@ def as_shared_dtype(scalars_or_arrays, xp=None):
 
     # Avoid calling array_type("cupy") repeatedly in the any check
     array_type_cupy = array_type("cupy")
-    if any(first_layer(x) is array_type_cupy for x in scalars_or_arrays):
+    if any(issubclass(first_layer(x), array_type_cupy) for x in scalars_or_arrays):
         import cupy as cp
 
         xp = cp
