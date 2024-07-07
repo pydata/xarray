@@ -214,6 +214,10 @@ def unops() -> list[OpsType]:
     ]
 
 
+# We use short names T_DA and T_DS to keep below 88 lines so
+# ruff does not reformat everything. When reformatting, the
+# type-ignores end up in the wrong line :/
+
 ops_info = {}
 ops_info["DatasetOpsMixin"] = (
     binops(other_type="DsCompatible") + inplace(other_type="DsCompatible") + unops()
