@@ -49,6 +49,9 @@ Bug fixes
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Dark themes are now properly detected for ``html[data-theme=dark]``-tags (:pull:`9200`).
   By `Dieter Werthmüller <https://github.com/prisae>`_.
+- Reductions no longer fail for ``np.complex_`` dtype arrays when numbagg is
+  installed.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 Documentation
 ~~~~~~~~~~~~~
