@@ -273,7 +273,7 @@ def as_shared_dtype(scalars_or_arrays, xp=None):
             f" array types {[x.dtype for x in scalars_or_arrays]}"
         )
 
-    # Avoid calling array_type("cupy") repeatidely in the any check
+    # Avoid calling array_type("cupy") repeatedly in the any check
     array_type_cupy = array_type("cupy")
     if any(first_layer(x) is array_type_cupy for x in scalars_or_arrays):
         import cupy as cp
