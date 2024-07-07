@@ -88,12 +88,10 @@ template_binop = """
         return self._binary_op(other, {func})"""
 template_binop_overload = """
     @overload{overload_type_ignore}
-    def {method}(self, other: {overload_type}) -> {overload_type}:
-        ...
+    def {method}(self, other: {overload_type}) -> {overload_type}: ...
 
     @overload
-    def {method}(self, other: {other_type}) -> {return_type}:
-        ...
+    def {method}(self, other: {other_type}) -> {return_type}: ...
 
     def {method}(self, other: {other_type}) -> {return_type} | {overload_type}:{type_ignore}
         return self._binary_op(other, {func})"""
@@ -129,7 +127,7 @@ unhashable = """
 # The type ignores might not be necessary anymore at some point.
 #
 # We require a "hack" to tell type checkers that e.g. Variable + DataArray = DataArray
-# In reality this returns NotImplementes, but this is not a valid type in python 3.9.
+# In reality this returns NotImplemented, but this is not a valid type in python 3.9.
 # Therefore, we return DataArray. In reality this would call DataArray.__add__(Variable)
 # TODO: change once python 3.10 is the minimum.
 #
@@ -224,12 +222,12 @@ ops_info["DataArrayOpsMixin"] = (
     binops(other_type="DaCompatible") + inplace(other_type="DaCompatible") + unops()
 )
 ops_info["VariableOpsMixin"] = (
-    binops_overload(other_type="VarCompatible", overload_type="T_DataArray")
+    binops_overload(other_type="VarCompatible", overload_type="T_DA")
     + inplace(other_type="VarCompatible", type_ignore="misc")
     + unops()
 )
 ops_info["DatasetGroupByOpsMixin"] = binops(
-    other_type="GroupByCompatible", return_type="Dataset"
+    other_type="T_DS | T_DA", return_type="T_DS"
 )
 ops_info["DataArrayGroupByOpsMixin"] = binops(
     other_type="T_Xarray", return_type="T_Xarray"
@@ -237,26 +235,24 @@ ops_info["DataArrayGroupByOpsMixin"] = binops(
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with arithmetic operators."""
+
 # This file was generated using xarray.util.generate_ops. Do not edit manually.
 
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, overload
+from typing import Any, Callable, overload
 
 from xarray.core import nputils, ops
 from xarray.core.types import (
     DaCompatible,
     DsCompatible,
-    GroupByCompatible,
     Self,
-    T_DataArray,
     T_Xarray,
     VarCompatible,
 )
-
-if TYPE_CHECKING:
-    from xarray.core.dataset import Dataset'''
+from xarray.core.types import T_DataArray as T_DA
+from xarray.core.types import T_Dataset as T_DS'''
 
 
 CLASS_PREAMBLE = """{newline}
