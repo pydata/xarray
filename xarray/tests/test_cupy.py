@@ -67,6 +67,7 @@ def test_where() -> None:
 @requires_dask
 def test_where_dask() -> None:
     import dask.array as da
+    import nested_duck_arrays.dask  # noqa: F401
 
     from xarray.core.duck_array_ops import where
 
