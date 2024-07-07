@@ -113,6 +113,9 @@ with warnings.catch_warnings():
         category=DeprecationWarning,
     )
     has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
+has_nested_duck_arrays, requires_nested_duck_arrays = _importorskip(
+    "nested_duck_arrays"
+)
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")

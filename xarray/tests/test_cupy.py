@@ -5,9 +5,9 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.tests import requires_dask, requires_nested_duck_arrays
 
 cp = pytest.importorskip("cupy")
-from xarray.tests import requires_dask
 
 
 @pytest.fixture
@@ -63,6 +63,7 @@ def test_where() -> None:
     assert isinstance(output, cp.ndarray)
 
 
+@requires_nested_duck_arrays
 @requires_dask
 def test_where_dask() -> None:
     import dask.array as da
