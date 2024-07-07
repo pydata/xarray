@@ -580,10 +580,19 @@ class PandasIndex(Index):
         array: Any,
         dim: Hashable,
         coord_dtype: Any = None,
+        *,
+        fastpath: bool = False,
     ):
-        index = safe_cast_to_index(array).copy()
+        if fastpath:
+            index = array
+        else:
+            index = safe_cast_to_index(array)
 
         if index.name is None:
+            # make a shallow copy: cheap and because the index name may be updated
+            # here or in other constructors (cannot use pd.Index.rename as this
+            # constructor is also called from PandasMultiIndex)
+            index = index.copy()
             index.name = dim
 
         self.index = index
@@ -598,7 +607,7 @@ class PandasIndex(Index):
             dim = self.dim
         if coord_dtype is None:
             coord_dtype = self.coord_dtype
-        return type(self)(index, dim, coord_dtype)
+        return type(self)(index, dim, coord_dtype, fastpath=True)
 
     @classmethod
     def from_variables(
@@ -644,6 +653,11 @@ class PandasIndex(Index):
 
         obj = cls(data, dim, coord_dtype=var.dtype)
         assert not isinstance(obj.index, pd.MultiIndex)
+        # Rename safely
+        # make a shallow copy: cheap and because the index name may be updated
+        # here or in other constructors (cannot use pd.Index.rename as this
+        # constructor is also called from PandasMultiIndex)
+        obj.index = obj.index.copy()
         obj.index.name = name
 
         return obj
