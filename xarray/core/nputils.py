@@ -191,7 +191,7 @@ def _create_method(name, npmodule=np) -> Callable:
                 or kwargs.get("ddof", 0) == 1
             )
             # TODO: bool?
-            and values.dtype.kind in "uifc"
+            and values.dtype.kind in "uif"
             # and values.dtype.isnative
             and (dtype is None or np.dtype(dtype) == values.dtype)
             # numbagg.nanquantile only available after 0.8.0 and with linear method
