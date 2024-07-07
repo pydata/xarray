@@ -282,7 +282,9 @@ def test_resample_loffset_cftimeindex(loffset) -> None:
         result = da_cftimeindex.resample(time="24h", loffset=loffset).mean()
         expected = da_datetimeindex.resample(time="24h", loffset=loffset).mean()
 
-    result["time"] = result.xindexes["time"].to_pandas_index().to_datetimeindex()
+    index = result.xindexes["time"].to_pandas_index()
+    assert isinstance(index, CFTimeIndex)
+    result["time"] = index.to_datetimeindex()
     xr.testing.assert_identical(result, expected)
 
 

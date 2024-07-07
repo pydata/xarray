@@ -581,7 +581,7 @@ class TestDataset:
             pandas_obj = a.to_pandas()
             ds_based_on_pandas = Dataset(pandas_obj)  # type: ignore  # TODO: improve typing of __init__
             for dim in ds_based_on_pandas.data_vars:
-                assert_array_equal(ds_based_on_pandas[dim], pandas_obj[dim])
+                assert_array_equal(ds_based_on_pandas[dim], pandas_obj[str(dim)])
 
     def test_constructor_compat(self) -> None:
         data = {"x": DataArray(0, coords={"y": 1}), "y": ("z", [1, 1, 1])}
@@ -1695,7 +1695,7 @@ class TestDataset:
         with pytest.raises(ValueError):
             ds.sel(ind="bar", method="nearest")
         with pytest.raises(ValueError):
-            ds.sel(ind="bar", tolerance="nearest")
+            ds.sel(ind="bar", tolerance="nearest")  # type: ignore[arg-type]
 
     def test_categorical_index(self) -> None:
         cat = pd.CategoricalIndex(
