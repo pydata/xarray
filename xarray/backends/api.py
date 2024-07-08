@@ -398,7 +398,7 @@ def open_dataset(
     chunks: T_Chunks = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
-    mask_and_scale: bool | None = None,
+    mask_and_scale: bool | dict[str, bool] | None = None,
     decode_times: bool | None = None,
     decode_timedelta: bool | None = None,
     use_cftime: bool | None = None,
@@ -451,14 +451,16 @@ def open_dataset(
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
         to CF conventions.
-    mask_and_scale : bool, optional
+    mask_and_scale : bool or mapping from variable name to bool, optional
         If True, replace array values equal to `_FillValue` with NA and scale
         values according to the formula `original_values * scale_factor +
         add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
         taken from variable attributes (if they exist).  If the `_FillValue` or
         `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
-        be replaced by NA. This keyword may not be supported by all the backends.
+        be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
+        to toggle this feature per-variable individually.
+        This keyword may not be supported by all the backends.
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.

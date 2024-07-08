@@ -384,11 +384,18 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
                     bounds_encoding.setdefault("calendar", encoding["calendar"])
 
 
+def _item_or_default(obj: Mapping | Any, key: Hashable, default: Any = None):
+    """
+    Return item by key if obj is mapping and key is present, else return default value.
+    """
+    return (obj.get(key, default) if isinstance(obj, Mapping) else obj)
+
+
 def decode_cf_variables(
     variables: T_Variables,
     attributes: T_Attrs,
     concat_characters: bool = True,
-    mask_and_scale: bool = True,
+    mask_and_scale: bool | dict[str, bool] = True,
     decode_times: bool = True,
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
@@ -441,7 +448,7 @@ def decode_cf_variables(
                 k,
                 v,
                 concat_characters=concat_characters,
-                mask_and_scale=mask_and_scale,
+                mask_and_scale=_item_or_default(mask_and_scale, k, True),
                 decode_times=decode_times,
                 stack_char_dim=stack_char_dim,
                 use_cftime=use_cftime,
