@@ -388,7 +388,7 @@ def _item_or_default(obj: Mapping | Any, key: Hashable, default: Any = None):
     """
     Return item by key if obj is mapping and key is present, else return default value.
     """
-    return (obj.get(key, default) if isinstance(obj, Mapping) else obj)
+    return obj.get(key, default) if isinstance(obj, Mapping) else obj
 
 
 def decode_cf_variables(
