@@ -244,11 +244,6 @@ class TestUpdate:
         dt: DataTree = DataTree()
         dt.update({"foo": xr.DataArray(0), "a": DataTree()})
         expected = DataTree.from_dict({"/": xr.Dataset({"foo": 0}), "a": None})
-        print(dt)
-        print(dt.children)
-        print(dt._children)
-        print(dt["a"])
-        print(expected)
         assert_equal(dt, expected)
 
     def test_update_new_named_dataarray(self):
@@ -268,13 +263,37 @@ class TestUpdate:
     def test_update_overwrite(self):
         actual = DataTree.from_dict({"a": DataTree(xr.Dataset({"x": 1}))})
         actual.update({"a": DataTree(xr.Dataset({"x": 2}))})
-
         expected = DataTree.from_dict({"a": DataTree(xr.Dataset({"x": 2}))})
-
-        print(actual)
-        print(expected)
-
         assert_equal(actual, expected)
+
+    def test_update_coordinates(self):
+        expected = DataTree.from_dict({"/": xr.Dataset(coords={"a": 1})})
+        actual = DataTree.from_dict({"/": xr.Dataset()})
+        actual.update(xr.Dataset(coords={"a": 1}))
+        assert_equal(actual, expected)
+
+    def test_update_inherited_coords(self):
+        expected = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"a": 1}),
+                "/b": xr.Dataset(coords={"c": 1}),
+            }
+        )
+        actual = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"a": 1}),
+                "/b": xr.Dataset(),
+            }
+        )
+        actual["/b"].update(xr.Dataset(coords={"c": 1}))
+        assert_identical(actual, expected)
+
+        # DataTree.identical() currently does not require that non-inherited
+        # coordinates are defined identically, so we need to check this
+        # explicitly
+        actual_node = actual.children["b"].to_dataset(inherited=False)
+        expected_node = expected.children["b"].to_dataset(inherited=False)
+        assert_identical(actual_node, expected_node)
 
 
 class TestCopy:
