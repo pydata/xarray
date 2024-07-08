@@ -37,6 +37,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Don't convert custom indexes to ``pandas`` indexes when computing a diff (:pull:`9157`)
+  By `Justus Magin <https://github.com/keewis>`_.
 - Make :py:func:`testing.assert_allclose` work with numpy 2.0 (:issue:`9165`, :pull:`9166`).
   By `Pontus Lurcock <https://github.com/pont-us>`_.
 - Allow diffing objects with array attributes on variables (:issue:`9153`, :pull:`9169`).
@@ -47,6 +49,9 @@ Bug fixes
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Dark themes are now properly detected for ``html[data-theme=dark]``-tags (:pull:`9200`).
   By `Dieter Werthmüller <https://github.com/prisae>`_.
+- Reductions no longer fail for ``np.complex_`` dtype arrays when numbagg is
+  installed.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 Documentation
 ~~~~~~~~~~~~~
