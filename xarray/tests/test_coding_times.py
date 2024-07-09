@@ -20,6 +20,7 @@ from xarray import (
 )
 from xarray.coding.times import (
     _STANDARD_CALENDARS,
+    CFDatetimeCoder,
     _encode_datetime_with_cftime,
     _netcdf_to_numpy_timeunit,
     _numpy_to_netcdf_timeunit,
@@ -33,7 +34,6 @@ from xarray.coding.times import (
     infer_datetime_units,
     infer_timedelta_units,
     to_timedelta_unboxed,
-    CFDatetimeCoder,
 )
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import _update_bounds_attributes, cf_encoder
