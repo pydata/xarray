@@ -22,7 +22,7 @@ from xarray.coding.variables import (
 )
 from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
-from xarray.core.duck_array_ops import asarray
+from xarray.core.duck_array_ops import asarray, ravel
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
 from xarray.core.pdcompat import nanosecond_precision_timestamp
 from xarray.core.utils import emit_user_level_warning
@@ -321,7 +321,7 @@ def decode_cf_datetime(
     cftime.num2date
     """
     num_dates = np.asarray(num_dates)
-    flat_num_dates = num_dates.ravel()
+    flat_num_dates = ravel(num_dates)
     if calendar is None:
         calendar = "standard"
 
@@ -375,7 +375,7 @@ def decode_cf_timedelta(num_timedeltas, units: str) -> np.ndarray:
     """
     num_timedeltas = np.asarray(num_timedeltas)
     units = _netcdf_to_numpy_timeunit(units)
-    result = to_timedelta_unboxed(num_timedeltas.ravel(), unit=units)
+    result = to_timedelta_unboxed(ravel(num_timedeltas), unit=units)
     return result.reshape(num_timedeltas.shape)
 
 
@@ -434,7 +434,7 @@ def infer_datetime_units(dates) -> str:
     'hours', 'minutes' or 'seconds' (the first one that can evenly divide all
     unique time deltas in `dates`)
     """
-    dates = np.asarray(dates).ravel()
+    dates = ravel(np.asarray(dates))
     if np.asarray(dates).dtype == "datetime64[ns]":
         dates = to_datetime_unboxed(dates)
         dates = dates[pd.notnull(dates)]
@@ -462,7 +462,7 @@ def infer_timedelta_units(deltas) -> str:
     {'days', 'hours', 'minutes' 'seconds'} (the first one that can evenly
     divide all unique time deltas in `deltas`)
     """
-    deltas = to_timedelta_unboxed(np.asarray(deltas).ravel())
+    deltas = to_timedelta_unboxed(ravel(np.asarray(deltas)))
     unique_timedeltas = np.unique(deltas[pd.notnull(deltas)])
     return _infer_time_units_from_diff(unique_timedeltas)
 
@@ -649,7 +649,7 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
         except TypeError:
             return np.nan if d is None else cftime.date2num(d, units, calendar)
 
-    return np.array([encode_datetime(d) for d in dates.ravel()]).reshape(dates.shape)
+    return np.array([encode_datetime(d) for d in ravel(dates)]).reshape(dates.shape)
 
 
 def cast_to_int_if_safe(num) -> np.ndarray:
@@ -729,7 +729,7 @@ def encode_cf_datetime(
 
 
 def _eagerly_encode_cf_datetime(
-    dates: duckarray,  # type: ignore
+    dates: duckarray,
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
@@ -759,7 +759,7 @@ def _eagerly_encode_cf_datetime(
         # Wrap the dates in a DatetimeIndex to do the subtraction to ensure
         # an OverflowError is raised if the ref_date is too far away from
         # dates to be encoded (GH 2272).
-        dates_as_index = pd.DatetimeIndex(dates.ravel())
+        dates_as_index = pd.DatetimeIndex(ravel(dates))
         time_deltas = dates_as_index - ref_date
 
         # retrieve needed units to faithfully encode to int64
@@ -897,7 +897,7 @@ def _eagerly_encode_cf_timedelta(
         units = data_units
 
     time_delta = _time_units_to_timedelta64(units)
-    time_deltas = pd.TimedeltaIndex(timedeltas.ravel())
+    time_deltas = pd.TimedeltaIndex(ravel(timedeltas))
 
     # retrieve needed units to faithfully encode to int64
     needed_units = data_units
