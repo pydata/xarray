@@ -28,9 +28,9 @@ from xarray.core.pdcompat import nanosecond_precision_timestamp
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
 from xarray.namedarray._typing import (
+    _chunkedarrayfunction_or_api,
     chunkedduckarray,
     duckarray,
-    _chunkedarrayfunction_or_api,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 
