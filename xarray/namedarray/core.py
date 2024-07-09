@@ -749,7 +749,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def chunk(
         self,
         chunks: int | Literal["auto"] | Mapping[Any, None | int | tuple[int, ...]] = {},
-        chunked_array_type: str | ChunkManagerEntrypoint[Any] | None = None,
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs: Any = None,
         **chunks_kwargs: Any,
     ) -> Self:

@@ -2526,7 +2526,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         name: str | None = None,
         lock: bool | None = None,
         inline_array: bool | None = None,
-        chunked_array_type: str | ChunkManagerEntrypoint[Any] | None = None,
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs: Any = None,
         **chunks_kwargs: Any,
     ) -> Self:
