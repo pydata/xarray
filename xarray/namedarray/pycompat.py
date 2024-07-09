@@ -150,7 +150,7 @@ def to_duck_array(
 @overload
 def to_duck_array(
     data: np.typing.ArrayLike, **kwargs: dict[str, Any]
-) -> duckarray[Any, np.dtype[np.generic]]: ...
+) -> duckarray[Any, _dtype[_generic]]: ...
 def to_duck_array(
     data: (
         ExplicitlyIndexed
