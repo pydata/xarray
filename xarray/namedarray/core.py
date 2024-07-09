@@ -822,6 +822,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         chunkmanager = guess_chunkmanager(chunked_array_type)
 
         data_old = self._data
+        data_chunked: _chunkedarray[Any, _DType_co]
         if chunkmanager.is_chunked_array(data_old):
             data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
         else:
@@ -990,7 +991,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         Change backend from sparse to np.array.
         """
         if isinstance(self._data, _sparsearrayfunction_or_api):
-            data_dense: np.ndarray[Any, _DType_co] = self._data.todense()
+            data_dense: np.ndarray[Any, Any] = self._data.todense()
             return self._new(data=data_dense)
         else:
             raise TypeError("self.data is not a sparse array")
