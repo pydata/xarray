@@ -3562,6 +3562,8 @@ def test_plot1d_lines_facetgrid_legend() -> None:
             2.449489742783178,
         ]
         np.testing.assert_allclose(expected_size, actual_size)
+
+
 def test_9155() -> None:
     # A test for types from issue #9155
 
