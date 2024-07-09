@@ -938,7 +938,7 @@ def _eagerly_encode_cf_timedelta(
 
 
 def _encode_cf_timedelta_within_map_blocks(
-    timedeltas: duckarray,  # type:ignore
+    timedeltas: duckarray,
     units: str,
     dtype: np.dtype,
 ) -> duckarray:
