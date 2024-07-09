@@ -706,6 +706,20 @@ def _cast_to_dtype_if_safe(num: np.ndarray, dtype: np.dtype) -> np.ndarray:
     return cast_num
 
 
+@overload
+def encode_cf_datetime(
+    dates: chunkedduckarray,
+    units: str | None = None,
+    calendar: str | None = None,
+    dtype: np.dtype | None = None,
+) -> tuple[chunkedduckarray, str, str]: ...
+@overload
+def encode_cf_datetime(
+    dates: duckarray,
+    units: str | None = None,
+    calendar: str | None = None,
+    dtype: np.dtype | None = None,
+) -> tuple[duckarray, str, str]: ...
 def encode_cf_datetime(
     dates: duckarray | chunkedduckarray,
     units: str | None = None,
