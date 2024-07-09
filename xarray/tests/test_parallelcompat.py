@@ -6,8 +6,15 @@ from typing import Any
 import numpy as np
 import pytest
 
-from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
-from xarray.namedarray._typing import _Chunks
+from xarray.core.types import T_DuckArray
+from xarray.namedarray._typing import (
+    _Chunks,
+    chunkedduckarray,
+    _ChunksLike,
+    _Shape,
+    _DType,
+    duckarray,
+)
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import (
     ChunkManagerEntrypoint,
@@ -27,7 +34,7 @@ class DummyChunkedArray(np.ndarray):
     https://numpy.org/doc/stable/user/basics.subclassing.html#simple-example-adding-an-extra-attribute-to-ndarray
     """
 
-    chunks: T_NormalizedChunks
+    chunks: _Chunks
 
     def __new__(
         cls,
@@ -63,32 +70,36 @@ class DummyChunkManager(ChunkManagerEntrypoint):
     def is_chunked_array(self, data: Any) -> bool:
         return isinstance(data, DummyChunkedArray)
 
-    def chunks(self, data: DummyChunkedArray) -> T_NormalizedChunks:
+    def chunks(self, data: chunkedduckarray[Any, Any]) -> _Chunks:
         return data.chunks
 
     def normalize_chunks(
         self,
-        chunks: T_Chunks | T_NormalizedChunks,
-        shape: tuple[int, ...] | None = None,
+        chunks: _ChunksLike,
+        shape: _Shape | None = None,
         limit: int | None = None,
-        dtype: np.dtype | None = None,
-        previous_chunks: T_NormalizedChunks | None = None,
-    ) -> T_NormalizedChunks:
+        dtype: _DType | None = None,
+        previous_chunks: _Chunks | None = None,
+    ) -> _Chunks:
         from dask.array.core import normalize_chunks
 
         return normalize_chunks(chunks, shape, limit, dtype, previous_chunks)
 
     def from_array(
-        self, data: T_DuckArray | np.typing.ArrayLike, chunks: _Chunks, **kwargs
-    ) -> DummyChunkedArray:
+        self, data: duckarray[Any, _DType], chunks: _Chunks, **kwargs
+    ) -> chunkedduckarray[Any, _DType]:
         from dask import array as da
 
         return da.from_array(data, chunks, **kwargs)
 
-    def rechunk(self, data: DummyChunkedArray, chunks, **kwargs) -> DummyChunkedArray:
+    def rechunk(
+        self, data: chunkedduckarray[Any, _DType], chunks: _ChunksLike, **kwargs
+    ) -> chunkedduckarray[Any, _DType]:
         return data.rechunk(chunks, **kwargs)
 
-    def compute(self, *data: DummyChunkedArray, **kwargs) -> tuple[np.ndarray, ...]:
+    def compute(
+        self, *data: chunkedduckarray[Any, _DType], **kwargs
+    ) -> tuple[duckarray[Any, _DType], ...]:
         from dask.array import compute
 
         return compute(*data, **kwargs)
