@@ -157,9 +157,7 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
 
 
 @runtime_checkable
-class _arrayfunction(
-    _array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
-):
+class _arrayfunction(_array[_ShapeType, _DType_co], Protocol[_ShapeType, _DType_co]):
     """
     Duck array supporting NEP 18.
 
@@ -185,14 +183,14 @@ class _arrayfunction(
     ) -> _arrayfunction[Any, _DType_co] | Any: ...
 
     @overload
-    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]: ...
+    def __array__(self, dtype: None = ..., /) -> np.ndarray[_ShapeType, _DType_co]: ...
 
     @overload
-    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]: ...
+    def __array__(self, dtype: _DType, /) -> np.ndarray[_ShapeType, _DType]: ...
 
     def __array__(
         self, dtype: _DType | None = ..., /
-    ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]: ...
+    ) -> np.ndarray[_ShapeType, _DType] | np.ndarray[_ShapeType, _DType_co]: ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
@@ -215,10 +213,10 @@ class _arrayfunction(
     ) -> Any: ...
 
     @property
-    def imag(self) -> _arrayfunction[_ShapeType_co, Any]: ...
+    def imag(self) -> _arrayfunction[_ShapeType, Any]: ...
 
     @property
-    def real(self) -> _arrayfunction[_ShapeType_co, Any]: ...
+    def real(self) -> _arrayfunction[_ShapeType, Any]: ...
 
 
 @runtime_checkable
@@ -267,7 +265,7 @@ class _chunkedarray(
 
 @runtime_checkable
 class _chunkedarrayfunction(
-    _arrayfunction[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
+    _arrayfunction[_ShapeType, _DType_co], Protocol[_ShapeType, _DType_co]
 ):
     """
     Chunked duck array supporting NEP 18.
@@ -281,7 +279,7 @@ class _chunkedarrayfunction(
     def rechunk(
         self,
         chunks: _ChunksLike,
-    ) -> _chunkedarrayfunction[_ShapeType_co, _DType_co]: ...
+    ) -> _chunkedarrayfunction[_ShapeType, _DType_co]: ...
 
 
 @runtime_checkable
@@ -326,7 +324,7 @@ class _sparsearray(
 
 @runtime_checkable
 class _sparsearrayfunction(
-    _arrayfunction[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
+    _arrayfunction[_ShapeType, _DType_co], Protocol[_ShapeType, _DType_co]
 ):
     """
     Sparse duck array supporting NEP 18.
@@ -361,8 +359,18 @@ ErrorOptions = Literal["raise", "ignore"]
 ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]
 
 
-def test(arr: duckarray[_ShapeType, _DType]) -> duckarray[_ShapeType, _DType]:
-    return arr
+# def test(arr: duckarray[_ShapeType, _DType]) -> duckarray[_ShapeType, _DType]:
+#     return np.round(arr)
 
 
-test(np.array([], dtype=np.int64))
+# test(np.array([], dtype=np.int64))
+
+
+# def test2(arr: _arrayfunction[Any, _DType]) -> _arrayfunction[Any, _DType]:
+#     return np.round(arr)
+#     # return np.asarray(arr)
+#     # return arr.__array__()
+#     # return arr
+
+
+# test2(np.array([], dtype=np.int64))
