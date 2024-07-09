@@ -721,8 +721,8 @@ def _temp_dataarray(ds: Dataset, y: Hashable, locals_: dict[str, Any]) -> DataAr
     """Create a temporary datarray with extra coords."""
     from xarray.core.dataarray import DataArray
 
-    # Base coords:
-    coords = dict(ds.coords)
+    coords = dict(ds[y].coords)
+    dims = set(ds[y].dims)
 
     # Add extra coords to the DataArray from valid kwargs, if using all
     # kwargs there is a risk that we add unnecessary dataarrays as
@@ -732,12 +732,17 @@ def _temp_dataarray(ds: Dataset, y: Hashable, locals_: dict[str, Any]) -> DataAr
     coord_kwargs = locals_.keys() & valid_coord_kwargs
     for k in coord_kwargs:
         key = locals_[k]
-        if ds.data_vars.get(key) is not None:
-            coords[key] = ds[key]
+        darray = ds.get(key)
+        if darray is not None:
+            coords[key] = darray
+            dims.update(darray.dims)
+
+    # Trim dataset from unneccessary dims:
+    ds_trimmed = ds.drop_dims(ds.sizes.keys() - dims)  # TODO: Use ds.dims in the future
 
     # The dataarray has to include all the dims. Broadcast to that shape
     # and add the additional coords:
-    _y = ds[y].broadcast_like(ds)
+    _y = ds[y].broadcast_like(ds_trimmed)
 
     return DataArray(_y, coords=coords)
 
