@@ -139,12 +139,12 @@ def to_duck_array(
 ) -> chunkedduckarray[_ShapeType, _DType]: ...
 @overload
 def to_duck_array(
-    data: np.typing.ArrayLike, **kwargs: dict[str, Any]
-) -> np.ndarray[Any, np.dtype[np.generic]]: ...
-@overload
-def to_duck_array(
     data: duckarray[_ShapeType, _DType], **kwargs: dict[str, Any]
 ) -> duckarray[_ShapeType, _DType]: ...
+@overload
+def to_duck_array(
+    data: np.typing.ArrayLike, **kwargs: dict[str, Any]
+) -> np.ndarray[Any, np.dtype[np.generic]]: ...
 def to_duck_array(
     data: (
         ExplicitlyIndexed
