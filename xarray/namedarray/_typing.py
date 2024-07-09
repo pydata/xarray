@@ -44,11 +44,37 @@ _default = Default.token
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
+_generic: TypeAlias = Any
+# _generic = np.generic
+
+
+class _DType2(Protocol[_T_co]):
+    def __eq__(self, other: _DType2[_generic], /) -> bool:
+        """
+        Computes the truth value of ``self == other`` in order to test for data type object equality.
+
+        Parameters
+        ----------
+        self: dtype
+            data type instance. May be any supported data type.
+        other: dtype
+            other data type instance. May be any supported data type.
+
+        Returns
+        -------
+        out: bool
+            a boolean indicating whether the data type objects are equal.
+        """
+        ...
+
+
 _dtype = np.dtype
 _DType = TypeVar("_DType", bound=np.dtype[Any])
 _DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
 # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
 
+# _ScalarType = TypeVar("_ScalarType", bound=_generic)
+# _ScalarType_co = TypeVar("_ScalarType_co", bound=_generic, covariant=True)
 _ScalarType = TypeVar("_ScalarType", bound=np.generic)
 _ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
 
