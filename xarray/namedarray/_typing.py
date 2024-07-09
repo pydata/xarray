@@ -12,7 +12,6 @@ from typing import (
     Literal,
     Protocol,
     SupportsIndex,
-    TypeAlias,
     TypeVar,
     Union,
     overload,
@@ -44,7 +43,7 @@ _default = Default.token
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
-_generic: TypeAlias = Any
+_generic = Any
 # _generic = np.generic
 
 
@@ -69,8 +68,8 @@ class _DType2(Protocol[_T_co]):
 
 
 _dtype = np.dtype
-_DType = TypeVar("_DType", bound=np.dtype[Any])
-_DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
+_DType = TypeVar("_DType", bound=_dtype[Any])
+_DType_co = TypeVar("_DType_co", covariant=True, bound=_dtype[Any])
 # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
 
 # _ScalarType = TypeVar("_ScalarType", bound=_generic)
@@ -87,9 +86,9 @@ class _SupportsDType(Protocol[_DType_co]):
 
 
 _DTypeLike = Union[
-    np.dtype[_ScalarType],
+    _dtype[_ScalarType],
     type[_ScalarType],
-    _SupportsDType[np.dtype[_ScalarType]],
+    _SupportsDType[_dtype[_ScalarType]],
 ]
 
 # For unknown shapes Dask uses np.nan, array_api uses None:
@@ -249,7 +248,7 @@ duckarray = Union[
 ]
 
 # Corresponds to np.typing.NDArray:
-DuckArray = _arrayfunction[Any, np.dtype[_ScalarType_co]]
+DuckArray = _arrayfunction[Any, _dtype[_ScalarType_co]]
 
 
 @runtime_checkable
