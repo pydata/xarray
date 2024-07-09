@@ -85,7 +85,7 @@ class DummyChunkManager(ChunkManagerEntrypoint):
         return normalize_chunks(chunks, shape, limit, dtype, previous_chunks)
 
     def from_array(
-        self, data: duckarray[Any, _DType], chunks: _Chunks, **kwargs
+        self, data: duckarray[Any, _DType], chunks: _ChunksLike, **kwargs
     ) -> chunkedduckarray[Any, _DType]:
         from dask import array as da
 
