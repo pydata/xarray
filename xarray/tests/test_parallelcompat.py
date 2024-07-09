@@ -6,13 +6,12 @@ from typing import Any
 import numpy as np
 import pytest
 
-from xarray.core.types import T_DuckArray
 from xarray.namedarray._typing import (
     _Chunks,
-    chunkedduckarray,
     _ChunksLike,
-    _Shape,
     _DType,
+    _Shape,
+    chunkedduckarray,
     duckarray,
 )
 from xarray.namedarray.daskmanager import DaskManager
