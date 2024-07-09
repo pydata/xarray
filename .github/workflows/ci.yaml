@@ -6,13 +6,6 @@ on:
   pull_request:
     branches:
       - "main"
-    paths:
-      - "ci/**"
-      - ".github/**"
-      - "/*" # covers files such as `pyproject.toml`
-      - "/.*" # ...and dotfiles in the root such as `.pre-commit-config.yaml`
-      - "properties/**"
-      - "xarray/**"
   workflow_dispatch: # allows you to trigger manually
 
 concurrency:
@@ -54,7 +47,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.9", "3.12"]
+        python-version: ["3.9",  "3.12"]
         env: [""]
         include:
           # Minimum python version:
@@ -166,7 +159,7 @@ jobs:
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v4.4.1
+        uses: codecov/codecov-action@v4.5.0
         with:
           file: ./coverage.xml
           flags: unittests

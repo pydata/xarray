@@ -59,6 +59,7 @@ except ImportError:
     )
 
 nbsphinx_allow_errors = False
+nbsphinx_requirejs_path = ""
 
 # -- General configuration ------------------------------------------------
 
@@ -68,7 +69,9 @@ nbsphinx_allow_errors = False
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+
 extensions = [
+    "sphinxcontrib.mermaid",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
@@ -175,6 +178,8 @@ napoleon_type_aliases = {
     "pd.NaT": "~pandas.NaT",
 }
 
+# mermaid config
+mermaid_version = "10.9.1"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
@@ -242,7 +247,7 @@ html_theme_options = dict(
     Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
     twitter_url="https://twitter.com/xarray_dev",
     icon_links=[],  # workaround for pydata/pydata-sphinx-theme#1220
-    announcement="🍾 <a href='https://github.com/pydata/xarray/discussions/8462'>Xarray is now 10 years old!</a> 🎉",
+    announcement="<a href='https://forms.gle/KEq7WviCdz9xTaJX6'>Xarray's 2024 User Survey is live now. Please take ~5 minutes to fill it out and help us improve Xarray.</a>",
 )
 
 

@@ -538,11 +538,14 @@ def test_infer_datetime_units(freq, units) -> None:
     ["dates", "expected"],
     [
         (
-            pd.to_datetime(["1900-01-01", "1900-01-02", "NaT"]),
+            pd.to_datetime(["1900-01-01", "1900-01-02", "NaT"], unit="ns"),
             "days since 1900-01-01 00:00:00",
         ),
-        (pd.to_datetime(["NaT", "1900-01-01"]), "days since 1900-01-01 00:00:00"),
-        (pd.to_datetime(["NaT"]), "days since 1970-01-01 00:00:00"),
+        (
+            pd.to_datetime(["NaT", "1900-01-01"], unit="ns"),
+            "days since 1900-01-01 00:00:00",
+        ),
+        (pd.to_datetime(["NaT"], unit="ns"), "days since 1970-01-01 00:00:00"),
     ],
 )
 def test_infer_datetime_units_with_NaT(dates, expected) -> None:
@@ -1177,6 +1180,22 @@ def test_decode_0size_datetime(use_cftime):
         use_cftime=use_cftime,
     )
     np.testing.assert_equal(expected, actual)
+
+
+def test_decode_float_datetime():
+    num_dates = np.array([1867128, 1867134, 1867140], dtype="float32")
+    units = "hours since 1800-01-01"
+    calendar = "standard"
+
+    expected = np.array(
+        ["2013-01-01T00:00:00", "2013-01-01T06:00:00", "2013-01-01T12:00:00"],
+        dtype="datetime64[ns]",
+    )
+
+    actual = decode_cf_datetime(
+        num_dates, units=units, calendar=calendar, use_cftime=False
+    )
+    np.testing.assert_equal(actual, expected)
 
 
 @requires_cftime

@@ -15,20 +15,17 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2024.05.1:
+.. _whats-new.2024.06.1:
 
-v2024.05.1 (unreleased)
+v2024.06.1 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
-
-Performance
-~~~~~~~~~~~
-
-- Small optimization to the netCDF4 and h5netcdf backends (:issue:`9058`, :pull:`9067`).
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-
+- Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
+  By `Martin Raspaud <https://github.com/mraspaud>`_.
+- Extract the source url from fsspec objects (:issue:`9142`, :pull:`8923`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -40,14 +37,80 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix scatter plot broadcasting unneccesarily. (:issue:`9129`, :pull:`9206`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Don't convert custom indexes to ``pandas`` indexes when computing a diff (:pull:`9157`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Make :py:func:`testing.assert_allclose` work with numpy 2.0 (:issue:`9165`, :pull:`9166`).
+  By `Pontus Lurcock <https://github.com/pont-us>`_.
+- Allow diffing objects with array attributes on variables (:issue:`9153`, :pull:`9169`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Promote floating-point numeric datetimes before decoding (:issue:`9179`, :pull:`9182`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Fiy static typing of tolerance arguments by allowing `str` type (:issue:`8892`, :pull:`9194`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Dark themes are now properly detected for ``html[data-theme=dark]``-tags (:pull:`9200`).
+  By `Dieter Werthmüller <https://github.com/prisae>`_.
+- Reductions no longer fail for ``np.complex_`` dtype arrays when numbagg is
+  installed.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Adds a flow-chart diagram to help users navigate help resources (`Discussion #8990 <https://github.com/pydata/xarray/discussions/8990>`_).
+  By `Jessica Scheick <https://github.com/jessicas11>`_.
+- Improvements to Zarr & chunking docs (:pull:`9139`, :pull:`9140`, :pull:`9132`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2024.06.0:
+
+v2024.06.0 (Jun 13, 2024)
+-------------------------
+This release brings various performance optimizations and compatibility with the upcoming numpy 2.0 release.
+
+Thanks to the 22 contributors to this release:
+Alfonso Ladino, David Hoese, Deepak Cherian, Eni Awowale, Ilan Gold, Jessica Scheick, Joe Hamman, Justus Magin, Kai Mühlbauer, Mark Harfouche, Mathias Hauser, Matt Savoie, Maximilian Roos, Mike Thramann, Nicolas Karasiak, Owen Littlejohns, Paul Ockenfuß, Philippe THOMY, Scott Henderson, Spencer Clark, Stephan Hoyer and Tom Nicholas
+
+Performance
+~~~~~~~~~~~
+
+- Small optimization to the netCDF4 and h5netcdf backends (:issue:`9058`, :pull:`9067`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Small optimizations to help reduce indexing speed of datasets (:pull:`9002`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
+- Performance improvement in `open_datatree` method for Zarr, netCDF4 and h5netcdf backends (:issue:`8994`, :pull:`9014`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
+
+
+Bug fixes
+~~~~~~~~~
+- Preserve conversion of timezone-aware pandas Datetime arrays to numpy object arrays
+  (:issue:`9026`, :pull:`9042`).
+  By `Ilan Gold <https://github.com/ilan-gold>`_.
+- :py:meth:`DataArrayResample.interpolate` and :py:meth:`DatasetResample.interpolate` method now
+  support arbitrary kwargs such as ``order`` for polynomial interpolation (:issue:`8762`).
+  By `Nicolas Karasiak <https://github.com/nkarasiak>`_.
+
+Documentation
+~~~~~~~~~~~~~
+- Add link to CF Conventions on packed data and sentence on type determination in the I/O user guide (:issue:`9041`, :pull:`9045`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Migrates remainder of ``io.py`` to ``xarray/core/datatree_io.py`` and
+  ``TreeAttrAccessMixin`` into ``xarray/core/common.py`` (:pull:`9011`).
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Compatibility with numpy 2 (:issue:`8844`, :pull:`8854`, :pull:`8946`).
+  By `Justus Magin <https://github.com/keewis>`_ and `Stephan Hoyer <https://github.com/shoyer>`_.
 
 
 .. _whats-new.2024.05.0:
@@ -106,8 +169,8 @@ Bug fixes
   <https://github.com/pandas-dev/pandas/issues/56147>`_ to
   :py:func:`pandas.date_range`, date ranges produced by
   :py:func:`xarray.cftime_range` with negative frequencies will now fall fully
-  within the bounds of the provided start and end dates (:pull:`8999`). By
-  `Spencer Clark <https://github.com/spencerkclark>`_.
+  within the bounds of the provided start and end dates (:pull:`8999`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -130,8 +193,8 @@ Internal Changes
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
   <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
 - ``transpose``, ``set_dims``, ``stack`` & ``unstack`` now use a ``dim`` kwarg
-  rather than ``dims`` or ``dimensions``. This is the final change to unify
-  xarray functions to use ``dim``. Using the existing kwarg will raise a
+  rather than ``dims`` or ``dimensions``. This is the final change to make xarray methods
+  consistent with their use of ``dim``. Using the existing kwarg will raise a
   warning.
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
@@ -2897,7 +2960,7 @@ Bug fixes
   process (:issue:`4045`, :pull:`4684`). It also enables encoding and decoding standard
   calendar dates with time units of nanoseconds (:pull:`4400`).
   By `Spencer Clark <https://github.com/spencerkclark>`_ and `Mark Harfouche
-  <http://github.com/hmaarrfk>`_.
+  <https://github.com/hmaarrfk>`_.
 - :py:meth:`DataArray.astype`, :py:meth:`Dataset.astype` and :py:meth:`Variable.astype` support
   the ``order`` and ``subok`` parameters again. This fixes a regression introduced in version 0.16.1
   (:issue:`4644`, :pull:`4683`).

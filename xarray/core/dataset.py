@@ -88,6 +88,7 @@ from xarray.core.merge import (
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
+    NetcdfWriteModes,
     QuantileMethods,
     Self,
     T_ChunkDim,
@@ -2171,7 +2172,7 @@ class Dataset(
     def to_netcdf(
         self,
         path: None = None,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -2186,7 +2187,7 @@ class Dataset(
     def to_netcdf(
         self,
         path: str | PathLike,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -2202,7 +2203,7 @@ class Dataset(
     def to_netcdf(
         self,
         path: str | PathLike,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -2218,7 +2219,7 @@ class Dataset(
     def to_netcdf(
         self,
         path: str | PathLike,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -2231,7 +2232,7 @@ class Dataset(
     def to_netcdf(
         self,
         path: str | PathLike | None = None,
-        mode: Literal["w", "a"] = "w",
+        mode: NetcdfWriteModes = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
@@ -2457,24 +2458,26 @@ class Dataset(
             If set, the dimension along which the data will be appended. All
             other dimensions on overridden variables must remain the same size.
         region : dict or "auto", optional
-            Optional mapping from dimension names to integer slices along
-            dataset dimensions to indicate the region of existing zarr array(s)
-            in which to write this dataset's data. For example,
-            ``{'x': slice(0, 1000), 'y': slice(10000, 11000)}`` would indicate
-            that values should be written to the region ``0:1000`` along ``x``
-            and ``10000:11000`` along ``y``.
+            Optional mapping from dimension names to either a) ``"auto"``, or b) integer
+            slices, indicating the region of existing zarr array(s) in which to write
+            this dataset's data.
 
-            Can also specify ``"auto"``, in which case the existing store will be
-            opened and the region inferred by matching the new data's coordinates.
-            ``"auto"`` can be used as a single string, which will automatically infer
-            the region for all dimensions, or as dictionary values for specific
-            dimensions mixed together with explicit slices for other dimensions.
+            If ``"auto"`` is provided the existing store will be opened and the region
+            inferred by matching indexes. ``"auto"`` can be used as a single string,
+            which will automatically infer the region for all dimensions, or as
+            dictionary values for specific dimensions mixed together with explicit
+            slices for other dimensions.
+
+            Alternatively integer slices can be provided; for example, ``{'x': slice(0,
+            1000), 'y': slice(10000, 11000)}`` would indicate that values should be
+            written to the region ``0:1000`` along ``x`` and ``10000:11000`` along
+            ``y``.
 
             Two restrictions apply to the use of ``region``:
 
             - If ``region`` is set, _all_ variables in a dataset must have at
               least one dimension in common with the region. Other variables
-              should be written in a separate call to ``to_zarr()``.
+              should be written in a separate single call to ``to_zarr()``.
             - Dimensions cannot be included in both ``region`` and
               ``append_dim`` at the same time. To create empty arrays to fill
               in with ``region``, use a separate call to ``to_zarr()`` with
@@ -3496,7 +3499,7 @@ class Dataset(
         self,
         other: T_Xarray,
         method: ReindexMethodOptions = None,
-        tolerance: int | float | Iterable[int | float] | None = None,
+        tolerance: float | Iterable[float] | str | None = None,
         copy: bool = True,
         fill_value: Any = xrdtypes.NA,
     ) -> Self:
@@ -3523,7 +3526,7 @@ class Dataset(
             - "backfill" / "bfill": propagate next valid index value backward
             - "nearest": use nearest valid index value
 
-        tolerance : optional
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
@@ -3566,7 +3569,7 @@ class Dataset(
         self,
         indexers: Mapping[Any, Any] | None = None,
         method: ReindexMethodOptions = None,
-        tolerance: int | float | Iterable[int | float] | None = None,
+        tolerance: float | Iterable[float] | str | None = None,
         copy: bool = True,
         fill_value: Any = xrdtypes.NA,
         **indexers_kwargs: Any,
@@ -3591,7 +3594,7 @@ class Dataset(
             - "backfill" / "bfill": propagate next valid index value backward
             - "nearest": use nearest valid index value
 
-        tolerance : optional
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
@@ -7420,7 +7423,9 @@ class Dataset(
         arrays = []
         extension_arrays = []
         for k, v in dataframe.items():
-            if not is_extension_array_dtype(v):
+            if not is_extension_array_dtype(v) or isinstance(
+                v.array, (pd.arrays.DatetimeArray, pd.arrays.TimedeltaArray)
+            ):
                 arrays.append((k, np.asarray(v)))
             else:
                 extension_arrays.append((k, v))
@@ -10298,9 +10303,9 @@ class Dataset(
         from xarray.core.groupby import (
             DatasetGroupBy,
             ResolvedGrouper,
-            UniqueGrouper,
             _validate_groupby_squeeze,
         )
+        from xarray.core.groupers import UniqueGrouper
 
         _validate_groupby_squeeze(squeeze)
         rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
@@ -10381,11 +10386,11 @@ class Dataset(
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
         from xarray.core.groupby import (
-            BinGrouper,
             DatasetGroupBy,
             ResolvedGrouper,
             _validate_groupby_squeeze,
         )
+        from xarray.core.groupers import BinGrouper
 
         _validate_groupby_squeeze(squeeze)
         grouper = BinGrouper(

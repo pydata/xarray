@@ -11,9 +11,9 @@ try:
 except ImportError:
 
     class DummyArrayAPINamespace:
-        bool = None
-        int32 = None
-        float64 = None
+        bool = None  # type: ignore[unused-ignore,var-annotated]
+        int32 = None  # type: ignore[unused-ignore,var-annotated]
+        float64 = None  # type: ignore[unused-ignore,var-annotated]
 
     array_api_strict = DummyArrayAPINamespace
 
@@ -35,9 +35,23 @@ def test_result_type(args, expected) -> None:
     assert actual == expected
 
 
-def test_result_type_scalar() -> None:
-    actual = dtypes.result_type(np.arange(3, dtype=np.float32), np.nan)
-    assert actual == np.float32
+@pytest.mark.parametrize(
+    ["values", "expected"],
+    (
+        ([np.arange(3, dtype="float32"), np.nan], np.float32),
+        ([np.arange(3, dtype="int8"), 1], np.int8),
+        ([np.array(["a", "b"], dtype=str), np.nan], object),
+        ([np.array([b"a", b"b"], dtype=bytes), True], object),
+        ([np.array([b"a", b"b"], dtype=bytes), "c"], object),
+        ([np.array(["a", "b"], dtype=str), "c"], np.dtype(str)),
+        ([np.array(["a", "b"], dtype=str), None], object),
+        ([0, 1], np.dtype("int")),
+    ),
+)
+def test_result_type_scalars(values, expected) -> None:
+    actual = dtypes.result_type(*values)
+
+    assert np.issubdtype(actual, expected)
 
 
 def test_result_type_dask_array() -> None:
