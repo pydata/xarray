@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Hashable
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Callable, Union
+from typing import TYPE_CHECKING, Callable, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -27,9 +27,14 @@ from xarray.core.formatting import first_n_items, format_timestamp, last_item
 from xarray.core.pdcompat import nanosecond_precision_timestamp
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
-from xarray.namedarray._typing import chunkedduckarray, duckarray
+from xarray.namedarray._typing import (
+    chunkedduckarray,
+    duckarray,
+    _chunkedarrayfunction_or_api,
+)
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import is_chunked_array
+
+# from xarray.namedarray.pycompat import is_chunked_array
 from xarray.namedarray.utils import is_duck_dask_array
 
 try:
@@ -38,7 +43,7 @@ except ImportError:
     cftime = None
 
 if TYPE_CHECKING:
-    from xarray.core.types import CFCalendar, T_DuckArray
+    from xarray.core.types import CFCalendar
 
     T_Name = Union[Hashable, None]
 
@@ -702,11 +707,11 @@ def _cast_to_dtype_if_safe(num: np.ndarray, dtype: np.dtype) -> np.ndarray:
 
 
 def encode_cf_datetime(
-    dates: duckarray,
+    dates: duckarray | chunkedduckarray,
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
-) -> tuple[duckarray, str, str]:
+) -> tuple[duckarray | chunkedduckarray, str, str]:
     """Given an array of datetime objects, returns the tuple `(num, units,
     calendar)` suitable for a CF compliant time variable.
 
@@ -717,19 +722,19 @@ def encode_cf_datetime(
     cftime.date2num
     """
     dates = asarray(dates)
-    if is_chunked_array(dates):
+    if isinstance(dates, _chunkedarrayfunction_or_api):
         return _lazily_encode_cf_datetime(dates, units, calendar, dtype)
     else:
         return _eagerly_encode_cf_datetime(dates, units, calendar, dtype)
 
 
 def _eagerly_encode_cf_datetime(
-    dates: T_DuckArray,  # type: ignore
+    dates: duckarray,  # type: ignore
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
     allow_units_modification: bool = True,
-) -> tuple[T_DuckArray, str, str]:
+) -> tuple[duckarray, str, str]:
     dates = asarray(dates)
 
     data_units = infer_datetime_units(dates)
@@ -807,11 +812,11 @@ def _eagerly_encode_cf_datetime(
 
 
 def _encode_cf_datetime_within_map_blocks(
-    dates: T_DuckArray,  # type: ignore
+    dates: duckarray,
     units: str,
     calendar: str,
     dtype: np.dtype,
-) -> T_DuckArray:
+) -> duckarray:
     num, *_ = _eagerly_encode_cf_datetime(
         dates, units, calendar, dtype, allow_units_modification=False
     )
@@ -856,24 +861,36 @@ def _lazily_encode_cf_datetime(
     return num, units, calendar
 
 
+@overload
+def encode_cf_timedelta(
+    timedeltas: chunkedduckarray,
+    units: str | None = None,
+    dtype: np.dtype | None = None,
+) -> tuple[chunkedduckarray, str]: ...
+@overload
 def encode_cf_timedelta(
     timedeltas: duckarray,
     units: str | None = None,
     dtype: np.dtype | None = None,
-) -> tuple[duckarray, str]:
+) -> tuple[duckarray, str]: ...
+def encode_cf_timedelta(
+    timedeltas: chunkedduckarray | duckarray,
+    units: str | None = None,
+    dtype: np.dtype | None = None,
+) -> tuple[chunkedduckarray | duckarray, str]:
     timedeltas = asarray(timedeltas)
-    if is_chunked_array(timedeltas):
+    if isinstance(timedeltas, _chunkedarrayfunction_or_api):
         return _lazily_encode_cf_timedelta(timedeltas, units, dtype)
     else:
         return _eagerly_encode_cf_timedelta(timedeltas, units, dtype)
 
 
 def _eagerly_encode_cf_timedelta(
-    timedeltas: T_DuckArray,  # type: ignore
+    timedeltas: duckarray,
     units: str | None = None,
     dtype: np.dtype | None = None,
     allow_units_modification: bool = True,
-) -> tuple[T_DuckArray, str]:
+) -> tuple[duckarray, str]:
     data_units = infer_timedelta_units(timedeltas)
 
     if units is None:
@@ -921,10 +938,10 @@ def _eagerly_encode_cf_timedelta(
 
 
 def _encode_cf_timedelta_within_map_blocks(
-    timedeltas: T_DuckArray,  # type:ignore
+    timedeltas: duckarray,  # type:ignore
     units: str,
     dtype: np.dtype,
-) -> T_DuckArray:
+) -> duckarray:
     num, _ = _eagerly_encode_cf_timedelta(
         timedeltas, units, dtype, allow_units_modification=False
     )
