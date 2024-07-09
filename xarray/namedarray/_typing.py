@@ -44,39 +44,11 @@ _default = Default.token
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
-_generic: TypeAlias = Any
-# _generic = np.generic
-
-
-class _DType2(Protocol[_T_co]):
-    def __eq__(self, other: _DType2[_generic], /) -> bool:
-        """
-        Computes the truth value of ``self == other`` in order to test for data type object equality.
-
-        Parameters
-        ----------
-        self: dtype
-            data type instance. May be any supported data type.
-        other: dtype
-            other data type instance. May be any supported data type.
-
-        Returns
-        -------
-        out: bool
-            a boolean indicating whether the data type objects are equal.
-        """
-        ...
-
-
 _dtype = np.dtype
-# _dtype = _DType2
-_DType = TypeVar("_DType", bound=_dtype[_generic])
-_DType_co = TypeVar("_DType_co", covariant=True, bound=_dtype[_generic])
-_DType_np = TypeVar("_DType_np", bound=np.dtype[np.generic])
+_DType = TypeVar("_DType", bound=np.dtype[Any])
+_DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
 # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
 
-# _ScalarType = TypeVar("_ScalarType", bound=_generic)
-# _ScalarType_co = TypeVar("_ScalarType_co", bound=_generic, covariant=True)
 _ScalarType = TypeVar("_ScalarType", bound=np.generic)
 _ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
 
@@ -89,9 +61,9 @@ class _SupportsDType(Protocol[_DType_co]):
 
 
 _DTypeLike = Union[
-    _dtype[_ScalarType],
+    np.dtype[_ScalarType],
     type[_ScalarType],
-    _SupportsDType[_dtype[_ScalarType]],
+    _SupportsDType[np.dtype[_ScalarType]],
 ]
 
 # For unknown shapes Dask uses np.nan, array_api uses None:
@@ -187,25 +159,15 @@ class _arrayfunction(
         /,
     ) -> _arrayfunction[Any, _DType_co] | Any: ...
 
-    # @overload
-    # def __getitem__(self, key: _IndexKeyLike, /) -> Any: ...
-    # @overload
-    # def __getitem__(self: Any, key: Any, /) -> Any: ...
+    @overload
+    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]: ...
 
-    # @overload
-    # def __getitem__(self: NDArray[void], key: str) -> NDArray[Any]: ...
-    # @overload
-    # def __getitem__(
-    #     self: NDArray[void], key: list[str]
-    # ) -> ndarray[_ShapeType, _dtype[void]]: ...
+    @overload
+    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]: ...
 
     def __array__(
-        self, dtype: Any | None = ..., /
-    ) -> np.ndarray[Any, np.dtype[np.generic]]: ...
-
-    # def __array__(
-    #     self, dtype: _dtype[_generic] | None = ..., /
-    # ) -> np.ndarray[Any, np.dtype[np.generic]]: ...
+        self, dtype: _DType | None = ..., /
+    ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]: ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
@@ -261,7 +223,7 @@ duckarray = Union[
 ]
 
 # Corresponds to np.typing.NDArray:
-DuckArray = _arrayfunction[Any, _dtype[_ScalarType_co]]
+DuckArray = _arrayfunction[Any, np.dtype[_ScalarType_co]]
 
 
 @runtime_checkable
