@@ -27,7 +27,7 @@ from xarray.core.formatting import first_n_items, format_timestamp, last_item
 from xarray.core.pdcompat import nanosecond_precision_timestamp
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
-from xarray.namedarray._typing import chunkedduckarray
+from xarray.namedarray._typing import chunkedduckarray, duckarray
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 from xarray.namedarray.utils import is_duck_dask_array
@@ -702,11 +702,11 @@ def _cast_to_dtype_if_safe(num: np.ndarray, dtype: np.dtype) -> np.ndarray:
 
 
 def encode_cf_datetime(
-    dates: T_DuckArray,  # type: ignore
+    dates: duckarray,
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
-) -> tuple[T_DuckArray, str, str]:
+) -> tuple[duckarray, str, str]:
     """Given an array of datetime objects, returns the tuple `(num, units,
     calendar)` suitable for a CF compliant time variable.
 
@@ -857,10 +857,10 @@ def _lazily_encode_cf_datetime(
 
 
 def encode_cf_timedelta(
-    timedeltas: T_DuckArray,  # type: ignore
+    timedeltas: duckarray,
     units: str | None = None,
     dtype: np.dtype | None = None,
-) -> tuple[T_DuckArray, str]:
+) -> tuple[duckarray, str]:
     timedeltas = asarray(timedeltas)
     if is_chunked_array(timedeltas):
         return _lazily_encode_cf_timedelta(timedeltas, units, dtype)
