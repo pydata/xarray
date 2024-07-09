@@ -84,7 +84,7 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False
 
     if non_uniform:
         # construct a datetime index that has irregular spacing
-        deltas = pd.to_timedelta(rs.normal(size=shape[0], scale=10), unit="d")
+        deltas = pd.to_timedelta(rs.normal(size=shape[0], scale=10), unit="D")
         coords = {"time": (pd.Timestamp("2000-01-01") + deltas).sort_values()}
     else:
         coords = {"time": pd.date_range("2000-01-01", freq="D", periods=shape[0])}
@@ -421,46 +421,37 @@ def test_ffill():
     assert_equal(actual, expected)
 
 
-def test_ffill_use_bottleneck_numbagg():
+@pytest.mark.parametrize("compute_backend", [None], indirect=True)
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_b_ffill_use_bottleneck_numbagg(method, compute_backend):
+    """
+    bfill & ffill fail if both bottleneck and numba are disabled
+    """
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    with xr.set_options(use_bottleneck=False, use_numbagg=False):
-        with pytest.raises(RuntimeError):
-            da.ffill("x")
+    with pytest.raises(RuntimeError):
+        getattr(da, method)("x")
 
 
 @requires_dask
-def test_ffill_use_bottleneck_dask():
+@pytest.mark.parametrize("compute_backend", [None], indirect=True)
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_b_ffill_use_bottleneck_dask(method, compute_backend):
+    """
+    ffill fails if both bottleneck and numba are disabled, on dask arrays
+    """
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    da = da.chunk({"x": 1})
-    with xr.set_options(use_bottleneck=False, use_numbagg=False):
-        with pytest.raises(RuntimeError):
-            da.ffill("x")
+    with pytest.raises(RuntimeError):
+        getattr(da, method)("x")
 
 
 @requires_numbagg
 @requires_dask
-def test_ffill_use_numbagg_dask():
-    with xr.set_options(use_bottleneck=False):
-        da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-        da = da.chunk(x=-1)
-        # Succeeds with a single chunk:
-        _ = da.ffill("x").compute()
-
-
-def test_bfill_use_bottleneck():
+@pytest.mark.parametrize("compute_backend", ["numbagg"], indirect=True)
+def test_ffill_use_numbagg_dask(compute_backend):
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    with xr.set_options(use_bottleneck=False, use_numbagg=False):
-        with pytest.raises(RuntimeError):
-            da.bfill("x")
-
-
-@requires_dask
-def test_bfill_use_bottleneck_dask():
-    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    da = da.chunk({"x": 1})
-    with xr.set_options(use_bottleneck=False, use_numbagg=False):
-        with pytest.raises(RuntimeError):
-            da.bfill("x")
+    da = da.chunk(x=-1)
+    # Succeeds with a single chunk:
+    _ = da.ffill("x").compute()
 
 
 @requires_bottleneck
