@@ -749,7 +749,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def chunk(
         self,
         chunks: int | Literal["auto"] | Mapping[Any, None | int | tuple[int, ...]] = {},
-        chunked_array_type: str | ChunkManagerEntrypoint[Any] | None = None,
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs: Any = None,
         **chunks_kwargs: Any,
     ) -> Self:
@@ -822,6 +822,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         chunkmanager = guess_chunkmanager(chunked_array_type)
 
         data_old = self._data
+        data_chunked: _chunkedarray[Any, _DType_co]
         if chunkmanager.is_chunked_array(data_old):
             data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
         else:
@@ -990,7 +991,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         Change backend from sparse to np.array.
         """
         if isinstance(self._data, _sparsearrayfunction_or_api):
-            data_dense: np.ndarray[Any, _DType_co] = self._data.todense()
+            data_dense: np.ndarray[Any, Any] = self._data.todense()
             return self._new(data=data_dense)
         else:
             raise TypeError("self.data is not a sparse array")
@@ -1152,7 +1153,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return expand_dims(self, dim=dim)
 
 
-_NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]
+_NamedArray = NamedArray[Any, _dtype[_ScalarType_co]]
 
 
 def _raise_if_any_duplicate_dimensions(

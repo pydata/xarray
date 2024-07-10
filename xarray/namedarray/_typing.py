@@ -43,11 +43,37 @@ _default = Default.token
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
+_generic = Any
+# _generic = np.generic
+
+
+class _DType2(Protocol[_T_co]):
+    def __eq__(self, other: _DType2[_generic], /) -> bool:
+        """
+        Computes the truth value of ``self == other`` in order to test for data type object equality.
+
+        Parameters
+        ----------
+        self: dtype
+            data type instance. May be any supported data type.
+        other: dtype
+            other data type instance. May be any supported data type.
+
+        Returns
+        -------
+        out: bool
+            a boolean indicating whether the data type objects are equal.
+        """
+        ...
+
+
 _dtype = np.dtype
-_DType = TypeVar("_DType", bound=np.dtype[Any])
-_DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
+_DType = TypeVar("_DType", bound=_dtype[Any])
+_DType_co = TypeVar("_DType_co", covariant=True, bound=_dtype[Any])
 # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
 
+# _ScalarType = TypeVar("_ScalarType", bound=_generic)
+# _ScalarType_co = TypeVar("_ScalarType_co", bound=_generic, covariant=True)
 _ScalarType = TypeVar("_ScalarType", bound=np.generic)
 _ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
 
@@ -60,9 +86,9 @@ class _SupportsDType(Protocol[_DType_co]):
 
 
 _DTypeLike = Union[
-    np.dtype[_ScalarType],
+    _dtype[_ScalarType],
     type[_ScalarType],
-    _SupportsDType[np.dtype[_ScalarType]],
+    _SupportsDType[_dtype[_ScalarType]],
 ]
 
 # For unknown shapes Dask uses np.nan, array_api uses None:
@@ -76,8 +102,14 @@ _Axis = int
 _Axes = tuple[_Axis, ...]
 _AxisLike = Union[_Axis, _Axes]
 
-_Chunks = tuple[_Shape, ...]
-_NormalizedChunks = tuple[tuple[int, ...], ...]
+_Chunk = tuple[int, ...]
+_Chunks = tuple[_Chunk, ...]
+_NormalizedChunks = tuple[tuple[int, ...], ...]  # TODO: Same as Chunks.
+_ChunksLike = Union[
+    int, Literal["auto"], None, _Chunk, _Chunks
+]  # TODO: Literal["auto"]
+_ChunksType = TypeVar("_ChunksType", bound=_Chunks)
+
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
@@ -125,9 +157,7 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
 
 
 @runtime_checkable
-class _arrayfunction(
-    _array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
-):
+class _arrayfunction(_array[_ShapeType, _DType_co], Protocol[_ShapeType, _DType_co]):
     """
     Duck array supporting NEP 18.
 
@@ -153,14 +183,14 @@ class _arrayfunction(
     ) -> _arrayfunction[Any, _DType_co] | Any: ...
 
     @overload
-    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]: ...
+    def __array__(self, dtype: None = ..., /) -> np.ndarray[_ShapeType, _DType_co]: ...
 
     @overload
-    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]: ...
+    def __array__(self, dtype: _DType, /) -> np.ndarray[_ShapeType, _DType]: ...
 
     def __array__(
         self, dtype: _DType | None = ..., /
-    ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]: ...
+    ) -> np.ndarray[_ShapeType, _DType] | np.ndarray[_ShapeType, _DType_co]: ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
@@ -183,10 +213,10 @@ class _arrayfunction(
     ) -> Any: ...
 
     @property
-    def imag(self) -> _arrayfunction[_ShapeType_co, Any]: ...
+    def imag(self) -> _arrayfunction[_ShapeType, Any]: ...
 
     @property
-    def real(self) -> _arrayfunction[_ShapeType_co, Any]: ...
+    def real(self) -> _arrayfunction[_ShapeType, Any]: ...
 
 
 @runtime_checkable
@@ -216,7 +246,7 @@ duckarray = Union[
 ]
 
 # Corresponds to np.typing.NDArray:
-DuckArray = _arrayfunction[Any, np.dtype[_ScalarType_co]]
+DuckArray = _arrayfunction[Any, _dtype[_ScalarType_co]]
 
 
 @runtime_checkable
@@ -235,7 +265,7 @@ class _chunkedarray(
 
 @runtime_checkable
 class _chunkedarrayfunction(
-    _arrayfunction[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
+    _arrayfunction[_ShapeType, _DType_co], Protocol[_ShapeType, _DType_co]
 ):
     """
     Chunked duck array supporting NEP 18.
@@ -245,6 +275,11 @@ class _chunkedarrayfunction(
 
     @property
     def chunks(self) -> _Chunks: ...
+
+    def rechunk(
+        self,
+        chunks: _ChunksLike,
+    ) -> _chunkedarrayfunction[_ShapeType, _DType_co]: ...
 
 
 @runtime_checkable
@@ -259,6 +294,11 @@ class _chunkedarrayapi(
 
     @property
     def chunks(self) -> _Chunks: ...
+
+    def rechunk(
+        self,
+        chunks: _ChunksLike,
+    ) -> _chunkedarrayapi[_ShapeType_co, _DType_co]: ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
@@ -279,12 +319,12 @@ class _sparsearray(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, _DType_co]: ...
+    def todense(self) -> np.ndarray[Any, np.dtype[np.generic]]: ...
 
 
 @runtime_checkable
 class _sparsearrayfunction(
-    _arrayfunction[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
+    _arrayfunction[_ShapeType, _DType_co], Protocol[_ShapeType, _DType_co]
 ):
     """
     Sparse duck array supporting NEP 18.
@@ -292,7 +332,7 @@ class _sparsearrayfunction(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, _DType_co]: ...
+    def todense(self) -> np.ndarray[Any, np.dtype[np.generic]]: ...
 
 
 @runtime_checkable
@@ -305,7 +345,7 @@ class _sparsearrayapi(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> np.ndarray[Any, _DType_co]: ...
+    def todense(self) -> np.ndarray[Any, np.dtype[np.generic]]: ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
@@ -317,3 +357,20 @@ sparseduckarray = Union[
 
 ErrorOptions = Literal["raise", "ignore"]
 ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]
+
+
+# def test(arr: duckarray[_ShapeType, _DType]) -> duckarray[_ShapeType, _DType]:
+#     return np.round(arr)
+
+
+# test(np.array([], dtype=np.int64))
+
+
+# def test2(arr: _arrayfunction[Any, _DType]) -> _arrayfunction[Any, _DType]:
+#     return np.round(arr)
+#     # return np.asarray(arr)
+#     # return arr.__array__()
+#     # return arr
+
+
+# test2(np.array([], dtype=np.int64))
