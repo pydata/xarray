@@ -34,7 +34,6 @@ from xarray.namedarray._typing import (
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 
-# from xarray.namedarray.pycompat import is_chunked_array
 from xarray.namedarray.utils import is_duck_dask_array
 
 try:
