@@ -17,7 +17,6 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 
 from xarray.core.utils import emit_user_level_warning
-from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
@@ -126,7 +125,8 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint:
     chunked_arrays = [
         a
         for a in args
-        if is_chunked_array(a) and type(a) not in ALLOWED_NON_CHUNKED_TYPES
+        if isinstance(a, _chunkedarrayfunction_or_api)
+        and type(a) not in ALLOWED_NON_CHUNKED_TYPES
     ]
 
     # Asserts all arrays are the same type (or numpy etc.)
