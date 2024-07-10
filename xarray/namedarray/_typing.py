@@ -78,7 +78,7 @@ _AxisLike = Union[_Axis, _Axes]
 
 _Chunk = tuple[int, ...]
 _Chunks = tuple[_Chunk, ...]
-_NormalizedChunks = tuple[tuple[int, ...], ...]  # TODO: Same as Chunks.
+# _NormalizedChunks = tuple[tuple[int, ...], ...]  # TODO: Same as Chunks.
 _ChunksLike = Union[
     int, Literal["auto"], None, _Chunk, _Chunks
 ]  # TODO: Literal["auto"]
