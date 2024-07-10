@@ -48,6 +48,8 @@ from xarray.tests import (
     has_cftime,
     requires_cftime,
     requires_dask,
+    assert_duckarray_allclose,
+    assert_duckarray_equal,
 )
 
 _NON_STANDARD_CALENDARS_SET = {
@@ -144,13 +146,13 @@ def test_cf_datetime(num_dates, units, calendar) -> None:
     assert (abs_diff <= np.timedelta64(1, "s")).all()
     encoded, _, _ = encode_cf_datetime(actual, units, calendar)
 
-    assert_array_equal(num_dates, np.round(encoded, 1))
+    assert_duckarray_allclose(num_dates, encoded)
     if hasattr(num_dates, "ndim") and num_dates.ndim == 1 and "1000" not in units:
         # verify that wrapping with a pandas.Index works
         # note that it *does not* currently work to put
         # non-datetime64 compatible dates into a pandas.Index
         encoded, _, _ = encode_cf_datetime(pd.Index(actual), units, calendar)
-        assert_array_equal(num_dates, np.round(encoded, 1))
+        assert_duckarray_allclose(num_dates, encoded)
 
 
 @requires_cftime
@@ -893,10 +895,10 @@ def test_time_units_with_timezone_roundtrip(calendar) -> None:
     )
 
     if calendar in _STANDARD_CALENDARS:
-        np.testing.assert_array_equal(result_num_dates, expected_num_dates)
+        assert_duckarray_equal(result_num_dates, expected_num_dates)
     else:
         # cftime datetime arithmetic is not quite exact.
-        np.testing.assert_allclose(result_num_dates, expected_num_dates)
+        assert_duckarray_allclose(result_num_dates, expected_num_dates)
 
     assert result_units == expected_units
     assert result_calendar == calendar
