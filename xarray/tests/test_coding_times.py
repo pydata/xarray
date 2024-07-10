@@ -18,8 +18,8 @@ from xarray import (
     date_range,
     decode_cf,
 )
+from xarray.coding.times import _STANDARD_CALENDARS as _STANDARD_CALENDARS_UNSORTED
 from xarray.coding.times import (
-    _STANDARD_CALENDARS,
     CFDatetimeCoder,
     _encode_datetime_with_cftime,
     _netcdf_to_numpy_timeunit,
@@ -58,9 +58,9 @@ _NON_STANDARD_CALENDARS_SET = {
     "all_leap",
     "366_day",
 }
+_STANDARD_CALENDARS = sorted(_STANDARD_CALENDARS_UNSORTED)
 _ALL_CALENDARS = sorted(_NON_STANDARD_CALENDARS_SET.union(_STANDARD_CALENDARS))
 _NON_STANDARD_CALENDARS = sorted(_NON_STANDARD_CALENDARS_SET)
-_STANDARD_CALENDARS = sorted(_STANDARD_CALENDARS)
 _CF_DATETIME_NUM_DATES_UNITS = [
     (np.arange(10), "days since 2000-01-01"),
     (np.arange(10).astype("float64"), "days since 2000-01-01"),
