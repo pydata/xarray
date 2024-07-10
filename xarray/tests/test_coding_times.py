@@ -44,12 +44,12 @@ from xarray.tests import (
     FirstElementAccessibleArray,
     arm_xfail,
     assert_array_equal,
+    assert_duckarray_allclose,
+    assert_duckarray_equal,
     assert_no_warnings,
     has_cftime,
     requires_cftime,
     requires_dask,
-    assert_duckarray_allclose,
-    assert_duckarray_equal,
 )
 
 _NON_STANDARD_CALENDARS_SET = {
