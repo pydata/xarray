@@ -17,10 +17,10 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 
 from xarray.core.utils import emit_user_level_warning
+from xarray.namedarray._typing import _chunkedarrayfunction_or_api
 
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
-        _chunkedarrayfunction_or_api,
         _Chunks,
         _ChunksLike,
         _DType,
