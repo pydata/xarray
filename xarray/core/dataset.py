@@ -163,6 +163,7 @@ if TYPE_CHECKING:
         T_Xarray,
     )
     from xarray.core.weighted import DatasetWeighted
+    from xarray.namedarray._typing import duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
@@ -860,7 +861,7 @@ class Dataset(
             chunkmanager = get_chunked_array_type(*lazy_data.values())
 
             # evaluate all the chunked arrays simultaneously
-            evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
+            evaluated_data: tuple[duckarray[Any, Any], ...] = chunkmanager.compute(
                 *lazy_data.values(), **kwargs
             )
 
