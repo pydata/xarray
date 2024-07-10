@@ -22,7 +22,7 @@ from xarray.coding.variables import (
 )
 from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
-from xarray.core.duck_array_ops import asarray, ravel
+from xarray.core.duck_array_ops import asarray, ravel, reshape
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
 from xarray.core.pdcompat import nanosecond_precision_timestamp
 from xarray.core.utils import emit_user_level_warning
@@ -348,7 +348,7 @@ def decode_cf_datetime(
     else:
         dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar)
 
-    return dates.reshape(num_dates.shape)
+    return reshape(dates, num_dates.shape)
 
 
 def to_timedelta_unboxed(value, **kwargs):
@@ -370,7 +370,7 @@ def decode_cf_timedelta(num_timedeltas, units: str) -> np.ndarray:
     num_timedeltas = np.asarray(num_timedeltas)
     units = _netcdf_to_numpy_timeunit(units)
     result = to_timedelta_unboxed(ravel(num_timedeltas), unit=units)
-    return result.reshape(num_timedeltas.shape)
+    return reshape(result, num_timedeltas.shape)
 
 
 def _unit_timedelta_cftime(units: str) -> timedelta:
@@ -643,7 +643,7 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
         except TypeError:
             return np.nan if d is None else cftime.date2num(d, units, calendar)
 
-    return np.array([encode_datetime(d) for d in ravel(dates)]).reshape(dates.shape)
+    return reshape(np.array([encode_datetime(d) for d in ravel(dates)]), dates.shape)
 
 
 def cast_to_int_if_safe(num) -> np.ndarray:
@@ -791,7 +791,7 @@ def _eagerly_encode_cf_datetime(
                 floor_division = True
 
         num = _division(time_deltas, time_delta, floor_division)
-        num = num.values.reshape(dates.shape)
+        num = reshape(num.values, dates.shape)
 
     except (OutOfBoundsDatetime, OverflowError, ValueError):
         num = _encode_datetime_with_cftime(dates, units, calendar)
@@ -911,7 +911,7 @@ def _eagerly_encode_cf_timedelta(
             floor_division = True
 
     num = _division(time_deltas, time_delta, floor_division)
-    num = num.values.reshape(timedeltas.shape)
+    num = reshape(num.values, timedeltas.shape)
 
     if dtype is not None:
         num = _cast_to_dtype_if_safe(num, dtype)
