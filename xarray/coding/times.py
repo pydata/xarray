@@ -33,7 +33,6 @@ from xarray.namedarray._typing import (
     duckarray,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-
 from xarray.namedarray.utils import is_duck_dask_array
 
 try:
