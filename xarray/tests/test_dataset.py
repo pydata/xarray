@@ -39,8 +39,8 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.pycompat import array_type, integer_types
 from xarray.core.utils import is_scalar
+from xarray.namedarray.pycompat import array_type, integer_types
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
     DuckArrayWrapper,
@@ -51,6 +51,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    assert_writeable,
     create_test_data,
     has_cftime,
     has_dask,
@@ -78,6 +79,13 @@ try:
 except ImportError:
     pass
 
+# from numpy version 2.0 trapz is deprecated and renamed to trapezoid
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy import trapezoid  # type: ignore[attr-defined,unused-ignore]
+except ImportError:
+    from numpy import trapz as trapezoid
+
 sparse_array_type = array_type("sparse")
 
 pytestmark = [
@@ -95,11 +103,11 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
     nt2 = 2
     time1 = pd.date_range("2000-01-01", periods=nt1)
     time2 = pd.date_range("2000-02-01", periods=nt2)
-    string_var = np.array(["ae", "bc", "df"], dtype=object)
+    string_var = np.array(["a", "bc", "def"], dtype=object)
     string_var_to_append = np.array(["asdf", "asdfg"], dtype=object)
     string_var_fixed_length = np.array(["aa", "bb", "cc"], dtype="|S2")
     string_var_fixed_length_to_append = np.array(["dd", "ee"], dtype="|S2")
-    unicode_var = ["áó", "áó", "áó"]
+    unicode_var = np.array(["áó", "áó", "áó"])
     datetime_var = np.array(
         ["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[s]"
     )
@@ -118,17 +126,11 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
                     coords=[lat, lon, time1],
                     dims=["lat", "lon", "time"],
                 ),
-                "string_var": xr.DataArray(string_var, coords=[time1], dims=["time"]),
-                "string_var_fixed_length": xr.DataArray(
-                    string_var_fixed_length, coords=[time1], dims=["time"]
-                ),
-                "unicode_var": xr.DataArray(
-                    unicode_var, coords=[time1], dims=["time"]
-                ).astype(np.str_),
-                "datetime_var": xr.DataArray(
-                    datetime_var, coords=[time1], dims=["time"]
-                ),
-                "bool_var": xr.DataArray(bool_var, coords=[time1], dims=["time"]),
+                "string_var": ("time", string_var),
+                "string_var_fixed_length": ("time", string_var_fixed_length),
+                "unicode_var": ("time", unicode_var),
+                "datetime_var": ("time", datetime_var),
+                "bool_var": ("time", bool_var),
             }
         )
 
@@ -139,21 +141,11 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
                     coords=[lat, lon, time2],
                     dims=["lat", "lon", "time"],
                 ),
-                "string_var": xr.DataArray(
-                    string_var_to_append, coords=[time2], dims=["time"]
-                ),
-                "string_var_fixed_length": xr.DataArray(
-                    string_var_fixed_length_to_append, coords=[time2], dims=["time"]
-                ),
-                "unicode_var": xr.DataArray(
-                    unicode_var[:nt2], coords=[time2], dims=["time"]
-                ).astype(np.str_),
-                "datetime_var": xr.DataArray(
-                    datetime_var_to_append, coords=[time2], dims=["time"]
-                ),
-                "bool_var": xr.DataArray(
-                    bool_var_to_append, coords=[time2], dims=["time"]
-                ),
+                "string_var": ("time", string_var_to_append),
+                "string_var_fixed_length": ("time", string_var_fixed_length_to_append),
+                "unicode_var": ("time", unicode_var[:nt2]),
+                "datetime_var": ("time", datetime_var_to_append),
+                "bool_var": ("time", bool_var_to_append),
             }
         )
 
@@ -167,8 +159,9 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
             }
         )
 
-    assert all(objp.data.flags.writeable for objp in ds.variables.values())
-    assert all(objp.data.flags.writeable for objp in ds_to_append.variables.values())
+    assert_writeable(ds)
+    assert_writeable(ds_to_append)
+    assert_writeable(ds_with_new_var)
     return ds, ds_to_append, ds_with_new_var
 
 
@@ -181,10 +174,8 @@ def create_append_string_length_mismatch_test_data(dtype) -> tuple[Dataset, Data
         ds_to_append = xr.Dataset(
             {"temperature": (["time"], data_to_append)}, coords={"time": [0, 1, 2]}
         )
-        assert all(objp.data.flags.writeable for objp in ds.variables.values())
-        assert all(
-            objp.data.flags.writeable for objp in ds_to_append.variables.values()
-        )
+        assert_writeable(ds)
+        assert_writeable(ds_to_append)
         return ds, ds_to_append
 
     u2_strings = ["ab", "cd", "ef"]
@@ -293,7 +284,7 @@ class TestDataset:
             Dimensions:  (dim2: 9, dim3: 10, time: 20, dim1: 8)
             Coordinates:
               * dim2     (dim2) float64 72B 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
-              * dim3     (dim3) %s 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+              * dim3     (dim3) {} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
               * time     (time) datetime64[ns] 160B 2000-01-01 2000-01-02 ... 2000-01-20
                 numbers  (dim3) int64 80B 0 1 2 0 0 1 1 2 2 3
             Dimensions without coordinates: dim1
@@ -302,8 +293,9 @@ class TestDataset:
                 var2     (dim1, dim2) float64 576B 1.162 -1.097 -2.123 ... 1.267 0.3328
                 var3     (dim3, dim1) float64 640B 0.5565 -0.2121 0.4563 ... -0.2452 -0.3616
             Attributes:
-                foo:      bar"""
-            % data["dim3"].dtype
+                foo:      bar""".format(
+                data["dim3"].dtype
+            )
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
         print(actual)
@@ -343,13 +335,14 @@ class TestDataset:
 
     def test_repr_multiindex(self) -> None:
         data = create_test_multiindex()
+        obj_size = np.dtype("O").itemsize
         expected = dedent(
-            """\
-            <xarray.Dataset> Size: 96B
+            f"""\
+            <xarray.Dataset> Size: {8 * obj_size + 32}B
             Dimensions:  (x: 4)
             Coordinates:
-              * x        (x) object 32B MultiIndex
-              * level_1  (x) object 32B 'a' 'a' 'b' 'b'
+              * x        (x) object {4 * obj_size}B MultiIndex
+              * level_1  (x) object {4 * obj_size}B 'a' 'a' 'b' 'b'
               * level_2  (x) int64 32B 1 2 1 2
             Data variables:
                 *empty*"""
@@ -365,12 +358,12 @@ class TestDataset:
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         data = Dataset({}, midx_coords)
         expected = dedent(
-            """\
-            <xarray.Dataset> Size: 96B
+            f"""\
+            <xarray.Dataset> Size: {8 * obj_size + 32}B
             Dimensions:                  (x: 4)
             Coordinates:
-              * x                        (x) object 32B MultiIndex
-              * a_quite_long_level_name  (x) object 32B 'a' 'a' 'b' 'b'
+              * x                        (x) object {4 * obj_size}B MultiIndex
+              * a_quite_long_level_name  (x) object {4 * obj_size}B 'a' 'a' 'b' 'b'
               * level_2                  (x) int64 32B 1 2 1 2
             Data variables:
                 *empty*"""
@@ -493,14 +486,6 @@ class TestDataset:
         expected = Dataset({"x": x1, "z": z})
         actual = Dataset({"z": expected["z"]})
         assert_identical(expected, actual)
-
-    def test_constructor_invalid_dims(self) -> None:
-        # regression for GH1120
-        with pytest.raises(MergeError):
-            Dataset(
-                data_vars=dict(v=("y", [1, 2, 3, 4])),
-                coords=dict(y=DataArray([0.1, 0.2, 0.3, 0.4], dims="x")),
-            )
 
     def test_constructor_1d(self) -> None:
         expected = Dataset({"x": (["x"], 5.0 + np.arange(5))})
@@ -2963,10 +2948,11 @@ class TestDataset:
             name="value",
         ).to_dataset()
         ds_cp = ds.copy(deep=deep)
-        ds_cp.coords["a"].data[0] = 999
+        new_a = np.array([999, 2])
+        ds_cp.coords["a"] = ds_cp.a.copy(data=new_a)
 
         expected_cp = xr.DataArray(
-            xr.IndexVariable("a", np.array([999, 2])),
+            xr.IndexVariable("a", new_a),
             coords={"a": [999, 2]},
             dims=["a"],
         )
@@ -3446,6 +3432,64 @@ class TestDataset:
         )
         assert_identical(other_way_expected, other_way)
 
+    @pytest.mark.parametrize("create_index_for_new_dim_flag", [True, False])
+    def test_expand_dims_create_index_data_variable(
+        self, create_index_for_new_dim_flag
+    ):
+        # data variables should not gain an index ever
+        ds = Dataset({"x": 0})
+
+        if create_index_for_new_dim_flag:
+            with pytest.warns(UserWarning, match="No index created"):
+                expanded = ds.expand_dims(
+                    "x", create_index_for_new_dim=create_index_for_new_dim_flag
+                )
+        else:
+            expanded = ds.expand_dims(
+                "x", create_index_for_new_dim=create_index_for_new_dim_flag
+            )
+
+        # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
+        expected = Dataset({"x": ("x", [0])}).drop_indexes("x").reset_coords("x")
+
+        assert_identical(expanded, expected, check_default_indexes=False)
+        assert expanded.indexes == {}
+
+    def test_expand_dims_create_index_coordinate_variable(self):
+        # coordinate variables should gain an index only if create_index_for_new_dim is True (the default)
+        ds = Dataset(coords={"x": 0})
+        expanded = ds.expand_dims("x")
+        expected = Dataset({"x": ("x", [0])})
+        assert_identical(expanded, expected)
+
+        expanded_no_index = ds.expand_dims("x", create_index_for_new_dim=False)
+
+        # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
+        expected = Dataset(coords={"x": ("x", [0])}).drop_indexes("x")
+
+        assert_identical(expanded_no_index, expected, check_default_indexes=False)
+        assert expanded_no_index.indexes == {}
+
+    def test_expand_dims_create_index_from_iterable(self):
+        ds = Dataset(coords={"x": 0})
+        expanded = ds.expand_dims(x=[0, 1])
+        expected = Dataset({"x": ("x", [0, 1])})
+        assert_identical(expanded, expected)
+
+        expanded_no_index = ds.expand_dims(x=[0, 1], create_index_for_new_dim=False)
+
+        # TODO Can't just create the expected dataset directly using constructor because of GH issue 8959
+        expected = Dataset(coords={"x": ("x", [0, 1])}).drop_indexes("x")
+
+        assert_identical(expanded, expected, check_default_indexes=False)
+        assert expanded_no_index.indexes == {}
+
+    def test_expand_dims_non_nanosecond_conversion(self) -> None:
+        # Regression test for https://github.com/pydata/xarray/issues/7493#issuecomment-1953091000
+        with pytest.warns(UserWarning, match="non-nanosecond precision"):
+            ds = Dataset().expand_dims({"time": [np.datetime64("2018-01-01", "s")]})
+        assert ds.time.dtype == np.dtype("datetime64[ns]")
+
     def test_set_index(self) -> None:
         expected = create_test_multiindex()
         mindex = expected["x"].to_index()
@@ -3764,6 +3808,14 @@ class TestDataset:
         with pytest.raises(ValueError, match=r".*do not have exactly one multi-index"):
             ds.unstack("x")
 
+        ds = Dataset({"da": [1, 2]}, coords={"y": ("x", [1, 1]), "z": ("x", [0, 0])})
+        ds = ds.set_index(x=("y", "z"))
+
+        with pytest.raises(
+            ValueError, match="Cannot unstack MultiIndex containing duplicates"
+        ):
+            ds.unstack("x")
+
     def test_unstack_fill_value(self) -> None:
         ds = xr.Dataset(
             {"var": (("x",), np.arange(6)), "other_var": (("x",), np.arange(3, 9))},
@@ -3926,6 +3978,25 @@ class TestDataset:
         x = y.to_unstacked_dataset("features")
         assert_identical(D, x)
 
+    def test_to_stacked_array_preserves_dtype(self) -> None:
+        # regression test for bug found in https://github.com/pydata/xarray/pull/8872#issuecomment-2081218616
+        ds = xr.Dataset(
+            data_vars={
+                "a": (("x", "y"), [[0, 1, 2], [3, 4, 5]]),
+                "b": ("x", [6, 7]),
+            },
+            coords={"y": ["u", "v", "w"]},
+        )
+        stacked = ds.to_stacked_array("z", sample_dims=["x"])
+
+        # coordinate created from variables names should be of string dtype
+        data = np.array(["a", "a", "a", "b"], dtype="<U1")
+        expected_stacked_variable = DataArray(name="variable", data=data, dims="z")
+        assert_identical(
+            stacked.coords["variable"].drop_vars(["z", "variable", "y"]),
+            expected_stacked_variable,
+        )
+
     def test_update(self) -> None:
         data = create_test_data(seed=0)
         expected = data.copy()
@@ -4067,7 +4138,8 @@ class TestDataset:
         assert_identical(actual, expected)
 
     def test_time_season(self) -> None:
-        ds = Dataset({"t": pd.date_range("2000-01-01", periods=12, freq="M")})
+        time = xr.date_range("2000-01-01", periods=12, freq="ME", use_cftime=False)
+        ds = Dataset({"t": time})
         seas = ["DJF"] * 2 + ["MAM"] * 3 + ["JJA"] * 3 + ["SON"] * 3 + ["DJF"]
         assert_array_equal(seas, ds["t.season"])
 
@@ -4661,10 +4733,12 @@ class TestDataset:
         x = np.random.randn(10)
         y = np.random.randn(10)
         t = list("abcdefghij")
-        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
+        cat = pd.Categorical(["a", "b"] * 5)
+        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t), "cat": ("t", cat)})
         expected = pd.DataFrame(
             np.array([x, y]).T, columns=["a", "b"], index=pd.Index(t, name="t")
         )
+        expected["cat"] = cat
         actual = ds.to_dataframe()
         # use the .equals method to check all DataFrame metadata
         assert expected.equals(actual), (expected, actual)
@@ -4675,23 +4749,31 @@ class TestDataset:
 
         # check roundtrip
         assert_identical(ds, Dataset.from_dataframe(actual))
-
+        assert isinstance(ds["cat"].variable.data.dtype, pd.CategoricalDtype)
         # test a case with a MultiIndex
         w = np.random.randn(2, 3)
-        ds = Dataset({"w": (("x", "y"), w)})
+        cat = pd.Categorical(["a", "a", "c"])
+        ds = Dataset({"w": (("x", "y"), w), "cat": ("y", cat)})
         ds["y"] = ("y", list("abc"))
         exp_index = pd.MultiIndex.from_arrays(
             [[0, 0, 0, 1, 1, 1], ["a", "b", "c", "a", "b", "c"]], names=["x", "y"]
         )
-        expected = pd.DataFrame(w.reshape(-1), columns=["w"], index=exp_index)
+        expected = pd.DataFrame(
+            {"w": w.reshape(-1), "cat": pd.Categorical(["a", "a", "c", "a", "a", "c"])},
+            index=exp_index,
+        )
         actual = ds.to_dataframe()
         assert expected.equals(actual)
 
         # check roundtrip
+        # from_dataframe attempts to broadcast across because it doesn't know better, so cat must be converted
+        ds["cat"] = (("x", "y"), np.stack((ds["cat"].to_numpy(), ds["cat"].to_numpy())))
         assert_identical(ds.assign_coords(x=[0, 1]), Dataset.from_dataframe(actual))
 
         # Check multiindex reordering
         new_order = ["x", "y"]
+        # revert broadcasting fix above for 1d arrays
+        ds["cat"] = ("y", cat)
         actual = ds.to_dataframe(dim_order=new_order)
         assert expected.equals(actual)
 
@@ -4700,7 +4782,11 @@ class TestDataset:
             [["a", "a", "b", "b", "c", "c"], [0, 1, 0, 1, 0, 1]], names=["y", "x"]
         )
         expected = pd.DataFrame(
-            w.transpose().reshape(-1), columns=["w"], index=exp_index
+            {
+                "w": w.transpose().reshape(-1),
+                "cat": pd.Categorical(["a", "a", "a", "a", "c", "c"]),
+            },
+            index=exp_index,
         )
         actual = ds.to_dataframe(dim_order=new_order)
         assert expected.equals(actual)
@@ -4753,7 +4839,7 @@ class TestDataset:
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
-    def test_from_dataframe_categorical(self) -> None:
+    def test_from_dataframe_categorical_index(self) -> None:
         cat = pd.CategoricalDtype(
             categories=["foo", "bar", "baz", "qux", "quux", "corge"]
         )
@@ -4768,7 +4854,7 @@ class TestDataset:
         assert len(ds["i1"]) == 2
         assert len(ds["i2"]) == 2
 
-    def test_from_dataframe_categorical_string_categories(self) -> None:
+    def test_from_dataframe_categorical_index_string_categories(self) -> None:
         cat = pd.CategoricalIndex(
             pd.Categorical.from_codes(
                 np.array([1, 1, 0, 2]),
@@ -5172,7 +5258,7 @@ class TestDataset:
         actual6 = ds.fillna(expected)
         assert_identical(expected, actual6)
 
-        actual7 = ds.fillna(range(4))
+        actual7 = ds.fillna(np.arange(4))
         assert_identical(expected, actual7)
 
         actual8 = ds.fillna(b[:3])
@@ -5496,18 +5582,22 @@ class TestDataset:
         assert list(actual) == expected
 
     def test_reduce_non_numeric(self) -> None:
-        data1 = create_test_data(seed=44)
+        data1 = create_test_data(seed=44, use_extension_array=True)
         data2 = create_test_data(seed=44)
-        add_vars = {"var4": ["dim1", "dim2"], "var5": ["dim1"]}
+        add_vars = {"var5": ["dim1", "dim2"], "var6": ["dim1"]}
         for v, dims in sorted(add_vars.items()):
             size = tuple(data1.sizes[d] for d in dims)
             data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {"foo": "variable"})
-
-        assert "var4" not in data1.mean() and "var5" not in data1.mean()
+        # var4 is extension array categorical and should be dropped
+        assert (
+            "var4" not in data1.mean()
+            and "var5" not in data1.mean()
+            and "var6" not in data1.mean()
+        )
         assert_equal(data1.mean(), data2.mean())
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
-        assert "var4" not in data1.mean(dim="dim2") and "var5" in data1.mean(dim="dim2")
+        assert "var5" not in data1.mean(dim="dim2") and "var6" in data1.mean(dim="dim2")
 
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"
@@ -6995,7 +7085,7 @@ def test_differentiate_datetime(dask) -> None:
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_cftime(dask) -> None:
     rs = np.random.RandomState(42)
-    coord = xr.cftime_range("2000", periods=8, freq="2M")
+    coord = xr.cftime_range("2000", periods=8, freq="2ME")
 
     da = xr.DataArray(
         rs.randn(8, 6),
@@ -7045,7 +7135,7 @@ def test_integrate(dask) -> None:
     actual = da.integrate("x")
     # coordinate that contains x should be dropped.
     expected_x = xr.DataArray(
-        np.trapz(da.compute(), da["x"], axis=0),
+        trapezoid(da.compute(), da["x"], axis=0),
         dims=["y"],
         coords={k: v for k, v in da.coords.items() if "x" not in v.dims},
     )
@@ -7058,7 +7148,7 @@ def test_integrate(dask) -> None:
     # along y
     actual = da.integrate("y")
     expected_y = xr.DataArray(
-        np.trapz(da, da["y"], axis=1),
+        trapezoid(da, da["y"], axis=1),
         dims=["x"],
         coords={k: v for k, v in da.coords.items() if "y" not in v.dims},
     )
@@ -7098,12 +7188,10 @@ def test_cumulative_integrate(dask) -> None:
     # along x
     actual = da.cumulative_integrate("x")
 
-    # From scipy-1.6.0 cumtrapz is renamed to cumulative_trapezoid, but cumtrapz is
-    # still provided for backward compatibility
-    from scipy.integrate import cumtrapz
+    from scipy.integrate import cumulative_trapezoid
 
     expected_x = xr.DataArray(
-        cumtrapz(da.compute(), da["x"], axis=0, initial=0.0),
+        cumulative_trapezoid(da.compute(), da["x"], axis=0, initial=0.0),
         dims=["x", "y"],
         coords=da.coords,
     )
@@ -7119,7 +7207,7 @@ def test_cumulative_integrate(dask) -> None:
     # along y
     actual = da.cumulative_integrate("y")
     expected_y = xr.DataArray(
-        cumtrapz(da, da["y"], axis=1, initial=0.0),
+        cumulative_trapezoid(da, da["y"], axis=1, initial=0.0),
         dims=["x", "y"],
         coords=da.coords,
     )
@@ -7141,7 +7229,7 @@ def test_cumulative_integrate(dask) -> None:
 @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("which_datetime", ["np", "cftime"])
-def test_trapz_datetime(dask, which_datetime) -> None:
+def test_trapezoid_datetime(dask, which_datetime) -> None:
     rs = np.random.RandomState(42)
     if which_datetime == "np":
         coord = np.array(
@@ -7172,7 +7260,7 @@ def test_trapz_datetime(dask, which_datetime) -> None:
         da = da.chunk({"time": 4})
 
     actual = da.integrate("time", datetime_unit="D")
-    expected_data = np.trapz(
+    expected_data = trapezoid(
         da.compute().data,
         duck_array_ops.datetime_to_numeric(da["time"].data, datetime_unit="D"),
         axis=0,
@@ -7390,7 +7478,7 @@ def test_transpose_error() -> None:
     with pytest.raises(
         TypeError,
         match=re.escape(
-            "transpose requires dims to be passed as multiple arguments. Expected `'y', 'x'`. Received `['y', 'x']` instead"
+            "transpose requires dim to be passed as multiple arguments. Expected `'y', 'x'`. Received `['y', 'x']` instead"
         ),
     ):
         ds.transpose(["y", "x"])  # type: ignore

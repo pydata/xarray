@@ -27,7 +27,8 @@ from xarray.core.duck_array_ops import (
     timedelta_to_numeric,
     where,
 )
-from xarray.core.pycompat import array_type
+from xarray.core.extension_array import PandasExtensionArray
+from xarray.namedarray.pycompat import array_type
 from xarray.testing import assert_allclose, assert_equal, assert_identical
 from xarray.tests import (
     arm_xfail,
@@ -38,9 +39,53 @@ from xarray.tests import (
     requires_bottleneck,
     requires_cftime,
     requires_dask,
+    requires_pyarrow,
 )
 
 dask_array_type = array_type("dask")
+
+
+@pytest.fixture
+def categorical1():
+    return pd.Categorical(["cat1", "cat2", "cat2", "cat1", "cat2"])
+
+
+@pytest.fixture
+def categorical2():
+    return pd.Categorical(["cat2", "cat1", "cat2", "cat3", "cat1"])
+
+
+try:
+    import pyarrow as pa
+
+    @pytest.fixture
+    def arrow1():
+        return pd.arrays.ArrowExtensionArray(
+            pa.array([{"x": 1, "y": True}, {"x": 2, "y": False}])
+        )
+
+    @pytest.fixture
+    def arrow2():
+        return pd.arrays.ArrowExtensionArray(
+            pa.array([{"x": 3, "y": False}, {"x": 4, "y": True}])
+        )
+
+except ImportError:
+    pass
+
+
+@pytest.fixture
+def int1():
+    return pd.arrays.IntegerArray(
+        np.array([1, 2, 3, 4, 5]), np.array([True, False, False, True, True])
+    )
+
+
+@pytest.fixture
+def int2():
+    return pd.arrays.IntegerArray(
+        np.array([6, 7, 8, 9, 10]), np.array([True, True, False, True, False])
+    )
 
 
 class TestOps:
@@ -112,19 +157,64 @@ class TestOps:
         assert 1 == count(np.datetime64("2000-01-01"))
 
     def test_where_type_promotion(self):
-        result = where([True, False], [1, 2], ["a", "b"])
+        result = where(np.array([True, False]), np.array([1, 2]), np.array(["a", "b"]))
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
         result = where([True, False], np.array([1, 2], np.float32), np.nan)
         assert result.dtype == np.float32
         assert_array_equal(result, np.array([1, np.nan], dtype=np.float32))
 
+    def test_where_extension_duck_array(self, categorical1, categorical2):
+        where_res = where(
+            np.array([True, False, True, False, False]),
+            PandasExtensionArray(categorical1),
+            PandasExtensionArray(categorical2),
+        )
+        assert isinstance(where_res, PandasExtensionArray)
+        assert (
+            where_res == pd.Categorical(["cat1", "cat1", "cat2", "cat3", "cat1"])
+        ).all()
+
+    def test_concatenate_extension_duck_array(self, categorical1, categorical2):
+        concate_res = concatenate(
+            [PandasExtensionArray(categorical1), PandasExtensionArray(categorical2)]
+        )
+        assert isinstance(concate_res, PandasExtensionArray)
+        assert (
+            concate_res
+            == type(categorical1)._concat_same_type((categorical1, categorical2))
+        ).all()
+
+    @requires_pyarrow
+    def test_extension_array_pyarrow_concatenate(self, arrow1, arrow2):
+        concatenated = concatenate(
+            (PandasExtensionArray(arrow1), PandasExtensionArray(arrow2))
+        )
+        assert concatenated[2]["x"] == 3
+        assert concatenated[3]["y"]
+
+    def test___getitem__extension_duck_array(self, categorical1):
+        extension_duck_array = PandasExtensionArray(categorical1)
+        assert (extension_duck_array[0:2] == categorical1[0:2]).all()
+        assert isinstance(extension_duck_array[0:2], PandasExtensionArray)
+        assert extension_duck_array[0] == categorical1[0]
+        assert isinstance(extension_duck_array[0], PandasExtensionArray)
+        mask = [True, False, True, False, True]
+        assert (extension_duck_array[mask] == categorical1[mask]).all()
+
+    def test__setitem__extension_duck_array(self, categorical1):
+        extension_duck_array = PandasExtensionArray(categorical1)
+        extension_duck_array[2] = "cat1"  # already existing category
+        assert extension_duck_array[2] == "cat1"
+        with pytest.raises(TypeError, match="Cannot setitem on a Categorical"):
+            extension_duck_array[2] = "cat4"  # new category
+
     def test_stack_type_promotion(self):
         result = stack([1, "b"])
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
     def test_concatenate_type_promotion(self):
-        result = concatenate([[1], ["b"]])
+        result = concatenate([np.array([1]), np.array(["b"])])
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
     @pytest.mark.filterwarnings("error")
@@ -932,3 +1022,26 @@ def test_push_dask():
                 dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)), axis=0, n=n
             )
         np.testing.assert_equal(actual, expected)
+
+
+def test_extension_array_equality(categorical1, int1):
+    int_duck_array = PandasExtensionArray(int1)
+    categorical_duck_array = PandasExtensionArray(categorical1)
+    assert (int_duck_array != categorical_duck_array).all()
+    assert (categorical_duck_array == categorical1).all()
+    assert (int_duck_array[0:2] == int1[0:2]).all()
+
+
+def test_extension_array_singleton_equality(categorical1):
+    categorical_duck_array = PandasExtensionArray(categorical1)
+    assert (categorical_duck_array != "cat3").all()
+
+
+def test_extension_array_repr(int1):
+    int_duck_array = PandasExtensionArray(int1)
+    assert repr(int1) in repr(int_duck_array)
+
+
+def test_extension_array_attr(int1):
+    int_duck_array = PandasExtensionArray(int1)
+    assert (~int_duck_array.fillna(10)).all()

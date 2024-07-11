@@ -36,6 +36,7 @@ Geosciences
 - `rioxarray <https://corteva.github.io/rioxarray>`_: geospatial xarray extension powered by rasterio
 - `salem <https://salem.readthedocs.io>`_: Adds geolocalised subsetting, masking, and plotting operations to xarray's data structures via accessors.
 - `SatPy <https://satpy.readthedocs.io/>`_ : Library for reading and manipulating meteorological remote sensing data and writing it to various image and data file formats.
+- `SARXarray <https://tudelftgeodesy.github.io/sarxarray/>`_: xarray extension for reading and processing large Synthetic Aperture Radar (SAR) data stacks.
 - `Spyfit <https://spyfit.readthedocs.io/en/master/>`_: FTIR spectroscopy of the atmosphere
 - `windspharm <https://ajdawson.github.io/windspharm/index.html>`_: Spherical
   harmonic wind analysis in Python.
@@ -73,6 +74,7 @@ Extend xarray capabilities
 - `Collocate <https://github.com/cistools/collocate>`_: Collocate xarray trajectories in arbitrary physical dimensions
 - `eofs <https://ajdawson.github.io/eofs/>`_: EOF analysis in Python.
 - `hypothesis-gufunc <https://hypothesis-gufunc.readthedocs.io/en/latest/>`_: Extension to hypothesis. Makes it easy to write unit tests with xarray objects as input.
+- `ntv-pandas <https://github.com/loco-philippe/ntv-pandas>`_ : A tabular analyzer and a semantic, compact and reversible converter for multidimensional and tabular data
 - `nxarray <https://github.com/nxarray/nxarray>`_: NeXus input/output capability for xarray.
 - `xarray-compare <https://github.com/astropenguin/xarray-compare>`_: xarray extension for data comparison.
 - `xarray-dataclasses <https://github.com/astropenguin/xarray-dataclasses>`_: xarray extension for typed DataArray and Dataset creation.

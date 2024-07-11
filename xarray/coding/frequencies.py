@@ -45,7 +45,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from xarray.coding.cftime_offsets import _MONTH_ABBREVIATIONS
+from xarray.coding.cftime_offsets import _MONTH_ABBREVIATIONS, _legacy_to_new_freq
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core.common import _contains_datetime_like_objects
 
@@ -99,7 +99,7 @@ def infer_freq(index):
         inferer = _CFTimeFrequencyInferer(index)
         return inferer.get_freq()
 
-    return pd.infer_freq(index)
+    return _legacy_to_new_freq(pd.infer_freq(index))
 
 
 class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):

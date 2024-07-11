@@ -51,6 +51,7 @@ from xarray.tests import (
     requires_bottleneck,
     requires_cupy,
     requires_dask,
+    requires_dask_expr,
     requires_iris,
     requires_numexpr,
     requires_pint,
@@ -109,13 +110,14 @@ class TestDataArray:
         assert expected == repr(data_array)
 
     def test_repr_multiindex(self) -> None:
+        obj_size = np.dtype("O").itemsize
         expected = dedent(
-            """\
+            f"""\
             <xarray.DataArray (x: 4)> Size: 32B
             array([0, 1, 2, 3], dtype=uint64)
             Coordinates:
-              * x        (x) object 32B MultiIndex
-              * level_1  (x) object 32B 'a' 'a' 'b' 'b'
+              * x        (x) object {4 * obj_size}B MultiIndex
+              * level_1  (x) object {4 * obj_size}B 'a' 'a' 'b' 'b'
               * level_2  (x) int64 32B 1 2 1 2"""
         )
         assert expected == repr(self.mda)
@@ -128,15 +130,16 @@ class TestDataArray:
         mda_long = DataArray(
             list(range(32)), coords={"x": mindex_long}, dims="x"
         ).astype(np.uint64)
+        obj_size = np.dtype("O").itemsize
         expected = dedent(
-            """\
+            f"""\
             <xarray.DataArray (x: 32)> Size: 256B
             array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
                    17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31],
                   dtype=uint64)
             Coordinates:
-              * x        (x) object 256B MultiIndex
-              * level_1  (x) object 256B 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
+              * x        (x) object {32 * obj_size}B MultiIndex
+              * level_1  (x) object {32 * obj_size}B 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
               * level_2  (x) int64 256B 1 2 3 4 5 6 7 8 1 2 3 4 ... 5 6 7 8 1 2 3 4 5 6 7 8"""
         )
         assert expected == repr(mda_long)
@@ -2483,7 +2486,7 @@ class TestDataArray:
         assert_identical(orig, orig.unstack())
 
         # test GH3000
-        a = orig[:0, :1].stack(dim=("x", "y")).indexes["dim"]
+        a = orig[:0, :1].stack(new_dim=("x", "y")).indexes["new_dim"]
         b = pd.MultiIndex(
             levels=[pd.Index([], np.int64), pd.Index([0], np.int64)],
             codes=[[], []],
@@ -2531,6 +2534,15 @@ class TestDataArray:
         expected = DataArray(s.unstack(), name="foo")
         actual = DataArray(s, dims="z").unstack("z")
         assert_identical(expected, actual)
+
+    def test_unstack_requires_unique(self) -> None:
+        df = pd.DataFrame({"foo": range(2), "x": ["a", "a"], "y": [0, 0]})
+        s = df.set_index(["x", "y"])["foo"]
+
+        with pytest.raises(
+            ValueError, match="Cannot unstack MultiIndex containing duplicates"
+        ):
+            DataArray(s, dims="z").unstack("z")
 
     @pytest.mark.filterwarnings("error")
     def test_unstack_roundtrip_integer_array(self) -> None:
@@ -2999,7 +3011,7 @@ class TestDataArray:
         expected = b.copy()
         assert_identical(expected, actual)
 
-        actual = a.fillna(range(4))
+        actual = a.fillna(np.arange(4))
         assert_identical(expected, actual)
 
         actual = a.fillna(b[:3])
@@ -3012,7 +3024,7 @@ class TestDataArray:
             a.fillna({0: 0})
 
         with pytest.raises(ValueError, match=r"broadcast"):
-            a.fillna([1, 2])
+            a.fillna(np.array([1, 2]))
 
     def test_align(self) -> None:
         array = DataArray(
@@ -3199,6 +3211,42 @@ class TestDataArray:
         assert_identical(expected_b, actual_b)
         assert expected_b.x.dtype == actual_b.x.dtype
 
+    def test_broadcast_on_vs_off_global_option_different_dims(self) -> None:
+        xda_1 = xr.DataArray([1], dims="x1")
+        xda_2 = xr.DataArray([1], dims="x2")
+
+        with xr.set_options(arithmetic_broadcast=True):
+            expected_xda = xr.DataArray([[1.0]], dims=("x1", "x2"))
+            actual_xda = xda_1 / xda_2
+            assert_identical(actual_xda, expected_xda)
+
+        with xr.set_options(arithmetic_broadcast=False):
+            with pytest.raises(
+                ValueError,
+                match=re.escape(
+                    "Broadcasting is necessary but automatic broadcasting is disabled via "
+                    "global option `'arithmetic_broadcast'`. "
+                    "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
+                ),
+            ):
+                xda_1 / xda_2
+
+    @pytest.mark.parametrize("arithmetic_broadcast", [True, False])
+    def test_broadcast_on_vs_off_global_option_same_dims(
+        self, arithmetic_broadcast: bool
+    ) -> None:
+        # Ensure that no error is raised when arithmetic broadcasting is disabled,
+        # when broadcasting is not needed. The two DataArrays have the same
+        # dimensions of the same size.
+        xda_1 = xr.DataArray([1], dims="x")
+        xda_2 = xr.DataArray([1], dims="x")
+        expected_xda = xr.DataArray([2.0], dims=("x",))
+
+        with xr.set_options(arithmetic_broadcast=arithmetic_broadcast):
+            assert_identical(xda_1 + xda_2, expected_xda)
+            assert_identical(xda_1 + np.array([1.0]), expected_xda)
+            assert_identical(np.array([1.0]) + xda_1, expected_xda)
+
     def test_broadcast_arrays(self) -> None:
         x = DataArray([1, 2], coords=[("a", [-1, -2])], name="x")
         y = DataArray([1, 2], coords=[("b", [3, 4])], name="y")
@@ -3377,7 +3425,9 @@ class TestDataArray:
         assert len(actual) == 0
         assert_array_equal(actual.index.names, list("ABC"))
 
+    @requires_dask_expr
     @requires_dask
+    @pytest.mark.xfail(reason="dask-expr is broken")
     def test_to_dask_dataframe(self) -> None:
         arr_np = np.arange(3 * 4).reshape(3, 4)
         arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
@@ -3599,6 +3649,7 @@ class TestDataArray:
         actual_no_data = da.to_dict(data=False, encoding=encoding)
         assert expected_no_data == actual_no_data
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_to_and_from_dict_with_time_dim(self) -> None:
         x = np.random.randn(10, 3)
         t = pd.date_range("20130101", periods=10)
@@ -3607,6 +3658,7 @@ class TestDataArray:
         roundtripped = DataArray.from_dict(da.to_dict())
         assert_identical(da, roundtripped)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_to_and_from_dict_with_nan_nat(self) -> None:
         y = np.random.randn(10, 3)
         y[2] = np.nan
@@ -3902,7 +3954,8 @@ class TestDataArray:
             dims=["a", "b", "c"],
         )
         da_cp = da.copy(deep)
-        da_cp["a"].data[0] = 999
+        new_a = np.array([999, 2])
+        da_cp.coords["a"] = da_cp["a"].copy(data=new_a)
 
         expected_cp = xr.DataArray(
             xr.IndexVariable("a", np.array([999, 2])),
@@ -4904,7 +4957,7 @@ class TestReduce1D(TestReduce):
         with pytest.raises(ValueError):
             xr.DataArray(5).idxmin()
 
-        coordarr0 = xr.DataArray(ar0.coords["x"], dims=["x"])
+        coordarr0 = xr.DataArray(ar0.coords["x"].data, dims=["x"])
         coordarr1 = coordarr0.copy()
 
         hasna = np.isnan(minindex)
@@ -5019,7 +5072,7 @@ class TestReduce1D(TestReduce):
         with pytest.raises(ValueError):
             xr.DataArray(5).idxmax()
 
-        coordarr0 = xr.DataArray(ar0.coords["x"], dims=["x"])
+        coordarr0 = xr.DataArray(ar0.coords["x"].data, dims=["x"])
         coordarr1 = coordarr0.copy()
 
         hasna = np.isnan(maxindex)
@@ -7091,7 +7144,7 @@ class TestStackEllipsis:
     def test_error_on_ellipsis_without_list(self) -> None:
         da = DataArray([[1, 2], [1, 2]], dims=("x", "y"))
         with pytest.raises(ValueError):
-            da.stack(flat=...)  # type: ignore
+            da.stack(flat=...)
 
 
 def test_nD_coord_dataarray() -> None:
@@ -7124,3 +7177,13 @@ def test_nD_coord_dataarray() -> None:
     _assert_internal_invariants(da4, check_default_indexes=True)
     assert "x" not in da4.xindexes
     assert "x" in da4.coords
+
+
+def test_lazy_data_variable_not_loaded():
+    # GH8753
+    array = InaccessibleArray(np.array([1, 2, 3]))
+    v = Variable(data=array, dims="x")
+    # No data needs to be accessed, so no error should be raised
+    da = xr.DataArray(v)
+    # No data needs to be accessed, so no error should be raised
+    xr.DataArray(da)

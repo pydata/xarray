@@ -416,7 +416,8 @@ read the data.
 Scaling and type conversions
 ............................
 
-These encoding options work on any version of the netCDF file format:
+These encoding options (based on `CF Conventions on packed data`_) work on any
+version of the netCDF file format:
 
 - ``dtype``: Any valid NumPy dtype or string convertible to a dtype, e.g., ``'int16'``
   or ``'float32'``. This controls the type of the data written on disk.
@@ -427,13 +428,16 @@ These encoding options work on any version of the netCDF file format:
   output file, unless explicitly disabled with an encoding ``{'_FillValue': None}``.
 - ``scale_factor`` and ``add_offset``: Used to convert from encoded data on disk to
   to the decoded data in memory, according to the formula
-  ``decoded = scale_factor * encoded + add_offset``.
+  ``decoded = scale_factor * encoded + add_offset``. Please note that ``scale_factor``
+  and ``add_offset`` must be of same type and determine the type of the decoded data.
 
 These parameters can be fruitfully combined to compress discretized data on disk. For
 example, to save the variable ``foo`` with a precision of 0.1 in 16-bit integers while
 converting ``NaN`` to ``-9999``, we would use
 ``encoding={'foo': {'dtype': 'int16', 'scale_factor': 0.1, '_FillValue': -9999}}``.
 Compression and decompression with such discretization is extremely fast.
+
+.. _CF Conventions on packed data: https://cfconventions.org/cf-conventions/cf-conventions.html#packed-data
 
 .. _io.string-encoding:
 
@@ -737,6 +741,65 @@ instance and pass this, as follows:
 .. _Google Cloud Storage: https://cloud.google.com/storage/
 .. _gcsfs: https://github.com/fsspec/gcsfs
 
+.. _io.zarr.distributed_writes:
+
+Distributed writes
+~~~~~~~~~~~~~~~~~~
+
+Xarray will natively use dask to write in parallel to a zarr store, which should
+satisfy most moderately sized datasets. For more flexible parallelization, we
+can use ``region`` to write to limited regions of arrays in an existing Zarr
+store.
+
+To scale this up to writing large datasets, first create an initial Zarr store
+without writing all of its array data. This can be done by first creating a
+``Dataset`` with dummy values stored in :ref:`dask <dask>`, and then calling
+``to_zarr`` with ``compute=False`` to write only metadata (including ``attrs``)
+to Zarr:
+
+.. ipython:: python
+    :suppress:
+
+    ! rm -rf path/to/directory.zarr
+
+.. ipython:: python
+
+    import dask.array
+
+    # The values of this dask array are entirely irrelevant; only the dtype,
+    # shape and chunks are used
+    dummies = dask.array.zeros(30, chunks=10)
+    ds = xr.Dataset({"foo": ("x", dummies)}, coords={"x": np.arange(30)})
+    path = "path/to/directory.zarr"
+    # Now we write the metadata without computing any array values
+    ds.to_zarr(path, compute=False)
+
+Now, a Zarr store with the correct variable shapes and attributes exists that
+can be filled out by subsequent calls to ``to_zarr``.
+Setting ``region="auto"`` will open the existing store and determine the
+correct alignment of the new data with the existing dimensions, or as an
+explicit mapping from dimension names to Python ``slice`` objects indicating
+where the data should be written (in index space, not label space), e.g.,
+
+.. ipython:: python
+
+    # For convenience, we'll slice a single dataset, but in the real use-case
+    # we would create them separately possibly even from separate processes.
+    ds = xr.Dataset({"foo": ("x", np.arange(30))}, coords={"x": np.arange(30)})
+    # Any of the following region specifications are valid
+    ds.isel(x=slice(0, 10)).to_zarr(path, region="auto")
+    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": "auto"})
+    ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
+
+Concurrent writes with ``region`` are safe as long as they modify distinct
+chunks in the underlying Zarr arrays (or use an appropriate ``lock``).
+
+As a safety check to make it harder to inadvertently override existing values,
+if you set ``region`` then *all* variables included in a Dataset must have
+dimensions included in ``region``. Other variables (typically coordinates)
+need to be explicitly dropped and/or written in a separate calls to ``to_zarr``
+with ``mode='a'``.
+
 Zarr Compressors and Filters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -762,37 +825,6 @@ For example:
 
     Not all native zarr compression and filtering options have been tested with
     xarray.
-
-.. _io.zarr.consolidated_metadata:
-
-Consolidated Metadata
-~~~~~~~~~~~~~~~~~~~~~
-
-Xarray needs to read all of the zarr metadata when it opens a dataset.
-In some storage mediums, such as with cloud object storage (e.g. `Amazon S3`_),
-this can introduce significant overhead, because two separate HTTP calls to the
-object store must be made for each variable in the dataset.
-By default Xarray uses a feature called
-*consolidated metadata*, storing all metadata for the entire dataset with a
-single key (by default called ``.zmetadata``). This typically drastically speeds
-up opening the store. (For more information on this feature, consult the
-`zarr docs on consolidating metadata <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
-
-By default, xarray writes consolidated metadata and attempts to read stores
-with consolidated metadata, falling back to use non-consolidated metadata for
-reads. Because this fall-back option is so much slower, xarray issues a
-``RuntimeWarning`` with guidance when reading with consolidated metadata fails:
-
-    Failed to open Zarr store with consolidated metadata, falling back to try
-    reading non-consolidated metadata. This is typically much slower for
-    opening a dataset. To silence this warning, consider:
-
-    1. Consolidating metadata in this existing store with
-       :py:func:`zarr.consolidate_metadata`.
-    2. Explicitly setting ``consolidated=False``, to avoid trying to read
-       consolidate metadata.
-    3. Explicitly setting ``consolidated=True``, to raise an error in this case
-       instead of falling back to try reading non-consolidated metadata.
 
 .. _io.zarr.appending:
 
@@ -851,59 +883,6 @@ order, e.g., for time-stepping a simulation:
         },
     )
     ds2.to_zarr("path/to/directory.zarr", append_dim="t")
-
-Finally, you can use ``region`` to write to limited regions of existing arrays
-in an existing Zarr store. This is a good option for writing data in parallel
-from independent processes.
-
-To scale this up to writing large datasets, the first step is creating an
-initial Zarr store without writing all of its array data. This can be done by
-first creating a ``Dataset`` with dummy values stored in :ref:`dask <dask>`,
-and then calling ``to_zarr`` with ``compute=False`` to write only metadata
-(including ``attrs``) to Zarr:
-
-.. ipython:: python
-    :suppress:
-
-    ! rm -rf path/to/directory.zarr
-
-.. ipython:: python
-
-    import dask.array
-
-    # The values of this dask array are entirely irrelevant; only the dtype,
-    # shape and chunks are used
-    dummies = dask.array.zeros(30, chunks=10)
-    ds = xr.Dataset({"foo": ("x", dummies)})
-    path = "path/to/directory.zarr"
-    # Now we write the metadata without computing any array values
-    ds.to_zarr(path, compute=False)
-
-Now, a Zarr store with the correct variable shapes and attributes exists that
-can be filled out by subsequent calls to ``to_zarr``.
-Setting ``region="auto"`` will open the existing store and determine the
-correct alignment of the new data with the existing coordinates, or as an
-explicit mapping from dimension names to Python ``slice`` objects indicating
-where the data should be written (in index space, not label space), e.g.,
-
-.. ipython:: python
-
-    # For convenience, we'll slice a single dataset, but in the real use-case
-    # we would create them separately possibly even from separate processes.
-    ds = xr.Dataset({"foo": ("x", np.arange(30))})
-    # Any of the following region specifications are valid
-    ds.isel(x=slice(0, 10)).to_zarr(path, region="auto")
-    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": "auto"})
-    ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
-
-Concurrent writes with ``region`` are safe as long as they modify distinct
-chunks in the underlying Zarr arrays (or use an appropriate ``lock``).
-
-As a safety check to make it harder to inadvertently override existing values,
-if you set ``region`` then *all* variables included in a Dataset must have
-dimensions included in ``region``. Other variables (typically coordinates)
-need to be explicitly dropped and/or written in a separate calls to ``to_zarr``
-with ``mode='a'``.
 
 .. _io.zarr.writing_chunks:
 
@@ -973,6 +952,38 @@ length of each dimension by using the shorthand chunk size ``-1``:
 
 The number of chunks on Tair matches our dask chunks, while there is now only a single
 chunk in the directory stores of each coordinate.
+
+.. _io.zarr.consolidated_metadata:
+
+Consolidated Metadata
+~~~~~~~~~~~~~~~~~~~~~
+
+Xarray needs to read all of the zarr metadata when it opens a dataset.
+In some storage mediums, such as with cloud object storage (e.g. `Amazon S3`_),
+this can introduce significant overhead, because two separate HTTP calls to the
+object store must be made for each variable in the dataset.
+By default Xarray uses a feature called
+*consolidated metadata*, storing all metadata for the entire dataset with a
+single key (by default called ``.zmetadata``). This typically drastically speeds
+up opening the store. (For more information on this feature, consult the
+`zarr docs on consolidating metadata <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
+
+By default, xarray writes consolidated metadata and attempts to read stores
+with consolidated metadata, falling back to use non-consolidated metadata for
+reads. Because this fall-back option is so much slower, xarray issues a
+``RuntimeWarning`` with guidance when reading with consolidated metadata fails:
+
+    Failed to open Zarr store with consolidated metadata, falling back to try
+    reading non-consolidated metadata. This is typically much slower for
+    opening a dataset. To silence this warning, consider:
+
+    1. Consolidating metadata in this existing store with
+       :py:func:`zarr.consolidate_metadata`.
+    2. Explicitly setting ``consolidated=False``, to avoid trying to read
+       consolidate metadata.
+    3. Explicitly setting ``consolidated=True``, to raise an error in this case
+       instead of falling back to try reading non-consolidated metadata.
+
 
 .. _io.iris:
 
@@ -1293,27 +1304,6 @@ We recommend installing cfgrib via conda::
     conda install -c conda-forge cfgrib
 
 .. _cfgrib: https://github.com/ecmwf/cfgrib
-
-.. _io.pynio:
-
-Formats supported by PyNIO
---------------------------
-
-.. warning::
-
-    The `PyNIO backend is deprecated`_. `PyNIO is no longer maintained`_.
-
-Xarray can also read GRIB, HDF4 and other file formats supported by PyNIO_,
-if PyNIO is installed. To use PyNIO to read such files, supply
-``engine='pynio'`` to :py:func:`open_dataset`.
-
-We recommend installing PyNIO via conda::
-
-    conda install -c conda-forge pynio
-
-.. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
-.. _PyNIO backend is deprecated: https://github.com/pydata/xarray/issues/4491
-.. _PyNIO is no longer maintained: https://github.com/NCAR/pynio/issues/53
 
 
 CSV and other formats supported by pandas

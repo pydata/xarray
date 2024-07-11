@@ -4,7 +4,7 @@ import itertools
 import textwrap
 import warnings
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
-from datetime import datetime
+from datetime import date, datetime
 from inspect import getfullargspec
 from typing import TYPE_CHECKING, Any, Callable, Literal, overload
 
@@ -13,8 +13,8 @@ import pandas as pd
 
 from xarray.core.indexes import PandasMultiIndex
 from xarray.core.options import OPTIONS
-from xarray.core.pycompat import DuckArrayModule
 from xarray.core.utils import is_scalar, module_available
+from xarray.namedarray.pycompat import DuckArrayModule
 
 nc_time_axis_available = module_available("nc_time_axis")
 
@@ -672,7 +672,7 @@ def _ensure_plottable(*args) -> None:
         np.bool_,
         np.str_,
     )
-    other_types: tuple[type[object], ...] = (datetime,)
+    other_types: tuple[type[object], ...] = (datetime, date)
     cftime_datetime_types: tuple[type[object], ...] = (
         () if cftime is None else (cftime.datetime,)
     )
@@ -811,11 +811,11 @@ def _update_axes(
 def _is_monotonic(coord, axis=0):
     """
     >>> _is_monotonic(np.array([0, 1, 2]))
-    True
+    np.True_
     >>> _is_monotonic(np.array([2, 1, 0]))
-    True
+    np.True_
     >>> _is_monotonic(np.array([0, 2, 1]))
-    False
+    np.False_
     """
     if coord.shape[axis] < 3:
         return True

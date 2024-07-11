@@ -10,7 +10,7 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray, Variable
-from xarray.core.pycompat import array_type
+from xarray.namedarray.pycompat import array_type
 from xarray.tests import assert_equal, assert_identical, requires_dask
 
 filterwarnings = pytest.mark.filterwarnings
@@ -109,11 +109,11 @@ def test_variable_property(prop):
         (do("notnull"), True),
         (do("roll"), True),
         (do("round"), True),
-        (do("set_dims", dims=("x", "y", "z")), True),
-        (do("stack", dimensions={"flat": ("x", "y")}), True),
+        (do("set_dims", dim=("x", "y", "z")), True),
+        (do("stack", dim={"flat": ("x", "y")}), True),
         (do("to_base_variable"), True),
         (do("transpose"), True),
-        (do("unstack", dimensions={"x": {"x1": 5, "x2": 2}}), True),
+        (do("unstack", dim={"x": {"x1": 5, "x2": 2}}), True),
         (do("broadcast_equals", make_xrvar({"x": 10, "y": 5})), False),
         (do("equals", make_xrvar({"x": 10, "y": 5})), False),
         (do("identical", make_xrvar({"x": 10, "y": 5})), False),
@@ -878,10 +878,6 @@ def test_dask_token():
     import dask
 
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
-
-    # https://github.com/pydata/sparse/issues/300
-    s.__dask_tokenize__ = lambda: dask.base.normalize_token(s.__dict__)
-
     a = DataArray(s)
     t1 = dask.base.tokenize(a)
     t2 = dask.base.tokenize(a)

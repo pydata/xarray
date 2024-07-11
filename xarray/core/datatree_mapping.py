@@ -3,16 +3,15 @@ from __future__ import annotations
 import functools
 import sys
 from itertools import repeat
-from textwrap import dedent
-from typing import TYPE_CHECKING, Callable, Tuple
+from typing import TYPE_CHECKING, Callable
 
-from xarray import DataArray, Dataset
-
-from .iterators import LevelOrderIter
-from .treenode import NodePath, TreeNode
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
+from xarray.core.formatting import diff_treestructure
+from xarray.core.treenode import NodePath, TreeNode
 
 if TYPE_CHECKING:
-    from .datatree import DataTree
+    from xarray.core.datatree import DataTree
 
 
 class TreeIsomorphismError(ValueError):
@@ -72,38 +71,6 @@ def check_isomorphic(
         raise TreeIsomorphismError("DataTree objects are not isomorphic:\n" + diff)
 
 
-def diff_treestructure(a: DataTree, b: DataTree, require_names_equal: bool) -> str:
-    """
-    Return a summary of why two trees are not isomorphic.
-    If they are isomorphic return an empty string.
-    """
-
-    # Walking nodes in "level-order" fashion means walking down from the root breadth-first.
-    # Checking for isomorphism by walking in this way implicitly assumes that the tree is an ordered tree
-    # (which it is so long as children are stored in a tuple or list rather than in a set).
-    for node_a, node_b in zip(LevelOrderIter(a), LevelOrderIter(b)):
-        path_a, path_b = node_a.path, node_b.path
-
-        if require_names_equal:
-            if node_a.name != node_b.name:
-                diff = dedent(
-                    f"""\
-                Node '{path_a}' in the left object has name '{node_a.name}'
-                Node '{path_b}' in the right object has name '{node_b.name}'"""
-                )
-                return diff
-
-        if len(node_a.children) != len(node_b.children):
-            diff = dedent(
-                f"""\
-                Number of children on node '{path_a}' of the left object: {len(node_a.children)}
-                Number of children on node '{path_b}' of the right object: {len(node_b.children)}"""
-            )
-            return diff
-
-    return ""
-
-
 def map_over_subtree(func: Callable) -> Callable:
     """
     Decorator which turns a function which acts on (and returns) Datasets into one which acts on and returns DataTrees.
@@ -125,16 +92,16 @@ def map_over_subtree(func: Callable) -> Callable:
     func : callable
         Function to apply to datasets with signature:
 
-        `func(*args, **kwargs) -> Union[Dataset, Iterable[Dataset]]`.
+        `func(*args, **kwargs) -> Union[DataTree, Iterable[DataTree]]`.
 
         (i.e. func must accept at least one Dataset and return at least one Dataset.)
         Function will not be applied to any nodes without datasets.
     *args : tuple, optional
         Positional arguments passed on to `func`. If DataTrees any data-containing nodes will be converted to Datasets
-        via .ds .
+        via `.ds`.
     **kwargs : Any
         Keyword arguments passed on to `func`. If DataTrees any data-containing nodes will be converted to Datasets
-        via .ds .
+        via `.ds`.
 
     Returns
     -------
@@ -154,9 +121,9 @@ def map_over_subtree(func: Callable) -> Callable:
     # TODO inspect function to work out immediately if the wrong number of arguments were passed for it?
 
     @functools.wraps(func)
-    def _map_over_subtree(*args, **kwargs) -> DataTree | Tuple[DataTree, ...]:
+    def _map_over_subtree(*args, **kwargs) -> DataTree | tuple[DataTree, ...]:
         """Internal function which maps func over every node in tree, returning a tree of the results."""
-        from .datatree import DataTree
+        from xarray.core.datatree import DataTree
 
         all_tree_inputs = [a for a in args if isinstance(a, DataTree)] + [
             a for a in kwargs.values() if isinstance(a, DataTree)
@@ -259,7 +226,7 @@ def map_over_subtree(func: Callable) -> Callable:
     return _map_over_subtree
 
 
-def _handle_errors_with_path_context(path):
+def _handle_errors_with_path_context(path: str):
     """Wraps given function so that if it fails it also raises path to node on which it failed."""
 
     def decorator(func):
@@ -267,11 +234,10 @@ def _handle_errors_with_path_context(path):
             try:
                 return func(*args, **kwargs)
             except Exception as e:
-                if sys.version_info >= (3, 11):
-                    # Add the context information to the error message
-                    e.add_note(
-                        f"Raised whilst mapping function over node with path {path}"
-                    )
+                # Add the context information to the error message
+                add_note(
+                    e, f"Raised whilst mapping function over node with path {path}"
+                )
                 raise
 
         return wrapper
@@ -287,7 +253,9 @@ def add_note(err: BaseException, msg: str) -> None:
         err.add_note(msg)
 
 
-def _check_single_set_return_values(path_to_node, obj):
+def _check_single_set_return_values(
+    path_to_node: str, obj: Dataset | DataArray | tuple[Dataset | DataArray]
+):
     """Check types returned from single evaluation of func, and return number of return values received from func."""
     if isinstance(obj, (Dataset, DataArray)):
         return 1

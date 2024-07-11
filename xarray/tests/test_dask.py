@@ -299,17 +299,6 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
 
-    def test_tokenize_empty_attrs(self) -> None:
-        # Issue #6970
-        assert self.eager_var._attrs is None
-        expected = dask.base.tokenize(self.eager_var)
-        assert self.eager_var.attrs == self.eager_var._attrs == {}
-        assert (
-            expected
-            == dask.base.tokenize(self.eager_var)
-            == dask.base.tokenize(self.lazy_var.compute())
-        )
-
     @requires_pint
     def test_tokenize_duck_dask_array(self):
         import pint
@@ -348,13 +337,16 @@ class TestDataArrayAndDataset(DaskTestCase):
             self.data, coords={"x": range(4)}, dims=("x", "y"), name="foo"
         )
 
-    def test_chunk(self):
+    def test_chunk(self) -> None:
         for chunks, expected in [
             ({}, ((2, 2), (2, 2, 2))),
             (3, ((3, 1), (3, 3))),
             ({"x": 3, "y": 3}, ((3, 1), (3, 3))),
             ({"x": 3}, ((3, 1), (2, 2, 2))),
             ({"x": (3, 1)}, ((3, 1), (2, 2, 2))),
+            ({"x": "16B"}, ((1, 1, 1, 1), (2, 2, 2))),
+            ("16B", ((1, 1, 1, 1), (1,) * 6)),
+            ("16MB", ((4,), (6,))),
         ]:
             # Test DataArray
             rechunked = self.lazy_array.chunk(chunks)
@@ -645,6 +637,13 @@ class TestDataArrayAndDataset(DaskTestCase):
         ds.load(scheduler=counting_get)
 
         assert count[0] == 1
+
+    def test_duplicate_dims(self):
+        data = np.random.normal(size=(4, 4))
+        arr = DataArray(data, dims=("x", "x"))
+        chunked_array = arr.chunk({"x": 2})
+        assert chunked_array.chunks == ((2, 2), (2, 2))
+        assert chunked_array.chunksizes == {"x": (2, 2)}
 
     def test_stack(self):
         data = da.random.normal(size=(2, 3, 4), chunks=(1, 3, 4))
@@ -1573,6 +1572,30 @@ def test_token_identical(obj, transform):
     )
 
 
+@pytest.mark.parametrize(
+    "obj",
+    [
+        make_ds(),  # Dataset
+        make_ds().variables["c2"],  # Variable
+        make_ds().variables["x"],  # IndexVariable
+    ],
+)
+def test_tokenize_empty_attrs(obj):
+    """Issues #6970 and #8788"""
+    obj.attrs = {}
+    assert obj._attrs is None
+    a = dask.base.tokenize(obj)
+
+    assert obj.attrs == {}
+    assert obj._attrs == {}  # attrs getter changed None to dict
+    b = dask.base.tokenize(obj)
+    assert a == b
+
+    obj2 = obj.copy()
+    c = dask.base.tokenize(obj2)
+    assert a == c
+
+
 def test_recursive_token():
     """Test that tokenization is invoked recursively, and doesn't just rely on the
     output of str()
@@ -1662,16 +1685,10 @@ def test_lazy_array_equiv_merge(compat):
         lambda a: a.assign_attrs(new_attr="anew"),
         lambda a: a.assign_coords(cxy=a.cxy),
         lambda a: a.copy(),
-        lambda a: a.isel(x=np.arange(a.sizes["x"])),
         lambda a: a.isel(x=slice(None)),
         lambda a: a.loc[dict(x=slice(None))],
-        lambda a: a.loc[dict(x=np.arange(a.sizes["x"]))],
-        lambda a: a.loc[dict(x=a.x)],
-        lambda a: a.sel(x=a.x),
-        lambda a: a.sel(x=a.x.values),
         lambda a: a.transpose(...),
         lambda a: a.squeeze(),  # no dimensions to squeeze
-        lambda a: a.sortby("x"),  # "x" is already sorted
         lambda a: a.reindex(x=a.x),
         lambda a: a.reindex_like(a),
         lambda a: a.rename({"cxy": "cnew"}).rename({"cnew": "cxy"}),

@@ -20,10 +20,11 @@ from xarray.core.duck_array_ops import (
     timedelta_to_numeric,
 )
 from xarray.core.options import _get_keep_attrs
-from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.core.types import Interp1dOptions, InterpOptions
 from xarray.core.utils import OrderedSet, is_scalar
 from xarray.core.variable import Variable, broadcast_variables
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -552,11 +553,11 @@ def _localize(var, indexes_coords):
     """
     indexes = {}
     for dim, [x, new_x] in indexes_coords.items():
-        minval = np.nanmin(new_x.values)
-        maxval = np.nanmax(new_x.values)
+        new_x_loaded = new_x.values
+        minval = np.nanmin(new_x_loaded)
+        maxval = np.nanmax(new_x_loaded)
         index = x.to_index()
-        imin = index.get_indexer([minval], method="nearest").item()
-        imax = index.get_indexer([maxval], method="nearest").item()
+        imin, imax = index.get_indexer([minval, maxval], method="nearest")
         indexes[dim] = slice(max(imin - 2, 0), imax + 2)
         indexes_coords[dim] = (x[indexes[dim]], new_x)
     return var.isel(**indexes), indexes_coords

@@ -254,7 +254,7 @@ class TestDataArrayRolling:
         rolling_obj = da.rolling(time=window, center=center, min_periods=min_periods)
 
         # add nan prefix to numpy methods to get similar # behavior as bottleneck
-        actual = rolling_obj.reduce(getattr(np, "nan%s" % name))
+        actual = rolling_obj.reduce(getattr(np, f"nan{name}"))
         expected = getattr(rolling_obj, name)()
         assert_allclose(actual, expected)
         assert actual.sizes == expected.sizes
@@ -276,7 +276,7 @@ class TestDataArrayRolling:
         rolling_obj = da.rolling(time=window, center=center, min_periods=min_periods)
 
         # add nan prefix to numpy methods to get similar behavior as bottleneck
-        actual = rolling_obj.reduce(getattr(np, "nan%s" % name))
+        actual = rolling_obj.reduce(getattr(np, f"nan{name}"))
         expected = getattr(rolling_obj, name)()
         assert_allclose(actual, expected)
         assert actual.sizes == expected.sizes
@@ -741,7 +741,7 @@ class TestDatasetRolling:
         rolling_obj = ds.rolling(time=window, center=center, min_periods=min_periods)
 
         # add nan prefix to numpy methods to get similar behavior as bottleneck
-        actual = rolling_obj.reduce(getattr(np, "nan%s" % name))
+        actual = rolling_obj.reduce(getattr(np, f"nan{name}"))
         expected = getattr(rolling_obj, name)()
         assert_allclose(actual, expected)
         assert ds.sizes == actual.sizes

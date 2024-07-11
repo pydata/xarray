@@ -4,7 +4,6 @@ import functools
 import operator
 
 import numpy as np
-import pandas as pd
 import pytest
 
 import xarray as xr
@@ -35,6 +34,7 @@ DimensionalityError = pint.errors.DimensionalityError
 # always be treated like ndarrays
 unit_registry = pint.UnitRegistry(force_ndarray_like=True)
 Quantity = unit_registry.Quantity
+no_unit_values = ("none", None)
 
 
 pytestmark = [
@@ -92,17 +92,13 @@ def array_strip_units(array):
 
 
 def array_attach_units(data, unit):
-    if isinstance(data, Quantity):
+    if isinstance(data, Quantity) and data.units != unit:
         raise ValueError(f"cannot attach unit {unit} to quantity {data}")
 
-    try:
-        quantity = data * unit
-    except np.core._exceptions.UFuncTypeError:
-        if isinstance(unit, unit_registry.Unit):
-            raise
+    if unit in no_unit_values or (isinstance(unit, int) and unit == 1):
+        return data
 
-        quantity = data
-
+    quantity = unit_registry.Quantity(data, unit)
     return quantity
 
 
@@ -3883,11 +3879,11 @@ class TestDataArray:
     def test_resample(self, dtype):
         array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
 
-        time = pd.date_range("10-09-2010", periods=len(array), freq="Y")
+        time = xr.date_range("10-09-2010", periods=len(array), freq="YE")
         data_array = xr.DataArray(data=array, coords={"time": time}, dims="time")
         units = extract_units(data_array)
 
-        func = method("resample", time="6M")
+        func = method("resample", time="6ME")
 
         expected = attach_units(func(strip_units(data_array)).mean(), units)
         actual = func(data_array).mean()
@@ -5388,7 +5384,7 @@ class TestDataset:
         array1 = np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit1
         array2 = np.linspace(10, 20, 10 * 8).reshape(10, 8).astype(dtype) * unit2
 
-        t = pd.date_range("10-09-2010", periods=array1.shape[0], freq="Y")
+        t = xr.date_range("10-09-2010", periods=array1.shape[0], freq="YE")
         y = np.arange(5) * dim_unit
         z = np.arange(8) * dim_unit
 
@@ -5400,7 +5396,7 @@ class TestDataset:
         )
         units = extract_units(ds)
 
-        func = method("resample", time="6M")
+        func = method("resample", time="6ME")
 
         expected = attach_units(func(strip_units(ds)).mean(), units)
         actual = func(ds).mean()

@@ -84,13 +84,19 @@ if TYPE_CHECKING:
         # anything with a dtype attribute
         _SupportsDType[np.dtype[Any]],
     ]
-    try:
-        from cftime import datetime as CFTimeDatetime
-    except ImportError:
-        CFTimeDatetime = Any
-    DatetimeLike = Union[pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime]
+
 else:
     DTypeLikeSave: Any = None
+
+# https://mypy.readthedocs.io/en/stable/common_issues.html#variables-vs-type-aliases
+try:
+    from cftime import datetime as CFTimeDatetime
+except ImportError:
+    CFTimeDatetime = np.datetime64
+
+DatetimeLike: TypeAlias = Union[
+    pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime
+]
 
 
 class Alignable(Protocol):
@@ -167,6 +173,9 @@ T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 # hopefully in the future we can narrow this down more:
 T_DuckArray = TypeVar("T_DuckArray", bound=Any, covariant=True)
 
+# For typing pandas extension arrays.
+T_ExtensionArray = TypeVar("T_ExtensionArray", bound=pd.api.extensions.ExtensionArray)
+
 
 ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
@@ -179,7 +188,8 @@ GroupByCompatible = Union["Dataset", "DataArray"]
 Dims = Union[str, Collection[Hashable], "ellipsis", None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
-T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
+# FYI the `str` is for a size string, e.g. "16MB", supported by dask.
+T_ChunkDim: TypeAlias = Union[str, int, Literal["auto"], None, tuple[int, ...]]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
 T_Chunks: TypeAlias = Union[T_ChunkDim, Mapping[Any, T_ChunkDim]]
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
@@ -278,4 +288,9 @@ QuantileMethods = Literal[
 ]
 
 
+NetcdfWriteModes = Literal["w", "a"]
 ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]
+
+GroupKey = Any
+GroupIndex = Union[int, slice, list[int]]
+T_GroupIndices = list[GroupIndex]

@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from xarray.core import pycompat
-from xarray.core.utils import module_available
+from xarray.core.utils import is_duck_array, module_available
+from xarray.namedarray import pycompat
 
 # remove once numpy 2.0 is the oldest supported version
 if module_available("numpy", minversion="2.0.0.dev0"):
@@ -27,7 +27,6 @@ except ImportError:
     from numpy import RankWarning  # type: ignore[attr-defined,no-redef,unused-ignore]
 
 from xarray.core.options import OPTIONS
-from xarray.core.pycompat import is_duck_array
 
 try:
     import bottleneck as bn
@@ -192,7 +191,7 @@ def _create_method(name, npmodule=np) -> Callable:
                 or kwargs.get("ddof", 0) == 1
             )
             # TODO: bool?
-            and values.dtype.kind in "uifc"
+            and values.dtype.kind in "uif"
             # and values.dtype.isnative
             and (dtype is None or np.dtype(dtype) == values.dtype)
             # numbagg.nanquantile only available after 0.8.0 and with linear method
