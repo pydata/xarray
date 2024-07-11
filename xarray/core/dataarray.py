@@ -7411,7 +7411,7 @@ class DataArray(
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = utils.UncachedAccessor(StringAccessor["DataArray"])
 
-    def drop_attrs(self, deep: bool = True) -> Self:
+    def drop_attrs(self, *, deep: bool = True) -> Self:
         """
         Removes all attributes from the DataArray.
 
