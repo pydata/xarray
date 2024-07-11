@@ -37,8 +37,7 @@ python -m pip install \
     numpy \
     scipy \
     matplotlib \
-    pandas \
-    h5py
+    pandas
 # for some reason pandas depends on pyarrow already.
 # Remove once a `pyarrow` version compiled with `numpy>=2.0` is on `conda-forge`
 python -m pip install \

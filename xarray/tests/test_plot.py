@@ -3406,3 +3406,53 @@ def test_plot1d_filtered_nulls() -> None:
         actual = pc.get_offsets().shape[0]
 
         assert expected == actual
+
+
+@requires_matplotlib
+def test_9155() -> None:
+    # A test for types from issue #9155
+
+    with figure_context():
+        data = xr.DataArray([1, 2, 3], dims=["x"])
+        fig, ax = plt.subplots(ncols=1, nrows=1)
+        data.plot(ax=ax)
+
+
+@requires_matplotlib
+def test_temp_dataarray() -> None:
+    from xarray.plot.dataset_plot import _temp_dataarray
+
+    x = np.arange(1, 4)
+    y = np.arange(4, 6)
+    var1 = np.arange(x.size * y.size).reshape((x.size, y.size))
+    var2 = np.arange(x.size * y.size).reshape((x.size, y.size))
+    ds = xr.Dataset(
+        {
+            "var1": (["x", "y"], var1),
+            "var2": (["x", "y"], 2 * var2),
+            "var3": (["x"], 3 * x),
+        },
+        coords={
+            "x": x,
+            "y": y,
+            "model": np.arange(7),
+        },
+    )
+
+    # No broadcasting:
+    y_ = "var1"
+    locals_ = {"x": "var2"}
+    da = _temp_dataarray(ds, y_, locals_)
+    assert da.shape == (3, 2)
+
+    # Broadcast from 1 to 2dim:
+    y_ = "var3"
+    locals_ = {"x": "var1"}
+    da = _temp_dataarray(ds, y_, locals_)
+    assert da.shape == (3, 2)
+
+    # Ignore non-valid coord kwargs:
+    y_ = "var3"
+    locals_ = dict(x="x", extend="var2")
+    da = _temp_dataarray(ds, y_, locals_)
+    assert da.shape == (3,)

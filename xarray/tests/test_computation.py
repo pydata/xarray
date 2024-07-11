@@ -2598,3 +2598,11 @@ def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:
 
     actual = xr.cross(a, b, dim=dim)
     xr.testing.assert_duckarray_allclose(expected, actual)
+
+
+@pytest.mark.parametrize("compute_backend", ["numbagg"], indirect=True)
+def test_complex_number_reduce(compute_backend):
+    da = xr.DataArray(np.ones((2,), dtype=np.complex64), dims=["x"])
+    # Check that xarray doesn't call into numbagg, which doesn't compile for complex
+    # numbers at the moment (but will when numba supports dynamic compilation)
+    da.min()

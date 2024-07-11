@@ -138,14 +138,14 @@ class TreeNode(Generic[Tree]):
                     "To directly set parent, child needs a name, but child is unnamed"
                 )
 
-            self._pre_attach(parent)
+            self._pre_attach(parent, child_name)
             parentchildren = parent._children
             assert not any(
                 child is self for child in parentchildren
             ), "Tree is corrupt."
             parentchildren[child_name] = self
             self._parent = parent
-            self._post_attach(parent)
+            self._post_attach(parent, child_name)
         else:
             self._parent = None
 
@@ -415,11 +415,11 @@ class TreeNode(Generic[Tree]):
         """Method call after detaching from `parent`."""
         pass
 
-    def _pre_attach(self: Tree, parent: Tree) -> None:
+    def _pre_attach(self: Tree, parent: Tree, name: str) -> None:
         """Method call before attaching to `parent`."""
         pass
 
-    def _post_attach(self: Tree, parent: Tree) -> None:
+    def _post_attach(self: Tree, parent: Tree, name: str) -> None:
         """Method call after attaching to `parent`."""
         pass
 
@@ -567,6 +567,9 @@ class TreeNode(Generic[Tree]):
         return self.root is other.root
 
 
+AnyNamedNode = TypeVar("AnyNamedNode", bound="NamedNode")
+
+
 class NamedNode(TreeNode, Generic[Tree]):
     """
     A TreeNode which knows its own name.
@@ -606,10 +609,9 @@ class NamedNode(TreeNode, Generic[Tree]):
     def __str__(self) -> str:
         return f"NamedNode('{self.name}')" if self.name else "NamedNode()"
 
-    def _post_attach(self: NamedNode, parent: NamedNode) -> None:
+    def _post_attach(self: AnyNamedNode, parent: AnyNamedNode, name: str) -> None:
         """Ensures child has name attribute corresponding to key under which it has been stored."""
-        key = next(k for k, v in parent.children.items() if v is self)
-        self.name = key
+        self.name = name
 
     @property
     def path(self) -> str:
