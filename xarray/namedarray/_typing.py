@@ -211,7 +211,9 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _arrayfunction_or_api = (_arrayfunction, _arrayapi)
 
-duckarray = Union[_arrayfunction[_ShapeType, _DType], _arrayapi[_ShapeType, _DType]]
+duckarray = Union[
+    _arrayfunction[_ShapeType_co, _DType_co], _arrayapi[_ShapeType_co, _DType_co]
+]
 
 # Corresponds to np.typing.NDArray:
 DuckArray = _arrayfunction[Any, np.dtype[_ScalarType_co]]
