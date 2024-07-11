@@ -1597,24 +1597,6 @@ def cross(
     array([ 0,  0, -3])
     Dimensions without coordinates: dim_0
 
-    One vector with different dimension order:
-
-    >>> a = xr.DataArray(
-    ...     [1, 2, 0],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "z", "y"])),
-    ... )
-    >>> b = xr.DataArray(
-    ...     [4, 5, 6],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
-    ... )
-    >>> xr.cross(a, b, dim="cartesian")
-    <xarray.DataArray (cartesian: 3)> Size: 24B
-    array([-10,   2,   5])
-    Coordinates:
-      * cartesian  (cartesian) <U1 12B 'x' 'y' 'z'
-
     Multiple vector cross-products. Note that the direction of the
     cross product vector is defined by the right-hand rule:
 
