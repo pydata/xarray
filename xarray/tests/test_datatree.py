@@ -525,7 +525,7 @@ class TestTreeFromDict:
         roundtrip = DataTree.from_dict(dt.to_dict())
         assert roundtrip.equals(dt)
 
-    @pytest.mark.parametrize("copy", [False, True])
+    @pytest.mark.parametrize("fastpath", [False, True])
     def test_fastpath(self, fastpath: bool) -> None:
         run1 = DataTree.from_dict({"run1": xr.Dataset({"a": 1})})
         dt = DataTree.from_dict({"run1": run1}, fastpath=fastpath)
