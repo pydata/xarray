@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
 
-from xarray import DataArray, infer_freq
+from xarray import CFTimeIndex, DataArray, infer_freq
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftime_offsets import date_range
 from xarray.testing import assert_identical
@@ -286,3 +287,25 @@ def test_interp_calendar_errors():
         ValueError, match="Both 'source.x' and 'target' must contain datetime objects."
     ):
         interp_calendar(da1, da2, dim="x")
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    ("source_calendar", "target_calendar", "expected_index"),
+    [("standard", "noleap", CFTimeIndex), ("all_leap", "standard", pd.DatetimeIndex)],
+)
+def test_convert_calendar_produces_time_index(
+    source_calendar, target_calendar, expected_index
+):
+    # https://github.com/pydata/xarray/issues/9138
+    time = date_range("2000-01-01", "2002-01-01", freq="D", calendar=source_calendar)
+    temperature = np.ones(len(time))
+    da = DataArray(
+        data=temperature,
+        dims=["time"],
+        coords=dict(
+            time=time,
+        ),
+    )
+    converted = da.convert_calendar(target_calendar)
+    assert isinstance(converted.indexes["time"], expected_index)
