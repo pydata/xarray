@@ -1110,9 +1110,10 @@ class DataWithCoords(AttrAccessMixin):
                 loffset=loffset,
                 base=base,
             )
-        else:
-            assert isinstance(freq, Resampler)
+        elif isinstance(freq, Resampler):
             grouper = freq
+        else:
+            raise ValueError("freq must be a str or a Resampler object")
 
         rgrouper = ResolvedGrouper(grouper, group, self)
 
