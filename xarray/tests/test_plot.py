@@ -3366,6 +3366,20 @@ def test_facetgrid_axes_raises_deprecation_warning() -> None:
 
 
 @requires_matplotlib
+def test_debug() -> None:
+    import matplotlib as mpl
+
+    with figure_context():
+        fig, ax = plt.subplots(1, 1)
+        ax.scatter(x=np.array([1, 2, 3]), y=np.array([6, 7, 8]), color="k")
+        actual: np.ndarray = mpl.colors.to_rgba_array("k")
+        assert isinstance(actual, np.ndarray)
+        expected: np.ndarray = ax.collections[0].get_edgecolor()
+        assert isinstance(expected, np.ndarray)
+        np.testing.assert_allclose(actual, expected)
+
+
+@requires_matplotlib
 def test_plot1d_default_rcparams() -> None:
     import matplotlib as mpl
 
@@ -3376,17 +3390,15 @@ def test_plot1d_default_rcparams() -> None:
         # see overlapping markers:
         fig, ax = plt.subplots(1, 1)
         ds.plot.scatter(x="A", y="B", marker="o", ax=ax)
-        actual: np.ndarray = mpl.colors.to_rgba_array("w")
-        assert isinstance(actual, np.ndarray)
-        expected: np.ndarray = ax.collections[0].get_edgecolor()
-        assert isinstance(expected, np.ndarray)
+        actual: np.ndarray = mpl.colors.to_rgba_array("w")  # type: ignore[assignment] # mpl error?
+        expected: np.ndarray = ax.collections[0].get_edgecolor()  # type: ignore[assignment] # mpl error?
         np.testing.assert_allclose(actual, expected)
 
         # Facetgrids should have the default value as well:
         fg = ds.plot.scatter(x="A", y="B", col="x", marker="o")
         ax = fg.axs.ravel()[0]
-        actual = mpl.colors.to_rgba_array("w")
-        expected = ax.collections[0].get_edgecolor()
+        actual = mpl.colors.to_rgba_array("w")  # type: ignore[assignment] # mpl error?
+        expected = ax.collections[0].get_edgecolor()  # type: ignore[assignment] # mpl error?
         np.testing.assert_allclose(actual, expected)
 
         # scatter should not emit any warnings when using unfilled markers:
@@ -3397,8 +3409,8 @@ def test_plot1d_default_rcparams() -> None:
         # Prioritize edgecolor argument over default plot1d values:
         fig, ax = plt.subplots(1, 1)
         ds.plot.scatter(x="A", y="B", marker="o", ax=ax, edgecolor="k")
-        actual = mpl.colors.to_rgba_array("k")
-        expected = ax.collections[0].get_edgecolor()
+        actual = mpl.colors.to_rgba_array("k")  # type: ignore[assignment] # mpl error?
+        expected = ax.collections[0].get_edgecolor()  # type: ignore[assignment] # mpl error?
         np.testing.assert_allclose(actual, expected)
 
 
