@@ -3390,14 +3390,14 @@ def test_plot1d_default_rcparams() -> None:
         # see overlapping markers:
         fig, ax = plt.subplots(1, 1)
         ds.plot.scatter(x="A", y="B", marker="o", ax=ax)
-        actual: np.ndarray = mpl.colors.to_rgba_array("w")  # type: ignore[assignment] # mpl error?
+        actual: np.ndarray = mpl.colors.to_rgba_array("w")
         expected: np.ndarray = ax.collections[0].get_edgecolor()  # type: ignore[assignment] # mpl error?
         np.testing.assert_allclose(actual, expected)
 
         # Facetgrids should have the default value as well:
         fg = ds.plot.scatter(x="A", y="B", col="x", marker="o")
         ax = fg.axs.ravel()[0]
-        actual = mpl.colors.to_rgba_array("w")  # type: ignore[assignment] # mpl error?
+        actual = mpl.colors.to_rgba_array("w")
         expected = ax.collections[0].get_edgecolor()  # type: ignore[assignment] # mpl error?
         np.testing.assert_allclose(actual, expected)
 
@@ -3409,7 +3409,7 @@ def test_plot1d_default_rcparams() -> None:
         # Prioritize edgecolor argument over default plot1d values:
         fig, ax = plt.subplots(1, 1)
         ds.plot.scatter(x="A", y="B", marker="o", ax=ax, edgecolor="k")
-        actual = mpl.colors.to_rgba_array("k")  # type: ignore[assignment] # mpl error?
+        actual = mpl.colors.to_rgba_array("k")
         expected = ax.collections[0].get_edgecolor()  # type: ignore[assignment] # mpl error?
         np.testing.assert_allclose(actual, expected)
 
