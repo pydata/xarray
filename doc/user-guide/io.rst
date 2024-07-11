@@ -999,7 +999,7 @@ Instead of creating a new copy of the dataset in the Zarr spec/format or
 downloading the files locally, Kerchunk reads through the data archive and extracts the
 byte range and compression information of each chunk and saves as a ``reference``.
 These references are then saved as ``json`` files or ``parquet`` (more efficient)
-for later use. You can view some of these stored in the **references**
+for later use. You can view some of these stored in the `references`
 directory `here <https://github.com/pydata/xarray-data>`_.
 
 
@@ -1022,7 +1022,7 @@ The following example shows opening a combined references generated from a ``.hd
         "target_protocol": "file",
     }
 
-    # add **remote_protocol** key in ``storage_options`` if you're accessing a file remotely
+    # add the `remote_protocol` key in `storage_options` if you're accessing a file remotely
 
     ds1 = xr.open_dataset(
         "./combined.json",
@@ -1034,7 +1034,7 @@ The following example shows opening a combined references generated from a ``.hd
 
 .. note::
 
-    You can refer this `project pythia kerchunk cookbook <https://projectpythia.org/kerchunk-cookbook/README.html>`_ for more information.
+    You can refer to this `project pythia kerchunk cookbook <https://projectpythia.org/kerchunk-cookbook/README.html>`_ for more information.
 
 
 .. _io.iris:
