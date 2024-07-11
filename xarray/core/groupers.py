@@ -107,6 +107,7 @@ class Grouper(ABC):
 class Resampler(Grouper):
     """
     Abstract base class for Grouper objects that allow specializing resampling-type GroupBy instructions.
+
     Currently only used for TimeResampler, but could be used for SpaceResampler in the future.
     """
 

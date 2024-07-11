@@ -290,7 +290,7 @@ is identical to
 
     ds.groupby(x=BinGrouper(bins))
 
-; and
+and
 
 .. code-block:: python
 
