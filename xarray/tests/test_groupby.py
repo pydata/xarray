@@ -873,7 +873,14 @@ def test_groupby_dataset_errors() -> None:
         data.groupby(data.coords["dim1"].to_index())
 
 
-def test_groupby_dataset_reduce() -> None:
+@pytest.mark.parametrize(
+    "by_func",
+    [
+        pytest.param(lambda x: x, id="group-by-string"),
+        pytest.param(lambda x: {x: UniqueGrouper()}, id="group-by-unique-grouper"),
+    ],
+)
+def test_groupby_dataset_reduce_ellipsis(by_func) -> None:
     data = Dataset(
         {
             "xy": (["x", "y"], np.random.randn(3, 4)),
@@ -885,12 +892,12 @@ def test_groupby_dataset_reduce() -> None:
 
     expected = data.mean("y")
     expected["yonly"] = expected["yonly"].variable.set_dims({"x": 3})
-    for gb in [data.groupby("x"), data.groupby(x=UniqueGrouper())]:
-        actual = gb.mean(...)
-        assert_allclose(expected, actual)
+    gb = data.groupby(by_func("x"))
+    actual = gb.mean(...)
+    assert_allclose(expected, actual)
 
-        actual = gb.mean("y")
-        assert_allclose(expected, actual)
+    actual = gb.mean("y")
+    assert_allclose(expected, actual)
 
     letters = data["letters"]
     expected = Dataset(
@@ -900,9 +907,9 @@ def test_groupby_dataset_reduce() -> None:
             "yonly": data["yonly"].groupby(letters).mean(),
         }
     )
-    for gb in [data.groupby("letters"), data.groupby(letters=UniqueGrouper())]:
-        actual = gb.mean(...)
-        assert_allclose(expected, actual)
+    gb = data.groupby(by_func("letters"))
+    actual = gb.mean(...)
+    assert_allclose(expected, actual)
 
 
 @pytest.mark.parametrize("squeeze", [True, False])
@@ -1040,23 +1047,25 @@ def test_groupby_bins_cut_kwargs(use_flox: bool) -> None:
 
 
 @pytest.mark.parametrize("indexed_coord", [True, False])
-def test_groupby_bins_math(indexed_coord) -> None:
+@pytest.mark.parametrize(
+    ["groupby_method", "args"],
+    (
+        ("groupby_bins", ("x", np.arange(0, 8, 3))),
+        ("groupby", ({"x": BinGrouper(bins=np.arange(0, 8, 3))},)),
+    ),
+)
+def test_groupby_bins_math(groupby_method, args, indexed_coord) -> None:
     N = 7
     da = DataArray(np.random.random((N, N)), dims=("x", "y"))
     if indexed_coord:
         da["x"] = np.arange(N)
         da["y"] = np.arange(N)
 
-    for g in [
-        da.groupby_bins("x", np.arange(0, N + 1, 3)),
-        da.groupby(x=BinGrouper(bins=np.arange(0, N + 1, 3))),
-    ]:
-        mean = g.mean()
-        expected = da.isel(x=slice(1, None)) - mean.isel(
-            x_bins=("x", [0, 0, 0, 1, 1, 1])
-        )
-        actual = g - mean
-        assert_identical(expected, actual)
+    g = getattr(da, groupby_method)(*args)
+    mean = g.mean()
+    expected = da.isel(x=slice(1, None)) - mean.isel(x_bins=("x", [0, 0, 0, 1, 1, 1]))
+    actual = g - mean
+    assert_identical(expected, actual)
 
 
 def test_groupby_math_nD_group() -> None:
