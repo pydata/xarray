@@ -811,11 +811,11 @@ def _update_axes(
 def _is_monotonic(coord, axis=0):
     """
     >>> _is_monotonic(np.array([0, 1, 2]))
-    True
+    np.True_
     >>> _is_monotonic(np.array([2, 1, 0]))
-    True
+    np.True_
     >>> _is_monotonic(np.array([0, 2, 1]))
-    False
+    np.False_
     """
     if coord.shape[axis] < 3:
         return True
