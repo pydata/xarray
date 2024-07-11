@@ -883,7 +883,7 @@ class DataTree(
             raise ValueError(f"Invalid format for key: {key}")
 
     def _set(
-        self, key: str, val: DataTree | CoercibleValue, *, copy: bool = True
+        self, key: str, val: DataTree | CoercibleValue, *, fastpath: bool = False
     ) -> None:
         """
         Set the child node or variable with the specified key to value.
@@ -892,7 +892,7 @@ class DataTree(
         """
         if isinstance(val, DataTree):
             # create and assign a shallow copy here so as not to alter original name of node in grafted tree
-            new_node = val.copy(deep=False) if copy else val
+            new_node = val.copy(deep=False) if not fastpath else val
             new_node.name = key
             new_node.parent = self
         else:
@@ -1055,7 +1055,7 @@ class DataTree(
         d: MutableMapping[str, Dataset | DataArray | DataTree | None],
         name: str | None = None,
         *,
-        copy: bool = True,
+        fastpath: bool = False,
     ) -> DataTree:
         """
         Create a datatree from a dictionary of data objects, organised by paths into the tree.
@@ -1071,8 +1071,8 @@ class DataTree(
             To assign data to the root node of the tree use "/" as the path.
         name : Hashable | None, optional
             Name for the root node of the tree. Default is None.
-        copy : bool, optional
-            Whether to make a shallow copy of the values in the dict. Default is True.
+        fastpath : bool, optional
+            Whether to bypass checks and avoid shallow copies of the values in the dict. Default is False.
 
         Returns
         -------
@@ -1086,7 +1086,7 @@ class DataTree(
         # First create the root node
         root_data = d.pop("/", None)
         if isinstance(root_data, DataTree):
-            obj = root_data.copy() if copy else root_data
+            obj = root_data.copy() if not fastpath else root_data
             obj.orphan()
         else:
             obj = cls(name=name, data=root_data, parent=None, children=None)
@@ -1097,7 +1097,7 @@ class DataTree(
                 # Create and set new node
                 node_name = NodePath(path).name
                 if isinstance(data, DataTree):
-                    new_node = data.copy() if copy else data
+                    new_node = data.copy() if not fastpath else data
                     new_node.orphan()
                 else:
                     new_node = cls(name=node_name, data=data)
@@ -1106,7 +1106,7 @@ class DataTree(
                     new_node,
                     allow_overwrite=False,
                     new_nodes_along_path=True,
-                    copy=copy,
+                    fastpath=fastpath,
                 )
 
         return obj

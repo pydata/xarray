@@ -525,12 +525,12 @@ class TestTreeFromDict:
         roundtrip = DataTree.from_dict(dt.to_dict())
         assert roundtrip.equals(dt)
 
-    @pytest.mark.parametrize("copy", [True, False])
-    def test_copy(self, copy: bool) -> None:
+    @pytest.mark.parametrize("copy", [False, True])
+    def test_fastpath(self, fastpath: bool) -> None:
         run1 = DataTree.from_dict({"run1": xr.Dataset({"a": 1})})
-        dt = DataTree.from_dict({"run1": run1}, copy=copy)
+        dt = DataTree.from_dict({"run1": run1}, fastpath=fastpath)
         is_exact = dt["run1"] is run1
-        assert is_exact is not copy
+        assert is_exact is fastpath
 
 
 class TestDatasetView:

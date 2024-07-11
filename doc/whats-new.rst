@@ -22,7 +22,7 @@ v2024.06.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-- Add optional parameter `copy` to :py:func:`xarray.core.datatree.DataTree.from_dict`,
+- Add optional parameter `fastpath` to :py:func:`xarray.core.datatree.DataTree.from_dict`,
   which by default shallow copies the values in the dict. (:pull:`9193`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).

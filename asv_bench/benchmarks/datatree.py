@@ -9,6 +9,6 @@ class Datatree:
         run1 = DataTree.from_dict({"run1": xr.Dataset({"a": 1})})
         self.d = {"run1": run1}
 
-    @parameterized(["copy"], [(True, False)])
-    def time_from_dict(self, copy: bool):
-        DataTree.from_dict(self.d, copy=copy)
+    @parameterized(["fastpath"], [(False, True)])
+    def time_from_dict(self, fastpath: bool):
+        DataTree.from_dict(self.d, fastpath=fastpath)

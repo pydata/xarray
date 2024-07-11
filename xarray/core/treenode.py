@@ -468,7 +468,7 @@ class TreeNode(Generic[Tree]):
                     current_node = current_node.get(part)
         return current_node
 
-    def _set(self: Tree, key: str, val: Tree, *, copy: bool = True) -> None:
+    def _set(self: Tree, key: str, val: Tree, *, fastpath: bool = False) -> None:
         """
         Set the child node with the specified key to value.
 
@@ -484,7 +484,7 @@ class TreeNode(Generic[Tree]):
         new_nodes_along_path: bool = False,
         allow_overwrite: bool = True,
         *,
-        copy: bool = True,
+        fastpath: bool = False,
     ) -> None:
         """
         Set a new item in the tree, overwriting anything already present at that path.
@@ -502,8 +502,8 @@ class TreeNode(Generic[Tree]):
         allow_overwrite : bool
             Whether or not to overwrite any existing node at the location given
             by path.
-        copy : bool, optional
-            Whether to make a shallow copy of the values in the node. Default is True.
+        fastpath : bool, optional
+            Whether to bypass checks and avoid shallow copies of the values in the dict. Default is False.
 
         Raises
         ------
@@ -543,7 +543,7 @@ class TreeNode(Generic[Tree]):
                     elif new_nodes_along_path:
                         # Want child classes (i.e. DataTree) to populate tree with their own types
                         new_node = type(self)()
-                        current_node._set(part, new_node, copy=copy)
+                        current_node._set(part, new_node, fastpath=fastpath)
                         current_node = current_node.children[part]
                     else:
                         raise KeyError(f"Could not reach node at path {path}")
@@ -551,11 +551,11 @@ class TreeNode(Generic[Tree]):
         if name in current_node.children:
             # Deal with anything already existing at this location
             if allow_overwrite:
-                current_node._set(name, item, copy=copy)
+                current_node._set(name, item, fastpath=fastpath)
             else:
                 raise KeyError(f"Already a node object at path {path}")
         else:
-            current_node._set(name, item, copy=copy)
+            current_node._set(name, item, fastpath=fastpath)
 
     def __delitem__(self: Tree, key: str):
         """Remove a child node from this tree object."""
