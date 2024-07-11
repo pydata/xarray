@@ -81,7 +81,7 @@ class Grouper(ABC):
         """
         Do not use.
 
-        .. deprecated:: 2023.03.0
+        .. deprecated:: 2024.01.0
             This is a deprecated method. It will be deleted when the `squeeze` kwarg is deprecated.
             Only ``UniqueGrouper`` should override it.
         """
