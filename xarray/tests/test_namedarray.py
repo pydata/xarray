@@ -79,6 +79,8 @@ class CustomArrayIndexable(
 
 
 def check_duck_array_typevar(a: duckarray[Any, _DType]) -> duckarray[Any, _DType]:
+    reveal_type(a)
+
     # Mypy checks a is valid:
     b: duckarray[Any, _DType] = a
 
