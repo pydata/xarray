@@ -158,9 +158,10 @@ class PlotTestCase:
         plt.close("all")
 
     def pass_in_axis(self, plotmethod, subplot_kw=None) -> None:
-        fig, axs = plt.subplots(ncols=2, subplot_kw=subplot_kw)
-        plotmethod(ax=axs[0])
-        assert axs[0].has_data()
+        fig, axs = plt.subplots(ncols=2, subplot_kw=subplot_kw, squeeze=False)
+        ax = axs[0, 0]
+        plotmethod(ax=ax)
+        assert ax.has_data()
 
     @pytest.mark.slow
     def imshow_called(self, plotmethod) -> bool:
@@ -240,9 +241,9 @@ class TestPlot(PlotTestCase):
 
         xy: list[list[None | str]] = [[None, None], [None, "z"], ["z", None]]
 
-        f, ax = plt.subplots(3, 1)
+        f, axs = plt.subplots(3, 1, squeeze=False)
         for aa, (x, y) in enumerate(xy):
-            da.plot(x=x, y=y, ax=ax.flat[aa])
+            da.plot(x=x, y=y, ax=axs.flat[aa])
 
         with pytest.raises(ValueError, match=r"Cannot specify both"):
             da.plot(x="z", y="z")
@@ -1566,7 +1567,9 @@ class Common2dMixin:
         assert "MyLabel" in alltxt
         assert "testvar" not in alltxt
         # change cbar ax
-        fig, (ax, cax) = plt.subplots(1, 2)
+        fig, axs = plt.subplots(1, 2, squeeze=False)
+        ax = axs[0, 0]
+        cax = axs[0, 1]
         self.plotmethod(
             ax=ax, cbar_ax=cax, add_colorbar=True, cbar_kwargs={"label": "MyBar"}
         )
@@ -1576,7 +1579,9 @@ class Common2dMixin:
         assert "MyBar" in alltxt
         assert "testvar" not in alltxt
         # note that there are two ways to achieve this
-        fig, (ax, cax) = plt.subplots(1, 2)
+        fig, axs = plt.subplots(1, 2, squeeze=False)
+        ax = axs[0, 0]
+        cax = axs[0, 1]
         self.plotmethod(
             ax=ax, add_colorbar=True, cbar_kwargs={"label": "MyBar", "cax": cax}
         )
