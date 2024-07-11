@@ -3377,7 +3377,9 @@ def test_plot1d_default_rcparams() -> None:
         fig, ax = plt.subplots(1, 1)
         ds.plot.scatter(x="A", y="B", marker="o", ax=ax)
         actual: np.ndarray = mpl.colors.to_rgba_array("w")
+        assert isinstance(actual, np.ndarray)
         expected: np.ndarray = ax.collections[0].get_edgecolor()
+        assert isinstance(expected, np.ndarray)
         np.testing.assert_allclose(actual, expected)
 
         # Facetgrids should have the default value as well:
