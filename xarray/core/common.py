@@ -1051,18 +1051,6 @@ class DataWithCoords(AttrAccessMixin):
         from xarray.core.groupers import Resampler, TimeResampler
         from xarray.core.resample import RESAMPLE_DIM
 
-        # note: the second argument (now 'skipna') use to be 'dim'
-        if (
-            (skipna is not None and not isinstance(skipna, bool))
-            or ("how" in indexer_kwargs and "how" not in self.dims)
-            or ("dim" in indexer_kwargs and "dim" not in self.dims)
-        ):
-            raise TypeError(
-                "resample() no longer supports the `how` or "
-                "`dim` arguments. Instead call methods on resample "
-                "objects, e.g., data.resample(time='1D').mean()"
-            )
-
         indexer = either_dict_or_kwargs(indexer, indexer_kwargs, "resample")
         if len(indexer) != 1:
             raise ValueError("Resampling only supported along single dimensions.")
