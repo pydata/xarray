@@ -10681,7 +10681,7 @@ class Dataset(
             **indexer_kwargs,
         )
 
-    def drop_attrs(self, deep: bool = True) -> Self:
+    def drop_attrs(self, *, deep: bool = True) -> Self:
         """
         Removes all attributes from the Dataset and its variables.
 
