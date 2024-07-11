@@ -75,26 +75,6 @@ no_default = (
 NoDefault = Literal[_NoDefault.no_default]  # For typing following pandas
 
 
-def _convert_base_to_offset(base, freq, index):
-    """Required until we officially deprecate the base argument to resample.  This
-    translates a provided `base` argument to an `offset` argument, following logic
-    from pandas.
-    """
-    from xarray.coding.cftimeindex import CFTimeIndex
-
-    if isinstance(index, pd.DatetimeIndex):
-        freq = cftime_offsets._new_to_legacy_freq(freq)
-        freq = pd.tseries.frequencies.to_offset(freq)
-        if isinstance(freq, pd.offsets.Tick):
-            return pd.Timedelta(base * freq.nanos // freq.n)
-    elif isinstance(index, CFTimeIndex):
-        freq = cftime_offsets.to_offset(freq)
-        if isinstance(freq, cftime_offsets.Tick):
-            return base * freq.as_timedelta() // freq.n
-    else:
-        raise ValueError("Can only resample using a DatetimeIndex or CFTimeIndex.")
-
-
 def nanosecond_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
     """Return a nanosecond-precision Timestamp object.
 

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime
 import operator
 import warnings
 from unittest import mock
@@ -2205,19 +2204,6 @@ class TestDataArrayResample:
             # done here due to floating point arithmetic
             assert_allclose(expected, actual, rtol=1e-16)
 
-    def test_resample_base(self) -> None:
-        times = pd.date_range("2000-01-01T02:03:01", freq="6h", periods=10)
-        array = DataArray(np.arange(10), [("time", times)])
-
-        base = 11
-
-        with pytest.warns(FutureWarning, match="the `base` parameter to resample"):
-            actual = array.resample(time="24h", base=base).mean()
-        expected = DataArray(
-            array.to_series().resample("24h", offset=f"{base}h").mean()
-        )
-        assert_identical(expected, actual)
-
     def test_resample_offset(self) -> None:
         times = pd.date_range("2000-01-01T02:03:01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
@@ -2235,38 +2221,6 @@ class TestDataArrayResample:
         actual = array.resample(time="24h", origin=origin).mean()
         expected = DataArray(array.to_series().resample("24h", origin=origin).mean())
         assert_identical(expected, actual)
-
-    @pytest.mark.parametrize(
-        "loffset",
-        [
-            "-12h",
-            datetime.timedelta(hours=-12),
-            pd.Timedelta(hours=-12),
-            pd.DateOffset(hours=-12),
-        ],
-    )
-    def test_resample_loffset(self, loffset) -> None:
-        times = pd.date_range("2000-01-01", freq="6h", periods=10)
-        array = DataArray(np.arange(10), [("time", times)])
-
-        with pytest.warns(FutureWarning, match="`loffset` parameter"):
-            actual = array.resample(time="24h", loffset=loffset).mean()
-        series = array.to_series().resample("24h").mean()
-        if not isinstance(loffset, pd.DateOffset):
-            loffset = pd.Timedelta(loffset)
-        series.index = series.index + loffset
-        expected = DataArray(series)
-        assert_identical(actual, expected)
-
-    def test_resample_invalid_loffset(self) -> None:
-        times = pd.date_range("2000-01-01", freq="6h", periods=10)
-        array = DataArray(np.arange(10), [("time", times)])
-
-        with pytest.warns(
-            FutureWarning, match="Following pandas, the `loffset` parameter"
-        ):
-            with pytest.raises(ValueError, match="`loffset` must be"):
-                array.resample(time="24h", loffset=1).mean()  # type: ignore
 
 
 class TestDatasetResample:
@@ -2337,17 +2291,6 @@ class TestDatasetResample:
         actual = resampled_ds.attrs
         expected = ds.attrs
         assert expected == actual
-
-    def test_resample_loffset(self) -> None:
-        times = pd.date_range("2000-01-01", freq="6h", periods=10)
-        ds = Dataset(
-            {
-                "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
-                "bar": ("time", np.random.randn(10), {"meta": "data"}),
-                "time": times,
-            }
-        )
-        ds.attrs["dsmeta"] = "dsdata"
 
     def test_resample_by_mean_discarding_attrs(self) -> None:
         times = pd.date_range("2000-01-01", freq="6h", periods=10)

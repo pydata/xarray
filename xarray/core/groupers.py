@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -21,11 +21,7 @@ from xarray.core.groupby import T_Group, _DummyGroup
 from xarray.core.indexes import safe_cast_to_index
 from xarray.core.resample_cftime import CFTimeGrouper
 from xarray.core.types import Bins, DatetimeLike, GroupIndices, SideOptions
-from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
-
-if TYPE_CHECKING:
-    pass
 
 __all__ = [
     "EncodedGroups",
@@ -299,17 +295,7 @@ class TimeResampler(Resampler):
         Side of each interval to treat as closed.
     label : {"left", "right"}, optional
         Side of each interval to use for labeling.
-    base : int, optional
-        For frequencies that evenly subdivide 1 day, the "origin" of the
-        aggregated intervals. For example, for "24H" frequency, base could
-        range from 0 through 23.
-
-        .. deprecated:: 2023.03.0
-            Following pandas, the ``base`` parameter is deprecated in favor
-            of the ``origin`` and ``offset`` parameters, and will be removed
-            in a future version of xarray.
-
-    origin : {"epoch", "start", "start_day", "end", "end_day"}, pandas.Timestamp, datetime.datetime, numpy.datetime64, or cftime.datetime, default: "start_day"
+    origin : {'epoch', 'start', 'start_day', 'end', 'end_day'}, pandas.Timestamp, datetime.datetime, numpy.datetime64, or cftime.datetime, default 'start_day'
         The datetime on which to adjust the grouping. The timezone of origin
         must match the timezone of the index.
 
@@ -321,15 +307,6 @@ class TimeResampler(Resampler):
         - 'end_day': `origin` is the ceiling midnight of the last day
     offset : pd.Timedelta, datetime.timedelta, or str, default is None
         An offset timedelta added to the origin.
-    loffset : timedelta or str, optional
-        Offset used to adjust the resampled time labels. Some pandas date
-        offset strings are supported.
-
-        .. deprecated:: 2023.03.0
-            Following pandas, the ``loffset`` parameter is deprecated in favor
-            of using time offset arithmetic, and will be removed in a future
-            version of xarray.
-
     """
 
     freq: str
@@ -337,44 +314,15 @@ class TimeResampler(Resampler):
     label: SideOptions | None = field(default=None)
     origin: str | DatetimeLike = field(default="start_day")
     offset: pd.Timedelta | datetime.timedelta | str | None = field(default=None)
-    loffset: datetime.timedelta | str | None = field(default=None)
-    base: int | None = field(default=None)
 
     index_grouper: CFTimeGrouper | pd.Grouper = field(init=False, repr=False)
     group_as_index: pd.Index = field(init=False, repr=False)
 
-    def __post_init__(self):
-        if self.loffset is not None:
-            emit_user_level_warning(
-                "Following pandas, the `loffset` parameter to resample is deprecated.  "
-                "Switch to updating the resampled dataset time coordinate using "
-                "time offset arithmetic.  For example:\n"
-                "    >>> offset = pd.tseries.frequencies.to_offset(freq) / 2\n"
-                '    >>> resampled_ds["time"] = resampled_ds.get_index("time") + offset',
-                FutureWarning,
-            )
-
-        if self.base is not None:
-            emit_user_level_warning(
-                "Following pandas, the `base` parameter to resample will be deprecated in "
-                "a future version of xarray.  Switch to using `origin` or `offset` instead.",
-                FutureWarning,
-            )
-
-        if self.base is not None and self.offset is not None:
-            raise ValueError("base and offset cannot be present at the same time")
-
     def _init_properties(self, group: T_Group) -> None:
         from xarray import CFTimeIndex
-        from xarray.core.pdcompat import _convert_base_to_offset
 
         group_as_index = safe_cast_to_index(group)
-
-        if self.base is not None:
-            # grouper constructor verifies that grouper.offset is None at this point
-            offset = _convert_base_to_offset(self.base, self.freq, group_as_index)
-        else:
-            offset = self.offset
+        offset = self.offset
 
         if not group_as_index.is_monotonic_increasing:
             # TODO: sort instead of raising an error
@@ -389,7 +337,6 @@ class TimeResampler(Resampler):
                 label=self.label,
                 origin=self.origin,
                 offset=offset,
-                loffset=self.loffset,
             )
         else:
             self.index_grouper = pd.Grouper(
@@ -415,22 +362,22 @@ class TimeResampler(Resampler):
         from xarray.coding.cftimeindex import CFTimeIndex
         from xarray.core.resample_cftime import CFTimeGrouper
 
-        if isinstance(self.index_grouper, CFTimeGrouper):
+        if isinstance(self.group_as_index, CFTimeIndex):
             return self.index_grouper.first_items(
                 cast(CFTimeIndex, self.group_as_index)
             )
-
-        s = pd.Series(np.arange(self.group_as_index.size), self.group_as_index)
-        grouped = s.groupby(self.index_grouper)
-        first_items = grouped.first()
-        counts = grouped.count()
-        # This way we generate codes for the final output index: full_index.
-        # So for _flox_reduce we avoid one reindex and copy by avoiding
-        # _maybe_restore_empty_groups
-        codes = np.repeat(np.arange(len(first_items)), counts)
-        if self.loffset is not None:
-            _apply_loffset(self.loffset, first_items)
-        return first_items, codes
+        else:
+            s = pd.Series(np.arange(self.group_as_index.size), self.group_as_index)
+            grouped = s.groupby(self.index_grouper)
+            first_items = grouped.first()
+            counts = grouped.count()
+            # This way we generate codes for the final output index: full_index.
+            # So for _flox_reduce we avoid one reindex and copy by avoiding
+            # _maybe_restore_empty_groups
+            codes = np.repeat(np.arange(len(first_items)), counts)
+            if self.loffset is not None:
+                _apply_loffset(self.loffset, first_items)
+            return first_items, codes
 
     def factorize(self, group: T_Group) -> EncodedGroups:
         self._init_properties(group)
@@ -452,43 +399,6 @@ class TimeResampler(Resampler):
             full_index=full_index,
             unique_coord=unique_coord,
         )
-
-
-def _apply_loffset(
-    loffset: str | pd.DateOffset | datetime.timedelta | pd.Timedelta,
-    result: pd.Series | pd.DataFrame,
-):
-    """
-    (copied from pandas)
-    if loffset is set, offset the result index
-
-    This is NOT an idempotent routine, it will be applied
-    exactly once to the result.
-
-    Parameters
-    ----------
-    result : Series or DataFrame
-        the result of resample
-    """
-    # pd.Timedelta is a subclass of datetime.timedelta so we do not need to
-    # include it in instance checks.
-    if not isinstance(loffset, (str, pd.DateOffset, datetime.timedelta)):
-        raise ValueError(
-            f"`loffset` must be a str, pd.DateOffset, datetime.timedelta, or pandas.Timedelta object. "
-            f"Got {loffset}."
-        )
-
-    if isinstance(loffset, str):
-        loffset = pd.tseries.frequencies.to_offset(loffset)  # type: ignore[assignment]
-
-    needs_offset = (
-        isinstance(loffset, (pd.DateOffset, datetime.timedelta))
-        and isinstance(result.index, pd.DatetimeIndex)
-        and len(result.index) > 0
-    )
-
-    if needs_offset:
-        result.index = result.index + loffset
 
 
 def unique_value_groups(
