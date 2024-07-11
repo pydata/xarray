@@ -10330,9 +10330,9 @@ class Dataset(
             rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
         else:
             if len(groupers) > 1:
-                raise ValueError("grouping by multiple variables is not supported yet.")
-            if not groupers:
-                raise ValueError
+                raise ValueError("Grouping by multiple variables is not supported yet.")
+            elif not groupers:
+                raise ValueError("Either `group` or `**groupers` must be provided.")
             for group, grouper in groupers.items():
                 rgrouper = ResolvedGrouper(grouper, group, self)
 

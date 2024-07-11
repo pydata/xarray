@@ -6790,7 +6790,7 @@ class DataArray(
             if len(groupers) > 1:
                 raise ValueError("grouping by multiple variables is not supported yet.")
             if not groupers:
-                raise ValueError("**groupers must be provided if `group` is not.")
+                raise ValueError("Either `group` or `**groupers` must be provided.")
             group, grouper = next(iter(groupers.items()))
 
         rgrouper = ResolvedGrouper(grouper, group, self)
