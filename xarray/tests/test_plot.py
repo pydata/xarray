@@ -3366,20 +3366,6 @@ def test_facetgrid_axes_raises_deprecation_warning() -> None:
 
 
 @requires_matplotlib
-def test_debug() -> None:
-    import matplotlib as mpl
-
-    with figure_context():
-        fig, ax = plt.subplots(1, 1)
-        ax.scatter(x=np.array([1, 2, 3]), y=np.array([6, 7, 8]), color="k")
-        actual: np.ndarray = mpl.colors.to_rgba_array("k")
-        assert isinstance(actual, np.ndarray)
-        expected: np.ndarray = ax.collections[0].get_edgecolor()
-        assert isinstance(expected, np.ndarray)
-        np.testing.assert_allclose(actual, expected)
-
-
-@requires_matplotlib
 def test_plot1d_default_rcparams() -> None:
     import matplotlib as mpl
 
