@@ -1587,15 +1587,6 @@ def cross(
     array([-3,  6, -3])
     Dimensions without coordinates: dim_0
 
-    Vector cross-product with 2 dimensions, returns in the perpendicular
-    direction:
-
-    >>> a = xr.DataArray([1, 2])
-    >>> b = xr.DataArray([4, 5])
-    >>> xr.cross(a, b, dim="dim_0")
-    <xarray.DataArray ()> Size: 8B
-    array(-3)
-
     Vector cross-product with 3 dimensions but zeros at the last axis
     yields the same results as with 2 dimensions:
 
@@ -1606,30 +1597,12 @@ def cross(
     array([ 0,  0, -3])
     Dimensions without coordinates: dim_0
 
-    One vector with dimension 2:
+    One vector with different dimension order:
 
     >>> a = xr.DataArray(
-    ...     [1, 2],
+    ...     [1, 2, 0],
     ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "y"])),
-    ... )
-    >>> b = xr.DataArray(
-    ...     [4, 5, 6],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
-    ... )
-    >>> xr.cross(a, b, dim="cartesian")
-    <xarray.DataArray (cartesian: 3)> Size: 24B
-    array([12, -6, -3])
-    Coordinates:
-      * cartesian  (cartesian) <U1 12B 'x' 'y' 'z'
-
-    One vector with dimension 2 but coords in other positions:
-
-    >>> a = xr.DataArray(
-    ...     [1, 2],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "z"])),
+    ...     coords=dict(cartesian=(["cartesian"], ["x", "z", "y"])),
     ... )
     >>> b = xr.DataArray(
     ...     [4, 5, 6],
