@@ -30,7 +30,7 @@ New Features
   to return an object without ``attrs``. A ``deep`` parameter controls whether
   variables' ``attrs`` are also dropped.
   By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
-  
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
