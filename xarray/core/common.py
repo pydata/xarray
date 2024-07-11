@@ -1060,10 +1060,7 @@ class DataWithCoords(AttrAccessMixin):
         dim_coord = self[dim]
 
         group = DataArray(
-            dim_coord,
-            coords=dim_coord.coords,
-            dims=dim_coord.dims,
-            name=RESAMPLE_DIM,
+            dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
         )
 
         grouper: Resampler
