@@ -10258,7 +10258,7 @@ class Dataset(
     def groupby(
         self,
         group: (
-            Hashable | DataArray | IndexVariable | Mapping[Hashable, Grouper] | None
+            Hashable | DataArray | IndexVariable | Mapping[Any, Grouper] | None
         ) = None,
         squeeze: bool | None = None,
         restore_coord_dims: bool = False,
@@ -10268,9 +10268,10 @@ class Dataset(
 
         Parameters
         ----------
-        group : Hashable, DataArray or IndexVariable
+        group : Hashable or DataArray or IndexVariable or mapping of Hashable to Grouper
             Array whose unique values should be used to group this array. If a
-            string, must be the name of a variable contained in this dataset.
+            Hashable, must be the name of a coordinate contained in this dataarray. If a dictionary,
+            must map an existing variable name to a :py:class:`Grouper` instance.
         squeeze : bool, default: True
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
@@ -10278,8 +10279,8 @@ class Dataset(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
-        **groupers : Mapping of hashable to Grouper or Resampler
-            Mapping of variable name to group by to ``Grouper`` or ``Resampler`` object.
+        **groupers : Mapping of str to Grouper or Resampler
+            Mapping of variable name to group by to :py:class:`Grouper` or :py:class:`Resampler` object.
             One of ``group`` or ``groupers`` must be provided.
             Only a single ``grouper`` is allowed at present.
 
@@ -10318,7 +10319,7 @@ class Dataset(
         _validate_groupby_squeeze(squeeze)
 
         if isinstance(group, Mapping):
-            groupers = either_dict_or_kwargs(group, groupers, "groupby")
+            groupers = either_dict_or_kwargs(group, groupers, "groupby")  # type: ignore
             group = None
 
         if group is not None:
@@ -10613,7 +10614,7 @@ class Dataset(
 
     def resample(
         self,
-        indexer: Mapping[Hashable, str | Resampler] | None = None,
+        indexer: Mapping[Any, str | Resampler] | None = None,
         skipna: bool | None = None,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
