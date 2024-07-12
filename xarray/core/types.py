@@ -178,7 +178,7 @@ T_DuckArray = TypeVar("T_DuckArray", bound=Any, covariant=True)
 T_ExtensionArray = TypeVar("T_ExtensionArray", bound=pd.api.extensions.ExtensionArray)
 
 
-ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
+ScalarOrArray = Union["ArrayLike", np.generic]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 DaCompatible = Union["DataArray", "VarCompatible"]
 DsCompatible = Union["Dataset", "DaCompatible"]

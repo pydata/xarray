@@ -1481,7 +1481,7 @@ class TestDataArrayGroupBy:
         with pytest.raises(TypeError, match=r"only support binary ops"):
             grouped + grouped  # type: ignore[type-var]
         with pytest.raises(TypeError, match=r"in-place operations"):
-            array += grouped
+            array += grouped  # type: ignore[arg-type]
 
     def test_groupby_math_not_aligned(self) -> None:
         array = DataArray(
