@@ -24,6 +24,7 @@ in `xr.open_dataset` by specifying the engine to be used:
 
 .. ipython:: python
     :suppress:
+
     import xarray as xr
 
     xr.open_dataset("my_file.grib", engine="cfgrib")
