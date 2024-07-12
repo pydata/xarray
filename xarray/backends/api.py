@@ -398,7 +398,7 @@ def open_dataset(
     chunks: T_Chunks = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
-    mask_and_scale: bool | dict[str, bool] | None = None,
+    mask_and_scale: bool | Mapping[str, bool] | None = None,
     decode_times: bool | None = None,
     decode_timedelta: bool | None = None,
     use_cftime: bool | None = None,
