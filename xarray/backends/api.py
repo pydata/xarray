@@ -399,10 +399,10 @@ def open_dataset(
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool | None = None,
-    decode_timedelta: bool | None = None,
-    use_cftime: bool | None = None,
-    concat_characters: bool | None = None,
+    decode_times: bool | Mapping[str, bool] | None = None,
+    decode_timedelta: bool | Mapping[str, bool] | None = None,
+    use_cftime: bool | Mapping[str, bool] | None = None,
+    concat_characters: bool | Mapping[str, bool] | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
@@ -464,12 +464,16 @@ def open_dataset(
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
+        Pass a mapping, e.g. ``{"my_variable": False}``,
+        to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
     decode_timedelta : bool, optional
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
         If None (default), assume the same value of decode_time.
+        Pass a mapping, e.g. ``{"my_variable": False}``,
+        to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
@@ -480,12 +484,16 @@ def open_dataset(
         ``cftime.datetime`` objects, regardless of whether or not they can be
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
-        raise an error. This keyword may not be supported by all the backends.
+        raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
+        to toggle this feature per-variable individually.
+        This keyword may not be supported by all the backends.
     concat_characters : bool, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
+        Pass a mapping, e.g. ``{"my_variable": False}``,
+        to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
     decode_coords : bool or {"coordinates", "all"}, optional
         Controls which variables are set as coordinate variables:
