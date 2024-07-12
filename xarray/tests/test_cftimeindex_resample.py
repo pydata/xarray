@@ -251,11 +251,11 @@ def test_base_and_offset_error():
 
 
 @pytest.mark.parametrize("offset", ["foo", "5MS", 10])
-def test_invalid_offset_error(offset) -> None:
+def test_invalid_offset_error(offset: str | int) -> None:
     cftime_index = xr.cftime_range("2000", periods=5)
     da_cftime = da(cftime_index)
     with pytest.raises(ValueError, match="offset must be"):
-        da_cftime.resample(time="2D", offset=offset)
+        da_cftime.resample(time="2D", offset=offset)  # type: ignore[arg-type]
 
 
 def test_timedelta_offset() -> None:
