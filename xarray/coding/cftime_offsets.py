@@ -112,8 +112,8 @@ def get_date_type(calendar, use_cftime=True):
 
 
 class BaseCFTimeOffset:
-    _freq: ClassVar[str]
-    _day_option: ClassVar[DayOption]
+    _freq: ClassVar[str | None] = None
+    _day_option: ClassVar[DayOption | None] = None
     n: int
 
     def __init__(self, n: int = 1) -> None:
@@ -124,7 +124,7 @@ class BaseCFTimeOffset:
             )
         self.n = n
 
-    def rule_code(self) -> str:
+    def rule_code(self) -> str | None:
         return self._freq
 
     def __eq__(self, other: object) -> bool:
