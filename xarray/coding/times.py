@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Hashable
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Callable, Literal, Union, cast
+from typing import Callable, Literal, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -36,10 +36,9 @@ try:
 except ImportError:
     cftime = None
 
-if TYPE_CHECKING:
-    from xarray.core.types import CFCalendar, NPDatetimeUnitOptions, T_DuckArray
+from xarray.core.types import CFCalendar, NPDatetimeUnitOptions, T_DuckArray
 
-    T_Name = Union[Hashable, None]
+T_Name = Union[Hashable, None]
 
 # standard calendars recognized by cftime
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
