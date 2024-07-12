@@ -7468,3 +7468,20 @@ class DataArray(
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = utils.UncachedAccessor(StringAccessor["DataArray"])
+
+    def drop_attrs(self, *, deep: bool = True) -> Self:
+        """
+        Removes all attributes from the DataArray.
+
+        Parameters
+        ----------
+        deep : bool, default True
+            Removes attributes from coordinates.
+
+        Returns
+        -------
+        DataArray
+        """
+        return (
+            self._to_temp_dataset().drop_attrs(deep=deep).pipe(self._from_temp_dataset)
+        )

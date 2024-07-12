@@ -15,14 +15,15 @@ from xarray import (
     Dataset,
     Variable,
     cftime_range,
-    coding,
     conventions,
     date_range,
     decode_cf,
 )
+from xarray.coding.times import _STANDARD_CALENDARS as _STANDARD_CALENDARS_UNSORTED
 from xarray.coding.times import (
     CFDatetimeCoder,
     _encode_datetime_with_cftime,
+    _netcdf_to_numpy_timeunit,
     _numpy_to_netcdf_timeunit,
     _should_cftime_be_used,
     cftime_to_nptime,
@@ -44,6 +45,8 @@ from xarray.tests import (
     FirstElementAccessibleArray,
     arm_xfail,
     assert_array_equal,
+    assert_duckarray_allclose,
+    assert_duckarray_equal,
     assert_no_warnings,
     has_cftime,
     requires_cftime,
@@ -58,11 +61,9 @@ _NON_STANDARD_CALENDARS_SET = {
     "all_leap",
     "366_day",
 }
-_ALL_CALENDARS = sorted(
-    _NON_STANDARD_CALENDARS_SET.union(coding.times._STANDARD_CALENDARS)
-)
+_STANDARD_CALENDARS = sorted(_STANDARD_CALENDARS_UNSORTED)
+_ALL_CALENDARS = sorted(_NON_STANDARD_CALENDARS_SET.union(_STANDARD_CALENDARS))
 _NON_STANDARD_CALENDARS = sorted(_NON_STANDARD_CALENDARS_SET)
-_STANDARD_CALENDARS = sorted(coding.times._STANDARD_CALENDARS)
 _CF_DATETIME_NUM_DATES_UNITS = [
     (np.arange(10), "days since 2000-01-01"),
     (np.arange(10).astype("float64"), "days since 2000-01-01"),
@@ -895,10 +896,10 @@ def test_time_units_with_timezone_roundtrip(calendar) -> None:
     )
 
     if calendar in _STANDARD_CALENDARS:
-        np.testing.assert_array_equal(result_num_dates, expected_num_dates)
+        assert_duckarray_equal(result_num_dates, expected_num_dates)
     else:
         # cftime datetime arithmetic is not quite exact.
-        np.testing.assert_allclose(result_num_dates, expected_num_dates)
+        assert_duckarray_allclose(result_num_dates, expected_num_dates)
 
     assert result_units == expected_units
     assert result_calendar == calendar
@@ -1005,7 +1006,7 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
 
     # we don't decode non-standard calendards with
     # pandas so expect no warning will be emitted
-    is_standard_calendar = calendar in coding.times._STANDARD_CALENDARS
+    is_standard_calendar = calendar in _STANDARD_CALENDARS
 
     dates = [1, 2, 3]
     units = "days since 1-1-1"
@@ -1042,7 +1043,7 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(
     units = f"{encoding_units} since 2000-01-01"
     encoded, _units, _ = encode_cf_datetime(times, units)
 
-    numpy_timeunit = coding.times._netcdf_to_numpy_timeunit(encoding_units)
+    numpy_timeunit = _netcdf_to_numpy_timeunit(encoding_units)
     encoding_units_as_timedelta = np.timedelta64(1, numpy_timeunit)
     if pd.to_timedelta(1, freq) >= encoding_units_as_timedelta:
         assert encoded.dtype == np.int64

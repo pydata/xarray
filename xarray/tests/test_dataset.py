@@ -4454,6 +4454,54 @@ class TestDataset:
         assert_identical(new_actual, expected)
         assert actual.attrs == dict(a=1, b=2)
 
+    def test_drop_attrs(self) -> None:
+        # Simple example
+        ds = Dataset().assign_attrs(a=1, b=2)
+        original = ds.copy()
+        expected = Dataset()
+        result = ds.drop_attrs()
+        assert_identical(result, expected)
+
+        # Doesn't change original
+        assert_identical(ds, original)
+
+        # Example with variables and coords with attrs, and a multiindex. (arguably
+        # should have used a canonical dataset with all the features we're should
+        # support...)
+        var = Variable("x", [1, 2, 3], attrs=dict(x=1, y=2))
+        idx = IndexVariable("y", [1, 2, 3], attrs=dict(c=1, d=2))
+        mx = xr.Coordinates.from_pandas_multiindex(
+            pd.MultiIndex.from_tuples([(1, 2), (3, 4)], names=["d", "e"]), "z"
+        )
+        ds = Dataset(dict(var1=var), coords=dict(y=idx, z=mx)).assign_attrs(a=1, b=2)
+        assert ds.attrs != {}
+        assert ds["var1"].attrs != {}
+        assert ds["y"].attrs != {}
+        assert ds.coords["y"].attrs != {}
+
+        original = ds.copy(deep=True)
+        result = ds.drop_attrs()
+
+        assert result.attrs == {}
+        assert result["var1"].attrs == {}
+        assert result["y"].attrs == {}
+        assert list(result.data_vars) == list(ds.data_vars)
+        assert list(result.coords) == list(ds.coords)
+
+        # Doesn't change original
+        assert_identical(ds, original)
+        # Specifically test that the attrs on the coords are still there. (The index
+        # can't currently contain `attrs`, so we can't test those.)
+        assert ds.coords["y"].attrs != {}
+
+        # Test for deep=False
+        result_shallow = ds.drop_attrs(deep=False)
+        assert result_shallow.attrs == {}
+        assert result_shallow["var1"].attrs != {}
+        assert result_shallow["y"].attrs != {}
+        assert list(result.data_vars) == list(ds.data_vars)
+        assert list(result.coords) == list(ds.coords)
+
     def test_assign_multiindex_level(self) -> None:
         data = create_test_multiindex()
         with pytest.raises(ValueError, match=r"cannot drop or update.*corrupt.*index "):
