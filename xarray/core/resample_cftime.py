@@ -124,10 +124,10 @@ class CFTimeGrouper:
         if offset is not None:
             try:
                 self.offset = _convert_offset_to_timedelta(offset)
-            except (AttributeError, TypeError) as error:
+            except (ValueError, TypeError) as error:
                 raise ValueError(
                     f"offset must be a datetime.timedelta object or an offset string "
-                    f"that can be converted to a timedelta.  Got {type(offset)} instead."
+                    f"that can be converted to a timedelta. Got {type(offset)} instead."
                 ) from error
         else:
             self.offset = None
@@ -505,8 +505,8 @@ def _convert_offset_to_timedelta(
         return offset
     if isinstance(offset, (str, Tick)):
         timedelta_cftime_offset = to_offset(offset)
-        assert isinstance(timedelta_cftime_offset, Tick)
-        return timedelta_cftime_offset.as_timedelta()
+        if isinstance(timedelta_cftime_offset, Tick):
+            return timedelta_cftime_offset.as_timedelta()
     raise TypeError(f"Expected timedelta, str or Tick, got {type(offset)}")
 
 
