@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any, Literal, Union, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -383,7 +383,10 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
                 if "calendar" in encoding:
                     bounds_encoding.setdefault("calendar", encoding["calendar"])
 
+
 T = TypeVar("T")
+
+
 def _item_or_default(obj: Mapping[Any, T] | T, key: Hashable, default: T = None) -> T:
     """
     Return item by key if obj is mapping and key is present, else return default value.
