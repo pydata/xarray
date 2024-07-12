@@ -231,7 +231,7 @@ ops_info["VariableOpsMixin"] = (
     + unops()
 )
 ops_info["DatasetGroupByOpsMixin"] = binops(
-    other_type="T_DS | T_DA", return_type="T_DS"
+    other_type="Dataset | DataArray", return_type="Dataset"
 )
 ops_info["DataArrayGroupByOpsMixin"] = binops(
     other_type="T_Xarray", return_type="T_Xarray"
@@ -245,7 +245,7 @@ MODULE_PREAMBLE = '''\
 from __future__ import annotations
 
 import operator
-from typing import Any, Callable, overload
+from typing import TYPE_CHECKING, Any, Callable, overload
 
 from xarray.core import nputils, ops
 from xarray.core.types import (
@@ -255,8 +255,11 @@ from xarray.core.types import (
     T_Xarray,
     VarCompatible,
 )
-from xarray.core.types import T_DataArray as T_DA
-from xarray.core.types import T_Dataset as T_DS'''
+
+if TYPE_CHECKING:
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.types import T_DataArray as T_DA'''
 
 
 CLASS_PREAMBLE = """{newline}
