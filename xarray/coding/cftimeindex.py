@@ -555,6 +555,8 @@ class CFTimeIndex(pd.Index):
         CFTimeIndex([2000-02-01 12:00:00],
                     dtype='object', length=1, calendar='standard', freq=None)
         """
+        from xarray.coding.cftime_offsets import BaseCFTimeOffset
+
         if freq is None:
             # None type is required to be compatible with base pd.Index class
             raise TypeError(
@@ -570,7 +572,7 @@ class CFTimeIndex(pd.Index):
             return self + periods * to_offset(freq)
 
         raise TypeError(
-            f"'freq' must be of type str or datetime.timedelta, got {freq}."
+            f"'freq' must be of type str or datetime.timedelta, got {type(freq)}."
         )
 
     def __add__(self, other) -> Self:
