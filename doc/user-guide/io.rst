@@ -24,6 +24,7 @@ in `xr.open_dataset` by specifying the engine to be used:
 
 .. ipython:: python
     :okexcept:
+    :supress:
 
     import xarray as xr
 
