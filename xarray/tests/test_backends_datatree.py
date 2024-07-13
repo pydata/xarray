@@ -66,7 +66,23 @@ class DatatreeIOBase:
 @requires_netCDF4
 class TestNetCDF4DatatreeIO(DatatreeIOBase):
     engine: T_DataTreeNetcdfEngine | None = "netcdf4"
-
+    keywords: [
+        {"mask_and_scale":True},
+        {"decode_times":True},
+        {"concat_characters":True},
+        {"decode_coords":True},
+        {"drop_variables": str | Iterable[str] | None : None},
+        {"use_cftime":None},
+        {"decode_timedelta":None},
+        {"group": str | Iterable[str] | Callable | None = None,},
+        {"mode":"r"},
+        {"format":"NETCDF4"},
+        {"clobber":True},
+        {"diskless":False},
+        {"persist":False},
+        {"lock":None},
+        {"autoclose":False}
+    ] | None = {}
 
 @requires_h5netcdf
 class TestH5NetCDFDatatreeIO(DatatreeIOBase):
