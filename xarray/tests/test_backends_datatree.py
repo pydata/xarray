@@ -72,6 +72,15 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
 class TestH5NetCDFDatatreeIO(DatatreeIOBase):
     engine: T_DataTreeNetcdfEngine | None = "h5netcdf"
 
+    def test_pass_engine_kwargs(self, tmpdir, simple_datatree):
+        filepath = tmpdir / "test.nc"
+        original_dt = simple_datatree
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        roundtrip_dt = open_datatree(filepath, engine=self.engine, phony_dims="sort")
+        assert_equal(original_dt, roundtrip_dt)
+
+
 
 @requires_zarr
 class TestZarrDatatreeIO:
