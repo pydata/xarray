@@ -23,7 +23,7 @@ You can `read different types of files <https://docs.xarray.dev/en/stable/user-g
 in `xr.open_dataset` by specifying the engine to be used:
 
 .. ipython:: python
-    :suppress:
+    :okexcept:
 
     import xarray as xr
 
