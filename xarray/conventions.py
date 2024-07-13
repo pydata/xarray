@@ -388,8 +388,8 @@ T = TypeVar("T")
 
 
 def _item_or_default(
-    obj: Mapping[Any, T] | T, key: Hashable, default: T | None = None
-) -> T | None:
+    obj: Mapping[Any, T] | T, key: Hashable, default: T
+) -> T:
     """
     Return item by key if obj is mapping and key is present, else return default value.
     """
@@ -456,8 +456,8 @@ def decode_cf_variables(
                 mask_and_scale=_item_or_default(mask_and_scale, k, True),
                 decode_times=_item_or_default(decode_times, k, True),
                 stack_char_dim=stack_char_dim,
-                use_cftime=_item_or_default(use_cftime, k),
-                decode_timedelta=_item_or_default(decode_timedelta, k),
+                use_cftime=_item_or_default(use_cftime, k, None),
+                decode_timedelta=_item_or_default(decode_timedelta, k, None),
             )
         except Exception as e:
             raise type(e)(f"Failed to decode variable {k!r}: {e}") from e
