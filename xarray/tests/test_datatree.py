@@ -1187,6 +1187,16 @@ class TestUFuncs:
         result_tree = np.sin(dt)
         assert_equal(result_tree, expected)
 
+    def test_ufunc_over_duplicated_names_in_tree(
+        self, create_test_multidataset_withoutroot_datatree
+    ):
+        dt = create_test_multidataset_withoutroot_datatree()
+        expected = create_test_multidataset_withoutroot_datatree(
+            modify=lambda ds: np.sin(ds)
+        )
+        result_tree = np.sin(dt)
+        assert_equal(result_tree, expected)
+
 
 class TestDocInsertion:
     """Tests map_over_subtree docstring injection."""
