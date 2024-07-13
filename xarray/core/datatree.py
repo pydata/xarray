@@ -409,6 +409,7 @@ class DataTree(
     _attrs: dict[Hashable, Any] | None
     _encoding: dict[Hashable, Any] | None
     _close: Callable[[], None] | None
+    _attrs: dict[Hashable, Any] | None
 
     __slots__ = (
         "_name",
@@ -422,6 +423,7 @@ class DataTree(
         "_attrs",
         "_encoding",
         "_close",
+        "_attrs",
     )
 
     def __init__(
@@ -430,6 +432,7 @@ class DataTree(
         parent: DataTree | None = None,
         children: Mapping[str, DataTree] | None = None,
         name: str | None = None,
+        attrs: Mapping[Any, Any] | None = None,
     ):
         """
         Create a single node of a DataTree.
@@ -449,6 +452,8 @@ class DataTree(
             Any child nodes of this node. Default is None.
         name : str, optional
             Name for this node of the tree. Default is None.
+        attrs : dict-like, optional
+            Global attributes to save on this datatree.
 
         Returns
         -------
@@ -465,6 +470,7 @@ class DataTree(
         self._set_node_data(_coerce_to_dataset(data))
         self.parent = parent
         self.children = children
+        self._attrs = dict(attrs) if attrs else None
 
     def _set_node_data(self, ds: Dataset):
         data_vars, coord_vars = _collect_data_and_coord_variables(ds)

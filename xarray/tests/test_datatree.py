@@ -1193,3 +1193,23 @@ class TestDocInsertion:
     def test_none(self):
         actual_doc = insert_doc_addendum(None, _MAPPED_DOCSTRING_ADDENDUM)
         assert actual_doc is None
+
+
+class TestDataTreeAttrs:
+    """
+    Test passing ``attrs`` to the DataTree constructor.
+    """
+
+    @pytest.fixture
+    def dataset(self):
+        """Sample dataset fixture."""
+        ds = xr.Dataset({"a": ("x", [0, 3])})
+        return ds
+
+    def test_attrs_argument(self, dataset):
+        """
+        Test passing attrs as argument to the constructor.
+        """
+        attrs = {"foo": "bar"}
+        dt = DataTree(dataset, attrs=attrs)
+        assert dt.attrs == attrs
