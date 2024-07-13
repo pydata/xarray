@@ -682,7 +682,8 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         group: str | Iterable[str] | Callable | None = None,
         **kwargs,
     ) -> DataTree:
-        from xarray.backends.api import open_dataset
+        # TODO: Add function docstring
+
         from xarray.backends.common import _iter_nc_groups
         from xarray.core.datatree import DataTree
         from xarray.core.treenode import NodePath
@@ -692,19 +693,21 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             filename_or_obj,
             group=group,
         )
+
+        # Check for a group and make it a parent if it exists
         if group:
             parent = NodePath("/") / NodePath(group)
         else:
             parent = NodePath("/")
 
         manager = store._manager
-        ds = open_dataset(store, **kwargs)
-        tree_root = DataTree.from_dict({str(parent): ds})
+        groups_dict = {}
+
         for path_group in _iter_nc_groups(store.ds, parent=parent):
             group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
             store_entrypoint = StoreBackendEntrypoint()
             with close_on_error(group_store):
-                ds = store_entrypoint.open_dataset(
+                group_ds = store_entrypoint.open_dataset(
                     group_store,
                     mask_and_scale=mask_and_scale,
                     decode_times=decode_times,
@@ -714,14 +717,66 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-                new_node: DataTree = DataTree(name=NodePath(path_group).name, data=ds)
-                tree_root._set_item(
-                    path_group,
-                    new_node,
-                    allow_overwrite=False,
-                    new_nodes_along_path=True,
+
+            group_name = NodePath(path_group).name
+            groups_dict[group_name] = group_ds
+
+        return DataTree.from_dict(groups_dict)
+
+
+    def open_groups(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group: str | Iterable[str] | Callable | None = None,
+        **kwargs,
+    ) -> dict:
+        # TODO: Add function docstring
+
+        from xarray.backends.common import _iter_nc_groups
+        from xarray.core.treenode import NodePath
+
+        filename_or_obj = _normalize_path(filename_or_obj)
+        store = NetCDF4DataStore.open(
+            filename_or_obj,
+            group=group,
+        )
+
+        # Check for a group and make it a parent if it exists
+        if group:
+            parent = NodePath("/") / NodePath(group)
+        else:
+            parent = NodePath("/")
+
+        manager = store._manager
+
+        groups_dict = {}
+        for path_group in _iter_nc_groups(store.ds, parent=parent):
+            group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
+            store_entrypoint = StoreBackendEntrypoint()
+            with close_on_error(group_store):
+                group_ds = store_entrypoint.open_dataset(
+                    group_store,
+                    mask_and_scale=mask_and_scale,
+                    decode_times=decode_times,
+                    concat_characters=concat_characters,
+                    decode_coords=decode_coords,
+                    drop_variables=drop_variables,
+                    use_cftime=use_cftime,
+                    decode_timedelta=decode_timedelta,
                 )
-        return tree_root
+
+            group_name = NodePath(path_group).name
+            groups_dict[group_name] = group_ds
+
+        return groups_dict
 
 
 BACKEND_ENTRYPOINTS["netcdf4"] = ("netCDF4", NetCDF4BackendEntrypoint)

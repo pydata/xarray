@@ -1758,39 +1758,9 @@ def open_groups(
     open_datatree()
     DataTree.from_dict()
     """
-    filename_or_obj = _normalize_path(filename_or_obj)
-    store = NetCDF4DataStore.open(
-        filename_or_obj,
-        group=group,
-    )
-    if group:
-        parent = NodePath("/") / NodePath(group)
-    else:
-        parent = NodePath("/")
+    if engine is None:
+        engine = plugins.guess_engine(filename_or_obj)
 
-    manager = store._manager
+    backend = plugins.get_backend(engine)
 
-    ds = open_dataset(store, **kwargs)
-    # tree_root = DataTree.from_dict({str(parent): ds})
-    for path_group in _iter_nc_groups(store.ds, parent=parent):
-        group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
-        store_entrypoint = StoreBackendEntrypoint()
-        with close_on_error(group_store):
-            ds = store_entrypoint.open_dataset(
-                group_store,
-                mask_and_scale=mask_and_scale,
-                decode_times=decode_times,
-                concat_characters=concat_characters,
-                decode_coords=decode_coords,
-                drop_variables=drop_variables,
-                use_cftime=use_cftime,
-                decode_timedelta=decode_timedelta,
-            )
-            new_node: DataTree = DataTree(name=NodePath(path_group).name, data=ds)
-            tree_root._set_item(
-                path_group,
-                new_node,
-                allow_overwrite=False,
-                new_nodes_along_path=True,
-            )
-    return tree_root
+    return backend.open_groups(filename_or_obj, **kwargs)

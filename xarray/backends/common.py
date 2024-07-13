@@ -535,6 +535,17 @@ class BackendEntrypoint:
 
         raise NotImplementedError()
 
+    def open_groups(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        **kwargs: Any,
+    ) -> dict[str, Dataset]:
+        """
+        Backend open_groups method used by Xarray in :py:func:`~xarray.open_groups`.
+        """
+
+        raise NotImplementedError()
+
 
 # mapping of engine name to (module name, BackendEntrypoint Class)
 BACKEND_ENTRYPOINTS: dict[str, tuple[str | None, type[BackendEntrypoint]]] = {}
