@@ -387,9 +387,7 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
 T = TypeVar("T")
 
 
-def _item_or_default(
-    obj: Mapping[Any, T] | T, key: Hashable, default: T
-) -> T:
+def _item_or_default(obj: Mapping[Any, T] | T, key: Hashable, default: T) -> T:
     """
     Return item by key if obj is mapping and key is present, else return default value.
     """
