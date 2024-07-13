@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import itertools
 import textwrap
 from collections import ChainMap
@@ -829,7 +830,8 @@ class DataTree(
     ) -> DataTree:
         """Copy just one node of a tree"""
         data = self.ds.copy(deep=deep)
-        new_node: DataTree = DataTree(data, name=self.name)
+        attrs = copy.deepcopy(self.attrs) if deep else self.attrs.copy()
+        new_node: DataTree = DataTree(data, name=self.name, attrs=attrs)
         return new_node
 
     def __copy__(self: DataTree) -> DataTree:
