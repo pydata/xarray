@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
-from typing import Optional
 from functools import partial
 from io import BytesIO
 from numbers import Number
@@ -12,6 +11,7 @@ from typing import (
     Callable,
     Final,
     Literal,
+    Optional,
     Union,
     cast,
     overload,
