@@ -515,7 +515,7 @@ class TestConcatDataset:
         assert_identical(expected, actual)
 
     @pytest.mark.parametrize("data", [False], indirect=["data"])
-    def test_concat_2(self, data) -> None:
+    def test_concat_2(self, data: Dataset) -> None:
         dim = "dim2"
         datasets = [g.squeeze(dim) for _, g in data.groupby(dim, squeeze=False)]
         concat_over = [k for k, v in data.coords.items() if dim in v.dims and k != dim]
