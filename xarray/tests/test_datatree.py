@@ -561,6 +561,13 @@ class TestTreeFromDict:
         roundtrip = DataTree.from_dict(dt.to_dict())
         assert roundtrip.equals(dt)
 
+    def test_roundtrip_noninherited_dupl_names(
+        self, create_test_multidataset_withoutroot_datatree
+    ):
+        dt = create_test_multidataset_withoutroot_datatree()
+        roundtrip = DataTree.from_dict(dt.to_dict())
+        assert roundtrip.equals(dt)
+
 
 class TestDatasetView:
     def test_view_contents(self):
