@@ -723,7 +723,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         return DataTree.from_dict(groups_dict)
 
-
     def open_groups(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,

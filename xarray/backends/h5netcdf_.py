@@ -536,5 +536,4 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         return groups_dict
 
 
-
 BACKEND_ENTRYPOINTS["h5netcdf"] = ("h5netcdf", H5netcdfBackendEntrypoint)
