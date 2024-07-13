@@ -119,6 +119,25 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
 @requires_zarr
 class TestZarrDatatreeIO:
     engine = "zarr"
+    keywords: [
+        {"mask_and_scale":True},
+        {"decode_times":True},
+        {"concat_characters":True},
+        {"decode_coords":True},
+        {"drop_variables":str | Iterable[str] | None = None},
+        {"use_cftime":None},
+        {"decode_timedelta":None},
+        {"group":str | Iterable[str] | Callable | None = None},
+        {"mode":"r"},
+        {"synchronizer":None},
+        {"consolidated":None},
+        {"chunk_store":None},
+        {"storage_options":None},
+        {"stacklevel":3}
+        {"zarr_version":None},
+        {"store":None},
+        {"engine":None}
+    ] | None = {}
 
     def test_to_zarr(self, tmpdir, simple_datatree):
         filepath = tmpdir / "test.zarr"
