@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
-from typing import Optional
 from functools import partial
 from io import BytesIO
 from numbers import Number
@@ -28,7 +27,6 @@ from xarray.backends.common import (
     _normalize_path,
 )
 from xarray.backends.locks import _get_scheduler
-from xarray.backends.netCDF4_ import NetCDF4DataStore
 from xarray.core import indexing
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
@@ -39,7 +37,6 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.indexes import Index
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
-from xarray.core.treenode import NodePath
 from xarray.core.utils import is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
