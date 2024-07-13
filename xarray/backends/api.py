@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
+from typing import Optional
 from functools import partial
 from io import BytesIO
 from numbers import Number
@@ -27,6 +28,7 @@ from xarray.backends.common import (
     _normalize_path,
 )
 from xarray.backends.locks import _get_scheduler
+from xarray.backends.netCDF4_ import NetCDF4DataStore
 from xarray.core import indexing
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
@@ -37,6 +39,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.indexes import Index
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
+from xarray.core.treenode import NodePath
 from xarray.core.utils import is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
@@ -1720,3 +1723,74 @@ def to_zarr(
         return dask.delayed(_finalize_store)(writes, zstore)
 
     return zstore
+
+
+def open_groups(
+    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    engine: T_Engine = None,
+    group: Optional[str] = None,
+    **kwargs,
+) -> dict[str, Dataset]:
+    """
+    Open and decode a file or file-like object, creating a dictionary containing one xarray Dataset for each group in the file.
+
+    Useful when you have e.g. a netCDF file containing many groups, some of which are not alignable with their parents and so the file cannot be opened directly with ``open_datatree``.
+
+    It is encouraged to use this function to inspect your data, then make the necessary changes to make the structure coercible to a `DataTree` object before calling `DataTree.from_dict()` and proceeding with your analysis.
+
+    Parameters
+    ----------
+    filename_or_obj : str, Path, file-like, or DataStore
+        Strings and Path objects are interpreted as a path to a netCDF file or Zarr store.
+    engine : str, optional
+        Xarray backend engine to use. Valid options include `{"netcdf4", "h5netcdf", "zarr"}`.
+    group : str, optional
+        Group to use as the root group to start reading from. Groups above this root group will not be included in the output.
+    **kwargs : dict
+        Additional keyword arguments passed to :py:func:`~xarray.open_dataset` for each group.
+
+    Returns
+    -------
+    dict[str, xarray.Dataset]
+
+    See Also
+    --------
+    open_datatree()
+    DataTree.from_dict()
+    """
+    filename_or_obj = _normalize_path(filename_or_obj)
+    store = NetCDF4DataStore.open(
+        filename_or_obj,
+        group=group,
+    )
+    if group:
+        parent = NodePath("/") / NodePath(group)
+    else:
+        parent = NodePath("/")
+
+    manager = store._manager
+
+    ds = open_dataset(store, **kwargs)
+    # tree_root = DataTree.from_dict({str(parent): ds})
+    for path_group in _iter_nc_groups(store.ds, parent=parent):
+        group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
+        store_entrypoint = StoreBackendEntrypoint()
+        with close_on_error(group_store):
+            ds = store_entrypoint.open_dataset(
+                group_store,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
+            new_node: DataTree = DataTree(name=NodePath(path_group).name, data=ds)
+            tree_root._set_item(
+                path_group,
+                new_node,
+                allow_overwrite=False,
+                new_nodes_along_path=True,
+            )
+    return tree_root
