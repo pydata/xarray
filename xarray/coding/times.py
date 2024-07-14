@@ -626,18 +626,16 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
         raise ModuleNotFoundError("No module named 'cftime'")
 
     dates = np.array(dates)
-
-    if dates.shape == ():
-        dates = dates.reshape(1)
+    original_shape = dates.shape
 
     if np.issubdtype(dates.dtype, np.datetime64):
         # numpy's broken datetime conversion only works for us precision
         dates = dates.astype("M8[us]").astype(datetime)
 
+    dates = np.atleast_1d(dates)
+
     # Find all the None position
     none_position = np.equal(dates, None)
-
-    # Remove None from the dates and return new array
     filtered_dates = dates[~none_position]
 
     # Since netCDF files do not support storing float128 values, we ensure
@@ -651,11 +649,14 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
     except TypeError:
         encoded_nums = cftime.date2num(filtered_dates, units, calendar)
 
+    if filtered_dates.size == none_position.size:
+        return encoded_nums.reshape(original_shape)
+
     # Create a full matrix of NaN
     # And fill the num dates in the not NaN or None position
     result = np.full(dates.shape, np.nan)
     result[np.nonzero(~none_position)] = encoded_nums
-    return result
+    return result.reshape(original_shape)
 
 
 def cast_to_int_if_safe(num) -> np.ndarray:
