@@ -936,9 +936,9 @@ class TestInheritance:
                             np.meshgrid(np.arange(60), np.arange(50))[0],
                         ),
                         "t": ("t", np.arange(30)),
-                        "u": (["t", "yi", "xi"], np.zeros((30, 50, 60))),
-                        "v": (["t", "yi", "xi"], np.zeros((30, 50, 60))),
-                        "p": (["t", "yi", "xi"], np.zeros((30, 50, 60))),
+                        "u": (["t", "yi", "xi"], np.ones((30, 50, 60))),
+                        "v": (["t", "yi", "xi"], np.ones((30, 50, 60))),
+                        "p": (["t", "yi", "xi"], np.ones((30, 50, 60))),
                     }
                 ),
                 "/ovr1": xr.Dataset(
@@ -952,9 +952,9 @@ class TestInheritance:
                             np.meshgrid(np.arange(51), np.arange(51))[0],
                         ),
                         "t": ("t", np.arange(10, 20)),
-                        "u": (["t", "yi", "xi"], np.zeros((10, 51, 51))),
-                        "v": (["t", "yi", "xi"], np.zeros((10, 51, 51))),
-                        "p": (["t", "yi", "xi"], np.zeros((10, 51, 51))),
+                        "u": (["t", "yi", "xi"], np.ones((10, 51, 51))),
+                        "v": (["t", "yi", "xi"], np.ones((10, 51, 51))),
+                        "p": (["t", "yi", "xi"], np.ones((10, 51, 51))),
                         "cx": ("t", np.arange(10, 20)),
                         "cy": ("t", np.arange(10, 20)),
                     }
@@ -970,9 +970,9 @@ class TestInheritance:
                             np.meshgrid(np.arange(51), np.arange(51))[0],
                         ),
                         "t": ("t", np.arange(10, 30)),
-                        "u": (["t", "yi", "xi"], np.zeros((20, 51, 51))),
-                        "v": (["t", "yi", "xi"], np.zeros((20, 51, 51))),
-                        "p": (["t", "yi", "xi"], np.zeros((20, 51, 51))),
+                        "u": (["t", "yi", "xi"], np.ones((20, 51, 51))),
+                        "v": (["t", "yi", "xi"], np.ones((20, 51, 51))),
+                        "p": (["t", "yi", "xi"], np.ones((20, 51, 51))),
                         "cx": ("t", np.arange(10, 30)),
                         "cy": ("t", np.arange(10, 30)),
                     }
@@ -1137,6 +1137,24 @@ class TestDSMethodInheritance:
 
         result = dt.cumsum()
         assert_equal(result, expected)
+
+    def test_dim_sum_over_duplicated_names_in_tree(
+        self, create_test_multidataset_withoutroot_datatree
+    ):
+        dt = create_test_multidataset_withoutroot_datatree()
+        dims = ("t", "xi", "yi")
+        for dname in dims:
+            dtsum = dt.sum(dim=dname)
+            subgroups = dt.groups[1:]
+            for gname in subgroups:
+                subds = dt[gname]
+                sumds = dtsum[gname]
+                assert dname in subds.dims
+                assert dname not in sumds.dims
+                for vname in subds.variables:
+                    if vname != dname:
+                        if dname in subds[vname].dims:
+                            assert (subds[vname].sum(dim=dname) == sumds[vname]).all()
 
 
 class TestOps:
