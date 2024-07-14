@@ -625,25 +625,37 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
     if cftime is None:
         raise ModuleNotFoundError("No module named 'cftime'")
 
+    dates = np.array(dates)
+
+    if dates.shape == ():
+        dates = dates.reshape(1)
+
     if np.issubdtype(dates.dtype, np.datetime64):
         # numpy's broken datetime conversion only works for us precision
         dates = dates.astype("M8[us]").astype(datetime)
 
-    def encode_datetime(d):
-        # Since netCDF files do not support storing float128 values, we ensure
-        # that float64 values are used by setting longdouble=False in num2date.
-        # This try except logic can be removed when xarray's minimum version of
-        # cftime is at least 1.6.2.
-        try:
-            return (
-                np.nan
-                if d is None
-                else cftime.date2num(d, units, calendar, longdouble=False)
-            )
-        except TypeError:
-            return np.nan if d is None else cftime.date2num(d, units, calendar)
+    # Find all the None position
+    none_position = np.equal(dates, None)
 
-    return reshape(np.array([encode_datetime(d) for d in ravel(dates)]), dates.shape)
+    # Remove None from the dates and return new array
+    filtered_dates = dates[~none_position]
+
+    # Since netCDF files do not support storing float128 values, we ensure
+    # that float64 values are used by setting longdouble=False in num2date.
+    # This try except logic can be removed when xarray's minimum version of
+    # cftime is at least 1.6.2.
+    try:
+        encoded_nums = cftime.date2num(
+            filtered_dates, units, calendar, longdouble=False
+        )
+    except TypeError:
+        encoded_nums = cftime.date2num(filtered_dates, units, calendar)
+
+    # Create a full matrix of NaN
+    # And fill the num dates in the not NaN or None position
+    result = np.full(dates.shape, np.nan)
+    result[np.nonzero(~none_position)] = encoded_nums
+    return result
 
 
 def cast_to_int_if_safe(num) -> np.ndarray:
