@@ -79,6 +79,8 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Enable typing checks of pandas (:pull:`9213`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 .. _whats-new.2024.06.0:
 
