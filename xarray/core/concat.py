@@ -598,7 +598,7 @@ def _dataset_concat(
         for ds in datasets:
             if name in ds._indexes:
                 yield ds._indexes[name]
-            elif name == dim:
+            elif name == dim_name:
                 var = ds._variables[name]
                 if not var.dims:
                     data = var.set_dims(dim_name).values
