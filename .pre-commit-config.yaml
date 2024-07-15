@@ -1,6 +1,7 @@
 # https://pre-commit.com/
 ci:
     autoupdate_schedule: monthly
+    skip: ["no-commit-to-branch"]
 exclude: 'xarray/datatree_.*'
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
