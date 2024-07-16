@@ -451,7 +451,7 @@ def open_dataset(
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
         to CF conventions.
-    mask_and_scale : bool or dict, optional
+    mask_and_scale : bool or dict-like, optional
         If True, replace array values equal to `_FillValue` with NA and scale
         values according to the formula `original_values * scale_factor +
         add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
@@ -461,13 +461,13 @@ def open_dataset(
         be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-    decode_times : bool, optional
+    decode_times : bool or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-    decode_timedelta : bool, optional
+    decode_timedelta : bool or dict-like, optional
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
@@ -475,7 +475,7 @@ def open_dataset(
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-    use_cftime: bool, optional
+    use_cftime: bool or dict-like, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. "gregorian", "proleptic_gregorian", "standard", or not
         specified).  If None (default), attempt to decode times to
@@ -487,7 +487,7 @@ def open_dataset(
         raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-    concat_characters : bool, optional
+    concat_characters : bool or dict-like, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
         removed) if they have no corresponding variable and if they are only
