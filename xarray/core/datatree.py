@@ -61,7 +61,7 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
-    from xarray.core.merge import CoercibleValue
+    from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.types import ErrorOptions, NetcdfWriteModes, ZarrWriteModes
 
 # """
@@ -954,23 +954,29 @@ class DataTree(
 
         Just like `dict.update` this is an in-place operation.
         """
-        # TODO separate by type
         new_children: dict[str, DataTree] = {}
-        new_variables = {}
-        for k, v in other.items():
-            if isinstance(v, DataTree):
-                # avoid named node being stored under inconsistent key
-                new_child: DataTree = v.copy()
-                # Datatree's name is always a string until we fix that (#8836)
-                new_child.name = str(k)
-                new_children[str(k)] = new_child
-            elif isinstance(v, (DataArray, Variable)):
-                # TODO this should also accommodate other types that can be coerced into Variables
-                new_variables[k] = v
-            else:
-                raise TypeError(f"Type {type(v)} cannot be assigned to a DataTree")
+        new_variables: CoercibleMapping
 
-        vars_merge_result = dataset_update_method(self.to_dataset(), new_variables)
+        if isinstance(other, Dataset):
+            new_variables = other
+        else:
+            new_variables = {}
+            for k, v in other.items():
+                if isinstance(v, DataTree):
+                    # avoid named node being stored under inconsistent key
+                    new_child: DataTree = v.copy()
+                    # Datatree's name is always a string until we fix that (#8836)
+                    new_child.name = str(k)
+                    new_children[str(k)] = new_child
+                elif isinstance(v, (DataArray, Variable)):
+                    # TODO this should also accommodate other types that can be coerced into Variables
+                    new_variables[k] = v
+                else:
+                    raise TypeError(f"Type {type(v)} cannot be assigned to a DataTree")
+
+        vars_merge_result = dataset_update_method(
+            self.to_dataset(inherited=False), new_variables
+        )
         data = Dataset._construct_direct(**vars_merge_result._asdict())
 
         # TODO are there any subtleties with preserving order of children like this?
