@@ -22,6 +22,9 @@ v2024.06.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Allow per-variable specification of ``mask_and_scale``, ``decode_times``, ``decode_timedelta``
+  ``use_cftime`` and ``concat_characters`` params in :py:func:`~xarray.open_dataset`  (:pull:`9218`).
+  By `Mathijs Verhaegh <https://github.com/Ostheer>`_.
 - Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
 - Extract the source url from fsspec objects (:issue:`9142`, :pull:`8923`).
