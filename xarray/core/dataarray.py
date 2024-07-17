@@ -136,7 +136,11 @@ def _check_coords_dims(shape, coords, dim):
 
 def _infer_coords_and_dims(
     shape: tuple[int, ...],
-    coords: Sequence[Sequence | pd.Index | DataArray] | Mapping | None,
+    coords: (
+        Sequence[Sequence | pd.Index | DataArray | Variable | np.ndarray]
+        | Mapping
+        | None
+    ),
     dims: str | Iterable[Hashable] | None,
 ) -> tuple[Mapping[Hashable, Any], tuple[Hashable, ...]]:
     """All the logic for creating a new DataArray"""
@@ -200,7 +204,11 @@ def _infer_coords_and_dims(
 
 def _check_data_shape(
     data: Any,
-    coords: Sequence[Sequence | pd.Index | DataArray] | Mapping | None,
+    coords: (
+        Sequence[Sequence | pd.Index | DataArray | Variable | np.ndarray]
+        | Mapping
+        | None
+    ),
     dims: str | Iterable[Hashable] | None,
 ) -> Any:
     if data is dtypes.NA:
@@ -414,7 +422,11 @@ class DataArray(
     def __init__(
         self,
         data: Any = dtypes.NA,
-        coords: Sequence[Sequence | pd.Index | DataArray] | Mapping | None = None,
+        coords: (
+            Sequence[Sequence | pd.Index | DataArray | Variable | np.ndarray]
+            | Mapping
+            | None
+        ) = None,
         dims: str | Iterable[Hashable] | None = None,
         name: Hashable | None = None,
         attrs: Mapping | None = None,
@@ -966,7 +978,7 @@ class DataArray(
         return self.xindexes.to_pandas_indexes()
 
     @property
-    def xindexes(self) -> Indexes:
+    def xindexes(self) -> Indexes[Index]:
         """Mapping of :py:class:`~xarray.indexes.Index` objects
         used for label based indexing.
         """
@@ -3005,7 +3017,7 @@ class DataArray(
         if not isinstance(idx, pd.MultiIndex):
             raise ValueError(f"'{dim}' is not a stacked coordinate")
 
-        level_number = idx._get_level_number(level)
+        level_number = idx._get_level_number(level)  # type: ignore[attr-defined]
         variables = idx.levels[level_number]
         variable_dim = idx.names[level_number]
 
@@ -3839,7 +3851,7 @@ class DataArray(
                 "pandas objects. Requires 2 or fewer dimensions."
             )
         indexes = [self.get_index(dim) for dim in self.dims]
-        return constructor(self.values, *indexes)
+        return constructor(self.values, *indexes)  # type: ignore[operator]
 
     def to_dataframe(
         self, name: Hashable | None = None, dim_order: Sequence[Hashable] | None = None
@@ -6882,7 +6894,7 @@ class DataArray(
 
         _validate_groupby_squeeze(squeeze)
         grouper = BinGrouper(
-            bins=bins,
+            bins=bins,  # type: ignore[arg-type]  # TODO: fix this arg or BinGrouper
             right=right,
             labels=labels,
             precision=precision,
@@ -7462,3 +7474,20 @@ class DataArray(
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = utils.UncachedAccessor(StringAccessor["DataArray"])
+
+    def drop_attrs(self, *, deep: bool = True) -> Self:
+        """
+        Removes all attributes from the DataArray.
+
+        Parameters
+        ----------
+        deep : bool, default True
+            Removes attributes from coordinates.
+
+        Returns
+        -------
+        DataArray
+        """
+        return (
+            self._to_temp_dataset().drop_attrs(deep=deep).pipe(self._from_temp_dataset)
+        )

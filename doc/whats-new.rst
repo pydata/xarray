@@ -22,10 +22,17 @@ v2024.06.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Allow per-variable specification of ``mask_and_scale``, ``decode_times``, ``decode_timedelta``
+  ``use_cftime`` and ``concat_characters`` params in :py:func:`~xarray.open_dataset`  (:pull:`9218`).
+  By `Mathijs Verhaegh <https://github.com/Ostheer>`_.
 - Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
 - Extract the source url from fsspec objects (:issue:`9142`, :pull:`8923`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Add :py:meth:`DataArray.drop_attrs` & :py:meth:`Dataset.drop_attrs` methods,
+  to return an object without ``attrs``. A ``deep`` parameter controls whether
+  variables' ``attrs`` are also dropped.
+  By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -75,6 +82,8 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Enable typing checks of pandas (:pull:`9213`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 .. _whats-new.2024.06.0:
 
