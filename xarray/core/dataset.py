@@ -91,6 +91,7 @@ from xarray.core.types import (
     NetcdfWriteModes,
     QuantileMethods,
     Self,
+    T_Bins,
     T_ChunkDim,
     T_Chunks,
     T_DataArray,
@@ -10353,7 +10354,7 @@ class Dataset(
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
-        bins: ArrayLike,
+        bins: T_Bins,
         right: bool = True,
         labels: ArrayLike | None = None,
         precision: int = 3,
@@ -10430,7 +10431,7 @@ class Dataset(
 
         _validate_groupby_squeeze(squeeze)
         grouper = BinGrouper(
-            bins=bins,  # type: ignore[arg-type]  #TODO: fix this here or in BinGrouper?
+            bins=bins,
             right=right,
             labels=labels,
             precision=precision,

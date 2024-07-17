@@ -55,6 +55,7 @@ from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     DaCompatible,
     NetcdfWriteModes,
+    T_Bins,
     T_DataArray,
     T_DataArrayOrSet,
     ZarrWriteModes,
@@ -6817,7 +6818,7 @@ class DataArray(
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
-        bins: ArrayLike,
+        bins: T_Bins,
         right: bool = True,
         labels: ArrayLike | Literal[False] | None = None,
         precision: int = 3,
@@ -6894,7 +6895,7 @@ class DataArray(
 
         _validate_groupby_squeeze(squeeze)
         grouper = BinGrouper(
-            bins=bins,  # type: ignore[arg-type]  # TODO: fix this arg or BinGrouper
+            bins=bins,
             right=right,
             labels=labels,
             precision=precision,

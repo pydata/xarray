@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import datetime
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -21,7 +20,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.groupby import T_Group, _DummyGroup
 from xarray.core.indexes import safe_cast_to_index
 from xarray.core.resample_cftime import CFTimeGrouper
-from xarray.core.types import DatetimeLike, SideOptions, T_GroupIndices
+from xarray.core.types import DatetimeLike, SideOptions, T_Bins, T_GroupIndices
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
 
@@ -234,7 +233,7 @@ class BinGrouper(Grouper):
         If bin edges are not unique, raise ValueError or drop non-uniques.
     """
 
-    bins: int | Sequence | pd.IntervalIndex
+    bins: T_Bins
     # The rest are copied from pandas
     right: bool = True
     labels: Any = None
@@ -249,9 +248,9 @@ class BinGrouper(Grouper):
     def factorize(self, group: T_Group) -> EncodedGroups:
         from xarray.core.dataarray import DataArray
 
-        data = group.data
+        data = np.asarray(group.data)  # Cast _DummyGroup data to array
 
-        binned, self.bins = pd.cut(
+        binned, self.bins = pd.cut(  # type: ignore [call-overload]
             data,
             bins=self.bins,
             right=self.right,

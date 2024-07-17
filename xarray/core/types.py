@@ -296,3 +296,4 @@ ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]
 GroupKey = Any
 GroupIndex = Union[int, slice, list[int]]
 T_GroupIndices = tuple[GroupIndex, ...]
+T_Bins = int | Sequence | np.ndarray | pd.Index
