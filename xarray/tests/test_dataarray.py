@@ -15,9 +15,9 @@ import pytest
 
 # remove once numpy 2.0 is the oldest supported version
 try:
-    from numpy.exceptions import RankWarning  # type: ignore[attr-defined,unused-ignore]
+    from numpy.exceptions import RankWarning
 except ImportError:
-    from numpy import RankWarning
+    from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
 
 import xarray as xr
 from xarray import (
@@ -3522,9 +3522,9 @@ class TestDataArray:
         import sparse
 
         idx = pd.MultiIndex.from_product([np.arange(3), np.arange(5)], names=["a", "b"])
-        series = pd.Series(np.random.RandomState(0).random(len(idx)), index=idx).sample(
-            n=5, random_state=3
-        )
+        series: pd.Series = pd.Series(
+            np.random.RandomState(0).random(len(idx)), index=idx
+        ).sample(n=5, random_state=3)
 
         dense = DataArray.from_series(series, sparse=False)
         expected_coords = sparse.COO.from_numpy(dense.data, np.nan).coords
