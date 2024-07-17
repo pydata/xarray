@@ -217,7 +217,7 @@ class TestVariablesStrategy:
                 warnings.filterwarnings(
                     "ignore", category=UserWarning, message=".+See NEP 47."
                 )
-                from numpy import (  # type: ignore[no-redef,unused-ignore]
+                from numpy import (  # type: ignore[attr-defined,no-redef,unused-ignore]
                     array_api as nxp,
                 )
 
