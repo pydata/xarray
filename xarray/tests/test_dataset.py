@@ -39,6 +39,7 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
+from xarray.core.types import ArrayLike
 from xarray.core.utils import is_scalar
 from xarray.namedarray.pycompat import array_type, integer_types
 from xarray.testing import _assert_internal_invariants
@@ -580,6 +581,7 @@ class TestDataset:
             pandas_obj = a.to_pandas()
             ds_based_on_pandas = Dataset(pandas_obj)  # type: ignore  # TODO: improve typing of __init__
             for dim in ds_based_on_pandas.data_vars:
+                assert isinstance(dim, int)
                 assert_array_equal(ds_based_on_pandas[dim], pandas_obj[dim])
 
     def test_constructor_compat(self) -> None:
@@ -1694,7 +1696,7 @@ class TestDataset:
         with pytest.raises(ValueError):
             ds.sel(ind="bar", method="nearest")
         with pytest.raises(ValueError):
-            ds.sel(ind="bar", tolerance="nearest")
+            ds.sel(ind="bar", tolerance="nearest")  # type: ignore[arg-type]
 
     def test_categorical_index(self) -> None:
         cat = pd.CategoricalIndex(
@@ -2044,9 +2046,9 @@ class TestDataset:
         y = np.random.randn(10)
         t = list("abcdefghij")
         ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
-        actual = ds.to_pandas()
-        expected = ds.to_dataframe()
-        assert expected.equals(actual), (expected, actual)
+        actual_df = ds.to_pandas()
+        expected_df = ds.to_dataframe()
+        assert expected_df.equals(actual_df), (expected_df, actual_df)
 
         # 2D -> error
         x2d = np.random.randn(10, 10)
@@ -3618,6 +3620,7 @@ class TestDataset:
     def test_reorder_levels(self) -> None:
         ds = create_test_multiindex()
         mindex = ds["x"].to_index()
+        assert isinstance(mindex, pd.MultiIndex)
         midx = mindex.reorder_levels(["level_2", "level_1"])
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         expected = Dataset({}, coords=midx_coords)
@@ -3943,7 +3946,9 @@ class TestDataset:
         D = xr.Dataset({"a": a, "b": b})
         sample_dims = ["x"]
         y = D.to_stacked_array("features", sample_dims)
-        assert y.xindexes["features"].to_pandas_index().levels[1].dtype == D.y.dtype
+        mindex = y.xindexes["features"].to_pandas_index()
+        assert isinstance(mindex, pd.MultiIndex)
+        assert mindex.levels[1].dtype == D.y.dtype
         assert y.dims == ("x", "features")
 
     def test_to_stacked_array_to_unstacked_dataset(self) -> None:
@@ -4114,9 +4119,9 @@ class TestDataset:
     def test_virtual_variables_time(self) -> None:
         # access virtual variables
         data = create_test_data()
-        assert_array_equal(
-            data["time.month"].values, data.variables["time"].to_index().month
-        )
+        index = data.variables["time"].to_index()
+        assert isinstance(index, pd.DatetimeIndex)
+        assert_array_equal(data["time.month"].values, index.month)
         assert_array_equal(data["time.season"].values, "DJF")
         # test virtual variable math
         assert_array_equal(data["time.dayofyear"] + 1, 2 + np.arange(20))
@@ -4805,20 +4810,20 @@ class TestDataset:
 
         # check pathological cases
         df = pd.DataFrame([1])
-        actual = Dataset.from_dataframe(df)
-        expected = Dataset({0: ("index", [1])}, {"index": [0]})
-        assert_identical(expected, actual)
+        actual_ds = Dataset.from_dataframe(df)
+        expected_ds = Dataset({0: ("index", [1])}, {"index": [0]})
+        assert_identical(expected_ds, actual_ds)
 
         df = pd.DataFrame()
-        actual = Dataset.from_dataframe(df)
-        expected = Dataset(coords={"index": []})
-        assert_identical(expected, actual)
+        actual_ds = Dataset.from_dataframe(df)
+        expected_ds = Dataset(coords={"index": []})
+        assert_identical(expected_ds, actual_ds)
 
         # GH697
         df = pd.DataFrame({"A": []})
-        actual = Dataset.from_dataframe(df)
-        expected = Dataset({"A": DataArray([], dims=("index",))}, {"index": []})
-        assert_identical(expected, actual)
+        actual_ds = Dataset.from_dataframe(df)
+        expected_ds = Dataset({"A": DataArray([], dims=("index",))}, {"index": []})
+        assert_identical(expected_ds, actual_ds)
 
         # regression test for GH278
         # use int64 to ensure consistent results for the pandas .equals method
@@ -4857,7 +4862,7 @@ class TestDataset:
     def test_from_dataframe_categorical_index_string_categories(self) -> None:
         cat = pd.CategoricalIndex(
             pd.Categorical.from_codes(
-                np.array([1, 1, 0, 2]),
+                np.array([1, 1, 0, 2], dtype=np.int64),  # type: ignore[arg-type]
                 categories=pd.Index(["foo", "bar", "baz"], dtype="string"),
             )
         )
@@ -4942,7 +4947,7 @@ class TestDataset:
     def test_from_dataframe_non_unique_columns(self) -> None:
         # regression test for GH449
         df = pd.DataFrame(np.zeros((2, 2)))
-        df.columns = ["foo", "foo"]
+        df.columns = ["foo", "foo"]  # type: ignore[assignment]
         with pytest.raises(ValueError, match=r"non-unique columns"):
             Dataset.from_dataframe(df)
 
@@ -7231,6 +7236,7 @@ def test_cumulative_integrate(dask) -> None:
 @pytest.mark.parametrize("which_datetime", ["np", "cftime"])
 def test_trapezoid_datetime(dask, which_datetime) -> None:
     rs = np.random.RandomState(42)
+    coord: ArrayLike
     if which_datetime == "np":
         coord = np.array(
             [

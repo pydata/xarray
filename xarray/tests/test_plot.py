@@ -6,7 +6,7 @@ import math
 from collections.abc import Generator, Hashable
 from copy import copy
 from datetime import date, timedelta
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -528,7 +528,7 @@ class TestPlot(PlotTestCase):
             [-0.5, 0.5, 5.0, 9.5, 10.5], _infer_interval_breaks([0, 1, 9, 10])
         )
         assert_array_equal(
-            pd.date_range("20000101", periods=4) - np.timedelta64(12, "h"),
+            pd.date_range("20000101", periods=4) - np.timedelta64(12, "h"),  # type: ignore[operator]
             _infer_interval_breaks(pd.date_range("20000101", periods=3)),
         )
 
@@ -1048,7 +1048,9 @@ class TestDetermineCmapParams:
         assert cmap_params["cmap"].N == 5
         assert cmap_params["norm"].N == 6
 
-        for wrap_levels in [list, np.array, pd.Index, DataArray]:
+        for wrap_levels in cast(
+            list[Callable[[Any], dict[Any, Any]]], [list, np.array, pd.Index, DataArray]
+        ):
             cmap_params = _determine_cmap_params(data, levels=wrap_levels(orig_levels))
             assert_array_equal(cmap_params["levels"], orig_levels)
 

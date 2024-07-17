@@ -10,7 +10,7 @@ import datetime
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -24,6 +24,9 @@ from xarray.core.resample_cftime import CFTimeGrouper
 from xarray.core.types import DatetimeLike, SideOptions, T_GroupIndices
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
+
+if TYPE_CHECKING:
+    pass
 
 __all__ = [
     "EncodedGroups",
@@ -160,6 +163,7 @@ class UniqueGrouper(Grouper):
         # equivalent to: group_indices = group_indices.reshape(-1, 1)
         group_indices: T_GroupIndices = [slice(i, i + 1) for i in range(size)]
         size_range = np.arange(size)
+        full_index: pd.Index
         if isinstance(self.group, _DummyGroup):
             codes = self.group.to_dataarray().copy(data=size_range)
             unique_coord = self.group
@@ -275,7 +279,7 @@ class TimeResampler(Resampler):
         if isinstance(group_as_index, CFTimeIndex):
             from xarray.core.resample_cftime import CFTimeGrouper
 
-            index_grouper = CFTimeGrouper(
+            self.index_grouper = CFTimeGrouper(
                 freq=self.freq,
                 closed=self.closed,
                 label=self.label,
@@ -284,7 +288,7 @@ class TimeResampler(Resampler):
                 loffset=self.loffset,
             )
         else:
-            index_grouper = pd.Grouper(
+            self.index_grouper = pd.Grouper(
                 # TODO remove once requiring pandas >= 2.2
                 freq=_new_to_legacy_freq(self.freq),
                 closed=self.closed,
@@ -292,7 +296,6 @@ class TimeResampler(Resampler):
                 origin=self.origin,
                 offset=offset,
             )
-        self.index_grouper = index_grouper
         self.group_as_index = group_as_index
 
     def _get_index_and_items(self) -> tuple[pd.Index, pd.Series, np.ndarray]:
@@ -305,22 +308,25 @@ class TimeResampler(Resampler):
         return full_index, first_items, codes
 
     def first_items(self) -> tuple[pd.Series, np.ndarray]:
-        from xarray import CFTimeIndex
+        from xarray.coding.cftimeindex import CFTimeIndex
+        from xarray.core.resample_cftime import CFTimeGrouper
 
-        if isinstance(self.group_as_index, CFTimeIndex):
-            return self.index_grouper.first_items(self.group_as_index)
-        else:
-            s = pd.Series(np.arange(self.group_as_index.size), self.group_as_index)
-            grouped = s.groupby(self.index_grouper)
-            first_items = grouped.first()
-            counts = grouped.count()
-            # This way we generate codes for the final output index: full_index.
-            # So for _flox_reduce we avoid one reindex and copy by avoiding
-            # _maybe_restore_empty_groups
-            codes = np.repeat(np.arange(len(first_items)), counts)
-            if self.loffset is not None:
-                _apply_loffset(self.loffset, first_items)
-            return first_items, codes
+        if isinstance(self.index_grouper, CFTimeGrouper):
+            return self.index_grouper.first_items(
+                cast(CFTimeIndex, self.group_as_index)
+            )
+
+        s = pd.Series(np.arange(self.group_as_index.size), self.group_as_index)
+        grouped = s.groupby(self.index_grouper)
+        first_items = grouped.first()
+        counts = grouped.count()
+        # This way we generate codes for the final output index: full_index.
+        # So for _flox_reduce we avoid one reindex and copy by avoiding
+        # _maybe_restore_empty_groups
+        codes = np.repeat(np.arange(len(first_items)), counts)
+        if self.loffset is not None:
+            _apply_loffset(self.loffset, first_items)
+        return first_items, codes
 
     def factorize(self, group) -> EncodedGroups:
         self._init_properties(group)
@@ -369,7 +375,7 @@ def _apply_loffset(
         )
 
     if isinstance(loffset, str):
-        loffset = pd.tseries.frequencies.to_offset(loffset)
+        loffset = pd.tseries.frequencies.to_offset(loffset)  # type: ignore[assignment]
 
     needs_offset = (
         isinstance(loffset, (pd.DateOffset, datetime.timedelta))

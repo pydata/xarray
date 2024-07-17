@@ -66,6 +66,13 @@ class CFTimeGrouper:
     single method, the only one required for resampling in xarray.  It cannot
     be used in a call to groupby like a pandas.Grouper object can."""
 
+    freq: BaseCFTimeOffset
+    closed: SideOptions
+    label: SideOptions
+    loffset: str | datetime.timedelta | BaseCFTimeOffset | None
+    origin: str | CFTimeDatetime
+    offset: datetime.timedelta | None
+
     def __init__(
         self,
         freq: str | BaseCFTimeOffset,
@@ -73,11 +80,8 @@ class CFTimeGrouper:
         label: SideOptions | None = None,
         loffset: str | datetime.timedelta | BaseCFTimeOffset | None = None,
         origin: str | CFTimeDatetime = "start_day",
-        offset: str | datetime.timedelta | None = None,
+        offset: str | datetime.timedelta | BaseCFTimeOffset | None = None,
     ):
-        self.offset: datetime.timedelta | None
-        self.closed: SideOptions
-        self.label: SideOptions
         self.freq = to_offset(freq)
         self.loffset = loffset
         self.origin = origin
@@ -120,10 +124,10 @@ class CFTimeGrouper:
         if offset is not None:
             try:
                 self.offset = _convert_offset_to_timedelta(offset)
-            except (ValueError, AttributeError) as error:
+            except (ValueError, TypeError) as error:
                 raise ValueError(
                     f"offset must be a datetime.timedelta object or an offset string "
-                    f"that can be converted to a timedelta.  Got {offset} instead."
+                    f"that can be converted to a timedelta. Got {type(offset)} instead."
                 ) from error
         else:
             self.offset = None
@@ -250,12 +254,12 @@ def _get_time_bins(
 
 
 def _adjust_bin_edges(
-    datetime_bins: np.ndarray,
+    datetime_bins: CFTimeIndex,
     freq: BaseCFTimeOffset,
     closed: SideOptions,
     index: CFTimeIndex,
-    labels: np.ndarray,
-):
+    labels: CFTimeIndex,
+) -> tuple[CFTimeIndex, CFTimeIndex]:
     """This is required for determining the bin edges resampling with
     month end, quarter end, and year end frequencies.
 
@@ -499,10 +503,11 @@ def _convert_offset_to_timedelta(
 ) -> datetime.timedelta:
     if isinstance(offset, datetime.timedelta):
         return offset
-    elif isinstance(offset, (str, Tick)):
-        return to_offset(offset).as_timedelta()
-    else:
-        raise ValueError
+    if isinstance(offset, (str, Tick)):
+        timedelta_cftime_offset = to_offset(offset)
+        if isinstance(timedelta_cftime_offset, Tick):
+            return timedelta_cftime_offset.as_timedelta()
+    raise TypeError(f"Expected timedelta, str or Tick, got {type(offset)}")
 
 
 def _ceil_via_cftimeindex(date: CFTimeDatetime, freq: str | BaseCFTimeOffset):
