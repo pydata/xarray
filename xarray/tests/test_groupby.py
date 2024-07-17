@@ -734,7 +734,7 @@ def test_groupby_bins_timeseries() -> None:
     expected = xr.DataArray(
         96 * np.ones((14,)),
         dims=["time_bins"],
-        coords={"time_bins": pd.cut(time_bins, time_bins).categories},
+        coords={"time_bins": pd.cut(time_bins, time_bins).categories},  # type: ignore[arg-type]
     ).to_dataset(name="val")
     assert_identical(actual, expected)
 
@@ -868,7 +868,7 @@ def test_groupby_dataset_errors() -> None:
     with pytest.raises(ValueError, match=r"length does not match"):
         data.groupby(data["dim1"][:3])
     with pytest.raises(TypeError, match=r"`group` must be"):
-        data.groupby(data.coords["dim1"].to_index())
+        data.groupby(data.coords["dim1"].to_index())  # type: ignore[arg-type]
 
 
 def test_groupby_dataset_reduce() -> None:
@@ -1624,7 +1624,7 @@ class TestDataArrayGroupBy:
         bins = [0, 1.5, 5]
 
         df = array.to_dataframe()
-        df["dim_0_bins"] = pd.cut(array["dim_0"], bins, **cut_kwargs)
+        df["dim_0_bins"] = pd.cut(array["dim_0"], bins, **cut_kwargs)  # type: ignore[call-overload]
 
         expected_df = df.groupby("dim_0_bins", observed=True).sum()
         # TODO: can't convert df with IntervalIndex to Xarray
@@ -1690,7 +1690,7 @@ class TestDataArrayGroupBy:
         array = DataArray(np.arange(4), [("x", range(4))])
         # one of these bins will be empty
         bins = [0, 4, 5]
-        bin_coords = pd.cut(array["x"], bins).categories
+        bin_coords = pd.cut(array["x"], bins).categories  # type: ignore[call-overload]
         actual = array.groupby_bins("x", bins).sum()
         expected = DataArray([6, np.nan], dims="x_bins", coords={"x_bins": bin_coords})
         assert_identical(expected, actual)
@@ -1701,7 +1701,7 @@ class TestDataArrayGroupBy:
     def test_groupby_bins_multidim(self) -> None:
         array = self.make_groupby_multidim_example_array()
         bins = [0, 15, 20]
-        bin_coords = pd.cut(array["lat"].values.flat, bins).categories
+        bin_coords = pd.cut(array["lat"].values.flat, bins).categories  # type: ignore[call-overload]
         expected = DataArray([16, 40], dims="lat_bins", coords={"lat_bins": bin_coords})
         actual = array.groupby_bins("lat", bins).map(lambda x: x.sum())
         assert_identical(expected, actual)

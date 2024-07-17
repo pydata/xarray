@@ -10,6 +10,7 @@ from packaging.version import Version
 
 import xarray as xr
 from xarray.coding.cftime_offsets import _new_to_legacy_freq
+from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core.pdcompat import _convert_base_to_offset
 from xarray.core.resample_cftime import CFTimeGrouper
 
@@ -204,7 +205,9 @@ def test_calendars(calendar: str) -> None:
         .mean()
     )
     # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
-    da_cftime["time"] = da_cftime.xindexes["time"].to_pandas_index().to_datetimeindex()
+    new_pd_index = da_cftime.xindexes["time"].to_pandas_index()
+    assert isinstance(new_pd_index, CFTimeIndex)  # shouldn't that be a pd.Index?
+    da_cftime["time"] = new_pd_index.to_datetimeindex()
     xr.testing.assert_identical(da_cftime, da_datetime)
 
 
@@ -248,11 +251,11 @@ def test_base_and_offset_error():
 
 
 @pytest.mark.parametrize("offset", ["foo", "5MS", 10])
-def test_invalid_offset_error(offset) -> None:
+def test_invalid_offset_error(offset: str | int) -> None:
     cftime_index = xr.cftime_range("2000", periods=5)
     da_cftime = da(cftime_index)
     with pytest.raises(ValueError, match="offset must be"):
-        da_cftime.resample(time="2D", offset=offset)
+        da_cftime.resample(time="2D", offset=offset)  # type: ignore[arg-type]
 
 
 def test_timedelta_offset() -> None:
@@ -279,7 +282,9 @@ def test_resample_loffset_cftimeindex(loffset) -> None:
         result = da_cftimeindex.resample(time="24h", loffset=loffset).mean()
         expected = da_datetimeindex.resample(time="24h", loffset=loffset).mean()
 
-    result["time"] = result.xindexes["time"].to_pandas_index().to_datetimeindex()
+    index = result.xindexes["time"].to_pandas_index()
+    assert isinstance(index, CFTimeIndex)
+    result["time"] = index.to_datetimeindex()
     xr.testing.assert_identical(result, expected)
 
 
