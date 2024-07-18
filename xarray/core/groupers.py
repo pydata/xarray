@@ -360,8 +360,9 @@ class TimeResampler(Resampler):
 
     def first_items(self) -> tuple[pd.Series, np.ndarray]:
         from xarray.coding.cftimeindex import CFTimeIndex
+        from xarray.core.resample_cftime import CFTimeGrouper
 
-        if isinstance(self.group_as_index, CFTimeIndex):
+        if isinstance(self.index_grouper, CFTimeGrouper):
             return self.index_grouper.first_items(
                 cast(CFTimeIndex, self.group_as_index)
             )
