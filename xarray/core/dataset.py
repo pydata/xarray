@@ -88,10 +88,10 @@ from xarray.core.merge import (
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
+    Bins,
     NetcdfWriteModes,
     QuantileMethods,
     Self,
-    T_Bins,
     T_ChunkDim,
     T_Chunks,
     T_DataArray,
@@ -10354,7 +10354,7 @@ class Dataset(
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
-        bins: T_Bins,
+        bins: Bins,
         right: bool = True,
         labels: ArrayLike | None = None,
         precision: int = 3,
