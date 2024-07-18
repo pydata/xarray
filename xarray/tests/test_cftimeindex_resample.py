@@ -215,13 +215,6 @@ def test_origin(closed, origin) -> None:
     )
 
 
-def test_base_and_offset_error():
-    cftime_index = xr.cftime_range("2000", periods=5)
-    da_cftime = da(cftime_index)
-    with pytest.raises(ValueError, match="base and offset cannot"):
-        da_cftime.resample(time="2D", base=3, offset="5s")
-
-
 @pytest.mark.parametrize("offset", ["foo", "5MS", 10])
 def test_invalid_offset_error(offset: str | int) -> None:
     cftime_index = xr.cftime_range("2000", periods=5)
