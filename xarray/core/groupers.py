@@ -20,7 +20,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.groupby import T_Group, _DummyGroup
 from xarray.core.indexes import safe_cast_to_index
 from xarray.core.resample_cftime import CFTimeGrouper
-from xarray.core.types import DatetimeLike, SideOptions, T_Bins, T_GroupIndices
+from xarray.core.types import Bins, DatetimeLike, GroupIndices, SideOptions
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
 
@@ -61,7 +61,7 @@ class EncodedGroups:
 
     codes: DataArray
     full_index: pd.Index
-    group_indices: T_GroupIndices | None = field(default=None)
+    group_indices: GroupIndices | None = field(default=None)
     unique_coord: Variable | _DummyGroup | None = field(default=None)
 
     def __post_init__(self):
@@ -173,7 +173,7 @@ class UniqueGrouper(Grouper):
         # no need to factorize
         # use slices to do views instead of fancy indexing
         # equivalent to: group_indices = group_indices.reshape(-1, 1)
-        group_indices: T_GroupIndices = tuple(slice(i, i + 1) for i in range(size))
+        group_indices: GroupIndices = tuple(slice(i, i + 1) for i in range(size))
         size_range = np.arange(size)
         full_index: pd.Index
         if isinstance(self.group, _DummyGroup):
@@ -233,7 +233,7 @@ class BinGrouper(Grouper):
         If bin edges are not unique, raise ValueError or drop non-uniques.
     """
 
-    bins: T_Bins
+    bins: Bins
     # The rest are copied from pandas
     right: bool = True
     labels: Any = None
@@ -309,7 +309,7 @@ class TimeResampler(Resampler):
             of the ``origin`` and ``offset`` parameters, and will be removed
             in a future version of xarray.
 
-    origin : {'epoch', 'start', 'start_day', 'end', 'end_day'}, pandas.Timestamp, datetime.datetime, numpy.datetime64, or cftime.datetime, default 'start_day'
+    origin : {"epoch", "start", "start_day", "end", "end_day"}, pandas.Timestamp, datetime.datetime, numpy.datetime64, or cftime.datetime, default: "start_day"
         The datetime on which to adjust the grouping. The timezone of origin
         must match the timezone of the index.
 
@@ -436,7 +436,7 @@ class TimeResampler(Resampler):
         self._init_properties(group)
         full_index, first_items, codes_ = self._get_index_and_items()
         sbins = first_items.values.astype(np.int64)
-        group_indices: T_GroupIndices = tuple(
+        group_indices: GroupIndices = tuple(
             [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])]
             + [slice(sbins[-1], None)]
         )

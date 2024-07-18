@@ -53,9 +53,9 @@ from xarray.core.indexing import is_fancy_indexer, map_index_queries
 from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
+    Bins,
     DaCompatible,
     NetcdfWriteModes,
-    T_Bins,
     T_DataArray,
     T_DataArrayOrSet,
     ZarrWriteModes,
@@ -6818,7 +6818,7 @@ class DataArray(
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
-        bins: T_Bins,
+        bins: Bins,
         right: bool = True,
         labels: ArrayLike | Literal[False] | None = None,
         precision: int = 3,
