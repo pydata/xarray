@@ -229,7 +229,7 @@ class BinGrouper(Grouper):
         The precision at which to store and display the bins labels.
     include_lowest : bool, default False
         Whether the first interval should be left-inclusive or not.
-    duplicates : {"raise", "drop"}, optional
+    duplicates : {"raise", "drop"}, default: "raise"
         If bin edges are not unique, raise ValueError or drop non-uniques.
     """
 
