@@ -360,7 +360,6 @@ class TimeResampler(Resampler):
 
     def first_items(self) -> tuple[pd.Series, np.ndarray]:
         from xarray.coding.cftimeindex import CFTimeIndex
-        from xarray.core.resample_cftime import CFTimeGrouper
 
         if isinstance(self.group_as_index, CFTimeIndex):
             return self.index_grouper.first_items(
@@ -375,8 +374,6 @@ class TimeResampler(Resampler):
             # So for _flox_reduce we avoid one reindex and copy by avoiding
             # _maybe_restore_empty_groups
             codes = np.repeat(np.arange(len(first_items)), counts)
-            if self.loffset is not None:
-                _apply_loffset(self.loffset, first_items)
             return first_items, codes
 
     def factorize(self, group: T_Group) -> EncodedGroups:

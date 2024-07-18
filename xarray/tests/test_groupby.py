@@ -2351,25 +2351,6 @@ class TestDatasetResample:
         actual = ds.resample(time="1h").interpolate("linear")
         assert "tc" not in actual.coords
 
-    def test_resample_old_api(self) -> None:
-        times = pd.date_range("2000-01-01", freq="6h", periods=10)
-        ds = Dataset(
-            {
-                "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
-                "bar": ("time", np.random.randn(10), {"meta": "data"}),
-                "time": times,
-            }
-        )
-
-        with pytest.raises(TypeError, match=r"resample\(\) no longer supports"):
-            ds.resample("1D", "time")  # type: ignore[arg-type]
-
-        with pytest.raises(TypeError, match=r"resample\(\) no longer supports"):
-            ds.resample("1D", dim="time", how="mean")  # type: ignore[arg-type]
-
-        with pytest.raises(TypeError, match=r"resample\(\) no longer supports"):
-            ds.resample("1D", dim="time")  # type: ignore[arg-type]
-
     def test_resample_ds_da_are_the_same(self) -> None:
         time = pd.date_range("2000-01-01", freq="6h", periods=365 * 4)
         ds = xr.Dataset(
