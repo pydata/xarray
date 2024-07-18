@@ -295,4 +295,7 @@ ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]
 
 GroupKey = Any
 GroupIndex = Union[int, slice, list[int]]
-T_GroupIndices = list[GroupIndex]
+GroupIndices = tuple[GroupIndex, ...]
+Bins = Union[
+    int, Sequence[int], Sequence[float], Sequence[pd.Timestamp], np.ndarray, pd.Index
+]

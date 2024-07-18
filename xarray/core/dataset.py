@@ -88,6 +88,7 @@ from xarray.core.merge import (
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
+    Bins,
     NetcdfWriteModes,
     QuantileMethods,
     Self,
@@ -137,6 +138,7 @@ if TYPE_CHECKING:
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
+    from xarray.core.groupers import Grouper, Resampler
     from xarray.core.merge import CoercibleMapping, CoercibleValue, _MergeResult
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
@@ -10263,17 +10265,21 @@ class Dataset(
 
     def groupby(
         self,
-        group: Hashable | DataArray | IndexVariable,
+        group: (
+            Hashable | DataArray | IndexVariable | Mapping[Any, Grouper] | None
+        ) = None,
         squeeze: bool | None = None,
         restore_coord_dims: bool = False,
+        **groupers: Grouper,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
 
         Parameters
         ----------
-        group : Hashable, DataArray or IndexVariable
+        group : Hashable or DataArray or IndexVariable or mapping of Hashable to Grouper
             Array whose unique values should be used to group this array. If a
-            string, must be the name of a variable contained in this dataset.
+            Hashable, must be the name of a coordinate contained in this dataarray. If a dictionary,
+            must map an existing variable name to a :py:class:`Grouper` instance.
         squeeze : bool, default: True
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
@@ -10281,6 +10287,10 @@ class Dataset(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
+        **groupers : Mapping of str to Grouper or Resampler
+            Mapping of variable name to group by to :py:class:`Grouper` or :py:class:`Resampler` object.
+            One of ``group`` or ``groupers`` must be provided.
+            Only a single ``grouper`` is allowed at present.
 
         Returns
         -------
@@ -10315,7 +10325,24 @@ class Dataset(
         from xarray.core.groupers import UniqueGrouper
 
         _validate_groupby_squeeze(squeeze)
-        rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
+
+        if isinstance(group, Mapping):
+            groupers = either_dict_or_kwargs(group, groupers, "groupby")  # type: ignore
+            group = None
+
+        if group is not None:
+            if groupers:
+                raise ValueError(
+                    "Providing a combination of `group` and **groupers is not supported."
+                )
+            rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
+        else:
+            if len(groupers) > 1:
+                raise ValueError("Grouping by multiple variables is not supported yet.")
+            elif not groupers:
+                raise ValueError("Either `group` or `**groupers` must be provided.")
+            for group, grouper in groupers.items():
+                rgrouper = ResolvedGrouper(grouper, group, self)
 
         return DatasetGroupBy(
             self,
@@ -10327,13 +10354,14 @@ class Dataset(
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
-        bins: ArrayLike,
+        bins: Bins,
         right: bool = True,
         labels: ArrayLike | None = None,
         precision: int = 3,
         include_lowest: bool = False,
         squeeze: bool | None = None,
         restore_coord_dims: bool = False,
+        duplicates: Literal["raise", "drop"] = "raise",
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
 
@@ -10370,6 +10398,8 @@ class Dataset(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
+        duplicates : {"raise", "drop"}, default: "raise"
+            If bin edges are not unique, raise ValueError or drop non-uniques.
 
         Returns
         -------
@@ -10401,13 +10431,11 @@ class Dataset(
 
         _validate_groupby_squeeze(squeeze)
         grouper = BinGrouper(
-            bins=bins,  # type: ignore[arg-type]  #TODO: fix this here or in BinGrouper?
-            cut_kwargs={
-                "right": right,
-                "labels": labels,
-                "precision": precision,
-                "include_lowest": include_lowest,
-            },
+            bins=bins,
+            right=right,
+            labels=labels,
+            precision=precision,
+            include_lowest=include_lowest,
         )
         rgrouper = ResolvedGrouper(grouper, group, self)
 
@@ -10594,7 +10622,7 @@ class Dataset(
 
     def resample(
         self,
-        indexer: Mapping[Any, str] | None = None,
+        indexer: Mapping[Any, str | Resampler] | None = None,
         skipna: bool | None = None,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
@@ -10603,7 +10631,7 @@ class Dataset(
         origin: str | DatetimeLike = "start_day",
         loffset: datetime.timedelta | str | None = None,
         restore_coord_dims: bool | None = None,
-        **indexer_kwargs: str,
+        **indexer_kwargs: str | Resampler,
     ) -> DatasetResample:
         """Returns a Resample object for performing resampling operations.
 
