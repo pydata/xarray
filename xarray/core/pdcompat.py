@@ -41,8 +41,6 @@ from typing import Literal
 import pandas as pd
 from packaging.version import Version
 
-from xarray.coding import cftime_offsets
-
 
 def count_not_none(*args) -> int:
     """Compute the number of non-None arguments.
