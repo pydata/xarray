@@ -722,7 +722,7 @@ def test_groupby_reduce_dimension_error(array) -> None:
 
 def test_groupby_multiple_string_args(array) -> None:
     with pytest.raises(TypeError):
-        array.groupby("x", "y")
+        array.groupby("x", squeeze="y")
 
 
 def test_groupby_bins_timeseries() -> None:
@@ -2407,25 +2407,6 @@ class TestDatasetResample:
         # Up-sample - interpolation
         actual = ds.resample(time="1h").interpolate("linear")
         assert "tc" not in actual.coords
-
-    def test_resample_old_api(self) -> None:
-        times = pd.date_range("2000-01-01", freq="6h", periods=10)
-        ds = Dataset(
-            {
-                "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
-                "bar": ("time", np.random.randn(10), {"meta": "data"}),
-                "time": times,
-            }
-        )
-
-        with pytest.raises(TypeError, match=r"resample\(\) no longer supports"):
-            ds.resample("1D", "time")  # type: ignore[arg-type]
-
-        with pytest.raises(TypeError, match=r"resample\(\) no longer supports"):
-            ds.resample("1D", dim="time", how="mean")  # type: ignore[arg-type]
-
-        with pytest.raises(TypeError, match=r"resample\(\) no longer supports"):
-            ds.resample("1D", dim="time")  # type: ignore[arg-type]
 
     def test_resample_ds_da_are_the_same(self) -> None:
         time = pd.date_range("2000-01-01", freq="6h", periods=365 * 4)

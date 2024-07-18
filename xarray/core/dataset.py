@@ -10263,11 +10263,13 @@ class Dataset(
         """
         return interp_calendar(self, target, dim=dim)
 
+    @_deprecate_positional_args("v2024.08.0")
     def groupby(
         self,
         group: (
             Hashable | DataArray | IndexVariable | Mapping[Any, Grouper] | None
         ) = None,
+        *,
         squeeze: bool | None = None,
         restore_coord_dims: bool = False,
         **groupers: Grouper,
@@ -10351,6 +10353,7 @@ class Dataset(
             restore_coord_dims=restore_coord_dims,
         )
 
+    @_deprecate_positional_args("v2024.08.0")
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
@@ -10620,9 +10623,11 @@ class Dataset(
             coord_func=coord_func,
         )
 
+    @_deprecate_positional_args("v2024.08.0")
     def resample(
         self,
         indexer: Mapping[Any, str | Resampler] | None = None,
+        *,
         skipna: bool | None = None,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
