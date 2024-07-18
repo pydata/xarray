@@ -1216,6 +1216,7 @@ class TestDataset:
         ds = Dataset(
             {
                 "pr": ("time", dask.array.random.random((N), chunks=(20))),
+                "pr2d": (("x", "time"), dask.array.random.random((10, N), chunks=(20))),
                 "ones": ("time", np.ones((N,))),
             },
             coords={
@@ -1224,9 +1225,14 @@ class TestDataset:
                 )
             },
         )
-        actual = ds.chunk(time=TimeResampler(freq)).chunksizes["time"]
+        rechunked = ds.chunk(x=2, time=TimeResampler(freq))
         expected = tuple(ds.ones.resample(time=freq).sum().data.tolist())
-        assert expected == actual
+        assert rechunked.chunksizes["time"] == expected
+        assert rechunked.chunksizes["x"] == (2,) * 5
+
+        rechunked = ds.chunk({"x": 2, "time": TimeResampler(freq)})
+        assert rechunked.chunksizes["time"] == expected
+        assert rechunked.chunksizes["x"] == (2,) * 5
 
     def test_chunk_by_frequecy_errors(self):
         ds = Dataset({"foo": ("x", [1, 2, 3])})
