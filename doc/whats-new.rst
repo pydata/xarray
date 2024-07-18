@@ -22,6 +22,12 @@ v2024.06.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Introduce new :py:class:`groupers.UniqueGrouper`, :py:class:`groupers.BinGrouper`, and
+  :py:class:`groupers.TimeResampler` objects as a step towards supporting grouping by
+  multiple variables. See the `docs <groupby.groupers_>` and the
+  `grouper design doc <https://github.com/pydata/xarray/blob/main/design_notes/grouper_objects.md>`_ for more.
+  (:issue:`6610`, :pull:`8840`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Allow per-variable specification of ``mask_and_scale``, ``decode_times``, ``decode_timedelta``
   ``use_cftime`` and ``concat_characters`` params in :py:func:`~xarray.open_dataset`  (:pull:`9218`).
   By `Mathijs Verhaegh <https://github.com/Ostheer>`_.
@@ -82,6 +88,8 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Enable typing checks of pandas (:pull:`9213`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 .. _whats-new.2024.06.0:
 
