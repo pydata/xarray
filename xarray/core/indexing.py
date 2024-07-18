@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
     from xarray.core.indexes import Index
+    from xarray.core.types import Self
     from xarray.core.variable import Variable
     from xarray.namedarray._typing import _Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
@@ -296,15 +297,16 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
 
 
 def _index_indexer_1d(old_indexer, applied_indexer, size: int):
-    assert isinstance(applied_indexer, integer_types + (slice, np.ndarray))
     if isinstance(applied_indexer, slice) and applied_indexer == slice(None):
         # shortcut for the usual case
         return old_indexer
     if isinstance(old_indexer, slice):
         if isinstance(applied_indexer, slice):
             indexer = slice_slice(old_indexer, applied_indexer, size)
+        elif isinstance(applied_indexer, integer_types):
+            indexer = range(*old_indexer.indices(size))[applied_indexer]  # type: ignore[assignment]
         else:
-            indexer = _expand_slice(old_indexer, size)[applied_indexer]  # type: ignore[assignment]
+            indexer = _expand_slice(old_indexer, size)[applied_indexer]
     else:
         indexer = old_indexer[applied_indexer]
     return indexer
@@ -591,7 +593,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
 class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and outer indexing lazy."""
 
-    __slots__ = ("array", "key")
+    __slots__ = ("array", "key", "_shape")
 
     def __init__(self, array: Any, key: ExplicitIndexer | None = None):
         """
@@ -614,6 +616,14 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         self.array = as_indexable(array)
         self.key = key
 
+        shape: _Shape = ()
+        for size, k in zip(self.array.shape, self.key.tuple):
+            if isinstance(k, slice):
+                shape += (len(range(*k.indices(size))),)
+            elif isinstance(k, np.ndarray):
+                shape += (k.size,)
+        self._shape = shape
+
     def _updated_key(self, new_key: ExplicitIndexer) -> BasicIndexer | OuterIndexer:
         iter_new_key = iter(expanded_indexer(new_key.tuple, self.ndim))
         full_key = []
@@ -630,13 +640,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
     @property
     def shape(self) -> _Shape:
-        shape = []
-        for size, k in zip(self.array.shape, self.key.tuple):
-            if isinstance(k, slice):
-                shape.append(len(range(*k.indices(size))))
-            elif isinstance(k, np.ndarray):
-                shape.append(k.size)
-        return tuple(shape)
+        return self._shape
 
     def get_duck_array(self):
         if isinstance(self.array, ExplicitlyIndexedNDArrayMixin):
@@ -1653,6 +1657,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     __slots__ = ("array", "_dtype")
 
+    array: pd.Index
+    _dtype: np.dtype
+
     def __init__(self, array: pd.Index, dtype: DTypeLike = None):
         from xarray.core.indexes import safe_cast_to_index
 
@@ -1789,7 +1796,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def __repr__(self) -> str:
         return f"{type(self).__name__}(array={self.array!r}, dtype={self.dtype!r})"
 
-    def copy(self, deep: bool = True) -> PandasIndexingAdapter:
+    def copy(self, deep: bool = True) -> Self:
         # Not the same as just writing `self.array.copy(deep=deep)`, as
         # shallow copies of the underlying numpy.ndarrays become deep ones
         # upon pickling
@@ -1807,10 +1814,13 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
     This allows creating one instance for each multi-index level while
     preserving indexing efficiency (memoized + might reuse another instance with
     the same multi-index).
-
     """
 
     __slots__ = ("array", "_dtype", "level", "adapter")
+
+    array: pd.MultiIndex
+    _dtype: np.dtype
+    level: str | None
 
     def __init__(
         self,
@@ -1907,7 +1917,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         array_repr = short_array_repr(self._get_array_subset())
         return f"<pre>{escape(array_repr)}</pre>"
 
-    def copy(self, deep: bool = True) -> PandasMultiIndexingAdapter:
+    def copy(self, deep: bool = True) -> Self:
         # see PandasIndexingAdapter.copy
         array = self.array.copy(deep=True) if deep else self.array
         return type(self)(array, self._dtype, self.level)

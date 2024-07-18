@@ -13,7 +13,7 @@ $conda remove -y numba numbagg sparse
 # temporarily remove numexpr
 $conda remove -y numexpr
 # temporarily remove backends
-$conda remove -y cf_units hdf5 h5py netcdf4 pydap
+$conda remove -y pydap
 # forcibly remove packages to avoid artifacts
 $conda remove -y --force \
     numpy \
@@ -37,8 +37,7 @@ python -m pip install \
     numpy \
     scipy \
     matplotlib \
-    pandas \
-    h5py
+    pandas
 # for some reason pandas depends on pyarrow already.
 # Remove once a `pyarrow` version compiled with `numpy>=2.0` is on `conda-forge`
 python -m pip install \
@@ -48,6 +47,8 @@ python -m pip install \
     --pre \
     --upgrade \
     pyarrow
+# manually install `pint` to pull in new dependencies
+python -m pip install --upgrade pint
 python -m pip install \
     --no-deps \
     --upgrade \

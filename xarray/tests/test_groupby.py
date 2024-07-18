@@ -13,6 +13,7 @@ from packaging.version import Version
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core.groupby import _consolidate_slices
+from xarray.core.groupers import BinGrouper, EncodedGroups, Grouper, UniqueGrouper
 from xarray.core.types import InterpOptions
 from xarray.tests import (
     InaccessibleArray,
@@ -113,8 +114,9 @@ def test_multi_index_groupby_map(dataset) -> None:
     assert_equal(expected, actual)
 
 
-def test_reduce_numeric_only(dataset) -> None:
-    gb = dataset.groupby("x", squeeze=False)
+@pytest.mark.parametrize("grouper", [dict(group="x"), dict(x=UniqueGrouper())])
+def test_reduce_numeric_only(dataset, grouper: dict) -> None:
+    gb = dataset.groupby(**grouper, squeeze=False)
     with xr.set_options(use_flox=False):
         expected = gb.sum()
     with xr.set_options(use_flox=True):
@@ -139,8 +141,7 @@ def test_groupby_da_datetime() -> None:
     times = pd.date_range("2000-01-01", periods=4)
     foo = xr.DataArray([1, 2, 3, 4], coords=dict(time=times), dims="time")
     # create test index
-    dd = times.to_pydatetime()
-    reference_dates = [dd[0], dd[2]]
+    reference_dates = [times[0], times[2]]
     labels = reference_dates[0:1] * 2 + reference_dates[1:2] * 2
     ind = xr.DataArray(
         labels, coords=dict(time=times), dims="time", name="reference_date"
@@ -735,7 +736,7 @@ def test_groupby_bins_timeseries() -> None:
     expected = xr.DataArray(
         96 * np.ones((14,)),
         dims=["time_bins"],
-        coords={"time_bins": pd.cut(time_bins, time_bins).categories},
+        coords={"time_bins": pd.cut(time_bins, time_bins).categories},  # type: ignore[arg-type]
     ).to_dataset(name="val")
     assert_identical(actual, expected)
 
@@ -869,10 +870,17 @@ def test_groupby_dataset_errors() -> None:
     with pytest.raises(ValueError, match=r"length does not match"):
         data.groupby(data["dim1"][:3])
     with pytest.raises(TypeError, match=r"`group` must be"):
-        data.groupby(data.coords["dim1"].to_index())
+        data.groupby(data.coords["dim1"].to_index())  # type: ignore[arg-type]
 
 
-def test_groupby_dataset_reduce() -> None:
+@pytest.mark.parametrize(
+    "by_func",
+    [
+        pytest.param(lambda x: x, id="group-by-string"),
+        pytest.param(lambda x: {x: UniqueGrouper()}, id="group-by-unique-grouper"),
+    ],
+)
+def test_groupby_dataset_reduce_ellipsis(by_func) -> None:
     data = Dataset(
         {
             "xy": (["x", "y"], np.random.randn(3, 4)),
@@ -884,10 +892,11 @@ def test_groupby_dataset_reduce() -> None:
 
     expected = data.mean("y")
     expected["yonly"] = expected["yonly"].variable.set_dims({"x": 3})
-    actual = data.groupby("x").mean(...)
+    gb = data.groupby(by_func("x"))
+    actual = gb.mean(...)
     assert_allclose(expected, actual)
 
-    actual = data.groupby("x").mean("y")
+    actual = gb.mean("y")
     assert_allclose(expected, actual)
 
     letters = data["letters"]
@@ -898,7 +907,8 @@ def test_groupby_dataset_reduce() -> None:
             "yonly": data["yonly"].groupby(letters).mean(),
         }
     )
-    actual = data.groupby("letters").mean(...)
+    gb = data.groupby(by_func("letters"))
+    actual = gb.mean(...)
     assert_allclose(expected, actual)
 
 
@@ -1029,15 +1039,29 @@ def test_groupby_bins_cut_kwargs(use_flox: bool) -> None:
     )
     assert_identical(expected, actual)
 
+    with xr.set_options(use_flox=use_flox):
+        actual = da.groupby(
+            x=BinGrouper(bins=x_bins, include_lowest=True, right=False),
+        ).mean()
+    assert_identical(expected, actual)
+
 
 @pytest.mark.parametrize("indexed_coord", [True, False])
-def test_groupby_bins_math(indexed_coord) -> None:
+@pytest.mark.parametrize(
+    ["groupby_method", "args"],
+    (
+        ("groupby_bins", ("x", np.arange(0, 8, 3))),
+        ("groupby", ({"x": BinGrouper(bins=np.arange(0, 8, 3))},)),
+    ),
+)
+def test_groupby_bins_math(groupby_method, args, indexed_coord) -> None:
     N = 7
     da = DataArray(np.random.random((N, N)), dims=("x", "y"))
     if indexed_coord:
         da["x"] = np.arange(N)
         da["y"] = np.arange(N)
-    g = da.groupby_bins("x", np.arange(0, N + 1, 3))
+
+    g = getattr(da, groupby_method)(*args)
     mean = g.mean()
     expected = da.isel(x=slice(1, None)) - mean.isel(x_bins=("x", [0, 0, 0, 1, 1, 1]))
     actual = g - mean
@@ -1625,7 +1649,7 @@ class TestDataArrayGroupBy:
         bins = [0, 1.5, 5]
 
         df = array.to_dataframe()
-        df["dim_0_bins"] = pd.cut(array["dim_0"], bins, **cut_kwargs)
+        df["dim_0_bins"] = pd.cut(array["dim_0"], bins, **cut_kwargs)  # type: ignore[call-overload]
 
         expected_df = df.groupby("dim_0_bins", observed=True).sum()
         # TODO: can't convert df with IntervalIndex to Xarray
@@ -1691,7 +1715,7 @@ class TestDataArrayGroupBy:
         array = DataArray(np.arange(4), [("x", range(4))])
         # one of these bins will be empty
         bins = [0, 4, 5]
-        bin_coords = pd.cut(array["x"], bins).categories
+        bin_coords = pd.cut(array["x"], bins).categories  # type: ignore[call-overload]
         actual = array.groupby_bins("x", bins).sum()
         expected = DataArray([6, np.nan], dims="x_bins", coords={"x_bins": bin_coords})
         assert_identical(expected, actual)
@@ -1702,7 +1726,7 @@ class TestDataArrayGroupBy:
     def test_groupby_bins_multidim(self) -> None:
         array = self.make_groupby_multidim_example_array()
         bins = [0, 15, 20]
-        bin_coords = pd.cut(array["lat"].values.flat, bins).categories
+        bin_coords = pd.cut(array["lat"].values.flat, bins).categories  # type: ignore[call-overload]
         expected = DataArray([16, 40], dims="lat_bins", coords={"lat_bins": bin_coords})
         actual = array.groupby_bins("lat", bins).map(lambda x: x.sum())
         assert_identical(expected, actual)
@@ -1881,7 +1905,7 @@ class TestDataArrayResample:
         array = Dataset({"time": times})["time"]
         actual = array.resample(time="1D").last()
         expected_times = pd.to_datetime(
-            ["2000-01-01T18", "2000-01-02T18", "2000-01-03T06"]
+            ["2000-01-01T18", "2000-01-02T18", "2000-01-03T06"], unit="ns"
         )
         expected = DataArray(expected_times, [("time", times[::4])], name="time")
         assert_identical(expected, actual)
@@ -2038,17 +2062,17 @@ class TestDataArrayResample:
         array = DataArray(np.arange(2), [("time", times)])
 
         # Forward fill
-        actual = array.resample(time="6h").ffill(tolerance="12h")  # type: ignore[arg-type] # TODO: tolerance also allows strings, same issue in .reindex.
+        actual = array.resample(time="6h").ffill(tolerance="12h")
         expected = DataArray([0.0, 0.0, 0.0, np.nan, 1.0], [("time", times_upsampled)])
         assert_identical(expected, actual)
 
         # Backward fill
-        actual = array.resample(time="6h").bfill(tolerance="12h")  # type: ignore[arg-type] # TODO: tolerance also allows strings, same issue in .reindex.
+        actual = array.resample(time="6h").bfill(tolerance="12h")
         expected = DataArray([0.0, np.nan, 1.0, 1.0, 1.0], [("time", times_upsampled)])
         assert_identical(expected, actual)
 
         # Nearest
-        actual = array.resample(time="6h").nearest(tolerance="6h")  # type: ignore[arg-type] # TODO: tolerance also allows strings, same issue in .reindex.
+        actual = array.resample(time="6h").nearest(tolerance="6h")
         expected = DataArray([0, 0, np.nan, 1, 1], [("time", times_upsampled)])
         assert_identical(expected, actual)
 
@@ -2075,13 +2099,18 @@ class TestDataArrayResample:
             "slinear",
             "quadratic",
             "cubic",
+            "polynomial",
         ]
         for kind in kinds:
-            actual = array.resample(time="1h").interpolate(kind)
+            kwargs = {}
+            if kind == "polynomial":
+                kwargs["order"] = 1
+            actual = array.resample(time="1h").interpolate(kind, **kwargs)
+            # using interp1d, polynomial order is to set directly in kind using int
             f = interp1d(
                 np.arange(len(times)),
                 data,
-                kind=kind,
+                kind=kwargs["order"] if kind == "polynomial" else kind,
                 axis=-1,
                 bounds_error=True,
                 assume_sorted=True,
@@ -2148,14 +2177,19 @@ class TestDataArrayResample:
             "slinear",
             "quadratic",
             "cubic",
+            "polynomial",
         ]
         for kind in kinds:
-            actual = array.chunk(chunks).resample(time="1h").interpolate(kind)
+            kwargs = {}
+            if kind == "polynomial":
+                kwargs["order"] = 1
+            actual = array.chunk(chunks).resample(time="1h").interpolate(kind, **kwargs)
             actual = actual.compute()
+            # using interp1d, polynomial order is to set directly in kind using int
             f = interp1d(
                 np.arange(len(times)),
                 data,
-                kind=kind,
+                kind=kwargs["order"] if kind == "polynomial" else kind,
                 axis=-1,
                 bounds_error=True,
                 assume_sorted=True,
@@ -2597,3 +2631,45 @@ def test_default_flox_method() -> None:
         assert kwargs["method"] == "cohorts"
     else:
         assert "method" not in kwargs
+
+
+def test_custom_grouper() -> None:
+    class YearGrouper(Grouper):
+        """
+        An example re-implementation of ``.groupby("time.year")``.
+        """
+
+        def factorize(self, group) -> EncodedGroups:
+            assert np.issubdtype(group.dtype, np.datetime64)
+            year = group.dt.year.data
+            codes_, uniques = pd.factorize(year)
+            codes = group.copy(data=codes_).rename("year")
+            return EncodedGroups(codes=codes, full_index=pd.Index(uniques))
+
+    da = xr.DataArray(
+        dims="time",
+        data=np.arange(20),
+        coords={"time": ("time", pd.date_range("2000-01-01", freq="3MS", periods=20))},
+        name="foo",
+    )
+    ds = da.to_dataset()
+
+    expected = ds.groupby("time.year").mean()
+    actual = ds.groupby(time=YearGrouper()).mean()
+    assert_identical(expected, actual)
+
+    actual = ds.groupby({"time": YearGrouper()}).mean()
+    assert_identical(expected, actual)
+
+    expected = ds.foo.groupby("time.year").mean()
+    actual = ds.foo.groupby(time=YearGrouper()).mean()
+    assert_identical(expected, actual)
+
+    actual = ds.foo.groupby({"time": YearGrouper()}).mean()
+    assert_identical(expected, actual)
+
+    for obj in [ds, ds.foo]:
+        with pytest.raises(ValueError):
+            obj.groupby("time.year", time=YearGrouper())
+        with pytest.raises(ValueError):
+            obj.groupby()

@@ -38,6 +38,7 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.groupers import Resampler
     from xarray.core.indexes import Index
     from xarray.core.resample import Resample
     from xarray.core.rolling_exp import RollingExp
@@ -345,6 +346,24 @@ class AttrAccessMixin:
             if isinstance(item, str)
         }
         return list(items)
+
+
+class TreeAttrAccessMixin(AttrAccessMixin):
+    """Mixin class that allows getting keys with attribute access"""
+
+    # TODO: Ensure ipython tab completion can include both child datatrees and
+    # variables from Dataset objects on relevant nodes.
+
+    __slots__ = ()
+
+    def __init_subclass__(cls, **kwargs):
+        """This method overrides the check from ``AttrAccessMixin`` that ensures
+        ``__dict__`` is absent in a class, with ``__slots__`` used instead.
+        ``DataTree`` has some dynamically defined attributes in addition to those
+        defined in ``__slots__``. (GH9068)
+        """
+        if not hasattr(object.__new__(cls), "__dict__"):
+            pass
 
 
 def get_squeeze_dims(
@@ -858,7 +877,7 @@ class DataWithCoords(AttrAccessMixin):
     def _resample(
         self,
         resample_cls: type[T_Resample],
-        indexer: Mapping[Any, str] | None,
+        indexer: Mapping[Hashable, str | Resampler] | None,
         skipna: bool | None,
         closed: SideOptions | None,
         label: SideOptions | None,
@@ -867,7 +886,7 @@ class DataWithCoords(AttrAccessMixin):
         origin: str | DatetimeLike,
         loffset: datetime.timedelta | str | None,
         restore_coord_dims: bool | None,
-        **indexer_kwargs: str,
+        **indexer_kwargs: str | Resampler,
     ) -> T_Resample:
         """Returns a Resample object for performing resampling operations.
 
@@ -1049,7 +1068,8 @@ class DataWithCoords(AttrAccessMixin):
         # TODO support non-string indexer after removing the old API.
 
         from xarray.core.dataarray import DataArray
-        from xarray.core.groupby import ResolvedGrouper, TimeResampler
+        from xarray.core.groupby import ResolvedGrouper
+        from xarray.core.groupers import Resampler, TimeResampler
         from xarray.core.resample import RESAMPLE_DIM
 
         # note: the second argument (now 'skipna') use to be 'dim'
@@ -1079,15 +1099,21 @@ class DataWithCoords(AttrAccessMixin):
             name=RESAMPLE_DIM,
         )
 
-        grouper = TimeResampler(
-            freq=freq,
-            closed=closed,
-            label=label,
-            origin=origin,
-            offset=offset,
-            loffset=loffset,
-            base=base,
-        )
+        grouper: Resampler
+        if isinstance(freq, str):
+            grouper = TimeResampler(
+                freq=freq,
+                closed=closed,
+                label=label,
+                origin=origin,
+                offset=offset,
+                loffset=loffset,
+                base=base,
+            )
+        elif isinstance(freq, Resampler):
+            grouper = freq
+        else:
+            raise ValueError("freq must be a str or a Resampler object")
 
         rgrouper = ResolvedGrouper(grouper, group, self)
 
