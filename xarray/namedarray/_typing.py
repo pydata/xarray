@@ -153,13 +153,16 @@ class _arrayfunction(
     ) -> _arrayfunction[Any, _DType_co] | Any: ...
 
     @overload
-    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]: ...
-
+    def __array__(
+        self, dtype: None = ..., /, *, copy: None | bool = ...
+    ) -> np.ndarray[Any, _DType_co]: ...
     @overload
-    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]: ...
+    def __array__(
+        self, dtype: _DType, /, *, copy: None | bool = ...
+    ) -> np.ndarray[Any, _DType]: ...
 
     def __array__(
-        self, dtype: _DType | None = ..., /
+        self, dtype: _DType | None = ..., /, *, copy: None | bool = ...
     ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]: ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
@@ -211,9 +214,9 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _arrayfunction_or_api = (_arrayfunction, _arrayapi)
 
-duckarray: TypeAlias = (
-    _arrayfunction[_ShapeType_co, _DType_co] | _arrayapi[_ShapeType_co, _DType_co]
-)
+duckarray = Union[
+    _arrayfunction[_ShapeType_co, _DType_co], _arrayapi[_ShapeType_co, _DType_co]
+]
 
 
 # Corresponds to np.typing.NDArray:
