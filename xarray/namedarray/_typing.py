@@ -212,7 +212,7 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
 _arrayfunction_or_api = (_arrayfunction, _arrayapi)
 
 duckarray: TypeAlias = (
-    _arrayfunction[_ShapeType, _DType] | _arrayapi[_ShapeType, _DType]
+    _arrayfunction[_ShapeType_co, _DType_co] | _arrayapi[_ShapeType_co, _DType_co]
 )
 
 

@@ -250,14 +250,14 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     __slots__ = ("_data", "_dims", "_attrs")
 
-    _data: duckarray[Any, _DType_co]
+    _data: duckarray[_ShapeType_co, _DType_co]
     _dims: _Dims
     _attrs: dict[Any, Any] | None
 
     def __init__(
         self,
         dims: _DimsLike,
-        data: duckarray[Any, _DType_co],
+        data: duckarray[_ShapeType_co, _DType_co],
         attrs: _AttrsLike = None,
     ):
         self._data = data
@@ -292,7 +292,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def _new(
         self,
         dims: _DimsLike | Default = _default,
-        data: duckarray[Any, _DType] | Default = _default,
+        data: duckarray[_ShapeType, _DType] | Default = _default,
         attrs: _AttrsLike | Default = _default,
     ) -> NamedArray[_ShapeType, _DType] | NamedArray[_ShapeType_co, _DType_co]:
         """
@@ -447,7 +447,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self._data.dtype
 
     @property
-    def shape(self) -> _Shape:
+    def shape(self) -> _ShapeType_co:
         """
         Get the shape of the array.
 
@@ -850,9 +850,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         # TODO an entrypoint so array libraries can choose coercion method?
         return to_numpy(self._data)
 
-    def as_numpy(self) -> Self:
+    def as_numpy(self) -> NamedArray[Any, Any]:
         """Coerces wrapped data into a numpy array, returning a Variable."""
-        return self._replace(data=self.to_numpy())
+        return self._new(data=self.to_numpy())
 
     def reduce(
         self,
