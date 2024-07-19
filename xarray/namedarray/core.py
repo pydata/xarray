@@ -56,6 +56,7 @@ if TYPE_CHECKING:
     from xarray.core.types import Dims
     from xarray.namedarray._typing import (
         Default,
+        _arrayfunction,
         _AttrsLike,
         _Chunks,
         _Dim,
@@ -66,7 +67,6 @@ if TYPE_CHECKING:
         _ScalarType,
         _Shape,
         _ShapeType,
-        _arrayfunction,
         duckarray,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
