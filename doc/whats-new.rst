@@ -45,6 +45,11 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- The ``base`` and ``loffset`` parameters to :py:meth:`Dataset.resample` and :py:meth:`DataArray.resample`
+  is now removed. These parameters has been deprecated since v2023.03.0. Using the
+  ``origin`` or ``offset`` parameters is recommended as a replacement for using
+  the ``base`` parameter and using time offset arithmetic is recommended as a
+  replacement for using the ``loffset`` parameter.
 
 
 Deprecations
