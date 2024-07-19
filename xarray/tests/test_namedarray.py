@@ -30,6 +30,7 @@ if TYPE_CHECKING:
         _DType,
         _IndexKeyLike,
         _IntOrUnknown,
+        _Shape,
         _ShapeLike,
         duckarray,
     )
