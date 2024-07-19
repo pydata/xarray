@@ -56,6 +56,7 @@ if TYPE_CHECKING:
     from xarray.core.types import Dims
     from xarray.namedarray._typing import (
         Default,
+        _arrayfunction,
         _AttrsLike,
         _Chunks,
         _Dim,
@@ -66,7 +67,6 @@ if TYPE_CHECKING:
         _ScalarType,
         _Shape,
         _ShapeType,
-        _arrayfunction,
         duckarray,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
@@ -1194,7 +1194,7 @@ reveal_type(a)
 
 
 # %% Class should pass
-from typing import Generic, TypeVar, Protocol, Union
+from typing import Generic, Protocol, TypeVar, Union
 
 _ST = TypeVar("_ST", bound=Any, covariant=True)
 _DT = TypeVar("_DT", bound=Any, covariant=True)
