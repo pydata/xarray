@@ -298,8 +298,8 @@ Automatic parallelization with ``apply_ufunc`` and ``map_blocks``
 
 .. tip::
 
-   Some problems can become embarassingly parallel and thus easy to parallelize automatically
-   by rechunk to a frequency: e.g. ``ds.chunk(time=TimeResampler("YE"))``.
+   Some problems can become embarassingly parallel and thus easy to parallelize
+   automatically by rechunking to a frequency: e.g. ``ds.chunk(time=TimeResampler("YE"))``.
    See :py:meth:``Dataset.chunk` for more.
 
 Almost all of xarray's built-in operations work on Dask arrays. If you want to
