@@ -66,7 +66,7 @@ _DTypeLike = Union[
 ]
 
 # For unknown shapes Dask uses np.nan, array_api uses None:
-_IntOrUnknown = Union[int, float, None]
+_IntOrUnknown = int
 _Shape = tuple[_IntOrUnknown, ...]
 _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
 _ShapeType = TypeVar("_ShapeType", bound=_Shape)
