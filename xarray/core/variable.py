@@ -298,7 +298,7 @@ def as_compatible_data(
 
     # we don't want nested self-described arrays
     if isinstance(data, (pd.Series, pd.DataFrame)):
-        data = data.values
+        data = data.values  # type: ignore[assignment]
 
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)
@@ -1504,7 +1504,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         # Potentially we could replace `len(other_dims)` with just `-1`
         other_dims = [d for d in self.dims if d != dim]
         new_shape = tuple(list(reordered.shape[: len(other_dims)]) + new_dim_sizes)
-        new_dims = reordered.dims[: len(other_dims)] + new_dim_names
+        new_dims = reordered.dims[: len(other_dims)] + tuple(new_dim_names)
 
         create_template: Callable
         if fill_value is dtypes.NA:
