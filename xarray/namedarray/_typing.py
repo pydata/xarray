@@ -218,7 +218,6 @@ duckarray = Union[
     _arrayfunction[_ShapeType_co, _DType_co], _arrayapi[_ShapeType_co, _DType_co]
 ]
 
-
 # Corresponds to np.typing.NDArray:
 DuckArray = _arrayfunction[Any, np.dtype[_ScalarType_co]]
 
