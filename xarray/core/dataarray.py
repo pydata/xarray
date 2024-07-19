@@ -6694,7 +6694,7 @@ class DataArray(
         """
         return interp_calendar(self, target, dim=dim)
 
-    @_deprecate_positional_args("v2024.08.0")
+    @_deprecate_positional_args("v2024.07.0")
     def groupby(
         self,
         group: (
@@ -6817,7 +6817,7 @@ class DataArray(
             restore_coord_dims=restore_coord_dims,
         )
 
-    @_deprecate_positional_args("v2024.08.0")
+    @_deprecate_positional_args("v2024.07.0")
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
@@ -7242,7 +7242,7 @@ class DataArray(
             coord_func=coord_func,
         )
 
-    @_deprecate_positional_args("v2024.08.0")
+    @_deprecate_positional_args("v2024.07.0")
     def resample(
         self,
         indexer: Mapping[Hashable, str | Resampler] | None = None,
