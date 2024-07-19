@@ -721,7 +721,7 @@ def test_groupby_reduce_dimension_error(array) -> None:
 
 def test_groupby_multiple_string_args(array) -> None:
     with pytest.raises(TypeError):
-        array.groupby("x", "y")
+        array.groupby("x", squeeze="y")
 
 
 def test_groupby_bins_timeseries() -> None:
