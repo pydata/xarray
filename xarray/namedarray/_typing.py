@@ -8,6 +8,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Collection,
     Final,
     Literal,
     Protocol,
@@ -66,11 +67,11 @@ _DTypeLike = Union[
 ]
 
 # For unknown shapes Dask uses np.nan, array_api uses None:
-_IntOrUnknown = int
+_IntOrUnknown = Union[int, float, None]
 _Shape = tuple[_IntOrUnknown, ...]
 _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
-_ShapeType = TypeVar("_ShapeType", bound=Any)
-_ShapeType_co = TypeVar("_ShapeType_co", bound=Any, covariant=True)
+_ShapeType = TypeVar("_ShapeType", bound=_Shape)
+_ShapeType_co = TypeVar("_ShapeType_co", bound=_Shape, covariant=True)
 
 _Axis = int
 _Axes = tuple[_Axis, ...]
@@ -118,7 +119,7 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     """
 
     @property
-    def shape(self) -> _Shape: ...
+    def shape(self) -> _ShapeType_co: ...
 
     @property
     def dtype(self) -> _DType_co: ...
@@ -211,7 +212,10 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _arrayfunction_or_api = (_arrayfunction, _arrayapi)
 
-duckarray = Union[_arrayfunction[_ShapeType, _DType], _arrayapi[_ShapeType, _DType]]
+duckarray: TypeAlias = (
+    _arrayfunction[_ShapeType, _DType] | _arrayapi[_ShapeType, _DType]
+)
+
 
 # Corresponds to np.typing.NDArray:
 DuckArray = _arrayfunction[Any, np.dtype[_ScalarType_co]]
