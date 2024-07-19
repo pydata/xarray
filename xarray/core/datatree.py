@@ -1213,7 +1213,8 @@ class DataTree(
         ...     },
         ... }
         >>> dt.DataTree.from_native_dict(basic_dict)
-        DataTree('(root)', parent=None)
+        <xarray.DataTree '(root)'>
+        Group: /
         │   Dimensions:  (time: 2)
         │   Coordinates:
         │     * time     (time) <U10 80B '2020-12-01' '2020-12-02'
@@ -1221,30 +1222,32 @@ class DataTree(
         │       *empty*
         │   Attributes:
         │       description:  Root Hypothetical DataTree with heterogeneous data: weather...
-        ├── DataTree('weather_data')
-        │   │   Dimensions:     (station: 6, time: 2)
+        ├── Group: /weather_data
+        │   │   Dimensions:     (time: 2, station: 6)
         │   │   Coordinates:
+        │   │     * time        (time) <U10 80B '2020-12-01' '2020-12-02'
         │   │     * station     (station) <U1 24B 'a' 'b' 'c' 'd' 'e' 'f'
-        │   │   Dimensions without coordinates: time
         │   │   Data variables:
         │   │       wind_speed  (time, station) float64 96B 2.0 2.0 2.0 2.0 ... 2.0 2.0 2.0 2.0
         │   │       pressure    (time, station) float64 96B 3.0 3.0 3.0 3.0 ... 3.0 3.0 3.0 3.0
         │   │   Attributes:
         │   │       description:  Weather data node, inheriting the 'time' dimension
-        │   └── DataTree('temperature')
+        │   └── Group: /weather_data/temperature
         │           Dimensions:          (time: 2, station: 6)
-        │           Dimensions without coordinates: time, station
+        │           Coordinates:
+        │             * time             (time) <U10 80B '2020-12-01' '2020-12-02'
+        │             * station          (station) <U1 24B 'a' 'b' 'c' 'd' 'e' 'f'
         │           Data variables:
         │               air_temperature  (time, station) float64 96B 3.0 3.0 3.0 3.0 ... 3.0 3.0 3.0
         │               dewpoint_temp    (time, station) float64 96B 4.0 4.0 4.0 4.0 ... 4.0 4.0 4.0
         │           Attributes:
         │               description:  Temperature, subnode of the weather data node, inheriting t...
-        └── DataTree('satellite_image')
-                Dimensions:     (x: 3, y: 3, time: 2)
+        └── Group: /satellite_image
+                Dimensions:     (time: 2, x: 3, y: 3)
                 Coordinates:
+                  * time        (time) <U10 80B '2020-12-01' '2020-12-02'
                   * x           (x) int64 24B 10 20 30
                   * y           (y) int64 24B 90 80 70
-                Dimensions without coordinates: time
                 Data variables:
                     infrared    (time, y, x) float64 144B 5.0 5.0 5.0 5.0 ... 5.0 5.0 5.0 5.0
                     true_color  (time, y, x) float64 144B 6.0 6.0 6.0 6.0 ... 6.0 6.0 6.0 6.0

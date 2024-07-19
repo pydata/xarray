@@ -1,6 +1,6 @@
+import datetime
 import re
 import typing
-import datetime
 from copy import copy, deepcopy
 from textwrap import dedent
 from typing import Any
@@ -1349,16 +1349,27 @@ class TestDictSerialization:
         # Test conversion of a DataTree with default parameters of the `to_dict` method.
         original_xdt = TestDictSerialization.create_test_data()
 
+        # Note: coordinates are duplicated when serialized ; each sub-datatree is self-sufficient
+        # and loadable as-is without requiring higher-up context, at the cost of redundancy.
+        time_coords = {
+            "dims": ("time",),
+            "attrs": {"units": "date", "long_name": "Time of acquisition"},
+            "data": [
+                datetime.datetime(2020, 12, 1, 0, 0),
+                datetime.datetime(2020, 12, 2, 0, 0),
+            ],
+        }
+        station_coords = {
+            "dims": ("station",),
+            "attrs": {
+                "units": "dl",
+                "long_name": "Station of acquisition",
+            },
+            "data": ["a", "b", "c", "d", "e", "f"],
+        }
         expected_basic_dict = {
             "coords": {
-                "time": {
-                    "dims": ("time",),
-                    "attrs": {"units": "date", "long_name": "Time of acquisition"},
-                    "data": [
-                        datetime.datetime(2020, 12, 1, 0, 0),
-                        datetime.datetime(2020, 12, 2, 0, 0),
-                    ],
-                }
+                "time": time_coords,
             },
             "attrs": {
                 "description": "Root Hypothetical DataTree with heterogeneous data: weather and satellite"
@@ -1369,14 +1380,8 @@ class TestDictSerialization:
             "children": {
                 "weather_data": {
                     "coords": {
-                        "station": {
-                            "dims": ("station",),
-                            "attrs": {
-                                "units": "dl",
-                                "long_name": "Station of acquisition",
-                            },
-                            "data": ["a", "b", "c", "d", "e", "f"],
-                        }
+                        "time": time_coords,
+                        "station": station_coords,
                     },
                     "attrs": {
                         "description": "Weather data node, inheriting the 'time' dimension"
@@ -1406,7 +1411,10 @@ class TestDictSerialization:
                     "name": "weather_data",
                     "children": {
                         "temperature": {
-                            "coords": {},
+                            "coords": {
+                                "time": time_coords,
+                                "station": station_coords,
+                            },
                             "attrs": {
                                 "description": "Temperature, subnode of the weather data node, inheriting the 'time' dimension from root and 'station' dimension from the Temperature group."
                             },
@@ -1442,6 +1450,7 @@ class TestDictSerialization:
                 },
                 "satellite_image": {
                     "coords": {
+                        "time": time_coords,
                         "x": {"dims": ("x",), "attrs": {}, "data": [10, 20, 30]},
                         "y": {"dims": ("y",), "attrs": {}, "data": [90, 80, 70]},
                     },
