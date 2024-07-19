@@ -1166,100 +1166,100 @@ def _raise_if_any_duplicate_dimensions(
         )
 
 
-# %% function should pass
+# # %% function should pass
 
-data = np.array([1, 2, 3], dtype=np.dtype(np.int64))
-# data: duckarray[Any, np.dtype[np.int64]] = np.array([1, 2, 3], dtype=np.dtype(np.int64))
-reveal_type(data)
-
-
-def test(
-    data: duckarray[_ShapeType_co, _DType_co]
-) -> duckarray[_ShapeType_co, _DType_co]:
-    return data
+# data = np.array([1, 2, 3], dtype=np.dtype(np.int64))
+# # data: duckarray[Any, np.dtype[np.int64]] = np.array([1, 2, 3], dtype=np.dtype(np.int64))
+# reveal_type(data)
 
 
-def test2(
-    data: _arrayfunction[_ShapeType, _DType]
-) -> _arrayfunction[_ShapeType, _DType]:
-    return data
+# def test(
+#     data: duckarray[_ShapeType_co, _DType_co]
+# ) -> duckarray[_ShapeType_co, _DType_co]:
+#     return data
 
 
-b = test(data)
-reveal_type(b)
-c = test2(data)
-reveal_type(c)
-a = NamedArray(("time",), data=data)
-reveal_type(a)
+# def test2(
+#     data: _arrayfunction[_ShapeType, _DType]
+# ) -> _arrayfunction[_ShapeType, _DType]:
+#     return data
 
 
-# %% Class should pass
-from typing import Generic, TypeVar, Protocol, Union
-
-_ST = TypeVar("_ST", bound=Any, covariant=True)
-_DT = TypeVar("_DT", bound=Any, covariant=True)
-
-
-# Valid numpy protocol:
-class ArrayA(Protocol[_ST, _DT]):
-    @property
-    def dtype(self) -> _DT: ...
-    @property
-    def shape(self) -> _ST: ...
+# b = test(data)
+# reveal_type(b)
+# c = test2(data)
+# reveal_type(c)
+# a = NamedArray(("time",), data=data)
+# reveal_type(a)
 
 
-class TestArray(Generic[_ST, _DT]):
-    __slots__ = ("_data",)
+# # %% Class should pass
+# from typing import Generic, TypeVar, Protocol, Union
 
-    _data: ArrayA[_ST, _DT]
-
-    def __init__(self, data: ArrayA[_ST, _DT]):
-        self._data = data
+# _ST = TypeVar("_ST", bound=Any, covariant=True)
+# _DT = TypeVar("_DT", bound=Any, covariant=True)
 
 
-ta = TestArray(data)
-reveal_type(ta)
+# # Valid numpy protocol:
+# class ArrayA(Protocol[_ST, _DT]):
+#     @property
+#     def dtype(self) -> _DT: ...
+#     @property
+#     def shape(self) -> _ST: ...
 
 
-# %% Class should pass
-# Not valid numpy protocol:
-class ArrayB(Protocol[_ST, _DT]):
-    @property
-    def dtype(self) -> _DT: ...
-    @property
-    def shape(self) -> _ST: ...
-    def b(self) -> int: ...
+# class TestArray(Generic[_ST, _DT]):
+#     __slots__ = ("_data",)
+
+#     _data: ArrayA[_ST, _DT]
+
+#     def __init__(self, data: ArrayA[_ST, _DT]):
+#         self._data = data
 
 
-duckiearray = Union[ArrayA[_ST, _DT], ArrayB[_ST, _DT]]
+# ta = TestArray(data)
+# reveal_type(ta)
 
 
-class TestArray2(Generic[_ST, _DT]):
-    __slots__ = ("_data",)
-
-    _data: duckiearray[_ST, _DT]
-
-    def __init__(self, data: duckiearray[_ST, _DT]):
-        self._data = data
-
-
-ta2 = TestArray2(data)
-reveal_type(ta2)
+# # %% Class should pass
+# # Not valid numpy protocol:
+# class ArrayB(Protocol[_ST, _DT]):
+#     @property
+#     def dtype(self) -> _DT: ...
+#     @property
+#     def shape(self) -> _ST: ...
+#     def b(self) -> int: ...
 
 
-# %% Class should pass
-class TestArray3(Generic[_ST, _DT]):
-    __slots__ = ("_data",)
-
-    _data: duckarray[_ST, _DT]
-
-    def __init__(self, data: duckarray[_ST, _DT]):
-        self._data = data
+# duckiearray = Union[ArrayA[_ST, _DT], ArrayB[_ST, _DT]]
 
 
-ta3 = TestArray3(data)
-reveal_type(ta3)
-# %% Namedarray should pass
+# class TestArray2(Generic[_ST, _DT]):
+#     __slots__ = ("_data",)
 
-narr = NamedArray(("time",), data)
-reveal_type(narr)
+#     _data: duckiearray[_ST, _DT]
+
+#     def __init__(self, data: duckiearray[_ST, _DT]):
+#         self._data = data
+
+
+# ta2 = TestArray2(data)
+# reveal_type(ta2)
+
+
+# # %% Class should pass
+# class TestArray3(Generic[_ST, _DT]):
+#     __slots__ = ("_data",)
+
+#     _data: duckarray[_ST, _DT]
+
+#     def __init__(self, data: duckarray[_ST, _DT]):
+#         self._data = data
+
+
+# ta3 = TestArray3(data)
+# reveal_type(ta3)
+# # %% Namedarray should pass
+
+# narr = NamedArray(("time",), data)
+# reveal_type(narr)
