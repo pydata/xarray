@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Hashable
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Callable, Union
+from typing import Callable, Literal, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -36,10 +36,9 @@ try:
 except ImportError:
     cftime = None
 
-if TYPE_CHECKING:
-    from xarray.core.types import CFCalendar, T_DuckArray
+from xarray.core.types import CFCalendar, NPDatetimeUnitOptions, T_DuckArray
 
-    T_Name = Union[Hashable, None]
+T_Name = Union[Hashable, None]
 
 # standard calendars recognized by cftime
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
@@ -111,22 +110,25 @@ def _is_numpy_compatible_time_range(times):
         return True
 
 
-def _netcdf_to_numpy_timeunit(units: str) -> str:
+def _netcdf_to_numpy_timeunit(units: str) -> NPDatetimeUnitOptions:
     units = units.lower()
     if not units.endswith("s"):
         units = f"{units}s"
-    return {
-        "nanoseconds": "ns",
-        "microseconds": "us",
-        "milliseconds": "ms",
-        "seconds": "s",
-        "minutes": "m",
-        "hours": "h",
-        "days": "D",
-    }[units]
+    return cast(
+        NPDatetimeUnitOptions,
+        {
+            "nanoseconds": "ns",
+            "microseconds": "us",
+            "milliseconds": "ms",
+            "seconds": "s",
+            "minutes": "m",
+            "hours": "h",
+            "days": "D",
+        }[units],
+    )
 
 
-def _numpy_to_netcdf_timeunit(units: str) -> str:
+def _numpy_to_netcdf_timeunit(units: NPDatetimeUnitOptions) -> str:
     return {
         "ns": "nanoseconds",
         "us": "microseconds",
@@ -252,12 +254,12 @@ def _decode_datetime_with_pandas(
             "pandas."
         )
 
-    time_units, ref_date = _unpack_netcdf_time_units(units)
+    time_units, ref_date_str = _unpack_netcdf_time_units(units)
     time_units = _netcdf_to_numpy_timeunit(time_units)
     try:
         # TODO: the strict enforcement of nanosecond precision Timestamps can be
         # relaxed when addressing GitHub issue #7493.
-        ref_date = nanosecond_precision_timestamp(ref_date)
+        ref_date = nanosecond_precision_timestamp(ref_date_str)
     except ValueError:
         # ValueError is raised by pd.Timestamp for non-ISO timestamp
         # strings, in which case we fall back to using cftime
@@ -471,6 +473,7 @@ def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
     # TODO: the strict enforcement of nanosecond precision datetime values can
     # be relaxed when addressing GitHub issue #7493.
     new = np.empty(times.shape, dtype="M8[ns]")
+    dt: pd.Timestamp | Literal["NaT"]
     for i, t in np.ndenumerate(times):
         try:
             # Use pandas.Timestamp in place of datetime.datetime, because

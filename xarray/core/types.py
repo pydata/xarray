@@ -28,10 +28,11 @@ except ImportError:
     else:
         Self: Any = None
 
-if TYPE_CHECKING:
-    from numpy._typing import _SupportsDType
-    from numpy.typing import ArrayLike
 
+from numpy._typing import _SupportsDType
+from numpy.typing import ArrayLike
+
+if TYPE_CHECKING:
     from xarray.backends.common import BackendEntrypoint
     from xarray.core.alignment import Aligner
     from xarray.core.common import AbstractArray, DataWithCoords
@@ -45,7 +46,7 @@ if TYPE_CHECKING:
     try:
         from dask.array import Array as DaskArray
     except ImportError:
-        DaskArray = np.ndarray  # type: ignore
+        DaskArray = np.ndarray
 
     try:
         from cubed import Array as CubedArray
@@ -177,7 +178,7 @@ T_DuckArray = TypeVar("T_DuckArray", bound=Any, covariant=True)
 T_ExtensionArray = TypeVar("T_ExtensionArray", bound=pd.api.extensions.ExtensionArray)
 
 
-ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
+ScalarOrArray = Union["ArrayLike", np.generic]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 DaCompatible = Union["DataArray", "VarCompatible"]
 DsCompatible = Union["Dataset", "DaCompatible"]
@@ -219,6 +220,7 @@ InterpOptions = Union[Interp1dOptions, InterpolantOptions]
 DatetimeUnitOptions = Literal[
     "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
 ]
+NPDatetimeUnitOptions = Literal["D", "h", "m", "s", "ms", "us", "ns"]
 
 QueryEngineOptions = Literal["python", "numexpr", None]
 QueryParserOptions = Literal["pandas", "python"]
@@ -293,4 +295,7 @@ ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]
 
 GroupKey = Any
 GroupIndex = Union[int, slice, list[int]]
-T_GroupIndices = list[GroupIndex]
+GroupIndices = tuple[GroupIndex, ...]
+Bins = Union[
+    int, Sequence[int], Sequence[float], Sequence[pd.Timestamp], np.ndarray, pd.Index
+]
