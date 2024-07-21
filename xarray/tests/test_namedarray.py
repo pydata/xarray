@@ -180,7 +180,7 @@ class TestNamedArray(NamedArraySubclassobjects):
             # Fail:
             (
                 ("x",),
-                NamedArray("time", np.array([1, 2, 3])),  # type: ignore
+                NamedArray("time", np.array([1, 2, 3], dtype=np.dtype(np.int64))),
                 np.array([1, 2, 3]),
                 True,
             ),
@@ -341,7 +341,7 @@ class TestNamedArray(NamedArraySubclassobjects):
     def test_duck_array_class(self) -> None:
         numpy_a: NDArray[np.int64]
         numpy_a = np.array([2.1, 4], dtype=np.dtype(np.int64))
-        check_duck_array_typevar(numpy_a)  # type: ignore
+        check_duck_array_typevar(numpy_a)
 
         masked_a: np.ma.MaskedArray[Any, np.dtype[np.int64]]
         masked_a = np.ma.asarray([2.1, 4], dtype=np.dtype(np.int64))  # type: ignore[no-untyped-call]
@@ -560,4 +560,4 @@ class TestNamedArray(NamedArraySubclassobjects):
 
     def test_warn_on_repeated_dimension_names(self) -> None:
         with pytest.warns(UserWarning, match="Duplicate dimension names"):
-            NamedArray(("x", "x"), np.arange(4).reshape(2, 2))  # type: ignore
+            NamedArray(("x", "x"), np.arange(4).reshape(2, 2))
