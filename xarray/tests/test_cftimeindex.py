@@ -679,11 +679,11 @@ def test_indexing_in_series_loc(series, index, scalar_args, range_args):
 
 @requires_cftime
 def test_indexing_in_series_iloc(series, index):
-    expected = 1
-    assert series.iloc[0] == expected
+    expected1 = 1
+    assert series.iloc[0] == expected1
 
-    expected = pd.Series([1, 2], index=index[:2])
-    assert series.iloc[:2].equals(expected)
+    expected2 = pd.Series([1, 2], index=index[:2])
+    assert series.iloc[:2].equals(expected2)
 
 
 @requires_cftime
@@ -696,27 +696,27 @@ def test_series_dropna(index):
 
 @requires_cftime
 def test_indexing_in_dataframe_loc(df, index, scalar_args, range_args):
-    expected = pd.Series([1], name=index[0])
+    expected_s = pd.Series([1], name=index[0])
     for arg in scalar_args:
-        result = df.loc[arg]
-        assert result.equals(expected)
+        result_s = df.loc[arg]
+        assert result_s.equals(expected_s)
 
-    expected = pd.DataFrame([1, 2], index=index[:2])
+    expected_df = pd.DataFrame([1, 2], index=index[:2])
     for arg in range_args:
-        result = df.loc[arg]
-        assert result.equals(expected)
+        result_df = df.loc[arg]
+        assert result_df.equals(expected_df)
 
 
 @requires_cftime
 def test_indexing_in_dataframe_iloc(df, index):
-    expected = pd.Series([1], name=index[0])
-    result = df.iloc[0]
-    assert result.equals(expected)
-    assert result.equals(expected)
+    expected_s = pd.Series([1], name=index[0])
+    result_s = df.iloc[0]
+    assert result_s.equals(expected_s)
+    assert result_s.equals(expected_s)
 
-    expected = pd.DataFrame([1, 2], index=index[:2])
-    result = df.iloc[:2]
-    assert result.equals(expected)
+    expected_df = pd.DataFrame([1, 2], index=index[:2])
+    result_df = df.iloc[:2]
+    assert result_df.equals(expected_df)
 
 
 @requires_cftime
@@ -957,17 +957,17 @@ def test_cftimeindex_shift(index, freq) -> None:
 
 
 @requires_cftime
-def test_cftimeindex_shift_invalid_n() -> None:
+def test_cftimeindex_shift_invalid_periods() -> None:
     index = xr.cftime_range("2000", periods=3)
     with pytest.raises(TypeError):
-        index.shift("a", "D")
+        index.shift("a", "D")  # type: ignore[arg-type]
 
 
 @requires_cftime
 def test_cftimeindex_shift_invalid_freq() -> None:
     index = xr.cftime_range("2000", periods=3)
     with pytest.raises(TypeError):
-        index.shift(1, 1)
+        index.shift(1, 1)  # type: ignore[arg-type]
 
 
 @requires_cftime

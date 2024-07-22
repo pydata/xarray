@@ -315,7 +315,9 @@ def interp_na(
     use_coordinate: bool | str = True,
     method: InterpOptions = "linear",
     limit: int | None = None,
-    max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta = None,
+    max_gap: (
+        int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta | None
+    ) = None,
     keep_attrs: bool | None = None,
     **kwargs,
 ):
