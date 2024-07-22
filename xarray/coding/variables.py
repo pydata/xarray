@@ -261,7 +261,7 @@ def _is_time_like(units):
 
 
 def _check_fill_values(attrs, name, dtype):
-    """ "Check _FillValue and missing_value if available.
+    """Check _FillValue and missing_value if available.
 
     Return dictionary with raw fill values and set with encoded fill values.
 
