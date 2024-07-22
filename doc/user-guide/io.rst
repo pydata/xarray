@@ -19,6 +19,81 @@ format (recommended).
 
     np.random.seed(123456)
 
+You can `read different types of files <https://docs.xarray.dev/en/stable/user-guide/io.html>`_
+in `xr.open_dataset` by specifying the engine to be used:
+
+.. ipython:: python
+    :okexcept:
+    :suppress:
+
+    import xarray as xr
+
+    xr.open_dataset("my_file.grib", engine="cfgrib")
+
+The "engine" provides a set of instructions that tells xarray how
+to read the data and pack them into a `dataset` (or `dataarray`).
+These instructions are stored in an underlying "backend".
+
+Xarray comes with several backends that cover many common data formats.
+Many more backends are available via external libraries, or you can `write your own <https://docs.xarray.dev/en/stable/internals/how-to-add-new-backend.html>`_.
+This diagram aims to help you determine - based on the format of the file you'd like to read -
+which type of backend you're using and how to use it.
+
+Text and boxes are clickable for more information.
+Following the diagram is detailed information on many popular backends.
+You can learn more about using and developing backends in the
+`Xarray tutorial JupyterBook <https://tutorial.xarray.dev/advanced/backends/backends.html>`_.
+
+.. mermaid::
+    :alt: Flowchart illustrating how to choose the right backend engine to read your data
+
+    flowchart LR
+        built-in-eng["""Is your data stored in one of these formats?
+            - netCDF4 (<code>netcdf4</code>)
+            - netCDF3 (<code>scipy</code>)
+            - Zarr (<code>zarr</code>)
+            - DODS/OPeNDAP (<code>pydap</code>)
+            - HDF5 (<code>h5netcdf</code>)
+            """]
+
+        built-in("""You're in luck! Xarray bundles a backend for this format.
+            Open data using <code>xr.open_dataset()</code>. We recommend
+            always setting the engine you want to use.""")
+
+        installed-eng["""One of these formats?
+            - <a href='https://github.com/ecmwf/cfgrib'>GRIB (<code>cfgrib</code>)
+            - <a href='https://tiledb-inc.github.io/TileDB-CF-Py/documentation/index.html'>TileDB (<code>tiledb</code>)
+            - <a href='https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, ESRI-hdf (<code>rioxarray</code>, via GDAL)
+            - <a href='https://www.bopen.eu/xarray-sentinel-open-source-library/'>Sentinel-1 SAFE (<code>xarray-sentinel</code>)
+            """]
+
+        installed("""Install the package indicated in parentheses to your
+            Python environment. Restart the kernel and use
+            <code>xr.open_dataset(files, engine='rioxarray')</code>.""")
+
+        other("""Ask around to see if someone in your data community
+            has created an Xarray backend for your data type.
+            If not, you may need to create your own or consider
+            exporting your data to a more common format.""")
+
+        built-in-eng -->|Yes| built-in
+        built-in-eng -->|No| installed-eng
+
+        installed-eng -->|Yes| installed
+        installed-eng -->|No| other
+
+        click built-in-eng "https://docs.xarray.dev/en/stable/getting-started-guide/faq.html#how-do-i-open-format-x-file-as-an-xarray-dataset"
+        click other "https://docs.xarray.dev/en/stable/internals/how-to-add-new-backend.html"
+
+        classDef quesNodefmt fill:#9DEEF4,stroke:#206C89,text-align:left
+        class built-in-eng,installed-eng quesNodefmt
+
+        classDef ansNodefmt fill:#FFAA05,stroke:#E37F17,text-align:left,white-space:nowrap
+        class built-in,installed,other ansNodefmt
+
+        linkStyle default font-size:20pt,color:#206C89
+
+
 .. _io.netcdf:
 
 netCDF
