@@ -507,7 +507,7 @@ class CFTimeIndex(pd.Index):
             result = self.get_loc(key)
             return (
                 is_scalar(result)
-                or type(result) == slice
+                or isinstance(result, slice)
                 or (isinstance(result, np.ndarray) and result.size > 0)
             )
         except (KeyError, TypeError, ValueError):
