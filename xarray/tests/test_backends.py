@@ -166,7 +166,7 @@ def create_encoded_masked_and_scaled_data(dtype: np.dtype) -> Dataset:
 
 def create_unsigned_masked_scaled_data(dtype: np.dtype) -> Dataset:
     encoding = {
-        "_FillValue": np.int8(-1),
+        "_FillValue": 255,
         "_Unsigned": "true",
         "dtype": "i1",
         "add_offset": dtype.type(10),
@@ -925,7 +925,7 @@ class CFEncodedBase(DatasetIOBase):
                 assert decoded.variables[k].dtype == actual.variables[k].dtype
             assert_allclose(decoded, actual, decode_bytes=False)
 
-    @pytest.mark.parametrize("fillvalue", [np.int8(-1), np.uint8(255)])
+    @pytest.mark.parametrize("fillvalue", [np.int8(-1), np.uint8(255), -1, 255])
     def test_roundtrip_unsigned(self, fillvalue):
         # regression/numpy2 test for
         encoding = {
