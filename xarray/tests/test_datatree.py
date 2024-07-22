@@ -593,7 +593,7 @@ class TestDatasetView:
         ds = create_test_data()
         dt: DataTree = DataTree(data=ds)
         assert ds.mean().identical(dt.ds.mean())
-        assert type(dt.ds.mean()) == xr.Dataset
+        assert isinstance(dt.ds.mean(), xr.Dataset)
 
     def test_arithmetic(self, create_test_datatree):
         dt = create_test_datatree()
