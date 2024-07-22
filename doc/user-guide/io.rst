@@ -39,7 +39,7 @@ Many more backends are available via external libraries, or you can `write your 
 This diagram aims to help you determine - based on the format of the file you'd like to read -
 which type of backend you're using and how to use it.
 
-The rectangular boxes are clickable for more information.
+Text and boxes are clickable for more information.
 Following the diagram is detailed information on many popular backends.
 You can learn more about using and developing backends in the
 `Xarray tutorial JupyterBook <https://tutorial.xarray.dev/advanced/backends/backends.html>`_.
@@ -61,10 +61,10 @@ You can learn more about using and developing backends in the
             always setting the engine you want to use.""")
 
         installed-eng["""One of these formats?
-            - GRIB (<code>cfgrib</code>)
-            - TileDB (<code>tiledb</code>)
-            - GeoTIFF, JPEG-2000, ESRI-hdf (<code>rioxarray</code>, via GDAL)
-            - Sentinel-1 SAFE (<code>xarray-sentinel</code>)
+            - <a href='https://github.com/ecmwf/cfgrib'>GRIB (<code>cfgrib</code>)
+            - <a href='https://tiledb-inc.github.io/TileDB-CF-Py/documentation/index.html'>TileDB (<code>tiledb</code>)
+            - <a href='https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, ESRI-hdf (<code>rioxarray</code>, via GDAL)
+            - <a href='https://www.bopen.eu/xarray-sentinel-open-source-library/'>Sentinel-1 SAFE (<code>xarray-sentinel</code>)
             """]
 
         installed("""Install the package indicated in parentheses to your
@@ -83,7 +83,6 @@ You can learn more about using and developing backends in the
         installed-eng -->|No| other
 
         click built-in-eng "https://docs.xarray.dev/en/stable/getting-started-guide/faq.html#how-do-i-open-format-x-file-as-an-xarray-dataset"
-        click installed-eng "https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray"
         click other "https://docs.xarray.dev/en/stable/internals/how-to-add-new-backend.html"
 
         classDef quesNodefmt fill:#9DEEF4,stroke:#206C89,text-align:left
