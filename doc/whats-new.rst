@@ -88,7 +88,8 @@ Documentation
   By `Jessica Scheick <https://github.com/jessicas11>`_.
 - Improvements to Zarr & chunking docs (:pull:`9139`, :pull:`9140`, :pull:`9132`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-
+- Fix copybutton for multi line examples and double digit ipython cell numbers (:pull:`9264`).
+  By `Moritz Schreiber <https://github.com/mosc9575>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
