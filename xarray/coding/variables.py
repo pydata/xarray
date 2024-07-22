@@ -677,7 +677,7 @@ class ObjectVLenStringCoder(VariableCoder):
         raise NotImplementedError
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if variable.dtype == object and variable.encoding.get("dtype", False) == str:
+        if variable.dtype.kind == "O" and variable.encoding.get("dtype", False) is str:
             variable = variable.astype(variable.encoding["dtype"])
             return variable
         else:

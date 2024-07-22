@@ -178,8 +178,8 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         # check type or dtype is consistent for both ndarray and Variable
         if expected_dtype is None:
             # check output type instead of array dtype
-            assert type(variable.values[0]) == type(expected_value0)
-            assert type(variable[0].values) == type(expected_value0)
+            assert type(variable.values[0]) is type(expected_value0)
+            assert type(variable[0].values) is type(expected_value0)
         elif expected_dtype is not False:
             assert variable.values[0].dtype == expected_dtype
             assert variable[0].values.dtype == expected_dtype

@@ -806,7 +806,7 @@ class ZarrStore(AbstractWritableDataStore):
                 for k2, v2 in attrs.items():
                     encoded_attrs[k2] = self.encode_attribute(v2)
 
-                if coding.strings.check_vlen_dtype(dtype) == str:
+                if coding.strings.check_vlen_dtype(dtype) is str:
                     dtype = str
 
                 if self._write_empty is not None:

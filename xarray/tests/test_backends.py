@@ -863,14 +863,14 @@ class CFEncodedBase(DatasetIOBase):
         # checks preserving vlen dtype for empty arrays GH7862
         dtype = create_vlen_dtype(str)
         original = Dataset({"a": np.array([], dtype=dtype)})
-        assert check_vlen_dtype(original["a"].dtype) == str
+        assert check_vlen_dtype(original["a"].dtype) is str
         with self.roundtrip(original) as actual:
             assert_identical(original, actual)
             if np.issubdtype(actual["a"].dtype, object):
                 # only check metadata for capable backends
                 # eg. NETCDF3 based backends do not roundtrip metadata
                 if actual["a"].dtype.metadata is not None:
-                    assert check_vlen_dtype(actual["a"].dtype) == str
+                    assert check_vlen_dtype(actual["a"].dtype) is str
             else:
                 assert actual["a"].dtype == np.dtype("<U1")
 
