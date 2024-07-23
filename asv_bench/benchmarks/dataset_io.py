@@ -7,8 +7,6 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
-from xarray.backends.api import open_datatree
-from xarray.core.datatree import DataTree
 
 from . import _skip_slow, parameterized, randint, randn, requires_dask
 
@@ -556,7 +554,7 @@ class IONestedDataTree:
             for group in range(self.nchildren)
         }
         dtree = root | nested_tree1 | nested_tree2 | nested_tree3
-        self.dtree = DataTree.from_dict(dtree)
+        self.dtree = xr.DataTree.from_dict(dtree)
 
 
 class IOReadDataTreeNetCDF4(IONestedDataTree):
@@ -574,10 +572,10 @@ class IOReadDataTreeNetCDF4(IONestedDataTree):
         dtree.to_netcdf(filepath=self.filepath)
 
     def time_load_datatree_netcdf4(self):
-        open_datatree(self.filepath, engine="netcdf4").load()
+        xr.open_datatree(self.filepath, engine="netcdf4").load()
 
     def time_open_datatree_netcdf4(self):
-        open_datatree(self.filepath, engine="netcdf4")
+        xr.open_datatree(self.filepath, engine="netcdf4")
 
 
 class IOWriteNetCDFDask:
