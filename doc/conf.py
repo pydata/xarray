@@ -59,6 +59,7 @@ except ImportError:
     )
 
 nbsphinx_allow_errors = False
+nbsphinx_requirejs_path = ""
 
 # -- General configuration ------------------------------------------------
 
@@ -68,7 +69,9 @@ nbsphinx_allow_errors = False
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+
 extensions = [
+    "sphinxcontrib.mermaid",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
@@ -94,7 +97,7 @@ extlinks = {
 }
 
 # sphinx-copybutton configurations
-copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
+copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.{3,}: | {5,8}: "
 copybutton_prompt_is_regexp = True
 
 # nbsphinx configurations
@@ -156,6 +159,8 @@ napoleon_type_aliases = {
     "DataTree": "~xarray.core.datatree.DataTree",
     "DatasetGroupBy": "~xarray.core.groupby.DatasetGroupBy",
     "DataArrayGroupBy": "~xarray.core.groupby.DataArrayGroupBy",
+    "Grouper": "~xarray.core.groupers.Grouper",
+    "Resampler": "~xarray.core.groupers.Resampler",
     # objects without namespace: numpy
     "ndarray": "~numpy.ndarray",
     "MaskedArray": "~numpy.ma.MaskedArray",
@@ -167,6 +172,7 @@ napoleon_type_aliases = {
     "CategoricalIndex": "~pandas.CategoricalIndex",
     "TimedeltaIndex": "~pandas.TimedeltaIndex",
     "DatetimeIndex": "~pandas.DatetimeIndex",
+    "IntervalIndex": "~pandas.IntervalIndex",
     "Series": "~pandas.Series",
     "DataFrame": "~pandas.DataFrame",
     "Categorical": "~pandas.Categorical",
@@ -176,6 +182,8 @@ napoleon_type_aliases = {
     "pd.NaT": "~pandas.NaT",
 }
 
+# mermaid config
+mermaid_version = "10.9.1"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]

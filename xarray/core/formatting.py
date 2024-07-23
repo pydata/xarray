@@ -748,6 +748,27 @@ def dataset_repr(ds):
     return "\n".join(summary)
 
 
+def dims_and_coords_repr(ds) -> str:
+    """Partial Dataset repr for use inside DataTree inheritance errors."""
+    summary = []
+
+    col_width = _calculate_col_width(ds.coords)
+    max_rows = OPTIONS["display_max_rows"]
+
+    dims_start = pretty_print("Dimensions:", col_width)
+    dims_values = dim_summary_limited(ds, col_width=col_width + 1, max_rows=max_rows)
+    summary.append(f"{dims_start}({dims_values})")
+
+    if ds.coords:
+        summary.append(coords_repr(ds.coords, col_width=col_width, max_rows=max_rows))
+
+    unindexed_dims_str = unindexed_dims_repr(ds.dims, ds.coords, max_rows=max_rows)
+    if unindexed_dims_str:
+        summary.append(unindexed_dims_str)
+
+    return "\n".join(summary)
+
+
 def diff_dim_summary(a, b):
     if a.sizes != b.sizes:
         return f"Differing dimensions:\n    ({dim_summary(a)}) != ({dim_summary(b)})"
@@ -765,6 +786,12 @@ def _diff_mapping_repr(
     a_indexes=None,
     b_indexes=None,
 ):
+    def compare_attr(a, b):
+        if is_duck_array(a) or is_duck_array(b):
+            return array_equiv(a, b)
+        else:
+            return a == b
+
     def extra_items_repr(extra_keys, mapping, ab_side, kwargs):
         extra_repr = [
             summarizer(k, mapping[k], col_width, **kwargs[k]) for k in extra_keys
@@ -801,11 +828,7 @@ def _diff_mapping_repr(
             is_variable = True
         except AttributeError:
             # compare attribute value
-            if is_duck_array(a_mapping[k]) or is_duck_array(b_mapping[k]):
-                compatible = array_equiv(a_mapping[k], b_mapping[k])
-            else:
-                compatible = a_mapping[k] == b_mapping[k]
-
+            compatible = compare_attr(a_mapping[k], b_mapping[k])
             is_variable = False
 
         if not compatible:
@@ -821,7 +844,11 @@ def _diff_mapping_repr(
 
                 attrs_to_print = set(a_attrs) ^ set(b_attrs)
                 attrs_to_print.update(
-                    {k for k in set(a_attrs) & set(b_attrs) if a_attrs[k] != b_attrs[k]}
+                    {
+                        k
+                        for k in set(a_attrs) & set(b_attrs)
+                        if not compare_attr(a_attrs[k], b_attrs[k])
+                    }
                 )
                 for m in (a_mapping, b_mapping):
                     attr_s = "\n".join(
@@ -871,8 +898,8 @@ def diff_coords_repr(a, b, compat, col_width=None):
         "Coordinates",
         summarize_variable,
         col_width=col_width,
-        a_indexes=a.indexes,
-        b_indexes=b.indexes,
+        a_indexes=a.xindexes,
+        b_indexes=b.xindexes,
     )
 
 
@@ -1023,20 +1050,21 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
 
 def _single_node_repr(node: DataTree) -> str:
     """Information about this node, not including its relationships to other nodes."""
-    node_info = f"DataTree('{node.name}')"
-
     if node.has_data or node.has_attrs:
-        ds_info = "\n" + repr(node.ds)
+        ds_info = "\n" + repr(node._to_dataset_view(rebuild_dims=False))
     else:
         ds_info = ""
-    return node_info + ds_info
+    return f"Group: {node.path}{ds_info}"
 
 
 def datatree_repr(dt: DataTree):
     """A printable representation of the structure of this entire tree."""
     renderer = RenderDataTree(dt)
 
-    lines = []
+    name_info = "" if dt.name is None else f" {dt.name!r}"
+    header = f"<xarray.DataTree{name_info}>"
+
+    lines = [header]
     for pre, fill, node in renderer:
         node_repr = _single_node_repr(node)
 
@@ -1050,12 +1078,6 @@ def datatree_repr(dt: DataTree):
                     lines.append(f"{fill}{renderer.style.vertical}{line}")
                 else:
                     lines.append(f"{fill}{' ' * len(renderer.style.vertical)}{line}")
-
-    # Tack on info about whether or not root node has a parent at the start
-    first_line = lines[0]
-    parent = f'"{dt.parent.name}"' if dt.parent is not None else "None"
-    first_line_with_parent = first_line[:-1] + f", parent={parent})"
-    lines[0] = first_line_with_parent
 
     return "\n".join(lines)
 
