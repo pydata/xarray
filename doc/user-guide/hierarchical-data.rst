@@ -328,7 +328,7 @@ we can construct a complex tree quickly using the alternative constructor :py:me
     d = {
         "/": xr.Dataset({"foo": "orange"}),
         "/a": xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])}),
-        "/a/b": xr.Dataset({"zed": np.NaN}),
+        "/a/b": xr.Dataset({"zed": np.nan}),
         "a/c/d": None,
     }
     dt = xr.DataTree.from_dict(d)

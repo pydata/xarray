@@ -595,7 +595,7 @@ or by dynamically updating the attributes of one node to refer to another:
 .. ipython:: python
 
     # add a second child by first creating a new node ...
-    ds3 = xr.Dataset({"zed": np.NaN})
+    ds3 = xr.Dataset({"zed": np.nan})
     node3 = xr.DataTree(name="b", data=ds3)
     # ... then updating its .parent property
     node3.parent = dt
@@ -674,7 +674,7 @@ datatree from scratch, we could have written:
     dt = xr.DataTree(name="root")
     dt["foo"] = "orange"
     dt["a"] = xr.DataTree(data=xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])}))
-    dt["a/b/zed"] = np.NaN
+    dt["a/b/zed"] = np.nan
     dt
 
 To change the variables in a node of a ``DataTree``, you can use all the
