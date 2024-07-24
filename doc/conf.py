@@ -156,7 +156,7 @@ napoleon_type_aliases = {
     "DataArray": "~xarray.DataArray",
     "Dataset": "~xarray.Dataset",
     "Variable": "~xarray.Variable",
-    "DataTree": "~xarray.core.datatree.DataTree",
+    "DataTree": "~xarray.DataTree",
     "DatasetGroupBy": "~xarray.core.groupby.DatasetGroupBy",
     "DataArrayGroupBy": "~xarray.core.groupby.DataArrayGroupBy",
     "Grouper": "~xarray.core.groupers.Grouper",
