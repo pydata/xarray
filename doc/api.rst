@@ -658,7 +658,7 @@ This interface echoes that of ``xarray.Dataset``.
 Dictionary Interface
 --------------------
 
-``DataTree`` objects also have a dict-like interface mapping keys to either ``xarray.DataArray`` or to child ``DataTree`` nodes.
+``DataTree`` objects also have a dict-like interface mapping keys to either ``xarray.DataArray`` s or to child ``DataTree`` nodes.
 
 .. autosummary::
    :toctree: generated/
@@ -952,7 +952,8 @@ DataTree methods
 .. autosummary::
    :toctree: generated/
 
-   xarray.backends.api.open_datatree
+   open_datatree
+   map_over_subtree
    DataTree.to_dict
    DataTree.to_netcdf
    DataTree.to_zarr

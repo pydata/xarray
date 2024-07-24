@@ -232,8 +232,7 @@ It is common for datasets to be distributed across multiple files (commonly one 
 DataTrees
 ---------
 
-:py:class:`xarray.DataTree` is a tree-like container of :py:class:`xarray.DataArray` objects, organised into multiple mutually allignable groups.
-You can think of it like a (recursive) ``dict`` of :py:class:`xarray.Dataset` objects.
+:py:class:`xarray.DataTree` is a tree-like container of :py:class:`xarray.DataArray` objects, organised into multiple mutually alignable groups. You can think of it like a (recursive) ``dict`` of :py:class:`xarray.Dataset` objects, where coordinate variables and their indexes are inherited down to children.
 
 Let's first make some example xarray datasets:
 
@@ -243,19 +242,19 @@ Let's first make some example xarray datasets:
     import xarray as xr
 
     data = xr.DataArray(np.random.randn(2, 3), dims=("x", "y"), coords={"x": [10, 20]})
-    ds = xr.Dataset(dict(foo=data, bar=("x", [1, 2]), baz=np.pi))
+    ds = xr.Dataset({"foo": data, "bar": ("x", [1, 2]), "baz": np.pi})
     ds
 
     ds2 = ds.interp(coords={"x": [10, 12, 14, 16, 18, 20]})
     ds2
 
     ds3 = xr.Dataset(
-        dict(people=["alice", "bob"], heights=("people", [1.57, 1.82])),
+        {"people": ["alice", "bob"], "heights": ("people", [1.57, 1.82])},
         coords={"species": "human"},
     )
     ds3
 
-Now we'll put this data into a multi-group tree:
+Now we'll put this data into a multi-group DataTree:
 
 .. ipython:: python
 
@@ -264,16 +263,17 @@ Now we'll put this data into a multi-group tree:
     )
     dt
 
-This creates a datatree with various groups. We have one root group, containing information about individual people.
+This creates a datatree with a group hierarchy. We have one root group, containing information about individual people.
 (This root group can be named, but here is unnamed, so is referred to with ``"/"``, same as the root of a unix-like filesystem.)
 The root group then has one subgroup ``simulation``, which contains no data itself but does contain another two subgroups,
 named ``fine`` and ``coarse``.
 
 The (sub-)sub-groups ``fine`` and ``coarse`` contain two very similar datasets.
 They both have an ``"x"`` dimension, but the dimension is of different lengths in each group, which makes the data in each group unalignable.
+Remember to keep unalignable coordinates in sibling groups as a DataTree inherits coordinates through its child nodes.  All parent/descendent coordinates must be alignable to form a DataTree.
 In the root group we placed some completely unrelated information, showing how we can use a tree to store heterogenous data.
 
-The constraints on each group are therefore the same as the constraint on DataArrays within a single dataset.
+The constraints on each group are the same as the constraint on DataArrays within a single dataset with the addition of requiring parent/descendent coordinate agreement.
 
 We created the sub-groups using a filesystem-like syntax, and accessing groups works the same way.
 We can access individual DataArrays in a similar fashion
@@ -282,11 +282,25 @@ We can access individual DataArrays in a similar fashion
 
     dt["simulation/coarse/foo"]
 
-and we can also view the data in a particular group as a ``Dataset`` object using ``.ds``:
+and we can also view the data in a particular group as a readonly ``DatasetView`` object using ``.ds``:
 
 .. ipython:: python
 
     dt["simulation/coarse"].ds
+
+We can get a copy of the ``Dataset`` including the inherited coordinates by calling the ``.to_dataset`` method:
+
+.. ipython:: python
+
+    ds_inherited = dt["simulation/coarse"].to_dataset()
+    ds_inherited
+
+And you can get a copy of just the node local values of ``Dataset`` by setting the ``inherited`` keyword to ``False``:
+
+.. ipython:: python
+
+    ds_node_local = dt["simulation/coarse"].to_dataset(inherited=False)
+    ds_node_local
 
 Operations map over subtrees, so we can take a mean over the ``x`` dimension of both the ``fine`` and ``coarse`` groups just by
 
@@ -296,6 +310,16 @@ Operations map over subtrees, so we can take a mean over the ``x`` dimension of 
     avg
 
 Here the ``"x"`` dimension used is always the one local to that sub-group.
+
+
+Finally we can try to create an invalid tree by putting the ``coarse`` data under the ``fine`` data:
+
+.. ipython:: python
+
+    dt = xr.DataTree.from_dict(
+        {"simulation/fine/coarse": ds, "simulation/fine": ds2, "/": ds3}
+    )
+    dt
 
 You can do almost everything you can do with ``Dataset`` objects with ``DataTree`` objects
 (including indexing and arithmetic), as operations will be mapped over every sub-group in the tree.
