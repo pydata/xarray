@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
     from xarray.core.indexes import Index
+    from xarray.core.types import Self
     from xarray.core.variable import Variable
     from xarray.namedarray._typing import _Chunks, _IndexerKey, _Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
@@ -1718,6 +1719,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     __slots__ = ("array", "_dtype")
 
+    array: pd.Index
+    _dtype: np.dtype
+
     def __init__(self, array: pd.Index, dtype: DTypeLike = None):
         from xarray.core.indexes import safe_cast_to_index
 
@@ -1855,7 +1859,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def __repr__(self) -> str:
         return f"{type(self).__name__}(array={self.array!r}, dtype={self.dtype!r})"
 
-    def copy(self, deep: bool = True) -> PandasIndexingAdapter:
+    def copy(self, deep: bool = True) -> Self:
         # Not the same as just writing `self.array.copy(deep=deep)`, as
         # shallow copies of the underlying numpy.ndarrays become deep ones
         # upon pickling
@@ -1873,10 +1877,13 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
     This allows creating one instance for each multi-index level while
     preserving indexing efficiency (memoized + might reuse another instance with
     the same multi-index).
-
     """
 
     __slots__ = ("array", "_dtype", "level", "adapter")
+
+    array: pd.MultiIndex
+    _dtype: np.dtype
+    level: str | None
 
     def __init__(
         self,
@@ -1973,7 +1980,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         array_repr = short_array_repr(self._get_array_subset())
         return f"<pre>{escape(array_repr)}</pre>"
 
-    def copy(self, deep: bool = True) -> PandasMultiIndexingAdapter:
+    def copy(self, deep: bool = True) -> Self:
         # see PandasIndexingAdapter.copy
         array = self.array.copy(deep=True) if deep else self.array
         return type(self)(array, self._dtype, self.level)

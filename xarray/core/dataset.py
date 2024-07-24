@@ -29,9 +29,9 @@ from pandas.api.types import is_extension_array_dtype
 
 # remove once numpy 2.0 is the oldest supported version
 try:
-    from numpy.exceptions import RankWarning  # type: ignore[attr-defined,unused-ignore]
+    from numpy.exceptions import RankWarning
 except ImportError:
-    from numpy import RankWarning
+    from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
 
 import pandas as pd
 
@@ -88,6 +88,7 @@ from xarray.core.merge import (
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
+    Bins,
     NetcdfWriteModes,
     QuantileMethods,
     Self,
@@ -137,6 +138,7 @@ if TYPE_CHECKING:
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
+    from xarray.core.groupers import Grouper, Resampler
     from xarray.core.merge import CoercibleMapping, CoercibleValue, _MergeResult
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
@@ -3499,7 +3501,7 @@ class Dataset(
         self,
         other: T_Xarray,
         method: ReindexMethodOptions = None,
-        tolerance: int | float | Iterable[int | float] | None = None,
+        tolerance: float | Iterable[float] | str | None = None,
         copy: bool = True,
         fill_value: Any = xrdtypes.NA,
     ) -> Self:
@@ -3526,7 +3528,7 @@ class Dataset(
             - "backfill" / "bfill": propagate next valid index value backward
             - "nearest": use nearest valid index value
 
-        tolerance : optional
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
@@ -3569,7 +3571,7 @@ class Dataset(
         self,
         indexers: Mapping[Any, Any] | None = None,
         method: ReindexMethodOptions = None,
-        tolerance: int | float | Iterable[int | float] | None = None,
+        tolerance: float | Iterable[float] | str | None = None,
         copy: bool = True,
         fill_value: Any = xrdtypes.NA,
         **indexers_kwargs: Any,
@@ -3594,7 +3596,7 @@ class Dataset(
             - "backfill" / "bfill": propagate next valid index value backward
             - "nearest": use nearest valid index value
 
-        tolerance : optional
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
@@ -4156,15 +4158,15 @@ class Dataset(
             kwargs = {}
 
         # pick only dimension coordinates with a single index
-        coords = {}
+        coords: dict[Hashable, Variable] = {}
         other_indexes = other.xindexes
         for dim in self.dims:
             other_dim_coords = other_indexes.get_all_coords(dim, errors="ignore")
             if len(other_dim_coords) == 1:
                 coords[dim] = other_dim_coords[dim]
 
-        numeric_coords: dict[Hashable, pd.Index] = {}
-        object_coords: dict[Hashable, pd.Index] = {}
+        numeric_coords: dict[Hashable, Variable] = {}
+        object_coords: dict[Hashable, Variable] = {}
         for k, v in coords.items():
             if v.dtype.kind in "uifcMm":
                 numeric_coords[k] = v
@@ -6369,7 +6371,7 @@ class Dataset(
         Data variables:
             temperature  (time, location) float64 64B 23.4 24.1 nan ... 24.2 20.5 25.3
 
-        # Drop NaN values from the dataset
+        Drop NaN values from the dataset
 
         >>> dataset.dropna(dim="time")
         <xarray.Dataset> Size: 80B
@@ -6380,7 +6382,7 @@ class Dataset(
         Data variables:
             temperature  (time, location) float64 48B 23.4 24.1 21.8 24.2 20.5 25.3
 
-        # Drop labels with any NAN values
+        Drop labels with any NaN values
 
         >>> dataset.dropna(dim="time", how="any")
         <xarray.Dataset> Size: 80B
@@ -6391,7 +6393,7 @@ class Dataset(
         Data variables:
             temperature  (time, location) float64 48B 23.4 24.1 21.8 24.2 20.5 25.3
 
-        # Drop labels with all NAN values
+        Drop labels with all NAN values
 
         >>> dataset.dropna(dim="time", how="all")
         <xarray.Dataset> Size: 104B
@@ -6402,7 +6404,7 @@ class Dataset(
         Data variables:
             temperature  (time, location) float64 64B 23.4 24.1 nan ... 24.2 20.5 25.3
 
-        # Drop labels with less than 2 non-NA values
+        Drop labels with less than 2 non-NA values
 
         >>> dataset.dropna(dim="time", thresh=2)
         <xarray.Dataset> Size: 80B
@@ -6416,6 +6418,11 @@ class Dataset(
         Returns
         -------
         Dataset
+
+        See Also
+        --------
+        DataArray.dropna
+        pandas.DataFrame.dropna
         """
         # TODO: consider supporting multiple dimensions? Or not, given that
         # there are some ugly edge cases, e.g., pandas's dropna differs
@@ -6539,7 +6546,13 @@ class Dataset(
         limit: int | None = None,
         use_coordinate: bool | Hashable = True,
         max_gap: (
-            int | float | str | pd.Timedelta | np.timedelta64 | datetime.timedelta
+            int
+            | float
+            | str
+            | pd.Timedelta
+            | np.timedelta64
+            | datetime.timedelta
+            | None
         ) = None,
         **kwargs: Any,
     ) -> Self:
@@ -6573,7 +6586,8 @@ class Dataset(
             or None for no limit. This filling is done regardless of the size of
             the gap in the data. To only interpolate over gaps less than a given length,
             see ``max_gap``.
-        max_gap : int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta, default: None
+        max_gap : int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta \
+            or None, default: None
             Maximum size of gap, a continuous sequence of NaNs, that will be filled.
             Use None for no limit. When interpolating along a datetime64 dimension
             and ``use_coordinate=True``, ``max_gap`` can be one of the following:
@@ -9715,7 +9729,7 @@ class Dataset(
             c        (x) float64 40B 0.0 1.25 2.5 3.75 5.0
         """
 
-        return pd.eval(
+        return pd.eval(  # type: ignore[return-value]
             statement,
             resolvers=[self],
             target=self,
@@ -10254,19 +10268,25 @@ class Dataset(
         """
         return interp_calendar(self, target, dim=dim)
 
+    @_deprecate_positional_args("v2024.07.0")
     def groupby(
         self,
-        group: Hashable | DataArray | IndexVariable,
+        group: (
+            Hashable | DataArray | IndexVariable | Mapping[Any, Grouper] | None
+        ) = None,
+        *,
         squeeze: bool | None = None,
         restore_coord_dims: bool = False,
+        **groupers: Grouper,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
 
         Parameters
         ----------
-        group : Hashable, DataArray or IndexVariable
+        group : Hashable or DataArray or IndexVariable or mapping of Hashable to Grouper
             Array whose unique values should be used to group this array. If a
-            string, must be the name of a variable contained in this dataset.
+            Hashable, must be the name of a coordinate contained in this dataarray. If a dictionary,
+            must map an existing variable name to a :py:class:`Grouper` instance.
         squeeze : bool, default: True
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
@@ -10274,6 +10294,10 @@ class Dataset(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
+        **groupers : Mapping of str to Grouper or Resampler
+            Mapping of variable name to group by to :py:class:`Grouper` or :py:class:`Resampler` object.
+            One of ``group`` or ``groupers`` must be provided.
+            Only a single ``grouper`` is allowed at present.
 
         Returns
         -------
@@ -10308,7 +10332,24 @@ class Dataset(
         from xarray.core.groupers import UniqueGrouper
 
         _validate_groupby_squeeze(squeeze)
-        rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
+
+        if isinstance(group, Mapping):
+            groupers = either_dict_or_kwargs(group, groupers, "groupby")  # type: ignore
+            group = None
+
+        if group is not None:
+            if groupers:
+                raise ValueError(
+                    "Providing a combination of `group` and **groupers is not supported."
+                )
+            rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
+        else:
+            if len(groupers) > 1:
+                raise ValueError("Grouping by multiple variables is not supported yet.")
+            elif not groupers:
+                raise ValueError("Either `group` or `**groupers` must be provided.")
+            for group, grouper in groupers.items():
+                rgrouper = ResolvedGrouper(grouper, group, self)
 
         return DatasetGroupBy(
             self,
@@ -10317,16 +10358,18 @@ class Dataset(
             restore_coord_dims=restore_coord_dims,
         )
 
+    @_deprecate_positional_args("v2024.07.0")
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
-        bins: ArrayLike,
+        bins: Bins,
         right: bool = True,
         labels: ArrayLike | None = None,
         precision: int = 3,
         include_lowest: bool = False,
         squeeze: bool | None = None,
         restore_coord_dims: bool = False,
+        duplicates: Literal["raise", "drop"] = "raise",
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
 
@@ -10363,6 +10406,8 @@ class Dataset(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
+        duplicates : {"raise", "drop"}, default: "raise"
+            If bin edges are not unique, raise ValueError or drop non-uniques.
 
         Returns
         -------
@@ -10395,12 +10440,10 @@ class Dataset(
         _validate_groupby_squeeze(squeeze)
         grouper = BinGrouper(
             bins=bins,
-            cut_kwargs={
-                "right": right,
-                "labels": labels,
-                "precision": precision,
-                "include_lowest": include_lowest,
-            },
+            right=right,
+            labels=labels,
+            precision=precision,
+            include_lowest=include_lowest,
         )
         rgrouper = ResolvedGrouper(grouper, group, self)
 
@@ -10585,18 +10628,18 @@ class Dataset(
             coord_func=coord_func,
         )
 
+    @_deprecate_positional_args("v2024.07.0")
     def resample(
         self,
-        indexer: Mapping[Any, str] | None = None,
+        indexer: Mapping[Any, str | Resampler] | None = None,
+        *,
         skipna: bool | None = None,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
-        base: int | None = None,
         offset: pd.Timedelta | datetime.timedelta | str | None = None,
         origin: str | DatetimeLike = "start_day",
-        loffset: datetime.timedelta | str | None = None,
         restore_coord_dims: bool | None = None,
-        **indexer_kwargs: str,
+        **indexer_kwargs: str | Resampler,
     ) -> DatasetResample:
         """Returns a Resample object for performing resampling operations.
 
@@ -10616,10 +10659,6 @@ class Dataset(
             Side of each interval to treat as closed.
         label : {"left", "right"}, optional
             Side of each interval to use for labeling.
-        base : int, optional
-            For frequencies that evenly subdivide 1 day, the "origin" of the
-            aggregated intervals. For example, for "24H" frequency, base could
-            range from 0 through 23.
         origin : {'epoch', 'start', 'start_day', 'end', 'end_day'}, pd.Timestamp, datetime.datetime, np.datetime64, or cftime.datetime, default 'start_day'
             The datetime on which to adjust the grouping. The timezone of origin
             must match the timezone of the index.
@@ -10632,15 +10671,6 @@ class Dataset(
             - 'end_day': `origin` is the ceiling midnight of the last day
         offset : pd.Timedelta, datetime.timedelta, or str, default is None
             An offset timedelta added to the origin.
-        loffset : timedelta or str, optional
-            Offset used to adjust the resampled time labels. Some pandas date
-            offset strings are supported.
-
-            .. deprecated:: 2023.03.0
-                Following pandas, the ``loffset`` parameter is deprecated in favor
-                of using time offset arithmetic, and will be removed in a future
-                version of xarray.
-
         restore_coord_dims : bool, optional
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -10673,10 +10703,50 @@ class Dataset(
             skipna=skipna,
             closed=closed,
             label=label,
-            base=base,
             offset=offset,
             origin=origin,
-            loffset=loffset,
             restore_coord_dims=restore_coord_dims,
             **indexer_kwargs,
         )
+
+    def drop_attrs(self, *, deep: bool = True) -> Self:
+        """
+        Removes all attributes from the Dataset and its variables.
+
+        Parameters
+        ----------
+        deep : bool, default True
+            Removes attributes from all variables.
+
+        Returns
+        -------
+        Dataset
+        """
+        # Remove attributes from the dataset
+        self = self._replace(attrs={})
+
+        if not deep:
+            return self
+
+        # Remove attributes from each variable in the dataset
+        for var in self.variables:
+            # variables don't have a `._replace` method, so we copy and then remove
+            # attrs. If we added a `._replace` method, we could use that instead.
+            if var not in self.indexes:
+                self[var] = self[var].copy()
+                self[var].attrs = {}
+
+        new_idx_variables = {}
+        # Not sure this is the most elegant way of doing this, but it works.
+        # (Should we have a more general "map over all variables, including
+        # indexes" approach?)
+        for idx, idx_vars in self.xindexes.group_by_index():
+            # copy each coordinate variable of an index and drop their attrs
+            temp_idx_variables = {k: v.copy() for k, v in idx_vars.items()}
+            for v in temp_idx_variables.values():
+                v.attrs = {}
+            # re-wrap the index object in new coordinate variables
+            new_idx_variables.update(idx.create_variables(temp_idx_variables))
+        self = self.assign(new_idx_variables)
+
+        return self

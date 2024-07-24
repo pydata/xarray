@@ -22,11 +22,31 @@ v2024.06.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Introduce new :py:class:`groupers.UniqueGrouper`, :py:class:`groupers.BinGrouper`, and
+  :py:class:`groupers.TimeResampler` objects as a step towards supporting grouping by
+  multiple variables. See the `docs <groupby.groupers_>` and the
+  `grouper design doc <https://github.com/pydata/xarray/blob/main/design_notes/grouper_objects.md>`_ for more.
+  (:issue:`6610`, :pull:`8840`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Allow per-variable specification of ``mask_and_scale``, ``decode_times``, ``decode_timedelta``
+  ``use_cftime`` and ``concat_characters`` params in :py:func:`~xarray.open_dataset`  (:pull:`9218`).
+  By `Mathijs Verhaegh <https://github.com/Ostheer>`_.
 - Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
+- Extract the source url from fsspec objects (:issue:`9142`, :pull:`8923`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Add :py:meth:`DataArray.drop_attrs` & :py:meth:`Dataset.drop_attrs` methods,
+  to return an object without ``attrs``. A ``deep`` parameter controls whether
+  variables' ``attrs`` are also dropped.
+  By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- The ``base`` and ``loffset`` parameters to :py:meth:`Dataset.resample` and :py:meth:`DataArray.resample`
+  is now removed. These parameters has been deprecated since v2023.03.0. Using the
+  ``origin`` or ``offset`` parameters is recommended as a replacement for using
+  the ``base`` parameter and using time offset arithmetic is recommended as a
+  replacement for using the ``loffset`` parameter.
 
 
 Deprecations
@@ -35,17 +55,49 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Fix scatter plot broadcasting unneccesarily. (:issue:`9129`, :pull:`9206`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Don't convert custom indexes to ``pandas`` indexes when computing a diff (:pull:`9157`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Make :py:func:`testing.assert_allclose` work with numpy 2.0 (:issue:`9165`, :pull:`9166`).
+  By `Pontus Lurcock <https://github.com/pont-us>`_.
+- Allow diffing objects with array attributes on variables (:issue:`9153`, :pull:`9169`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- ``numpy>=2`` compatibility in the ``netcdf4`` backend (:pull:`9136`).
+  By `Justus Magin <https://github.com/keewis>`_ and `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Promote floating-point numeric datetimes before decoding (:issue:`9179`, :pull:`9182`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Address regression introduced in :pull:`9002` that prevented objects returned
+  by py:meth:`DataArray.convert_calendar` to be indexed by a time index in
+  certain circumstances (:issue:`9138`, :pull:`9192`). By `Mark Harfouche
+  <https://github.com/hmaarrfk>`_ and `Spencer Clark
+  <https://github.com/spencerkclark>`.
 
+- Fiy static typing of tolerance arguments by allowing `str` type (:issue:`8892`, :pull:`9194`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Dark themes are now properly detected for ``html[data-theme=dark]``-tags (:pull:`9200`).
+  By `Dieter Werthmüller <https://github.com/prisae>`_.
+- Reductions no longer fail for ``np.complex_`` dtype arrays when numbagg is
+  installed.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Adds intro to backend section of docs, including a flow-chart to navigate types of backends (:pull:`9175`).
+  By `Jessica Scheick <https://github.com/jessicas11>`_.
+- Adds a flow-chart diagram to help users navigate help resources (`Discussion #8990 <https://github.com/pydata/xarray/discussions/8990>`_, :pull:`9147`).
+  By `Jessica Scheick <https://github.com/jessicas11>`_.
 - Improvements to Zarr & chunking docs (:pull:`9139`, :pull:`9140`, :pull:`9132`)
-  By `Maximilian Roos <https://github.com/max-sixty>`_
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Fix copybutton for multi line examples and double digit ipython cell numbers (:pull:`9264`).
+  By `Moritz Schreiber <https://github.com/mosc9575>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Enable typing checks of pandas (:pull:`9213`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 .. _whats-new.2024.06.0:
 
