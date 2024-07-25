@@ -312,15 +312,6 @@ Operations map over subtrees, so we can take a mean over the ``x`` dimension of 
 Here the ``"x"`` dimension used is always the one local to that sub-group.
 
 
-Finally we can try to create an invalid tree by putting the ``coarse`` data under the ``fine`` data:
-
-.. ipython:: python
-
-    dt = xr.DataTree.from_dict(
-        {"simulation/fine/coarse": ds, "simulation/fine": ds2, "/": ds3}
-    )
-    dt
-
 You can do almost everything you can do with ``Dataset`` objects with ``DataTree`` objects
 (including indexing and arithmetic), as operations will be mapped over every sub-group in the tree.
 This allows you to work with multiple groups of non-alignable variables at once.
