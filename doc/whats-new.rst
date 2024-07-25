@@ -22,9 +22,6 @@ v2024.06.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
-- Fix :py:meth:`xr.cov` and :py:meth:`xr.corr` now support complex valued arrays  (:issue:`7340`, :pull:`7392`).
-  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Use fastpath when grouping both montonically increasing and decreasing variable
   in :py:class:`GroupBy` (:issue:`6220`, :pull:`7427`). By `Joel Jaeschke <https://github.com/joeljaeschke>`_.
 - Introduce new :py:class:`groupers.UniqueGrouper`, :py:class:`groupers.BinGrouper`, and
@@ -1452,7 +1449,6 @@ Deprecations
   :py:func:`date_range` are deprecated in favor of the `inclusive` parameters,
   and will be removed in a future version of xarray (:issue:`6985`:,
   :pull:`7373`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
-
 
 Bug fixes
 ~~~~~~~~~
