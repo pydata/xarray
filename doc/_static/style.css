@@ -7,6 +7,10 @@ table.docutils td {
     word-wrap: break-word;
 }
 
+.bd-header-announcement {
+  background-color: var(--pst-color-info-bg);
+}
+
 /* Reduce left and right margins */
 
 .container, .container-lg, .container-md, .container-sm, .container-xl {
@@ -172,11 +176,9 @@ https://github.com/bokeh/bokeh/blob/branch-2.4/sphinx/source/bokeh/static/custom
   display: block;
   padding: 0.25rem 1.5rem;
   font-size: 90%;
-  color: rgba(0, 0, 0, 0.65);
 }
 
 .bd-sidebar .nav > li > a:hover {
-  color: rgba(0, 0, 0, 0.85);
   text-decoration: none;
   background-color: transparent;
 }
@@ -184,7 +186,6 @@ https://github.com/bokeh/bokeh/blob/branch-2.4/sphinx/source/bokeh/static/custom
 .bd-sidebar .nav > .active > a,
 .bd-sidebar .nav > .active:hover > a {
   font-weight: 400;
-  color: #130654;
   /* adjusted from original
   color: rgba(0, 0, 0, 0.85);
   background-color: transparent; */
@@ -199,13 +200,11 @@ https://github.com/bokeh/bokeh/blob/branch-2.4/sphinx/source/bokeh/static/custom
   display: block;
   padding: 0.25rem 1.5rem;
   font-size: 90%;
-  color: rgba(0, 0, 0, 0.65);
 }
 
 .bd-sidebar .nav > li > ul > .active > a,
 .bd-sidebar .nav > li > ul > .active:hover > a {
   font-weight: 400;
-  color: #542437;
 }
 
 dt:target {
@@ -222,8 +221,6 @@ main *:target::before {
 }
 
 body {
-  /* Add padding to body to avoid overlap with navbar. */
-  padding-top: var(--navbar-height);
   width: 100%;
 }
 

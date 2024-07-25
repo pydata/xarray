@@ -15,15 +15,15 @@ def test_deprecate_positional_args_warns_for_function():
     assert result == (1, 2, 3, 4)
 
     with pytest.warns(FutureWarning, match=r".*v0.1"):
-        result = f1(1, 2, 3)
+        result = f1(1, 2, 3)  # type: ignore[misc]
     assert result == (1, 2, 3, "d")
 
     with pytest.warns(FutureWarning, match=r"Passing 'c' as positional"):
-        result = f1(1, 2, 3)
+        result = f1(1, 2, 3)  # type: ignore[misc]
     assert result == (1, 2, 3, "d")
 
     with pytest.warns(FutureWarning, match=r"Passing 'c, d' as positional"):
-        result = f1(1, 2, 3, 4)
+        result = f1(1, 2, 3, 4)  # type: ignore[misc]
     assert result == (1, 2, 3, 4)
 
     @_deprecate_positional_args("v0.1")
@@ -31,7 +31,7 @@ def test_deprecate_positional_args_warns_for_function():
         return a, b, c, d
 
     with pytest.warns(FutureWarning, match=r"Passing 'b' as positional"):
-        result = f2(1, 2)
+        result = f2(1, 2)  # type: ignore[misc]
     assert result == (1, 2, "c", "d")
 
     @_deprecate_positional_args("v0.1")
@@ -39,11 +39,11 @@ def test_deprecate_positional_args_warns_for_function():
         return a, b, kwargs
 
     with pytest.warns(FutureWarning, match=r"Passing 'b' as positional"):
-        result = f3(1, 2)
+        result = f3(1, 2)  # type: ignore[misc]
     assert result == (1, 2, {})
 
     with pytest.warns(FutureWarning, match=r"Passing 'b' as positional"):
-        result = f3(1, 2, f="f")
+        result = f3(1, 2, f="f")  # type: ignore[misc]
     assert result == (1, 2, {"f": "f"})
 
     @_deprecate_positional_args("v0.1")
@@ -57,7 +57,7 @@ def test_deprecate_positional_args_warns_for_function():
     assert result == (1, 2, {"f": "f"})
 
     with pytest.warns(FutureWarning, match=r"Passing 'b' as positional"):
-        result = f4(1, 2, f="f")
+        result = f4(1, 2, f="f")  # type: ignore[misc]
     assert result == (1, 2, {"f": "f"})
 
     with pytest.raises(TypeError, match=r"Keyword-only param without default"):
@@ -80,15 +80,15 @@ def test_deprecate_positional_args_warns_for_class():
     assert result == (1, 2, 3, 4)
 
     with pytest.warns(FutureWarning, match=r".*v0.1"):
-        result = A1().method(1, 2, 3)
+        result = A1().method(1, 2, 3)  # type: ignore[misc]
     assert result == (1, 2, 3, "d")
 
     with pytest.warns(FutureWarning, match=r"Passing 'c' as positional"):
-        result = A1().method(1, 2, 3)
+        result = A1().method(1, 2, 3)  # type: ignore[misc]
     assert result == (1, 2, 3, "d")
 
     with pytest.warns(FutureWarning, match=r"Passing 'c, d' as positional"):
-        result = A1().method(1, 2, 3, 4)
+        result = A1().method(1, 2, 3, 4)  # type: ignore[misc]
     assert result == (1, 2, 3, 4)
 
     class A2:
@@ -97,11 +97,11 @@ def test_deprecate_positional_args_warns_for_class():
             return a, b, c, d
 
     with pytest.warns(FutureWarning, match=r"Passing 'c' as positional"):
-        result = A2().method(1, 2, 3)
+        result = A2().method(1, 2, 3)  # type: ignore[misc]
     assert result == (1, 2, 3, "d")
 
     with pytest.warns(FutureWarning, match=r"Passing 'c, d' as positional"):
-        result = A2().method(1, 2, 3, 4)
+        result = A2().method(1, 2, 3, 4)  # type: ignore[misc]
     assert result == (1, 2, 3, 4)
 
     class A3:
@@ -110,11 +110,11 @@ def test_deprecate_positional_args_warns_for_class():
             return a, b, kwargs
 
     with pytest.warns(FutureWarning, match=r"Passing 'b' as positional"):
-        result = A3().method(1, 2)
+        result = A3().method(1, 2)  # type: ignore[misc]
     assert result == (1, 2, {})
 
     with pytest.warns(FutureWarning, match=r"Passing 'b' as positional"):
-        result = A3().method(1, 2, f="f")
+        result = A3().method(1, 2, f="f")  # type: ignore[misc]
     assert result == (1, 2, {"f": "f"})
 
     class A4:
@@ -129,7 +129,7 @@ def test_deprecate_positional_args_warns_for_class():
     assert result == (1, 2, {"f": "f"})
 
     with pytest.warns(FutureWarning, match=r"Passing 'b' as positional"):
-        result = A4().method(1, 2, f="f")
+        result = A4().method(1, 2, f="f")  # type: ignore[misc]
     assert result == (1, 2, {"f": "f"})
 
     with pytest.raises(TypeError, match=r"Keyword-only param without default"):

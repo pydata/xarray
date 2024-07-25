@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, cast
 import numpy as np
 
 from xarray.core.formatting import format_item
-from xarray.core.types import HueStyleOptions, T_Xarray
+from xarray.core.types import HueStyleOptions, T_DataArrayOrSet
 from xarray.plot.utils import (
     _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
@@ -21,7 +21,6 @@ from xarray.plot.utils import (
     _Normalize,
     _parse_size,
     _process_cmap_cbar_kwargs,
-    import_matplotlib_pyplot,
     label_from_attrs,
 )
 
@@ -60,7 +59,7 @@ def _nicetitle(coord, value, maxchar, template):
 T_FacetGrid = TypeVar("T_FacetGrid", bound="FacetGrid")
 
 
-class FacetGrid(Generic[T_Xarray]):
+class FacetGrid(Generic[T_DataArrayOrSet]):
     """
     Initialize the Matplotlib figure and FacetGrid object.
 
@@ -76,7 +75,7 @@ class FacetGrid(Generic[T_Xarray]):
     The general approach to plotting here is called "small multiples",
     where the same kind of plot is repeated multiple times, and the
     specific use of small multiples to display the same relationship
-    conditioned on one ore more other variables is often called a "trellis
+    conditioned on one or more other variables is often called a "trellis
     plot".
 
     The basic workflow is to initialize the :class:`FacetGrid` object with
@@ -101,7 +100,7 @@ class FacetGrid(Generic[T_Xarray]):
         sometimes the rightmost grid positions in the bottom row.
     """
 
-    data: T_Xarray
+    data: T_DataArrayOrSet
     name_dicts: np.ndarray
     fig: Figure
     axs: np.ndarray
@@ -126,7 +125,7 @@ class FacetGrid(Generic[T_Xarray]):
 
     def __init__(
         self,
-        data: T_Xarray,
+        data: T_DataArrayOrSet,
         col: Hashable | None = None,
         row: Hashable | None = None,
         col_wrap: int | None = None,
@@ -166,7 +165,7 @@ class FacetGrid(Generic[T_Xarray]):
 
         """
 
-        plt = import_matplotlib_pyplot()
+        import matplotlib.pyplot as plt
 
         # Handle corner case of nonunique coordinates
         rep_col = col is not None and not data[col].to_index().is_unique
@@ -681,7 +680,10 @@ class FacetGrid(Generic[T_Xarray]):
 
     def _adjust_fig_for_guide(self, guide) -> None:
         # Draw the plot to set the bounding boxes correctly
-        renderer = self.fig.canvas.get_renderer()
+        if hasattr(self.fig.canvas, "get_renderer"):
+            renderer = self.fig.canvas.get_renderer()
+        else:
+            raise RuntimeError("MPL backend has no renderer")
         self.fig.draw(renderer)
 
         # Calculate and set the new width of the figure so the legend fits
@@ -731,6 +733,9 @@ class FacetGrid(Generic[T_Xarray]):
         if hasattr(self._mappables[-1], "extend"):
             kwargs.pop("extend", None)
         if "label" not in kwargs:
+            from xarray import DataArray
+
+            assert isinstance(self.data, DataArray)
             kwargs.setdefault("label", label_from_attrs(self.data))
         self.cbar = self.fig.colorbar(
             self._mappables[-1], ax=list(self.axs.flat), **kwargs
@@ -769,7 +774,7 @@ class FacetGrid(Generic[T_Xarray]):
         >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
         >>> fg = ds.plot.scatter(x="A", y="B", hue="y", row="x", col="w")
         >>> round(fg._get_largest_lims()["x"][0], 3)
-        -0.334
+        np.float64(-0.334)
         """
         lims_largest: dict[str, tuple[float, float]] = dict(
             x=(np.inf, -np.inf), y=(np.inf, -np.inf), z=(np.inf, -np.inf)
@@ -812,7 +817,7 @@ class FacetGrid(Generic[T_Xarray]):
         >>> fg = ds.plot.scatter(x="A", y="B", hue="y", row="x", col="w")
         >>> fg._set_lims(x=(-0.3, 0.3), y=(0, 2), z=(0, 4))
         >>> fg.axs[0, 0].get_xlim(), fg.axs[0, 0].get_ylim()
-        ((-0.3, 0.3), (0.0, 2.0))
+        ((np.float64(-0.3), np.float64(0.3)), (np.float64(0.0), np.float64(2.0)))
         """
         lims_largest = self._get_largest_lims()
 
@@ -985,7 +990,7 @@ class FacetGrid(Generic[T_Xarray]):
         self : FacetGrid object
 
         """
-        plt = import_matplotlib_pyplot()
+        import matplotlib.pyplot as plt
 
         for ax, namedict in zip(self.axs.flat, self.name_dicts.flat):
             if namedict is not None:
@@ -1004,7 +1009,7 @@ class FacetGrid(Generic[T_Xarray]):
 
 
 def _easy_facetgrid(
-    data: T_Xarray,
+    data: T_DataArrayOrSet,
     plotfunc: Callable,
     kind: Literal["line", "dataarray", "dataset", "plot1d"],
     x: Hashable | None = None,
@@ -1020,7 +1025,7 @@ def _easy_facetgrid(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_Xarray]:
+) -> FacetGrid[T_DataArrayOrSet]:
     """
     Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
 

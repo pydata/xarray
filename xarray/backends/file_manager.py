@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import atexit
 import contextlib
 import io
 import threading
@@ -62,7 +63,7 @@ class CachingFileManager(FileManager):
     FileManager.close(), which ensures that closed files are removed from the
     cache as well.
 
-    Example usage:
+    Example usage::
 
         manager = FileManager(open, 'example.txt', mode='w')
         f = manager.acquire()
@@ -70,7 +71,7 @@ class CachingFileManager(FileManager):
         manager.close()  # ensures file is closed
 
     Note that as long as previous files are still cached, acquiring a file
-    multiple times from the same FileManager is essentially free:
+    multiple times from the same FileManager is essentially free::
 
         f1 = manager.acquire()
         f2 = manager.acquire()
@@ -287,6 +288,13 @@ class CachingFileManager(FileManager):
             f"{type(self).__name__}({self._opener!r}, {args_string}, "
             f"kwargs={self._kwargs}, manager_id={self._manager_id!r})"
         )
+
+
+@atexit.register
+def _remove_del_method():
+    # We don't need to close unclosed files at program exit, and may not be able
+    # to, because Python is cleaning up imports / globals.
+    del CachingFileManager.__del__
 
 
 class _RefCounter:

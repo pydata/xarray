@@ -6,29 +6,32 @@ import pytest
 
 import xarray as xr
 from xarray.core import formatting_html as fh
+from xarray.core.coordinates import Coordinates
+from xarray.core.datatree import DataTree
 
 
 @pytest.fixture
-def dataarray():
+def dataarray() -> xr.DataArray:
     return xr.DataArray(np.random.RandomState(0).randn(4, 6))
 
 
 @pytest.fixture
-def dask_dataarray(dataarray):
+def dask_dataarray(dataarray: xr.DataArray) -> xr.DataArray:
     pytest.importorskip("dask")
     return dataarray.chunk()
 
 
 @pytest.fixture
-def multiindex():
-    mindex = pd.MultiIndex.from_product(
+def multiindex() -> xr.Dataset:
+    midx = pd.MultiIndex.from_product(
         [["a", "b"], [1, 2]], names=("level_1", "level_2")
     )
-    return xr.Dataset({}, {"x": mindex})
+    midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
+    return xr.Dataset({}, midx_coords)
 
 
 @pytest.fixture
-def dataset():
+def dataset() -> xr.Dataset:
     times = pd.date_range("2000-01-01", "2001-12-31", name="time")
     annual_cycle = np.sin(2 * np.pi * (times.dayofyear.values / 365.25 - 0.28))
 
@@ -46,17 +49,17 @@ def dataset():
     )
 
 
-def test_short_data_repr_html(dataarray) -> None:
+def test_short_data_repr_html(dataarray: xr.DataArray) -> None:
     data_repr = fh.short_data_repr_html(dataarray)
     assert data_repr.startswith("<pre>array")
 
 
-def test_short_data_repr_html_non_str_keys(dataset) -> None:
+def test_short_data_repr_html_non_str_keys(dataset: xr.Dataset) -> None:
     ds = dataset.assign({2: lambda x: x["tmin"]})
     fh.dataset_repr(ds)
 
 
-def test_short_data_repr_html_dask(dask_dataarray) -> None:
+def test_short_data_repr_html_dask(dask_dataarray: xr.DataArray) -> None:
     assert hasattr(dask_dataarray.data, "_repr_html_")
     data_repr = fh.short_data_repr_html(dask_dataarray)
     assert data_repr == dask_dataarray.data._repr_html_()
@@ -97,7 +100,7 @@ def test_summarize_attrs_with_unsafe_attr_name_and_value() -> None:
     assert "<dd>&lt;pd.DataFrame&gt;</dd>" in formatted
 
 
-def test_repr_of_dataarray(dataarray) -> None:
+def test_repr_of_dataarray(dataarray: xr.DataArray) -> None:
     formatted = fh.array_repr(dataarray)
     assert "dim_0" in formatted
     # has an expanded data section
@@ -119,12 +122,12 @@ def test_repr_of_dataarray(dataarray) -> None:
         )
 
 
-def test_repr_of_multiindex(multiindex) -> None:
+def test_repr_of_multiindex(multiindex: xr.Dataset) -> None:
     formatted = fh.dataset_repr(multiindex)
     assert "(x)" in formatted
 
 
-def test_repr_of_dataset(dataset) -> None:
+def test_repr_of_dataset(dataset: xr.Dataset) -> None:
     formatted = fh.dataset_repr(dataset)
     # coords, attrs, and data_vars are expanded
     assert (
@@ -151,7 +154,7 @@ def test_repr_of_dataset(dataset) -> None:
         assert "&lt;IA&gt;" in formatted
 
 
-def test_repr_text_fallback(dataset) -> None:
+def test_repr_text_fallback(dataset: xr.Dataset) -> None:
     formatted = fh.dataset_repr(dataset)
 
     # Just test that the "pre" block used for fallback to plain text is present.
@@ -170,7 +173,7 @@ def test_variable_repr_html() -> None:
     assert "xarray.Variable" in html
 
 
-def test_repr_of_nonstr_dataset(dataset) -> None:
+def test_repr_of_nonstr_dataset(dataset: xr.Dataset) -> None:
     ds = dataset.copy()
     ds.attrs[1] = "Test value"
     ds[2] = ds["tmin"]
@@ -179,7 +182,7 @@ def test_repr_of_nonstr_dataset(dataset) -> None:
     assert "<div class='xr-var-name'><span>2</span>" in formatted
 
 
-def test_repr_of_nonstr_dataarray(dataarray) -> None:
+def test_repr_of_nonstr_dataarray(dataarray: xr.DataArray) -> None:
     da = dataarray.rename(dim_0=15)
     da.attrs[1] = "value"
     formatted = fh.array_repr(da)
@@ -194,3 +197,197 @@ def test_nonstr_variable_repr_html() -> None:
         html = v._repr_html_().strip()
     assert "<dt><span>22 :</span></dt><dd>bar</dd>" in html
     assert "<li><span>10</span>: 3</li></ul>" in html
+
+
+@pytest.fixture(scope="module", params=["some html", "some other html"])
+def repr(request):
+    return request.param
+
+
+class Test_summarize_datatree_children:
+    """
+    Unit tests for summarize_datatree_children.
+    """
+
+    func = staticmethod(fh.summarize_datatree_children)
+
+    @pytest.fixture(scope="class")
+    def childfree_tree_factory(self):
+        """
+        Fixture for a child-free DataTree factory.
+        """
+        from random import randint
+
+        def _childfree_tree_factory():
+            return DataTree(
+                data=xr.Dataset({"z": ("y", [randint(1, 100) for _ in range(3)])})
+            )
+
+        return _childfree_tree_factory
+
+    @pytest.fixture(scope="class")
+    def childfree_tree(self, childfree_tree_factory):
+        """
+        Fixture for a child-free DataTree.
+        """
+        return childfree_tree_factory()
+
+    @pytest.fixture(scope="function")
+    def mock_datatree_node_repr(self, monkeypatch):
+        """
+        Apply mocking for datatree_node_repr.
+        """
+
+        def mock(group_title, dt):
+            """
+            Mock with a simple result
+            """
+            return group_title + " " + str(id(dt))
+
+        monkeypatch.setattr(fh, "datatree_node_repr", mock)
+
+    @pytest.fixture(scope="function")
+    def mock_wrap_datatree_repr(self, monkeypatch):
+        """
+        Apply mocking for _wrap_datatree_repr.
+        """
+
+        def mock(r, *, end, **kwargs):
+            """
+            Mock by appending "end" or "not end".
+            """
+            return r + " " + ("end" if end else "not end") + "//"
+
+        monkeypatch.setattr(fh, "_wrap_datatree_repr", mock)
+
+    def test_empty_mapping(self):
+        """
+        Test with an empty mapping of children.
+        """
+        children: dict[str, DataTree] = {}
+        assert self.func(children) == (
+            "<div style='display: inline-grid; grid-template-columns: 100%; grid-column: 1 / -1'>"
+            "</div>"
+        )
+
+    def test_one_child(
+        self, childfree_tree, mock_wrap_datatree_repr, mock_datatree_node_repr
+    ):
+        """
+        Test with one child.
+
+        Uses a mock of _wrap_datatree_repr and _datatree_node_repr to essentially mock
+        the inline lambda function "lines_callback".
+        """
+        # Create mapping of children
+        children = {"a": childfree_tree}
+
+        # Expect first line to be produced from the first child, and
+        # wrapped as the last child
+        first_line = f"a {id(children['a'])} end//"
+
+        assert self.func(children) == (
+            "<div style='display: inline-grid; grid-template-columns: 100%; grid-column: 1 / -1'>"
+            f"{first_line}"
+            "</div>"
+        )
+
+    def test_two_children(
+        self, childfree_tree_factory, mock_wrap_datatree_repr, mock_datatree_node_repr
+    ):
+        """
+        Test with two level deep children.
+
+        Uses a mock of _wrap_datatree_repr and datatree_node_repr to essentially mock
+        the inline lambda function "lines_callback".
+        """
+
+        # Create mapping of children
+        children = {"a": childfree_tree_factory(), "b": childfree_tree_factory()}
+
+        # Expect first line to be produced from the first child, and
+        # wrapped as _not_ the last child
+        first_line = f"a {id(children['a'])} not end//"
+
+        # Expect second line to be produced from the second child, and
+        # wrapped as the last child
+        second_line = f"b {id(children['b'])} end//"
+
+        assert self.func(children) == (
+            "<div style='display: inline-grid; grid-template-columns: 100%; grid-column: 1 / -1'>"
+            f"{first_line}"
+            f"{second_line}"
+            "</div>"
+        )
+
+
+class Test__wrap_datatree_repr:
+    """
+    Unit tests for _wrap_datatree_repr.
+    """
+
+    func = staticmethod(fh._wrap_datatree_repr)
+
+    def test_end(self, repr):
+        """
+        Test with end=True.
+        """
+        r = self.func(repr, end=True)
+        assert r == (
+            "<div style='display: inline-grid; grid-template-columns: 0px 20px auto; width: 100%;'>"
+            "<div style='"
+            "grid-column-start: 1;"
+            "border-right: 0.2em solid;"
+            "border-color: var(--xr-border-color);"
+            "height: 1.2em;"
+            "width: 0px;"
+            "'>"
+            "</div>"
+            "<div style='"
+            "grid-column-start: 2;"
+            "grid-row-start: 1;"
+            "height: 1em;"
+            "width: 20px;"
+            "border-bottom: 0.2em solid;"
+            "border-color: var(--xr-border-color);"
+            "'>"
+            "</div>"
+            "<div style='"
+            "grid-column-start: 3;"
+            "'>"
+            f"{repr}"
+            "</div>"
+            "</div>"
+        )
+
+    def test_not_end(self, repr):
+        """
+        Test with end=False.
+        """
+        r = self.func(repr, end=False)
+        assert r == (
+            "<div style='display: inline-grid; grid-template-columns: 0px 20px auto; width: 100%;'>"
+            "<div style='"
+            "grid-column-start: 1;"
+            "border-right: 0.2em solid;"
+            "border-color: var(--xr-border-color);"
+            "height: 100%;"
+            "width: 0px;"
+            "'>"
+            "</div>"
+            "<div style='"
+            "grid-column-start: 2;"
+            "grid-row-start: 1;"
+            "height: 1em;"
+            "width: 20px;"
+            "border-bottom: 0.2em solid;"
+            "border-color: var(--xr-border-color);"
+            "'>"
+            "</div>"
+            "<div style='"
+            "grid-column-start: 3;"
+            "'>"
+            f"{repr}"
+            "</div>"
+            "</div>"
+        )

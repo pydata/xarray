@@ -50,24 +50,16 @@ with suppress(ImportError):
     matplotlib.use("Agg")
 
 try:
-    import rasterio  # noqa: F401
-except ImportError:
-    allowed_failures.update(
-        ["gallery/plot_rasterio_rgb.py", "gallery/plot_rasterio.py"]
-    )
-
-try:
     import cartopy  # noqa: F401
 except ImportError:
     allowed_failures.update(
         [
             "gallery/plot_cartopy_facetgrid.py",
-            "gallery/plot_rasterio_rgb.py",
-            "gallery/plot_rasterio.py",
         ]
     )
 
-nbsphinx_allow_errors = True
+nbsphinx_allow_errors = False
+nbsphinx_requirejs_path = ""
 
 # -- General configuration ------------------------------------------------
 
@@ -77,7 +69,9 @@ nbsphinx_allow_errors = True
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+
 extensions = [
+    "sphinxcontrib.mermaid",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
@@ -93,16 +87,17 @@ extensions = [
     "sphinx_copybutton",
     "sphinxext.rediraffe",
     "sphinx_design",
+    "sphinx_inline_tabs",
 ]
 
 
 extlinks = {
-    "issue": ("https://github.com/pydata/xarray/issues/%s", "GH"),
-    "pull": ("https://github.com/pydata/xarray/pull/%s", "PR"),
+    "issue": ("https://github.com/pydata/xarray/issues/%s", "GH%s"),
+    "pull": ("https://github.com/pydata/xarray/pull/%s", "PR%s"),
 }
 
 # sphinx-copybutton configurations
-copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
+copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.{3,}: | {5,8}: "
 copybutton_prompt_is_regexp = True
 
 # nbsphinx configurations
@@ -163,6 +158,8 @@ napoleon_type_aliases = {
     "Variable": "~xarray.Variable",
     "DatasetGroupBy": "~xarray.core.groupby.DatasetGroupBy",
     "DataArrayGroupBy": "~xarray.core.groupby.DataArrayGroupBy",
+    "Grouper": "~xarray.core.groupers.Grouper",
+    "Resampler": "~xarray.core.groupers.Resampler",
     # objects without namespace: numpy
     "ndarray": "~numpy.ndarray",
     "MaskedArray": "~numpy.ma.MaskedArray",
@@ -174,6 +171,7 @@ napoleon_type_aliases = {
     "CategoricalIndex": "~pandas.CategoricalIndex",
     "TimedeltaIndex": "~pandas.TimedeltaIndex",
     "DatetimeIndex": "~pandas.DatetimeIndex",
+    "IntervalIndex": "~pandas.IntervalIndex",
     "Series": "~pandas.Series",
     "DataFrame": "~pandas.DataFrame",
     "Categorical": "~pandas.Categorical",
@@ -183,6 +181,8 @@ napoleon_type_aliases = {
     "pd.NaT": "~pandas.NaT",
 }
 
+# mermaid config
+mermaid_version = "10.9.1"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
@@ -239,28 +239,29 @@ html_theme_options = dict(
     # canonical_url="",
     repository_url="https://github.com/pydata/xarray",
     repository_branch="main",
+    navigation_with_keys=False,  # pydata/pydata-sphinx-theme#1492
     path_to_docs="doc",
     use_edit_page_button=True,
     use_repository_button=True,
     use_issues_button=True,
     home_page_in_toc=False,
-    extra_navbar="",
-    navbar_footer_text="",
     extra_footer="""<p>Xarray is a fiscally sponsored project of <a href="https://numfocus.org">NumFOCUS</a>,
     a nonprofit dedicated to supporting the open-source scientific computing community.<br>
     Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
-    twitter_url="https://twitter.com/xarray_devs",
+    twitter_url="https://twitter.com/xarray_dev",
+    icon_links=[],  # workaround for pydata/pydata-sphinx-theme#1220
+    announcement="<a href='https://forms.gle/KEq7WviCdz9xTaJX6'>Xarray's 2024 User Survey is live now. Please take ~5 minutes to fill it out and help us improve Xarray.</a>",
 )
 
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = "_static/dataset-diagram-logo.png"
+html_logo = "_static/logos/Xarray_Logo_RGB_Final.svg"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-html_favicon = "_static/favicon.ico"
+html_favicon = "_static/logos/Xarray_Icon_Final.svg"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -271,11 +272,11 @@ html_css_files = ["style.css"]
 
 # configuration for sphinxext.opengraph
 ogp_site_url = "https://docs.xarray.dev/en/latest/"
-ogp_image = "https://docs.xarray.dev/en/stable/_static/dataset-diagram-logo.png"
+ogp_image = "https://docs.xarray.dev/en/stable/_static/logos/Xarray_Logo_RGB_Final.png"
 ogp_custom_meta_tags = [
     '<meta name="twitter:card" content="summary_large_image" />',
     '<meta property="twitter:site" content="@xarray_dev" />',
-    '<meta name="image" property="og:image" content="https://docs.xarray.dev/en/stable/_static/dataset-diagram-logo.png" />',
+    '<meta name="image" property="og:image" content="https://docs.xarray.dev/en/stable/_static/logos/Xarray_Logo_RGB_Final.png" />',
 ]
 
 # Redirects for pages that were moved to new locations
@@ -323,17 +324,22 @@ htmlhelp_basename = "xarraydoc"
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/3/", None),
-    "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
-    "iris": ("https://scitools-iris.readthedocs.io/en/latest", None),
-    "numpy": ("https://numpy.org/doc/stable", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy", None),
-    "numba": ("https://numba.readthedocs.io/en/stable/", None),
-    "matplotlib": ("https://matplotlib.org/stable/", None),
-    "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
-    "rasterio": ("https://rasterio.readthedocs.io/en/latest", None),
+    "cubed": ("https://cubed-dev.github.io/cubed/", None),
+    "dask": ("https://docs.dask.org/en/latest", None),
+    "datatree": ("https://xarray-datatree.readthedocs.io/en/latest/", None),
+    "flox": ("https://flox.readthedocs.io/en/latest/", None),
+    "hypothesis": ("https://hypothesis.readthedocs.io/en/latest/", None),
+    "iris": ("https://scitools-iris.readthedocs.io/en/latest", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    "numba": ("https://numba.readthedocs.io/en/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
+    "python": ("https://docs.python.org/3/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
+    "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
+    "zarr": ("https://zarr.readthedocs.io/en/latest/", None),
 }
 
 

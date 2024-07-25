@@ -36,15 +36,18 @@ Geosciences
 - `rioxarray <https://corteva.github.io/rioxarray>`_: geospatial xarray extension powered by rasterio
 - `salem <https://salem.readthedocs.io>`_: Adds geolocalised subsetting, masking, and plotting operations to xarray's data structures via accessors.
 - `SatPy <https://satpy.readthedocs.io/>`_ : Library for reading and manipulating meteorological remote sensing data and writing it to various image and data file formats.
+- `SARXarray <https://tudelftgeodesy.github.io/sarxarray/>`_: xarray extension for reading and processing large Synthetic Aperture Radar (SAR) data stacks.
 - `Spyfit <https://spyfit.readthedocs.io/en/master/>`_: FTIR spectroscopy of the atmosphere
 - `windspharm <https://ajdawson.github.io/windspharm/index.html>`_: Spherical
   harmonic wind analysis in Python.
 - `wradlib <https://wradlib.org/>`_: An Open Source Library for Weather Radar Data Processing.
 - `wrf-python <https://wrf-python.readthedocs.io/>`_: A collection of diagnostic and interpolation routines for use with output of the Weather Research and Forecasting (WRF-ARW) Model.
+- `xarray-regrid <https://github.com/EXCITED-CO2/xarray-regrid>`_: xarray extension for regridding rectilinear data.
 - `xarray-simlab <https://xarray-simlab.readthedocs.io>`_: xarray extension for computer model simulations.
 - `xarray-spatial <https://xarray-spatial.org/>`_: Numba-accelerated raster-based spatial processing tools (NDVI, curvature, zonal-statistics, proximity, hillshading, viewshed, etc.)
 - `xarray-topo <https://xarray-topo.readthedocs.io/>`_: xarray extension for topographic analysis and modelling.
 - `xbpch <https://github.com/darothen/xbpch>`_: xarray interface for bpch files.
+- `xCDAT <https://xcdat.readthedocs.io/>`_: An extension of xarray for climate data analysis on structured grids.
 - `xclim <https://xclim.readthedocs.io/>`_: A library for calculating climate science indices with unit handling built from xarray and dask.
 - `xESMF <https://pangeo-xesmf.readthedocs.io/>`_: Universal regridder for geospatial data.
 - `xgcm <https://xgcm.readthedocs.io/>`_: Extends the xarray data model to understand finite volume grid cells (common in General Circulation Models) and provides interpolation and difference operations for such grids.
@@ -71,11 +74,13 @@ Extend xarray capabilities
 - `Collocate <https://github.com/cistools/collocate>`_: Collocate xarray trajectories in arbitrary physical dimensions
 - `eofs <https://ajdawson.github.io/eofs/>`_: EOF analysis in Python.
 - `hypothesis-gufunc <https://hypothesis-gufunc.readthedocs.io/en/latest/>`_: Extension to hypothesis. Makes it easy to write unit tests with xarray objects as input.
+- `ntv-pandas <https://github.com/loco-philippe/ntv-pandas>`_ : A tabular analyzer and a semantic, compact and reversible converter for multidimensional and tabular data
 - `nxarray <https://github.com/nxarray/nxarray>`_: NeXus input/output capability for xarray.
 - `xarray-compare <https://github.com/astropenguin/xarray-compare>`_: xarray extension for data comparison.
 - `xarray-dataclasses <https://github.com/astropenguin/xarray-dataclasses>`_: xarray extension for typed DataArray and Dataset creation.
 - `xarray_einstats <https://xarray-einstats.readthedocs.io>`_: Statistics, linear algebra and einops for xarray
 - `xarray_extras <https://github.com/crusaderky/xarray_extras>`_: Advanced algorithms for xarray objects (e.g. integrations/interpolations).
+- `xeofs <https://github.com/nicrie/xeofs>`_: PCA/EOF analysis and related techniques, integrated with xarray and Dask for efficient handling of large-scale data.
 - `xpublish <https://xpublish.readthedocs.io/>`_: Publish Xarray Datasets via a Zarr compatible REST API.
 - `xrft <https://github.com/rabernat/xrft>`_: Fourier transforms for xarray data.
 - `xr-scipy <https://xr-scipy.readthedocs.io>`_: A lightweight scipy wrapper for xarray.
@@ -95,7 +100,6 @@ Visualization
 Non-Python projects
 ~~~~~~~~~~~~~~~~~~~
 - `xframe <https://github.com/xtensor-stack/xframe>`_: C++ data structures inspired by xarray.
-- `AxisArrays <https://github.com/JuliaArrays/AxisArrays.jl>`_ and
-  `NamedArrays <https://github.com/davidavdav/NamedArrays.jl>`_: similar data structures for Julia.
+- `AxisArrays <https://github.com/JuliaArrays/AxisArrays.jl>`_, `NamedArrays <https://github.com/davidavdav/NamedArrays.jl>`_ and `YAXArrays.jl <https://github.com/JuliaDataCubes/YAXArrays.jl>`_: similar data structures for Julia.
 
 More projects can be found at the `"xarray" Github topic <https://github.com/topics/xarray>`_.

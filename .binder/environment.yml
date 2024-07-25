@@ -2,11 +2,10 @@ name: xarray-examples
 channels:
   - conda-forge
 dependencies:
-  - python=3.9
+  - python=3.10
   - boto3
   - bottleneck
   - cartopy
-  - cdms2
   - cfgrib
   - cftime
   - coveralls
@@ -25,11 +24,10 @@ dependencies:
   - numpy
   - packaging
   - pandas
-  - pint
+  - pint>=0.22
   - pip
   - pooch
   - pydap
-  - pynio
   - rasterio
   - scipy
   - seaborn
@@ -38,5 +36,4 @@ dependencies:
   - toolz
   - xarray
   - zarr
-  - pip:
-    - numbagg
+  - numbagg

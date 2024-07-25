@@ -7,7 +7,6 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 
 import xarray as xr
 from xarray.coding.cftimeindex import (
@@ -33,12 +32,7 @@ from xarray.tests.test_coding_times import (
 # cftime 1.5.2 renames "gregorian" to "standard"
 standard_or_gregorian = ""
 if has_cftime:
-    import cftime
-
-    if Version(cftime.__version__) >= Version("1.5.2"):
-        standard_or_gregorian = "standard"
-    else:
-        standard_or_gregorian = "gregorian"
+    standard_or_gregorian = "standard"
 
 
 def date_dict(year=None, month=None, day=None, hour=None, minute=None, second=None):
@@ -244,28 +238,57 @@ def test_assert_all_valid_date_type(date_type, index):
 )
 def test_cftimeindex_field_accessors(index, field, expected):
     result = getattr(index, field)
+    expected = np.array(expected, dtype=np.int64)
     assert_array_equal(result, expected)
+    assert result.dtype == expected.dtype
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    ("field"),
+    [
+        "year",
+        "month",
+        "day",
+        "hour",
+        "minute",
+        "second",
+        "microsecond",
+        "dayofyear",
+        "dayofweek",
+        "days_in_month",
+    ],
+)
+def test_empty_cftimeindex_field_accessors(field):
+    index = CFTimeIndex([])
+    result = getattr(index, field)
+    expected = np.array([], dtype=np.int64)
+    assert_array_equal(result, expected)
+    assert result.dtype == expected.dtype
 
 
 @requires_cftime
 def test_cftimeindex_dayofyear_accessor(index):
     result = index.dayofyear
-    expected = [date.dayofyr for date in index]
+    expected = np.array([date.dayofyr for date in index], dtype=np.int64)
     assert_array_equal(result, expected)
+    assert result.dtype == expected.dtype
 
 
 @requires_cftime
 def test_cftimeindex_dayofweek_accessor(index):
     result = index.dayofweek
-    expected = [date.dayofwk for date in index]
+    expected = np.array([date.dayofwk for date in index], dtype=np.int64)
     assert_array_equal(result, expected)
+    assert result.dtype == expected.dtype
 
 
 @requires_cftime
 def test_cftimeindex_days_in_month_accessor(index):
     result = index.days_in_month
-    expected = [date.daysinmonth for date in index]
+    expected = np.array([date.daysinmonth for date in index], dtype=np.int64)
     assert_array_equal(result, expected)
+    assert result.dtype == expected.dtype
 
 
 @requires_cftime
@@ -656,11 +679,11 @@ def test_indexing_in_series_loc(series, index, scalar_args, range_args):
 
 @requires_cftime
 def test_indexing_in_series_iloc(series, index):
-    expected = 1
-    assert series.iloc[0] == expected
+    expected1 = 1
+    assert series.iloc[0] == expected1
 
-    expected = pd.Series([1, 2], index=index[:2])
-    assert series.iloc[:2].equals(expected)
+    expected2 = pd.Series([1, 2], index=index[:2])
+    assert series.iloc[:2].equals(expected2)
 
 
 @requires_cftime
@@ -673,27 +696,27 @@ def test_series_dropna(index):
 
 @requires_cftime
 def test_indexing_in_dataframe_loc(df, index, scalar_args, range_args):
-    expected = pd.Series([1], name=index[0])
+    expected_s = pd.Series([1], name=index[0])
     for arg in scalar_args:
-        result = df.loc[arg]
-        assert result.equals(expected)
+        result_s = df.loc[arg]
+        assert result_s.equals(expected_s)
 
-    expected = pd.DataFrame([1, 2], index=index[:2])
+    expected_df = pd.DataFrame([1, 2], index=index[:2])
     for arg in range_args:
-        result = df.loc[arg]
-        assert result.equals(expected)
+        result_df = df.loc[arg]
+        assert result_df.equals(expected_df)
 
 
 @requires_cftime
 def test_indexing_in_dataframe_iloc(df, index):
-    expected = pd.Series([1], name=index[0])
-    result = df.iloc[0]
-    assert result.equals(expected)
-    assert result.equals(expected)
+    expected_s = pd.Series([1], name=index[0])
+    result_s = df.iloc[0]
+    assert result_s.equals(expected_s)
+    assert result_s.equals(expected_s)
 
-    expected = pd.DataFrame([1, 2], index=index[:2])
-    result = df.iloc[:2]
-    assert result.equals(expected)
+    expected_df = pd.DataFrame([1, 2], index=index[:2])
+    result_df = df.iloc[:2]
+    assert result_df.equals(expected_df)
 
 
 @requires_cftime
@@ -747,10 +770,10 @@ def test_cftimeindex_add_timedeltaindex(calendar) -> None:
     "freq,units",
     [
         ("D", "D"),
-        ("H", "H"),
-        ("T", "min"),
-        ("S", "S"),
-        ("L", "ms"),
+        ("h", "h"),
+        ("min", "min"),
+        ("s", "s"),
+        ("ms", "ms"),
     ],
 )
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
@@ -772,7 +795,7 @@ def test_cftimeindex_shift_float_us() -> None:
 
 
 @requires_cftime
-@pytest.mark.parametrize("freq", ["AS", "A", "YS", "Y", "QS", "Q", "MS", "M"])
+@pytest.mark.parametrize("freq", ["YS", "YE", "QS", "QE", "MS", "ME"])
 def test_cftimeindex_shift_float_fails_for_non_tick_freqs(freq) -> None:
     a = xr.cftime_range("2000", periods=3, freq="D")
     with pytest.raises(TypeError, match="unsupported operand type"):
@@ -934,17 +957,17 @@ def test_cftimeindex_shift(index, freq) -> None:
 
 
 @requires_cftime
-def test_cftimeindex_shift_invalid_n() -> None:
+def test_cftimeindex_shift_invalid_periods() -> None:
     index = xr.cftime_range("2000", periods=3)
     with pytest.raises(TypeError):
-        index.shift("a", "D")
+        index.shift("a", "D")  # type: ignore[arg-type]
 
 
 @requires_cftime
 def test_cftimeindex_shift_invalid_freq() -> None:
     index = xr.cftime_range("2000", periods=3)
     with pytest.raises(TypeError):
-        index.shift(1, 1)
+        index.shift(1, 1)  # type: ignore[arg-type]
 
 
 @requires_cftime
@@ -963,6 +986,31 @@ def test_cftimeindex_shift_invalid_freq() -> None:
 def test_cftimeindex_calendar_property(calendar, expected):
     index = xr.cftime_range(start="2000", periods=3, calendar=calendar)
     assert index.calendar == expected
+
+
+@requires_cftime
+def test_empty_cftimeindex_calendar_property():
+    index = CFTimeIndex([])
+    assert index.calendar is None
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    "calendar",
+    [
+        "noleap",
+        "365_day",
+        "360_day",
+        "julian",
+        "gregorian",
+        "standard",
+        "proleptic_gregorian",
+    ],
+)
+def test_cftimeindex_freq_property_none_size_lt_3(calendar):
+    for periods in range(3):
+        index = xr.cftime_range(start="2000", periods=periods, calendar=calendar)
+        assert index.freq is None
 
 
 @requires_cftime
@@ -997,7 +1045,7 @@ def test_cftimeindex_periods_repr(periods):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", ["noleap", "360_day", "standard"])
-@pytest.mark.parametrize("freq", ["D", "H"])
+@pytest.mark.parametrize("freq", ["D", "h"])
 def test_cftimeindex_freq_in_repr(freq, calendar):
     """Test that cftimeindex has frequency property in repr."""
     index = xr.cftime_range(start="2000", periods=3, freq=freq, calendar=calendar)
@@ -1141,7 +1189,6 @@ def test_to_datetimeindex_feb_29(calendar):
 
 
 @requires_cftime
-@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/24263")
 def test_multiindex():
     index = xr.cftime_range("2001-01-01", periods=100, calendar="360_day")
     mindex = pd.MultiIndex.from_arrays([index])
@@ -1149,20 +1196,32 @@ def test_multiindex():
 
 
 @requires_cftime
-@pytest.mark.parametrize("freq", ["3663S", "33T", "2H"])
+@pytest.mark.parametrize("freq", ["3663s", "33min", "2h"])
 @pytest.mark.parametrize("method", ["floor", "ceil", "round"])
 def test_rounding_methods_against_datetimeindex(freq, method):
-    expected = pd.date_range("2000-01-02T01:03:51", periods=10, freq="1777S")
+    expected = pd.date_range("2000-01-02T01:03:51", periods=10, freq="1777s")
     expected = getattr(expected, method)(freq)
-    result = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777S")
+    result = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777s")
     result = getattr(result, method)(freq).to_datetimeindex()
     assert result.equals(expected)
 
 
 @requires_cftime
 @pytest.mark.parametrize("method", ["floor", "ceil", "round"])
+def test_rounding_methods_empty_cftimindex(method):
+    index = CFTimeIndex([])
+    result = getattr(index, method)("2s")
+
+    expected = CFTimeIndex([])
+
+    assert result.equals(expected)
+    assert result is not index
+
+
+@requires_cftime
+@pytest.mark.parametrize("method", ["floor", "ceil", "round"])
 def test_rounding_methods_invalid_freq(method):
-    index = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777S")
+    index = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777s")
     with pytest.raises(ValueError, match="fixed"):
         getattr(index, method)("MS")
 
@@ -1180,7 +1239,7 @@ def rounding_index(date_type):
 
 @requires_cftime
 def test_ceil(rounding_index, date_type):
-    result = rounding_index.ceil("S")
+    result = rounding_index.ceil("s")
     expected = xr.CFTimeIndex(
         [
             date_type(1, 1, 1, 2, 0, 0, 0),
@@ -1193,7 +1252,7 @@ def test_ceil(rounding_index, date_type):
 
 @requires_cftime
 def test_floor(rounding_index, date_type):
-    result = rounding_index.floor("S")
+    result = rounding_index.floor("s")
     expected = xr.CFTimeIndex(
         [
             date_type(1, 1, 1, 1, 59, 59, 0),
@@ -1206,7 +1265,7 @@ def test_floor(rounding_index, date_type):
 
 @requires_cftime
 def test_round(rounding_index, date_type):
-    result = rounding_index.round("S")
+    result = rounding_index.round("s")
     expected = xr.CFTimeIndex(
         [
             date_type(1, 1, 1, 2, 0, 0, 0),
@@ -1234,6 +1293,14 @@ def test_asi8_distant_date():
     index = xr.CFTimeIndex([date_type(10731, 4, 22, 3, 25, 45, 123456)])
     result = index.asi8
     expected = np.array([1000000 * 86400 * 400 * 8000 + 12345 * 1000000 + 123456])
+    np.testing.assert_array_equal(result, expected)
+
+
+@requires_cftime
+def test_asi8_empty_cftimeindex():
+    index = xr.CFTimeIndex([])
+    result = index.asi8
+    expected = np.array([], dtype=np.int64)
     np.testing.assert_array_equal(result, expected)
 
 
@@ -1285,19 +1352,19 @@ def test_infer_freq_invalid_inputs():
 @pytest.mark.parametrize(
     "freq",
     [
-        "300AS-JAN",
-        "A-DEC",
-        "AS-JUL",
-        "2AS-FEB",
-        "Q-NOV",
+        "300YS-JAN",
+        "YE-DEC",
+        "YS-JUL",
+        "2YS-FEB",
+        "QE-NOV",
         "3QS-DEC",
         "MS",
-        "4M",
+        "4ME",
         "7D",
         "D",
-        "30H",
-        "5T",
-        "40S",
+        "30h",
+        "5min",
+        "40s",
     ],
 )
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)

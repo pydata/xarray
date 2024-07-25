@@ -39,7 +39,7 @@ The actual computation is controlled by a multi-processing or thread pool,
 which allows Dask to take full advantage of multiple processors available on
 most modern computers.
 
-For more details on Dask, read `its documentation <https://docs.dask.org/>`__.
+For more details, read the `Dask documentation <https://docs.dask.org/>`__.
 Note that xarray only makes use of ``dask.array`` and ``dask.delayed``.
 
 .. _dask.io:
@@ -234,7 +234,7 @@ disk.
 .. note::
 
    For more on the differences between :py:meth:`~xarray.Dataset.persist` and
-   :py:meth:`~xarray.Dataset.compute` see this `Stack Overflow answer <https://stackoverflow.com/questions/41806850/dask-difference-between-client-persist-and-client-compute>`_ and the `Dask documentation <https://distributed.dask.org/en/latest/manage-computation.html#dask-collections-to-futures>`_.
+   :py:meth:`~xarray.Dataset.compute` see this `Stack Overflow answer on the differences between client persist and client compute <https://stackoverflow.com/questions/41806850/dask-difference-between-client-persist-and-client-compute>`_ and the `Dask documentation <https://distributed.dask.org/en/latest/manage-computation.html#dask-collections-to-futures>`_.
 
 For performance you may wish to consider chunk sizes.  The correct choice of
 chunk size depends both on your data and on the operations you want to perform.
@@ -549,7 +549,7 @@ larger chunksizes.
 
 .. tip::
 
-   Check out the dask documentation on `chunks <https://docs.dask.org/en/latest/array-chunks.html>`_.
+   Check out the `dask documentation on chunks <https://docs.dask.org/en/latest/array-chunks.html>`_.
 
 
 Optimization Tips
@@ -562,7 +562,7 @@ through experience:
 1. Do your spatial and temporal indexing (e.g. ``.sel()`` or ``.isel()``) early in the pipeline, especially before calling ``resample()`` or ``groupby()``. Grouping and resampling triggers some computation on all the blocks, which in theory should commute with indexing, but this optimization hasn't been implemented in Dask yet. (See `Dask issue #746 <https://github.com/dask/dask/issues/746>`_).
 
 2. More generally, ``groupby()`` is a costly operation and will perform a lot better if the ``flox`` package is installed.
-   See the `flox documentation <flox.readthedocs.io/>`_ for more. By default Xarray will use ``flox`` if installed.
+   See the `flox documentation <https://flox.readthedocs.io>`_ for more. By default Xarray will use ``flox`` if installed.
 
 3. Save intermediate results to disk as a netCDF files (using ``to_netcdf()``) and then load them again with ``open_dataset()`` for further computations. For example, if subtracting temporal mean from a dataset, save the temporal mean to disk before subtracting. Again, in theory, Dask should be able to do the computation in a streaming fashion, but in practice this is a fail case for the Dask scheduler, because it tries to keep every chunk of an array that it computes in memory. (See `Dask issue #874 <https://github.com/dask/dask/issues/874>`_)
 
@@ -572,6 +572,6 @@ through experience:
 
 6. Using the h5netcdf package by passing ``engine='h5netcdf'`` to :py:meth:`~xarray.open_mfdataset` can be quicker than the default ``engine='netcdf4'`` that uses the netCDF4 package.
 
-7. Some dask-specific tips may be found `here <https://docs.dask.org/en/latest/array-best-practices.html>`_.
+7. Find `best practices specific to Dask arrays in the documentation <https://docs.dask.org/en/latest/array-best-practices.html>`_.
 
-8. The dask `diagnostics <https://docs.dask.org/en/latest/understanding-performance.html>`_ can be useful in identifying performance bottlenecks.
+8. The `dask diagnostics <https://docs.dask.org/en/latest/understanding-performance.html>`_ can be useful in identifying performance bottlenecks.

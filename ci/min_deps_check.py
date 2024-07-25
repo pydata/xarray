@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 """Fetch from conda database all available versions of the xarray dependencies and their
-publication date. Compare it against requirements/py37-min-all-deps.yml to verify the
+publication date. Compare it against requirements/min-all-deps.yml to verify the
 policy on obsolete dependencies is being followed. Print a pretty report :)
 """
+from __future__ import annotations
+
 import itertools
 import sys
 from collections.abc import Iterator
@@ -21,14 +23,15 @@ IGNORE_DEPS = {
     "isort",
     "mypy",
     "pip",
-    "setuptools",
     "pytest",
     "pytest-cov",
     "pytest-env",
+    "pytest-timeout",
     "pytest-xdist",
+    "setuptools",
 }
 
-POLICY_MONTHS = {"python": 24, "numpy": 18}
+POLICY_MONTHS = {"python": 30, "numpy": 18}
 POLICY_MONTHS_DEFAULT = 12
 POLICY_OVERRIDE: dict[str, tuple[int, int]] = {}
 errors = []
@@ -45,7 +48,7 @@ def warning(msg: str) -> None:
 
 
 def parse_requirements(fname) -> Iterator[tuple[str, int, int, int | None]]:
-    """Load requirements/py37-min-all-deps.yml
+    """Load requirements/min-all-deps.yml
 
     Yield (package name, major version, minor version, [patch version])
     """
@@ -108,6 +111,9 @@ def query_conda(pkg: str) -> dict[tuple[int, int], datetime]:
                 (3, 6): datetime(2016, 12, 23),
                 (3, 7): datetime(2018, 6, 27),
                 (3, 8): datetime(2019, 10, 14),
+                (3, 9): datetime(2020, 10, 5),
+                (3, 10): datetime(2021, 10, 4),
+                (3, 11): datetime(2022, 10, 24),
             }
         )
 
@@ -127,7 +133,7 @@ def process_pkg(
     - publication date of version suggested by policy (YYYY-MM-DD)
     - status ("<", "=", "> (!)")
     """
-    print("Analyzing %s..." % pkg)
+    print(f"Analyzing {pkg}...")
     versions = query_conda(pkg)
 
     try:
@@ -156,11 +162,11 @@ def process_pkg(
         status = "<"
     elif (req_major, req_minor) > (policy_major, policy_minor):
         status = "> (!)"
-        delta = relativedelta(datetime.now(), policy_published_actual).normalized()
+        delta = relativedelta(datetime.now(), req_published).normalized()
         n_months = delta.years * 12 + delta.months
         warning(
-            f"Package is too new: {pkg}={policy_major}.{policy_minor} was "
-            f"published on {versions[policy_major, policy_minor]:%Y-%m-%d} "
+            f"Package is too new: {pkg}={req_major}.{req_minor} was "
+            f"published on {req_published:%Y-%m-%d} "
             f"which was {n_months} months ago (policy is {policy_months} months)"
         )
     else:

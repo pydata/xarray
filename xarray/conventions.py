@@ -1,22 +1,22 @@
 from __future__ import annotations
 
-import warnings
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
 
 import numpy as np
 import pandas as pd
 
 from xarray.coding import strings, times, variables
 from xarray.coding.variables import SerializationWarning, pop_to
-from xarray.core import duck_array_ops, indexing
+from xarray.core import indexing
 from xarray.core.common import (
     _contains_datetime_like_objects,
     contains_cftime_datetimes,
 )
-from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import IndexVariable, Variable
+from xarray.namedarray.utils import is_duck_dask_array
 
 CF_RELATED_DATA = (
     "bounds",
@@ -48,132 +48,22 @@ if TYPE_CHECKING:
     T_DatasetOrAbstractstore = Union[Dataset, AbstractDataStore]
 
 
-class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Decode arrays on the fly from non-native to native endianness
-
-    This is useful for decoding arrays from netCDF3 files (which are all
-    big endian) into native endianness, so they can be used with Cython
-    functions, such as those found in bottleneck and pandas.
-
-    >>> x = np.arange(5, dtype=">i2")
-
-    >>> x.dtype
-    dtype('>i2')
-
-    >>> NativeEndiannessArray(x).dtype
-    dtype('int16')
-
-    >>> indexer = indexing.BasicIndexer((slice(None),))
-    >>> NativeEndiannessArray(x)[indexer].dtype
-    dtype('int16')
-    """
-
-    __slots__ = ("array",)
-
-    def __init__(self, array):
-        self.array = indexing.as_indexable(array)
-
-    @property
-    def dtype(self):
-        return np.dtype(self.array.dtype.kind + str(self.array.dtype.itemsize))
-
-    def __getitem__(self, key):
-        return np.asarray(self.array[key], dtype=self.dtype)
-
-
-class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Decode arrays on the fly from integer to boolean datatype
-
-    This is useful for decoding boolean arrays from integer typed netCDF
-    variables.
-
-    >>> x = np.array([1, 0, 1, 1, 0], dtype="i1")
-
-    >>> x.dtype
-    dtype('int8')
-
-    >>> BoolTypeArray(x).dtype
-    dtype('bool')
-
-    >>> indexer = indexing.BasicIndexer((slice(None),))
-    >>> BoolTypeArray(x)[indexer].dtype
-    dtype('bool')
-    """
-
-    __slots__ = ("array",)
-
-    def __init__(self, array):
-        self.array = indexing.as_indexable(array)
-
-    @property
-    def dtype(self):
-        return np.dtype("bool")
-
-    def __getitem__(self, key):
-        return np.asarray(self.array[key], dtype=self.dtype)
-
-
-def _var_as_tuple(var: Variable) -> T_VarTuple:
-    return var.dims, var.data, var.attrs.copy(), var.encoding.copy()
-
-
-def maybe_encode_nonstring_dtype(var: Variable, name: T_Name = None) -> Variable:
-    if "dtype" in var.encoding and var.encoding["dtype"] not in ("S1", str):
-        dims, data, attrs, encoding = _var_as_tuple(var)
-        dtype = np.dtype(encoding.pop("dtype"))
-        if dtype != var.dtype:
-            if np.issubdtype(dtype, np.integer):
-                if (
-                    np.issubdtype(var.dtype, np.floating)
-                    and "_FillValue" not in var.attrs
-                    and "missing_value" not in var.attrs
-                ):
-                    warnings.warn(
-                        f"saving variable {name} with floating "
-                        "point data as an integer dtype without "
-                        "any _FillValue to use for NaNs",
-                        SerializationWarning,
-                        stacklevel=10,
-                    )
-                data = np.around(data)
-            data = data.astype(dtype=dtype)
-        var = Variable(dims, data, attrs, encoding, fastpath=True)
-    return var
-
-
-def maybe_default_fill_value(var: Variable) -> Variable:
-    # make NaN the fill value for float types:
-    if (
-        "_FillValue" not in var.attrs
-        and "_FillValue" not in var.encoding
-        and np.issubdtype(var.dtype, np.floating)
-    ):
-        var.attrs["_FillValue"] = var.dtype.type(np.nan)
-    return var
-
-
-def maybe_encode_bools(var: Variable) -> Variable:
-    if (
-        (var.dtype == bool)
-        and ("dtype" not in var.encoding)
-        and ("dtype" not in var.attrs)
-    ):
-        dims, data, attrs, encoding = _var_as_tuple(var)
-        attrs["dtype"] = "bool"
-        data = duck_array_ops.astype(data, dtype="i1", copy=True)
-        var = Variable(dims, data, attrs, encoding, fastpath=True)
-    return var
-
-
-def _infer_dtype(array, name: T_Name = None) -> np.dtype:
-    """Given an object array with no missing values, infer its dtype from its
-    first element
-    """
+def _infer_dtype(array, name=None):
+    """Given an object array with no missing values, infer its dtype from all elements."""
     if array.dtype.kind != "O":
         raise TypeError("infer_type must be called on a dtype=object array")
 
     if array.size == 0:
         return np.dtype(float)
+
+    native_dtypes = set(np.vectorize(type, otypes=[object])(array.ravel()))
+    if len(native_dtypes) > 1 and native_dtypes != {bytes, str}:
+        raise ValueError(
+            "unable to infer dtype on variable {!r}; object array "
+            "contains mixed native types: {}".format(
+                name, ", ".join(x.__name__ for x in native_dtypes)
+            )
+        )
 
     element = array[(0,) * array.ndim]
     # We use the base types to avoid subclasses of bytes and str (which might
@@ -188,20 +78,23 @@ def _infer_dtype(array, name: T_Name = None) -> np.dtype:
         return dtype
 
     raise ValueError(
-        "unable to infer dtype on variable {!r}; xarray "
-        "cannot serialize arbitrary Python objects".format(name)
+        f"unable to infer dtype on variable {name!r}; xarray "
+        "cannot serialize arbitrary Python objects"
     )
 
 
 def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
-    if isinstance(var, IndexVariable) and isinstance(var.to_index(), pd.MultiIndex):
-        raise NotImplementedError(
-            "variable {!r} is a MultiIndex, which cannot yet be "
-            "serialized to netCDF files "
-            "(https://github.com/pydata/xarray/issues/1077). Use "
-            "reset_index() to convert MultiIndex levels into coordinate "
-            "variables instead.".format(name)
-        )
+    # only the pandas multi-index dimension coordinate cannot be serialized (tuple values)
+    if isinstance(var._data, indexing.PandasMultiIndexingAdapter):
+        if name is None and isinstance(var, IndexVariable):
+            name = var.name
+        if var.dims == (name,):
+            raise NotImplementedError(
+                f"variable {name!r} is a MultiIndex, which cannot yet be "
+                "serialized. Instead, either use reset_index() "
+                "to convert MultiIndex levels into coordinate variables instead "
+                "or use https://cf-xarray.readthedocs.io/en/latest/coding.html."
+            )
 
 
 def _copy_with_dtype(data, dtype: np.typing.DTypeLike):
@@ -218,16 +111,20 @@ def _copy_with_dtype(data, dtype: np.typing.DTypeLike):
 def ensure_dtype_not_object(var: Variable, name: T_Name = None) -> Variable:
     # TODO: move this from conventions to backends? (it's not CF related)
     if var.dtype.kind == "O":
-        dims, data, attrs, encoding = _var_as_tuple(var)
+        dims, data, attrs, encoding = variables.unpack_for_encoding(var)
+
+        # leave vlen dtypes unchanged
+        if strings.check_vlen_dtype(data.dtype) is not None:
+            return var
 
         if is_duck_dask_array(data):
-            warnings.warn(
-                "variable {} has data in the form of a dask array with "
+            emit_user_level_warning(
+                f"variable {name} has data in the form of a dask array with "
                 "dtype=object, which means it is being loaded into memory "
                 "to determine a data type that can be safely stored on disk. "
                 "To avoid this, coerce this variable to a fixed-size dtype "
-                "with astype() before saving it.".format(name),
-                SerializationWarning,
+                "with astype() before saving it.",
+                category=SerializationWarning,
             )
             data = data.compute()
 
@@ -265,7 +162,7 @@ def encode_cf_variable(
     var: Variable, needs_copy: bool = True, name: T_Name = None
 ) -> Variable:
     """
-    Converts an Variable into an Variable which follows some
+    Converts a Variable into a Variable which follows some
     of the CF conventions:
 
         - Nans are masked using _FillValue (or the deprecated missing_value)
@@ -291,13 +188,14 @@ def encode_cf_variable(
         variables.CFScaleOffsetCoder(),
         variables.CFMaskCoder(),
         variables.UnsignedIntegerCoder(),
+        variables.NativeEnumCoder(),
+        variables.NonStringCoder(),
+        variables.DefaultFillvalueCoder(),
+        variables.BooleanCoder(),
     ]:
         var = coder.encode(var, name=name)
 
-    # TODO(shoyer): convert all of these to use coders, too:
-    var = maybe_encode_nonstring_dtype(var, name=name)
-    var = maybe_default_fill_value(var)
-    var = maybe_encode_bools(var)
+    # TODO(kmuehlbauer): check if ensure_dtype_not_object can be moved to backends:
     var = ensure_dtype_not_object(var, name=name)
 
     for attr_name in CF_RELATED_DATA:
@@ -375,6 +273,10 @@ def decode_cf_variable(
             var = strings.CharacterArrayCoder().decode(var, name=name)
         var = strings.EncodedStringCoder().decode(var)
 
+    if original_dtype.kind == "O":
+        var = variables.ObjectVLenStringCoder().decode(var)
+        original_dtype = var.dtype
+
     if mask_and_scale:
         for coder in [
             variables.UnsignedIntegerCoder(),
@@ -388,19 +290,15 @@ def decode_cf_variable(
     if decode_times:
         var = times.CFDatetimeCoder(use_cftime=use_cftime).decode(var, name=name)
 
-    dimensions, data, attributes, encoding = variables.unpack_for_decoding(var)
-    # TODO(shoyer): convert everything below to use coders
+    if decode_endianness and not var.dtype.isnative:
+        var = variables.EndianCoder().decode(var)
+        original_dtype = var.dtype
 
-    if decode_endianness and not data.dtype.isnative:
-        # do this last, so it's only done if we didn't already unmask/scale
-        data = NativeEndiannessArray(data)
-        original_dtype = data.dtype
+    var = variables.BooleanCoder().decode(var)
+
+    dimensions, data, attributes, encoding = variables.unpack_for_decoding(var)
 
     encoding.setdefault("dtype", original_dtype)
-
-    if "dtype" in attributes and attributes["dtype"] == "bool":
-        del attributes["dtype"]
-        data = BoolTypeArray(data)
 
     if not is_duck_dask_array(data):
         data = indexing.LazilyIndexedArray(data)
@@ -468,15 +366,14 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
             and "bounds" in attrs
             and attrs["bounds"] in variables
         ):
-            warnings.warn(
-                "Variable '{0}' has datetime type and a "
-                "bounds variable but {0}.encoding does not have "
-                "units specified. The units encodings for '{0}' "
-                "and '{1}' will be determined independently "
+            emit_user_level_warning(
+                f"Variable {name:s} has datetime type and a "
+                f"bounds variable but {name:s}.encoding does not have "
+                f"units specified. The units encodings for {name:s} "
+                f"and {attrs['bounds']} will be determined independently "
                 "and may not be equal, counter to CF-conventions. "
                 "If this is a concern, specify a units encoding for "
-                "'{0}' before writing to a file.".format(name, attrs["bounds"]),
-                UserWarning,
+                f"{name:s} before writing to a file.",
             )
 
         if has_date_units and "bounds" in attrs:
@@ -487,16 +384,26 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
                     bounds_encoding.setdefault("calendar", encoding["calendar"])
 
 
+T = TypeVar("T")
+
+
+def _item_or_default(obj: Mapping[Any, T] | T, key: Hashable, default: T) -> T:
+    """
+    Return item by key if obj is mapping and key is present, else return default value.
+    """
+    return obj.get(key, default) if isinstance(obj, Mapping) else obj
+
+
 def decode_cf_variables(
     variables: T_Variables,
     attributes: T_Attrs,
-    concat_characters: bool = True,
-    mask_and_scale: bool = True,
-    decode_times: bool = True,
-    decode_coords: bool = True,
+    concat_characters: bool | Mapping[str, bool] = True,
+    mask_and_scale: bool | Mapping[str, bool] = True,
+    decode_times: bool | Mapping[str, bool] = True,
+    decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
-    use_cftime: bool | None = None,
-    decode_timedelta: bool | None = None,
+    use_cftime: bool | Mapping[str, bool] | None = None,
+    decode_timedelta: bool | Mapping[str, bool] | None = None,
 ) -> tuple[T_Variables, T_Attrs, set[Hashable]]:
     """
     Decode several CF encoded variables.
@@ -534,7 +441,7 @@ def decode_cf_variables(
         if k in drop_variables:
             continue
         stack_char_dim = (
-            concat_characters
+            _item_or_default(concat_characters, k, True)
             and v.dtype == "S1"
             and v.ndim > 0
             and stackable(v.dims[-1])
@@ -543,23 +450,26 @@ def decode_cf_variables(
             new_vars[k] = decode_cf_variable(
                 k,
                 v,
-                concat_characters=concat_characters,
-                mask_and_scale=mask_and_scale,
-                decode_times=decode_times,
+                concat_characters=_item_or_default(concat_characters, k, True),
+                mask_and_scale=_item_or_default(mask_and_scale, k, True),
+                decode_times=_item_or_default(decode_times, k, True),
                 stack_char_dim=stack_char_dim,
-                use_cftime=use_cftime,
-                decode_timedelta=decode_timedelta,
+                use_cftime=_item_or_default(use_cftime, k, None),
+                decode_timedelta=_item_or_default(decode_timedelta, k, None),
             )
         except Exception as e:
-            raise type(e)(f"Failed to decode variable {k!r}: {e}")
+            raise type(e)(f"Failed to decode variable {k!r}: {e}") from e
         if decode_coords in [True, "coordinates", "all"]:
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:
-                coord_str = var_attrs["coordinates"]
-                var_coord_names = coord_str.split()
-                if all(k in variables for k in var_coord_names):
-                    new_vars[k].encoding["coordinates"] = coord_str
-                    del var_attrs["coordinates"]
+                var_coord_names = [
+                    c for c in var_attrs["coordinates"].split() if c in variables
+                ]
+                # propagate as is
+                new_vars[k].encoding["coordinates"] = var_attrs["coordinates"]
+                del var_attrs["coordinates"]
+                # but only use as coordinate if existing
+                if var_coord_names:
                     coord_names.update(var_coord_names)
 
         if decode_coords == "all":
@@ -575,8 +485,8 @@ def decode_cf_variables(
                             for role_or_name in part.split()
                         ]
                         if len(roles_and_names) % 2 == 1:
-                            warnings.warn(
-                                f"Attribute {attr_name:s} malformed", stacklevel=5
+                            emit_user_level_warning(
+                                f"Attribute {attr_name:s} malformed"
                             )
                         var_names = roles_and_names[1::2]
                     if all(var_name in variables for var_name in var_names):
@@ -588,9 +498,8 @@ def decode_cf_variables(
                             for proj_name in var_names
                             if proj_name not in variables
                         ]
-                        warnings.warn(
+                        emit_user_level_warning(
                             f"Variable(s) referenced in {attr_name:s} not in variables: {referenced_vars_not_in_variables!s}",
-                            stacklevel=5,
                         )
                     del var_attrs[attr_name]
 
@@ -607,7 +516,7 @@ def decode_cf(
     concat_characters: bool = True,
     mask_and_scale: bool = True,
     decode_times: bool = True,
-    decode_coords: bool = True,
+    decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
@@ -735,23 +644,28 @@ def cf_decoder(
     decode_cf_variable
     """
     variables, attributes, _ = decode_cf_variables(
-        variables, attributes, concat_characters, mask_and_scale, decode_times
+        variables,
+        attributes,
+        concat_characters,
+        mask_and_scale,
+        decode_times,
     )
     return variables, attributes
 
 
-def _encode_coordinates(variables, attributes, non_dim_coord_names):
+def _encode_coordinates(
+    variables: T_Variables, attributes: T_Attrs, non_dim_coord_names
+):
     # calculate global and variable specific coordinates
     non_dim_coord_names = set(non_dim_coord_names)
 
     for name in list(non_dim_coord_names):
         if isinstance(name, str) and " " in name:
-            warnings.warn(
-                "coordinate {!r} has a space in its name, which means it "
+            emit_user_level_warning(
+                f"coordinate {name!r} has a space in its name, which means it "
                 "cannot be marked as a coordinate on disk and will be "
-                "saved as a data variable instead".format(name),
-                SerializationWarning,
-                stacklevel=6,
+                "saved as a data variable instead",
+                category=SerializationWarning,
             )
             non_dim_coord_names.discard(name)
 
@@ -769,7 +683,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 variable_coordinates[k].add(coord_name)
 
             if any(
-                attr_name in v.encoding and coord_name in v.encoding.get(attr_name)
+                coord_name in v.encoding.get(attr_name, tuple())
                 for attr_name in CF_RELATED_DATA
             ):
                 not_technically_coordinates.add(coord_name)
@@ -806,7 +720,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
         if not coords_str and variable_coordinates[name]:
             coordinates_text = " ".join(
                 str(coord_name)
-                for coord_name in variable_coordinates[name]
+                for coord_name in sorted(variable_coordinates[name])
                 if coord_name not in not_technically_coordinates
             )
             if coordinates_text:
@@ -824,19 +738,19 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     if global_coordinates:
         attributes = dict(attributes)
         if "coordinates" in attributes:
-            warnings.warn(
+            emit_user_level_warning(
                 f"cannot serialize global coordinates {global_coordinates!r} because the global "
                 f"attribute 'coordinates' already exists. This may prevent faithful roundtripping"
                 f"of xarray datasets",
-                SerializationWarning,
+                category=SerializationWarning,
             )
         else:
-            attributes["coordinates"] = " ".join(map(str, global_coordinates))
+            attributes["coordinates"] = " ".join(sorted(map(str, global_coordinates)))
 
     return variables, attributes
 
 
-def encode_dataset_coordinates(dataset):
+def encode_dataset_coordinates(dataset: Dataset):
     """Encode coordinates on the given dataset object into variable specific
     and global attributes.
 
@@ -858,7 +772,7 @@ def encode_dataset_coordinates(dataset):
     )
 
 
-def cf_encoder(variables, attributes):
+def cf_encoder(variables: T_Variables, attributes: T_Attrs):
     """
     Encode a set of CF encoded variables and attributes.
     Takes a dicts of variables and attributes and encodes them
