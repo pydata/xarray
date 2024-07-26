@@ -407,7 +407,6 @@ class CFMaskCoder(VariableCoder):
 
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        # dims, data, attrs, encoding = unpack_for_decoding(variable)
         # Even if _Unsigned is use, retain on-disk _FillValue
         [
             safe_setitem(encoding, attr, value, name=name)

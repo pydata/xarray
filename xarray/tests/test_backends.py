@@ -54,6 +54,7 @@ from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
+from xarray.core.utils import module_available
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     assert_allclose,
@@ -952,8 +953,9 @@ class CFEncodedBase(DatasetIOBase):
     def test_roundtrip_unsigned(self, fill_value, exp_fill_warning):
         @contextlib.contextmanager
         def _roundtrip_with_warnings(*args, **kwargs):
-            if exp_fill_warning:
-                warn_checker = pytest.warns(
+            is_np2 = module_available("numpy", minversion="2.0.0.dev0")
+            if exp_fill_warning and is_np2:
+                warn_checker: contextlib.AbstractContextManager = pytest.warns(
                     SerializationWarning,
                     match="_FillValue attribute can't be represented",
                 )
