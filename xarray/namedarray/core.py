@@ -41,7 +41,7 @@ from xarray.namedarray._typing import (
     _SupportsReal,
 )
 from xarray.namedarray.parallelcompat import guess_chunkmanager
-from xarray.namedarray.pycompat import to_numpy
+from xarray.namedarray.pycompat import to_numpy, is_chunked_array
 from xarray.namedarray.utils import (
     either_dict_or_kwargs,
     infix_dims,
@@ -820,7 +820,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             }
 
         data_old = self._data
-        if hasattr(data_old, "chunks"):
+        if is_chunked_array(data_old):
             # Assume any chunked array supports .rechunk - if it doesn't then at least a clear AttributeError will be raised.
             # Deliberately don't go through the chunkmanager so as to support chunked array types that don't need all the special computation methods.
             # See GH issue #8733
@@ -849,7 +849,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def to_numpy(self) -> np.ndarray[Any, Any]:
         """Coerces wrapped data to numpy and returns a numpy.ndarray"""
-        # TODO an entrypoint so array libraries can choose coercion method?
         return to_numpy(self._data)
 
     def as_numpy(self) -> Self:
