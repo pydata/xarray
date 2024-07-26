@@ -353,7 +353,7 @@ def _validate_groupby_squeeze(squeeze: Literal[False]) -> None:
     # checking here.
     # A future version could make squeeze kwarg only, but would face
     # backward-compat issues.
-    if squeeze is not False and not isinstance(squeeze, bool):
+    if squeeze is not False:
         raise TypeError(f"`squeeze` must be False, but {squeeze} was supplied.")
 
 
