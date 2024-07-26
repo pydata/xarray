@@ -125,7 +125,7 @@ from xarray.core.variable import (
     calculate_dimensions,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
-from xarray.namedarray.pycompat import array_type, is_chunked_array
+from xarray.namedarray.pycompat import array_type, has_chunkmanager, is_chunked_array
 from xarray.plot.accessor import DatasetPlotAccessor
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
@@ -856,7 +856,9 @@ class Dataset(
         """
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
-            k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
+            k: v._data
+            for k, v in self.variables.items()
+            if is_chunked_array(v._data) and has_chunkmanager(v._data)
         }
         if lazy_data:
             chunkmanager = get_chunked_array_type(*lazy_data.values())

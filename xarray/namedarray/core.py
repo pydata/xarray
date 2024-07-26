@@ -41,7 +41,7 @@ from xarray.namedarray._typing import (
     _SupportsReal,
 )
 from xarray.namedarray.parallelcompat import guess_chunkmanager
-from xarray.namedarray.pycompat import to_numpy, is_chunked_array
+from xarray.namedarray.pycompat import is_chunked_array, to_numpy
 from xarray.namedarray.utils import (
     either_dict_or_kwargs,
     infix_dims,

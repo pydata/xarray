@@ -19,8 +19,11 @@ from xarray.core.utils import (
     is_scalar,
 )
 from xarray.namedarray.core import _raise_if_any_duplicate_dimensions
-from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
-from xarray.namedarray.pycompat import is_chunked_array
+from xarray.namedarray.parallelcompat import (
+    get_chunked_array_type,
+    guess_chunkmanager,
+)
+from xarray.namedarray.pycompat import has_chunkmanager, is_chunked_array
 
 try:
     import cftime
@@ -1717,6 +1720,7 @@ def _full_like_variable(
 
     if (
         is_chunked_array(other.data)
+        and has_chunkmanager(other.data)
         or chunked_array_type is not None
         or chunks is not None
     ):
