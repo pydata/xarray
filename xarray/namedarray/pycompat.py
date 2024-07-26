@@ -101,6 +101,8 @@ def has_chunkmanager(x: _chunkedarray) -> bool:
     except TypeError as e:
         if str(e).startswith("Could not find a Chunk Manager which recognises type"):
             return False
+        elif str(e) == "Expected a chunked array but none were found":
+            return False
         else:
             raise  # something else went wrong
     else:
