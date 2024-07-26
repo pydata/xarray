@@ -168,6 +168,11 @@ class TestPassThroughNonRegisteredChunkedArrays:
         assert isinstance(na.data, DummyChunkedArray)
         assert na.chunks == ((2,),)
 
+    def test_computation(self) -> None:
+        dummy_arr = DummyChunkedArray(shape=(4,), chunks=((1,),))
+        na: NamedArray = NamedArray(data=dummy_arr, dims=["x"])
+        na.mean()
+
 
 class TestGetChunkManager:
     def test_get_chunkmanger(self, register_dummy_chunkmanager) -> None:
