@@ -119,8 +119,8 @@ class UniqueGrouper(Grouper):
 
         index = self.group_as_index
         is_unique_and_monotonic = isinstance(self.group, _DummyGroup) or (
-            index.is_unique and 
-          (index.is_monotonic_increasing or index.is_monotonic_decreasing)
+            index.is_unique
+            and (index.is_monotonic_increasing or index.is_monotonic_decreasing)
         )
         is_dimension = self.group.dims == (self.group.name,)
         can_squeeze = is_dimension and is_unique_and_monotonic
