@@ -51,6 +51,9 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- The ``squeeze`` kwarg to ``groupby`` is completely deprecated. It is the source of some quite confusing
+  behaviour and has been deprecated since v2024.01.0.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Bug fixes

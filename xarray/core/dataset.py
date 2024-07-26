@@ -10275,7 +10275,7 @@ class Dataset(
             Hashable | DataArray | IndexVariable | Mapping[Any, Grouper] | None
         ) = None,
         *,
-        squeeze: bool | None = None,
+        squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         **groupers: Grouper,
     ) -> DatasetGroupBy:
@@ -10354,7 +10354,6 @@ class Dataset(
         return DatasetGroupBy(
             self,
             (rgrouper,),
-            squeeze=squeeze,
             restore_coord_dims=restore_coord_dims,
         )
 
@@ -10367,7 +10366,7 @@ class Dataset(
         labels: ArrayLike | None = None,
         precision: int = 3,
         include_lowest: bool = False,
-        squeeze: bool | None = None,
+        squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         duplicates: Literal["raise", "drop"] = "raise",
     ) -> DatasetGroupBy:
@@ -10399,10 +10398,8 @@ class Dataset(
             The precision at which to store and display the bins labels.
         include_lowest : bool, default: False
             Whether the first interval should be left-inclusive or not.
-        squeeze : bool, default: True
-            If "group" is a dimension of any arrays in this dataset, `squeeze`
-            controls whether the subarrays have a dimension of length 1 along
-            that dimension or if the dimension is squeezed out.
+        squeeze : False
+            This argument is deprecated.
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -10450,7 +10447,6 @@ class Dataset(
         return DatasetGroupBy(
             self,
             (rgrouper,),
-            squeeze=squeeze,
             restore_coord_dims=restore_coord_dims,
         )
 

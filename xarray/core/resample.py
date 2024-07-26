@@ -286,21 +286,9 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
         applied : DataArray
             The result of splitting, applying and combining this array.
         """
-        return self._map_maybe_warn(func, args, shortcut, warn_squeeze=True, **kwargs)
-
-    def _map_maybe_warn(
-        self,
-        func: Callable[..., Any],
-        args: tuple[Any, ...] = (),
-        shortcut: bool | None = False,
-        warn_squeeze: bool = True,
-        **kwargs: Any,
-    ) -> DataArray:
         # TODO: the argument order for Resample doesn't match that for its parent,
         # GroupBy
-        combined = super()._map_maybe_warn(
-            func, shortcut=shortcut, args=args, warn_squeeze=warn_squeeze, **kwargs
-        )
+        combined = super().map(func, shortcut=shortcut, args=args, **kwargs)
 
         # If the aggregation function didn't drop the original resampling
         # dimension, then we need to do so before we can rename the proxy
@@ -380,18 +368,8 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAg
         applied : Dataset
             The result of splitting, applying and combining this dataset.
         """
-        return self._map_maybe_warn(func, args, shortcut, warn_squeeze=True, **kwargs)
-
-    def _map_maybe_warn(
-        self,
-        func: Callable[..., Any],
-        args: tuple[Any, ...] = (),
-        shortcut: bool | None = None,
-        warn_squeeze: bool = True,
-        **kwargs: Any,
-    ) -> Dataset:
         # ignore shortcut if set (for now)
-        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped(warn_squeeze))
+        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         combined = self._combine(applied)
 
         # If the aggregation function didn't drop the original resampling
@@ -457,27 +435,6 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAg
             removed.
         """
         return super().reduce(
-            func=func,
-            dim=dim,
-            axis=axis,
-            keep_attrs=keep_attrs,
-            keepdims=keepdims,
-            shortcut=shortcut,
-            **kwargs,
-        )
-
-    def _reduce_without_squeeze_warn(
-        self,
-        func: Callable[..., Any],
-        dim: Dims = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        shortcut: bool = True,
-        **kwargs: Any,
-    ) -> Dataset:
-        return super()._reduce_without_squeeze_warn(
             func=func,
             dim=dim,
             axis=axis,
