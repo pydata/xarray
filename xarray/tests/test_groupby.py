@@ -1793,7 +1793,7 @@ class TestDataArrayGroupBy:
         assert_identical(expected, actual)
 
     @pytest.mark.parametrize("use_flox", [True, False])
-    def test_groupby_fastpath_for_monotonic(self, use_flox):
+    def test_groupby_fastpath_for_monotonic(self, use_flox: bool) -> None:
         # Fixes https://github.com/pydata/xarray/issues/6220
         # Fixes https://github.com/pydata/xarray/issues/9279
         index = [1, 2, 3, 4, 7, 9, 10]
