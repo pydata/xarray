@@ -1792,8 +1792,10 @@ class TestDataArrayGroupBy:
         actual = a.groupby("b").fillna(DataArray([0, 2], dims="b"))
         assert_identical(expected, actual)
 
-    def test_groupby_fastpath_for_monotonic(self):
+    @pytest.mark.parametrize("use_flox", [True, False])
+    def test_groupby_fastpath_for_monotonic(self, use_flox):
         # Fixes https://github.com/pydata/xarray/issues/6220
+        # Fixes https://github.com/pydata/xarray/issues/9279
         index = [1, 2, 3, 4, 7, 9, 10]
         array = DataArray(np.arange(len(index)), [("idx", index)])
         array_rev = array.copy().assign_coords({"idx": index[::-1]})
@@ -1803,8 +1805,9 @@ class TestDataArrayGroupBy:
         for gb in [fwd, rev]:
             assert all([isinstance(elem, slice) for elem in gb._group_indices])
 
-        assert_identical(fwd.sum(), array)
-        assert_identical(rev.sum(), array_rev)
+        with xr.set_options(use_flox=use_flox):
+            assert_identical(fwd.sum(), array)
+            assert_identical(rev.sum(), array_rev)
 
 
 class TestDataArrayResample:
