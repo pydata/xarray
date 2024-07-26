@@ -624,6 +624,88 @@ data files with groups that do not not align see :py:func:`xarray.open_groups()`
 :py:func:`xarray.open_dataset(group='target_group')`
 
 
+DataTree Inheritence
+~~~~~~~~~~~~~~~~~~~~
+
+DataTree implements a simple inheritance mechanism. Coordinates and their
+associated indices are propagated from each node downward starting from the
+root node.  Coordinate inheritance was inspired by the NetCDF-CF inherited
+dimensions, but DataTree's inheritance is slightly stricter and easier to
+reason about.
+
+The constraint that this puts on a DataTree is that dimensions and indices that
+are inherited must be aligned with any child's existing dimension or index.
+This allows child nodes to use dimensions defined in ancestor nodes, without
+duplicating that information, but on the flip side if a dimension dimname is
+defined in on a node and that same dimname dimension in one of it's ancestors,
+they must align (have the same index and size).
+
+Some examples:
+
+.. ipython:: python
+
+    # Set up coordinates
+    times = xr.DataArray(data=["2022-01", "2023-01"], dims="time")
+    stations = xr.DataArray(data=list("abcdef"), dims="station")
+    lon = [-100, -80, -60]
+    lat = [10, 20, 30]
+
+    # Set up fake data
+    wind_speed = xr.DataArray(np.ones((2, 6)) * 2, dims=("time", "station"))
+    pressure = xr.DataArray(np.ones((2, 6)) * 3, dims=("time", "station"))
+    air_temperature = xr.DataArray(np.ones((2, 6)) * 4, dims=("time", "station"))
+    dewpoint_temp = xr.DataArray(np.ones((2, 6)) * 5, dims=("time", "station"))
+    infrared = xr.DataArray(np.ones((2, 3, 3)) * 6, dims=("time", "lon", "lat"))
+    true_color = xr.DataArray(np.ones((2, 3, 3)) * 7, dims=("time", "lon", "lat"))
+
+    xdt = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset(
+                coords={"time": times},
+            ),
+            "/weather_data": xr.Dataset(
+                coords={"station": stations},
+                data_vars={
+                    "wind_speed": wind_speed,
+                    "pressure": pressure,
+                },
+            ),
+            "/weather_data/temperature": xr.Dataset(
+                data_vars={
+                    "air_temperature": air_temperature,
+                    "dewpoint_temp": dewpoint_temp,
+                },
+            ),
+            "/satellite_image": xr.Dataset(
+                coords={"lat": lat, "lon": lon},
+                data_vars={
+                    "infrared": infrared,
+                    "true_color": true_color,
+                },
+            ),
+        },
+    )
+
+
+Here there are four different coordinate variables, which apply to variables in the DataTree in different ways:
+
+``time`` is a shared coordinate used by both ``weather`` and ``satellite`` variables
+``station`` is used only for ``weather`` variables
+``lat`` and ``lon`` are only use for ``satellite images``
+
+Coordinate variables are inherited to descendent nodes, which means that
+variables at different levels of a hierarchical DataTree are always
+aligned. Placing the ``time`` variable at the root node automatically indicates
+that it applies to all descendent nodes. Similarly, ``station`` is in the base
+``weather_data`` node, because it applies to all weather variables, both directly
+in ``weather_data`` and in the ``temperature`` sub-tree.
+
+Accessing any of the lower level trees as an ``xarray.Dataset`` would
+automatically include coordinates from higher levels (e.g., time):
+
+.. ipython:: python
+
+    dt["/weather_data/temperature"].ds
 
 
 DataTree Contents
