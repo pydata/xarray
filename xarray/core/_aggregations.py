@@ -3576,10 +3576,22 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").median()
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 24B 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 24B 1.0 2.0 1.5
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").median(skipna=False)
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 24B 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 24B nan 2.0 1.5
         """
         return self.reduce(
             duck_array_ops.median,
@@ -3665,10 +3677,20 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").cumsum()
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 48B 1.0 2.0 3.0 3.0 4.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").cumsum(skipna=False)
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 48B 1.0 2.0 3.0 3.0 4.0 nan
         """
         return self.reduce(
             duck_array_ops.cumsum,
@@ -3754,10 +3776,20 @@ class DatasetGroupByAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").cumprod()
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 4.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").cumprod(skipna=False)
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 48B 1.0 2.0 3.0 0.0 4.0 nan
         """
         return self.reduce(
             duck_array_ops.cumprod,
@@ -5032,10 +5064,22 @@ class DatasetResampleAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").median()
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 24B 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").median(skipna=False)
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 24B 1.0 2.0 nan
         """
         return self.reduce(
             duck_array_ops.median,
@@ -5121,10 +5165,20 @@ class DatasetResampleAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").cumsum()
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 48B 1.0 2.0 5.0 5.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").cumsum(skipna=False)
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 48B 1.0 2.0 5.0 5.0 2.0 nan
         """
         return self.reduce(
             duck_array_ops.cumsum,
@@ -5210,10 +5264,20 @@ class DatasetResampleAggregations:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").cumprod()
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 48B 1.0 2.0 6.0 0.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").cumprod(skipna=False)
+        <xarray.Dataset> Size: 48B
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 48B 1.0 2.0 6.0 0.0 2.0 nan
         """
         return self.reduce(
             duck_array_ops.cumprod,
@@ -7773,10 +7837,18 @@ class DataArrayResampleAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").median()
+        <xarray.DataArray (time: 3)> Size: 24B
+        array([1., 2., 2.])
+        Coordinates:
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").median(skipna=False)
+        <xarray.DataArray (time: 3)> Size: 24B
+        array([ 1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         return self.reduce(
             duck_array_ops.median,
@@ -7858,10 +7930,20 @@ class DataArrayResampleAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").cumsum()
+        <xarray.DataArray (time: 6)> Size: 48B
+        array([1., 2., 5., 5., 2., 2.])
+        Coordinates:
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+        Dimensions without coordinates: time
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").cumsum(skipna=False)
+        <xarray.DataArray (time: 6)> Size: 48B
+        array([ 1.,  2.,  5.,  5.,  2., nan])
+        Coordinates:
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+        Dimensions without coordinates: time
         """
         return self.reduce(
             duck_array_ops.cumsum,
@@ -7943,10 +8025,20 @@ class DataArrayResampleAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").cumprod()
+        <xarray.DataArray (time: 6)> Size: 48B
+        array([1., 2., 6., 0., 2., 2.])
+        Coordinates:
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+        Dimensions without coordinates: time
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3ME").cumprod(skipna=False)
+        <xarray.DataArray (time: 6)> Size: 48B
+        array([ 1.,  2.,  6.,  0.,  2., nan])
+        Coordinates:
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
+        Dimensions without coordinates: time
         """
         return self.reduce(
             duck_array_ops.cumprod,
