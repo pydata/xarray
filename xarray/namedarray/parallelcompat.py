@@ -219,30 +219,6 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         return isinstance(data, self.array_cls)
 
     @abstractmethod
-    def chunks(self, data: T_ChunkedArray) -> _NormalizedChunks:
-        """
-        Return the current chunks of the given array.
-
-        Returns chunks explicitly as a tuple of tuple of ints.
-
-        Used internally by xarray objects' .chunks and .chunksizes properties.
-
-        Parameters
-        ----------
-        data : chunked array
-
-        Returns
-        -------
-        chunks : tuple[tuple[int, ...], ...]
-
-        See Also
-        --------
-        dask.array.Array.chunks
-        cubed.Array.chunks
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
     def normalize_chunks(
         self,
         chunks: _Chunks | _NormalizedChunks,
@@ -304,37 +280,6 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         cubed.from_array
         """
         raise NotImplementedError()
-
-    def rechunk(
-        self,
-        data: T_ChunkedArray,
-        chunks: _NormalizedChunks | tuple[int, ...] | _Chunks,
-        **kwargs: Any,
-    ) -> Any:
-        """
-        Changes the chunking pattern of the given array.
-
-        Called when the .chunk method is called on an xarray object that is already chunked.
-
-        Parameters
-        ----------
-        data : dask array
-            Array to be rechunked.
-        chunks :  int, tuple, dict or str, optional
-            The new block dimensions to create. -1 indicates the full size of the
-            corresponding dimension. Default is "auto" which automatically
-            determines chunk sizes.
-
-        Returns
-        -------
-        chunked array
-
-        See Also
-        --------
-        dask.array.Array.rechunk
-        cubed.Array.rechunk
-        """
-        return data.rechunk(chunks, **kwargs)
 
     @abstractmethod
     def compute(

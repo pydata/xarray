@@ -819,11 +819,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 if dim in chunks
             }
 
-        chunkmanager = guess_chunkmanager(chunked_array_type)
-
         data_old = self._data
-        if chunkmanager.is_chunked_array(data_old):
-            data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
+        if hasattr(data_old, "chunks"):
+            # Assume any chunked array supports .rechunk - if it doesn't then at least a clear AttributeError will be raised.
+            # Deliberately don't go through the chunkmanager so as to support chunked array types that don't need all the special computation methods.
+            # See GH issue #8733
+            data_chunked = data_old.rechunk(chunks)
         else:
             if not isinstance(data_old, ExplicitlyIndexed):
                 ndata = data_old
@@ -841,6 +842,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             if is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))  # type: ignore[assignment]
 
+            chunkmanager = guess_chunkmanager(chunked_array_type)
             data_chunked = chunkmanager.from_array(ndata, chunks, **from_array_kwargs)  # type: ignore[arg-type]
 
         return self._replace(data=data_chunked)
