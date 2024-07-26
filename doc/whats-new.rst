@@ -50,7 +50,7 @@ Breaking changes
 - The ``squeeze`` kwarg to ``groupby`` is completely deprecated. This has been the source of some quite confusing
   behaviour and has been deprecated since v2024.01.0. `groupby`` behavior is now always consistent
   with the existing ``.groupby(..., squeeze=False)`` behavior.
-  By `Deepak Cherian <https://github.com/dcherian>`_. (:pr:`9280`)
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:pull:`9280`)
 
 
 Bug fixes
