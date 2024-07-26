@@ -370,7 +370,10 @@ class CFMaskCoder(VariableCoder):
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
     def _encode_unsigned_fill_value(
-        self, name: T_Name, fill_value: Any, signed_dtype: np.typing.DTypeLike
+        self,
+        name: T_Name,
+        fill_value: Any,
+        signed_dtype: np.dtype,
     ) -> Any:
         try:
             # user provided the on-disk signed fill
