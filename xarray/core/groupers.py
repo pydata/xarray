@@ -74,17 +74,6 @@ class EncodedGroups:
 class Grouper(ABC):
     """Abstract base class for Grouper objects that allow specializing GroupBy instructions."""
 
-    @property
-    def can_squeeze(self) -> bool:
-        """
-        Do not use.
-
-        .. deprecated:: 2024.01.0
-            This is a deprecated method. It will be deleted when the `squeeze` kwarg is deprecated.
-            Only ``UniqueGrouper`` should override it.
-        """
-        return False
-
     @abstractmethod
     def factorize(self, group: T_Group) -> EncodedGroups:
         """
@@ -119,31 +108,24 @@ class UniqueGrouper(Grouper):
     _group_as_index: pd.Index | None = field(default=None, repr=False)
 
     @property
-    def is_unique_and_monotonic(self) -> bool:
-        if isinstance(self.group, _DummyGroup):
-            return True
-        index = self.group_as_index
-        return index.is_unique and (
-            index.is_monotonic_increasing or index.is_monotonic_decreasing
-        )
-
-    @property
     def group_as_index(self) -> pd.Index:
         """Caches the group DataArray as a pandas Index."""
         if self._group_as_index is None:
             self._group_as_index = self.group.to_index()
         return self._group_as_index
 
-    @property
-    def can_squeeze(self) -> bool:
-        """This is a deprecated method and will be removed eventually."""
-        is_dimension = self.group.dims == (self.group.name,)
-        return is_dimension and self.is_unique_and_monotonic
-
     def factorize(self, group1d: T_Group) -> EncodedGroups:
         self.group = group1d
 
-        if self.can_squeeze:
+        index = self.group_as_index
+        is_unique_and_monotonic = isinstance(self.group, _DummyGroup) or (
+            index.is_unique
+            and (index.is_monotonic_increasing or index.is_monotonic_decreasing)
+        )
+        is_dimension = self.group.dims == (self.group.name,)
+        can_squeeze = is_dimension and is_unique_and_monotonic
+
+        if can_squeeze:
             return self._factorize_dummy()
         else:
             return self._factorize_unique()
