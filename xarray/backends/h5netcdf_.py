@@ -441,43 +441,10 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         group: str | Iterable[str] | Callable | None = None,
         **kwargs,
     ) -> DataTree:
-        # TODO: Add function docstring
 
-        from xarray.backends.common import _iter_nc_groups
-        from xarray.core.treenode import NodePath
-        from xarray.core.utils import close_on_error
+        from xarray.core.datatree import DataTree
 
-        filename_or_obj = _normalize_path(filename_or_obj)
-        store = H5NetCDFStore.open(
-            filename_or_obj,
-            group=group,
-        )
-        # Check for a group and make it a parent if it exists
-        if group:
-            parent = NodePath("/") / NodePath(group)
-        else:
-            parent = NodePath("/")
-
-        manager = store._manager
-
-        groups_dict = {}
-        for path_group in _iter_nc_groups(store.ds, parent=parent):
-            group_store = H5NetCDFStore(manager, group=path_group, **kwargs)
-            store_entrypoint = StoreBackendEntrypoint()
-            with close_on_error(group_store):
-                group_ds = store_entrypoint.open_dataset(
-                    group_store,
-                    mask_and_scale=mask_and_scale,
-                    decode_times=decode_times,
-                    concat_characters=concat_characters,
-                    decode_coords=decode_coords,
-                    drop_variables=drop_variables,
-                    use_cftime=use_cftime,
-                    decode_timedelta=decode_timedelta,
-                )
-
-            group_name = NodePath(path_group).name
-            groups_dict[group_name] = group_ds
+        groups_dict = self.open_groups(filename_or_obj, **kwargs)
 
         return DataTree.from_dict(groups_dict)
 
@@ -495,7 +462,6 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         group: str | Iterable[str] | Callable | None = None,
         **kwargs,
     ) -> dict[str, Dataset]:
-        # TODO: Add function docstring
 
         from xarray.backends.common import _iter_nc_groups
         from xarray.core.treenode import NodePath

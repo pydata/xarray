@@ -11,7 +11,6 @@ from typing import (
     Callable,
     Final,
     Literal,
-    Optional,
     Union,
     cast,
     overload,
@@ -826,6 +825,43 @@ def open_datatree(
     backend = plugins.get_backend(engine)
 
     return backend.open_datatree(filename_or_obj, **kwargs)
+
+
+def open_groups(
+    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    engine: T_Engine = None,
+    **kwargs,
+) -> dict[str, Dataset]:
+    """
+    Open and decode a file or file-like object, creating a dictionary containing one xarray Dataset for each group in the file.
+    Useful for an HDF file ("netcdf4" or "h5netcdf") containing many groups that are not alignable with their parents
+    and cannot be opened directly with ``open_datatree``. It is encouraged to use this function to inspect your data,
+    then make the necessary changes to make the structure coercible to a `DataTree` object before calling `DataTree.from_dict()` and proceeding with your analysis.
+
+    Parameters
+    ----------
+    filename_or_obj : str, Path, file-like, or DataStore
+        Strings and Path objects are interpreted as a path to a netCDF file.
+    engine : str, optional
+        Xarray backend engine to use. Valid options include `{"netcdf4", "h5netcdf"}`.
+    **kwargs : dict
+        Additional keyword arguments passed to :py:func:`~xarray.open_dataset` for each group.
+
+    Returns
+    -------
+    dict[str, xarray.Dataset]
+
+    See Also
+    --------
+    open_datatree()
+    DataTree.from_dict()
+    """
+    if engine is None:
+        engine = plugins.guess_engine(filename_or_obj)
+
+    backend = plugins.get_backend(engine)
+
+    return backend.open_groups(filename_or_obj, **kwargs)
 
 
 def open_mfdataset(
@@ -1721,44 +1757,3 @@ def to_zarr(
         return dask.delayed(_finalize_store)(writes, zstore)
 
     return zstore
-
-
-def open_groups(
-    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-    engine: T_Engine = None,
-    group: Optional[str] = None,
-    **kwargs,
-) -> dict[str, Dataset]:
-    """
-    Open and decode a file or file-like object, creating a dictionary containing one xarray Dataset for each group in the file.
-
-    Useful when you have e.g. a netCDF file containing many groups, some of which are not alignable with their parents and so the file cannot be opened directly with ``open_datatree``.
-
-    It is encouraged to use this function to inspect your data, then make the necessary changes to make the structure coercible to a `DataTree` object before calling `DataTree.from_dict()` and proceeding with your analysis.
-
-    Parameters
-    ----------
-    filename_or_obj : str, Path, file-like, or DataStore
-        Strings and Path objects are interpreted as a path to a netCDF file or Zarr store.
-    engine : str, optional
-        Xarray backend engine to use. Valid options include `{"netcdf4", "h5netcdf", "zarr"}`.
-    group : str, optional
-        Group to use as the root group to start reading from. Groups above this root group will not be included in the output.
-    **kwargs : dict
-        Additional keyword arguments passed to :py:func:`~xarray.open_dataset` for each group.
-
-    Returns
-    -------
-    dict[str, xarray.Dataset]
-
-    See Also
-    --------
-    open_datatree()
-    DataTree.from_dict()
-    """
-    if engine is None:
-        engine = plugins.guess_engine(filename_or_obj)
-
-    backend = plugins.get_backend(engine)
-
-    return backend.open_groups(filename_or_obj, **kwargs)

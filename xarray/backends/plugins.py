@@ -202,9 +202,8 @@ def get_backend(engine: str | type[BackendEntrypoint]) -> BackendEntrypoint:
     if isinstance(engine, str):
         engines = list_engines()
         if engine not in engines:
-            # TODO: Improve error handing message
             raise ValueError(
-                f"unrecognized engine {engine} must be one of: {list(engines)}"
+                f"unrecognized engine {engine} must be one of your download engines: {list(engines)}"
             )
         backend = engines[engine]
     elif isinstance(engine, type) and issubclass(engine, BackendEntrypoint):
