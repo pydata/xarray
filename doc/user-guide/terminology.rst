@@ -263,7 +263,7 @@ complete examples, please consult the relevant documentation.*
         :term:`variables<Variable>`, :term:`dimensions<Dimension>`, :term:`coordinates<Coordinate>`,
         and attributes.
 
-        The nodes in a tree are linked to one another, and each node is it's own instance of
+       The nodes in a tree are linked to one another, and each node is its own instance of
         ``DataTree`` object. Each node can have zero or more *children* (stored in a dictionary-like
         manner under their corresponding *names*), and those child nodes can themselves have
         children. If a node is a child of another node that other node is said to be its *parent*.

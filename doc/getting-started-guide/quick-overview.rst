@@ -229,6 +229,9 @@ You can directly read and write xarray objects to disk using :py:meth:`~xarray.D
 
 It is common for datasets to be distributed across multiple files (commonly one file per timestep). Xarray supports this use-case by providing the :py:meth:`~xarray.open_mfdataset` and the :py:meth:`~xarray.save_mfdataset` methods. For more, see :ref:`io`.
 
+
+.. _quick-overview-datatrees:
+
 DataTrees
 ---------
 

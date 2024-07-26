@@ -201,6 +201,13 @@ extensions.
 Tree-like data structure
 ++++++++++++++++++++++++
 
+.. note::
+
+   After some time, the community DataTree project has now been updated and
+   merged into xarray exposing :py:class:`xarray.DataTree`. This is just
+   released and a bit experimental, but please try it out and let us know what
+   you think. Take a look at our :ref:`quick-overview-datatrees` quickstart.
+
 Xarray’s highest-level object was previously an ``xarray.Dataset``, whose data
 model echoes that of a single netCDF group. However real-world datasets are
 often better represented by a collection of related Datasets. Particular common
@@ -219,10 +226,12 @@ A new tree-like data structure, ``xarray.DataTree``, which is essentially a
 structured hierarchical collection of Datasets, represents these cases and
 instead maps to multiple netCDF groups (see :issue:`4118`).
 
-Currently there are several libraries which have wrapped xarray in order to build
-domain-specific data structures (e.g. `xarray-multiscale <https://github.com/JaneliaSciComp/xarray-multiscale>`__.),
-but the general ``xarray.DataTree`` object obviates the need for these and
-consolidates effort in a single domain-agnostic tool, much as xarray has already achieved.
+Currently there are several libraries which have wrapped xarray in order to
+build domain-specific data structures (e.g. `xarray-multiscale
+<https://github.com/JaneliaSciComp/xarray-multiscale>`__.), but the general
+``xarray.DataTree`` object obviates the need for these and consolidates effort
+in a single domain-agnostic tool, much as xarray has already achieved.
+
 
 Labeled array without coordinates
 +++++++++++++++++++++++++++++++++

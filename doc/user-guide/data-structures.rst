@@ -97,7 +97,7 @@ Coordinates can be specified in the following ways:
     arguments for :py:class:`~xarray.Variable`
   * A pandas object or scalar value, which is converted into a ``DataArray``
   * A 1D array or list, which is interpreted as values for a one dimensional
-    coordinate variable along the same dimension as it's name
+    coordinate variable along the same dimension as its name
 
 - A dictionary of ``{coord_name: coord}`` where values are of the same form
   as the list. Supplying coordinates as a dictionary allows other coordinates
@@ -260,8 +260,6 @@ In this example, it would be natural to call ``temperature`` and
 variables" because they label the points along the dimensions. (see [1]_ for
 more background on this example).
 
-.. _dataarray constructor:
-
 Creating a Dataset
 ~~~~~~~~~~~~~~~~~~
 
@@ -276,7 +274,7 @@ variables (``data_vars``), coordinates (``coords``) and attributes (``attrs``).
     arguments for :py:class:`~xarray.Variable`
   * A pandas object, which is converted into a ``DataArray``
   * A 1D array or list, which is interpreted as values for a one dimensional
-    coordinate variable along the same dimension as it's name
+    coordinate variable along the same dimension as its name
 
 - ``coords`` should be a dictionary of the same form as ``data_vars``.
 
@@ -614,17 +612,15 @@ instance, if we try to create a `cycle`, where the root node is also a child of 
 
     dt.parent = node3
 
-Alternatively you can also create a ``DataTree`` object from
+Alternatively you can also create a ``DataTree`` object from:
 
-- A dictionary mapping directory-like paths to either ``DataTree`` nodes or
-  data, using :py:meth:`xarray.DataTree.from_dict()`,
-- A well formed netCDF or Zarr file on disk with
-:py:func:`open_datatree()`. See :ref:`reading and writing files <io>`.
+- A dictionary mapping directory-like paths to either ``DataTree`` nodes or data, using :py:meth:`xarray.DataTree.from_dict()`,
+- A well formed netCDF or Zarr file on disk with :py:func:`open_datatree()`. See :ref:`reading and writing files <io>`.
 
 For data files with groups that do not not align see
-:py:func:`xarray.open_groups()` or use
-:py:func:`xarray.open_dataset(group='target_group')`. For more information
-about coordinate alignment see :ref:`datatree-inheritance`
+:py:func:`xarray.open_groups()` or target each group individually
+:py:func:`xarray.open_dataset(group='groupname') <xarray.open_dataset>`. For
+more information about coordinate alignment see :ref:`datatree-inheritance`
 
 
 
@@ -642,7 +638,7 @@ but with values given by either ``xarray.DataArray`` objects or other
 
 Iterating over keys will iterate over both the names of variables and child nodes.
 
-We can also access all the data in a single node through a dataset-like view
+We can also access all the data in a single node, and its inerited coordinates, through a dataset-like view
 
 .. ipython:: python
 
@@ -657,6 +653,15 @@ as a new (and mutable) ``xarray.Dataset`` object via
 .. ipython:: python
 
     dt["a"].to_dataset()
+
+This same call can be made to get only the local node variables without any
+inherited ones, by setting the inherited keyword to False, but in this example
+there are no inherited coordinates so the result is the same as the previous call.
+
+.. ipython:: python
+
+    dt["a"].to_dataset(inherited=False)
+
 
 Like with ``Dataset``, you can access the data and coordinate variables of a
 node separately via the ``data_vars`` and ``coords`` attributes:
@@ -702,24 +707,25 @@ DataTree Inheritance
 ~~~~~~~~~~~~~~~~~~~~
 
 DataTree implements a simple inheritance mechanism. Coordinates and their
-associated indices are propagated from each node downward starting from the
-root node.  Coordinate inheritance was inspired by the NetCDF-CF inherited
-dimensions, but DataTree's inheritance is slightly stricter and easier to
-reason about.
+associated indices are propagated from downward starting from the root node to
+all descendent nodes.  Coordinate inheritance was inspired by the NetCDF-CF
+inherited dimensions, but DataTree's inheritance is slightly stricter yet
+easier to reason about.
 
 The constraint that this puts on a DataTree is that dimensions and indices that
-are inherited must be aligned with any child's existing dimension or index.
-This allows child nodes to use dimensions defined in ancestor nodes, without
-duplicating that information, but on the flip side if a dimension dimname is
-defined in on a node and that same dimname dimension in one of it's ancestors,
-they must align (have the same index and size).
+are inherited must be aligned with any direct decendent node's existing
+dimension or index.  This allows decendents to use dimensions defined in
+ancestor nodes, without duplicating that information. But as a consequence, if
+a dimension dimension-name is defined in on a node and that same dimension-name
+exists in one of its ancestors, they must align (have the same index and
+size).
 
 Some examples:
 
 .. ipython:: python
 
     # Set up coordinates
-    times = xr.DataArray(data=["2022-01", "2023-01"], dims="time")
+    time = xr.DataArray(data=["2022-01", "2023-01"], dims="time")
     stations = xr.DataArray(data=list("abcdef"), dims="station")
     lon = [-100, -80, -60]
     lat = [10, 20, 30]
@@ -728,29 +734,29 @@ Some examples:
     wind_speed = xr.DataArray(np.ones((2, 6)) * 2, dims=("time", "station"))
     pressure = xr.DataArray(np.ones((2, 6)) * 3, dims=("time", "station"))
     air_temperature = xr.DataArray(np.ones((2, 6)) * 4, dims=("time", "station"))
-    dewpoint_temp = xr.DataArray(np.ones((2, 6)) * 5, dims=("time", "station"))
+    dewpoint = xr.DataArray(np.ones((2, 6)) * 5, dims=("time", "station"))
     infrared = xr.DataArray(np.ones((2, 3, 3)) * 6, dims=("time", "lon", "lat"))
     true_color = xr.DataArray(np.ones((2, 3, 3)) * 7, dims=("time", "lon", "lat"))
 
     dt2 = xr.DataTree.from_dict(
         {
             "/": xr.Dataset(
-                coords={"time": times},
+                coords={"time": time},
             ),
-            "/weather_data": xr.Dataset(
+            "/weather": xr.Dataset(
                 coords={"station": stations},
                 data_vars={
                     "wind_speed": wind_speed,
                     "pressure": pressure,
                 },
             ),
-            "/weather_data/temperature": xr.Dataset(
+            "/weather/temperature": xr.Dataset(
                 data_vars={
                     "air_temperature": air_temperature,
-                    "dewpoint_temp": dewpoint_temp,
+                    "dewpoint": dewpoint,
                 },
             ),
-            "/satellite_image": xr.Dataset(
+            "/satellite": xr.Dataset(
                 coords={"lat": lat, "lon": lon},
                 data_vars={
                     "infrared": infrared,
@@ -765,21 +771,21 @@ Here there are four different coordinate variables, which apply to variables in 
 
 ``time`` is a shared coordinate used by both ``weather`` and ``satellite`` variables
 ``station`` is used only for ``weather`` variables
-``lat`` and ``lon`` are only use for ``satellite images``
+``lat`` and ``lon`` are only use for ``satellite`` images
 
 Coordinate variables are inherited to descendent nodes, which means that
 variables at different levels of a hierarchical DataTree are always
 aligned. Placing the ``time`` variable at the root node automatically indicates
 that it applies to all descendent nodes. Similarly, ``station`` is in the base
-``weather_data`` node, because it applies to all weather variables, both directly
-in ``weather_data`` and in the ``temperature`` sub-tree.
+``weather`` node, because it applies to all weather variables, both directly
+in ``weather`` and in the ``temperature`` sub-tree.
 
 Accessing any of the lower level trees as an ``xarray.Dataset`` would
-automatically include coordinates from higher levels (e.g., time):
+automatically include coordinates from higher levels (e.g., ``time`` and ``station``):
 
 .. ipython:: python
 
-    dt2["/weather_data/temperature"].ds
+    dt2["/weather/temperature"].ds
 
 
 .. _coordinates:
