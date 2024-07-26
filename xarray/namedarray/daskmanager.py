@@ -41,9 +41,6 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     def is_chunked_array(self, data: duckarray[Any, Any]) -> bool:
         return is_duck_dask_array(data)
 
-    def chunks(self, data: Any) -> _NormalizedChunks:
-        return data.chunks  # type: ignore[no-any-return]
-
     def normalize_chunks(
         self,
         chunks: T_Chunks | _NormalizedChunks,
