@@ -658,7 +658,7 @@ Some examples:
     infrared = xr.DataArray(np.ones((2, 3, 3)) * 6, dims=("time", "lon", "lat"))
     true_color = xr.DataArray(np.ones((2, 3, 3)) * 7, dims=("time", "lon", "lat"))
 
-    xdt = xr.DataTree.from_dict(
+    dt = xr.DataTree.from_dict(
         {
             "/": xr.Dataset(
                 coords={"time": times},
