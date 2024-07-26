@@ -298,6 +298,42 @@ def _check_fill_values(attrs, name, dtype):
     return raw_fill_dict, encoded_fill_values
 
 
+def _convert_unsigned_fill_value(
+    name: T_Name,
+    data: Any,
+    unsigned: str,
+    raw_fill_value: Any,
+    encoded_fill_values: set,
+) -> Any:
+    if data.dtype.kind == "i":
+        if unsigned == "true":
+            unsigned_dtype = np.dtype(f"u{data.dtype.itemsize}")
+            transform = partial(np.asarray, dtype=unsigned_dtype)
+            if raw_fill_value is not None:
+                new_fill = np.array(raw_fill_value, dtype=data.dtype)
+                encoded_fill_values.remove(raw_fill_value)
+                # use view here to prevent OverflowError
+                encoded_fill_values.add(new_fill.view(unsigned_dtype).item())
+            data = lazy_elemwise_func(data, transform, unsigned_dtype)
+    elif data.dtype.kind == "u":
+        if unsigned == "false":
+            signed_dtype = np.dtype(f"i{data.dtype.itemsize}")
+            transform = partial(np.asarray, dtype=signed_dtype)
+            data = lazy_elemwise_func(data, transform, signed_dtype)
+            if raw_fill_value is not None:
+                new_fill = signed_dtype.type(raw_fill_value)
+                encoded_fill_values.remove(raw_fill_value)
+                encoded_fill_values.add(new_fill)
+    else:
+        warnings.warn(
+            f"variable {name!r} has _Unsigned attribute but is not "
+            "of integer type. Ignoring attribute.",
+            SerializationWarning,
+            stacklevel=3,
+        )
+    return data
+
+
 class CFMaskCoder(VariableCoder):
     """Mask or unmask fill values according to CF conventions."""
 
@@ -344,7 +380,7 @@ class CFMaskCoder(VariableCoder):
             encoding["missing_value"] = attrs.get(
                 "_FillValue",
                 (
-                    self._encode_unsigned_fill_value(name, fv, signed_dtype)
+                    self._encode_unsigned_fill_value(name, mv, signed_dtype)
                     if is_unsigned
                     else dtype.type(mv)
                 ),
@@ -415,35 +451,13 @@ class CFMaskCoder(VariableCoder):
 
         if "_Unsigned" in attrs:
             unsigned = pop_to(attrs, encoding, "_Unsigned")
-
-            if data.dtype.kind == "i":
-                if unsigned == "true":
-                    unsigned_dtype = np.dtype(f"u{data.dtype.itemsize}")
-                    transform = partial(np.asarray, dtype=unsigned_dtype)
-                    if "_FillValue" in raw_fill_dict:
-                        new_fill = np.array(
-                            raw_fill_dict["_FillValue"], dtype=data.dtype
-                        )
-                        encoded_fill_values.remove(raw_fill_dict["_FillValue"])
-                        # use view here to prevent OverflowError
-                        encoded_fill_values.add(new_fill.view(unsigned_dtype).item())
-                    data = lazy_elemwise_func(data, transform, unsigned_dtype)
-            elif data.dtype.kind == "u":
-                if unsigned == "false":
-                    signed_dtype = np.dtype(f"i{data.dtype.itemsize}")
-                    transform = partial(np.asarray, dtype=signed_dtype)
-                    data = lazy_elemwise_func(data, transform, signed_dtype)
-                    if "_FillValue" in raw_fill_dict:
-                        new_fill = signed_dtype.type(raw_fill_dict["_FillValue"])
-                        encoded_fill_values.remove(raw_fill_dict["_FillValue"])
-                        encoded_fill_values.add(new_fill)
-            else:
-                warnings.warn(
-                    f"variable {name!r} has _Unsigned attribute but is not "
-                    "of integer type. Ignoring attribute.",
-                    SerializationWarning,
-                    stacklevel=3,
-                )
+            data = _convert_unsigned_fill_value(
+                name,
+                data,
+                unsigned,
+                raw_fill_dict.get("_FillValue"),
+                encoded_fill_values,
+            )
 
         if encoded_fill_values:
             # special case DateTime to properly handle NaT
