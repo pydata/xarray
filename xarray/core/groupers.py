@@ -123,7 +123,9 @@ class UniqueGrouper(Grouper):
         if isinstance(self.group, _DummyGroup):
             return True
         index = self.group_as_index
-        return index.is_unique and index.is_monotonic_increasing
+        return index.is_unique and (
+            index.is_monotonic_increasing or index.is_monotonic_decreasing
+        )
 
     @property
     def group_as_index(self) -> pd.Index:
@@ -326,7 +328,7 @@ class TimeResampler(Resampler):
 
         if not group_as_index.is_monotonic_increasing:
             # TODO: sort instead of raising an error
-            raise ValueError("index must be monotonic for resampling")
+            raise ValueError("Index must be monotonic for resampling")
 
         if isinstance(group_as_index, CFTimeIndex):
             from xarray.core.resample_cftime import CFTimeGrouper
