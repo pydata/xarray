@@ -22,6 +22,8 @@ v2024.06.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Use fastpath when grouping both montonically increasing and decreasing variable
+  in :py:class:`GroupBy` (:issue:`6220`, :pull:`7427`). By `Joel Jaeschke <https://github.com/joeljaeschke>`_.
 - Introduce new :py:class:`groupers.UniqueGrouper`, :py:class:`groupers.BinGrouper`, and
   :py:class:`groupers.TimeResampler` objects as a step towards supporting grouping by
   multiple variables. See the `docs <groupby.groupers_>` and the
