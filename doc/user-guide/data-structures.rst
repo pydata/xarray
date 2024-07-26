@@ -511,17 +511,17 @@ Each ``DataTree`` object (or "node") contains the same data that a single
 keys), and so has the same key properties:
 
 - ``dims``: a dictionary mapping of dimension names to lengths, for the
-  variables in this node,
+  variables in this node, and this node's ancestors,
 - ``data_vars``: a dict-like container of DataArrays corresponding to variables
   in this node,
 - ``coords``: another dict-like container of DataArrays, corresponding to
-  coordinate variables in this node,
+  coordinate variables in this node, and this node's ancestors,
 - ``attrs``: dict to hold arbitary metadata relevant to data in this node.
 
 A single ``DataTree`` object acts much like a single ``Dataset`` object, and
-has a similar set of dict-like methods defined upon it. However, ``DataTree``'s
+has a similar set of dict-like methods defined upon it. However, ``DataTree``\s
 can also contain other ``DataTree`` objects, so they can be thought of as
-nested dict-like containers of both ``xarray.DataArray``'s and ``DataTree``'s.
+nested dict-like containers of both ``xarray.DataArray``\s and ``DataTree``\s.
 
 A single datatree object is known as a "node", and its position relative to
 other nodes is defined by two more key properties:
@@ -576,7 +576,6 @@ Let's make a single datatree node with some example data in it:
 
     ds1 = xr.Dataset({"foo": "orange"})
     dt = xr.DataTree(name="root", data=ds1)  # create root node
-
     dt
 
 At this point our node is also the root node, as every tree has a root node.
@@ -590,7 +589,7 @@ the constructor of the second:
     # add a child by referring to the parent node
     node2 = xr.DataTree(name="a", parent=dt, data=ds2)
 
-or by dynamically updating the attributes of one node to refer to another:
+or by dynamically updating the properties of one node to refer to another:
 
 .. ipython:: python
 
@@ -607,7 +606,7 @@ Our tree now has three nodes within it:
     dt
 
 It is at tree construction time that consistency checks are enforced. For
-instance, if we try to create a `cycle` the constructor will raise an error
+instance, if we try to create a `cycle`, where the root node is also a child of a decendent, the constructor will raise an
 (:py:class:`~xarray.InvalidTreeError`):
 
 .. ipython:: python
@@ -619,8 +618,12 @@ Alternatively you can also create a ``DataTree`` object from
 
 - A dictionary mapping directory-like paths to either ``DataTree`` nodes or
   data, using :py:meth:`xarray.DataTree.from_dict()`,
-- A netCDF or Zarr file on disk with :py:func:`open_datatree()`. See
-  :ref:`reading and writing files <io>`.
+- A well formed netCDF or Zarr file on disk with
+:py:func:`open_datatree()`. See :ref:`reading and writing files <io>`.  For
+data files with groups that do not not align see :py:func:`xarray.open_groups()` or use
+:py:func:`xarray.open_dataset(group='target_group')`
+
+
 
 
 DataTree Contents

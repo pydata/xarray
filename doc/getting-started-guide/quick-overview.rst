@@ -254,7 +254,7 @@ Let's first make some example xarray datasets:
     )
     ds3
 
-Now we'll put this data into a multi-group DataTree:
+Now we'll put these datasets into a hierarchical DataTree:
 
 .. ipython:: python
 
@@ -263,26 +263,35 @@ Now we'll put this data into a multi-group DataTree:
     )
     dt
 
-This creates a datatree with a group hierarchy. We have one root group, containing information about individual people.
-(This root group can be named, but here is unnamed, so is referred to with ``"/"``, same as the root of a unix-like filesystem.)
-The root group then has one subgroup ``simulation``, which contains no data itself but does contain another two subgroups,
-named ``fine`` and ``coarse``.
+This created a DataTree with nested groups. We have one root group, containing information about individual
+people.  This root group can be named, but here is unnamed, so is referred to with ``/``, same as the root of a
+unix-like filesystem.  The root group then has one subgroup ``simulation``, which contains no data itself but does
+contain another two subgroups, named ``fine`` and ``coarse``.
 
-The (sub-)sub-groups ``fine`` and ``coarse`` contain two very similar datasets.
-They both have an ``"x"`` dimension, but the dimension is of different lengths in each group, which makes the data in each group unalignable.
-Remember to keep unalignable coordinates in sibling groups as a DataTree inherits coordinates through its child nodes.  All parent/descendent coordinates must be alignable to form a DataTree.
-In the root group we placed some completely unrelated information, showing how we can use a tree to store heterogenous data.
+The (sub)subgroups ``fine`` and ``coarse`` contain two very similar datasets.  They both have an ``x``
+dimension, but the dimension is of different lengths in each group, which makes the data in each group
+unalignable.  In the root group we placed some completely unrelated information, in order to show how a tree can
+store heterogenous data.
 
-The constraints on each group are the same as the constraint on DataArrays within a single dataset with the addition of requiring parent/descendent coordinate agreement.
+Remember to keep unalignable dimensions in sibling groups because a DataTree inherits coordinates down through its
+child nodes.  You can see this inheritance in the above representation of the DataTree.  The coordinates
+``people`` and ``species`` defined in the root ``/`` node are shown in the child nodes both
+``/simulation/coarse`` and ``/simulation/fine``.  All coordinates in parent-descendent lineage must be
+alignable to form a DataTree.  If your input data is not aligned, you can still get a nested ``dict`` of
+``Dataset`` objects with :py:func:`~xarray.open_groups` and then apply any required changes to ensure alignment
+before converting to a ``DataTree``.
 
-We created the sub-groups using a filesystem-like syntax, and accessing groups works the same way.
-We can access individual DataArrays in a similar fashion
+The constraints on each group are the same as the constraint on DataArrays within a single dataset with the
+addition of requiring parent-descendent coordinate agreement.
+
+We created the subgroups using a filesystem-like syntax, and accessing groups works the same way.  We can access
+individual DataArrays in a similar fashion.
 
 .. ipython:: python
 
     dt["simulation/coarse/foo"]
 
-and we can also view the data in a particular group as a readonly ``DatasetView`` object using ``.ds``:
+We can also view the data in a particular group as a readonly ``DatasetView`` using ``.ds``:
 
 .. ipython:: python
 
@@ -302,22 +311,23 @@ And you can get a copy of just the node local values of ``Dataset`` by setting t
     ds_node_local = dt["simulation/coarse"].to_dataset(inherited=False)
     ds_node_local
 
-Operations map over subtrees, so we can take a mean over the ``x`` dimension of both the ``fine`` and ``coarse`` groups just by
+Operations map over subtrees, so we can take a mean over the ``x`` dimension of both the ``fine`` and ``coarse`` groups just by:
 
 .. ipython:: python
 
     avg = dt["simulation"].mean(dim="x")
     avg
 
-Here the ``"x"`` dimension used is always the one local to that sub-group.
+Here the ``x`` dimension used is always the one local to that subgroup.
 
 
 You can do almost everything you can do with ``Dataset`` objects with ``DataTree`` objects
-(including indexing and arithmetic), as operations will be mapped over every sub-group in the tree.
+(including indexing and arithmetic), as operations will be mapped over every subgroup in the tree.
 This allows you to work with multiple groups of non-alignable variables at once.
 
 .. note::
 
-    If all of your variables are mutually alignable
-    (i.e. they live on the same grid, such that every common dimension name maps to the same length),
-    then you probably don't need :py:class:`xarray.DataTree`, and should consider just sticking with ``xarray.Dataset``.
+    If all of your variables are mutually alignable (i.e. they live on the same
+    grid, such that every common dimension name maps to the same length), then
+    you probably don't need :py:class:`xarray.DataTree`, and should consider
+    just sticking with ``xarray.Dataset``.
