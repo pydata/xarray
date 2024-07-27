@@ -20,6 +20,7 @@ from xarray.namedarray.parallelcompat import (
 from xarray.tests import has_dask, requires_dask
 
 
+# TODO can I subclass the chunkedduckarray protocol here?
 class DummyChunkedArray(np.ndarray):
     """
     Mock-up of a chunked array class.
@@ -28,7 +29,7 @@ class DummyChunkedArray(np.ndarray):
     https://numpy.org/doc/stable/user/basics.subclassing.html#simple-example-adding-an-extra-attribute-to-ndarray
     """
 
-    chunks: T_NormalizedChunks
+    _chunks: T_NormalizedChunks
 
     def __new__(
         cls,
@@ -48,6 +49,20 @@ class DummyChunkedArray(np.ndarray):
         if obj is None:
             return
         self.chunks = getattr(obj, "chunks")
+
+    @property
+    def chunks(self) -> T_NormalizedChunks:
+        return self._chunks
+
+    @chunks.setter
+    def chunks(self, value: T_NormalizedChunks) -> None:
+        # ensure the chunks actually are normalized before setting them
+        assert isinstance(value, tuple)
+        for lengths_along_axis in value:
+            assert isinstance(lengths_along_axis, tuple)
+            for length in lengths_along_axis:
+                assert isinstance(length, int)
+        self._chunks = value
 
     def rechunk(self, chunks: T_NormalizedChunks, **kwargs) -> DummyChunkedArray:
         copied = self.copy()
@@ -161,14 +176,15 @@ class TestPassThroughNonRegisteredChunkedArrays:
         dummy_arr = DummyChunkedArray(shape=(9,), chunks=((3,),))
         na: NamedArray = NamedArray(data=dummy_arr, dims=["x"])
         assert na.chunks == ((3,),)
+        assert na.chunksizes == {"x": (3,)}
 
     def test_rechunk(self) -> None:
         dummy_arr = DummyChunkedArray(shape=(4,), chunks=((1,),))
-        na: NamedArray = NamedArray(data=dummy_arr, dims=["x"]).chunk(
-            chunks={"x": (2,)}
-        )
-        assert isinstance(na.data, DummyChunkedArray)
-        assert na.chunks == ((2,),)
+        na: NamedArray = NamedArray(data=dummy_arr, dims=["x"])
+        rechunked_na = na.chunk(chunks={"x": (2,)})
+        assert isinstance(rechunked_na.data, DummyChunkedArray)
+        assert rechunked_na.data.chunks == ((2,),)
+        assert rechunked_na.chunksizes == {"x": (2,)}
 
     def test_computation(self) -> None:
         dummy_arr = DummyChunkedArray(shape=(4,), chunks=((1,),))
