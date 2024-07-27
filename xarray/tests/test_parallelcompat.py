@@ -79,9 +79,6 @@ class DummyChunkManager(ChunkManagerEntrypoint):
     def is_chunked_array(self, data: Any) -> bool:
         return isinstance(data, DummyChunkedArray)
 
-    def chunks(self, data: DummyChunkedArray) -> T_NormalizedChunks:
-        return data.chunks
-
     def normalize_chunks(
         self,
         chunks: T_Chunks | T_NormalizedChunks,
@@ -100,9 +97,6 @@ class DummyChunkManager(ChunkManagerEntrypoint):
         from dask import array as da
 
         return da.from_array(data, chunks, **kwargs)
-
-    def rechunk(self, data: DummyChunkedArray, chunks, **kwargs) -> DummyChunkedArray:
-        return data.rechunk(chunks, **kwargs)
 
     def compute(self, *data: DummyChunkedArray, **kwargs) -> tuple[np.ndarray, ...]:
         from dask.array import compute
