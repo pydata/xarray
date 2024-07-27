@@ -243,6 +243,32 @@ def create_encoded_signed_masked_scaled_data(dtype: np.dtype) -> Dataset:
     return Dataset({"x": ("t", sb, attributes)})
 
 
+def create_unsigned_false_masked_scaled_data(dtype: np.dtype) -> Dataset:
+    encoding = {
+        "_FillValue": 255,
+        "_Unsigned": "false",
+        "dtype": "u1",
+        "add_offset": dtype.type(10),
+        "scale_factor": dtype.type(0.1),
+    }
+    x = np.array([-1.0, 10.1, 22.7, np.nan], dtype=dtype)
+    return Dataset({"x": ("t", x, {}, encoding)})
+
+
+def create_encoded_unsigned_false_masked_scaled_data(dtype: np.dtype) -> Dataset:
+    # These are values as written to the file: the _FillValue will
+    # be represented in the unsigned form.
+    attributes = {
+        "_FillValue": 255,
+        "_Unsigned": "false",
+        "add_offset": dtype.type(10),
+        "scale_factor": dtype.type(0.1),
+    }
+    # Create unsigned data corresponding to [-110, 1, 127, 255] signed
+    sb = np.asarray([146, 1, 127, 255], dtype="u1")
+    return Dataset({"x": ("t", sb, attributes)})
+
+
 def create_boolean_data() -> Dataset:
     attributes = {"units": "-"}
     return Dataset({"x": ("t", [True, False, False, True], attributes)})
@@ -891,6 +917,10 @@ class CFEncodedBase(DatasetIOBase):
                 create_signed_masked_scaled_data,
                 create_encoded_signed_masked_scaled_data,
             ),
+            (
+                create_unsigned_false_masked_scaled_data,
+                create_encoded_unsigned_false_masked_scaled_data,
+            ),
             (create_masked_and_scaled_data, create_encoded_masked_and_scaled_data),
         ],
     )
@@ -900,6 +930,13 @@ class CFEncodedBase(DatasetIOBase):
             pytest.skip("float32 will be treated as float64 in zarr")
         decoded = decoded_fn(dtype)
         encoded = encoded_fn(dtype)
+        if decoded["x"].encoding["dtype"] == "u1" and not (
+            self.engine == "netcdf4"
+            and self.file_format is None
+            or self.file_format == "NETCDF4"
+        ):
+            pytest.skip("uint8 data can't be written to non-NetCDF4 data")
+
         with self.roundtrip(decoded) as actual:
             for k in decoded.variables:
                 assert decoded.variables[k].dtype == actual.variables[k].dtype

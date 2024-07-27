@@ -334,6 +334,36 @@ def _convert_unsigned_fill_value(
     return data
 
 
+def _encode_unsigned_fill_value(
+    name: T_Name,
+    fill_value: Any,
+    encoded_dtype: np.dtype,
+) -> Any:
+    try:
+        if hasattr(fill_value, "item"):
+            # if numpy type, convert to python native integer to determine overflow
+            # otherwise numpy unsigned ints will silently cast to the signed counterpart
+            fill_value = fill_value.item()
+        # passes if provided fill value fits in encoded on-disk type
+        new_fill = encoded_dtype.type(fill_value)
+    except OverflowError:
+        encoded_kind_str = "signed" if encoded_dtype.kind == "i" else "unsigned"
+        warnings.warn(
+            f"variable {name!r} will be stored as {encoded_kind_str} integers "
+            f"but _FillValue attribute can't be represented as a "
+            f"{encoded_kind_str} integer.",
+            SerializationWarning,
+            stacklevel=3,
+        )
+        # user probably provided the fill as the in-memory dtype,
+        # convert to on-disk type to match CF standard
+        orig_kind = "u" if encoded_dtype.kind == "i" else "i"
+        orig_dtype = np.dtype(f"{orig_kind}{encoded_dtype.itemsize}")
+        # use view here to prevent OverflowError
+        new_fill = np.array(fill_value, dtype=orig_dtype).view(encoded_dtype).item()
+    return new_fill
+
+
 class CFMaskCoder(VariableCoder):
     """Mask or unmask fill values according to CF conventions."""
 
@@ -345,11 +375,7 @@ class CFMaskCoder(VariableCoder):
         # https://docs.unidata.ucar.edu/nug/current/best_practices.html#bp_Unsigned-Data
         #     "_Unsigned = "true" to indicate that
         #      integer data should be treated as unsigned"
-        is_unsigned = encoding.get("_Unsigned", "false") == "true"
-        # only used for _Unsigned cases
-        signed_dtype = np.dtype(
-            encoding.get("dtype", f"i{dtype.itemsize}" if is_unsigned else dtype)
-        )
+        has_unsigned = encoding.get("_Unsigned") is not None
         fv = encoding.get("_FillValue")
         mv = encoding.get("missing_value")
         fill_value = None
@@ -368,8 +394,8 @@ class CFMaskCoder(VariableCoder):
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
             encoding["_FillValue"] = (
-                self._encode_unsigned_fill_value(name, fv, signed_dtype)
-                if is_unsigned
+                _encode_unsigned_fill_value(name, fv, dtype)
+                if has_unsigned
                 else dtype.type(fv)
             )
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
@@ -380,8 +406,8 @@ class CFMaskCoder(VariableCoder):
             encoding["missing_value"] = attrs.get(
                 "_FillValue",
                 (
-                    self._encode_unsigned_fill_value(name, mv, signed_dtype)
-                    if is_unsigned
+                    _encode_unsigned_fill_value(name, mv, dtype)
+                    if has_unsigned
                     else dtype.type(mv)
                 ),
             )
@@ -397,42 +423,13 @@ class CFMaskCoder(VariableCoder):
             else:
                 data = duck_array_ops.fillna(data, fill_value)
 
-        if fill_value is not None and is_unsigned:
+        if fill_value is not None and has_unsigned:
             pop_to(encoding, attrs, "_Unsigned")
             # XXX: Is this actually needed? Doesn't the backend handle this?
-            data = duck_array_ops.astype(duck_array_ops.around(data), signed_dtype)
+            data = duck_array_ops.astype(duck_array_ops.around(data), dtype)
             attrs["_FillValue"] = fill_value
 
         return Variable(dims, data, attrs, encoding, fastpath=True)
-
-    def _encode_unsigned_fill_value(
-        self,
-        name: T_Name,
-        fill_value: Any,
-        signed_dtype: np.dtype,
-    ) -> Any:
-        try:
-            # user provided the on-disk signed fill
-            if hasattr(fill_value, "item"):
-                # if numpy type, convert to python native integer to determine overflow
-                # otherwise numpy unsigned ints will silently cast to the signed counterpart
-                fill_value = fill_value.item()
-            new_fill = signed_dtype.type(fill_value)
-        except OverflowError:
-            warnings.warn(
-                f"variable {name!r} will be stored as signed integers "
-                f"but _FillValue attribute can't be represented as a "
-                f"signed integer.",
-                SerializationWarning,
-                stacklevel=3,
-            )
-            # user provided the in-memory unsigned fill, convert to signed type
-            unsigned_dtype = np.dtype(f"u{signed_dtype.itemsize}")
-            # use view here to prevent OverflowError
-            new_fill = (
-                np.array(fill_value, dtype=unsigned_dtype).view(signed_dtype).item()
-            )
-        return new_fill
 
     def decode(self, variable: Variable, name: T_Name = None):
         raw_fill_dict, encoded_fill_values = _check_fill_values(
