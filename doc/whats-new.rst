@@ -22,6 +22,8 @@ v2024.06.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Use fastpath when grouping both montonically increasing and decreasing variable
+  in :py:class:`GroupBy` (:issue:`6220`, :pull:`7427`). By `Joel Jaeschke <https://github.com/joeljaeschke>`_.
 - Introduce new :py:class:`groupers.UniqueGrouper`, :py:class:`groupers.BinGrouper`, and
   :py:class:`groupers.TimeResampler` objects as a step towards supporting grouping by
   multiple variables. See the `docs <groupby.groupers_>` and the
@@ -47,10 +49,10 @@ Breaking changes
   ``origin`` or ``offset`` parameters is recommended as a replacement for using
   the ``base`` parameter and using time offset arithmetic is recommended as a
   replacement for using the ``loffset`` parameter.
-
-
-Deprecations
-~~~~~~~~~~~~
+- The ``squeeze`` kwarg to ``groupby`` is completely deprecated. This has been the source of some quite confusing
+  behaviour and has been deprecated since v2024.01.0. `groupby`` behavior is now always consistent
+  with the existing ``.groupby(..., squeeze=False)`` behavior.
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:pull:`9280`)
 
 
 Bug fixes
