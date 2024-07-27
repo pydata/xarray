@@ -164,7 +164,9 @@ class TestPassThroughNonRegisteredChunkedArrays:
 
     def test_rechunk(self) -> None:
         dummy_arr = DummyChunkedArray(shape=(4,), chunks=((1,),))
-        na: NamedArray = NamedArray(data=dummy_arr, dims=["x"]).chunk(chunks=((2,),))
+        na: NamedArray = NamedArray(data=dummy_arr, dims=["x"]).chunk(
+            chunks={"x": (2,)}
+        )
         assert isinstance(na.data, DummyChunkedArray)
         assert na.chunks == ((2,),)
 
