@@ -821,6 +821,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         data_old = self._data
         if is_chunked_array(data_old):
+            print(f"problematic chunks = {chunks}")
+            # if is_dict_like(chunks) and chunks != {}:
+            #     chunks = tuple(chunks.get(n, s) for n, s in enumerate(data_old.shape))  # type: ignore[assignment]
+
+            print(f"hopefully normalized chunks = {chunks}")
+
             # Assume any chunked array supports .rechunk - if it doesn't then at least a clear AttributeError will be raised.
             # Deliberately don't go through the chunkmanager so as to support chunked array types that don't need all the special computation methods.
             # See GH issue #8733
