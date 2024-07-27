@@ -824,7 +824,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             # Assume any chunked array supports .rechunk - if it doesn't then at least a clear AttributeError will be raised.
             # Deliberately don't go through the chunkmanager so as to support chunked array types that don't need all the special computation methods.
             # See GH issue #8733
-            data_chunked = data_old.rechunk(chunks)
+            data_chunked = data_old.rechunk(chunks)  # type: ignore[union-attr]
         else:
             if not isinstance(data_old, ExplicitlyIndexed):
                 ndata = data_old

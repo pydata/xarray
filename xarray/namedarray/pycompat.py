@@ -93,7 +93,7 @@ def is_chunked_array(x: duckarray[Any, Any]) -> bool:
     return is_duck_dask_array(x) or isinstance(x, _chunkedarray)
 
 
-def has_chunkmanager(x: _chunkedarray) -> bool:
+def has_chunkmanager(x: duckarray[Any, Any]) -> bool:
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
     try:
