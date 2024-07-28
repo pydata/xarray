@@ -562,7 +562,7 @@ larger chunksizes.
    Many time domain problems become amenable to an embarassingly parallel or blockwise solution
    (e.g. using :py:func:`xarray.map_blocks`, :py:func:`dask.array.map_blocks`, or
    :py:func:`dask.array.blockwise`) by rechunking to a frequency along the time dimension.
-   Provide :py:class:`groupers.TimeResampler` objects to :py:meth:`Dataset.chunk` to do so.
+   Provide :py:class:`xarray.groupers.TimeResampler` objects to :py:meth:`Dataset.chunk` to do so.
    For example ``ds.chunk(time=TimeResampler("MS"))`` will set the chunks so that a month of
    data is contained in one chunk. The resulting chunk sizes need not be uniform, depending on
    the frequency of the data, and the calendar.
