@@ -17,8 +17,8 @@ What's New
 
 .. _whats-new.2024.07.0:
 
-v2024.07.0 (unreleased)
------------------------
+v2024.07.0 (Jul 30, 2024)
+-------------------------
 This release extends the API for groupby operations with different `grouper objects <groupby.groupers_>`, improvements to the documentation, and numerous bugfixes.
 
 Thanks to the 22 contributors to this release:
