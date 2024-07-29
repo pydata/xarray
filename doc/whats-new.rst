@@ -23,11 +23,12 @@ v2024.07.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 - Use fastpath when grouping both montonically increasing and decreasing variable
-  in :py:class:`GroupBy` (:issue:`6220`, :pull:`7427`). By `Joel Jaeschke <https://github.com/joeljaeschke>`_.
+  in :py:class:`GroupBy` (:issue:`6220`, :pull:`7427`).
+  By `Joel Jaeschke <https://github.com/joeljaeschke>`_.
 - Introduce new :py:class:`groupers.UniqueGrouper`, :py:class:`groupers.BinGrouper`, and
   :py:class:`groupers.TimeResampler` objects as a step towards supporting grouping by
-  multiple variables. See the `docs <groupby.groupers_>` and the
-  `grouper design doc <https://github.com/pydata/xarray/blob/main/design_notes/grouper_objects.md>`_ for more.
+  multiple variables. See the `docs <groupby.groupers_>` and the `grouper design doc
+  <https://github.com/pydata/xarray/blob/main/design_notes/grouper_objects.md>`_ for more.
   (:issue:`6610`, :pull:`8840`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Allow per-variable specification of ``mask_and_scale``, ``decode_times``, ``decode_timedelta``
@@ -44,15 +45,16 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-- The ``base`` and ``loffset`` parameters to :py:meth:`Dataset.resample` and :py:meth:`DataArray.resample`
-  is now removed. These parameters has been deprecated since v2023.03.0. Using the
-  ``origin`` or ``offset`` parameters is recommended as a replacement for using
-  the ``base`` parameter and using time offset arithmetic is recommended as a
-  replacement for using the ``loffset`` parameter.
-- The ``squeeze`` kwarg to ``groupby`` is completely deprecated. This has been the source of some quite confusing
-  behaviour and has been deprecated since v2024.01.0. `groupby`` behavior is now always consistent
-  with the existing ``.groupby(..., squeeze=False)`` behavior.
-  By `Deepak Cherian <https://github.com/dcherian>`_. (:pull:`9280`)
+- The ``base`` and ``loffset`` parameters to :py:meth:`Dataset.resample` and
+  :py:meth:`DataArray.resample` is now removed. These parameters has been deprecated since
+  v2023.03.0. Using the ``origin`` or ``offset`` parameters is recommended as a replacement for
+  using the ``base`` parameter and using time offset arithmetic is recommended as a replacement for
+  using the ``loffset`` parameter. (:pull:`9233`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- The ``squeeze`` kwarg to ``groupby`` is completely deprecated. This has been the source of some
+  quite confusing behaviour and has been deprecated since v2024.01.0. `groupby`` behavior is now
+  always consistent with the existing ``.groupby(..., squeeze=False)`` behavior. (:pull:`9280`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Bug fixes
@@ -75,13 +77,13 @@ Bug fixes
   <https://github.com/hmaarrfk>`_ and `Spencer Clark
   <https://github.com/spencerkclark>`.
 
-- Fiy static typing of tolerance arguments by allowing `str` type (:issue:`8892`, :pull:`9194`).
+- Fix static typing of tolerance arguments by allowing `str` type (:issue:`8892`, :pull:`9194`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Dark themes are now properly detected for ``html[data-theme=dark]``-tags (:pull:`9200`).
   By `Dieter Werthmüller <https://github.com/prisae>`_.
 - Reductions no longer fail for ``np.complex_`` dtype arrays when numbagg is
-  installed.
-  By `Maximilian Roos <https://github.com/max-sixty>`_
+  installed. (:pull:`9210`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Documentation
 ~~~~~~~~~~~~~
