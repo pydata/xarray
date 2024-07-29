@@ -31,7 +31,10 @@ New Features
   `grouper design doc <https://github.com/pydata/xarray/blob/main/design_notes/grouper_objects.md>`_ for more.
   (:issue:`6610`, :pull:`8840`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Allow per-variable specification of ``mask_and_scale``, ``decode_times``, ``decode_timedelta``
+- Allow rechunking to a frequency using ``Dataset.chunk(time=TimeResampler("YE"))`` syntax. (:issue:`7559`, :pull:`9109`)
+  Such rechunking allows many time domain analyses to be executed in an embarassingly parallel fashion.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Allow per-variable specification of ```mask_and_scale``, ``decode_times``, ``decode_timedelta``
   ``use_cftime`` and ``concat_characters`` params in :py:func:`~xarray.open_dataset`  (:pull:`9218`).
   By `Mathijs Verhaegh <https://github.com/Ostheer>`_.
 - Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).

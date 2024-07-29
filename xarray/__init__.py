@@ -1,6 +1,6 @@
 from importlib.metadata import version as _version
 
-from xarray import testing, tutorial
+from xarray import groupers, testing, tutorial
 from xarray.backends.api import (
     load_dataarray,
     load_dataset,
@@ -15,7 +15,6 @@ from xarray.coding.cftime_offsets import cftime_range, date_range, date_range_li
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.frequencies import infer_freq
 from xarray.conventions import SerializationWarning, decode_cf
-from xarray.core import groupers
 from xarray.core.alignment import align, broadcast
 from xarray.core.combine import combine_by_coords, combine_nested
 from xarray.core.common import ALL_DIMS, full_like, ones_like, zeros_like

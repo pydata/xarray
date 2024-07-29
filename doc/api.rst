@@ -1115,7 +1115,7 @@ DataArray
 Grouper Objects
 ---------------
 
-.. currentmodule:: xarray.core
+.. currentmodule:: xarray
 
 .. autosummary::
    :toctree: generated/

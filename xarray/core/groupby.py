@@ -52,9 +52,9 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.groupers import Grouper
     from xarray.core.types import GroupIndex, GroupIndices, GroupKey
     from xarray.core.utils import Frozen
+    from xarray.groupers import Grouper
 
 
 def check_reduce_dims(reduce_dims, dimensions):
@@ -581,7 +581,7 @@ class GroupBy(Generic[T_Xarray]):
             yield self._obj.isel({self._group_dim: indices})
 
     def _infer_concat_args(self, applied_example):
-        from xarray.core.groupers import BinGrouper
+        from xarray.groupers import BinGrouper
 
         (grouper,) = self.groupers
         if self._group_dim in applied_example.dims:
@@ -695,7 +695,7 @@ class GroupBy(Generic[T_Xarray]):
         """Our index contained empty groups (e.g., from a resampling or binning). If we
         reduced on that dimension, we want to restore the full index.
         """
-        from xarray.core.groupers import BinGrouper, TimeResampler
+        from xarray.groupers import BinGrouper, TimeResampler
 
         (grouper,) = self.groupers
         if (
@@ -731,7 +731,7 @@ class GroupBy(Generic[T_Xarray]):
         from flox.xarray import xarray_reduce
 
         from xarray.core.dataset import Dataset
-        from xarray.core.groupers import BinGrouper
+        from xarray.groupers import BinGrouper
 
         obj = self._original_obj
         (grouper,) = self.groupers
