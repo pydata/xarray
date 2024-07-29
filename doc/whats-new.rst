@@ -19,6 +19,7 @@ What's New
 
 v2024.07.0 (unreleased)
 -----------------------
+This release extends the API for groupby operations with different grouper objects, improvements to the documentation, and numerous bugfixes.
 
 New Features
 ~~~~~~~~~~~~
