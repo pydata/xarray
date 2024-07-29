@@ -53,7 +53,7 @@ from xarray.namedarray.utils import (
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
-    from xarray.core.types import Dims
+    from xarray.core.types import Dims, T_Chunks
     from xarray.namedarray._typing import (
         Default,
         _AttrsLike,
@@ -748,7 +748,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def chunk(
         self,
-        chunks: int | Literal["auto"] | Mapping[Any, None | int | tuple[int, ...]] = {},
+        chunks: T_Chunks = {},
         chunked_array_type: str | ChunkManagerEntrypoint[Any] | None = None,
         from_array_kwargs: Any = None,
         **chunks_kwargs: Any,

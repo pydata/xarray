@@ -93,7 +93,7 @@ from xarray.core.types import (
     QuantileMethods,
     Self,
     T_ChunkDim,
-    T_Chunks,
+    T_ChunksFreq,
     T_DataArray,
     T_DataArrayOrSet,
     T_Dataset,
@@ -162,6 +162,7 @@ if TYPE_CHECKING:
         QueryParserOptions,
         ReindexMethodOptions,
         SideOptions,
+        T_ChunkDimFreq,
         T_Xarray,
     )
     from xarray.core.weighted import DatasetWeighted
@@ -283,18 +284,17 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
 
 
 def _maybe_chunk(
-    name,
-    var,
-    chunks,
+    name: Hashable,
+    var: Variable,
+    chunks: Mapping[Any, T_ChunkDim] | None,
     token=None,
     lock=None,
-    name_prefix="xarray-",
-    overwrite_encoded_chunks=False,
-    inline_array=False,
+    name_prefix: str = "xarray-",
+    overwrite_encoded_chunks: bool = False,
+    inline_array: bool = False,
     chunked_array_type: str | ChunkManagerEntrypoint | None = None,
     from_array_kwargs=None,
-):
-
+) -> Variable:
     from xarray.namedarray.daskmanager import DaskManager
 
     if chunks is not None:
@@ -2650,14 +2650,14 @@ class Dataset(
 
     def chunk(
         self,
-        chunks: T_Chunks = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        chunks: T_ChunksFreq = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
         chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs=None,
-        **chunks_kwargs: T_ChunkDim,
+        **chunks_kwargs: T_ChunkDimFreq,
     ) -> Self:
         """Coerce all arrays in this dataset into dask arrays with the given
         chunks.
@@ -2669,11 +2669,13 @@ class Dataset(
         sizes along that dimension will not be updated; non-dask arrays will be
         converted into dask arrays with a single block.
 
+        Along datetime-like dimensions, a :py:class:`groupers.TimeResampler` object is also accepted.
+
         Parameters
         ----------
-        chunks : int, tuple of int, "auto" or mapping of hashable to int, optional
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
             Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
-            ``{"x": 5, "y": 5}``.
+            ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": TimeResampler(freq="YE")}``.
         name_prefix : str, default: "xarray-"
             Prefix for the name of any new dask arrays.
         token : str, optional
@@ -2708,6 +2710,9 @@ class Dataset(
         xarray.unify_chunks
         dask.array.from_array
         """
+        from xarray.core.dataarray import DataArray
+        from xarray.core.groupers import TimeResampler
+
         if chunks is None and not chunks_kwargs:
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
@@ -2733,6 +2738,42 @@ class Dataset(
                 f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.sizes.keys())}"
             )
 
+        def _resolve_frequency(
+            name: Hashable, resampler: TimeResampler
+        ) -> tuple[int, ...]:
+            variable = self._variables.get(name, None)
+            if variable is None:
+                raise ValueError(
+                    f"Cannot chunk by resampler {resampler!r} for virtual variables."
+                )
+            elif not _contains_datetime_like_objects(variable):
+                raise ValueError(
+                    f"chunks={resampler!r} only supported for datetime variables. "
+                    f"Received variable {name!r} with dtype {variable.dtype!r} instead."
+                )
+
+            assert variable.ndim == 1
+            chunks: tuple[int, ...] = tuple(
+                DataArray(
+                    np.ones(variable.shape, dtype=int),
+                    dims=(name,),
+                    coords={name: variable},
+                )
+                .resample({name: resampler})
+                .sum()
+                .data.tolist()
+            )
+            return chunks
+
+        chunks_mapping_ints: Mapping[Any, T_ChunkDim] = {
+            name: (
+                _resolve_frequency(name, chunks)
+                if isinstance(chunks, TimeResampler)
+                else chunks
+            )
+            for name, chunks in chunks_mapping.items()
+        }
+
         chunkmanager = guess_chunkmanager(chunked_array_type)
         if from_array_kwargs is None:
             from_array_kwargs = {}
@@ -2741,7 +2782,7 @@ class Dataset(
             k: _maybe_chunk(
                 k,
                 v,
-                chunks_mapping,
+                chunks_mapping_ints,
                 token,
                 lock,
                 name_prefix,
