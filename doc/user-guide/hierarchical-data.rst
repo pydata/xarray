@@ -30,12 +30,12 @@ Examples of data which one might want organise in a grouped or hierarchical mann
 
 or even any combination of the above.
 
-Often datasets like this cannot easily fit into a single :py:class:`xarray.Dataset` object,
-or are more usefully thought of as groups of related ``xarray.Dataset`` objects.
+Often datasets like this cannot easily fit into a single :py:class:`~xarray.Dataset` object,
+or are more usefully thought of as groups of related :py:class:`~xarray.Dataset` objects.
 For this purpose we provide the :py:class:`xarray.DataTree` class.
 
 This page explains in detail how to understand and use the different features
-of the :py:class:`xarray.DataTree` class for your own hierarchical data needs.
+of the :py:class:`~xarray.DataTree` class for your own hierarchical data needs.
 
 .. _node relationships:
 
@@ -47,7 +47,7 @@ Node Relationships
 Creating a Family Tree
 ~~~~~~~~~~~~~~~~~~~~~~
 
-The three main ways of creating a ``DataTree`` object are described briefly in :ref:`creating a datatree`.
+The three main ways of creating a :py:class:`~xarray.DataTree` object are described briefly in :ref:`creating a datatree`.
 Here we go into more detail about how to create a tree node-by-node, using a famous family tree from the Simpsons cartoon as an example.
 
 Let's start by defining nodes representing the two siblings, Bart and Lisa Simpson:
@@ -94,10 +94,10 @@ Let's check that Maggie knows who her Dad is:
 
 That's good - updating the properties of our nodes does not break the internal consistency of our tree, as changes of parentage are automatically reflected on both nodes.
 
-    These children obviously have another parent, Marge Simpson, but ``DataTree`` nodes can only have a maximum of one parent.
+    These children obviously have another parent, Marge Simpson, but :py:class:`~xarray.DataTree` nodes can only have a maximum of one parent.
     Genealogical `family trees are not even technically trees <https://en.wikipedia.org/wiki/Family_tree#Graph_theory>`_ in the mathematical sense -
     the fact that distant relatives can mate makes them directed acyclic graphs.
-    Trees of ``DataTree`` objects cannot represent this.
+    Trees of :py:class:`~xarray.DataTree` objects cannot represent this.
 
 Homer is currently listed as having no parent (the so-called "root node" of this tree), but we can update his :py:class:`~xarray.DataTree.parent` property:
 
@@ -134,7 +134,7 @@ We can add Herbert to the family tree without displacing Homer by :py:meth:`~xar
    but the original node was named "Herbert". Not only are names overriden when stored as keys like this,
    but the new node is a copy, so that the original node that was reference is unchanged (i.e. ``herbert.name == "Herb"`` still).
    In other words, nodes are copied into trees, not inserted into them.
-   This is intentional, and mirrors the behaviour when storing named ``xarray.DataArray`` objects inside datasets.
+   This is intentional, and mirrors the behaviour when storing named :py:class:`~xarray.DataArray` objects inside datasets.
 
 Certain manipulations of our tree are forbidden, if they would create an inconsistent result.
 In episode 51 of the show Futurama, Philip J. Fry travels back in time and accidentally becomes his own Grandfather.
@@ -182,7 +182,7 @@ and :ref:`filesystem paths` (to be explained shortly) to select two nodes of int
 This tree shows various families of species, grouped by their common features (making it technically a `"Cladogram" <https://en.wikipedia.org/wiki/Cladogram>`_,
 rather than an evolutionary tree).
 
-Here both the species and the features used to group them are represented by ``DataTree`` node objects - there is no distinction in types of node.
+Here both the species and the features used to group them are represented by :py:class:`~xarray.DataTree` node objects - there is no distinction in types of node.
 We can however get a list of only the nodes we used to represent species by using the fact that all those nodes have no children - they are "leaf nodes".
 We can check if a node is a leaf with :py:meth:`~xarray.DataTree.is_leaf`, and get a list of all leaves with the :py:class:`~xarray.DataTree.leaves` property:
 
@@ -243,7 +243,7 @@ including :py:meth:`~xarray.DataTree.keys`, :py:class:`~xarray.DataTree.values`,
 
     vertebrates["Bony Skeleton"]["Ray-finned Fish"]
 
-Note that the dict-like interface combines access to child ``DataTree`` nodes and stored ``DataArrays``,
+Note that the dict-like interface combines access to child :py:class:`~xarray.DataTree` nodes and stored :py:class:`~xarray.DataArrays`,
 so if we have a node that contains both children and data, calling :py:meth:`~xarray.DataTree.keys` will list both names of child nodes and
 names of data variables:
 
@@ -368,7 +368,7 @@ then rebuilding a new tree using only the paths of those nodes:
 
 You can see this tree is similar to the ``dt`` object above, except that it is missing the empty nodes ``a/c`` and ``a/c/d``.
 
-(If you want to keep the name of the root node, you will need to add the ``name`` kwarg to :py:class:`from_dict`, i.e. ``DataTree.from_dict(non_empty_nodes, name=dt.root.name)``.)
+(If you want to keep the name of the root node, you will need to add the ``name`` kwarg to :py:class:`~xarray.DataTree.from_dict`, i.e. ``DataTree.from_dict(non_empty_nodes, name=dt.root.name)``.)
 
 .. _manipulating trees:
 
@@ -450,7 +450,7 @@ have children (i.e. Abe and Homer).
 Computation
 -----------
 
-``DataTree`` objects are also useful for performing computations, not just for organizing data.
+:py:class:`~xarray.DataTree` objects are also useful for performing computations, not just for organizing data.
 
 Operations and Methods on Trees
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
