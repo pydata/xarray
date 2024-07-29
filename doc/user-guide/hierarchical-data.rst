@@ -34,7 +34,8 @@ Often datasets like this cannot easily fit into a single :py:class:`xarray.Datas
 or are more usefully thought of as groups of related ``xarray.Dataset`` objects.
 For this purpose we provide the :py:class:`xarray.DataTree` class.
 
-This page explains in detail how to understand and use the different features of the :py:class:`xarray.DataTree` class for your own hierarchical data needs.
+This page explains in detail how to understand and use the different features
+of the :py:class:`xarray.DataTree` class for your own hierarchical data needs.
 
 .. _node relationships:
 
@@ -95,7 +96,7 @@ That's good - updating the properties of our nodes does not break the internal c
 
     These children obviously have another parent, Marge Simpson, but ``DataTree`` nodes can only have a maximum of one parent.
     Genealogical `family trees are not even technically trees <https://en.wikipedia.org/wiki/Family_tree#Graph_theory>`_ in the mathematical sense -
-    the fact that distant relatives can mate makes it a directed acyclic graph.
+    the fact that distant relatives can mate makes them directed acyclic graphs.
     Trees of ``DataTree`` objects cannot represent this.
 
 Homer is currently listed as having no parent (the so-called "root node" of this tree), but we can update his :py:class:`~xarray.DataTree.parent` property:
@@ -126,7 +127,7 @@ We can add Herbert to the family tree without displacing Homer by :py:meth:`~xar
 .. ipython:: python
 
     herbert = xr.DataTree(name="Herb")
-    abe.assign({"Herbert": herbert})
+    abe = abe.assign({"Herbert": herbert})
 
 .. note::
    This example shows a minor subtlety - the returned tree has Homer's brother listed as ``"Herbert"``,
@@ -319,9 +320,9 @@ Given two nodes in a tree, we can also find their relative path:
 
     bart.relative_to(lisa)
 
-You can use this filepath feature to build a nested tree from a dictionary of filesystem-like paths and corresponding ``xarray.Dataset`` objects in a single step.
+You can use this filepath feature to build a nested tree from a dictionary of filesystem-like paths and corresponding :py:class:`~xarray.Dataset` objects in a single step.
 If we have a dictionary where each key is a valid path, and each value is either valid data or ``None``,
-we can construct a complex tree quickly using the alternative constructor :py:meth:`DataTree.from_dict()`:
+we can construct a complex tree quickly using the alternative constructor :py:meth:`~xarray.DataTree.from_dict()`:
 
 .. ipython:: python
 
@@ -337,7 +338,7 @@ we can construct a complex tree quickly using the alternative constructor :py:me
 .. note::
 
     Notice that using the path-like syntax will also create any intermediate empty nodes necessary to reach the end of the specified path
-    (i.e. the node labelled `"c"` in this case.)
+    (i.e. the node labelled `"/a/c"` in this case.)
     This is to help avoid lots of redundant entries when creating deeply-nested trees using :py:meth:`xarray.DataTree.from_dict`.
 
 .. _iterating over trees:
@@ -363,7 +364,7 @@ then rebuilding a new tree using only the paths of those nodes:
 .. ipython:: python
 
     non_empty_nodes = {node.path: node.ds for node in dt.subtree if node.has_data}
-    DataTree.from_dict(non_empty_nodes)
+    xr.DataTree.from_dict(non_empty_nodes)
 
 You can see this tree is similar to the ``dt`` object above, except that it is missing the empty nodes ``a/c`` and ``a/c/d``.
 
@@ -437,7 +438,7 @@ A concept that can sometimes be useful is that of a "Hollow Tree", which means a
 This is useful because certain useful tree manipulation operations only make sense for hollow trees.
 
 You can check if a tree is a hollow tree by using the :py:class:`~xarray.DataTree.is_hollow` property.
-We can see that the Simpson's family is not hollow because the data variable ``"age"`` is present at some nodes which
+We can see that the Simpson's family is not hollow because the data variable ``age`` is present at some nodes which
 have children (i.e. Abe and Homer).
 
 .. ipython:: python
@@ -564,7 +565,7 @@ Then calculate the RMS value of these signals:
 
 .. _multiple trees:
 
-We can also use the :py:func:`map_over_subtree` decorator to promote a function which accepts datasets into one which
+We can also use the :py:meth:`~xarray.map_over_subtree` decorator to promote a function which accepts datasets into one which
 accepts datatrees.
 
 Operating on Multiple Trees
@@ -579,7 +580,7 @@ Comparing Trees for Isomorphism
 For it to make sense to map a single non-unary function over the nodes of multiple trees at once,
 each tree needs to have the same structure. Specifically two trees can only be considered similar, or "isomorphic",
 if they have the same number of nodes, and each corresponding node has the same number of children.
-We can check if any two trees are isomorphic using the :py:meth:`DataTree.isomorphic` method.
+We can check if any two trees are isomorphic using the :py:meth:`~xarray.DataTree.isomorphic` method.
 
 .. ipython:: python
     :okexcept:
@@ -594,7 +595,7 @@ We can check if any two trees are isomorphic using the :py:meth:`DataTree.isomor
     dt4 = xr.DataTree.from_dict({"A": None, "A/B": xr.Dataset({"foo": 1})})
     dt1.isomorphic(dt4)
 
-If the trees are not isomorphic a :py:class:`~TreeIsomorphismError` will be raised.
+If the trees are not isomorphic a :py:class:`~xarray.TreeIsomorphismError` will be raised.
 Notice that corresponding tree nodes do not need to have the same name or contain the same data in order to be considered isomorphic.
 
 Arithmetic Between Multiple Trees
