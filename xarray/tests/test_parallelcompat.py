@@ -167,21 +167,21 @@ class TestPassThroughNonRegisteredChunkedArrays:
     """
 
     def test_chunks(self) -> None:
-        dummy_arr = DummyChunkedArray(shape=(9,), chunks=((3,),))
+        dummy_arr = DummyChunkedArray(shape=(6,), chunks=((3, 3),))
         na: NamedArray = NamedArray(data=dummy_arr, dims=["x"])
-        assert na.chunks == ((3,),)
-        assert na.chunksizes == {"x": (3,)}
+        assert na.chunks == ((3, 3),)
+        assert na.chunksizes == {"x": (3, 3)}
 
     def test_rechunk(self) -> None:
-        dummy_arr = DummyChunkedArray(shape=(4,), chunks=((1,),))
+        dummy_arr = DummyChunkedArray(shape=(4,), chunks=((4,),))
         na: NamedArray = NamedArray(data=dummy_arr, dims=["x"])
-        rechunked_na = na.chunk(chunks={"x": (2,)})
+        rechunked_na = na.chunk(chunks={"x": (2, 2)})
         assert isinstance(rechunked_na.data, DummyChunkedArray)
-        assert rechunked_na.data.chunks == ((2,),)
-        assert rechunked_na.chunksizes == {"x": (2,)}
+        assert rechunked_na.data.chunks == ((2, 2),)
+        assert rechunked_na.chunksizes == {"x": (2, 2)}
 
     def test_computation(self) -> None:
-        dummy_arr = DummyChunkedArray(shape=(4,), chunks=((1,),))
+        dummy_arr = DummyChunkedArray(shape=(4,), chunks=((2, 2),))
         na: NamedArray = NamedArray(data=dummy_arr, dims=["x"])
         na.mean()
 
