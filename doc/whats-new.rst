@@ -19,7 +19,7 @@ What's New
 
 v2024.07.0 (unreleased)
 -----------------------
-This release extends the API for groupby operations with different grouper objects, improvements to the documentation, and numerous bugfixes.
+This release extends the API for groupby operations with different `grouper objects <groupby.groupers_>`, improvements to the documentation, and numerous bugfixes.
 
 New Features
 ~~~~~~~~~~~~
@@ -47,14 +47,15 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - The ``base`` and ``loffset`` parameters to :py:meth:`Dataset.resample` and
-  :py:meth:`DataArray.resample` is now removed. These parameters has been deprecated since
+  :py:meth:`DataArray.resample` are now removed. These parameters have been deprecated since
   v2023.03.0. Using the ``origin`` or ``offset`` parameters is recommended as a replacement for
   using the ``base`` parameter and using time offset arithmetic is recommended as a replacement for
   using the ``loffset`` parameter. (:pull:`9233`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- The ``squeeze`` kwarg to ``groupby`` is completely deprecated. This has been the source of some
+- The ``squeeze`` kwarg to ``groupby`` is now ignored. This has been the source of some
   quite confusing behaviour and has been deprecated since v2024.01.0. `groupby`` behavior is now
-  always consistent with the existing ``.groupby(..., squeeze=False)`` behavior. (:pull:`9280`)
+  always consistent with the existing ``.groupby(..., squeeze=False)`` behavior. No errors will 
+  be raised if `squeeze=False`. (:pull:`9280`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
