@@ -39,10 +39,10 @@ if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.groupers import TimeResampler
     from xarray.core.indexes import Index, Indexes
     from xarray.core.utils import Frozen
     from xarray.core.variable import Variable
+    from xarray.groupers import TimeResampler
 
     try:
         from dask.array import Array as DaskArray
