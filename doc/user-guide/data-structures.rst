@@ -496,16 +496,16 @@ dimension and non-dimension variables:
 DataTree
 --------
 
-:py:class:`DataTree` is ``xarray``'s highest-level data structure, able to
+:py:class:`~xarray.DataTree` is ``xarray``'s highest-level data structure, able to
 organise heterogeneous data which could not be stored inside a single
-:py:class:`Dataset` object. This includes representing the recursive structure
+:py:class:`~xarray.Dataset` object. This includes representing the recursive structure
 of multiple `groups`_ within a netCDF file or `Zarr Store`_.
 
 .. _groups: https://www.unidata.ucar.edu/software/netcdf/workshops/2011/groups-types/GroupsIntro.html
 .. _Zarr Store: https://zarr.readthedocs.io/en/stable/tutorial.html#groups
 
-Each ``DataTree`` object (or "node") contains the same data that a single
-``xarray.Dataset`` would (i.e. ``DataArray`` objects stored under hashable
+Each :py:class:`~xarray.DataTree` object (or "node") contains the same data that a single
+:py:class:`xarray.Dataset` would (i.e. :py:class:`~xarray.DataArray` objects stored under hashable
 keys), and so has the same key properties:
 
 - ``dims``: a dictionary mapping of dimension names to lengths, for the
@@ -516,17 +516,17 @@ keys), and so has the same key properties:
   coordinate variables in this node, and this node's ancestors,
 - ``attrs``: dict to hold arbitary metadata relevant to data in this node.
 
-A single ``DataTree`` object acts much like a single ``Dataset`` object, and
-has a similar set of dict-like methods defined upon it. However, ``DataTree``\s
-can also contain other ``DataTree`` objects, so they can be thought of as
-nested dict-like containers of both ``xarray.DataArray``\s and ``DataTree``\s.
+A single :py:class:`~xarray.DataTree` object acts much like a single :py:class:`~xarray.Dataset` object, and
+has a similar set of dict-like methods defined upon it. However, :py:class:`~xarray.DataTree`\s
+can also contain other :py:class:`~xarray.DataTree` objects, so they can be thought of as
+nested dict-like containers of both :py:class:`xarray.DataArray`\s and :py:class:`~xarray.DataTree`\s.
 
 A single datatree object is known as a "node", and its position relative to
 other nodes is defined by two more key properties:
 
-- ``children``: An ordered dictionary mapping from names to other ``DataTree``
+- ``children``: An ordered dictionary mapping from names to other :py:class:`~xarray.DataTree`
   objects, known as its "child nodes".
-- ``parent``: The single ``DataTree`` object whose children this datatree is a
+- ``parent``: The single :py:class:`~xarray.DataTree` object whose children this datatree is a
   member of, known as its "parent node".
 
 Each child automatically knows about its parent node, and a node without a
@@ -539,15 +539,15 @@ otherwise known as a `"Tree" <https://en.wikipedia.org/wiki/Tree_(graph_theory)>
 
 .. note::
 
-    Technically a ``DataTree`` with more than one child node forms an
+    Technically a `:py:class:`~xarray.DataTree` with more than one child node forms an
     `"Ordered Tree" <https://en.wikipedia.org/wiki/Tree_(graph_theory)#Ordered_tree>`_,
     because the children are stored in an Ordered Dictionary. However, this
     distinction only really matters for a few edge cases involving operations
     on multiple trees simultaneously, and can safely be ignored by most users.
 
 
-``DataTree`` objects can also optionally have a ``name`` as well as ``attrs``,
-just like a ``DataArray``. Again these are not normally used unless explicitly
+:py:class:`~xarray.DataTree` objects can also optionally have a ``name`` as well as ``attrs``,
+just like a :py:class:`~xarray.DataArray`. Again these are not normally used unless explicitly
 accessed by the user.
 
 
@@ -556,16 +556,16 @@ accessed by the user.
 Creating a DataTree
 ~~~~~~~~~~~~~~~~~~~
 
-One way to create a ``DataTree`` from scratch is to create each node individually,
+One way to create a :py:class:`~xarray.DataTree` from scratch is to create each node individually,
 specifying the nodes' relationship to one another as you create each one.
 
-The ``DataTree`` constructor takes:
+The :py:class:`~xarray.DataTree`` constructor takes:
 
 - ``data``: The data that will be stored in this node, represented by a single
-  ``xarray.Dataset``, or a named ``xarray.DataArray``.
-- ``parent``: The parent node (if there is one), given as a ``DataTree`` object.
+  :py:class:`xarray.Dataset`, or a named :py:class:`xarray.DataArray`.
+- ``parent``: The parent node (if there is one), given as a :py:class:`~xarray.DataTree` object.
 - ``children``: The various child nodes (if there are any), given as a mapping
-  from string keys to ``DataTree`` objects.
+  from string keys to :py:class:`~xarray.DataTree` objects.
 - ``name``: A string to use as the name of this node.
 
 Let's make a single datatree node with some example data in it:
@@ -612,13 +612,13 @@ instance, if we try to create a `cycle`, where the root node is also a child of 
 
     dt.parent = node3
 
-Alternatively you can also create a ``DataTree`` object from:
+Alternatively you can also create a :py:class:`~xarray.DataTree` object from:
 
-- A dictionary mapping directory-like paths to either ``DataTree`` nodes or data, using :py:meth:`xarray.DataTree.from_dict()`,
-- A well formed netCDF or Zarr file on disk with :py:func:`open_datatree()`. See :ref:`reading and writing files <io>`.
+- A dictionary mapping directory-like paths to either :py:class:`~xarray.DataTree` nodes or data, using :py:meth:`xarray.DataTree.from_dict()`,
+- A well formed netCDF or Zarr file on disk with :py:func:`~xarray.open_datatree()`. See :ref:`reading and writing files <io>`.
 
 For data files with groups that do not not align see
-:py:func:`xarray.open_groups()` or target each group individually
+:py:func:`xarray.open_group` or target each group individually
 :py:func:`xarray.open_dataset(group='groupname') <xarray.open_dataset>`. For
 more information about coordinate alignment see :ref:`datatree-inheritance`
 
@@ -627,9 +627,9 @@ more information about coordinate alignment see :ref:`datatree-inheritance`
 DataTree Contents
 ~~~~~~~~~~~~~~~~~
 
-Like ``xarray.Dataset``, ``xarray.DataTree`` implements the python mapping interface,
-but with values given by either ``xarray.DataArray`` objects or other
-``DataTree`` objects.
+Like :py:class:`~xarray.Dataset`, :py:class:`~xarray.DataTree` implements the python mapping interface,
+but with values given by either :py:class:`~xarray.DataArray` objects or other
+:py:class:`~xarray.DataTree` objects.
 
 .. ipython:: python
 
@@ -645,10 +645,10 @@ We can also access all the data in a single node, and its inerited coordinates, 
     dt["a"].ds
 
 This demonstrates the fact that the data in any one node is equivalent to the
-contents of a single ``xarray.Dataset`` object. The ``DataTree.ds`` property
+contents of a single :py:class:`~xarray.Dataset` object. The :py:attr:`DataTree.ds <xarray.DataTree.ds>` property
 returns an immutable view, but we can instead extract the node's data contents
-as a new (and mutable) ``xarray.Dataset`` object via
-:py:meth:`xarray.DataTree.to_dataset()`:
+as a new and mutable :py:class:`~xarray.Dataset` object via
+:py:meth:`DataTree.to_dataset() <xarray.DataTree.to_dataset>`:
 
 .. ipython:: python
 
@@ -663,8 +663,8 @@ there are no inherited coordinates so the result is the same as the previous cal
     dt["a"].to_dataset(inherited=False)
 
 
-Like with ``Dataset``, you can access the data and coordinate variables of a
-node separately via the ``data_vars`` and ``coords`` attributes:
+Like with :py:class:`~xarray.Dataset`, you can access the data and coordinate variables of a
+node separately via the :py:attr:`~xarray.DataTree.data_vars` and :py:attr:`~xarray.DataTree.coords` attributes:
 
 .. ipython:: python
 
@@ -687,17 +687,17 @@ datatree from scratch, we could have written:
     dt["a/b/zed"] = np.nan
     dt
 
-To change the variables in a node of a ``DataTree``, you can use all the
+To change the variables in a node of a :py:class:`~xarray.DataTree`, you can use all the
 standard dictionary methods, including ``values``, ``items``, ``__delitem__``,
 ``get`` and :py:meth:`xarray.DataTree.update`.
-Note that assigning a ``DataArray`` object to a ``DataTree`` variable using
-``__setitem__`` or ``update`` will :ref:`automatically align <update>` the
+Note that assigning a :py:class:`~xarray.DataTree` object to a :py:class:`~xarray.DataTree` variable using
+``__setitem__`` or :py:meth:`~xarray.DataTree.update` will :ref:`automatically align <update>` the
 array(s) to the original node's indexes.
 
-If you copy a ``DataTree`` using the :py:func:`copy` function or the
+If you copy a :py:class:`~xarray.DataTree` using the :py:func:`copy` function or the
 :py:meth:`xarray.DataTree.copy` method it will copy the subtree,
 meaning that node and children below it, but no parents above it.
-Like for ``Dataset``, this copy is shallow by default, but you can copy all the
+Like for :py:class:`~xarray.Dataset`, this copy is shallow by default, but you can copy all the
 underlying data arrays by calling ``dt.copy(deep=True)``.
 
 

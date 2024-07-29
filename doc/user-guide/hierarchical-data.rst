@@ -438,7 +438,7 @@ A concept that can sometimes be useful is that of a "Hollow Tree", which means a
 This is useful because certain useful tree manipulation operations only make sense for hollow trees.
 
 You can check if a tree is a hollow tree by using the :py:class:`~xarray.DataTree.is_hollow` property.
-We can see that the Simpson's family is not hollow because the data variable ``age`` is present at some nodes which
+We can see that the Simpson's family is not hollow because the data variable ``"age"`` is present at some nodes which
 have children (i.e. Abe and Homer).
 
 .. ipython:: python
