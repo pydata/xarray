@@ -27,7 +27,7 @@ upstream        https://github.com/pydata/xarray (push)
     ```sh
     python ci/release_contributors.py
     ```
-    (needs `gitpython`)
+    (needs `gitpython` and `toolz` / `cytoolz`)
 
     and copy the output.
  3. Write a release summary: ~50 words describing the high level features. This
