@@ -38,7 +38,6 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.groupers import Resampler
     from xarray.core.indexes import Index
     from xarray.core.resample import Resample
     from xarray.core.rolling_exp import RollingExp
@@ -53,6 +52,7 @@ if TYPE_CHECKING:
         T_Variable,
     )
     from xarray.core.variable import Variable
+    from xarray.groupers import Resampler
 
     DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
@@ -1048,8 +1048,8 @@ class DataWithCoords(AttrAccessMixin):
 
         from xarray.core.dataarray import DataArray
         from xarray.core.groupby import ResolvedGrouper
-        from xarray.core.groupers import Resampler, TimeResampler
         from xarray.core.resample import RESAMPLE_DIM
+        from xarray.groupers import Resampler, TimeResampler
 
         indexer = either_dict_or_kwargs(indexer, indexer_kwargs, "resample")
         if len(indexer) != 1:
