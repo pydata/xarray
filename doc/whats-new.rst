@@ -38,6 +38,10 @@ New Features
   By `Mathijs Verhaegh <https://github.com/Ostheer>`_.
 - Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
+- Added new plot method `lines` which allows creating line plots efficiently in
+  a similiar manner to `scatter`. (:pull:`7173`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
 - Extract the source url from fsspec objects (:issue:`9142`, :pull:`8923`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Add :py:meth:`DataArray.drop_attrs` & :py:meth:`Dataset.drop_attrs` methods,

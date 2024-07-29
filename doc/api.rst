@@ -686,6 +686,7 @@ Dataset
    :template: autosummary/accessor_method.rst
 
    Dataset.plot.scatter
+   Dataset.plot.lines
    Dataset.plot.quiver
    Dataset.plot.streamplot
 
@@ -710,6 +711,7 @@ DataArray
    DataArray.plot.pcolormesh
    DataArray.plot.step
    DataArray.plot.scatter
+   DataArray.plot.lines
    DataArray.plot.surface
 
 
