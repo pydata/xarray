@@ -38,6 +38,7 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
+from xarray.core.groupers import TimeResampler
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.types import ArrayLike
 from xarray.core.utils import is_scalar
@@ -1195,6 +1196,54 @@ class TestDataset:
             ),
         ):
             data.chunk({"foo": 10})
+
+    @requires_dask
+    @pytest.mark.parametrize(
+        "calendar",
+        (
+            "standard",
+            pytest.param(
+                "gregorian",
+                marks=pytest.mark.skipif(not has_cftime, reason="needs cftime"),
+            ),
+        ),
+    )
+    @pytest.mark.parametrize("freq", ["D", "W", "5ME", "YE"])
+    def test_chunk_by_frequency(self, freq, calendar) -> None:
+        import dask.array
+
+        N = 365 * 2
+        ds = Dataset(
+            {
+                "pr": ("time", dask.array.random.random((N), chunks=(20))),
+                "pr2d": (("x", "time"), dask.array.random.random((10, N), chunks=(20))),
+                "ones": ("time", np.ones((N,))),
+            },
+            coords={
+                "time": xr.date_range(
+                    "2001-01-01", periods=N, freq="D", calendar=calendar
+                )
+            },
+        )
+        rechunked = ds.chunk(x=2, time=TimeResampler(freq))
+        expected = tuple(ds.ones.resample(time=freq).sum().data.tolist())
+        assert rechunked.chunksizes["time"] == expected
+        assert rechunked.chunksizes["x"] == (2,) * 5
+
+        rechunked = ds.chunk({"x": 2, "time": TimeResampler(freq)})
+        assert rechunked.chunksizes["time"] == expected
+        assert rechunked.chunksizes["x"] == (2,) * 5
+
+    def test_chunk_by_frequecy_errors(self):
+        ds = Dataset({"foo": ("x", [1, 2, 3])})
+        with pytest.raises(ValueError, match="virtual variable"):
+            ds.chunk(x=TimeResampler("YE"))
+        ds["x"] = ("x", [1, 2, 3])
+        with pytest.raises(ValueError, match="datetime variables"):
+            ds.chunk(x=TimeResampler("YE"))
+        ds["x"] = ("x", xr.date_range("2001-01-01", periods=3, freq="D"))
+        with pytest.raises(ValueError, match="Invalid frequency"):
+            ds.chunk(x=TimeResampler("foo"))
 
     @requires_dask
     def test_dask_is_lazy(self) -> None:

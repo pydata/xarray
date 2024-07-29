@@ -296,6 +296,12 @@ loaded into Dask or not:
 Automatic parallelization with ``apply_ufunc`` and ``map_blocks``
 -----------------------------------------------------------------
 
+.. tip::
+
+   Some problems can become embarassingly parallel and thus easy to parallelize
+   automatically by rechunking to a frequency, e.g. ``ds.chunk(time=TimeResampler("YE"))``.
+   See :py:meth:`Dataset.chunk` for more.
+
 Almost all of xarray's built-in operations work on Dask arrays. If you want to
 use a function that isn't wrapped by xarray, and have it applied in parallel on
 each block of your xarray object, you have three options:
@@ -550,6 +556,16 @@ larger chunksizes.
 .. tip::
 
    Check out the `dask documentation on chunks <https://docs.dask.org/en/latest/array-chunks.html>`_.
+
+.. tip::
+
+   Many time domain problems become amenable to an embarassingly parallel or blockwise solution
+   (e.g. using :py:func:`xarray.map_blocks`, :py:func:`dask.array.map_blocks`, or
+   :py:func:`dask.array.blockwise`) by rechunking to a frequency along the time dimension.
+   Provide :py:class:`xarray.groupers.TimeResampler` objects to :py:meth:`Dataset.chunk` to do so.
+   For example ``ds.chunk(time=TimeResampler("MS"))`` will set the chunks so that a month of
+   data is contained in one chunk. The resulting chunk sizes need not be uniform, depending on
+   the frequency of the data, and the calendar.
 
 
 Optimization Tips

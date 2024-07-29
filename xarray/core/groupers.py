@@ -264,7 +264,7 @@ class BinGrouper(Grouper):
         )
 
 
-@dataclass
+@dataclass(repr=False)
 class TimeResampler(Resampler):
     """
     Grouper object specialized to resampling the time coordinate.
