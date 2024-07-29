@@ -19,7 +19,7 @@ What's New
 
 v2024.07.0 (Jul 30, 2024)
 -------------------------
-This release extends the API for groupby operations with different `grouper objects <groupby.groupers_>`, improvements to the documentation, and numerous bugfixes.
+This release extends the API for groupby operations with various `grouper objects <groupby.groupers_>`, and includes improvements to the documentation and numerous bugfixes.
 
 Thanks to the 22 contributors to this release:
 Alfonso Ladino, ChrisCleaner, David Hoese, Deepak Cherian, Dieter Werthmüller, Illviljan, Jessica Scheick, Joel Jaeschke, Justus Magin, K. Arthur Endsley, Kai Mühlbauer, Mark Harfouche, Martin Raspaud, Mathijs Verhaegh, Maximilian Roos, Michael Niklas, Michał Górny, Moritz Schreiber, Pontus Lurcock, Spencer Clark, Stephan Hoyer and Tom Nicholas
