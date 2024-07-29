@@ -812,6 +812,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         if is_dict_like(chunks):
+            # turns dict[str, tuple[in, ..]] -> dict[int, tuple[int, ...]]
+
             # This method of iteration allows for duplicated dimension names, GH8579
             chunks = {
                 dim_number: chunks[dim]
@@ -824,6 +826,21 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             print(f"problematic chunks = {chunks}")
             # if is_dict_like(chunks) and chunks != {}:
             #     chunks = tuple(chunks.get(n, s) for n, s in enumerate(data_old.shape))  # type: ignore[assignment]
+
+            old_chunks = data_old.chunks
+
+            if is_dict_like(chunks):
+                # turns dict[int, tuple[int, ...]] -> tuple[tuple[int, ...], ...], filling in unspecified dimensions using previous chunking
+                chunks = tuple(
+                    [
+                        (
+                            chunks[dim_number]
+                            if dim_number in chunks.keys()
+                            else old_chunks[dim_number]
+                        )
+                        for dim_number in range(self.ndim)
+                    ]
+                )
 
             print(f"hopefully normalized chunks = {chunks}")
 
@@ -846,6 +863,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[assignment]
 
             if is_dict_like(chunks):
+                # turns dict[int, tuple[int, ...]] -> tuple[tuple[int, ...], ...], filling in unspecified dimensions using full length along each axis (i.e. array shape)
                 chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))  # type: ignore[assignment]
 
             chunkmanager = guess_chunkmanager(chunked_array_type)
