@@ -242,10 +242,6 @@ Internal Changes
   consistent with their use of ``dim``. Using the existing kwarg will raise a
   warning.
   By `Maximilian Roos <https://github.com/max-sixty>`_
-  rather than ``dims`` or ``dimensions``. This is the final change to make xarray methods
-  consistent with their use of ``dim``. Using the existing kwarg will raise a
-  warning. By `Maximilian Roos <https://github.com/max-sixty>`_
-
 
 .. _whats-new.2024.03.0:
 
