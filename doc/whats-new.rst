@@ -54,7 +54,7 @@ Breaking changes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - The ``squeeze`` kwarg to ``groupby`` is now ignored. This has been the source of some
   quite confusing behaviour and has been deprecated since v2024.01.0. `groupby`` behavior is now
-  always consistent with the existing ``.groupby(..., squeeze=False)`` behavior. No errors will 
+  always consistent with the existing ``.groupby(..., squeeze=False)`` behavior. No errors will
   be raised if `squeeze=False`. (:pull:`9280`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
