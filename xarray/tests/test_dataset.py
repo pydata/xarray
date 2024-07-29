@@ -38,10 +38,10 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
-from xarray.core.groupers import TimeResampler
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.types import ArrayLike
 from xarray.core.utils import is_scalar
+from xarray.groupers import TimeResampler
 from xarray.namedarray.pycompat import array_type, integer_types
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (

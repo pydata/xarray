@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
-from xarray.core.groupers import RESAMPLE_DIM
+from xarray.groupers import RESAMPLE_DIM
 
 
 class Resample(GroupBy[T_Xarray]):

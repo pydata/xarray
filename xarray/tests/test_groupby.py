@@ -12,8 +12,8 @@ from packaging.version import Version
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core.groupby import _consolidate_slices
-from xarray.core.groupers import BinGrouper, EncodedGroups, Grouper, UniqueGrouper
 from xarray.core.types import InterpOptions
+from xarray.groupers import BinGrouper, EncodedGroups, Grouper, UniqueGrouper
 from xarray.tests import (
     InaccessibleArray,
     assert_allclose,
