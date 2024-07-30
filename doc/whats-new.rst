@@ -15,20 +15,66 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2024.06.1:
+.. _whats-new.2024.07.1:
 
-v2024.06.1 (unreleased)
+v2024.07.1 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
+- ``DataTree`` related functionality is now exposed in the main ``xarray`` public
+  API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``,
+  ``xarray.map_over_subtree``, ``xarray.register_datatree_accessor`` and
+  ``xarray.testing.assert_isomorphic``.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
 
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+- Migrate documentation for ``datatree`` into main ``xarray`` documentation (:pull:`9033`).
+  For information on previous ``datatree`` releases, please see:
+  `datatree's historical release notes <https://xarray-datatree.readthedocs.io/en/latest/>`_.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie <https://github.com/flamingbear>`_, and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+
+.. _whats-new.2024.07.0:
+
+v2024.07.0 (Jul 30, 2024)
+-------------------------
+This release extends the API for groupby operations with various `grouper objects <groupby.groupers_>`, and includes improvements to the documentation and numerous bugfixes.
+
+Thanks to the 22 contributors to this release:
+Alfonso Ladino, ChrisCleaner, David Hoese, Deepak Cherian, Dieter Werthmüller, Illviljan, Jessica Scheick, Joel Jaeschke, Justus Magin, K. Arthur Endsley, Kai Mühlbauer, Mark Harfouche, Martin Raspaud, Mathijs Verhaegh, Maximilian Roos, Michael Niklas, Michał Górny, Moritz Schreiber, Pontus Lurcock, Spencer Clark, Stephan Hoyer and Tom Nicholas
+
+New Features
+~~~~~~~~~~~~
 - Use fastpath when grouping both montonically increasing and decreasing variable
-  in :py:class:`GroupBy` (:issue:`6220`, :pull:`7427`). By `Joel Jaeschke <https://github.com/joeljaeschke>`_.
+  in :py:class:`GroupBy` (:issue:`6220`, :pull:`7427`).
+  By `Joel Jaeschke <https://github.com/joeljaeschke>`_.
 - Introduce new :py:class:`groupers.UniqueGrouper`, :py:class:`groupers.BinGrouper`, and
   :py:class:`groupers.TimeResampler` objects as a step towards supporting grouping by
-  multiple variables. See the `docs <groupby.groupers_>` and the
-  `grouper design doc <https://github.com/pydata/xarray/blob/main/design_notes/grouper_objects.md>`_ for more.
+  multiple variables. See the `docs <groupby.groupers_>` and the `grouper design doc
+  <https://github.com/pydata/xarray/blob/main/design_notes/grouper_objects.md>`_ for more.
   (:issue:`6610`, :pull:`8840`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Allow rechunking to a frequency using ``Dataset.chunk(time=TimeResampler("YE"))`` syntax. (:issue:`7559`, :pull:`9109`)
@@ -39,12 +85,6 @@ New Features
   By `Mathijs Verhaegh <https://github.com/Ostheer>`_.
 - Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
-- ``DataTree`` related functionality is now exposed in the main ``xarray`` public
-  API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``,
-  ``xarray.map_over_subtree``, ``xarray.register_datatree_accessor`` and
-  ``xarray.testing.assert_isomorphic``.
-  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
-  `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Extract the source url from fsspec objects (:issue:`9142`, :pull:`8923`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Add :py:meth:`DataArray.drop_attrs` & :py:meth:`Dataset.drop_attrs` methods,
@@ -54,15 +94,17 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-- The ``base`` and ``loffset`` parameters to :py:meth:`Dataset.resample` and :py:meth:`DataArray.resample`
-  is now removed. These parameters has been deprecated since v2023.03.0. Using the
-  ``origin`` or ``offset`` parameters is recommended as a replacement for using
-  the ``base`` parameter and using time offset arithmetic is recommended as a
-  replacement for using the ``loffset`` parameter.
-- The ``squeeze`` kwarg to ``groupby`` is completely deprecated. This has been the source of some quite confusing
-  behaviour and has been deprecated since v2024.01.0. `groupby`` behavior is now always consistent
-  with the existing ``.groupby(..., squeeze=False)`` behavior.
-  By `Deepak Cherian <https://github.com/dcherian>`_. (:pull:`9280`)
+- The ``base`` and ``loffset`` parameters to :py:meth:`Dataset.resample` and
+  :py:meth:`DataArray.resample` are now removed. These parameters have been deprecated since
+  v2023.03.0. Using the ``origin`` or ``offset`` parameters is recommended as a replacement for
+  using the ``base`` parameter and using time offset arithmetic is recommended as a replacement for
+  using the ``loffset`` parameter. (:pull:`9233`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- The ``squeeze`` kwarg to ``groupby`` is now ignored. This has been the source of some
+  quite confusing behaviour and has been deprecated since v2024.01.0. `groupby`` behavior is now
+  always consistent with the existing ``.groupby(..., squeeze=False)`` behavior. No errors will
+  be raised if `squeeze=False`. (:pull:`9280`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Bug fixes
@@ -81,29 +123,22 @@ Bug fixes
   By `Justus Magin <https://github.com/keewis>`_.
 - Address regression introduced in :pull:`9002` that prevented objects returned
   by py:meth:`DataArray.convert_calendar` to be indexed by a time index in
-  certain circumstances (:issue:`9138`, :pull:`9192`). By `Mark Harfouche
-  <https://github.com/hmaarrfk>`_ and `Spencer Clark
-  <https://github.com/spencerkclark>`.
-
-- Fiy static typing of tolerance arguments by allowing `str` type (:issue:`8892`, :pull:`9194`).
+  certain circumstances (:issue:`9138`, :pull:`9192`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix static typing of tolerance arguments by allowing `str` type (:issue:`8892`, :pull:`9194`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Dark themes are now properly detected for ``html[data-theme=dark]``-tags (:pull:`9200`).
   By `Dieter Werthmüller <https://github.com/prisae>`_.
 - Reductions no longer fail for ``np.complex_`` dtype arrays when numbagg is
-  installed.
-  By `Maximilian Roos <https://github.com/max-sixty>`_
+  installed. (:pull:`9210`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
-- Migrate documentation for ``datatree`` into main ``xarray`` documentation (:pull:`9033`).
-  For information on previous ``datatree`` releases, please see:
-  `datatree's historical release notes <https://xarray-datatree.readthedocs.io/en/latest/>`_.
-  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
-  `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Adds intro to backend section of docs, including a flow-chart to navigate types of backends (:pull:`9175`).
   By `Jessica Scheick <https://github.com/jessicas11>`_.
-- Adds a flow-chart diagram to help users navigate help resources (`Discussion #8990 <https://github.com/pydata/xarray/discussions/8990>`_, :pull:`9147`).
+- Adds a flow-chart diagram to help users navigate help resources (:discussion:`8990`, :pull:`9147`).
   By `Jessica Scheick <https://github.com/jessicas11>`_.
 - Improvements to Zarr & chunking docs (:pull:`9139`, :pull:`9140`, :pull:`9132`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
