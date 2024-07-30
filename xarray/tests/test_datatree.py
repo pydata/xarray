@@ -561,6 +561,13 @@ class TestTreeFromDict:
         roundtrip = DataTree.from_dict(dt.to_dict())
         assert roundtrip.equals(dt)
 
+    def test_roundtrip_noninherited_dupl_names(
+        self, create_test_multidataset_withoutroot_datatree
+    ):
+        dt = create_test_multidataset_withoutroot_datatree()
+        roundtrip = DataTree.from_dict(dt.to_dict())
+        assert roundtrip.equals(dt)
+
 
 class TestDatasetView:
     def test_view_contents(self):
@@ -913,6 +920,68 @@ class TestInheritance:
         with pytest.raises(ValueError, match=expected_msg):
             dt["/b/c/d"] = xr.DataArray([3.0], dims=["x"])
 
+    def test_allow_inconsistent_noninherited_coords_dims_vars(
+        self, create_test_multidataset_withoutroot_datatree
+    ):
+        dt_fd = DataTree.from_dict(
+            {
+                "/Main": xr.Dataset(
+                    {
+                        "x": (
+                            ["yi", "xi"],
+                            np.meshgrid(np.arange(60), np.arange(50))[1],
+                        ),
+                        "y": (
+                            ["yi", "xi"],
+                            np.meshgrid(np.arange(60), np.arange(50))[0],
+                        ),
+                        "t": ("t", np.arange(30)),
+                        "u": (["t", "yi", "xi"], np.ones((30, 50, 60))),
+                        "v": (["t", "yi", "xi"], np.ones((30, 50, 60))),
+                        "p": (["t", "yi", "xi"], np.ones((30, 50, 60))),
+                    }
+                ),
+                "/ovr1": xr.Dataset(
+                    {
+                        "x": (
+                            ["yi", "xi"],
+                            np.meshgrid(np.arange(51), np.arange(51) + 150.0)[1],
+                        ),
+                        "y": (
+                            ["yi", "xi"],
+                            np.meshgrid(np.arange(51), np.arange(51))[0],
+                        ),
+                        "t": ("t", np.arange(10, 20)),
+                        "u": (["t", "yi", "xi"], np.ones((10, 51, 51))),
+                        "v": (["t", "yi", "xi"], np.ones((10, 51, 51))),
+                        "p": (["t", "yi", "xi"], np.ones((10, 51, 51))),
+                        "cx": ("t", np.arange(10, 20)),
+                        "cy": ("t", np.arange(10, 20)),
+                    }
+                ),
+                "/ovr2": xr.Dataset(
+                    {
+                        "x": (
+                            ["yi", "xi"],
+                            np.meshgrid(np.arange(51), np.arange(51))[1],
+                        ),
+                        "y": (
+                            ["yi", "xi"],
+                            np.meshgrid(np.arange(51), np.arange(51))[0],
+                        ),
+                        "t": ("t", np.arange(10, 30)),
+                        "u": (["t", "yi", "xi"], np.ones((20, 51, 51))),
+                        "v": (["t", "yi", "xi"], np.ones((20, 51, 51))),
+                        "p": (["t", "yi", "xi"], np.ones((20, 51, 51))),
+                        "cx": ("t", np.arange(10, 30)),
+                        "cy": ("t", np.arange(10, 30)),
+                    }
+                ),
+            }
+        )
+        dt = create_test_multidataset_withoutroot_datatree()
+        assert_equal(dt, dt_fd)
+
 
 class TestRestructuring:
     def test_drop_nodes(self):
@@ -1069,6 +1138,24 @@ class TestDSMethodInheritance:
         result = dt.cumsum()
         assert_equal(result, expected)
 
+    def test_dim_sum_over_duplicated_names_in_tree(
+        self, create_test_multidataset_withoutroot_datatree
+    ):
+        dt = create_test_multidataset_withoutroot_datatree()
+        dims = ("t", "xi", "yi")
+        for dname in dims:
+            dtsum = dt.sum(dim=dname)
+            subgroups = dt.groups[1:]
+            for gname in subgroups:
+                subds = dt[gname]
+                sumds = dtsum[gname]
+                assert dname in subds.dims
+                assert dname not in sumds.dims
+                for vname in subds.variables:
+                    if vname != dname:
+                        if dname in subds[vname].dims:
+                            assert (subds[vname].sum(dim=dname) == sumds[vname]).all()
+
 
 class TestOps:
     def test_binary_op_on_int(self):
@@ -1118,12 +1205,21 @@ class TestUFuncs:
         result_tree = np.sin(dt)
         assert_equal(result_tree, expected)
 
+    def test_ufunc_over_duplicated_names_in_tree(
+        self, create_test_multidataset_withoutroot_datatree
+    ):
+        dt = create_test_multidataset_withoutroot_datatree()
+        expected = create_test_multidataset_withoutroot_datatree(
+            modify=lambda ds: np.sin(ds)
+        )
+        result_tree = np.sin(dt)
+        assert_equal(result_tree, expected)
+
 
 class TestDocInsertion:
     """Tests map_over_subtree docstring injection."""
 
     def test_standard_doc(self):
-
         dataset_doc = dedent(
             """\
             Manually trigger loading and/or computation of this dataset's data
