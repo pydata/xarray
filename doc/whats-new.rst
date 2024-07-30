@@ -79,6 +79,8 @@ New Features
   to return an object without ``attrs``. A ``deep`` parameter controls whether
   variables' ``attrs`` are also dropped.
   By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
+  By `Eni Awowale <https://github.com/eni-awowale>`_.
+- Add `open_groups` method for unaligned datasets (:issue:`9137`, :pull:`9243`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
