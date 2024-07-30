@@ -35,6 +35,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix bug causing `DataTree.from_dict` to be sensitive to insertion order (:issue:`9276`, :pull:`9292`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
