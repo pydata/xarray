@@ -1104,7 +1104,8 @@ class DataTree(
 
         if d:
             # Populate tree with children determined from data_objects mapping
-            for path, data in d.items():
+            # Sort keys so as to insert nodes from root first (see GH issue #9276)
+            for path, data in sorted(d.items()):
                 # Create and set new node
                 node_name = NodePath(path).name
                 if isinstance(data, DataTree):
