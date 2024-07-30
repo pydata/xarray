@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, cast
 
 import pytest
 
 import xarray as xr
-from xarray.backends.api import open_datatree
+from xarray.backends.api import open_datatree, open_groups
 from xarray.core.datatree import DataTree
 from xarray.testing import assert_equal
 from xarray.tests import (
@@ -61,6 +62,52 @@ class DatatreeIOBase:
         enc["/not/a/group"] = {"foo": "bar"}  # type: ignore
         with pytest.raises(ValueError, match="unexpected encoding group.*"):
             original_dt.to_netcdf(filepath, encoding=enc, engine=self.engine)
+
+    def test_open_datatree(self):
+        """Test `open_datatree` with netCDF4 file with this structure:
+        DataTree('None', parent=None)
+        │   Dimensions:        (lat: 1, lon: 2)
+        │   Dimensions without coordinates: lat, lon
+        │   Data variables:
+        │       root_variable  (lat, lon) float64 16B ...
+        └── DataTree('Group1')
+                Dimensions:      (lat: 2, lon: 2)
+                Dimensions without coordinates: lat, lon
+                Data variables:
+                    group_1_var  (lat, lon) float64 32B ...
+        """
+        filepath = os.path.join(
+            os.path.dirname(__file__), "data", "test_data_not_aligned.nc"
+        )
+        with pytest.raises(ValueError):
+            open_datatree(filepath)
+
+    def test_open_groups(self):
+        """Test `open_groups` with netCDF4 file with this structure:
+        DataTree('None', parent=None)
+        │   Dimensions:        (lat: 1, lon: 2)
+        │   Dimensions without coordinates: lat, lon
+        │   Data variables:
+        │       root_variable  (lat, lon) float64 16B ...
+        └── DataTree('Group1')
+                Dimensions:      (lat: 2, lon: 2)
+                Dimensions without coordinates: lat, lon
+                Data variables:
+                    group_1_var  (lat, lon) float64 32B ...
+        """
+        filepath = os.path.join(
+            os.path.dirname(__file__), "data", "test_data_not_aligned.nc"
+        )
+        unaligned_dict_of_datasets = open_groups(filepath)
+
+        # Check that group names are keys in the dictionary of `xr.Datasets`
+        assert "/" in unaligned_dict_of_datasets.keys()
+        assert "Group1" in unaligned_dict_of_datasets.keys()
+        # Check that group name returns the correct datasets
+        assert unaligned_dict_of_datasets["/"].identical(xr.open_dataset(filepath))
+        assert unaligned_dict_of_datasets["Group1"].identical(
+            xr.open_dataset(filepath, group="Group1")
+        )
 
 
 @requires_netCDF4

@@ -463,6 +463,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         **kwargs,
     ) -> dict[str, Dataset]:
 
+        from xarray.backends.api import open_dataset
         from xarray.backends.common import _iter_nc_groups
         from xarray.core.treenode import NodePath
         from xarray.core.utils import close_on_error
@@ -480,7 +481,10 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         manager = store._manager
 
-        groups_dict = {}
+        # Open root group with `xr.open_dataset()` and it to dictionary of groups
+        ds = open_dataset(filename_or_obj, **kwargs)
+        groups_dict = {str(parent): ds}
+
         for path_group in _iter_nc_groups(store.ds, parent=parent):
             group_store = H5NetCDFStore(manager, group=path_group, **kwargs)
             store_entrypoint = StoreBackendEntrypoint()

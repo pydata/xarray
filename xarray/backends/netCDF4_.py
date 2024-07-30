@@ -702,8 +702,8 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         decode_timedelta=None,
         group: str | Iterable[str] | Callable | None = None,
         **kwargs,
-    ) -> dict:
-
+    ) -> DataTree:
+        from xarray.backends.api import open_dataset
         from xarray.backends.common import _iter_nc_groups
         from xarray.core.treenode import NodePath
 
@@ -721,7 +721,10 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         manager = store._manager
 
-        groups_dict = {}
+        # Open root group with `xr.open_dataset() and to dictionary of groups
+        ds = open_dataset(filename_or_obj, **kwargs)
+        groups_dict = {str(parent): ds}
+
         for path_group in _iter_nc_groups(store.ds, parent=parent):
             group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
             store_entrypoint = StoreBackendEntrypoint()
@@ -736,7 +739,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-
             group_name = NodePath(path_group).name
             groups_dict[group_name] = group_ds
 
