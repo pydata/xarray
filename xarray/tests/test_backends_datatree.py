@@ -94,10 +94,10 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
 
             root_group.createDimension("lat", 1)
             root_group.createDimension("lon", 2)
-            root_group.createVariable("root_variable", np.float_, ("lat", "lon"))
+            root_group.createVariable("root_variable", np.float64, ("lat", "lon"))
 
             group_1_var = group_1.createVariable(
-                "group_1_var", np.float_, ("lat", "lon")
+                "group_1_var", np.float64, ("lat", "lon")
             )
             group_1_var[:] = np.array([[0.1, 0.2]])
             group_1_var.units = "K"
@@ -106,7 +106,7 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
             subgroup_1.createDimension("lat", 2)
 
             subgroup1_var = subgroup_1.createVariable(
-                "subgroup1_var", np.float_, ("lat", "lon")
+                "subgroup1_var", np.float64, ("lat", "lon")
             )
             subgroup1_var[:] = np.array([[0.1, 0.2]])
         with pytest.raises(ValueError):
@@ -137,10 +137,10 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
 
             root_group.createDimension("lat", 1)
             root_group.createDimension("lon", 2)
-            root_group.createVariable("root_variable", np.float_, ("lat", "lon"))
+            root_group.createVariable("root_variable", np.float64, ("lat", "lon"))
 
             group_1_var = group_1.createVariable(
-                "group_1_var", np.float_, ("lat", "lon")
+                "group_1_var", np.float64, ("lat", "lon")
             )
             group_1_var[:] = np.array([[0.1, 0.2]])
             group_1_var.units = "K"
@@ -149,7 +149,7 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
             subgroup_1.createDimension("lat", 2)
 
             subgroup1_var = subgroup_1.createVariable(
-                "subgroup1_var", np.float_, ("lat", "lon")
+                "subgroup1_var", np.float64, ("lat", "lon")
             )
             subgroup1_var[:] = np.array([[0.1, 0.2]])
 
@@ -195,17 +195,17 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
 
             root_group.createDimension("lat", 1)
             root_group.createDimension("lon", 2)
-            root_group.createVariable("root_variable", np.float_, ("lat", "lon"))
+            root_group.createVariable("root_variable", np.float64, ("lat", "lon"))
 
             group_1_var = group_1.createVariable(
-                "group_1_var", np.float_, ("lat", "lon")
+                "group_1_var", np.float64, ("lat", "lon")
             )
             group_1_var[:] = np.array([[0.1, 0.2]])
             group_1_var.units = "K"
             group_1_var.long_name = "air_temperature"
 
             subgroup1_var = subgroup_1.createVariable(
-                "subgroup1_var", np.float_, ("lat", "lon")
+                "subgroup1_var", np.float64, ("lat", "lon")
             )
             subgroup1_var[:] = np.array([[0.1, 0.2]])
 
