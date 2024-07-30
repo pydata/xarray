@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING, cast
 
+import netCDF4 as nc4
+import numpy as np
 import pytest
 
 import xarray as xr
@@ -63,26 +64,55 @@ class DatatreeIOBase:
         with pytest.raises(ValueError, match="unexpected encoding group.*"):
             original_dt.to_netcdf(filepath, encoding=enc, engine=self.engine)
 
-    def test_open_datatree(self):
-        """Test `open_datatree` with netCDF4 file with this structure:
+
+@requires_netCDF4
+class TestNetCDF4DatatreeIO(DatatreeIOBase):
+    engine: T_DataTreeNetcdfEngine | None = "netcdf4"
+
+    def test_open_datatree(self, tmpdir):
+        """Create a test netCDF4 file with this unaligned structure:
         DataTree('None', parent=None)
         │   Dimensions:        (lat: 1, lon: 2)
         │   Dimensions without coordinates: lat, lon
         │   Data variables:
         │       root_variable  (lat, lon) float64 16B ...
         └── DataTree('Group1')
-                Dimensions:      (lat: 2, lon: 2)
-                Dimensions without coordinates: lat, lon
-                Data variables:
-                    group_1_var  (lat, lon) float64 32B ...
+            │   Dimensions:      (lat: 1, lon: 2)
+            │   Dimensions without coordinates: lat, lon
+            │   Data variables:
+            │       group_1_var  (lat, lon) float64 16B ...
+            └── DataTree('subgroup1')
+                    Dimensions:        (lat: 2, lon: 2)
+                    Dimensions without coordinates: lat, lon
+                    Data variables:
+                        subgroup1_var  (lat, lon) float64 32B ...
         """
-        filepath = os.path.join(
-            os.path.dirname(__file__), "data", "test_data_not_aligned.nc"
-        )
+        filepath = tmpdir + "/unaligned_subgroups.nc"
+        with nc4.Dataset(filepath, "w", format="NETCDF4") as root_group:
+            group_1 = root_group.createGroup("/Group1")
+            subgroup_1 = group_1.createGroup("/subgroup1")
+
+            root_group.createDimension("lat", 1)
+            root_group.createDimension("lon", 2)
+            root_group.createVariable("root_variable", np.float_, ("lat", "lon"))
+
+            group_1_var = group_1.createVariable(
+                "group_1_var", np.float_, ("lat", "lon")
+            )
+            group_1_var[:] = np.array([[0.1, 0.2]])
+            group_1_var.units = "K"
+            group_1_var.long_name = "air_temperature"
+
+            subgroup_1.createDimension("lat", 2)
+
+            subgroup1_var = subgroup_1.createVariable(
+                "subgroup1_var", np.float_, ("lat", "lon")
+            )
+            subgroup1_var[:] = np.array([[0.1, 0.2]])
         with pytest.raises(ValueError):
             open_datatree(filepath)
 
-    def test_open_groups(self):
+    def test_open_groups(self, tmpdir):
         """Test `open_groups` with netCDF4 file with this structure:
         DataTree('None', parent=None)
         │   Dimensions:        (lat: 1, lon: 2)
@@ -90,29 +120,99 @@ class DatatreeIOBase:
         │   Data variables:
         │       root_variable  (lat, lon) float64 16B ...
         └── DataTree('Group1')
-                Dimensions:      (lat: 2, lon: 2)
-                Dimensions without coordinates: lat, lon
-                Data variables:
-                    group_1_var  (lat, lon) float64 32B ...
+            │   Dimensions:      (lat: 1, lon: 2)
+            │   Dimensions without coordinates: lat, lon
+            │   Data variables:
+            │       group_1_var  (lat, lon) float64 16B ...
+            └── DataTree('subgroup1')
+                    Dimensions:        (lat: 2, lon: 2)
+                    Dimensions without coordinates: lat, lon
+                    Data variables:
+                        subgroup1_var  (lat, lon) float64 32B ...
         """
-        filepath = os.path.join(
-            os.path.dirname(__file__), "data", "test_data_not_aligned.nc"
-        )
+        filepath = tmpdir + "/unaligned_subgroups.nc"
+        with nc4.Dataset(filepath, "w", format="NETCDF4") as root_group:
+            group_1 = root_group.createGroup("/Group1")
+            subgroup_1 = group_1.createGroup("/subgroup1")
+
+            root_group.createDimension("lat", 1)
+            root_group.createDimension("lon", 2)
+            root_group.createVariable("root_variable", np.float_, ("lat", "lon"))
+
+            group_1_var = group_1.createVariable(
+                "group_1_var", np.float_, ("lat", "lon")
+            )
+            group_1_var[:] = np.array([[0.1, 0.2]])
+            group_1_var.units = "K"
+            group_1_var.long_name = "air_temperature"
+
+            subgroup_1.createDimension("lat", 2)
+
+            subgroup1_var = subgroup_1.createVariable(
+                "subgroup1_var", np.float_, ("lat", "lon")
+            )
+            subgroup1_var[:] = np.array([[0.1, 0.2]])
+
         unaligned_dict_of_datasets = open_groups(filepath)
 
         # Check that group names are keys in the dictionary of `xr.Datasets`
         assert "/" in unaligned_dict_of_datasets.keys()
-        assert "Group1" in unaligned_dict_of_datasets.keys()
+        assert "/Group1" in unaligned_dict_of_datasets.keys()
+        assert "/Group1/subgroup1" in unaligned_dict_of_datasets.keys()
         # Check that group name returns the correct datasets
         assert unaligned_dict_of_datasets["/"].identical(xr.open_dataset(filepath))
-        assert unaligned_dict_of_datasets["Group1"].identical(
+        assert unaligned_dict_of_datasets["/Group1"].identical(
             xr.open_dataset(filepath, group="Group1")
         )
+        assert unaligned_dict_of_datasets["/Group1/subgroup1"].identical(
+            xr.open_dataset(filepath, group="/Group1/subgroup1")
+        )
 
+    def test_open_groups_to_dict(self, tmpdir):
+        """Create a an aligned netCDF4 with the following structure to test `open_groups`
+        and `DataTree.from_dict`.
 
-@requires_netCDF4
-class TestNetCDF4DatatreeIO(DatatreeIOBase):
-    engine: T_DataTreeNetcdfEngine | None = "netcdf4"
+        Group: /
+        │   Dimensions:        (lat: 1, lon: 2)
+        │   Dimensions without coordinates: lat, lon
+        │   Data variables:
+        │       root_variable  (lat, lon) float64 16B ...
+        └── Group: /Group1
+            │   Dimensions:      (lat: 1, lon: 2)
+            │   Dimensions without coordinates: lat, lon
+            │   Data variables:
+            │       group_1_var  (lat, lon) float64 16B ...
+            └── Group: /Group1/subgroup1
+                    Dimensions:        (lat: 1, lon: 2)
+                    Dimensions without coordinates: lat, lon
+                    Data variables:
+                        subgroup1_var  (lat, lon) float64 16B ...
+        """
+        filepath = tmpdir + "/all_aligned_child_nodes.nc"
+        with nc4.Dataset(filepath, "w", format="NETCDF4") as root_group:
+            group_1 = root_group.createGroup("/Group1")
+            subgroup_1 = group_1.createGroup("/subgroup1")
+
+            root_group.createDimension("lat", 1)
+            root_group.createDimension("lon", 2)
+            root_group.createVariable("root_variable", np.float_, ("lat", "lon"))
+
+            group_1_var = group_1.createVariable(
+                "group_1_var", np.float_, ("lat", "lon")
+            )
+            group_1_var[:] = np.array([[0.1, 0.2]])
+            group_1_var.units = "K"
+            group_1_var.long_name = "air_temperature"
+
+            subgroup1_var = subgroup_1.createVariable(
+                "subgroup1_var", np.float_, ("lat", "lon")
+            )
+            subgroup1_var[:] = np.array([[0.1, 0.2]])
+
+        aligned_dict_of_datasets = open_groups(filepath)
+        aligned_dt = DataTree.from_dict(aligned_dict_of_datasets)
+
+        assert open_datatree(filepath).identical(aligned_dt)
 
 
 @requires_h5netcdf

@@ -466,6 +466,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
+        format=None,
         group: str | Iterable[str] | Callable | None = None,
         lock=None,
         invalid_netcdf=None,
@@ -520,7 +521,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
                     decode_timedelta=decode_timedelta,
                 )
 
-            group_name = NodePath(path_group).name
+            group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
 
         return groups_dict

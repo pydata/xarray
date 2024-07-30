@@ -757,7 +757,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-            group_name = NodePath(path_group).name
+            group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
 
         return groups_dict
