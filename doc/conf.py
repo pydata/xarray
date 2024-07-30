@@ -94,6 +94,7 @@ extensions = [
 extlinks = {
     "issue": ("https://github.com/pydata/xarray/issues/%s", "GH%s"),
     "pull": ("https://github.com/pydata/xarray/pull/%s", "PR%s"),
+    "discussion": ("https://github.com/pydata/xarray/discussions/%s", "D%s"),
 }
 
 # sphinx-copybutton configurations
