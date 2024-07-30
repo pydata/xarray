@@ -347,7 +347,7 @@ def construct_dataarray(dim_num, dtype, contains_nan, dask):
         array = rng.randint(0, 10, size=shapes).astype(dtype)
     elif np.issubdtype(dtype, np.bool_):
         array = rng.randint(0, 1, size=shapes).astype(dtype)
-    elif dtype == str:
+    elif dtype is str:
         array = rng.choice(["a", "b", "c", "d"], size=shapes)
     else:
         raise ValueError

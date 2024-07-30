@@ -438,7 +438,14 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
+        format=None,
         group: str | Iterable[str] | Callable | None = None,
+        lock=None,
+        invalid_netcdf=None,
+        phony_dims=None,
+        decode_vlen_strings=True,
+        driver=None,
+        driver_kwds=None,
         **kwargs,
     ) -> DataTree:
 
@@ -460,6 +467,12 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         use_cftime=None,
         decode_timedelta=None,
         group: str | Iterable[str] | Callable | None = None,
+        lock=None,
+        invalid_netcdf=None,
+        phony_dims=None,
+        decode_vlen_strings=True,
+        driver=None,
+        driver_kwds=None,
         **kwargs,
     ) -> dict[str, Dataset]:
 
@@ -471,7 +484,14 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
+            format=format,
             group=group,
+            lock=lock,
+            invalid_netcdf=invalid_netcdf,
+            phony_dims=phony_dims,
+            decode_vlen_strings=decode_vlen_strings,
+            driver=driver,
+            driver_kwds=driver_kwds,
         )
         # Check for a group and make it a parent if it exists
         if group:

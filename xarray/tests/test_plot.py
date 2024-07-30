@@ -6,7 +6,7 @@ import math
 from collections.abc import Generator, Hashable
 from copy import copy
 from datetime import date, timedelta
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -158,9 +158,10 @@ class PlotTestCase:
         plt.close("all")
 
     def pass_in_axis(self, plotmethod, subplot_kw=None) -> None:
-        fig, axs = plt.subplots(ncols=2, subplot_kw=subplot_kw)
-        plotmethod(ax=axs[0])
-        assert axs[0].has_data()
+        fig, axs = plt.subplots(ncols=2, subplot_kw=subplot_kw, squeeze=False)
+        ax = axs[0, 0]
+        plotmethod(ax=ax)
+        assert ax.has_data()
 
     @pytest.mark.slow
     def imshow_called(self, plotmethod) -> bool:
@@ -240,9 +241,9 @@ class TestPlot(PlotTestCase):
 
         xy: list[list[None | str]] = [[None, None], [None, "z"], ["z", None]]
 
-        f, ax = plt.subplots(3, 1)
+        f, axs = plt.subplots(3, 1, squeeze=False)
         for aa, (x, y) in enumerate(xy):
-            da.plot(x=x, y=y, ax=ax.flat[aa])
+            da.plot(x=x, y=y, ax=axs.flat[aa])
 
         with pytest.raises(ValueError, match=r"Cannot specify both"):
             da.plot(x="z", y="z")
@@ -527,7 +528,7 @@ class TestPlot(PlotTestCase):
             [-0.5, 0.5, 5.0, 9.5, 10.5], _infer_interval_breaks([0, 1, 9, 10])
         )
         assert_array_equal(
-            pd.date_range("20000101", periods=4) - np.timedelta64(12, "h"),
+            pd.date_range("20000101", periods=4) - np.timedelta64(12, "h"),  # type: ignore[operator]
             _infer_interval_breaks(pd.date_range("20000101", periods=3)),
         )
 
@@ -1047,7 +1048,9 @@ class TestDetermineCmapParams:
         assert cmap_params["cmap"].N == 5
         assert cmap_params["norm"].N == 6
 
-        for wrap_levels in [list, np.array, pd.Index, DataArray]:
+        for wrap_levels in cast(
+            list[Callable[[Any], dict[Any, Any]]], [list, np.array, pd.Index, DataArray]
+        ):
             cmap_params = _determine_cmap_params(data, levels=wrap_levels(orig_levels))
             assert_array_equal(cmap_params["levels"], orig_levels)
 
@@ -1566,7 +1569,9 @@ class Common2dMixin:
         assert "MyLabel" in alltxt
         assert "testvar" not in alltxt
         # change cbar ax
-        fig, (ax, cax) = plt.subplots(1, 2)
+        fig, axs = plt.subplots(1, 2, squeeze=False)
+        ax = axs[0, 0]
+        cax = axs[0, 1]
         self.plotmethod(
             ax=ax, cbar_ax=cax, add_colorbar=True, cbar_kwargs={"label": "MyBar"}
         )
@@ -1576,7 +1581,9 @@ class Common2dMixin:
         assert "MyBar" in alltxt
         assert "testvar" not in alltxt
         # note that there are two ways to achieve this
-        fig, (ax, cax) = plt.subplots(1, 2)
+        fig, axs = plt.subplots(1, 2, squeeze=False)
+        ax = axs[0, 0]
+        cax = axs[0, 1]
         self.plotmethod(
             ax=ax, add_colorbar=True, cbar_kwargs={"label": "MyBar", "cax": cax}
         )
@@ -3371,16 +3378,16 @@ def test_plot1d_default_rcparams() -> None:
         # see overlapping markers:
         fig, ax = plt.subplots(1, 1)
         ds.plot.scatter(x="A", y="B", marker="o", ax=ax)
-        np.testing.assert_allclose(
-            ax.collections[0].get_edgecolor(), mpl.colors.to_rgba_array("w")
-        )
+        actual: np.ndarray = mpl.colors.to_rgba_array("w")
+        expected: np.ndarray = ax.collections[0].get_edgecolor()  # type: ignore[assignment] # mpl error?
+        np.testing.assert_allclose(actual, expected)
 
         # Facetgrids should have the default value as well:
         fg = ds.plot.scatter(x="A", y="B", col="x", marker="o")
         ax = fg.axs.ravel()[0]
-        np.testing.assert_allclose(
-            ax.collections[0].get_edgecolor(), mpl.colors.to_rgba_array("w")
-        )
+        actual = mpl.colors.to_rgba_array("w")
+        expected = ax.collections[0].get_edgecolor()  # type: ignore[assignment] # mpl error?
+        np.testing.assert_allclose(actual, expected)
 
         # scatter should not emit any warnings when using unfilled markers:
         with assert_no_warnings():
@@ -3390,9 +3397,9 @@ def test_plot1d_default_rcparams() -> None:
         # Prioritize edgecolor argument over default plot1d values:
         fig, ax = plt.subplots(1, 1)
         ds.plot.scatter(x="A", y="B", marker="o", ax=ax, edgecolor="k")
-        np.testing.assert_allclose(
-            ax.collections[0].get_edgecolor(), mpl.colors.to_rgba_array("k")
-        )
+        actual = mpl.colors.to_rgba_array("k")
+        expected = ax.collections[0].get_edgecolor()  # type: ignore[assignment] # mpl error?
+        np.testing.assert_allclose(actual, expected)
 
 
 @requires_matplotlib
@@ -3416,3 +3423,43 @@ def test_9155() -> None:
         data = xr.DataArray([1, 2, 3], dims=["x"])
         fig, ax = plt.subplots(ncols=1, nrows=1)
         data.plot(ax=ax)
+
+
+@requires_matplotlib
+def test_temp_dataarray() -> None:
+    from xarray.plot.dataset_plot import _temp_dataarray
+
+    x = np.arange(1, 4)
+    y = np.arange(4, 6)
+    var1 = np.arange(x.size * y.size).reshape((x.size, y.size))
+    var2 = np.arange(x.size * y.size).reshape((x.size, y.size))
+    ds = xr.Dataset(
+        {
+            "var1": (["x", "y"], var1),
+            "var2": (["x", "y"], 2 * var2),
+            "var3": (["x"], 3 * x),
+        },
+        coords={
+            "x": x,
+            "y": y,
+            "model": np.arange(7),
+        },
+    )
+
+    # No broadcasting:
+    y_ = "var1"
+    locals_ = {"x": "var2"}
+    da = _temp_dataarray(ds, y_, locals_)
+    assert da.shape == (3, 2)
+
+    # Broadcast from 1 to 2dim:
+    y_ = "var3"
+    locals_ = {"x": "var1"}
+    da = _temp_dataarray(ds, y_, locals_)
+    assert da.shape == (3, 2)
+
+    # Ignore non-valid coord kwargs:
+    y_ = "var3"
+    locals_ = dict(x="x", extend="var2")
+    da = _temp_dataarray(ds, y_, locals_)
+    assert da.shape == (3,)
