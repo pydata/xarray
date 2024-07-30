@@ -561,6 +561,24 @@ class TestTreeFromDict:
         roundtrip = DataTree.from_dict(dt.to_dict())
         assert roundtrip.equals(dt)
 
+    def test_insertion_order(self):
+        # regression test for GH issue #9276
+        reversed = DataTree.from_dict(
+            {
+                "/Homer/Bart": xr.Dataset({"age": 10}),
+                "/Homer": xr.Dataset({"age": 39}),
+                "/": xr.Dataset({"age": 83}),
+            }
+        )
+        expected = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"age": 83}),
+                "/Homer": xr.Dataset({"age": 39}),
+                "/Homer/Bart": xr.Dataset({"age": 10}),
+            }
+        )
+        assert reversed.equals(expected)
+
 
 class TestDatasetView:
     def test_view_contents(self):
