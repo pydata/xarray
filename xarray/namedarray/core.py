@@ -805,9 +805,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             chunks = {}
 
         if isinstance(chunks, (float, str, int, tuple, list)):
-            # TODO we shouldn't assume here that other chunkmanagers can handle these types
-            # TODO should we call normalize_chunks here?
-            pass  # dask.array.from_array can handle these directly
+            pass  # normalize_chunks_to_tuples can handle these types directly, via dask.array.core.normalize_chunks
         else:
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
