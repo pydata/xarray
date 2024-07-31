@@ -1034,7 +1034,8 @@ The following example shows opening a combined references generated from a ``.hd
 
 .. note::
 
-    You can refer to this `project pythia kerchunk cookbook <https://projectpythia.org/kerchunk-cookbook/README.html>`_ for more information.
+    You can refer to this `project pythia kerchunk cookbook <https://projectpythia.org/kerchunk-cookbook/README.html>` 
+    and `pangeo guide on kerchunk <https://guide.cloudnativegeo.org/kerchunk/intro.html>`for more information.
 
 
 .. _io.iris:
