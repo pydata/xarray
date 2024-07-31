@@ -6,7 +6,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
+from xarray.core.types import T_DuckArray, T_NormalizedChunks
 from xarray.namedarray._typing import _Chunks
 from xarray.namedarray.core import NamedArray
 from xarray.namedarray.daskmanager import DaskManager
@@ -78,18 +78,6 @@ class DummyChunkManager(ChunkManagerEntrypoint):
 
     def is_chunked_array(self, data: Any) -> bool:
         return isinstance(data, DummyChunkedArray)
-
-    def normalize_chunks(
-        self,
-        chunks: T_Chunks | T_NormalizedChunks,
-        shape: tuple[int, ...] | None = None,
-        limit: int | None = None,
-        dtype: np.dtype | None = None,
-        previous_chunks: T_NormalizedChunks | None = None,
-    ) -> T_NormalizedChunks:
-        from dask.array.core import normalize_chunks
-
-        return normalize_chunks(chunks, shape, limit, dtype, previous_chunks)
 
     def from_array(
         self, data: T_DuckArray | np.typing.ArrayLike, chunks: _Chunks, **kwargs

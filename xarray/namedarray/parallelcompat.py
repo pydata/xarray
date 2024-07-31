@@ -21,10 +21,8 @@ from xarray.namedarray.pycompat import is_chunked_array
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
         _Chunks,
-        _DType,
         _DType_co,
         _NormalizedChunks,
-        _ShapeType,
         duckarray,
     )
 
@@ -217,43 +215,6 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         dask.is_dask_collection
         """
         return isinstance(data, self.array_cls)
-
-    @abstractmethod
-    def normalize_chunks(
-        self,
-        chunks: _Chunks | _NormalizedChunks,
-        shape: _ShapeType | None = None,
-        limit: int | None = None,
-        dtype: _DType | None = None,
-        previous_chunks: _NormalizedChunks | None = None,
-    ) -> _NormalizedChunks:
-        """
-        Normalize given chunking pattern into an explicit tuple of tuples representation.
-
-        Exposed primarily because different chunking backends may want to make different decisions about how to
-        automatically chunk along dimensions not given explicitly in the input chunks.
-
-        Called internally by xarray.open_dataset.
-
-        Parameters
-        ----------
-        chunks : tuple, int, dict, or string
-            The chunks to be normalized.
-        shape : Tuple[int]
-            The shape of the array
-        limit : int (optional)
-            The maximum block size to target in bytes,
-            if freedom is given to choose
-        dtype : np.dtype
-        previous_chunks : Tuple[Tuple[int]], optional
-            Chunks from a previous array that we should use for inspiration when
-            rechunking dimensions automatically.
-
-        See Also
-        --------
-        dask.array.core.normalize_chunks
-        """
-        raise NotImplementedError()
 
     @abstractmethod
     def from_array(
