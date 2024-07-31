@@ -180,7 +180,7 @@ class TestNamedArray(NamedArraySubclassobjects):
             # Fail:
             (
                 ("x",),
-                NamedArray("time", np.array([1, 2, 3])),
+                NamedArray("time", np.array([1, 2, 3], dtype=np.dtype(np.int64))),
                 np.array([1, 2, 3]),
                 True,
             ),

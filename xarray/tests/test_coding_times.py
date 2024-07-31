@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from datetime import timedelta
 from itertools import product
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -44,6 +45,8 @@ from xarray.tests import (
     FirstElementAccessibleArray,
     arm_xfail,
     assert_array_equal,
+    assert_duckarray_allclose,
+    assert_duckarray_equal,
     assert_no_warnings,
     has_cftime,
     requires_cftime,
@@ -142,15 +145,15 @@ def test_cf_datetime(num_dates, units, calendar) -> None:
     # we could do this check with near microsecond accuracy:
     # https://github.com/Unidata/netcdf4-python/issues/355
     assert (abs_diff <= np.timedelta64(1, "s")).all()
-    encoded, _, _ = encode_cf_datetime(actual, units, calendar)
+    encoded1, _, _ = encode_cf_datetime(actual, units, calendar)
+    assert_array_equal(num_dates, np.around(encoded1, 1))
 
-    assert_array_equal(num_dates, np.round(encoded, 1))
     if hasattr(num_dates, "ndim") and num_dates.ndim == 1 and "1000" not in units:
         # verify that wrapping with a pandas.Index works
         # note that it *does not* currently work to put
         # non-datetime64 compatible dates into a pandas.Index
-        encoded, _, _ = encode_cf_datetime(pd.Index(actual), units, calendar)
-        assert_array_equal(num_dates, np.round(encoded, 1))
+        encoded2, _, _ = encode_cf_datetime(pd.Index(actual), units, calendar)
+        assert_array_equal(num_dates, np.around(encoded2, 1))
 
 
 @requires_cftime
@@ -625,10 +628,10 @@ def test_cf_timedelta_2d() -> None:
 @pytest.mark.parametrize(
     ["deltas", "expected"],
     [
-        (pd.to_timedelta(["1 day", "2 days"]), "days"),
-        (pd.to_timedelta(["1h", "1 day 1 hour"]), "hours"),
-        (pd.to_timedelta(["1m", "2m", np.nan]), "minutes"),
-        (pd.to_timedelta(["1m3s", "1m4s"]), "seconds"),
+        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type]  #https://github.com/pandas-dev/pandas-stubs/issues/956
+        (pd.to_timedelta(["1h", "1 day 1 hour"]), "hours"),  # type: ignore[arg-type]  #https://github.com/pandas-dev/pandas-stubs/issues/956
+        (pd.to_timedelta(["1m", "2m", np.nan]), "minutes"),  # type: ignore[arg-type]  #https://github.com/pandas-dev/pandas-stubs/issues/956
+        (pd.to_timedelta(["1m3s", "1m4s"]), "seconds"),  # type: ignore[arg-type]  #https://github.com/pandas-dev/pandas-stubs/issues/956
     ],
 )
 def test_infer_timedelta_units(deltas, expected) -> None:
@@ -893,10 +896,10 @@ def test_time_units_with_timezone_roundtrip(calendar) -> None:
     )
 
     if calendar in _STANDARD_CALENDARS:
-        np.testing.assert_array_equal(result_num_dates, expected_num_dates)
+        assert_duckarray_equal(result_num_dates, expected_num_dates)
     else:
         # cftime datetime arithmetic is not quite exact.
-        np.testing.assert_allclose(result_num_dates, expected_num_dates)
+        assert_duckarray_allclose(result_num_dates, expected_num_dates)
 
     assert result_units == expected_units
     assert result_calendar == calendar
@@ -1235,7 +1238,7 @@ def test_contains_cftime_lazy() -> None:
 )
 def test_roundtrip_datetime64_nanosecond_precision(
     timestr: str,
-    timeunit: str,
+    timeunit: Literal["ns", "us"],
     dtype: np.typing.DTypeLike,
     fill_value: int | float | None,
     use_encoding: bool,
@@ -1431,8 +1434,8 @@ _ENCODE_DATETIME64_VIA_DASK_TESTS = {
 def test_encode_cf_datetime_datetime64_via_dask(freq, units, dtype) -> None:
     import dask.array
 
-    times = pd.date_range(start="1700", freq=freq, periods=3)
-    times = dask.array.from_array(times, chunks=1)
+    times_pd = pd.date_range(start="1700", freq=freq, periods=3)
+    times = dask.array.from_array(times_pd, chunks=1)
     encoded_times, encoding_units, encoding_calendar = encode_cf_datetime(
         times, units, None, dtype
     )
@@ -1482,8 +1485,8 @@ def test_encode_cf_datetime_cftime_datetime_via_dask(units, dtype) -> None:
     import dask.array
 
     calendar = "standard"
-    times = cftime_range(start="1700", freq="D", periods=3, calendar=calendar)
-    times = dask.array.from_array(times, chunks=1)
+    times_idx = cftime_range(start="1700", freq="D", periods=3, calendar=calendar)
+    times = dask.array.from_array(times_idx, chunks=1)
     encoded_times, encoding_units, encoding_calendar = encode_cf_datetime(
         times, units, None, dtype
     )
@@ -1555,11 +1558,13 @@ def test_encode_cf_datetime_casting_overflow_error(use_cftime, use_dask, dtype) 
 @pytest.mark.parametrize(
     ("units", "dtype"), [("days", np.dtype("int32")), (None, None)]
 )
-def test_encode_cf_timedelta_via_dask(units, dtype) -> None:
+def test_encode_cf_timedelta_via_dask(
+    units: str | None, dtype: np.dtype | None
+) -> None:
     import dask.array
 
-    times = pd.timedelta_range(start="0D", freq="D", periods=3)
-    times = dask.array.from_array(times, chunks=1)
+    times_pd = pd.timedelta_range(start="0D", freq="D", periods=3)
+    times = dask.array.from_array(times_pd, chunks=1)
     encoded_times, encoding_units = encode_cf_timedelta(times, units, dtype)
 
     assert is_duck_dask_array(encoded_times)
