@@ -1546,7 +1546,7 @@ class DataTree(
             ``dask.delayed.Delayed`` object that can be computed later.
             Currently, ``compute=False`` is not supported.
         kwargs :
-            Additonal keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
+            Additional keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
 
         .. note::
             Due to file format specifications the on-disk root group name
