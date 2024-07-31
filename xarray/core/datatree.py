@@ -1546,7 +1546,13 @@ class DataTree(
             ``dask.delayed.Delayed`` object that can be computed later.
             Currently, ``compute=False`` is not supported.
         kwargs :
-            Addional keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
+            Additional keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
+
+        Note
+        ----
+            Due to file format specifications the on-disk root group name
+            is always ``"/"`` overriding any given ``DataTree`` root node name.
+
         """
         from xarray.core.datatree_io import _datatree_to_netcdf
 
@@ -1602,6 +1608,11 @@ class DataTree(
             supported.
         kwargs :
             Additional keyword arguments to be passed to ``xarray.Dataset.to_zarr``
+
+        Note
+        ----
+            Due to file format specifications the on-disk root group name
+            is always ``"/"`` overriding any given ``DataTree`` root node name.
         """
         from xarray.core.datatree_io import _datatree_to_zarr
 
