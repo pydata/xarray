@@ -45,8 +45,8 @@ from xarray.namedarray.pycompat import is_chunked_array, to_numpy
 from xarray.namedarray.utils import (
     either_dict_or_kwargs,
     infix_dims,
-    is_dict_like,
     is_duck_dask_array,
+    normalize_chunks_to_tuples,
     to_0d_object_array,
 )
 
@@ -811,37 +811,22 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         else:
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
-        if is_dict_like(chunks):
-            # turns dict[str, tuple[in, ..]] -> dict[int, tuple[int, ...]]
-
-            # This method of iteration allows for duplicated dimension names, GH8579
-            chunks = {
-                dim_number: chunks[dim]
-                for dim_number, dim in enumerate(self.dims)
-                if dim in chunks
-            }
-
         data_old = self._data
         if is_chunked_array(data_old):
             old_chunks = data_old.chunks
 
-            if is_dict_like(chunks):
-                # turns dict[int, tuple[int, ...]] -> tuple[tuple[int, ...], ...], filling in unspecified dimensions using previous chunking
-                chunks = tuple(
-                    [
-                        (
-                            chunks[dim_number]
-                            if dim_number in chunks.keys()
-                            else old_chunks[dim_number]
-                        )
-                        for dim_number in range(self.ndim)
-                    ]
-                )
+            normalized_chunks = normalize_chunks_to_tuples(
+                chunks,
+                self.dims,
+                data_old.shape,
+                data_old.dtype,
+                previous_chunks=old_chunks,
+            )
 
             # Assume any chunked array supports .rechunk - if it doesn't then at least a clear AttributeError will be raised.
             # Deliberately don't go through the chunkmanager so as to support chunked array types that don't need all the special computation methods.
             # See GH issue #8733
-            data_chunked = data_old.rechunk(chunks)  # type: ignore[union-attr]
+            data_chunked = data_old.rechunk(normalized_chunks)  # type: ignore[union-attr]
         else:
             if not isinstance(data_old, ExplicitlyIndexed):
                 ndata = data_old
@@ -856,12 +841,13 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 # https://github.com/dask/dask/issues/2883
                 ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[assignment]
 
-            if is_dict_like(chunks):
-                # turns dict[int, tuple[int, ...]] -> tuple[tuple[int, ...], ...], filling in unspecified dimensions using full length along each axis (i.e. array shape)
-                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))  # type: ignore[assignment]
+            # will fallback to one chunk per axis as previous_chunks is not supplied
+            normalized_chunks = normalize_chunks_to_tuples(
+                chunks, self.dims, ndata.shape, ndata.dtype
+            )
 
             chunkmanager = guess_chunkmanager(chunked_array_type)
-            data_chunked = chunkmanager.from_array(ndata, chunks, **from_array_kwargs)  # type: ignore[arg-type]
+            data_chunked = chunkmanager.from_array(ndata, normalized_chunks, **from_array_kwargs)  # type: ignore[arg-type]
 
         return self._replace(data=data_chunked)
 

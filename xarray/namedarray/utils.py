@@ -27,7 +27,7 @@ if TYPE_CHECKING:
         DaskArray = NDArray  # type: ignore
         DaskCollection: Any = NDArray  # type: ignore
 
-    from xarray.namedarray._typing import _Dim, duckarray
+    from xarray.namedarray._typing import T_Chunks, _Dim, _Dims, _Shape, duckarray
 
 
 K = TypeVar("K")
@@ -222,3 +222,93 @@ class ReprObject:
         from dask.base import normalize_token
 
         return normalize_token((type(self), self._value))
+
+
+from xarray.namedarray._typing import _DType, _NormalizedChunks
+
+
+def normalize_chunks_to_tuples(
+    chunks: T_Chunks,
+    dims: _Dims,
+    shape: _Shape,
+    dtype: _DType,
+    previous_chunks: _NormalizedChunks | None = None,
+) -> _NormalizedChunks:
+    """
+    Converts any specification of chunking to a tuple-of-tuple of ints along every axis.
+
+    Handles:
+      tuples or lists of repeated chunk lengths
+      tuples of tuples of individual chunk lengths
+      dicts mapping dim name to chunk lengths
+      chunks passed as 'auto'
+      chunks passed as -1
+
+    If a chunk axis is not specified it will fallback to using `previous_chunks` if given, else the array shape (i.e. one chunk per axis).
+    """
+
+    if previous_chunks is None:
+        # default to using array shape, i.e. one chunk per axis
+        _previous_chunks: _NormalizedChunks = tuple((lc,) for lc in shape)
+    else:
+        _previous_chunks = previous_chunks
+
+    if is_dict_like(chunks):
+        # turns dict[str, tuple[in, ..]] -> dict[int, tuple[int, ...]]
+        # This method of iteration allows for duplicated dimension names, GH8579
+        chunks = {
+            dim_number: chunks[dim]
+            for dim_number, dim in enumerate(dims)
+            if dim in chunks
+        }
+
+        # (everything below here is vendored from dask)
+
+        # validate that chunk lengths are valid choices
+        ndim = len(dims)
+        chunks = {validate_axis(c, ndim): v for c, v in chunks.items()}
+
+        # fill in any missing dimensions in the dict
+        for i in range(ndim):
+            if i not in chunks:
+                chunks[i] = _previous_chunks[i]
+            elif chunks[i] is None:
+                chunks[i] = _previous_chunks[i]
+
+    # coerce list-like iterables to tuple-of-tuples
+    if isinstance(chunks, (tuple, list)):
+        chunks = tuple(
+            lc if lc is not None else rc for lc, rc in zip(chunks, _previous_chunks)
+        )
+
+    # TODO vendor the normalize_chunks function and remove it from the ChunkManager
+    from dask.array.core import normalize_chunks
+
+    # supports the 'auto' option, using previous_chunks as a fallback
+    return cast(
+        _NormalizedChunks,
+        normalize_chunks(  # type: ignore[no-untyped-call]
+            chunks, shape, dtype=dtype, previous_chunks=_previous_chunks
+        ),
+    )
+
+
+import numbers
+
+if Version(np.__version__).release >= (2, 0):
+    from numpy.exceptions import AxisError
+else:
+    from numpy import AxisError
+
+
+def validate_axis(axis: int, ndim: int) -> int:
+    """Validate an input to axis= keywords"""
+    if isinstance(axis, (tuple, list)):
+        return tuple(validate_axis(ax, ndim) for ax in axis)
+    if not isinstance(axis, numbers.Integral):
+        raise TypeError(f"Axis value must be an integer, got {axis}")
+    if axis < -ndim or axis >= ndim:
+        raise AxisError(f"Axis {axis} is out of bounds for array of dimension {ndim}")
+    if axis < 0:
+        axis += ndim
+    return axis
