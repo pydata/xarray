@@ -1102,10 +1102,14 @@ class DataTree(
         else:
             obj = cls(name=name, data=root_data, parent=None, children=None)
 
+        def depth(item) -> int:
+            pathstr, _ = item
+            return len(NodePath(pathstr).parts)
+
         if d:
             # Populate tree with children determined from data_objects mapping
-            # Sort keys so as to insert nodes from root first (see GH issue #9276)
-            for path, data in sorted(d.items()):
+            # Sort keys by depth so as to insert nodes from root first (see GH issue #9276)
+            for path, data in sorted(d.items(), key=depth):
                 # Create and set new node
                 node_name = NodePath(path).name
                 if isinstance(data, DataTree):
