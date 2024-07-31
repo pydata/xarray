@@ -24,6 +24,12 @@ To open a whole netCDF file as a tree of groups use the :py:func:`open_datatree`
 To save a DataTree object as a netCDF file containing many groups, use the :py:meth:`DataTree.to_netcdf` method.
 
 
+.. _netcdf.root_group.note:
+
+.. note::
+    Due to file format specifications the on-disk root group name is always `/`,
+    overriding any given ``DataTree`` root node name.
+
 .. _netcdf.group.warning:
 
 .. warning::
@@ -52,3 +58,8 @@ To save a DataTree object as a zarr store containing many groups, use the :py:me
 .. note::
     Note that perfect round-tripping should always be possible with a zarr store (:ref:`unlike for netCDF files <netcdf.group.warning>`),
     as zarr does not support "unused" dimensions.
+
+    For the root group the same restrictions (:ref:`as for netCDF files <netcdf.root_group.note>`) apply.
+    Due to file format specifications the on-disk root group name is always `/`
+    overriding any given ``DataTree`` root node name.
+
