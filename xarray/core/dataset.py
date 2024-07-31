@@ -126,6 +126,7 @@ from xarray.core.variable import (
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.namedarray.pycompat import array_type, has_chunkmanager, is_chunked_array
+from xarray.namedarray.utils import normalize_chunks_to_tuples
 from xarray.plot.accessor import DatasetPlotAccessor
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
@@ -240,15 +241,13 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
     preferred_chunk_shape = tuple(
         preferred_chunks.get(dim, size) for dim, size in zip(dims, shape)
     )
-    if isinstance(chunks, Number) or (chunks == "auto"):
-        chunks = dict.fromkeys(dims, chunks)
-    chunk_shape = tuple(
-        chunks.get(dim, None) or preferred_chunk_sizes
-        for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape)
-    )
 
-    chunk_shape = chunkmanager.normalize_chunks(
-        chunk_shape, shape=shape, dtype=var.dtype, previous_chunks=preferred_chunk_shape
+    chunk_shape = normalize_chunks_to_tuples(
+        chunks,
+        var.dims,
+        var.shape,
+        var.dtype,
+        previous_chunks=preferred_chunk_shape,
     )
 
     # Warn where requested chunks break preferred chunks, provided that the variable
