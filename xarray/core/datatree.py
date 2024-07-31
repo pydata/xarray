@@ -463,8 +463,10 @@ class DataTree(
 
         super().__init__(name=name)
         self._set_node_data(_coerce_to_dataset(data))
-        self.parent = parent
-        self.children = children
+
+        # shallow copy to avoid modifying arguments in-place (see GH issue #9196)
+        self.parent = parent.copy() if parent is not None else None
+        self.children = {name: child.copy() for name, child in children.items()}
 
     def _set_node_data(self, ds: Dataset):
         data_vars, coord_vars = _collect_data_and_coord_variables(ds)
@@ -770,7 +772,7 @@ class DataTree(
         if data is not _default:
             self._set_node_data(ds)
 
-        self._children = children
+        self.children = children
 
     def copy(
         self: DataTree,
