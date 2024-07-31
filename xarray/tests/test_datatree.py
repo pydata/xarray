@@ -565,6 +565,7 @@ class TestTreeFromDict:
         # regression test for GH issue #9276
         reversed = DataTree.from_dict(
             {
+                "/Homer/Lisa": xr.Dataset({"age": 8}),
                 "/Homer/Bart": xr.Dataset({"age": 10}),
                 "/Homer": xr.Dataset({"age": 39}),
                 "/": xr.Dataset({"age": 83}),
@@ -574,10 +575,15 @@ class TestTreeFromDict:
             {
                 "/": xr.Dataset({"age": 83}),
                 "/Homer": xr.Dataset({"age": 39}),
+                "/Homer/Lisa": xr.Dataset({"age": 8}),
                 "/Homer/Bart": xr.Dataset({"age": 10}),
             }
         )
         assert reversed.equals(expected)
+
+        # Check that Bart and Lisa's order is still preserved within the group,
+        # despite 'Bart' coming before 'Lisa' when sorted alphabetically
+        assert list(reversed["Homer"].children.keys()) == ["Lisa", "Bart"]
 
 
 class TestDatasetView:
