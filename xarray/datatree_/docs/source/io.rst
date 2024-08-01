@@ -27,7 +27,7 @@ To save a DataTree object as a netCDF file containing many groups, use the :py:m
 .. _netcdf.root_group.note:
 
 .. note::
-    Due to file format specifications the on-disk root group name is always `/`,
+    Due to file format specifications the on-disk root group name is always ``"/"``,
     overriding any given ``DataTree`` root node name.
 
 .. _netcdf.group.warning:
