@@ -38,7 +38,7 @@ Bug fixes
 - Fix bug causing `DataTree.from_dict` to be sensitive to insertion order (:issue:`9276`, :pull:`9292`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Fix resampling with cftime when the time vector contains the "0001-01-01" date. (:issue:`9108`, :pull:`9116`)
-  By `Spencer Clark <https://github.com/spencerkclark>`_ and `Deepak Cherian <https://github.com.dcherian>`_.
+  By `Spencer Clark <https://github.com/spencerkclark>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
