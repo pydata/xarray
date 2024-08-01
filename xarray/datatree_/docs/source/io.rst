@@ -60,6 +60,6 @@ To save a DataTree object as a zarr store containing many groups, use the :py:me
     as zarr does not support "unused" dimensions.
 
     For the root group the same restrictions (:ref:`as for netCDF files <netcdf.root_group.note>`) apply.
-    Due to file format specifications the on-disk root group name is always `/`
+    Due to file format specifications the on-disk root group name is always ``"/"``
     overriding any given ``DataTree`` root node name.
 
