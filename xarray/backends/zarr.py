@@ -446,7 +446,7 @@ class ZarrStore(AbstractWritableDataStore):
             stacklevel=stacklevel,
             zarr_version=zarr_version,
         )
-        group_paths = [str(group / node[1:]) for node in _iter_zarr_groups(zarr_group)]
+        group_paths = [node for node in _iter_zarr_groups(zarr_group, parent=group)]
         return {
             group: cls(
                 zarr_group.get(group),
@@ -806,7 +806,7 @@ class ZarrStore(AbstractWritableDataStore):
                 for k2, v2 in attrs.items():
                     encoded_attrs[k2] = self.encode_attribute(v2)
 
-                if coding.strings.check_vlen_dtype(dtype) == str:
+                if coding.strings.check_vlen_dtype(dtype) is str:
                     dtype = str
 
                 if self._write_empty is not None:
@@ -973,12 +973,18 @@ def open_zarr(
         Array synchronizer provided to zarr
     group : str, optional
         Group path. (a.k.a. `path` in zarr terminology.)
-    chunks : int or dict or tuple or {None, 'auto'}, optional
-        Chunk sizes along each dimension, e.g., ``5`` or
-        ``{'x': 5, 'y': 5}``. If `chunks='auto'`, dask chunks are created
-        based on the variable's zarr chunks. If `chunks=None`, zarr array
-        data will lazily convert to numpy arrays upon access. This accepts
-        all the chunk specifications as Dask does.
+    chunks : int, dict, 'auto' or None, default: 'auto'
+        If provided, used to load the data into dask arrays.
+
+        - ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
+          engine preferred chunks.
+        - ``chunks=None`` skips using dask, which is generally faster for
+          small arrays.
+        - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
+        - ``chunks={}`` loads the data with dask using engine preferred chunks if
+          exposed by the backend, otherwise with a single chunk for all arrays.
+
+        See dask chunking for more details.
     overwrite_encoded_chunks : bool, optional
         Whether to drop the zarr chunks encoded for each variable when a
         dataset is loaded with specified chunk sizes (default: False)

@@ -192,9 +192,13 @@ _small_arrays = npst.arrays(
         max_side=2,
         max_dims=2,
     ),
-    dtype=npst.scalar_dtypes(),
+    dtype=npst.scalar_dtypes()
+    | npst.byte_string_dtypes()
+    | npst.unicode_string_dtypes(),
 )
 _attr_values = st.none() | st.booleans() | _readable_strings | _small_arrays
+
+simple_attrs = st.dictionaries(_attr_keys, _attr_values)
 
 
 def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:

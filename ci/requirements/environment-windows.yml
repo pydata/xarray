@@ -29,7 +29,7 @@ dependencies:
   # - pint>=0.22
   - pip
   - pre-commit
-  - pydap
+  # - pydap
   - pytest
   - pytest-cov
   - pytest-env

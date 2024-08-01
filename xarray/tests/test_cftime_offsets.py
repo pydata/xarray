@@ -511,7 +511,7 @@ def test_Microsecond_multiplied_float_error():
     ],
     ids=_id_func,
 )
-def test_neg(offset, expected):
+def test_neg(offset: BaseCFTimeOffset, expected: BaseCFTimeOffset) -> None:
     assert -offset == expected
 
 
