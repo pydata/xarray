@@ -2507,11 +2507,18 @@ def test_default_flox_method() -> None:
 @requires_cftime
 @pytest.mark.filterwarnings("ignore")
 def test_cftime_resample_gh_9108():
+    import cftime
+
     ds = Dataset(
         {"pr": ("time", np.random.random((10,)))},
         coords={"time": xr.date_range("0001-01-01", periods=10, freq="D")},
     )
-    ds.resample(time="ME")
+    actual = ds.resample(time="ME").mean()
+    expected = ds.mean("time").expand_dims(
+        time=[cftime.DatetimeGregorian(1, 1, 31, 0, 0, 0, 0, has_year_zero=False)]
+    )
+    assert actual.time.data[0].has_year_zero == ds.time.data[0].has_year_zero
+    assert_equal(actual, expected)
 
 
 def test_custom_grouper() -> None:
