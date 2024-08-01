@@ -1608,9 +1608,10 @@ class DataTree(
         kwargs :
             Additional keyword arguments to be passed to ``xarray.Dataset.to_zarr``
 
-        .. note::
+        Note
+        ----
             Due to file format specifications the on-disk root group name
-            is always `/` overriding any given ``DataTree`` root node name.
+            is always ``"/"`` overriding any given ``DataTree`` root node name.
         """
         from xarray.core.datatree_io import _datatree_to_zarr
 
