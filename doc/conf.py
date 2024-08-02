@@ -94,6 +94,7 @@ extensions = [
 extlinks = {
     "issue": ("https://github.com/pydata/xarray/issues/%s", "GH%s"),
     "pull": ("https://github.com/pydata/xarray/pull/%s", "PR%s"),
+    "discussion": ("https://github.com/pydata/xarray/discussions/%s", "D%s"),
 }
 
 # sphinx-copybutton configurations
@@ -158,8 +159,8 @@ napoleon_type_aliases = {
     "Variable": "~xarray.Variable",
     "DatasetGroupBy": "~xarray.core.groupby.DatasetGroupBy",
     "DataArrayGroupBy": "~xarray.core.groupby.DataArrayGroupBy",
-    "Grouper": "~xarray.core.groupers.Grouper",
-    "Resampler": "~xarray.core.groupers.Resampler",
+    "Grouper": "~xarray.groupers.Grouper",
+    "Resampler": "~xarray.groupers.Resampler",
     # objects without namespace: numpy
     "ndarray": "~numpy.ndarray",
     "MaskedArray": "~numpy.ma.MaskedArray",

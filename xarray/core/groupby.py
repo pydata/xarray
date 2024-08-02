@@ -38,7 +38,6 @@ from xarray.core.utils import (
     FrozenMappingWarningOnValuesAccess,
     contains_only_chunked_or_numpy,
     either_dict_or_kwargs,
-    emit_user_level_warning,
     hashable,
     is_scalar,
     maybe_wrap_array,
@@ -53,9 +52,9 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.groupers import Grouper
     from xarray.core.types import GroupIndex, GroupIndices, GroupKey
     from xarray.core.utils import Frozen
+    from xarray.groupers import Grouper
 
 
 def check_reduce_dims(reduce_dims, dimensions):
@@ -66,29 +65,7 @@ def check_reduce_dims(reduce_dims, dimensions):
             raise ValueError(
                 f"cannot reduce over dimensions {reduce_dims!r}. expected either '...' "
                 f"to reduce over all dimensions or one or more of {dimensions!r}."
-                f" Try passing .groupby(..., squeeze=False)"
             )
-
-
-def _maybe_squeeze_indices(
-    indices, squeeze: bool | None, grouper: ResolvedGrouper, warn: bool
-):
-    from xarray.core.groupers import UniqueGrouper
-
-    is_unique_grouper = isinstance(grouper.grouper, UniqueGrouper)
-    can_squeeze = is_unique_grouper and grouper.grouper.can_squeeze
-    if squeeze in [None, True] and can_squeeze:
-        if isinstance(indices, slice):
-            if indices.stop - indices.start == 1:
-                if (squeeze is None and warn) or squeeze is True:
-                    emit_user_level_warning(
-                        "The `squeeze` kwarg to GroupBy is being removed."
-                        "Pass .groupby(..., squeeze=False) to disable squeezing,"
-                        " which is the new default, and to silence this warning."
-                    )
-
-                indices = indices.start
-    return indices
 
 
 def _codes_to_group_indices(inverse: np.ndarray, N: int) -> GroupIndices:
@@ -369,17 +346,15 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
             self.unique_coord = encoded.unique_coord
 
 
-def _validate_groupby_squeeze(squeeze: bool | None) -> None:
+def _validate_groupby_squeeze(squeeze: Literal[False]) -> None:
     # While we don't generally check the type of every arg, passing
     # multiple dimensions as multiple arguments is common enough, and the
     # consequences hidden enough (strings evaluate as true) to warrant
     # checking here.
     # A future version could make squeeze kwarg only, but would face
     # backward-compat issues.
-    if squeeze is not None and not isinstance(squeeze, bool):
-        raise TypeError(
-            f"`squeeze` must be None,  True or False, but {squeeze} was supplied"
-        )
+    if squeeze is not False:
+        raise TypeError(f"`squeeze` must be False, but {squeeze} was supplied.")
 
 
 def _resolve_group(
@@ -466,7 +441,6 @@ class GroupBy(Generic[T_Xarray]):
         "_unique_coord",
         "_dims",
         "_sizes",
-        "_squeeze",
         # Save unstacked object for flox
         "_original_obj",
         "_original_group",
@@ -475,7 +449,6 @@ class GroupBy(Generic[T_Xarray]):
     )
     _obj: T_Xarray
     groupers: tuple[ResolvedGrouper]
-    _squeeze: bool | None
     _restore_coord_dims: bool
 
     _original_obj: T_Xarray
@@ -492,7 +465,6 @@ class GroupBy(Generic[T_Xarray]):
         self,
         obj: T_Xarray,
         groupers: tuple[ResolvedGrouper],
-        squeeze: bool | None = False,
         restore_coord_dims: bool = True,
     ) -> None:
         """Create a GroupBy object
@@ -517,7 +489,6 @@ class GroupBy(Generic[T_Xarray]):
         # specification for the groupby operation
         self._obj = grouper.stacked_obj
         self._restore_coord_dims = restore_coord_dims
-        self._squeeze = squeeze
 
         # These should generalize to multiple groupers
         self._group_indices = grouper.group_indices
@@ -542,14 +513,8 @@ class GroupBy(Generic[T_Xarray]):
         """
         if self._sizes is None:
             (grouper,) = self.groupers
-            index = _maybe_squeeze_indices(
-                self._group_indices[0],
-                self._squeeze,
-                grouper,
-                warn=True,
-            )
+            index = self._group_indices[0]
             self._sizes = self._obj.isel({self._group_dim: index}).sizes
-
         return self._sizes
 
     def map(
@@ -582,11 +547,7 @@ class GroupBy(Generic[T_Xarray]):
         # provided to mimic pandas.groupby
         if self._groups is None:
             (grouper,) = self.groupers
-            squeezed_indices = (
-                _maybe_squeeze_indices(ind, self._squeeze, grouper, warn=idx > 0)
-                for idx, ind in enumerate(self._group_indices)
-            )
-            self._groups = dict(zip(grouper.unique_coord.values, squeezed_indices))
+            self._groups = dict(zip(grouper.unique_coord.values, self._group_indices))
         return self._groups
 
     def __getitem__(self, key: GroupKey) -> T_Xarray:
@@ -594,10 +555,7 @@ class GroupBy(Generic[T_Xarray]):
         Get DataArray or Dataset corresponding to a particular group label.
         """
         (grouper,) = self.groupers
-        index = _maybe_squeeze_indices(
-            self.groups[key], self._squeeze, grouper, warn=True
-        )
-        return self._obj.isel({self._group_dim: index})
+        return self._obj.isel({self._group_dim: self.groups[key]})
 
     def __len__(self) -> int:
         (grouper,) = self.groupers
@@ -616,17 +574,14 @@ class GroupBy(Generic[T_Xarray]):
             ", ".join(format_array_flat(grouper.full_index, 30).split()),
         )
 
-    def _iter_grouped(self, warn_squeeze=True) -> Iterator[T_Xarray]:
+    def _iter_grouped(self) -> Iterator[T_Xarray]:
         """Iterate over each element in this group"""
         (grouper,) = self.groupers
         for idx, indices in enumerate(self._group_indices):
-            indices = _maybe_squeeze_indices(
-                indices, self._squeeze, grouper, warn=warn_squeeze and idx == 0
-            )
             yield self._obj.isel({self._group_dim: indices})
 
     def _infer_concat_args(self, applied_example):
-        from xarray.core.groupers import BinGrouper
+        from xarray.groupers import BinGrouper
 
         (grouper,) = self.groupers
         if self._group_dim in applied_example.dims:
@@ -740,7 +695,7 @@ class GroupBy(Generic[T_Xarray]):
         """Our index contained empty groups (e.g., from a resampling or binning). If we
         reduced on that dimension, we want to restore the full index.
         """
-        from xarray.core.groupers import BinGrouper, TimeResampler
+        from xarray.groupers import BinGrouper, TimeResampler
 
         (grouper,) = self.groupers
         if (
@@ -776,7 +731,7 @@ class GroupBy(Generic[T_Xarray]):
         from flox.xarray import xarray_reduce
 
         from xarray.core.dataset import Dataset
-        from xarray.core.groupers import BinGrouper
+        from xarray.groupers import BinGrouper
 
         obj = self._original_obj
         (grouper,) = self.groupers
@@ -808,14 +763,6 @@ class GroupBy(Generic[T_Xarray]):
             elif kwargs["min_count"] is None:
                 # set explicitly to avoid unnecessarily accumulating count
                 kwargs["min_count"] = 0
-
-        # weird backcompat
-        # reducing along a unique indexed dimension with squeeze=True
-        # should raise an error
-        if (dim is None or dim == name) and name in obj.xindexes:
-            index = obj.indexes[name]
-            if index.is_unique and self._squeeze:
-                raise ValueError(f"cannot reduce over dimensions {name!r}")
 
         unindexed_dims: tuple[Hashable, ...] = tuple()
         if isinstance(grouper.group, _DummyGroup) and not isbin:
@@ -1141,23 +1088,17 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
     def dims(self) -> tuple[Hashable, ...]:
         if self._dims is None:
             (grouper,) = self.groupers
-            index = _maybe_squeeze_indices(
-                self._group_indices[0], self._squeeze, grouper, warn=True
-            )
+            index = self._group_indices[0]
             self._dims = self._obj.isel({self._group_dim: index}).dims
-
         return self._dims
 
-    def _iter_grouped_shortcut(self, warn_squeeze=True):
+    def _iter_grouped_shortcut(self):
         """Fast version of `_iter_grouped` that yields Variables without
         metadata
         """
         var = self._obj.variable
         (grouper,) = self.groupers
         for idx, indices in enumerate(self._group_indices):
-            indices = _maybe_squeeze_indices(
-                indices, self._squeeze, grouper, warn=warn_squeeze and idx == 0
-            )
             yield var[{self._group_dim: indices}]
 
     def _concat_shortcut(self, applied, dim, positions=None):
@@ -1237,24 +1178,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         applied : DataArray
             The result of splitting, applying and combining this array.
         """
-        return self._map_maybe_warn(
-            func, args, warn_squeeze=True, shortcut=shortcut, **kwargs
-        )
-
-    def _map_maybe_warn(
-        self,
-        func: Callable[..., DataArray],
-        args: tuple[Any, ...] = (),
-        *,
-        warn_squeeze: bool = True,
-        shortcut: bool | None = None,
-        **kwargs: Any,
-    ) -> DataArray:
-        grouped = (
-            self._iter_grouped_shortcut(warn_squeeze)
-            if shortcut
-            else self._iter_grouped(warn_squeeze)
-        )
+        grouped = self._iter_grouped_shortcut() if shortcut else self._iter_grouped()
         applied = (maybe_wrap_array(arr, func(arr, *args, **kwargs)) for arr in grouped)
         return self._combine(applied, shortcut=shortcut)
 
@@ -1356,68 +1280,6 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
 
         return self.map(reduce_array, shortcut=shortcut)
 
-    def _reduce_without_squeeze_warn(
-        self,
-        func: Callable[..., Any],
-        dim: Dims = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        shortcut: bool = True,
-        **kwargs: Any,
-    ) -> DataArray:
-        """Reduce the items in this group by applying `func` along some
-        dimension(s).
-
-        Parameters
-        ----------
-        func : callable
-            Function which can be called in the form
-            `func(x, axis=axis, **kwargs)` to return the result of collapsing
-            an np.ndarray over an integer valued axis.
-        dim : "...", str, Iterable of Hashable or None, optional
-            Dimension(s) over which to apply `func`. If None, apply over the
-            groupby dimension, if "..." apply over all dimensions.
-        axis : int or sequence of int, optional
-            Axis(es) over which to apply `func`. Only one of the 'dimension'
-            and 'axis' arguments can be supplied. If neither are supplied, then
-            `func` is calculated over all dimension for each group item.
-        keep_attrs : bool, optional
-            If True, the datasets's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
-        **kwargs : dict
-            Additional keyword arguments passed on to `func`.
-
-        Returns
-        -------
-        reduced : Array
-            Array with summarized data and the indicated dimension(s)
-            removed.
-        """
-        if dim is None:
-            dim = [self._group_dim]
-
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=True)
-
-        def reduce_array(ar: DataArray) -> DataArray:
-            return ar.reduce(
-                func=func,
-                dim=dim,
-                axis=axis,
-                keep_attrs=keep_attrs,
-                keepdims=keepdims,
-                **kwargs,
-            )
-
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message="The `squeeze` kwarg")
-            check_reduce_dims(dim, self.dims)
-
-        return self._map_maybe_warn(reduce_array, shortcut=shortcut, warn_squeeze=False)
-
 
 # https://github.com/python/mypy/issues/9031
 class DataArrayGroupBy(  # type: ignore[misc]
@@ -1436,12 +1298,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
     def dims(self) -> Frozen[Hashable, int]:
         if self._dims is None:
             (grouper,) = self.groupers
-            index = _maybe_squeeze_indices(
-                self._group_indices[0],
-                self._squeeze,
-                grouper,
-                warn=True,
-            )
+            index = self._group_indices[0]
             self._dims = self._obj.isel({self._group_dim: index}).dims
 
         return FrozenMappingWarningOnValuesAccess(self._dims)
@@ -1482,18 +1339,8 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         applied : Dataset
             The result of splitting, applying and combining this dataset.
         """
-        return self._map_maybe_warn(func, args, shortcut, warn_squeeze=True, **kwargs)
-
-    def _map_maybe_warn(
-        self,
-        func: Callable[..., Dataset],
-        args: tuple[Any, ...] = (),
-        shortcut: bool | None = None,
-        warn_squeeze: bool = False,
-        **kwargs: Any,
-    ) -> Dataset:
         # ignore shortcut if set (for now)
-        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped(warn_squeeze))
+        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         return self._combine(applied)
 
     def apply(self, func, args=(), shortcut=None, **kwargs):
@@ -1587,68 +1434,6 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         check_reduce_dims(dim, self.dims)
 
         return self.map(reduce_dataset)
-
-    def _reduce_without_squeeze_warn(
-        self,
-        func: Callable[..., Any],
-        dim: Dims = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        shortcut: bool = True,
-        **kwargs: Any,
-    ) -> Dataset:
-        """Reduce the items in this group by applying `func` along some
-        dimension(s).
-
-        Parameters
-        ----------
-        func : callable
-            Function which can be called in the form
-            `func(x, axis=axis, **kwargs)` to return the result of collapsing
-            an np.ndarray over an integer valued axis.
-        dim : ..., str, Iterable of Hashable or None, optional
-            Dimension(s) over which to apply `func`. By default apply over the
-            groupby dimension, with "..." apply over all dimensions.
-        axis : int or sequence of int, optional
-            Axis(es) over which to apply `func`. Only one of the 'dimension'
-            and 'axis' arguments can be supplied. If neither are supplied, then
-            `func` is calculated over all dimension for each group item.
-        keep_attrs : bool, optional
-            If True, the datasets's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
-        **kwargs : dict
-            Additional keyword arguments passed on to `func`.
-
-        Returns
-        -------
-        reduced : Dataset
-            Array with summarized data and the indicated dimension(s)
-            removed.
-        """
-        if dim is None:
-            dim = [self._group_dim]
-
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=True)
-
-        def reduce_dataset(ds: Dataset) -> Dataset:
-            return ds.reduce(
-                func=func,
-                dim=dim,
-                axis=axis,
-                keep_attrs=keep_attrs,
-                keepdims=keepdims,
-                **kwargs,
-            )
-
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message="The `squeeze` kwarg")
-            check_reduce_dims(dim, self.dims)
-
-        return self._map_maybe_warn(reduce_dataset, warn_squeeze=False)
 
     def assign(self, **kwargs: Any) -> Dataset:
         """Assign data variables by group.
