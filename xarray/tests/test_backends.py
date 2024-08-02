@@ -166,7 +166,7 @@ def create_encoded_masked_and_scaled_data(dtype: np.dtype) -> Dataset:
 
 def create_unsigned_masked_scaled_data(dtype: np.dtype) -> Dataset:
     encoding = {
-        "_FillValue": np.int8(-1),
+        "_FillValue": 255,
         "_Unsigned": "true",
         "dtype": "i1",
         "add_offset": dtype.type(10),
@@ -863,14 +863,14 @@ class CFEncodedBase(DatasetIOBase):
         # checks preserving vlen dtype for empty arrays GH7862
         dtype = create_vlen_dtype(str)
         original = Dataset({"a": np.array([], dtype=dtype)})
-        assert check_vlen_dtype(original["a"].dtype) == str
+        assert check_vlen_dtype(original["a"].dtype) is str
         with self.roundtrip(original) as actual:
             assert_identical(original, actual)
             if np.issubdtype(actual["a"].dtype, object):
                 # only check metadata for capable backends
                 # eg. NETCDF3 based backends do not roundtrip metadata
                 if actual["a"].dtype.metadata is not None:
-                    assert check_vlen_dtype(actual["a"].dtype) == str
+                    assert check_vlen_dtype(actual["a"].dtype) is str
             else:
                 assert actual["a"].dtype == np.dtype("<U1")
 
@@ -925,7 +925,7 @@ class CFEncodedBase(DatasetIOBase):
                 assert decoded.variables[k].dtype == actual.variables[k].dtype
             assert_allclose(decoded, actual, decode_bytes=False)
 
-    @pytest.mark.parametrize("fillvalue", [np.int8(-1), np.uint8(255)])
+    @pytest.mark.parametrize("fillvalue", [np.int8(-1), np.uint8(255), -1, 255])
     def test_roundtrip_unsigned(self, fillvalue):
         # regression/numpy2 test for
         encoding = {
