@@ -714,7 +714,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         lock=None,
         autoclose=False,
         **kwargs,
-    ) -> DataTree:
+    ) -> dict[str, Dataset]:
         from xarray.backends.api import open_dataset
         from xarray.backends.common import _iter_nc_groups
         from xarray.core.treenode import NodePath
@@ -740,7 +740,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         manager = store._manager
 
         # Open root group with `xr.open_dataset() and to dictionary of groups
-        ds = open_dataset(filename_or_obj, **kwargs)
+        ds = open_dataset(store, **kwargs)
         groups_dict = {str(parent): ds}
 
         for path_group in _iter_nc_groups(store.ds, parent=parent):

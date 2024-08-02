@@ -503,7 +503,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         manager = store._manager
 
         # Open root group with `xr.open_dataset()` and it to dictionary of groups
-        ds = open_dataset(filename_or_obj, **kwargs)
+        ds = open_dataset(store, **kwargs)
         groups_dict = {str(parent): ds}
 
         for path_group in _iter_nc_groups(store.ds, parent=parent):

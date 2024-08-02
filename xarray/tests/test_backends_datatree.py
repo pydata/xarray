@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-import netCDF4 as nc4
 import numpy as np
 import pytest
 
@@ -18,6 +17,11 @@ from xarray.tests import (
 
 if TYPE_CHECKING:
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine
+
+try:
+    import netCDF4 as nc4
+except ImportError:
+    pass
 
 
 class DatatreeIOBase:
@@ -71,17 +75,17 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
 
     def test_open_datatree(self, tmpdir):
         """Create a test netCDF4 file with this unaligned structure:
-        DataTree('None', parent=None)
+        Group: /
         │   Dimensions:        (lat: 1, lon: 2)
         │   Dimensions without coordinates: lat, lon
         │   Data variables:
         │       root_variable  (lat, lon) float64 16B ...
-        └── DataTree('Group1')
+        └── Group: /Group1
             │   Dimensions:      (lat: 1, lon: 2)
             │   Dimensions without coordinates: lat, lon
             │   Data variables:
             │       group_1_var  (lat, lon) float64 16B ...
-            └── DataTree('subgroup1')
+            └── Group: /Group1/subgroup1
                     Dimensions:        (lat: 2, lon: 2)
                     Dimensions without coordinates: lat, lon
                     Data variables:
@@ -113,18 +117,18 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
             open_datatree(filepath)
 
     def test_open_groups(self, tmpdir):
-        """Test `open_groups` with netCDF4 file with this structure:
-        DataTree('None', parent=None)
+        """Test `open_groups` with netCDF4 file with the same unaligned structure:
+        Group: /
         │   Dimensions:        (lat: 1, lon: 2)
         │   Dimensions without coordinates: lat, lon
         │   Data variables:
         │       root_variable  (lat, lon) float64 16B ...
-        └── DataTree('Group1')
+        └── Group: /Group1
             │   Dimensions:      (lat: 1, lon: 2)
             │   Dimensions without coordinates: lat, lon
             │   Data variables:
             │       group_1_var  (lat, lon) float64 16B ...
-            └── DataTree('subgroup1')
+            └── Group: /Group1/subgroup1
                     Dimensions:        (lat: 2, lon: 2)
                     Dimensions without coordinates: lat, lon
                     Data variables:
@@ -171,7 +175,6 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
     def test_open_groups_to_dict(self, tmpdir):
         """Create a an aligned netCDF4 with the following structure to test `open_groups`
         and `DataTree.from_dict`.
-
         Group: /
         │   Dimensions:        (lat: 1, lon: 2)
         │   Dimensions without coordinates: lat, lon
