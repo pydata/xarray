@@ -82,7 +82,7 @@ class TestNames:
     def test_child_gets_named_on_attach(self):
         sue: DataTree = DataTree()
         mary: DataTree = DataTree(children={"Sue": sue})  # noqa
-        assert sue.name == "Sue"
+        assert mary.children["Sue"].name == "Sue"
 
 
 class TestPaths:
@@ -90,14 +90,14 @@ class TestPaths:
         sue: DataTree = DataTree()
         mary: DataTree = DataTree(children={"Sue": sue})
         john: DataTree = DataTree(children={"Mary": mary})
-        assert sue.path == "/Mary/Sue"
+        assert john.children["Mary"].children["Sue"].path == "/Mary/Sue"
         assert john.path == "/"
 
     def test_path_roundtrip(self):
         sue: DataTree = DataTree()
         mary: DataTree = DataTree(children={"Sue": sue})
         john: DataTree = DataTree(children={"Mary": mary})
-        assert john[sue.path] is sue
+        assert john["/Mary/Sue"].name == "Sue"
 
     def test_same_tree(self):
         mary: DataTree = DataTree()
