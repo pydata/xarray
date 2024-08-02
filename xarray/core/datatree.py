@@ -1557,7 +1557,6 @@ class DataTree(
         ----
             Due to file format specifications the on-disk root group name
             is always ``"/"`` overriding any given ``DataTree`` root node name.
-
         """
         from xarray.core.datatree_io import _datatree_to_netcdf
 
