@@ -628,7 +628,7 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
     if cftime is None:
         raise ModuleNotFoundError("No module named 'cftime'")
 
-    dates = np.array(dates)
+    dates = np.asarray(dates)
     original_shape = dates.shape
 
     if np.issubdtype(dates.dtype, np.datetime64):
