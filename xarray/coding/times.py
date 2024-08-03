@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Hashable
 from datetime import datetime, timedelta
 from functools import partial
-from typing import Callable, Literal, Union, cast
+from typing import Callable, Literal, Union, cast, overload
 
 import numpy as np
 import pandas as pd
