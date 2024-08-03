@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     try:
         from dask.array.core import Array as DaskArray
     except ImportError:
-        DaskArray = np.ndarray[Any, Any]  # type: ignore[assignment,  misc]
+        DaskArray = np.ndarray[Any, Any]
 
 
 dask_available = module_available("dask")

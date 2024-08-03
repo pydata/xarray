@@ -19,6 +19,81 @@ format (recommended).
 
     np.random.seed(123456)
 
+You can `read different types of files <https://docs.xarray.dev/en/stable/user-guide/io.html>`_
+in `xr.open_dataset` by specifying the engine to be used:
+
+.. ipython:: python
+    :okexcept:
+    :suppress:
+
+    import xarray as xr
+
+    xr.open_dataset("my_file.grib", engine="cfgrib")
+
+The "engine" provides a set of instructions that tells xarray how
+to read the data and pack them into a `dataset` (or `dataarray`).
+These instructions are stored in an underlying "backend".
+
+Xarray comes with several backends that cover many common data formats.
+Many more backends are available via external libraries, or you can `write your own <https://docs.xarray.dev/en/stable/internals/how-to-add-new-backend.html>`_.
+This diagram aims to help you determine - based on the format of the file you'd like to read -
+which type of backend you're using and how to use it.
+
+Text and boxes are clickable for more information.
+Following the diagram is detailed information on many popular backends.
+You can learn more about using and developing backends in the
+`Xarray tutorial JupyterBook <https://tutorial.xarray.dev/advanced/backends/backends.html>`_.
+
+.. mermaid::
+    :alt: Flowchart illustrating how to choose the right backend engine to read your data
+
+    flowchart LR
+        built-in-eng["""Is your data stored in one of these formats?
+            - netCDF4 (<code>netcdf4</code>)
+            - netCDF3 (<code>scipy</code>)
+            - Zarr (<code>zarr</code>)
+            - DODS/OPeNDAP (<code>pydap</code>)
+            - HDF5 (<code>h5netcdf</code>)
+            """]
+
+        built-in("""You're in luck! Xarray bundles a backend for this format.
+            Open data using <code>xr.open_dataset()</code>. We recommend
+            always setting the engine you want to use.""")
+
+        installed-eng["""One of these formats?
+            - <a href='https://github.com/ecmwf/cfgrib'>GRIB (<code>cfgrib</code>)
+            - <a href='https://tiledb-inc.github.io/TileDB-CF-Py/documentation/index.html'>TileDB (<code>tiledb</code>)
+            - <a href='https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, ESRI-hdf (<code>rioxarray</code>, via GDAL)
+            - <a href='https://www.bopen.eu/xarray-sentinel-open-source-library/'>Sentinel-1 SAFE (<code>xarray-sentinel</code>)
+            """]
+
+        installed("""Install the package indicated in parentheses to your
+            Python environment. Restart the kernel and use
+            <code>xr.open_dataset(files, engine='rioxarray')</code>.""")
+
+        other("""Ask around to see if someone in your data community
+            has created an Xarray backend for your data type.
+            If not, you may need to create your own or consider
+            exporting your data to a more common format.""")
+
+        built-in-eng -->|Yes| built-in
+        built-in-eng -->|No| installed-eng
+
+        installed-eng -->|Yes| installed
+        installed-eng -->|No| other
+
+        click built-in-eng "https://docs.xarray.dev/en/stable/getting-started-guide/faq.html#how-do-i-open-format-x-file-as-an-xarray-dataset"
+        click other "https://docs.xarray.dev/en/stable/internals/how-to-add-new-backend.html"
+
+        classDef quesNodefmt fill:#9DEEF4,stroke:#206C89,text-align:left
+        class built-in-eng,installed-eng quesNodefmt
+
+        classDef ansNodefmt fill:#FFAA05,stroke:#E37F17,text-align:left,white-space:nowrap
+        class built-in,installed,other ansNodefmt
+
+        linkStyle default font-size:20pt,color:#206C89
+
+
 .. _io.netcdf:
 
 netCDF
@@ -983,6 +1058,59 @@ reads. Because this fall-back option is so much slower, xarray issues a
        consolidate metadata.
     3. Explicitly setting ``consolidated=True``, to raise an error in this case
        instead of falling back to try reading non-consolidated metadata.
+
+
+.. _io.kerchunk:
+
+Kerchunk
+--------
+
+`Kerchunk <https://fsspec.github.io/kerchunk/index.html>`_ is a Python library
+that allows you to access chunked and compressed data formats (such as NetCDF3, NetCDF4, HDF5, GRIB2, TIFF & FITS),
+many of which are primary data formats for many data archives, by viewing the
+whole archive as an ephemeral `Zarr`_ dataset which allows for parallel, chunk-specific access.
+
+Instead of creating a new copy of the dataset in the Zarr spec/format or
+downloading the files locally, Kerchunk reads through the data archive and extracts the
+byte range and compression information of each chunk and saves as a ``reference``.
+These references are then saved as ``json`` files or ``parquet`` (more efficient)
+for later use. You can view some of these stored in the `references`
+directory `here <https://github.com/pydata/xarray-data>`_.
+
+
+.. note::
+    These references follow this `specification <https://fsspec.github.io/kerchunk/spec.html>`_.
+    Packages like `kerchunk`_ and `virtualizarr <https://github.com/zarr-developers/VirtualiZarr>`_
+    help in creating and reading these references.
+
+
+Reading these data archives becomes really easy with ``kerchunk`` in combination
+with ``xarray``, especially when these archives are large in size. A single combined
+reference can refer to thousands of the original data files present in these archives.
+You can view the whole dataset with from this `combined reference` using the above packages.
+
+The following example shows opening a combined references generated from a ``.hdf`` file stored locally.
+
+.. ipython:: python
+
+    storage_options = {
+        "target_protocol": "file",
+    }
+
+    # add the `remote_protocol` key in `storage_options` if you're accessing a file remotely
+
+    ds1 = xr.open_dataset(
+        "./combined.json",
+        engine="kerchunk",
+        storage_options=storage_options,
+    )
+
+    ds1
+
+.. note::
+
+    You can refer to the `project pythia kerchunk cookbook <https://projectpythia.org/kerchunk-cookbook/README.html>`_
+    and the `pangeo guide on kerchunk <https://guide.cloudnativegeo.org/kerchunk/intro.html>`_ for more information.
 
 
 .. _io.iris:
