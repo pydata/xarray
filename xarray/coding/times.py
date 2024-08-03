@@ -40,7 +40,7 @@ try:
 except ImportError:
     cftime = None
 
-from xarray.core.types import CFCalendar, NPDatetimeUnitOptions, T_DuckArray
+from xarray.core.types import CFCalendar, NPDatetimeUnitOptions
 
 T_Name = Union[Hashable, None]
 
