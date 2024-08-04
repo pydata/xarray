@@ -22,11 +22,6 @@ if TYPE_CHECKING:
         duckarray,
     )
 
-    try:
-        from dask.array.core import Array as DaskArray
-    except ImportError:
-        DaskArray = np.ndarray[Any, Any]
-
 
 dask_available = module_available("dask")
 
