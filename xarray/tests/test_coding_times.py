@@ -146,7 +146,6 @@ def test_cf_datetime(num_dates, units, calendar) -> None:
     # https://github.com/Unidata/netcdf4-python/issues/355
     assert (abs_diff <= np.timedelta64(1, "s")).all()
     encoded1, _, _ = encode_cf_datetime(actual, units, calendar)
-
     assert_duckarray_allclose(num_dates, encoded1)
 
     if hasattr(num_dates, "ndim") and num_dates.ndim == 1 and "1000" not in units:
