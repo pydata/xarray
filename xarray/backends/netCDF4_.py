@@ -680,6 +680,12 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         use_cftime=None,
         decode_timedelta=None,
         group: str | Iterable[str] | Callable | None = None,
+        format="NETCDF4",
+        clobber=True,
+        diskless=False,
+        persist=False,
+        lock=None,
+        autoclose=False,
         **kwargs,
     ) -> DataTree:
         from xarray.backends.api import open_dataset
@@ -691,6 +697,12 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         store = NetCDF4DataStore.open(
             filename_or_obj,
             group=group,
+            format=format,
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            lock=lock,
+            autoclose=autoclose,
         )
         if group:
             parent = NodePath("/") / NodePath(group)
