@@ -360,10 +360,10 @@ class TestNamedArray(NamedArraySubclassobjects):
         arrayapi_a = nxp.asarray([2.1, 4], dtype=nxp.int64)
         check_duck_array_typevar(arrayapi_a)
 
-    def test_pd_index_duckarray() -> None:
+    def test_pd_index_duckarray(self) -> None:
         import pandas as pd
 
-        a: duckarray = pd.Index([])
+        a: duckarray[Any, Any] = pd.Index([])
         check_duck_array_typevar(a)
 
     def test_new_namedarray(self) -> None:
