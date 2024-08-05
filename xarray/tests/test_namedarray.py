@@ -383,7 +383,7 @@ class TestNamedArray(NamedArraySubclassobjects):
         arrayapi_a = nxp.asarray([2.1, 4], dtype=nxp.int64)
         check_duck_array_typevar(arrayapi_a)
 
-    def test_pd_index_duckarray(self) -> None:
+    def test_duck_array_class_pd_index(self) -> None:
         import pandas as pd
 
         a: duckarray[Any, Any] = pd.Index([])
