@@ -561,3 +561,6 @@ class TestNamedArray(NamedArraySubclassobjects):
     def test_warn_on_repeated_dimension_names(self) -> None:
         with pytest.warns(UserWarning, match="Duplicate dimension names"):
             NamedArray(("x", "x"), np.arange(4).reshape(2, 2))
+
+    def test_pd_index_duckarray() -> None:
+        a: duckarray = pd.Index([])
