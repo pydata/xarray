@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import sys
 from abc import abstractmethod
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
@@ -90,7 +91,13 @@ def check_duck_array_typevar(a: duckarray[Any, _DType]) -> duckarray[Any, _DType
         missing_attrs = ""
         actual_attrs = set(dir(b))
         for t in _arrayfunction_or_api:
-            expected_attrs = t.__protocol_attrs__
+            if sys.version_info >= (3, 11):
+                expected_attrs = t.__protocol_attrs__
+            else:
+                from typing import _get_protocol_attrs
+
+                expected_attrs = _get_protocol_attrs(t)
+
             missing_attrs_ = expected_attrs - actual_attrs
             if missing_attrs_:
                 missing_attrs += f"{t.__name__} - {missing_attrs_}\n"
