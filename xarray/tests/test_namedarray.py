@@ -360,6 +360,12 @@ class TestNamedArray(NamedArraySubclassobjects):
         arrayapi_a = nxp.asarray([2.1, 4], dtype=nxp.int64)
         check_duck_array_typevar(arrayapi_a)
 
+    def test_pd_index_duckarray() -> None:
+        import pandas as pd
+
+        a: duckarray = pd.Index([])
+        check_duck_array_typevar(a)
+
     def test_new_namedarray(self) -> None:
         dtype_float = np.dtype(np.float32)
         narr_float: NamedArray[Any, np.dtype[np.float32]]
@@ -561,6 +567,3 @@ class TestNamedArray(NamedArraySubclassobjects):
     def test_warn_on_repeated_dimension_names(self) -> None:
         with pytest.warns(UserWarning, match="Duplicate dimension names"):
             NamedArray(("x", "x"), np.arange(4).reshape(2, 2))
-
-    def test_pd_index_duckarray() -> None:
-        a: duckarray = pd.Index([])
