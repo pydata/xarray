@@ -95,11 +95,9 @@ def check_duck_array_typevar(a: duckarray[Any, _DType]) -> duckarray[Any, _DType
             if missing_attrs_:
                 missing_attrs += f"{t.__name__} - {missing_attrs_}\n"
         raise TypeError(
-            (
-                f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi. "
-                "Missing following attrs:\n"
-                f"{missing_attrs}"
-            )
+            f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi. "
+            "Missing following attrs:\n"
+            f"{missing_attrs}"
         )
 
 
