@@ -146,14 +146,14 @@ def test_cf_datetime(num_dates, units, calendar) -> None:
     # https://github.com/Unidata/netcdf4-python/issues/355
     assert (abs_diff <= np.timedelta64(1, "s")).all()
     encoded1, _, _ = encode_cf_datetime(actual, units, calendar)
-    assert_array_equal(num_dates, np.around(encoded1, 1))
+    assert_duckarray_allclose(num_dates, encoded1)
 
     if hasattr(num_dates, "ndim") and num_dates.ndim == 1 and "1000" not in units:
         # verify that wrapping with a pandas.Index works
         # note that it *does not* currently work to put
         # non-datetime64 compatible dates into a pandas.Index
         encoded2, _, _ = encode_cf_datetime(pd.Index(actual), units, calendar)
-        assert_array_equal(num_dates, np.around(encoded2, 1))
+        assert_duckarray_allclose(num_dates, encoded2)
 
 
 @requires_cftime
