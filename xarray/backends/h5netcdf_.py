@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import io
 import os
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, MutableMapping
 from typing import TYPE_CHECKING, Any
 
 from xarray.backends.common import (
@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from io import BufferedIOBase
 
     from xarray.backends.common import AbstractDataStore
+    from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
 
@@ -475,7 +476,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         driver=None,
         driver_kwds=None,
         **kwargs,
-    ) -> dict[str, Dataset]:
+    ) -> MutableMapping[str, Dataset | DataArray | DataTree | None]:
 
         from xarray.backends.api import open_dataset
         from xarray.backends.common import _iter_nc_groups
