@@ -35,6 +35,14 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix bug causing `DataTree.from_dict` to be sensitive to insertion order (:issue:`9276`, :pull:`9292`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fix resampling error with monthly, quarterly, or yearly frequencies with
+  cftime when the time bins straddle the date "0001-01-01". For example, this
+  can happen in certain circumstances when the time coordinate contains the
+  date "0001-01-01". (:issue:`9108`, :pull:`9116`) By `Spencer Clark
+  <https://github.com/spencerkclark>`_ and `Deepak Cherian
+  <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
