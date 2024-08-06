@@ -136,7 +136,7 @@ def test_dataset_typed_ops() -> None:
     _test(_int + ds)
     _test(_list + ds)
     _test(_ndarray + ds)
-    _test(_var + ds)  # type: ignore[arg-type]  # TODO: wrong in mypy 312
+    _test(_var + ds)  # type: ignore[arg-type]  # TODO: wrong in mypy 312 test
     _test(_da + ds)  # type: ignore[arg-type]  # TODO: wrong in mypy 312
 
     # __eq__ as an example of cmp ops
