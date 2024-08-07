@@ -904,7 +904,7 @@ def deep_align(
         indexes = {}
 
     def is_alignable(obj):
-        return isinstance(obj, (Coordinates, DataArray, Dataset))
+        return isinstance(obj, Coordinates | DataArray | Dataset)
 
     positions: list[int] = []
     keys: list[type[object] | Hashable] = []

@@ -351,7 +351,7 @@ def variables(
             valid_shapes = npst.array_shapes(min_dims=len(_dims), max_dims=len(_dims))
             _shape = draw(valid_shapes)
             array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
-        elif isinstance(_dims, (Mapping, dict)):
+        elif isinstance(_dims, Mapping | dict):
             # should be a mapping of form {dim_names: lengths}
             dim_names, _shape = list(_dims.keys()), tuple(_dims.values())
             array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)

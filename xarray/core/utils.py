@@ -256,7 +256,7 @@ def is_full_slice(value: Any) -> bool:
 
 
 def is_list_like(value: Any) -> TypeGuard[list | tuple]:
-    return isinstance(value, (list, tuple))
+    return isinstance(value, list | tuple)
 
 
 def _is_scalar(value, include_0d):
@@ -266,7 +266,7 @@ def _is_scalar(value, include_0d):
         include_0d = getattr(value, "ndim", None) == 0
     return (
         include_0d
-        or isinstance(value, (str, bytes))
+        or isinstance(value, str | bytes)
         or not (
             isinstance(value, (Iterable,) + NON_NUMPY_SUPPORTED_ARRAY_TYPES)
             or hasattr(value, "__array_function__")

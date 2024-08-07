@@ -90,7 +90,7 @@ def _contains_obj_type(*, pat: Any, checker: Any) -> bool:
 
 def _contains_str_like(pat: Any) -> bool:
     """Determine if the object is a str-like or array of str-like."""
-    if isinstance(pat, (str, bytes)):
+    if isinstance(pat, str | bytes):
         return True
 
     if not hasattr(pat, "dtype"):

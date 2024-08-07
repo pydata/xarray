@@ -1822,7 +1822,7 @@ def dot(
     from xarray.core.dataarray import DataArray
     from xarray.core.variable import Variable
 
-    if any(not isinstance(arr, (Variable, DataArray)) for arr in arrays):
+    if any(not isinstance(arr, Variable | DataArray) for arr in arrays):
         raise TypeError(
             "Only xr.DataArray and xr.Variable are supported."
             f"Given {[type(arr) for arr in arrays]}."

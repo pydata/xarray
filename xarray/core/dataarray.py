@@ -461,7 +461,7 @@ class DataArray(
                     coords = [data.index]
                 elif isinstance(data, pd.DataFrame):
                     coords = [data.index, data.columns]
-                elif isinstance(data, (pd.Index, IndexVariable)):
+                elif isinstance(data, pd.Index | IndexVariable):
                     coords = [data]
 
             if dims is None:
@@ -1427,10 +1427,10 @@ class DataArray(
             )
             chunk_mapping = {}
 
-        if isinstance(chunks, (float, str, int)):
+        if isinstance(chunks, float | str | int):
             # ignoring type; unclear why it won't accept a Literal into the value.
             chunk_mapping = dict.fromkeys(self.dims, chunks)
-        elif isinstance(chunks, (tuple, list)):
+        elif isinstance(chunks, tuple | list):
             utils.emit_user_level_warning(
                 "Supplying chunks as dimension-order tuples is deprecated. "
                 "It will raise an error in the future. Instead use a dict with dimension names as keys.",
@@ -4737,7 +4737,7 @@ class DataArray(
     ) -> Self:
         from xarray.core.groupby import GroupBy
 
-        if isinstance(other, (Dataset, GroupBy)):
+        if isinstance(other, Dataset | GroupBy):
             return NotImplemented
         if isinstance(other, DataArray):
             align_type = OPTIONS["arithmetic_join"]

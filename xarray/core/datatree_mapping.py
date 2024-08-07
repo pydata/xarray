@@ -258,11 +258,11 @@ def _check_single_set_return_values(
     path_to_node: str, obj: Dataset | DataArray | tuple[Dataset | DataArray]
 ):
     """Check types returned from single evaluation of func, and return number of return values received from func."""
-    if isinstance(obj, (Dataset, DataArray)):
+    if isinstance(obj, Dataset | DataArray):
         return 1
     elif isinstance(obj, tuple):
         for r in obj:
-            if not isinstance(r, (Dataset, DataArray)):
+            if not isinstance(r, Dataset | DataArray):
                 raise TypeError(
                     f"One of the results of calling func on datasets on the nodes at position {path_to_node} is "
                     f"of type {type(r)}, not Dataset or DataArray."

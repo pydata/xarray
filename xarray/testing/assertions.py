@@ -98,7 +98,7 @@ def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
 def maybe_transpose_dims(a, b, check_dim_order: bool):
     """Helper for assert_equal/allclose/identical"""
     __tracebackhide__ = True
-    if not isinstance(a, (Variable, DataArray, Dataset)):
+    if not isinstance(a, Variable | DataArray | Dataset):
         return b
     if not check_dim_order and set(a.dims) == set(b.dims):
         # Ensure transpose won't fail if a dimension is missing
@@ -152,7 +152,7 @@ def assert_equal(a, b, from_root=True, check_dim_order: bool = True):
         type(a) == type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
     b = maybe_transpose_dims(a, b, check_dim_order)
-    if isinstance(a, (Variable, DataArray)):
+    if isinstance(a, Variable | DataArray):
         assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
     elif isinstance(a, Dataset):
         assert a.equals(b), formatting.diff_dataset_repr(a, b, "equals")
@@ -213,7 +213,7 @@ def assert_identical(a, b, from_root=True):
     elif isinstance(a, DataArray):
         assert a.name == b.name
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
-    elif isinstance(a, (Dataset, Variable)):
+    elif isinstance(a, Dataset | Variable):
         assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")
     elif isinstance(a, Coordinates):
         assert a.identical(b), formatting.diff_coords_repr(a, b, "identical")
@@ -429,10 +429,10 @@ def _assert_variable_invariants(var: Variable, name: Hashable = None):
         var._dims,
         var._data.shape,
     )
-    assert isinstance(var._encoding, (type(None), dict)), name_or_empty + (
+    assert isinstance(var._encoding, type(None) | dict), name_or_empty + (
         var._encoding,
     )
-    assert isinstance(var._attrs, (type(None), dict)), name_or_empty + (var._attrs,)
+    assert isinstance(var._attrs, type(None) | dict), name_or_empty + (var._attrs,)
 
 
 def _assert_dataarray_invariants(da: DataArray, check_default_indexes: bool):
@@ -491,8 +491,8 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
             ds._indexes, ds._variables, ds._dims, check_default=check_default_indexes
         )
 
-    assert isinstance(ds._encoding, (type(None), dict))
-    assert isinstance(ds._attrs, (type(None), dict))
+    assert isinstance(ds._encoding, type(None) | dict)
+    assert isinstance(ds._attrs, type(None) | dict)
 
 
 def _assert_internal_invariants(

@@ -131,7 +131,7 @@ def infer_template(
             "Please supply the 'template' kwarg to map_blocks."
         ) from e
 
-    if not isinstance(template, (Dataset, DataArray)):
+    if not isinstance(template, Dataset | DataArray):
         raise TypeError(
             "Function must return an xarray DataArray or Dataset. Instead it returned "
             f"{type(template)}"
@@ -351,7 +351,7 @@ def map_blocks(
         result = func(*converted_args, **kwargs)
 
         merged_coordinates = merge(
-            [arg.coords for arg in args if isinstance(arg, (Dataset, DataArray))]
+            [arg.coords for arg in args if isinstance(arg, Dataset | DataArray)]
         ).coords
 
         # check all dims are present
@@ -387,7 +387,7 @@ def map_blocks(
 
         return make_dict(result)
 
-    if template is not None and not isinstance(template, (DataArray, Dataset)):
+    if template is not None and not isinstance(template, DataArray | Dataset):
         raise TypeError(
             f"template must be a DataArray or Dataset. Received {type(template).__name__} instead."
         )
@@ -417,7 +417,7 @@ def map_blocks(
         pass
 
     all_args = [obj] + list(args)
-    is_xarray = [isinstance(arg, (Dataset, DataArray)) for arg in all_args]
+    is_xarray = [isinstance(arg, Dataset | DataArray) for arg in all_args]
     is_array = [isinstance(arg, DataArray) for arg in all_args]
 
     # there should be a better way to group this. partition?

@@ -308,7 +308,7 @@ def _calc_concat_dim_index(
         dim = dim_or_data
         index = None
     else:
-        if not isinstance(dim_or_data, (DataArray, Variable)):
+        if not isinstance(dim_or_data, DataArray | Variable):
             dim = getattr(dim_or_data, "name", None)
             if dim is None:
                 dim = "concat_dim"

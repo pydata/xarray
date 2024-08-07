@@ -175,7 +175,7 @@ class PlotTestCase:
         # Compatible with mpl before (PathCollection) and after (QuadContourSet) 3.8
         def matchfunc(x) -> bool:
             return isinstance(
-                x, (mpl.collections.PathCollection, mpl.contour.QuadContourSet)
+                x, mpl.collections.PathCollection | mpl.contour.QuadContourSet
             )
 
         paths = plt.gca().findobj(matchfunc)

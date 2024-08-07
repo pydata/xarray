@@ -500,7 +500,7 @@ def test_apply_output_core_dimension() -> None:
             return np.stack([x, -x], axis=-1)
 
         result = apply_ufunc(func, obj, output_core_dims=[["sign"]])
-        if isinstance(result, (xr.Dataset, xr.DataArray)):
+        if isinstance(result, xr.Dataset | xr.DataArray):
             result.coords["sign"] = [1, -1]
         return result
 
@@ -527,7 +527,7 @@ def test_apply_output_core_dimension() -> None:
             return (x, np.stack([x, -x], axis=-1))
 
         result = apply_ufunc(func, obj, output_core_dims=[[], ["sign"]])
-        if isinstance(result[1], (xr.Dataset, xr.DataArray)):
+        if isinstance(result[1], xr.Dataset | xr.DataArray):
             result[1].coords["sign"] = [1, -1]
         return result
 
@@ -568,7 +568,7 @@ def test_apply_exclude() -> None:
             output_core_dims=[[dim]],
             exclude_dims={dim},
         )
-        if isinstance(result, (xr.Dataset, xr.DataArray)):
+        if isinstance(result, xr.Dataset | xr.DataArray):
             # note: this will fail if dim is not a coordinate on any input
             new_coord = np.concatenate([obj.coords[dim] for obj in objects])
             result.coords[dim] = new_coord

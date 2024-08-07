@@ -546,7 +546,7 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
         )
 
     def _check_and_raise_if_non_basic_indexer(self, indexer: ExplicitIndexer) -> None:
-        if isinstance(indexer, (VectorizedIndexer, OuterIndexer)):
+        if isinstance(indexer, VectorizedIndexer | OuterIndexer):
             raise TypeError(
                 "Vectorized indexing with vectorized or outer indexers is not supported. "
                 "Please use .vindex and .oindex properties to index the array."
@@ -708,7 +708,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
             Array like object to index.
         key : VectorizedIndexer
         """
-        if isinstance(key, (BasicIndexer, OuterIndexer)):
+        if isinstance(key, BasicIndexer | OuterIndexer):
             self.key = _outer_to_vectorized_indexer(key, array.shape)
         elif isinstance(key, VectorizedIndexer):
             self.key = _arrayize_vectorized_indexer(key, array.shape)
@@ -1045,7 +1045,7 @@ def decompose_indexer(
 ) -> tuple[ExplicitIndexer, ExplicitIndexer]:
     if isinstance(indexer, VectorizedIndexer):
         return _decompose_vectorized_indexer(indexer, shape, indexing_support)
-    if isinstance(indexer, (BasicIndexer, OuterIndexer)):
+    if isinstance(indexer, BasicIndexer | OuterIndexer):
         return _decompose_outer_indexer(indexer, shape, indexing_support)
     raise TypeError(f"unexpected key type: {indexer}")
 
@@ -1204,7 +1204,7 @@ def _decompose_outer_indexer(
     backend_indexer: list[Any] = []
     np_indexer: list[Any] = []
 
-    assert isinstance(indexer, (OuterIndexer, BasicIndexer))
+    assert isinstance(indexer, OuterIndexer | BasicIndexer)
 
     if indexing_support == IndexingSupport.VECTORIZED:
         for k, s in zip(indexer.tuple, shape):
@@ -1474,7 +1474,7 @@ def is_fancy_indexer(indexer: Any) -> bool:
     """Return False if indexer is a int, slice, a 1-dimensional list, or a 0 or
     1-dimensional ndarray; in all other cases return True
     """
-    if isinstance(indexer, (int, slice)):
+    if isinstance(indexer, int | slice):
         return False
     if isinstance(indexer, np.ndarray):
         return indexer.ndim > 1
