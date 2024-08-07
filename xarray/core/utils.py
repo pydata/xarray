@@ -47,6 +47,7 @@ import re
 import sys
 import warnings
 from collections.abc import (
+    Callable,
     Collection,
     Container,
     Hashable,
@@ -62,7 +63,7 @@ from collections.abc import (
 )
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -281,7 +282,7 @@ try:
     if sys.version_info >= (3, 10):
         from typing import TypeGuard
     else:
-        from typing_extensions import TypeGuard
+        from typing import TypeGuard
 except ImportError:
     if TYPE_CHECKING:
         raise

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import functools
 import sys
+from collections.abc import Callable
 from itertools import repeat
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset

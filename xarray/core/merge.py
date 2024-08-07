@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, Sequence, Set
-from typing import TYPE_CHECKING, Any, NamedTuple, Optional, Union
+from typing import TYPE_CHECKING, Any, NamedTuple, Union
 
 import pandas as pd
 
@@ -158,7 +158,7 @@ def _assert_compat_valid(compat):
         raise ValueError(f"compat={compat!r} invalid: must be {set(_VALID_COMPAT)}")
 
 
-MergeElement = tuple[Variable, Optional[Index]]
+MergeElement = tuple[Variable, Index | None]
 
 
 def _assert_prioritized_valid(

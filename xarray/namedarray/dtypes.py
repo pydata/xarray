@@ -7,7 +7,7 @@ from typing import Any, Literal
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
 else:
-    from typing_extensions import TypeGuard
+    from typing import TypeGuard
 
 import numpy as np
 

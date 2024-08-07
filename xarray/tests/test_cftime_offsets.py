@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Callable
 from itertools import product
-from typing import Callable, Literal
+from typing import Literal
 
 import numpy as np
 import pandas as pd

@@ -1,5 +1,5 @@
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Protocol, Union, overload
+from typing import TYPE_CHECKING, Any, Protocol, overload
 
 try:
     import hypothesis.strategies as st
@@ -141,7 +141,7 @@ def dimension_sizes(
     min_dims: int = 0,
     max_dims: int = 3,
     min_side: int = 1,
-    max_side: Union[int, None] = None,
+    max_side: int | None = None,
 ) -> st.SearchStrategy[Mapping[Hashable, int]]:
     """
     Generates an arbitrary mapping from dimension names to lengths.
@@ -224,11 +224,8 @@ def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
 def variables(
     draw: st.DrawFn,
     *,
-    array_strategy_fn: Union[ArrayStrategyFn, None] = None,
-    dims: Union[
-        st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]],
-        None,
-    ] = None,
+    array_strategy_fn: ArrayStrategyFn | None = None,
+    dims: st.SearchStrategy[Sequence[Hashable] | Mapping[Hashable, int]] | None = None,
     dtype: st.SearchStrategy[np.dtype] = supported_dtypes(),
     attrs: st.SearchStrategy[Mapping] = attrs(),
 ) -> xr.Variable:
@@ -394,7 +391,7 @@ def unique_subset_of(
     objs: Sequence[Hashable],
     *,
     min_size: int = 0,
-    max_size: Union[int, None] = None,
+    max_size: int | None = None,
 ) -> st.SearchStrategy[Sequence[Hashable]]: ...
 
 
@@ -403,18 +400,18 @@ def unique_subset_of(
     objs: Mapping[Hashable, Any],
     *,
     min_size: int = 0,
-    max_size: Union[int, None] = None,
+    max_size: int | None = None,
 ) -> st.SearchStrategy[Mapping[Hashable, Any]]: ...
 
 
 @st.composite
 def unique_subset_of(
     draw: st.DrawFn,
-    objs: Union[Sequence[Hashable], Mapping[Hashable, Any]],
+    objs: Sequence[Hashable] | Mapping[Hashable, Any],
     *,
     min_size: int = 0,
-    max_size: Union[int, None] = None,
-) -> Union[Sequence[Hashable], Mapping[Hashable, Any]]:
+    max_size: int | None = None,
+) -> Sequence[Hashable] | Mapping[Hashable, Any]:
     """
     Return a strategy which generates a unique subset of the given objects.
 

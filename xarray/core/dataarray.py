@@ -2,18 +2,23 @@ from __future__ import annotations
 
 import datetime
 import warnings
-from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import (
+    Callable,
+    Hashable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from functools import partial
 from os import PathLike
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     Literal,
     NoReturn,
     TypeVar,
-    Union,
     overload,
 )
 
@@ -114,7 +119,7 @@ if TYPE_CHECKING:
     from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
-    T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
+    T_XarrayOther = TypeVar("T_XarrayOther", bound="DataArray" | Dataset)
 
 
 def _check_coords_dims(shape, coords, dim):

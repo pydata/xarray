@@ -9,8 +9,16 @@ import itertools
 import operator
 import warnings
 from collections import Counter
-from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence, Set
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, Union, cast, overload
+from collections.abc import (
+    Callable,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    Sequence,
+    Set,
+)
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, cast, overload
 
 import numpy as np
 
