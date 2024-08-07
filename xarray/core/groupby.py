@@ -529,7 +529,6 @@ class GroupBy(Generic[T_Xarray]):
         """
         from xarray.core.dataarray import DataArray
         from xarray.core.dataset import Dataset
-        from xarray.core.duck_array_ops import shuffle_array
 
         (grouper,) = self.groupers
         dim = self._group_dim
@@ -537,6 +536,8 @@ class GroupBy(Generic[T_Xarray]):
         # Slices mean this is already sorted. E.g. resampling ops, _DummyGroup
         if all(isinstance(idx, slice) for idx in self._group_indices):
             return
+
+        indices: tuple[list[int]] = self._group_indices  # type: ignore[assignment]
 
         was_array = isinstance(self._obj, DataArray)
         as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
@@ -546,21 +547,22 @@ class GroupBy(Generic[T_Xarray]):
             if dim not in var.dims:
                 shuffled[name] = var
                 continue
-            shuffled_data = shuffle_array(
-                var._data, list(self._group_indices), axis=var.get_axis_num(dim)
-            )
-            shuffled[name] = var._replace(data=shuffled_data)
+            shuffled[name] = var._shuffle(indices=list(indices), dim=dim)
 
         # Replace self._group_indices with slices
         slices = []
         start = 0
         for idxr in self._group_indices:
+            if TYPE_CHECKING:
+                assert not isinstance(idxr, slice)
             slices.append(slice(start, start + len(idxr)))
             start += len(idxr)
         # TODO: we have now broken the invariant
         # self._group_indices ≠ self.groupers[0].group_indices
         self._group_indices = tuple(slices)
         if was_array:
+            if TYPE_CHECKING:
+                assert isinstance(self._obj, DataArray)
             self._obj = self._obj._from_temp_dataset(shuffled)
         else:
             self._obj = shuffled

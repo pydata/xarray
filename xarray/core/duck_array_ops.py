@@ -831,18 +831,3 @@ def chunked_nanfirst(darray, axis):
 
 def chunked_nanlast(darray, axis):
     return _chunked_first_or_last(darray, axis, op=nputils.nanlast)
-
-
-def shuffle_array(array, indices: list[list[int]], axis: int):
-    # TODO: do chunk manager dance here.
-    if is_duck_dask_array(array):
-        if not module_available("dask", minversion="2024.08.0"):
-            raise ValueError(
-                "This method is very inefficient on dask<2024.08.0. Please upgrade."
-            )
-        # TODO: handle dimensions
-        return array.shuffle(indexer=indices, axis=axis)
-    else:
-        indexer = np.concatenate(indices)
-        # TODO: Do the array API thing here.
-        return np.take(array, indices=indexer, axis=axis)
