@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
-RESAMPLE_DIM = "__resample_dim__"
+from xarray.groupers import RESAMPLE_DIM
 
 
 class Resample(GroupBy[T_Xarray]):
@@ -66,12 +66,12 @@ class Resample(GroupBy[T_Xarray]):
                 obj = obj.drop_vars([k])
         return obj
 
-    def pad(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
+    def pad(self, tolerance: float | Iterable[float] | str | None = None) -> T_Xarray:
         """Forward fill new values at up-sampled frequency.
 
         Parameters
         ----------
-        tolerance : float | Iterable[float] | None, default: None
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels to limit
             the up-sampling method.
             Up-sampled data with indices that satisfy the equation
@@ -91,12 +91,14 @@ class Resample(GroupBy[T_Xarray]):
 
     ffill = pad
 
-    def backfill(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
+    def backfill(
+        self, tolerance: float | Iterable[float] | str | None = None
+    ) -> T_Xarray:
         """Backward fill new values at up-sampled frequency.
 
         Parameters
         ----------
-        tolerance : float | Iterable[float] | None, default: None
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels to limit
             the up-sampling method.
             Up-sampled data with indices that satisfy the equation
@@ -116,13 +118,15 @@ class Resample(GroupBy[T_Xarray]):
 
     bfill = backfill
 
-    def nearest(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
+    def nearest(
+        self, tolerance: float | Iterable[float] | str | None = None
+    ) -> T_Xarray:
         """Take new values from nearest original coordinate to up-sampled
         frequency coordinates.
 
         Parameters
         ----------
-        tolerance : float | Iterable[float] | None, default: None
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels to limit
             the up-sampling method.
             Up-sampled data with indices that satisfy the equation
@@ -140,7 +144,7 @@ class Resample(GroupBy[T_Xarray]):
             {self._dim: grouper.full_index}, method="nearest", tolerance=tolerance
         )
 
-    def interpolate(self, kind: InterpOptions = "linear") -> T_Xarray:
+    def interpolate(self, kind: InterpOptions = "linear", **kwargs) -> T_Xarray:
         """Interpolate up-sampled data using the original data as knots.
 
         Parameters
@@ -168,17 +172,18 @@ class Resample(GroupBy[T_Xarray]):
         scipy.interpolate.interp1d
 
         """
-        return self._interpolate(kind=kind)
+        return self._interpolate(kind=kind, **kwargs)
 
-    def _interpolate(self, kind="linear") -> T_Xarray:
+    def _interpolate(self, kind="linear", **kwargs) -> T_Xarray:
         """Apply scipy.interpolate.interp1d along resampling dimension."""
         obj = self._drop_coords()
         (grouper,) = self.groupers
+        kwargs.setdefault("bounds_error", False)
         return obj.interp(
             coords={self._dim: grouper.full_index},
             assume_sorted=True,
             method=kind,
-            kwargs={"bounds_error": False},
+            kwargs=kwargs,
         )
 
 
@@ -281,21 +286,9 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
         applied : DataArray
             The result of splitting, applying and combining this array.
         """
-        return self._map_maybe_warn(func, args, shortcut, warn_squeeze=True, **kwargs)
-
-    def _map_maybe_warn(
-        self,
-        func: Callable[..., Any],
-        args: tuple[Any, ...] = (),
-        shortcut: bool | None = False,
-        warn_squeeze: bool = True,
-        **kwargs: Any,
-    ) -> DataArray:
         # TODO: the argument order for Resample doesn't match that for its parent,
         # GroupBy
-        combined = super()._map_maybe_warn(
-            func, shortcut=shortcut, args=args, warn_squeeze=warn_squeeze, **kwargs
-        )
+        combined = super().map(func, shortcut=shortcut, args=args, **kwargs)
 
         # If the aggregation function didn't drop the original resampling
         # dimension, then we need to do so before we can rename the proxy
@@ -375,18 +368,8 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAg
         applied : Dataset
             The result of splitting, applying and combining this dataset.
         """
-        return self._map_maybe_warn(func, args, shortcut, warn_squeeze=True, **kwargs)
-
-    def _map_maybe_warn(
-        self,
-        func: Callable[..., Any],
-        args: tuple[Any, ...] = (),
-        shortcut: bool | None = None,
-        warn_squeeze: bool = True,
-        **kwargs: Any,
-    ) -> Dataset:
         # ignore shortcut if set (for now)
-        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped(warn_squeeze))
+        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         combined = self._combine(applied)
 
         # If the aggregation function didn't drop the original resampling
@@ -452,27 +435,6 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAg
             removed.
         """
         return super().reduce(
-            func=func,
-            dim=dim,
-            axis=axis,
-            keep_attrs=keep_attrs,
-            keepdims=keepdims,
-            shortcut=shortcut,
-            **kwargs,
-        )
-
-    def _reduce_without_squeeze_warn(
-        self,
-        func: Callable[..., Any],
-        dim: Dims = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        shortcut: bool = True,
-        **kwargs: Any,
-    ) -> Dataset:
-        return super()._reduce_without_squeeze_warn(
             func=func,
             dim=dim,
             axis=axis,

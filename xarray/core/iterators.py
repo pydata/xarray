@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import abc
 from collections.abc import Iterator
 from typing import Callable
 
@@ -9,7 +8,7 @@ from xarray.core.treenode import Tree
 """These iterators are copied from anytree.iterators, with minor modifications."""
 
 
-class LevelOrderIter(abc.Iterator):
+class LevelOrderIter(Iterator):
     """Iterate over tree applying level-order strategy starting at `node`.
     This is the iterator used by `DataTree` to traverse nodes.
 
@@ -40,15 +39,16 @@ class LevelOrderIter(abc.Iterator):
     >>> i = DataTree(name="i", parent=g)
     >>> h = DataTree(name="h", parent=i)
     >>> print(f)
-    DataTree('f', parent=None)
-    ├── DataTree('b')
-    │   ├── DataTree('a')
-    │   └── DataTree('d')
-    │       ├── DataTree('c')
-    │       └── DataTree('e')
-    └── DataTree('g')
-        └── DataTree('i')
-            └── DataTree('h')
+    <xarray.DataTree 'f'>
+    Group: /
+    ├── Group: /b
+    │   ├── Group: /b/a
+    │   └── Group: /b/d
+    │       ├── Group: /b/d/c
+    │       └── Group: /b/d/e
+    └── Group: /g
+        └── Group: /g/i
+            └── Group: /g/i/h
     >>> [node.name for node in LevelOrderIter(f)]
     ['f', 'b', 'g', 'a', 'd', 'i', 'c', 'e', 'h']
     >>> [node.name for node in LevelOrderIter(f, maxlevel=3)]

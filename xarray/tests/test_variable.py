@@ -36,12 +36,11 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
-    has_pandas_version_two,
+    has_pandas_3,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
     requires_dask,
-    requires_pandas_version_two,
     requires_pint,
     requires_sparse,
     source_ndarray,
@@ -179,8 +178,8 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         # check type or dtype is consistent for both ndarray and Variable
         if expected_dtype is None:
             # check output type instead of array dtype
-            assert type(variable.values[0]) == type(expected_value0)
-            assert type(variable[0].values) == type(expected_value0)
+            assert type(variable.values[0]) is type(expected_value0)
+            assert type(variable[0].values) is type(expected_value0)
         elif expected_dtype is not False:
             assert variable.values[0].dtype == expected_dtype
             assert variable[0].values.dtype == expected_dtype
@@ -254,6 +253,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         assert_array_equal(x[0].data, listarray.squeeze())
         assert_array_equal(x.squeeze().data, listarray.squeeze())
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_index_and_concat_datetime(self):
         # regression test for #125
         date_range = pd.date_range("2011-09-01", periods=10)
@@ -318,12 +318,11 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         with pytest.raises(pderror, match=r"Out of bounds nanosecond"):
             self.cls(["t"], [data])
 
-    @pytest.mark.xfail(reason="pandas issue 36615")
     @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_timedelta64_valid_range(self):
         data = np.timedelta64("200000", "D")
         pderror = pd.errors.OutOfBoundsTimedelta
-        with pytest.raises(pderror, match=r"Out of bounds nanosecond"):
+        with pytest.raises(pderror, match=r"Cannot convert"):
             self.cls(["t"], [data])
 
     def test_pandas_data(self):
@@ -1576,6 +1575,20 @@ class TestVariable(VariableSubclassobjects):
             actual = variable.transpose()
             assert_identical(actual, variable)
 
+    def test_pandas_cateogrical_dtype(self):
+        data = pd.Categorical(np.arange(10, dtype="int64"))
+        v = self.cls("x", data)
+        print(v)  # should not error
+        assert pd.api.types.is_extension_array_dtype(v.dtype)
+
+    def test_pandas_cateogrical_no_chunk(self):
+        data = pd.Categorical(np.arange(10, dtype="int64"))
+        v = self.cls("x", data)
+        with pytest.raises(
+            ValueError, match=r".*was found to be a Pandas ExtensionArray.*"
+        ):
+            v.chunk((5,))
+
     def test_squeeze(self):
         v = Variable(["x", "y"], [[1]])
         assert_identical(Variable([], 1), v.squeeze())
@@ -2287,20 +2300,20 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert blocked.chunks == ((3,), (3, 1))
         assert blocked.data.name != first_dask_name
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_0d_object_array_with_list(self):
         super().test_0d_object_array_with_list()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_array_interface(self):
         # dask array does not have `argsort`
         super().test_array_interface()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_copy_index(self):
         super().test_copy_index()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     @pytest.mark.filterwarnings("ignore:elementwise comparison failed.*:FutureWarning")
     def test_eq_all_dtypes(self):
         super().test_eq_all_dtypes()
@@ -2372,6 +2385,11 @@ class TestVariableWithDask(VariableSubclassobjects):
     )
     def test_pad(self, mode, xr_arg, np_arg):
         super().test_pad(mode, xr_arg, np_arg)
+
+    def test_pandas_cateogrical_dtype(self):
+        data = pd.Categorical(np.arange(10, dtype="int64"))
+        with pytest.raises(ValueError, match="was found to be a Pandas ExtensionArray"):
+            self.cls("x", data)
 
 
 @requires_sparse
@@ -2626,12 +2644,11 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         assert np.ndarray == type(actual)
         assert np.dtype("datetime64[ns]") == actual.dtype
 
-    @requires_pandas_version_two
     def test_tz_datetime(self) -> None:
         tz = pytz.timezone("America/New_York")
         times_ns = pd.date_range("2000", periods=1, tz=tz)
 
-        times_s = times_ns.astype(pd.DatetimeTZDtype("s", tz))
+        times_s = times_ns.astype(pd.DatetimeTZDtype("s", tz))  # type: ignore[arg-type]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             actual: T_DuckArray = as_compatible_data(times_s)
@@ -2643,7 +2660,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
             warnings.simplefilter("ignore")
             actual2: T_DuckArray = as_compatible_data(series)
 
-        np.testing.assert_array_equal(actual2, series.values)
+        np.testing.assert_array_equal(actual2, np.asarray(series.values))
         assert actual2.dtype == np.dtype("datetime64[ns]")
 
     def test_full_like(self) -> None:
@@ -2919,15 +2936,15 @@ class TestNumpyCoercion:
 
 
 @pytest.mark.parametrize(
-    ("values", "warns_under_pandas_version_two"),
+    ("values", "warns"),
     [
         (np.datetime64("2000-01-01", "ns"), False),
         (np.datetime64("2000-01-01", "s"), True),
         (np.array([np.datetime64("2000-01-01", "ns")]), False),
         (np.array([np.datetime64("2000-01-01", "s")]), True),
         (pd.date_range("2000", periods=1), False),
-        (datetime(2000, 1, 1), False),
-        (np.array([datetime(2000, 1, 1)]), False),
+        (datetime(2000, 1, 1), has_pandas_3),
+        (np.array([datetime(2000, 1, 1)]), has_pandas_3),
         (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), False),
         (
             pd.Series(
@@ -2938,9 +2955,9 @@ class TestNumpyCoercion:
     ],
     ids=lambda x: f"{x}",
 )
-def test_datetime_conversion_warning(values, warns_under_pandas_version_two) -> None:
+def test_datetime_conversion_warning(values, warns) -> None:
     dims = ["time"] if isinstance(values, (np.ndarray, pd.Index, pd.Series)) else []
-    if warns_under_pandas_version_two and has_pandas_version_two:
+    if warns:
         with pytest.warns(UserWarning, match="non-nanosecond precision datetime"):
             var = Variable(dims, values)
     else:
@@ -2960,27 +2977,35 @@ def test_datetime_conversion_warning(values, warns_under_pandas_version_two) -> 
         )
 
 
-@requires_pandas_version_two
-def test_pandas_two_only_datetime_conversion_warnings() -> None:
-    # Note these tests rely on pandas features that are only present in pandas
-    # 2.0.0 and above, and so for now cannot be parametrized.
-    cases = [
-        (pd.date_range("2000", periods=1), "datetime64[s]"),
-        (pd.Series(pd.date_range("2000", periods=1)), "datetime64[s]"),
-        (
-            pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")),
-            pd.DatetimeTZDtype("s", pytz.timezone("America/New_York")),
+tz_ny = pytz.timezone("America/New_York")
+
+
+@pytest.mark.parametrize(
+    ["data", "dtype"],
+    [
+        pytest.param(pd.date_range("2000", periods=1), "datetime64[s]", id="index-sec"),
+        pytest.param(
+            pd.Series(pd.date_range("2000", periods=1)),
+            "datetime64[s]",
+            id="series-sec",
         ),
-        (
-            pd.Series(
-                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
-            ),
-            pd.DatetimeTZDtype("s", pytz.timezone("America/New_York")),
+        pytest.param(
+            pd.date_range("2000", periods=1, tz=tz_ny),
+            pd.DatetimeTZDtype("s", tz_ny),  # type: ignore[arg-type]
+            id="index-timezone",
         ),
-    ]
-    for data, dtype in cases:
-        with pytest.warns(UserWarning, match="non-nanosecond precision datetime"):
-            var = Variable(["time"], data.astype(dtype))
+        pytest.param(
+            pd.Series(pd.date_range("2000", periods=1, tz=tz_ny)),
+            pd.DatetimeTZDtype("s", tz_ny),  # type: ignore[arg-type]
+            id="series-timezone",
+        ),
+    ],
+)
+def test_pandas_two_only_datetime_conversion_warnings(
+    data: pd.DatetimeIndex | pd.Series, dtype: str | pd.DatetimeTZDtype
+) -> None:
+    with pytest.warns(UserWarning, match="non-nanosecond precision datetime"):
+        var = Variable(["time"], data.astype(dtype))  # type: ignore[arg-type]
 
     if var.dtype.kind == "M":
         assert var.dtype == np.dtype("datetime64[ns]")
@@ -2989,13 +3014,11 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
         # the case that the variable is backed by a timezone-aware
         # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
         assert isinstance(var._data, PandasIndexingAdapter)
-        assert var._data.array.dtype == pd.DatetimeTZDtype(
-            "ns", pytz.timezone("America/New_York")
-        )
+        assert var._data.array.dtype == pd.DatetimeTZDtype("ns", tz_ny)
 
 
 @pytest.mark.parametrize(
-    ("values", "warns_under_pandas_version_two"),
+    ("values", "warns"),
     [
         (np.timedelta64(10, "ns"), False),
         (np.timedelta64(10, "s"), True),
@@ -3007,9 +3030,9 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
     ],
     ids=lambda x: f"{x}",
 )
-def test_timedelta_conversion_warning(values, warns_under_pandas_version_two) -> None:
+def test_timedelta_conversion_warning(values, warns) -> None:
     dims = ["time"] if isinstance(values, (np.ndarray, pd.Index)) else []
-    if warns_under_pandas_version_two and has_pandas_version_two:
+    if warns:
         with pytest.warns(UserWarning, match="non-nanosecond precision timedelta"):
             var = Variable(dims, values)
     else:
@@ -3020,7 +3043,6 @@ def test_timedelta_conversion_warning(values, warns_under_pandas_version_two) ->
     assert var.dtype == np.dtype("timedelta64[ns]")
 
 
-@requires_pandas_version_two
 def test_pandas_two_only_timedelta_conversion_warning() -> None:
     # Note this test relies on a pandas feature that is only present in pandas
     # 2.0.0 and above, and so for now cannot be parametrized.
@@ -3031,7 +3053,6 @@ def test_pandas_two_only_timedelta_conversion_warning() -> None:
     assert var.dtype == np.dtype("timedelta64[ns]")
 
 
-@requires_pandas_version_two
 @pytest.mark.parametrize(
     ("index", "dtype"),
     [

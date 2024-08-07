@@ -27,7 +27,7 @@ dependencies:
   - pandas
   - pint>=0.22
   - pip
-  - pydap
+  # - pydap
   - pytest
   - pytest-cov
   - pytest-env

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any, Literal, Union
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -273,7 +273,7 @@ def decode_cf_variable(
             var = strings.CharacterArrayCoder().decode(var, name=name)
         var = strings.EncodedStringCoder().decode(var)
 
-    if original_dtype == object:
+    if original_dtype.kind == "O":
         var = variables.ObjectVLenStringCoder().decode(var)
         original_dtype = var.dtype
 
@@ -384,16 +384,26 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
                     bounds_encoding.setdefault("calendar", encoding["calendar"])
 
 
+T = TypeVar("T")
+
+
+def _item_or_default(obj: Mapping[Any, T] | T, key: Hashable, default: T) -> T:
+    """
+    Return item by key if obj is mapping and key is present, else return default value.
+    """
+    return obj.get(key, default) if isinstance(obj, Mapping) else obj
+
+
 def decode_cf_variables(
     variables: T_Variables,
     attributes: T_Attrs,
-    concat_characters: bool = True,
-    mask_and_scale: bool = True,
-    decode_times: bool = True,
+    concat_characters: bool | Mapping[str, bool] = True,
+    mask_and_scale: bool | Mapping[str, bool] = True,
+    decode_times: bool | Mapping[str, bool] = True,
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
-    use_cftime: bool | None = None,
-    decode_timedelta: bool | None = None,
+    use_cftime: bool | Mapping[str, bool] | None = None,
+    decode_timedelta: bool | Mapping[str, bool] | None = None,
 ) -> tuple[T_Variables, T_Attrs, set[Hashable]]:
     """
     Decode several CF encoded variables.
@@ -431,7 +441,7 @@ def decode_cf_variables(
         if k in drop_variables:
             continue
         stack_char_dim = (
-            concat_characters
+            _item_or_default(concat_characters, k, True)
             and v.dtype == "S1"
             and v.ndim > 0
             and stackable(v.dims[-1])
@@ -440,12 +450,12 @@ def decode_cf_variables(
             new_vars[k] = decode_cf_variable(
                 k,
                 v,
-                concat_characters=concat_characters,
-                mask_and_scale=mask_and_scale,
-                decode_times=decode_times,
+                concat_characters=_item_or_default(concat_characters, k, True),
+                mask_and_scale=_item_or_default(mask_and_scale, k, True),
+                decode_times=_item_or_default(decode_times, k, True),
                 stack_char_dim=stack_char_dim,
-                use_cftime=use_cftime,
-                decode_timedelta=decode_timedelta,
+                use_cftime=_item_or_default(use_cftime, k, None),
+                decode_timedelta=_item_or_default(decode_timedelta, k, None),
             )
         except Exception as e:
             raise type(e)(f"Failed to decode variable {k!r}: {e}") from e

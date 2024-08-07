@@ -1064,7 +1064,7 @@ def apply_ufunc(
     supported:
 
     >>> magnitude(3, 4)
-    5.0
+    np.float64(5.0)
     >>> magnitude(3, np.array([0, 4]))
     array([3., 5.])
     >>> magnitude(array, 0)
@@ -1142,6 +1142,8 @@ def apply_ufunc(
     dask.array.apply_gufunc
     xarray.map_blocks
 
+    Notes
+    -----
     :ref:`dask.automatic-parallelization`
         User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
 
@@ -1585,15 +1587,6 @@ def cross(
     array([-3,  6, -3])
     Dimensions without coordinates: dim_0
 
-    Vector cross-product with 2 dimensions, returns in the perpendicular
-    direction:
-
-    >>> a = xr.DataArray([1, 2])
-    >>> b = xr.DataArray([4, 5])
-    >>> xr.cross(a, b, dim="dim_0")
-    <xarray.DataArray ()> Size: 8B
-    array(-3)
-
     Vector cross-product with 3 dimensions but zeros at the last axis
     yields the same results as with 2 dimensions:
 
@@ -1603,42 +1596,6 @@ def cross(
     <xarray.DataArray (dim_0: 3)> Size: 24B
     array([ 0,  0, -3])
     Dimensions without coordinates: dim_0
-
-    One vector with dimension 2:
-
-    >>> a = xr.DataArray(
-    ...     [1, 2],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "y"])),
-    ... )
-    >>> b = xr.DataArray(
-    ...     [4, 5, 6],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
-    ... )
-    >>> xr.cross(a, b, dim="cartesian")
-    <xarray.DataArray (cartesian: 3)> Size: 24B
-    array([12, -6, -3])
-    Coordinates:
-      * cartesian  (cartesian) <U1 12B 'x' 'y' 'z'
-
-    One vector with dimension 2 but coords in other positions:
-
-    >>> a = xr.DataArray(
-    ...     [1, 2],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "z"])),
-    ... )
-    >>> b = xr.DataArray(
-    ...     [4, 5, 6],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
-    ... )
-    >>> xr.cross(a, b, dim="cartesian")
-    <xarray.DataArray (cartesian: 3)> Size: 24B
-    array([-10,   2,   5])
-    Coordinates:
-      * cartesian  (cartesian) <U1 12B 'x' 'y' 'z'
 
     Multiple vector cross-products. Note that the direction of the
     cross product vector is defined by the right-hand rule:

@@ -26,10 +26,10 @@ dependencies:
   - numpy
   - packaging
   - pandas
-  - pint>=0.22
+  # - pint>=0.22
   - pip
   - pre-commit
-  - pydap
+  # - pydap
   - pytest
   - pytest-cov
   - pytest-env

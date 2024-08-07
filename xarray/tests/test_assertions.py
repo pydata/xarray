@@ -52,11 +52,35 @@ def test_allclose_regression() -> None:
             xr.Dataset({"a": ("x", [0, 2]), "b": ("y", [0, 1])}),
             id="Dataset",
         ),
+        pytest.param(
+            xr.DataArray(np.array("a", dtype="|S1")),
+            xr.DataArray(np.array("b", dtype="|S1")),
+            id="DataArray_with_character_dtype",
+        ),
     ),
 )
 def test_assert_allclose(obj1, obj2) -> None:
     with pytest.raises(AssertionError):
         xr.testing.assert_allclose(obj1, obj2)
+    with pytest.raises(AssertionError):
+        xr.testing.assert_allclose(obj1, obj2, check_dim_order=False)
+
+
+@pytest.mark.parametrize("func", ["assert_equal", "assert_allclose"])
+def test_assert_allclose_equal_transpose(func) -> None:
+    """Transposed DataArray raises assertion unless check_dim_order=False."""
+    obj1 = xr.DataArray([[0, 1, 2], [2, 3, 4]], dims=["a", "b"])
+    obj2 = xr.DataArray([[0, 2], [1, 3], [2, 4]], dims=["b", "a"])
+    with pytest.raises(AssertionError):
+        getattr(xr.testing, func)(obj1, obj2)
+    getattr(xr.testing, func)(obj1, obj2, check_dim_order=False)
+    ds1 = obj1.to_dataset(name="varname")
+    ds1["var2"] = obj1
+    ds2 = obj1.to_dataset(name="varname")
+    ds2["var2"] = obj1.transpose()
+    with pytest.raises(AssertionError):
+        getattr(xr.testing, func)(ds1, ds2)
+    getattr(xr.testing, func)(ds1, ds2, check_dim_order=False)
 
 
 @pytest.mark.filterwarnings("error")
@@ -149,7 +173,7 @@ def test_ensure_warnings_not_elevated(func) -> None:
             warnings.warn("warning in test")
             return super().dims
 
-        def __array__(self):
+        def __array__(self, dtype=None, copy=None):
             warnings.warn("warning in test")
             return super().__array__()
 

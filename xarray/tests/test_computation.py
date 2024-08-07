@@ -118,10 +118,8 @@ def test_apply_identity() -> None:
     assert_identical(variable, apply_identity(variable))
     assert_identical(data_array, apply_identity(data_array))
     assert_identical(data_array, apply_identity(data_array.groupby("x")))
-    assert_identical(data_array, apply_identity(data_array.groupby("x", squeeze=False)))
     assert_identical(dataset, apply_identity(dataset))
     assert_identical(dataset, apply_identity(dataset.groupby("x")))
-    assert_identical(dataset, apply_identity(dataset.groupby("x", squeeze=False)))
 
 
 def add(a, b):
@@ -521,10 +519,8 @@ def test_apply_output_core_dimension() -> None:
     assert_identical(stacked_variable, stack_negative(variable))
     assert_identical(stacked_data_array, stack_negative(data_array))
     assert_identical(stacked_dataset, stack_negative(dataset))
-    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
-        assert_identical(stacked_data_array, stack_negative(data_array.groupby("x")))
-    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
-        assert_identical(stacked_dataset, stack_negative(dataset.groupby("x")))
+    assert_identical(stacked_data_array, stack_negative(data_array.groupby("x")))
+    assert_identical(stacked_dataset, stack_negative(dataset.groupby("x")))
 
     def original_and_stack_negative(obj):
         def func(x):
@@ -551,13 +547,11 @@ def test_apply_output_core_dimension() -> None:
     assert_identical(dataset, out0)
     assert_identical(stacked_dataset, out1)
 
-    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
-        out0, out1 = original_and_stack_negative(data_array.groupby("x"))
+    out0, out1 = original_and_stack_negative(data_array.groupby("x"))
     assert_identical(data_array, out0)
     assert_identical(stacked_data_array, out1)
 
-    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
-        out0, out1 = original_and_stack_negative(dataset.groupby("x"))
+    out0, out1 = original_and_stack_negative(dataset.groupby("x"))
     assert_identical(dataset, out0)
     assert_identical(stacked_dataset, out1)
 
@@ -2500,32 +2494,32 @@ def test_polyfit_polyval_integration(
         [
             xr.DataArray([1, 2, 3]),
             xr.DataArray([4, 5, 6]),
-            [1, 2, 3],
-            [4, 5, 6],
+            np.array([1, 2, 3]),
+            np.array([4, 5, 6]),
             "dim_0",
             -1,
         ],
         [
             xr.DataArray([1, 2]),
             xr.DataArray([4, 5, 6]),
-            [1, 2],
-            [4, 5, 6],
+            np.array([1, 2, 0]),
+            np.array([4, 5, 6]),
             "dim_0",
             -1,
         ],
         [
             xr.Variable(dims=["dim_0"], data=[1, 2, 3]),
             xr.Variable(dims=["dim_0"], data=[4, 5, 6]),
-            [1, 2, 3],
-            [4, 5, 6],
+            np.array([1, 2, 3]),
+            np.array([4, 5, 6]),
             "dim_0",
             -1,
         ],
         [
             xr.Variable(dims=["dim_0"], data=[1, 2]),
             xr.Variable(dims=["dim_0"], data=[4, 5, 6]),
-            [1, 2],
-            [4, 5, 6],
+            np.array([1, 2, 0]),
+            np.array([4, 5, 6]),
             "dim_0",
             -1,
         ],
@@ -2564,8 +2558,8 @@ def test_polyfit_polyval_integration(
                 dims=["cartesian"],
                 coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
             ),
-            [0, 0, 1],
-            [4, 5, 6],
+            np.array([0, 0, 1]),
+            np.array([4, 5, 6]),
             "cartesian",
             -1,
         ],
@@ -2580,8 +2574,8 @@ def test_polyfit_polyval_integration(
                 dims=["cartesian"],
                 coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
             ),
-            [1, 0, 2],
-            [4, 5, 6],
+            np.array([1, 0, 2]),
+            np.array([4, 5, 6]),
             "cartesian",
             -1,
         ],
@@ -2598,3 +2592,11 @@ def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:
 
     actual = xr.cross(a, b, dim=dim)
     xr.testing.assert_duckarray_allclose(expected, actual)
+
+
+@pytest.mark.parametrize("compute_backend", ["numbagg"], indirect=True)
+def test_complex_number_reduce(compute_backend):
+    da = xr.DataArray(np.ones((2,), dtype=np.complex64), dims=["x"])
+    # Check that xarray doesn't call into numbagg, which doesn't compile for complex
+    # numbers at the moment (but will when numba supports dynamic compilation)
+    da.min()

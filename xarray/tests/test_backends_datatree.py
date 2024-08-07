@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
+import xarray as xr
 from xarray.backends.api import open_datatree
-from xarray.datatree_.datatree.testing import assert_equal
+from xarray.core.datatree import DataTree
+from xarray.testing import assert_equal
 from xarray.tests import (
     requires_h5netcdf,
     requires_netCDF4,
@@ -13,11 +15,11 @@ from xarray.tests import (
 )
 
 if TYPE_CHECKING:
-    from xarray.backends.api import T_NetcdfEngine
+    from xarray.core.datatree_io import T_DataTreeNetcdfEngine
 
 
 class DatatreeIOBase:
-    engine: T_NetcdfEngine | None = None
+    engine: T_DataTreeNetcdfEngine | None = None
 
     def test_to_netcdf(self, tmpdir, simple_datatree):
         filepath = tmpdir / "test.nc"
@@ -26,6 +28,21 @@ class DatatreeIOBase:
 
         roundtrip_dt = open_datatree(filepath, engine=self.engine)
         assert_equal(original_dt, roundtrip_dt)
+
+    def test_to_netcdf_inherited_coords(self, tmpdir):
+        filepath = tmpdir / "test.nc"
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"a": (("x",), [1, 2])}, coords={"x": [3, 4]}),
+                "/sub": xr.Dataset({"b": (("x",), [5, 6])}),
+            }
+        )
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        roundtrip_dt = open_datatree(filepath, engine=self.engine)
+        assert_equal(original_dt, roundtrip_dt)
+        subtree = cast(DataTree, roundtrip_dt["/sub"])
+        assert "x" not in subtree.to_dataset(inherited=False).coords
 
     def test_netcdf_encoding(self, tmpdir, simple_datatree):
         filepath = tmpdir / "test.nc"
@@ -48,12 +65,12 @@ class DatatreeIOBase:
 
 @requires_netCDF4
 class TestNetCDF4DatatreeIO(DatatreeIOBase):
-    engine: T_NetcdfEngine | None = "netcdf4"
+    engine: T_DataTreeNetcdfEngine | None = "netcdf4"
 
 
 @requires_h5netcdf
 class TestH5NetCDFDatatreeIO(DatatreeIOBase):
-    engine: T_NetcdfEngine | None = "h5netcdf"
+    engine: T_DataTreeNetcdfEngine | None = "h5netcdf"
 
 
 @requires_zarr
@@ -119,3 +136,18 @@ class TestZarrDatatreeIO:
         # with default settings, to_zarr should not overwrite an existing dir
         with pytest.raises(zarr.errors.ContainsGroupError):
             simple_datatree.to_zarr(tmpdir)
+
+    def test_to_zarr_inherited_coords(self, tmpdir):
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"a": (("x",), [1, 2])}, coords={"x": [3, 4]}),
+                "/sub": xr.Dataset({"b": (("x",), [5, 6])}),
+            }
+        )
+        filepath = tmpdir / "test.zarr"
+        original_dt.to_zarr(filepath)
+
+        roundtrip_dt = open_datatree(filepath, engine="zarr")
+        assert_equal(original_dt, roundtrip_dt)
+        subtree = cast(DataTree, roundtrip_dt["/sub"])
+        assert "x" not in subtree.to_dataset(inherited=False).coords

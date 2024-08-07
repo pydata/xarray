@@ -30,12 +30,12 @@ dependencies:
   - opt_einsum
   - packaging
   - pandas
-  - pint>=0.22
+  # - pint>=0.22
   - pip
   - pooch
   - pre-commit
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
-  - pydap
+  # - pydap
   - pytest
   - pytest-cov
   - pytest-env

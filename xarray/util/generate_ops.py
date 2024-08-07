@@ -88,12 +88,10 @@ template_binop = """
         return self._binary_op(other, {func})"""
 template_binop_overload = """
     @overload{overload_type_ignore}
-    def {method}(self, other: {overload_type}) -> {overload_type}:
-        ...
+    def {method}(self, other: {overload_type}) -> {overload_type}: ...
 
     @overload
-    def {method}(self, other: {other_type}) -> {return_type}:
-        ...
+    def {method}(self, other: {other_type}) -> {return_type}: ...
 
     def {method}(self, other: {other_type}) -> {return_type} | {overload_type}:{type_ignore}
         return self._binary_op(other, {func})"""
@@ -216,6 +214,10 @@ def unops() -> list[OpsType]:
     ]
 
 
+# We use short names T_DA and T_DS to keep below 88 lines so
+# ruff does not reformat everything. When reformatting, the
+# type-ignores end up in the wrong line :/
+
 ops_info = {}
 ops_info["DatasetOpsMixin"] = (
     binops(other_type="DsCompatible") + inplace(other_type="DsCompatible") + unops()
@@ -224,12 +226,12 @@ ops_info["DataArrayOpsMixin"] = (
     binops(other_type="DaCompatible") + inplace(other_type="DaCompatible") + unops()
 )
 ops_info["VariableOpsMixin"] = (
-    binops_overload(other_type="VarCompatible", overload_type="T_DataArray")
+    binops_overload(other_type="VarCompatible", overload_type="T_DA")
     + inplace(other_type="VarCompatible", type_ignore="misc")
     + unops()
 )
 ops_info["DatasetGroupByOpsMixin"] = binops(
-    other_type="GroupByCompatible", return_type="Dataset"
+    other_type="Dataset | DataArray", return_type="Dataset"
 )
 ops_info["DataArrayGroupByOpsMixin"] = binops(
     other_type="T_Xarray", return_type="T_Xarray"
@@ -237,6 +239,7 @@ ops_info["DataArrayGroupByOpsMixin"] = binops(
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with arithmetic operators."""
+
 # This file was generated using xarray.util.generate_ops. Do not edit manually.
 
 from __future__ import annotations
@@ -248,15 +251,15 @@ from xarray.core import nputils, ops
 from xarray.core.types import (
     DaCompatible,
     DsCompatible,
-    GroupByCompatible,
     Self,
-    T_DataArray,
     T_Xarray,
     VarCompatible,
 )
 
 if TYPE_CHECKING:
-    from xarray.core.dataset import Dataset'''
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.types import T_DataArray as T_DA'''
 
 
 CLASS_PREAMBLE = """{newline}

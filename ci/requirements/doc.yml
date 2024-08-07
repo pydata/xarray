@@ -8,6 +8,7 @@ dependencies:
   - bottleneck
   - cartopy
   - cfgrib
+  - kerchunk
   - dask-core>=2022.1
   - dask-expr
   - hypothesis>=6.75.8
@@ -21,7 +22,7 @@ dependencies:
   - nbsphinx
   - netcdf4>=1.5
   - numba
-  - numpy>=1.21
+  - numpy>=2
   - packaging>=21.3
   - pandas>=1.4,!=2.1.0
   - pooch
@@ -38,9 +39,10 @@ dependencies:
   - sphinx-design
   - sphinx-inline-tabs
   - sphinx>=5.0
+  - sphinxext-opengraph
+  - sphinxext-rediraffe
   - zarr>=2.10
   - pip:
-      - sphinxext-rediraffe
-      - sphinxext-opengraph
+      - sphinxcontrib-mermaid
       # relative to this file. Needs to be editable to be accepted.
       - -e ../..
