@@ -86,7 +86,19 @@ def check_duck_array_typevar(a: duckarray[Any, _DType]) -> duckarray[Any, _DType
     if isinstance(b, _arrayfunction_or_api):
         return b
     else:
-        raise TypeError(f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi")
+
+        missing_attrs = ""
+        actual_attrs = set(dir(b))
+        for t in _arrayfunction_or_api:
+            expected_attrs = t.__protocol_attrs__
+            missing_attrs_ = expected_attrs - actual_attrs
+            if missing_attrs_:
+                missing_attrs += f"{t.__name__} - {missing_attrs_}\n"
+        raise TypeError(
+            f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi. "
+            "Missing following attrs:\n"
+            f"{missing_attrs}"
+        )
 
 
 class NamedArraySubclassobjects:
@@ -359,6 +371,12 @@ class TestNamedArray(NamedArraySubclassobjects):
         arrayapi_a: duckarray[Any, Any]  #  duckarray[Any, np.dtype[np.int64]]
         arrayapi_a = nxp.asarray([2.1, 4], dtype=nxp.int64)
         check_duck_array_typevar(arrayapi_a)
+
+    def test_pd_index_duckarray(self) -> None:
+        import pandas as pd
+
+        a: duckarray[Any, Any] = pd.Index([])
+        check_duck_array_typevar(a)
 
     def test_new_namedarray(self) -> None:
         dtype_float = np.dtype(np.float32)
