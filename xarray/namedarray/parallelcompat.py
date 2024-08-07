@@ -103,6 +103,10 @@ def guess_chunkmanager(
     """
 
     chunkmanagers = list_chunkmanagers()
+    if len(chunkmanagers) == 0:
+        raise ValueError(
+            "no chunk managers available. Try installing `dask` or a package that provides a chunk manager."
+        )
 
     if manager is None:
         if len(chunkmanagers) == 1:
