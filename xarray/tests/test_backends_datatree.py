@@ -164,7 +164,9 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         assert "/Group1" in unaligned_dict_of_datasets.keys()
         assert "/Group1/subgroup1" in unaligned_dict_of_datasets.keys()
         # Check that group name returns the correct datasets
-        assert unaligned_dict_of_datasets["/"].identical(xr.open_dataset(filepath))
+        assert unaligned_dict_of_datasets["/"].identical(
+            xr.open_dataset(filepath, group="/")
+        )
         assert unaligned_dict_of_datasets["/Group1"].identical(
             xr.open_dataset(filepath, group="Group1")
         )
