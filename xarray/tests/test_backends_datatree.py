@@ -8,7 +8,7 @@ import pytest
 import xarray as xr
 from xarray.backends.api import open_datatree, open_groups
 from xarray.core.datatree import DataTree
-from xarray.testing import assert_equal
+from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
     requires_h5netcdf,
     requires_netCDF4,
@@ -164,14 +164,16 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         assert "/Group1" in unaligned_dict_of_datasets.keys()
         assert "/Group1/subgroup1" in unaligned_dict_of_datasets.keys()
         # Check that group name returns the correct datasets
-        assert unaligned_dict_of_datasets["/"].identical(
-            xr.open_dataset(filepath, group="/")
+        assert_identical(
+            unaligned_dict_of_datasets["/"], xr.open_dataset(filepath, group="/")
         )
-        assert unaligned_dict_of_datasets["/Group1"].identical(
-            xr.open_dataset(filepath, group="Group1")
+        assert_identical(
+            unaligned_dict_of_datasets["/Group1"],
+            xr.open_dataset(filepath, group="Group1"),
         )
-        assert unaligned_dict_of_datasets["/Group1/subgroup1"].identical(
-            xr.open_dataset(filepath, group="/Group1/subgroup1")
+        assert_identical(
+            unaligned_dict_of_datasets["/Group1/subgroup1"],
+            xr.open_dataset(filepath, group="/Group1/subgroup1"),
         )
 
     def test_open_groups_to_dict(self, tmpdir):
