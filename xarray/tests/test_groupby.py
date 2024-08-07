@@ -21,6 +21,7 @@ from xarray.tests import (
     assert_identical,
     create_test_data,
     has_cftime,
+    has_dask_ge_2024_08_0,
     has_flox,
     requires_cftime,
     requires_dask,
@@ -1293,10 +1294,25 @@ class TestDataArrayGroupBy:
         assert_allclose(expected_sum_axis1, grouped.reduce(np.sum, "y"))
         assert_allclose(expected_sum_axis1, grouped.sum("y"))
 
+    @pytest.mark.parametrize(
+        "shuffle",
+        [
+            pytest.param(
+                True,
+                marks=pytest.mark.skipif(
+                    not has_dask_ge_2024_08_0, reason="dask too old"
+                ),
+            ),
+            False,
+        ],
+    )
     @pytest.mark.parametrize("method", ["sum", "mean", "median"])
-    def test_groupby_reductions(self, method) -> None:
+    def test_groupby_reductions(self, method: str, shuffle: bool) -> None:
         array = self.da
         grouped = array.groupby("abc")
+
+        if shuffle:
+            grouped.shuffle()
 
         reduction = getattr(np, method)
         expected = Dataset(
