@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib
-import sys
 import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
 from functools import lru_cache
@@ -13,10 +12,7 @@ from packaging.version import Version
 from xarray.namedarray._typing import ErrorOptionsWithWarn, _DimsLike
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 10):
-        from typing import TypeGuard
-    else:
-        from typing import TypeGuard
+    from typing import TypeGuard
 
     from numpy.typing import NDArray
 
