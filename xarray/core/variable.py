@@ -1008,7 +1008,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         size = self.sizes[dim]
         indices: list[list[int]] = [
             list(range(*idx.indices(size))) if isinstance(idx, slice) else idx
-            for idx in self._group_indices
+            for idx in indices
         ]
         array = self._data
         if is_chunked_array(array):
