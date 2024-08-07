@@ -540,7 +540,7 @@ class BackendEntrypoint:
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         **kwargs: Any,
-    ) -> MutableMapping[str, Dataset | DataArray | DataTree[Any]]:
+    ) -> MutableMapping[str, Dataset | DataArray | DataTree[Any] | None]:
         """
         Opens a dictionary mapping from group names to Datasets.
 

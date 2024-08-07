@@ -476,7 +476,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         driver=None,
         driver_kwds=None,
         **kwargs,
-    ) -> MutableMapping[str, Dataset | DataArray | DataTree[Any]]:
+    ) -> MutableMapping[str, Dataset | DataArray | DataTree[Any] | None]:
 
         from xarray.backends.api import open_dataset
         from xarray.backends.common import _iter_nc_groups

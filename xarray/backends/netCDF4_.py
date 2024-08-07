@@ -715,7 +715,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         lock=None,
         autoclose=False,
         **kwargs,
-    ) -> MutableMapping[str, Dataset | DataArray | DataTree[Any]]:
+    ) -> MutableMapping[str, Dataset | DataArray | DataTree[Any] | None]:
         from xarray.backends.api import open_dataset
         from xarray.backends.common import _iter_nc_groups
         from xarray.core.treenode import NodePath
