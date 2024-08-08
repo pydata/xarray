@@ -3,7 +3,7 @@ from __future__ import annotations
 import itertools
 import textwrap
 from collections import ChainMap
-from collections.abc import Hashable, Iterable, Iterator, Mapping
+from collections.abc import Hashable, Iterable, Iterator, Mapping, MutableMapping
 from html import escape
 from typing import (
     TYPE_CHECKING,
@@ -770,7 +770,7 @@ class DataTree(
         if data is not _default:
             self._set_node_data(ds)
 
-        self._children = children
+        self.children = children
 
     def copy(
         self: DataTree,
@@ -1067,7 +1067,7 @@ class DataTree(
     @classmethod
     def from_dict(
         cls,
-        d: dict[str, Dataset],
+        d: MutableMapping[str, Dataset | DataArray | DataTree | None],
         name: str | None = None,
     ) -> DataTree:
         """
