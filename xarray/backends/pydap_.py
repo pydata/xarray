@@ -43,7 +43,17 @@ class PydapArrayWrapper(BackendArray):
     def dtype(self):
         return self.array.dtype
 
-    def __getitem__(self, key):
+    def _oindex_get(self, key: indexing.OuterIndexer):
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem
+        )
+
+    def _vindex_get(self, key: indexing.VectorizedIndexer):
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem
+        )
+
+    def __getitem__(self, key: indexing.BasicIndexer):
         return indexing.explicit_indexing_adapter(
             key, self.shape, indexing.IndexingSupport.BASIC, self._getitem
         )
