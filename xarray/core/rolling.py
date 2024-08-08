@@ -4,8 +4,8 @@ import functools
 import itertools
 import math
 import warnings
-from collections.abc import Hashable, Iterator, Mapping
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
+from collections.abc import Callable, Hashable, Iterator, Mapping
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import numpy as np
 from packaging.version import Version

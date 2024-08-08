@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Callable
 from itertools import product
-from typing import Callable, Literal
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -978,9 +979,9 @@ def test_onOffset_month_or_quarter_or_year_end(
 def test_rollforward(calendar, offset, initial_date_args, partial_expected_date_args):
     date_type = get_date_type(calendar)
     initial = date_type(*initial_date_args)
-    if isinstance(offset, (MonthBegin, QuarterBegin, YearBegin)):
+    if isinstance(offset, MonthBegin | QuarterBegin | YearBegin):
         expected_date_args = partial_expected_date_args + (1,)
-    elif isinstance(offset, (MonthEnd, QuarterEnd, YearEnd)):
+    elif isinstance(offset, MonthEnd | QuarterEnd | YearEnd):
         reference_args = partial_expected_date_args + (1,)
         reference = date_type(*reference_args)
         expected_date_args = partial_expected_date_args + (reference.daysinmonth,)
@@ -1029,9 +1030,9 @@ def test_rollforward(calendar, offset, initial_date_args, partial_expected_date_
 def test_rollback(calendar, offset, initial_date_args, partial_expected_date_args):
     date_type = get_date_type(calendar)
     initial = date_type(*initial_date_args)
-    if isinstance(offset, (MonthBegin, QuarterBegin, YearBegin)):
+    if isinstance(offset, MonthBegin | QuarterBegin | YearBegin):
         expected_date_args = partial_expected_date_args + (1,)
-    elif isinstance(offset, (MonthEnd, QuarterEnd, YearEnd)):
+    elif isinstance(offset, MonthEnd | QuarterEnd | YearEnd):
         reference_args = partial_expected_date_args + (1,)
         reference = date_type(*reference_args)
         expected_date_args = partial_expected_date_args + (reference.daysinmonth,)

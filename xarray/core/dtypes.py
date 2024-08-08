@@ -216,7 +216,7 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
 
 
 def preprocess_scalar_types(t):
-    if isinstance(t, (str, bytes)):
+    if isinstance(t, str | bytes):
         return type(t)
     else:
         return t

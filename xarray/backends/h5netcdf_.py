@@ -109,7 +109,7 @@ class H5NetCDFStore(WritableCFDataStore):
     def __init__(self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False):
         import h5netcdf
 
-        if isinstance(manager, (h5netcdf.File, h5netcdf.Group)):
+        if isinstance(manager, h5netcdf.File | h5netcdf.Group):
             if group is None:
                 root, group = find_root_and_group(manager)
             else:
@@ -374,7 +374,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         if magic_number is not None:
             return magic_number.startswith(b"\211HDF\r\n\032\n")
 
-        if isinstance(filename_or_obj, (str, os.PathLike)):
+        if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
             return ext in {".nc", ".nc4", ".cdf"}
 

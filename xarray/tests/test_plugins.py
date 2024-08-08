@@ -1,12 +1,7 @@
 from __future__ import annotations
 
 import sys
-from importlib.metadata import EntryPoint
-
-if sys.version_info >= (3, 10):
-    from importlib.metadata import EntryPoints
-else:
-    EntryPoints = list[EntryPoint]
+from importlib.metadata import EntryPoint, EntryPoints
 from unittest import mock
 
 import pytest
@@ -288,10 +283,7 @@ def test_refresh_engines() -> None:
     EntryPointMock1.name = "test1"
     EntryPointMock1.load.return_value = DummyBackendEntrypoint1
 
-    if sys.version_info >= (3, 10):
-        return_value = EntryPoints([EntryPointMock1])
-    else:
-        return_value = {"xarray.backends": [EntryPointMock1]}
+    return_value = EntryPoints([EntryPointMock1])
 
     with mock.patch("xarray.backends.plugins.entry_points", return_value=return_value):
         list_engines.cache_clear()
@@ -303,10 +295,7 @@ def test_refresh_engines() -> None:
     EntryPointMock2.name = "test2"
     EntryPointMock2.load.return_value = DummyBackendEntrypoint2
 
-    if sys.version_info >= (3, 10):
-        return_value2 = EntryPoints([EntryPointMock2])
-    else:
-        return_value2 = {"xarray.backends": [EntryPointMock2]}
+    return_value2 = EntryPoints([EntryPointMock2])
 
     with mock.patch("xarray.backends.plugins.entry_points", return_value=return_value2):
         refresh_engines()

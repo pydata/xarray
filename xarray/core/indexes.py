@@ -443,7 +443,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
 
     if isinstance(array, pd.Index):
         index = array
-    elif isinstance(array, (DataArray, Variable)):
+    elif isinstance(array, DataArray | Variable):
         # returns the original multi-index for pandas.MultiIndex level coordinates
         index = array._to_index()
     elif isinstance(array, Index):
@@ -480,7 +480,7 @@ def _sanitize_slice_element(x):
             f"cannot use non-scalar arrays in a slice for xarray indexing: {x}"
         )
 
-    if isinstance(x, (Variable, DataArray)):
+    if isinstance(x, Variable | DataArray):
         x = x.values
 
     if isinstance(x, np.ndarray):
@@ -530,7 +530,7 @@ def _asarray_tuplesafe(values):
 
 def _is_nested_tuple(possible_tuple):
     return isinstance(possible_tuple, tuple) and any(
-        isinstance(value, (tuple, list, slice)) for value in possible_tuple
+        isinstance(value, tuple | list | slice) for value in possible_tuple
     )
 
 

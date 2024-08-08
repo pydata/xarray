@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Hashable, MutableMapping
+from collections.abc import Callable, Hashable, MutableMapping
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Union
+from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
 import pandas as pd

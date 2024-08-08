@@ -4,11 +4,10 @@ import copy
 import math
 import sys
 import warnings
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     Literal,
     TypeVar,
@@ -804,7 +803,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             )
             chunks = {}
 
-        if isinstance(chunks, (float, str, int, tuple, list)):
+        if isinstance(chunks, float | str | int | tuple | list):
             # TODO we shouldn't assume here that other chunkmanagers can handle these types
             # TODO should we call normalize_chunks here?
             pass  # dask.array.from_array can handle these directly

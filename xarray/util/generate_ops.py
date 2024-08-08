@@ -13,7 +13,6 @@ Usage:
 from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
-from typing import Optional
 
 BINOPS_EQNE = (("__eq__", "nputils.array_eq"), ("__ne__", "nputils.array_ne"))
 BINOPS_CMP = (
@@ -139,7 +138,7 @@ def _type_ignore(ignore: str) -> str:
     return f"  # type:ignore[{ignore}]" if ignore else ""
 
 
-FuncType = Sequence[tuple[Optional[str], Optional[str]]]
+FuncType = Sequence[tuple[str | None, str | None]]
 OpsType = tuple[FuncType, str, dict[str, str]]
 
 

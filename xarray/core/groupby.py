@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import copy
 import warnings
-from collections.abc import Hashable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Union
+from typing import TYPE_CHECKING, Any, Generic, Literal, Union
 
 import numpy as np
 import pandas as pd
@@ -622,7 +622,7 @@ class GroupBy(Generic[T_Xarray]):
                 # TODO: explicitly create Index here
                 coord = DataArray(coord, coords={coord_dim: coord.data})
 
-        if not isinstance(other, (Dataset, DataArray)):
+        if not isinstance(other, Dataset | DataArray):
             raise TypeError(
                 "GroupBy objects only support binary ops "
                 "when the other argument is a Dataset or "
@@ -699,7 +699,7 @@ class GroupBy(Generic[T_Xarray]):
 
         (grouper,) = self.groupers
         if (
-            isinstance(grouper.grouper, (BinGrouper, TimeResampler))
+            isinstance(grouper.grouper, BinGrouper | TimeResampler)
             and grouper.name in combined.dims
         ):
             indexers = {grouper.name: grouper.full_index}
