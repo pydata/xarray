@@ -35,6 +35,18 @@ class TestTreeCreation:
 
 
 class TestFamilyTree:
+    def test_dont_modify_parent_inplace(self):
+        # GH issue 9196
+        root = DataTree()
+        DataTree(name="child", parent=root)
+        assert root.children == {}
+
+    def test_dont_modify_children_inplace(self):
+        # GH issue 9196
+        child = DataTree()
+        DataTree(children={"child": child})
+        assert child.parent is None
+
     def test_setparent_unnamed_child_node_fails(self):
         john: DataTree = DataTree(name="john")
         with pytest.raises(ValueError, match="unnamed"):
@@ -70,7 +82,7 @@ class TestNames:
     def test_child_gets_named_on_attach(self):
         sue: DataTree = DataTree()
         mary: DataTree = DataTree(children={"Sue": sue})  # noqa
-        assert sue.name == "Sue"
+        assert mary.children["Sue"].name == "Sue"
 
 
 class TestPaths:
@@ -78,14 +90,14 @@ class TestPaths:
         sue: DataTree = DataTree()
         mary: DataTree = DataTree(children={"Sue": sue})
         john: DataTree = DataTree(children={"Mary": mary})
-        assert sue.path == "/Mary/Sue"
+        assert john.children["Mary"].children["Sue"].path == "/Mary/Sue"
         assert john.path == "/"
 
     def test_path_roundtrip(self):
         sue: DataTree = DataTree()
         mary: DataTree = DataTree(children={"Sue": sue})
         john: DataTree = DataTree(children={"Mary": mary})
-        assert john[sue.path] is sue
+        assert john["/Mary/Sue"].name == "Sue"
 
     def test_same_tree(self):
         mary: DataTree = DataTree()
