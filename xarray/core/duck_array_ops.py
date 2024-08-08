@@ -18,7 +18,6 @@ import pandas as pd
 from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
 from numpy import (  # noqa
-    around,  # noqa
     full_like,
     gradient,
     isclose,
@@ -122,37 +121,11 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
 # Requires special-casing because pandas won't automatically dispatch to dask.isnull via NEP-18
 pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd, dask_module="dask.array")
 
-# np.around has failing doctests, overwrite it so they pass:
-# https://github.com/numpy/numpy/issues/19759
-around.__doc__ = str.replace(
-    around.__doc__ or "",
-    "array([0.,  2.])",
-    "array([0., 2.])",
-)
-around.__doc__ = str.replace(
-    around.__doc__ or "",
-    "array([0.,  2.])",
-    "array([0., 2.])",
-)
-around.__doc__ = str.replace(
-    around.__doc__ or "",
-    "array([0.4,  1.6])",
-    "array([0.4, 1.6])",
-)
-around.__doc__ = str.replace(
-    around.__doc__ or "",
-    "array([0.,  2.,  2.,  4.,  4.])",
-    "array([0., 2., 2., 4., 4.])",
-)
-around.__doc__ = str.replace(
-    around.__doc__ or "",
-    (
-        '    .. [2] "How Futile are Mindless Assessments of\n'
-        '           Roundoff in Floating-Point Computation?", William Kahan,\n'
-        "           https://people.eecs.berkeley.edu/~wkahan/Mindless.pdf\n"
-    ),
-    "",
-)
+def round(array):
+    xp = get_array_namespace(array)
+    return xp.round(array)
+
+around = round
 
 
 def isnull(data):
