@@ -12,6 +12,7 @@ import inspect
 import warnings
 from functools import partial
 from importlib import import_module
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -127,7 +128,7 @@ def round(array):
     return xp.round(array)
 
 
-around = round
+around: Callable = round
 
 
 def isnull(data):
