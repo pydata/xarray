@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import sys
 from abc import abstractmethod
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
@@ -86,7 +87,29 @@ def check_duck_array_typevar(a: duckarray[Any, _DType]) -> duckarray[Any, _DType
     if isinstance(b, _arrayfunction_or_api):
         return b
     else:
-        raise TypeError(f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi")
+        missing_attrs = ""
+        actual_attrs = set(dir(b))
+        for t in _arrayfunction_or_api:
+            if sys.version_info >= (3, 13):
+                # https://github.com/python/cpython/issues/104873
+                from typing import get_protocol_members
+
+                expected_attrs = get_protocol_members(t)
+            elif sys.version_info >= (3, 12):
+                expected_attrs = t.__protocol_attrs__
+            else:
+                from typing import _get_protocol_attrs  # type: ignore[attr-defined]
+
+                expected_attrs = _get_protocol_attrs(t)
+
+            missing_attrs_ = expected_attrs - actual_attrs
+            if missing_attrs_:
+                missing_attrs += f"{t.__name__} - {missing_attrs_}\n"
+        raise TypeError(
+            f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi. "
+            "Missing following attrs:\n"
+            f"{missing_attrs}"
+        )
 
 
 class NamedArraySubclassobjects:
