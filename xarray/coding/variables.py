@@ -662,8 +662,8 @@ class NonStringCoder(VariableCoder):
                             SerializationWarning,
                             stacklevel=10,
                         )
-                    data = np.around(data)
-                data = data.astype(dtype=dtype)
+                    data = duck_array_ops.around(data)
+                data = duck_array_ops.astype(data, dtype=dtype)
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
             return variable
