@@ -13,7 +13,7 @@ import pandas as pd
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import is_chunked_array
+from xarray.namedarray.pycompat import has_chunkmanager, is_chunked_array
 
 if TYPE_CHECKING:
     T_VarTuple = tuple[tuple[Hashable, ...], Any, dict, dict]
@@ -176,7 +176,7 @@ def lazy_elemwise_func(array, func: Callable, dtype: np.typing.DTypeLike):
     -------
     Either a dask.array.Array or _ElementwiseFunctionArray.
     """
-    if is_chunked_array(array):
+    if is_chunked_array(array) and has_chunkmanager(array):
         chunkmanager = get_chunked_array_type(array)
 
         return chunkmanager.map_blocks(func, array, dtype=dtype)  # type: ignore[arg-type]

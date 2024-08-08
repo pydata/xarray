@@ -41,28 +41,6 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     def is_chunked_array(self, data: duckarray[Any, Any]) -> bool:
         return is_duck_dask_array(data)
 
-    def chunks(self, data: Any) -> _NormalizedChunks:
-        return data.chunks  # type: ignore[no-any-return]
-
-    def normalize_chunks(
-        self,
-        chunks: T_Chunks | _NormalizedChunks,
-        shape: tuple[int, ...] | None = None,
-        limit: int | None = None,
-        dtype: _DType_co | None = None,
-        previous_chunks: _NormalizedChunks | None = None,
-    ) -> Any:
-        """Called by open_dataset"""
-        from dask.array.core import normalize_chunks
-
-        return normalize_chunks(
-            chunks,
-            shape=shape,
-            limit=limit,
-            dtype=dtype,
-            previous_chunks=previous_chunks,
-        )  # type: ignore[no-untyped-call]
-
     def from_array(
         self, data: Any, chunks: T_Chunks | _NormalizedChunks, **kwargs: Any
     ) -> DaskArray | Any:

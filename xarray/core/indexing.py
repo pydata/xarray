@@ -28,7 +28,12 @@ from xarray.core.utils import (
     to_0d_array,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import array_type, integer_types, is_chunked_array
+from xarray.namedarray.pycompat import (
+    array_type,
+    has_chunkmanager,
+    integer_types,
+    is_chunked_array,
+)
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
@@ -1349,7 +1354,7 @@ def _masked_result_drop_slice(key, data: duckarray[Any, Any] | None = None):
     new_keys = []
     for k in key:
         if isinstance(k, np.ndarray):
-            if is_chunked_array(data):  # type: ignore[arg-type]
+            if is_chunked_array(data) and has_chunkmanager(data):  # type: ignore[arg-type]
                 chunkmanager = get_chunked_array_type(data)
                 new_keys.append(
                     _chunked_array_with_chunks_hint(k, chunks_hint, chunkmanager)

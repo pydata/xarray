@@ -1036,14 +1036,16 @@ def contains_only_chunked_or_numpy(obj) -> bool:
 
     Expects obj to be Dataset or DataArray"""
     from xarray.core.dataarray import DataArray
-    from xarray.namedarray.pycompat import is_chunked_array
+    from xarray.namedarray.pycompat import has_chunkmanager, is_chunked_array
 
     if isinstance(obj, DataArray):
         obj = obj._to_temp_dataset()
 
     return all(
         [
-            isinstance(var.data, np.ndarray) or is_chunked_array(var.data)
+            isinstance(var.data, np.ndarray)
+            or is_chunked_array(var.data)
+            and has_chunkmanager(var.data)
             for var in obj.variables.values()
         ]
     )

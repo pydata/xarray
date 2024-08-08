@@ -24,7 +24,7 @@ from xarray.core.types import Interp1dOptions, InterpOptions
 from xarray.core.utils import OrderedSet, is_scalar
 from xarray.core.variable import Variable, broadcast_variables
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import is_chunked_array
+from xarray.namedarray.pycompat import has_chunkmanager, is_chunked_array
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -690,7 +690,7 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
     else:
         func, kwargs = _get_interpolator_nd(method, **kwargs)
 
-    if is_chunked_array(var):
+    if is_chunked_array(var) and has_chunkmanager(var):
         chunkmanager = get_chunked_array_type(var)
 
         ndim = var.ndim

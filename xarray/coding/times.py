@@ -27,8 +27,11 @@ from xarray.core.formatting import first_n_items, format_timestamp, last_item
 from xarray.core.pdcompat import nanosecond_precision_timestamp
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
-from xarray.namedarray.parallelcompat import T_ChunkedArray, get_chunked_array_type
-from xarray.namedarray.pycompat import is_chunked_array
+from xarray.namedarray.parallelcompat import (
+    T_ChunkedArray,
+    get_chunked_array_type,
+)
+from xarray.namedarray.pycompat import has_chunkmanager, is_chunked_array
 from xarray.namedarray.utils import is_duck_dask_array
 
 try:
@@ -719,7 +722,7 @@ def encode_cf_datetime(
     cftime.date2num
     """
     dates = asarray(dates)
-    if is_chunked_array(dates):
+    if is_chunked_array(dates) and has_chunkmanager(dates):
         return _lazily_encode_cf_datetime(dates, units, calendar, dtype)
     else:
         return _eagerly_encode_cf_datetime(dates, units, calendar, dtype)
@@ -864,7 +867,7 @@ def encode_cf_timedelta(
     dtype: np.dtype | None = None,
 ) -> tuple[T_DuckArray, str]:
     timedeltas = asarray(timedeltas)
-    if is_chunked_array(timedeltas):
+    if is_chunked_array(timedeltas) and has_chunkmanager(timedeltas):
         return _lazily_encode_cf_timedelta(timedeltas, units, dtype)
     else:
         return _eagerly_encode_cf_timedelta(timedeltas, units, dtype)
