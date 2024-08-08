@@ -4,7 +4,7 @@ import logging
 import os
 import time
 import traceback
-from collections.abc import Iterable, MutableMapping
+from collections.abc import Iterable
 from glob import glob
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -19,7 +19,6 @@ from xarray.namedarray.pycompat import is_chunked_array
 if TYPE_CHECKING:
     from io import BufferedIOBase
 
-    from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
     from xarray.core.types import NestedSequence
@@ -540,7 +539,7 @@ class BackendEntrypoint:
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         **kwargs: Any,
-    ) -> MutableMapping[str, Dataset | DataArray | DataTree[Any] | None]:
+    ) -> dict[str, Dataset]:
         """
         Opens a dictionary mapping from group names to Datasets.
 

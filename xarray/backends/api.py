@@ -841,7 +841,7 @@ def open_groups(
     filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     engine: T_Engine = None,
     **kwargs,
-) -> MutableMapping[str, Dataset | DataArray | DataTree[Any] | None]:
+) -> dict[str, Dataset]:
     """
     Open and decode a file or file-like object, creating a dictionary containing one xarray Dataset for each group in the file.
     Useful for an HDF file ("netcdf4" or "h5netcdf") containing many groups that are not alignable with their parents
@@ -871,7 +871,7 @@ def open_groups(
 
     backend = plugins.get_backend(engine)
 
-    return backend.open_groups(filename_or_obj, **kwargs)
+    return backend.open_groups_as_dict(filename_or_obj, **kwargs)
 
 
 def open_mfdataset(

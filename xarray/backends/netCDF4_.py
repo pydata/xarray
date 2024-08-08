@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import os
-from collections.abc import Callable, Iterable, MutableMapping
+from collections.abc import Callable, Iterable
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
@@ -43,7 +43,6 @@ if TYPE_CHECKING:
     from io import BufferedIOBase
 
     from xarray.backends.common import AbstractDataStore
-    from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
 
@@ -692,11 +691,11 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         from xarray.core.datatree import DataTree
 
-        groups_dict = self.open_groups(filename_or_obj, **kwargs)
+        groups_dict = self.open_groups_as_dict(filename_or_obj, **kwargs)
 
         return DataTree.from_dict(groups_dict)
 
-    def open_groups(
+    def open_groups_as_dict(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         *,
@@ -715,7 +714,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         lock=None,
         autoclose=False,
         **kwargs,
-    ) -> MutableMapping[str, Dataset | DataArray | DataTree[Any] | None]:
+    ) -> dict[str, Dataset]:
         from xarray.backends.api import open_dataset
         from xarray.backends.common import _iter_nc_groups
         from xarray.core.treenode import NodePath
