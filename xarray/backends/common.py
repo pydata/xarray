@@ -132,6 +132,7 @@ def _iter_nc_groups(root, parent="/"):
     from xarray.core.treenode import NodePath
 
     parent = NodePath(parent)
+    yield str(parent)
     for path, group in root.groups.items():
         gpath = parent / path
         yield str(gpath)
