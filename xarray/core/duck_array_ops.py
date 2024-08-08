@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
+from numpy import concatenate as _concatenate
 from numpy import (  # noqa
     full_like,
     gradient,
@@ -28,7 +29,6 @@ from numpy import (  # noqa
     transpose,
     unravel_index,
 )
-from numpy import concatenate as _concatenate
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 from packaging.version import Version
 from pandas.api.types import is_extension_array_dtype
@@ -121,9 +121,11 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
 # Requires special-casing because pandas won't automatically dispatch to dask.isnull via NEP-18
 pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd, dask_module="dask.array")
 
+
 def round(array):
     xp = get_array_namespace(array)
     return xp.round(array)
+
 
 around = round
 
