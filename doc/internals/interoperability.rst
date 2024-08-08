@@ -36,7 +36,7 @@ it is entirely possible today to:
 - track the physical units of the data through computations (e.g via `pint-xarray <https://pint-xarray.readthedocs.io/en/stable/>`_),
 - query the data via custom index logic optimized for specific applications (e.g. an :py:class:`~xarray.Index` object backed by a KDTree structure),
 - attach domain-specific logic via accessor methods (e.g. to understand geographic Coordinate Reference System metadata),
-- organize hierarchical groups of xarray data in a :py:class:`~datatree.DataTree` (e.g. to treat heterogeneous simulation and observational data together during analysis).
+- organize hierarchical groups of xarray data in a :py:class:`xarray.DataTree` (e.g. to treat heterogeneous simulation and observational data together during analysis).
 
 All of these features can be provided simultaneously, using libraries compatible with the rest of the scientific python ecosystem.
 In this situation xarray would be essentially a thin wrapper acting as pure-python framework, providing a common interface and

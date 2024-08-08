@@ -5,7 +5,7 @@ Xarray developers meet bi-weekly every other Wednesday.
 
 The meeting occurs on `Zoom <https://us02web.zoom.us/j/87503265754?pwd=cEFJMzFqdTFaS3BMdkx4UkNZRk1QZz09>`__.
 
-Find the `notes for the meeting here <https://hackmd.io/fx7KNO2vTKutZeUysE-SIA/edit>`__.
+Find the `notes for the meeting here <https://hackmd.io/LFOk5e8BSnqjX3QiKWy5Mw/edit>`__.
 
 There is a :issue:`GitHub issue for changes to the meeting<4001>`.
 

@@ -12,6 +12,7 @@ from xarray.testing.assertions import (  # noqa: F401
     assert_duckarray_equal,
     assert_equal,
     assert_identical,
+    assert_isomorphic,
 )
 
 __all__ = [
@@ -21,4 +22,5 @@ __all__ = [
     "assert_duckarray_allclose",
     "assert_equal",
     "assert_identical",
+    "assert_isomorphic",
 ]
