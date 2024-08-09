@@ -517,6 +517,50 @@ class GroupBy(Generic[T_Xarray]):
             self._sizes = self._obj.isel({self._group_dim: index}).sizes
         return self._sizes
 
+    def shuffle(self) -> None:
+        """
+        Shuffle the underlying object so that all members in a group occur sequentially.
+
+        The order of appearance is not guaranteed. This method modifies the underlying Xarray
+        object in place.
+
+        Use this method first if you need to map a function that requires all members of a group
+        be in a single chunk.
+        """
+        from xarray.core.dataarray import DataArray
+        from xarray.core.dataset import Dataset
+
+        (grouper,) = self.groupers
+        dim = self._group_dim
+        was_array = isinstance(self._obj, DataArray)
+        as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
+
+        shuffled = Dataset()
+        for name, var in as_dataset._variables.items():
+            if dim not in var.dims:
+                shuffled[name] = var
+                continue
+            shuffled[name] = var._shuffle(indices=list(self._group_indices), dim=dim)
+
+        # Replace self._group_indices with slices
+        slices = []
+        start = 0
+        for idxr in self._group_indices:
+            if TYPE_CHECKING:
+                assert not isinstance(idxr, slice)
+            slices.append(slice(start, start + len(idxr)))
+            start += len(idxr)
+
+        # TODO: we have now broken the invariant
+        # self._group_indices ≠ self.groupers[0].group_indices
+        self._group_indices = tuple(slices)
+        if was_array:
+            if TYPE_CHECKING:
+                assert isinstance(self._obj, DataArray)
+            self._obj = self._obj._from_temp_dataset(shuffled)
+        else:
+            self._obj = shuffled
+
     def map(
         self,
         func: Callable,

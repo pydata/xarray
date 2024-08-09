@@ -364,6 +364,11 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         """
         raise NotImplementedError()
 
+    def shuffle(
+        self, x: T_ChunkedArray, indexer: list[list[int]], axis: int
+    ) -> T_ChunkedArray:
+        raise NotImplementedError()
+
     @property
     def array_api(self) -> Any:
         """
