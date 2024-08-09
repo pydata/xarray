@@ -187,7 +187,6 @@ def encode_cf_variable(
         times.CFTimedeltaCoder(),
         variables.CFScaleOffsetCoder(),
         variables.CFMaskCoder(),
-        variables.UnsignedIntegerCoder(),
         variables.NativeEnumCoder(),
         variables.NonStringCoder(),
         variables.DefaultFillvalueCoder(),
@@ -279,7 +278,6 @@ def decode_cf_variable(
 
     if mask_and_scale:
         for coder in [
-            variables.UnsignedIntegerCoder(),
             variables.CFMaskCoder(),
             variables.CFScaleOffsetCoder(),
         ]:
