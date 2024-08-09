@@ -770,7 +770,7 @@ class DataTree(
         if data is not _default:
             self._set_node_data(ds)
 
-        self._children = children
+        self.children = children
 
     def copy(
         self: DataTree,
