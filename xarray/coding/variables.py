@@ -662,7 +662,7 @@ class NonStringCoder(VariableCoder):
                             SerializationWarning,
                             stacklevel=10,
                         )
-                    data = duck_array_ops.around(data)
+                    data = duck_array_ops.round(data)
                 data = duck_array_ops.astype(data, dtype=dtype)
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
