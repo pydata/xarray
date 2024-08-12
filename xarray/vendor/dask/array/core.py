@@ -32,8 +32,7 @@ def blockdims_from_blockshape(shape, chunks):
         raise TypeError("Must supply shape= keyword argument")
     if np.isnan(sum(shape)) or np.isnan(sum(chunks)):
         raise ValueError(
-            "Array chunk sizes are unknown. shape: %s, chunks: %s%s"
-            % (shape, chunks, unknown_chunk_message)
+            f"Array chunk sizes are unknown. shape: {shape}, chunks: {chunks}{unknown_chunk_message}"
         )
     if not all(map(is_integer, chunks)):
         raise ValueError("chunks can only contain integers.")
@@ -157,7 +156,7 @@ def normalize_chunks(chunks, shape=None, limit=None, dtype=None, previous_chunks
     if shape and len(chunks) != len(shape):
         raise ValueError(
             "Chunks and shape must be of the same length/dimension. "
-            "Got chunks=%s, shape=%s" % (chunks, shape)
+            f"Got chunks={chunks}, shape={shape}"
         )
     if -1 in chunks or None in chunks:
         chunks = tuple(s if c == -1 or c is None else c for c, s in zip(chunks, shape))
@@ -172,7 +171,7 @@ def normalize_chunks(chunks, shape=None, limit=None, dtype=None, previous_chunks
             elif parsed != limit:
                 raise ValueError(
                     "Only one consistent value of limit or chunk is allowed."
-                    "Used %s != %s" % (parsed, limit)
+                    f"Used {parsed} != {limit}"
                 )
     # Substitute byte limits with 'auto' now that limit is set.
     chunks = tuple("auto" if isinstance(c, str) and c != "auto" else c for c in chunks)
@@ -213,8 +212,7 @@ def normalize_chunks(chunks, shape=None, limit=None, dtype=None, previous_chunks
             for c, s in zip(map(sum, chunks), shape)
         ):
             raise ValueError(
-                "Chunks do not add up to shape. "
-                "Got chunks=%s, shape=%s" % (chunks, shape)
+                "Chunks do not add up to shape. " f"Got chunks={chunks}, shape={shape}"
             )
 
     return tuple(
@@ -292,7 +290,7 @@ def auto_chunks(chunks, shape, limit, dtype, previous_chunks=None):
         ):
             raise ValueError(
                 "Can not perform automatic rechunking with unknown "
-                "(nan) chunk sizes.%s" % unknown_chunk_message
+                f"(nan) chunk sizes.{unknown_chunk_message}"
             )
 
     limit = max(1, limit)

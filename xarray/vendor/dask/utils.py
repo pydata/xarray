@@ -60,12 +60,12 @@ def parse_bytes(s: Union[float, str]) -> int:
     try:
         n = float(prefix)
     except ValueError as e:
-        raise ValueError("Could not interpret '%s' as a number" % prefix) from e
+        raise ValueError(f"Could not interpret '{prefix}' as a number") from e
 
     try:
         multiplier = byte_sizes[suffix.lower()]
     except KeyError as e:
-        raise ValueError("Could not interpret '%s' as a byte unit" % suffix) from e
+        raise ValueError(f"Could not interpret '{suffix}' as a byte unit") from e
 
     result = n * multiplier
     return int(result)
