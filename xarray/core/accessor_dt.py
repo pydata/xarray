@@ -6,11 +6,12 @@ from typing import TYPE_CHECKING, Generic
 import numpy as np
 import pandas as pd
 
+from xarray.coding.calendar_ops import _decimal_year
 from xarray.coding.times import infer_calendar_name
-from xarray.coding.calendar_ops import _days_in_year, _datetime_to_decimal_year
 from xarray.core import duck_array_ops
 from xarray.core.common import (
     _contains_datetime_like_objects,
+    full_like,
     is_np_datetime_like,
     is_np_timedelta_like,
 )
@@ -537,22 +538,19 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     @property
     def days_in_year(self) -> T_DataArray:
         """The number of days in the year."""
-        obj_type = type(self._obj)
-        result = _days_in_year(self.year, self.calendar)
-        return obj_type(
-            result, name="days_in_year", coords=self._obj.coords,
-            dims=self._obj.dims, attrs=self._obj.attrs
-        )
+        if self.calendar == "360_day":
+            result = full_like(self.year, 360)
+        else:
+            result = self.is_leap_year.astype(int) + 365
+        newvar = self._obj.variable.copy(data=result, deep=False)
+        return self._obj._replace(newvar, name="days_in_year")
 
     @property
     def decimal_year(self) -> T_DataArray:
         """Convert the dates as a fractional year."""
-        obj_type = type(self._obj)
-        result = _datetime_to_decimal_year(self._obj)
-        return obj_type(
-            result, name="decimal_year", coords=self._obj.coords,
-            dims=self._obj.dims, attrs=self._obj.attrs
-        )
+        result = _decimal_year(self._obj)
+        newvar = self._obj.variable.copy(data=result, deep=False)
+        return self._obj._replace(newvar, name="decimal_year")
 
 
 class TimedeltaAccessor(TimeAccessor[T_DataArray]):

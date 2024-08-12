@@ -3,15 +3,18 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from xarray.core.common import full_like
-from xarray.core.computation import where
 from xarray.coding.cftime_offsets import date_range_like, get_date_type
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.times import (
     _should_cftime_be_used,
     convert_times,
 )
-from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_like
+from xarray.core.common import (
+    _contains_datetime_like_objects,
+    full_like,
+    is_np_datetime_like,
+)
+from xarray.core.computation import apply_ufunc
 
 try:
     import cftime
@@ -25,37 +28,6 @@ _CALENDARS_WITHOUT_YEAR_ZERO = [
     "julian",
     "standard",
 ]
-
-
-def _leap_gregorian(years):
-    # A year is a leap year if either (i) it is divisible by 4 but not by 100 or (ii) it is divisible by 400
-    return ((years % 4 == 0) & (years % 100 != 0)) | (years % 400 == 0)
-
-
-def _leap_julian(years):
-    # A year is a leap year if it is divisible by 4, even if it is also divisible by 100
-    return years % 4 == 0
-
-
-def _days_in_year(years, calendar):
-    """The number of days in each year for the corresponding calendar."""
-    if calendar in ['standard', 'gregorian']:
-        return 365 + where(years < 1582, _leap_julian(years), _leap_gregorian(years)) * 1
-    if calendar == 'proleptic_gregorian':
-        return 365 + _leap_gregorian(years) * 1
-    if calendar == 'julian':
-        return 365 + _leap_julian(years) * 1
-    if calendar in ['noleap', '365_day']:
-        const = 365
-    elif calendar in ['all_leap', '366_day']:
-        const = 366
-    elif calendar == '360_day':
-        const = 360
-    else:
-        raise ValueError(f'Calendar {calendar} not recognized.')
-    if isinstance(years, (float, int)):
-        return const
-    return full_like(years, const)
 
 
 def convert_calendar(
@@ -261,6 +233,18 @@ def convert_calendar(
     return out
 
 
+def _is_leap_year(years, calendar):
+    func = np.vectorize(cftime.is_leap_year)
+    return func(years, calendar=calendar)
+
+
+def _days_in_year(years, calendar):
+    """The number of days in the year according to given calendar."""
+    if calendar == "360_day":
+        return full_like(years, 360)
+    return _is_leap_year(years, calendar).astype(int) + 365
+
+
 def _interpolate_day_of_year(times, target_calendar):
     """Returns the nearest day in the target calendar of the corresponding "decimal year" in the source calendar."""
     source_calendar = times.dt.calendar
@@ -320,33 +304,49 @@ def _convert_to_new_calendar_with_new_day_of_year(
         return np.nan
 
 
-def _datetime_to_decimal_year(times, dim="time", calendar=None):
-    """Convert a datetime DataArray to decimal years according to its calendar or the given one.
+def _yearstart_cftime(year, date_class):
+    return date_class(year, 1, 1)
+
+
+def _yearstart_np(year, dtype):
+    return np.datetime64(int(year) - 1970, "Y").astype(dtype)
+
+
+def _yearstart(times):
+    if times.dtype == "O":
+        return apply_ufunc(
+            _yearstart_cftime,
+            times.dt.year,
+            kwargs={"date_class": get_date_type(times.dt.calendar, True)},
+            vectorize=True,
+            dask="parallelized",
+        )
+    return apply_ufunc(
+        _yearstart_np,
+        times.dt.year,
+        kwargs={"dtype": times.dtype},
+        vectorize=True,
+        dask="parallelized",
+    )
+
+
+def _decimal_year(times):
+    """Convert a datetime DataArray to decimal years according to its calendar.
 
     The decimal year of a timestamp is its year plus its sub-year component
     converted to the fraction of its year.
     Ex: '2000-03-01 12:00' is 2000.1653 in a standard calendar,
       2000.16301 in a "noleap" or 2000.16806 in a "360_day".
     """
-    from xarray.core.dataarray import DataArray
-
-    if calendar is None:
-        calendar = times.dt.calendar
-
-    if is_np_datetime_like(times.dtype):
-        times = times.copy(data=convert_times(times.values, get_date_type("proleptic_gregorian")))
-
-    def _make_index(time):
-        year = int(time.dt.year[0])
-        doys = cftime.date2num(time, f"days since {year:04d}-01-01", calendar=calendar)
-        return DataArray(
-            year + doys / _days_in_year(year, calendar),
-            dims=(dim,),
-            coords=time.coords,
-            name=dim,
+    years = times.dt.year
+    deltas = times - _yearstart(times)
+    # astype on the data to avoid warning about timedelta64[D] being automatically converted to ns in Variable constructor.
+    days_in_years = deltas.copy(
+        data=times.dt.days_in_year.data.astype("timedelta64[D]").astype(
+            "timedelta64[ns]"
         )
-
-    return times.groupby(f"{dim}.year").map(_make_index)
+    )
+    return years + deltas / days_in_years
 
 
 def interp_calendar(source, target, dim="time"):
@@ -389,9 +389,7 @@ def interp_calendar(source, target, dim="time"):
             f"Both 'source.{dim}' and 'target' must contain datetime objects."
         )
 
-    source_calendar = source[dim].dt.calendar
     target_calendar = target.dt.calendar
-
     if (
         source[dim].time.dt.year == 0
     ).any() and target_calendar in _CALENDARS_WITHOUT_YEAR_ZERO:
@@ -400,8 +398,8 @@ def interp_calendar(source, target, dim="time"):
         )
 
     out = source.copy()
-    out[dim] = _datetime_to_decimal_year(source[dim], dim=dim, calendar=source_calendar)
-    target_idx = _datetime_to_decimal_year(target, dim=dim, calendar=target_calendar)
+    out[dim] = _decimal_year(source[dim])
+    target_idx = _decimal_year(target)
     out = out.interp(**{dim: target_idx})
     out[dim] = target
     return out
