@@ -12,8 +12,8 @@ from packaging.version import Version
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core.groupby import _consolidate_slices
-from xarray.core.groupers import BinGrouper, EncodedGroups, Grouper, UniqueGrouper
 from xarray.core.types import InterpOptions
+from xarray.groupers import BinGrouper, EncodedGroups, Grouper, UniqueGrouper
 from xarray.tests import (
     InaccessibleArray,
     assert_allclose,
@@ -22,6 +22,7 @@ from xarray.tests import (
     create_test_data,
     has_cftime,
     has_flox,
+    requires_cftime,
     requires_dask,
     requires_flox,
     requires_scipy,
@@ -2501,6 +2502,23 @@ def test_default_flox_method() -> None:
         assert kwargs["method"] == "cohorts"
     else:
         assert "method" not in kwargs
+
+
+@requires_cftime
+@pytest.mark.filterwarnings("ignore")
+def test_cftime_resample_gh_9108():
+    import cftime
+
+    ds = Dataset(
+        {"pr": ("time", np.random.random((10,)))},
+        coords={"time": xr.date_range("0001-01-01", periods=10, freq="D")},
+    )
+    actual = ds.resample(time="ME").mean()
+    expected = ds.mean("time").expand_dims(
+        time=[cftime.DatetimeGregorian(1, 1, 31, 0, 0, 0, 0, has_year_zero=False)]
+    )
+    assert actual.time.data[0].has_year_zero == ds.time.data[0].has_year_zero
+    assert_equal(actual, expected)
 
 
 def test_custom_grouper() -> None:

@@ -139,7 +139,6 @@ if TYPE_CHECKING:
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
-    from xarray.core.groupers import Grouper, Resampler
     from xarray.core.merge import CoercibleMapping, CoercibleValue, _MergeResult
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
@@ -167,6 +166,7 @@ if TYPE_CHECKING:
         T_Xarray,
     )
     from xarray.core.weighted import DatasetWeighted
+    from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
@@ -2710,7 +2710,7 @@ class Dataset(
         dask.array.from_array
         """
         from xarray.core.dataarray import DataArray
-        from xarray.core.groupers import TimeResampler
+        from xarray.groupers import TimeResampler
 
         if chunks is None and not chunks_kwargs:
             warnings.warn(
@@ -10371,7 +10371,7 @@ class Dataset(
             ResolvedGrouper,
             _validate_groupby_squeeze,
         )
-        from xarray.core.groupers import UniqueGrouper
+        from xarray.groupers import UniqueGrouper
 
         _validate_groupby_squeeze(squeeze)
 
@@ -10474,7 +10474,7 @@ class Dataset(
             ResolvedGrouper,
             _validate_groupby_squeeze,
         )
-        from xarray.core.groupers import BinGrouper
+        from xarray.groupers import BinGrouper
 
         _validate_groupby_squeeze(squeeze)
         grouper = BinGrouper(

@@ -1102,9 +1102,14 @@ class DataTree(
         else:
             obj = cls(name=name, data=root_data, parent=None, children=None)
 
+        def depth(item) -> int:
+            pathstr, _ = item
+            return len(NodePath(pathstr).parts)
+
         if d:
             # Populate tree with children determined from data_objects mapping
-            for path, data in d.items():
+            # Sort keys by depth so as to insert nodes from root first (see GH issue #9276)
+            for path, data in sorted(d.items(), key=depth):
                 # Create and set new node
                 node_name = NodePath(path).name
                 if isinstance(data, DataTree):
@@ -1546,7 +1551,12 @@ class DataTree(
             ``dask.delayed.Delayed`` object that can be computed later.
             Currently, ``compute=False`` is not supported.
         kwargs :
-            Addional keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
+            Additional keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
+
+        Note
+        ----
+            Due to file format specifications the on-disk root group name
+            is always ``"/"`` overriding any given ``DataTree`` root node name.
         """
         from xarray.core.datatree_io import _datatree_to_netcdf
 
@@ -1602,6 +1612,11 @@ class DataTree(
             supported.
         kwargs :
             Additional keyword arguments to be passed to ``xarray.Dataset.to_zarr``
+
+        Note
+        ----
+            Due to file format specifications the on-disk root group name
+            is always ``"/"`` overriding any given ``DataTree`` root node name.
         """
         from xarray.core.datatree_io import _datatree_to_zarr
 
