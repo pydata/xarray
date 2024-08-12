@@ -111,6 +111,7 @@ Dataset contents
    Dataset.drop_duplicates
    Dataset.drop_dims
    Dataset.drop_encoding
+   Dataset.drop_attrs
    Dataset.set_coords
    Dataset.reset_coords
    Dataset.convert_calendar
@@ -306,6 +307,7 @@ DataArray contents
    DataArray.drop_indexes
    DataArray.drop_duplicates
    DataArray.drop_encoding
+   DataArray.drop_attrs
    DataArray.reset_coords
    DataArray.copy
    DataArray.convert_calendar
@@ -803,6 +805,18 @@ DataArray
    DataArrayGroupBy.dims
    DataArrayGroupBy.groups
 
+Grouper Objects
+---------------
+
+.. currentmodule:: xarray
+
+.. autosummary::
+   :toctree: generated/
+
+   groupers.BinGrouper
+   groupers.UniqueGrouper
+   groupers.TimeResampler
+
 
 Rolling objects
 ===============
@@ -1028,17 +1042,20 @@ DataArray
 Accessors
 =========
 
-.. currentmodule:: xarray
+.. currentmodule:: xarray.core
 
 .. autosummary::
    :toctree: generated/
 
-   core.accessor_dt.DatetimeAccessor
-   core.accessor_dt.TimedeltaAccessor
-   core.accessor_str.StringAccessor
+   accessor_dt.DatetimeAccessor
+   accessor_dt.TimedeltaAccessor
+   accessor_str.StringAccessor
+
 
 Custom Indexes
 ==============
+.. currentmodule:: xarray
+
 .. autosummary::
    :toctree: generated/
 
