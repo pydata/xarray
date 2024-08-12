@@ -2,9 +2,9 @@ import collections
 
 
 def frequencies(seq):
-    """ Find number of occurrences of each value in seq
+    """Find number of occurrences of each value in seq
 
-    >>> frequencies(['cat', 'cat', 'ox', 'pig', 'pig', 'cat'])  #doctest: +SKIP
+    >>> frequencies(["cat", "cat", "ox", "pig", "pig", "cat"])  # doctest: +SKIP
     {'cat': 3, 'ox': 1, 'pig': 2}
 
     See Also:

@@ -5,8 +5,8 @@ from numbers import Number
 
 import numpy as np
 
-from xarray.vendor.toolz.itertoolz import frequencies
 from xarray.vendor.dask.utils import is_integer, parse_bytes
+from xarray.vendor.toolz.itertoolz import frequencies
 
 unknown_chunk_message = (
     "\n\n"
@@ -16,6 +16,7 @@ unknown_chunk_message = (
     "   x.compute_chunk_sizes()  # for Dask Array `x`\n"
     "   ddf.to_dask_array(lengths=True)  # for Dask DataFrame `ddf`"
 )
+
 
 def blockdims_from_blockshape(shape, chunks):
     """
@@ -116,13 +117,13 @@ def normalize_chunks(chunks, shape=None, limit=None, dtype=None, previous_chunks
     anywhere an integer can be used.  See array chunking documentation for more
     information.
 
-    >>> normalize_chunks(("auto",), shape=(20,), limit=5, dtype='uint8')
+    >>> normalize_chunks(("auto",), shape=(20,), limit=5, dtype="uint8")
     ((5, 5, 5, 5),)
 
     You can also use byte sizes (see :func:`dask.utils.parse_bytes`) in place of
     "auto" to ask for a particular size
 
-    >>> normalize_chunks("1kiB", shape=(2000,), dtype='float32')
+    >>> normalize_chunks("1kiB", shape=(2000,), dtype="float32")
     ((256, 256, 256, 256, 256, 256, 256, 208),)
 
     Respects null dimensions
@@ -185,9 +186,11 @@ def normalize_chunks(chunks, shape=None, limit=None, dtype=None, previous_chunks
     if chunks and shape is not None:
         chunks = sum(
             (
-                blockdims_from_blockshape((s,), (c,))
-                if not isinstance(c, (tuple, list))
-                else (c,)
+                (
+                    blockdims_from_blockshape((s,), (c,))
+                    if not isinstance(c, (tuple, list))
+                    else (c,)
+                )
                 for s, c in zip(shape, chunks)
             ),
             (),
@@ -267,7 +270,7 @@ def auto_chunks(chunks, shape, limit, dtype, previous_chunks=None):
         return tuple(chunks)
 
     if limit is None:
-        limit = "128MiB" # config.get("array.chunk-size")
+        limit = "128MiB"  # config.get("array.chunk-size")
     if isinstance(limit, str):
         limit = parse_bytes(limit)
 

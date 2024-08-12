@@ -7,7 +7,7 @@ def is_integer(i) -> bool:
     True
     >>> is_integer(42.0)
     True
-    >>> is_integer('abc')
+    >>> is_integer("abc")
     False
     """
     return isinstance(i, Integral) or (isinstance(i, float) and i.is_integer())
@@ -17,27 +17,27 @@ def parse_bytes(s: float | str) -> int:
     """Parse byte string to numbers
 
     >>> from dask.utils import parse_bytes
-    >>> parse_bytes('100')
+    >>> parse_bytes("100")
     100
-    >>> parse_bytes('100 MB')
+    >>> parse_bytes("100 MB")
     100000000
-    >>> parse_bytes('100M')
+    >>> parse_bytes("100M")
     100000000
-    >>> parse_bytes('5kB')
+    >>> parse_bytes("5kB")
     5000
-    >>> parse_bytes('5.4 kB')
+    >>> parse_bytes("5.4 kB")
     5400
-    >>> parse_bytes('1kiB')
+    >>> parse_bytes("1kiB")
     1024
-    >>> parse_bytes('1e6')
+    >>> parse_bytes("1e6")
     1000000
-    >>> parse_bytes('1e6 kB')
+    >>> parse_bytes("1e6 kB")
     1000000000
-    >>> parse_bytes('MB')
+    >>> parse_bytes("MB")
     1000000
     >>> parse_bytes(123)
     123
-    >>> parse_bytes('5 foos')
+    >>> parse_bytes("5 foos")
     Traceback (most recent call last):
         ...
     ValueError: Could not interpret 'foos' as a byte unit

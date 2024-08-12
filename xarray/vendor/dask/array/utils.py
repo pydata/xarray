@@ -1,8 +1,7 @@
 import numbers
+
 import numpy
-
 from packaging.version import Version
-
 
 if Version(numpy.__version__).release >= (2, 0):
     from numpy.exceptions import AxisError
