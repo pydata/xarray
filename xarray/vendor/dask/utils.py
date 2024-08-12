@@ -1,4 +1,5 @@
 from numbers import Integral
+from typing import Union
 
 
 def is_integer(i) -> bool:
@@ -13,7 +14,7 @@ def is_integer(i) -> bool:
     return isinstance(i, Integral) or (isinstance(i, float) and i.is_integer())
 
 
-def parse_bytes(s: float | str) -> int:
+def parse_bytes(s: Union[float, str]) -> int:
     """Parse byte string to numbers
 
     >>> from dask.utils import parse_bytes
