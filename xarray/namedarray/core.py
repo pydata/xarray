@@ -811,9 +811,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         data_old = self._data
         if is_chunked_array(data_old):
+            cast(_chunkedarray, data_old)
             old_chunks = data_old.chunks
 
-            normalized_chunks = normalize_chunks_to_tuples(
+            normalized_chunks = normalize_chunks_to_tuples(  # type: ignore[arg-type]
                 chunks,
                 self.dims,
                 data_old.shape,
@@ -840,7 +841,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[assignment]
 
             # will fallback to one chunk per axis as previous_chunks is not supplied
-            normalized_chunks = normalize_chunks_to_tuples(
+            normalized_chunks = normalize_chunks_to_tuples(  # type: ignore[arg-type]
                 chunks, self.dims, ndata.shape, ndata.dtype
             )
 
