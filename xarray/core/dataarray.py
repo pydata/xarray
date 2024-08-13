@@ -7228,7 +7228,7 @@ class DataArray(
             User guide describing :py:func:`~xarray.DataArray.coarsen`
 
         :ref:`compute.coarsen`
-            User guide on block arrgragation :py:func:`~xarray.DataArray.coarsen`
+            User guide on block aggregation :py:func:`~xarray.DataArray.coarsen`
 
         :doc:`xarray-tutorial:fundamentals/03.3_windowed`
             Tutorial on windowed computation using :py:func:`~xarray.DataArray.coarsen`
