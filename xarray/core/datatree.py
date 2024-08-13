@@ -3,7 +3,7 @@ from __future__ import annotations
 import itertools
 import textwrap
 from collections import ChainMap
-from collections.abc import Hashable, Iterable, Iterator, Mapping, MutableMapping
+from collections.abc import Hashable, Iterable, Iterator, Mapping
 from html import escape
 from typing import (
     TYPE_CHECKING,
@@ -1067,7 +1067,7 @@ class DataTree(
     @classmethod
     def from_dict(
         cls,
-        d: MutableMapping[str, Dataset | DataArray | DataTree | None],
+        d: Mapping[str, Dataset | DataArray | DataTree | None],
         name: str | None = None,
     ) -> DataTree:
         """

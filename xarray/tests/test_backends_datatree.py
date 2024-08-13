@@ -73,7 +73,7 @@ class DatatreeIOBase:
 class TestNetCDF4DatatreeIO(DatatreeIOBase):
     engine: T_DataTreeNetcdfEngine | None = "netcdf4"
 
-    def test_open_datatree(self, tmpdir):
+    def test_open_datatree(self, tmpdir) -> None:
         """Create a test netCDF4 file with this unaligned structure:
         Group: /
         │   Dimensions:        (lat: 1, lon: 2)
@@ -116,7 +116,7 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         with pytest.raises(ValueError):
             open_datatree(filepath)
 
-    def test_open_groups(self, tmpdir):
+    def test_open_groups(self, tmpdir) -> None:
         """Test `open_groups` with netCDF4 file with the same unaligned structure:
         Group: /
         │   Dimensions:        (lat: 1, lon: 2)
@@ -176,7 +176,7 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
             xr.open_dataset(filepath, group="/Group1/subgroup1"),
         )
 
-    def test_open_groups_to_dict(self, tmpdir):
+    def test_open_groups_to_dict(self, tmpdir) -> None:
         """Create a an aligned netCDF4 with the following structure to test `open_groups`
         and `DataTree.from_dict`.
         Group: /
