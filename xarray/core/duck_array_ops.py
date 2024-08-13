@@ -10,9 +10,9 @@ import contextlib
 import datetime
 import inspect
 import warnings
+from collections.abc import Callable
 from functools import partial
 from importlib import import_module
-from typing import Callable
 
 import numpy as np
 import pandas as pd
