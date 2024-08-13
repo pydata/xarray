@@ -13,7 +13,6 @@ from typing import (
     Literal,
     NoReturn,
     Union,
-    cast,
     overload,
 )
 
@@ -1096,7 +1095,7 @@ class DataTree(
         """
 
         # First create the root node
-        d_cast = cast(dict, d)
+        d_cast = dict(d)
         root_data = d_cast.pop("/", None)
         if isinstance(root_data, DataTree):
             obj = root_data.copy()
