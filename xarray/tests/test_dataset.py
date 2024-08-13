@@ -6584,9 +6584,29 @@ class TestDataset:
             ds.var1.polyfit("dim2", 10, full=True)
             assert len(ws) == 1
 
-    def test_pad(self) -> None:
+    @pytest.mark.parametrize(
+        ["constant_values", "expected"],
+        [
+            pytest.param(42, {"var1": 42}, id="numeric"),
+            pytest.param((42, 43), {"var1": (42, 43)}, id="tuple"),
+            pytest.param(
+                {"dim2": (42, 43)}, {"var1": (42, 43), "var2": (42, 43)}, id="per dim"
+            ),
+            pytest.param(
+                {"var1": 42, "var2": (42, 43)},
+                {"var1": 42, "var2": (42, 43)},
+                id="per var",
+            ),
+            pytest.param(
+                {"var1": 42, "dim2": (42, 43)},
+                {"var1": 42, "var2": (42, 43)},
+                id="mixed",
+            ),
+        ],
+    )
+    def test_pad(self, constant_values, expected) -> None:
         ds = create_test_data(seed=1)
-        padded = ds.pad(dim2=(1, 1), constant_values=42)
+        padded = ds.pad(dim2=(1, 1), constant_values=constant_values)
 
         assert padded["dim2"].shape == (11,)
         assert padded["var1"].shape == (8, 11)
@@ -6594,7 +6614,11 @@ class TestDataset:
         assert padded["var3"].shape == (10, 8)
         assert dict(padded.sizes) == {"dim1": 8, "dim2": 11, "dim3": 10, "time": 20}
 
-        np.testing.assert_equal(padded["var1"].isel(dim2=[0, -1]).data, 42)
+        for var, expected_value in expected.items():
+            np.testing.assert_equal(
+                np.unique(padded[var].isel(dim2=[0, -1]).data), expected_value
+            )
+        # np.testing.assert_equal(padded["var1"].isel(dim2=[0, -1]).data, 42)
         np.testing.assert_equal(padded["dim2"][[0, -1]].data, np.nan)
 
     @pytest.mark.parametrize(
