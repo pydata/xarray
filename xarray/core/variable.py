@@ -1006,18 +1006,20 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def _shuffle(self, indices: list[slice | list[int]], dim: Hashable) -> Self:
         size = self.sizes[dim]
-        indices: list[list[int]] = [
+        no_slices: list[list[int]] = [
             list(range(*idx.indices(size))) if isinstance(idx, slice) else idx
             for idx in indices
         ]
         array = self._data
         if is_chunked_array(array):
             chunkmanager = get_chunked_array_type(array)
-            return chunkmanager.shuffle(
-                array, indexer=indices, axis=self.get_axis_num(dim)
+            return self._replace(
+                data=chunkmanager.shuffle(
+                    array, indexer=no_slices, axis=self.get_axis_num(dim)
+                )
             )
         else:
-            return self.isel({dim: np.concatenate(indices)})
+            return self.isel({dim: np.concatenate(no_slices)})
 
     def isel(
         self,

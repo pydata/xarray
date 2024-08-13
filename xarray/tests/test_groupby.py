@@ -23,6 +23,7 @@ from xarray.tests import (
     has_cftime,
     has_dask_ge_2024_08_0,
     has_flox,
+    raise_if_dask_computes,
     requires_cftime,
     requires_dask,
     requires_flox,
@@ -1294,26 +1295,19 @@ class TestDataArrayGroupBy:
         assert_allclose(expected_sum_axis1, grouped.reduce(np.sum, "y"))
         assert_allclose(expected_sum_axis1, grouped.sum("y"))
 
-    @pytest.mark.parametrize(
-        "shuffle",
-        [
-            pytest.param(
-                True,
-                marks=pytest.mark.skipif(
-                    not has_dask_ge_2024_08_0, reason="dask too old"
-                ),
-            ),
-            False,
-        ],
-    )
+    @pytest.mark.parametrize("use_flox", [True, False])
+    @pytest.mark.parametrize("shuffle", [True, False])
+    @pytest.mark.parametrize("chunk", [True, False])
     @pytest.mark.parametrize("method", ["sum", "mean", "median"])
-    def test_groupby_reductions(self, method: str, shuffle: bool) -> None:
+    def test_groupby_reductions(
+        self, use_flox: bool, method: str, shuffle: bool, chunk: bool
+    ) -> None:
+        if shuffle and chunk and not has_dask_ge_2024_08_0:
+            pytest.skip()
+
         array = self.da
-        grouped = array.groupby("abc")
-
-        if shuffle:
-            grouped.shuffle()
-
+        if chunk:
+            array.data = array.chunk({"y": 5}).data
         reduction = getattr(np, method)
         expected = Dataset(
             {
@@ -1331,14 +1325,14 @@ class TestDataArrayGroupBy:
             }
         )["foo"]
 
-        with xr.set_options(use_flox=False):
-            actual_legacy = getattr(grouped, method)(dim="y")
+        with raise_if_dask_computes():
+            grouped = array.groupby("abc")
+            if shuffle:
+                grouped = grouped.shuffle()
 
-        with xr.set_options(use_flox=True):
-            actual_npg = getattr(grouped, method)(dim="y")
-
-        assert_allclose(expected, actual_legacy)
-        assert_allclose(expected, actual_npg)
+            with xr.set_options(use_flox=use_flox):
+                actual = getattr(grouped, method)(dim="y")
+        assert_allclose(expected, actual)
 
     def test_groupby_count(self) -> None:
         array = DataArray(

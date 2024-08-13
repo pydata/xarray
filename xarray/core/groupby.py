@@ -4,7 +4,7 @@ import copy
 import warnings
 from collections.abc import Hashable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Union
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Self, Union
 
 import numpy as np
 import pandas as pd
@@ -517,12 +517,11 @@ class GroupBy(Generic[T_Xarray]):
             self._sizes = self._obj.isel({self._group_dim: index}).sizes
         return self._sizes
 
-    def shuffle(self) -> None:
+    def shuffle(self) -> Self:
         """
         Shuffle the underlying object so that all members in a group occur sequentially.
 
-        The order of appearance is not guaranteed. This method modifies the underlying Xarray
-        object in place.
+        The order of appearance is not guaranteed.
 
         Use this method first if you need to map a function that requires all members of a group
         be in a single chunk.
@@ -536,30 +535,19 @@ class GroupBy(Generic[T_Xarray]):
         as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
 
         shuffled = Dataset()
+        if grouper.name not in as_dataset._variables:
+            as_dataset.coords[grouper.name] = grouper.group1d
         for name, var in as_dataset._variables.items():
             if dim not in var.dims:
                 shuffled[name] = var
                 continue
             shuffled[name] = var._shuffle(indices=list(self._group_indices), dim=dim)
-
-        # Replace self._group_indices with slices
-        slices = []
-        start = 0
-        for idxr in self._group_indices:
-            if TYPE_CHECKING:
-                assert not isinstance(idxr, slice)
-            slices.append(slice(start, start + len(idxr)))
-            start += len(idxr)
-
-        # TODO: we have now broken the invariant
-        # self._group_indices ≠ self.groupers[0].group_indices
-        self._group_indices = tuple(slices)
-        if was_array:
-            if TYPE_CHECKING:
-                assert isinstance(self._obj, DataArray)
-            self._obj = self._obj._from_temp_dataset(shuffled)
-        else:
-            self._obj = shuffled
+        shuffled = self._maybe_unstack(shuffled)
+        new_obj = self._obj._from_temp_dataset(shuffled) if was_array else shuffled
+        return new_obj.groupby(
+            {grouper.name: grouper.grouper.reset()},
+            restore_coord_dims=self._restore_coord_dims,
+        )
 
     def map(
         self,

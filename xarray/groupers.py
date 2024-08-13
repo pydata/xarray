@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Literal, cast
+from typing import Any, Literal, Self, cast
 
 import numpy as np
 import pandas as pd
@@ -90,6 +90,13 @@ class Grouper(ABC):
         """
         pass
 
+    @abstractmethod
+    def reset(self) -> Self:
+        """
+        Creates a new version of this Grouper clearing any caches.
+        """
+        pass
+
 
 class Resampler(Grouper):
     """
@@ -113,6 +120,9 @@ class UniqueGrouper(Grouper):
         if self._group_as_index is None:
             self._group_as_index = self.group.to_index()
         return self._group_as_index
+
+    def reset(self) -> Self:
+        return type(self)()
 
     def factorize(self, group1d: T_Group) -> EncodedGroups:
         self.group = group1d
@@ -221,6 +231,16 @@ class BinGrouper(Grouper):
     include_lowest: bool = False
     duplicates: Literal["raise", "drop"] = "raise"
 
+    def reset(self) -> Self:
+        return type(self)(
+            bins=self.bins,
+            right=self.right,
+            labels=self.labels,
+            precision=self.precision,
+            include_lowest=self.include_lowest,
+            duplicates=self.duplicates,
+        )
+
     def __post_init__(self) -> None:
         if duck_array_ops.isnull(self.bins).all():
             raise ValueError("All bin edges are NaN.")
@@ -301,6 +321,15 @@ class TimeResampler(Resampler):
 
     index_grouper: CFTimeGrouper | pd.Grouper = field(init=False, repr=False)
     group_as_index: pd.Index = field(init=False, repr=False)
+
+    def reset(self) -> Self:
+        return type(self)(
+            freq=self.freq,
+            closed=self.closed,
+            label=self.label,
+            origin=self.origin,
+            offset=self.offset,
+        )
 
     def _init_properties(self, group: T_Group) -> None:
         from xarray import CFTimeIndex
