@@ -63,7 +63,7 @@ class CachingFileManager(FileManager):
     FileManager.close(), which ensures that closed files are removed from the
     cache as well.
 
-    Example usage:
+    Example usage::
 
         manager = FileManager(open, 'example.txt', mode='w')
         f = manager.acquire()
@@ -71,7 +71,7 @@ class CachingFileManager(FileManager):
         manager.close()  # ensures file is closed
 
     Note that as long as previous files are still cached, acquiring a file
-    multiple times from the same FileManager is essentially free:
+    multiple times from the same FileManager is essentially free::
 
         f1 = manager.acquire()
         f2 = manager.acquire()

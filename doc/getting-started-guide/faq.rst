@@ -352,9 +352,9 @@ Some packages may have additional functionality beyond what is shown here. You c
 How does xarray handle missing values?
 --------------------------------------
 
-**xarray can handle missing values using ``np.NaN``**
+**xarray can handle missing values using ``np.nan``**
 
-- ``np.NaN`` is  used to represent missing values in labeled arrays and datasets. It is a commonly used standard for representing missing or undefined numerical data in scientific computing. ``np.NaN`` is a constant value in NumPy that represents "Not a Number" or missing values.
+- ``np.nan`` is  used to represent missing values in labeled arrays and datasets. It is a commonly used standard for representing missing or undefined numerical data in scientific computing. ``np.nan`` is a constant value in NumPy that represents "Not a Number" or missing values.
 
 - Most of xarray's computation methods are designed to automatically handle missing values appropriately.
 

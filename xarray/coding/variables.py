@@ -516,9 +516,22 @@ class UnsignedIntegerCoder(VariableCoder):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
 
             pop_to(encoding, attrs, "_Unsigned")
-            signed_dtype = np.dtype(f"i{data.dtype.itemsize}")
+            # we need the on-disk type here
+            # trying to get it from encoding, resort to an int with the same precision as data.dtype if not available
+            signed_dtype = np.dtype(encoding.get("dtype", f"i{data.dtype.itemsize}"))
             if "_FillValue" in attrs:
-                new_fill = signed_dtype.type(attrs["_FillValue"])
+                try:
+                    # user provided the on-disk signed fill
+                    new_fill = signed_dtype.type(attrs["_FillValue"])
+                except OverflowError:
+                    # user provided the in-memory unsigned fill, convert to signed type
+                    unsigned_dtype = np.dtype(f"u{signed_dtype.itemsize}")
+                    # use view here to prevent OverflowError
+                    new_fill = (
+                        np.array(attrs["_FillValue"], dtype=unsigned_dtype)
+                        .view(signed_dtype)
+                        .item()
+                    )
                 attrs["_FillValue"] = new_fill
             data = duck_array_ops.astype(duck_array_ops.around(data), signed_dtype)
 
@@ -535,10 +548,11 @@ class UnsignedIntegerCoder(VariableCoder):
                 if unsigned == "true":
                     unsigned_dtype = np.dtype(f"u{data.dtype.itemsize}")
                     transform = partial(np.asarray, dtype=unsigned_dtype)
-                    data = lazy_elemwise_func(data, transform, unsigned_dtype)
                     if "_FillValue" in attrs:
-                        new_fill = unsigned_dtype.type(attrs["_FillValue"])
-                        attrs["_FillValue"] = new_fill
+                        new_fill = np.array(attrs["_FillValue"], dtype=data.dtype)
+                        # use view here to prevent OverflowError
+                        attrs["_FillValue"] = new_fill.view(unsigned_dtype).item()
+                    data = lazy_elemwise_func(data, transform, unsigned_dtype)
             elif data.dtype.kind == "u":
                 if unsigned == "false":
                     signed_dtype = np.dtype(f"i{data.dtype.itemsize}")
@@ -648,8 +662,8 @@ class NonStringCoder(VariableCoder):
                             SerializationWarning,
                             stacklevel=10,
                         )
-                    data = np.around(data)
-                data = data.astype(dtype=dtype)
+                    data = duck_array_ops.round(data)
+                data = duck_array_ops.astype(data, dtype=dtype)
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
             return variable
@@ -663,7 +677,7 @@ class ObjectVLenStringCoder(VariableCoder):
         raise NotImplementedError
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if variable.dtype == object and variable.encoding.get("dtype", False) == str:
+        if variable.dtype.kind == "O" and variable.encoding.get("dtype", False) is str:
             variable = variable.astype(variable.encoding["dtype"])
             return variable
         else:

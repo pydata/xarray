@@ -87,6 +87,7 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 [tool.mypy]
 enable_error_code = "redundant-self"
 exclude = [
+  'build',
   'xarray/util/generate_.*\.py',
   'xarray/datatree_/doc/.*\.py',
 ]
@@ -110,24 +111,19 @@ module = [
   "cloudpickle.*",
   "cubed.*",
   "cupy.*",
-  "dask.types.*",
   "fsspec.*",
   "h5netcdf.*",
   "h5py.*",
   "iris.*",
-  "matplotlib.*",
   "mpl_toolkits.*",
   "nc_time_axis.*",
-  "numbagg.*",
   "netCDF4.*",
   "netcdftime.*",
   "opt_einsum.*",
-  "pandas.*",
   "pint.*",
   "pooch.*",
   "pyarrow.*",
   "pydap.*",
-  "pytest.*",
   "scipy.*",
   "seaborn.*",
   "setuptools",
@@ -329,8 +325,7 @@ filterwarnings = [
   "default:the `pandas.MultiIndex` object:FutureWarning:xarray.tests.test_variable",
   "default:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
   "default:Duplicate dimension names present:UserWarning:xarray.namedarray.core",
-  "default:::xarray.tests.test_strategies",
-  # TODO: remove once we know how to deal with a changed signature in protocols
+  "default:::xarray.tests.test_strategies", # TODO: remove once we know how to deal with a changed signature in protocols
   "ignore:__array__ implementation doesn't accept a copy keyword, so passing copy=False failed.",
 ]
 

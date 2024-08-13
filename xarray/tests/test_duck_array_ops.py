@@ -157,7 +157,7 @@ class TestOps:
         assert 1 == count(np.datetime64("2000-01-01"))
 
     def test_where_type_promotion(self):
-        result = where([True, False], [1, 2], ["a", "b"])
+        result = where(np.array([True, False]), np.array([1, 2]), np.array(["a", "b"]))
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
         result = where([True, False], np.array([1, 2], np.float32), np.nan)
@@ -214,7 +214,7 @@ class TestOps:
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
     def test_concatenate_type_promotion(self):
-        result = concatenate([[1], ["b"]])
+        result = concatenate([np.array([1]), np.array(["b"])])
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
     @pytest.mark.filterwarnings("error")
@@ -347,7 +347,7 @@ def construct_dataarray(dim_num, dtype, contains_nan, dask):
         array = rng.randint(0, 10, size=shapes).astype(dtype)
     elif np.issubdtype(dtype, np.bool_):
         array = rng.randint(0, 1, size=shapes).astype(dtype)
-    elif dtype == str:
+    elif dtype is str:
         array = rng.choice(["a", "b", "c", "d"], size=shapes)
     else:
         raise ValueError

@@ -693,3 +693,7 @@
 
    coding.times.CFTimedeltaCoder
    coding.times.CFDatetimeCoder
+
+   groupers.Grouper
+   groupers.Resampler
+   groupers.EncodedGroups
