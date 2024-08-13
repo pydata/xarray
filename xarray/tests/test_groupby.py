@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import operator
 import warnings
+from typing import Literal
 from unittest import mock
 
 import numpy as np
@@ -584,7 +585,12 @@ def test_groupby_repr_datetime(obj) -> None:
 
 @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
-def test_groupby_drops_nans() -> None:
+@pytest.mark.parametrize("shuffle", [True, False])
+@pytest.mark.parametrize("chunk", [dict(lat=1), dict(lat=2, lon=2), False])
+def test_groupby_drops_nans(shuffle: bool, chunk: Literal[False] | dict) -> None:
+    xr.set_options(use_flox=False)  # TODO: remove
+    if shuffle and chunk and not has_dask_ge_2024_08_0:
+        pytest.skip()
     # GH2383
     # nan in 2D data variable (requires stacking)
     ds = xr.Dataset(
@@ -599,13 +605,17 @@ def test_groupby_drops_nans() -> None:
     ds["id"].values[3, 0] = np.nan
     ds["id"].values[-1, -1] = np.nan
 
+    if chunk:
+        ds = ds.chunk(chunk)
     grouped = ds.groupby(ds.id)
+    if shuffle:
+        grouped = grouped.shuffle()
 
     # non reduction operation
     expected1 = ds.copy()
-    expected1.variable.values[0, 0, :] = np.nan
-    expected1.variable.values[-1, -1, :] = np.nan
-    expected1.variable.values[3, 0, :] = np.nan
+    expected1.variable.data[0, 0, :] = np.nan
+    expected1.variable.data[-1, -1, :] = np.nan
+    expected1.variable.data[3, 0, :] = np.nan
     actual1 = grouped.map(lambda x: x).transpose(*ds.variable.dims)
     assert_identical(actual1, expected1)
 

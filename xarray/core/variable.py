@@ -1004,22 +1004,18 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         new = self.copy(deep=False)
         return new.load(**kwargs)
 
-    def _shuffle(self, indices: list[slice | list[int]], dim: Hashable) -> Self:
-        size = self.sizes[dim]
-        no_slices: list[list[int]] = [
-            list(range(*idx.indices(size))) if isinstance(idx, slice) else idx
-            for idx in indices
-        ]
+    def _shuffle(self, indices: list[list[int]], dim: Hashable) -> Self:
         array = self._data
         if is_chunked_array(array):
             chunkmanager = get_chunked_array_type(array)
             return self._replace(
                 data=chunkmanager.shuffle(
-                    array, indexer=no_slices, axis=self.get_axis_num(dim)
+                    array, indexer=indices, axis=self.get_axis_num(dim)
                 )
             )
         else:
-            return self.isel({dim: np.concatenate(no_slices)})
+            assert False, "this should be unreachable"
+            return self.isel({dim: np.concatenate(indices)})
 
     def isel(
         self,
