@@ -245,6 +245,7 @@ class TestUpdate:
         dt.update({"foo": xr.DataArray(0), "a": DataTree()})
         expected = DataTree.from_dict({"/": xr.Dataset({"foo": 0}), "a": None})
         assert_equal(dt, expected)
+        assert dt.groups == ("/", "/a")
 
     def test_update_new_named_dataarray(self):
         da = xr.DataArray(name="temp", data=[0, 50])

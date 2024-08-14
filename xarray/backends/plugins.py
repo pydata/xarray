@@ -193,7 +193,7 @@ def get_backend(engine: str | type[BackendEntrypoint]) -> BackendEntrypoint:
         engines = list_engines()
         if engine not in engines:
             raise ValueError(
-                f"unrecognized engine {engine} must be one of: {list(engines)}"
+                f"unrecognized engine {engine} must be one of your download engines: {list(engines)}"
                 "To install additional dependencies, see:\n"
                 "https://docs.xarray.dev/en/stable/user-guide/io.html \n"
                 "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html"

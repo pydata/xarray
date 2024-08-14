@@ -132,6 +132,7 @@ def _iter_nc_groups(root, parent="/"):
     from xarray.core.treenode import NodePath
 
     parent = NodePath(parent)
+    yield str(parent)
     for path, group in root.groups.items():
         gpath = parent / path
         yield str(gpath)
@@ -531,6 +532,22 @@ class BackendEntrypoint:
     ) -> DataTree:
         """
         Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
+        """
+
+        raise NotImplementedError()
+
+    def open_groups_as_dict(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        **kwargs: Any,
+    ) -> dict[str, Dataset]:
+        """
+        Opens a dictionary mapping from group names to Datasets.
+
+        Called by :py:func:`~xarray.open_groups`.
+        This function exists to provide a universal way to open all groups in a file,
+        before applying any additional consistency checks or requirements necessary
+        to create a `DataTree` object (typically done using :py:meth:`~xarray.DataTree.from_dict`).
         """
 
         raise NotImplementedError()
