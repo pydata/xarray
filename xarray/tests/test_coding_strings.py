@@ -7,9 +7,7 @@ import pytest
 
 from xarray import Variable
 from xarray.coding import strings
-from xarray.core import indexing
 from xarray.tests import (
-    IndexerMaker,
     assert_array_equal,
     assert_identical,
     requires_dask,
@@ -150,10 +148,9 @@ def test_StackedBytesArray() -> None:
     assert len(actual) == len(expected)
     assert_array_equal(expected, actual)
 
-    B = IndexerMaker(indexing.BasicIndexer)
-    assert_array_equal(expected[:1], actual[B[:1]])
+    assert_array_equal(expected[:1], actual[(slice(1),)])
     with pytest.raises(IndexError):
-        actual[B[:, :2]]
+        actual[slice(None), slice(2)]
 
 
 def test_StackedBytesArray_scalar() -> None:
@@ -168,10 +165,8 @@ def test_StackedBytesArray_scalar() -> None:
     with pytest.raises(TypeError):
         len(actual)
     np.testing.assert_array_equal(expected, actual)
-
-    B = IndexerMaker(indexing.BasicIndexer)
     with pytest.raises(IndexError):
-        actual[B[:2]]
+        actual[(slice(2),)]
 
 
 def test_StackedBytesArray_vectorized_indexing() -> None:
@@ -179,9 +174,7 @@ def test_StackedBytesArray_vectorized_indexing() -> None:
     stacked = strings.StackedBytesArray(array)
     expected = np.array([[b"abc", b"def"], [b"def", b"abc"]])
 
-    V = IndexerMaker(indexing.VectorizedIndexer)
-    indexer = V[np.array([[0, 1], [1, 0]])]
-    actual = stacked.vindex[indexer]
+    actual = stacked.vindex[(np.array([[0, 1], [1, 0]]),)]
     assert_array_equal(actual, expected)
 
 
