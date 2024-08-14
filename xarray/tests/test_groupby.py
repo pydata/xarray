@@ -22,6 +22,7 @@ from xarray.tests import (
     assert_identical,
     create_test_data,
     has_cftime,
+    has_dask,
     has_dask_ge_2024_08_0,
     has_flox,
     raise_if_dask_computes,
@@ -586,7 +587,18 @@ def test_groupby_repr_datetime(obj) -> None:
 @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
 @pytest.mark.parametrize("shuffle", [True, False])
-@pytest.mark.parametrize("chunk", [dict(lat=1), dict(lat=2, lon=2), False])
+@pytest.mark.parametrize(
+    "chunk",
+    [
+        pytest.param(
+            dict(lat=1), marks=pytest.mark.skipif(not has_dask, reason="no dask")
+        ),
+        pytest.param(
+            dict(lat=2, lon=2), marks=pytest.mark.skipif(not has_dask, reason="no dask")
+        ),
+        False,
+    ],
+)
 def test_groupby_drops_nans(shuffle: bool, chunk: Literal[False] | dict) -> None:
     xr.set_options(use_flox=False)  # TODO: remove
     if shuffle and chunk and not has_dask_ge_2024_08_0:
@@ -744,7 +756,6 @@ def test_groupby_none_group_name() -> None:
 
 
 def test_groupby_getitem(dataset) -> None:
-
     assert_identical(dataset.sel(x=["a"]), dataset.groupby("x")["a"])
     assert_identical(dataset.sel(z=[1]), dataset.groupby("z")[1])
     assert_identical(dataset.foo.sel(x=["a"]), dataset.foo.groupby("x")["a"])
@@ -1307,7 +1318,15 @@ class TestDataArrayGroupBy:
 
     @pytest.mark.parametrize("use_flox", [True, False])
     @pytest.mark.parametrize("shuffle", [True, False])
-    @pytest.mark.parametrize("chunk", [True, False])
+    @pytest.mark.parametrize(
+        "chunk",
+        [
+            pytest.param(
+                True, marks=pytest.mark.skipif(not has_dask, reason="no dask")
+            ),
+            False,
+        ],
+    )
     @pytest.mark.parametrize("method", ["sum", "mean", "median"])
     def test_groupby_reductions(
         self, use_flox: bool, method: str, shuffle: bool, chunk: bool
