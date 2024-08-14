@@ -11,15 +11,7 @@ from collections.abc import (
     Mapping,
 )
 from html import escape
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Literal,
-    NoReturn,
-    Union,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Generic, Literal, NoReturn, Union, overload
 
 from xarray.core import utils
 from xarray.core.alignment import align
@@ -1112,10 +1104,10 @@ class DataTree(
             pathstr, _ = item
             return len(NodePath(pathstr).parts)
 
-        if d:
+        if d_cast:
             # Populate tree with children determined from data_objects mapping
             # Sort keys by depth so as to insert nodes from root first (see GH issue #9276)
-            for path, data in sorted(d.items(), key=depth):
+            for path, data in sorted(d_cast.items(), key=depth):
                 # Create and set new node
                 node_name = NodePath(path).name
                 if isinstance(data, DataTree):
