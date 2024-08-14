@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Callable, Generic, cast
+from collections.abc import Callable, Sequence
+from typing import Generic, cast
 
 import numpy as np
 import pandas as pd

@@ -566,7 +566,7 @@ class CFTimeIndex(pd.Index):
         if isinstance(freq, timedelta):
             return self + periods * freq
 
-        if isinstance(freq, (str, BaseCFTimeOffset)):
+        if isinstance(freq, str | BaseCFTimeOffset):
             from xarray.coding.cftime_offsets import to_offset
 
             return self + periods * to_offset(freq)

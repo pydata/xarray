@@ -181,11 +181,11 @@ def format_timedelta(t, timedelta_format=None):
 
 def format_item(x, timedelta_format=None, quote_strings=True):
     """Returns a succinct summary of an object as a string"""
-    if isinstance(x, (np.datetime64, datetime)):
+    if isinstance(x, np.datetime64 | datetime):
         return format_timestamp(x)
-    if isinstance(x, (np.timedelta64, timedelta)):
+    if isinstance(x, np.timedelta64 | timedelta):
         return format_timedelta(x, timedelta_format=timedelta_format)
-    elif isinstance(x, (str, bytes)):
+    elif isinstance(x, str | bytes):
         if hasattr(x, "dtype"):
             x = x.item()
         return repr(x) if quote_strings else x

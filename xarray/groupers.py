@@ -66,7 +66,7 @@ class EncodedGroups:
             raise ValueError("Please set a name on the array you are grouping by.")
         assert isinstance(self.full_index, pd.Index)
         assert (
-            isinstance(self.unique_coord, (Variable, _DummyGroup))
+            isinstance(self.unique_coord, Variable | _DummyGroup)
             or self.unique_coord is None
         )
 
