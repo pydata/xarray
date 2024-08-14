@@ -261,4 +261,6 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             raise ValueError(
                 "This method is very inefficient on dask<2024.08.1. Please upgrade."
             )
-        return dask.array.shuffle(x, indexer, axis, chunks=chunks)
+        if chunks is not None:
+            raise NotImplementedError
+        return dask.array.shuffle(x, indexer, axis, chunks=None)
