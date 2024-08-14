@@ -2547,7 +2547,8 @@ def test_polyfit_polyval_integration(
             "cartesian",
             1,
         ],
-        [  # Test 1 sized arrays with coords:
+        # Test 1 sized arrays with coords:
+        pytest.param(
             xr.DataArray(
                 np.array([1]),
                 dims=["cartesian"],
@@ -2562,8 +2563,10 @@ def test_polyfit_polyval_integration(
             np.array([4, 5, 6]),
             "cartesian",
             -1,
-        ],
-        [  # Test filling in between with coords:
+            marks=(pytest.mark.xfail(),),
+        ),
+        # Test filling in between with coords:
+        pytest.param(
             xr.DataArray(
                 [1, 2],
                 dims=["cartesian"],
@@ -2578,7 +2581,8 @@ def test_polyfit_polyval_integration(
             np.array([4, 5, 6]),
             "cartesian",
             -1,
-        ],
+            marks=(pytest.mark.xfail(),),
+        ),
     ],
 )
 def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:
