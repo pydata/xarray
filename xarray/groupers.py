@@ -7,7 +7,6 @@ to integer codes (one per group).
 from __future__ import annotations
 
 import datetime
-import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Literal, cast
@@ -15,18 +14,13 @@ from typing import Any, Literal, cast
 import numpy as np
 import pandas as pd
 
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
 from xarray.coding.cftime_offsets import _new_to_legacy_freq
 from xarray.core import duck_array_ops
 from xarray.core.dataarray import DataArray
 from xarray.core.groupby import T_Group, _DummyGroup
 from xarray.core.indexes import safe_cast_to_index
 from xarray.core.resample_cftime import CFTimeGrouper
-from xarray.core.types import Bins, DatetimeLike, GroupIndices, SideOptions
+from xarray.core.types import Bins, DatetimeLike, GroupIndices, Self, SideOptions
 from xarray.core.variable import Variable
 
 __all__ = [
