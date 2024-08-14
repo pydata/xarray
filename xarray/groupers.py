@@ -7,12 +7,18 @@ to integer codes (one per group).
 from __future__ import annotations
 
 import datetime
+import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Literal, Self, cast
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 from xarray.coding.cftime_offsets import _new_to_legacy_freq
 from xarray.core import duck_array_ops
