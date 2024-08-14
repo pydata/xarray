@@ -23,7 +23,7 @@ from xarray.core.indexes import Index, filter_indexes_from_coords
 from xarray.core.merge import merge_attrs, merge_coordinates_without_align
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import Dims, T_DataArray
-from xarray.core.utils import is_dict_like, is_duck_dask_array, is_scalar, parse_dims
+from xarray.core.utils import is_dict_like, is_scalar, parse_dims
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import has_chunkmanager, is_chunked_array
@@ -1693,11 +1693,11 @@ def cross(
             if a.sizes[dim] < b.sizes[dim]:
                 a = a.pad({dim: (0, 1)}, constant_values=0)
                 # TODO: Should pad or apply_ufunc handle correct chunking?
-                a = a.chunk({dim: -1}) if is_duck_dask_array(a.data) else a
+                a = a.chunk({dim: -1}) if is_chunked_array(a.data) else a
             else:
                 b = b.pad({dim: (0, 1)}, constant_values=0)
                 # TODO: Should pad or apply_ufunc handle correct chunking?
-                b = b.chunk({dim: -1}) if is_duck_dask_array(b.data) else b
+                b = b.chunk({dim: -1}) if is_chunked_array(b.data) else b
         else:
             raise ValueError(
                 f"{dim!r} on {'a' if a.sizes[dim] == 1 else 'b'} is incompatible:"
