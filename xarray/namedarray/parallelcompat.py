@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Sequence
 from importlib.metadata import EntryPoint, entry_points
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Callable, Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
