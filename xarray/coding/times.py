@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import warnings
-from collections.abc import Hashable
+from collections.abc import Callable, Hashable
 from datetime import datetime, timedelta
 from functools import partial
 from typing import Callable, Literal, Union, cast, overload

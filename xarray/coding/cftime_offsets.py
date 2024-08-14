@@ -220,7 +220,7 @@ class Tick(BaseCFTimeOffset):
         raise ValueError("Could not convert to integer offset at any resolution")
 
     def __mul__(self, other: int | float) -> Tick:
-        if not isinstance(other, (int, float)):
+        if not isinstance(other, int | float):
             return NotImplemented
         if isinstance(other, float):
             n = other * self.n
@@ -805,7 +805,7 @@ def to_cftime_datetime(date_str_or_date, calendar=None):
         return date
     elif isinstance(date_str_or_date, cftime.datetime):
         return date_str_or_date
-    elif isinstance(date_str_or_date, (datetime, pd.Timestamp)):
+    elif isinstance(date_str_or_date, datetime | pd.Timestamp):
         return cftime.DatetimeProlepticGregorian(*date_str_or_date.timetuple())
     else:
         raise TypeError(
@@ -1409,7 +1409,7 @@ def date_range_like(source, calendar, use_cftime=None):
     from xarray.coding.frequencies import infer_freq
     from xarray.core.dataarray import DataArray
 
-    if not isinstance(source, (pd.DatetimeIndex, CFTimeIndex)) and (
+    if not isinstance(source, pd.DatetimeIndex | CFTimeIndex) and (
         isinstance(source, DataArray)
         and (source.ndim != 1)
         or not _contains_datetime_like_objects(source.variable)
@@ -1458,7 +1458,7 @@ def date_range_like(source, calendar, use_cftime=None):
 
     # For the cases where the source ends on the end of the month, we expect the same in the new calendar.
     if source_end.day == source_end.daysinmonth and isinstance(
-        freq_as_offset, (YearEnd, QuarterEnd, MonthEnd, Day)
+        freq_as_offset, YearEnd | QuarterEnd | MonthEnd | Day
     ):
         end = end.replace(day=end.daysinmonth)
 

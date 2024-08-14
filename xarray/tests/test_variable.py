@@ -2956,7 +2956,7 @@ class TestNumpyCoercion:
     ids=lambda x: f"{x}",
 )
 def test_datetime_conversion_warning(values, warns) -> None:
-    dims = ["time"] if isinstance(values, (np.ndarray, pd.Index, pd.Series)) else []
+    dims = ["time"] if isinstance(values, np.ndarray | pd.Index | pd.Series) else []
     if warns:
         with pytest.warns(UserWarning, match="non-nanosecond precision datetime"):
             var = Variable(dims, values)
@@ -3031,7 +3031,7 @@ def test_pandas_two_only_datetime_conversion_warnings(
     ids=lambda x: f"{x}",
 )
 def test_timedelta_conversion_warning(values, warns) -> None:
-    dims = ["time"] if isinstance(values, (np.ndarray, pd.Index)) else []
+    dims = ["time"] if isinstance(values, np.ndarray | pd.Index) else []
     if warns:
         with pytest.warns(UserWarning, match="non-nanosecond precision timedelta"):
             var = Variable(dims, values)
