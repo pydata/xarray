@@ -615,7 +615,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             # netcdf 3 or HDF5
             return magic_number.startswith((b"CDF", b"\211HDF\r\n\032\n"))
 
-        if isinstance(filename_or_obj, (str, os.PathLike)):
+        if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
             return ext in {".nc", ".nc4", ".cdf"}
 

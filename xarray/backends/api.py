@@ -1,14 +1,20 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import (
+    Callable,
+    Hashable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from functools import partial
 from io import BytesIO
 from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Literal,
     Union,
@@ -358,7 +364,7 @@ def _dataset_from_backend_dataset(
     from_array_kwargs,
     **extra_tokens,
 ):
-    if not isinstance(chunks, (int, dict)) and chunks not in {None, "auto"}:
+    if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
         raise ValueError(
             f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
         )
@@ -385,7 +391,7 @@ def _dataset_from_backend_dataset(
     if "source" not in ds.encoding:
         path = getattr(filename_or_obj, "path", filename_or_obj)
 
-        if isinstance(path, (str, os.PathLike)):
+        if isinstance(path, str | os.PathLike):
             ds.encoding["source"] = _normalize_path(path)
 
     return ds
@@ -1079,7 +1085,7 @@ def open_mfdataset(
         raise OSError("no files to open")
 
     if combine == "nested":
-        if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
+        if isinstance(concat_dim, str | DataArray) or concat_dim is None:
             concat_dim = [concat_dim]  # type: ignore[assignment]
 
         # This creates a flat list which is easier to iterate over, whilst

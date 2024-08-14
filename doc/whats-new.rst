@@ -26,6 +26,7 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Support for ``python 3.9`` has been dropped (:pull:`8937`)
 
 
 Deprecations

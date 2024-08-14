@@ -570,7 +570,7 @@ def combine_nested(
     if mixed_datasets_and_arrays:
         raise ValueError("Can't combine datasets with unnamed arrays.")
 
-    if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
+    if isinstance(concat_dim, str | DataArray) or concat_dim is None:
         concat_dim = [concat_dim]
 
     # The IDs argument tells _nested_combine that datasets aren't yet sorted

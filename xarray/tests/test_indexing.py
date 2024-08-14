@@ -333,7 +333,7 @@ class TestLazyArray:
 
                         # make sure actual.key is appropriate type
                         if all(
-                            isinstance(k, (int, slice)) for k in v_lazy._data.key.tuple
+                            isinstance(k, int | slice) for k in v_lazy._data.key.tuple
                         ):
                             assert isinstance(v_lazy._data.key, indexing.BasicIndexer)
                         else:
@@ -364,10 +364,7 @@ class TestLazyArray:
                 assert_array_equal(expected_b.transpose(*order), transposed)
                 assert isinstance(
                     actual._data,
-                    (
-                        indexing.LazilyVectorizedIndexedArray,
-                        indexing.LazilyIndexedArray,
-                    ),
+                    indexing.LazilyVectorizedIndexedArray | indexing.LazilyIndexedArray,
                 )
 
             assert isinstance(actual._data, indexing.LazilyIndexedArray)
@@ -388,10 +385,7 @@ class TestLazyArray:
                 assert expected.shape == actual.shape
                 assert isinstance(
                     actual._data,
-                    (
-                        indexing.LazilyVectorizedIndexedArray,
-                        indexing.LazilyIndexedArray,
-                    ),
+                    indexing.LazilyVectorizedIndexedArray | indexing.LazilyIndexedArray,
                 )
                 assert_array_equal(expected, actual)
                 v_eager = expected
