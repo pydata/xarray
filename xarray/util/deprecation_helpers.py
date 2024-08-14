@@ -33,8 +33,9 @@
 
 import inspect
 import warnings
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable, TypeVar
+from typing import TypeVar
 
 from xarray.core.utils import emit_user_level_warning
 
