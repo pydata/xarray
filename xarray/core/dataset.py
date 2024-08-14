@@ -163,6 +163,7 @@ if TYPE_CHECKING:
         ReindexMethodOptions,
         SideOptions,
         T_ChunkDimFreq,
+        T_DatasetPadConstantValues,
         T_Xarray,
     )
     from xarray.core.weighted import DatasetWeighted
@@ -9147,14 +9148,7 @@ class Dataset(
         stat_length: (
             int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
         ) = None,
-        constant_values: (
-            float
-            | tuple[float, float]
-            | Mapping[
-                Any, float | tuple[float, float] | Mapping[Any, tuple[float, float]]
-            ]
-            | None
-        ) = None,
+        constant_values: T_DatasetPadConstantValues | None = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
         keep_attrs: bool | None = None,
@@ -9210,8 +9204,8 @@ class Dataset(
             (stat_length,) or int is a shortcut for before = after = statistic
             length for all axes.
             Default is ``None``, to use the entire axis.
-        constant_values : scalar, tuple, mapping of hashable to tuple or
-            mapping of hashable to mapping of hashable to tuple, default: 0
+        constant_values : scalar, tuple, mapping of dim name to scalar or tuple, or \
+            mapping of var name to scalar, tuple or to mapping of dim name to scalar or tuple, default: 0
             Used in 'constant'. The values to set the padded values for each data variable / axis.
             ``{var_1: {dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}, ...
             var_M: (before, after)}`` unique pad constants per data variable.

@@ -6692,10 +6692,14 @@ class TestDataset:
     @pytest.mark.parametrize(
         ["constant_values", "expected"],
         [
-            pytest.param(42, {"var1": 42}, id="numeric"),
-            pytest.param((42, 43), {"var1": (42, 43)}, id="tuple"),
+            pytest.param(None, {"var1": np.nan}, id="default"),
+            pytest.param(42, {"var1": 42, "var2": 42}, id="scalar"),
+            pytest.param((42, 43), {"var1": (42, 43), "var2": (42, 43)}, id="tuple"),
+            pytest.param({"dim2": 42}, {"var1": 42, "var2": 42}, id="per dim scalar"),
             pytest.param(
-                {"dim2": (42, 43)}, {"var1": (42, 43), "var2": (42, 43)}, id="per dim"
+                {"dim2": (42, 43)},
+                {"var1": (42, 43), "var2": (42, 43)},
+                id="per dim tuple",
             ),
             pytest.param(
                 {"var1": 42, "var2": (42, 43)},
