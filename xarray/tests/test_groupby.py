@@ -631,8 +631,7 @@ def test_groupby_drops_nans(shuffle: bool, chunk: Literal[False] | dict) -> None
     assert_identical(actual1, expected1)
 
     # reduction along grouped dimension
-    with xr.set_options(use_flox=False):  # TODO: remove
-        actual2 = grouped.mean()
+    actual2 = grouped.mean()
     stacked = ds.stack({"xy": ["lat", "lon"]})
     expected2 = (
         stacked.variable.where(stacked.id.notnull())
