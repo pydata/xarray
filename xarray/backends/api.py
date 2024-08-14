@@ -1,14 +1,20 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import (
+    Callable,
+    Hashable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from functools import partial
 from io import BytesIO
 from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Literal,
     Union,
@@ -358,7 +364,7 @@ def _dataset_from_backend_dataset(
     from_array_kwargs,
     **extra_tokens,
 ):
-    if not isinstance(chunks, (int, dict)) and chunks not in {None, "auto"}:
+    if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
         raise ValueError(
             f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
         )
@@ -385,7 +391,7 @@ def _dataset_from_backend_dataset(
     if "source" not in ds.encoding:
         path = getattr(filename_or_obj, "path", filename_or_obj)
 
-        if isinstance(path, (str, os.PathLike)):
+        if isinstance(path, str | os.PathLike):
             ds.encoding["source"] = _normalize_path(path)
 
     return ds
@@ -837,6 +843,43 @@ def open_datatree(
     return backend.open_datatree(filename_or_obj, **kwargs)
 
 
+def open_groups(
+    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    engine: T_Engine = None,
+    **kwargs,
+) -> dict[str, Dataset]:
+    """
+    Open and decode a file or file-like object, creating a dictionary containing one xarray Dataset for each group in the file.
+    Useful for an HDF file ("netcdf4" or "h5netcdf") containing many groups that are not alignable with their parents
+    and cannot be opened directly with ``open_datatree``. It is encouraged to use this function to inspect your data,
+    then make the necessary changes to make the structure coercible to a `DataTree` object before calling `DataTree.from_dict()` and proceeding with your analysis.
+
+    Parameters
+    ----------
+    filename_or_obj : str, Path, file-like, or DataStore
+        Strings and Path objects are interpreted as a path to a netCDF file.
+    engine : str, optional
+        Xarray backend engine to use. Valid options include `{"netcdf4", "h5netcdf"}`.
+    **kwargs : dict
+        Additional keyword arguments passed to :py:func:`~xarray.open_dataset` for each group.
+
+    Returns
+    -------
+    dict[str, xarray.Dataset]
+
+    See Also
+    --------
+    open_datatree()
+    DataTree.from_dict()
+    """
+    if engine is None:
+        engine = plugins.guess_engine(filename_or_obj)
+
+    backend = plugins.get_backend(engine)
+
+    return backend.open_groups_as_dict(filename_or_obj, **kwargs)
+
+
 def open_mfdataset(
     paths: str | NestedSequence[str | os.PathLike],
     chunks: T_Chunks | None = None,
@@ -1042,7 +1085,7 @@ def open_mfdataset(
         raise OSError("no files to open")
 
     if combine == "nested":
-        if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
+        if isinstance(concat_dim, str | DataArray) or concat_dim is None:
             concat_dim = [concat_dim]  # type: ignore[assignment]
 
         # This creates a flat list which is easier to iterate over, whilst

@@ -507,7 +507,7 @@ class CFTimeIndex(pd.Index):
             result = self.get_loc(key)
             return (
                 is_scalar(result)
-                or type(result) == slice
+                or isinstance(result, slice)
                 or (isinstance(result, np.ndarray) and result.size > 0)
             )
         except (KeyError, TypeError, ValueError):
@@ -566,7 +566,7 @@ class CFTimeIndex(pd.Index):
         if isinstance(freq, timedelta):
             return self + periods * freq
 
-        if isinstance(freq, (str, BaseCFTimeOffset)):
+        if isinstance(freq, str | BaseCFTimeOffset):
             from xarray.coding.cftime_offsets import to_offset
 
             return self + periods * to_offset(freq)

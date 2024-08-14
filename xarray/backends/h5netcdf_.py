@@ -109,7 +109,7 @@ class H5NetCDFStore(WritableCFDataStore):
     def __init__(self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False):
         import h5netcdf
 
-        if isinstance(manager, (h5netcdf.File, h5netcdf.Group)):
+        if isinstance(manager, h5netcdf.File | h5netcdf.Group):
             if group is None:
                 root, group = find_root_and_group(manager)
             else:
@@ -374,7 +374,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         if magic_number is not None:
             return magic_number.startswith(b"\211HDF\r\n\032\n")
 
-        if isinstance(filename_or_obj, (str, os.PathLike)):
+        if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
             return ext in {".nc", ".nc4", ".cdf"}
 
@@ -438,33 +438,74 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
+        format=None,
         group: str | Iterable[str] | Callable | None = None,
+        lock=None,
+        invalid_netcdf=None,
+        phony_dims=None,
+        decode_vlen_strings=True,
+        driver=None,
+        driver_kwds=None,
         **kwargs,
     ) -> DataTree:
-        from xarray.backends.api import open_dataset
-        from xarray.backends.common import _iter_nc_groups
+
         from xarray.core.datatree import DataTree
+
+        groups_dict = self.open_groups_as_dict(filename_or_obj, **kwargs)
+
+        return DataTree.from_dict(groups_dict)
+
+    def open_groups_as_dict(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        format=None,
+        group: str | Iterable[str] | Callable | None = None,
+        lock=None,
+        invalid_netcdf=None,
+        phony_dims=None,
+        decode_vlen_strings=True,
+        driver=None,
+        driver_kwds=None,
+        **kwargs,
+    ) -> dict[str, Dataset]:
+
+        from xarray.backends.common import _iter_nc_groups
         from xarray.core.treenode import NodePath
         from xarray.core.utils import close_on_error
 
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
+            format=format,
             group=group,
+            lock=lock,
+            invalid_netcdf=invalid_netcdf,
+            phony_dims=phony_dims,
+            decode_vlen_strings=decode_vlen_strings,
+            driver=driver,
+            driver_kwds=driver_kwds,
         )
+        # Check for a group and make it a parent if it exists
         if group:
             parent = NodePath("/") / NodePath(group)
         else:
             parent = NodePath("/")
 
         manager = store._manager
-        ds = open_dataset(store, **kwargs)
-        tree_root = DataTree.from_dict({str(parent): ds})
+        groups_dict = {}
         for path_group in _iter_nc_groups(store.ds, parent=parent):
             group_store = H5NetCDFStore(manager, group=path_group, **kwargs)
             store_entrypoint = StoreBackendEntrypoint()
             with close_on_error(group_store):
-                ds = store_entrypoint.open_dataset(
+                group_ds = store_entrypoint.open_dataset(
                     group_store,
                     mask_and_scale=mask_and_scale,
                     decode_times=decode_times,
@@ -474,14 +515,11 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-                new_node: DataTree = DataTree(name=NodePath(path_group).name, data=ds)
-                tree_root._set_item(
-                    path_group,
-                    new_node,
-                    allow_overwrite=False,
-                    new_nodes_along_path=True,
-                )
-        return tree_root
+
+            group_name = str(NodePath(path_group))
+            groups_dict[group_name] = group_ds
+
+        return groups_dict
 
 
 BACKEND_ENTRYPOINTS["h5netcdf"] = ("h5netcdf", H5netcdfBackendEntrypoint)

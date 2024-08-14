@@ -273,7 +273,7 @@ def decode_cf_variable(
             var = strings.CharacterArrayCoder().decode(var, name=name)
         var = strings.EncodedStringCoder().decode(var)
 
-    if original_dtype == object:
+    if original_dtype.kind == "O":
         var = variables.ObjectVLenStringCoder().decode(var)
         original_dtype = var.dtype
 

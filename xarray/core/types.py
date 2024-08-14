@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import datetime
 import sys
-from collections.abc import Collection, Hashable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Hashable, Iterator, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Literal,
     Protocol,
     SupportsIndex,
@@ -21,7 +20,9 @@ try:
     if sys.version_info >= (3, 11):
         from typing import Self, TypeAlias
     else:
-        from typing_extensions import Self, TypeAlias
+        from typing import TypeAlias
+
+        from typing_extensions import Self
 except ImportError:
     if TYPE_CHECKING:
         raise
@@ -42,6 +43,7 @@ if TYPE_CHECKING:
     from xarray.core.indexes import Index, Indexes
     from xarray.core.utils import Frozen
     from xarray.core.variable import Variable
+    from xarray.groupers import TimeResampler
 
     try:
         from dask.array import Array as DaskArray
@@ -95,9 +97,9 @@ try:
 except ImportError:
     CFTimeDatetime = np.datetime64
 
-DatetimeLike: TypeAlias = Union[
-    pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime
-]
+DatetimeLike: TypeAlias = (
+    pd.Timestamp | datetime.datetime | np.datetime64 | CFTimeDatetime
+)
 
 
 class Alignable(Protocol):
@@ -190,9 +192,11 @@ Dims = Union[str, Collection[Hashable], "ellipsis", None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
-T_ChunkDim: TypeAlias = Union[str, int, Literal["auto"], None, tuple[int, ...]]
+T_ChunkDim: TypeAlias = str | int | Literal["auto"] | None | tuple[int, ...]
+T_ChunkDimFreq: TypeAlias = Union["TimeResampler", T_ChunkDim]
+T_ChunksFreq: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
-T_Chunks: TypeAlias = Union[T_ChunkDim, Mapping[Any, T_ChunkDim]]
+T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim]
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 DataVars = Mapping[Any, Any]
