@@ -3,12 +3,18 @@ from __future__ import annotations
 import itertools
 import textwrap
 from collections import ChainMap
-from collections.abc import Hashable, Iterable, Iterator, Mapping, MutableMapping
+from collections.abc import (
+    Callable,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+)
 from html import escape
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     Literal,
     NoReturn,
@@ -902,7 +908,7 @@ class DataTree(
             new_node.name = key
             new_node.parent = self
         else:
-            if not isinstance(val, (DataArray, Variable)):
+            if not isinstance(val, DataArray | Variable):
                 # accommodate other types that can be coerced into Variables
                 val = DataArray(val)
 
@@ -968,7 +974,7 @@ class DataTree(
                     # Datatree's name is always a string until we fix that (#8836)
                     new_child.name = str(k)
                     new_children[str(k)] = new_child
-                elif isinstance(v, (DataArray, Variable)):
+                elif isinstance(v, DataArray | Variable):
                     # TODO this should also accommodate other types that can be coerced into Variables
                     new_variables[k] = v
                 else:

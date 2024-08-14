@@ -44,7 +44,7 @@ pytestmark = [
 
 def is_compatible(unit1, unit2):
     def dimensionality(obj):
-        if isinstance(obj, (unit_registry.Quantity, unit_registry.Unit)):
+        if isinstance(obj, unit_registry.Quantity | unit_registry.Unit):
             unit_like = obj
         else:
             unit_like = unit_registry.dimensionless
@@ -75,7 +75,7 @@ def zip_mappings(*mappings):
 
 
 def array_extract_units(obj):
-    if isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
+    if isinstance(obj, xr.Variable | xr.DataArray | xr.Dataset):
         obj = obj.data
 
     try:
@@ -163,7 +163,7 @@ def strip_units(obj):
         new_obj = obj.copy(data=data)
     elif isinstance(obj, unit_registry.Quantity):
         new_obj = obj.magnitude
-    elif isinstance(obj, (list, tuple)):
+    elif isinstance(obj, list | tuple):
         return type(obj)(strip_units(elem) for elem in obj)
     else:
         new_obj = obj
@@ -172,7 +172,7 @@ def strip_units(obj):
 
 
 def attach_units(obj, units):
-    if not isinstance(obj, (xr.DataArray, xr.Dataset, xr.Variable)):
+    if not isinstance(obj, xr.DataArray | xr.Dataset | xr.Variable):
         units = units.get("data", None) or units.get(None, None) or 1
         return array_attach_units(obj, units)
 
@@ -1580,11 +1580,11 @@ class TestVariable:
         variable = xr.Variable("x", array)
 
         args = [
-            item * unit if isinstance(item, (int, float, list)) else item
+            item * unit if isinstance(item, int | float | list) else item
             for item in func.args
         ]
         kwargs = {
-            key: value * unit if isinstance(value, (int, float, list)) else value
+            key: value * unit if isinstance(value, int | float | list) else value
             for key, value in func.kwargs.items()
         }
 
@@ -1633,7 +1633,7 @@ class TestVariable:
         args = [
             (
                 item * unit
-                if isinstance(item, (int, float, list)) and func.name != "item"
+                if isinstance(item, int | float | list) and func.name != "item"
                 else item
             )
             for item in func.args
@@ -1641,7 +1641,7 @@ class TestVariable:
         kwargs = {
             key: (
                 value * unit
-                if isinstance(value, (int, float, list)) and func.name != "item"
+                if isinstance(value, int | float | list) and func.name != "item"
                 else value
             )
             for key, value in func.kwargs.items()
@@ -3308,7 +3308,7 @@ class TestDataArray:
         values = raw_values * unit
 
         if error is not None and not (
-            isinstance(raw_values, (int, float)) and x.check(unit)
+            isinstance(raw_values, int | float) and x.check(unit)
         ):
             with pytest.raises(error):
                 data_array.sel(x=values)
@@ -3353,7 +3353,7 @@ class TestDataArray:
         values = raw_values * unit
 
         if error is not None and not (
-            isinstance(raw_values, (int, float)) and x.check(unit)
+            isinstance(raw_values, int | float) and x.check(unit)
         ):
             with pytest.raises(error):
                 data_array.loc[{"x": values}]
@@ -3398,7 +3398,7 @@ class TestDataArray:
         values = raw_values * unit
 
         if error is not None and not (
-            isinstance(raw_values, (int, float)) and x.check(unit)
+            isinstance(raw_values, int | float) and x.check(unit)
         ):
             with pytest.raises(error):
                 data_array.drop_sel(x=values)
@@ -3808,7 +3808,7 @@ class TestDataArray:
 
         # we want to make sure the output unit is correct
         units = extract_units(data_array)
-        if not isinstance(func, (function, method)):
+        if not isinstance(func, function | method):
             units.update(extract_units(func(array.reshape(-1))))
 
         with xr.set_options(use_opt_einsum=False):

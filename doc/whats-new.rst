@@ -26,6 +26,7 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Support for ``python 3.9`` has been dropped (:pull:`8937`)
 
 
 Deprecations
@@ -35,6 +36,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix bug with rechunking to a frequency when some periods contain no data (:issue:`9360`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix bug causing `DataTree.from_dict` to be sensitive to insertion order (:issue:`9276`, :pull:`9292`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Fix resampling error with monthly, quarterly, or yearly frequencies with

@@ -10,7 +10,7 @@ from xarray.tests import assert_identical as assert_identical_
 
 def assert_identical(a, b):
     assert type(a) is type(b) or float(a) == float(b)
-    if isinstance(a, (xr.DataArray, xr.Dataset, xr.Variable)):
+    if isinstance(a, xr.DataArray | xr.Dataset | xr.Variable):
         assert_identical_(a, b)
     else:
         assert_array_equal(a, b)
