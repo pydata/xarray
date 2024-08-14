@@ -3,16 +3,13 @@ from __future__ import annotations
 import itertools
 import textwrap
 from collections import ChainMap
-
 from collections.abc import (
     Callable,
     Hashable,
     Iterable,
     Iterator,
     Mapping,
-    MutableMapping,
 )
-
 from html import escape
 from typing import (
     TYPE_CHECKING,
