@@ -53,7 +53,7 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.types import GroupIndex, GroupIndices, GroupKey
+    from xarray.core.types import GroupIndex, GroupIndices, GroupKey, T_Chunks
     from xarray.core.utils import Frozen
     from xarray.groupers import Grouper
 
@@ -518,7 +518,7 @@ class GroupBy(Generic[T_Xarray]):
             self._sizes = self._obj.isel({self._group_dim: index}).sizes
         return self._sizes
 
-    def shuffle(self) -> Self:
+    def shuffle(self, chunks: T_Chunks = "auto") -> Self:
         """
         Shuffle the underlying object so that all members in a group occur sequentially.
 
@@ -555,7 +555,9 @@ class GroupBy(Generic[T_Xarray]):
         ]
         shuffled = subset.isel({dim: np.concatenate(no_slices)})
         for name, var in is_chunked.items():
-            shuffled[name] = var._shuffle(indices=list(self._group_indices), dim=dim)
+            shuffled[name] = var._shuffle(
+                indices=list(self._group_indices), dim=dim, chunks=chunks
+            )
         shuffled = self._maybe_unstack(shuffled)
         new_obj = self._obj._from_temp_dataset(shuffled) if was_array else shuffled
         return new_obj.groupby(

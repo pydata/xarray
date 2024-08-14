@@ -19,6 +19,7 @@ from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
+        T_Chunks,
         _Chunks,
         _DType,
         _DType_co,
@@ -357,7 +358,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         raise NotImplementedError()
 
     def shuffle(
-        self, x: T_ChunkedArray, indexer: list[list[int]], axis: int
+        self, x: T_ChunkedArray, indexer: list[list[int]], axis: int, chunks: T_Chunks
     ) -> T_ChunkedArray:
         raise NotImplementedError()
 

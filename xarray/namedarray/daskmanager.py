@@ -252,11 +252,13 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             **kwargs,
         )
 
-    def shuffle(self, x: DaskArray, indexer: list[list[int]], axis: int) -> DaskArray:
+    def shuffle(
+        self, x: DaskArray, indexer: list[list[int]], axis: int, chunks: T_Chunks
+    ) -> DaskArray:
         import dask.array
 
-        if not module_available("dask", minversion="2024.08.0"):
+        if not module_available("dask", minversion="2024.08.1"):
             raise ValueError(
-                "This method is very inefficient on dask<2024.08.0. Please upgrade."
+                "This method is very inefficient on dask<2024.08.1. Please upgrade."
             )
-        return dask.array.shuffle(x, indexer, axis)
+        return dask.array.shuffle(x, indexer, axis, chunks=chunks)
