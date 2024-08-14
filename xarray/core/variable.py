@@ -1004,13 +1004,18 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         new = self.copy(deep=False)
         return new.load(**kwargs)
 
-    def _shuffle(self, indices: list[list[int]], dim: Hashable) -> Self:
+    def _shuffle(
+        self, indices: list[list[int]], dim: Hashable, chunks: T_Chunks
+    ) -> Self:
         array = self._data
         if is_chunked_array(array):
             chunkmanager = get_chunked_array_type(array)
             return self._replace(
                 data=chunkmanager.shuffle(
-                    array, indexer=indices, axis=self.get_axis_num(dim)
+                    array,
+                    indexer=indices,
+                    axis=self.get_axis_num(dim),
+                    chunks=chunks,
                 )
             )
         else:
