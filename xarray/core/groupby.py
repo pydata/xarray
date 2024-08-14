@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import copy
+import sys
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Generic, Literal, Self, Union
+from typing import TYPE_CHECKING, Any, Generic, Literal, Union
 
 import numpy as np
 import pandas as pd
@@ -56,6 +57,11 @@ if TYPE_CHECKING:
     from xarray.core.types import GroupIndex, GroupIndices, GroupKey, T_Chunks
     from xarray.core.utils import Frozen
     from xarray.groupers import Grouper
+
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
 
 
 def check_reduce_dims(reduce_dims, dimensions):
