@@ -66,16 +66,78 @@ class DatatreeIOBase:
 @requires_netCDF4
 class TestNetCDF4DatatreeIO(DatatreeIOBase):
     engine: T_DataTreeNetcdfEngine | None = "netcdf4"
-
+    keywords: [
+        {"mask_and_scale":True},
+        {"decode_times":True},
+        {"concat_characters":True},
+        {"decode_coords":True},
+        {"drop_variables": str | Iterable[str] | None : None},
+        {"use_cftime":None},
+        {"decode_timedelta":None},
+        {"group": str | Iterable[str] | Callable | None = None,},
+        {"mode":"r"},
+        {"format":"NETCDF4"},
+        {"clobber":True},
+        {"diskless":False},
+        {"persist":False},
+        {"lock":None},
+        {"autoclose":False}
+    ] | None = {}
 
 @requires_h5netcdf
 class TestH5NetCDFDatatreeIO(DatatreeIOBase):
     engine: T_DataTreeNetcdfEngine | None = "h5netcdf"
+    keywords: [
+        {"mask_and_scale":True},
+        {"decode_times":True},
+        {"concat_characters":True},
+        {"decode_coords":True},
+        {"drop_variables": str | Iterable[str] | None : None},
+        {"use_cftime":None},
+        {"decode_timedelta":None},
+        {"format":None},
+        {"group":None},
+        {"lock":None},
+        {"invalid_netcdf":None},
+        {"phony_dims":None},
+        {"decode_vlen_strings":True},
+        {"driver":None},
+        {"driver_kwds":None}
+    ] | None = {}
+
+
+    def test_pass_engine_kwargs(self, tmpdir, simple_datatree):
+        filepath = tmpdir / "test.nc"
+        original_dt = simple_datatree
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        roundtrip_dt = open_datatree(filepath, engine=self.engine, phony_dims="sort")
+        assert_equal(original_dt, roundtrip_dt)
+
 
 
 @requires_zarr
 class TestZarrDatatreeIO:
     engine = "zarr"
+    keywords: [
+        {"mask_and_scale":True},
+        {"decode_times":True},
+        {"concat_characters":True},
+        {"decode_coords":True},
+        {"drop_variables":str | Iterable[str] | None = None},
+        {"use_cftime":None},
+        {"decode_timedelta":None},
+        {"group":str | Iterable[str] | Callable | None = None},
+        {"mode":"r"},
+        {"synchronizer":None},
+        {"consolidated":None},
+        {"chunk_store":None},
+        {"storage_options":None},
+        {"stacklevel":3}
+        {"zarr_version":None},
+        {"store":None},
+        {"engine":None}
+    ] | None = {}
 
     def test_to_zarr(self, tmpdir, simple_datatree):
         filepath = tmpdir / "test.zarr"
