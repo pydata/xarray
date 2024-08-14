@@ -600,7 +600,6 @@ def test_groupby_repr_datetime(obj) -> None:
     ],
 )
 def test_groupby_drops_nans(shuffle: bool, chunk: Literal[False] | dict) -> None:
-    xr.set_options(use_flox=False)  # TODO: remove
     if shuffle and chunk and not has_dask_ge_2024_08_0:
         pytest.skip()
     # GH2383
@@ -632,7 +631,8 @@ def test_groupby_drops_nans(shuffle: bool, chunk: Literal[False] | dict) -> None
     assert_identical(actual1, expected1)
 
     # reduction along grouped dimension
-    actual2 = grouped.mean()
+    with xr.set_options(use_flox=False):  # TODO: remove
+        actual2 = grouped.mean()
     stacked = ds.stack({"xy": ["lat", "lon"]})
     expected2 = (
         stacked.variable.where(stacked.id.notnull())
@@ -2572,6 +2572,9 @@ def test_custom_grouper() -> None:
             codes_, uniques = pd.factorize(year)
             codes = group.copy(data=codes_).rename("year")
             return EncodedGroups(codes=codes, full_index=pd.Index(uniques))
+
+        def reset(self):
+            return type(self)()
 
     da = xr.DataArray(
         dims="time",
