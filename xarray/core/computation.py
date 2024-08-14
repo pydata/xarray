@@ -26,7 +26,7 @@ from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import is_dict_like, is_scalar, parse_dims
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import is_chunked_array
+from xarray.namedarray.pycompat import has_chunkmanager, is_chunked_array
 from xarray.util.deprecation_helpers import deprecate_dims
 
 if TYPE_CHECKING:
@@ -2169,7 +2169,7 @@ def _calc_idxminmax(
     indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
 
     # Handle chunked arrays (e.g. dask).
-    if is_chunked_array(array.data):
+    if is_chunked_array(array.data) and has_chunkmanager(array.data):
         chunkmanager = get_chunked_array_type(array.data)
         chunks = dict(zip(array.dims, array.chunks))
         dask_coord = chunkmanager.from_array(array[dim].data, chunks=chunks[dim])

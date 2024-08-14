@@ -7,13 +7,13 @@ Alternative chunked array types
 
 .. warning::
 
-    This is a *highly* experimental feature. Please report any bugs or other difficulties on `xarray's issue tracker <https://github.com/pydata/xarray/issues>`_.
+    This is an experimental feature. Please report any bugs or other difficulties on `xarray's issue tracker <https://github.com/pydata/xarray/issues>`_.
     In particular see discussion on `xarray issue #6807 <https://github.com/pydata/xarray/issues/6807>`_
 
-Xarray can wrap chunked dask arrays (see :ref:`dask`), but can also wrap any other chunked array type that exposes the correct interface.
+Xarray can wrap chunked dask arrays (see :ref:`dask`), but can also wrap any other chunked array type which exposes the correct interface.
 This allows us to support using other frameworks for distributed and out-of-core processing, with user code still written as xarray commands.
 In particular xarray also supports wrapping :py:class:`cubed.Array` objects
-(see `Cubed's documentation <https://tom-e-white.com/cubed/>`_ and the `cubed-xarray package <https://github.com/xarray-contrib/cubed-xarray>`_).
+(see `Cubed's documentation <https://tom-e-white.com/cubed/>`_ via the `cubed-xarray package <https://github.com/xarray-contrib/cubed-xarray>`_).
 
 The basic idea is that by wrapping an array that has an explicit notion of ``.chunks``, xarray can expose control over
 the choice of chunking scheme to users via methods like :py:meth:`DataArray.chunk` whilst the wrapped array actually
@@ -25,11 +25,12 @@ Chunked array methods and "core operations"
 A chunked array needs to meet all the :ref:`requirements for normal duck arrays <internals.duckarrays.requirements>`, but must also
 implement additional features.
 
-Chunked arrays have additional attributes and methods, such as ``.chunks`` and ``.rechunk``.
-Furthermore, Xarray dispatches chunk-aware computations across one or more chunked arrays using special functions known
-as "core operations". Examples include ``map_blocks``, ``blockwise``, and ``apply_gufunc``.
+Chunked arrays will have additional attributes and methods, such as ``.chunks`` and ``.rechunk``.
+If the wrapped class only implements these additional methods then xarray will handle them in the same way it handles other duck arrays - i.e. with no further action on the user's part.
 
-The core operations are generalizations of functions first implemented in :py:mod:`dask.array`.
+However to support applying computations across chunks, Xarray dispatches all chunk-aware computations across one or more chunked arrays using special functions known
+as "core operations". The core operations are generalizations of functions first implemented in :py:mod:`dask.array`, and examples include ``map_blocks``, ``blockwise``, and ``apply_gufunc``.
+
 The implementation of these functions is specific to the type of arrays passed to them. For example, when applying the
 ``map_blocks`` core operation, :py:class:`dask.array.Array` objects must be processed by :py:func:`dask.array.map_blocks`,
 whereas :py:class:`cubed.Array` objects must be processed by :py:func:`cubed.map_blocks`.
@@ -100,3 +101,9 @@ To use a parallel array type that does not expose a concept of chunks explicitly
 is theoretically required. Such an array type (e.g. `Ramba <https://github.com/Python-for-HPC/ramba>`_ or
 `Arkouda <https://github.com/Bears-R-Us/arkouda>`_) could be wrapped using xarray's existing support for
 :ref:`numpy-like "duck" arrays <userguide.duckarrays>`.
+
+Chunks without parallel processing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Some chunked array types exist which don't support parallel processing.
+These will define `.chunks` and possibly also `.rechunk`, but do not require a `ChunkManagerEntrypoint` in order for these method to be called by `DataArray.chunk`.

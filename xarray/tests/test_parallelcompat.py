@@ -6,8 +6,9 @@ from typing import Any
 import numpy as np
 import pytest
 
-from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
+from xarray.core.types import T_DuckArray, T_NormalizedChunks
 from xarray.namedarray._typing import _Chunks
+from xarray.namedarray.core import NamedArray
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import (
     ChunkManagerEntrypoint,
@@ -19,6 +20,7 @@ from xarray.namedarray.parallelcompat import (
 from xarray.tests import has_dask, requires_dask
 
 
+# TODO can I subclass the chunkedduckarray protocol here?
 class DummyChunkedArray(np.ndarray):
     """
     Mock-up of a chunked array class.
@@ -27,17 +29,17 @@ class DummyChunkedArray(np.ndarray):
     https://numpy.org/doc/stable/user/basics.subclassing.html#simple-example-adding-an-extra-attribute-to-ndarray
     """
 
-    chunks: T_NormalizedChunks
+    _chunks: T_NormalizedChunks
 
     def __new__(
         cls,
-        shape,
+        shape: tuple[int, ...],
+        chunks: T_NormalizedChunks,
         dtype=float,
         buffer=None,
         offset=0,
         strides=None,
         order=None,
-        chunks=None,
     ):
         obj = super().__new__(cls, shape, dtype, buffer, offset, strides, order)
         obj.chunks = chunks
@@ -46,9 +48,23 @@ class DummyChunkedArray(np.ndarray):
     def __array_finalize__(self, obj):
         if obj is None:
             return
-        self.chunks = getattr(obj, "chunks", None)
+        self.chunks = getattr(obj, "chunks")
 
-    def rechunk(self, chunks, **kwargs):
+    @property
+    def chunks(self) -> T_NormalizedChunks:
+        return self._chunks
+
+    @chunks.setter
+    def chunks(self, value: T_NormalizedChunks) -> None:
+        # ensure the chunks actually are normalized before setting them
+        assert isinstance(value, tuple)
+        for lengths_along_axis in value:
+            assert isinstance(lengths_along_axis, tuple)
+            for length in lengths_along_axis:
+                assert isinstance(length, int)
+        self._chunks = value
+
+    def rechunk(self, chunks: T_NormalizedChunks, **kwargs) -> DummyChunkedArray:
         copied = self.copy()
         copied.chunks = chunks
         return copied
@@ -63,30 +79,12 @@ class DummyChunkManager(ChunkManagerEntrypoint):
     def is_chunked_array(self, data: Any) -> bool:
         return isinstance(data, DummyChunkedArray)
 
-    def chunks(self, data: DummyChunkedArray) -> T_NormalizedChunks:
-        return data.chunks
-
-    def normalize_chunks(
-        self,
-        chunks: T_Chunks | T_NormalizedChunks,
-        shape: tuple[int, ...] | None = None,
-        limit: int | None = None,
-        dtype: np.dtype | None = None,
-        previous_chunks: T_NormalizedChunks | None = None,
-    ) -> T_NormalizedChunks:
-        from dask.array.core import normalize_chunks
-
-        return normalize_chunks(chunks, shape, limit, dtype, previous_chunks)
-
     def from_array(
         self, data: T_DuckArray | np.typing.ArrayLike, chunks: _Chunks, **kwargs
     ) -> DummyChunkedArray:
         from dask import array as da
 
         return da.from_array(data, chunks, **kwargs)
-
-    def rechunk(self, data: DummyChunkedArray, chunks, **kwargs) -> DummyChunkedArray:
-        return data.rechunk(chunks, **kwargs)
 
     def compute(self, *data: DummyChunkedArray, **kwargs) -> tuple[np.ndarray, ...]:
         from dask.array import compute
@@ -147,6 +145,35 @@ def register_dummy_chunkmanager(monkeypatch):
     yield
 
 
+class TestPassThroughNonRegisteredChunkedArrays:
+    """
+    Check that types which implement .chunks and .rechunk are still dispatched to for these methods, even if they are not registered via a ChunkManager.
+
+    Basically regression tests for GH issue #8733.
+
+    Notice we specifically do not use the register_dummy_chunkmanager fixture in these tests.
+    """
+
+    def test_chunks(self) -> None:
+        dummy_arr = DummyChunkedArray(shape=(6,), chunks=((3, 3),))
+        na: NamedArray = NamedArray(data=dummy_arr, dims=["x"])
+        assert na.chunks == ((3, 3),)
+        assert na.chunksizes == {"x": (3, 3)}
+
+    def test_rechunk(self) -> None:
+        dummy_arr = DummyChunkedArray(shape=(4,), chunks=((4,),))
+        na: NamedArray = NamedArray(data=dummy_arr, dims=["x"])
+        rechunked_na = na.chunk(chunks={"x": (2, 2)})
+        assert isinstance(rechunked_na.data, DummyChunkedArray)
+        assert rechunked_na.data.chunks == ((2, 2),)
+        assert rechunked_na.chunksizes == {"x": (2, 2)}
+
+    def test_computation(self) -> None:
+        dummy_arr = DummyChunkedArray(shape=(4,), chunks=((2, 2),))
+        na: NamedArray = NamedArray(data=dummy_arr, dims=["x"])
+        na.mean()
+
+
 class TestGetChunkManager:
     def test_get_chunkmanger(self, register_dummy_chunkmanager) -> None:
         chunkmanager = guess_chunkmanager("dummy")
@@ -176,13 +203,13 @@ class TestGetChunkManager:
 
 class TestGetChunkedArrayType:
     def test_detect_chunked_arrays(self, register_dummy_chunkmanager) -> None:
-        dummy_arr = DummyChunkedArray([1, 2, 3])
+        dummy_arr = DummyChunkedArray(shape=(4,), chunks=((1,),))
 
         chunk_manager = get_chunked_array_type(dummy_arr)
         assert isinstance(chunk_manager, DummyChunkManager)
 
     def test_ignore_inmemory_arrays(self, register_dummy_chunkmanager) -> None:
-        dummy_arr = DummyChunkedArray([1, 2, 3])
+        dummy_arr = DummyChunkedArray(shape=(4,), chunks=((1,),))
 
         chunk_manager = get_chunked_array_type(*[dummy_arr, 1.0, np.array([5, 6])])
         assert isinstance(chunk_manager, DummyChunkManager)
@@ -195,7 +222,7 @@ class TestGetChunkedArrayType:
             get_chunked_array_type(*[1.0, np.array([5, 6])])
 
     def test_raise_if_no_matching_chunkmanagers(self) -> None:
-        dummy_arr = DummyChunkedArray([1, 2, 3])
+        dummy_arr = DummyChunkedArray(shape=(4,), chunks=((1,),))
 
         with pytest.raises(
             TypeError, match="Could not find a Chunk Manager which recognises"
@@ -215,7 +242,7 @@ class TestGetChunkedArrayType:
     def test_raise_on_mixed_array_types(self, register_dummy_chunkmanager) -> None:
         import dask.array as da
 
-        dummy_arr = DummyChunkedArray([1, 2, 3])
+        dummy_arr = DummyChunkedArray(shape=(4,), chunks=((1,),))
         dask_arr = da.from_array([1, 2, 3], chunks=(1,))
 
         with pytest.raises(TypeError, match="received multiple types"):

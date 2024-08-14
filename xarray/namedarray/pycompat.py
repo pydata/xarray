@@ -8,6 +8,7 @@ import numpy as np
 from packaging.version import Version
 
 from xarray.core.utils import is_scalar
+from xarray.namedarray._typing import _chunkedarray
 from xarray.namedarray.utils import is_duck_array, is_duck_dask_array
 
 integer_types = (int, np.integer)
@@ -89,7 +90,23 @@ def mod_version(mod: ModType) -> Version:
 
 
 def is_chunked_array(x: duckarray[Any, Any]) -> bool:
-    return is_duck_dask_array(x) or (is_duck_array(x) and hasattr(x, "chunks"))
+    return is_duck_dask_array(x) or isinstance(x, _chunkedarray)
+
+
+def has_chunkmanager(x: duckarray[Any, Any]) -> bool:
+    from xarray.namedarray.parallelcompat import get_chunked_array_type
+
+    try:
+        get_chunked_array_type(x)
+    except TypeError as e:
+        if str(e).startswith("Could not find a Chunk Manager which recognises type"):
+            return False
+        elif str(e) == "Expected a chunked array but none were found":
+            return False
+        else:
+            raise  # something else went wrong
+    else:
+        return True
 
 
 def is_0d_dask_array(x: duckarray[Any, Any]) -> bool:
@@ -106,7 +123,7 @@ def to_numpy(
         data = data.get_duck_array()  # type: ignore[no-untyped-call]
 
     # TODO first attempt to call .to_numpy() once some libraries implement it
-    if is_chunked_array(data):
+    if is_chunked_array(data) and has_chunkmanager(data):
         chunkmanager = get_chunked_array_type(data)
         data, *_ = chunkmanager.compute(data, **kwargs)
     if isinstance(data, array_type("cupy")):
@@ -125,7 +142,7 @@ def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, 
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
-    if is_chunked_array(data):
+    if is_chunked_array(data) and has_chunkmanager(data):
         chunkmanager = get_chunked_array_type(data)
         loaded_data, *_ = chunkmanager.compute(data, **kwargs)  # type: ignore[var-annotated]
         return loaded_data

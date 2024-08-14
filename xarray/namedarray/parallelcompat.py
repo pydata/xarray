@@ -21,10 +21,8 @@ from xarray.namedarray.pycompat import is_chunked_array
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
         _Chunks,
-        _DType,
         _DType_co,
         _NormalizedChunks,
-        _ShapeType,
         duckarray,
     )
 
@@ -219,67 +217,6 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         return isinstance(data, self.array_cls)
 
     @abstractmethod
-    def chunks(self, data: T_ChunkedArray) -> _NormalizedChunks:
-        """
-        Return the current chunks of the given array.
-
-        Returns chunks explicitly as a tuple of tuple of ints.
-
-        Used internally by xarray objects' .chunks and .chunksizes properties.
-
-        Parameters
-        ----------
-        data : chunked array
-
-        Returns
-        -------
-        chunks : tuple[tuple[int, ...], ...]
-
-        See Also
-        --------
-        dask.array.Array.chunks
-        cubed.Array.chunks
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def normalize_chunks(
-        self,
-        chunks: _Chunks | _NormalizedChunks,
-        shape: _ShapeType | None = None,
-        limit: int | None = None,
-        dtype: _DType | None = None,
-        previous_chunks: _NormalizedChunks | None = None,
-    ) -> _NormalizedChunks:
-        """
-        Normalize given chunking pattern into an explicit tuple of tuples representation.
-
-        Exposed primarily because different chunking backends may want to make different decisions about how to
-        automatically chunk along dimensions not given explicitly in the input chunks.
-
-        Called internally by xarray.open_dataset.
-
-        Parameters
-        ----------
-        chunks : tuple, int, dict, or string
-            The chunks to be normalized.
-        shape : Tuple[int]
-            The shape of the array
-        limit : int (optional)
-            The maximum block size to target in bytes,
-            if freedom is given to choose
-        dtype : np.dtype
-        previous_chunks : Tuple[Tuple[int]], optional
-            Chunks from a previous array that we should use for inspiration when
-            rechunking dimensions automatically.
-
-        See Also
-        --------
-        dask.array.core.normalize_chunks
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
     def from_array(
         self, data: duckarray[Any, Any], chunks: _Chunks, **kwargs: Any
     ) -> T_ChunkedArray:
@@ -304,37 +241,6 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         cubed.from_array
         """
         raise NotImplementedError()
-
-    def rechunk(
-        self,
-        data: T_ChunkedArray,
-        chunks: _NormalizedChunks | tuple[int, ...] | _Chunks,
-        **kwargs: Any,
-    ) -> Any:
-        """
-        Changes the chunking pattern of the given array.
-
-        Called when the .chunk method is called on an xarray object that is already chunked.
-
-        Parameters
-        ----------
-        data : dask array
-            Array to be rechunked.
-        chunks :  int, tuple, dict or str, optional
-            The new block dimensions to create. -1 indicates the full size of the
-            corresponding dimension. Default is "auto" which automatically
-            determines chunk sizes.
-
-        Returns
-        -------
-        chunked array
-
-        See Also
-        --------
-        dask.array.Array.rechunk
-        cubed.Array.rechunk
-        """
-        return data.rechunk(chunks, **kwargs)
 
     @abstractmethod
     def compute(

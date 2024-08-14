@@ -39,7 +39,7 @@ from xarray.core.options import OPTIONS
 from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
 from xarray.namedarray import pycompat
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import array_type, is_chunked_array
+from xarray.namedarray.pycompat import array_type, has_chunkmanager, is_chunked_array
 
 # remove once numpy 2.0 is the oldest supported version
 if module_available("numpy", minversion="2.0.0.dev0"):
@@ -712,7 +712,7 @@ def first(values, axis, skipna=None):
         dtypes.isdtype(values.dtype, "signed integer") or dtypes.is_string(values.dtype)
     ):
         # only bother for dtypes that can hold NaN
-        if is_chunked_array(values):
+        if is_chunked_array(values) and has_chunkmanager(values):
             return chunked_nanfirst(values, axis)
         else:
             return nputils.nanfirst(values, axis)
@@ -725,7 +725,7 @@ def last(values, axis, skipna=None):
         dtypes.isdtype(values.dtype, "signed integer") or dtypes.is_string(values.dtype)
     ):
         # only bother for dtypes that can hold NaN
-        if is_chunked_array(values):
+        if is_chunked_array(values) and has_chunkmanager(values):
             return chunked_nanlast(values, axis)
         else:
             return nputils.nanlast(values, axis)

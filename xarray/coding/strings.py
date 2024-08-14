@@ -18,7 +18,7 @@ from xarray.core import indexing
 from xarray.core.utils import module_available
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import is_chunked_array
+from xarray.namedarray.pycompat import has_chunkmanager, is_chunked_array
 
 HAS_NUMPY_2_0 = module_available("numpy", minversion="2.0.0.dev0")
 
@@ -144,7 +144,7 @@ def bytes_to_char(arr):
     if arr.dtype.kind != "S":
         raise ValueError("argument must have a fixed-width bytes dtype")
 
-    if is_chunked_array(arr):
+    if has_chunkmanager(arr):
         chunkmanager = get_chunked_array_type(arr)
 
         return chunkmanager.map_blocks(
@@ -183,7 +183,7 @@ def char_to_bytes(arr):
         # can't make an S0 dtype
         return np.zeros(arr.shape[:-1], dtype=np.bytes_)
 
-    if is_chunked_array(arr):
+    if is_chunked_array(arr) and has_chunkmanager(arr):
         chunkmanager = get_chunked_array_type(arr)
 
         if len(arr.chunks[-1]) > 1:

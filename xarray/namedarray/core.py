@@ -41,12 +41,12 @@ from xarray.namedarray._typing import (
     _SupportsReal,
 )
 from xarray.namedarray.parallelcompat import guess_chunkmanager
-from xarray.namedarray.pycompat import to_numpy
+from xarray.namedarray.pycompat import is_chunked_array, to_numpy
 from xarray.namedarray.utils import (
     either_dict_or_kwargs,
     infix_dims,
-    is_dict_like,
     is_duck_dask_array,
+    normalize_chunks_to_tuples,
     to_0d_object_array,
 )
 
@@ -805,25 +805,27 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             chunks = {}
 
         if isinstance(chunks, (float, str, int, tuple, list)):
-            # TODO we shouldn't assume here that other chunkmanagers can handle these types
-            # TODO should we call normalize_chunks here?
-            pass  # dask.array.from_array can handle these directly
+            pass  # normalize_chunks_to_tuples can handle these types directly, via dask.array.core.normalize_chunks
         else:
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
-        if is_dict_like(chunks):
-            # This method of iteration allows for duplicated dimension names, GH8579
-            chunks = {
-                dim_number: chunks[dim]
-                for dim_number, dim in enumerate(self.dims)
-                if dim in chunks
-            }
-
-        chunkmanager = guess_chunkmanager(chunked_array_type)
-
         data_old = self._data
-        if chunkmanager.is_chunked_array(data_old):
-            data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
+        if is_chunked_array(data_old):
+            cast(_chunkedarray, data_old)
+            old_chunks = data_old.chunks
+
+            normalized_chunks = normalize_chunks_to_tuples(  # type: ignore[arg-type]
+                chunks,
+                self.dims,
+                data_old.shape,
+                data_old.dtype,
+                previous_chunks=old_chunks,
+            )
+
+            # Assume any chunked array supports .rechunk - if it doesn't then at least a clear AttributeError will be raised.
+            # Deliberately don't go through the chunkmanager so as to support chunked array types that don't need all the special computation methods.
+            # See GH issue #8733
+            data_chunked = data_old.rechunk(normalized_chunks)  # type: ignore[union-attr]
         else:
             if not isinstance(data_old, ExplicitlyIndexed):
                 ndata = data_old
@@ -838,16 +840,18 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 # https://github.com/dask/dask/issues/2883
                 ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[assignment]
 
-            if is_dict_like(chunks):
-                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
+            # will fallback to one chunk per axis as previous_chunks is not supplied
+            normalized_chunks = normalize_chunks_to_tuples(  # type: ignore[arg-type]
+                chunks, self.dims, ndata.shape, ndata.dtype
+            )
 
-            data_chunked = chunkmanager.from_array(ndata, chunks, **from_array_kwargs)  # type: ignore[arg-type]
+            chunkmanager = guess_chunkmanager(chunked_array_type)
+            data_chunked = chunkmanager.from_array(ndata, normalized_chunks, **from_array_kwargs)  # type: ignore[arg-type]
 
         return self._replace(data=data_chunked)
 
     def to_numpy(self) -> np.ndarray[Any, Any]:
         """Coerces wrapped data to numpy and returns a numpy.ndarray"""
-        # TODO an entrypoint so array libraries can choose coercion method?
         return to_numpy(self._data)
 
     def as_numpy(self) -> Self:
