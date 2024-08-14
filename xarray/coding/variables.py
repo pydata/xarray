@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Hashable, MutableMapping
+from collections.abc import Callable, Hashable, MutableMapping
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Union
+from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
 import pandas as pd
@@ -662,8 +662,8 @@ class NonStringCoder(VariableCoder):
                             SerializationWarning,
                             stacklevel=10,
                         )
-                    data = np.around(data)
-                data = data.astype(dtype=dtype)
+                    data = duck_array_ops.round(data)
+                data = duck_array_ops.astype(data, dtype=dtype)
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
             return variable

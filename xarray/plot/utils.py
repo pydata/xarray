@@ -3,10 +3,17 @@ from __future__ import annotations
 import itertools
 import textwrap
 import warnings
-from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import (
+    Callable,
+    Hashable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from datetime import date, datetime
 from inspect import getfullargspec
-from typing import TYPE_CHECKING, Any, Callable, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -119,7 +126,7 @@ def _color_palette(cmap, n_colors):
     from matplotlib.colors import ListedColormap
 
     colors_i = np.linspace(0, 1.0, n_colors)
-    if isinstance(cmap, (list, tuple)):
+    if isinstance(cmap, list | tuple):
         # we have a list of colors
         cmap = ListedColormap(cmap, N=n_colors)
         pal = cmap(colors_i)
@@ -925,7 +932,7 @@ def _process_cmap_cbar_kwargs(
 
     # we should not be getting a list of colors in cmap anymore
     # is there a better way to do this test?
-    if isinstance(cmap, (list, tuple)):
+    if isinstance(cmap, list | tuple):
         raise ValueError(
             "Specifying a list of colors in cmap is deprecated. "
             "Use colors keyword instead."
