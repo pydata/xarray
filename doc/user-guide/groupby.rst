@@ -276,7 +276,7 @@ is identical to
 
     ds.groupby(x=UniqueGrouper())
 
-; and
+and
 
 .. code-block:: python
 
