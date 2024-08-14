@@ -1122,9 +1122,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def _pad_options_dim_to_index(
         self,
-        pad_option: Mapping[
-            Any, numbers.Number | tuple[numbers.Number, numbers.Number]
-        ],
+        pad_option: Mapping[Any, int | float | tuple[int, int] | tuple[float, float]],
         fill_with_shape=False,
     ):
         # change number values to a tuple of two of those values

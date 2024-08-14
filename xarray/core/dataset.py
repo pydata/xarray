@@ -9295,7 +9295,7 @@ class Dataset(
                 indexes[k] = idx
 
         per_data_var_constant_values = {}
-        if isinstance(constant_values, Mapping):
+        if isinstance(constant_values, dict):
             for k in self.data_vars:
                 if v := constant_values.pop(k, None):
                     per_data_var_constant_values[k] = v
