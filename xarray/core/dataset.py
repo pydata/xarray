@@ -2753,7 +2753,7 @@ class Dataset(
                 )
 
             assert variable.ndim == 1
-            chunks: tuple[int, ...] = tuple(
+            chunks = (
                 DataArray(
                     np.ones(variable.shape, dtype=int),
                     dims=(name,),
@@ -2761,9 +2761,13 @@ class Dataset(
                 )
                 .resample({name: resampler})
                 .sum()
-                .data.tolist()
             )
-            return chunks
+            # When bins (binning) or time periods are missing (resampling)
+            # we can end up with NaNs. Drop them.
+            if chunks.dtype.kind == "f":
+                chunks = chunks.dropna(name).astype(int)
+            chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
+            return chunks_tuple
 
         chunks_mapping_ints: Mapping[Any, T_ChunkDim] = {
             name: (
