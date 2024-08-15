@@ -52,7 +52,7 @@ if TYPE_CHECKING:
         T_Variable,
     )
     from xarray.core.variable import Variable
-    from xarray.groupers import Resampler
+    from xarray.groupers import Grouper, Resampler
 
     DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
@@ -873,6 +873,51 @@ class DataWithCoords(AttrAccessMixin):
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
 
         return rolling_exp.RollingExp(self, window, window_type)
+
+    def shuffle_by(self, **groupers: Grouper) -> Self:
+        """
+        Shuffle this object by a Grouper.
+
+        Parameters
+        ----------
+        **groupers : Grouper
+           Grouper objects using which to shuffle the data.
+
+        Examples
+        --------
+        >>> import dask
+        >>> from xarray.groupers import UniqueGrouper
+        >>> da = xr.DataArray(
+        ...     dims="x",
+        ...     data=dask.array.arange(10, chunks=1),
+        ...     coords={"x": [1, 2, 3, 1, 2, 3, 1, 2, 3, 0]},
+        ...     name="a",
+        ... )
+        >>> da
+        <xarray.DataArray 'a' (x: 10)> Size: 80B
+        dask.array<arange, shape=(10,), dtype=int64, chunksize=(1,), chunktype=numpy.ndarray>
+        Coordinates:
+          * x        (x) int64 80B 1 2 3 1 2 3 1 2 3 0
+
+        >>> da.shuffle_by(x=UniqueGrouper())
+        <xarray.DataArray 'a' (x: 10)> Size: 80B
+        dask.array<shuffle, shape=(10,), dtype=int64, chunksize=(3,), chunktype=numpy.ndarray>
+        Coordinates:
+          * x        (x) int64 80B 0 1 1 1 2 2 2 3 3 3
+
+        Returns
+        -------
+        DataArray or Dataset
+            The same type as this object
+
+        See Also
+        --------
+        DataArrayGroupBy.shuffle
+        DatasetGroupBy.shuffle
+        dask.dataframe.DataFrame.shuffle
+        dask.array.shuffle
+        """
+        return self.groupby(**groupers).shuffle()._obj
 
     def _resample(
         self,

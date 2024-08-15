@@ -520,12 +520,37 @@ class GroupBy(Generic[T_Xarray]):
 
     def shuffle(self, chunks: T_Chunks = None) -> Self:
         """
-        Shuffle the underlying object so that all members in a group occur sequentially.
+        Sort or "shuffle" the underlying object so that all members in a group occur sequentially.
 
-        The order of appearance is not guaranteed.
+        This method is particularly useful for chunked arrays (e.g. dask, cubed).
+        particularly when you need to map a function that requires all members of a group
+        to be present in a single chunk.
+        For chunked array types, the order of appearance is not guaranteed, but will depend on
+        the input chunking.
 
-        Use this method first if you need to map a function that requires all members of a group
-        be in a single chunk.
+        Parameters
+        ----------
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
+            How to adjust chunks along dimensions not present in the array being grouped by.
+
+        Returns
+        -------
+        DataArrayGroupBy or DatasetGroupBy
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     dims="x",
+        ...     data=dask.array.arange(10, chunks=3),
+        ...     coords={"x": [1, 2, 3, 1, 2, 3, 1, 2, 3, 0]},
+        ... )
+        >>> shuffled = da.groupby("x").shuffle()
+        >>> shuffled.quantile().compute()
+
+        See Also
+        --------
+        dask.dataframe.shuffle
+        dask.array.shuffle
         """
         from xarray.core.dataarray import DataArray
 
