@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from packaging.version import Version
 from types import ModuleType
 from typing import Any
 
@@ -71,7 +72,7 @@ def astype(
         xp = x._data.__array_namespace__()
         return x._new(data=xp.astype(x._data, dtype, copy=copy))
 
-    # np.astype doesn't exist yet:
+    # TODO: np.astype only exists in np 2.0.0:
     return x._new(data=x._data.astype(dtype, copy=copy))  # type: ignore[attr-defined]
 
 
@@ -105,9 +106,12 @@ def imag(
     <xarray.NamedArray (x: 2)> Size: 16B
     array([2., 4.])
     """
-    xp = _get_data_namespace(x)
-    out = x._new(data=xp.imag(x._data))
-    return out
+    if isinstance(x._data, _arrayapi):
+        xp = x._data.__array_namespace__()
+        return x._new(data=xp.imag(x._data))
+
+    # TODO: np.imag only exists in np 2.0.0:
+    return x._new(data=x._data.imag())  # type: ignore[attr-defined]
 
 
 def real(
@@ -137,9 +141,12 @@ def real(
     <xarray.NamedArray (x: 2)> Size: 16B
     array([1., 2.])
     """
-    xp = _get_data_namespace(x)
-    out = x._new(data=xp.real(x._data))
-    return out
+    if isinstance(x._data, _arrayapi):
+        xp = x._data.__array_namespace__()
+        return x._new(data=xp.real(x._data))
+
+    # TODO: np.real only exists in np 2.0.0:
+    return x._new(data=x._data.real())  # type: ignore[attr-defined]
 
 
 # %% Manipulation functions
