@@ -175,7 +175,9 @@ class set_options:
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-
+    chunk_manager : str, default: "dask"
+        Chunk manager to use for chunked array computations when multiple
+        options are installed.
     cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
         Colormap to use for divergent data plots. If string, must be
         matplotlib built-in colormap. Can also be a Colormap object
