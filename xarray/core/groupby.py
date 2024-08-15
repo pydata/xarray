@@ -559,6 +559,13 @@ class GroupBy(Generic[T_Xarray]):
         dask.dataframe.shuffle
         dask.array.shuffle
         """
+        (grouper,) = self.groupers
+        return self._shuffle_obj(chunks).groupby(
+            {grouper.name: grouper.grouper.reset()},
+            restore_coord_dims=self._restore_coord_dims,
+        )
+
+    def _shuffle_obj(self, chunks: T_Chunks) -> T_DataWithCoords:
         from xarray.core.dataarray import DataArray
 
         (grouper,) = self.groupers
@@ -592,10 +599,7 @@ class GroupBy(Generic[T_Xarray]):
             )
         shuffled = self._maybe_unstack(shuffled)
         new_obj = self._obj._from_temp_dataset(shuffled) if was_array else shuffled
-        return new_obj.groupby(
-            {grouper.name: grouper.grouper.reset()},
-            restore_coord_dims=self._restore_coord_dims,
-        )
+        return new_obj
 
     def map(
         self,

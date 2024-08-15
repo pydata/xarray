@@ -917,7 +917,7 @@ class DataWithCoords(AttrAccessMixin):
         dask.dataframe.DataFrame.shuffle
         dask.array.shuffle
         """
-        return self.groupby(**groupers).shuffle()._obj
+        return self.groupby(**groupers)._shuffle_obj()
 
     def _resample(
         self,
