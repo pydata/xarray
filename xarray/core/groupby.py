@@ -539,13 +539,20 @@ class GroupBy(Generic[T_Xarray]):
 
         Examples
         --------
+        >>> import dask
         >>> da = xr.DataArray(
         ...     dims="x",
         ...     data=dask.array.arange(10, chunks=3),
         ...     coords={"x": [1, 2, 3, 1, 2, 3, 1, 2, 3, 0]},
+        ...     name="a",
         ... )
         >>> shuffled = da.groupby("x").shuffle()
-        >>> shuffled.quantile().compute()
+        >>> shuffled.quantile(q=0.5).compute()
+        <xarray.DataArray 'a' (x: 4)> Size: 32B
+        array([9., 3., 4., 5.])
+        Coordinates:
+            quantile  float64 8B 0.5
+          * x         (x) int64 32B 0 1 2 3
 
         See Also
         --------
