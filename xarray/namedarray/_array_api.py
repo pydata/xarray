@@ -111,7 +111,7 @@ def imag(
         return x._new(data=xp.imag(x._data))
 
     # TODO: np.imag only exists in np 2.0.0:
-    return x._new(data=x._data.imag())  # type: ignore[attr-defined]
+    return x._new(data=x._data.imag)  # type: ignore[attr-defined]
 
 
 def real(
@@ -146,7 +146,7 @@ def real(
         return x._new(data=xp.real(x._data))
 
     # TODO: np.real only exists in np 2.0.0:
-    return x._new(data=x._data.real())  # type: ignore[attr-defined]
+    return x._new(data=x._data.real)  # type: ignore[attr-defined]
 
 
 # %% Manipulation functions
