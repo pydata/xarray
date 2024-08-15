@@ -3,18 +3,15 @@ from __future__ import annotations
 import itertools
 import textwrap
 from collections import ChainMap
-from collections.abc import Hashable, Iterable, Iterator, Mapping, MutableMapping
-from html import escape
-from typing import (
-    TYPE_CHECKING,
-    Any,
+from collections.abc import (
     Callable,
-    Generic,
-    Literal,
-    NoReturn,
-    Union,
-    overload,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
 )
+from html import escape
+from typing import TYPE_CHECKING, Any, Generic, Literal, NoReturn, Union, overload
 
 from xarray.core import utils
 from xarray.core.alignment import align
@@ -770,7 +767,7 @@ class DataTree(
         if data is not _default:
             self._set_node_data(ds)
 
-        self._children = children
+        self.children = children
 
     def copy(
         self: DataTree,
@@ -902,7 +899,7 @@ class DataTree(
             new_node.name = key
             new_node.parent = self
         else:
-            if not isinstance(val, (DataArray, Variable)):
+            if not isinstance(val, DataArray | Variable):
                 # accommodate other types that can be coerced into Variables
                 val = DataArray(val)
 
@@ -968,7 +965,7 @@ class DataTree(
                     # Datatree's name is always a string until we fix that (#8836)
                     new_child.name = str(k)
                     new_children[str(k)] = new_child
-                elif isinstance(v, (DataArray, Variable)):
+                elif isinstance(v, DataArray | Variable):
                     # TODO this should also accommodate other types that can be coerced into Variables
                     new_variables[k] = v
                 else:
@@ -1067,7 +1064,7 @@ class DataTree(
     @classmethod
     def from_dict(
         cls,
-        d: MutableMapping[str, Dataset | DataArray | DataTree | None],
+        d: Mapping[str, Dataset | DataArray | DataTree | None],
         name: str | None = None,
     ) -> DataTree:
         """
@@ -1095,7 +1092,8 @@ class DataTree(
         """
 
         # First create the root node
-        root_data = d.pop("/", None)
+        d_cast = dict(d)
+        root_data = d_cast.pop("/", None)
         if isinstance(root_data, DataTree):
             obj = root_data.copy()
             obj.orphan()
@@ -1106,10 +1104,10 @@ class DataTree(
             pathstr, _ = item
             return len(NodePath(pathstr).parts)
 
-        if d:
+        if d_cast:
             # Populate tree with children determined from data_objects mapping
             # Sort keys by depth so as to insert nodes from root first (see GH issue #9276)
-            for path, data in sorted(d.items(), key=depth):
+            for path, data in sorted(d_cast.items(), key=depth):
                 # Create and set new node
                 node_name = NodePath(path).name
                 if isinstance(data, DataTree):

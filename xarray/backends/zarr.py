@@ -1140,7 +1140,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     ) -> bool:
-        if isinstance(filename_or_obj, (str, os.PathLike)):
+        if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
             return ext in {".zarr"}
 

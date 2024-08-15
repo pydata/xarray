@@ -82,7 +82,7 @@ def infer_freq(index):
     from xarray.core.dataarray import DataArray
     from xarray.core.variable import Variable
 
-    if isinstance(index, (DataArray, pd.Series)):
+    if isinstance(index, DataArray | pd.Series):
         if index.ndim != 1:
             raise ValueError("'index' must be 1D")
         elif not _contains_datetime_like_objects(Variable("dim", index)):
