@@ -6689,6 +6689,16 @@ class TestDataset:
         ds.polyfit("dim2", 2, w=np.arange(ds.sizes["dim2"]))
         xr.testing.assert_identical(ds, ds_copy)
 
+    def test_polyfit_coord(self) -> None:
+        # Make sure polyfit works when given a non-dimension coordinate.
+        ds = create_test_data(seed=1)
+
+        out = ds.polyfit("numbers", 2, full=False)
+        assert "var3_polyfit_coefficients" in out
+        assert "dim1" in out
+        assert "dim2" not in out
+        assert "dim3" not in out
+
     def test_polyfit_warnings(self) -> None:
         ds = create_test_data(seed=1)
 
