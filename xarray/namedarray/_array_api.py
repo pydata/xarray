@@ -71,7 +71,7 @@ def astype(
         xp = x._data.__array_namespace__()
         return x._new(data=xp.astype(x._data, dtype, copy=copy))
 
-    # TODO: np.astype only exists in np 2.0.0:
+    # TODO: np.astype only exists in np 2:
     return x._new(data=x._data.astype(dtype, copy=copy))  # type: ignore[attr-defined]
 
 
@@ -109,7 +109,7 @@ def imag(
         xp = x._data.__array_namespace__()
         return x._new(data=xp.imag(x._data))
 
-    # TODO: np.imag only exists in np 2.0.0:
+    # TODO: np.imag only exists in np 2:
     return x._new(data=x._data.imag)  # type: ignore[attr-defined]
 
 
@@ -144,7 +144,7 @@ def real(
         xp = x._data.__array_namespace__()
         return x._new(data=xp.real(x._data))
 
-    # TODO: np.real only exists in np 2.0.0:
+    # TODO: np.real only exists in np 2:
     return x._new(data=x._data.real)  # type: ignore[attr-defined]
 
 
