@@ -520,13 +520,14 @@ class GroupBy(Generic[T_Xarray]):
 
     def shuffle(self, chunks: T_Chunks = None) -> Self:
         """
-        Sort or "shuffle" the underlying object so that all members in a group occur sequentially.
+        Sort or "shuffle" the underlying object.
 
+        "Shuffle" means the object is sorted so that all group members occur sequentially,
+        in the same chunk. Multiple groups may occur in the same chunk.
         This method is particularly useful for chunked arrays (e.g. dask, cubed).
         particularly when you need to map a function that requires all members of a group
-        to be present in a single chunk.
-        For chunked array types, the order of appearance is not guaranteed, but will depend on
-        the input chunking.
+        to be present in a single chunk. For chunked array types, the order of appearance
+        is not guaranteed, but will depend on the input chunking.
 
         Parameters
         ----------

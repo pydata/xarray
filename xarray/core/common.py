@@ -876,7 +876,13 @@ class DataWithCoords(AttrAccessMixin):
 
     def shuffle_by(self, **groupers: Grouper) -> Self:
         """
-        Shuffle this object by a Grouper.
+        Sort or "shuffle" this object by a Grouper.
+
+        "Shuffle" means the object is sorted so that all group members occur sequentially,
+        in the same chunk. Multiple groups may occur in the same chunk.
+        This method is particularly useful for chunked arrays (e.g. dask, cubed).
+        For chunked array types, the order of appearance is not guaranteed, but will depend on
+        the input chunking.
 
         Parameters
         ----------
