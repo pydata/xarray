@@ -874,7 +874,12 @@ class DataWithCoords(AttrAccessMixin):
 
         return rolling_exp.RollingExp(self, window, window_type)
 
-    def shuffle_by(self, **groupers: Grouper) -> Self:
+    def shuffle_by(
+        self,
+        group: Hashable | DataArray | Mapping[Any, Grouper] | None = None,
+        chunks: T_Chunks = None,
+        **groupers: Grouper,
+    ) -> Self:
         """
         Sort or "shuffle" this object by a Grouper.
 
@@ -886,6 +891,12 @@ class DataWithCoords(AttrAccessMixin):
 
         Parameters
         ----------
+        group : Hashable or DataArray or IndexVariable or mapping of Hashable to Grouper
+            Array whose unique values should be used to group this array. If a
+            Hashable, must be the name of a coordinate contained in this dataarray. If a dictionary,
+            must map an existing variable name to a :py:class:`Grouper` instance.
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
+            How to adjust chunks along dimensions not present in the array being grouped by.
         **groupers : Grouper
            Grouper objects using which to shuffle the data.
 
@@ -923,7 +934,7 @@ class DataWithCoords(AttrAccessMixin):
         dask.dataframe.DataFrame.shuffle
         dask.array.shuffle
         """
-        return self.groupby(**groupers)._shuffle_obj()
+        return self.groupby(group=group, **groupers)._shuffle_obj(chunks)
 
     def _resample(
         self,
