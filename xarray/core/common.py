@@ -895,7 +895,7 @@ class DataWithCoords(AttrAccessMixin):
             Array whose unique values should be used to group this array. If a
             Hashable, must be the name of a coordinate contained in this dataarray. If a dictionary,
             must map an existing variable name to a :py:class:`Grouper` instance.
-        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or tuple of int, optional
             How to adjust chunks along dimensions not present in the array being grouped by.
         **groupers : Grouper
            Grouper objects using which to shuffle the data.

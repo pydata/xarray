@@ -531,7 +531,7 @@ class GroupBy(Generic[T_Xarray]):
 
         Parameters
         ----------
-        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or tuple of int, optional
             How to adjust chunks along dimensions not present in the array being grouped by.
 
         Returns
@@ -557,7 +557,7 @@ class GroupBy(Generic[T_Xarray]):
 
         See Also
         --------
-        dask.dataframe.shuffle
+        dask.dataframe.DataFrame.shuffle
         dask.array.shuffle
         """
         (grouper,) = self.groupers
