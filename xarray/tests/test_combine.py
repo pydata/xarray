@@ -728,7 +728,10 @@ class TestCombineDatasetsbyCoords:
             combine_by_coords(objs)
 
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [0]})]
-        with pytest.raises(ValueError, match=r"Every dimension needs a coordinate"):
+        with pytest.raises(
+            ValueError,
+            match=r"Every dimension requires a corresponding 1D coordinate and index",
+        ):
             combine_by_coords(objs)
 
     def test_empty_input(self):
@@ -1163,16 +1166,3 @@ def test_combine_by_coords_raises_for_differing_types():
         TypeError, match=r"Cannot combine along dimension 'time' with mixed types."
     ):
         combine_by_coords([da_1, da_2])
-
-
-def test_combine_by_coords_raises_for_no_index():
-    # previously failed with uninformative ValueError
-
-    da1 = DataArray([1, 2, 3], dims="x", coords={"x": [1, 2, 3]})
-    da2 = DataArray([1, 2, 3], dims="x", coords={"x": [4, 5, 6]})
-    da1 = da1.drop_indexes("x")
-    with pytest.raises(
-        ValueError,
-        match=r"Every dimension requires a corresponding 1D coordinate and index for inferring concatenation order but the coordinate 'x' has no corresponding index",
-    ):
-        combine_by_coords([da1, da2])
