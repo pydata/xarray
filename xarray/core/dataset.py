@@ -9023,7 +9023,10 @@ class Dataset(
         variables = {}
         skipna_da = skipna
 
-        x = get_clean_interp_index(self, dim, strict=False)
+        x = get_clean_interp_index(self, dim, use_coordinate=dim, strict=False)
+        # If we have a coordinate convert it to its underlying dimension.
+        dim = self.coords[dim].dims[0]
+
         xname = f"{self[dim].name}_"
         order = int(deg) + 1
         lhs = np.vander(x, order)
