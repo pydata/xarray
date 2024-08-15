@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from packaging.version import Version
 from types import ModuleType
 from typing import Any
 
