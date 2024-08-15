@@ -46,6 +46,8 @@ Bug fixes
   date "0001-01-01". (:issue:`9108`, :pull:`9116`) By `Spencer Clark
   <https://github.com/spencerkclark>`_ and `Deepak Cherian
   <https://github.com/dcherian>`_.
+- Fix issue where polyfit wouldn't handle non-dimension coordinates. (:issue:`4375`, :pull:`9369`)
+  By `Karl Krauth <https://github.com/Karl-Krauth>`_.
 
 Documentation
 ~~~~~~~~~~~~~
