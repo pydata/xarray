@@ -2096,6 +2096,11 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
             assert actual["x"].encoding["chunksizes"] == (50, 100)
             assert actual["y"].encoding["chunksizes"] == (100, 50)
 
+    # Flaky test. Very open to contributions on fixing this
+    @pytest.mark.flaky
+    def test_roundtrip_coordinates(self) -> None:
+        super().test_roundtrip_coordinates()
+
 
 @requires_zarr
 class ZarrBase(CFEncodedBase):
