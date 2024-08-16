@@ -22,7 +22,8 @@ v2024.07.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Make chunk manager an option in ``set_options`` (:pull:`9362`).
+  By `Tom White <https://github.com/tomwhite>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

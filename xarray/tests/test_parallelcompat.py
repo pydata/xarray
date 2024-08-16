@@ -6,6 +6,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+from xarray import set_options
 from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
 from xarray.namedarray._typing import _Chunks
 from xarray.namedarray.daskmanager import DaskManager
@@ -151,6 +152,11 @@ class TestGetChunkManager:
     def test_get_chunkmanger(self, register_dummy_chunkmanager) -> None:
         chunkmanager = guess_chunkmanager("dummy")
         assert isinstance(chunkmanager, DummyChunkManager)
+
+    def test_get_chunkmanger_via_set_options(self, register_dummy_chunkmanager) -> None:
+        with set_options(chunk_manager="dummy"):
+            chunkmanager = guess_chunkmanager(None)
+            assert isinstance(chunkmanager, DummyChunkManager)
 
     def test_fail_on_nonexistent_chunkmanager(self) -> None:
         with pytest.raises(ValueError, match="unrecognized chunk manager foo"):
