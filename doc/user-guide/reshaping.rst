@@ -274,7 +274,7 @@ Sort
 ----
 
 One may sort a DataArray/Dataset via :py:meth:`~xarray.DataArray.sortby` and
-:py:meth:`~xarray.Dataset.sortby`.  The input can be an individual or list of
+:py:meth:`~xarray.Dataset.sortby`. The input can be an individual or list of
 1D ``DataArray`` objects:
 
 .. ipython:: python
