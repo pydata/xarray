@@ -33,6 +33,7 @@ from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import is_dict_like, is_scalar, parse_dims
 from xarray.core.variable import Variable
+from xarray.namedarray._typing import chunkedduckarray
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 from xarray.util.deprecation_helpers import deprecate_dims
@@ -803,6 +804,7 @@ def apply_variable_ufunc(
                     )
 
             def func(*arrays):
+                res: chunkedduckarray | tuple[chunkedduckarray, ...]
                 res = chunkmanager.apply_gufunc(
                     numpy_func,
                     signature.to_gufunc_string(exclude_dims),
