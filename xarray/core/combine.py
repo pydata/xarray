@@ -89,10 +89,12 @@ def _infer_concat_order_from_coords(datasets):
             # Need to read coordinate values to do ordering
             indexes = [ds._indexes.get(dim) for ds in datasets]
             if any(index is None for index in indexes):
-                raise ValueError(
-                    "Every dimension needs a coordinate for "
-                    "inferring concatenation order"
+                error_msg = (
+                    f"Every dimension requires a corresponding 1D coordinate "
+                    f"and index for inferring concatenation order but the "
+                    f"coordinate '{dim}' has no corresponding index"
                 )
+                raise ValueError(error_msg)
 
             # TODO (benbovy, flexible indexes): support flexible indexes?
             indexes = [index.to_pandas_index() for index in indexes]

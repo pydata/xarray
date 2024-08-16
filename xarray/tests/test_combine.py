@@ -728,7 +728,10 @@ class TestCombineDatasetsbyCoords:
             combine_by_coords(objs)
 
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [0]})]
-        with pytest.raises(ValueError, match=r"Every dimension needs a coordinate"):
+        with pytest.raises(
+            ValueError,
+            match=r"Every dimension requires a corresponding 1D coordinate and index",
+        ):
             combine_by_coords(objs)
 
     def test_empty_input(self):
