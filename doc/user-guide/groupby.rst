@@ -81,8 +81,10 @@ You can index out a particular group:
 
     ds.groupby("letters")["b"]
 
-Just like in pandas, creating a GroupBy object is cheap: it does not actually
+Just like in pandas, creating a ``GroupBy`` object is cheap: it does not actually
 split the data until you access particular values.
+
+To group by multiple variables, see the section on `Grouper Objects`_
 
 Binning
 ~~~~~~~
@@ -276,7 +278,15 @@ is identical to
 
     ds.groupby(x=UniqueGrouper())
 
-and
+We can use this to group by multiple dimensions:
+
+.. ipython:: python
+
+    from xarray.groupers import UniqueGrouper
+
+    ds.groupby(lat=UniqueGrouper(), lon=UniqueGrouper()).sum()
+
+Similarly,
 
 .. code-block:: python
 
