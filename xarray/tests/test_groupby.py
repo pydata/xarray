@@ -23,7 +23,7 @@ from xarray.tests import (
     create_test_data,
     has_cftime,
     has_dask,
-    has_dask_ge_2024_08_0,
+    has_dask_ge_2024_08_1,
     has_flox,
     raise_if_dask_computes,
     requires_cftime,
@@ -600,7 +600,7 @@ def test_groupby_repr_datetime(obj) -> None:
     ],
 )
 def test_groupby_drops_nans(shuffle: bool, chunk: Literal[False] | dict) -> None:
-    if shuffle and chunk and not has_dask_ge_2024_08_0:
+    if shuffle and chunk and not has_dask_ge_2024_08_1:
         pytest.skip()
     # GH2383
     # nan in 2D data variable (requires stacking)
@@ -1330,7 +1330,7 @@ class TestDataArrayGroupBy:
     def test_groupby_reductions(
         self, use_flox: bool, method: str, shuffle: bool, chunk: bool
     ) -> None:
-        if shuffle and chunk and not has_dask_ge_2024_08_0:
+        if shuffle and chunk and not has_dask_ge_2024_08_1:
             pytest.skip()
 
         array = self.da

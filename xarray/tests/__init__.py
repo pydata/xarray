@@ -106,7 +106,7 @@ with warnings.catch_warnings():
     has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
-has_dask_ge_2024_08_0, _ = _importorskip("dask", minversion="2024.08.0")
+has_dask_ge_2024_08_1, _ = _importorskip("dask", minversion="2024.08.1")
 with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
