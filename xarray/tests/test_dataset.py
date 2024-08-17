@@ -4134,6 +4134,11 @@ class TestDataset:
             data["notfound"]
         with pytest.raises(KeyError):
             data[["var1", "notfound"]]
+        with pytest.raises(
+            KeyError,
+            match=r"Hint: use a list to select multiple variables, for example `ds\[\['var1', 'var2'\]\]`",
+        ):
+            data["var1", "var2"]
 
         actual1 = data[["var1", "var2"]]
         expected1 = Dataset({"var1": data["var1"], "var2": data["var2"]})
