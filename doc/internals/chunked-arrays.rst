@@ -91,7 +91,8 @@ Once the chunkmanager subclass has been registered, xarray objects wrapping the 
 The latter two methods ultimately call the chunkmanager's implementation of ``.from_array``, to which they pass the ``from_array_kwargs`` dict.
 The ``chunked_array_type`` kwarg selects which registered chunkmanager subclass to dispatch to. It defaults to ``'dask'``
 if Dask is installed, otherwise it defaults to whichever chunkmanager is registered if only one is registered.
-If multiple chunkmanagers are registered it will raise an error by default.
+If multiple chunkmanagers are registered, the ``chunk_manager`` configuration option (which can be set using :py:func:`set_options`)
+will be used to determine which chunkmanager to use, defaulting to ``'dask'``.
 
 Parallel processing without chunks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
