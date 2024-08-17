@@ -261,7 +261,8 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             raise ValueError(
                 "This method is very inefficient on dask<2024.08.1. Please upgrade."
             )
-        chunks = chunks or "auto"
+        if chunks is None:
+            chunks = "auto"
         if chunks != "auto":
             raise NotImplementedError("Only chunks='auto' is supported at present.")
-        return dask.array.shuffle(x, indexer, axis, chunks=chunks)
+        return dask.array.shuffle(x, indexer, axis, chunks="auto")
