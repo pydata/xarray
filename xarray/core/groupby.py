@@ -53,7 +53,7 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.types import GroupIndex, GroupIndices, GroupKey, Self, T_Chunks
+    from xarray.core.types import GroupIndex, GroupIndices, GroupKey, T_Chunks
     from xarray.core.utils import Frozen
     from xarray.groupers import Grouper
 
@@ -518,7 +518,7 @@ class GroupBy(Generic[T_Xarray]):
             self._sizes = self._obj.isel({self._group_dim: index}).sizes
         return self._sizes
 
-    def shuffle(self, chunks: T_Chunks = None) -> Self:
+    def shuffle(self, chunks: T_Chunks = None) -> DataArrayGroupBy | DatasetGroupBy:
         """
         Sort or "shuffle" the underlying object.
 
@@ -566,7 +566,7 @@ class GroupBy(Generic[T_Xarray]):
             restore_coord_dims=self._restore_coord_dims,
         )
 
-    def _shuffle_obj(self, chunks: T_Chunks) -> T_DataWithCoords:
+    def _shuffle_obj(self, chunks: T_Chunks) -> T_Xarray:
         from xarray.core.dataarray import DataArray
 
         (grouper,) = self.groupers
