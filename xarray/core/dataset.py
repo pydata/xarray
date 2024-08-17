@@ -9209,7 +9209,7 @@ class Dataset(
             length for all axes.
             Default is ``None``, to use the entire axis.
         constant_values : scalar, tuple, mapping of dim name to scalar or tuple, or \
-            mapping of var name to scalar, tuple or to mapping of dim name to scalar or tuple, default: 0
+            mapping of var name to scalar, tuple or to mapping of dim name to scalar or tuple, default: None
             Used in 'constant'. The values to set the padded values for each data variable / axis.
             ``{var_1: {dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}, ...
             var_M: (before, after)}`` unique pad constants per data variable.
@@ -9219,8 +9219,8 @@ class Dataset(
             dimension.
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all dimensions.
-            Default is 0.
-        end_values : scalar, tuple or mapping of hashable to tuple, default: 0
+            Default is ``None``, pads with ``np.nan``.
+        end_values : scalar, tuple or mapping of hashable to tuple, default: None
             Used in 'linear_ramp'.  The values used for the ending value of the
             linear_ramp and that will form the edge of the padded array.
             ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
@@ -9229,7 +9229,7 @@ class Dataset(
             axis.
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all axes.
-            Default is 0.
+            Default is None.
         reflect_type : {"even", "odd", None}, optional
             Used in "reflect", and "symmetric".  The "even" style is the
             default with an unaltered reflection around the edge value.  For
@@ -9299,7 +9299,8 @@ class Dataset(
                 indexes[k] = idx
 
         per_data_var_constant_values = {}
-        if isinstance(constant_values, dict):
+        if utils.is_dict_like(constant_values):
+            constant_values = dict(constant_values)
             for k in self.data_vars:
                 if v := constant_values.pop(k, None):
                     per_data_var_constant_values[k] = v
