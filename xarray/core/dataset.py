@@ -115,7 +115,6 @@ from xarray.core.utils import (
     is_dict_like,
     is_duck_array,
     is_duck_dask_array,
-    is_list_like,
     is_scalar,
     maybe_wrap_array,
 )
