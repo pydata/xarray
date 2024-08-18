@@ -123,6 +123,12 @@ _dtype_categories = {
     "floating-point": _floating_dtypes,
 }
 
+# %% Constants
+e = np.e
+inf = np.inf
+nan = np.nan
+newaxis = np.newaxis
+pi = np.pi
 
 
 # %% Creation Functions
