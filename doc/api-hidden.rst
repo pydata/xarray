@@ -694,6 +694,6 @@
    coding.times.CFTimedeltaCoder
    coding.times.CFDatetimeCoder
 
-   core.groupers.Grouper
-   core.groupers.Resampler
-   core.groupers.EncodedGroups
+   groupers.Grouper
+   groupers.Resampler
+   groupers.EncodedGroups

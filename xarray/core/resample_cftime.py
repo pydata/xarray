@@ -78,15 +78,13 @@ class CFTimeGrouper:
         freq: str | BaseCFTimeOffset,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
-        loffset: str | datetime.timedelta | BaseCFTimeOffset | None = None,
         origin: str | CFTimeDatetime = "start_day",
         offset: str | datetime.timedelta | BaseCFTimeOffset | None = None,
     ):
         self.freq = to_offset(freq)
-        self.loffset = loffset
         self.origin = origin
 
-        if isinstance(self.freq, (MonthEnd, QuarterEnd, YearEnd)):
+        if isinstance(self.freq, MonthEnd | QuarterEnd | YearEnd):
             if closed is None:
                 self.closed = "right"
             else:
@@ -145,22 +143,6 @@ class CFTimeGrouper:
         datetime_bins, labels = _get_time_bins(
             index, self.freq, self.closed, self.label, self.origin, self.offset
         )
-        if self.loffset is not None:
-            if not isinstance(
-                self.loffset, (str, datetime.timedelta, BaseCFTimeOffset)
-            ):
-                # BaseCFTimeOffset is not public API so we do not include it in
-                # the error message for now.
-                raise ValueError(
-                    f"`loffset` must be a str or datetime.timedelta object. "
-                    f"Got {self.loffset}."
-                )
-
-            if isinstance(self.loffset, datetime.timedelta):
-                labels = labels + self.loffset
-            else:
-                labels = labels + to_offset(self.loffset)
-
         # check binner fits data
         if index[0] < datetime_bins[0]:
             raise ValueError("Value falls before first bin")
@@ -290,7 +272,7 @@ def _adjust_bin_edges(
 
     CFTimeIndex([2000-01-31 00:00:00, 2000-02-29 00:00:00], dtype='object')
     """
-    if isinstance(freq, (MonthEnd, QuarterEnd, YearEnd)):
+    if isinstance(freq, MonthEnd | QuarterEnd | YearEnd):
         if closed == "right":
             datetime_bins = datetime_bins + datetime.timedelta(days=1, microseconds=-1)
         if datetime_bins[-2] > index.max():
@@ -503,7 +485,7 @@ def _convert_offset_to_timedelta(
 ) -> datetime.timedelta:
     if isinstance(offset, datetime.timedelta):
         return offset
-    if isinstance(offset, (str, Tick)):
+    if isinstance(offset, str | Tick):
         timedelta_cftime_offset = to_offset(offset)
         if isinstance(timedelta_cftime_offset, Tick):
             return timedelta_cftime_offset.as_timedelta()

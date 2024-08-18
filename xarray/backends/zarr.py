@@ -806,7 +806,7 @@ class ZarrStore(AbstractWritableDataStore):
                 for k2, v2 in attrs.items():
                     encoded_attrs[k2] = self.encode_attribute(v2)
 
-                if coding.strings.check_vlen_dtype(dtype) == str:
+                if coding.strings.check_vlen_dtype(dtype) is str:
                     dtype = str
 
                 if self._write_empty is not None:
@@ -1140,7 +1140,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     ) -> bool:
-        if isinstance(filename_or_obj, (str, os.PathLike)):
+        if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
             return ext in {".zarr"}
 

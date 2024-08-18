@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import sys
 from abc import abstractmethod
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
@@ -86,7 +87,29 @@ def check_duck_array_typevar(a: duckarray[Any, _DType]) -> duckarray[Any, _DType
     if isinstance(b, _arrayfunction_or_api):
         return b
     else:
-        raise TypeError(f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi")
+        missing_attrs = ""
+        actual_attrs = set(dir(b))
+        for t in _arrayfunction_or_api:
+            if sys.version_info >= (3, 13):
+                # https://github.com/python/cpython/issues/104873
+                from typing import get_protocol_members
+
+                expected_attrs = get_protocol_members(t)
+            elif sys.version_info >= (3, 12):
+                expected_attrs = t.__protocol_attrs__
+            else:
+                from typing import _get_protocol_attrs  # type: ignore[attr-defined]
+
+                expected_attrs = _get_protocol_attrs(t)
+
+            missing_attrs_ = expected_attrs - actual_attrs
+            if missing_attrs_:
+                missing_attrs += f"{t.__name__} - {missing_attrs_}\n"
+        raise TypeError(
+            f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi. "
+            "Missing following attrs:\n"
+            f"{missing_attrs}"
+        )
 
 
 class NamedArraySubclassobjects:
@@ -180,7 +203,7 @@ class TestNamedArray(NamedArraySubclassobjects):
             # Fail:
             (
                 ("x",),
-                NamedArray("time", np.array([1, 2, 3])),  # type: ignore
+                NamedArray("time", np.array([1, 2, 3], dtype=np.dtype(np.int64))),
                 np.array([1, 2, 3]),
                 True,
             ),
@@ -341,7 +364,7 @@ class TestNamedArray(NamedArraySubclassobjects):
     def test_duck_array_class(self) -> None:
         numpy_a: NDArray[np.int64]
         numpy_a = np.array([2.1, 4], dtype=np.dtype(np.int64))
-        check_duck_array_typevar(numpy_a)  # type: ignore
+        check_duck_array_typevar(numpy_a)
 
         masked_a: np.ma.MaskedArray[Any, np.dtype[np.int64]]
         masked_a = np.ma.asarray([2.1, 4], dtype=np.dtype(np.int64))  # type: ignore[no-untyped-call]
@@ -560,4 +583,4 @@ class TestNamedArray(NamedArraySubclassobjects):
 
     def test_warn_on_repeated_dimension_names(self) -> None:
         with pytest.warns(UserWarning, match="Duplicate dimension names"):
-            NamedArray(("x", "x"), np.arange(4).reshape(2, 2))  # type: ignore
+            NamedArray(("x", "x"), np.arange(4).reshape(2, 2))

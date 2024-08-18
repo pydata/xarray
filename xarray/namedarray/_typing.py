@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from enum import Enum
 from types import ModuleType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Literal,
     Protocol,
@@ -24,7 +23,7 @@ try:
     if sys.version_info >= (3, 11):
         from typing import TypeAlias
     else:
-        from typing_extensions import TypeAlias
+        from typing import TypeAlias
 except ImportError:
     if TYPE_CHECKING:
         raise
@@ -79,9 +78,9 @@ _AxisLike = Union[_Axis, _Axes]
 _Chunks = tuple[_Shape, ...]
 _NormalizedChunks = tuple[tuple[int, ...], ...]
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
-T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
+T_ChunkDim: TypeAlias = int | Literal["auto"] | None | tuple[int, ...]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
-T_Chunks: TypeAlias = Union[T_ChunkDim, Mapping[Any, T_ChunkDim]]
+T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim]
 
 _Dim = Hashable
 _Dims = tuple[_Dim, ...]
@@ -93,7 +92,7 @@ _DimsLike = Union[str, Iterable[_Dim]]
 # https://github.com/numpy/numpy/pull/25022
 # https://github.com/data-apis/array-api/pull/674
 _IndexKey = Union[int, slice, "ellipsis"]
-_IndexKeys = tuple[Union[_IndexKey], ...]  #  tuple[Union[_IndexKey, None], ...]
+_IndexKeys = tuple[_IndexKey, ...]  #  tuple[Union[_IndexKey, None], ...]
 _IndexKeyLike = Union[_IndexKey, _IndexKeys]
 
 _AttrsLike = Union[Mapping[Any, Any], None]
@@ -153,13 +152,16 @@ class _arrayfunction(
     ) -> _arrayfunction[Any, _DType_co] | Any: ...
 
     @overload
-    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]: ...
-
+    def __array__(
+        self, dtype: None = ..., /, *, copy: None | bool = ...
+    ) -> np.ndarray[Any, _DType_co]: ...
     @overload
-    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]: ...
+    def __array__(
+        self, dtype: _DType, /, *, copy: None | bool = ...
+    ) -> np.ndarray[Any, _DType]: ...
 
     def __array__(
-        self, dtype: _DType | None = ..., /
+        self, dtype: _DType | None = ..., /, *, copy: None | bool = ...
     ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]: ...
 
     # TODO: Should return the same subclass but with a new dtype generic.

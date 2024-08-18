@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Hashable, MutableMapping
+from collections.abc import Callable, Hashable, MutableMapping
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Union
+from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
 import pandas as pd
@@ -520,9 +520,19 @@ class UnsignedIntegerCoder(VariableCoder):
             # trying to get it from encoding, resort to an int with the same precision as data.dtype if not available
             signed_dtype = np.dtype(encoding.get("dtype", f"i{data.dtype.itemsize}"))
             if "_FillValue" in attrs:
-                new_fill = np.array(attrs["_FillValue"])
-                # use view here to prevent OverflowError
-                attrs["_FillValue"] = new_fill.view(signed_dtype).item()
+                try:
+                    # user provided the on-disk signed fill
+                    new_fill = signed_dtype.type(attrs["_FillValue"])
+                except OverflowError:
+                    # user provided the in-memory unsigned fill, convert to signed type
+                    unsigned_dtype = np.dtype(f"u{signed_dtype.itemsize}")
+                    # use view here to prevent OverflowError
+                    new_fill = (
+                        np.array(attrs["_FillValue"], dtype=unsigned_dtype)
+                        .view(signed_dtype)
+                        .item()
+                    )
+                attrs["_FillValue"] = new_fill
             data = duck_array_ops.astype(duck_array_ops.around(data), signed_dtype)
 
             return Variable(dims, data, attrs, encoding, fastpath=True)
@@ -652,8 +662,8 @@ class NonStringCoder(VariableCoder):
                             SerializationWarning,
                             stacklevel=10,
                         )
-                    data = np.around(data)
-                data = data.astype(dtype=dtype)
+                    data = duck_array_ops.round(data)
+                data = duck_array_ops.astype(data, dtype=dtype)
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
             return variable
@@ -667,7 +677,7 @@ class ObjectVLenStringCoder(VariableCoder):
         raise NotImplementedError
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if variable.dtype == object and variable.encoding.get("dtype", False) == str:
+        if variable.dtype.kind == "O" and variable.encoding.get("dtype", False) is str:
             variable = variable.astype(variable.encoding["dtype"])
             return variable
         else:

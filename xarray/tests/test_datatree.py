@@ -249,6 +249,7 @@ class TestUpdate:
         dt.update({"foo": xr.DataArray(0), "a": DataTree()})
         expected = DataTree.from_dict({"/": xr.Dataset({"foo": 0}), "a": None})
         assert_equal(dt, expected)
+        assert dt.groups == ("/", "/a")
 
     def test_update_new_named_dataarray(self):
         da = xr.DataArray(name="temp", data=[0, 50])
@@ -565,6 +566,30 @@ class TestTreeFromDict:
         roundtrip = DataTree.from_dict(dt.to_dict())
         assert roundtrip.equals(dt)
 
+    def test_insertion_order(self):
+        # regression test for GH issue #9276
+        reversed = DataTree.from_dict(
+            {
+                "/Homer/Lisa": xr.Dataset({"age": 8}),
+                "/Homer/Bart": xr.Dataset({"age": 10}),
+                "/Homer": xr.Dataset({"age": 39}),
+                "/": xr.Dataset({"age": 83}),
+            }
+        )
+        expected = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"age": 83}),
+                "/Homer": xr.Dataset({"age": 39}),
+                "/Homer/Lisa": xr.Dataset({"age": 8}),
+                "/Homer/Bart": xr.Dataset({"age": 10}),
+            }
+        )
+        assert reversed.equals(expected)
+
+        # Check that Bart and Lisa's order is still preserved within the group,
+        # despite 'Bart' coming before 'Lisa' when sorted alphabetically
+        assert list(reversed["Homer"].children.keys()) == ["Lisa", "Bart"]
+
 
 class TestDatasetView:
     def test_view_contents(self):
@@ -597,7 +622,7 @@ class TestDatasetView:
         ds = create_test_data()
         dt: DataTree = DataTree(data=ds)
         assert ds.mean().identical(dt.ds.mean())
-        assert type(dt.ds.mean()) == xr.Dataset
+        assert isinstance(dt.ds.mean(), xr.Dataset)
 
     def test_arithmetic(self, create_test_datatree):
         dt = create_test_datatree()
