@@ -101,7 +101,6 @@ def asarray(
     device=...,
     copy: bool | None = ...,
     dims: _DimsLike = ...,
-    attrs: _AttrsLike = ...,
 ) -> NamedArray[_ShapeType, _DType]: ...
 @overload
 def asarray(
@@ -112,7 +111,6 @@ def asarray(
     device=...,
     copy: bool | None = ...,
     dims: _DimsLike = ...,
-    attrs: _AttrsLike = ...,
 ) -> NamedArray[Any, _DType]: ...
 @overload
 def asarray(
@@ -123,7 +121,6 @@ def asarray(
     device=None,
     copy: bool | None = None,
     dims: _DimsLike = ...,
-    attrs: _AttrsLike = ...,
 ) -> NamedArray[_ShapeType, _DType]: ...
 @overload
 def asarray(
@@ -134,7 +131,6 @@ def asarray(
     device=...,
     copy: bool | None = ...,
     dims: _DimsLike = ...,
-    attrs: _AttrsLike = ...,
 ) -> NamedArray[Any, _DType]: ...
 def asarray(
     obj: duckarray[_ShapeType, _DType] | _ArrayLike,
@@ -144,7 +140,6 @@ def asarray(
     device=None,
     copy: bool | None = None,
     dims: _DimsLike = _default,
-    attrs: _AttrsLike = None,
 ) -> NamedArray[_ShapeType, _DType] | NamedArray[Any, Any]:
     """
     Create a Named array from an array-like object.
@@ -163,9 +158,10 @@ def asarray(
     """
     data = obj
     if isinstance(data, NamedArray):
-        raise TypeError(
-            "Array is already a Named array. Use 'data.data' to retrieve the data array"
-        )
+        if copy:
+            return data.copy()
+        else:
+            return data
 
     # TODO: dask.array.ma.MaskedArray also exists, better way?
     if isinstance(data, np.ma.MaskedArray):
@@ -176,21 +172,21 @@ def asarray(
             raise NotImplementedError("MaskedArray is not supported yet")
 
         _dims = _infer_dims(data.shape, dims)
-        return NamedArray(_dims, data, attrs)
+        return NamedArray(_dims, data)
 
     if isinstance(data, _arrayfunction_or_api):
         _dims = _infer_dims(data.shape, dims)
-        return NamedArray(_dims, data, attrs)
+        return NamedArray(_dims, data)
 
     if isinstance(data, tuple):
         _data = to_0d_object_array(data)
         _dims = _infer_dims(_data.shape, dims)
-        return NamedArray(_dims, _data, attrs)
+        return NamedArray(_dims, _data)
 
     # validate whether the data is valid data types.
-    _data = np.asarray(data)
+    _data = np.asarray(data, dtype=dtype, device=device, copy=copy)
     _dims = _infer_dims(_data.shape, dims)
-    return NamedArray(_dims, _data, attrs)
+    return NamedArray(_dims, _data)
 
 
 # %% Data types
