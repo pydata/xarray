@@ -64,6 +64,7 @@ if TYPE_CHECKING:
         _DimsLike,
         _DimsLikeAgg,
         _DType,
+        _IndexKeyLike,
         _IntOrUnknown,
         _ScalarType,
         _Shape,
@@ -547,12 +548,16 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __bool__(self, /) -> bool:
         return self._data.__bool__()
 
-    def __getitem__(self, key):
-        if isinstance(key, int):
+    def __getitem__(self, key: _IndexKeyLike | NamedArray):
+        if isinstance(key, (int, slice, tuple)):
             _data = self._data[key]
             return self._new((), _data)
+        elif isinstance(key, NamedArray):
+            _key = self._data  # TODO: Transpose, unordered dims shouldn't matter.
+            _data = self._data[_key]
+            return self._new(key._dims, _data)
         else:
-            raise NotImplementedError("only int supported")
+            raise NotImplementedError("{k=} is not supported")
 
     @property
     def dtype(self) -> _DType_co:
