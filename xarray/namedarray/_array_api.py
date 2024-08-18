@@ -370,7 +370,7 @@ def iinfo(type: _dtype | NamedArray[Any, Any], /):
         return xp.iinfo(type._data)
     else:
         xp = _get_namespace_dtype(type)
-        return xp.finfo(type)
+        return xp.iinfo(type)
 
 
 def isdtype(dtype: _dtype, kind: _dtype | str | tuple[_dtype | str, ...]) -> bool:
