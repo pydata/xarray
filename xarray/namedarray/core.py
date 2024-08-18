@@ -602,6 +602,38 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         return matmul(self, other)
 
+    # Bitwise Operators
+
+    def __invert__(self, /):
+        from xarray.namedarray._array_api import bitwise_invert
+
+        return bitwise_invert(self)
+
+    def __and__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_and
+
+        return bitwise_and(self)
+
+    def __or__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_or
+
+        return bitwise_or(self)
+
+    def __xor__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_xor
+
+        return bitwise_xor(self)
+
+    def __lshift__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_left_shift
+
+        return bitwise_left_shift(self)
+
+    def __rshift__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_right_shift
+
+        return bitwise_right_shift(self)
+
     # Comparison Operators
 
     def __eq__(self, other, /):
