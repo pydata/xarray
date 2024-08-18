@@ -666,6 +666,78 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         return not_equal(self, other)
 
+    # Reflected Operators
+
+    # (Reflected) Arithmetic Operators
+
+    def __radd__(self, other, /):
+        from xarray.namedarray._array_api import add
+
+        return add(other, self)
+
+    def __rsub__(self, other, /):
+        from xarray.namedarray._array_api import subtract
+
+        return subtract(other, self)
+
+    def __rmul__(self, other, /):
+        from xarray.namedarray._array_api import multiply
+
+        return multiply(other, self)
+
+    def __rtruediv__(self, other, /):
+        from xarray.namedarray._array_api import divide
+
+        return divide(other, self)
+
+    def __rfloordiv__(self, other, /):
+        from xarray.namedarray._array_api import floor_divide
+
+        return floor_divide(other, self)
+
+    def __rmod__(self, other, /):
+        from xarray.namedarray._array_api import remainder
+
+        return remainder(other, self)
+
+    def __rpow__(self, other, /):
+        from xarray.namedarray._array_api import pow
+
+        return pow(other, self)
+
+    # (Reflected) Array Operators
+
+    def __rmatmul__(self, other, /):
+        from xarray.namedarray._array_api import matmul
+
+        return matmul(other, self)
+
+    # (Reflected) Bitwise Operators
+
+    def __rand__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_and
+
+        return bitwise_and(other, self)
+
+    def __ror__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_or
+
+        return bitwise_or(other, self)
+
+    def __rxor__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_xor
+
+        return bitwise_xor(other, self)
+
+    def __rlshift__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_left_shift
+
+        return bitwise_left_shift(other, self)
+
+    def __rrshift__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_right_shift
+
+        return bitwise_right_shift(other, self)
     # Something
 
     def __getitem__(self, key: _IndexKeyLike | NamedArray):
