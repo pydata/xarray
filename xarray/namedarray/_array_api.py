@@ -50,6 +50,10 @@ def _get_namespace_dtype(dtype: _dtype) -> ModuleType:
     return xp
 
 
+def _maybe_default_namespace(xp: ModuleType | None = None) -> ModuleType:
+    return np if xp is None else xp
+
+
 # %% array_api version
 __array_api_version__ = "2023.12"
 
@@ -71,6 +75,21 @@ def _infer_dims(
         return tuple(f"dim_{n}" for n in range(len(shape)))
     else:
         return dims
+
+
+def arange(
+    start,
+    /,
+    stop=None,
+    step=1,
+    *,
+    dtype: _DType | None = None,
+    device=None,
+) -> NamedArray[_ShapeType, _DType]:
+    xp = _maybe_default_namespace()
+    _data = xp.arange(start, stop=stop, step=step, dtype=dtype, device=device)
+    _dims = _infer_dims(_data.shape)
+    return NamedArray(_dims, _data)
 
 
 @overload
