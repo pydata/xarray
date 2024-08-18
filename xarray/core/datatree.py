@@ -158,6 +158,18 @@ def _check_alignment(
             _check_alignment(child_path, child_ds, base_ds, child.children)
 
 
+def _check_for_slashes_in_names(variables: Iterable[Hashable]) -> None:
+    offending_variable_names = [
+        name for name in variables if isinstance(name, str) and "/" in name
+    ]
+    if len(offending_variable_names) > 0:
+        raise KeyError(
+            f"Given Dataset contains path-like variable names: {offending_variable_names}. "
+            "A Dataset represents a group, and a single group "
+            "cannot have path-like variable names. "
+        )
+
+
 class DatasetView(Dataset):
     """
     An immutable Dataset-like view onto the data in a single DataTree node.
@@ -459,7 +471,9 @@ class DataTree(
             children = {}
 
         super().__init__(name=name)
-        self._set_node_data(_coerce_to_dataset(data))
+        ds = _coerce_to_dataset(data)
+        self._set_node_data(ds)
+        _check_for_slashes_in_names(ds.variables)
         self.parent = parent
         self.children = children
 
