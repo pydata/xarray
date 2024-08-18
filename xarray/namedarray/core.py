@@ -547,6 +547,13 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __bool__(self, /) -> bool:
         return self._data.__bool__()
 
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            _data = self._data[key]
+            return self._new((), _data)
+        else:
+            raise NotImplementedError("only int supported")
+
     @property
     def dtype(self) -> _DType_co:
         """

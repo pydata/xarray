@@ -77,10 +77,10 @@ def _infer_dims(
 
 
 def arange(
-    start,
+    start: int | float,
     /,
-    stop=None,
-    step=1,
+    stop: int | float | None = None,
+    step: int | float = 1,
     *,
     dtype: _DType | None = None,
     device=None,
@@ -189,7 +189,11 @@ def asarray(
 
 
 def full(
-    shape, fill_value, *, dtype: _DType | None = None, device=None
+    shape: _Shape,
+    fill_value: bool | int | float | complex,
+    *,
+    dtype: _DType | None = None,
+    device=None,
 ) -> NamedArray[_ShapeType, _DType]:
     xp = _maybe_default_namespace()
     _data = xp.full(shape, fill_value, dtype=dtype, device=device)
@@ -198,13 +202,13 @@ def full(
 
 
 def ones(
-    shape, *, dtype: _DType | None = None, device=None
+    shape: _Shape, *, dtype: _DType | None = None, device=None
 ) -> NamedArray[_ShapeType, _DType]:
     return full(shape, 1, dtype=dtype, device=device)
 
 
 def zeros(
-    shape, *, dtype: _DType | None = None, device=None
+    shape: _Shape, *, dtype: _DType | None = None, device=None
 ) -> NamedArray[_ShapeType, _DType]:
     return full(shape, 0, dtype=dtype, device=device)
 
