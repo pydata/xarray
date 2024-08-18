@@ -189,6 +189,27 @@ def asarray(
     return NamedArray(_dims, _data)
 
 
+def full(
+    shape, fill_value, *, dtype: _DType | None = None, device=None
+) -> NamedArray[_ShapeType, _DType]:
+    xp = _maybe_default_namespace()
+    _data = xp.full(shape, fill_value, dtype=dtype, device=device)
+    _dims = _infer_dims(_data.shape)
+    return NamedArray(_dims, _data)
+
+
+def ones(
+    shape, *, dtype: _DType | None = None, device=None
+) -> NamedArray[_ShapeType, _DType]:
+    return full(shape, 1, dtype=dtype, device=device)
+
+
+def zeros(
+    shape, *, dtype: _DType | None = None, device=None
+) -> NamedArray[_ShapeType, _DType]:
+    return full(shape, 0, dtype=dtype, device=device)
+
+
 # %% Data types
 # TODO: should delegate to underlying array? Cubed doesn't at the moment.
 int8 = np.int8
