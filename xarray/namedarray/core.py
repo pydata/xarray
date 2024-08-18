@@ -544,6 +544,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         except Exception as exc:
             raise TypeError("len() of unsized object") from exc
 
+    def __bool__(self, /) -> bool:
+        return self._data.__bool__()
+
     @property
     def dtype(self) -> _DType_co:
         """
