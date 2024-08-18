@@ -944,3 +944,36 @@ def mean(
     dims_, data_ = _get_remaining_dims(x, d, axis_, keepdims=keepdims)
     out = x._new(dims=dims_, data=data_)
     return out
+
+
+# %% Utility functions
+def all(
+    x,
+    /,
+    *,
+    dims: _Dims | Default = _default,
+    keepdims: bool = False,
+    axis: _AxisLike | None = None,
+) -> NamedArray[Any, _DType]:
+    xp = _get_data_namespace(x)
+    axis_ = _dims_to_axis(x, dims, axis)
+    d = xp.all(x._data, axis=axis_, keepdims=False)  # We fix keepdims later
+    dims_, data_ = _get_remaining_dims(x, d, axis_, keepdims=keepdims)
+    out = x._new(dims=dims_, data=data_)
+    return out
+
+
+def any(
+    x,
+    /,
+    *,
+    dims: _Dims | Default = _default,
+    keepdims: bool = False,
+    axis: _AxisLike | None = None,
+) -> NamedArray[Any, _DType]:
+    xp = _get_data_namespace(x)
+    axis_ = _dims_to_axis(x, dims, axis)
+    d = xp.any(x._data, axis=axis_, keepdims=False)  # We fix keepdims later
+    dims_, data_ = _get_remaining_dims(x, d, axis_, keepdims=keepdims)
+    out = x._new(dims=dims_, data=data_)
+    return out
