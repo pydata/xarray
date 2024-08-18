@@ -548,6 +548,53 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __bool__(self, /) -> bool:
         return self._data.__bool__()
 
+    # Arithmetic Operators
+
+    def __neg__(self, /):
+        from xarray.namedarray._array_api import negative
+
+        return negative(self)
+
+    def __pos__(self, /):
+        from xarray.namedarray._array_api import positive
+
+        return positive(self)
+
+    def __add__(self, other, /):
+        from xarray.namedarray._array_api import add
+
+        return add(self, other)
+
+    def __sub__(self, other, /):
+        from xarray.namedarray._array_api import subtract
+
+        return subtract(self, other)
+
+    def __mul__(self, other, /):
+        from xarray.namedarray._array_api import multiply
+
+        return multiply(self, other)
+
+    def __truediv__(self, other, /):
+        from xarray.namedarray._array_api import divide
+
+        return divide(self, other)
+
+    def __floordiv__(self, other, /):
+        from xarray.namedarray._array_api import floor_divide
+
+        return floor_divide(self, other)
+
+    def __mod__(self, other, /):
+        from xarray.namedarray._array_api import remainder
+
+        return remainder(self, other)
+
+    def __pow__(self, other, /):
+        from xarray.namedarray._array_api import pow
+
+        return pow(self, other)
+
     # Comparison Operators
 
     def __eq__(self, other, /):
