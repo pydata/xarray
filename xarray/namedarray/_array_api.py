@@ -303,7 +303,7 @@ def astype(
     return x._new(data=x._data.astype(dtype, copy=copy))  # type: ignore[attr-defined]
 
 
-def can_cast(from_, to, /):
+def can_cast(from_: _dtype | NamedArray, to: _dtype, /) -> bool:
     if isinstance(from_, NamedArray):
         xp = _get_data_namespace(type)
         from_ = from_.dtype
@@ -320,7 +320,7 @@ def finfo(type: _dtype | NamedArray[Any, Any], /):
         raise NotImplementedError("How to retrieve xp from dtype?")
 
 
-def iinfo(type, /):
+def iinfo(type: _dtype | NamedArray[Any, Any], /):
     if isinstance(type, NamedArray):
         xp = _get_data_namespace(type)
         return xp.iinfo(type._data)
@@ -328,7 +328,7 @@ def iinfo(type, /):
         raise NotImplementedError("How to retrieve xp from dtype?")
 
 
-def isdtype(dtype, kind):
+def isdtype(dtype: _dtype, kind: _dtype | str | tuple[_dtype | str, ...]) -> bool:
     if isinstance(dtype, NamedArray):
         xp = _get_data_namespace(dtype)
 
@@ -337,7 +337,7 @@ def isdtype(dtype, kind):
         raise NotImplementedError("How to retrieve xp from dtype?")
 
 
-def result_type(*arrays_and_dtypes):
+def result_type(*arrays_and_dtypes: NamedArray[Any, Any] | _dtype) -> _dtype:
     # TODO: Empty arg?
     xp = _get_data_namespace(arrays_and_dtypes[0])
     return xp.result_type(
