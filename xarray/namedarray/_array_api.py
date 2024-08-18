@@ -37,11 +37,17 @@ from xarray.namedarray.utils import (
 )
 
 
+# %% Helper functions
 def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
     if isinstance(x._data, _arrayapi):
         return x._data.__array_namespace__()
 
     return np
+
+
+def _get_namespace_dtype(dtype: _dtype) -> ModuleType:
+    xp = __import__(dtype.__module__)
+    return xp
 
 
 # %% array_api version
@@ -257,11 +263,6 @@ _dtype_categories = {
 }
 
 # %% Data type functions
-
-
-def _get_namespace_dtype(dtype: _dtype) -> ModuleType:
-    xp = __import__(dtype.__module__)
-    return xp
 
 
 def astype(
