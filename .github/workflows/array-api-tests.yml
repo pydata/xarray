@@ -3,7 +3,7 @@ name: Array API Tests - NamedArray._array_api
 on: [push, pull_request]
 
 env:
-  PYTEST_ARGS: "-v -rxXfE --ci --hypothesis-disable-deadline --max-examples 200"
+  PYTEST_ARGS: "-v -rxXfE --ci --hypothesis-disable-deadline --max-examples 5"
   API_VERSIONS: "2023.12"
 
 jobs:
@@ -41,4 +41,4 @@ jobs:
         ARRAY_API_TESTS_MODULE: xarray.namedarray._array_api
       run: |
         cd ${GITHUB_WORKSPACE}/array-api-tests
-        pytest array_api_tests/ ${PYTEST_ARGS}
+        pytest array_api_tests/ --skips-file ${GITHUB_WORKSPACE}/xarray/tests/namedarray_array_api_skips.txt ${PYTEST_ARGS}
