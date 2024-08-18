@@ -548,6 +548,40 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __bool__(self, /) -> bool:
         return self._data.__bool__()
 
+    # Comparison Operators
+
+    def __eq__(self, other, /):
+        from xarray.namedarray._array_api import equal
+
+        return equal(self, other)
+
+    def __ge__(self, other, /):
+        from xarray.namedarray._array_api import greater_equal
+
+        return greater_equal(self, other)
+
+    def __gt__(self, other, /):
+        from xarray.namedarray._array_api import greater
+
+        return greater(self, other)
+
+    def __le__(self, other, /):
+        from xarray.namedarray._array_api import less_equal
+
+        return less_equal(self, other)
+
+    def __lt__(self, other, /):
+        from xarray.namedarray._array_api import less
+
+        return less(self, other)
+
+    def __ne__(self, other, /):
+        from xarray.namedarray._array_api import not_equal
+
+        return not_equal(self, other)
+
+    # Something
+
     def __getitem__(self, key: _IndexKeyLike | NamedArray):
         if isinstance(key, (int, slice, tuple)):
             _data = self._data[key]
