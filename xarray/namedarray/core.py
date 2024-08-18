@@ -738,6 +738,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         from xarray.namedarray._array_api import bitwise_right_shift
 
         return bitwise_right_shift(other, self)
+
     # Something
 
     def __getitem__(self, key: _IndexKeyLike | NamedArray):
