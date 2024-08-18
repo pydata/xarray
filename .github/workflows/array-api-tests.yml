@@ -1,4 +1,4 @@
-name: Array API Tests - NamedArray._array_api
+name: NamedArray._array_api
 
 on: [push, pull_request]
 
