@@ -201,6 +201,24 @@ def full(
     return NamedArray(_dims, _data)
 
 
+def linspace(
+    start: int | float | complex,
+    stop: int | float | complex,
+    /,
+    num: int,
+    *,
+    dtype: _DType | None = None,
+    device=None,
+    endpoint: bool = True,
+) -> NamedArray[_ShapeType, _DType]:
+    xp = _maybe_default_namespace()
+    _data = xp.linspace(
+        start, stop, num=num, dtype=dtype, device=device, endpoint=endpoint
+    )
+    _dims = _infer_dims(_data.shape)
+    return NamedArray(_dims, _data)
+
+
 def ones(
     shape: _Shape, *, dtype: _DType | None = None, device=None
 ) -> NamedArray[_ShapeType, _DType]:
