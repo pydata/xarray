@@ -1,21 +1,27 @@
 from __future__ import annotations
 
 from types import ModuleType
-from typing import Any
+from typing import Any, overload
 
 import numpy as np
 
 from xarray.namedarray._typing import (
     Default,
     _arrayapi,
+    duckarray,
+    _arrayfunction_or_api,
+    _ArrayLike,
+    _AttrsLike,
     _Axes,
     _Axis,
     _AxisLike,
     _default,
     _Dim,
     _Dims,
+    _DimsLike,
     _DType,
     _ScalarType,
+    _Shape,
     _ShapeType,
     _SupportsImag,
     _SupportsReal,
@@ -25,6 +31,9 @@ from xarray.namedarray.core import (
     _dims_to_axis,
     _get_remaining_dims,
 )
+from xarray.namedarray.utils import (
+    to_0d_object_array,
+)
 
 
 def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
@@ -33,6 +42,9 @@ def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
 
     return np
 
+
+# %% array_api version
+__array_api_version__ = "2023.12"
 
 # %% Dtypes
 # TODO: should delegate to underlying array? Cubed doesn't at the moment.
@@ -131,6 +143,117 @@ pi = np.pi
 
 
 # %% Creation Functions
+def _infer_dims(
+    shape: _Shape,
+    dims: _DimsLike | Default = _default,
+) -> _DimsLike:
+    if dims is _default:
+        return tuple(f"dim_{n}" for n in range(len(shape)))
+    else:
+        return dims
+
+
+@overload
+def asarray(
+    obj: duckarray[_ShapeType, Any],
+    /,
+    *,
+    dtype: _DType,
+    device=...,
+    copy: bool | None = ...,
+    dims: _DimsLike = ...,
+    attrs: _AttrsLike = ...,
+) -> NamedArray[_ShapeType, _DType]: ...
+@overload
+def asarray(
+    obj: _ArrayLike,
+    /,
+    *,
+    dtype: _DType,
+    device=...,
+    copy: bool | None = ...,
+    dims: _DimsLike = ...,
+    attrs: _AttrsLike = ...,
+) -> NamedArray[Any, _DType]: ...
+@overload
+def asarray(
+    obj: duckarray[_ShapeType, _DType],
+    /,
+    *,
+    dtype: None,
+    device=None,
+    copy: bool | None = None,
+    dims: _DimsLike = ...,
+    attrs: _AttrsLike = ...,
+) -> NamedArray[_ShapeType, _DType]: ...
+@overload
+def asarray(
+    obj: _ArrayLike,
+    /,
+    *,
+    dtype: None,
+    device=...,
+    copy: bool | None = ...,
+    dims: _DimsLike = ...,
+    attrs: _AttrsLike = ...,
+) -> NamedArray[Any, _DType]: ...
+def asarray(
+    obj: duckarray[_ShapeType, _DType] | _ArrayLike,
+    /,
+    *,
+    dtype: _DType | None = None,
+    device=None,
+    copy: bool | None = None,
+    dims: _DimsLike = _default,
+    attrs: _AttrsLike = None,
+) -> NamedArray[_ShapeType, _DType] | NamedArray[Any, Any]:
+    """
+    Create a Named array from an array-like object.
+
+    Parameters
+    ----------
+    dims : str or iterable of str
+        Name(s) of the dimension(s).
+    data : T_DuckArray or ArrayLike
+        The actual data that populates the array. Should match the
+        shape specified by `dims`.
+    attrs : dict, optional
+        A dictionary containing any additional information or
+        attributes you want to store with the array.
+        Default is None, meaning no attributes will be stored.
+    """
+    data = obj
+    if isinstance(data, NamedArray):
+        raise TypeError(
+            "Array is already a Named array. Use 'data.data' to retrieve the data array"
+        )
+
+    # TODO: dask.array.ma.MaskedArray also exists, better way?
+    if isinstance(data, np.ma.MaskedArray):
+        mask = np.ma.getmaskarray(data)  # type: ignore[no-untyped-call]
+        if mask.any():
+            # TODO: requires refactoring/vendoring xarray.core.dtypes and
+            # xarray.core.duck_array_ops
+            raise NotImplementedError("MaskedArray is not supported yet")
+
+        _dims = _infer_dims(data.shape, dims)
+        return NamedArray(_dims, data, attrs)
+
+    if isinstance(data, _arrayfunction_or_api):
+        _dims = _infer_dims(data.shape, dims)
+        return NamedArray(_dims, data, attrs)
+
+    if isinstance(data, tuple):
+        _data = to_0d_object_array(data)
+        _dims = _infer_dims(_data.shape, dims)
+        return NamedArray(_dims, _data, attrs)
+
+    # validate whether the data is valid data types.
+    _data = np.asarray(data)
+    _dims = _infer_dims(_data.shape, dims)
+    return NamedArray(_dims, _data, attrs)
+
+
 def astype(
     x: NamedArray[_ShapeType, Any], dtype: _DType, /, *, copy: bool = True
 ) -> NamedArray[_ShapeType, _DType]:

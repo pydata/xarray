@@ -50,11 +50,12 @@ from xarray.namedarray.utils import (
 )
 
 if TYPE_CHECKING:
-    from numpy.typing import ArrayLike, NDArray
+    from numpy.typing import NDArray
 
     from xarray.core.types import T_Chunks
     from xarray.namedarray._typing import (
         Default,
+        _ArrayLike,
         _AttrsLike,
         _AxisLike,
         _Chunks,
@@ -274,14 +275,14 @@ def from_array(
 @overload
 def from_array(
     dims: _DimsLike,
-    data: ArrayLike,
+    data: _ArrayLike,
     attrs: _AttrsLike = ...,
 ) -> NamedArray[Any, Any]: ...
 
 
 def from_array(
     dims: _DimsLike,
-    data: duckarray[_ShapeType, _DType] | ArrayLike,
+    data: duckarray[_ShapeType, _DType] | _ArrayLike,
     attrs: _AttrsLike = None,
 ) -> NamedArray[_ShapeType, _DType] | NamedArray[Any, Any]:
     """
@@ -291,7 +292,7 @@ def from_array(
     ----------
     dims : str or iterable of str
         Name(s) of the dimension(s).
-    data : T_DuckArray or ArrayLike
+    data : T_DuckArray or _ArrayLike
         The actual data that populates the array. Should match the
         shape specified by `dims`.
     attrs : dict, optional
@@ -1017,7 +1018,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             axislike = tuple(axis)
         axis_ = _dims_to_axis(self, d, axislike)
 
-        data: duckarray[Any, Any] | ArrayLike
+        data: duckarray[Any, Any] | _ArrayLike
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore", r"Mean of empty slice", category=RuntimeWarning
@@ -1061,7 +1062,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def _as_sparse(
         self,
         sparse_format: Literal["coo"] | Default = _default,
-        fill_value: ArrayLike | Default = _default,
+        fill_value: _ArrayLike | Default = _default,
     ) -> NamedArray[Any, _DType_co]:
         """
         Use sparse-array as backend.
