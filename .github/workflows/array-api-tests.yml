@@ -19,7 +19,7 @@ jobs:
     - name: Checkout xarray
       uses: actions/checkout@v4
       with:
-        path: xarray-tests
+        path: xarray
     - name: Checkout array-api-tests
       uses: actions/checkout@v4
       with:
@@ -41,4 +41,4 @@ jobs:
         ARRAY_API_TESTS_MODULE: xarray.namedarray._array_api
       run: |
         cd ${GITHUB_WORKSPACE}/array-api-tests
-        pytest array_api_tests/ --skips-file ${GITHUB_WORKSPACE}/tests/namedarray_array_api_skips.txt ${PYTEST_ARGS}
+        pytest array_api_tests/ --skips-file ${GITHUB_WORKSPACE}/xarray/xarray/tests/namedarray_array_api_skips.txt ${PYTEST_ARGS}
