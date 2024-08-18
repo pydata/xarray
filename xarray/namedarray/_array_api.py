@@ -34,7 +34,6 @@ def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
     return np
 
 
-
 # %% Dtypes
 # TODO: should delegate to underlying array? Cubed doesn't at the moment.
 int8 = np.int8
