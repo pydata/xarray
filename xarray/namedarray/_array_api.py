@@ -8,6 +8,7 @@ import numpy as np
 from xarray.namedarray._typing import (
     Default,
     _arrayapi,
+    _dtype,
     duckarray,
     _arrayfunction_or_api,
     _ArrayLike,
@@ -46,93 +47,6 @@ def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
 # %% array_api version
 __array_api_version__ = "2023.12"
 
-# %% Dtypes
-# TODO: should delegate to underlying array? Cubed doesn't at the moment.
-int8 = np.int8
-int16 = np.int16
-int32 = np.int32
-int64 = np.int64
-uint8 = np.uint8
-uint16 = np.uint16
-uint32 = np.uint32
-uint64 = np.uint64
-float32 = np.float32
-float64 = np.float64
-complex64 = np.complex64
-complex128 = np.complex128
-bool = np.bool
-
-_all_dtypes = (
-    int8,
-    int16,
-    int32,
-    int64,
-    uint8,
-    uint16,
-    uint32,
-    uint64,
-    float32,
-    float64,
-    complex64,
-    complex128,
-    bool,
-)
-_boolean_dtypes = (bool,)
-_real_floating_dtypes = (float32, float64)
-_floating_dtypes = (float32, float64, complex64, complex128)
-_complex_floating_dtypes = (complex64, complex128)
-_integer_dtypes = (int8, int16, int32, int64, uint8, uint16, uint32, uint64)
-_signed_integer_dtypes = (int8, int16, int32, int64)
-_unsigned_integer_dtypes = (uint8, uint16, uint32, uint64)
-_integer_or_boolean_dtypes = (
-    bool,
-    int8,
-    int16,
-    int32,
-    int64,
-    uint8,
-    uint16,
-    uint32,
-    uint64,
-)
-_real_numeric_dtypes = (
-    float32,
-    float64,
-    int8,
-    int16,
-    int32,
-    int64,
-    uint8,
-    uint16,
-    uint32,
-    uint64,
-)
-_numeric_dtypes = (
-    float32,
-    float64,
-    complex64,
-    complex128,
-    int8,
-    int16,
-    int32,
-    int64,
-    uint8,
-    uint16,
-    uint32,
-    uint64,
-)
-
-_dtype_categories = {
-    "all": _all_dtypes,
-    "real numeric": _real_numeric_dtypes,
-    "numeric": _numeric_dtypes,
-    "integer": _integer_dtypes,
-    "integer or boolean": _integer_or_boolean_dtypes,
-    "boolean": _boolean_dtypes,
-    "real floating-point": _floating_dtypes,
-    "complex floating-point": _complex_floating_dtypes,
-    "floating-point": _floating_dtypes,
-}
 
 # %% Constants
 e = np.e
@@ -254,6 +168,97 @@ def asarray(
     return NamedArray(_dims, _data, attrs)
 
 
+# %% Data types
+# TODO: should delegate to underlying array? Cubed doesn't at the moment.
+int8 = np.int8
+int16 = np.int16
+int32 = np.int32
+int64 = np.int64
+uint8 = np.uint8
+uint16 = np.uint16
+uint32 = np.uint32
+uint64 = np.uint64
+float32 = np.float32
+float64 = np.float64
+complex64 = np.complex64
+complex128 = np.complex128
+bool = np.bool
+
+_all_dtypes = (
+    int8,
+    int16,
+    int32,
+    int64,
+    uint8,
+    uint16,
+    uint32,
+    uint64,
+    float32,
+    float64,
+    complex64,
+    complex128,
+    bool,
+)
+_boolean_dtypes = (bool,)
+_real_floating_dtypes = (float32, float64)
+_floating_dtypes = (float32, float64, complex64, complex128)
+_complex_floating_dtypes = (complex64, complex128)
+_integer_dtypes = (int8, int16, int32, int64, uint8, uint16, uint32, uint64)
+_signed_integer_dtypes = (int8, int16, int32, int64)
+_unsigned_integer_dtypes = (uint8, uint16, uint32, uint64)
+_integer_or_boolean_dtypes = (
+    bool,
+    int8,
+    int16,
+    int32,
+    int64,
+    uint8,
+    uint16,
+    uint32,
+    uint64,
+)
+_real_numeric_dtypes = (
+    float32,
+    float64,
+    int8,
+    int16,
+    int32,
+    int64,
+    uint8,
+    uint16,
+    uint32,
+    uint64,
+)
+_numeric_dtypes = (
+    float32,
+    float64,
+    complex64,
+    complex128,
+    int8,
+    int16,
+    int32,
+    int64,
+    uint8,
+    uint16,
+    uint32,
+    uint64,
+)
+
+_dtype_categories = {
+    "all": _all_dtypes,
+    "real numeric": _real_numeric_dtypes,
+    "numeric": _numeric_dtypes,
+    "integer": _integer_dtypes,
+    "integer or boolean": _integer_or_boolean_dtypes,
+    "boolean": _boolean_dtypes,
+    "real floating-point": _floating_dtypes,
+    "complex floating-point": _complex_floating_dtypes,
+    "floating-point": _floating_dtypes,
+}
+
+# %% Data type functions
+
+
 def astype(
     x: NamedArray[_ShapeType, Any], dtype: _DType, /, *, copy: bool = True
 ) -> NamedArray[_ShapeType, _DType]:
@@ -296,6 +301,48 @@ def astype(
 
     # np.astype doesn't exist yet:
     return x._new(data=x._data.astype(dtype, copy=copy))  # type: ignore[attr-defined]
+
+
+def can_cast(from_, to, /):
+    if isinstance(from_, NamedArray):
+        xp = _get_data_namespace(type)
+        from_ = from_.dtype
+        return xp.can_cast(from_, to)
+    else:
+        raise NotImplementedError("How to retrieve xp from dtype?")
+
+
+def finfo(type: _dtype | NamedArray[Any, Any], /):
+    if isinstance(type, NamedArray):
+        xp = _get_data_namespace(type)
+        return xp.finfo(type._data)
+    else:
+        raise NotImplementedError("How to retrieve xp from dtype?")
+
+
+def iinfo(type, /):
+    if isinstance(type, NamedArray):
+        xp = _get_data_namespace(type)
+        return xp.iinfo(type._data)
+    else:
+        raise NotImplementedError("How to retrieve xp from dtype?")
+
+
+def isdtype(dtype, kind):
+    if isinstance(dtype, NamedArray):
+        xp = _get_data_namespace(dtype)
+
+        return xp.isdtype(dtype.dtype, kind)
+    else:
+        raise NotImplementedError("How to retrieve xp from dtype?")
+
+
+def result_type(*arrays_and_dtypes):
+    # TODO: Empty arg?
+    xp = _get_data_namespace(arrays_and_dtypes[0])
+    return xp.result_type(
+        *(a.dtype if isinstance(a, NamedArray) else a for a in arrays_and_dtypes)
+    )
 
 
 # %% Elementwise Functions
