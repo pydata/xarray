@@ -34,9 +34,98 @@ def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
     return np
 
 
+
+# %% Dtypes
+# TODO: should delegate to underlying array? Cubed doesn't at the moment.
+int8 = np.int8
+int16 = np.int16
+int32 = np.int32
+int64 = np.int64
+uint8 = np.uint8
+uint16 = np.uint16
+uint32 = np.uint32
+uint64 = np.uint64
+float32 = np.float32
+float64 = np.float64
+complex64 = np.complex64
+complex128 = np.complex128
+bool = np.bool
+
+_all_dtypes = (
+    int8,
+    int16,
+    int32,
+    int64,
+    uint8,
+    uint16,
+    uint32,
+    uint64,
+    float32,
+    float64,
+    complex64,
+    complex128,
+    bool,
+)
+_boolean_dtypes = (bool,)
+_real_floating_dtypes = (float32, float64)
+_floating_dtypes = (float32, float64, complex64, complex128)
+_complex_floating_dtypes = (complex64, complex128)
+_integer_dtypes = (int8, int16, int32, int64, uint8, uint16, uint32, uint64)
+_signed_integer_dtypes = (int8, int16, int32, int64)
+_unsigned_integer_dtypes = (uint8, uint16, uint32, uint64)
+_integer_or_boolean_dtypes = (
+    bool,
+    int8,
+    int16,
+    int32,
+    int64,
+    uint8,
+    uint16,
+    uint32,
+    uint64,
+)
+_real_numeric_dtypes = (
+    float32,
+    float64,
+    int8,
+    int16,
+    int32,
+    int64,
+    uint8,
+    uint16,
+    uint32,
+    uint64,
+)
+_numeric_dtypes = (
+    float32,
+    float64,
+    complex64,
+    complex128,
+    int8,
+    int16,
+    int32,
+    int64,
+    uint8,
+    uint16,
+    uint32,
+    uint64,
+)
+
+_dtype_categories = {
+    "all": _all_dtypes,
+    "real numeric": _real_numeric_dtypes,
+    "numeric": _numeric_dtypes,
+    "integer": _integer_dtypes,
+    "integer or boolean": _integer_or_boolean_dtypes,
+    "boolean": _boolean_dtypes,
+    "real floating-point": _floating_dtypes,
+    "complex floating-point": _complex_floating_dtypes,
+    "floating-point": _floating_dtypes,
+}
+
+
+
 # %% Creation Functions
-
-
 def astype(
     x: NamedArray[_ShapeType, Any], dtype: _DType, /, *, copy: bool = True
 ) -> NamedArray[_ShapeType, _DType]:
@@ -226,8 +315,6 @@ def permute_dims(x: NamedArray[Any, _DType], axes: _Axes) -> NamedArray[Any, _DT
 
 
 # %% Statistical Functions
-
-
 def mean(
     x: NamedArray[Any, _DType],
     /,
