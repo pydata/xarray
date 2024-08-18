@@ -10,7 +10,6 @@ from xarray.namedarray._typing import (
     _arrayapi,
     _arrayfunction_or_api,
     _ArrayLike,
-    _AttrsLike,
     _Axes,
     _Axis,
     _AxisLike,
