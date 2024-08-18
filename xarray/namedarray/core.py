@@ -52,12 +52,10 @@ from xarray.namedarray.utils import (
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
-    from xarray.core.types import Dims, T_Chunks
+    from xarray.core.types import T_Chunks
     from xarray.namedarray._typing import (
         Default,
         _AttrsLike,
-        _Axes,
-        _Axis,
         _AxisLike,
         _Chunks,
         _Dim,
