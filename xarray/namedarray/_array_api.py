@@ -259,6 +259,11 @@ _dtype_categories = {
 # %% Data type functions
 
 
+def _get_namespace_dtype(dtype: _dtype) -> ModuleType:
+    xp = __import__(dtype.__module__)
+    return xp
+
+
 def astype(
     x: NamedArray[_ShapeType, Any], dtype: _DType, /, *, copy: bool = True
 ) -> NamedArray[_ShapeType, _DType]:
@@ -305,11 +310,13 @@ def astype(
 
 def can_cast(from_: _dtype | NamedArray, to: _dtype, /) -> bool:
     if isinstance(from_, NamedArray):
-        xp = _get_data_namespace(type)
+        xp = _get_data_namespace(from_)
         from_ = from_.dtype
         return xp.can_cast(from_, to)
     else:
-        raise NotImplementedError("How to retrieve xp from dtype?")
+        xp = _get_namespace_dtype(from_)
+        from_ = from_.dtype
+        return xp.can_cast(from_, to)
 
 
 def finfo(type: _dtype | NamedArray[Any, Any], /):
@@ -317,7 +324,8 @@ def finfo(type: _dtype | NamedArray[Any, Any], /):
         xp = _get_data_namespace(type)
         return xp.finfo(type._data)
     else:
-        raise NotImplementedError("How to retrieve xp from dtype?")
+        xp = _get_namespace_dtype(type)
+        return xp.finfo(type._data)
 
 
 def iinfo(type: _dtype | NamedArray[Any, Any], /):
@@ -325,21 +333,23 @@ def iinfo(type: _dtype | NamedArray[Any, Any], /):
         xp = _get_data_namespace(type)
         return xp.iinfo(type._data)
     else:
-        raise NotImplementedError("How to retrieve xp from dtype?")
+        xp = _get_namespace_dtype(type)
+        return xp.finfo(type._data)
 
 
 def isdtype(dtype: _dtype, kind: _dtype | str | tuple[_dtype | str, ...]) -> bool:
-    if isinstance(dtype, NamedArray):
-        xp = _get_data_namespace(dtype)
-
-        return xp.isdtype(dtype.dtype, kind)
-    else:
-        raise NotImplementedError("How to retrieve xp from dtype?")
+    xp = _get_namespace_dtype(type)
+    return xp.isdtype(dtype, kind)
 
 
 def result_type(*arrays_and_dtypes: NamedArray[Any, Any] | _dtype) -> _dtype:
     # TODO: Empty arg?
-    xp = _get_data_namespace(arrays_and_dtypes[0])
+    arr_or_dtype = arrays_and_dtypes[0]
+    if isinstance(arr_or_dtype, NamedArray):
+        xp = _get_data_namespace(arr_or_dtype)
+    else:
+        xp = _get_namespace_dtype(arr_or_dtype)
+
     return xp.result_type(
         *(a.dtype if isinstance(a, NamedArray) else a for a in arrays_and_dtypes)
     )
