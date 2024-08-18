@@ -898,6 +898,16 @@ def permute_dims(x: NamedArray[Any, _DType], axes: _Axes) -> NamedArray[Any, _DT
     return out
 
 
+def reshape(x, /, shape: _Shape, *, copy: bool | None = None):
+    xp = _get_data_namespace(x)
+    _data = xp.reshape(x._data, shape)
+    out = asarray(_data, copy=copy)
+    # TODO: Have better control where the dims went.
+    # TODO: If reshaping should we save the dims?
+    # TODO: What's the xarray equivalent?
+    return out
+
+
 # %% Statistical Functions
 def mean(
     x: NamedArray[Any, _DType],
