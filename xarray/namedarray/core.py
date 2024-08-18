@@ -595,6 +595,13 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         return pow(self, other)
 
+    # Array Operators
+
+    def __matmul__(self, other, /):
+        from xarray.namedarray._array_api import matmul
+
+        return matmul(self, other)
+
     # Comparison Operators
 
     def __eq__(self, other, /):
