@@ -8,7 +8,6 @@ import numpy as np
 from xarray.namedarray._typing import (
     Default,
     _arrayapi,
-    duckarray,
     _arrayfunction_or_api,
     _ArrayLike,
     _AttrsLike,
@@ -25,6 +24,7 @@ from xarray.namedarray._typing import (
     _ShapeType,
     _SupportsImag,
     _SupportsReal,
+    duckarray,
 )
 from xarray.namedarray.core import (
     NamedArray,
