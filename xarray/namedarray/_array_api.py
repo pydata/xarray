@@ -325,7 +325,7 @@ def finfo(type: _dtype | NamedArray[Any, Any], /):
         return xp.finfo(type._data)
     else:
         xp = _get_namespace_dtype(type)
-        return xp.finfo(type._data)
+        return xp.finfo(type)
 
 
 def iinfo(type: _dtype | NamedArray[Any, Any], /):
@@ -334,7 +334,7 @@ def iinfo(type: _dtype | NamedArray[Any, Any], /):
         return xp.iinfo(type._data)
     else:
         xp = _get_namespace_dtype(type)
-        return xp.finfo(type._data)
+        return xp.finfo(type)
 
 
 def isdtype(dtype: _dtype, kind: _dtype | str | tuple[_dtype | str, ...]) -> bool:
