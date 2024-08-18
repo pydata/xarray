@@ -1,6 +1,6 @@
 from importlib.metadata import version as _version
 
-from xarray import testing, tutorial
+from xarray import groupers, testing, tutorial
 from xarray.backends.api import (
     load_dataarray,
     load_dataset,
@@ -41,6 +41,7 @@ from xarray.core.merge import Context, MergeError, merge
 from xarray.core.options import get_options, set_options
 from xarray.core.parallel import map_blocks
 from xarray.core.variable import IndexVariable, Variable, as_variable
+from xarray.namedarray.core import NamedArray
 from xarray.util.print_versions import show_versions
 
 try:
@@ -54,6 +55,7 @@ except Exception:
 # `mypy --strict` running in projects that import xarray.
 __all__ = (
     # Sub-packages
+    "groupers",
     "testing",
     "tutorial",
     # Top-level functions
@@ -96,7 +98,6 @@ __all__ = (
     # Classes
     "CFTimeIndex",
     "Context",
-    "Coordinate",
     "Coordinates",
     "DataArray",
     "Dataset",
@@ -104,6 +105,7 @@ __all__ = (
     "IndexSelResult",
     "IndexVariable",
     "Variable",
+    "NamedArray",
     # Exceptions
     "MergeError",
     "SerializationWarning",

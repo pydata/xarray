@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable, Hashable, Iterable, Sequence
+from typing import TYPE_CHECKING, Any
 
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
-RESAMPLE_DIM = "__resample_dim__"
+from xarray.groupers import RESAMPLE_DIM
 
 
 class Resample(GroupBy[T_Xarray]):
@@ -66,12 +66,12 @@ class Resample(GroupBy[T_Xarray]):
                 obj = obj.drop_vars([k])
         return obj
 
-    def pad(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
+    def pad(self, tolerance: float | Iterable[float] | str | None = None) -> T_Xarray:
         """Forward fill new values at up-sampled frequency.
 
         Parameters
         ----------
-        tolerance : float | Iterable[float] | None, default: None
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels to limit
             the up-sampling method.
             Up-sampled data with indices that satisfy the equation
@@ -91,12 +91,14 @@ class Resample(GroupBy[T_Xarray]):
 
     ffill = pad
 
-    def backfill(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
+    def backfill(
+        self, tolerance: float | Iterable[float] | str | None = None
+    ) -> T_Xarray:
         """Backward fill new values at up-sampled frequency.
 
         Parameters
         ----------
-        tolerance : float | Iterable[float] | None, default: None
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels to limit
             the up-sampling method.
             Up-sampled data with indices that satisfy the equation
@@ -116,13 +118,15 @@ class Resample(GroupBy[T_Xarray]):
 
     bfill = backfill
 
-    def nearest(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
+    def nearest(
+        self, tolerance: float | Iterable[float] | str | None = None
+    ) -> T_Xarray:
         """Take new values from nearest original coordinate to up-sampled
         frequency coordinates.
 
         Parameters
         ----------
-        tolerance : float | Iterable[float] | None, default: None
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels to limit
             the up-sampling method.
             Up-sampled data with indices that satisfy the equation
@@ -140,7 +144,7 @@ class Resample(GroupBy[T_Xarray]):
             {self._dim: grouper.full_index}, method="nearest", tolerance=tolerance
         )
 
-    def interpolate(self, kind: InterpOptions = "linear") -> T_Xarray:
+    def interpolate(self, kind: InterpOptions = "linear", **kwargs) -> T_Xarray:
         """Interpolate up-sampled data using the original data as knots.
 
         Parameters
@@ -168,17 +172,18 @@ class Resample(GroupBy[T_Xarray]):
         scipy.interpolate.interp1d
 
         """
-        return self._interpolate(kind=kind)
+        return self._interpolate(kind=kind, **kwargs)
 
-    def _interpolate(self, kind="linear") -> T_Xarray:
+    def _interpolate(self, kind="linear", **kwargs) -> T_Xarray:
         """Apply scipy.interpolate.interp1d along resampling dimension."""
         obj = self._drop_coords()
         (grouper,) = self.groupers
+        kwargs.setdefault("bounds_error", False)
         return obj.interp(
             coords={self._dim: grouper.full_index},
             assume_sorted=True,
             method=kind,
-            kwargs={"bounds_error": False},
+            kwargs=kwargs,
         )
 
 
@@ -187,6 +192,51 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
+    ) -> DataArray:
+        """Reduce the items in this group by applying `func` along the
+        pre-defined resampling dimension.
+
+        Parameters
+        ----------
+        func : callable
+            Function which can be called in the form
+            `func(x, axis=axis, **kwargs)` to return the result of collapsing
+            an np.ndarray over an integer valued axis.
+        dim : "...", str, Iterable of Hashable or None, optional
+            Dimension(s) over which to apply `func`.
+        keep_attrs : bool, optional
+            If True, the datasets's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        reduced : DataArray
+            Array with summarized data and the indicated dimension(s)
+            removed.
+        """
+        return super().reduce(
+            func=func,
+            dim=dim,
+            axis=axis,
+            keep_attrs=keep_attrs,
+            keepdims=keepdims,
+            shortcut=shortcut,
+            **kwargs,
+        )
 
     def map(
         self,

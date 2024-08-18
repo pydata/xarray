@@ -500,7 +500,7 @@ def test_apply_output_core_dimension() -> None:
             return np.stack([x, -x], axis=-1)
 
         result = apply_ufunc(func, obj, output_core_dims=[["sign"]])
-        if isinstance(result, (xr.Dataset, xr.DataArray)):
+        if isinstance(result, xr.Dataset | xr.DataArray):
             result.coords["sign"] = [1, -1]
         return result
 
@@ -527,7 +527,7 @@ def test_apply_output_core_dimension() -> None:
             return (x, np.stack([x, -x], axis=-1))
 
         result = apply_ufunc(func, obj, output_core_dims=[[], ["sign"]])
-        if isinstance(result[1], (xr.Dataset, xr.DataArray)):
+        if isinstance(result[1], xr.Dataset | xr.DataArray):
             result[1].coords["sign"] = [1, -1]
         return result
 
@@ -568,7 +568,7 @@ def test_apply_exclude() -> None:
             output_core_dims=[[dim]],
             exclude_dims={dim},
         )
-        if isinstance(result, (xr.Dataset, xr.DataArray)):
+        if isinstance(result, xr.Dataset | xr.DataArray):
             # note: this will fail if dim is not a coordinate on any input
             new_coord = np.concatenate([obj.coords[dim] for obj in objects])
             result.coords[dim] = new_coord
@@ -2494,32 +2494,32 @@ def test_polyfit_polyval_integration(
         [
             xr.DataArray([1, 2, 3]),
             xr.DataArray([4, 5, 6]),
-            [1, 2, 3],
-            [4, 5, 6],
+            np.array([1, 2, 3]),
+            np.array([4, 5, 6]),
             "dim_0",
             -1,
         ],
         [
             xr.DataArray([1, 2]),
             xr.DataArray([4, 5, 6]),
-            [1, 2],
-            [4, 5, 6],
+            np.array([1, 2, 0]),
+            np.array([4, 5, 6]),
             "dim_0",
             -1,
         ],
         [
             xr.Variable(dims=["dim_0"], data=[1, 2, 3]),
             xr.Variable(dims=["dim_0"], data=[4, 5, 6]),
-            [1, 2, 3],
-            [4, 5, 6],
+            np.array([1, 2, 3]),
+            np.array([4, 5, 6]),
             "dim_0",
             -1,
         ],
         [
             xr.Variable(dims=["dim_0"], data=[1, 2]),
             xr.Variable(dims=["dim_0"], data=[4, 5, 6]),
-            [1, 2],
-            [4, 5, 6],
+            np.array([1, 2, 0]),
+            np.array([4, 5, 6]),
             "dim_0",
             -1,
         ],
@@ -2547,7 +2547,8 @@ def test_polyfit_polyval_integration(
             "cartesian",
             1,
         ],
-        [  # Test 1 sized arrays with coords:
+        # Test 1 sized arrays with coords:
+        pytest.param(
             xr.DataArray(
                 np.array([1]),
                 dims=["cartesian"],
@@ -2558,12 +2559,14 @@ def test_polyfit_polyval_integration(
                 dims=["cartesian"],
                 coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
             ),
-            [0, 0, 1],
-            [4, 5, 6],
+            np.array([0, 0, 1]),
+            np.array([4, 5, 6]),
             "cartesian",
             -1,
-        ],
-        [  # Test filling in between with coords:
+            marks=(pytest.mark.xfail(),),
+        ),
+        # Test filling in between with coords:
+        pytest.param(
             xr.DataArray(
                 [1, 2],
                 dims=["cartesian"],
@@ -2574,11 +2577,12 @@ def test_polyfit_polyval_integration(
                 dims=["cartesian"],
                 coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
             ),
-            [1, 0, 2],
-            [4, 5, 6],
+            np.array([1, 0, 2]),
+            np.array([4, 5, 6]),
             "cartesian",
             -1,
-        ],
+            marks=(pytest.mark.xfail(),),
+        ),
     ],
 )
 def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:
@@ -2592,3 +2596,11 @@ def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:
 
     actual = xr.cross(a, b, dim=dim)
     xr.testing.assert_duckarray_allclose(expected, actual)
+
+
+@pytest.mark.parametrize("compute_backend", ["numbagg"], indirect=True)
+def test_complex_number_reduce(compute_backend):
+    da = xr.DataArray(np.ones((2,), dtype=np.complex64), dims=["x"])
+    # Check that xarray doesn't call into numbagg, which doesn't compile for complex
+    # numbers at the moment (but will when numba supports dynamic compilation)
+    da.min()

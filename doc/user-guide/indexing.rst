@@ -549,6 +549,7 @@ __ https://numpy.org/doc/stable/user/basics.indexing.html#assigning-values-to-in
 You can also assign values to all variables of a :py:class:`Dataset` at once:
 
 .. ipython:: python
+    :okwarning:
 
     ds_org = xr.tutorial.open_dataset("eraint_uvz").isel(
         latitude=slice(56, 59), longitude=slice(255, 258), level=0
@@ -747,7 +748,7 @@ Whether array indexing returns a view or a copy of the underlying
 data depends on the nature of the labels.
 
 For positional (integer)
-indexing, xarray follows the same rules as NumPy:
+indexing, xarray follows the same `rules`_ as NumPy:
 
 * Positional indexing with only integers and slices returns a view.
 * Positional indexing with arrays or lists returns a copy.
@@ -764,8 +765,10 @@ Whether data is a copy or a view is more predictable in xarray than in pandas, s
 unlike pandas, xarray does not produce `SettingWithCopy warnings`_. However, you
 should still avoid assignment with chained indexing.
 
-.. _SettingWithCopy warnings: https://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
+Note that other operations (such as :py:meth:`~xarray.DataArray.values`) may also return views rather than copies.
 
+.. _SettingWithCopy warnings: https://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
+.. _rules: https://numpy.org/doc/stable/user/basics.copies.html
 
 .. _multi-level indexing:
 

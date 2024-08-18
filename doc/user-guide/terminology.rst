@@ -221,11 +221,11 @@ complete examples, please consult the relevant documentation.*
             combined_ds
 
     lazy
-        Lazily-evaluated operations do not load data into memory until necessary.Instead of doing calculations
+        Lazily-evaluated operations do not load data into memory until necessary. Instead of doing calculations
         right away, xarray lets you plan what calculations you want to do, like finding the
-        average temperature in a dataset.This planning is called "lazy evaluation." Later, when
+        average temperature in a dataset. This planning is called "lazy evaluation." Later, when
         you're ready to see the final result, you tell xarray, "Okay, go ahead and do those calculations now!"
-        That's when xarray starts working through the steps you planned and gives you the answer you wanted.This
+        That's when xarray starts working through the steps you planned and gives you the answer you wanted. This
         lazy approach helps save time and memory because xarray only does the work when you actually need the
         results.
 

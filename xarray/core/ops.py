@@ -4,6 +4,7 @@ TODO(shoyer): rewrite this module, making use of xarray.core.computation,
 NumPy's __array_ufunc__ and mixin classes instead of the unintuitive "inject"
 functions.
 """
+
 from __future__ import annotations
 
 import operator

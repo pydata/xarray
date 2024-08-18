@@ -1,24 +1,26 @@
 """Mixin classes with arithmetic operators."""
+
 # This file was generated using xarray.util.generate_ops. Do not edit manually.
 
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, overload
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, overload
 
 from xarray.core import nputils, ops
 from xarray.core.types import (
     DaCompatible,
     DsCompatible,
-    GroupByCompatible,
     Self,
-    T_DataArray,
     T_Xarray,
     VarCompatible,
 )
 
 if TYPE_CHECKING:
+    from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.types import T_DataArray as T_DA
 
 
 class DatasetOpsMixin:
@@ -454,201 +456,165 @@ class VariableOpsMixin:
         raise NotImplementedError
 
     @overload
-    def __add__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __add__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __add__(self, other: VarCompatible) -> Self:
-        ...
+    def __add__(self, other: VarCompatible) -> Self: ...
 
-    def __add__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __add__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.add)
 
     @overload
-    def __sub__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __sub__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __sub__(self, other: VarCompatible) -> Self:
-        ...
+    def __sub__(self, other: VarCompatible) -> Self: ...
 
-    def __sub__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __sub__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.sub)
 
     @overload
-    def __mul__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __mul__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __mul__(self, other: VarCompatible) -> Self:
-        ...
+    def __mul__(self, other: VarCompatible) -> Self: ...
 
-    def __mul__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __mul__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.mul)
 
     @overload
-    def __pow__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __pow__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __pow__(self, other: VarCompatible) -> Self:
-        ...
+    def __pow__(self, other: VarCompatible) -> Self: ...
 
-    def __pow__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __pow__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.pow)
 
     @overload
-    def __truediv__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __truediv__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __truediv__(self, other: VarCompatible) -> Self:
-        ...
+    def __truediv__(self, other: VarCompatible) -> Self: ...
 
-    def __truediv__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __truediv__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.truediv)
 
     @overload
-    def __floordiv__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __floordiv__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __floordiv__(self, other: VarCompatible) -> Self:
-        ...
+    def __floordiv__(self, other: VarCompatible) -> Self: ...
 
-    def __floordiv__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __floordiv__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.floordiv)
 
     @overload
-    def __mod__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __mod__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __mod__(self, other: VarCompatible) -> Self:
-        ...
+    def __mod__(self, other: VarCompatible) -> Self: ...
 
-    def __mod__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __mod__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.mod)
 
     @overload
-    def __and__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __and__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __and__(self, other: VarCompatible) -> Self:
-        ...
+    def __and__(self, other: VarCompatible) -> Self: ...
 
-    def __and__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __and__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.and_)
 
     @overload
-    def __xor__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __xor__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __xor__(self, other: VarCompatible) -> Self:
-        ...
+    def __xor__(self, other: VarCompatible) -> Self: ...
 
-    def __xor__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __xor__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.xor)
 
     @overload
-    def __or__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __or__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __or__(self, other: VarCompatible) -> Self:
-        ...
+    def __or__(self, other: VarCompatible) -> Self: ...
 
-    def __or__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __or__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.or_)
 
     @overload
-    def __lshift__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __lshift__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __lshift__(self, other: VarCompatible) -> Self:
-        ...
+    def __lshift__(self, other: VarCompatible) -> Self: ...
 
-    def __lshift__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __lshift__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.lshift)
 
     @overload
-    def __rshift__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __rshift__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __rshift__(self, other: VarCompatible) -> Self:
-        ...
+    def __rshift__(self, other: VarCompatible) -> Self: ...
 
-    def __rshift__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __rshift__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.rshift)
 
     @overload
-    def __lt__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __lt__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __lt__(self, other: VarCompatible) -> Self:
-        ...
+    def __lt__(self, other: VarCompatible) -> Self: ...
 
-    def __lt__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __lt__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.lt)
 
     @overload
-    def __le__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __le__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __le__(self, other: VarCompatible) -> Self:
-        ...
+    def __le__(self, other: VarCompatible) -> Self: ...
 
-    def __le__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __le__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.le)
 
     @overload
-    def __gt__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __gt__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __gt__(self, other: VarCompatible) -> Self:
-        ...
+    def __gt__(self, other: VarCompatible) -> Self: ...
 
-    def __gt__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __gt__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.gt)
 
     @overload
-    def __ge__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __ge__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __ge__(self, other: VarCompatible) -> Self:
-        ...
+    def __ge__(self, other: VarCompatible) -> Self: ...
 
-    def __ge__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __ge__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, operator.ge)
 
     @overload  # type:ignore[override]
-    def __eq__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __eq__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __eq__(self, other: VarCompatible) -> Self:
-        ...
+    def __eq__(self, other: VarCompatible) -> Self: ...
 
-    def __eq__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __eq__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, nputils.array_eq)
 
     @overload  # type:ignore[override]
-    def __ne__(self, other: T_DataArray) -> T_DataArray:
-        ...
+    def __ne__(self, other: T_DA) -> T_DA: ...
 
     @overload
-    def __ne__(self, other: VarCompatible) -> Self:
-        ...
+    def __ne__(self, other: VarCompatible) -> Self: ...
 
-    def __ne__(self, other: VarCompatible) -> Self | T_DataArray:
+    def __ne__(self, other: VarCompatible) -> Self | T_DA:
         return self._binary_op(other, nputils.array_ne)
 
     # When __eq__ is defined but __hash__ is not, then an object is unhashable,
@@ -805,96 +771,96 @@ class DatasetGroupByOpsMixin:
     __slots__ = ()
 
     def _binary_op(
-        self, other: GroupByCompatible, f: Callable, reflexive: bool = False
+        self, other: Dataset | DataArray, f: Callable, reflexive: bool = False
     ) -> Dataset:
         raise NotImplementedError
 
-    def __add__(self, other: GroupByCompatible) -> Dataset:
+    def __add__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.add)
 
-    def __sub__(self, other: GroupByCompatible) -> Dataset:
+    def __sub__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.sub)
 
-    def __mul__(self, other: GroupByCompatible) -> Dataset:
+    def __mul__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.mul)
 
-    def __pow__(self, other: GroupByCompatible) -> Dataset:
+    def __pow__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.pow)
 
-    def __truediv__(self, other: GroupByCompatible) -> Dataset:
+    def __truediv__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.truediv)
 
-    def __floordiv__(self, other: GroupByCompatible) -> Dataset:
+    def __floordiv__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.floordiv)
 
-    def __mod__(self, other: GroupByCompatible) -> Dataset:
+    def __mod__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.mod)
 
-    def __and__(self, other: GroupByCompatible) -> Dataset:
+    def __and__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.and_)
 
-    def __xor__(self, other: GroupByCompatible) -> Dataset:
+    def __xor__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.xor)
 
-    def __or__(self, other: GroupByCompatible) -> Dataset:
+    def __or__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.or_)
 
-    def __lshift__(self, other: GroupByCompatible) -> Dataset:
+    def __lshift__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.lshift)
 
-    def __rshift__(self, other: GroupByCompatible) -> Dataset:
+    def __rshift__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.rshift)
 
-    def __lt__(self, other: GroupByCompatible) -> Dataset:
+    def __lt__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.lt)
 
-    def __le__(self, other: GroupByCompatible) -> Dataset:
+    def __le__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.le)
 
-    def __gt__(self, other: GroupByCompatible) -> Dataset:
+    def __gt__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.gt)
 
-    def __ge__(self, other: GroupByCompatible) -> Dataset:
+    def __ge__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.ge)
 
-    def __eq__(self, other: GroupByCompatible) -> Dataset:  # type:ignore[override]
+    def __eq__(self, other: Dataset | DataArray) -> Dataset:  # type:ignore[override]
         return self._binary_op(other, nputils.array_eq)
 
-    def __ne__(self, other: GroupByCompatible) -> Dataset:  # type:ignore[override]
+    def __ne__(self, other: Dataset | DataArray) -> Dataset:  # type:ignore[override]
         return self._binary_op(other, nputils.array_ne)
 
     # When __eq__ is defined but __hash__ is not, then an object is unhashable,
     # and it should be declared as follows:
     __hash__: None  # type:ignore[assignment]
 
-    def __radd__(self, other: GroupByCompatible) -> Dataset:
+    def __radd__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.add, reflexive=True)
 
-    def __rsub__(self, other: GroupByCompatible) -> Dataset:
+    def __rsub__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.sub, reflexive=True)
 
-    def __rmul__(self, other: GroupByCompatible) -> Dataset:
+    def __rmul__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.mul, reflexive=True)
 
-    def __rpow__(self, other: GroupByCompatible) -> Dataset:
+    def __rpow__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.pow, reflexive=True)
 
-    def __rtruediv__(self, other: GroupByCompatible) -> Dataset:
+    def __rtruediv__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.truediv, reflexive=True)
 
-    def __rfloordiv__(self, other: GroupByCompatible) -> Dataset:
+    def __rfloordiv__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.floordiv, reflexive=True)
 
-    def __rmod__(self, other: GroupByCompatible) -> Dataset:
+    def __rmod__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.mod, reflexive=True)
 
-    def __rand__(self, other: GroupByCompatible) -> Dataset:
+    def __rand__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.and_, reflexive=True)
 
-    def __rxor__(self, other: GroupByCompatible) -> Dataset:
+    def __rxor__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.xor, reflexive=True)
 
-    def __ror__(self, other: GroupByCompatible) -> Dataset:
+    def __ror__(self, other: Dataset | DataArray) -> Dataset:
         return self._binary_op(other, operator.or_, reflexive=True)
 
     __add__.__doc__ = operator.add.__doc__

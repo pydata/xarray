@@ -3,18 +3,25 @@ from __future__ import annotations
 import itertools
 import textwrap
 import warnings
-from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
-from datetime import datetime
+from collections.abc import (
+    Callable,
+    Hashable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
+from datetime import date, datetime
 from inspect import getfullargspec
-from typing import TYPE_CHECKING, Any, Callable, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
 import pandas as pd
 
 from xarray.core.indexes import PandasMultiIndex
 from xarray.core.options import OPTIONS
-from xarray.core.pycompat import DuckArrayModule
 from xarray.core.utils import is_scalar, module_available
+from xarray.namedarray.pycompat import DuckArrayModule
 
 nc_time_axis_available = module_available("nc_time_axis")
 
@@ -119,7 +126,7 @@ def _color_palette(cmap, n_colors):
     from matplotlib.colors import ListedColormap
 
     colors_i = np.linspace(0, 1.0, n_colors)
-    if isinstance(cmap, (list, tuple)):
+    if isinstance(cmap, list | tuple):
         # we have a list of colors
         cmap = ListedColormap(cmap, N=n_colors)
         pal = cmap(colors_i)
@@ -672,7 +679,7 @@ def _ensure_plottable(*args) -> None:
         np.bool_,
         np.str_,
     )
-    other_types: tuple[type[object], ...] = (datetime,)
+    other_types: tuple[type[object], ...] = (datetime, date)
     cftime_datetime_types: tuple[type[object], ...] = (
         () if cftime is None else (cftime.datetime,)
     )
@@ -811,11 +818,11 @@ def _update_axes(
 def _is_monotonic(coord, axis=0):
     """
     >>> _is_monotonic(np.array([0, 1, 2]))
-    True
+    np.True_
     >>> _is_monotonic(np.array([2, 1, 0]))
-    True
+    np.True_
     >>> _is_monotonic(np.array([0, 2, 1]))
-    False
+    np.False_
     """
     if coord.shape[axis] < 3:
         return True
@@ -925,7 +932,7 @@ def _process_cmap_cbar_kwargs(
 
     # we should not be getting a list of colors in cmap anymore
     # is there a better way to do this test?
-    if isinstance(cmap, (list, tuple)):
+    if isinstance(cmap, list | tuple):
         raise ValueError(
             "Specifying a list of colors in cmap is deprecated. "
             "Use colors keyword instead."
@@ -1291,16 +1298,14 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
 def _parse_size(
     data: None,
     norm: tuple[float | None, float | None, bool] | Normalize | None,
-) -> None:
-    ...
+) -> None: ...
 
 
 @overload
 def _parse_size(
     data: DataArray,
     norm: tuple[float | None, float | None, bool] | Normalize | None,
-) -> pd.Series:
-    ...
+) -> pd.Series: ...
 
 
 # copied from seaborn
@@ -1445,12 +1450,10 @@ class _Normalize(Sequence):
         return self._data_is_numeric
 
     @overload
-    def _calc_widths(self, y: np.ndarray) -> np.ndarray:
-        ...
+    def _calc_widths(self, y: np.ndarray) -> np.ndarray: ...
 
     @overload
-    def _calc_widths(self, y: DataArray) -> DataArray:
-        ...
+    def _calc_widths(self, y: DataArray) -> DataArray: ...
 
     def _calc_widths(self, y: np.ndarray | DataArray) -> np.ndarray | DataArray:
         """
@@ -1472,12 +1475,10 @@ class _Normalize(Sequence):
         return widths
 
     @overload
-    def _indexes_centered(self, x: np.ndarray) -> np.ndarray:
-        ...
+    def _indexes_centered(self, x: np.ndarray) -> np.ndarray: ...
 
     @overload
-    def _indexes_centered(self, x: DataArray) -> DataArray:
-        ...
+    def _indexes_centered(self, x: DataArray) -> DataArray: ...
 
     def _indexes_centered(self, x: np.ndarray | DataArray) -> np.ndarray | DataArray:
         """
@@ -1495,28 +1496,28 @@ class _Normalize(Sequence):
         --------
         >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
         >>> _Normalize(a).values
-        <xarray.DataArray (dim_0: 5)>
+        <xarray.DataArray (dim_0: 5)> Size: 40B
         array([3, 1, 1, 3, 5])
         Dimensions without coordinates: dim_0
 
         >>> _Normalize(a, width=(18, 36, 72)).values
-        <xarray.DataArray (dim_0: 5)>
+        <xarray.DataArray (dim_0: 5)> Size: 40B
         array([45., 18., 18., 45., 72.])
         Dimensions without coordinates: dim_0
 
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
         >>> _Normalize(a).values
-        <xarray.DataArray (dim_0: 6)>
+        <xarray.DataArray (dim_0: 6)> Size: 48B
         array([0.5, 0. , 0. , 0.5, 2. , 3. ])
         Dimensions without coordinates: dim_0
 
         >>> _Normalize(a, width=(18, 36, 72)).values
-        <xarray.DataArray (dim_0: 6)>
+        <xarray.DataArray (dim_0: 6)> Size: 48B
         array([27., 18., 18., 27., 54., 72.])
         Dimensions without coordinates: dim_0
 
         >>> _Normalize(a * 0, width=(18, 36, 72)).values
-        <xarray.DataArray (dim_0: 6)>
+        <xarray.DataArray (dim_0: 6)> Size: 48B
         array([36., 36., 36., 36., 36., 36.])
         Dimensions without coordinates: dim_0
 

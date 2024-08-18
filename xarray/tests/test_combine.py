@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 from itertools import product
 
 import numpy as np
@@ -229,8 +228,12 @@ class TestTileIDsFromCoords:
         assert concat_dims == ["simulation"]
 
     def test_datetime_coords(self):
-        ds0 = Dataset({"time": [datetime(2000, 3, 6), datetime(2001, 3, 7)]})
-        ds1 = Dataset({"time": [datetime(1999, 1, 1), datetime(1999, 2, 4)]})
+        ds0 = Dataset(
+            {"time": np.array(["2000-03-06", "2000-03-07"], dtype="datetime64[ns]")}
+        )
+        ds1 = Dataset(
+            {"time": np.array(["1999-01-01", "1999-02-04"], dtype="datetime64[ns]")}
+        )
 
         expected = {(0,): ds1, (1,): ds0}
         actual, concat_dims = _infer_concat_order_from_coords([ds0, ds1])
@@ -725,7 +728,10 @@ class TestCombineDatasetsbyCoords:
             combine_by_coords(objs)
 
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [0]})]
-        with pytest.raises(ValueError, match=r"Every dimension needs a coordinate"):
+        with pytest.raises(
+            ValueError,
+            match=r"Every dimension requires a corresponding 1D coordinate and index",
+        ):
             combine_by_coords(objs)
 
     def test_empty_input(self):

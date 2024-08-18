@@ -4,7 +4,7 @@ How to add a new backend
 ------------------------
 
 Adding a new backend for read support to Xarray does not require
-to integrate any code in Xarray; all you need to do is:
+one to integrate any code in Xarray; all you need to do is:
 
 - Create a class that inherits from Xarray :py:class:`~xarray.backends.BackendEntrypoint`
   and implements the method ``open_dataset`` see :ref:`RST backend_entrypoint`
@@ -281,7 +281,7 @@ You can declare the entrypoint in your project configuration like so:
 
    .. code:: toml
 
-      [project.entry-points."xarray-backends"]
+      [project.entry-points."xarray.backends"]
       my_engine = "my_package.my_module:MyBackendEntrypoint"
 
 .. tab:: pyproject.toml [Poetry]

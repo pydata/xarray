@@ -66,7 +66,7 @@ class DataArrayMissingBottleneck:
         ),
     )
     def time_bfill(self, shape, chunks, limit):
-        actual = self.da.ffill(dim="time", limit=limit)
+        actual = self.da.bfill(dim="time", limit=limit)
 
         if chunks is not None:
             actual = actual.compute()

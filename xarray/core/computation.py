@@ -1,6 +1,7 @@
 """
 Functions for applying functions that act on arrays to xarray's labeled data.
 """
+
 from __future__ import annotations
 
 import functools
@@ -8,8 +9,16 @@ import itertools
 import operator
 import warnings
 from collections import Counter
-from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence, Set
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, Union, cast, overload
+from collections.abc import (
+    Callable,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    Sequence,
+    Set,
+)
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, cast, overload
 
 import numpy as np
 
@@ -21,11 +30,11 @@ from xarray.core.formatting import limit_lines
 from xarray.core.indexes import Index, filter_indexes_from_coords
 from xarray.core.merge import merge_attrs, merge_coordinates_without_align
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import get_chunked_array_type
-from xarray.core.pycompat import is_chunked_array, is_duck_dask_array
 from xarray.core.types import Dims, T_DataArray
-from xarray.core.utils import is_dict_like, is_scalar
+from xarray.core.utils import is_dict_like, is_scalar, parse_dims
 from xarray.core.variable import Variable
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import is_chunked_array
 from xarray.util.deprecation_helpers import deprecate_dims
 
 if TYPE_CHECKING:
@@ -132,11 +141,7 @@ class _UFuncSignature:
         return not self == other
 
     def __repr__(self):
-        return "{}({!r}, {!r})".format(
-            type(self).__name__,
-            list(self.input_core_dims),
-            list(self.output_core_dims),
-        )
+        return f"{type(self).__name__}({list(self.input_core_dims)!r}, {list(self.output_core_dims)!r})"
 
     def __str__(self):
         lhs = ",".join("({})".format(",".join(dims)) for dims in self.input_core_dims)
@@ -731,9 +736,11 @@ def apply_variable_ufunc(
     output_dims = [broadcast_dims + out for out in signature.output_core_dims]
 
     input_data = [
-        broadcast_compat_data(arg, broadcast_dims, core_dims)
-        if isinstance(arg, Variable)
-        else arg
+        (
+            broadcast_compat_data(arg, broadcast_dims, core_dims)
+            if isinstance(arg, Variable)
+            else arg
+        )
         for arg, core_dims in zip(args, signature.input_core_dims)
     ]
 
@@ -811,7 +818,7 @@ def apply_variable_ufunc(
             pass
         else:
             raise ValueError(
-                "unknown setting for chunked array handling in " f"apply_ufunc: {dask}"
+                f"unknown setting for chunked array handling in apply_ufunc: {dask}"
             )
     else:
         if vectorize:
@@ -1056,23 +1063,23 @@ def apply_ufunc(
 
     >>> array = xr.DataArray([1, 2, 3], coords=[("x", [0.1, 0.2, 0.3])])
     >>> magnitude(array, -array)
-    <xarray.DataArray (x: 3)>
+    <xarray.DataArray (x: 3)> Size: 24B
     array([1.41421356, 2.82842712, 4.24264069])
     Coordinates:
-      * x        (x) float64 0.1 0.2 0.3
+      * x        (x) float64 24B 0.1 0.2 0.3
 
     Plain scalars, numpy arrays and a mix of these with xarray objects is also
     supported:
 
     >>> magnitude(3, 4)
-    5.0
+    np.float64(5.0)
     >>> magnitude(3, np.array([0, 4]))
     array([3., 5.])
     >>> magnitude(array, 0)
-    <xarray.DataArray (x: 3)>
+    <xarray.DataArray (x: 3)> Size: 24B
     array([1., 2., 3.])
     Coordinates:
-      * x        (x) float64 0.1 0.2 0.3
+      * x        (x) float64 24B 0.1 0.2 0.3
 
     Other examples of how you could use ``apply_ufunc`` to write functions to
     (very nearly) replicate existing xarray functionality:
@@ -1143,6 +1150,8 @@ def apply_ufunc(
     dask.array.apply_gufunc
     xarray.map_blocks
 
+    Notes
+    -----
     :ref:`dask.automatic-parallelization`
         User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
 
@@ -1325,13 +1334,13 @@ def cov(
     ...     ],
     ... )
     >>> da_a
-    <xarray.DataArray (space: 3, time: 3)>
+    <xarray.DataArray (space: 3, time: 3)> Size: 72B
     array([[1. , 2. , 3. ],
            [0.1, 0.2, 0.3],
            [3.2, 0.6, 1.8]])
     Coordinates:
-      * space    (space) <U2 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
+      * space    (space) <U2 24B 'IA' 'IL' 'IN'
+      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
     >>> da_b = DataArray(
     ...     np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
     ...     dims=("space", "time"),
@@ -1341,21 +1350,21 @@ def cov(
     ...     ],
     ... )
     >>> da_b
-    <xarray.DataArray (space: 3, time: 3)>
+    <xarray.DataArray (space: 3, time: 3)> Size: 72B
     array([[ 0.2,  0.4,  0.6],
            [15. , 10. ,  5. ],
            [ 3.2,  0.6,  1.8]])
     Coordinates:
-      * space    (space) <U2 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
+      * space    (space) <U2 24B 'IA' 'IL' 'IN'
+      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
     >>> xr.cov(da_a, da_b)
-    <xarray.DataArray ()>
+    <xarray.DataArray ()> Size: 8B
     array(-3.53055556)
     >>> xr.cov(da_a, da_b, dim="time")
-    <xarray.DataArray (space: 3)>
+    <xarray.DataArray (space: 3)> Size: 24B
     array([ 0.2       , -0.5       ,  1.69333333])
     Coordinates:
-      * space    (space) <U2 'IA' 'IL' 'IN'
+      * space    (space) <U2 24B 'IA' 'IL' 'IN'
     >>> weights = DataArray(
     ...     [4, 2, 1],
     ...     dims=("space"),
@@ -1364,15 +1373,15 @@ def cov(
     ...     ],
     ... )
     >>> weights
-    <xarray.DataArray (space: 3)>
+    <xarray.DataArray (space: 3)> Size: 24B
     array([4, 2, 1])
     Coordinates:
-      * space    (space) <U2 'IA' 'IL' 'IN'
+      * space    (space) <U2 24B 'IA' 'IL' 'IN'
     >>> xr.cov(da_a, da_b, dim="space", weights=weights)
-    <xarray.DataArray (time: 3)>
+    <xarray.DataArray (time: 3)> Size: 24B
     array([-4.69346939, -4.49632653, -3.37959184])
     Coordinates:
-      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
     """
     from xarray.core.dataarray import DataArray
 
@@ -1383,7 +1392,7 @@ def cov(
         )
     if weights is not None:
         if not isinstance(weights, DataArray):
-            raise TypeError("Only xr.DataArray is supported." f"Given {type(weights)}.")
+            raise TypeError(f"Only xr.DataArray is supported. Given {type(weights)}.")
     return _cov_corr(da_a, da_b, weights=weights, dim=dim, ddof=ddof, method="cov")
 
 
@@ -1429,13 +1438,13 @@ def corr(
     ...     ],
     ... )
     >>> da_a
-    <xarray.DataArray (space: 3, time: 3)>
+    <xarray.DataArray (space: 3, time: 3)> Size: 72B
     array([[1. , 2. , 3. ],
            [0.1, 0.2, 0.3],
            [3.2, 0.6, 1.8]])
     Coordinates:
-      * space    (space) <U2 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
+      * space    (space) <U2 24B 'IA' 'IL' 'IN'
+      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
     >>> da_b = DataArray(
     ...     np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
     ...     dims=("space", "time"),
@@ -1445,21 +1454,21 @@ def corr(
     ...     ],
     ... )
     >>> da_b
-    <xarray.DataArray (space: 3, time: 3)>
+    <xarray.DataArray (space: 3, time: 3)> Size: 72B
     array([[ 0.2,  0.4,  0.6],
            [15. , 10. ,  5. ],
            [ 3.2,  0.6,  1.8]])
     Coordinates:
-      * space    (space) <U2 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
+      * space    (space) <U2 24B 'IA' 'IL' 'IN'
+      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
     >>> xr.corr(da_a, da_b)
-    <xarray.DataArray ()>
+    <xarray.DataArray ()> Size: 8B
     array(-0.57087777)
     >>> xr.corr(da_a, da_b, dim="time")
-    <xarray.DataArray (space: 3)>
+    <xarray.DataArray (space: 3)> Size: 24B
     array([ 1., -1.,  1.])
     Coordinates:
-      * space    (space) <U2 'IA' 'IL' 'IN'
+      * space    (space) <U2 24B 'IA' 'IL' 'IN'
     >>> weights = DataArray(
     ...     [4, 2, 1],
     ...     dims=("space"),
@@ -1468,15 +1477,15 @@ def corr(
     ...     ],
     ... )
     >>> weights
-    <xarray.DataArray (space: 3)>
+    <xarray.DataArray (space: 3)> Size: 24B
     array([4, 2, 1])
     Coordinates:
-      * space    (space) <U2 'IA' 'IL' 'IN'
+      * space    (space) <U2 24B 'IA' 'IL' 'IN'
     >>> xr.corr(da_a, da_b, dim="space", weights=weights)
-    <xarray.DataArray (time: 3)>
+    <xarray.DataArray (time: 3)> Size: 24B
     array([-0.50240504, -0.83215028, -0.99057446])
     Coordinates:
-      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
     """
     from xarray.core.dataarray import DataArray
 
@@ -1487,7 +1496,7 @@ def corr(
         )
     if weights is not None:
         if not isinstance(weights, DataArray):
-            raise TypeError("Only xr.DataArray is supported." f"Given {type(weights)}.")
+            raise TypeError(f"Only xr.DataArray is supported. Given {type(weights)}.")
     return _cov_corr(da_a, da_b, weights=weights, dim=dim, method="corr")
 
 
@@ -1582,18 +1591,9 @@ def cross(
     >>> a = xr.DataArray([1, 2, 3])
     >>> b = xr.DataArray([4, 5, 6])
     >>> xr.cross(a, b, dim="dim_0")
-    <xarray.DataArray (dim_0: 3)>
+    <xarray.DataArray (dim_0: 3)> Size: 24B
     array([-3,  6, -3])
     Dimensions without coordinates: dim_0
-
-    Vector cross-product with 2 dimensions, returns in the perpendicular
-    direction:
-
-    >>> a = xr.DataArray([1, 2])
-    >>> b = xr.DataArray([4, 5])
-    >>> xr.cross(a, b, dim="dim_0")
-    <xarray.DataArray ()>
-    array(-3)
 
     Vector cross-product with 3 dimensions but zeros at the last axis
     yields the same results as with 2 dimensions:
@@ -1601,45 +1601,9 @@ def cross(
     >>> a = xr.DataArray([1, 2, 0])
     >>> b = xr.DataArray([4, 5, 0])
     >>> xr.cross(a, b, dim="dim_0")
-    <xarray.DataArray (dim_0: 3)>
+    <xarray.DataArray (dim_0: 3)> Size: 24B
     array([ 0,  0, -3])
     Dimensions without coordinates: dim_0
-
-    One vector with dimension 2:
-
-    >>> a = xr.DataArray(
-    ...     [1, 2],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "y"])),
-    ... )
-    >>> b = xr.DataArray(
-    ...     [4, 5, 6],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
-    ... )
-    >>> xr.cross(a, b, dim="cartesian")
-    <xarray.DataArray (cartesian: 3)>
-    array([12, -6, -3])
-    Coordinates:
-      * cartesian  (cartesian) <U1 'x' 'y' 'z'
-
-    One vector with dimension 2 but coords in other positions:
-
-    >>> a = xr.DataArray(
-    ...     [1, 2],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "z"])),
-    ... )
-    >>> b = xr.DataArray(
-    ...     [4, 5, 6],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
-    ... )
-    >>> xr.cross(a, b, dim="cartesian")
-    <xarray.DataArray (cartesian: 3)>
-    array([-10,   2,   5])
-    Coordinates:
-      * cartesian  (cartesian) <U1 'x' 'y' 'z'
 
     Multiple vector cross-products. Note that the direction of the
     cross product vector is defined by the right-hand rule:
@@ -1661,12 +1625,12 @@ def cross(
     ...     ),
     ... )
     >>> xr.cross(a, b, dim="cartesian")
-    <xarray.DataArray (time: 2, cartesian: 3)>
+    <xarray.DataArray (time: 2, cartesian: 3)> Size: 48B
     array([[-3,  6, -3],
            [ 3, -6,  3]])
     Coordinates:
-      * time       (time) int64 0 1
-      * cartesian  (cartesian) <U1 'x' 'y' 'z'
+      * time       (time) int64 16B 0 1
+      * cartesian  (cartesian) <U1 12B 'x' 'y' 'z'
 
     Cross can be called on Datasets by converting to DataArrays and later
     back to a Dataset:
@@ -1679,13 +1643,13 @@ def cross(
     ...     dim="cartesian",
     ... )
     >>> c.to_dataset(dim="cartesian")
-    <xarray.Dataset>
+    <xarray.Dataset> Size: 24B
     Dimensions:  (dim_0: 1)
     Dimensions without coordinates: dim_0
     Data variables:
-        x        (dim_0) int64 -3
-        y        (dim_0) int64 6
-        z        (dim_0) int64 -3
+        x        (dim_0) int64 8B -3
+        y        (dim_0) int64 8B 6
+        z        (dim_0) int64 8B -3
 
     See Also
     --------
@@ -1737,11 +1701,11 @@ def cross(
             if a.sizes[dim] < b.sizes[dim]:
                 a = a.pad({dim: (0, 1)}, constant_values=0)
                 # TODO: Should pad or apply_ufunc handle correct chunking?
-                a = a.chunk({dim: -1}) if is_duck_dask_array(a.data) else a
+                a = a.chunk({dim: -1}) if is_chunked_array(a.data) else a
             else:
                 b = b.pad({dim: (0, 1)}, constant_values=0)
                 # TODO: Should pad or apply_ufunc handle correct chunking?
-                b = b.chunk({dim: -1}) if is_duck_dask_array(b.data) else b
+                b = b.chunk({dim: -1}) if is_chunked_array(b.data) else b
         else:
             raise ValueError(
                 f"{dim!r} on {'a' if a.sizes[dim] == 1 else 'b'} is incompatible:"
@@ -1804,14 +1768,14 @@ def dot(
     >>> da_c = xr.DataArray(np.arange(2 * 3).reshape(2, 3), dims=["c", "d"])
 
     >>> da_a
-    <xarray.DataArray (a: 3, b: 2)>
+    <xarray.DataArray (a: 3, b: 2)> Size: 48B
     array([[0, 1],
            [2, 3],
            [4, 5]])
     Dimensions without coordinates: a, b
 
     >>> da_b
-    <xarray.DataArray (a: 3, b: 2, c: 2)>
+    <xarray.DataArray (a: 3, b: 2, c: 2)> Size: 96B
     array([[[ 0,  1],
             [ 2,  3]],
     <BLANKLINE>
@@ -1823,42 +1787,42 @@ def dot(
     Dimensions without coordinates: a, b, c
 
     >>> da_c
-    <xarray.DataArray (c: 2, d: 3)>
+    <xarray.DataArray (c: 2, d: 3)> Size: 48B
     array([[0, 1, 2],
            [3, 4, 5]])
     Dimensions without coordinates: c, d
 
     >>> xr.dot(da_a, da_b, dim=["a", "b"])
-    <xarray.DataArray (c: 2)>
+    <xarray.DataArray (c: 2)> Size: 16B
     array([110, 125])
     Dimensions without coordinates: c
 
     >>> xr.dot(da_a, da_b, dim=["a"])
-    <xarray.DataArray (b: 2, c: 2)>
+    <xarray.DataArray (b: 2, c: 2)> Size: 32B
     array([[40, 46],
            [70, 79]])
     Dimensions without coordinates: b, c
 
     >>> xr.dot(da_a, da_b, da_c, dim=["b", "c"])
-    <xarray.DataArray (a: 3, d: 3)>
+    <xarray.DataArray (a: 3, d: 3)> Size: 72B
     array([[  9,  14,  19],
            [ 93, 150, 207],
            [273, 446, 619]])
     Dimensions without coordinates: a, d
 
     >>> xr.dot(da_a, da_b)
-    <xarray.DataArray (c: 2)>
+    <xarray.DataArray (c: 2)> Size: 16B
     array([110, 125])
     Dimensions without coordinates: c
 
     >>> xr.dot(da_a, da_b, dim=...)
-    <xarray.DataArray ()>
+    <xarray.DataArray ()> Size: 8B
     array(235)
     """
     from xarray.core.dataarray import DataArray
     from xarray.core.variable import Variable
 
-    if any(not isinstance(arr, (Variable, DataArray)) for arr in arrays):
+    if any(not isinstance(arr, Variable | DataArray) for arr in arrays):
         raise TypeError(
             "Only xr.DataArray and xr.Variable are supported."
             f"Given {[type(arr) for arr in arrays]}."
@@ -1875,16 +1839,14 @@ def dot(
     einsum_axes = "abcdefghijklmnopqrstuvwxyz"
     dim_map = {d: einsum_axes[i] for i, d in enumerate(all_dims)}
 
-    if dim is ...:
-        dim = all_dims
-    elif isinstance(dim, str):
-        dim = (dim,)
-    elif dim is None:
-        # find dimensions that occur more than one times
+    if dim is None:
+        # find dimensions that occur more than once
         dim_counts: Counter = Counter()
         for arr in arrays:
             dim_counts.update(arr.dims)
         dim = tuple(d for d, c in dim_counts.items() if c > 1)
+    else:
+        dim = parse_dims(dim, all_dims=tuple(all_dims))
 
     dot_dims: set[Hashable] = set(dim)
 
@@ -1958,16 +1920,16 @@ def where(cond, x, y, keep_attrs=None):
     ...     name="sst",
     ... )
     >>> x
-    <xarray.DataArray 'sst' (lat: 10)>
+    <xarray.DataArray 'sst' (lat: 10)> Size: 80B
     array([0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
     Coordinates:
-      * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
+      * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
 
     >>> xr.where(x < 0.5, x, x * 100)
-    <xarray.DataArray 'sst' (lat: 10)>
+    <xarray.DataArray 'sst' (lat: 10)> Size: 80B
     array([ 0. ,  0.1,  0.2,  0.3,  0.4, 50. , 60. , 70. , 80. , 90. ])
     Coordinates:
-      * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
+      * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
 
     >>> y = xr.DataArray(
     ...     0.1 * np.arange(9).reshape(3, 3),
@@ -1976,27 +1938,27 @@ def where(cond, x, y, keep_attrs=None):
     ...     name="sst",
     ... )
     >>> y
-    <xarray.DataArray 'sst' (lat: 3, lon: 3)>
+    <xarray.DataArray 'sst' (lat: 3, lon: 3)> Size: 72B
     array([[0. , 0.1, 0.2],
            [0.3, 0.4, 0.5],
            [0.6, 0.7, 0.8]])
     Coordinates:
-      * lat      (lat) int64 0 1 2
-      * lon      (lon) int64 10 11 12
+      * lat      (lat) int64 24B 0 1 2
+      * lon      (lon) int64 24B 10 11 12
 
     >>> xr.where(y.lat < 1, y, -1)
-    <xarray.DataArray (lat: 3, lon: 3)>
+    <xarray.DataArray (lat: 3, lon: 3)> Size: 72B
     array([[ 0. ,  0.1,  0.2],
            [-1. , -1. , -1. ],
            [-1. , -1. , -1. ]])
     Coordinates:
-      * lat      (lat) int64 0 1 2
-      * lon      (lon) int64 10 11 12
+      * lat      (lat) int64 24B 0 1 2
+      * lon      (lon) int64 24B 10 11 12
 
     >>> cond = xr.DataArray([True, False], dims=["x"])
     >>> x = xr.DataArray([1, 2], dims=["y"])
     >>> xr.where(cond, x, 0)
-    <xarray.DataArray (x: 2, y: 2)>
+    <xarray.DataArray (x: 2, y: 2)> Size: 32B
     array([[1, 2],
            [0, 0]])
     Dimensions without coordinates: x, y
@@ -2049,29 +2011,25 @@ def where(cond, x, y, keep_attrs=None):
 @overload
 def polyval(
     coord: DataArray, coeffs: DataArray, degree_dim: Hashable = "degree"
-) -> DataArray:
-    ...
+) -> DataArray: ...
 
 
 @overload
 def polyval(
     coord: DataArray, coeffs: Dataset, degree_dim: Hashable = "degree"
-) -> Dataset:
-    ...
+) -> Dataset: ...
 
 
 @overload
 def polyval(
     coord: Dataset, coeffs: DataArray, degree_dim: Hashable = "degree"
-) -> Dataset:
-    ...
+) -> Dataset: ...
 
 
 @overload
 def polyval(
     coord: Dataset, coeffs: Dataset, degree_dim: Hashable = "degree"
-) -> Dataset:
-    ...
+) -> Dataset: ...
 
 
 @overload
@@ -2079,8 +2037,7 @@ def polyval(
     coord: Dataset | DataArray,
     coeffs: Dataset | DataArray,
     degree_dim: Hashable = "degree",
-) -> Dataset | DataArray:
-    ...
+) -> Dataset | DataArray: ...
 
 
 def polyval(
@@ -2249,23 +2206,19 @@ _V = TypeVar("_V", bound=Union["Dataset", "DataArray"])
 
 
 @overload
-def unify_chunks(__obj: _T) -> tuple[_T]:
-    ...
+def unify_chunks(__obj: _T) -> tuple[_T]: ...
 
 
 @overload
-def unify_chunks(__obj1: _T, __obj2: _U) -> tuple[_T, _U]:
-    ...
+def unify_chunks(__obj1: _T, __obj2: _U) -> tuple[_T, _U]: ...
 
 
 @overload
-def unify_chunks(__obj1: _T, __obj2: _U, __obj3: _V) -> tuple[_T, _U, _V]:
-    ...
+def unify_chunks(__obj1: _T, __obj2: _U, __obj3: _V) -> tuple[_T, _U, _V]: ...
 
 
 @overload
-def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]:
-    ...
+def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]: ...
 
 
 def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]:

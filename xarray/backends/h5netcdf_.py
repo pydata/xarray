@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import io
 import os
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Any
 
 from xarray.backends.common import (
@@ -27,6 +27,7 @@ from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
 from xarray.core.utils import (
     FrozenDict,
+    emit_user_level_warning,
     is_remote_uri,
     read_magic_number_from_file,
     try_read_magic_number_from_file_or_path,
@@ -38,6 +39,7 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -56,13 +58,6 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
             return array[key]
 
 
-def maybe_decode_bytes(txt):
-    if isinstance(txt, bytes):
-        return txt.decode("utf-8")
-    else:
-        return txt
-
-
 def _read_attributes(h5netcdf_var):
     # GH451
     # to ensure conventions decoding works properly on Python 3, decode all
@@ -70,7 +65,16 @@ def _read_attributes(h5netcdf_var):
     attrs = {}
     for k, v in h5netcdf_var.attrs.items():
         if k not in ["_FillValue", "missing_value"]:
-            v = maybe_decode_bytes(v)
+            if isinstance(v, bytes):
+                try:
+                    v = v.decode("utf-8")
+                except UnicodeDecodeError:
+                    emit_user_level_warning(
+                        f"'utf-8' codec can't decode bytes for attribute "
+                        f"{k!r} of h5netcdf object {h5netcdf_var.name!r}, "
+                        f"returning bytes undecoded.",
+                        UnicodeWarning,
+                    )
         attrs[k] = v
     return attrs
 
@@ -105,7 +109,7 @@ class H5NetCDFStore(WritableCFDataStore):
     def __init__(self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False):
         import h5netcdf
 
-        if isinstance(manager, (h5netcdf.File, h5netcdf.Group)):
+        if isinstance(manager, h5netcdf.File | h5netcdf.Group):
             if group is None:
                 root, group = find_root_and_group(manager)
             else:
@@ -216,7 +220,7 @@ class H5NetCDFStore(WritableCFDataStore):
 
         # save source so __repr__ can detect if it's local or not
         encoding["source"] = self._filename
-        encoding["original_shape"] = var.shape
+        encoding["original_shape"] = data.shape
 
         vlen_dtype = h5py.check_dtype(vlen=var.dtype)
         if vlen_dtype is str:
@@ -370,7 +374,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         if magic_number is not None:
             return magic_number.startswith(b"\211HDF\r\n\032\n")
 
-        if isinstance(filename_or_obj, (str, os.PathLike)):
+        if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
             return ext in {".nc", ".nc4", ".cdf"}
 
@@ -422,6 +426,100 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             decode_timedelta=decode_timedelta,
         )
         return ds
+
+    def open_datatree(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        format=None,
+        group: str | Iterable[str] | Callable | None = None,
+        lock=None,
+        invalid_netcdf=None,
+        phony_dims=None,
+        decode_vlen_strings=True,
+        driver=None,
+        driver_kwds=None,
+        **kwargs,
+    ) -> DataTree:
+
+        from xarray.core.datatree import DataTree
+
+        groups_dict = self.open_groups_as_dict(filename_or_obj, **kwargs)
+
+        return DataTree.from_dict(groups_dict)
+
+    def open_groups_as_dict(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        format=None,
+        group: str | Iterable[str] | Callable | None = None,
+        lock=None,
+        invalid_netcdf=None,
+        phony_dims=None,
+        decode_vlen_strings=True,
+        driver=None,
+        driver_kwds=None,
+        **kwargs,
+    ) -> dict[str, Dataset]:
+
+        from xarray.backends.common import _iter_nc_groups
+        from xarray.core.treenode import NodePath
+        from xarray.core.utils import close_on_error
+
+        filename_or_obj = _normalize_path(filename_or_obj)
+        store = H5NetCDFStore.open(
+            filename_or_obj,
+            format=format,
+            group=group,
+            lock=lock,
+            invalid_netcdf=invalid_netcdf,
+            phony_dims=phony_dims,
+            decode_vlen_strings=decode_vlen_strings,
+            driver=driver,
+            driver_kwds=driver_kwds,
+        )
+        # Check for a group and make it a parent if it exists
+        if group:
+            parent = NodePath("/") / NodePath(group)
+        else:
+            parent = NodePath("/")
+
+        manager = store._manager
+        groups_dict = {}
+        for path_group in _iter_nc_groups(store.ds, parent=parent):
+            group_store = H5NetCDFStore(manager, group=path_group, **kwargs)
+            store_entrypoint = StoreBackendEntrypoint()
+            with close_on_error(group_store):
+                group_ds = store_entrypoint.open_dataset(
+                    group_store,
+                    mask_and_scale=mask_and_scale,
+                    decode_times=decode_times,
+                    concat_characters=concat_characters,
+                    decode_coords=decode_coords,
+                    drop_variables=drop_variables,
+                    use_cftime=use_cftime,
+                    decode_timedelta=decode_timedelta,
+                )
+
+            group_name = str(NodePath(path_group))
+            groups_dict[group_name] = group_ds
+
+        return groups_dict
 
 
 BACKEND_ENTRYPOINTS["h5netcdf"] = ("h5netcdf", H5netcdfBackendEntrypoint)

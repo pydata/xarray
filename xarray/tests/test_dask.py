@@ -194,7 +194,7 @@ class TestVariable(DaskTestCase):
     def test_repr(self):
         expected = dedent(
             f"""\
-            <xarray.Variable (x: 4, y: 6)>
+            <xarray.Variable (x: 4, y: 6)> Size: 192B
             {self.lazy_var.data!r}"""
         )
         assert expected == repr(self.lazy_var)
@@ -299,17 +299,6 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
 
-    def test_tokenize_empty_attrs(self) -> None:
-        # Issue #6970
-        assert self.eager_var._attrs is None
-        expected = dask.base.tokenize(self.eager_var)
-        assert self.eager_var.attrs == self.eager_var._attrs == {}
-        assert (
-            expected
-            == dask.base.tokenize(self.eager_var)
-            == dask.base.tokenize(self.lazy_var.compute())
-        )
-
     @requires_pint
     def test_tokenize_duck_dask_array(self):
         import pint
@@ -348,13 +337,16 @@ class TestDataArrayAndDataset(DaskTestCase):
             self.data, coords={"x": range(4)}, dims=("x", "y"), name="foo"
         )
 
-    def test_chunk(self):
+    def test_chunk(self) -> None:
         for chunks, expected in [
             ({}, ((2, 2), (2, 2, 2))),
             (3, ((3, 1), (3, 3))),
             ({"x": 3, "y": 3}, ((3, 1), (3, 3))),
             ({"x": 3}, ((3, 1), (2, 2, 2))),
             ({"x": (3, 1)}, ((3, 1), (2, 2, 2))),
+            ({"x": "16B"}, ((1, 1, 1, 1), (2, 2, 2))),
+            ("16B", ((1, 1, 1, 1), (1,) * 6)),
+            ("16MB", ((4,), (6,))),
         ]:
             # Test DataArray
             rechunked = self.lazy_array.chunk(chunks)
@@ -646,6 +638,15 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         assert count[0] == 1
 
+    def test_duplicate_dims(self):
+        data = np.random.normal(size=(4, 4))
+        with pytest.warns(UserWarning, match="Duplicate dimension"):
+            arr = DataArray(data, dims=("x", "x"))
+        with pytest.warns(UserWarning, match="Duplicate dimension"):
+            chunked_array = arr.chunk({"x": 2})
+        assert chunked_array.chunks == ((2, 2), (2, 2))
+        assert chunked_array.chunksizes == {"x": (2, 2)}
+
     def test_stack(self):
         data = da.random.normal(size=(2, 3, 4), chunks=(1, 3, 4))
         arr = DataArray(data, dims=("w", "x", "y"))
@@ -666,10 +667,10 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(data, dims=["x"], coords={"y": ("x", nonindex_coord)})
         expected = dedent(
             f"""\
-            <xarray.DataArray 'data' (x: 1)>
+            <xarray.DataArray 'data' (x: 1)> Size: 8B
             {data!r}
             Coordinates:
-                y        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>
+                y        (x) int64 8B dask.array<chunksize=(1,), meta=np.ndarray>
             Dimensions without coordinates: x"""
         )
         assert expected == repr(a)
@@ -681,13 +682,13 @@ class TestDataArrayAndDataset(DaskTestCase):
         ds = Dataset(data_vars={"a": ("x", data)}, coords={"y": ("x", nonindex_coord)})
         expected = dedent(
             """\
-            <xarray.Dataset>
+            <xarray.Dataset> Size: 16B
             Dimensions:  (x: 1)
             Coordinates:
-                y        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>
+                y        (x) int64 8B dask.array<chunksize=(1,), meta=np.ndarray>
             Dimensions without coordinates: x
             Data variables:
-                a        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>"""
+                a        (x) int64 8B dask.array<chunksize=(1,), meta=np.ndarray>"""
         )
         assert expected == repr(ds)
         assert kernel_call_count == 0  # should not evaluate dask array
@@ -802,7 +803,7 @@ class TestToDaskDataFrame:
         assert isinstance(actual, dd.DataFrame)
 
         # use the .equals from pandas to check dataframes are equivalent
-        assert_frame_equal(expected.compute(), actual.compute())
+        assert_frame_equal(actual.compute(), expected.compute())
 
         # test if no index is given
         expected = dd.from_pandas(expected_pd.reset_index(drop=False), chunksize=4)
@@ -810,8 +811,12 @@ class TestToDaskDataFrame:
         actual = ds.to_dask_dataframe(set_index=False)
 
         assert isinstance(actual, dd.DataFrame)
-        assert_frame_equal(expected.compute(), actual.compute())
+        assert_frame_equal(actual.compute(), expected.compute())
 
+    @pytest.mark.xfail(
+        reason="Currently pandas with pyarrow installed will return a `string[pyarrow]` type, "
+        "which causes the `y` column to have a different type depending on whether pyarrow is installed"
+    )
     def test_to_dask_dataframe_2D(self):
         # Test if 2-D dataset is supplied
         w = np.random.randn(2, 3)
@@ -830,7 +835,7 @@ class TestToDaskDataFrame:
         actual = ds.to_dask_dataframe(set_index=False)
 
         assert isinstance(actual, dd.DataFrame)
-        assert_frame_equal(expected, actual.compute())
+        assert_frame_equal(actual.compute(), expected)
 
     @pytest.mark.xfail(raises=NotImplementedError)
     def test_to_dask_dataframe_2D_set_index(self):
@@ -863,6 +868,10 @@ class TestToDaskDataFrame:
         assert isinstance(actual, dd.DataFrame)
         assert_frame_equal(expected.compute(), actual.compute())
 
+    @pytest.mark.xfail(
+        reason="Currently pandas with pyarrow installed will return a `string[pyarrow]` type, "
+        "which causes the index to have a different type depending on whether pyarrow is installed"
+    )
     def test_to_dask_dataframe_not_daskarray(self):
         # Test if DataArray is not a dask array
         x = np.random.randn(10)
@@ -1357,7 +1366,8 @@ def test_map_blocks_ds_transformations(func, map_ds):
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_da_ds_with_template(obj):
     func = lambda x: x.isel(x=[1])
-    template = obj.isel(x=[1, 5, 9])
+    # a simple .isel(x=[1, 5, 9]) puts all those in a single chunk.
+    template = xr.concat([obj.isel(x=[i]) for i in [1, 5, 9]], dim="x")
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, obj, template=template)
     assert_identical(actual, template)
@@ -1367,17 +1377,37 @@ def test_map_blocks_da_ds_with_template(obj):
     assert_identical(actual, template)
 
 
+def test_map_blocks_roundtrip_string_index():
+    ds = xr.Dataset(
+        {"data": (["label"], [1, 2, 3])}, coords={"label": ["foo", "bar", "baz"]}
+    ).chunk(label=1)
+    assert ds.label.dtype == np.dtype("<U3")
+
+    mapped = ds.map_blocks(lambda x: x, template=ds)
+    assert mapped.label.dtype == ds.label.dtype
+
+    mapped = ds.map_blocks(lambda x: x, template=None)
+    assert mapped.label.dtype == ds.label.dtype
+
+    mapped = ds.data.map_blocks(lambda x: x, template=ds.data)
+    assert mapped.label.dtype == ds.label.dtype
+
+    mapped = ds.data.map_blocks(lambda x: x, template=None)
+    assert mapped.label.dtype == ds.label.dtype
+
+
 def test_map_blocks_template_convert_object():
     da = make_da()
+    ds = da.to_dataset()
+
     func = lambda x: x.to_dataset().isel(x=[1])
-    template = da.to_dataset().isel(x=[1, 5, 9])
+    template = xr.concat([da.to_dataset().isel(x=[i]) for i in [1, 5, 9]], dim="x")
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, da, template=template)
     assert_identical(actual, template)
 
-    ds = da.to_dataset()
     func = lambda x: x.to_dataarray().isel(x=[1])
-    template = ds.to_dataarray().isel(x=[1, 5, 9])
+    template = xr.concat([ds.to_dataarray().isel(x=[i]) for i in [1, 5, 9]], dim="x")
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, ds, template=template)
     assert_identical(actual, template)
@@ -1403,7 +1433,7 @@ def test_map_blocks_errors_bad_template(obj):
         xr.map_blocks(
             lambda a: a.isel(x=[1]).assign_coords(x=[120]),  # assign bad index values
             obj,
-            template=obj.isel(x=[1, 5, 9]),
+            template=xr.concat([obj.isel(x=[i]) for i in [1, 5, 9]], dim="x"),
         ).compute()
 
 
@@ -1546,6 +1576,30 @@ def test_token_identical(obj, transform):
     )
 
 
+@pytest.mark.parametrize(
+    "obj",
+    [
+        make_ds(),  # Dataset
+        make_ds().variables["c2"],  # Variable
+        make_ds().variables["x"],  # IndexVariable
+    ],
+)
+def test_tokenize_empty_attrs(obj):
+    """Issues #6970 and #8788"""
+    obj.attrs = {}
+    assert obj._attrs is None
+    a = dask.base.tokenize(obj)
+
+    assert obj.attrs == {}
+    assert obj._attrs == {}  # attrs getter changed None to dict
+    b = dask.base.tokenize(obj)
+    assert a == b
+
+    obj2 = obj.copy()
+    c = dask.base.tokenize(obj2)
+    assert a == c
+
+
 def test_recursive_token():
     """Test that tokenization is invoked recursively, and doesn't just rely on the
     output of str()
@@ -1635,16 +1689,10 @@ def test_lazy_array_equiv_merge(compat):
         lambda a: a.assign_attrs(new_attr="anew"),
         lambda a: a.assign_coords(cxy=a.cxy),
         lambda a: a.copy(),
-        lambda a: a.isel(x=np.arange(a.sizes["x"])),
         lambda a: a.isel(x=slice(None)),
         lambda a: a.loc[dict(x=slice(None))],
-        lambda a: a.loc[dict(x=np.arange(a.sizes["x"]))],
-        lambda a: a.loc[dict(x=a.x)],
-        lambda a: a.sel(x=a.x),
-        lambda a: a.sel(x=a.x.values),
         lambda a: a.transpose(...),
         lambda a: a.squeeze(),  # no dimensions to squeeze
-        lambda a: a.sortby("x"),  # "x" is already sorted
         lambda a: a.reindex(x=a.x),
         lambda a: a.reindex_like(a),
         lambda a: a.rename({"cxy": "cnew"}).rename({"cnew": "cxy"}),
@@ -1727,3 +1775,28 @@ def test_new_index_var_computes_once():
     data = dask.array.from_array(np.array([100, 200]))
     with raise_if_dask_computes(max_computes=1):
         Dataset(coords={"z": ("z", data)})
+
+
+def test_minimize_graph_size():
+    # regression test for https://github.com/pydata/xarray/issues/8409
+    ds = Dataset(
+        {
+            "foo": (
+                ("x", "y", "z"),
+                dask.array.ones((120, 120, 120), chunks=(20, 20, 1)),
+            )
+        },
+        coords={"x": np.arange(120), "y": np.arange(120), "z": np.arange(120)},
+    )
+
+    mapped = ds.map_blocks(lambda x: x)
+    graph = dict(mapped.__dask_graph__())
+
+    numchunks = {k: len(v) for k, v in ds.chunksizes.items()}
+    for var in "xyz":
+        actual = len([key for key in graph if var in key[0]])
+        # assert that we only include each chunk of an index variable
+        # is only included once, not the product of number of chunks of
+        # all the other dimenions.
+        # e.g. previously for 'x',  actual == numchunks['y'] * numchunks['z']
+        assert actual == numchunks[var], (actual, numchunks[var])
