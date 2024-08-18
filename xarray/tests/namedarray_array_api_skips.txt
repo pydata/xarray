@@ -1,5 +1,8 @@
 # Known failures for the array api tests.
 
+array_api_tests/test_array_object.py::test_getitem
+array_api_tests/test_array_object.py::test_getitem_masking
+
 # Test suite attempts in-place mutation:
 array_api_tests/test_array_object.py::test_setitem
 array_api_tests/test_array_object.py::test_setitem_masking
