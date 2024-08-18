@@ -38,7 +38,7 @@ Bug fixes
 ~~~~~~~~~
 
 - Make illegal path-like variable names when constructing a DataTree from a Dataset
-  (:issue:`311`, :pull:`314`)
+  (:issue:`9339`, :pull:`9378`)
   By `Etienne Schalk <https://github.com/etienneschalk>`_.
 - Fix bug with rechunking to a frequency when some periods contain no data (:issue:`9360`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
