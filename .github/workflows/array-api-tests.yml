@@ -19,7 +19,7 @@ jobs:
     - name: Checkout xarray
       uses: actions/checkout@v4
       with:
-        path: xarray
+        path: xarray-tests
     - name: Checkout array-api-tests
       uses: actions/checkout@v4
       with:
