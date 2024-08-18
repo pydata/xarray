@@ -9,7 +9,6 @@ from xarray.namedarray._typing import (
     Default,
     _arrayapi,
     _dtype,
-    duckarray,
     _arrayfunction_or_api,
     _ArrayLike,
     _AttrsLike,
