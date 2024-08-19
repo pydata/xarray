@@ -27,6 +27,7 @@ from xarray.namedarray._array_api.creation_functions import (
     # tril,
     # triu,
     zeros,
+    # zeros_like,
 )
 
 __all__ += [
@@ -244,6 +245,9 @@ from xarray.namedarray._array_api.manipulation_functions import (
     # moveaxis,
     permute_dims,
     reshape,
+    # roll,
+    # squeeze,
+    # stack,
 )
 
 __all__ += [
@@ -275,6 +279,9 @@ __all__ += [
 from xarray.namedarray._array_api.statistical_functions import (
     # max,
     mean,
+    # min,
+    # prod,
+    # sum,
 )
 
 __all__ += [
