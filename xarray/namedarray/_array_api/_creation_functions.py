@@ -5,8 +5,8 @@ from typing import Any, overload
 import numpy as np
 
 from xarray.namedarray._array_api._utils import (
-    _maybe_default_namespace,
     _get_data_namespace,
+    _maybe_default_namespace,
 )
 from xarray.namedarray._typing import (
     Default,
