@@ -1381,7 +1381,7 @@ def test_map_blocks_roundtrip_string_index():
     ds = xr.Dataset(
         {"data": (["label"], [1, 2, 3])}, coords={"label": ["foo", "bar", "baz"]}
     ).chunk(label=1)
-    assert ds.label.dtype == np.dtype("<U3")
+    assert ds.label.dtype == np.dtype("=U3")
 
     mapped = ds.map_blocks(lambda x: x, template=ds)
     assert mapped.label.dtype == ds.label.dtype

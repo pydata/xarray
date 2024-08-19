@@ -872,7 +872,7 @@ class CFEncodedBase(DatasetIOBase):
                 if actual["a"].dtype.metadata is not None:
                     assert check_vlen_dtype(actual["a"].dtype) is str
             else:
-                assert actual["a"].dtype == np.dtype("<U1")
+                assert actual["a"].dtype == np.dtype("=U1")
 
     @pytest.mark.parametrize(
         "decoded_fn, encoded_fn",
@@ -1430,8 +1430,8 @@ class NetCDF4Base(NetCDFBase):
         expected = Dataset({"x": expected_string})
         kwargs = dict(encoding={"x": {"dtype": str}})
         with self.roundtrip(original, save_kwargs=kwargs) as actual:
-            assert actual["x"].encoding["dtype"] == "<U3"
-            assert actual["x"].dtype == "<U3"
+            assert actual["x"].encoding["dtype"] == "=U3"
+            assert actual["x"].dtype == "=U3"
             assert_identical(actual, expected)
 
     @pytest.mark.parametrize("fill_value", ["XXX", "", "bár"])
