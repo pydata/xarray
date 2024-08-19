@@ -1,4 +1,7 @@
-from typing import TYPE_CHECKING, Any, ModuleType
+from __future__ import annotations
+
+from types import ModuleType
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 

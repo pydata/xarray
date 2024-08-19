@@ -4,7 +4,7 @@ __array_api_version__ = "2023.12"
 
 __all__ += ["__array_api_version__"]
 
-from xarray.namedarray._array_api.array_object import Array
+from xarray.namedarray.core import NamedArray as Array
 
 __all__ += ["Array"]
 
@@ -15,37 +15,37 @@ __all__ += ["e", "inf", "nan", "newaxis", "pi"]
 from xarray.namedarray._array_api.creation_functions import (
     arange,
     asarray,
-    empty,
-    empty_like,
-    eye,
+    # empty,
+    # empty_like,
+    # eye,
     full,
-    full_like,
+    # full_like,
     linspace,
-    meshgrid,
+    # meshgrid,
     ones,
-    ones_like,
-    tril,
-    triu,
+    # ones_like,
+    # tril,
+    # triu,
     zeros,
-    zeros_like,
+    # zeros_like,
 )
 
 __all__ += [
     "arange",
     "asarray",
-    "empty",
-    "empty_like",
-    "eye",
+    # "empty",
+    # "empty_like",
+    # "eye",
     "full",
-    "full_like",
+    # "full_like",
     "linspace",
-    "meshgrid",
+    # "meshgrid",
     "ones",
-    "ones_like",
-    "tril",
-    "triu",
+    # "ones_like",
+    # "tril",
+    # "triu",
     "zeros",
-    "zeros_like",
+    # "zeros_like",
 ]
 
 from xarray.namedarray._array_api.data_type_functions import (
@@ -57,7 +57,14 @@ from xarray.namedarray._array_api.data_type_functions import (
     result_type,
 )
 
-__all__ += ["astype", "can_cast", "finfo", "iinfo", "isdtype", "result_type"]
+__all__ += [
+    "astype",
+    "can_cast",
+    "finfo",
+    "iinfo",
+    "isdtype",
+    "result_type",
+]
 
 from xarray.namedarray._array_api.dtypes import (
     bool,
@@ -215,56 +222,82 @@ __all__ += [
     "trunc",
 ]
 
-from xarray.namedarray._array_api.indexing_functions import take
+# from xarray.namedarray._array_api.indexing_functions import take
 
-__all__ += ["take"]
+# __all__ += ["take"]
 
-from xarray.namedarray._array_api.linear_algebra_functions import (
-    matmul,
-    matrix_transpose,
-    outer,
-    tensordot,
-    vecdot,
-)
+# from xarray.namedarray._array_api.linear_algebra_functions import (
+#     matmul,
+#     matrix_transpose,
+#     outer,
+#     tensordot,
+#     vecdot,
+# )
 
-__all__ += ["matmul", "matrix_transpose", "outer", "tensordot", "vecdot"]
+# __all__ += ["matmul", "matrix_transpose", "outer", "tensordot", "vecdot"]
 
 from xarray.namedarray._array_api.manipulation_functions import (
-    broadcast_arrays,
-    broadcast_to,
-    concat,
+    # broadcast_arrays,
+    # broadcast_to,
+    # concat,
     expand_dims,
-    flip,
-    moveaxis,
+    # flip,
+    # moveaxis,
     permute_dims,
     reshape,
-    roll,
-    squeeze,
-    stack,
+    # roll,
+    # squeeze,
+    # stack,
 )
 
 __all__ += [
-    "broadcast_arrays",
-    "broadcast_to",
-    "concat",
+    # "broadcast_arrays",
+    # "broadcast_to",
+    # "concat",
     "expand_dims",
-    "flip",
-    "moveaxis",
+    # "flip",
+    # "moveaxis",
     "permute_dims",
     "reshape",
-    "roll",
-    "squeeze",
-    "stack",
+    # "roll",
+    # "squeeze",
+    # "stack",
 ]
 
-from xarray.namedarray._array_api.searching_functions import argmax, argmin, where
+# from xarray.namedarray._array_api.searching_functions import (
+#     argmax,
+#     argmin,
+#     where,
+# )
 
-__all__ += ["argmax", "argmin", "where"]
+# __all__ += [
+#     "argmax",
+#     "argmin",
+#     "where",
+# ]
 
-from xarray.namedarray._array_api.statistical_functions import max, mean, min, prod, sum
+from xarray.namedarray._array_api.statistical_functions import (
+    # max,
+    mean,
+    # min,
+    # prod,
+    # sum,
+)
 
-__all__ += ["max", "mean", "min", "prod", "sum"]
+__all__ += [
+    # "max",
+    "mean",
+    # "min",
+    # "prod",
+    # "sum",
+]
 
-from xarray.namedarray._array_api.utility_functions import all, any
+from xarray.namedarray._array_api.utility_functions import (
+    all,
+    any,
+)
 
-__all__ += ["all", "any"]
+__all__ += [
+    "all",
+    "any",
+]
