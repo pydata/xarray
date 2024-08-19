@@ -104,3 +104,7 @@ def reshape(x, /, shape: _Shape, *, copy: bool | None = None):
     # TODO: If reshaping should we save the dims?
     # TODO: What's the xarray equivalent?
     return out
+
+
+def stack(arrays, /, *, axis=0):
+    raise NotImplementedError("TODO:")

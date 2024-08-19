@@ -253,7 +253,7 @@ from xarray.namedarray._array_api._manipulation_functions import (
     reshape,
     # roll,
     # squeeze,
-    # stack,
+    stack,
 )
 
 __all__ += [
