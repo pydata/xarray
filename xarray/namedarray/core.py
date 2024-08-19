@@ -59,6 +59,7 @@ if TYPE_CHECKING:
         _AttrsLike,
         _AxisLike,
         _Chunks,
+        _Device,
         _Dim,
         _Dims,
         _DimsLike,
@@ -751,6 +752,20 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return self._new(key._dims, _data)
         else:
             raise NotImplementedError("{k=} is not supported")
+
+    @property
+    def device(self) -> _Device:
+        """
+        Device of the array’s elements.
+
+        See Also
+        --------
+        ndarray.device
+        """
+        if isinstance(self._data, _arrayapi):
+            return self._data.device
+        else:
+            raise NotImplementedError("self._data missing device")
 
     @property
     def dtype(self) -> _DType_co:
