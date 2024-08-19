@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from types import ModuleType
-    from typing import Optional, Union
 
     from xarray.namedarray._typing import _Device
 
@@ -61,7 +60,7 @@ def default_dtypes(
 def dtypes(
     *,
     device: _Device | None = None,
-    kind: str| Tuple[str, ...] | None = None,
+    kind: str | Tuple[str, ...] | None = None,
 ) -> dict:
     if kind is None:
         return {
