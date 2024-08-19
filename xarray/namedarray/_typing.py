@@ -50,8 +50,6 @@ _DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
 _ScalarType = TypeVar("_ScalarType", bound=np.generic)
 _ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
 
-_ArrayLike = np.typing.ArrayLike
-
 
 # A protocol for anything with the dtype attribute
 @runtime_checkable
@@ -99,6 +97,10 @@ _IndexKeys = tuple[_IndexKey, ...]  #  tuple[Union[_IndexKey, None], ...]
 _IndexKeyLike = Union[_IndexKey, _IndexKeys]
 
 _AttrsLike = Union[Mapping[Any, Any], None]
+
+_ArrayLike = np.typing.ArrayLike
+
+_Device = Any
 
 
 class _SupportsReal(Protocol[_T_co]):
