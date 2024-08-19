@@ -15,37 +15,37 @@ __all__ += ["e", "inf", "nan", "newaxis", "pi"]
 from xarray.namedarray._array_api.creation_functions import (
     arange,
     asarray,
-    # empty,
-    # empty_like,
+    empty,
+    empty_like,
     # eye,
     full,
-    # full_like,
+    full_like,
     linspace,
     # meshgrid,
     ones,
-    # ones_like,
+    ones_like,
     # tril,
     # triu,
     zeros,
-    # zeros_like,
+    zeros_like,
 )
 
 __all__ += [
     "arange",
     "asarray",
-    # "empty",
-    # "empty_like",
+    "empty",
+    "empty_like",
     # "eye",
     "full",
-    # "full_like",
+    "full_like",
     "linspace",
     # "meshgrid",
     "ones",
-    # "ones_like",
+    "ones_like",
     # "tril",
     # "triu",
     "zeros",
-    # "zeros_like",
+    "zeros_like",
 ]
 
 from xarray.namedarray._array_api.data_type_functions import (
@@ -277,19 +277,19 @@ __all__ += [
 # ]
 
 from xarray.namedarray._array_api.statistical_functions import (
-    # max,
+    max,
     mean,
-    # min,
-    # prod,
-    # sum,
+    min,
+    prod,
+    sum,
 )
 
 __all__ += [
-    # "max",
+    "max",
     "mean",
-    # "min",
-    # "prod",
-    # "sum",
+    "min",
+    "prod",
+    "sum",
 ]
 
 from xarray.namedarray._array_api.utility_functions import (
