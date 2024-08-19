@@ -1,40 +1,6 @@
 from __future__ import annotations
 
-from types import ModuleType
-from typing import Any, overload
-
-import numpy as np
-
 from xarray.namedarray._array_api._utils import _maybe_default_namespace
-from xarray.namedarray._typing import (
-    Default,
-    _arrayapi,
-    _arrayfunction_or_api,
-    _ArrayLike,
-    _Axes,
-    _Axis,
-    _AxisLike,
-    _default,
-    _Dim,
-    _Dims,
-    _DimsLike,
-    _DType,
-    _dtype,
-    _ScalarType,
-    _Shape,
-    _ShapeType,
-    _SupportsImag,
-    _SupportsReal,
-    duckarray,
-)
-from xarray.namedarray.core import (
-    NamedArray,
-    _dims_to_axis,
-    _get_remaining_dims,
-)
-from xarray.namedarray.utils import (
-    to_0d_object_array,
-)
 
 _xp = _maybe_default_namespace()
 int8 = _xp.int8

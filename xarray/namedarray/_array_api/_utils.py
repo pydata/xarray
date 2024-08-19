@@ -1,9 +1,8 @@
-from typing import Any, ModuleType, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, ModuleType
 
 import numpy as np
 
 from xarray.namedarray._typing import _arrayapi, _dtype
-
 
 if TYPE_CHECKING:
     from xarray.namedarray.core import NamedArray

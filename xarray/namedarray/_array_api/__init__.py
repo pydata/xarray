@@ -4,15 +4,15 @@ __array_api_version__ = "2023.12"
 
 __all__ += ["__array_api_version__"]
 
-from .array_object import Array
+from xarray.namedarray._array_api.array_object import Array
 
 __all__ += ["Array"]
 
-from .constants import e, inf, nan, newaxis, pi
+from xarray.namedarray._array_api.constants import e, inf, nan, newaxis, pi
 
 __all__ += ["e", "inf", "nan", "newaxis", "pi"]
 
-from .creation_functions import (
+from xarray.namedarray._array_api.creation_functions import (
     arange,
     asarray,
     empty,
@@ -48,11 +48,18 @@ __all__ += [
     "zeros_like",
 ]
 
-from .data_type_functions import astype, can_cast, finfo, iinfo, isdtype, result_type
+from xarray.namedarray._array_api.data_type_functions import (
+    astype,
+    can_cast,
+    finfo,
+    iinfo,
+    isdtype,
+    result_type,
+)
 
 __all__ += ["astype", "can_cast", "finfo", "iinfo", "isdtype", "result_type"]
 
-from .dtypes import (
+from xarray.namedarray._array_api.dtypes import (
     bool,
     complex64,
     complex128,
@@ -84,7 +91,7 @@ __all__ += [
     "uint64",
 ]
 
-from .elementwise_functions import (
+from xarray.namedarray._array_api.elementwise_functions import (
     abs,
     acos,
     acosh,
@@ -208,15 +215,21 @@ __all__ += [
     "trunc",
 ]
 
-from .indexing_functions import take
+from xarray.namedarray._array_api.indexing_functions import take
 
 __all__ += ["take"]
 
-from .linear_algebra_functions import matmul, matrix_transpose, outer, tensordot, vecdot
+from xarray.namedarray._array_api.linear_algebra_functions import (
+    matmul,
+    matrix_transpose,
+    outer,
+    tensordot,
+    vecdot,
+)
 
 __all__ += ["matmul", "matrix_transpose", "outer", "tensordot", "vecdot"]
 
-from .manipulation_functions import (
+from xarray.namedarray._array_api.manipulation_functions import (
     broadcast_arrays,
     broadcast_to,
     concat,
@@ -244,14 +257,14 @@ __all__ += [
     "stack",
 ]
 
-from .searching_functions import argmax, argmin, where
+from xarray.namedarray._array_api.searching_functions import argmax, argmin, where
 
 __all__ += ["argmax", "argmin", "where"]
 
-from .statistical_functions import max, mean, min, prod, sum
+from xarray.namedarray._array_api.statistical_functions import max, mean, min, prod, sum
 
 __all__ += ["max", "mean", "min", "prod", "sum"]
 
-from .utility_functions import all, any
+from xarray.namedarray._array_api.utility_functions import all, any
 
 __all__ += ["all", "any"]
