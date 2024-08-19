@@ -4,7 +4,6 @@ from typing import Any
 
 from xarray.namedarray._array_api._utils import _get_data_namespace
 from xarray.namedarray._array_api.creation_functions import asarray
-
 from xarray.namedarray._typing import (
     Default,
     _arrayapi,

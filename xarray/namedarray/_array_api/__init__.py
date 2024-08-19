@@ -245,9 +245,6 @@ from xarray.namedarray._array_api.manipulation_functions import (
     # moveaxis,
     permute_dims,
     reshape,
-    # roll,
-    # squeeze,
-    # stack,
 )
 
 __all__ += [
