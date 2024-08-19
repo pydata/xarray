@@ -7,8 +7,7 @@ if TYPE_CHECKING:
     from typing import Optional, Union, Tuple, List
     from xarray.namedarray._typing import _Device
 
-# from ._array_object import CPU_DEVICE
-from ._dtypes import (
+from xarray.namedarray._array_api._dtypes import (
     bool,
     int8,
     int16,

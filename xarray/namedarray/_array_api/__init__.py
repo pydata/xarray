@@ -226,7 +226,7 @@ __all__ += [
 
 # __all__ += ["take"]
 
-from ._info import __array_namespace_info__
+from xarray.namedarray._array_api._info import __array_namespace_info__
 
 __all__ += [
     "__array_namespace_info__",
