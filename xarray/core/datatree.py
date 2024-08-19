@@ -164,9 +164,10 @@ def _check_for_slashes_in_names(variables: Iterable[Hashable]) -> None:
     ]
     if len(offending_variable_names) > 0:
         raise KeyError(
-            f"Given Dataset contains path-like variable names: {offending_variable_names}. "
+            "Given Dataset contains variable names with '/': "
+            f"{offending_variable_names}. "
             "A Dataset represents a group, and a single group "
-            "cannot have path-like variable names. "
+            "cannot have path-like variable names with '/' characters in them. "
         )
 
 
@@ -473,11 +474,11 @@ class DataTree(
         super().__init__(name=name)
         ds = _coerce_to_dataset(data)
         self._set_node_data(ds)
-        _check_for_slashes_in_names(ds.variables)
         self.parent = parent
         self.children = children
 
     def _set_node_data(self, ds: Dataset):
+        _check_for_slashes_in_names(ds.variables)
         data_vars, coord_vars = _collect_data_and_coord_variables(ds)
         self._data_variables = data_vars
         self._node_coord_variables = coord_vars
