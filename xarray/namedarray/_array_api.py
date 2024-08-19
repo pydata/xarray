@@ -37,20 +37,20 @@ from xarray.namedarray.utils import (
 
 
 # %% Helper functions
+def _maybe_default_namespace(xp: ModuleType | None = None) -> ModuleType:
+    return np if xp is None else xp
+
+
 def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
     if isinstance(x._data, _arrayapi):
         return x._data.__array_namespace__()
 
-    return np
+    return _maybe_default_namespace()
 
 
 def _get_namespace_dtype(dtype: _dtype) -> ModuleType:
     xp = __import__(dtype.__module__)
     return xp
-
-
-def _maybe_default_namespace(xp: ModuleType | None = None) -> ModuleType:
-    return np if xp is None else xp
 
 
 # %% array_api version
@@ -373,7 +373,6 @@ def can_cast(from_: _dtype | NamedArray, to: _dtype, /) -> bool:
         return xp.can_cast(from_, to)
     else:
         xp = _get_namespace_dtype(from_)
-        from_ = from_.dtype
         return xp.can_cast(from_, to)
 
 
