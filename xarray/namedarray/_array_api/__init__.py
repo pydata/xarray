@@ -8,11 +8,11 @@ from xarray.namedarray.core import NamedArray as Array
 
 __all__ += ["Array"]
 
-from xarray.namedarray._array_api.constants import e, inf, nan, newaxis, pi
+from xarray.namedarray._array_api._constants import e, inf, nan, newaxis, pi
 
 __all__ += ["e", "inf", "nan", "newaxis", "pi"]
 
-from xarray.namedarray._array_api.creation_functions import (
+from xarray.namedarray._array_api._creation_functions import (
     arange,
     asarray,
     empty,
@@ -48,7 +48,7 @@ __all__ += [
     "zeros_like",
 ]
 
-from xarray.namedarray._array_api.data_type_functions import (
+from xarray.namedarray._array_api._data_type_functions import (
     astype,
     can_cast,
     finfo,
@@ -66,7 +66,7 @@ __all__ += [
     "result_type",
 ]
 
-from xarray.namedarray._array_api.dtypes import (
+from xarray.namedarray._array_api._dtypes import (
     bool,
     complex64,
     complex128,
@@ -98,7 +98,7 @@ __all__ += [
     "uint64",
 ]
 
-from xarray.namedarray._array_api.elementwise_functions import (
+from xarray.namedarray._array_api._elementwise_functions import (
     abs,
     acos,
     acosh,
@@ -226,7 +226,13 @@ __all__ += [
 
 # __all__ += ["take"]
 
-# from xarray.namedarray._array_api.linear_algebra_functions import (
+from ._info import __array_namespace_info__
+
+__all__ += [
+    "__array_namespace_info__",
+]
+
+# from xarray.namedarray._array_api._linear_algebra_functions import (
 #     matmul,
 #     matrix_transpose,
 #     outer,
@@ -236,7 +242,7 @@ __all__ += [
 
 # __all__ += ["matmul", "matrix_transpose", "outer", "tensordot", "vecdot"]
 
-from xarray.namedarray._array_api.manipulation_functions import (
+from xarray.namedarray._array_api._manipulation_functions import (
     # broadcast_arrays,
     # broadcast_to,
     # concat,
@@ -264,7 +270,7 @@ __all__ += [
     # "stack",
 ]
 
-# from xarray.namedarray._array_api.searching_functions import (
+# from xarray.namedarray._array_api._searching_functions import (
 #     argmax,
 #     argmin,
 #     where,
@@ -276,7 +282,7 @@ __all__ += [
 #     "where",
 # ]
 
-from xarray.namedarray._array_api.statistical_functions import (
+from xarray.namedarray._array_api._statistical_functions import (
     max,
     mean,
     min,
@@ -292,7 +298,7 @@ __all__ += [
     "sum",
 ]
 
-from xarray.namedarray._array_api.utility_functions import (
+from xarray.namedarray._array_api._utility_functions import (
     all,
     any,
 )
