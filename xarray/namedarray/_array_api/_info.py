@@ -60,7 +60,7 @@ def default_dtypes(
 def dtypes(
     *,
     device: _Device | None = None,
-    kind: Optional[Union[str, Tuple[str, ...]]] = None,
+    kind: Union[str, Tuple[str, ...]] | None = None,
 ) -> dict:
     if kind is None:
         return {
