@@ -472,8 +472,7 @@ class DataTree(
             children = {}
 
         super().__init__(name=name)
-        ds = _coerce_to_dataset(data)
-        self._set_node_data(ds)
+        self._set_node_data(_coerce_to_dataset(data))
         self.parent = parent
         self.children = children
 
