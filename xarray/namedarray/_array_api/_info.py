@@ -4,16 +4,11 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from types import ModuleType
-    from typing import Optional, Union
-
+    from typing import Optional, Union, Tuple, List
     from xarray.namedarray._typing import _Device
 
 from xarray.namedarray._array_api._dtypes import (
     bool,
-    complex64,
-    complex128,
-    float32,
-    float64,
     int8,
     int16,
     int32,
@@ -22,6 +17,10 @@ from xarray.namedarray._array_api._dtypes import (
     uint16,
     uint32,
     uint64,
+    float32,
+    float64,
+    complex64,
+    complex128,
 )
 
 
@@ -61,7 +60,7 @@ def default_dtypes(
 def dtypes(
     *,
     device: _Device | None = None,
-    kind: Optional[Union[str, tuple[str, ...]]] = None,
+    kind: Optional[Union[str, Tuple[str, ...]]] = None,
 ) -> dict:
     if kind is None:
         return {
@@ -139,7 +138,7 @@ def dtypes(
     raise ValueError(f"unsupported kind: {kind!r}")
 
 
-def devices() -> list[_Device]:
+def devices() -> List[_Device]:
     return [default_device()]
 
 
