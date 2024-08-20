@@ -3,7 +3,6 @@ from __future__ import annotations
 from types import ModuleType
 from typing import TYPE_CHECKING, Any
 
-
 from xarray.namedarray._typing import _arrayapi, _dtype
 
 if TYPE_CHECKING:
