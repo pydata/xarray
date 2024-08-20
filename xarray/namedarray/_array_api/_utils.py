@@ -28,6 +28,9 @@ def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
     return _maybe_default_namespace()
 
 
-def _get_namespace_dtype(dtype: _dtype) -> ModuleType:
+def _get_namespace_dtype(dtype: _dtype | None = None) -> ModuleType:
+    if dtype is None:
+        return _maybe_default_namespace()
+
     xp = __import__(dtype.__module__)
     return xp
