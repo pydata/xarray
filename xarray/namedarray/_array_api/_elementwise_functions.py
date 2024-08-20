@@ -117,9 +117,27 @@ def ceil(x, /):
     return out
 
 
+def clip(
+    x: NamedArray,
+    /,
+    min: int | float | NamedArray | None = None,
+    max: int | float | NamedArray | None = None,
+) -> NamedArray:
+    xp = _get_data_namespace(x)
+    out = x._new(data=xp.clip(x._data))
+    return out
+
+
 def conj(x, /):
     xp = _get_data_namespace(x)
     out = x._new(data=xp.conj(x._data))
+    return out
+
+
+def copysign(x1: NamedArray, x2: NamedArray, /) -> NamedArray:
+    xp = _get_data_namespace(x1)
+    # TODO: Handle attrs? will get x1 now
+    out = x1._new(data=xp.copysign(x1._data, x2._data))
     return out
 
 
@@ -317,6 +335,20 @@ def logical_xor(x1, x2, /):
     return out
 
 
+def maximum(x1: NamedArray, x2: NamedArray, /) -> NamedArray:
+    xp = _get_data_namespace(x1)
+    # TODO: Handle attrs? will get x1 now
+    out = x1._new(data=xp.maximum(x1._data, x2._data))
+    return out
+
+
+def minimum(x1: NamedArray, x2: NamedArray, /) -> NamedArray:
+    xp = _get_data_namespace(x1)
+    # TODO: Handle attrs? will get x1 now
+    out = x1._new(data=xp.minimum(x1._data, x2._data))
+    return out
+
+
 def multiply(x1, x2, /):
     xp = _get_data_namespace(x1)
     # TODO: Handle attrs? will get x1 now
@@ -398,6 +430,12 @@ def round(x, /):
 def sign(x, /):
     xp = _get_data_namespace(x)
     out = x._new(data=xp.sign(x._data))
+    return out
+
+
+def signbit(x, /):
+    xp = _get_data_namespace(x)
+    out = x._new(data=xp.signbit(x._data))
     return out
 
 
