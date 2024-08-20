@@ -179,6 +179,21 @@ def empty_like(
     return x._new(data=_data)
 
 
+def eye(
+    n_rows: int,
+    n_cols: int | None = None,
+    /,
+    *,
+    k: int = 0,
+    dtype: _DType | None = None,
+    device: _Device | None = None,
+) -> NamedArray[_ShapeType, _DType]:
+    xp = _maybe_default_namespace()
+    _data = xp.eye(n_rows, M=n_cols, k=k, dtype=dtype)
+    _dims = _infer_dims(_data.shape)
+    return NamedArray(_dims, _data)
+
+
 def full(
     shape: _Shape,
     fill_value: bool | int | float | complex,
@@ -219,10 +234,24 @@ def linspace(
 ) -> NamedArray[_ShapeType, _DType]:
     xp = _maybe_default_namespace()
     _data = xp.linspace(
-        start, stop, num=num, dtype=dtype, device=device, endpoint=endpoint
+        start,
+        stop,
+        num=num,
+        dtype=dtype,
+        device=device,
+        endpoint=endpoint,
     )
     _dims = _infer_dims(_data.shape)
     return NamedArray(_dims, _data)
+
+
+def meshgrid(*arrays: NamedArray, indexing: str = "xy") -> list[NamedArray]:
+    arr = arrays[0]
+    xp = _get_data_namespace(arr)
+    _datas = xp.meshgrid(*[a._data for a in arrays], indexing=indexing)
+    # TODO: Can probably determine dim names from arrays, for now just default names:
+    _dims = _infer_dims(_datas[0].shape)
+    return [arr._new(_dims, _datas)]
 
 
 def ones(
@@ -243,6 +272,26 @@ def ones_like(
     _device = x.device if device is None else device
     _data = xp.ones(x.shape, dtype=_dtype, device=_device)
     return x._new(data=_data)
+
+
+def tril(
+    x: NamedArray[_ShapeType, _DType], /, *, k: int = 0
+) -> NamedArray[_ShapeType, _DType]:
+    xp = _get_data_namespace(x)
+    _data = xp.tril(x._data, dtype=x.dtype)
+    # TODO: Can probably determine dim names from x, for now just default names:
+    _dims = _infer_dims(_data.shape)
+    return x._new(_dims, _data)
+
+
+def triu(
+    x: NamedArray[_ShapeType, _DType], /, *, k: int = 0
+) -> NamedArray[_ShapeType, _DType]:
+    xp = _get_data_namespace(x)
+    _data = xp.triu(x._data, dtype=x.dtype)
+    # TODO: Can probably determine dim names from x, for now just default names:
+    _dims = _infer_dims(_data.shape)
+    return x._new(_dims, _data)
 
 
 def zeros(
