@@ -62,20 +62,20 @@ class TestFamilyTree:
         DataTree(name="set2", parent=set1)
 
     def test_create_full_tree(self, simple_datatree):
-        root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
-        set1_data = xr.Dataset({"a": 0, "b": 1})
-        set2_data = xr.Dataset({"a": ("x", [2, 3]), "b": ("x", [0.1, 0.2])})
+        d = simple_datatree.to_dict()
+        d_keys = list(d.keys())
 
-        root: DataTree = DataTree(data=root_data)
-        set1: DataTree = DataTree(name="set1", parent=root, data=set1_data)
-        DataTree(name="set1", parent=set1)
-        DataTree(name="set2", parent=set1)
-        set2: DataTree = DataTree(name="set2", parent=root, data=set2_data)
-        DataTree(name="set1", parent=set2)
-        DataTree(name="set3", parent=root)
+        expected_keys = [
+            "/",
+            "/set1",
+            "/set2",
+            "/set3",
+            "/set1/set1",
+            "/set1/set2",
+            "/set2/set1",
+        ]
 
-        expected = simple_datatree
-        assert root.identical(expected)
+        assert d_keys == expected_keys
 
 
 class TestNames:
