@@ -684,7 +684,6 @@
 
    conventions.decode_cf_variables
 
-   coding.variables.UnsignedIntegerCoder
    coding.variables.CFMaskCoder
    coding.variables.CFScaleOffsetCoder
 
