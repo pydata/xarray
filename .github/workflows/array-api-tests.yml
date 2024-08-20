@@ -37,6 +37,7 @@ jobs:
         python -m pip install -r ${GITHUB_WORKSPACE}/array-api-tests/requirements.txt
         python -m pip install hypothesis
         python -m pip install array-api-strict
+        python -m pip install array-api-compat
     - name: Run the array API testsuite
       env:
         ARRAY_API_TESTS_MODULE: xarray.namedarray._array_api
