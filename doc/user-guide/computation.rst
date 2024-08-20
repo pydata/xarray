@@ -426,7 +426,7 @@ However, the functions also take missing values in the data into account:
 
 .. ipython:: python
 
-    data = xr.DataArray([np.NaN, 2, 4])
+    data = xr.DataArray([np.nan, 2, 4])
     weights = xr.DataArray([8, 1, 1])
 
     data.weighted(weights).mean()
@@ -444,7 +444,7 @@ If the weights add up to to 0, ``sum`` returns 0:
 
     data.weighted(weights).sum()
 
-and ``mean``, ``std`` and ``var`` return ``NaN``:
+and ``mean``, ``std`` and ``var`` return ``nan``:
 
 .. ipython:: python
 
@@ -482,7 +482,7 @@ every 2 points along ``x`` dimension,
 
     da.coarsen(time=7, x=2).mean()
 
-:py:meth:`~xarray.DataArray.coarsen` raises an ``ValueError`` if the data
+:py:meth:`~xarray.DataArray.coarsen` raises a ``ValueError`` if the data
 length is not a multiple of the corresponding window size.
 You can choose ``boundary='trim'`` or ``boundary='pad'`` options for trimming
 the excess entries or padding ``nan`` to insufficient entries,

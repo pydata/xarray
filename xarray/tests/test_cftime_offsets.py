@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import warnings
+from collections.abc import Callable
 from itertools import product
-from typing import Callable, Literal
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -24,7 +26,6 @@ from xarray.coding.cftime_offsets import (
     Tick,
     YearBegin,
     YearEnd,
-    _days_in_month,
     _legacy_to_new_freq,
     _new_to_legacy_freq,
     cftime_range,
@@ -511,7 +512,7 @@ def test_Microsecond_multiplied_float_error():
     ],
     ids=_id_func,
 )
-def test_neg(offset, expected):
+def test_neg(offset: BaseCFTimeOffset, expected: BaseCFTimeOffset) -> None:
     assert -offset == expected
 
 
@@ -589,22 +590,6 @@ def test_minus_offset_error(a, b):
         b - a
 
 
-def test_days_in_month_non_december(calendar):
-    date_type = get_date_type(calendar)
-    reference = date_type(1, 4, 1)
-    assert _days_in_month(reference) == 30
-
-
-def test_days_in_month_december(calendar):
-    if calendar == "360_day":
-        expected = 30
-    else:
-        expected = 31
-    date_type = get_date_type(calendar)
-    reference = date_type(1, 12, 5)
-    assert _days_in_month(reference) == expected
-
-
 @pytest.mark.parametrize(
     ("initial_date_args", "offset", "expected_date_args"),
     [
@@ -657,7 +642,7 @@ def test_add_month_end(
 
     # Here the days at the end of each month varies based on the calendar used
     expected_date_args = (
-        expected_year_month + (_days_in_month(reference),) + expected_sub_day
+        expected_year_month + (reference.daysinmonth,) + expected_sub_day
     )
     expected = date_type(*expected_date_args)
     assert result == expected
@@ -694,9 +679,7 @@ def test_add_month_end_onOffset(
     date_type = get_date_type(calendar)
     reference_args = initial_year_month + (1,)
     reference = date_type(*reference_args)
-    initial_date_args = (
-        initial_year_month + (_days_in_month(reference),) + initial_sub_day
-    )
+    initial_date_args = initial_year_month + (reference.daysinmonth,) + initial_sub_day
     initial = date_type(*initial_date_args)
     result = initial + offset
     reference_args = expected_year_month + (1,)
@@ -704,7 +687,7 @@ def test_add_month_end_onOffset(
 
     # Here the days at the end of each month varies based on the calendar used
     expected_date_args = (
-        expected_year_month + (_days_in_month(reference),) + expected_sub_day
+        expected_year_month + (reference.daysinmonth,) + expected_sub_day
     )
     expected = date_type(*expected_date_args)
     assert result == expected
@@ -756,7 +739,7 @@ def test_add_year_end(
 
     # Here the days at the end of each month varies based on the calendar used
     expected_date_args = (
-        expected_year_month + (_days_in_month(reference),) + expected_sub_day
+        expected_year_month + (reference.daysinmonth,) + expected_sub_day
     )
     expected = date_type(*expected_date_args)
     assert result == expected
@@ -792,9 +775,7 @@ def test_add_year_end_onOffset(
     date_type = get_date_type(calendar)
     reference_args = initial_year_month + (1,)
     reference = date_type(*reference_args)
-    initial_date_args = (
-        initial_year_month + (_days_in_month(reference),) + initial_sub_day
-    )
+    initial_date_args = initial_year_month + (reference.daysinmonth,) + initial_sub_day
     initial = date_type(*initial_date_args)
     result = initial + offset
     reference_args = expected_year_month + (1,)
@@ -802,7 +783,7 @@ def test_add_year_end_onOffset(
 
     # Here the days at the end of each month varies based on the calendar used
     expected_date_args = (
-        expected_year_month + (_days_in_month(reference),) + expected_sub_day
+        expected_year_month + (reference.daysinmonth,) + expected_sub_day
     )
     expected = date_type(*expected_date_args)
     assert result == expected
@@ -854,7 +835,7 @@ def test_add_quarter_end(
 
     # Here the days at the end of each month varies based on the calendar used
     expected_date_args = (
-        expected_year_month + (_days_in_month(reference),) + expected_sub_day
+        expected_year_month + (reference.daysinmonth,) + expected_sub_day
     )
     expected = date_type(*expected_date_args)
     assert result == expected
@@ -890,9 +871,7 @@ def test_add_quarter_end_onOffset(
     date_type = get_date_type(calendar)
     reference_args = initial_year_month + (1,)
     reference = date_type(*reference_args)
-    initial_date_args = (
-        initial_year_month + (_days_in_month(reference),) + initial_sub_day
-    )
+    initial_date_args = initial_year_month + (reference.daysinmonth,) + initial_sub_day
     initial = date_type(*initial_date_args)
     result = initial + offset
     reference_args = expected_year_month + (1,)
@@ -900,7 +879,7 @@ def test_add_quarter_end_onOffset(
 
     # Here the days at the end of each month varies based on the calendar used
     expected_date_args = (
-        expected_year_month + (_days_in_month(reference),) + expected_sub_day
+        expected_year_month + (reference.daysinmonth,) + expected_sub_day
     )
     expected = date_type(*expected_date_args)
     assert result == expected
@@ -957,7 +936,7 @@ def test_onOffset_month_or_quarter_or_year_end(
     date_type = get_date_type(calendar)
     reference_args = year_month_args + (1,)
     reference = date_type(*reference_args)
-    date_args = year_month_args + (_days_in_month(reference),) + sub_day_args
+    date_args = year_month_args + (reference.daysinmonth,) + sub_day_args
     date = date_type(*date_args)
     result = offset.onOffset(date)
     assert result
@@ -1000,12 +979,12 @@ def test_onOffset_month_or_quarter_or_year_end(
 def test_rollforward(calendar, offset, initial_date_args, partial_expected_date_args):
     date_type = get_date_type(calendar)
     initial = date_type(*initial_date_args)
-    if isinstance(offset, (MonthBegin, QuarterBegin, YearBegin)):
+    if isinstance(offset, MonthBegin | QuarterBegin | YearBegin):
         expected_date_args = partial_expected_date_args + (1,)
-    elif isinstance(offset, (MonthEnd, QuarterEnd, YearEnd)):
+    elif isinstance(offset, MonthEnd | QuarterEnd | YearEnd):
         reference_args = partial_expected_date_args + (1,)
         reference = date_type(*reference_args)
-        expected_date_args = partial_expected_date_args + (_days_in_month(reference),)
+        expected_date_args = partial_expected_date_args + (reference.daysinmonth,)
     else:
         expected_date_args = partial_expected_date_args
     expected = date_type(*expected_date_args)
@@ -1051,12 +1030,12 @@ def test_rollforward(calendar, offset, initial_date_args, partial_expected_date_
 def test_rollback(calendar, offset, initial_date_args, partial_expected_date_args):
     date_type = get_date_type(calendar)
     initial = date_type(*initial_date_args)
-    if isinstance(offset, (MonthBegin, QuarterBegin, YearBegin)):
+    if isinstance(offset, MonthBegin | QuarterBegin | YearBegin):
         expected_date_args = partial_expected_date_args + (1,)
-    elif isinstance(offset, (MonthEnd, QuarterEnd, YearEnd)):
+    elif isinstance(offset, MonthEnd | QuarterEnd | YearEnd):
         reference_args = partial_expected_date_args + (1,)
         reference = date_type(*reference_args)
-        expected_date_args = partial_expected_date_args + (_days_in_month(reference),)
+        expected_date_args = partial_expected_date_args + (reference.daysinmonth,)
     else:
         expected_date_args = partial_expected_date_args
     expected = date_type(*expected_date_args)
@@ -1787,3 +1766,69 @@ def test_date_range_no_freq(start, end, periods):
     expected = pd.date_range(start=start, end=end, periods=periods)
 
     np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "offset",
+    [
+        MonthBegin(n=1),
+        MonthEnd(n=1),
+        QuarterBegin(n=1),
+        QuarterEnd(n=1),
+        YearBegin(n=1),
+        YearEnd(n=1),
+    ],
+    ids=lambda x: f"{x}",
+)
+@pytest.mark.parametrize("has_year_zero", [False, True])
+def test_offset_addition_preserves_has_year_zero(offset, has_year_zero):
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="this date/calendar/year zero")
+        datetime = cftime.DatetimeGregorian(-1, 12, 31, has_year_zero=has_year_zero)
+
+    result = datetime + offset
+    assert result.has_year_zero == datetime.has_year_zero
+    if has_year_zero:
+        assert result.year == 0
+    else:
+        assert result.year == 1
+
+
+@pytest.mark.parametrize(
+    "offset",
+    [
+        MonthBegin(n=1),
+        MonthEnd(n=1),
+        QuarterBegin(n=1),
+        QuarterEnd(n=1),
+        YearBegin(n=1),
+        YearEnd(n=1),
+    ],
+    ids=lambda x: f"{x}",
+)
+@pytest.mark.parametrize("has_year_zero", [False, True])
+def test_offset_subtraction_preserves_has_year_zero(offset, has_year_zero):
+    datetime = cftime.DatetimeGregorian(1, 1, 1, has_year_zero=has_year_zero)
+    result = datetime - offset
+    assert result.has_year_zero == datetime.has_year_zero
+    if has_year_zero:
+        assert result.year == 0
+    else:
+        assert result.year == -1
+
+
+@pytest.mark.parametrize("has_year_zero", [False, True])
+def test_offset_day_option_end_accounts_for_has_year_zero(has_year_zero):
+    offset = MonthEnd(n=1)
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="this date/calendar/year zero")
+        datetime = cftime.DatetimeGregorian(-1, 1, 31, has_year_zero=has_year_zero)
+
+    result = datetime + offset
+    assert result.has_year_zero == datetime.has_year_zero
+    if has_year_zero:
+        assert result.day == 28
+    else:
+        assert result.day == 29

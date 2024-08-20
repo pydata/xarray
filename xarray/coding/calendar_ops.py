@@ -5,7 +5,10 @@ import pandas as pd
 
 from xarray.coding.cftime_offsets import date_range_like, get_date_type
 from xarray.coding.cftimeindex import CFTimeIndex
-from xarray.coding.times import _should_cftime_be_used, convert_times
+from xarray.coding.times import (
+    _should_cftime_be_used,
+    convert_times,
+)
 from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_like
 
 try:
@@ -222,6 +225,13 @@ def convert_calendar(
         # Remove NaN that where put on invalid dates in target calendar
         out = out.where(out[dim].notnull(), drop=True)
 
+        if use_cftime:
+            # Reassign times to ensure time index of output is a CFTimeIndex
+            # (previously it was an Index due to the presence of NaN values).
+            # Note this is not needed in the case that the output time index is
+            # a DatetimeIndex, since DatetimeIndexes can handle NaN values.
+            out[dim] = CFTimeIndex(out[dim].data)
+
     if missing is not None:
         time_target = date_range_like(time, calendar=calendar, use_cftime=use_cftime)
         out = out.reindex({dim: time_target}, fill_value=missing)
@@ -352,7 +362,7 @@ def interp_calendar(source, target, dim="time"):
     """
     from xarray.core.dataarray import DataArray
 
-    if isinstance(target, (pd.DatetimeIndex, CFTimeIndex)):
+    if isinstance(target, pd.DatetimeIndex | CFTimeIndex):
         target = DataArray(target, dims=(dim,), name=dim)
 
     if not _contains_datetime_like_objects(

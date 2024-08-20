@@ -4,12 +4,12 @@ import enum
 import functools
 import operator
 from collections import Counter, defaultdict
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
-from typing import TYPE_CHECKING, Any, Callable, overload
+from typing import TYPE_CHECKING, Any, overload
 
 import numpy as np
 import pandas as pd
@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
     from xarray.core.indexes import Index
+    from xarray.core.types import Self
     from xarray.core.variable import Variable
     from xarray.namedarray._typing import _Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
@@ -545,7 +546,7 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
         )
 
     def _check_and_raise_if_non_basic_indexer(self, indexer: ExplicitIndexer) -> None:
-        if isinstance(indexer, (VectorizedIndexer, OuterIndexer)):
+        if isinstance(indexer, VectorizedIndexer | OuterIndexer):
             raise TypeError(
                 "Vectorized indexing with vectorized or outer indexers is not supported. "
                 "Please use .vindex and .oindex properties to index the array."
@@ -707,7 +708,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
             Array like object to index.
         key : VectorizedIndexer
         """
-        if isinstance(key, (BasicIndexer, OuterIndexer)):
+        if isinstance(key, BasicIndexer | OuterIndexer):
             self.key = _outer_to_vectorized_indexer(key, array.shape)
         elif isinstance(key, VectorizedIndexer):
             self.key = _arrayize_vectorized_indexer(key, array.shape)
@@ -1044,7 +1045,7 @@ def decompose_indexer(
 ) -> tuple[ExplicitIndexer, ExplicitIndexer]:
     if isinstance(indexer, VectorizedIndexer):
         return _decompose_vectorized_indexer(indexer, shape, indexing_support)
-    if isinstance(indexer, (BasicIndexer, OuterIndexer)):
+    if isinstance(indexer, BasicIndexer | OuterIndexer):
         return _decompose_outer_indexer(indexer, shape, indexing_support)
     raise TypeError(f"unexpected key type: {indexer}")
 
@@ -1203,7 +1204,7 @@ def _decompose_outer_indexer(
     backend_indexer: list[Any] = []
     np_indexer: list[Any] = []
 
-    assert isinstance(indexer, (OuterIndexer, BasicIndexer))
+    assert isinstance(indexer, OuterIndexer | BasicIndexer)
 
     if indexing_support == IndexingSupport.VECTORIZED:
         for k, s in zip(indexer.tuple, shape):
@@ -1473,7 +1474,7 @@ def is_fancy_indexer(indexer: Any) -> bool:
     """Return False if indexer is a int, slice, a 1-dimensional list, or a 0 or
     1-dimensional ndarray; in all other cases return True
     """
-    if isinstance(indexer, (int, slice)):
+    if isinstance(indexer, int | slice):
         return False
     if isinstance(indexer, np.ndarray):
         return indexer.ndim > 1
@@ -1656,6 +1657,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     __slots__ = ("array", "_dtype")
 
+    array: pd.Index
+    _dtype: np.dtype
+
     def __init__(self, array: pd.Index, dtype: DTypeLike = None):
         from xarray.core.indexes import safe_cast_to_index
 
@@ -1792,7 +1796,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def __repr__(self) -> str:
         return f"{type(self).__name__}(array={self.array!r}, dtype={self.dtype!r})"
 
-    def copy(self, deep: bool = True) -> PandasIndexingAdapter:
+    def copy(self, deep: bool = True) -> Self:
         # Not the same as just writing `self.array.copy(deep=deep)`, as
         # shallow copies of the underlying numpy.ndarrays become deep ones
         # upon pickling
@@ -1810,10 +1814,13 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
     This allows creating one instance for each multi-index level while
     preserving indexing efficiency (memoized + might reuse another instance with
     the same multi-index).
-
     """
 
     __slots__ = ("array", "_dtype", "level", "adapter")
+
+    array: pd.MultiIndex
+    _dtype: np.dtype
+    level: str | None
 
     def __init__(
         self,
@@ -1910,7 +1917,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         array_repr = short_array_repr(self._get_array_subset())
         return f"<pre>{escape(array_repr)}</pre>"
 
-    def copy(self, deep: bool = True) -> PandasMultiIndexingAdapter:
+    def copy(self, deep: bool = True) -> Self:
         # see PandasIndexingAdapter.copy
         array = self.array.copy(deep=True) if deep else self.array
         return type(self)(array, self._dtype, self.level)

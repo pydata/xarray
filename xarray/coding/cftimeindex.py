@@ -45,6 +45,7 @@ import math
 import re
 import warnings
 from datetime import timedelta
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -63,6 +64,10 @@ try:
     import cftime
 except ImportError:
     cftime = None
+
+if TYPE_CHECKING:
+    from xarray.coding.cftime_offsets import BaseCFTimeOffset
+    from xarray.core.types import Self
 
 
 # constants for cftimeindex.repr
@@ -495,24 +500,28 @@ class CFTimeIndex(pd.Index):
         else:
             return series.iloc[self.get_loc(key)]
 
-    def __contains__(self, key):
+    def __contains__(self, key: Any) -> bool:
         """Adapted from
         pandas.tseries.base.DatetimeIndexOpsMixin.__contains__"""
         try:
             result = self.get_loc(key)
             return (
                 is_scalar(result)
-                or type(result) == slice
-                or (isinstance(result, np.ndarray) and result.size)
+                or isinstance(result, slice)
+                or (isinstance(result, np.ndarray) and result.size > 0)
             )
         except (KeyError, TypeError, ValueError):
             return False
 
-    def contains(self, key):
+    def contains(self, key: Any) -> bool:
         """Needed for .loc based partial-string indexing"""
         return self.__contains__(key)
 
-    def shift(self, n: int | float, freq: str | timedelta):
+    def shift(  # type: ignore[override]  # freq is typed Any, we are more precise
+        self,
+        periods: int | float,
+        freq: str | timedelta | BaseCFTimeOffset | None = None,
+    ) -> Self:
         """Shift the CFTimeIndex a multiple of the given frequency.
 
         See the documentation for :py:func:`~xarray.cftime_range` for a
@@ -520,9 +529,9 @@ class CFTimeIndex(pd.Index):
 
         Parameters
         ----------
-        n : int, float if freq of days or below
+        periods : int, float if freq of days or below
             Periods to shift by
-        freq : str or datetime.timedelta
+        freq : str, datetime.timedelta or BaseCFTimeOffset
             A frequency string or datetime.timedelta object to shift by
 
         Returns
@@ -546,33 +555,42 @@ class CFTimeIndex(pd.Index):
         CFTimeIndex([2000-02-01 12:00:00],
                     dtype='object', length=1, calendar='standard', freq=None)
         """
-        if isinstance(freq, timedelta):
-            return self + n * freq
-        elif isinstance(freq, str):
-            from xarray.coding.cftime_offsets import to_offset
+        from xarray.coding.cftime_offsets import BaseCFTimeOffset
 
-            return self + n * to_offset(freq)
-        else:
+        if freq is None:
+            # None type is required to be compatible with base pd.Index class
             raise TypeError(
-                f"'freq' must be of type str or datetime.timedelta, got {freq}."
+                f"`freq` argument cannot be None for {type(self).__name__}.shift"
             )
 
-    def __add__(self, other):
-        if isinstance(other, pd.TimedeltaIndex):
-            other = other.to_pytimedelta()
-        return CFTimeIndex(np.array(self) + other)
+        if isinstance(freq, timedelta):
+            return self + periods * freq
 
-    def __radd__(self, other):
+        if isinstance(freq, str | BaseCFTimeOffset):
+            from xarray.coding.cftime_offsets import to_offset
+
+            return self + periods * to_offset(freq)
+
+        raise TypeError(
+            f"'freq' must be of type str or datetime.timedelta, got {type(freq)}."
+        )
+
+    def __add__(self, other) -> Self:
         if isinstance(other, pd.TimedeltaIndex):
             other = other.to_pytimedelta()
-        return CFTimeIndex(other + np.array(self))
+        return type(self)(np.array(self) + other)
+
+    def __radd__(self, other) -> Self:
+        if isinstance(other, pd.TimedeltaIndex):
+            other = other.to_pytimedelta()
+        return type(self)(other + np.array(self))
 
     def __sub__(self, other):
         if _contains_datetime_timedeltas(other):
-            return CFTimeIndex(np.array(self) - other)
-        elif isinstance(other, pd.TimedeltaIndex):
-            return CFTimeIndex(np.array(self) - other.to_pytimedelta())
-        elif _contains_cftime_datetimes(np.array(other)):
+            return type(self)(np.array(self) - other)
+        if isinstance(other, pd.TimedeltaIndex):
+            return type(self)(np.array(self) - other.to_pytimedelta())
+        if _contains_cftime_datetimes(np.array(other)):
             try:
                 return pd.TimedeltaIndex(np.array(self) - np.array(other))
             except OUT_OF_BOUNDS_TIMEDELTA_ERRORS:
@@ -580,8 +598,7 @@ class CFTimeIndex(pd.Index):
                     "The time difference exceeds the range of values "
                     "that can be expressed at the nanosecond resolution."
                 )
-        else:
-            return NotImplemented
+        return NotImplemented
 
     def __rsub__(self, other):
         try:

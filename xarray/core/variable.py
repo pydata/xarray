@@ -5,10 +5,10 @@ import itertools
 import math
 import numbers
 import warnings
-from collections.abc import Hashable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast
+from typing import TYPE_CHECKING, Any, NoReturn, cast
 
 import numpy as np
 import pandas as pd
@@ -63,6 +63,7 @@ if TYPE_CHECKING:
         PadReflectOptions,
         QuantileMethods,
         Self,
+        T_Chunks,
         T_DuckArray,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
@@ -146,9 +147,9 @@ def as_variable(
             )
     elif utils.is_scalar(obj):
         obj = Variable([], obj)
-    elif isinstance(obj, (pd.Index, IndexVariable)) and obj.name is not None:
+    elif isinstance(obj, pd.Index | IndexVariable) and obj.name is not None:
         obj = Variable(obj.name, obj)
-    elif isinstance(obj, (set, dict)):
+    elif isinstance(obj, set | dict):
         raise TypeError(f"variable {name!r} has invalid type {type(obj)!r}")
     elif name is not None:
         data: T_DuckArray = as_compatible_data(obj)
@@ -249,9 +250,9 @@ def _possibly_convert_datetime_or_timedelta_index(data):
     handle non-nanosecond precision datetimes or timedeltas in our code
     before allowing such values to pass through unchanged."""
     if isinstance(data, PandasIndexingAdapter):
-        if isinstance(data.array, (pd.DatetimeIndex, pd.TimedeltaIndex)):
+        if isinstance(data.array, pd.DatetimeIndex | pd.TimedeltaIndex):
             data = PandasIndexingAdapter(_as_nanosecond_precision(data.array))
-    elif isinstance(data, (pd.DatetimeIndex, pd.TimedeltaIndex)):
+    elif isinstance(data, pd.DatetimeIndex | pd.TimedeltaIndex):
         data = _as_nanosecond_precision(data)
     return data
 
@@ -297,8 +298,8 @@ def as_compatible_data(
         data = np.timedelta64(getattr(data, "value", data), "ns")
 
     # we don't want nested self-described arrays
-    if isinstance(data, (pd.Series, pd.DataFrame)):
-        data = data.values
+    if isinstance(data, pd.Series | pd.DataFrame):
+        data = data.values  # type: ignore[assignment]
 
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)
@@ -424,7 +425,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     @property
     def _in_memory(self):
         return isinstance(
-            self._data, (np.ndarray, np.number, PandasIndexingAdapter)
+            self._data, np.ndarray | np.number | PandasIndexingAdapter
         ) or (
             isinstance(self._data, indexing.MemoryCachedArray)
             and isinstance(self._data.array, indexing.NumpyIndexingAdapter)
@@ -1504,7 +1505,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         # Potentially we could replace `len(other_dims)` with just `-1`
         other_dims = [d for d in self.dims if d != dim]
         new_shape = tuple(list(reordered.shape[: len(other_dims)]) + new_dim_sizes)
-        new_dims = reordered.dims[: len(other_dims)] + new_dim_names
+        new_dims = reordered.dims[: len(other_dims)] + tuple(new_dim_names)
 
         create_template: Callable
         if fill_value is dtypes.NA:
@@ -2304,7 +2305,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             return result
 
     def _binary_op(self, other, f, reflexive=False):
-        if isinstance(other, (xr.DataArray, xr.Dataset)):
+        if isinstance(other, xr.DataArray | xr.Dataset):
             return NotImplemented
         if reflexive and issubclass(type(self), type(other)):
             other_data, self_data, dims = _broadcast_compat_data(other, self)
@@ -2522,7 +2523,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def chunk(  # type: ignore[override]
         self,
-        chunks: int | Literal["auto"] | Mapping[Any, None | int | tuple[int, ...]] = {},
+        chunks: T_Chunks = {},
         name: str | None = None,
         lock: bool | None = None,
         inline_array: bool | None = None,

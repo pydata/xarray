@@ -443,7 +443,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
 
     if isinstance(array, pd.Index):
         index = array
-    elif isinstance(array, (DataArray, Variable)):
+    elif isinstance(array, DataArray | Variable):
         # returns the original multi-index for pandas.MultiIndex level coordinates
         index = array._to_index()
     elif isinstance(array, Index):
@@ -451,7 +451,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     elif isinstance(array, PandasIndexingAdapter):
         index = array.array
     else:
-        kwargs: dict[str, str] = {}
+        kwargs: dict[str, Any] = {}
         if hasattr(array, "dtype"):
             if array.dtype.kind == "O":
                 kwargs["dtype"] = "object"
@@ -480,7 +480,7 @@ def _sanitize_slice_element(x):
             f"cannot use non-scalar arrays in a slice for xarray indexing: {x}"
         )
 
-    if isinstance(x, (Variable, DataArray)):
+    if isinstance(x, Variable | DataArray):
         x = x.values
 
     if isinstance(x, np.ndarray):
@@ -530,7 +530,7 @@ def _asarray_tuplesafe(values):
 
 def _is_nested_tuple(possible_tuple):
     return isinstance(possible_tuple, tuple) and any(
-        isinstance(value, (tuple, list, slice)) for value in possible_tuple
+        isinstance(value, tuple | list | slice) for value in possible_tuple
     )
 
 
@@ -551,7 +551,7 @@ def as_scalar(value: np.ndarray):
     return value[()] if value.dtype.kind in "mM" else value.item()
 
 
-def get_indexer_nd(index, labels, method=None, tolerance=None):
+def get_indexer_nd(index: pd.Index, labels, method=None, tolerance=None) -> np.ndarray:
     """Wrapper around :meth:`pandas.Index.get_indexer` supporting n-dimensional
     labels
     """
@@ -740,7 +740,7 @@ class PandasIndex(Index):
             # scalar indexer: drop index
             return None
 
-        return self._replace(self.index[indxr])
+        return self._replace(self.index[indxr])  # type: ignore[index]
 
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
@@ -898,36 +898,45 @@ def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"
         )
 
 
-def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
+T_PDIndex = TypeVar("T_PDIndex", bound=pd.Index)
+
+
+def remove_unused_levels_categories(index: T_PDIndex) -> T_PDIndex:
     """
     Remove unused levels from MultiIndex and unused categories from CategoricalIndex
     """
     if isinstance(index, pd.MultiIndex):
-        index = index.remove_unused_levels()
+        new_index = cast(pd.MultiIndex, index.remove_unused_levels())
         # if it contains CategoricalIndex, we need to remove unused categories
         # manually. See https://github.com/pandas-dev/pandas/issues/30846
-        if any(isinstance(lev, pd.CategoricalIndex) for lev in index.levels):
+        if any(isinstance(lev, pd.CategoricalIndex) for lev in new_index.levels):
             levels = []
-            for i, level in enumerate(index.levels):
+            for i, level in enumerate(new_index.levels):
                 if isinstance(level, pd.CategoricalIndex):
-                    level = level[index.codes[i]].remove_unused_categories()
+                    level = level[new_index.codes[i]].remove_unused_categories()
                 else:
-                    level = level[index.codes[i]]
+                    level = level[new_index.codes[i]]
                 levels.append(level)
             # TODO: calling from_array() reorders MultiIndex levels. It would
             # be best to avoid this, if possible, e.g., by using
             # MultiIndex.remove_unused_levels() (which does not reorder) on the
             # part of the MultiIndex that is not categorical, or by fixing this
             # upstream in pandas.
-            index = pd.MultiIndex.from_arrays(levels, names=index.names)
-    elif isinstance(index, pd.CategoricalIndex):
-        index = index.remove_unused_categories()
+            new_index = pd.MultiIndex.from_arrays(levels, names=new_index.names)
+        return cast(T_PDIndex, new_index)
+
+    if isinstance(index, pd.CategoricalIndex):
+        return index.remove_unused_categories()  # type: ignore[attr-defined]
+
     return index
 
 
 class PandasMultiIndex(PandasIndex):
     """Wrap a pandas.MultiIndex as an xarray compatible index."""
 
+    index: pd.MultiIndex
+    dim: Hashable
+    coord_dtype: Any
     level_coords_dtype: dict[str, Any]
 
     __slots__ = ("index", "dim", "coord_dtype", "level_coords_dtype")
@@ -1063,8 +1072,8 @@ class PandasMultiIndex(PandasIndex):
         The index and its corresponding coordinates may be created along a new dimension.
         """
         names: list[Hashable] = []
-        codes: list[list[int]] = []
-        levels: list[list[int]] = []
+        codes: list[Iterable[int]] = []
+        levels: list[Iterable[Any]] = []
         level_variables: dict[Any, Variable] = {}
 
         _check_dim_compat({**current_variables, **variables})
@@ -1134,7 +1143,7 @@ class PandasMultiIndex(PandasIndex):
         its corresponding coordinates.
 
         """
-        index = self.index.reorder_levels(level_variables.keys())
+        index = cast(pd.MultiIndex, self.index.reorder_levels(level_variables.keys()))
         level_coords_dtype = {k: self.level_coords_dtype[k] for k in index.names}
         return self._replace(index, level_coords_dtype=level_coords_dtype)
 
@@ -1147,13 +1156,13 @@ class PandasMultiIndex(PandasIndex):
             variables = {}
 
         index_vars: IndexVars = {}
-        for name in (self.dim,) + self.index.names:
+        for name in (self.dim,) + tuple(self.index.names):
             if name == self.dim:
                 level = None
                 dtype = None
             else:
                 level = name
-                dtype = self.level_coords_dtype[name]
+                dtype = self.level_coords_dtype[name]  # type: ignore[index]  # TODO: are Hashables ok?
 
             var = variables.get(name, None)
             if var is not None:
@@ -1163,7 +1172,7 @@ class PandasMultiIndex(PandasIndex):
                 attrs = {}
                 encoding = {}
 
-            data = PandasMultiIndexingAdapter(self.index, dtype=dtype, level=level)
+            data = PandasMultiIndexingAdapter(self.index, dtype=dtype, level=level)  # type: ignore[arg-type]  # TODO: are Hashables ok?
             index_vars[name] = IndexVariable(
                 self.dim,
                 data,
@@ -1185,6 +1194,8 @@ class PandasMultiIndex(PandasIndex):
 
         new_index = None
         scalar_coord_values = {}
+
+        indexer: int | slice | np.ndarray | Variable | DataArray
 
         # label(s) given for multi-index level(s)
         if all([lbl in self.index.names for lbl in labels]):
@@ -1212,7 +1223,7 @@ class PandasMultiIndex(PandasIndex):
                 )
                 scalar_coord_values.update(label_values)
                 # GH2619. Raise a KeyError if nothing is chosen
-                if indexer.dtype.kind == "b" and indexer.sum() == 0:
+                if indexer.dtype.kind == "b" and indexer.sum() == 0:  # type: ignore[union-attr]
                     raise KeyError(f"{labels} not found")
 
         # assume one label value given for the multi-index "array" (dimension)
@@ -1600,9 +1611,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         """Returns a list of unique indexes and their corresponding coordinates."""
 
         index_coords = []
-
-        for i in self._id_index:
-            index = self._id_index[i]
+        for i, index in self._id_index.items():
             coords = {k: self._variables[k] for k in self._id_coord_names[i]}
             index_coords.append((index, coords))
 
@@ -1640,26 +1649,28 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
             in this dict.
 
         """
-        new_indexes = {}
-        new_index_vars = {}
+        new_indexes: dict[Hashable, T_PandasOrXarrayIndex] = {}
+        new_index_vars: dict[Hashable, Variable] = {}
 
-        idx: T_PandasOrXarrayIndex
+        xr_idx: Index
+        new_idx: T_PandasOrXarrayIndex
         for idx, coords in self.group_by_index():
             if isinstance(idx, pd.Index):
                 convert_new_idx = True
                 dim = next(iter(coords.values())).dims[0]
                 if isinstance(idx, pd.MultiIndex):
-                    idx = PandasMultiIndex(idx, dim)
+                    xr_idx = PandasMultiIndex(idx, dim)
                 else:
-                    idx = PandasIndex(idx, dim)
+                    xr_idx = PandasIndex(idx, dim)
             else:
                 convert_new_idx = False
+                xr_idx = idx
 
-            new_idx = idx._copy(deep=deep, memo=memo)
-            idx_vars = idx.create_variables(coords)
+            new_idx = xr_idx._copy(deep=deep, memo=memo)  # type: ignore[assignment]
+            idx_vars = xr_idx.create_variables(coords)
 
             if convert_new_idx:
-                new_idx = cast(PandasIndex, new_idx).index
+                new_idx = new_idx.index  # type: ignore[attr-defined]
 
             new_indexes.update({k: new_idx for k in coords})
             new_index_vars.update(idx_vars)

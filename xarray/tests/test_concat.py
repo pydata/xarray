@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -474,7 +475,7 @@ class TestConcatDataset:
             "dim3"
         )
 
-    def rectify_dim_order(self, data, dataset) -> Dataset:
+    def rectify_dim_order(self, data: Dataset, dataset) -> Dataset:
         # return a new dataset with all variable dimensions transposed into
         # the order in which they are found in `data`
         return Dataset(
@@ -487,11 +488,13 @@ class TestConcatDataset:
     @pytest.mark.parametrize(
         "dim,data", [["dim1", True], ["dim2", False]], indirect=["data"]
     )
-    def test_concat_simple(self, data, dim, coords) -> None:
+    def test_concat_simple(self, data: Dataset, dim, coords) -> None:
         datasets = [g for _, g in data.groupby(dim, squeeze=False)]
         assert_identical(data, concat(datasets, dim, coords=coords))
 
-    def test_concat_merge_variables_present_in_some_datasets(self, data) -> None:
+    def test_concat_merge_variables_present_in_some_datasets(
+        self, data: Dataset
+    ) -> None:
         # coordinates present in some datasets but not others
         ds1 = Dataset(data_vars={"a": ("y", [0.1])}, coords={"x": 0.1})
         ds2 = Dataset(data_vars={"a": ("y", [0.2])}, coords={"z": 0.2})
@@ -515,7 +518,7 @@ class TestConcatDataset:
         assert_identical(expected, actual)
 
     @pytest.mark.parametrize("data", [False], indirect=["data"])
-    def test_concat_2(self, data) -> None:
+    def test_concat_2(self, data: Dataset) -> None:
         dim = "dim2"
         datasets = [g.squeeze(dim) for _, g in data.groupby(dim, squeeze=False)]
         concat_over = [k for k, v in data.coords.items() if dim in v.dims and k != dim]
@@ -524,7 +527,9 @@ class TestConcatDataset:
 
     @pytest.mark.parametrize("coords", ["different", "minimal", "all"])
     @pytest.mark.parametrize("dim", ["dim1", "dim2"])
-    def test_concat_coords_kwarg(self, data, dim, coords) -> None:
+    def test_concat_coords_kwarg(
+        self, data: Dataset, dim: str, coords: Literal["all", "minimal", "different"]
+    ) -> None:
         data = data.copy(deep=True)
         # make sure the coords argument behaves as expected
         data.coords["extra"] = ("dim4", np.arange(3))
@@ -538,7 +543,7 @@ class TestConcatDataset:
         else:
             assert_equal(data["extra"], actual["extra"])
 
-    def test_concat(self, data) -> None:
+    def test_concat(self, data: Dataset) -> None:
         split_data = [
             data.isel(dim1=slice(3)),
             data.isel(dim1=3),
@@ -546,7 +551,7 @@ class TestConcatDataset:
         ]
         assert_identical(data, concat(split_data, "dim1"))
 
-    def test_concat_dim_precedence(self, data) -> None:
+    def test_concat_dim_precedence(self, data: Dataset) -> None:
         # verify that the dim argument takes precedence over
         # concatenating dataset variables of the same name
         dim = (2 * data["dim1"]).rename("dim1")

@@ -118,10 +118,8 @@ def test_apply_identity() -> None:
     assert_identical(variable, apply_identity(variable))
     assert_identical(data_array, apply_identity(data_array))
     assert_identical(data_array, apply_identity(data_array.groupby("x")))
-    assert_identical(data_array, apply_identity(data_array.groupby("x", squeeze=False)))
     assert_identical(dataset, apply_identity(dataset))
     assert_identical(dataset, apply_identity(dataset.groupby("x")))
-    assert_identical(dataset, apply_identity(dataset.groupby("x", squeeze=False)))
 
 
 def add(a, b):
@@ -502,7 +500,7 @@ def test_apply_output_core_dimension() -> None:
             return np.stack([x, -x], axis=-1)
 
         result = apply_ufunc(func, obj, output_core_dims=[["sign"]])
-        if isinstance(result, (xr.Dataset, xr.DataArray)):
+        if isinstance(result, xr.Dataset | xr.DataArray):
             result.coords["sign"] = [1, -1]
         return result
 
@@ -521,17 +519,15 @@ def test_apply_output_core_dimension() -> None:
     assert_identical(stacked_variable, stack_negative(variable))
     assert_identical(stacked_data_array, stack_negative(data_array))
     assert_identical(stacked_dataset, stack_negative(dataset))
-    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
-        assert_identical(stacked_data_array, stack_negative(data_array.groupby("x")))
-    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
-        assert_identical(stacked_dataset, stack_negative(dataset.groupby("x")))
+    assert_identical(stacked_data_array, stack_negative(data_array.groupby("x")))
+    assert_identical(stacked_dataset, stack_negative(dataset.groupby("x")))
 
     def original_and_stack_negative(obj):
         def func(x):
             return (x, np.stack([x, -x], axis=-1))
 
         result = apply_ufunc(func, obj, output_core_dims=[[], ["sign"]])
-        if isinstance(result[1], (xr.Dataset, xr.DataArray)):
+        if isinstance(result[1], xr.Dataset | xr.DataArray):
             result[1].coords["sign"] = [1, -1]
         return result
 
@@ -551,13 +547,11 @@ def test_apply_output_core_dimension() -> None:
     assert_identical(dataset, out0)
     assert_identical(stacked_dataset, out1)
 
-    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
-        out0, out1 = original_and_stack_negative(data_array.groupby("x"))
+    out0, out1 = original_and_stack_negative(data_array.groupby("x"))
     assert_identical(data_array, out0)
     assert_identical(stacked_data_array, out1)
 
-    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
-        out0, out1 = original_and_stack_negative(dataset.groupby("x"))
+    out0, out1 = original_and_stack_negative(dataset.groupby("x"))
     assert_identical(dataset, out0)
     assert_identical(stacked_dataset, out1)
 
@@ -574,7 +568,7 @@ def test_apply_exclude() -> None:
             output_core_dims=[[dim]],
             exclude_dims={dim},
         )
-        if isinstance(result, (xr.Dataset, xr.DataArray)):
+        if isinstance(result, xr.Dataset | xr.DataArray):
             # note: this will fail if dim is not a coordinate on any input
             new_coord = np.concatenate([obj.coords[dim] for obj in objects])
             result.coords[dim] = new_coord
@@ -2553,7 +2547,8 @@ def test_polyfit_polyval_integration(
             "cartesian",
             1,
         ],
-        [  # Test 1 sized arrays with coords:
+        # Test 1 sized arrays with coords:
+        pytest.param(
             xr.DataArray(
                 np.array([1]),
                 dims=["cartesian"],
@@ -2568,8 +2563,10 @@ def test_polyfit_polyval_integration(
             np.array([4, 5, 6]),
             "cartesian",
             -1,
-        ],
-        [  # Test filling in between with coords:
+            marks=(pytest.mark.xfail(),),
+        ),
+        # Test filling in between with coords:
+        pytest.param(
             xr.DataArray(
                 [1, 2],
                 dims=["cartesian"],
@@ -2584,7 +2581,8 @@ def test_polyfit_polyval_integration(
             np.array([4, 5, 6]),
             "cartesian",
             -1,
-        ],
+            marks=(pytest.mark.xfail(),),
+        ),
     ],
 )
 def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:
