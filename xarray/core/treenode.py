@@ -560,10 +560,7 @@ class TreeNode(Generic[Tree]):
             del self._children[key]
             child.orphan()
         else:
-            try:
-                raise ValueError("cannot delete key not found in child nodes")
-            except ValueError as e:
-                raise KeyError(key) from e
+            raise KeyError(key) from ValueError("cannot delete key not found in child nodes")
 
     def same_tree(self, other: Tree) -> bool:
         """True if other node is in the same tree as this node."""
