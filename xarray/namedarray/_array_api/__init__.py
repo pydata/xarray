@@ -286,19 +286,25 @@ __all__ += [
 ]
 
 from xarray.namedarray._array_api._statistical_functions import (
+    cumulative_sum,
     max,
     mean,
     min,
     prod,
+    std,
     sum,
+    var,
 )
 
 __all__ += [
+    "cumulative_sum",
     "max",
     "mean",
     "min",
     "prod",
+    "std",
     "sum",
+    "var",
 ]
 
 from xarray.namedarray._array_api._utility_functions import (
