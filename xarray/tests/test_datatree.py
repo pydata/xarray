@@ -87,32 +87,42 @@ class TestNames:
 
 class TestPaths:
     def test_path_property(self):
-        sue: DataTree = DataTree()
-        mary: DataTree = DataTree(children={"Sue": sue})
-        john: DataTree = DataTree(children={"Mary": mary})
-        assert john.children["Mary"].children["Sue"].path == "/Mary/Sue"
+        john = DataTree.from_dict(
+            {
+                "/Mary/Sue": DataTree(),
+            }
+        )
+        assert john["/Mary/Sue"].path == "/Mary/Sue"
         assert john.path == "/"
 
     def test_path_roundtrip(self):
-        sue: DataTree = DataTree()
-        mary: DataTree = DataTree(children={"Sue": sue})
-        john: DataTree = DataTree(children={"Mary": mary})
+        john = DataTree.from_dict(
+            {
+                "/Mary/Sue": DataTree(),
+            }
+        )
         assert john["/Mary/Sue"].name == "Sue"
 
     def test_same_tree(self):
-        mary: DataTree = DataTree()
-        kate: DataTree = DataTree()
-        john: DataTree = DataTree(children={"Mary": mary, "Kate": kate})  # noqa
-        assert mary.same_tree(kate)
+        john = DataTree.from_dict(
+            {
+                "/Mary": DataTree(),
+                "/Kate": DataTree(),
+            }
+        )
+        assert john["/Mary"].same_tree(john["/Kate"])
 
     def test_relative_paths(self):
-        sue: DataTree = DataTree()
-        mary: DataTree = DataTree(children={"Sue": sue})
-        annie: DataTree = DataTree()
-        john: DataTree = DataTree(children={"Mary": mary, "Annie": annie})
+        john = DataTree.from_dict(
+            {
+                "/Mary/Sue": DataTree(),
+                "/Annie": DataTree(),
+            }
+        )
+        sue = john["Mary/Sue"]
+        annie = john["Annie"]
 
-        result = sue.relative_to(john)
-        assert result == "Mary/Sue"
+        assert sue.relative_to(john) == "Mary/Sue"
         assert john.relative_to(sue) == "../.."
         assert annie.relative_to(sue) == "../../Annie"
         assert sue.relative_to(annie) == "../Mary/Sue"
@@ -185,8 +195,12 @@ class TestVariablesChildrenNameCollisions:
             DataTree(name="a", data=None, parent=dt)
 
     def test_assign_when_already_child_with_variables_name(self):
-        dt: DataTree = DataTree(data=None)
-        DataTree(name="a", data=None, parent=dt)
+        dt = DataTree.from_dict(
+            {
+                "/a": DataTree(),
+            }
+        )
+
         with pytest.raises(ValueError, match="node already contains a variable"):
             dt.ds = xr.Dataset({"a": 0})  # type: ignore[assignment]
 
@@ -202,11 +216,14 @@ class TestGet: ...
 
 class TestGetItem:
     def test_getitem_node(self):
-        folder1: DataTree = DataTree(name="folder1")
-        results: DataTree = DataTree(name="results", parent=folder1)
-        highres: DataTree = DataTree(name="highres", parent=results)
-        assert folder1["results"] is results
-        assert folder1["results/highres"] is highres
+        folder1 = DataTree.from_dict(
+            {
+                "/results/highres": DataTree(),
+            }
+        )
+
+        assert folder1["results"].name == "results"
+        assert folder1["results/highres"].name == "highres"
 
     def test_getitem_self(self):
         dt: DataTree = DataTree()
@@ -219,9 +236,11 @@ class TestGetItem:
 
     def test_getitem_single_data_variable_from_node(self):
         data = xr.Dataset({"temp": [0, 50]})
-        folder1: DataTree = DataTree(name="folder1")
-        results: DataTree = DataTree(name="results", parent=folder1)
-        DataTree(name="highres", parent=results, data=data)
+        folder1 = DataTree.from_dict(
+            {
+                "/results/highres": data,
+            }
+        )
         assert_identical(folder1["results/highres/temp"], data["temp"])
 
     def test_getitem_nonexistent_node(self):
@@ -401,14 +420,13 @@ class TestSetItem:
         assert john2["sonny"].name == "sonny"
 
     def test_setitem_new_grandchild_node(self):
-        john: DataTree = DataTree(name="john")
-        mary: DataTree = DataTree(name="mary", parent=john)
-        rose: DataTree = DataTree(name="rose")
-        john["mary/rose"] = rose
+        john = DataTree.from_dict({"/Mary/Rose": DataTree()})
+        new_rose = DataTree(data=xr.Dataset({"x": 0}))
+        john["Mary/Rose"] = new_rose
 
-        grafted_rose = john["mary/rose"]
-        assert grafted_rose.parent is mary
-        assert grafted_rose.name == "rose"
+        grafted_rose = john["Mary/Rose"]
+        assert grafted_rose.parent is john["/Mary"]
+        assert grafted_rose.name == "Rose"
 
     def test_grafted_subtree_retains_name(self):
         subtree: DataTree = DataTree(name="original_subtree_name")
