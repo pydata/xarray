@@ -188,6 +188,13 @@ def greater_equal(x1, x2, /):
     return out
 
 
+def hypot(x1: NamedArray, x2: NamedArray, /) -> NamedArray:
+    xp = _get_data_namespace(x1)
+    # TODO: Handle attrs? will get x1 now
+    out = x1._new(data=xp.hypot(x1._data, x2._data))
+    return out
+
+
 def imag(
     x: NamedArray[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]], /  # type: ignore[type-var]
 ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
