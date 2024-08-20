@@ -48,7 +48,8 @@ Bug fixes
   <https://github.com/spencerkclark>`_ and `Deepak Cherian
   <https://github.com/dcherian>`_.
 - Fix issue with passing parameters to ZarrStore.open_store when opening
-  datatree in zarr format (:issue:`9376`, :pull:`9377`) by `Alfonso Ladino <https://github.com/aladinor>`_
+  datatree in zarr format (:issue:`9376`, :pull:`9377`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_
 
 Documentation
 ~~~~~~~~~~~~~
