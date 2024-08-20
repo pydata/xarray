@@ -103,6 +103,22 @@ _ArrayLike = np.typing.ArrayLike
 _Device = Any
 
 
+class _IInfo(Protocol):
+    bits: int
+    max: int
+    min: int
+    dtype: _dtype
+
+
+class _FInfo(Protocol):
+    bits: int
+    eps: float
+    max: float
+    min: float
+    smallest_normal: float
+    dtype: _dtype
+
+
 class _SupportsReal(Protocol[_T_co]):
     @property
     def real(self) -> _T_co: ...

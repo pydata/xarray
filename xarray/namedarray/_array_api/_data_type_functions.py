@@ -11,6 +11,8 @@ from xarray.namedarray._typing import (
     _DType,
     _dtype,
     _ShapeType,
+    _FInfo,
+    _IInfo,
 )
 from xarray.namedarray.core import (
     NamedArray,
@@ -71,7 +73,7 @@ def can_cast(from_: _dtype | NamedArray, to: _dtype, /) -> bool:
         return xp.can_cast(from_, to)
 
 
-def finfo(type: _dtype | NamedArray[Any, Any], /):
+def finfo(type: _dtype | NamedArray[Any, Any], /) -> _FInfo:
     if isinstance(type, NamedArray):
         xp = _get_data_namespace(type)
         return xp.finfo(type._data)
@@ -80,7 +82,7 @@ def finfo(type: _dtype | NamedArray[Any, Any], /):
         return xp.finfo(type)
 
 
-def iinfo(type: _dtype | NamedArray[Any, Any], /):
+def iinfo(type: _dtype | NamedArray[Any, Any], /) -> _IInfo:
     if isinstance(type, NamedArray):
         xp = _get_data_namespace(type)
         return xp.iinfo(type._data)
@@ -90,7 +92,7 @@ def iinfo(type: _dtype | NamedArray[Any, Any], /):
 
 
 def isdtype(dtype: _dtype, kind: _dtype | str | tuple[_dtype | str, ...]) -> bool:
-    xp = _get_namespace_dtype(type)
+    xp = _get_namespace_dtype(dtype)
     return xp.isdtype(dtype, kind)
 
 
