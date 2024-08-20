@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 
 import numpy as np
 
+from xarray.core.options import OPTIONS
 from xarray.core.utils import emit_user_level_warning
 from xarray.namedarray.pycompat import is_chunked_array
 
@@ -101,8 +102,8 @@ def guess_chunkmanager(
             # use the only option available
             manager = next(iter(chunkmanagers.keys()))
         else:
-            # default to trying to use dask
-            manager = "dask"
+            # use the one in options (default dask)
+            manager = OPTIONS["chunk_manager"]
 
     if isinstance(manager, str):
         if manager not in chunkmanagers:
