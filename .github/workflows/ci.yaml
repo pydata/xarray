@@ -145,7 +145,7 @@ jobs:
           save-always: true
 
       - name: Run tests
-        run: python -m pytest -n 4
+        run: python -m pytest -n auto
           --timeout 180
           --cov=xarray
           --cov-report=xml
