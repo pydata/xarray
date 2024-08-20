@@ -51,6 +51,7 @@ from xarray.namedarray.utils import (
 
 if TYPE_CHECKING:
     from enum import IntEnum
+
     from numpy.typing import NDArray
 
     from xarray.core.types import T_Chunks
