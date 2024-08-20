@@ -286,6 +286,7 @@ from xarray.namedarray._array_api._searching_functions import (
     argmax,
     argmin,
     nonzero,
+    searchsorted,
     where,
 )
 
