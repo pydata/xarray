@@ -3,7 +3,6 @@ from __future__ import annotations
 from types import ModuleType
 from typing import TYPE_CHECKING, Any
 
-import numpy as np
 
 from xarray.namedarray._typing import _arrayapi, _dtype
 
@@ -12,7 +11,14 @@ if TYPE_CHECKING:
 
 
 def _maybe_default_namespace(xp: ModuleType | None = None) -> ModuleType:
-    return np if xp is None else xp
+    if xp is None:
+        import array_api_strict as xpd
+
+        # import numpy as xpd
+
+        return xpd
+    else:
+        return xp
 
 
 def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
