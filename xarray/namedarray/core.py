@@ -597,6 +597,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """
         return math.prod(self.shape)
 
+    def to_device(self, device: _Device, /, stream: None = None) -> Self:
+        if isinstance(self._data, _arrayapi):
+            return self._replace(data=self._data.to_device(device, stream=stream))
+        else:
+            raise NotImplementedError("Only array api are valid.")
+
     @property
     def T(self):
         raise NotImplementedError("Todo: ")
