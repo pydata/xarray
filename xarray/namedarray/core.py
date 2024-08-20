@@ -549,6 +549,18 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __bool__(self, /) -> bool:
         return self._data.__bool__()
 
+    def __complex__(self, /) -> complex:
+        return self._data.__complex__()
+
+    def __float__(self, /) -> float:
+        return self._data.__float__()
+
+    def __index__(self, /) -> int:
+        return self._data.__index__()
+
+    def __int__(self, /) -> int:
+        return self._data.__int__()
+
     # Arithmetic Operators
 
     def __neg__(self, /):
