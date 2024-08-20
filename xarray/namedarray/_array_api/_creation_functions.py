@@ -6,8 +6,8 @@ import numpy as np
 
 from xarray.namedarray._array_api._utils import (
     _get_data_namespace,
-    # _maybe_default_namespace,
     _get_namespace_dtype,
+    _infer_dims,
 )
 from xarray.namedarray._typing import (
     Default,
@@ -33,16 +33,6 @@ def _like_args(x, dtype=None, device: _Device | None = None):
     if dtype is None:
         dtype = x.dtype
     return dict(shape=x.shape, dtype=dtype, device=device)
-
-
-def _infer_dims(
-    shape: _Shape,
-    dims: _DimsLike | Default = _default,
-) -> _DimsLike:
-    if dims is _default:
-        return tuple(f"dim_{n}" for n in range(len(shape)))
-    else:
-        return dims
 
 
 def arange(

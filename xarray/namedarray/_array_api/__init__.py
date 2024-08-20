@@ -270,17 +270,20 @@ __all__ += [
     # "stack",
 ]
 
-# from xarray.namedarray._array_api._searching_functions import (
-#     argmax,
-#     argmin,
-#     where,
-# )
+from xarray.namedarray._array_api._searching_functions import (
+    argmax,
+    argmin,
+    nonzero,
+    where,
+)
 
-# __all__ += [
-#     "argmax",
-#     "argmin",
-#     "where",
-# ]
+__all__ += [
+    "argmax",
+    "argmin",
+    "nonzero",
+    "searchsorted",
+    "where",
+]
 
 from xarray.namedarray._array_api._statistical_functions import (
     max,
