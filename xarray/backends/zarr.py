@@ -1140,7 +1140,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     ) -> bool:
-        if isinstance(filename_or_obj, (str, os.PathLike)):
+        if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
             return ext in {".zarr"}
 
@@ -1225,7 +1225,18 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         filename_or_obj = _normalize_path(filename_or_obj)
         if group:
             parent = NodePath("/") / NodePath(group)
-            stores = ZarrStore.open_store(filename_or_obj, group=parent)
+            stores = ZarrStore.open_store(
+                filename_or_obj,
+                group=parent,
+                mode=mode,
+                synchronizer=synchronizer,
+                consolidated=consolidated,
+                consolidate_on_close=False,
+                chunk_store=chunk_store,
+                storage_options=storage_options,
+                stacklevel=stacklevel + 1,
+                zarr_version=zarr_version,
+            )
             if not stores:
                 ds = open_dataset(
                     filename_or_obj, group=parent, engine="zarr", **kwargs
@@ -1233,7 +1244,18 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 return DataTree.from_dict({str(parent): ds})
         else:
             parent = NodePath("/")
-            stores = ZarrStore.open_store(filename_or_obj, group=parent)
+            stores = ZarrStore.open_store(
+                filename_or_obj,
+                group=parent,
+                mode=mode,
+                synchronizer=synchronizer,
+                consolidated=consolidated,
+                consolidate_on_close=False,
+                chunk_store=chunk_store,
+                storage_options=storage_options,
+                stacklevel=stacklevel + 1,
+                zarr_version=zarr_version,
+            )
         ds = open_dataset(filename_or_obj, group=parent, engine="zarr", **kwargs)
         tree_root = DataTree.from_dict({str(parent): ds})
         for path_group, store in stores.items():

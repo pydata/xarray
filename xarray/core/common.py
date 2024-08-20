@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Hashable, Iterable, Iterator, Mapping
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, TypeVar, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -1181,7 +1181,7 @@ class DataWithCoords(AttrAccessMixin):
             other = other(self)
 
         if drop:
-            if not isinstance(cond, (Dataset, DataArray)):
+            if not isinstance(cond, Dataset | DataArray):
                 raise TypeError(
                     f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r} (or a callable than returns one)."
                 )
@@ -1355,7 +1355,7 @@ class DataWithCoords(AttrAccessMixin):
             raise TypeError(
                 f"isin() argument must be convertible to an array: {test_elements}"
             )
-        elif isinstance(test_elements, (Variable, DataArray)):
+        elif isinstance(test_elements, Variable | DataArray):
             # need to explicitly pull out data to support dask arrays as the
             # second argument
             test_elements = test_elements.data

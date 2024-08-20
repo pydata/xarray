@@ -299,7 +299,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         if magic_number is not None:
             return magic_number.startswith(b"CDF")
 
-        if isinstance(filename_or_obj, (str, os.PathLike)):
+        if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
             return ext in {".nc", ".nc4", ".cdf", ".gz"}
 
