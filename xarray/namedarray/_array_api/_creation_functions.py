@@ -241,7 +241,7 @@ def meshgrid(*arrays: NamedArray, indexing: str = "xy") -> list[NamedArray]:
     _datas = xp.meshgrid(*[a._data for a in arrays], indexing=indexing)
     # TODO: Can probably determine dim names from arrays, for now just default names:
     _dims = _infer_dims(_datas[0].shape)
-    return [arr._new(_dims, _datas)]
+    return [arr._new(_dims, _data) for _data in _datas]
 
 
 def ones(
