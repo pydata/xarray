@@ -516,6 +516,45 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """
         return self._copy(deep=deep, data=data)
 
+    def __len__(self) -> _IntOrUnknown:
+        try:
+            return self.shape[0]
+        except Exception as exc:
+            raise TypeError("len() of unsized object") from exc
+
+    # Array API:
+    # Attributes:
+
+    @property
+    def device(self) -> _Device:
+        """
+        Device of the array’s elements.
+
+        See Also
+        --------
+        ndarray.device
+        """
+        if isinstance(self._data, _arrayapi):
+            return self._data.device
+        else:
+            raise NotImplementedError("self._data missing device")
+
+    @property
+    def dtype(self) -> _DType_co:
+        """
+        Data-type of the array’s elements.
+
+        See Also
+        --------
+        ndarray.dtype
+        numpy.dtype
+        """
+        return self._data.dtype
+
+    @property
+    def mT(self):
+        raise NotImplementedError("Todo: ")
+
     @property
     def ndim(self) -> int:
         """
@@ -526,6 +565,22 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         numpy.ndarray.ndim
         """
         return len(self.shape)
+
+    @property
+    def shape(self) -> _Shape:
+        """
+        Get the shape of the array.
+
+        Returns
+        -------
+        shape : tuple of ints
+            Tuple of array dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.shape
+        """
+        return self._data.shape
 
     @property
     def size(self) -> _IntOrUnknown:
@@ -540,11 +595,26 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """
         return math.prod(self.shape)
 
-    def __len__(self) -> _IntOrUnknown:
-        try:
-            return self.shape[0]
-        except Exception as exc:
-            raise TypeError("len() of unsized object") from exc
+    @property
+    def T(self):
+        raise NotImplementedError("Todo: ")
+
+    # methods
+    def __abs__(self, /):
+        from xarray.namedarray._array_api import abs
+
+        return abs(self)
+
+    # def __array_namespace__(self, /, *, api_version=None):
+    #     if api_version is not None and api_version not in (
+    #         "2021.12",
+    #         "2022.12",
+    #         "2023.12",
+    #     ):
+    #         raise ValueError(f"Unrecognized array API version: {api_version!r}")
+    #     import xarray.namedarray._array_api as array_api
+
+    #     return array_api
 
     def __bool__(self, /) -> bool:
         return self._data.__bool__()
@@ -752,7 +822,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         return bitwise_right_shift(other, self)
 
-    # Something
+    # Indexing
 
     def __getitem__(self, key: _IndexKeyLike | NamedArray):
         if isinstance(key, (int, slice, tuple)):
@@ -764,48 +834,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return self._new(key._dims, _data)
         else:
             raise NotImplementedError("{k=} is not supported")
-
-    @property
-    def device(self) -> _Device:
-        """
-        Device of the array’s elements.
-
-        See Also
-        --------
-        ndarray.device
-        """
-        if isinstance(self._data, _arrayapi):
-            return self._data.device
-        else:
-            raise NotImplementedError("self._data missing device")
-
-    @property
-    def dtype(self) -> _DType_co:
-        """
-        Data-type of the array’s elements.
-
-        See Also
-        --------
-        ndarray.dtype
-        numpy.dtype
-        """
-        return self._data.dtype
-
-    @property
-    def shape(self) -> _Shape:
-        """
-        Get the shape of the array.
-
-        Returns
-        -------
-        shape : tuple of ints
-            Tuple of array dimensions.
-
-        See Also
-        --------
-        numpy.ndarray.shape
-        """
-        return self._data.shape
 
     @property
     def nbytes(self) -> _IntOrUnknown:
