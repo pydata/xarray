@@ -7,14 +7,33 @@ from xarray.namedarray._typing import (
     Default,
     _AxisLike,
     _default,
+    _Dim,
     _Dims,
     _DType,
+    _ShapeType,
 )
 from xarray.namedarray.core import (
     NamedArray,
     _dims_to_axis,
     _get_remaining_dims,
 )
+
+
+def cumulative_sum(
+    x: NamedArray[_ShapeType, _DType],
+    /,
+    *,
+    dim: _Dim | Default = _default,
+    dtype: _DType | None = None,
+    include_initial: bool = False,
+    axis: int | None = None,
+) -> NamedArray[_ShapeType, _DType]:
+    xp = _get_data_namespace(x)
+    _axis = _dims_to_axis(x, dim, axis)
+    _data = xp.cumulative_sum(
+        x._data, axis=_axis, dtype=dtype, include_initial=include_initial
+    )
+    return x._new(dims=x.dims, data=_data)
 
 
 def max(
@@ -26,12 +45,11 @@ def max(
     axis: _AxisLike | None = None,
 ) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
-    axis_ = _dims_to_axis(x, dims, axis)
-    d = xp.max(x._data, axis=axis_, keepdims=False)  # We fix keepdims later
+    _axis = _dims_to_axis(x, dims, axis)
+    _data = xp.max(x._data, axis=_axis, keepdims=False)  # We fix keepdims later
     # TODO: Why do we need to do the keepdims ourselves?
-    dims_, data_ = _get_remaining_dims(x, d, axis_, keepdims=keepdims)
-    out = x._new(dims=dims_, data=data_)
-    return out
+    dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
+    return x._new(dims=dims_, data=data_)
 
 
 def mean(
@@ -93,10 +111,10 @@ def mean(
            [3.5]], dtype=float64)
     """
     xp = _get_data_namespace(x)
-    axis_ = _dims_to_axis(x, dims, axis)
-    d = xp.mean(x._data, axis=axis_, keepdims=False)  # We fix keepdims later
+    _axis = _dims_to_axis(x, dims, axis)
+    _data = xp.mean(x._data, axis=_axis, keepdims=False)  # We fix keepdims later
     # TODO: Why do we need to do the keepdims ourselves?
-    dims_, data_ = _get_remaining_dims(x, d, axis_, keepdims=keepdims)
+    dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
     out = x._new(dims=dims_, data=data_)
     return out
 
@@ -110,10 +128,10 @@ def min(
     axis: _AxisLike | None = None,
 ) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
-    axis_ = _dims_to_axis(x, dims, axis)
-    d = xp.min(x._data, axis=axis_, keepdims=False)  # We fix keepdims later
+    _axis = _dims_to_axis(x, dims, axis)
+    _data = xp.min(x._data, axis=_axis, keepdims=False)  # We fix keepdims later
     # TODO: Why do we need to do the keepdims ourselves?
-    dims_, data_ = _get_remaining_dims(x, d, axis_, keepdims=keepdims)
+    dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
     out = x._new(dims=dims_, data=data_)
     return out
 
@@ -127,10 +145,30 @@ def prod(
     axis: _AxisLike | None = None,
 ) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
-    axis_ = _dims_to_axis(x, dims, axis)
-    d = xp.prod(x._data, axis=axis_, keepdims=False)  # We fix keepdims later
+    _axis = _dims_to_axis(x, dims, axis)
+    _data = xp.prod(x._data, axis=_axis, keepdims=False)  # We fix keepdims later
     # TODO: Why do we need to do the keepdims ourselves?
-    dims_, data_ = _get_remaining_dims(x, d, axis_, keepdims=keepdims)
+    dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
+    out = x._new(dims=dims_, data=data_)
+    return out
+
+
+def std(
+    x: NamedArray[Any, _DType],
+    /,
+    *,
+    dims: _Dims | Default = _default,
+    correction: int | float = 0.0,
+    keepdims: bool = False,
+    axis: _AxisLike | None = None,
+) -> NamedArray[Any, _DType]:
+    xp = _get_data_namespace(x)
+    _axis = _dims_to_axis(x, dims, axis)
+    _data = xp.std(
+        x._data, axis=_axis, correction=correction, keepdims=False
+    )  # We fix keepdims later
+    # TODO: Why do we need to do the keepdims ourselves?
+    dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
     out = x._new(dims=dims_, data=data_)
     return out
 
@@ -144,9 +182,29 @@ def sum(
     axis: _AxisLike | None = None,
 ) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
-    axis_ = _dims_to_axis(x, dims, axis)
-    d = xp.sum(x._data, axis=axis_, keepdims=False)  # We fix keepdims later
+    _axis = _dims_to_axis(x, dims, axis)
+    _data = xp.sum(x._data, axis=_axis, keepdims=False)  # We fix keepdims later
     # TODO: Why do we need to do the keepdims ourselves?
-    dims_, data_ = _get_remaining_dims(x, d, axis_, keepdims=keepdims)
+    dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
+    out = x._new(dims=dims_, data=data_)
+    return out
+
+
+def var(
+    x: NamedArray[Any, _DType],
+    /,
+    *,
+    dims: _Dims | Default = _default,
+    correction: int | float = 0.0,
+    keepdims: bool = False,
+    axis: _AxisLike | None = None,
+) -> NamedArray[Any, _DType]:
+    xp = _get_data_namespace(x)
+    _axis = _dims_to_axis(x, dims, axis)
+    _data = xp.var(
+        x._data, axis=_axis, correction=correction, keepdims=False
+    )  # We fix keepdims later
+    # TODO: Why do we need to do the keepdims ourselves?
+    dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
     out = x._new(dims=dims_, data=data_)
     return out
