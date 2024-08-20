@@ -298,6 +298,10 @@ __all__ += [
     "where",
 ]
 
+from xarray.namedarray._array_api._sorting_functions import argsort, sort
+
+__all__ += ["argsort", "sort"]
+
 from xarray.namedarray._array_api._statistical_functions import (
     cumulative_sum,
     max,
