@@ -50,6 +50,7 @@ from xarray.namedarray.utils import (
 )
 
 if TYPE_CHECKING:
+    from enum import IntEnum
     from numpy.typing import NDArray
 
     from xarray.core.types import T_Chunks
@@ -630,6 +631,23 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def __int__(self, /) -> int:
         return self._data.__int__()
+
+    # dlpack
+    def __dlpack__(
+        self,
+        /,
+        *,
+        stream: int | Any | None = None,
+        max_version: tuple[int, int] | None = None,
+        dl_device: tuple[IntEnum, int] | None = None,
+        copy: bool | None = None,
+    ) -> Any:
+        return self._data.__dlpack__(
+            stream=stream, max_version=max_version, dl_device=dl_device, copy=copy
+        )
+
+    def __dlpack_device__(self, /) -> tuple[IntEnum, int]:
+        return self._data.__dlpack_device__()
 
     # Arithmetic Operators
 
