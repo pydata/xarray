@@ -47,6 +47,9 @@ Bug fixes
   date "0001-01-01". (:issue:`9108`, :pull:`9116`) By `Spencer Clark
   <https://github.com/spencerkclark>`_ and `Deepak Cherian
   <https://github.com/dcherian>`_.
+- Fix issue with passing parameters to ZarrStore.open_store when opening
+  datatree in zarr format (:issue:`9376`, :pull:`9377`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_
 
 Documentation
 ~~~~~~~~~~~~~
