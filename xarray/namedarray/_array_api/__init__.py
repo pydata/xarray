@@ -234,9 +234,9 @@ __all__ += [
     "trunc",
 ]
 
-# from xarray.namedarray._array_api.indexing_functions import take
+from xarray.namedarray._array_api._indexing_functions import take
 
-# __all__ += ["take"]
+__all__ += ["take"]
 
 from xarray.namedarray._array_api._info import __array_namespace_info__
 
