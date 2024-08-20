@@ -1576,9 +1576,11 @@ class Dataset(
             try:
                 return self._construct_dataarray(key)
             except KeyError as e:
-                raise KeyError(
-                    f"No variable named {key!r}. Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
-                ) from e
+                message = f"No variable named {key!r}. Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
+                # If someone attempts `ds['foo' , 'bar']` instead of `ds[['foo', 'bar']]`
+                if isinstance(key, tuple):
+                    message += f"\nHint: use a list to select multiple variables, for example `ds[{[d for d in key]}]`"
+                raise KeyError(message) from e
 
         if utils.iterable_of_hashable(key):
             return self._copy_listed(key)
@@ -2752,7 +2754,7 @@ class Dataset(
                 )
 
             assert variable.ndim == 1
-            chunks: tuple[int, ...] = tuple(
+            chunks = (
                 DataArray(
                     np.ones(variable.shape, dtype=int),
                     dims=(name,),
@@ -2760,9 +2762,13 @@ class Dataset(
                 )
                 .resample({name: resampler})
                 .sum()
-                .data.tolist()
             )
-            return chunks
+            # When bins (binning) or time periods are missing (resampling)
+            # we can end up with NaNs. Drop them.
+            if chunks.dtype.kind == "f":
+                chunks = chunks.dropna(name).astype(int)
+            chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
+            return chunks_tuple
 
         chunks_mapping_ints: Mapping[Any, T_ChunkDim] = {
             name: (

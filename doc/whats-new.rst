@@ -22,7 +22,8 @@ v2024.07.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Make chunk manager an option in ``set_options`` (:pull:`9362`).
+  By `Tom White <https://github.com/tomwhite>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -36,6 +37,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix bug with rechunking to a frequency when some periods contain no data (:issue:`9360`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix bug causing `DataTree.from_dict` to be sensitive to insertion order (:issue:`9276`, :pull:`9292`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Fix resampling error with monthly, quarterly, or yearly frequencies with
@@ -44,6 +47,9 @@ Bug fixes
   date "0001-01-01". (:issue:`9108`, :pull:`9116`) By `Spencer Clark
   <https://github.com/spencerkclark>`_ and `Deepak Cherian
   <https://github.com/dcherian>`_.
+- Fix issue with passing parameters to ZarrStore.open_store when opening
+  datatree in zarr format (:issue:`9376`, :pull:`9377`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_
 
 Documentation
 ~~~~~~~~~~~~~
@@ -88,6 +94,8 @@ New Features
   to return an object without ``attrs``. A ``deep`` parameter controls whether
   variables' ``attrs`` are also dropped.
   By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
+  By `Eni Awowale <https://github.com/eni-awowale>`_.
+- Add `open_groups` method for unaligned datasets (:issue:`9137`, :pull:`9243`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

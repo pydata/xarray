@@ -1209,24 +1209,34 @@ class TestDataset:
         ),
     )
     @pytest.mark.parametrize("freq", ["D", "W", "5ME", "YE"])
-    def test_chunk_by_frequency(self, freq, calendar) -> None:
+    @pytest.mark.parametrize("add_gap", [True, False])
+    def test_chunk_by_frequency(self, freq: str, calendar: str, add_gap: bool) -> None:
         import dask.array
 
         N = 365 * 2
+        ΔN = 28
+        time = xr.date_range(
+            "2001-01-01", periods=N + ΔN, freq="D", calendar=calendar
+        ).to_numpy()
+        if add_gap:
+            # introduce an empty bin
+            time[31 : 31 + ΔN] = np.datetime64("NaT")
+            time = time[~np.isnat(time)]
+        else:
+            time = time[:N]
+
         ds = Dataset(
             {
                 "pr": ("time", dask.array.random.random((N), chunks=(20))),
                 "pr2d": (("x", "time"), dask.array.random.random((10, N), chunks=(20))),
                 "ones": ("time", np.ones((N,))),
             },
-            coords={
-                "time": xr.date_range(
-                    "2001-01-01", periods=N, freq="D", calendar=calendar
-                )
-            },
+            coords={"time": time},
         )
         rechunked = ds.chunk(x=2, time=TimeResampler(freq))
-        expected = tuple(ds.ones.resample(time=freq).sum().data.tolist())
+        expected = tuple(
+            ds.ones.resample(time=freq).sum().dropna("time").astype(int).data.tolist()
+        )
         assert rechunked.chunksizes["time"] == expected
         assert rechunked.chunksizes["x"] == (2,) * 5
 
@@ -4124,6 +4134,11 @@ class TestDataset:
             data["notfound"]
         with pytest.raises(KeyError):
             data[["var1", "notfound"]]
+        with pytest.raises(
+            KeyError,
+            match=r"Hint: use a list to select multiple variables, for example `ds\[\['var1', 'var2'\]\]`",
+        ):
+            data["var1", "var2"]
 
         actual1 = data[["var1", "var2"]]
         expected1 = Dataset({"var1": data["var1"], "var2": data["var2"]})
