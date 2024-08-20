@@ -1,20 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from xarray.namedarray._array_api._utils import _get_data_namespace, _infer_dims
 from xarray.namedarray._typing import (
     Default,
-    _arrayfunction_or_api,
-    _ArrayLike,
     _default,
-    _Device,
-    _DimsLike,
-    _DType,
     _Dims,
-    _Shape,
-    _ShapeType,
-    duckarray,
 )
 from xarray.namedarray.core import (
     NamedArray,
@@ -23,9 +15,7 @@ from xarray.namedarray.core import (
 )
 
 if TYPE_CHECKING:
-    from typing import Literal, Optional, Tuple
-
-from xarray.namedarray._array_api._utils import _get_data_namespace
+    from typing import Literal
 
 
 def argmax(

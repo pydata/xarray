@@ -5,18 +5,11 @@ from typing import TYPE_CHECKING, Any
 
 from xarray.namedarray._typing import (
     Default,
-    _arrayfunction_or_api,
-    _ArrayLike,
-    _default,
     _arrayapi,
-    _Device,
+    _default,
     _DimsLike,
-    _DType,
-    _Dims,
-    _Shape,
-    _ShapeType,
-    duckarray,
     _dtype,
+    _Shape,
 )
 
 if TYPE_CHECKING:

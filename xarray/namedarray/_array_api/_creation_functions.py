@@ -10,7 +10,6 @@ from xarray.namedarray._array_api._utils import (
     _infer_dims,
 )
 from xarray.namedarray._typing import (
-    Default,
     _arrayfunction_or_api,
     _ArrayLike,
     _default,
