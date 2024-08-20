@@ -9298,25 +9298,27 @@ class Dataset(
             if not pad_dims.intersection(xindexes.get_all_dims(k)):
                 indexes[k] = idx
 
-        per_data_var_constant_values = {}
-        if utils.is_dict_like(constant_values):
-            constant_values = dict(constant_values)
-            for k in self.data_vars:
-                if v := constant_values.pop(k, None):
-                    per_data_var_constant_values[k] = v
-
         for name, var in self.variables.items():
             var_pad_width = {k: v for k, v in pad_width.items() if k in var.dims}
             if not var_pad_width:
                 variables[name] = var
             elif name in self.data_vars:
+                if utils.is_dict_like(constant_values):
+                    if name in constant_values.keys():
+                        filtered_constant_values = constant_values[name]
+                    elif not set(var.dims).isdisjoint(constant_values.keys()):
+                        filtered_constant_values = {
+                            k: v for k, v in constant_values.items() if k in var.dims
+                        }
+                    else:
+                        filtered_constant_values = 0
+                else:
+                    filtered_constant_values = constant_values
                 variables[name] = var.pad(
                     pad_width=var_pad_width,
                     mode=mode,
                     stat_length=stat_length,
-                    constant_values=per_data_var_constant_values.get(
-                        name, constant_values
-                    ),
+                    constant_values=filtered_constant_values,
                     end_values=end_values,
                     reflect_type=reflect_type,
                     keep_attrs=keep_attrs,

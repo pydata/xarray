@@ -6746,7 +6746,7 @@ class TestDataset:
         # test if data_vars are paded with correct values
         for data_var_name, data_var in padded.data_vars.items():
             if padded_dim_name in data_var.dims:
-                if isinstance(constant_values, dict):
+                if utils.is_dict_like(constant_values):
                     if (
                         expected := constant_values.get(data_var_name, None)
                     ) is not None:
