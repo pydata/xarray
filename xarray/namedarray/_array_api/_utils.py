@@ -39,7 +39,15 @@ def _get_namespace_dtype(dtype: _dtype | None = None) -> ModuleType:
     if dtype is None:
         return _maybe_default_namespace()
 
-    xp = __import__(dtype.__module__)
+    try:
+        xp = __import__(dtype.__module__)
+    except AttributeError:
+        # TODO: Fix this.
+        #         FAILED array_api_tests/test_searching_functions.py::test_searchsorted - AttributeError: 'numpy.dtypes.Float64DType' object has no attribute '__module__'. Did you mean: '__mul__'?
+        # Falsifying example: test_searchsorted(
+        #     data=data(...),
+        # )
+        return _maybe_default_namespace()
     return xp
 
 
