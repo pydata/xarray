@@ -318,12 +318,11 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         with pytest.raises(pderror, match=r"Out of bounds nanosecond"):
             self.cls(["t"], [data])
 
-    @pytest.mark.xfail(reason="pandas issue 36615")
     @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_timedelta64_valid_range(self):
         data = np.timedelta64("200000", "D")
         pderror = pd.errors.OutOfBoundsTimedelta
-        with pytest.raises(pderror, match=r"Out of bounds nanosecond"):
+        with pytest.raises(pderror, match=r"Cannot convert"):
             self.cls(["t"], [data])
 
     def test_pandas_data(self):
@@ -2301,20 +2300,20 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert blocked.chunks == ((3,), (3, 1))
         assert blocked.data.name != first_dask_name
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_0d_object_array_with_list(self):
         super().test_0d_object_array_with_list()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_array_interface(self):
         # dask array does not have `argsort`
         super().test_array_interface()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_copy_index(self):
         super().test_copy_index()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     @pytest.mark.filterwarnings("ignore:elementwise comparison failed.*:FutureWarning")
     def test_eq_all_dtypes(self):
         super().test_eq_all_dtypes()
@@ -2957,7 +2956,7 @@ class TestNumpyCoercion:
     ids=lambda x: f"{x}",
 )
 def test_datetime_conversion_warning(values, warns) -> None:
-    dims = ["time"] if isinstance(values, (np.ndarray, pd.Index, pd.Series)) else []
+    dims = ["time"] if isinstance(values, np.ndarray | pd.Index | pd.Series) else []
     if warns:
         with pytest.warns(UserWarning, match="non-nanosecond precision datetime"):
             var = Variable(dims, values)
@@ -3032,7 +3031,7 @@ def test_pandas_two_only_datetime_conversion_warnings(
     ids=lambda x: f"{x}",
 )
 def test_timedelta_conversion_warning(values, warns) -> None:
-    dims = ["time"] if isinstance(values, (np.ndarray, pd.Index)) else []
+    dims = ["time"] if isinstance(values, np.ndarray | pd.Index) else []
     if warns:
         with pytest.warns(UserWarning, match="non-nanosecond precision timedelta"):
             var = Variable(dims, values)

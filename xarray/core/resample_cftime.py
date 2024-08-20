@@ -84,7 +84,7 @@ class CFTimeGrouper:
         self.freq = to_offset(freq)
         self.origin = origin
 
-        if isinstance(self.freq, (MonthEnd, QuarterEnd, YearEnd)):
+        if isinstance(self.freq, MonthEnd | QuarterEnd | YearEnd):
             if closed is None:
                 self.closed = "right"
             else:
@@ -272,7 +272,7 @@ def _adjust_bin_edges(
 
     CFTimeIndex([2000-01-31 00:00:00, 2000-02-29 00:00:00], dtype='object')
     """
-    if isinstance(freq, (MonthEnd, QuarterEnd, YearEnd)):
+    if isinstance(freq, MonthEnd | QuarterEnd | YearEnd):
         if closed == "right":
             datetime_bins = datetime_bins + datetime.timedelta(days=1, microseconds=-1)
         if datetime_bins[-2] > index.max():
@@ -485,7 +485,7 @@ def _convert_offset_to_timedelta(
 ) -> datetime.timedelta:
     if isinstance(offset, datetime.timedelta):
         return offset
-    if isinstance(offset, (str, Tick)):
+    if isinstance(offset, str | Tick):
         timedelta_cftime_offset = to_offset(offset)
         if isinstance(timedelta_cftime_offset, Tick):
             return timedelta_cftime_offset.as_timedelta()

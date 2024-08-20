@@ -9,6 +9,7 @@ import sys
 import warnings
 from collections import defaultdict
 from collections.abc import (
+    Callable,
     Collection,
     Hashable,
     Iterable,
@@ -22,7 +23,7 @@ from html import escape
 from numbers import Number
 from operator import methodcaller
 from os import PathLike
-from typing import IO, TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
+from typing import IO, TYPE_CHECKING, Any, Generic, Literal, cast, overload
 
 import numpy as np
 from pandas.api.types import is_extension_array_dtype
@@ -1575,9 +1576,11 @@ class Dataset(
             try:
                 return self._construct_dataarray(key)
             except KeyError as e:
-                raise KeyError(
-                    f"No variable named {key!r}. Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
-                ) from e
+                message = f"No variable named {key!r}. Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
+                # If someone attempts `ds['foo' , 'bar']` instead of `ds[['foo', 'bar']]`
+                if isinstance(key, tuple):
+                    message += f"\nHint: use a list to select multiple variables, for example `ds[{[d for d in key]}]`"
+                raise KeyError(message) from e
 
         if utils.iterable_of_hashable(key):
             return self._copy_listed(key)
@@ -2720,7 +2723,7 @@ class Dataset(
             chunks = {}
         chunks_mapping: Mapping[Any, Any]
         if not isinstance(chunks, Mapping) and chunks is not None:
-            if isinstance(chunks, (tuple, list)):
+            if isinstance(chunks, tuple | list):
                 utils.emit_user_level_warning(
                     "Supplying chunks as dimension-order tuples is deprecated. "
                     "It will raise an error in the future. Instead use a dict with dimensions as keys.",
@@ -2751,7 +2754,7 @@ class Dataset(
                 )
 
             assert variable.ndim == 1
-            chunks: tuple[int, ...] = tuple(
+            chunks = (
                 DataArray(
                     np.ones(variable.shape, dtype=int),
                     dims=(name,),
@@ -2759,9 +2762,13 @@ class Dataset(
                 )
                 .resample({name: resampler})
                 .sum()
-                .data.tolist()
             )
-            return chunks
+            # When bins (binning) or time periods are missing (resampling)
+            # we can end up with NaNs. Drop them.
+            if chunks.dtype.kind == "f":
+                chunks = chunks.dropna(name).astype(int)
+            chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
+            return chunks_tuple
 
         chunks_mapping_ints: Mapping[Any, T_ChunkDim] = {
             name: (
@@ -2808,7 +2815,7 @@ class Dataset(
 
         # all indexers should be int, slice, np.ndarrays, or Variable
         for k, v in indexers.items():
-            if isinstance(v, (int, slice, Variable)):
+            if isinstance(v, int | slice | Variable):
                 yield k, v
             elif isinstance(v, DataArray):
                 yield k, v.variable
@@ -7479,7 +7486,7 @@ class Dataset(
         extension_arrays = []
         for k, v in dataframe.items():
             if not is_extension_array_dtype(v) or isinstance(
-                v.array, (pd.arrays.DatetimeArray, pd.arrays.TimedeltaArray)
+                v.array, pd.arrays.DatetimeArray | pd.arrays.TimedeltaArray
             ):
                 arrays.append((k, np.asarray(v)))
             else:
@@ -7764,7 +7771,7 @@ class Dataset(
         if isinstance(other, GroupBy):
             return NotImplemented
         align_type = OPTIONS["arithmetic_join"] if join is None else join
-        if isinstance(other, (DataArray, Dataset)):
+        if isinstance(other, DataArray | Dataset):
             self, other = align(self, other, join=align_type, copy=False)
         g = f if not reflexive else lambda x, y: f(y, x)
         ds = self._calculate_binary_op(g, other, join=align_type)
@@ -7784,7 +7791,7 @@ class Dataset(
             )
         # we don't actually modify arrays in-place with in-place Dataset
         # arithmetic -- this lets us automatically align things
-        if isinstance(other, (DataArray, Dataset)):
+        if isinstance(other, DataArray | Dataset):
             other = other.reindex_like(self, copy=False)
         g = ops.inplace_to_noninplace_op(f)
         ds = self._calculate_binary_op(g, other, inplace=True)
@@ -8563,7 +8570,7 @@ class Dataset(
             a        float64 8B 20.0
             b        float64 8B 4.0
         """
-        if not isinstance(coord, (list, tuple)):
+        if not isinstance(coord, list | tuple):
             coord = (coord,)
         result = self
         for c in coord:
@@ -8692,7 +8699,7 @@ class Dataset(
             a        (x) float64 32B 0.0 30.0 8.0 20.0
             b        (x) float64 32B 0.0 9.0 3.0 4.0
         """
-        if not isinstance(coord, (list, tuple)):
+        if not isinstance(coord, list | tuple):
             coord = (coord,)
         result = self
         for c in coord:
