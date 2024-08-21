@@ -75,4 +75,6 @@ def searchsorted(
 def where(condition: NamedArray, x1: NamedArray, x2: NamedArray, /) -> NamedArray:
     xp = _get_data_namespace(x1)
     _data = xp.where(condition._data, x1._data, x2._data)
-    return x1._new(x1.dims, _data)
+    # TODO: Wrong, _dims should be either of the arguments. How to choose?
+    _dims = _infer_dims(_data.shape)
+    return NamedArray(_dims, _data)
