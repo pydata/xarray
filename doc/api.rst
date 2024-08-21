@@ -953,6 +953,7 @@ DataTree methods
    :toctree: generated/
 
    open_datatree
+   open_groups
    map_over_subtree
    DataTree.to_dict
    DataTree.to_netcdf
