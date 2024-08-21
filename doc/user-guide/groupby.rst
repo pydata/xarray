@@ -317,4 +317,4 @@ Different groupers can be combined to construct sophisticated GroupBy operations
 
     from xarray.groupers import BinGrouper, TimeResampler
 
-    ds.groupby(lat=BinGrouper(bins=5), time=TimeResampler(time="ME")).sum()
+    ds.groupby(lat=BinGrouper(bins=5), time=TimeResampler(freq="ME")).sum()
