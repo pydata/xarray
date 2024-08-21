@@ -2698,6 +2698,42 @@ def test_multiple_groupers(use_flox) -> None:
     # TODO: is order of dims correct?
     assert_identical(actual, expected.transpose("z", "x", "xy"))
 
+
+@pytest.mark.parametrize("use_flox", [True, False])
+def test_multiple_groupers_mixed(use_flox) -> None:
+    # This groupby has missing groups
+    ds = xr.Dataset(
+        {"foo": (("x", "y"), np.arange(12).reshape((4, 3)))},
+        coords={"x": [10, 20, 30, 40], "letters": ("x", list("abba"))},
+    )
+    gb = ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper())
+    expected_data = np.array(
+        [
+            [[0.0, np.nan], [np.nan, 3.0]],
+            [[1.0, np.nan], [np.nan, 4.0]],
+            [[2.0, np.nan], [np.nan, 5.0]],
+        ]
+    )
+    expected = xr.Dataset(
+        {"foo": (("y", "x_bins", "letters"), expected_data)},
+        coords={
+            "x_bins": (
+                "x_bins",
+                np.array(
+                    [
+                        pd.Interval(5, 15, closed="right"),
+                        pd.Interval(15, 25, closed="right"),
+                    ],
+                    dtype=object,
+                ),
+            ),
+            "letters": ("letters", np.array(["a", "b"], dtype=object)),
+        },
+    )
+    with xr.set_options(use_flox=use_flox):
+        actual = gb.sum()
+    assert_identical(actual, expected)
+
     # assert_identical(
     #     b.groupby(['x', 'y']).apply(lambda x: x - x.mean()),
     #     b - b.mean("z"),

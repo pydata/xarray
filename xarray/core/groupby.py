@@ -420,6 +420,10 @@ class ComposedGrouper:
             (grouper.unique_coord.data for grouper in groupers),
             names=tuple(grouper.name for grouper in groupers),
         )
+        # Constructing an index from the product is wrong when there are missing groups
+        # (e.g. binning, resampling). Account for that now.
+        midx = midx[np.sort(pd.unique(_flatcodes[~mask]))]
+
         full_index = pd.MultiIndex.from_product(
             (grouper.full_index.values for grouper in groupers),
             names=tuple(grouper.name for grouper in groupers),
@@ -429,7 +433,6 @@ class ComposedGrouper:
         coords = Coordinates.from_pandas_multiindex(midx, dim=dim_name)
         for grouper in groupers:
             coords.variables[grouper.name].attrs = grouper.group.attrs
-
         return EncodedGroups(
             codes=first_codes.copy(data=_flatcodes),
             full_index=full_index,
@@ -625,7 +628,6 @@ class GroupBy(Generic[T_Xarray]):
                 yield self._obj.isel({self._group_dim: indices})
 
     def _infer_concat_args(self, applied_example):
-
         if self._group_dim in applied_example.dims:
             coord = self.group1d
             positions = self.encoded.group_indices
@@ -1216,7 +1218,8 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         """
         var = self._obj.variable
         for idx, indices in enumerate(self.encoded.group_indices):
-            yield var[{self._group_dim: indices}]
+            if indices:
+                yield var[{self._group_dim: indices}]
 
     def _concat_shortcut(self, applied, dim, positions=None):
         # nb. don't worry too much about maintaining this method -- it does
