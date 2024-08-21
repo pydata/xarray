@@ -30,9 +30,28 @@ def cumulative_sum(
 ) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dim, axis)
-    _data = xp.cumulative_sum(
-        x._data, axis=_axis, dtype=dtype, include_initial=include_initial
-    )
+    try:
+        _data = xp.cumulative_sum(
+            x._data, axis=_axis, dtype=dtype, include_initial=include_initial
+        )
+    except AttributeError:
+        # Use np.cumsum until new name is introduced:
+        # np.cumsum does not support include_initial
+        if include_initial:
+            if axis < 0:
+                axis += x.ndim
+            d = xp.concat(
+                [
+                    xp.zeros(
+                        x.shape[:axis] + (1,) + x.shape[axis + 1 :], dtype=x.dtype
+                    ),
+                    x._data,
+                ],
+                axis=axis,
+            )
+        else:
+            d = x._data
+        _data = xp.cumsum(d, axis=axis, dtype=dtype)
     return x._new(dims=x.dims, data=_data)
 
 
