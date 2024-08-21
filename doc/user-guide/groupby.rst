@@ -182,19 +182,6 @@ This last line is roughly equivalent to the following::
         results.append(group - alt.sel(letters=label))
     xr.concat(results, dim='x')
 
-Iterating and Squeezing
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Previously, Xarray defaulted to squeezing out dimensions of size one when iterating over
-a GroupBy object. This behaviour is being removed.
-You can always squeeze explicitly later with the Dataset or DataArray
-:py:meth:`DataArray.squeeze` methods.
-
-.. ipython:: python
-
-    next(iter(arr.groupby("x", squeeze=False)))
-
-
 .. _groupby.multidim:
 
 Multidimensional Grouping
@@ -238,6 +225,8 @@ applying your function, and then unstacking the result:
     stacked = da.stack(gridcell=["ny", "nx"])
     stacked.groupby("gridcell").sum(...).unstack("gridcell")
 
+Alternatively, you can groupby both `lat` and `lon` at the :ref:`same time <groupby.multiple>`.
+
 .. _groupby.groupers:
 
 Grouper Objects
@@ -278,13 +267,6 @@ is identical to
 
     ds.groupby(x=UniqueGrouper())
 
-We can use this to group by multiple dimensions:
-
-.. ipython:: python
-
-    from xarray.groupers import UniqueGrouper
-
-    da.groupby(lat=UniqueGrouper(), lon=UniqueGrouper()).sum()
 
 Similarly,
 
@@ -313,3 +295,26 @@ is identical to
     from xarray.groupers import TimeResampler
 
     ds.resample(time=TimeResampler("ME"))
+
+
+.. _groupby.multiple:
+
+Grouping by multiple variables
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use grouper objects to group by multiple dimensions:
+
+.. ipython:: python
+
+    from xarray.groupers import UniqueGrouper
+
+    da.groupby(lat=UniqueGrouper(), lon=UniqueGrouper()).sum()
+
+
+Different groupers can be combined to construct sophisticated GroupBy operations.
+
+.. ipython:: python
+
+    from xarray.groupers import BinGrouper, TimeResampler
+
+    ds.groupby(lat=BinGrouper(bins=5), time=TimeResampler(time="ME")).sum()
