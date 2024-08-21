@@ -24,6 +24,8 @@ New Features
 ~~~~~~~~~~~~
 - Make chunk manager an option in ``set_options`` (:pull:`9362`).
   By `Tom White <https://github.com/tomwhite>`_.
+- Allow data variable specific ``constant_values`` in the dataset ``pad`` function (:pull:`9353``).
+  By `Tiago Sanona <https://github.com/tsanona>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -47,6 +49,9 @@ Bug fixes
   date "0001-01-01". (:issue:`9108`, :pull:`9116`) By `Spencer Clark
   <https://github.com/spencerkclark>`_ and `Deepak Cherian
   <https://github.com/dcherian>`_.
+- Fix issue with passing parameters to ZarrStore.open_store when opening
+  datatree in zarr format (:issue:`9376`, :pull:`9377`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_
 
 Documentation
 ~~~~~~~~~~~~~

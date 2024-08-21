@@ -6704,18 +6704,80 @@ class TestDataset:
             ds.var1.polyfit("dim2", 10, full=True)
             assert len(ws) == 1
 
-    def test_pad(self) -> None:
+    @staticmethod
+    def _test_data_var_interior(
+        original_data_var, padded_data_var, padded_dim_name, expected_pad_values
+    ):
+        np.testing.assert_equal(
+            np.unique(padded_data_var.isel({padded_dim_name: [0, -1]})),
+            expected_pad_values,
+        )
+        np.testing.assert_array_equal(
+            padded_data_var.isel({padded_dim_name: slice(1, -1)}), original_data_var
+        )
+
+    @pytest.mark.parametrize("padded_dim_name", ["dim1", "dim2", "dim3", "time"])
+    @pytest.mark.parametrize(
+        ["constant_values"],
+        [
+            pytest.param(None, id="default"),
+            pytest.param(42, id="scalar"),
+            pytest.param((42, 43), id="tuple"),
+            pytest.param({"dim1": 42, "dim2": 43}, id="per dim scalar"),
+            pytest.param({"dim1": (42, 43), "dim2": (43, 44)}, id="per dim tuple"),
+            pytest.param({"var1": 42, "var2": (42, 43)}, id="per var"),
+            pytest.param({"var1": 42, "dim1": (42, 43)}, id="mixed"),
+        ],
+    )
+    def test_pad(self, padded_dim_name, constant_values) -> None:
         ds = create_test_data(seed=1)
-        padded = ds.pad(dim2=(1, 1), constant_values=42)
+        padded = ds.pad({padded_dim_name: (1, 1)}, constant_values=constant_values)
 
-        assert padded["dim2"].shape == (11,)
-        assert padded["var1"].shape == (8, 11)
-        assert padded["var2"].shape == (8, 11)
-        assert padded["var3"].shape == (10, 8)
-        assert dict(padded.sizes) == {"dim1": 8, "dim2": 11, "dim3": 10, "time": 20}
+        # test padded dim values and size
+        for ds_dim_name, ds_dim in ds.sizes.items():
+            if ds_dim_name == padded_dim_name:
+                np.testing.assert_equal(padded.sizes[ds_dim_name], ds_dim + 2)
+                if ds_dim_name in padded.coords:
+                    assert padded[ds_dim_name][[0, -1]].isnull().all()
+            else:
+                np.testing.assert_equal(padded.sizes[ds_dim_name], ds_dim)
 
-        np.testing.assert_equal(padded["var1"].isel(dim2=[0, -1]).data, 42)
-        np.testing.assert_equal(padded["dim2"][[0, -1]].data, np.nan)
+        # check if coord "numbers" with dimention dim3 is paded correctly
+        if padded_dim_name == "dim3":
+            assert padded["numbers"][[0, -1]].isnull().all()
+            # twarning: passes but dtype changes from int to float
+            np.testing.assert_array_equal(padded["numbers"][1:-1], ds["numbers"])
+
+        # test if data_vars are paded with correct values
+        for data_var_name, data_var in padded.data_vars.items():
+            if padded_dim_name in data_var.dims:
+                if utils.is_dict_like(constant_values):
+                    if (
+                        expected := constant_values.get(data_var_name, None)
+                    ) is not None:
+                        self._test_data_var_interior(
+                            ds[data_var_name], data_var, padded_dim_name, expected
+                        )
+                    elif (
+                        expected := constant_values.get(padded_dim_name, None)
+                    ) is not None:
+                        self._test_data_var_interior(
+                            ds[data_var_name], data_var, padded_dim_name, expected
+                        )
+                    else:
+                        self._test_data_var_interior(
+                            ds[data_var_name], data_var, padded_dim_name, 0
+                        )
+                elif constant_values:
+                    self._test_data_var_interior(
+                        ds[data_var_name], data_var, padded_dim_name, constant_values
+                    )
+                else:
+                    self._test_data_var_interior(
+                        ds[data_var_name], data_var, padded_dim_name, np.nan
+                    )
+            else:
+                assert_array_equal(data_var, ds[data_var_name])
 
     @pytest.mark.parametrize(
         ["keep_attrs", "attrs", "expected"],
