@@ -352,7 +352,7 @@ class Coordinates(AbstractCoordinates):
         return obj
 
     @classmethod
-    def from_pandas_multiindex(cls, midx: pd.MultiIndex, dim: str) -> Self:
+    def from_pandas_multiindex(cls, midx: pd.MultiIndex, dim: Hashable) -> Self:
         """Wrap a pandas multi-index as Xarray coordinates (dimension + levels).
 
         The returned coordinates can be directly assigned to a

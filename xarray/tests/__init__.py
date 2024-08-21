@@ -134,6 +134,7 @@ has_cartopy, requires_cartopy = _importorskip("cartopy")
 has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
+has_pandas_ge_2_1, __ = _importorskip("pandas", "2.1")
 has_pandas_ge_2_2, __ = _importorskip("pandas", "2.2")
 has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0.dev0")
 
