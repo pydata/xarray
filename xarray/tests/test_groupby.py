@@ -118,6 +118,9 @@ def test_multi_index_groupby_sum() -> None:
     actual = ds.stack(space=["x", "y"]).groupby("space").sum("z").unstack("space")
     assert_equal(expected, actual)
 
+    actual = ds.stack(space=["x", "y"]).groupby("space").sum(...).unstack("space")
+    assert_equal(expected, actual)
+
 
 def test_groupby_da_datetime() -> None:
     # test groupby with a DataArray of dtype datetime for GH1132
@@ -1739,7 +1742,7 @@ class TestDataArrayGroupBy:
         rev = array_rev.groupby("idx", squeeze=False)
 
         for gb in [fwd, rev]:
-            assert all([isinstance(elem, slice) for elem in gb._group_indices])
+            assert all([isinstance(elem, slice) for elem in gb.encoded.group_indices])
 
         with xr.set_options(use_flox=use_flox):
             assert_identical(fwd.sum(), array)
@@ -2573,7 +2576,8 @@ def test_custom_grouper() -> None:
             obj.groupby()
 
 
-def test_weather_data_resample():
+@pytest.mark.parametrize("use_flox", [True, False])
+def test_weather_data_resample(use_flox):
     # from the docs
     times = pd.date_range("2000-01-01", "2001-12-31", name="time")
     annual_cycle = np.sin(2 * np.pi * (times.dayofyear.values / 365.25 - 0.28))
@@ -2587,8 +2591,12 @@ def test_weather_data_resample():
             "tmin": (("time", "location"), tmin_values),
             "tmax": (("time", "location"), tmax_values),
         },
-        {"time": times, "location": ["IA", "IN", "IL"]},
+        {
+            "time": ("time", times, {"time_key": "time_values"}),
+            "location": ("location", ["IA", "IN", "IL"], {"loc_key": "loc_value"}),
+        },
     )
 
-    actual = ds.resample(time="1MS").mean()
+    with xr.set_options(use_flox=use_flox):
+        actual = ds.resample(time="1MS").mean()
     assert "location" in actual._indexes
