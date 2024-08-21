@@ -744,7 +744,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     # Comparison Operators
     def __eq__(self, other: int | float | bool | NamedArray, /) -> NamedArray:
-        from xarray.namedarray._array_api import equal, asarray
+        from xarray.namedarray._array_api import asarray, equal
 
         return equal(self, asarray(other))
 
