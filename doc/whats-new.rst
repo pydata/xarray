@@ -24,6 +24,8 @@ New Features
 ~~~~~~~~~~~~
 - Make chunk manager an option in ``set_options`` (:pull:`9362`).
   By `Tom White <https://github.com/tomwhite>`_.
+- Allow data variable specific ``constant_values`` in the dataset ``pad`` function (:pull:`9353``).
+  By `Tiago Sanona <https://github.com/tsanona>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
