@@ -9313,7 +9313,7 @@ class Dataset(
                             k: v for k, v in constant_values.items() if k in var.dims
                         }
                     else:
-                        filtered_constant_values = 0
+                        filtered_constant_values = 0  # TODO: https://github.com/pydata/xarray/pull/9353#discussion_r1724018352
                 else:
                     filtered_constant_values = constant_values
                 variables[name] = var.pad(
