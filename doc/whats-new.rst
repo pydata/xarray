@@ -50,8 +50,6 @@ Bug fixes
 - Fix issue with passing parameters to ZarrStore.open_store when opening
   datatree in zarr format (:issue:`9376`, :pull:`9377`).
   By `Alfonso Ladino <https://github.com/aladinor>`_
-- ``numpy>=2`` compatibility in the ``pydap`` backend (:pull:`9391`).
-  By `Miguel Jimenez <https://github.com/Mikejmnez>`_ .
 
 Documentation
 ~~~~~~~~~~~~~
@@ -59,6 +57,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Re-enable testing ``pydap`` backend with ``numpy>=2`` (:pull:`9391`).
+  By `Miguel Jimenez <https://github.com/Mikejmnez>`_ .
 
 
 
