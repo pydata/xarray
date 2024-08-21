@@ -81,10 +81,7 @@ You can index out a particular group:
 
     ds.groupby("letters")["b"]
 
-Just like in pandas, creating a ``GroupBy`` object is cheap: it does not actually
-split the data until you access particular values.
-
-To group by multiple variables, see the section on `Grouper Objects`_
+To group by multiple variables, see :ref:`this section <groupby.multiple>`.
 
 Binning
 ~~~~~~~
