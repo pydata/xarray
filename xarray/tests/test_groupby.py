@@ -806,6 +806,7 @@ def test_groupby_dataset_errors() -> None:
         data.groupby(data.coords["dim1"].to_index())  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize("use_flox", [True, False])
 @pytest.mark.parametrize(
     "by_func",
     [
@@ -813,7 +814,10 @@ def test_groupby_dataset_errors() -> None:
         pytest.param(lambda x: {x: UniqueGrouper()}, id="group-by-unique-grouper"),
     ],
 )
-def test_groupby_dataset_reduce_ellipsis(by_func) -> None:
+@pytest.mark.parametrize("letters_as_coord", [True, False])
+def test_groupby_dataset_reduce_ellipsis(
+    by_func, use_flox: bool, letters_as_coord: bool
+) -> None:
     data = Dataset(
         {
             "xy": (["x", "y"], np.random.randn(3, 4)),
@@ -823,13 +827,18 @@ def test_groupby_dataset_reduce_ellipsis(by_func) -> None:
         }
     )
 
+    if letters_as_coord:
+        data = data.set_coords("letters")
+
     expected = data.mean("y")
     expected["yonly"] = expected["yonly"].variable.set_dims({"x": 3})
     gb = data.groupby(by_func("x"))
-    actual = gb.mean(...)
+    with xr.set_options(use_flox=use_flox):
+        actual = gb.mean(...)
     assert_allclose(expected, actual)
 
-    actual = gb.mean("y")
+    with xr.set_options(use_flox=use_flox):
+        actual = gb.mean("y")
     assert_allclose(expected, actual)
 
     letters = data["letters"]
@@ -841,7 +850,8 @@ def test_groupby_dataset_reduce_ellipsis(by_func) -> None:
         }
     )
     gb = data.groupby(by_func("letters"))
-    actual = gb.mean(...)
+    with xr.set_options(use_flox=use_flox):
+        actual = gb.mean(...)
     assert_allclose(expected, actual)
 
 
@@ -2561,3 +2571,24 @@ def test_custom_grouper() -> None:
             obj.groupby("time.year", time=YearGrouper())
         with pytest.raises(ValueError):
             obj.groupby()
+
+
+def test_weather_data_resample():
+    # from the docs
+    times = pd.date_range("2000-01-01", "2001-12-31", name="time")
+    annual_cycle = np.sin(2 * np.pi * (times.dayofyear.values / 365.25 - 0.28))
+
+    base = 10 + 15 * annual_cycle.reshape(-1, 1)
+    tmin_values = base + 3 * np.random.randn(annual_cycle.size, 3)
+    tmax_values = base + 10 + 3 * np.random.randn(annual_cycle.size, 3)
+
+    ds = xr.Dataset(
+        {
+            "tmin": (("time", "location"), tmin_values),
+            "tmax": (("time", "location"), tmax_values),
+        },
+        {"time": times, "location": ["IA", "IN", "IL"]},
+    )
+
+    actual = ds.resample(time="1MS").mean()
+    assert "location" in actual._indexes
