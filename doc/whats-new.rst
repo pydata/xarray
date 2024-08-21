@@ -28,6 +28,8 @@ New Features
   This is quite new, so please check your results and report bugs.
   (:issue:`1056`, :issue:`9332`, :issue:`324`, :pull:`9372`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Allow data variable specific ``constant_values`` in the dataset ``pad`` function (:pull:`9353``).
+  By `Tiago Sanona <https://github.com/tsanona>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
