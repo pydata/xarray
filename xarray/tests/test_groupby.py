@@ -22,6 +22,7 @@ from xarray.tests import (
     create_test_data,
     has_cftime,
     has_flox,
+    has_pandas_ge_2_1,
     requires_cftime,
     requires_dask,
     requires_flox,
@@ -117,6 +118,10 @@ def test_multi_index_groupby_sum() -> None:
     expected = ds.sum("z")
     actual = ds.stack(space=["x", "y"]).groupby("space").sum("z").unstack("space")
     assert_equal(expected, actual)
+
+    if not has_pandas_ge_2_1:
+        # the next line triggers a mysterious multiindex error on pandas 2.0
+        return
 
     actual = ds.stack(space=["x", "y"]).groupby("space").sum(...).unstack("space")
     assert_equal(expected, actual)
