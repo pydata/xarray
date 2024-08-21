@@ -126,6 +126,15 @@ def test_multi_index_groupby_sum() -> None:
     actual = ds.stack(space=["x", "y"]).groupby("space").sum("z").unstack("space")
     assert_equal(expected, actual)
 
+    with pytest.raises(NotImplementedError):
+        actual = (
+            ds.stack(space=["x", "y"])
+            .groupby(space=UniqueGrouper(), z=UniqueGrouper())
+            .sum("z")
+            .unstack("space")
+        )
+        assert_equal(expected, ds)
+
     if not has_pandas_ge_2_1:
         # the next line triggers a mysterious multiindex error on pandas 2.0
         return

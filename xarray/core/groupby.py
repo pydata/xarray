@@ -525,6 +525,14 @@ class GroupBy(Generic[T_Xarray]):
             (grouper,) = groupers
             self.encoded = grouper.encoded
         else:
+            if any(
+                isinstance(obj._indexes.get(grouper.name, None), PandasMultiIndex)
+                for grouper in groupers
+            ):
+                raise NotImplementedError(
+                    "Grouping by multiple variables, one of which "
+                    "wraps a Pandas MultiIndex, is not supported yet."
+                )
             self.encoded = ComposedGrouper(groupers).factorize()
 
         # specification for the groupby operation
