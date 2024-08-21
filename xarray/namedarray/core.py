@@ -668,10 +668,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         return positive(self)
 
-    def __add__(self, other, /):
-        from xarray.namedarray._array_api import add
+    def __add__(self, other: int | float | NamedArray, /) -> NamedArray:
+        from xarray.namedarray._array_api import add, asarray
 
-        return add(self, other)
+        return add(self, asarray(other))
 
     def __sub__(self, other, /):
         from xarray.namedarray._array_api import subtract
@@ -743,11 +743,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return bitwise_right_shift(self)
 
     # Comparison Operators
+    def __eq__(self, other: int | float | bool | NamedArray, /) -> NamedArray:
+        from xarray.namedarray._array_api import equal, asarray
 
-    def __eq__(self, other, /):
-        from xarray.namedarray._array_api import equal
-
-        return equal(self, other)
+        return equal(self, asarray(other))
 
     def __ge__(self, other, /):
         from xarray.namedarray._array_api import greater_equal
