@@ -315,6 +315,6 @@ Different groupers can be combined to construct sophisticated GroupBy operations
 
 .. ipython:: python
 
-    from xarray.groupers import BinGrouper, TimeResampler
+    from xarray.groupers import BinGrouper
 
-    ds.groupby(lat=BinGrouper(bins=5), time=TimeResampler(freq="ME")).sum()
+    ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper()).sum()
