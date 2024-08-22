@@ -413,8 +413,328 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         except Exception as exc:
             raise TypeError("len() of unsized object") from exc
 
-    # Array API:
-    # Attributes:
+    # < Array api >
+
+    def __abs__(self, /) -> Self:
+        from xarray.namedarray._array_api import abs
+
+        return abs(self)
+
+    def __add__(self, other: int | float | NamedArray, /) -> NamedArray:
+        from xarray.namedarray._array_api import add, asarray
+
+        return add(self, asarray(other))
+
+    def __and__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_and
+
+        return bitwise_and(self, asarray(other))
+
+    # def __array_namespace__(self, /, *, api_version=None):
+    #     if api_version is not None and api_version not in (
+    #         "2021.12",
+    #         "2022.12",
+    #         "2023.12",
+    #     ):
+    #         raise ValueError(f"Unrecognized array API version: {api_version!r}")
+    #     import xarray.namedarray._array_api as array_api
+
+    #     return array_api
+
+    def __bool__(self, /) -> bool:
+        return self._data.__bool__()
+
+    def __complex__(self, /) -> complex:
+        return self._data.__complex__()
+
+    def __dlpack__(
+        self,
+        /,
+        *,
+        stream: int | Any | None = None,
+        max_version: tuple[int, int] | None = None,
+        dl_device: tuple[IntEnum, int] | None = None,
+        copy: bool | None = None,
+    ) -> Any:
+        return self._data.__dlpack__(
+            stream=stream, max_version=max_version, dl_device=dl_device, copy=copy
+        )
+
+    def __dlpack_device__(self, /) -> tuple[IntEnum, int]:
+        return self._data.__dlpack_device__()
+
+    def __eq__(self, other: int | float | bool | NamedArray, /) -> NamedArray:
+        from xarray.namedarray._array_api import asarray, equal
+
+        return equal(self, asarray(other))
+
+    def __float__(self, /) -> float:
+        return self._data.__float__()
+
+    def __floordiv__(self, other, /):
+        from xarray.namedarray._array_api import floor_divide
+
+        return floor_divide(self, asarray(other))
+
+    def __ge__(self, other, /):
+        from xarray.namedarray._array_api import greater_equal
+
+        return greater_equal(self, asarray(other))
+
+    def __getitem__(self, key: _IndexKeyLike | NamedArray):
+        if isinstance(key, int | slice | tuple):
+            _data = self._data[key]
+            return self._new((), _data)
+        elif isinstance(key, NamedArray):
+            _key = self._data  # TODO: Transpose, unordered dims shouldn't matter.
+            _data = self._data[_key]
+            return self._new(key._dims, _data)
+        else:
+            raise NotImplementedError("{k=} is not supported")
+
+    def __gt__(self, other, /):
+        from xarray.namedarray._array_api import greater
+
+        return greater(self, asarray(other))
+
+    def __index__(self, /) -> int:
+        return self._data.__index__()
+
+    def __int__(self, /) -> int:
+        return self._data.__int__()
+
+    def __invert__(self, /):
+        from xarray.namedarray._array_api import bitwise_invert
+
+        return bitwise_invert(self)
+
+    def __iter__(self: NamedArray, /):
+        from xarray.namedarray._array_api import asarray
+
+        # TODO: smarter way to retain dims, xarray?
+        return (asarray(i) for i in self._data)
+
+    def __le__(self, other, /):
+        from xarray.namedarray._array_api import less_equal
+
+        return less_equal(self, asarray(other))
+
+    def __lshift__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_left_shift
+
+        return bitwise_left_shift(self)
+
+    def __lt__(self, other, /):
+        from xarray.namedarray._array_api import less
+
+        return less(self, asarray(other))
+
+    def __matmul__(self, other, /):
+        from xarray.namedarray._array_api import matmul
+
+        return matmul(self, asarray(other))
+
+    def __mod__(self, other, /):
+        from xarray.namedarray._array_api import remainder
+
+        return remainder(self, asarray(other))
+
+    def __mul__(self, other, /):
+        from xarray.namedarray._array_api import multiply
+
+        return multiply(self, asarray(other))
+
+    def __ne__(self, other, /):
+        from xarray.namedarray._array_api import not_equal
+
+        return not_equal(self, asarray(other))
+
+    def __neg__(self, /):
+        from xarray.namedarray._array_api import negative
+
+        return negative(self)
+
+    def __or__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_or
+
+        return bitwise_or(self)
+
+    def __pos__(self, /):
+        from xarray.namedarray._array_api import positive
+
+        return positive(self)
+
+    def __pow__(self, other, /):
+        from xarray.namedarray._array_api import pow
+
+        return pow(self, asarray(other))
+
+    def __rshift__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_right_shift
+
+        return bitwise_right_shift(self)
+
+    def __setitem__(
+        self,
+        key: _IndexKeyLike,
+        value: int | float | bool | NamedArray,
+        /,
+    ) -> None:
+        from xarray.namedarray._array_api import asarray
+
+        if isinstance(key, NamedArray):
+            key = key._data
+        self._array.__setitem__(key, asarray(value)._data)
+
+    def __sub__(self, other, /):
+        from xarray.namedarray._array_api import subtract
+
+        return subtract(self, asarray(other))
+
+    def __truediv__(self, other, /):
+        from xarray.namedarray._array_api import divide
+
+        return divide(self, asarray(other))
+
+    def __xor__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_xor
+
+        return bitwise_xor(self)
+
+    def __iadd__(self, other, /):
+        self._data.__iadd__(other._data)
+        return self
+
+    def __radd__(self, other, /):
+        from xarray.namedarray._array_api import add
+
+        return add(asarray(other), self)
+
+    def __iand__(self, other, /):
+        self._data.__iand__(other._data)
+        return self
+
+    def __rand__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_and
+
+        return bitwise_and(asarray(other), self)
+
+    def __ifloordiv__(self, other, /):
+        self._data.__ifloordiv__(other._data)
+        return self
+
+    def __rfloordiv__(self, other, /):
+        from xarray.namedarray._array_api import floor_divide
+
+        return floor_divide(asarray(other), self)
+
+    def __ilshift__(self, other, /):
+        self._data.__ilshift__(other._data)
+        return self
+
+    def __rlshift__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_left_shift
+
+        return bitwise_left_shift(asarray(other), self)
+
+    def __imatmul__(self, other, /):
+        self._data.__imatmul__(other._data)
+        return self
+
+    def __rmatmul__(self, other, /):
+        from xarray.namedarray._array_api import matmul
+
+        return matmul(asarray(other), self)
+
+    def __imod__(self, other, /):
+        self._data.__imod__(other._data)
+        return self
+
+    def __rmod__(self, other, /):
+        from xarray.namedarray._array_api import remainder
+
+        return remainder(asarray(other), self)
+
+    def __imul__(self, other, /):
+        self._data.__imul__(other._data)
+        return self
+
+    def __rmul__(self, other, /):
+        from xarray.namedarray._array_api import multiply
+
+        return multiply(asarray(other), self)
+
+    def __ior__(self, other, /):
+        self._data.__ior__(other._data)
+        return self
+
+    def __ror__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_or
+
+        return bitwise_or(asarray(other), self)
+
+    def __ipow__(self, other, /):
+        self._data.__ipow__(other._data)
+        return self
+
+    def __rpow__(self, other, /):
+        from xarray.namedarray._array_api import pow
+
+        return pow(asarray(other), self)
+
+    def __irshift__(self, other, /):
+        self._data.__irshift__(other._data)
+        return self
+
+    def __rrshift__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_right_shift
+
+        return bitwise_right_shift(asarray(other), self)
+
+    def __isub__(self, other, /):
+        self._data.__isub__(other._data)
+        return self
+
+    def __rsub__(self, other, /):
+        from xarray.namedarray._array_api import subtract
+
+        return subtract(asarray(other), self)
+
+    def __itruediv__(self, other, /):
+        self._data.__itruediv__(asarray(other)._data)
+        return self
+
+    def __rtruediv__(self, other, /):
+        from xarray.namedarray._array_api import divide
+
+        return divide(asarray(other), self)
+
+    def __ixor__(self, other, /):
+        self._data.__ixor__(other._data)
+        return self
+
+    def __rxor__(self, other, /):
+        from xarray.namedarray._array_api import bitwise_xor
+
+        return bitwise_xor(asarray(other), self)
+
+    def to_device(self, device: _Device, /, stream: None = None) -> Self:
+        if isinstance(self._data, _arrayapi):
+            return self._replace(data=self._data.to_device(device, stream=stream))
+        else:
+            raise NotImplementedError("Only array api are valid.")
+
+    @property
+    def dtype(self) -> _DType_co:
+        """
+        Data-type of the array’s elements.
+
+        See Also
+        --------
+        ndarray.dtype
+        numpy.dtype
+        """
+        return self._data.dtype
 
     @property
     def device(self) -> _Device:
@@ -429,18 +749,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return self._data.device
         else:
             raise NotImplementedError("self._data missing device")
-
-    @property
-    def dtype(self) -> _DType_co:
-        """
-        Data-type of the array’s elements.
-
-        See Also
-        --------
-        ndarray.dtype
-        numpy.dtype
-        """
-        return self._data.dtype
 
     @property
     def mT(self):
@@ -486,12 +794,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """
         return math.prod(self.shape)
 
-    def to_device(self, device: _Device, /, stream: None = None) -> Self:
-        if isinstance(self._data, _arrayapi):
-            return self._replace(data=self._data.to_device(device, stream=stream))
-        else:
-            raise NotImplementedError("Only array api are valid.")
-
     @property
     def T(self) -> NamedArray[Any, _DType_co]:
         """Return a new object with transposed dimensions."""
@@ -502,257 +804,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         return self.permute_dims()
 
-    # methods
-    def __abs__(self, /):
-        from xarray.namedarray._array_api import abs
-
-        return abs(self)
-
-    # def __array_namespace__(self, /, *, api_version=None):
-    #     if api_version is not None and api_version not in (
-    #         "2021.12",
-    #         "2022.12",
-    #         "2023.12",
-    #     ):
-    #         raise ValueError(f"Unrecognized array API version: {api_version!r}")
-    #     import xarray.namedarray._array_api as array_api
-
-    #     return array_api
-
-    def __bool__(self, /) -> bool:
-        return self._data.__bool__()
-
-    def __complex__(self, /) -> complex:
-        return self._data.__complex__()
-
-    def __float__(self, /) -> float:
-        return self._data.__float__()
-
-    def __index__(self, /) -> int:
-        return self._data.__index__()
-
-    def __int__(self, /) -> int:
-        return self._data.__int__()
-
-    # dlpack
-    def __dlpack__(
-        self,
-        /,
-        *,
-        stream: int | Any | None = None,
-        max_version: tuple[int, int] | None = None,
-        dl_device: tuple[IntEnum, int] | None = None,
-        copy: bool | None = None,
-    ) -> Any:
-        return self._data.__dlpack__(
-            stream=stream, max_version=max_version, dl_device=dl_device, copy=copy
-        )
-
-    def __dlpack_device__(self, /) -> tuple[IntEnum, int]:
-        return self._data.__dlpack_device__()
-
-    # Arithmetic Operators
-
-    def __neg__(self, /):
-        from xarray.namedarray._array_api import negative
-
-        return negative(self)
-
-    def __pos__(self, /):
-        from xarray.namedarray._array_api import positive
-
-        return positive(self)
-
-    def __add__(self, other: int | float | NamedArray, /) -> NamedArray:
-        from xarray.namedarray._array_api import add, asarray
-
-        return add(self, asarray(other))
-
-    def __sub__(self, other, /):
-        from xarray.namedarray._array_api import subtract
-
-        return subtract(self, other)
-
-    def __mul__(self, other, /):
-        from xarray.namedarray._array_api import multiply
-
-        return multiply(self, other)
-
-    def __truediv__(self, other, /):
-        from xarray.namedarray._array_api import divide
-
-        return divide(self, other)
-
-    def __floordiv__(self, other, /):
-        from xarray.namedarray._array_api import floor_divide
-
-        return floor_divide(self, other)
-
-    def __mod__(self, other, /):
-        from xarray.namedarray._array_api import remainder
-
-        return remainder(self, other)
-
-    def __pow__(self, other, /):
-        from xarray.namedarray._array_api import pow
-
-        return pow(self, other)
-
-    # Array Operators
-
-    def __matmul__(self, other, /):
-        from xarray.namedarray._array_api import matmul
-
-        return matmul(self, other)
-
-    # Bitwise Operators
-
-    def __invert__(self, /):
-        from xarray.namedarray._array_api import bitwise_invert
-
-        return bitwise_invert(self)
-
-    def __and__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_and
-
-        return bitwise_and(self)
-
-    def __or__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_or
-
-        return bitwise_or(self)
-
-    def __xor__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_xor
-
-        return bitwise_xor(self)
-
-    def __lshift__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_left_shift
-
-        return bitwise_left_shift(self)
-
-    def __rshift__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_right_shift
-
-        return bitwise_right_shift(self)
-
-    # Comparison Operators
-    def __eq__(self, other: int | float | bool | NamedArray, /) -> NamedArray:
-        from xarray.namedarray._array_api import asarray, equal
-
-        return equal(self, asarray(other))
-
-    def __ge__(self, other, /):
-        from xarray.namedarray._array_api import greater_equal
-
-        return greater_equal(self, other)
-
-    def __gt__(self, other, /):
-        from xarray.namedarray._array_api import greater
-
-        return greater(self, other)
-
-    def __le__(self, other, /):
-        from xarray.namedarray._array_api import less_equal
-
-        return less_equal(self, other)
-
-    def __lt__(self, other, /):
-        from xarray.namedarray._array_api import less
-
-        return less(self, other)
-
-    def __ne__(self, other, /):
-        from xarray.namedarray._array_api import not_equal
-
-        return not_equal(self, other)
-
-    # Reflected Operators
-
-    # (Reflected) Arithmetic Operators
-
-    def __radd__(self, other, /):
-        from xarray.namedarray._array_api import add
-
-        return add(other, self)
-
-    def __rsub__(self, other, /):
-        from xarray.namedarray._array_api import subtract
-
-        return subtract(other, self)
-
-    def __rmul__(self, other, /):
-        from xarray.namedarray._array_api import multiply
-
-        return multiply(other, self)
-
-    def __rtruediv__(self, other, /):
-        from xarray.namedarray._array_api import divide
-
-        return divide(other, self)
-
-    def __rfloordiv__(self, other, /):
-        from xarray.namedarray._array_api import floor_divide
-
-        return floor_divide(other, self)
-
-    def __rmod__(self, other, /):
-        from xarray.namedarray._array_api import remainder
-
-        return remainder(other, self)
-
-    def __rpow__(self, other, /):
-        from xarray.namedarray._array_api import pow
-
-        return pow(other, self)
-
-    # (Reflected) Array Operators
-
-    def __rmatmul__(self, other, /):
-        from xarray.namedarray._array_api import matmul
-
-        return matmul(other, self)
-
-    # (Reflected) Bitwise Operators
-
-    def __rand__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_and
-
-        return bitwise_and(other, self)
-
-    def __ror__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_or
-
-        return bitwise_or(other, self)
-
-    def __rxor__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_xor
-
-        return bitwise_xor(other, self)
-
-    def __rlshift__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_left_shift
-
-        return bitwise_left_shift(other, self)
-
-    def __rrshift__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_right_shift
-
-        return bitwise_right_shift(other, self)
-
-    # Indexing
-
-    def __getitem__(self, key: _IndexKeyLike | NamedArray):
-        if isinstance(key, int | slice | tuple):
-            _data = self._data[key]
-            return self._new((), _data)
-        elif isinstance(key, NamedArray):
-            _key = self._data  # TODO: Transpose, unordered dims shouldn't matter.
-            _data = self._data[_key]
-            return self._new(key._dims, _data)
-        else:
-            raise NotImplementedError("{k=} is not supported")
+    # </ Array api >
 
     @property
     def nbytes(self) -> _IntOrUnknown:
