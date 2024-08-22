@@ -744,7 +744,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     # Indexing
 
     def __getitem__(self, key: _IndexKeyLike | NamedArray):
-        if isinstance(key, (int, slice, tuple)):
+        if isinstance(key, int | slice | tuple):
             _data = self._data[key]
             return self._new((), _data)
         elif isinstance(key, NamedArray):
