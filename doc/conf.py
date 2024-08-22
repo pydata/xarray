@@ -223,12 +223,6 @@ html_context = {
     "doc_path": "doc",
 }
 
-WARNING: unsupported theme option 'path_to_docs' given
-WARNING: unsupported theme option 'use_repository_button' given
-WARNING: unsupported theme option 'use_issues_button' given
-WARNING: unsupported theme option 'home_page_in_toc' given
-WARNING: unsupported theme option 'extra_footer' given
-
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
