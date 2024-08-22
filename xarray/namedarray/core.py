@@ -602,6 +602,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return bitwise_xor(self)
 
     def __iadd__(self, other: int | float | NamedArray, /):
+        from xarray.namedarray._array_api import asarray
+
         self._data.__iadd__(asarray(other)._data)
         return self
 
@@ -611,6 +613,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return add(asarray(other), self)
 
     def __iand__(self, other: int | bool | NamedArray, /):
+        from xarray.namedarray._array_api import asarray
+
         self._data.__iand__(asarray(other)._data)
         return self
 
@@ -620,6 +624,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return bitwise_and(asarray(other), self)
 
     def __ifloordiv__(self, other: int | float | NamedArray, /):
+        from xarray.namedarray._array_api import asarray
+
         self._data.__ifloordiv__(asarray(other)._data)
         return self
 
@@ -629,6 +635,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return floor_divide(asarray(other), self)
 
     def __ilshift__(self, other: int | NamedArray, /):
+        from xarray.namedarray._array_api import asarray
+
         self._data.__ilshift__(asarray(other)._data)
         return self
 
@@ -647,6 +655,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return matmul(asarray(other), self)
 
     def __imod__(self, other: int | float | NamedArray, /):
+        from xarray.namedarray._array_api import asarray
+
         self._data.__imod__(asarray(other)._data)
         return self
 
@@ -656,6 +666,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return remainder(asarray(other), self)
 
     def __imul__(self, other: int | float | NamedArray, /):
+        from xarray.namedarray._array_api import asarray
+
         self._data.__imul__(asarray(other)._data)
         return self
 
@@ -665,6 +677,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return multiply(asarray(other), self)
 
     def __ior__(self, other: int | bool | NamedArray, /):
+        from xarray.namedarray._array_api import asarray
+
         self._data.__ior__(asarray(other)._data)
         return self
 
@@ -674,6 +688,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return bitwise_or(asarray(other), self)
 
     def __ipow__(self, other: int | float | NamedArray, /):
+        from xarray.namedarray._array_api import asarray
+
         self._data.__ipow__(asarray(other)._data)
         return self
 
@@ -683,6 +699,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return pow(asarray(other), self)
 
     def __irshift__(self, other: int | NamedArray, /):
+        from xarray.namedarray._array_api import asarray
+
         self._data.__irshift__(asarray(other)._data)
         return self
 
@@ -692,6 +710,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return bitwise_right_shift(asarray(other), self)
 
     def __isub__(self, other: int | float | NamedArray, /):
+        from xarray.namedarray._array_api import asarray
+
         self._data.__isub__(asarray(other)._data)
         return self
 
@@ -701,6 +721,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return subtract(asarray(other), self)
 
     def __itruediv__(self, other: float | NamedArray, /):
+        from xarray.namedarray._array_api import asarray
+
         self._data.__itruediv__(asarray(other)._data)
         return self
 
@@ -710,6 +732,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return divide(asarray(other), self)
 
     def __ixor__(self, other: int | bool | NamedArray, /):
+        from xarray.namedarray._array_api import asarray
+
         self._data.__ixor__(asarray(other)._data)
         return self
 
