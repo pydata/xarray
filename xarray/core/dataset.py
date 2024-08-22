@@ -9023,9 +9023,24 @@ class Dataset(
         variables = {}
         skipna_da = skipna
 
-        x = get_clean_interp_index(self, dim, use_coordinate=dim, strict=False)
-        # If we have a coordinate convert it to its underlying dimension.
-        dim = self.coords[dim].dims[0]
+        x = self.coords[dim].to_index()
+        # Special case for non-standard calendar indexes
+        # Numerical datetime values are defined with respect to 1970-01-01T00:00:00 in units of nanoseconds.
+        if isinstance(x, CFTimeIndex | pd.DatetimeIndex):
+            offset = type(x[0])(1970, 1, 1)
+            if isinstance(x, CFTimeIndex):
+                x = x.values
+            x = Variable(
+                data=datetime_to_numeric(x, offset=offset, datetime_unit="ns"),
+                dims=(dim,),
+            )
+
+        try:
+            x = x.values.astype(np.float64)
+        except TypeError:
+            raise TypeError(
+                f"Dim {dim!r} must be castable to float64, got {type(x).__name__}."
+            )
 
         xname = f"{self[dim].name}_"
         order = int(deg) + 1
@@ -9065,8 +9080,11 @@ class Dataset(
             )
             variables[sing.name] = sing
 
+        # If we have a coordinate get its underlying dimension.
+        true_dim = self.coords[dim].dims[0]
+
         for name, da in self.data_vars.items():
-            if dim not in da.dims:
+            if true_dim not in da.dims:
                 continue
 
             if is_duck_dask_array(da.data) and (
@@ -9078,11 +9096,11 @@ class Dataset(
             elif skipna is None:
                 skipna_da = bool(np.any(da.isnull()))
 
-            dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
+            dims_to_stack = [dimname for dimname in da.dims if dimname != true_dim]
             stacked_coords: dict[Hashable, DataArray] = {}
             if dims_to_stack:
                 stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
-                rhs = da.transpose(dim, *dims_to_stack).stack(
+                rhs = da.transpose(true_dim, *dims_to_stack).stack(
                     {stacked_dim: dims_to_stack}
                 )
                 stacked_coords = {stacked_dim: rhs[stacked_dim]}
