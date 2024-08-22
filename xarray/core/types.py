@@ -243,6 +243,11 @@ PadModeOptions = Literal[
     "symmetric",
     "wrap",
 ]
+T_PadConstantValues = float | tuple[float, float]
+T_VarPadConstantValues = T_PadConstantValues | Mapping[Any, T_PadConstantValues]
+T_DatasetPadConstantValues = (
+    T_VarPadConstantValues | Mapping[Any, T_VarPadConstantValues]
+)
 PadReflectOptions = Literal["even", "odd", None]
 
 CFCalendar = Literal[

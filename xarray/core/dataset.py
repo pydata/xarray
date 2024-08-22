@@ -163,6 +163,7 @@ if TYPE_CHECKING:
         ReindexMethodOptions,
         SideOptions,
         T_ChunkDimFreq,
+        T_DatasetPadConstantValues,
         T_Xarray,
     )
     from xarray.core.weighted import DatasetWeighted
@@ -1576,9 +1577,11 @@ class Dataset(
             try:
                 return self._construct_dataarray(key)
             except KeyError as e:
-                raise KeyError(
-                    f"No variable named {key!r}. Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
-                ) from e
+                message = f"No variable named {key!r}. Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
+                # If someone attempts `ds['foo' , 'bar']` instead of `ds[['foo', 'bar']]`
+                if isinstance(key, tuple):
+                    message += f"\nHint: use a list to select multiple variables, for example `ds[{[d for d in key]}]`"
+                raise KeyError(message) from e
 
         if utils.iterable_of_hashable(key):
             return self._copy_listed(key)
@@ -9151,9 +9154,7 @@ class Dataset(
         stat_length: (
             int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
         ) = None,
-        constant_values: (
-            float | tuple[float, float] | Mapping[Any, tuple[float, float]] | None
-        ) = None,
+        constant_values: T_DatasetPadConstantValues | None = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
         keep_attrs: bool | None = None,
@@ -9209,17 +9210,19 @@ class Dataset(
             (stat_length,) or int is a shortcut for before = after = statistic
             length for all axes.
             Default is ``None``, to use the entire axis.
-        constant_values : scalar, tuple or mapping of hashable to tuple, default: 0
-            Used in 'constant'.  The values to set the padded values for each
-            axis.
+        constant_values : scalar, tuple, mapping of dim name to scalar or tuple, or \
+            mapping of var name to scalar, tuple or to mapping of dim name to scalar or tuple, default: None
+            Used in 'constant'. The values to set the padded values for each data variable / axis.
+            ``{var_1: {dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}, ...
+            var_M: (before, after)}`` unique pad constants per data variable.
             ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
             pad constants along each dimension.
             ``((before, after),)`` yields same before and after constants for each
             dimension.
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all dimensions.
-            Default is 0.
-        end_values : scalar, tuple or mapping of hashable to tuple, default: 0
+            Default is ``None``, pads with ``np.nan``.
+        end_values : scalar, tuple or mapping of hashable to tuple, default: None
             Used in 'linear_ramp'.  The values used for the ending value of the
             linear_ramp and that will form the edge of the padded array.
             ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
@@ -9228,7 +9231,7 @@ class Dataset(
             axis.
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all axes.
-            Default is 0.
+            Default is None.
         reflect_type : {"even", "odd", None}, optional
             Used in "reflect", and "symmetric".  The "even" style is the
             default with an unaltered reflection around the edge value.  For
@@ -9302,11 +9305,22 @@ class Dataset(
             if not var_pad_width:
                 variables[name] = var
             elif name in self.data_vars:
+                if utils.is_dict_like(constant_values):
+                    if name in constant_values.keys():
+                        filtered_constant_values = constant_values[name]
+                    elif not set(var.dims).isdisjoint(constant_values.keys()):
+                        filtered_constant_values = {
+                            k: v for k, v in constant_values.items() if k in var.dims
+                        }
+                    else:
+                        filtered_constant_values = 0  # TODO: https://github.com/pydata/xarray/pull/9353#discussion_r1724018352
+                else:
+                    filtered_constant_values = constant_values
                 variables[name] = var.pad(
                     pad_width=var_pad_width,
                     mode=mode,
                     stat_length=stat_length,
-                    constant_values=constant_values,
+                    constant_values=filtered_constant_values,
                     end_values=end_values,
                     reflect_type=reflect_type,
                     keep_attrs=keep_attrs,
