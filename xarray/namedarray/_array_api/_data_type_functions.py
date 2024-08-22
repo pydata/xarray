@@ -8,11 +8,11 @@ from xarray.namedarray._array_api._utils import (
 )
 from xarray.namedarray._typing import (
     _arrayapi,
+    _Device,
     _DType,
     _dtype,
     _FInfo,
     _IInfo,
-    _Device,
     _ShapeType,
 )
 from xarray.namedarray.core import NamedArray
