@@ -19,9 +19,6 @@ from xarray.namedarray.pycompat import is_chunked_array
 if TYPE_CHECKING:
     from io import BufferedIOBase
 
-    from h5netcdf.legacyapi import Dataset as ncDatasetLegacyH5
-    from netCDF4 import Dataset as ncDataset
-
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
     from xarray.core.types import NestedSequence
@@ -131,37 +128,11 @@ def _decode_variable_name(name):
     return name
 
 
-def _open_datatree_netcdf(
-    ncDataset: ncDataset | ncDatasetLegacyH5,
-    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-    **kwargs,
-) -> DataTree:
-    from xarray.backends.api import open_dataset
-    from xarray.core.datatree import DataTree
-    from xarray.core.treenode import NodePath
-
-    ds = open_dataset(filename_or_obj, **kwargs)
-    tree_root = DataTree.from_dict({"/": ds})
-    with ncDataset(filename_or_obj, mode="r") as ncds:
-        for path in _iter_nc_groups(ncds):
-            subgroup_ds = open_dataset(filename_or_obj, group=path, **kwargs)
-
-            # TODO refactor to use __setitem__ once creation of new nodes by assigning Dataset works again
-            node_name = NodePath(path).name
-            new_node: DataTree = DataTree(name=node_name, data=subgroup_ds)
-            tree_root._set_item(
-                path,
-                new_node,
-                allow_overwrite=False,
-                new_nodes_along_path=True,
-            )
-    return tree_root
-
-
 def _iter_nc_groups(root, parent="/"):
     from xarray.core.treenode import NodePath
 
     parent = NodePath(parent)
+    yield str(parent)
     for path, group in root.groups.items():
         gpath = parent / path
         yield str(gpath)
@@ -561,6 +532,22 @@ class BackendEntrypoint:
     ) -> DataTree:
         """
         Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
+        """
+
+        raise NotImplementedError()
+
+    def open_groups_as_dict(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        **kwargs: Any,
+    ) -> dict[str, Dataset]:
+        """
+        Opens a dictionary mapping from group names to Datasets.
+
+        Called by :py:func:`~xarray.open_groups`.
+        This function exists to provide a universal way to open all groups in a file,
+        before applying any additional consistency checks or requirements necessary
+        to create a `DataTree` object (typically done using :py:meth:`~xarray.DataTree.from_dict`).
         """
 
         raise NotImplementedError()

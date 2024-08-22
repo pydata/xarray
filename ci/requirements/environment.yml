@@ -26,11 +26,11 @@ dependencies:
   - numba
   - numbagg
   - numexpr
-  - numpy
+  - numpy>=2
   - opt_einsum
   - packaging
   - pandas
-  - pint>=0.22
+  # - pint>=0.22
   - pip
   - pooch
   - pre-commit

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Hashable, Iterable, Iterator, Mapping
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, TypeVar, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -52,6 +52,7 @@ if TYPE_CHECKING:
         T_Variable,
     )
     from xarray.core.variable import Variable
+    from xarray.groupers import Resampler
 
     DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
@@ -161,8 +162,22 @@ class AbstractArray:
     def __complex__(self: Any) -> complex:
         return complex(self.values)
 
-    def __array__(self: Any, dtype: DTypeLike | None = None) -> np.ndarray:
-        return np.asarray(self.values, dtype=dtype)
+    def __array__(
+        self: Any, dtype: DTypeLike | None = None, copy: bool | None = None
+    ) -> np.ndarray:
+        if not copy:
+            if np.lib.NumpyVersion(np.__version__) >= "2.0.0":
+                copy = None
+            elif np.lib.NumpyVersion(np.__version__) <= "1.28.0":
+                copy = False
+            else:
+                # 2.0.0 dev versions, handle cases where copy may or may not exist
+                try:
+                    np.array([1]).__array__(copy=None)
+                    copy = None
+                except TypeError:
+                    copy = False
+        return np.array(self.values, dtype=dtype, copy=copy)
 
     def __repr__(self) -> str:
         return formatting.array_repr(self)
@@ -345,6 +360,24 @@ class AttrAccessMixin:
             if isinstance(item, str)
         }
         return list(items)
+
+
+class TreeAttrAccessMixin(AttrAccessMixin):
+    """Mixin class that allows getting keys with attribute access"""
+
+    # TODO: Ensure ipython tab completion can include both child datatrees and
+    # variables from Dataset objects on relevant nodes.
+
+    __slots__ = ()
+
+    def __init_subclass__(cls, **kwargs):
+        """This method overrides the check from ``AttrAccessMixin`` that ensures
+        ``__dict__`` is absent in a class, with ``__slots__`` used instead.
+        ``DataTree`` has some dynamically defined attributes in addition to those
+        defined in ``__slots__``. (GH9068)
+        """
+        if not hasattr(object.__new__(cls), "__dict__"):
+            pass
 
 
 def get_squeeze_dims(
@@ -858,16 +891,14 @@ class DataWithCoords(AttrAccessMixin):
     def _resample(
         self,
         resample_cls: type[T_Resample],
-        indexer: Mapping[Any, str] | None,
+        indexer: Mapping[Hashable, str | Resampler] | None,
         skipna: bool | None,
         closed: SideOptions | None,
         label: SideOptions | None,
-        base: int | None,
         offset: pd.Timedelta | datetime.timedelta | str | None,
         origin: str | DatetimeLike,
-        loffset: datetime.timedelta | str | None,
         restore_coord_dims: bool | None,
-        **indexer_kwargs: str,
+        **indexer_kwargs: str | Resampler,
     ) -> T_Resample:
         """Returns a Resample object for performing resampling operations.
 
@@ -887,16 +918,6 @@ class DataWithCoords(AttrAccessMixin):
             Side of each interval to treat as closed.
         label : {"left", "right"}, optional
             Side of each interval to use for labeling.
-        base : int, optional
-            For frequencies that evenly subdivide 1 day, the "origin" of the
-            aggregated intervals. For example, for "24H" frequency, base could
-            range from 0 through 23.
-
-            .. deprecated:: 2023.03.0
-                Following pandas, the ``base`` parameter is deprecated in favor
-                of the ``origin`` and ``offset`` parameters, and will be removed
-                in a future version of xarray.
-
         origin : {'epoch', 'start', 'start_day', 'end', 'end_day'}, pd.Timestamp, datetime.datetime, np.datetime64, or cftime.datetime, default 'start_day'
             The datetime on which to adjust the grouping. The timezone of origin
             must match the timezone of the index.
@@ -909,15 +930,6 @@ class DataWithCoords(AttrAccessMixin):
             - 'end_day': `origin` is the ceiling midnight of the last day
         offset : pd.Timedelta, datetime.timedelta, or str, default is None
             An offset timedelta added to the origin.
-        loffset : timedelta or str, optional
-            Offset used to adjust the resampled time labels. Some pandas date
-            offset strings are supported.
-
-            .. deprecated:: 2023.03.0
-                Following pandas, the ``loffset`` parameter is deprecated in favor
-                of using time offset arithmetic, and will be removed in a future
-                version of xarray.
-
         restore_coord_dims : bool, optional
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -1049,20 +1061,9 @@ class DataWithCoords(AttrAccessMixin):
         # TODO support non-string indexer after removing the old API.
 
         from xarray.core.dataarray import DataArray
-        from xarray.core.groupby import ResolvedGrouper, TimeResampler
+        from xarray.core.groupby import ResolvedGrouper
         from xarray.core.resample import RESAMPLE_DIM
-
-        # note: the second argument (now 'skipna') use to be 'dim'
-        if (
-            (skipna is not None and not isinstance(skipna, bool))
-            or ("how" in indexer_kwargs and "how" not in self.dims)
-            or ("dim" in indexer_kwargs and "dim" not in self.dims)
-        ):
-            raise TypeError(
-                "resample() no longer supports the `how` or "
-                "`dim` arguments. Instead call methods on resample "
-                "objects, e.g., data.resample(time='1D').mean()"
-            )
+        from xarray.groupers import Resampler, TimeResampler
 
         indexer = either_dict_or_kwargs(indexer, indexer_kwargs, "resample")
         if len(indexer) != 1:
@@ -1073,21 +1074,18 @@ class DataWithCoords(AttrAccessMixin):
         dim_coord = self[dim]
 
         group = DataArray(
-            dim_coord,
-            coords=dim_coord.coords,
-            dims=dim_coord.dims,
-            name=RESAMPLE_DIM,
+            dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
         )
 
-        grouper = TimeResampler(
-            freq=freq,
-            closed=closed,
-            label=label,
-            origin=origin,
-            offset=offset,
-            loffset=loffset,
-            base=base,
-        )
+        grouper: Resampler
+        if isinstance(freq, str):
+            grouper = TimeResampler(
+                freq=freq, closed=closed, label=label, origin=origin, offset=offset
+            )
+        elif isinstance(freq, Resampler):
+            grouper = freq
+        else:
+            raise ValueError("freq must be a str or a Resampler object")
 
         rgrouper = ResolvedGrouper(grouper, group, self)
 
@@ -1197,7 +1195,7 @@ class DataWithCoords(AttrAccessMixin):
             other = other(self)
 
         if drop:
-            if not isinstance(cond, (Dataset, DataArray)):
+            if not isinstance(cond, Dataset | DataArray):
                 raise TypeError(
                     f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r} (or a callable than returns one)."
                 )
@@ -1371,7 +1369,7 @@ class DataWithCoords(AttrAccessMixin):
             raise TypeError(
                 f"isin() argument must be convertible to an array: {test_elements}"
             )
-        elif isinstance(test_elements, (Variable, DataArray)):
+        elif isinstance(test_elements, Variable | DataArray):
             # need to explicitly pull out data to support dask arrays as the
             # second argument
             test_elements = test_elements.data

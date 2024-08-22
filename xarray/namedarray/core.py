@@ -4,11 +4,10 @@ import copy
 import math
 import sys
 import warnings
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     Literal,
     TypeVar,
@@ -53,7 +52,7 @@ from xarray.namedarray.utils import (
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
-    from xarray.core.types import Dims
+    from xarray.core.types import Dims, T_Chunks
     from xarray.namedarray._typing import (
         Default,
         _AttrsLike,
@@ -470,10 +469,28 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         If the underlying data array does not include ``nbytes``, estimates
         the bytes consumed based on the ``size`` and ``dtype``.
         """
+        from xarray.namedarray._array_api import _get_data_namespace
+
         if hasattr(self._data, "nbytes"):
             return self._data.nbytes  # type: ignore[no-any-return]
+
+        if hasattr(self.dtype, "itemsize"):
+            itemsize = self.dtype.itemsize
+        elif isinstance(self._data, _arrayapi):
+            xp = _get_data_namespace(self)
+
+            if xp.isdtype(self.dtype, "bool"):
+                itemsize = 1
+            elif xp.isdtype(self.dtype, "integral"):
+                itemsize = xp.iinfo(self.dtype).bits // 8
+            else:
+                itemsize = xp.finfo(self.dtype).bits // 8
         else:
-            return self.size * self.dtype.itemsize
+            raise TypeError(
+                "cannot compute the number of bytes (no array API nor nbytes / itemsize)"
+            )
+
+        return self.size * itemsize
 
     @property
     def dims(self) -> _Dims:
@@ -730,7 +747,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def chunk(
         self,
-        chunks: int | Literal["auto"] | Mapping[Any, None | int | tuple[int, ...]] = {},
+        chunks: T_Chunks = {},
         chunked_array_type: str | ChunkManagerEntrypoint[Any] | None = None,
         from_array_kwargs: Any = None,
         **chunks_kwargs: Any,
@@ -786,7 +803,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             )
             chunks = {}
 
-        if isinstance(chunks, (float, str, int, tuple, list)):
+        if isinstance(chunks, float | str | int | tuple | list):
             # TODO we shouldn't assume here that other chunkmanagers can handle these types
             # TODO should we call normalize_chunks here?
             pass  # dask.array.from_array can handle these directly
@@ -794,7 +811,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         if is_dict_like(chunks):
-            chunks = {self.get_axis_num(dim): chunk for dim, chunk in chunks.items()}
+            # This method of iteration allows for duplicated dimension names, GH8579
+            chunks = {
+                dim_number: chunks[dim]
+                for dim_number, dim in enumerate(self.dims)
+                if dim in chunks
+            }
 
         chunkmanager = guess_chunkmanager(chunked_array_type)
 
@@ -816,7 +838,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[assignment]
 
             if is_dict_like(chunks):
-                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))  # type: ignore[assignment]
+                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
 
             data_chunked = chunkmanager.from_array(ndata, chunks, **from_array_kwargs)  # type: ignore[arg-type]
 

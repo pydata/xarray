@@ -1,23 +1,39 @@
 from __future__ import annotations
 
-import copy
 import itertools
-from collections.abc import Hashable, Iterable, Iterator, Mapping, MutableMapping
-from html import escape
-from typing import (
-    TYPE_CHECKING,
-    Any,
+import textwrap
+from collections import ChainMap
+from collections.abc import (
     Callable,
-    Generic,
-    NoReturn,
-    Union,
-    overload,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
 )
+from html import escape
+from typing import TYPE_CHECKING, Any, Generic, Literal, NoReturn, Union, overload
 
 from xarray.core import utils
+from xarray.core.alignment import align
+from xarray.core.common import TreeAttrAccessMixin
 from xarray.core.coordinates import DatasetCoordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, DataVariables
+from xarray.core.datatree_mapping import (
+    TreeIsomorphismError,
+    check_isomorphic,
+    map_over_subtree,
+)
+from xarray.core.datatree_ops import (
+    DataTreeArithmeticMixin,
+    MappedDatasetMethodsMixin,
+    MappedDataWithCoords,
+)
+from xarray.core.datatree_render import RenderDataTree
+from xarray.core.formatting import datatree_repr, dims_and_coords_repr
+from xarray.core.formatting_html import (
+    datatree_repr as datatree_repr_html,
+)
 from xarray.core.indexes import Index, Indexes
 from xarray.core.merge import dataset_update_method
 from xarray.core.options import OPTIONS as XR_OPTS
@@ -31,22 +47,6 @@ from xarray.core.utils import (
     maybe_wrap_array,
 )
 from xarray.core.variable import Variable
-from xarray.datatree_.datatree.common import TreeAttrAccessMixin
-from xarray.datatree_.datatree.formatting import datatree_repr
-from xarray.datatree_.datatree.formatting_html import (
-    datatree_repr as datatree_repr_html,
-)
-from xarray.datatree_.datatree.mapping import (
-    TreeIsomorphismError,
-    check_isomorphic,
-    map_over_subtree,
-)
-from xarray.datatree_.datatree.ops import (
-    DataTreeArithmeticMixin,
-    MappedDatasetMethodsMixin,
-    MappedDataWithCoords,
-)
-from xarray.datatree_.datatree.render import RenderTree
 
 try:
     from xarray.core.variable import calculate_dimensions
@@ -57,8 +57,9 @@ except ImportError:
 if TYPE_CHECKING:
     import pandas as pd
 
-    from xarray.core.merge import CoercibleValue
-    from xarray.core.types import ErrorOptions
+    from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
+    from xarray.core.merge import CoercibleMapping, CoercibleValue
+    from xarray.core.types import ErrorOptions, NetcdfWriteModes, ZarrWriteModes
 
 # """
 # DEVELOPERS' NOTE
@@ -77,11 +78,24 @@ if TYPE_CHECKING:
 T_Path = Union[str, NodePath]
 
 
+def _collect_data_and_coord_variables(
+    data: Dataset,
+) -> tuple[dict[Hashable, Variable], dict[Hashable, Variable]]:
+    data_variables = {}
+    coord_variables = {}
+    for k, v in data.variables.items():
+        if k in data._coord_names:
+            coord_variables[k] = v
+        else:
+            data_variables[k] = v
+    return data_variables, coord_variables
+
+
 def _coerce_to_dataset(data: Dataset | DataArray | None) -> Dataset:
     if isinstance(data, DataArray):
         ds = data.to_dataset()
     elif isinstance(data, Dataset):
-        ds = data
+        ds = data.copy(deep=False)
     elif data is None:
         ds = Dataset()
     else:
@@ -91,14 +105,57 @@ def _coerce_to_dataset(data: Dataset | DataArray | None) -> Dataset:
     return ds
 
 
-def _check_for_name_collisions(
-    children: Iterable[str], variables: Iterable[Hashable]
+def _join_path(root: str, name: str) -> str:
+    return str(NodePath(root) / name)
+
+
+def _inherited_dataset(ds: Dataset, parent: Dataset) -> Dataset:
+    return Dataset._construct_direct(
+        variables=parent._variables | ds._variables,
+        coord_names=parent._coord_names | ds._coord_names,
+        dims=parent._dims | ds._dims,
+        attrs=ds._attrs,
+        indexes=parent._indexes | ds._indexes,
+        encoding=ds._encoding,
+        close=ds._close,
+    )
+
+
+def _without_header(text: str) -> str:
+    return "\n".join(text.split("\n")[1:])
+
+
+def _indented(text: str) -> str:
+    return textwrap.indent(text, prefix="    ")
+
+
+def _check_alignment(
+    path: str,
+    node_ds: Dataset,
+    parent_ds: Dataset | None,
+    children: Mapping[str, DataTree],
 ) -> None:
-    colliding_names = set(children).intersection(set(variables))
-    if colliding_names:
-        raise KeyError(
-            f"Some names would collide between variables and children: {list(colliding_names)}"
-        )
+    if parent_ds is not None:
+        try:
+            align(node_ds, parent_ds, join="exact")
+        except ValueError as e:
+            node_repr = _indented(_without_header(repr(node_ds)))
+            parent_repr = _indented(dims_and_coords_repr(parent_ds))
+            raise ValueError(
+                f"group {path!r} is not aligned with its parents:\n"
+                f"Group:\n{node_repr}\nFrom parents:\n{parent_repr}"
+            ) from e
+
+    if children:
+        if parent_ds is not None:
+            base_ds = _inherited_dataset(node_ds, parent_ds)
+        else:
+            base_ds = node_ds
+
+        for child_name, child in children.items():
+            child_path = str(NodePath(path) / child_name)
+            child_ds = child.to_dataset(inherited=False)
+            _check_alignment(child_path, child_ds, base_ds, child.children)
 
 
 class DatasetView(Dataset):
@@ -116,7 +173,7 @@ class DatasetView(Dataset):
 
     __slots__ = (
         "_attrs",
-        "_cache",
+        "_cache",  # used by _CachedAccessor
         "_coord_names",
         "_dims",
         "_encoding",
@@ -134,21 +191,27 @@ class DatasetView(Dataset):
         raise AttributeError("DatasetView objects are not to be initialized directly")
 
     @classmethod
-    def _from_node(
+    def _constructor(
         cls,
-        wrapping_node: DataTree,
+        variables: dict[Any, Variable],
+        coord_names: set[Hashable],
+        dims: dict[Any, int],
+        attrs: dict | None,
+        indexes: dict[Any, Index],
+        encoding: dict | None,
+        close: Callable[[], None] | None,
     ) -> DatasetView:
-        """Constructor, using dataset attributes from wrapping node"""
-
+        """Private constructor, from Dataset attributes."""
+        # We override Dataset._construct_direct below, so we need a new
+        # constructor for creating DatasetView objects.
         obj: DatasetView = object.__new__(cls)
-        obj._variables = wrapping_node._variables
-        obj._coord_names = wrapping_node._coord_names
-        obj._dims = wrapping_node._dims
-        obj._indexes = wrapping_node._indexes
-        obj._attrs = wrapping_node._attrs
-        obj._close = wrapping_node._close
-        obj._encoding = wrapping_node._encoding
-
+        obj._variables = variables
+        obj._coord_names = coord_names
+        obj._dims = dims
+        obj._indexes = indexes
+        obj._attrs = attrs
+        obj._close = close
+        obj._encoding = encoding
         return obj
 
     def __setitem__(self, key, val) -> None:
@@ -335,27 +398,27 @@ class DataTree(
     _name: str | None
     _parent: DataTree | None
     _children: dict[str, DataTree]
+    _cache: dict[str, Any]  # used by _CachedAccessor
+    _data_variables: dict[Hashable, Variable]
+    _node_coord_variables: dict[Hashable, Variable]
+    _node_dims: dict[Hashable, int]
+    _node_indexes: dict[Hashable, Index]
     _attrs: dict[Hashable, Any] | None
-    _cache: dict[str, Any]
-    _coord_names: set[Hashable]
-    _dims: dict[Hashable, int]
     _encoding: dict[Hashable, Any] | None
     _close: Callable[[], None] | None
-    _indexes: dict[Hashable, Index]
-    _variables: dict[Hashable, Variable]
 
     __slots__ = (
         "_name",
         "_parent",
         "_children",
+        "_cache",  # used by _CachedAccessor
+        "_data_variables",
+        "_node_coord_variables",
+        "_node_dims",
+        "_node_indexes",
         "_attrs",
-        "_cache",
-        "_coord_names",
-        "_dims",
         "_encoding",
         "_close",
-        "_indexes",
-        "_variables",
     )
 
     def __init__(
@@ -368,14 +431,15 @@ class DataTree(
         """
         Create a single node of a DataTree.
 
-        The node may optionally contain data in the form of data and coordinate variables, stored in the same way as
-        data is stored in an xarray.Dataset.
+        The node may optionally contain data in the form of data and coordinate
+        variables, stored in the same way as data is stored in an
+        xarray.Dataset.
 
         Parameters
         ----------
         data : Dataset, DataArray, or None, optional
-            Data to store under the .ds attribute of this node. DataArrays will be promoted to Datasets.
-            Default is None.
+            Data to store under the .ds attribute of this node. DataArrays will
+            be promoted to Datasets. Default is None.
         parent : DataTree, optional
             Parent node to this node. Default is None.
         children : Mapping[str, DataTree], optional
@@ -391,30 +455,48 @@ class DataTree(
         --------
         DataTree.from_dict
         """
-
-        # validate input
         if children is None:
             children = {}
-        ds = _coerce_to_dataset(data)
-        _check_for_name_collisions(children, ds.variables)
 
         super().__init__(name=name)
+        self._set_node_data(_coerce_to_dataset(data))
+        self.parent = parent
+        self.children = children
 
-        # set data attributes
-        self._replace(
-            inplace=True,
-            variables=ds._variables,
-            coord_names=ds._coord_names,
-            dims=ds._dims,
-            indexes=ds._indexes,
-            attrs=ds._attrs,
-            encoding=ds._encoding,
-        )
+    def _set_node_data(self, ds: Dataset):
+        data_vars, coord_vars = _collect_data_and_coord_variables(ds)
+        self._data_variables = data_vars
+        self._node_coord_variables = coord_vars
+        self._node_dims = ds._dims
+        self._node_indexes = ds._indexes
+        self._encoding = ds._encoding
+        self._attrs = ds._attrs
         self._close = ds._close
 
-        # set tree attributes (must happen after variables set to avoid initialization errors)
-        self.children = children
-        self.parent = parent
+    def _pre_attach(self: DataTree, parent: DataTree, name: str) -> None:
+        super()._pre_attach(parent, name)
+        if name in parent.ds.variables:
+            raise KeyError(
+                f"parent {parent.name} already contains a variable named {name}"
+            )
+        path = str(NodePath(parent.path) / name)
+        node_ds = self.to_dataset(inherited=False)
+        parent_ds = parent._to_dataset_view(rebuild_dims=False)
+        _check_alignment(path, node_ds, parent_ds, self.children)
+
+    @property
+    def _coord_variables(self) -> ChainMap[Hashable, Variable]:
+        return ChainMap(
+            self._node_coord_variables, *(p._node_coord_variables for p in self.parents)
+        )
+
+    @property
+    def _dims(self) -> ChainMap[Hashable, int]:
+        return ChainMap(self._node_dims, *(p._node_dims for p in self.parents))
+
+    @property
+    def _indexes(self) -> ChainMap[Hashable, Index]:
+        return ChainMap(self._node_indexes, *(p._node_indexes for p in self.parents))
 
     @property
     def parent(self: DataTree) -> DataTree | None:
@@ -427,71 +509,87 @@ class DataTree(
             raise ValueError("Cannot set an unnamed node as a child of another node")
         self._set_parent(new_parent, self.name)
 
+    def _to_dataset_view(self, rebuild_dims: bool) -> DatasetView:
+        variables = dict(self._data_variables)
+        variables |= self._coord_variables
+        if rebuild_dims:
+            dims = calculate_dimensions(variables)
+        else:
+            # Note: rebuild_dims=False can create technically invalid Dataset
+            # objects because it may not contain all dimensions on its direct
+            # member variables, e.g., consider:
+            #     tree = DataTree.from_dict(
+            #         {
+            #             "/": xr.Dataset({"a": (("x",), [1, 2])}),  # x has size 2
+            #             "/b/c": xr.Dataset({"d": (("x",), [3])}),  # x has size1
+            #         }
+            #     )
+            # However, they are fine for internal use cases, for align() or
+            # building a repr().
+            dims = dict(self._dims)
+        return DatasetView._constructor(
+            variables=variables,
+            coord_names=set(self._coord_variables),
+            dims=dims,
+            attrs=self._attrs,
+            indexes=dict(self._indexes),
+            encoding=self._encoding,
+            close=None,
+        )
+
     @property
     def ds(self) -> DatasetView:
         """
         An immutable Dataset-like view onto the data in this node.
 
-        For a mutable Dataset containing the same data as in this node, use `.to_dataset()` instead.
+        Includes inherited coordinates and indexes from parent nodes.
+
+        For a mutable Dataset containing the same data as in this node, use
+        `.to_dataset()` instead.
 
         See Also
         --------
         DataTree.to_dataset
         """
-        return DatasetView._from_node(self)
+        return self._to_dataset_view(rebuild_dims=True)
 
     @ds.setter
     def ds(self, data: Dataset | DataArray | None = None) -> None:
-        # Known mypy issue for setters with different type to property:
-        # https://github.com/python/mypy/issues/3004
         ds = _coerce_to_dataset(data)
+        self._replace_node(ds)
 
-        _check_for_name_collisions(self.children, ds.variables)
-
-        self._replace(
-            inplace=True,
-            variables=ds._variables,
-            coord_names=ds._coord_names,
-            dims=ds._dims,
-            indexes=ds._indexes,
-            attrs=ds._attrs,
-            encoding=ds._encoding,
-        )
-        self._close = ds._close
-
-    def _pre_attach(self: DataTree, parent: DataTree) -> None:
-        """
-        Method which superclass calls before setting parent, here used to prevent having two
-        children with duplicate names (or a data variable with the same name as a child).
-        """
-        super()._pre_attach(parent)
-        if self.name in list(parent.ds.variables):
-            raise KeyError(
-                f"parent {parent.name} already contains a data variable named {self.name}"
-            )
-
-    def to_dataset(self) -> Dataset:
+    def to_dataset(self, inherited: bool = True) -> Dataset:
         """
         Return the data in this node as a new xarray.Dataset object.
+
+        Parameters
+        ----------
+        inherited : bool, optional
+            If False, only include coordinates and indexes defined at the level
+            of this DataTree node, excluding inherited coordinates.
 
         See Also
         --------
         DataTree.ds
         """
+        coord_vars = self._coord_variables if inherited else self._node_coord_variables
+        variables = dict(self._data_variables)
+        variables |= coord_vars
+        dims = calculate_dimensions(variables) if inherited else dict(self._node_dims)
         return Dataset._construct_direct(
-            self._variables,
-            self._coord_names,
-            self._dims,
-            self._attrs,
-            self._indexes,
-            self._encoding,
+            variables,
+            set(coord_vars),
+            dims,
+            None if self._attrs is None else dict(self._attrs),
+            dict(self._indexes if inherited else self._node_indexes),
+            None if self._encoding is None else dict(self._encoding),
             self._close,
         )
 
     @property
-    def has_data(self):
-        """Whether or not there are any data variables in this node."""
-        return len(self._variables) > 0
+    def has_data(self) -> bool:
+        """Whether or not there are any variables in this node."""
+        return bool(self._data_variables or self._node_coord_variables)
 
     @property
     def has_attrs(self) -> bool:
@@ -516,7 +614,7 @@ class DataTree(
         Dataset invariants. It contains all variable objects constituting this
         DataTree node, including both data variables and coordinates.
         """
-        return Frozen(self._variables)
+        return Frozen(self._data_variables | self._coord_variables)
 
     @property
     def attrs(self) -> dict[Hashable, Any]:
@@ -577,7 +675,7 @@ class DataTree(
     def _item_sources(self) -> Iterable[Mapping[Any, Any]]:
         """Places to look-up items for key-completion"""
         yield self.data_vars
-        yield HybridMappingProxy(keys=self._coord_names, mapping=self.coords)
+        yield HybridMappingProxy(keys=self._coord_variables, mapping=self.coords)
 
         # virtual coordinates
         yield HybridMappingProxy(keys=self.dims, mapping=self)
@@ -619,12 +717,12 @@ class DataTree(
         return key in self.variables or key in self.children
 
     def __bool__(self) -> bool:
-        return bool(self.ds.data_vars) or bool(self.children)
+        return bool(self._data_variables) or bool(self._children)
 
     def __iter__(self) -> Iterator[Hashable]:
-        return itertools.chain(self.ds.data_vars, self.children)
+        return itertools.chain(self._data_variables, self._children)
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype=None, copy=None):
         raise TypeError(
             "cannot directly convert a DataTree into a "
             "numpy array. Instead, create an xarray.DataArray "
@@ -644,122 +742,32 @@ class DataTree(
             return f"<pre>{escape(repr(self))}</pre>"
         return datatree_repr_html(self)
 
-    @classmethod
-    def _construct_direct(
-        cls,
-        variables: dict[Any, Variable],
-        coord_names: set[Hashable],
-        dims: dict[Any, int] | None = None,
-        attrs: dict | None = None,
-        indexes: dict[Any, Index] | None = None,
-        encoding: dict | None = None,
-        name: str | None = None,
-        parent: DataTree | None = None,
-        children: dict[str, DataTree] | None = None,
-        close: Callable[[], None] | None = None,
-    ) -> DataTree:
-        """Shortcut around __init__ for internal use when we want to skip costly validation."""
-
-        # data attributes
-        if dims is None:
-            dims = calculate_dimensions(variables)
-        if indexes is None:
-            indexes = {}
-        if children is None:
-            children = dict()
-
-        obj: DataTree = object.__new__(cls)
-        obj._variables = variables
-        obj._coord_names = coord_names
-        obj._dims = dims
-        obj._indexes = indexes
-        obj._attrs = attrs
-        obj._close = close
-        obj._encoding = encoding
-
-        # tree attributes
-        obj._name = name
-        obj._children = children
-        obj._parent = parent
-
-        return obj
-
-    def _replace(
+    def _replace_node(
         self: DataTree,
-        variables: dict[Hashable, Variable] | None = None,
-        coord_names: set[Hashable] | None = None,
-        dims: dict[Any, int] | None = None,
-        attrs: dict[Hashable, Any] | None | Default = _default,
-        indexes: dict[Hashable, Index] | None = None,
-        encoding: dict | None | Default = _default,
-        name: str | None | Default = _default,
-        parent: DataTree | None | Default = _default,
-        children: dict[str, DataTree] | None = None,
-        inplace: bool = False,
-    ) -> DataTree:
-        """
-        Fastpath constructor for internal use.
+        data: Dataset | Default = _default,
+        children: dict[str, DataTree] | Default = _default,
+    ) -> None:
 
-        Returns an object with optionally replaced attributes.
+        ds = self.to_dataset(inherited=False) if data is _default else data
 
-        Explicitly passed arguments are *not* copied when placed on the new
-        datatree. It is up to the caller to ensure that they have the right type
-        and are not used elsewhere.
-        """
-        # TODO Adding new children inplace using this method will cause bugs.
-        # You will end up with an inconsistency between the name of the child node and the key the child is stored under.
-        # Use ._set() instead for now
-        if inplace:
-            if variables is not None:
-                self._variables = variables
-            if coord_names is not None:
-                self._coord_names = coord_names
-            if dims is not None:
-                self._dims = dims
-            if attrs is not _default:
-                self._attrs = attrs
-            if indexes is not None:
-                self._indexes = indexes
-            if encoding is not _default:
-                self._encoding = encoding
-            if name is not _default:
-                self._name = name
-            if parent is not _default:
-                self._parent = parent
-            if children is not None:
-                self._children = children
-            obj = self
-        else:
-            if variables is None:
-                variables = self._variables.copy()
-            if coord_names is None:
-                coord_names = self._coord_names.copy()
-            if dims is None:
-                dims = self._dims.copy()
-            if attrs is _default:
-                attrs = copy.copy(self._attrs)
-            if indexes is None:
-                indexes = self._indexes.copy()
-            if encoding is _default:
-                encoding = copy.copy(self._encoding)
-            if name is _default:
-                name = self._name  # no need to copy str objects or None
-            if parent is _default:
-                parent = copy.copy(self._parent)
-            if children is _default:
-                children = copy.copy(self._children)
-            obj = self._construct_direct(
-                variables,
-                coord_names,
-                dims,
-                attrs,
-                indexes,
-                encoding,
-                name,
-                parent,
-                children,
-            )
-        return obj
+        if children is _default:
+            children = self._children
+
+        for child_name in children:
+            if child_name in ds.variables:
+                raise ValueError(f"node already contains a variable named {child_name}")
+
+        parent_ds = (
+            self.parent._to_dataset_view(rebuild_dims=False)
+            if self.parent is not None
+            else None
+        )
+        _check_alignment(self.path, ds, parent_ds, children)
+
+        if data is not _default:
+            self._set_node_data(ds)
+
+        self.children = children
 
     def copy(
         self: DataTree,
@@ -811,9 +819,8 @@ class DataTree(
         deep: bool = False,
     ) -> DataTree:
         """Copy just one node of a tree"""
-        new_node: DataTree = DataTree()
-        new_node.name = self.name
-        new_node.ds = self.to_dataset().copy(deep=deep)  # type: ignore[assignment]
+        data = self.ds.copy(deep=deep)
+        new_node: DataTree = DataTree(data, name=self.name)
         return new_node
 
     def __copy__(self: DataTree) -> DataTree:
@@ -892,7 +899,7 @@ class DataTree(
             new_node.name = key
             new_node.parent = self
         else:
-            if not isinstance(val, (DataArray, Variable)):
+            if not isinstance(val, DataArray | Variable):
                 # accommodate other types that can be coerced into Variables
                 val = DataArray(val)
 
@@ -944,28 +951,35 @@ class DataTree(
 
         Just like `dict.update` this is an in-place operation.
         """
-        # TODO separate by type
         new_children: dict[str, DataTree] = {}
-        new_variables = {}
-        for k, v in other.items():
-            if isinstance(v, DataTree):
-                # avoid named node being stored under inconsistent key
-                new_child: DataTree = v.copy()
-                # Datatree's name is always a string until we fix that (#8836)
-                new_child.name = str(k)
-                new_children[str(k)] = new_child
-            elif isinstance(v, (DataArray, Variable)):
-                # TODO this should also accommodate other types that can be coerced into Variables
-                new_variables[k] = v
-            else:
-                raise TypeError(f"Type {type(v)} cannot be assigned to a DataTree")
+        new_variables: CoercibleMapping
 
-        vars_merge_result = dataset_update_method(self.to_dataset(), new_variables)
+        if isinstance(other, Dataset):
+            new_variables = other
+        else:
+            new_variables = {}
+            for k, v in other.items():
+                if isinstance(v, DataTree):
+                    # avoid named node being stored under inconsistent key
+                    new_child: DataTree = v.copy()
+                    # Datatree's name is always a string until we fix that (#8836)
+                    new_child.name = str(k)
+                    new_children[str(k)] = new_child
+                elif isinstance(v, DataArray | Variable):
+                    # TODO this should also accommodate other types that can be coerced into Variables
+                    new_variables[k] = v
+                else:
+                    raise TypeError(f"Type {type(v)} cannot be assigned to a DataTree")
+
+        vars_merge_result = dataset_update_method(
+            self.to_dataset(inherited=False), new_variables
+        )
+        data = Dataset._construct_direct(**vars_merge_result._asdict())
+
         # TODO are there any subtleties with preserving order of children like this?
         merged_children = {**self.children, **new_children}
-        self._replace(
-            inplace=True, children=merged_children, **vars_merge_result._asdict()
-        )
+
+        self._replace_node(data, children=merged_children)
 
     def assign(
         self, items: Mapping[Any, Any] | None = None, **items_kwargs: Any
@@ -1040,15 +1054,17 @@ class DataTree(
             if extra:
                 raise KeyError(f"Cannot drop all nodes - nodes {extra} not present")
 
+        result = self.copy()
         children_to_keep = {
-            name: child for name, child in self.children.items() if name not in names
+            name: child for name, child in result.children.items() if name not in names
         }
-        return self._replace(children=children_to_keep)
+        result._replace_node(children=children_to_keep)
+        return result
 
     @classmethod
     def from_dict(
         cls,
-        d: MutableMapping[str, Dataset | DataArray | DataTree | None],
+        d: Mapping[str, Dataset | DataArray | DataTree | None],
         name: str | None = None,
     ) -> DataTree:
         """
@@ -1076,16 +1092,22 @@ class DataTree(
         """
 
         # First create the root node
-        root_data = d.pop("/", None)
+        d_cast = dict(d)
+        root_data = d_cast.pop("/", None)
         if isinstance(root_data, DataTree):
             obj = root_data.copy()
             obj.orphan()
         else:
             obj = cls(name=name, data=root_data, parent=None, children=None)
 
-        if d:
+        def depth(item) -> int:
+            pathstr, _ = item
+            return len(NodePath(pathstr).parts)
+
+        if d_cast:
             # Populate tree with children determined from data_objects mapping
-            for path, data in d.items():
+            # Sort keys by depth so as to insert nodes from root first (see GH issue #9276)
+            for path, data in sorted(d_cast.items(), key=depth):
                 # Create and set new node
                 node_name = NodePath(path).name
                 if isinstance(data, DataTree):
@@ -1135,7 +1157,9 @@ class DataTree(
     @property
     def xindexes(self) -> Indexes[Index]:
         """Mapping of xarray Index objects used for label based indexing."""
-        return Indexes(self._indexes, {k: self._variables[k] for k in self._indexes})
+        return Indexes(
+            self._indexes, {k: self._coord_variables[k] for k in self._indexes}
+        )
 
     @property
     def coords(self) -> DatasetCoordinates:
@@ -1312,11 +1336,12 @@ class DataTree(
         ...     }
         ... )
         >>> dt.match("*/B")
-        DataTree('None', parent=None)
-        ├── DataTree('a')
-        │   └── DataTree('B')
-        └── DataTree('b')
-            └── DataTree('B')
+        <xarray.DataTree>
+        Group: /
+        ├── Group: /a
+        │   └── Group: /a/B
+        └── Group: /b
+            └── Group: /b/B
         """
         matching_nodes = {
             node.path: node.ds
@@ -1451,7 +1476,7 @@ class DataTree(
 
     def render(self):
         """Print tree structure, including any data stored at each node."""
-        for pre, fill, node in RenderTree(self):
+        for pre, fill, node in RenderDataTree(self):
             print(f"{pre}DataTree('{self.name}')")
             for ds_line in repr(node.ds)[1:]:
                 print(f"{fill}{ds_line}")
@@ -1475,7 +1500,16 @@ class DataTree(
         return tuple(node.path for node in self.subtree)
 
     def to_netcdf(
-        self, filepath, mode: str = "w", encoding=None, unlimited_dims=None, **kwargs
+        self,
+        filepath,
+        mode: NetcdfWriteModes = "w",
+        encoding=None,
+        unlimited_dims=None,
+        format: T_DataTreeNetcdfTypes | None = None,
+        engine: T_DataTreeNetcdfEngine | None = None,
+        group: str | None = None,
+        compute: bool = True,
+        **kwargs,
     ):
         """
         Write datatree contents to a netCDF file.
@@ -1499,10 +1533,30 @@ class DataTree(
             By default, no dimensions are treated as unlimited dimensions.
             Note that unlimited_dims may also be set via
             ``dataset.encoding["unlimited_dims"]``.
+        format : {"NETCDF4", }, optional
+            File format for the resulting netCDF file:
+
+            * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API features.
+        engine : {"netcdf4", "h5netcdf"}, optional
+            Engine to use when writing netCDF files. If not provided, the
+            default engine is chosen based on available dependencies, with a
+            preference for "netcdf4" if writing to a file on disk.
+        group : str, optional
+            Path to the netCDF4 group in the given file to open as the root group
+            of the ``DataTree``. Currently, specifying a group is not supported.
+        compute : bool, default: True
+            If true compute immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed later.
+            Currently, ``compute=False`` is not supported.
         kwargs :
-            Addional keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
+            Additional keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
+
+        Note
+        ----
+            Due to file format specifications the on-disk root group name
+            is always ``"/"`` overriding any given ``DataTree`` root node name.
         """
-        from xarray.datatree_.datatree.io import _datatree_to_netcdf
+        from xarray.core.datatree_io import _datatree_to_netcdf
 
         _datatree_to_netcdf(
             self,
@@ -1510,15 +1564,21 @@ class DataTree(
             mode=mode,
             encoding=encoding,
             unlimited_dims=unlimited_dims,
+            format=format,
+            engine=engine,
+            group=group,
+            compute=compute,
             **kwargs,
         )
 
     def to_zarr(
         self,
         store,
-        mode: str = "w-",
+        mode: ZarrWriteModes = "w-",
         encoding=None,
         consolidated: bool = True,
+        group: str | None = None,
+        compute: Literal[True] = True,
         **kwargs,
     ):
         """
@@ -1541,10 +1601,22 @@ class DataTree(
         consolidated : bool
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing metadata for all groups.
+        group : str, optional
+            Group path. (a.k.a. `path` in zarr terminology.)
+        compute : bool, default: True
+            If true compute immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed later. Metadata
+            is always updated eagerly. Currently, ``compute=False`` is not
+            supported.
         kwargs :
             Additional keyword arguments to be passed to ``xarray.Dataset.to_zarr``
+
+        Note
+        ----
+            Due to file format specifications the on-disk root group name
+            is always ``"/"`` overriding any given ``DataTree`` root node name.
         """
-        from xarray.datatree_.datatree.io import _datatree_to_zarr
+        from xarray.core.datatree_io import _datatree_to_zarr
 
         _datatree_to_zarr(
             self,
@@ -1552,6 +1624,8 @@ class DataTree(
             mode=mode,
             encoding=encoding,
             consolidated=consolidated,
+            group=group,
+            compute=compute,
             **kwargs,
         )
 

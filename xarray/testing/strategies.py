@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Protocol, Union, overload
 
@@ -21,6 +23,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "supported_dtypes",
+    "pandas_index_dtypes",
     "names",
     "dimension_names",
     "dimension_sizes",
@@ -38,8 +41,8 @@ class ArrayStrategyFn(Protocol[T_DuckArray]):
     def __call__(
         self,
         *,
-        shape: "_ShapeLike",
-        dtype: "_DTypeLikeNested",
+        shape: _ShapeLike,
+        dtype: _DTypeLikeNested,
     ) -> st.SearchStrategy[T_DuckArray]: ...
 
 
@@ -48,7 +51,7 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     Generates only those numpy dtypes which xarray can handle.
 
     Use instead of hypothesis.extra.numpy.scalar_dtypes in order to exclude weirder dtypes such as unicode, byte_string, array, or nested dtypes.
-    Also excludes datetimes, which dodges bugs with pandas non-nanosecond datetime overflows.
+    Also excludes datetimes, which dodges bugs with pandas non-nanosecond datetime overflows.  Checks only native endianness.
 
     Requires the hypothesis package to be installed.
 
@@ -59,10 +62,30 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     # TODO should this be exposed publicly?
     # We should at least decide what the set of numpy dtypes that xarray officially supports is.
     return (
-        npst.integer_dtypes()
-        | npst.unsigned_integer_dtypes()
-        | npst.floating_dtypes()
-        | npst.complex_number_dtypes()
+        npst.integer_dtypes(endianness="=")
+        | npst.unsigned_integer_dtypes(endianness="=")
+        | npst.floating_dtypes(endianness="=")
+        | npst.complex_number_dtypes(endianness="=")
+        # | npst.datetime64_dtypes()
+        # | npst.timedelta64_dtypes()
+        # | npst.unicode_string_dtypes()
+    )
+
+
+def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
+    """
+    Dtypes supported by pandas indexes.
+    Restrict datetime64 and timedelta64 to ns frequency till Xarray relaxes that.
+    """
+    return (
+        npst.integer_dtypes(endianness="=", sizes=(32, 64))
+        | npst.unsigned_integer_dtypes(endianness="=", sizes=(32, 64))
+        | npst.floating_dtypes(endianness="=", sizes=(32, 64))
+        # TODO: unset max_period
+        | npst.datetime64_dtypes(endianness="=", max_period="ns")
+        # TODO: set max_period="D"
+        | npst.timedelta64_dtypes(endianness="=", max_period="ns")
+        | npst.unicode_string_dtypes(endianness="=")
     )
 
 
@@ -91,6 +114,7 @@ def names() -> st.SearchStrategy[str]:
 
 def dimension_names(
     *,
+    name_strategy=names(),
     min_dims: int = 0,
     max_dims: int = 3,
 ) -> st.SearchStrategy[list[Hashable]]:
@@ -101,6 +125,8 @@ def dimension_names(
 
     Parameters
     ----------
+    name_strategy
+        Strategy for making names. Useful if we need to share this.
     min_dims
         Minimum number of dimensions in generated list.
     max_dims
@@ -108,7 +134,7 @@ def dimension_names(
     """
 
     return st.lists(
-        elements=names(),
+        elements=name_strategy,
         min_size=min_dims,
         max_size=max_dims,
         unique=True,
@@ -121,7 +147,7 @@ def dimension_sizes(
     min_dims: int = 0,
     max_dims: int = 3,
     min_side: int = 1,
-    max_side: Union[int, None] = None,
+    max_side: int | None = None,
 ) -> st.SearchStrategy[Mapping[Hashable, int]]:
     """
     Generates an arbitrary mapping from dimension names to lengths.
@@ -172,9 +198,13 @@ _small_arrays = npst.arrays(
         max_side=2,
         max_dims=2,
     ),
-    dtype=npst.scalar_dtypes(),
+    dtype=npst.scalar_dtypes()
+    | npst.byte_string_dtypes()
+    | npst.unicode_string_dtypes(),
 )
 _attr_values = st.none() | st.booleans() | _readable_strings | _small_arrays
+
+simple_attrs = st.dictionaries(_attr_keys, _attr_values)
 
 
 def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
@@ -200,11 +230,8 @@ def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
 def variables(
     draw: st.DrawFn,
     *,
-    array_strategy_fn: Union[ArrayStrategyFn, None] = None,
-    dims: Union[
-        st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]],
-        None,
-    ] = None,
+    array_strategy_fn: ArrayStrategyFn | None = None,
+    dims: st.SearchStrategy[Sequence[Hashable] | Mapping[Hashable, int]] | None = None,
     dtype: st.SearchStrategy[np.dtype] = supported_dtypes(),
     attrs: st.SearchStrategy[Mapping] = attrs(),
 ) -> xr.Variable:
@@ -330,7 +357,7 @@ def variables(
             valid_shapes = npst.array_shapes(min_dims=len(_dims), max_dims=len(_dims))
             _shape = draw(valid_shapes)
             array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
-        elif isinstance(_dims, (Mapping, dict)):
+        elif isinstance(_dims, Mapping | dict):
             # should be a mapping of form {dim_names: lengths}
             dim_names, _shape = list(_dims.keys()), tuple(_dims.values())
             array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
@@ -370,7 +397,7 @@ def unique_subset_of(
     objs: Sequence[Hashable],
     *,
     min_size: int = 0,
-    max_size: Union[int, None] = None,
+    max_size: int | None = None,
 ) -> st.SearchStrategy[Sequence[Hashable]]: ...
 
 
@@ -379,18 +406,18 @@ def unique_subset_of(
     objs: Mapping[Hashable, Any],
     *,
     min_size: int = 0,
-    max_size: Union[int, None] = None,
+    max_size: int | None = None,
 ) -> st.SearchStrategy[Mapping[Hashable, Any]]: ...
 
 
 @st.composite
 def unique_subset_of(
     draw: st.DrawFn,
-    objs: Union[Sequence[Hashable], Mapping[Hashable, Any]],
+    objs: Sequence[Hashable] | Mapping[Hashable, Any],
     *,
     min_size: int = 0,
-    max_size: Union[int, None] = None,
-) -> Union[Sequence[Hashable], Mapping[Hashable, Any]]:
+    max_size: int | None = None,
+) -> Sequence[Hashable] | Mapping[Hashable, Any]:
     """
     Return a strategy which generates a unique subset of the given objects.
 
@@ -568,6 +595,8 @@ def dataarrays(
         If custom strategies passed try to draw examples which together cannot create a valid DataArray.
     """
 
+    np_arrays = npst.arrays(dtype=supported_dtypes())
+
     _name = draw(st.none() | name)
 
     # TODO add a coords argument?
@@ -575,6 +604,7 @@ def dataarrays(
     if data is not None and dims is None:
         # no dims -> generate dims to match data
         _data = draw(data)
+
         dim_names = draw(dimension_names(min_dims=_data.ndim, max_dims=_data.ndim))
         dim_sizes: Mapping[Hashable, int] = {
             n: length for n, length in zip(dim_names, _data.shape)

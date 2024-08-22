@@ -3,9 +3,9 @@ from __future__ import annotations
 import functools
 import operator
 from collections import defaultdict
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Callable, Final, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -137,7 +137,7 @@ class Aligner(Generic[T_Alignable]):
         exclude_dims: str | Iterable[Hashable] = frozenset(),
         exclude_vars: Iterable[Hashable] = frozenset(),
         method: str | None = None,
-        tolerance: int | float | Iterable[int | float] | None = None,
+        tolerance: float | Iterable[float] | str | None = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
@@ -904,7 +904,7 @@ def deep_align(
         indexes = {}
 
     def is_alignable(obj):
-        return isinstance(obj, (Coordinates, DataArray, Dataset))
+        return isinstance(obj, Coordinates | DataArray | Dataset)
 
     positions: list[int] = []
     keys: list[type[object] | Hashable] = []
@@ -965,7 +965,7 @@ def reindex(
     obj: T_Alignable,
     indexers: Mapping[Any, Any],
     method: str | None = None,
-    tolerance: int | float | Iterable[int | float] | None = None,
+    tolerance: float | Iterable[float] | str | None = None,
     copy: bool = True,
     fill_value: Any = dtypes.NA,
     sparse: bool = False,
@@ -1004,7 +1004,7 @@ def reindex_like(
     obj: T_Alignable,
     other: Dataset | DataArray,
     method: str | None = None,
-    tolerance: int | float | Iterable[int | float] | None = None,
+    tolerance: float | Iterable[float] | str | None = None,
     copy: bool = True,
     fill_value: Any = dtypes.NA,
 ) -> T_Alignable:

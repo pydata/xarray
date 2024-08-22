@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import os
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
@@ -16,7 +16,6 @@ from xarray.backends.common import (
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
-    _open_datatree_netcdf,
     find_root_and_group,
     robust_getitem,
 )
@@ -454,7 +453,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         pop_to(attributes, encoding, "least_significant_digit")
         # save source so __repr__ can detect if it's local or not
         encoding["source"] = self._filename
-        encoding["original_shape"] = var.shape
+        encoding["original_shape"] = data.shape
 
         return Variable(dimensions, data, attributes, encoding)
 
@@ -616,7 +615,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             # netcdf 3 or HDF5
             return magic_number.startswith((b"CDF", b"\211HDF\r\n\032\n"))
 
-        if isinstance(filename_or_obj, (str, os.PathLike)):
+        if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
             return ext in {".nc", ".nc4", ".cdf"}
 
@@ -672,11 +671,91 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     def open_datatree(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group: str | Iterable[str] | Callable | None = None,
+        format="NETCDF4",
+        clobber=True,
+        diskless=False,
+        persist=False,
+        lock=None,
+        autoclose=False,
         **kwargs,
     ) -> DataTree:
-        from netCDF4 import Dataset as ncDataset
 
-        return _open_datatree_netcdf(ncDataset, filename_or_obj, **kwargs)
+        from xarray.core.datatree import DataTree
+
+        groups_dict = self.open_groups_as_dict(filename_or_obj, **kwargs)
+
+        return DataTree.from_dict(groups_dict)
+
+    def open_groups_as_dict(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group: str | Iterable[str] | Callable | None = None,
+        format="NETCDF4",
+        clobber=True,
+        diskless=False,
+        persist=False,
+        lock=None,
+        autoclose=False,
+        **kwargs,
+    ) -> dict[str, Dataset]:
+        from xarray.backends.common import _iter_nc_groups
+        from xarray.core.treenode import NodePath
+
+        filename_or_obj = _normalize_path(filename_or_obj)
+        store = NetCDF4DataStore.open(
+            filename_or_obj,
+            group=group,
+            format=format,
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            lock=lock,
+            autoclose=autoclose,
+        )
+
+        # Check for a group and make it a parent if it exists
+        if group:
+            parent = NodePath("/") / NodePath(group)
+        else:
+            parent = NodePath("/")
+
+        manager = store._manager
+        groups_dict = {}
+        for path_group in _iter_nc_groups(store.ds, parent=parent):
+            group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
+            store_entrypoint = StoreBackendEntrypoint()
+            with close_on_error(group_store):
+                group_ds = store_entrypoint.open_dataset(
+                    group_store,
+                    mask_and_scale=mask_and_scale,
+                    decode_times=decode_times,
+                    concat_characters=concat_characters,
+                    decode_coords=decode_coords,
+                    drop_variables=drop_variables,
+                    use_cftime=use_cftime,
+                    decode_timedelta=decode_timedelta,
+                )
+            group_name = str(NodePath(path_group))
+            groups_dict[group_name] = group_ds
+
+        return groups_dict
 
 
 BACKEND_ENTRYPOINTS["netcdf4"] = ("netCDF4", NetCDF4BackendEntrypoint)

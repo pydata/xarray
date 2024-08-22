@@ -337,13 +337,16 @@ class TestDataArrayAndDataset(DaskTestCase):
             self.data, coords={"x": range(4)}, dims=("x", "y"), name="foo"
         )
 
-    def test_chunk(self):
+    def test_chunk(self) -> None:
         for chunks, expected in [
             ({}, ((2, 2), (2, 2, 2))),
             (3, ((3, 1), (3, 3))),
             ({"x": 3, "y": 3}, ((3, 1), (3, 3))),
             ({"x": 3}, ((3, 1), (2, 2, 2))),
             ({"x": (3, 1)}, ((3, 1), (2, 2, 2))),
+            ({"x": "16B"}, ((1, 1, 1, 1), (2, 2, 2))),
+            ("16B", ((1, 1, 1, 1), (1,) * 6)),
+            ("16MB", ((4,), (6,))),
         ]:
             # Test DataArray
             rechunked = self.lazy_array.chunk(chunks)
@@ -634,6 +637,15 @@ class TestDataArrayAndDataset(DaskTestCase):
         ds.load(scheduler=counting_get)
 
         assert count[0] == 1
+
+    def test_duplicate_dims(self):
+        data = np.random.normal(size=(4, 4))
+        with pytest.warns(UserWarning, match="Duplicate dimension"):
+            arr = DataArray(data, dims=("x", "x"))
+        with pytest.warns(UserWarning, match="Duplicate dimension"):
+            chunked_array = arr.chunk({"x": 2})
+        assert chunked_array.chunks == ((2, 2), (2, 2))
+        assert chunked_array.chunksizes == {"x": (2, 2)}
 
     def test_stack(self):
         data = da.random.normal(size=(2, 3, 4), chunks=(1, 3, 4))
@@ -1354,7 +1366,8 @@ def test_map_blocks_ds_transformations(func, map_ds):
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_da_ds_with_template(obj):
     func = lambda x: x.isel(x=[1])
-    template = obj.isel(x=[1, 5, 9])
+    # a simple .isel(x=[1, 5, 9]) puts all those in a single chunk.
+    template = xr.concat([obj.isel(x=[i]) for i in [1, 5, 9]], dim="x")
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, obj, template=template)
     assert_identical(actual, template)
@@ -1368,7 +1381,7 @@ def test_map_blocks_roundtrip_string_index():
     ds = xr.Dataset(
         {"data": (["label"], [1, 2, 3])}, coords={"label": ["foo", "bar", "baz"]}
     ).chunk(label=1)
-    assert ds.label.dtype == np.dtype("<U3")
+    assert ds.label.dtype == np.dtype("=U3")
 
     mapped = ds.map_blocks(lambda x: x, template=ds)
     assert mapped.label.dtype == ds.label.dtype
@@ -1385,15 +1398,16 @@ def test_map_blocks_roundtrip_string_index():
 
 def test_map_blocks_template_convert_object():
     da = make_da()
+    ds = da.to_dataset()
+
     func = lambda x: x.to_dataset().isel(x=[1])
-    template = da.to_dataset().isel(x=[1, 5, 9])
+    template = xr.concat([da.to_dataset().isel(x=[i]) for i in [1, 5, 9]], dim="x")
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, da, template=template)
     assert_identical(actual, template)
 
-    ds = da.to_dataset()
     func = lambda x: x.to_dataarray().isel(x=[1])
-    template = ds.to_dataarray().isel(x=[1, 5, 9])
+    template = xr.concat([ds.to_dataarray().isel(x=[i]) for i in [1, 5, 9]], dim="x")
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, ds, template=template)
     assert_identical(actual, template)
@@ -1419,7 +1433,7 @@ def test_map_blocks_errors_bad_template(obj):
         xr.map_blocks(
             lambda a: a.isel(x=[1]).assign_coords(x=[120]),  # assign bad index values
             obj,
-            template=obj.isel(x=[1, 5, 9]),
+            template=xr.concat([obj.isel(x=[i]) for i in [1, 5, 9]], dim="x"),
         ).compute()
 
 
