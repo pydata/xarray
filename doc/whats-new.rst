@@ -60,6 +60,9 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Re-enable testing ``pydap`` backend with ``numpy>=2`` (:pull:`9391`).
+  By `Miguel Jimenez <https://github.com/Mikejmnez>`_ .
+
 
 
 .. _whats-new.2024.07.0:
