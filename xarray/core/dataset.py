@@ -86,7 +86,6 @@ from xarray.core.merge import (
     merge_coordinates_without_align,
     merge_core,
 )
-from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Bins,
