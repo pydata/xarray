@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
     Options = Literal[
         "arithmetic_join",
+        "chunk_manager",
         "cmap_divergent",
         "cmap_sequential",
         "display_max_rows",
@@ -36,6 +37,7 @@ if TYPE_CHECKING:
     class T_Options(TypedDict):
         arithmetic_broadcast: bool
         arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
+        chunk_manager: str
         cmap_divergent: str | Colormap
         cmap_sequential: str | Colormap
         display_max_rows: int
@@ -62,6 +64,7 @@ if TYPE_CHECKING:
 OPTIONS: T_Options = {
     "arithmetic_broadcast": True,
     "arithmetic_join": "inner",
+    "chunk_manager": "dask",
     "cmap_divergent": "RdBu_r",
     "cmap_sequential": "viridis",
     "display_max_rows": 12,
@@ -172,7 +175,9 @@ class set_options:
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-
+    chunk_manager : str, default: "dask"
+        Chunk manager to use for chunked array computations when multiple
+        options are installed.
     cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
         Colormap to use for divergent data plots. If string, must be
         matplotlib built-in colormap. Can also be a Colormap object
