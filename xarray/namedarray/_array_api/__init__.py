@@ -244,15 +244,21 @@ __all__ += [
     "__array_namespace_info__",
 ]
 
-# from xarray.namedarray._array_api._linear_algebra_functions import (
-#     matmul,
-#     matrix_transpose,
-#     outer,
-#     tensordot,
-#     vecdot,
-# )
+from xarray.namedarray._array_api._linear_algebra_functions import (
+    matmul,
+    matrix_transpose,
+    outer,
+    tensordot,
+    vecdot,
+)
 
-# __all__ += ["matmul", "matrix_transpose", "outer", "tensordot", "vecdot"]
+__all__ += [
+    "matmul",
+    "matrix_transpose",
+    "outer",
+    "tensordot",
+    "vecdot",
+]
 
 from xarray.namedarray._array_api._manipulation_functions import (
     # broadcast_arrays,

@@ -129,11 +129,11 @@ class _FInfo(Protocol):
 
 
 _Capabilities = TypedDict(
-    "Capabilities", {"boolean indexing": bool, "data-dependent shapes": bool}
+    "_Capabilities", {"boolean indexing": bool, "data-dependent shapes": bool}
 )
 
 _DefaultDataTypes = TypedDict(
-    "DefaultDataTypes",
+    "_DefaultDataTypes",
     {
         "real floating": _dtype,
         "complex floating": _dtype,
