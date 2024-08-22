@@ -199,8 +199,8 @@ def full(
 
 def full_like(
     x: NamedArray[_ShapeType, _DType],
-    fill_value: bool | int | float | complex,
     /,
+    fill_value: bool | int | float | complex,
     *,
     dtype: _DType | None = None,
     device: _Device | None = None,

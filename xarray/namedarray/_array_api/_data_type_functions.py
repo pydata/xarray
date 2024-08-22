@@ -12,15 +12,19 @@ from xarray.namedarray._typing import (
     _dtype,
     _FInfo,
     _IInfo,
+    _Device,
     _ShapeType,
 )
-from xarray.namedarray.core import (
-    NamedArray,
-)
+from xarray.namedarray.core import NamedArray
 
 
 def astype(
-    x: NamedArray[_ShapeType, Any], dtype: _DType, /, *, copy: bool = True
+    x: NamedArray[_ShapeType, Any],
+    dtype: _DType,
+    /,
+    *,
+    copy: bool = True,
+    device: _Device | None = None,
 ) -> NamedArray[_ShapeType, _DType]:
     """
     Copies an array to a specified data type irrespective of Type Promotion Rules rules.
