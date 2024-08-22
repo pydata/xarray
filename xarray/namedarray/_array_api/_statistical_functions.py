@@ -162,6 +162,7 @@ def prod(
     /,
     *,
     dims: _Dims | Default = _default,
+    dtype: _DType | None = None,
     keepdims: bool = False,
     axis: _AxisLike | None = None,
 ) -> NamedArray[Any, _DType]:
@@ -199,6 +200,7 @@ def sum(
     /,
     *,
     dims: _Dims | Default = _default,
+    dtype: _DType | None = None,
     keepdims: bool = False,
     axis: _AxisLike | None = None,
 ) -> NamedArray[Any, _DType]:
