@@ -223,21 +223,27 @@ html_context = {
     "doc_path": "doc",
 }
 
+WARNING: unsupported theme option 'path_to_docs' given
+WARNING: unsupported theme option 'use_repository_button' given
+WARNING: unsupported theme option 'use_issues_button' given
+WARNING: unsupported theme option 'home_page_in_toc' given
+WARNING: unsupported theme option 'extra_footer' given
+
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = dict(
     # analytics_id=''  this is configured in rtfd.io
     # canonical_url="",
-    repository_url="https://github.com/pydata/xarray",
-    repository_branch="main",
+    github_url="https://github.com/pydata/xarray",
+    # repository_branch="main",
     navigation_with_keys=False,  # pydata/pydata-sphinx-theme#1492
-    path_to_docs="doc",
+    # path_to_docs="doc",
     use_edit_page_button=True,
-    use_repository_button=True,
-    use_issues_button=True,
-    home_page_in_toc=False,
-    extra_footer="""<p>Xarray is a fiscally sponsored project of <a href="https://numfocus.org">NumFOCUS</a>,
+    # use_repository_button=True,
+    # use_issues_button=True,
+    # home_page_in_toc=False,
+    footer_center="""<p>Xarray is a fiscally sponsored project of <a href="https://numfocus.org">NumFOCUS</a>,
     a nonprofit dedicated to supporting the open-source scientific computing community.<br>
     Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
     twitter_url="https://twitter.com/xarray_dev",
