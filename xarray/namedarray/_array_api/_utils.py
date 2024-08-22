@@ -1,19 +1,20 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Iterable
+from typing import TYPE_CHECKING, Any
 
 from xarray.namedarray._typing import (
     Default,
     _arrayapi,
-    _default,
-    _DimsLike,
-    _dtype,
     _AxisLike,
-    _Shape,
+    _default,
     _Dim,
     _Dims,
+    _DimsLike,
     _DType,
+    _dtype,
+    _Shape,
     duckarray,
 )
 

@@ -11,11 +11,11 @@ from typing import (
     Literal,
     Protocol,
     SupportsIndex,
+    TypedDict,
     TypeVar,
     Union,
     overload,
     runtime_checkable,
-    TypedDict,
 )
 
 import numpy as np
@@ -144,25 +144,21 @@ _DefaultDataTypes = TypedDict(
     },
 )
 
-_DataTypes = TypedDict(
-    "DataTypes",
-    {
-        "bool": _dtype,
-        "float32": _dtype,
-        "float64": _dtype,
-        "complex64": _dtype,
-        "complex128": _dtype,
-        "int8": _dtype,
-        "int16": _dtype,
-        "int32": _dtype,
-        "int64": _dtype,
-        "uint8": _dtype,
-        "uint16": _dtype,
-        "uint32": _dtype,
-        "uint64": _dtype,
-    },
-    total=False,
-)
+
+class _DataTypes(TypedDict, total=False):
+    bool: _dtype
+    float32: _dtype
+    float64: _dtype
+    complex64: _dtype
+    complex128: _dtype
+    int8: _dtype
+    int16: _dtype
+    int32: _dtype
+    int64: _dtype
+    uint8: _dtype
+    uint16: _dtype
+    uint32: _dtype
+    uint64: _dtype
 
 
 @runtime_checkable

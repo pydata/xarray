@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 from xarray.namedarray._array_api._utils import (
-    _get_data_namespace,
     _dims_to_axis,
+    _get_data_namespace,
     _get_remaining_dims,
 )
 from xarray.namedarray._typing import (
