@@ -50,24 +50,17 @@ from xarray.namedarray.utils import (
 )
 
 if TYPE_CHECKING:
-    from enum import IntEnum
+    from numpy.typing import ArrayLike, NDArray
 
-    from numpy.typing import NDArray
-
-    from xarray.core.types import T_Chunks
+    from xarray.core.types import Dims, T_Chunks
     from xarray.namedarray._typing import (
         Default,
-        _ArrayLike,
         _AttrsLike,
-        _AxisLike,
         _Chunks,
-        _Device,
         _Dim,
         _Dims,
         _DimsLike,
-        _DimsLikeAgg,
         _DType,
-        _IndexKeyLike,
         _IntOrUnknown,
         _ScalarType,
         _Shape,
@@ -100,114 +93,6 @@ if TYPE_CHECKING:
     T_NamedArrayInteger = TypeVar(
         "T_NamedArrayInteger", bound="_NamedArray[np.integer[Any]]"
     )
-
-
-def _normalize_dimensions(dims: _DimsLike) -> _Dims:
-    """
-    Normalize dimensions.
-
-    Examples
-    --------
-    >>> _normalize_dimensions(None)
-    (None,)
-    >>> _normalize_dimensions(1)
-    (1,)
-    >>> _normalize_dimensions("2")
-    ('2',)
-    >>> _normalize_dimensions(("time",))
-    ('time',)
-    >>> _normalize_dimensions(["time"])
-    ('time',)
-    >>> _normalize_dimensions([("time", "x", "y")])
-    (('time', 'x', 'y'),)
-    """
-    if isinstance(dims, str) or not isinstance(dims, Iterable):
-        return (dims,)
-
-    return tuple(dims)
-
-
-def _assert_either_dim_or_axis(
-    dims: _Dim | _Dims | Default, axis: _AxisLike | None
-) -> None:
-    if dims is not _default and axis is not None:
-        raise ValueError("cannot supply both 'axis' and 'dim(s)' arguments")
-
-
-def _dims_to_axis(
-    x: NamedArray[Any, Any], dims: _Dim | _Dims | Default, axis: _AxisLike | None
-) -> _AxisLike | None:
-    """
-    Convert dims to axis indices.
-
-    Examples
-    --------
-    >>> narr = NamedArray(("x", "y"), np.array([[1, 2, 3], [5, 6, 7]]))
-    >>> _dims_to_axis(narr, ("y",), None)
-    (1,)
-    >>> _dims_to_axis(narr, None, 0)
-    (0,)
-    >>> _dims_to_axis(narr, None, None)
-    """
-    _assert_either_dim_or_axis(dims, axis)
-
-    if dims is not _default:
-        return x._dims_to_axes(dims)
-
-    if isinstance(axis, int):
-        return (axis,)
-
-    return axis
-
-
-def _get_remaining_dims(
-    x: NamedArray[Any, _DType],
-    data: duckarray[Any, _DType],
-    axis: _AxisLike | None,
-    *,
-    keepdims: bool,
-) -> tuple[_Dims, duckarray[Any, _DType]]:
-    """
-    Get the reamining dims after a reduce operation.
-
-    Parameters
-    ----------
-    x :
-        DESCRIPTION.
-    data :
-        DESCRIPTION.
-    axis :
-        DESCRIPTION.
-    keepdims :
-        DESCRIPTION.
-
-    Returns
-    -------
-    tuple[_Dims, duckarray[Any, _DType]]
-        DESCRIPTION.
-
-    """
-    if data.shape == x.shape:
-        return x.dims, data
-
-    removed_axes: np.ndarray[Any, np.dtype[np.intp]]
-    if axis is None:
-        removed_axes = np.arange(x.ndim, dtype=np.intp)
-    else:
-        removed_axes = np.atleast_1d(axis) % x.ndim
-
-    if keepdims:
-        # Insert np.newaxis for removed dims
-        slices = tuple(
-            np.newaxis if i in removed_axes else slice(None, None)
-            for i in range(x.ndim)
-        )
-        data = data[slices]
-        dims = x.dims
-    else:
-        dims = tuple(adim for n, adim in enumerate(x.dims) if n not in removed_axes)
-
-    return dims, data
 
 
 @overload
@@ -279,14 +164,14 @@ def from_array(
 @overload
 def from_array(
     dims: _DimsLike,
-    data: _ArrayLike,
+    data: ArrayLike,
     attrs: _AttrsLike = ...,
 ) -> NamedArray[Any, Any]: ...
 
 
 def from_array(
     dims: _DimsLike,
-    data: duckarray[_ShapeType, _DType] | _ArrayLike,
+    data: duckarray[_ShapeType, _DType] | ArrayLike,
     attrs: _AttrsLike = None,
 ) -> NamedArray[_ShapeType, _DType] | NamedArray[Any, Any]:
     """
@@ -296,7 +181,7 @@ def from_array(
     ----------
     dims : str or iterable of str
         Name(s) of the dimension(s).
-    data : T_DuckArray or _ArrayLike
+    data : T_DuckArray or ArrayLike
         The actual data that populates the array. Should match the
         shape specified by `dims`.
     attrs : dict, optional
@@ -900,7 +785,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self._dims = self._parse_dimensions(value)
 
     def _parse_dimensions(self, dims: _DimsLike) -> _Dims:
-        dims = _normalize_dimensions(dims)
+        dims = (dims,) if isinstance(dims, str) else tuple(dims)
         if len(dims) != self.ndim:
             raise ValueError(
                 f"dimensions {dims} must have the same length as the "
@@ -1084,18 +969,15 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         int or tuple of int
             Axis number or numbers corresponding to the given dimensions.
         """
-        if dims is _default:
-            return None
+        if not isinstance(dim, str) and isinstance(dim, Iterable):
+            return tuple(self._get_axis_num(d) for d in dim)
+        else:
+            return self._get_axis_num(dim)
 
-        if isinstance(dims, tuple):
-            return tuple(self._dim_to_axis(d) for d in dims)
-
-        return self._dim_to_axis(dims)
-
-    def _dim_to_axis(self, dim: _Dim) -> int:
+    def _get_axis_num(self: Any, dim: Hashable) -> int:
+        _raise_if_any_duplicate_dimensions(self.dims)
         try:
-            out = self.dims.index(dim)
-            return out
+            return self.dims.index(dim)  # type: ignore[no-any-return]
         except ValueError:
             raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
 
@@ -1257,8 +1139,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: _DimsLikeAgg | Default = _default,
-        axis: int | Sequence[int] | None = None,  # TODO: Use _AxisLike
+        dim: Dims = None,
+        axis: int | Sequence[int] | None = None,
         keepdims: bool = False,
         **kwargs: Any,
     ) -> NamedArray[Any, Any]:
@@ -1290,43 +1172,54 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        d: _Dims | None
-        if dim is None or dim is ...:  # TODO: isinstance(dim, types.EllipsisType)
-            # TODO: What's the point of ellipsis? Use either ... or None?
-            d = None
-        else:
-            dimslike: _DimsLike = dim
-            d = _normalize_dimensions(dimslike)
+        if dim == ...:
+            dim = None
+        if dim is not None and axis is not None:
+            raise ValueError("cannot supply both 'axis' and 'dim' arguments")
 
-        axislike: _AxisLike | None
-        if axis is None or isinstance(axis, int):
-            axislike = axis
-        else:
-            axislike = tuple(axis)
-        axis_ = _dims_to_axis(self, d, axislike)
+        if dim is not None:
+            axis = self.get_axis_num(dim)
 
-        data: duckarray[Any, Any] | _ArrayLike
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore", r"Mean of empty slice", category=RuntimeWarning
             )
-            if axis_ is not None:
-                if isinstance(axis_, tuple) and len(axis_) == 1:
+            if axis is not None:
+                if isinstance(axis, tuple) and len(axis) == 1:
                     # unpack axis for the benefit of functions
                     # like np.argmin which can't handle tuple arguments
-                    data = func(self.data, axis=axis_[0], **kwargs)
-                else:
-                    data = func(self.data, axis=axis_, **kwargs)
+                    axis = axis[0]
+                data = func(self.data, axis=axis, **kwargs)
             else:
                 data = func(self.data, **kwargs)
 
-        if not isinstance(data, _arrayfunction_or_api):
-            data = np.asarray(data)
-
-        dims_, data = _get_remaining_dims(self, data, axis_, keepdims=keepdims)
+        if getattr(data, "shape", ()) == self.shape:
+            dims = self.dims
+        else:
+            removed_axes: Iterable[int]
+            if axis is None:
+                removed_axes = range(self.ndim)
+            else:
+                removed_axes = np.atleast_1d(axis) % self.ndim
+            if keepdims:
+                # Insert np.newaxis for removed dims
+                slices = tuple(
+                    np.newaxis if i in removed_axes else slice(None, None)
+                    for i in range(self.ndim)
+                )
+                if getattr(data, "shape", None) is None:
+                    # Reduce has produced a scalar value, not an array-like
+                    data = np.asanyarray(data)[slices]
+                else:
+                    data = data[slices]
+                dims = self.dims
+            else:
+                dims = tuple(
+                    adim for n, adim in enumerate(self.dims) if n not in removed_axes
+                )
 
         # Return NamedArray to handle IndexVariable when data is nD
-        return from_array(dims_, data, attrs=self._attrs)
+        return from_array(dims, data, attrs=self._attrs)
 
     def _nonzero(self: T_NamedArrayInteger) -> tuple[T_NamedArrayInteger, ...]:
         """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
@@ -1349,7 +1242,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def _as_sparse(
         self,
         sparse_format: Literal["coo"] | Default = _default,
-        fill_value: _ArrayLike | Default = _default,
+        fill_value: ArrayLike | Default = _default,
     ) -> NamedArray[Any, _DType_co]:
         """
         Use sparse-array as backend.
