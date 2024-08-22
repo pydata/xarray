@@ -2,10 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from types import ModuleType
-
-    from xarray.namedarray._typing import _Device
 
 from xarray.namedarray._array_api._dtypes import (
     bool,
@@ -23,6 +19,16 @@ from xarray.namedarray._array_api._dtypes import (
     uint64,
 )
 
+if TYPE_CHECKING:
+    from types import ModuleType
+
+    from xarray.namedarray._typing import (
+        _Device,
+        _Capabilities,
+        _DefaultDataTypes,
+        _DataTypes,
+    )
+
 
 def __array_namespace_info__() -> ModuleType:
     import xarray.namedarray._array_api._info
@@ -30,7 +36,7 @@ def __array_namespace_info__() -> ModuleType:
     return xarray.namedarray._array_api._info
 
 
-def capabilities() -> dict:
+def capabilities() -> _Capabilities:
     return {
         "boolean indexing": False,
         "data-dependent shapes": False,
@@ -48,7 +54,7 @@ def default_device() -> _Device:
 def default_dtypes(
     *,
     device: _Device | None = None,
-) -> dict:
+) -> _DefaultDataTypes:
     return {
         "real floating": float64,
         "complex floating": complex128,
@@ -60,8 +66,8 @@ def default_dtypes(
 def dtypes(
     *,
     device: _Device | None = None,
-    kind: str | Tuple[str, ...] | None = None,
-) -> dict:
+    kind: str | tuple[str, ...] | None = None,
+) -> _DataTypes:
     if kind is None:
         return {
             "bool": bool,

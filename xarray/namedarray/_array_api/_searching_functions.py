@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from xarray.namedarray._array_api._utils import _get_data_namespace, _infer_dims
+from xarray.namedarray._array_api._utils import (
+    _get_data_namespace,
+    _infer_dims,
+    _dims_to_axis,
+    _get_remaining_dims,
+)
 from xarray.namedarray._typing import (
     Default,
     _default,
@@ -10,8 +15,6 @@ from xarray.namedarray._typing import (
 )
 from xarray.namedarray.core import (
     NamedArray,
-    _dims_to_axis,
-    _get_remaining_dims,
 )
 
 if TYPE_CHECKING:

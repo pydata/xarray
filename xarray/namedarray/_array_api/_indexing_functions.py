@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-from xarray.namedarray._array_api._utils import _get_data_namespace
+from xarray.namedarray._array_api._utils import _get_data_namespace, _dims_to_axis
 from xarray.namedarray._typing import (
     Default,
     _default,
     _Dim,
 )
-from xarray.namedarray.core import (
-    NamedArray,
-    _dims_to_axis,
-)
+from xarray.namedarray.core import NamedArray
 
 
 def take(
