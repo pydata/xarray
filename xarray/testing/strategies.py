@@ -518,9 +518,8 @@ def coordinate_variables(
 
     all_coords = {}
 
-    if draw(
-        st.booleans()
-    ):  # Allow for no coordinate variables - explicit possibility not to helps with shrinking
+    # Allow for no coordinate variables - explicit possibility not to helps with shrinking
+    if draw(st.booleans()):
         dim_names = list(dim_sizes.keys())
 
         # Possibly generate 1D "dimension coordinates" - explicit possibility not to helps with shrinking
