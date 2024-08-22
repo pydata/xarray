@@ -279,7 +279,7 @@ __all__ += [
     "reshape",
     # "roll",
     # "squeeze",
-    # "stack",
+    "stack",
 ]
 
 from xarray.namedarray._array_api._searching_functions import (
