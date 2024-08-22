@@ -520,7 +520,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return less_equal(self, asarray(other))
 
     def __lshift__(self, other: int | NamedArray, /):
-        from xarray.namedarray._array_api import bitwise_left_shift, asarray
+        from xarray.namedarray._array_api import asarray, bitwise_left_shift
 
         return bitwise_left_shift(self, asarray(other))
 
@@ -555,7 +555,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return negative(self)
 
     def __or__(self, other: int | bool | NamedArray, /):
-        from xarray.namedarray._array_api import bitwise_or, asarray
+        from xarray.namedarray._array_api import asarray, bitwise_or
 
         return bitwise_or(self, asarray(other))
 
@@ -570,7 +570,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return pow(self, asarray(other))
 
     def __rshift__(self, other: int | NamedArray, /):
-        from xarray.namedarray._array_api import bitwise_right_shift, asarray
+        from xarray.namedarray._array_api import asarray, bitwise_right_shift
 
         return bitwise_right_shift(self, asarray(other))
 
@@ -597,7 +597,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return divide(self, asarray(other))
 
     def __xor__(self, other: int | bool | NamedArray, /):
-        from xarray.namedarray._array_api import bitwise_xor, asarray
+        from xarray.namedarray._array_api import asarray, bitwise_xor
 
         return bitwise_xor(self, asarray(other))
 
