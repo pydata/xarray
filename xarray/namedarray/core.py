@@ -57,15 +57,12 @@ if TYPE_CHECKING:
     from xarray.core.types import T_Chunks
     from xarray.namedarray._typing import (
         Default,
-        _ArrayLike,
         _AttrsLike,
-        _AxisLike,
         _Chunks,
         _Device,
         _Dim,
         _Dims,
         _DimsLike,
-        _DimsLikeAgg,
         _DType,
         _IndexKeyLike,
         _IntOrUnknown,
