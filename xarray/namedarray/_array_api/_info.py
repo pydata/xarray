@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-
 from xarray.namedarray._array_api._dtypes import (
     bool,
     complex64,
@@ -23,10 +22,10 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     from xarray.namedarray._typing import (
-        _Device,
         _Capabilities,
-        _DefaultDataTypes,
         _DataTypes,
+        _DefaultDataTypes,
+        _Device,
     )
 
 
