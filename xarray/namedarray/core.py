@@ -55,7 +55,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import ArrayLike, NDArray
 
-    from xarray.core.types import T_Chunks
+    from xarray.core.types import Dims, T_Chunks
     from xarray.namedarray._typing import (
         Default,
         _AttrsLike,
@@ -493,8 +493,14 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             raise NotImplementedError("Only array api are valid.")
 
     @property
-    def T(self):
-        raise NotImplementedError("Todo: ")
+    def T(self) -> NamedArray[Any, _DType_co]:
+        """Return a new object with transposed dimensions."""
+        if self.ndim != 2:
+            raise ValueError(
+                f"x.T requires x to have 2 dimensions, got {self.ndim}. Use x.permute_dims() to permute dimensions."
+            )
+
+        return self.permute_dims()
 
     # methods
     def __abs__(self, /):
@@ -1328,16 +1334,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         axes = (axes_result,) if isinstance(axes_result, int) else axes_result
 
         return permute_dims(self, axes)
-
-    @property
-    def T(self) -> NamedArray[Any, _DType_co]:
-        """Return a new object with transposed dimensions."""
-        if self.ndim != 2:
-            raise ValueError(
-                f"x.T requires x to have 2 dimensions, got {self.ndim}. Use x.permute_dims() to permute dimensions."
-            )
-
-        return self.permute_dims()
 
     def broadcast_to(
         self, dim: Mapping[_Dim, int] | None = None, **dim_kwargs: Any
