@@ -247,7 +247,6 @@ __all__ += [
 from xarray.namedarray._array_api._linear_algebra_functions import (
     matmul,
     matrix_transpose,
-    outer,
     tensordot,
     vecdot,
 )
@@ -255,7 +254,6 @@ from xarray.namedarray._array_api._linear_algebra_functions import (
 __all__ += [
     "matmul",
     "matrix_transpose",
-    "outer",
     "tensordot",
     "vecdot",
 ]
