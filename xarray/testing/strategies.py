@@ -688,9 +688,8 @@ def data_variables(
     var_names: Strategy generating strings
         Allowed names for data variables. Needed to avoid conflict with names of coordinate variables & dimensions.
     """
-    if draw(
-        st.booleans()
-    ):  # Allow for no coordinate variables - explicit possibility not to helps with shrinking
+    # Allow for no coordinate variables - explicit possibility not to helps with shrinking
+    if draw(st.booleans()):
         dim_names = list(dim_sizes.keys())
 
         # can't have same name as a dimension
