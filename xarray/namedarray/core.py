@@ -426,7 +426,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return add(self, asarray(other))
 
     def __and__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_and
+        from xarray.namedarray._array_api import bitwise_and, asarray
 
         return bitwise_and(self, asarray(other))
 
@@ -472,12 +472,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self._data.__float__()
 
     def __floordiv__(self, other, /):
-        from xarray.namedarray._array_api import floor_divide
+        from xarray.namedarray._array_api import floor_divide, asarray
 
         return floor_divide(self, asarray(other))
 
     def __ge__(self, other, /):
-        from xarray.namedarray._array_api import greater_equal
+        from xarray.namedarray._array_api import greater_equal, asarray
 
         return greater_equal(self, asarray(other))
 
@@ -493,7 +493,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             raise NotImplementedError("{k=} is not supported")
 
     def __gt__(self, other, /):
-        from xarray.namedarray._array_api import greater
+        from xarray.namedarray._array_api import greater, asarray
 
         return greater(self, asarray(other))
 
@@ -515,7 +515,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return (asarray(i) for i in self._data)
 
     def __le__(self, other, /):
-        from xarray.namedarray._array_api import less_equal
+        from xarray.namedarray._array_api import less_equal, asarray
 
         return less_equal(self, asarray(other))
 
@@ -525,27 +525,27 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return bitwise_left_shift(self)
 
     def __lt__(self, other, /):
-        from xarray.namedarray._array_api import less
+        from xarray.namedarray._array_api import less, asarray
 
         return less(self, asarray(other))
 
     def __matmul__(self, other, /):
-        from xarray.namedarray._array_api import matmul
+        from xarray.namedarray._array_api import matmul, asarray
 
         return matmul(self, asarray(other))
 
     def __mod__(self, other, /):
-        from xarray.namedarray._array_api import remainder
+        from xarray.namedarray._array_api import remainder, asarray
 
         return remainder(self, asarray(other))
 
     def __mul__(self, other, /):
-        from xarray.namedarray._array_api import multiply
+        from xarray.namedarray._array_api import multiply, asarray
 
         return multiply(self, asarray(other))
 
     def __ne__(self, other, /):
-        from xarray.namedarray._array_api import not_equal
+        from xarray.namedarray._array_api import not_equal, asarray
 
         return not_equal(self, asarray(other))
 
@@ -565,7 +565,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return positive(self)
 
     def __pow__(self, other, /):
-        from xarray.namedarray._array_api import pow
+        from xarray.namedarray._array_api import pow, asarray
 
         return pow(self, asarray(other))
 
@@ -587,12 +587,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self._array.__setitem__(key, asarray(value)._data)
 
     def __sub__(self, other, /):
-        from xarray.namedarray._array_api import subtract
+        from xarray.namedarray._array_api import subtract, asarray
 
         return subtract(self, asarray(other))
 
     def __truediv__(self, other, /):
-        from xarray.namedarray._array_api import divide
+        from xarray.namedarray._array_api import divide, asarray
 
         return divide(self, asarray(other))
 
@@ -606,7 +606,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self
 
     def __radd__(self, other, /):
-        from xarray.namedarray._array_api import add
+        from xarray.namedarray._array_api import add, asarray
 
         return add(asarray(other), self)
 
@@ -615,7 +615,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self
 
     def __rand__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_and
+        from xarray.namedarray._array_api import bitwise_and, asarray
 
         return bitwise_and(asarray(other), self)
 
@@ -624,7 +624,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self
 
     def __rfloordiv__(self, other, /):
-        from xarray.namedarray._array_api import floor_divide
+        from xarray.namedarray._array_api import floor_divide, asarray
 
         return floor_divide(asarray(other), self)
 
@@ -633,7 +633,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self
 
     def __rlshift__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_left_shift
+        from xarray.namedarray._array_api import bitwise_left_shift, asarray
 
         return bitwise_left_shift(asarray(other), self)
 
@@ -642,7 +642,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self
 
     def __rmatmul__(self, other, /):
-        from xarray.namedarray._array_api import matmul
+        from xarray.namedarray._array_api import matmul, asarray
 
         return matmul(asarray(other), self)
 
@@ -651,7 +651,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self
 
     def __rmod__(self, other, /):
-        from xarray.namedarray._array_api import remainder
+        from xarray.namedarray._array_api import remainder, asarray
 
         return remainder(asarray(other), self)
 
@@ -660,7 +660,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self
 
     def __rmul__(self, other, /):
-        from xarray.namedarray._array_api import multiply
+        from xarray.namedarray._array_api import multiply, asarray
 
         return multiply(asarray(other), self)
 
@@ -669,7 +669,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self
 
     def __ror__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_or
+        from xarray.namedarray._array_api import bitwise_or, asarray
 
         return bitwise_or(asarray(other), self)
 
@@ -678,7 +678,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self
 
     def __rpow__(self, other, /):
-        from xarray.namedarray._array_api import pow
+        from xarray.namedarray._array_api import pow, asarray
 
         return pow(asarray(other), self)
 
@@ -687,7 +687,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self
 
     def __rrshift__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_right_shift
+        from xarray.namedarray._array_api import bitwise_right_shift, asarray
 
         return bitwise_right_shift(asarray(other), self)
 
@@ -696,16 +696,16 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self
 
     def __rsub__(self, other, /):
-        from xarray.namedarray._array_api import subtract
+        from xarray.namedarray._array_api import subtract, asarray
 
         return subtract(asarray(other), self)
 
     def __itruediv__(self, other, /):
-        self._data.__itruediv__(asarray(other)._data)
+        self._data.__itruediv__(other._data)
         return self
 
     def __rtruediv__(self, other, /):
-        from xarray.namedarray._array_api import divide
+        from xarray.namedarray._array_api import divide, asarray
 
         return divide(asarray(other), self)
 
@@ -714,7 +714,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self
 
     def __rxor__(self, other, /):
-        from xarray.namedarray._array_api import bitwise_xor
+        from xarray.namedarray._array_api import bitwise_xor, asarray
 
         return bitwise_xor(asarray(other), self)
 
