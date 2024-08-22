@@ -1253,7 +1253,7 @@ def test_roundtrip_datetime64_nanosecond_precision(
         encoding = {}
 
     var = Variable(["time"], times, encoding=encoding)
-    assert var.dtype == np.dtype("<M8[ns]")
+    assert var.dtype == np.dtype("=M8[ns]")
 
     encoded_var = conventions.encode_cf_variable(var)
     assert (
@@ -1264,7 +1264,7 @@ def test_roundtrip_datetime64_nanosecond_precision(
     assert encoded_var.data.dtype == dtype
 
     decoded_var = conventions.decode_cf_variable("foo", encoded_var)
-    assert decoded_var.dtype == np.dtype("<M8[ns]")
+    assert decoded_var.dtype == np.dtype("=M8[ns]")
     assert (
         decoded_var.encoding["units"]
         == f"{_numpy_to_netcdf_timeunit(timeunit)} since 1970-01-01 00:00:00"
