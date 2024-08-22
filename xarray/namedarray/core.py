@@ -31,6 +31,7 @@ from xarray.namedarray._typing import (
     _arrayfunction_or_api,
     _chunkedarray,
     _default,
+    duckarray,
     _dtype,
     _DType_co,
     _ScalarType_co,
@@ -52,7 +53,7 @@ from xarray.namedarray.utils import (
 if TYPE_CHECKING:
     from enum import IntEnum
 
-    from numpy.typing import NDArray
+    from numpy.typing import NDArray, ArrayLike
 
     from xarray.core.types import T_Chunks
     from xarray.namedarray._typing import (
@@ -71,6 +72,7 @@ if TYPE_CHECKING:
         _IntOrUnknown,
         _ScalarType,
         _Shape,
+        _ShapeType,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
