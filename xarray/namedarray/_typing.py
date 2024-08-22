@@ -15,6 +15,7 @@ from typing import (
     Union,
     overload,
     runtime_checkable,
+    TypedDict,
 )
 
 import numpy as np
@@ -42,13 +43,13 @@ _default = Default.token
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
+_ScalarType = TypeVar("_ScalarType", bound=np.generic)
+_ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
+
 _dtype = np.dtype
 _DType = TypeVar("_DType", bound=np.dtype[Any])
 _DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
 # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
-
-_ScalarType = TypeVar("_ScalarType", bound=np.generic)
-_ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
 
 
 # A protocol for anything with the dtype attribute
@@ -56,6 +57,16 @@ _ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
 class _SupportsDType(Protocol[_DType_co]):
     @property
     def dtype(self) -> _DType_co: ...
+
+
+class _SupportsReal(Protocol[_T_co]):
+    @property
+    def real(self) -> _T_co: ...
+
+
+class _SupportsImag(Protocol[_T_co]):
+    @property
+    def imag(self) -> _T_co: ...
 
 
 _DTypeLike = Union[
@@ -119,14 +130,39 @@ class _FInfo(Protocol):
     dtype: _dtype
 
 
-class _SupportsReal(Protocol[_T_co]):
-    @property
-    def real(self) -> _T_co: ...
+_Capabilities = TypedDict(
+    "Capabilities", {"boolean indexing": bool, "data-dependent shapes": bool}
+)
 
+_DefaultDataTypes = TypedDict(
+    "DefaultDataTypes",
+    {
+        "real floating": _dtype,
+        "complex floating": _dtype,
+        "integral": _dtype,
+        "indexing": _dtype,
+    },
+)
 
-class _SupportsImag(Protocol[_T_co]):
-    @property
-    def imag(self) -> _T_co: ...
+_DataTypes = TypedDict(
+    "DataTypes",
+    {
+        "bool": _dtype,
+        "float32": _dtype,
+        "float64": _dtype,
+        "complex64": _dtype,
+        "complex128": _dtype,
+        "int8": _dtype,
+        "int16": _dtype,
+        "int32": _dtype,
+        "int64": _dtype,
+        "uint8": _dtype,
+        "uint16": _dtype,
+        "uint32": _dtype,
+        "uint64": _dtype,
+    },
+    total=False,
+)
 
 
 @runtime_checkable
