@@ -50,22 +50,27 @@ from xarray.namedarray.utils import (
 )
 
 if TYPE_CHECKING:
-    from numpy.typing import ArrayLike, NDArray
+    from enum import IntEnum
 
-    from xarray.core.types import Dims, T_Chunks
+    from numpy.typing import NDArray
+
+    from xarray.core.types import T_Chunks
     from xarray.namedarray._typing import (
         Default,
+        _ArrayLike,
         _AttrsLike,
+        _AxisLike,
         _Chunks,
+        _Device,
         _Dim,
         _Dims,
         _DimsLike,
+        _DimsLikeAgg,
         _DType,
+        _IndexKeyLike,
         _IntOrUnknown,
         _ScalarType,
         _Shape,
-        _ShapeType,
-        duckarray,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
