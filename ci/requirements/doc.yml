@@ -44,5 +44,6 @@ dependencies:
   - zarr>=2.10
   - pip:
       - sphinxcontrib-mermaid
+      - sphinx-remove-toctrees
       # relative to this file. Needs to be editable to be accepted.
       - -e ../..
