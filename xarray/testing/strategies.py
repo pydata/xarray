@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Protocol, Union, overload
+from typing import TYPE_CHECKING, Any, Optional, Protocol, Union, overload
 
 try:
     import hypothesis.strategies as st
@@ -559,8 +559,10 @@ def _sizes_from_dim_names(
 def dataarrays(
     draw: st.DrawFn,
     *,
-    data: st.SearchStrategy[T_DuckArray] = None,
-    dims: st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]] = None,
+    data: Optional[st.SearchStrategy[T_DuckArray]] = None,
+    dims: Optional[
+        st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]]
+    ] = None,
     name: st.SearchStrategy[Union[Hashable, None]] = names(),
     attrs: st.SearchStrategy[Mapping] = attrs(),
 ) -> xr.DataArray:
@@ -708,8 +710,10 @@ def data_variables(
 def datasets(
     draw: st.DrawFn,
     *,
-    data_vars: st.SearchStrategy[Mapping[Hashable, xr.Variable]] = None,
-    dims: st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]] = None,
+    data_vars: Optional[st.SearchStrategy[Mapping[Hashable, xr.Variable]]] = None,
+    dims: Optional[
+        st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]]
+    ] = None,
     attrs: st.SearchStrategy[Mapping] = attrs(),
 ) -> xr.Dataset:
     """
