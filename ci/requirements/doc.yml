@@ -28,6 +28,7 @@ dependencies:
   - pooch
   - pip
   - pre-commit
+  - pyarrow
   - pyproj
   - scipy!=1.10.0
   - seaborn
