@@ -31,7 +31,6 @@ from xarray.namedarray._typing import (
     _arrayfunction_or_api,
     _chunkedarray,
     _default,
-    duckarray,
     _dtype,
     _DType_co,
     _ScalarType_co,
@@ -39,6 +38,7 @@ from xarray.namedarray._typing import (
     _sparsearrayfunction_or_api,
     _SupportsImag,
     _SupportsReal,
+    duckarray,
 )
 from xarray.namedarray.parallelcompat import guess_chunkmanager
 from xarray.namedarray.pycompat import to_numpy
@@ -53,7 +53,7 @@ from xarray.namedarray.utils import (
 if TYPE_CHECKING:
     from enum import IntEnum
 
-    from numpy.typing import NDArray, ArrayLike
+    from numpy.typing import ArrayLike, NDArray
 
     from xarray.core.types import T_Chunks
     from xarray.namedarray._typing import (
