@@ -76,7 +76,7 @@ _DTypeLike = Union[
 ]
 
 # For unknown shapes Dask uses np.nan, array_api uses None:
-_IntOrUnknown = int  # Union[int, _Unknown]
+_IntOrUnknown = int
 _Shape = tuple[_IntOrUnknown, ...]
 _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
 _ShapeType = TypeVar("_ShapeType", bound=Any)
@@ -95,9 +95,7 @@ T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim]
 
 _Dim = Hashable
 _Dims = tuple[_Dim, ...]
-# _DimsLike = Union[str, Iterable[_Dim], Default]
 _DimsLike = Union[str, Iterable[_Dim]]
-_DimsLikeAgg = Union[_DimsLike, "ellipsis", None]
 
 # https://data-apis.org/array-api/latest/API_specification/indexing.html
 # TODO: np.array_api was bugged and didn't allow (None,), but should!
