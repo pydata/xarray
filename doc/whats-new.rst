@@ -52,6 +52,9 @@ Bug fixes
 - Fix issue with passing parameters to ZarrStore.open_store when opening
   datatree in zarr format (:issue:`9376`, :pull:`9377`).
   By `Alfonso Ladino <https://github.com/aladinor>`_
+- Fix deprecation warning that was raised when calling ``np.array`` on an ``xr.DataArray``
+  in NumPy 2.0 (:issue:`9312`, :pull:`9393`)
+  By `Andrew Scherer <https://github.com/andrew-s28>`_.
 
 Documentation
 ~~~~~~~~~~~~~
