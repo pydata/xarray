@@ -9026,7 +9026,7 @@ class Dataset(
         variables = {}
         skipna_da = skipna
 
-        x = self.coords[dim].to_index()
+        x: Any = self.coords[dim].to_index()
         # Special case for non-standard calendar indexes
         # Numerical datetime values are defined with respect to 1970-01-01T00:00:00 in units of nanoseconds.
         if isinstance(x, CFTimeIndex | pd.DatetimeIndex):
