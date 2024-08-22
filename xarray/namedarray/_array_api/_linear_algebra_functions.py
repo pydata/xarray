@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Sequence
-
+from collections.abc import Sequence
 
 from xarray.namedarray._array_api._utils import _get_data_namespace, _infer_dims
-
 from xarray.namedarray.core import NamedArray
 
 
