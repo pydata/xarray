@@ -117,7 +117,7 @@ def test_interpolate_pd_compat(method, fill_value, dim, shape, frac_nan) -> None
         method=method,
         axis=da.get_axis_num(dim),
         fill_value=fill_value,
-        limit_direction='both'
+        limit_direction="both",
     )
 
     if method == "linear":
@@ -348,12 +348,12 @@ def test_interp1d_fastrack(method, vals):
 @requires_bottleneck
 def test_interpolate_limits():
     n = np.nan
-    times=pd.date_range("2000-01-01", periods=9, freq="2h")
+    times = pd.date_range("2000-01-01", periods=9, freq="2h")
     coords = {"yt": ("y", times)}
-    da = xr.DataArray([n,n,3, n, n, 6, n, 8, n], dims=["y"], coords=coords)
+    da = xr.DataArray([n, n, 3, n, n, 6, n, 8, n], dims=["y"], coords=coords)
 
     actual = da.interpolate_na(dim="y", limit=None, fill_value="extrapolate")
-    #With no limit, everything should be interpolated. Introduced in xarray due to a bug (GH7665), but kept for backward compatibility
+    # With no limit, everything should be interpolated. Introduced in xarray due to a bug (GH7665), but kept for backward compatibility
     expected = da.copy(data=[1, 2, 3, 4, 5, 6, 7, 8, 9])
     assert_equal(actual, expected)
 
@@ -369,6 +369,7 @@ def test_interpolate_limits():
     expected = da.copy(data=[n, n, 3, n, n, 6, 7, 8, 9])
     assert_equal(actual, expected)
 
+
 def test_interpolate_double_coordinate():
     # Check if max_gap is able to handle string coordinate names
     # Limit is always refering to an index
@@ -379,11 +380,8 @@ def test_interpolate_double_coordinate():
         coords={"y1": ("y", np.arange(7)), "y2": ("y", np.arange(7) * 2)},
     )
     actual = da.interpolate_na(
-        dim="y",
-        limit=1,
-        max_gap=4,
-        use_coordinate="y1",
-        fill_value="extrapolate")
+        dim="y", limit=1, max_gap=4, use_coordinate="y1", fill_value="extrapolate"
+    )
     expected = da.copy(data=[[1, 2, n, 4, 5, 6, 7], [1, 2, n, n, 5, 6, n]])
     assert_equal(actual, expected)
 
@@ -1027,7 +1025,9 @@ def test_interpolate_na_max_gap_2d(coords):
         coords=coords,
     )
 
-    actual = da.interpolate_na("y", use_coordinate=use_coordinate, max_gap=2, fill_value='extrapolate')
+    actual = da.interpolate_na(
+        "y", use_coordinate=use_coordinate, max_gap=2, fill_value="extrapolate"
+    )
     expected_y = da.copy(
         data=[
             [1, 2, 3, 4, 5, 6, n, n, n, 10, 11, 12],
@@ -1051,7 +1051,9 @@ def test_interpolate_na_max_gap_2d(coords):
     )
     assert_equal(actual, expected_y_extra)
 
-    actual = da.interpolate_na("x", use_coordinate=use_coordinate, max_gap=3, fill_value="extrapolate")
+    actual = da.interpolate_na(
+        "x", use_coordinate=use_coordinate, max_gap=3, fill_value="extrapolate"
+    )
     expected_x = xr.DataArray(
         [
             [1, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
@@ -1064,9 +1066,10 @@ def test_interpolate_na_max_gap_2d(coords):
     )
     assert_equal(actual, expected_x)
 
+
 def test_interpolate_na_limit_2d():
     n = np.nan
-    times=pd.date_range("2000-01-01", periods=12, freq="3h")
+    times = pd.date_range("2000-01-01", periods=12, freq="3h")
     coords = {
         "x": np.arange(3) * 2,
         "time": (times),
@@ -1090,6 +1093,7 @@ def test_interpolate_na_limit_2d():
     )
     assert_equal(actual, expected)
 
+
 @requires_scipy
 def test_interpolators_complex_out_of_bounds():
     """Ensure complex nans are used for complex data"""
@@ -1110,18 +1114,23 @@ def test_interpolators_complex_out_of_bounds():
         actual = f(x)
         assert_array_equal(actual, expected)
 
+
 ####Masking Functionality
 def test_fill_gaps_limit():
     n = np.nan
-    times=pd.date_range("2000-01-01", periods=8, freq="2h")
+    times = pd.date_range("2000-01-01", periods=8, freq="2h")
     coords = {"yt": ("y", times)}
     da = xr.DataArray([n, n, 2, n, n, 5, n, n], dims=["y"], coords=coords)
 
-    actual = da.fill_gaps(dim='y', limit=None).interpolate_na(dim="y", fill_value="extrapolate")
+    actual = da.fill_gaps(dim="y", limit=None).interpolate_na(
+        dim="y", fill_value="extrapolate"
+    )
     expected = da.copy(data=[0, 1, 2, 3, 4, 5, 6, 7])
     assert_equal(actual, expected)
 
-    actual = da.fill_gaps(dim='y', limit=1).interpolate_na(dim="y", fill_value="extrapolate")
+    actual = da.fill_gaps(dim="y", limit=1).interpolate_na(
+        dim="y", fill_value="extrapolate"
+    )
     expected = da.copy(data=[n, 1, 2, 3, 4, 5, 6, n])
     assert_equal(actual, expected)
 
@@ -1129,7 +1138,7 @@ def test_fill_gaps_limit():
         dim="y",
         limit=pd.Timedelta("3h"),
         use_coordinate="yt",
-    ).interpolate_na(dim='y', fill_value="extrapolate")
+    ).interpolate_na(dim="y", fill_value="extrapolate")
     expected = da.copy(data=[n, 1, 2, 3, 4, 5, 6, n])
     assert_equal(actual, expected)
 
@@ -1138,13 +1147,14 @@ def test_fill_gaps_limit():
         limit=pd.Timedelta("3h"),
         limit_direction="backward",
         use_coordinate="yt",
-    ).interpolate_na(dim='y', fill_value="extrapolate")
+    ).interpolate_na(dim="y", fill_value="extrapolate")
     expected = da.copy(data=[n, 1, 2, n, 4, 5, n, n])
     assert_equal(actual, expected)
 
+
 def test_mask_gap_limit_2d():
     n = np.nan
-    times=pd.date_range("2000-01-01", periods=12, freq="3h")
+    times = pd.date_range("2000-01-01", periods=12, freq="3h")
     coords = {
         "x": np.arange(3) * 2,
         "time": (times),
@@ -1158,8 +1168,8 @@ def test_mask_gap_limit_2d():
         coords=coords,
     )
 
-    mask = da.fill_gaps('time', limit=1, use_coordinate=False)
-    actual=mask.interpolate_na("time", fill_value="extrapolate")
+    mask = da.fill_gaps("time", limit=1, use_coordinate=False)
+    actual = mask.interpolate_na("time", fill_value="extrapolate")
     expected = da.copy(
         data=[
             [1, 2, 3, 4, 5, 6, 7, n, 9, 10, 11, 12],
@@ -1168,7 +1178,7 @@ def test_mask_gap_limit_2d():
         ]
     )
     assert_equal(actual, expected)
-    actual=mask.ffill(dim="time")
+    actual = mask.ffill(dim="time")
     expected = da.copy(
         data=[
             [1, 2, 3, 4, 4, 6, 6, n, 6, 10, 11, 11],
@@ -1177,7 +1187,7 @@ def test_mask_gap_limit_2d():
         ]
     )
     assert_equal(actual, expected)
-    actual=mask.fillna(0)
+    actual = mask.fillna(0)
     expected = da.copy(
         data=[
             [1, 2, 3, 4, 0, 6, 0, n, 0, 10, 11, 0],
@@ -1187,9 +1197,9 @@ def test_mask_gap_limit_2d():
     )
     assert_equal(actual, expected)
 
-    actual = da.fill_gaps('time', limit=2, use_coordinate=False, limit_direction='backward').interpolate_na(
-        "time", fill_value="extrapolate"
-    )
+    actual = da.fill_gaps(
+        "time", limit=2, use_coordinate=False, limit_direction="backward"
+    ).interpolate_na("time", fill_value="extrapolate")
     expected = da.copy(
         data=[
             [1, 2, 3, 4, 5, 6, n, 8, 9, 10, 11, n],
@@ -1204,9 +1214,9 @@ def test_mask_gap_limit_2d():
         limit=pd.Timedelta("3h"),
         limit_direction="backward",
         limit_area="inside",
-        use_coordinate=True
+        use_coordinate=True,
     ).interpolate_na(
-        'time',
+        "time",
         fill_value="extrapolate",
     )
     expected = da.copy(
@@ -1222,9 +1232,9 @@ def test_mask_gap_limit_2d():
         limit=pd.Timedelta("3h"),
         limit_direction="backward",
         limit_area="outside",
-        use_coordinate=True
+        use_coordinate=True,
     ).interpolate_na(
-        'time',
+        "time",
         fill_value="extrapolate",
     )
     expected = da.copy(
@@ -1241,9 +1251,9 @@ def test_mask_gap_limit_2d():
         limit=None,
         limit_direction="backward",
         limit_area="outside",
-        use_coordinate=True
+        use_coordinate=True,
     ).interpolate_na(
-        'time',
+        "time",
         fill_value=8,
     )
     expected = da.copy(
@@ -1270,9 +1280,9 @@ def test_mask_gap_limit_2d():
         limit=3,
         limit_direction="forward",
         limit_area=None,
-        use_coordinate=True
+        use_coordinate=True,
     ).interpolate_na(
-        'x',
+        "x",
         fill_value="extrapolate",
         method="linear",
     )
@@ -1286,9 +1296,10 @@ def test_mask_gap_limit_2d():
     )
     assert_equal(actual, expected)
 
+
 def test_mask_gap_max_gap_2d():
     n = np.nan
-    times=pd.date_range("2000-01-01", periods=12, freq="3h")
+    times = pd.date_range("2000-01-01", periods=12, freq="3h")
     coords = {
         "x": np.arange(3) * 2,
         "time": (times),
@@ -1302,8 +1313,8 @@ def test_mask_gap_max_gap_2d():
         coords=coords,
     )
 
-    mask = da.fill_gaps('time', max_gap=1, use_coordinate=False)
-    actual=mask.interpolate_na("time", fill_value="extrapolate")
+    mask = da.fill_gaps("time", max_gap=1, use_coordinate=False)
+    actual = mask.interpolate_na("time", fill_value="extrapolate")
     expected = da.copy(
         data=[
             [1, 2, 3, 4, n, 6, n, n, n, 10, 11, 12],
@@ -1312,8 +1323,8 @@ def test_mask_gap_max_gap_2d():
         ]
     )
     assert_equal(actual, expected)
-    mask = da.fill_gaps('time', max_gap=2, use_coordinate=False)
-    actual=mask.interpolate_na("time", fill_value="extrapolate")
+    mask = da.fill_gaps("time", max_gap=2, use_coordinate=False)
+    actual = mask.interpolate_na("time", fill_value="extrapolate")
     expected = da.copy(
         data=[
             [1, 2, 3, 4, 5, 6, n, n, n, 10, 11, 12],
@@ -1323,8 +1334,8 @@ def test_mask_gap_max_gap_2d():
     )
     assert_equal(actual, expected)
 
-    mask = da.fill_gaps('time', max_gap=pd.Timedelta("3h"), use_coordinate=True)
-    actual=mask.interpolate_na("time", fill_value="extrapolate")
+    mask = da.fill_gaps("time", max_gap=pd.Timedelta("3h"), use_coordinate=True)
+    actual = mask.interpolate_na("time", fill_value="extrapolate")
     expected = da.copy(
         data=[
             [1, 2, 3, 4, n, 6, n, n, n, 10, 11, 12],
@@ -1333,6 +1344,7 @@ def test_mask_gap_max_gap_2d():
         ]
     )
     assert_equal(actual, expected)
+
 
 def test_mask_double_coordinate():
     # Check if limit and max_gap are able to handle string coordinate names
@@ -1351,12 +1363,7 @@ def test_mask_double_coordinate():
     expected = da.copy(data=[[1, 2, 3, 4, 5, 6, 7], [1, 2, n, 4, 5, 6, n]])
     assert_equal(actual, expected)
 
-    actual = da.fill_gaps(
-        "y",
-        limit=2,
-        max_gap=4,
-        use_coordinate="y2"
-    ).interpolate_na(
+    actual = da.fill_gaps("y", limit=2, max_gap=4, use_coordinate="y2").interpolate_na(
         "y",
         fill_value="extrapolate",
     )
