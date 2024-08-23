@@ -11,42 +11,35 @@ pytest.importorskip("hypothesis")
 # isort: split
 
 import hypothesis.extra.numpy as npst
-import hypothesis.strategies as st
+import numpy as np
 from hypothesis import given
 
 import xarray as xr
-
-an_array = npst.arrays(
-    dtype=st.one_of(
-        npst.unsigned_integer_dtypes(), npst.integer_dtypes(), npst.floating_dtypes()
-    ),
-    shape=npst.array_shapes(max_side=3),  # max_side specified for performance
-)
+from xarray.testing.strategies import variables
 
 
 @pytest.mark.slow
-@given(st.data(), an_array)
-def test_CFMask_coder_roundtrip(data, arr) -> None:
-    names = data.draw(
-        st.lists(st.text(), min_size=arr.ndim, max_size=arr.ndim, unique=True).map(
-            tuple
-        )
-    )
-    original = xr.Variable(names, arr)
+@given(original=variables())
+def test_CFMask_coder_roundtrip(original) -> None:
     coder = xr.coding.variables.CFMaskCoder()
     roundtripped = coder.decode(coder.encode(original))
     xr.testing.assert_identical(original, roundtripped)
 
 
+@pytest.mark.xfail
 @pytest.mark.slow
-@given(st.data(), an_array)
-def test_CFScaleOffset_coder_roundtrip(data, arr) -> None:
-    names = data.draw(
-        st.lists(st.text(), min_size=arr.ndim, max_size=arr.ndim, unique=True).map(
-            tuple
-        )
-    )
-    original = xr.Variable(names, arr)
+@given(var=variables(dtype=npst.floating_dtypes()))
+def test_CFMask_coder_decode(var) -> None:
+    var[0] = -99
+    var.attrs["_FillValue"] = -99
+    coder = xr.coding.variables.CFMaskCoder()
+    decoded = coder.decode(var)
+    assert np.isnan(decoded[0])
+
+
+@pytest.mark.slow
+@given(original=variables())
+def test_CFScaleOffset_coder_roundtrip(original) -> None:
     coder = xr.coding.variables.CFScaleOffsetCoder()
     roundtripped = coder.decode(coder.encode(original))
     xr.testing.assert_identical(original, roundtripped)
