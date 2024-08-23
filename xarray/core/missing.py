@@ -55,10 +55,6 @@ Partly fill nan values in this object's data by applying `{name}` to all unmaske
 
 Parameters
 ----------
-keep_attrs : bool, default: None
-    If True, the attributes (``attrs``) will be copied from the original
-    object to the new one. If False, the new object will be returned
-    without attributes. If None uses the global default.
 **kwargs : dict
     Additional keyword arguments passed on to `{name}`.
 
@@ -67,6 +63,7 @@ Returns
 filled : same type as caller
     New object with `{name}` applied to all unmasked values.
 """
+
 
 def _get_gap_left_edge(
     obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable, outside=False
@@ -105,15 +102,15 @@ def _get_limit_fill_mask(
     limit,
     limit_direction,
 ):
-    #At the left boundary, distance to left is nan.
-    #For nan, a<=b and ~(a>b) behave differently
+    # At the left boundary, distance to left is nan.
+    # For nan, a<=b and ~(a>b) behave differently
     if limit_direction == "forward":
         limit_mask = ~(_get_gap_dist_to_left_edge(obj, dim, index) <= limit)
     elif limit_direction == "backward":
         limit_mask = ~(_get_gap_dist_to_right_edge(obj, dim, index) <= limit)
     elif limit_direction == "both":
-        limit_mask = (~(_get_gap_dist_to_left_edge(obj, dim, index) <= limit)) & (~(
-            _get_gap_dist_to_right_edge(obj, dim, index) <= limit)
+        limit_mask = (~(_get_gap_dist_to_left_edge(obj, dim, index) <= limit)) & (
+            ~(_get_gap_dist_to_right_edge(obj, dim, index) <= limit)
         )
     else:
         raise ValueError(
@@ -184,7 +181,7 @@ def _get_gap_mask(
         limit = np.inf
     else:
         if limit_use_coordinate is False:
-            if not isinstance(limit, (Number, np.number)):
+            if not isinstance(limit, Number | np.number):
                 raise TypeError(
                     f"Expected integer or floating point limit since limit_use_coordinate=False. Received {type(limit).__name__}."
                 )
@@ -200,7 +197,7 @@ def _get_gap_mask(
             max_gap = timedelta_to_numeric(max_gap)
 
         if not max_gap_use_coordinate:
-            if not isinstance(max_gap, (Number, np.number)):
+            if not isinstance(max_gap, Number | np.number):
                 raise TypeError(
                     f"Expected integer or floating point max_gap since use_coordinate=False. Received {type(max_gap).__name__}."
                 )
@@ -223,20 +220,23 @@ def _get_gap_mask(
         return None
 
     # Calculate individual masks
-    masks=[]
+    masks = []
     if need_limit_mask:
-        masks.append(_get_limit_fill_mask(obj, dim, index_limit, limit, limit_direction))
+        masks.append(
+            _get_limit_fill_mask(obj, dim, index_limit, limit, limit_direction)
+        )
 
     if need_area_mask:
         masks.append(_get_limit_area_mask(obj, dim, index_limit, limit_area))
 
     if need_max_gap_mask:
         masks.append(_get_max_gap_mask(obj, dim, index_max_gap, max_gap))
-    #Combine masks
-    mask=masks[0]
+    # Combine masks
+    mask = masks[0]
     for m in masks[1:]:
-        mask|=m
+        mask |= m
     return mask
+
 
 class BaseInterpolator:
     """Generic interpolator class for normalizing interpolation methods"""
@@ -510,7 +510,8 @@ def get_clean_interp_index(
 def _is_time_index(index):
     from xarray.coding.cftimeindex import CFTimeIndex
 
-    return isinstance(index, (pd.DatetimeIndex, CFTimeIndex))
+    return isinstance(index, pd.DatetimeIndex | CFTimeIndex)
+
 
 def _interp_na_all(
     self,
@@ -544,31 +545,35 @@ def _interp_na_all(
         ).transpose(*self.dims)
     return arr
 
+
 class GapMask:
     """An object that allows for flexible masking of gaps."""
+
     def __init__(self, content: DataArray | Dataset, mask: np.ndarray):
         self.content = content
         self.mask = mask
-    
+
     def _fill_method(name: str, _fill_function: Callable | None = None):
         def method(self, *args, _fill_function=_fill_function, **kwargs):
             if _fill_function is None:
-                _fill_function=getattr(self.content, name)
-                filled=_fill_function(*args, **kwargs)
+                _fill_function = getattr(self.content, name)
+                filled = _fill_function(*args, **kwargs)
             else:
-                filled=_fill_function(self.content, *args, **kwargs)
+                filled = _fill_function(self.content, *args, **kwargs)
 
             if self.mask is not None:
-                filled=filled.where(~self.mask, other=self.content)
+                filled = filled.where(~self.mask, other=self.content)
             return filled
+
         method.__name__ = name
         method.__doc__ = _FILL_MISSING_DOCSTRING_TEMPLATE.format(name=name)
         return method
 
-    ffill=_fill_method('ffill')
-    bfill=_fill_method('bfill')
-    fillna=_fill_method('fillna')
-    interpolate_na=_fill_method('interpolate_na')
+    ffill = _fill_method("ffill")
+    bfill = _fill_method("bfill")
+    fillna = _fill_method("fillna")
+    interpolate_na = _fill_method("interpolate_na")
+
 
 def mask_gaps(
     self,
@@ -577,7 +582,7 @@ def mask_gaps(
     limit: (
         int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta | None
     ) = None,
-    limit_direction: LimitDirectionOptions ="both",
+    limit_direction: LimitDirectionOptions = "both",
     limit_area: LimitAreaOptions | None = None,
     max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta = None,
 ) -> GapMask:
@@ -594,8 +599,6 @@ def mask_gaps(
         use_coordinate,
     )
     return GapMask(self, mask)
-
-
 
 
 def interp_na(
@@ -615,10 +618,10 @@ def interp_na(
     if dim is None:
         raise NotImplementedError("dim is a required argument")
 
-    #This was the original behaviour of interp_na and is kept for backward compatibility
-    #Limit=None: Fill everything, including both boundaries
-    #Limit!=None: Do forward interpolation until limit
-    limit_use_coordinate=False
+    # This was the original behaviour of interp_na and is kept for backward compatibility
+    # Limit=None: Fill everything, including both boundaries
+    # Limit!=None: Do forward interpolation until limit
+    limit_use_coordinate = False
     if limit is None:
         limit_direction = "both"
     else:
@@ -635,11 +638,10 @@ def interp_na(
         use_coordinate,
     )
 
-    arr=_interp_na_all(self, dim, method, use_coordinate, keep_attrs, **kwargs)
+    arr = _interp_na_all(self, dim, method, use_coordinate, keep_attrs, **kwargs)
     if mask is not None:
         arr = arr.where(~mask)
     return arr
-
 
 
 def func_interpolate_na(interpolator, y, x, **kwargs):
