@@ -140,6 +140,7 @@ if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
     from xarray.core.merge import CoercibleMapping, CoercibleValue, _MergeResult
+    from xarray.core.missing import GapMask
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
     from xarray.core.types import (
@@ -6594,19 +6595,8 @@ class Dataset(
         self,
         dim: Hashable,
         method: InterpOptions = "linear",
+        limit: int | None = None,
         use_coordinate: bool | Hashable = True,
-        limit: (
-            None
-            | int
-            | float
-            | str
-            | pd.Timedelta
-            | np.timedelta64
-            | datetime.timedelta
-        ) = None,
-        limit_direction: LimitDirectionOptions = "forward",
-        limit_area: LimitAreaOptions | None = None,
-        limit_use_coordinate: bool | Hashable = False,
         max_gap: (
             int
             | float
@@ -6673,6 +6663,10 @@ class Dataset(
                   * x        (x) int64 0 1 2 3 4 5 6 7 8
 
             The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
+        keep_attrs : bool or None, default: None
+            If True, the dataarray's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False, the new
+            object will be returned without attributes.
         **kwargs : dict, optional
             parameters passed verbatim to the underlying interpolation function
 
@@ -6737,6 +6731,9 @@ class Dataset(
         """
         from xarray.core.missing import _apply_over_vars_with_dim, interp_na
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
         new = _apply_over_vars_with_dim(
             interp_na,
             self,
@@ -6745,8 +6742,10 @@ class Dataset(
             limit=limit,
             use_coordinate=use_coordinate,
             max_gap=max_gap,
+            keep_attrs=keep_attrs,
             **kwargs,
         )
+        new.attrs = self.attrs if keep_attrs else None
         return new
 
     def ffill(self, dim: Hashable, limit: int | None = None) -> Self:
@@ -6972,10 +6971,6 @@ class Dataset(
                   * x        (x) int64 0 1 2 3 4 5 6 7 8
 
             The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
-        keep_attrs : bool or None, default: None
-            If True, the dataarray's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False, the new
-            object will be returned without attributes.
 
         Returns
         -------
@@ -6984,10 +6979,10 @@ class Dataset(
 
         See Also
         --------
-        DataArray.fillna
-        DataArray.ffill
-        DataArray.bfill
-        DataArray.interpolate_na
+        Dataset.fillna
+        Dataset.ffill
+        Dataset.bfill
+        Dataset.interpolate_na
         pandas.DataFrame.interpolate
 
         Notes
@@ -7011,9 +7006,9 @@ class Dataset(
         Data variables:
             A        (x) float64 56B nan 2.0 nan nan 5.0 nan 0.0
             B        (x) float64 56B nan 2.0 nan nan 5.0 6.0 nan
-        >>> ds.fill_gaps(
-        ...     dim="x",  limit=1, limit_direction="forward"
-        ... ).interpolate_na(dim="x")
+        >>> ds.fill_gaps(dim="x", limit=1, limit_direction="forward").interpolate_na(
+        ...     dim="x"
+        ... )
         <xarray.Dataset> Size: 168B
         Dimensions:  (x: 7)
         Coordinates:
@@ -7021,9 +7016,7 @@ class Dataset(
         Data variables:
             A        (x) float64 56B nan 2.0 3.0 nan 5.0 2.5 0.0
             B        (x) float64 56B nan 2.0 3.0 nan 5.0 6.0 nan
-        >>> ds.fill_gaps(
-        ...     dim="x", max_gap=2, limit_direction="forward"
-        ... ).ffill(dim="x")
+        >>> ds.fill_gaps(dim="x", max_gap=2, limit_direction="forward").ffill(dim="x")
         <xarray.Dataset> Size: 168B
         Dimensions:  (x: 7)
         Coordinates:
@@ -7031,9 +7024,7 @@ class Dataset(
         Data variables:
             A        (x) float64 56B nan 2.0 nan nan 5.0 5.0 0.0
             B        (x) float64 56B nan 2.0 nan nan 5.0 6.0 6.0
-        >>> ds.fill_gaps(
-        ...     dim="x", limit_area="inside"
-        ... ).fillna(9)
+        >>> ds.fill_gaps(dim="x", limit_area="inside").fillna(9)
         <xarray.Dataset> Size: 168B
         Dimensions:  (x: 7)
         Coordinates:
@@ -7044,7 +7035,16 @@ class Dataset(
         """
         from xarray.core.missing import mask_gaps
 
-        return mask_gaps(self, dim, use_coordinate=use_coordinate, limit=limit, limit_direction=limit_direction, limit_area=limit_area, max_gap=max_gap)
+        return mask_gaps(
+            self,
+            dim,
+            use_coordinate=use_coordinate,
+            limit=limit,
+            limit_direction=limit_direction,
+            limit_area=limit_area,
+            max_gap=max_gap,
+        )
+
     def combine_first(self, other: Self) -> Self:
         """Combine two Datasets, default to data_vars of self.
 
