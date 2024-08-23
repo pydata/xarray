@@ -470,7 +470,7 @@ def get_clean_interp_index(
     from xarray.coding.cftimeindex import CFTimeIndex
 
     index = _get_raw_interp_index(arr, dim, use_coordinate)
-    # index.name is None for multiindexes
+    # TODO: index.name is None for multiindexes
     # set name for nice error messages below
     if isinstance(index, pd.MultiIndex):
         index.name = dim

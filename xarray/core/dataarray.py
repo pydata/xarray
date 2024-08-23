@@ -97,9 +97,9 @@ if TYPE_CHECKING:
     from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.groupby import DataArrayGroupBy
+    from xarray.core.missing import GapMask
     from xarray.core.resample import DataArrayResample
     from xarray.core.rolling import DataArrayCoarsen, DataArrayRolling
-    from xarray.core.missing import GapMask
     from xarray.core.types import (
         CoarsenBoundaryOptions,
         DatetimeLike,
@@ -3521,21 +3521,12 @@ class DataArray(
         out = ops.fillna(self, value)
         return out
 
-
     def interpolate_na(
         self,
         dim: Hashable,
         method: InterpOptions = "linear",
+        limit: int | None = None,
         use_coordinate: bool | Hashable = True,
-        limit: (
-            None
-            | int
-            | float
-            | str
-            | pd.Timedelta
-            | np.timedelta64
-            | datetime.timedelta
-        ) = None,
         max_gap: (
             None
             | int
@@ -3559,25 +3550,25 @@ class DataArray(
             String indicating which method to use for interpolation:
 
             - 'linear': linear interpolation. Additional keyword
-            arguments are passed to :py:func:`numpy.interp`
+              arguments are passed to :py:func:`numpy.interp`
             - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'polynomial':
-            are passed to :py:func:`scipy.interpolate.interp1d`. If
-            ``method='polynomial'``, the ``order`` keyword argument must also be
-            provided.
+              are passed to :py:func:`scipy.interpolate.interp1d`. If
+              ``method='polynomial'``, the ``order`` keyword argument must also be
+              provided.
             - 'barycentric', 'krogh', 'pchip', 'spline', 'akima': use their
-            respective :py:class:`scipy.interpolate` classes.
+              respective :py:class:`scipy.interpolate` classes.
 
+        limit : int or None, default: None
+            Maximum number of consecutive NaNs to fill. Must be greater than 0
+            or None for no limit. This filling is done regardless of the size of
+            the gap in the data. To only interpolate over gaps less than a given length,
+            see ``max_gap``.
         use_coordinate : bool or str, default: True
             Specifies which index to use as the x values in the interpolation
             formulated as `y = f(x)`. If False, values are treated as if
             equally-spaced along ``dim``. If True, the IndexVariable `dim` is
             used. If ``use_coordinate`` is a string, it specifies the name of a
             coordinate variable to use as the index.
-        limit : int or None, default: None
-            Maximum number of consecutive NaNs to fill. Must be greater than 0
-            or None for no limit. This filling is done regardless of the size of
-            the gap in the data. To only interpolate over gaps less than a given length,
-            see ``max_gap``.
         max_gap : int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta, default: None
             Maximum size of gap, a continuous sequence of NaNs, that will be filled.
             Use None for no limit. When interpolating along a datetime64 dimension
@@ -3598,7 +3589,7 @@ class DataArray(
                 <xarray.DataArray (x: 9)>
                 array([nan, nan, nan,  1., nan, nan,  4., nan, nan])
                 Coordinates:
-                * x        (x) int64 0 1 2 3 4 5 6 7 8
+                  * x        (x) int64 0 1 2 3 4 5 6 7 8
 
             The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
         keep_attrs : bool or None, default: None
@@ -3627,33 +3618,32 @@ class DataArray(
         <xarray.DataArray (x: 5)> Size: 40B
         array([nan,  2.,  3., nan,  0.])
         Coordinates:
-        * x        (x) int64 40B 0 1 2 3 4
+          * x        (x) int64 40B 0 1 2 3 4
 
         >>> da.interpolate_na(dim="x", method="linear")
         <xarray.DataArray (x: 5)> Size: 40B
         array([nan, 2. , 3. , 1.5, 0. ])
         Coordinates:
-        * x        (x) int64 40B 0 1 2 3 4
+          * x        (x) int64 40B 0 1 2 3 4
 
         >>> da.interpolate_na(dim="x", method="linear", fill_value="extrapolate")
         <xarray.DataArray (x: 5)> Size: 40B
         array([1. , 2. , 3. , 1.5, 0. ])
         Coordinates:
-        * x        (x) int64 40B 0 1 2 3 4
+          * x        (x) int64 40B 0 1 2 3 4
         """
         from xarray.core.missing import interp_na
 
         return interp_na(
-                    self,
-                    dim=dim,
-                    method=method,
-                    limit=limit,
-                    use_coordinate=use_coordinate,
-                    max_gap=max_gap,
-                    keep_attrs=keep_attrs,
-                    **kwargs,
-                )
-
+            self,
+            dim=dim,
+            method=method,
+            limit=limit,
+            use_coordinate=use_coordinate,
+            max_gap=max_gap,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
 
     def ffill(self, dim: Hashable, limit: int | None = None) -> Self:
         """Fill NaN values by propagating values forward
@@ -3822,7 +3812,7 @@ class DataArray(
         from xarray.core.missing import bfill
 
         return bfill(self, dim, limit=limit)
-    
+
     def fill_gaps(
         self,
         dim: Hashable,
@@ -3917,10 +3907,6 @@ class DataArray(
                   * x        (x) int64 0 1 2 3 4 5 6 7 8
 
             The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
-        keep_attrs : bool or None, default: None
-            If True, the dataarray's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False, the new
-            object will be returned without attributes.
 
         Returns
         -------
@@ -3951,23 +3937,19 @@ class DataArray(
         array([nan,  2., nan, nan,  5., nan,  0.])
         Coordinates:
         * x        (x) int64 56B 0 1 2 3 4 5 6
-        >>> da.fill_gaps(
-        ...     dim="x",  limit=1, limit_direction="forward"
-        ... ).interpolate_na(dim="x")
+        >>> da.fill_gaps(dim="x", limit=1, limit_direction="forward").interpolate_na(
+        ...     dim="x"
+        ... )
         <xarray.DataArray (x: 7)> Size: 56B
         array([nan, 2. , 3. , nan, 5. , 2.5, 0. ])
         Coordinates:
         * x        (x) int64 56B 0 1 2 3 4 5 6
-        >>> da.fill_gaps(
-        ...     dim="x", max_gap=2, limit_direction="forward"
-        ... ).ffill(dim="x")
+        >>> da.fill_gaps(dim="x", max_gap=2, limit_direction="forward").ffill(dim="x")
         <xarray.DataArray (x: 7)> Size: 56B
         array([nan,  2., nan, nan,  5.,  5.,  0.])
         Coordinates:
         * x        (x) int64 56B 0 1 2 3 4 5 6
-        >>> da.fill_gaps(
-        ...     dim="x", limit_area="inside"
-        ... ).fillna(9)
+        >>> da.fill_gaps(dim="x", limit_area="inside").fillna(9)
         <xarray.DataArray (x: 7)> Size: 56B
         array([nan,  2.,  9.,  9.,  5.,  9.,  0.])
         Coordinates:
@@ -3975,8 +3957,15 @@ class DataArray(
         """
         from xarray.core.missing import mask_gaps
 
-        return mask_gaps(self, dim, use_coordinate=use_coordinate, limit=limit, limit_direction=limit_direction, limit_area=limit_area, max_gap=max_gap)
-
+        return mask_gaps(
+            self,
+            dim,
+            use_coordinate=use_coordinate,
+            limit=limit,
+            limit_direction=limit_direction,
+            limit_area=limit_area,
+            max_gap=max_gap,
+        )
 
     def combine_first(self, other: Self) -> Self:
         """Combine two DataArray objects, with union of coordinates.
