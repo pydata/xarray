@@ -6602,7 +6602,7 @@ class Dataset(
         ...     },
         ...     coords={"x": [0, 1, 2, 3, 4]},
         ... )
-        
+
         >>> ds
         <xarray.Dataset> Size: 200B
         Dimensions:  (x: 5)
@@ -6906,7 +6906,7 @@ class Dataset(
         ...     },
         ...     coords={"x": [0, 1, 2, 3, 4, 5, 6]},
         ... )
-        
+
         >>> ds
         <xarray.Dataset> Size: 168B
         Dimensions:  (x: 7)
