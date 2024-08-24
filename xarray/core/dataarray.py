@@ -3614,6 +3614,7 @@ class DataArray(
         >>> da = xr.DataArray(
         ...     [np.nan, 2, 3, np.nan, 0], dims="x", coords={"x": [0, 1, 2, 3, 4]}
         ... )
+
         >>> da
         <xarray.DataArray (x: 5)> Size: 40B
         array([nan,  2.,  3., nan,  0.])
@@ -3932,28 +3933,32 @@ class DataArray(
         ...     dims="x",
         ...     coords={"x": [0, 1, 2, 3, 4, 5, 6]},
         ... )
+
         >>> da
         <xarray.DataArray (x: 7)> Size: 56B
         array([nan,  2., nan, nan,  5., nan,  0.])
         Coordinates:
-        * x        (x) int64 56B 0 1 2 3 4 5 6
+          * x        (x) int64 56B 0 1 2 3 4 5 6
+
         >>> da.fill_gaps(dim="x", limit=1, limit_direction="forward").interpolate_na(
         ...     dim="x"
         ... )
         <xarray.DataArray (x: 7)> Size: 56B
         array([nan, 2. , 3. , nan, 5. , 2.5, 0. ])
         Coordinates:
-        * x        (x) int64 56B 0 1 2 3 4 5 6
+          * x        (x) int64 56B 0 1 2 3 4 5 6
+
         >>> da.fill_gaps(dim="x", max_gap=2, limit_direction="forward").ffill(dim="x")
         <xarray.DataArray (x: 7)> Size: 56B
         array([nan,  2., nan, nan,  5.,  5.,  0.])
         Coordinates:
-        * x        (x) int64 56B 0 1 2 3 4 5 6
+          * x        (x) int64 56B 0 1 2 3 4 5 6
+
         >>> da.fill_gaps(dim="x", limit_area="inside").fillna(9)
         <xarray.DataArray (x: 7)> Size: 56B
         array([nan,  2.,  9.,  9.,  5.,  9.,  0.])
         Coordinates:
-        * x        (x) int64 56B 0 1 2 3 4 5 6
+          * x        (x) int64 56B 0 1 2 3 4 5 6
         """
         from xarray.core.missing import mask_gaps
 

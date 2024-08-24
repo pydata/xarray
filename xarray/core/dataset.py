@@ -6813,6 +6813,7 @@ class Dataset(
         ...     },
         ...     coords={"x": [0, 1, 2, 3, 4]},
         ... )
+        
         >>> ds
         <xarray.Dataset> Size: 200B
         Dimensions:  (x: 5)
@@ -7115,37 +7116,41 @@ class Dataset(
         ...     },
         ...     coords={"x": [0, 1, 2, 3, 4, 5, 6]},
         ... )
+        
         >>> ds
         <xarray.Dataset> Size: 168B
         Dimensions:  (x: 7)
         Coordinates:
-        * x        (x) int64 56B 0 1 2 3 4 5 6
+          * x        (x) int64 56B 0 1 2 3 4 5 6
         Data variables:
             A        (x) float64 56B nan 2.0 nan nan 5.0 nan 0.0
             B        (x) float64 56B nan 2.0 nan nan 5.0 6.0 nan
+
         >>> ds.fill_gaps(dim="x", limit=1, limit_direction="forward").interpolate_na(
         ...     dim="x"
         ... )
         <xarray.Dataset> Size: 168B
         Dimensions:  (x: 7)
         Coordinates:
-        * x        (x) int64 56B 0 1 2 3 4 5 6
+          * x        (x) int64 56B 0 1 2 3 4 5 6
         Data variables:
             A        (x) float64 56B nan 2.0 3.0 nan 5.0 2.5 0.0
             B        (x) float64 56B nan 2.0 3.0 nan 5.0 6.0 nan
+
         >>> ds.fill_gaps(dim="x", max_gap=2, limit_direction="forward").ffill(dim="x")
         <xarray.Dataset> Size: 168B
         Dimensions:  (x: 7)
         Coordinates:
-        * x        (x) int64 56B 0 1 2 3 4 5 6
+          * x        (x) int64 56B 0 1 2 3 4 5 6
         Data variables:
             A        (x) float64 56B nan 2.0 nan nan 5.0 5.0 0.0
             B        (x) float64 56B nan 2.0 nan nan 5.0 6.0 6.0
+
         >>> ds.fill_gaps(dim="x", limit_area="inside").fillna(9)
         <xarray.Dataset> Size: 168B
         Dimensions:  (x: 7)
         Coordinates:
-        * x        (x) int64 56B 0 1 2 3 4 5 6
+          * x        (x) int64 56B 0 1 2 3 4 5 6
         Data variables:
             A        (x) float64 56B nan 2.0 9.0 9.0 5.0 9.0 0.0
             B        (x) float64 56B nan 2.0 9.0 9.0 5.0 6.0 nan
