@@ -6850,7 +6850,7 @@ class Dataset(
         from xarray.core.missing import _apply_over_vars_with_dim, interp_na
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         new = _apply_over_vars_with_dim(
             interp_na,
