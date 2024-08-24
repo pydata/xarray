@@ -6787,6 +6787,7 @@ class Dataset(
     def fill_gaps(
         self,
         dim: Hashable,
+        *,
         use_coordinate: bool | Hashable = True,
         limit: (
             None
