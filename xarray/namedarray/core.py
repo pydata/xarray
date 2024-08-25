@@ -779,7 +779,14 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     @property
     def mT(self):
-        raise NotImplementedError("Todo: ")
+        if isinstance(self._data, _arrayapi):
+            from xarray.namedarray._array_api._utils import _infer_dims
+
+            _data = self._data.mT
+            _dims = _infer_dims(_data.shape)
+            return self._new(_dims, _data)
+        else:
+            raise NotImplementedError("self._data missing mT")
 
     @property
     def ndim(self) -> int:
