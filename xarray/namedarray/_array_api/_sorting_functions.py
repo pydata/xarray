@@ -48,7 +48,7 @@ def sort(
 ) -> NamedArray:
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dim, axis)
-    _data = xp.sort(x._data, axis=_axis, descending=descending, stable=stable)
+    _data = xp.sort(x._data, axis=_axis, stable=stable)
     if descending:
         _data = xp.flip(_data, axis=axis)
     return x._new(data=_data)
