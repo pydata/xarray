@@ -14,6 +14,7 @@ from xarray.namedarray._typing import (
     _DimsLike,
     _DType,
     _dtype,
+    _Axis,
     _Shape,
     duckarray,
 )
@@ -162,3 +163,11 @@ def _get_remaining_dims(
         dims = tuple(adim for n, adim in enumerate(x.dims) if n not in removed_axes)
 
     return dims, data
+
+
+def _insert_dim(dims: _Dims, dim: _Dim | Default, axis: _Axis) -> _Dims:
+    if dim is _default:
+        dim = f"dim_{len(dims)}"
+    d = list(dims)
+    d.insert(axis, dim)
+    return tuple(d)

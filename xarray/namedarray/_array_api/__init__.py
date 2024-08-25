@@ -259,30 +259,30 @@ __all__ += [
 ]
 
 from xarray.namedarray._array_api._manipulation_functions import (
-    # broadcast_arrays,
-    # broadcast_to,
-    # concat,
+    broadcast_arrays,
+    broadcast_to,
+    concat,
     expand_dims,
-    # flip,
-    # moveaxis,
+    flip,
+    moveaxis,
     permute_dims,
     reshape,
-    # roll,
-    # squeeze,
+    roll,
+    squeeze,
     stack,
 )
 
 __all__ += [
-    # "broadcast_arrays",
-    # "broadcast_to",
-    # "concat",
+    "broadcast_arrays",
+    "broadcast_to",
+    "concat",
     "expand_dims",
-    # "flip",
-    # "moveaxis",
+    "flip",
+    "moveaxis",
     "permute_dims",
     "reshape",
-    # "roll",
-    # "squeeze",
+    "roll",
+    "squeeze",
     "stack",
 ]
 
