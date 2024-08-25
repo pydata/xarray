@@ -225,9 +225,9 @@ def var(
 ) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dims, axis)
-    _data = _atleast_0d(xp.var(
-        x._data, axis=_axis, correction=correction, keepdims=False
-    ), xp)
+    _data = _atleast_0d(
+        xp.var(x._data, axis=_axis, correction=correction, keepdims=False), xp
+    )
     # TODO: Why do we need to do the keepdims ourselves?
     dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
     out = x._new(dims=dims_, data=data_)
