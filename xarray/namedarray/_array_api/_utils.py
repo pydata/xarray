@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING, Any
 from xarray.namedarray._typing import (
     Default,
     _arrayapi,
+    _Axes,
     _Axis,
     _AxisLike,
-    _Axes,
     _default,
     _Dim,
     _Dims,
