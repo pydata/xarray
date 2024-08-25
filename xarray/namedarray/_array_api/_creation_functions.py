@@ -247,7 +247,7 @@ def meshgrid(*arrays: NamedArray, indexing: str = "xy") -> list[NamedArray]:
 def ones(
     shape: _Shape, *, dtype: _DType | None = None, device: _Device | None = None
 ) -> NamedArray[_ShapeType, _DType]:
-    return full(shape, 1, dtype=dtype, device=device)
+    return full(shape, 1.0, dtype=dtype, device=device)
 
 
 def ones_like(
@@ -287,7 +287,7 @@ def triu(
 def zeros(
     shape: _Shape, *, dtype: _DType | None = None, device: _Device | None = None
 ) -> NamedArray[_ShapeType, _DType]:
-    return full(shape, 0, dtype=dtype, device=device)
+    return full(shape, 0.0, dtype=dtype, device=device)
 
 
 def zeros_like(
