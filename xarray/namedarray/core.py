@@ -587,7 +587,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         if isinstance(key, NamedArray):
             key = key._data
-        self._array.__setitem__(key, asarray(value)._data)
+        self._data.__setitem__(key, asarray(value)._data)
 
     def __sub__(self, other: int | float | NamedArray, /):
         from xarray.namedarray._array_api import asarray, subtract
