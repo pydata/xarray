@@ -244,6 +244,12 @@ __all__ += [
     "__array_namespace_info__",
 ]
 
+import xarray.namedarray._array_api._linalg as linalg
+
+
+__all__ = ["linalg"]
+
+
 from xarray.namedarray._array_api._linear_algebra_functions import (
     matmul,
     matrix_transpose,
