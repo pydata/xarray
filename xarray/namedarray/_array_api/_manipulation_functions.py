@@ -34,7 +34,7 @@ def broadcast_arrays(*arrays: NamedArray) -> list[NamedArray]:
 def broadcast_to(x: NamedArray, /, shape: _Shape) -> NamedArray:
     xp = _get_data_namespace(x)
     _data = xp.broadcast_to(x._data, shape=shape)
-    _dims = _infer_dims(_data)  # TODO: Fix dims
+    _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
 
@@ -45,7 +45,7 @@ def concat(
     dtype = result_type(*arrays)
     arrays = tuple(a._data for a in arrays)
     _data = xp.concat(arrays, axis=axis, dtype=dtype)
-    _dims = _infer_dims(_data)
+    _dims = _infer_dims(_data.shape)
     return NamedArray(_dims, _data)
 
 
@@ -95,14 +95,14 @@ def expand_dims(
 def flip(x: NamedArray, /, *, axis: _Axes | None = None) -> NamedArray:
     xp = _get_data_namespace(x)
     _data = xp.flip(x._data, axis=axis)
-    _dims = _infer_dims(_data)  # TODO: Fix dims
+    _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
 
 def moveaxis(x: NamedArray, source: _Axes, destination: _Axes, /) -> NamedArray:
     xp = _get_data_namespace(x)
     _data = xp.moveaxis(x._data, source=source, destination=destination)
-    _dims = _infer_dims(_data)  # TODO: Fix dims
+    _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
 
@@ -144,7 +144,7 @@ def repeat(
 ) -> NamedArray:
     xp = _get_data_namespace(x)
     _data = xp.repeat(x._data, repeats, axis=axis)
-    _dims = _infer_dims(_data)  # TODO: Fix dims
+    _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
 
@@ -173,7 +173,7 @@ def roll(
 def squeeze(x: NamedArray, /, axis: _Axes) -> NamedArray:
     xp = _get_data_namespace(x)
     _data = xp.squeeze(x._data, axis=axis)
-    _dims = _infer_dims(_data)  # TODO: Fix dims
+    _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
 
@@ -184,14 +184,14 @@ def stack(
     xp = _get_data_namespace(x)
     arrays = tuple(a._data for a in arrays)
     _data = xp.stack(arrays, axis=axis)
-    _dims = _infer_dims(_data)  # TODO: Fix dims
+    _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
 
 def tile(x: NamedArray, repetitions: tuple[int, ...], /) -> NamedArray:
     xp = _get_data_namespace(x)
     _data = xp.tile(x._data, repetitions)
-    _dims = _infer_dims(_data)  # TODO: Fix dims
+    _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
 
@@ -200,6 +200,6 @@ def unstack(x: NamedArray, /, *, axis: _Axis = 0) -> tuple[NamedArray, ...]:
     _datas = xp.unstack(x._data, axis=axis)
     out = ()
     for _data in _datas:
-        _dims = _infer_dims(_data)  # TODO: Fix dims
+        _dims = _infer_dims(_data.shape)  # TODO: Fix dims
         out += (x._new(_dims, _data),)
     return out
