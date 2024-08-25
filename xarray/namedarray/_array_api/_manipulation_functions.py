@@ -26,7 +26,7 @@ def broadcast_arrays(*arrays: NamedArray) -> list[NamedArray]:
     x = arrays[0]
     xp = _get_data_namespace(x)
     _arrays = tuple(a._data for a in arrays)
-    _datas = xp.broadcast_arrays(_arrays)
+    _datas = xp.broadcast_arrays(*_arrays)
     _dims = _infer_dims(_datas[0].shape)
     return [arr._new(_dims, _data) for arr, _data in zip(arrays, _datas)]
 
