@@ -281,7 +281,7 @@ def tril(
     x: NamedArray[_ShapeType, _DType], /, *, k: int = 0
 ) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
-    _data = xp.tril(x._data, dtype=x.dtype)
+    _data = xp.tril(x._data, k=k)
     # TODO: Can probably determine dim names from x, for now just default names:
     _dims = _infer_dims(_data.shape)
     return x._new(_dims, _data)
@@ -291,7 +291,7 @@ def triu(
     x: NamedArray[_ShapeType, _DType], /, *, k: int = 0
 ) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
-    _data = xp.triu(x._data, dtype=x.dtype)
+    _data = xp.triu(x._data, k=k)
     # TODO: Can probably determine dim names from x, for now just default names:
     _dims = _infer_dims(_data.shape)
     return x._new(_dims, _data)
