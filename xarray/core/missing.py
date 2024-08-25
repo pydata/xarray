@@ -549,35 +549,117 @@ def _interp_na_all(
 class GapMask:
     """An object that allows for flexible masking of gaps."""
 
-    def __init__(self, content: DataArray | Dataset, mask: np.ndarray):
+    def __init__(self, content: DataArray | Dataset, mask: np.ndarray, dim: Hashable):
         self.content = content
         self.mask = mask
+        self.dim=dim
 
-    def _fill_method(name: str, _fill_function: Callable | None = None):
-        def method(self, *args, _fill_function=_fill_function, **kwargs):
-            if _fill_function is None:
-                _fill_function = getattr(self.content, name)
-                filled = _fill_function(*args, **kwargs)
-            else:
-                filled = _fill_function(self.content, *args, **kwargs)
+    def _apply_mask(self, filled):
+        if self.mask is not None:
+            filled = filled.where(~self.mask, other=self.content)
+        return filled
 
-            if self.mask is not None:
-                filled = filled.where(~self.mask, other=self.content)
-            return filled
+    def ffill(self, dim: Hashable | None = None):
+        """Partly fill missing values in this object's data by applying ffill to all unmasked values.
 
-        method.__name__ = name
-        method.__doc__ = _FILL_MISSING_DOCSTRING_TEMPLATE.format(name=name)
-        return method
+        Parameters
+        ----------
+        dim : Hashable or None, default None
+            Dimension along which to fill missing values. If None, the dimension used to create the mask is used.
 
-    ffill = _fill_method("ffill")
-    bfill = _fill_method("bfill")
-    fillna = _fill_method("fillna")
-    interpolate_na = _fill_method("interpolate_na")
+        Returns
+        -------
+        filled : same type as caller
+            New object with ffill applied to all unmasked values.
 
+        See Also
+        --------
+        DataArray.ffill
+        Dataset.ffill
+        """
+        if dim is None:
+            dim = self.dim
+        return self._apply_mask(self.content.ffill(dim))
+    
+    def bfill(self, dim: Hashable | None = None):
+        """Partly fill missing values in this object's data by applying bfill to all unmasked values.
+
+        Parameters
+        ----------
+        dim : Hashable or None, default None
+            Dimension along which to fill missing values. If None, the dimension used to create the mask is used.
+
+        Returns
+        -------
+        filled : same type as caller
+            New object with bfill applied to all unmasked values.
+
+        See Also
+        --------
+        DataArray.bfill
+        Dataset.bfill
+        """
+        if dim is None:
+            dim = self.dim
+        return self._apply_mask(self.content.bfill(dim))
+    
+    def fillna(self, value):
+        """Partly fill missing values in this object's data by applying fillna to all unmasked values.
+
+        Parameters
+        ----------
+        value : scalar, ndarray or DataArray
+            Used to fill all unmasked values. If the
+            argument is a DataArray, it is first aligned with (reindexed to)
+            this array.
+        
+        Returns
+        -------
+        filled : same type as caller
+            New object with fillna applied to all unmasked values.
+
+        See Also
+        --------
+        DataArray.fillna
+        Dataset.fillna
+        """
+        return self._apply_mask(self.content.fillna(value))
+    
+    def interpolate_na(
+        self,
+        dim: Hashable | None = None,
+        method: InterpOptions = "linear",
+        use_coordinate: bool | str = True,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ):
+        """Partly fill missing values in this object's data by applying interpolate_na to all unmasked values.
+
+        Parameters
+        ----------
+        See DataArray.interpolate_na and Dataset.interpolate_na for explanation of parameters.
+
+        Returns
+        -------
+        filled : same type as caller
+            New object with interpolate_na applied to all unmasked values.
+        
+        See Also
+        --------
+        DataArray.interpolate_na
+        Dataset.interpolate_na
+        """
+        if dim is None:
+            dim = self.dim
+        return self._apply_mask(
+            self.content.interpolate_na(
+                dim=dim, method=method, use_coordinate=use_coordinate, keep_attrs=keep_attrs, **kwargs
+            )
+        )
 
 def mask_gaps(
     self,
-    dim: Hashable | None = None,
+    dim: Hashable,
     use_coordinate: bool | str = True,
     limit: (
         int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta | None
@@ -598,7 +680,7 @@ def mask_gaps(
         max_gap,
         use_coordinate,
     )
-    return GapMask(self, mask)
+    return GapMask(self, mask, dim)
 
 
 def interp_na(

@@ -1275,14 +1275,29 @@ def test_mask_gap_limit_2d():
         dims=["x", "y"],
         coords={"x": np.arange(4) * 2},
     )
-    actual = da.fill_gaps(
+    mask = da.fill_gaps(
         dim="x",
         limit=3,
         limit_direction="forward",
         limit_area=None,
         use_coordinate=True,
-    ).interpolate_na(
+    )
+    actual=mask.interpolate_na(
         "x",
+        fill_value="extrapolate",
+        method="linear",
+    )
+    expected = da.copy(
+        data=[
+            [1, 1, n, n, 1, 1],
+            [n, 2, 2, n, 2, 2],
+            [n, 3, 3, 3, 3, n],
+            [n, n, 4, 4, 4, 4],
+        ]
+    )
+    assert_equal(actual, expected)
+    # Test: Dim argument from mask should be used
+    actual=mask.interpolate_na(
         fill_value="extrapolate",
         method="linear",
     )
