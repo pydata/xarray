@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from xarray.namedarray._array_api._utils import _get_data_namespace
+from xarray.namedarray._array_api._utils import _atleast_0d, _get_data_namespace
 from xarray.namedarray._typing import (
-    _atleast_0d,
     _ScalarType,
     _ShapeType,
     _SupportsImag,
