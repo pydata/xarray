@@ -166,7 +166,7 @@ def trace(
     x: NamedArray, /, *, offset: int = 0, dtype: _DType | None = None
 ) -> NamedArray:
     xp = _get_data_namespace(x)
-    _data = xp.linalg.svdvals(x._data, offset=offset)
+    _data = xp.linalg.trace(x._data, offset=offset)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
@@ -180,7 +180,7 @@ def vector_norm(
     ord: int | float | None = 2,
 ) -> NamedArray:
     xp = _get_data_namespace(x)
-    _data = xp.linalg.svdvals(x._data, axis=axis, keepdims=keepdims, ord=ord)
+    _data = xp.linalg.vector_norm(x._data, axis=axis, keepdims=keepdims, ord=ord)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
