@@ -234,6 +234,10 @@ __all__ += [
     "trunc",
 ]
 
+import xarray.namedarray._array_api._fft as fft
+
+__all__ = ["fft"]
+
 from xarray.namedarray._array_api._indexing_functions import take
 
 __all__ += ["take"]
