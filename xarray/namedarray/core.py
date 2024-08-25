@@ -18,7 +18,7 @@ from typing import (
 import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
-from xarray.core import dtypes, formatting, formatting_html
+from xarray.core import dtypes
 from xarray.core.indexing import (
     ExplicitlyIndexed,
     ImplicitToExplicitIndexingAdapter,
