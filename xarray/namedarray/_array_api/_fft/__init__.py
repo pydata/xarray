@@ -1,6 +1,6 @@
 __all__ = []
 
-from xarray.namedarray._array_api._linalg._linalg import (
+from xarray.namedarray._array_api._fft._fft import (
     fft,
     fftfreq,
     fftn,
