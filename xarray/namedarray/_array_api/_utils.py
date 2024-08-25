@@ -25,11 +25,11 @@ if TYPE_CHECKING:
 
 def _maybe_default_namespace(xp: ModuleType | None = None) -> ModuleType:
     if xp is None:
-        # import array_api_strict as xpd
+        import array_api_strict as xpd
 
         # import array_api_compat.numpy as xpd
 
-        import numpy as xpd
+        # import numpy as xpd
 
         return xpd
     else:
