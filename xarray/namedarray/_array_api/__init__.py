@@ -246,7 +246,6 @@ __all__ += [
 
 import xarray.namedarray._array_api._linalg as linalg
 
-
 __all__ = ["linalg"]
 
 

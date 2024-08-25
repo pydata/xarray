@@ -1,24 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, NamedTuple, Literal
+from typing import TYPE_CHECKING, Literal, NamedTuple
 
 from xarray.namedarray._array_api._utils import _get_data_namespace, _infer_dims
 from xarray.namedarray.core import NamedArray
-from xarray.namedarray._array_api._dtypes import (
-    _floating_dtypes,
-    _numeric_dtypes,
-    float32,
-    complex64,
-    complex128,
-)
-from xarray.namedarray._array_api._data_type_functions import finfo
-from xarray.namedarray._array_api._manipulation_functions import reshape
-from xarray.namedarray._array_api._elementwise_functions import conj
-
 
 if TYPE_CHECKING:
-    from xarray.namedarray._typing import _Axis, _DType, _Axes
+    from xarray.namedarray._typing import _Axes, _Axis, _DType
 
 
 class EighResult(NamedTuple):
