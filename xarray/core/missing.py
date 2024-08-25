@@ -645,11 +645,6 @@ class GapMask(Generic[T_Xarray]):
                 use_coordinate=use_coordinate,
                 keep_attrs=keep_attrs,
                 **kwargs,
-                dim=dim,
-                method=method,
-                use_coordinate=use_coordinate,
-                keep_attrs=keep_attrs,
-                **kwargs,
             )
         )
 
