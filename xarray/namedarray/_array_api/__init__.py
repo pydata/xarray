@@ -307,6 +307,21 @@ __all__ += [
     "where",
 ]
 
+from ._set_functions import (
+    unique_all,
+    unique_counts,
+    unique_inverse,
+    unique_values,
+)
+
+__all__ += [
+    "unique_all",
+    "unique_counts",
+    "unique_inverse",
+    "unique_values",
+]
+
+
 from xarray.namedarray._array_api._sorting_functions import argsort, sort
 
 __all__ += ["argsort", "sort"]
