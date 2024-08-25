@@ -8,15 +8,9 @@ from xarray.namedarray._typing import (
     _ShapeType,
     _SupportsImag,
     _SupportsReal,
+    _atleast_0d,
 )
 from xarray.namedarray.core import NamedArray
-
-
-def _atleast_0d(x, xp):
-    """
-    Workaround for numpy sometimes returning scalars instead of 0d arrays.
-    """
-    return xp.asarray(x)
 
 
 def abs(x: NamedArray, /) -> NamedArray:

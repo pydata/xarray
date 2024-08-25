@@ -167,7 +167,7 @@ def roll(
 ) -> NamedArray:
     xp = _get_data_namespace(x)
     _data = xp.roll(x._data, shift=shift, axis=axis)
-    return x._new(_data)
+    return x._new(data=_data)
 
 
 def squeeze(x: NamedArray, /, axis: _Axes) -> NamedArray:

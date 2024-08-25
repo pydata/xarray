@@ -174,3 +174,10 @@ def _insert_dim(dims: _Dims, dim: _Dim | Default, axis: _Axis) -> _Dims:
     d = list(dims)
     d.insert(axis, dim)
     return tuple(d)
+
+
+def _atleast_0d(x, xp):
+    """
+    Workaround for numpy sometimes returning scalars instead of 0d arrays.
+    """
+    return xp.asarray(x)
