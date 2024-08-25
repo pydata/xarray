@@ -63,9 +63,13 @@ def diagonal(x: NamedArray, /, *, offset: int = 0) -> NamedArray:
 
 def eigh(x: NamedArray, /) -> EighResult:
     xp = _get_data_namespace(x)
-    _datas = xp.linalg.eigh(x._data)
-    _dims = _infer_dims(_datas[0].shape)  # TODO: Fix dims
-    return EighResult(*(x._new(_dims, _data) for _data in _datas))
+    eigvals, eigvecs = xp.linalg.eigh(x._data)
+    _dims_vals = _infer_dims(eigvals.shape)  # TODO: Fix dims
+    _dims_vecs = _infer_dims(eigvecs.shape)  # TODO: Fix dims
+    return EighResult(
+        x._new(_dims_vals, eigvals),
+        x._new(_dims_vecs, eigvecs),
+    )
 
 
 def eigvalsh(x: NamedArray, /) -> NamedArray:
@@ -129,16 +133,24 @@ def qr(
     x: NamedArray, /, *, mode: Literal["reduced", "complete"] = "reduced"
 ) -> QRResult:
     xp = _get_data_namespace(x)
-    _datas = xp.linalg.qr(x._data)
-    _dims = _infer_dims(_datas[0].shape)  # TODO: Fix dims
-    return QRResult(*(x._new(_dims, _data) for _data in _datas))
+    q, r = xp.linalg.qr(x._data)
+    _dims_q = _infer_dims(q.shape)  # TODO: Fix dims
+    _dims_r = _infer_dims(r.shape)  # TODO: Fix dims
+    return QRResult(
+        x._new(_dims_q, q),
+        x._new(_dims_r, r),
+    )
 
 
 def slogdet(x: NamedArray, /) -> SlogdetResult:
     xp = _get_data_namespace(x)
-    _datas = xp.linalg.slogdet(x._data)
-    _dims = _infer_dims(_datas[0].shape)  # TODO: Fix dims
-    return SlogdetResult(*(x._new(_dims, _data) for _data in _datas))
+    sign, logabsdet = xp.linalg.slogdet(x._data)
+    _dims_sign = _infer_dims(sign.shape)  # TODO: Fix dims
+    _dims_logabsdet = _infer_dims(logabsdet.shape)  # TODO: Fix dims
+    return SlogdetResult(
+        x._new(_dims_sign, sign),
+        x._new(_dims_logabsdet, logabsdet),
+    )
 
 
 def solve(x1: NamedArray, x2: NamedArray, /) -> NamedArray:
@@ -150,9 +162,15 @@ def solve(x1: NamedArray, x2: NamedArray, /) -> NamedArray:
 
 def svd(x: NamedArray, /, *, full_matrices: bool = True) -> SVDResult:
     xp = _get_data_namespace(x)
-    _datas = xp.linalg.svd(x._data, full_matrices=full_matrices)
-    _dims = _infer_dims(_datas[0].shape)  # TODO: Fix dims
-    return SVDResult(*(x._new(_dims, _data) for _data in _datas))
+    u, s, vh = xp.linalg.svd(x._data, full_matrices=full_matrices)
+    _dims_u = _infer_dims(u.shape)  # TODO: Fix dims
+    _dims_s = _infer_dims(s.shape)  # TODO: Fix dims
+    _dims_vh = _infer_dims(vh.shape)  # TODO: Fix dims
+    return SVDResult(
+        x._new(_dims_u, u),
+        x._new(_dims_s, s),
+        x._new(_dims_vh, vh),
+    )
 
 
 def svdvals(x: NamedArray, /) -> NamedArray:

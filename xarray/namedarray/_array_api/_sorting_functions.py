@@ -20,12 +20,10 @@ def argsort(
 ) -> NamedArray:
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dim, axis)[0]
+    # TODO: As NumPy currently has no native descending sort, we imitate it here:
     if not descending:
         _data = xp.argsort(x._data, axis=_axis, stable=stable)
     else:
-        # As NumPy has no native descending sort, we imitate it here. Note that
-        # simply flipping the results of np.argsort(x._array, ...) would not
-        # respect the relative order like it would in native descending sorts.
         _data = xp.flip(
             xp.argsort(xp.flip(x._data, axis=_axis), stable=stable, axis=_axis),
             axis=_axis,
@@ -49,6 +47,7 @@ def sort(
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dim, axis)[0]
     _data = xp.sort(x._data, axis=_axis, stable=stable)
+    # TODO: As NumPy currently has no native descending sort, we imitate it here:
     if descending:
         _data = xp.flip(_data, axis=_axis)
     return x._new(data=_data)
