@@ -497,12 +497,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         from xarray.namedarray._array_api._utils import _atleast_0d, _infer_dims
 
         if isinstance(key, int | slice | tuple):
-            _data = _atleast_0d(self._data[key], self.__array_namespace__())
+            _data = _atleast_0d(self._data[key], self._data._array_namespace__())
             _dims = _infer_dims(_data.shape)  # TODO: fix
             return self._new(_dims, _data)
         elif isinstance(key, NamedArray):
             _key = key._data  # TODO: Transpose, unordered dims shouldn't matter.
-            _data = _atleast_0d(self._data[_key], self.__array_namespace__())
+            _data = _atleast_0d(self._data[_key], self._data.__array_namespace__())
             _dims = _infer_dims(_data.shape)  # TODO: fix
             return self._new(_dims, _data)
         else:
