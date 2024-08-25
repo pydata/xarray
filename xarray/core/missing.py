@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import datetime as dt
 import warnings
 from collections.abc import Callable, Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, get_args
+from typing import TYPE_CHECKING, Any, Generic, get_args
 
 import numpy as np
 import pandas as pd
@@ -24,6 +23,8 @@ from xarray.core.types import (
     InterpOptions,
     LimitAreaOptions,
     LimitDirectionOptions,
+    T_GapLength,
+    T_Xarray,
 )
 from xarray.core.utils import OrderedSet, is_scalar
 from xarray.core.variable import Variable, broadcast_variables
@@ -31,8 +32,7 @@ from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
+    pass
 
 
 _FILL_MISSING_DOCSTRING_TEMPLATE = """\
@@ -51,8 +51,8 @@ filled : same type as caller
 
 
 def _get_gap_left_edge(
-    obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable, outside=False
-):
+    obj: T_Xarray, dim: Hashable, index: Variable, outside=False
+) -> T_Xarray:
     left = index.where(~obj.isnull()).ffill(dim).transpose(*obj.dims)
     if outside:
         return left.fillna(index[0])
@@ -60,8 +60,8 @@ def _get_gap_left_edge(
 
 
 def _get_gap_right_edge(
-    obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable, outside=False
-):
+    obj: T_Xarray, dim: Hashable, index: Variable, outside=False
+) -> T_Xarray:
     right = index.where(~obj.isnull()).bfill(dim).transpose(*obj.dims)
     if outside:
         return right.fillna(index[-1])
@@ -69,24 +69,24 @@ def _get_gap_right_edge(
 
 
 def _get_gap_dist_to_left_edge(
-    obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable
-):
+    obj: T_Xarray, dim: Hashable, index: Variable
+) -> T_Xarray:
     return (index - _get_gap_left_edge(obj, dim, index)).transpose(*obj.dims)
 
 
 def _get_gap_dist_to_right_edge(
-    obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable
-):
+    obj: T_Xarray, dim: Hashable, index: Variable
+) -> T_Xarray:
     return (_get_gap_right_edge(obj, dim, index) - index).transpose(*obj.dims)
 
 
 def _get_limit_fill_mask(
-    obj: Dataset | DataArray | Variable,
+    obj: T_Xarray,
     dim: Hashable,
     index: Variable,
-    limit,
-    limit_direction,
-):
+    limit: T_GapLength,
+    limit_direction: LimitDirectionOptions,
+) -> T_Xarray:
     # At the left boundary, distance to left is nan.
     # For nan, a<=b and ~(a>b) behave differently
     if limit_direction == "forward":
@@ -105,8 +105,8 @@ def _get_limit_fill_mask(
 
 
 def _get_limit_area_mask(
-    obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable, limit_area
-):
+    obj: T_Xarray, dim: Hashable, index: Variable, limit_area
+) -> T_Xarray:
     if limit_area == "inside":
         area_mask = (
             _get_gap_left_edge(obj, dim, index).isnull()
@@ -125,9 +125,7 @@ def _get_limit_area_mask(
     return area_mask
 
 
-def _get_nan_block_lengths(
-    obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable
-):
+def _get_nan_block_lengths(obj: T_Xarray, dim: Hashable, index: Variable) -> T_Xarray:
     """
     Return an object where each NaN element in 'obj' is replaced by the
     length of the gap the element is in.
@@ -138,25 +136,22 @@ def _get_nan_block_lengths(
 
 
 def _get_max_gap_mask(
-    obj: Dataset | DataArray | Variable,
-    dim: Hashable,
-    index: Variable,
-    max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta,
-):
+    obj: T_Xarray, dim: Hashable, index: Variable, max_gap: T_GapLength
+) -> T_Xarray:
     nan_block_lengths = _get_nan_block_lengths(obj, dim, index)
     return nan_block_lengths > max_gap
 
 
 def _get_gap_mask(
-    obj: Dataset | DataArray | Variable,
+    obj: T_Xarray,
     dim: Hashable,
-    limit=None,
-    limit_direction="both",
-    limit_area=None,
+    limit: T_GapLength | None = None,
+    limit_direction: LimitDirectionOptions = "both",
+    limit_area: LimitAreaOptions = None,
     limit_use_coordinate=False,
-    max_gap=None,
+    max_gap: T_GapLength = None,
     max_gap_use_coordinate=False,
-):
+) -> T_Xarray:
     # Input checking
     ##Limit
     if not is_scalar(limit):
@@ -387,7 +382,9 @@ def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
     return ds
 
 
-def _get_raw_interp_index(arr, dim: Hashable, use_coordinate: bool | Hashable = True):
+def _get_raw_interp_index(
+    arr: T_Xarray, dim: Hashable, use_coordinate: bool | Hashable = True
+) -> pd.Index:
     """Return index to use for x values in interpolation or curve fitting.
     In comparison to get_clean_interp_index, this function does not convert
     to numeric values."""
@@ -419,8 +416,11 @@ def _get_raw_interp_index(arr, dim: Hashable, use_coordinate: bool | Hashable = 
 
 
 def get_clean_interp_index(
-    arr, dim: Hashable, use_coordinate: bool | Hashable = True, strict: bool = True
-):
+    arr: T_Xarray,
+    dim: Hashable,
+    use_coordinate: bool | Hashable = True,
+    strict: bool = True,
+) -> Variable:
     """Return index to use for x values in interpolation or curve fitting.
 
     Parameters
@@ -487,22 +487,22 @@ def get_clean_interp_index(
     return index
 
 
-def _is_time_index(index):
+def _is_time_index(index) -> bool:
     from xarray.coding.cftimeindex import CFTimeIndex
 
     return isinstance(index, pd.DatetimeIndex | CFTimeIndex)
 
 
 def _interp_na_all(
-    self,
-    dim: Hashable | None = None,
+    obj: T_Xarray,
+    dim: Hashable,
     method: InterpOptions = "linear",
     use_coordinate: bool | str = True,
     keep_attrs: bool | None = None,
     **kwargs,
-):
+) -> T_Xarray:
     """Interpolate all nan values, without restrictions regarding the gap size."""
-    index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate)
+    index = get_clean_interp_index(obj, dim, use_coordinate=use_coordinate)
     interp_class, kwargs = _get_interpolator(method, **kwargs)
     interpolator = partial(func_interpolate_na, interp_class, **kwargs)
 
@@ -514,32 +514,37 @@ def _interp_na_all(
         warnings.filterwarnings("ignore", "invalid value", RuntimeWarning)
         arr = apply_ufunc(
             interpolator,
-            self,
+            obj,
             index.values,
             input_core_dims=[[dim], [dim]],
             output_core_dims=[[dim]],
-            output_dtypes=[self.dtype],
+            output_dtypes=[obj.dtype],
             dask="parallelized",
             vectorize=True,
             keep_attrs=keep_attrs,
-        ).transpose(*self.dims)
+        ).transpose(*obj.dims)
     return arr
 
 
-class GapMask:
+class GapMask(Generic[T_Xarray]):
+    content: T_Xarray
+    mask: np.ndarray
+    dim: Hashable
+
     """An object that allows for flexible masking of gaps."""
 
-    def __init__(self, content: DataArray | Dataset, mask: np.ndarray, dim: Hashable):
+    def __init__(self, content: T_Xarray, mask: np.ndarray, dim: Hashable) -> None:
         self.content = content
         self.mask = mask
         self.dim = dim
+        self.dim = dim
 
-    def _apply_mask(self, filled):
+    def _apply_mask(self, filled: T_Xarray) -> T_Xarray:
         if self.mask is not None:
             filled = filled.where(~self.mask, other=self.content)
         return filled
 
-    def ffill(self, dim: Hashable | None = None):
+    def ffill(self, dim: Hashable | None = None) -> T_Xarray:
         """Partly fill missing values in this object's data by applying ffill to all unmasked values.
 
         Parameters
@@ -561,7 +566,7 @@ class GapMask:
             dim = self.dim
         return self._apply_mask(self.content.ffill(dim))
 
-    def bfill(self, dim: Hashable | None = None):
+    def bfill(self, dim: Hashable | None = None) -> T_Xarray:
         """Partly fill missing values in this object's data by applying bfill to all unmasked values.
 
         Parameters
@@ -583,7 +588,7 @@ class GapMask:
             dim = self.dim
         return self._apply_mask(self.content.bfill(dim))
 
-    def fillna(self, value):
+    def fillna(self, value) -> T_Xarray:
         """Partly fill missing values in this object's data by applying fillna to all unmasked values.
 
         Parameters
@@ -592,6 +597,7 @@ class GapMask:
             Used to fill all unmasked values. If the
             argument is a DataArray, it is first aligned with (reindexed to)
             this array.
+
 
         Returns
         -------
@@ -605,6 +611,7 @@ class GapMask:
         """
         return self._apply_mask(self.content.fillna(value))
 
+
     def interpolate_na(
         self,
         dim: Hashable | None = None,
@@ -612,7 +619,7 @@ class GapMask:
         use_coordinate: bool | str = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ):
+    ) -> T_Xarray:
         """Partly fill missing values in this object's data by applying interpolate_na to all unmasked values.
 
         Parameters
@@ -623,6 +630,7 @@ class GapMask:
         -------
         filled : same type as caller
             New object with interpolate_na applied to all unmasked values.
+
 
         See Also
         --------
@@ -638,25 +646,29 @@ class GapMask:
                 use_coordinate=use_coordinate,
                 keep_attrs=keep_attrs,
                 **kwargs,
+                dim=dim,
+                method=method,
+                use_coordinate=use_coordinate,
+                keep_attrs=keep_attrs,
+                **kwargs,
             )
         )
 
 
+
 def mask_gaps(
-    self,
+    obj: T_Xarray,
     dim: Hashable,
     use_coordinate: bool | str = True,
-    limit: (
-        int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta | None
-    ) = None,
+    limit: T_GapLength | None = None,
     limit_direction: LimitDirectionOptions = "both",
     limit_area: LimitAreaOptions | None = None,
-    max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta = None,
-) -> GapMask:
+    max_gap: T_GapLength | None = None,
+) -> GapMask[T_Xarray]:
     """Mask continuous gaps in the data, providing functionality to control gap length and offsets"""
 
     mask = _get_gap_mask(
-        self,
+        obj,
         dim,
         limit,
         limit_direction,
@@ -665,26 +677,20 @@ def mask_gaps(
         max_gap,
         use_coordinate,
     )
-    return GapMask(self, mask, dim)
+    return GapMask(obj, mask, dim)
 
 
 def interp_na(
-    self,
-    dim: Hashable | None = None,
+    obj: T_Xarray,
+    dim: Hashable,
     method: InterpOptions = "linear",
     use_coordinate: bool | str = True,
-    limit: (
-        int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta | None
-    ) = None,
-    max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta = None,
+    limit: T_GapLength | None = None,
+    max_gap: T_GapLength | None = None,
     keep_attrs: bool | None = None,
     **kwargs,
-):
+) -> T_Xarray:
     """Interpolate values according to different methods."""
-    # Preprocess arguments and do consistency checks
-    if dim is None:
-        raise NotImplementedError("dim is a required argument")
-
     # This was the original behaviour of interp_na and is kept for backward compatibility
     # Limit=None: Fill everything, including both boundaries
     # Limit!=None: Do forward interpolation until limit
@@ -695,7 +701,7 @@ def interp_na(
         limit_direction = "forward"
     limit_area = None
     mask = _get_gap_mask(
-        self,
+        obj,
         dim,
         limit,
         limit_direction,
@@ -705,7 +711,7 @@ def interp_na(
         use_coordinate,
     )
 
-    arr = _interp_na_all(self, dim, method, use_coordinate, keep_attrs, **kwargs)
+    arr = _interp_na_all(obj, dim, method, use_coordinate, keep_attrs, **kwargs)
     if mask is not None:
         arr = arr.where(~mask)
     return arr
