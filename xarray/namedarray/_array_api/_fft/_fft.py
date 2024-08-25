@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Literal, NamedTuple
+from typing import TYPE_CHECKING, Literal
 
 from xarray.namedarray._array_api._utils import (
     _get_data_namespace,
@@ -11,18 +11,9 @@ from xarray.namedarray._array_api._utils import (
 from xarray.namedarray.core import NamedArray
 
 if TYPE_CHECKING:
-    from xarray.namedarray._typing import _Axes, _Axis, _DType, _Device
+    from xarray.namedarray._typing import _Axes, _Axis, _Device
 
     _Norm = Literal["backward", "ortho", "forward"]
-
-from xarray.namedarray._array_api._dtypes import (
-    _floating_dtypes,
-    _real_floating_dtypes,
-    _complex_floating_dtypes,
-    float32,
-    complex64,
-)
-from xarray.namedarray._array_api._data_type_functions import astype
 
 
 def fft(
