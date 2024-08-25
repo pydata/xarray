@@ -9,6 +9,7 @@ from xarray.namedarray._typing import (
     _arrayapi,
     _Axis,
     _AxisLike,
+    _Axes,
     _default,
     _Dim,
     _Dims,
@@ -103,7 +104,7 @@ def _assert_either_dim_or_axis(
 
 def _dims_to_axis(
     x: NamedArray[Any, Any], dims: _Dim | _Dims | Default, axis: _AxisLike | None
-) -> _AxisLike | None:
+) -> _Axes | None:
     """
     Convert dims to axis indices.
 
@@ -112,7 +113,7 @@ def _dims_to_axis(
     >>> narr = NamedArray(("x", "y"), np.array([[1, 2, 3], [5, 6, 7]]))
     >>> _dims_to_axis(narr, ("y",), None)
     (1,)
-    >>> _dims_to_axis(narr, None, 0)
+    >>> _dims_to_axis(narr, _default, 0)
     (0,)
     >>> _dims_to_axis(narr, None, None)
     """
