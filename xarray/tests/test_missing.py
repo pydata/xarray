@@ -366,6 +366,7 @@ def test_interpolate_limits():
     assert_equal(actual, expected)
 
 
+@requires_bottleneck
 def test_interpolate_double_coordinate():
     # Check if max_gap is able to handle string coordinate names
     # Limit is always refering to an index
@@ -633,6 +634,7 @@ def test_bfill_dataset(ds):
     ds.ffill(dim="time")
 
 
+@requires_bottleneck
 def test_get_gap_left_edge():
     n = np.nan
     arr = [
@@ -664,6 +666,7 @@ def test_get_gap_left_edge():
     )
 
 
+@requires_bottleneck
 def test_get_gap_right_edge():
     n = np.nan
     arr = [
@@ -695,6 +698,7 @@ def test_get_gap_right_edge():
     )
 
 
+@requires_bottleneck
 def test_get_gap_dist_to_left_edge():
     n = np.nan
     arr = [
@@ -718,6 +722,7 @@ def test_get_gap_dist_to_left_edge():
     expected = da.copy(data=[[n, 0, 3, 4, 5, 6, 8, 10, 0], [n, n, n, 0, 1, 2, 0, 2, 4]])
 
 
+@requires_bottleneck
 def test_get_gap_dist_to_right_edge():
     n = np.nan
     arr = [
@@ -768,6 +773,7 @@ def test_get_nan_block_lengths(y, lengths_expected):
     assert_equal(actual, expected)
 
 
+@requires_bottleneck
 def test_get_nan_block_lengths_2d():
     n = np.nan
     da = xr.DataArray(
@@ -804,6 +810,7 @@ def test_get_nan_block_lengths_2d():
     assert_equal(actual, expected_y)
 
 
+@requires_bottleneck
 def test_get_limit_fill_mask():
     T = True
     F = False
@@ -856,6 +863,7 @@ def test_get_limit_fill_mask():
     assert_equal(actual, expected)
 
 
+@requires_bottleneck
 def test_get_area_mask():
     T = True
     F = False
@@ -1064,6 +1072,7 @@ def test_interpolate_na_max_gap_2d(coords):
     assert_equal(actual, expected_x)
 
 
+@requires_bottleneck
 def test_interpolate_na_limit_2d():
     n = np.nan
     times = pd.date_range("2000-01-01", periods=12, freq="3h")
@@ -1113,6 +1122,7 @@ def test_interpolators_complex_out_of_bounds():
 
 
 ####Masking Functionality
+@requires_bottleneck
 def test_fill_gaps_limit():
     n = np.nan
     times = pd.date_range("2000-01-01", periods=8, freq="2h")
@@ -1149,6 +1159,7 @@ def test_fill_gaps_limit():
     assert_equal(actual, expected)
 
 
+@requires_bottleneck
 def test_mask_gap_limit_2d():
     n = np.nan
     times = pd.date_range("2000-01-01", periods=12, freq="3h")
@@ -1309,6 +1320,7 @@ def test_mask_gap_limit_2d():
     assert_equal(actual, expected)
 
 
+@requires_bottleneck
 def test_mask_gap_max_gap_2d():
     n = np.nan
     times = pd.date_range("2000-01-01", periods=12, freq="3h")
@@ -1358,6 +1370,7 @@ def test_mask_gap_max_gap_2d():
     assert_equal(actual, expected)
 
 
+@requires_bottleneck
 def test_mask_double_coordinate():
     # Check if limit and max_gap are able to handle string coordinate names
     n = np.nan
