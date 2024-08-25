@@ -173,6 +173,7 @@ if TYPE_CHECKING:
         T_ChunkDimFreq,
         T_Chunks,
         T_DatasetPadConstantValues,
+        T_GapLength,
         T_Xarray,
     )
     from xarray.core.weighted import DatasetWeighted
@@ -6714,15 +6715,7 @@ class Dataset(
         method: InterpOptions = "linear",
         limit: int | None = None,
         use_coordinate: bool | Hashable = True,
-        max_gap: (
-            int
-            | float
-            | str
-            | pd.Timedelta
-            | np.timedelta64
-            | datetime.timedelta
-            | None
-        ) = None,
+        max_gap: T_GapLength | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -7000,27 +6993,11 @@ class Dataset(
         dim: Hashable,
         *,
         use_coordinate: bool | Hashable = True,
-        limit: (
-            None
-            | int
-            | float
-            | str
-            | pd.Timedelta
-            | np.timedelta64
-            | datetime.timedelta
-        ) = None,
+        limit: T_GapLength | None = None,
         limit_direction: LimitDirectionOptions = "both",
         limit_area: LimitAreaOptions | None = None,
-        max_gap: (
-            None
-            | int
-            | float
-            | str
-            | pd.Timedelta
-            | np.timedelta64
-            | datetime.timedelta
-        ) = None,
-    ) -> GapMask:
+        max_gap: T_GapLength | None = None,
+    ) -> GapMask[Dataset]:
         """Fill in gaps in the data using one of several filling methods.
         Allows for fine control on how far to extend the valid data into the gaps and the maximum size of the gaps to fill.
 
