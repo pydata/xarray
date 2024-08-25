@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from xarray.namedarray._array_api._utils import (
+    _atleast_0d,
     _dims_to_axis,
     _get_data_namespace,
     _get_remaining_dims,
@@ -29,7 +30,7 @@ def all(
 ) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     axis_ = _dims_to_axis(x, dims, axis)
-    d = xp.all(x._data, axis=axis_, keepdims=False)  # We fix keepdims later
+    d = _atleast_0d(xp.all(x._data, axis=axis_, keepdims=False), xp)
     dims_, data_ = _get_remaining_dims(x, d, axis_, keepdims=keepdims)
     out = x._new(dims=dims_, data=data_)
     return out
@@ -45,7 +46,7 @@ def any(
 ) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     axis_ = _dims_to_axis(x, dims, axis)
-    d = xp.any(x._data, axis=axis_, keepdims=False)  # We fix keepdims later
+    d = _atleast_0d(xp.any(x._data, axis=axis_, keepdims=False), xp)
     dims_, data_ = _get_remaining_dims(x, d, axis_, keepdims=keepdims)
     out = x._new(dims=dims_, data=data_)
     return out

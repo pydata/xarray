@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from xarray.namedarray._array_api._utils import (
+    _atleast_0d,
     _dims_to_axis,
     _get_data_namespace,
     _get_remaining_dims,
@@ -67,7 +68,7 @@ def max(
 ) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dims, axis)
-    _data = xp.max(x._data, axis=_axis, keepdims=False)  # We fix keepdims later
+    _data = _atleast_0d(xp.max(x._data, axis=_axis, keepdims=False), xp)
     # TODO: Why do we need to do the keepdims ourselves?
     dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
     return x._new(dims=dims_, data=data_)
@@ -133,7 +134,7 @@ def mean(
     """
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dims, axis)
-    _data = xp.mean(x._data, axis=_axis, keepdims=False)  # We fix keepdims later
+    _data = _atleast_0d(xp.mean(x._data, axis=_axis, keepdims=False), xp)
     # TODO: Why do we need to do the keepdims ourselves?
     dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
     out = x._new(dims=dims_, data=data_)
@@ -150,7 +151,7 @@ def min(
 ) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dims, axis)
-    _data = xp.min(x._data, axis=_axis, keepdims=False)  # We fix keepdims later
+    _data = _atleast_0d(xp.min(x._data, axis=_axis, keepdims=False), xp)
     # TODO: Why do we need to do the keepdims ourselves?
     dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
     out = x._new(dims=dims_, data=data_)
@@ -168,7 +169,7 @@ def prod(
 ) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dims, axis)
-    _data = xp.prod(x._data, axis=_axis, keepdims=False)  # We fix keepdims later
+    _data = _atleast_0d(xp.prod(x._data, axis=_axis, keepdims=False), xp)
     # TODO: Why do we need to do the keepdims ourselves?
     dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
     out = x._new(dims=dims_, data=data_)
@@ -186,9 +187,9 @@ def std(
 ) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dims, axis)
-    _data = xp.std(
-        x._data, axis=_axis, correction=correction, keepdims=False
-    )  # We fix keepdims later
+    _data = _atleast_0d(
+        xp.std(x._data, axis=_axis, correction=correction, keepdims=False), xp
+    )
     # TODO: Why do we need to do the keepdims ourselves?
     dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
     out = x._new(dims=dims_, data=data_)
@@ -206,7 +207,7 @@ def sum(
 ) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dims, axis)
-    _data = xp.sum(x._data, axis=_axis, keepdims=False)  # We fix keepdims later
+    _data = _atleast_0d(xp.sum(x._data, axis=_axis, keepdims=False), xp)
     # TODO: Why do we need to do the keepdims ourselves?
     dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
     out = x._new(dims=dims_, data=data_)
@@ -224,9 +225,9 @@ def var(
 ) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dims, axis)
-    _data = xp.var(
+    _data = _atleast_0d(xp.var(
         x._data, axis=_axis, correction=correction, keepdims=False
-    )  # We fix keepdims later
+    ), xp)
     # TODO: Why do we need to do the keepdims ourselves?
     dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
     out = x._new(dims=dims_, data=data_)
