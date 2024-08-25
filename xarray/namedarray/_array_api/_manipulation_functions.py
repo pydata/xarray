@@ -16,7 +16,6 @@ from xarray.namedarray._typing import (
     _Axis,
     _default,
     _Dim,
-    _Dims,
     _DType,
     _Shape,
 )
