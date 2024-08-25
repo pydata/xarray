@@ -184,6 +184,19 @@ def eye(
     return NamedArray(_dims, _data)
 
 
+def from_dlpack(
+    x: object,
+    /,
+    *,
+    device: _Device | None = None,
+    copy: bool | None = None,
+) -> NamedArray:
+    xp = _get_data_namespace(x)
+    _device = x.device if device is None else device
+    _data = xp.from_dlpack(x, device=_device, copy=copy)
+    return x._new(data=_data)
+
+
 def full(
     shape: _Shape,
     fill_value: bool | int | float | complex,
