@@ -97,7 +97,7 @@ def _get_limit_fill_mask(
     obj: T_Xarray,
     dim: Hashable,
     index: Variable,
-    limit: T_GapLength,
+    limit: int | float | np.number,
     limit_direction: LimitDirectionOptions,
 ) -> T_Xarray:
     # At the left boundary, distance to left is nan.
@@ -149,7 +149,7 @@ def _get_nan_block_lengths(obj: T_Xarray, dim: Hashable, index: Variable) -> T_X
 
 
 def _get_max_gap_mask(
-    obj: T_Xarray, dim: Hashable, index: Variable, max_gap: T_GapLength
+    obj: T_Xarray, dim: Hashable, index: Variable, max_gap: int | float | np.number
 ) -> T_Xarray:
     nan_block_lengths = _get_nan_block_lengths(obj, dim, index)
     return nan_block_lengths > max_gap
@@ -160,11 +160,11 @@ def _get_gap_mask(
     dim: Hashable,
     limit: T_GapLength | None = None,
     limit_direction: LimitDirectionOptions = "both",
-    limit_area: LimitAreaOptions = None,
+    limit_area: LimitAreaOptions | None = None,
     limit_use_coordinate=False,
-    max_gap: T_GapLength = None,
+    max_gap: T_GapLength | None = None,
     max_gap_use_coordinate=False,
-) -> T_Xarray:
+) -> T_Xarray | None:
     # Input checking
     ##Limit
     if not is_scalar(limit):
@@ -182,22 +182,25 @@ def _get_gap_mask(
             limit = timedelta_to_numeric(limit)
 
     ## Max_gap
-    if max_gap is not None:
-        if not is_scalar(max_gap):
-            raise ValueError("max_gap must be a scalar.")
+    if not is_scalar(max_gap):
+        raise ValueError("max_gap must be a scalar.")
 
-        if _is_time_index(_get_raw_interp_index(obj, dim, max_gap_use_coordinate)):
-            max_gap = timedelta_to_numeric(max_gap)
-
+    if max_gap is None:
+        max_gap = np.inf
+    else:
         if not max_gap_use_coordinate:
             if not isinstance(max_gap, Number | np.number):
                 raise TypeError(
                     f"Expected integer or floating point max_gap since use_coordinate=False. Received {type(max_gap).__name__}."
                 )
+
+        if _is_time_index(_get_raw_interp_index(obj, dim, max_gap_use_coordinate)):
+            max_gap = timedelta_to_numeric(max_gap)
+
     # Which masks are really needed?
     need_limit_mask = limit != np.inf or limit_direction != "both"
     need_area_mask = limit_area is not None
-    need_max_gap_mask = max_gap is not None
+    need_max_gap_mask = max_gap != np.inf
     # Calculate indexes
     if need_limit_mask or need_area_mask:
         index_limit = get_clean_interp_index(
@@ -515,7 +518,7 @@ def _interp_na_all(
     obj: T_Xarray,
     dim: Hashable,
     method: InterpOptions = "linear",
-    use_coordinate: bool | str = True,
+    use_coordinate: bool | Hashable = True,
     keep_attrs: bool | None = None,
     **kwargs,
 ) -> T_Xarray:
@@ -546,12 +549,12 @@ def _interp_na_all(
 
 class GapMask(Generic[T_Xarray]):
     content: T_Xarray
-    mask: np.ndarray
+    mask: T_Xarray | None
     dim: Hashable
 
     """An object that allows for flexible masking of gaps."""
 
-    def __init__(self, content: T_Xarray, mask: np.ndarray, dim: Hashable) -> None:
+    def __init__(self, content: T_Xarray, mask: T_Xarray | None, dim: Hashable) -> None:
         self.content = content
         self.mask = mask
         self.dim = dim
@@ -633,7 +636,7 @@ class GapMask(Generic[T_Xarray]):
         self,
         dim: Hashable | None = None,
         method: InterpOptions = "linear",
-        use_coordinate: bool | str = True,
+        use_coordinate: bool | Hashable = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> T_Xarray:
@@ -670,7 +673,7 @@ class GapMask(Generic[T_Xarray]):
 def mask_gaps(
     obj: T_Xarray,
     dim: Hashable,
-    use_coordinate: bool | str = True,
+    use_coordinate: bool | Hashable = True,
     limit: T_GapLength | None = None,
     limit_direction: LimitDirectionOptions = "both",
     limit_area: LimitAreaOptions | None = None,
@@ -695,7 +698,7 @@ def interp_na(
     obj: T_Xarray,
     dim: Hashable,
     method: InterpOptions = "linear",
-    use_coordinate: bool | str = True,
+    use_coordinate: bool | Hashable = True,
     limit: T_GapLength | None = None,
     max_gap: T_GapLength | None = None,
     keep_attrs: bool | None = None,
@@ -706,10 +709,7 @@ def interp_na(
     # Limit=None: Fill everything, including both boundaries
     # Limit!=None: Do forward interpolation until limit
     limit_use_coordinate = False
-    if limit is None:
-        limit_direction = "both"
-    else:
-        limit_direction = "forward"
+    limit_direction: LimitDirectionOptions = "both" if limit is None else "forward"
     limit_area = None
     mask = _get_gap_mask(
         obj,
