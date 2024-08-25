@@ -5,8 +5,8 @@ from typing import Any
 from xarray.namedarray._array_api._creation_functions import asarray
 from xarray.namedarray._array_api._data_type_functions import result_type
 from xarray.namedarray._array_api._utils import (
-    _get_data_namespace,
     _get_broadcasted_dims,
+    _get_data_namespace,
     _infer_dims,
     _insert_dim,
 )
