@@ -506,7 +506,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             _dims = _infer_dims(_data.shape)  # TODO: fix
             return self._new(_dims, _data)
         else:
-            raise NotImplementedError("{k=} is not supported")
+            raise NotImplementedError(f"{key=} is not supported")
 
     def __gt__(self, other: int | float | NamedArray, /):
         from xarray.namedarray._array_api import asarray, greater
