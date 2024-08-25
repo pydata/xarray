@@ -6,9 +6,7 @@ from xarray.namedarray._typing import (
     _default,
     _Dim,
 )
-from xarray.namedarray.core import (
-    NamedArray,
-)
+from xarray.namedarray.core import NamedArray
 
 
 def argsort(
@@ -22,10 +20,21 @@ def argsort(
 ) -> NamedArray:
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dim, axis)
-    out = x._new(
-        data=xp.argsort(x._data, axis=_axis, descending=descending, stable=stable)
-    )
-    return out
+    if not descending:
+        _data = xp.argsort(x._data, axis=_axis, stable=stable)
+    else:
+        # As NumPy has no native descending sort, we imitate it here. Note that
+        # simply flipping the results of np.argsort(x._array, ...) would not
+        # respect the relative order like it would in native descending sorts.
+        _data = xp.flip(
+            xp.argsort(xp.flip(x._data, axis=axis), stable=stable, axis=axis),
+            axis=axis,
+        )
+        # Rely on flip()/argsort() to validate axis
+        normalised_axis = axis if axis >= 0 else x.ndim + axis
+        max_i = x.shape[normalised_axis] - 1
+        _data = max_i - _data
+    return x._new(data=_data)
 
 
 def sort(
@@ -39,7 +48,7 @@ def sort(
 ) -> NamedArray:
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dim, axis)
-    out = x._new(
-        data=xp.argsort(x._data, axis=_axis, descending=descending, stable=stable)
-    )
-    return out
+    _data = xp.sort(x._data, axis=_axis, descending=descending, stable=stable)
+    if descending:
+        _data = xp.flip(_data, axis=axis)
+    return x._new(data=_data)
