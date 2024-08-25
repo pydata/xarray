@@ -263,6 +263,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         data: duckarray[Any, _DType_co],
         attrs: _AttrsLike = None,
     ):
+        if not isinstance(data, _arrayfunction_or_api):
+            raise NotImplementedError(
+                f"data is not a valid duckarray, got {data=}, {dims=}"
+            )
         self._data = data
         self._dims = self._parse_dimensions(dims)
         self._attrs = dict(attrs) if attrs else None
