@@ -483,8 +483,11 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def __getitem__(self, key: _IndexKeyLike | NamedArray) -> NamedArray:
         if isinstance(key, int | slice | tuple):
+            from xarray.namedarray._array_api._utils import _infer_dims
+
             _data = self._data[key]
-            return self._new((), _data)
+            _dims = _infer_dims(_data.shape)  # TODO: fix
+            return self._new(_dims, _data)
         elif isinstance(key, NamedArray):
             _key = self._data  # TODO: Transpose, unordered dims shouldn't matter.
             _data = self._data[_key]
