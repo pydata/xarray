@@ -1282,7 +1282,7 @@ def test_mask_gap_limit_2d():
         limit_area=None,
         use_coordinate=True,
     )
-    actual=mask.interpolate_na(
+    actual = mask.interpolate_na(
         "x",
         fill_value="extrapolate",
         method="linear",
@@ -1297,7 +1297,7 @@ def test_mask_gap_limit_2d():
     )
     assert_equal(actual, expected)
     # Test: Dim argument from mask should be used
-    actual=mask.interpolate_na(
+    actual = mask.interpolate_na(
         fill_value="extrapolate",
         method="linear",
     )

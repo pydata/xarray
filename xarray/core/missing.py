@@ -552,7 +552,7 @@ class GapMask:
     def __init__(self, content: DataArray | Dataset, mask: np.ndarray, dim: Hashable):
         self.content = content
         self.mask = mask
-        self.dim=dim
+        self.dim = dim
 
     def _apply_mask(self, filled):
         if self.mask is not None:
@@ -580,7 +580,7 @@ class GapMask:
         if dim is None:
             dim = self.dim
         return self._apply_mask(self.content.ffill(dim))
-    
+
     def bfill(self, dim: Hashable | None = None):
         """Partly fill missing values in this object's data by applying bfill to all unmasked values.
 
@@ -602,7 +602,7 @@ class GapMask:
         if dim is None:
             dim = self.dim
         return self._apply_mask(self.content.bfill(dim))
-    
+
     def fillna(self, value):
         """Partly fill missing values in this object's data by applying fillna to all unmasked values.
 
@@ -612,7 +612,7 @@ class GapMask:
             Used to fill all unmasked values. If the
             argument is a DataArray, it is first aligned with (reindexed to)
             this array.
-        
+
         Returns
         -------
         filled : same type as caller
@@ -624,7 +624,7 @@ class GapMask:
         Dataset.fillna
         """
         return self._apply_mask(self.content.fillna(value))
-    
+
     def interpolate_na(
         self,
         dim: Hashable | None = None,
@@ -643,7 +643,7 @@ class GapMask:
         -------
         filled : same type as caller
             New object with interpolate_na applied to all unmasked values.
-        
+
         See Also
         --------
         DataArray.interpolate_na
@@ -653,9 +653,14 @@ class GapMask:
             dim = self.dim
         return self._apply_mask(
             self.content.interpolate_na(
-                dim=dim, method=method, use_coordinate=use_coordinate, keep_attrs=keep_attrs, **kwargs
+                dim=dim,
+                method=method,
+                use_coordinate=use_coordinate,
+                keep_attrs=keep_attrs,
+                **kwargs,
             )
         )
+
 
 def mask_gaps(
     self,
