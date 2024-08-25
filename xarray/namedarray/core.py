@@ -494,15 +494,15 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return greater_equal(self, asarray(other))
 
     def __getitem__(self, key: _IndexKeyLike | NamedArray) -> NamedArray:
-        from xarray.namedarray._array_api._utils import _infer_dims
+        from xarray.namedarray._array_api._utils import _atleast_0d, _infer_dims
 
         if isinstance(key, int | slice | tuple):
-            _data = self._data[key]
+            _data = _atleast_0d(self._data[key], self.__array_namespace__())
             _dims = _infer_dims(_data.shape)  # TODO: fix
             return self._new(_dims, _data)
         elif isinstance(key, NamedArray):
             _key = key._data  # TODO: Transpose, unordered dims shouldn't matter.
-            _data = self._data[_key]
+            _data = _atleast_0d(self._data[_key], self.__array_namespace__())
             _dims = _infer_dims(_data.shape)  # TODO: fix
             return self._new(_dims, _data)
         else:
