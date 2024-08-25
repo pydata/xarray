@@ -32,7 +32,9 @@ def cumulative_sum(
     axis: int | None = None,
 ) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
-    _axis = _dims_to_axis(x, dim, axis)[0]
+
+    a = _dims_to_axis(x, dim, axis)
+    _axis = a if a is None else a[0]
     try:
         _data = xp.cumulative_sum(
             x._data, axis=_axis, dtype=dtype, include_initial=include_initial

@@ -181,3 +181,76 @@ def _atleast_0d(x, xp):
     Workaround for numpy sometimes returning scalars instead of 0d arrays.
     """
     return xp.asarray(x)
+
+
+# %%
+def _raise_if_any_duplicate_dimensions(
+    dims: _Dims, err_context: str = "This function"
+) -> None:
+    if len(set(dims)) < len(dims):
+        repeated_dims = {d for d in dims if dims.count(d) > 1}
+        raise ValueError(
+            f"{err_context} cannot handle duplicate dimensions, "
+            f"but dimensions {repeated_dims} appear more than once on this object's dims: {dims}"
+        )
+
+
+def _get_broadcasted_dims(*arrays: NamedArray) -> tuple[_Dims, _Shape]:
+    """
+    Get the expected broadcasted dims.
+
+    Examples
+    --------
+    >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
+    >>> b = NamedArray(("y", "z"), np.zeros((3, 4)))
+    >>> _get_broadcasted_dims(a, b)
+    (('x', 'y', 'z'), (5, 3, 4))
+
+    >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
+    >>> b = NamedArray(("x", "y", "z"), np.zeros((0, 3, 4)))
+    >>> _get_broadcasted_dims(a, b)
+    (('x', 'y', 'z'), (5, 3, 4))
+
+    >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
+    >>> b = NamedArray(("x", "y", "z"), np.zeros((1, 3, 4)))
+    >>> _get_broadcasted_dims(a, b)
+    (('x', 'y', 'z'), (5, 3, 4))
+
+    >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
+    >>> b = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
+    >>> _get_broadcasted_dims(a, b)
+    (('x', 'y', 'z'), (5, 3, 4))
+
+    >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
+    >>> b = NamedArray(("x", "y", "z"), np.zeros((2, 3, 4)))
+    >>> _get_broadcasted_dims(a, b)
+    Traceback (most recent call last):
+     ...
+    ValueError: operands cannot be broadcast together with mismatched lengths for dimension 'x': (5, 2)
+    """
+
+    def broadcastable(e1: int, e2: int) -> bool:
+        out = e1 > 1 and e2 <= 1
+        out |= e2 > 1 and e1 <= 1
+        return out
+
+    # validate dimensions
+    all_dims = {}
+    for x in arrays:
+        _dims = x.dims
+        _raise_if_any_duplicate_dimensions(_dims, err_context="Broadcasting")
+
+        for d, s in zip(_dims, x.shape):
+            if d not in all_dims:
+                all_dims[d] = s
+            elif all_dims[d] != s:
+                if broadcastable(all_dims[d], s):
+                    max(all_dims[d], s)
+                else:
+                    raise ValueError(
+                        "operands cannot be broadcast together "
+                        f"with mismatched lengths for dimension {d!r}: {(all_dims[d], s)}"
+                    )
+
+    # TODO: Return flag whether broadcasting is needed?
+    return tuple(all_dims.keys()), tuple(all_dims.values())

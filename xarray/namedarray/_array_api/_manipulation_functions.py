@@ -6,6 +6,7 @@ from xarray.namedarray._array_api._creation_functions import asarray
 from xarray.namedarray._array_api._data_type_functions import result_type
 from xarray.namedarray._array_api._utils import (
     _get_data_namespace,
+    _get_broadcasted_dims,
     _infer_dims,
     _insert_dim,
 )
@@ -23,11 +24,20 @@ from xarray.namedarray.core import NamedArray
 
 
 def broadcast_arrays(*arrays: NamedArray) -> list[NamedArray]:
+    """
+    Broadcasts one or more arrays against one another.
+
+    Examples
+    --------
+    >>> x = xp.asarray([[1, 2, 3]])
+    >>> y = xp.asarray([[4], [5]])
+    >>> xp.broadcast_arrays(x, y)
+    """
     x = arrays[0]
     xp = _get_data_namespace(x)
+    _dims, _ = _get_broadcasted_dims(*arrays)
     _arrays = tuple(a._data for a in arrays)
     _datas = xp.broadcast_arrays(*_arrays)
-    _dims = _infer_dims(_datas[0].shape)
     return [arr._new(_dims, _data) for arr, _data in zip(arrays, _datas)]
 
 
