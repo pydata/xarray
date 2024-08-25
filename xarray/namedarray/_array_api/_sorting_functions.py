@@ -19,7 +19,7 @@ def argsort(
     axis: int = -1,
 ) -> NamedArray:
     xp = _get_data_namespace(x)
-    _axis = _dims_to_axis(x, dim, axis)
+    _axis = _dims_to_axis(x, dim, axis)[0]
     if not descending:
         _data = xp.argsort(x._data, axis=_axis, stable=stable)
     else:
@@ -27,11 +27,11 @@ def argsort(
         # simply flipping the results of np.argsort(x._array, ...) would not
         # respect the relative order like it would in native descending sorts.
         _data = xp.flip(
-            xp.argsort(xp.flip(x._data, axis=axis), stable=stable, axis=axis),
-            axis=axis,
+            xp.argsort(xp.flip(x._data, axis=_axis), stable=stable, axis=_axis),
+            axis=_axis,
         )
         # Rely on flip()/argsort() to validate axis
-        normalised_axis = axis if axis >= 0 else x.ndim + axis
+        normalised_axis = _axis if _axis >= 0 else x.ndim + _axis
         max_i = x.shape[normalised_axis] - 1
         _data = max_i - _data
     return x._new(data=_data)
@@ -47,8 +47,8 @@ def sort(
     axis: int = -1,
 ) -> NamedArray:
     xp = _get_data_namespace(x)
-    _axis = _dims_to_axis(x, dim, axis)
+    _axis = _dims_to_axis(x, dim, axis)[0]
     _data = xp.sort(x._data, axis=_axis, stable=stable)
     if descending:
-        _data = xp.flip(_data, axis=axis)
+        _data = xp.flip(_data, axis=_axis)
     return x._new(data=_data)
