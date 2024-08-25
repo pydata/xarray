@@ -150,8 +150,10 @@ def _get_remaining_dims(
     removed_axes: tuple[int, ...]
     if axis is None:
         removed_axes = tuple(v for v in range(x.ndim))
+    elif isinstance(axis, tuple):
+        removed_axes = tuple(a % x.ndim for a in axis)
     else:
-        removed_axes = axis % x.ndim if isinstance(axis, tuple) else (axis % x.ndim,)
+        removed_axes = (axis % x.ndim,)
 
     if keepdims:
         # Insert None (aka newaxis) for removed dims
