@@ -4,9 +4,9 @@ __array_api_version__ = "2023.12"
 
 __all__ += ["__array_api_version__"]
 
-from xarray.namedarray.core import NamedArray as Array
+# from xarray.namedarray.core import NamedArray as Array
 
-__all__ += ["Array"]
+# __all__ += ["Array"]
 
 from xarray.namedarray._array_api._constants import e, inf, nan, newaxis, pi
 
