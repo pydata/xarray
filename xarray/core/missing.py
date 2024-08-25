@@ -629,7 +629,6 @@ class GapMask(Generic[T_Xarray]):
         """
         return self._apply_mask(self.content.fillna(value))
 
-
     def interpolate_na(
         self,
         dim: Hashable | None = None,
@@ -671,7 +670,6 @@ class GapMask(Generic[T_Xarray]):
                 **kwargs,
             )
         )
-
 
 
 def mask_gaps(
