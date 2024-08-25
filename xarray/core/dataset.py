@@ -7001,6 +7001,8 @@ class Dataset(
         """Fill in gaps in the data using one of several filling methods.
         Allows for fine control on how far to extend the valid data into the gaps and the maximum size of the gaps to fill.
 
+        *Requires bottleneck.*
+
         Parameters
         ----------
         dim : Hashable
