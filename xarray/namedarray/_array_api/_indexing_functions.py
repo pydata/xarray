@@ -18,7 +18,7 @@ def take(
     axis: int | None = None,
 ) -> NamedArray:
     xp = _get_data_namespace(x)
-    _axis = _dims_to_axis(x, dim, axis)
+    _axis = _dims_to_axis(x, dim, axis)[0]
     # TODO: Handle attrs? will get x1 now
     out = x._new(data=xp.take(x._data, indices._data, axis=_axis))
     return out
