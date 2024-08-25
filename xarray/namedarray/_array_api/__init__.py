@@ -271,10 +271,13 @@ from xarray.namedarray._array_api._manipulation_functions import (
     flip,
     moveaxis,
     permute_dims,
+    repeat,
     reshape,
     roll,
     squeeze,
     stack,
+    tile,
+    unstack,
 )
 
 __all__ += [
@@ -285,10 +288,13 @@ __all__ += [
     "flip",
     "moveaxis",
     "permute_dims",
+    "repeat",
     "reshape",
     "roll",
     "squeeze",
     "stack",
+    "tile",
+    "unstack",
 ]
 
 from xarray.namedarray._array_api._searching_functions import (
