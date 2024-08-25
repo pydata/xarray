@@ -307,7 +307,7 @@ __all__ += [
     "where",
 ]
 
-from ._set_functions import (
+from xarray.namedarray._array_api._set_functions import (
     unique_all,
     unique_counts,
     unique_inverse,
