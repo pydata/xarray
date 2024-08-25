@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import numpy as np
 
-from xarray.namedarray._array_api._utils import _atleast_0d, _get_data_namespace
+from xarray.namedarray._array_api._utils import (
+    _atleast_0d,
+    _get_broadcasted_dims,
+    _get_data_namespace,
+)
 from xarray.namedarray._typing import (
     _ScalarType,
     _ShapeType,
@@ -172,9 +176,9 @@ def expm1(x: NamedArray, /) -> NamedArray:
 
 def equal(x1: NamedArray, x2: NamedArray, /) -> NamedArray:
     xp = _get_data_namespace(x1)
-    # TODO: Handle attrs? will get x1 now
+    _dims, _ = _get_broadcasted_dims(x1, x2)
     _data = _atleast_0d(xp.equal(x1._data, x2._data), xp)
-    return x1._new(data=_data)
+    return NamedArray(_dims, _data)
 
 
 def floor(x: NamedArray, /) -> NamedArray:
