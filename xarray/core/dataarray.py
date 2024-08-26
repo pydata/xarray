@@ -3642,7 +3642,7 @@ class DataArray(
     def ffill(self, dim: Hashable, limit: int | None = None) -> Self:
         """Fill NaN values by propagating values forward
 
-        *Requires bottleneck.*
+        *Requires numbagg or bottleneck.*
 
         Parameters
         ----------
@@ -3726,7 +3726,7 @@ class DataArray(
     def bfill(self, dim: Hashable, limit: int | None = None) -> Self:
         """Fill NaN values by propagating values backward
 
-        *Requires bottleneck.*
+        *Requires numbagg or bottleneck.*
 
         Parameters
         ----------
@@ -3820,7 +3820,7 @@ class DataArray(
         """Fill in gaps in the data using one of several filling methods.
         Allows for fine control on how far to extend the valid data into the gaps and the maximum size of the gaps to fill.
 
-        *Requires bottleneck.*
+        *Requires numbagg or bottleneck.*
 
         Parameters
         ----------
