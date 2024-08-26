@@ -488,24 +488,24 @@ def get_clean_interp_index(
     if isinstance(index, CFTimeIndex | pd.DatetimeIndex):
         offset = type(index[0])(1970, 1, 1)
         if isinstance(index, CFTimeIndex):
-            index = index.values
-        index = Variable(
-            data=datetime_to_numeric(index, offset=offset, datetime_unit="ns"),
-            dims=(dim,),
-        )
-
-    # raise if index cannot be cast to a float (e.g. MultiIndex)
-    try:
-        index = index.values.astype(np.float64)
-    except (TypeError, ValueError) as err:
-        # pandas raises a TypeError
-        # xarray/numpy raise a ValueError
-        raise TypeError(
-            f"Index {index.name!r} must be castable to float64 to support "
-            f"interpolation or curve fitting, got {type(index).__name__}."
-        ) from err
-    index = Variable([dim], index)
-    return index
+            values = datetime_to_numeric(
+                index.values, offset=offset, datetime_unit="ns"
+            )
+        else:
+            values = datetime_to_numeric(index, offset=offset, datetime_unit="ns")
+    else:  # if numeric or standard calendar index: try to cast to float
+        try:
+            values = index.values.astype(np.float64)
+        # raise if index cannot be cast to a float (e.g. MultiIndex)
+        except (TypeError, ValueError) as err:
+            # pandas raises a TypeError
+            # xarray/numpy raise a ValueError
+            raise TypeError(
+                f"Index {index.name!r} must be castable to float64 to support "
+                f"interpolation or curve fitting, got {type(index).__name__}."
+            ) from err
+    var = Variable([dim], values)
+    return var
 
 
 def _is_time_index(index) -> bool:
