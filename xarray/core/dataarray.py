@@ -6801,27 +6801,22 @@ class DataArray(
             groupers = either_dict_or_kwargs(group, groupers, "groupby")  # type: ignore
             group = None
 
-        grouper: Grouper
+        rgroupers: tuple[ResolvedGrouper, ...]
         if group is not None:
             if groupers:
                 raise ValueError(
                     "Providing a combination of `group` and **groupers is not supported."
                 )
-            grouper = UniqueGrouper()
+            rgroupers = (ResolvedGrouper(UniqueGrouper(), group, self),)
         else:
-            if len(groupers) > 1:
-                raise ValueError("grouping by multiple variables is not supported yet.")
             if not groupers:
                 raise ValueError("Either `group` or `**groupers` must be provided.")
-            group, grouper = next(iter(groupers.items()))
+            rgroupers = tuple(
+                ResolvedGrouper(grouper, group, self)
+                for group, grouper in groupers.items()
+            )
 
-        rgrouper = ResolvedGrouper(grouper, group, self)
-
-        return DataArrayGroupBy(
-            self,
-            (rgrouper,),
-            restore_coord_dims=restore_coord_dims,
-        )
+        return DataArrayGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
     @_deprecate_positional_args("v2024.07.0")
     def groupby_bins(
