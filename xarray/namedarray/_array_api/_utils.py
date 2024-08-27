@@ -37,11 +37,15 @@ def _maybe_default_namespace(xp: ModuleType | None = None) -> ModuleType:
         return xp
 
 
-def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
-    if isinstance(x._data, _arrayapi):
-        return x._data.__array_namespace__()
+def _get_namespace(x: Any) -> ModuleType:
+    if isinstance(x, _arrayapi):
+        return x.__array_namespace__()
 
     return _maybe_default_namespace()
+
+
+def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
+    return _get_namespace(x._data)
 
 
 def _get_namespace_dtype(dtype: _dtype | None = None) -> ModuleType:

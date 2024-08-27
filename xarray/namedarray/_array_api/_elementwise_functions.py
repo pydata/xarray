@@ -37,7 +37,7 @@ def acosh(x: NamedArray, /) -> NamedArray:
 def add(x1: NamedArray, x2: NamedArray, /) -> NamedArray:
     xp = _get_data_namespace(x1)
     # TODO: Handle attrs? will get x1 now
-    _data = _atleast_0d(xp.add(x1._data, x2._data), xp)
+    _data = xp.add(x1._data, x2._data)
     return x1._new(data=_data)
 
 
