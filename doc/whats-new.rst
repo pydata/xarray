@@ -24,6 +24,11 @@ New Features
 ~~~~~~~~~~~~
 - Make chunk manager an option in ``set_options`` (:pull:`9362`).
   By `Tom White <https://github.com/tomwhite>`_.
+- Support for :ref:`grouping by multiple variables <groupby.multiple>`.
+  This is quite new, so please check your results and report bugs.
+  Binary operations after grouping by multiple arrays are not supported yet.
+  (:issue:`1056`, :issue:`9332`, :issue:`324`, :pull:`9372`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Allow data variable specific ``constant_values`` in the dataset ``pad`` function (:pull:`9353``).
   By `Tiago Sanona <https://github.com/tsanona>`_.
 
