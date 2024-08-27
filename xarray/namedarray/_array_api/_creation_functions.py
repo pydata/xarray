@@ -122,7 +122,7 @@ def asarray(
         if new_data is data._data:
             return data
         else:
-            NamedArray(data.dims, new_data, data.attrs)
+            return NamedArray(data.dims, new_data, data.attrs)
 
     xp = _get_namespace(data)
     _data = xp.asarray(data, dtype=dtype, device=device, copy=copy)

@@ -518,11 +518,11 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         if isinstance(key, NamedArray):
             _key = key._data  # TODO: Transpose, unordered dims shouldn't matter.
-            _data = _atleast_0d(self._data[_key], self._data.__array_namespace__())
+            _data = self._data[_key]
             _dims = _infer_dims(_data.shape)  # TODO: fix
             return self._new(_dims, _data)
         elif isinstance(key, int | slice | tuple) or key is None or key is ...:
-            _data = _atleast_0d(self._data[key], self._data.__array_namespace__())
+            _data = self._data[key]
             _dims = _infer_dims(_data.shape)  # TODO: fix
             return self._new(_dims, _data)
         else:
