@@ -6,6 +6,7 @@ import numpy as np
 
 from xarray.namedarray._array_api._utils import (
     _get_data_namespace,
+    _get_namespace,
     _get_namespace_dtype,
     _infer_dims,
 )
@@ -115,33 +116,16 @@ def asarray(
     """
     data = obj
     if isinstance(data, NamedArray):
-        if copy:
-            return data.copy()
-        else:
+        xp = _get_data_namespace(data)
+        _dtype = data.dtype if dtype is None else dtype
+        new_data = xp.asarray(data._data, dtype=_dtype, device=device, copy=copy)
+        if new_data is data._data:
             return data
+        else:
+            NamedArray(data.dims, new_data, data.attrs)
 
-    # TODO: dask.array.ma.MaskedArray also exists, better way?
-    if isinstance(data, np.ma.MaskedArray):
-        mask = np.ma.getmaskarray(data)  # type: ignore[no-untyped-call]
-        if mask.any():
-            # TODO: requires refactoring/vendoring xarray.core.dtypes and
-            # xarray.core.duck_array_ops
-            raise NotImplementedError("MaskedArray is not supported yet")
-
-        _dims = _infer_dims(data.shape, dims)
-        return NamedArray(_dims, data)
-
-    if isinstance(data, _arrayfunction_or_api):
-        _dims = _infer_dims(data.shape, dims)
-        return NamedArray(_dims, data)
-
-    if isinstance(data, tuple):
-        _data = to_0d_object_array(data)
-        _dims = _infer_dims(_data.shape, dims)
-        return NamedArray(_dims, _data)
-
-    # validate whether the data is valid data types.
-    _data = np.asarray(data, dtype=dtype, device=device, copy=copy)
+    xp = _get_namespace(data)
+    _data = xp.asarray(data, dtype=dtype, device=device, copy=copy)
     _dims = _infer_dims(_data.shape, dims)
     return NamedArray(_dims, _data)
 
