@@ -309,7 +309,7 @@ def as_compatible_data(
         else:
             data = np.asarray(data)
 
-    if not isinstance(data, np.ndarray) and (
+    if not isinstance(data, np.ndarray | np.generic) and (
         hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
     ):
         return cast("T_DuckArray", data)
