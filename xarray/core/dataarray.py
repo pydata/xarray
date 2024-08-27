@@ -2,18 +2,23 @@ from __future__ import annotations
 
 import datetime
 import warnings
-from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import (
+    Callable,
+    Hashable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from functools import partial
 from os import PathLike
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     Literal,
     NoReturn,
     TypeVar,
-    Union,
     overload,
 )
 
@@ -114,7 +119,7 @@ if TYPE_CHECKING:
     from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
-    T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
+    T_XarrayOther = TypeVar("T_XarrayOther", bound="DataArray" | Dataset)
 
 
 def _check_coords_dims(shape, coords, dim):
@@ -456,7 +461,7 @@ class DataArray(
                     coords = [data.index]
                 elif isinstance(data, pd.DataFrame):
                     coords = [data.index, data.columns]
-                elif isinstance(data, (pd.Index, IndexVariable)):
+                elif isinstance(data, pd.Index | IndexVariable):
                     coords = [data]
 
             if dims is None:
@@ -1422,10 +1427,10 @@ class DataArray(
             )
             chunk_mapping = {}
 
-        if isinstance(chunks, (float, str, int)):
+        if isinstance(chunks, float | str | int):
             # ignoring type; unclear why it won't accept a Literal into the value.
             chunk_mapping = dict.fromkeys(self.dims, chunks)
-        elif isinstance(chunks, (tuple, list)):
+        elif isinstance(chunks, tuple | list):
             utils.emit_user_level_warning(
                 "Supplying chunks as dimension-order tuples is deprecated. "
                 "It will raise an error in the future. Instead use a dict with dimension names as keys.",
@@ -4732,7 +4737,7 @@ class DataArray(
     ) -> Self:
         from xarray.core.groupby import GroupBy
 
-        if isinstance(other, (Dataset, GroupBy)):
+        if isinstance(other, Dataset | GroupBy):
             return NotImplemented
         if isinstance(other, DataArray):
             align_type = OPTIONS["arithmetic_join"]
@@ -6796,27 +6801,22 @@ class DataArray(
             groupers = either_dict_or_kwargs(group, groupers, "groupby")  # type: ignore
             group = None
 
-        grouper: Grouper
+        rgroupers: tuple[ResolvedGrouper, ...]
         if group is not None:
             if groupers:
                 raise ValueError(
                     "Providing a combination of `group` and **groupers is not supported."
                 )
-            grouper = UniqueGrouper()
+            rgroupers = (ResolvedGrouper(UniqueGrouper(), group, self),)
         else:
-            if len(groupers) > 1:
-                raise ValueError("grouping by multiple variables is not supported yet.")
             if not groupers:
                 raise ValueError("Either `group` or `**groupers` must be provided.")
-            group, grouper = next(iter(groupers.items()))
+            rgroupers = tuple(
+                ResolvedGrouper(grouper, group, self)
+                for group, grouper in groupers.items()
+            )
 
-        rgrouper = ResolvedGrouper(grouper, group, self)
-
-        return DataArrayGroupBy(
-            self,
-            (rgrouper,),
-            restore_coord_dims=restore_coord_dims,
-        )
+        return DataArrayGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
     @_deprecate_positional_args("v2024.07.0")
     def groupby_bins(
@@ -7223,7 +7223,7 @@ class DataArray(
             User guide describing :py:func:`~xarray.DataArray.coarsen`
 
         :ref:`compute.coarsen`
-            User guide on block arrgragation :py:func:`~xarray.DataArray.coarsen`
+            User guide on block aggregation :py:func:`~xarray.DataArray.coarsen`
 
         :doc:`xarray-tutorial:fundamentals/03.3_windowed`
             Tutorial on windowed computation using :py:func:`~xarray.DataArray.coarsen`

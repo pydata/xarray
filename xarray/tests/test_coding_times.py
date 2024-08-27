@@ -146,14 +146,14 @@ def test_cf_datetime(num_dates, units, calendar) -> None:
     # https://github.com/Unidata/netcdf4-python/issues/355
     assert (abs_diff <= np.timedelta64(1, "s")).all()
     encoded1, _, _ = encode_cf_datetime(actual, units, calendar)
-    assert_array_equal(num_dates, np.around(encoded1, 1))
+    assert_duckarray_allclose(num_dates, encoded1)
 
     if hasattr(num_dates, "ndim") and num_dates.ndim == 1 and "1000" not in units:
         # verify that wrapping with a pandas.Index works
         # note that it *does not* currently work to put
         # non-datetime64 compatible dates into a pandas.Index
         encoded2, _, _ = encode_cf_datetime(pd.Index(actual), units, calendar)
-        assert_array_equal(num_dates, np.around(encoded2, 1))
+        assert_duckarray_allclose(num_dates, encoded2)
 
 
 @requires_cftime
@@ -628,10 +628,10 @@ def test_cf_timedelta_2d() -> None:
 @pytest.mark.parametrize(
     ["deltas", "expected"],
     [
-        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type]  #https://github.com/pandas-dev/pandas-stubs/issues/956
-        (pd.to_timedelta(["1h", "1 day 1 hour"]), "hours"),  # type: ignore[arg-type]  #https://github.com/pandas-dev/pandas-stubs/issues/956
-        (pd.to_timedelta(["1m", "2m", np.nan]), "minutes"),  # type: ignore[arg-type]  #https://github.com/pandas-dev/pandas-stubs/issues/956
-        (pd.to_timedelta(["1m3s", "1m4s"]), "seconds"),  # type: ignore[arg-type]  #https://github.com/pandas-dev/pandas-stubs/issues/956
+        (pd.to_timedelta(["1 day", "2 days"]), "days"),
+        (pd.to_timedelta(["1h", "1 day 1 hour"]), "hours"),
+        (pd.to_timedelta(["1m", "2m", np.nan]), "minutes"),
+        (pd.to_timedelta(["1m3s", "1m4s"]), "seconds"),
     ],
 )
 def test_infer_timedelta_units(deltas, expected) -> None:
@@ -1253,7 +1253,7 @@ def test_roundtrip_datetime64_nanosecond_precision(
         encoding = {}
 
     var = Variable(["time"], times, encoding=encoding)
-    assert var.dtype == np.dtype("<M8[ns]")
+    assert var.dtype == np.dtype("=M8[ns]")
 
     encoded_var = conventions.encode_cf_variable(var)
     assert (
@@ -1264,7 +1264,7 @@ def test_roundtrip_datetime64_nanosecond_precision(
     assert encoded_var.data.dtype == dtype
 
     decoded_var = conventions.decode_cf_variable("foo", encoded_var)
-    assert decoded_var.dtype == np.dtype("<M8[ns]")
+    assert decoded_var.dtype == np.dtype("=M8[ns]")
     assert (
         decoded_var.encoding["units"]
         == f"{_numpy_to_netcdf_timeunit(timeunit)} since 1970-01-01 00:00:00"

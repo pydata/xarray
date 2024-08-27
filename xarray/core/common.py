@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Hashable, Iterable, Iterator, Mapping
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, TypeVar, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -162,8 +162,22 @@ class AbstractArray:
     def __complex__(self: Any) -> complex:
         return complex(self.values)
 
-    def __array__(self: Any, dtype: DTypeLike | None = None) -> np.ndarray:
-        return np.asarray(self.values, dtype=dtype)
+    def __array__(
+        self: Any, dtype: DTypeLike | None = None, copy: bool | None = None
+    ) -> np.ndarray:
+        if not copy:
+            if np.lib.NumpyVersion(np.__version__) >= "2.0.0":
+                copy = None
+            elif np.lib.NumpyVersion(np.__version__) <= "1.28.0":
+                copy = False
+            else:
+                # 2.0.0 dev versions, handle cases where copy may or may not exist
+                try:
+                    np.array([1]).__array__(copy=None)
+                    copy = None
+                except TypeError:
+                    copy = False
+        return np.array(self.values, dtype=dtype, copy=copy)
 
     def __repr__(self) -> str:
         return formatting.array_repr(self)
@@ -1181,7 +1195,7 @@ class DataWithCoords(AttrAccessMixin):
             other = other(self)
 
         if drop:
-            if not isinstance(cond, (Dataset, DataArray)):
+            if not isinstance(cond, Dataset | DataArray):
                 raise TypeError(
                     f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r} (or a callable than returns one)."
                 )
@@ -1355,7 +1369,7 @@ class DataWithCoords(AttrAccessMixin):
             raise TypeError(
                 f"isin() argument must be convertible to an array: {test_elements}"
             )
-        elif isinstance(test_elements, (Variable, DataArray)):
+        elif isinstance(test_elements, Variable | DataArray):
             # need to explicitly pull out data to support dask arrays as the
             # second argument
             test_elements = test_elements.data
