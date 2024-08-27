@@ -2584,10 +2584,15 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
                 assert source_ndarray(x) is source_ndarray(as_compatible_data(x))
 
     def test_converted_types(self):
-        for input_array in [[[0, 1, 2]], pd.DataFrame([[0, 1, 2]])]:
+        for input_array in [
+            [[0, 1, 2]],
+            pd.DataFrame([[0, 1, 2]]),
+            np.float64(1.4),
+            np.str_("abc"),
+        ]:
             actual = as_compatible_data(input_array)
             assert_array_equal(np.asarray(input_array), actual)
-            assert np.ndarray == type(actual)
+            assert isinstance(actual, np.ndarray)
             assert np.asarray(input_array).dtype == actual.dtype
 
     def test_masked_array(self):
