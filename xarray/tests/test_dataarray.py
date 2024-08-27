@@ -7065,6 +7065,14 @@ class TestNumpyCoercion:
         np.testing.assert_equal(da.to_numpy(), np.array([1, 2, 3]))
         np.testing.assert_equal(da["lat"].to_numpy(), np.array([4, 5, 6]))
 
+    def test_to_numpy(self) -> None:
+        arr = np.array([1, 2, 3])
+        da = xr.DataArray(arr, dims="x", coords={"lat": ("x", [4, 5, 6])})
+
+        with assert_no_warnings():
+            np.testing.assert_equal(np.asarray(da), arr)
+            np.testing.assert_equal(np.array(da), arr)
+
     @requires_dask
     def test_from_dask(self) -> None:
         da = xr.DataArray([1, 2, 3], dims="x", coords={"lat": ("x", [4, 5, 6])})

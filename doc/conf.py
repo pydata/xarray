@@ -153,6 +153,9 @@ napoleon_type_aliases = {
     "matplotlib colormap name": ":doc:`matplotlib colormap name <matplotlib:gallery/color/colormap_reference>`",
     "matplotlib axes object": ":py:class:`matplotlib axes object <matplotlib.axes.Axes>`",
     "colormap": ":py:class:`colormap <matplotlib.colors.Colormap>`",
+    # xarray terms
+    "dim name": ":term:`dimension name <name>`",
+    "var name": ":term:`variable name <name>`",
     # objects without namespace: xarray
     "DataArray": "~xarray.DataArray",
     "Dataset": "~xarray.Dataset",
