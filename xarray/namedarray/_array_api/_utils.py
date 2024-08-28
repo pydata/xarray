@@ -234,8 +234,14 @@ def _get_broadcasted_dims(*arrays: NamedArray) -> tuple[_Dims, _Shape]:
     """
 
     def broadcastable(e1: int, e2: int) -> bool:
-        out = e1 > 1 and e2 <= 1
-        out |= e2 > 1 and e1 <= 1
+        # out = e1 > 1 and e2 <= 1
+        # out |= e2 > 1 and e1 <= 1
+
+        # out = e1 >= 0 and e2 <= 1
+        # out |= e2 >= 0 and e1 <= 1
+
+        out = e1 <= 1 or e2 <= 1
+
         return out
 
     # validate dimensions
