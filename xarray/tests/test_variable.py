@@ -2592,7 +2592,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         ]:
             actual = as_compatible_data(input_array)
             assert_array_equal(np.asarray(input_array), actual)
-            assert isinstance(actual, np.ndarray)
+            assert np.ndarray is type(actual)
             assert np.asarray(input_array).dtype == actual.dtype
 
     def test_masked_array(self):
