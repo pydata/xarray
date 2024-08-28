@@ -41,7 +41,7 @@ repos:
         additional_dependencies: [
             # Type stubs
             types-python-dateutil,
-            types-pkg_resources,
+            types-setuptools,
             types-PyYAML,
             types-pytz,
             typing-extensions>=4.1.0,
