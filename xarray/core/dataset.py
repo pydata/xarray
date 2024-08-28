@@ -154,6 +154,7 @@ if TYPE_CHECKING:
         DsCompatible,
         ErrorOptions,
         ErrorOptionsWithWarn,
+        GroupInput,
         InterpOptions,
         JoinOptions,
         PadModeOptions,
@@ -10331,10 +10332,7 @@ class Dataset(
     @_deprecate_positional_args("v2024.07.0")
     def groupby(
         self,
-        group: (
-            Hashable | DataArray | IndexVariable | Mapping[Any, Grouper] | None
-        ) = None,
-        *,
+        group: GroupInput = None,
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         **groupers: Grouper,
@@ -10343,7 +10341,7 @@ class Dataset(
 
         Parameters
         ----------
-        group : Hashable or DataArray or IndexVariable or mapping of Hashable to Grouper
+        group : str or DataArray or IndexVariable or sequence of hashable or mapping of Hashable to Grouper
             Array whose unique values should be used to group this array. If a
             Hashable, must be the name of a coordinate contained in this dataarray. If a dictionary,
             must map an existing variable name to a :py:class:`Grouper` instance.
@@ -10384,29 +10382,35 @@ class Dataset(
         Dataset.resample
         DataArray.resample
         """
+        from xarray.core.dataarray import DataArray
         from xarray.core.groupby import (
             DatasetGroupBy,
             ResolvedGrouper,
+            _validate_group_and_groupers,
             _validate_groupby_squeeze,
         )
+        from xarray.core.variable import Variable
         from xarray.groupers import UniqueGrouper
 
         _validate_groupby_squeeze(squeeze)
+        _validate_group_and_groupers(group, groupers)
 
         if isinstance(group, Mapping):
             groupers = either_dict_or_kwargs(group, groupers, "groupby")  # type: ignore
             group = None
 
         rgroupers: tuple[ResolvedGrouper, ...]
-        if group is not None:
-            if groupers:
-                raise ValueError(
-                    "Providing a combination of `group` and **groupers is not supported."
-                )
+        if isinstance(group, DataArray | Variable):
             rgroupers = (ResolvedGrouper(UniqueGrouper(), group, self),)
         else:
-            if not groupers:
-                raise ValueError("Either `group` or `**groupers` must be provided.")
+            if group is not None:
+                if TYPE_CHECKING:
+                    assert isinstance(group, str | Iterable)
+                group_iter: Iterable[Hashable] = (
+                    (group,) if isinstance(group, str) else group
+                )
+                groupers = {g: UniqueGrouper() for g in group_iter}
+
             rgroupers = tuple(
                 ResolvedGrouper(grouper, group, self)
                 for group, grouper in groupers.items()

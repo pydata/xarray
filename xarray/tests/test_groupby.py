@@ -2635,6 +2635,31 @@ def test_weather_data_resample(use_flox):
     assert expected.location.attrs == ds.location.attrs
 
 
+@pytest.mark.parametrize("as_dataset", [True, False])
+def test_multiple_groupers_string(as_dataset) -> None:
+    obj = DataArray(
+        np.array([1, 2, 3, 0, 2, np.nan]),
+        dims="d",
+        coords=dict(
+            labels1=("d", np.array(["a", "b", "c", "c", "b", "a"])),
+            labels2=("d", np.array(["x", "y", "z", "z", "y", "x"])),
+        ),
+        name="foo",
+    )
+
+    if as_dataset:
+        obj = obj.to_dataset()
+
+    expected = obj.groupby(labels1=UniqueGrouper(), labels2=UniqueGrouper()).mean()
+    actual = obj.groupby(("labels1", "labels2")).mean()
+    assert_identical(expected, actual)
+
+    with pytest.raises(TypeError):
+        obj.groupby("labels1", "labels2")
+    with pytest.raises(ValueError):
+        obj.groupby("labels1", foo="bar")
+
+
 @pytest.mark.parametrize("use_flox", [True, False])
 def test_multiple_groupers(use_flox) -> None:
     da = DataArray(

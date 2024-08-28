@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.types import GroupIndex, GroupIndices, GroupKey
+    from xarray.core.types import GroupIndex, GroupIndices, GroupInput, GroupKey
     from xarray.core.utils import Frozen
     from xarray.groupers import EncodedGroups, Grouper
 
@@ -319,6 +319,21 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
         return len(self.encoded.full_index)
 
 
+def _validate_group_and_groupers(group: GroupInput, groupers: dict[str, Grouper]):
+    if group is not None and groupers:
+        raise ValueError(
+            "Providing a combination of `group` and **groupers is not supported."
+        )
+
+    if group is None and not groupers:
+        raise ValueError("Either `group` or `**groupers` must be provided.")
+
+    if isinstance(group, np.ndarray | pd.Index):
+        raise TypeError(
+            f"`group` must be a DataArray. Received {type(group).__name__!r} instead"
+        )
+
+
 def _validate_groupby_squeeze(squeeze: Literal[False]) -> None:
     # While we don't generally check the type of every arg, passing
     # multiple dimensions as multiple arguments is common enough, and the
@@ -327,7 +342,7 @@ def _validate_groupby_squeeze(squeeze: Literal[False]) -> None:
     # A future version could make squeeze kwarg only, but would face
     # backward-compat issues.
     if squeeze is not False:
-        raise TypeError(f"`squeeze` must be False, but {squeeze} was supplied.")
+        raise TypeError(f"`squeeze` must be False, but {squeeze!r} was supplied.")
 
 
 def _resolve_group(

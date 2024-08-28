@@ -42,8 +42,17 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.indexes import Index, Indexes
     from xarray.core.utils import Frozen
-    from xarray.core.variable import Variable
-    from xarray.groupers import TimeResampler
+    from xarray.core.variable import IndexVariable, Variable
+    from xarray.groupers import Grouper, TimeResampler
+
+    GroupInput: TypeAlias = (
+        str
+        | DataArray
+        | IndexVariable
+        | Sequence[Hashable]
+        | Mapping[Any, Grouper]
+        | None
+    )
 
     try:
         from dask.array import Array as DaskArray
