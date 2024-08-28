@@ -34,7 +34,7 @@ jobs:
           # add "build" because of https://github.com/airspeed-velocity/asv/issues/1385
           create-args: >-
             asv
-            build
+            python-build
             mamba
 
 
