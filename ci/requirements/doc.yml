@@ -39,11 +39,11 @@ dependencies:
   - sphinx-design
   - sphinx-inline-tabs
   - sphinx>=5.0
+  - sphinx-remove-toctrees
   - sphinxext-opengraph
   - sphinxext-rediraffe
   - zarr>=2.10
   - pip:
       - sphinxcontrib-mermaid
-      - sphinx-remove-toctrees
       # relative to this file. Needs to be editable to be accepted.
       - -e ../..
