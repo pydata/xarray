@@ -4,7 +4,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.10
+  - python=3.12
   - bottleneck
   - cartopy
   - cfgrib
@@ -40,6 +40,7 @@ dependencies:
   - sphinx-design
   - sphinx-inline-tabs
   - sphinx>=5.0
+  - sphinx-remove-toctrees
   - sphinxext-opengraph
   - sphinxext-rediraffe
   - zarr>=2.10
