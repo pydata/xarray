@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 import numpy as np
 import pandas as pd
 
-from xarray.coding.cftime_offsets import _new_to_legacy_freq
+from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
 from xarray.core import duck_array_ops
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
@@ -336,7 +336,7 @@ class TimeResampler(Resampler):
 
     Attributes
     ----------
-    freq : str
+    freq : str, pandas.Timestamp, pandas.BaseOffset, datetime.timedelta, BaseCFTimeOffset
         Frequency to resample to. See `Pandas frequency
         aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
         for a list of possible values.
@@ -358,7 +358,7 @@ class TimeResampler(Resampler):
         An offset timedelta added to the origin.
     """
 
-    freq: str
+    freq: str | pd.Timedelta | pd.offsets.BaseOffset | datetime.timedelta
     closed: SideOptions | None = field(default=None)
     label: SideOptions | None = field(default=None)
     origin: str | DatetimeLike = field(default="start_day")
@@ -380,6 +380,13 @@ class TimeResampler(Resampler):
         if isinstance(group_as_index, CFTimeIndex):
             from xarray.core.resample_cftime import CFTimeGrouper
 
+            if not isinstance(self.freq, str | BaseCFTimeOffset):
+                raise ValueError(
+                    "Resample frequency must be a string or 'BaseCFTimeOffset' "
+                    "object when resampling a 'CFTimeIndex'. Received "
+                    f"{type(self.freq)} instead."
+                )
+
             self.index_grouper = CFTimeGrouper(
                 freq=self.freq,
                 closed=self.closed,
@@ -388,6 +395,12 @@ class TimeResampler(Resampler):
                 offset=offset,
             )
         else:
+            if isinstance(self.freq, BaseCFTimeOffset):
+                raise ValueError(
+                    "'BaseCFTimeOffset' resample frequencies are only supported "
+                    "when resampling a 'CFTimeIndex'"
+                )
+
             self.index_grouper = pd.Grouper(
                 # TODO remove once requiring pandas >= 2.2
                 freq=_new_to_legacy_freq(self.freq),

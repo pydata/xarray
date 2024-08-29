@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
@@ -32,8 +33,6 @@ ALL_DIMS = ...
 
 
 if TYPE_CHECKING:
-    import datetime
-
     from numpy.typing import DTypeLike
 
     from xarray.core.dataarray import DataArray
@@ -1060,6 +1059,7 @@ class DataWithCoords(AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
+        from xarray.coding.cftime_offsets import BaseCFTimeOffset
         from xarray.core.dataarray import DataArray
         from xarray.core.groupby import ResolvedGrouper
         from xarray.core.resample import RESAMPLE_DIM
@@ -1078,14 +1078,25 @@ class DataWithCoords(AttrAccessMixin):
         )
 
         grouper: Resampler
-        if isinstance(freq, str):
+        if isinstance(
+            freq,
+            str
+            | datetime.timedelta
+            | pd.Timedelta
+            | pd.offsets.BaseOffset
+            | BaseCFTimeOffset,
+        ):
             grouper = TimeResampler(
                 freq=freq, closed=closed, label=label, origin=origin, offset=offset
             )
         elif isinstance(freq, Resampler):
             grouper = freq
         else:
-            raise ValueError("freq must be a str or a Resampler object")
+            raise ValueError(
+                "freq must be an object of type 'str', 'datetime.timedelta', "
+                "'pandas.Timedelta', 'pandas.offsets.BaseOffset', 'BaseCFTimeOffset', "
+                f" or 'TimeResampler'. Received {type(freq)} instead."
+            )
 
         rgrouper = ResolvedGrouper(grouper, group, self)
 
