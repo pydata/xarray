@@ -60,6 +60,10 @@ Bug fixes
 - Fix deprecation warning that was raised when calling ``np.array`` on an ``xr.DataArray``
   in NumPy 2.0 (:issue:`9312`, :pull:`9393`)
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fix support for using ``pandas.BaseOffset``, ``pandas.Timedelta``, and
+  ``datetime.timedelta`` objects as ``resample`` frequencies
+  (:issue:`9408`, :pull:`9413`).
+  By `Oliver Higgs <https://github.com/oliverhiggs>`_.
 
 Documentation
 ~~~~~~~~~~~~~
