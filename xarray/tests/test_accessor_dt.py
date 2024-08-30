@@ -97,6 +97,7 @@ class TestDatetimeAccessor:
                 actual = getattr(self.data.time.dt, field)
         else:
             actual = getattr(self.data.time.dt, field)
+        assert not isinstance(actual.variable, xr.IndexVariable)
 
         assert expected.dtype == actual.dtype
         assert_identical(expected, actual)
