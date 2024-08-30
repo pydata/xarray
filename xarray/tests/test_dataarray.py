@@ -7209,4 +7209,10 @@ def test_unstack_index_var() -> None:
     da = source.x
     da = da.assign_coords(y=("x", ["c", "d"]), z=("x", ["e", "f"]))
     da = da.set_index(x=["y", "z"])
-    da.unstack("x")
+    actual = da.unstack("x")
+    expected = xr.DataArray(
+        np.array([["a", np.nan], [np.nan, "b"]], dtype=object),
+        coords={"y": ["c", "d"], "z": ["e", "f"]},
+        name="x",
+    )
+    assert_identical(actual, expected)
