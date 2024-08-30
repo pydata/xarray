@@ -6708,7 +6708,6 @@ class DataArray(
     def groupby(
         self,
         group: GroupInput = None,
-        *,
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         **groupers: Grouper,
