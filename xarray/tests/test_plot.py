@@ -1177,7 +1177,7 @@ class TestDiscreteColorMap:
     @pytest.mark.slow
     def test_recover_from_seaborn_jet_exception(self) -> None:
         pal = _color_palette("jet", 4)
-        assert type(pal) == np.ndarray
+        assert type(pal) is np.ndarray
         assert len(pal) == 4
 
     @pytest.mark.slow
