@@ -1550,7 +1550,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             # case the destinations will be NaN / zero.
             data[(..., *indexer)] = reordered
 
-        return self._replace(dims=new_dims, data=data)
+        return self.to_base_variable()._replace(dims=new_dims, data=data)
 
     @partial(deprecate_dims, old_name="dimensions")
     def unstack(self, dim=None, **dim_kwargs):

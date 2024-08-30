@@ -7202,3 +7202,11 @@ def test_lazy_data_variable_not_loaded():
     da = xr.DataArray(v)
     # No data needs to be accessed, so no error should be raised
     xr.DataArray(da)
+
+
+def test_unstack_index_var() -> None:
+    source = xr.DataArray(range(2), dims=["x"], coords=[["a", "b"]])
+    da = source.x
+    da = da.assign_coords(y=("x", ["c", "d"]), z=("x", ["e", "f"]))
+    da = da.set_index(x=["y", "z"])
+    da.unstack("x")
