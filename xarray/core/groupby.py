@@ -671,7 +671,7 @@ class GroupBy(Generic[T_Xarray]):
         for grouper in self.groupers:
             coord = grouper.unique_coord
             labels = ", ".join(format_array_flat(coord, 30).split())
-            text += f"\n\t{grouper.name!r}: {coord.size} groups with labels {labels}"
+            text += f"\n    {grouper.name!r}: {coord.size} groups with labels {labels}"
         return text + ">"
 
     def _iter_grouped(self) -> Iterator[T_Xarray]:

@@ -10373,7 +10373,7 @@ class Dataset(
         Grouping by a single variable is easy
         >>> ds.groupby("letters")
         <DatasetGroupBy, grouped over 1 grouper(s), 2 groups in total:
-                'letters': 2 groups with labels 'a', 'b'>
+            'letters': 2 groups with labels 'a', 'b'>
 
         Execute a reduction
         >>> ds.groupby("letters").sum()
@@ -10388,13 +10388,21 @@ class Dataset(
         Grouping by multiple variables
         >>> ds.groupby(["letters", "x"])
         <DatasetGroupBy, grouped over 2 grouper(s), 8 groups in total:
-                'letters': 2 groups with labels 'a', 'b'
-                'x': 4 groups with labels 10, 20, 30, 40>
+            'letters': 2 groups with labels 'a', 'b'
+            'x': 4 groups with labels 10, 20, 30, 40>
 
         Use Grouper objects to express more complicated GroupBy operations
-        >>> from xarray.groupers import BinGrouper
+        >>> from xarray.groupers import BinGrouper, UniqueGrouper
         >>>
         >>> ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper()).sum()
+        <xarray.Dataset> Size: 128B
+        Dimensions:  (y: 3, x_bins: 2, letters: 2)
+        Coordinates:
+          * x_bins   (x_bins) object 16B (5, 15] (15, 25]
+          * letters  (letters) object 16B 'a' 'b'
+        Dimensions without coordinates: y
+        Data variables:
+            foo      (y, x_bins, letters) float64 96B 0.0 nan nan 3.0 ... nan nan 5.0
 
         See Also
         --------
