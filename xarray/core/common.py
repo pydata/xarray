@@ -52,7 +52,7 @@ if TYPE_CHECKING:
         T_Variable,
     )
     from xarray.core.variable import Variable
-    from xarray.groupers import Grouper, Resampler
+    from xarray.groupers import Resampler
 
     DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
@@ -887,68 +887,6 @@ class DataWithCoords(AttrAccessMixin):
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
 
         return rolling_exp.RollingExp(self, window, window_type)
-
-    def shuffle_by(
-        self,
-        group: Hashable | DataArray | Mapping[Any, Grouper] | None = None,
-        chunks: T_Chunks = None,
-        **groupers: Grouper,
-    ) -> Self:
-        """
-        Sort or "shuffle" this object by a Grouper.
-
-        "Shuffle" means the object is sorted so that all group members occur sequentially,
-        in the same chunk. Multiple groups may occur in the same chunk.
-        This method is particularly useful for chunked arrays (e.g. dask, cubed).
-        For chunked array types, the order of appearance is not guaranteed, but will depend on
-        the input chunking.
-
-        Parameters
-        ----------
-        group : Hashable or DataArray or IndexVariable or mapping of Hashable to Grouper
-            Array whose unique values should be used to group this array. If a
-            Hashable, must be the name of a coordinate contained in this dataarray. If a dictionary,
-            must map an existing variable name to a :py:class:`Grouper` instance.
-        chunks : int, tuple of int, "auto" or mapping of hashable to int or tuple of int, optional
-            How to adjust chunks along dimensions not present in the array being grouped by.
-        **groupers : Grouper
-           Grouper objects using which to shuffle the data.
-
-        Examples
-        --------
-        >>> import dask
-        >>> from xarray.groupers import UniqueGrouper
-        >>> da = xr.DataArray(
-        ...     dims="x",
-        ...     data=dask.array.arange(10, chunks=1),
-        ...     coords={"x": [1, 2, 3, 1, 2, 3, 1, 2, 3, 0]},
-        ...     name="a",
-        ... )
-        >>> da
-        <xarray.DataArray 'a' (x: 10)> Size: 80B
-        dask.array<arange, shape=(10,), dtype=int64, chunksize=(1,), chunktype=numpy.ndarray>
-        Coordinates:
-          * x        (x) int64 80B 1 2 3 1 2 3 1 2 3 0
-
-        >>> da.shuffle_by(x=UniqueGrouper())
-        <xarray.DataArray 'a' (x: 10)> Size: 80B
-        dask.array<shuffle, shape=(10,), dtype=int64, chunksize=(3,), chunktype=numpy.ndarray>
-        Coordinates:
-          * x        (x) int64 80B 0 1 1 1 2 2 2 3 3 3
-
-        Returns
-        -------
-        DataArray or Dataset
-            The same type as this object
-
-        See Also
-        --------
-        DataArrayGroupBy.shuffle
-        DatasetGroupBy.shuffle
-        dask.dataframe.DataFrame.shuffle
-        dask.array.shuffle
-        """
-        return self.groupby(group=group, **groupers)._shuffle_obj(chunks)
 
     def _resample(
         self,
