@@ -326,6 +326,19 @@ def _parse_group_and_groupers(
     from xarray.core.variable import Variable
     from xarray.groupers import UniqueGrouper
 
+    if group is not None and groupers:
+        raise ValueError(
+            "Providing a combination of `group` and **groupers is not supported."
+        )
+
+    if group is None and not groupers:
+        raise ValueError("Either `group` or `**groupers` must be provided.")
+
+    if isinstance(group, np.ndarray | pd.Index):
+        raise TypeError(
+            f"`group` must be a DataArray. Received {type(group).__name__!r} instead"
+        )
+
     if isinstance(group, Mapping):
         grouper_mapping = either_dict_or_kwargs(group, groupers, "groupby")
         group = None
@@ -349,21 +362,6 @@ def _parse_group_and_groupers(
             for group, grouper in grouper_mapping.items()
         )
     return rgroupers
-
-
-def _validate_group_and_groupers(group: GroupInput, groupers: dict[str, Grouper]):
-    if group is not None and groupers:
-        raise ValueError(
-            "Providing a combination of `group` and **groupers is not supported."
-        )
-
-    if group is None and not groupers:
-        raise ValueError("Either `group` or `**groupers` must be provided.")
-
-    if isinstance(group, np.ndarray | pd.Index):
-        raise TypeError(
-            f"`group` must be a DataArray. Received {type(group).__name__!r} instead"
-        )
 
 
 def _validate_groupby_squeeze(squeeze: Literal[False]) -> None:

@@ -6789,12 +6789,10 @@ class DataArray(
         from xarray.core.groupby import (
             DataArrayGroupBy,
             _parse_group_and_groupers,
-            _validate_group_and_groupers,
             _validate_groupby_squeeze,
         )
 
         _validate_groupby_squeeze(squeeze)
-        _validate_group_and_groupers(group, groupers)
         rgroupers = _parse_group_and_groupers(self, group, groupers)
         return DataArrayGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
