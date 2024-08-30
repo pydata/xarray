@@ -2684,8 +2684,9 @@ def test_weather_data_resample(use_flox):
     assert expected.location.attrs == ds.location.attrs
 
 
+@pytest.mark.parametrize("shuffle", [True, False])
 @pytest.mark.parametrize("use_flox", [True, False])
-def test_multiple_groupers(use_flox) -> None:
+def test_multiple_groupers(use_flox: bool, shuffle: bool) -> None:
     da = DataArray(
         np.array([1, 2, 3, 0, 2, np.nan]),
         dims="d",
@@ -2697,6 +2698,8 @@ def test_multiple_groupers(use_flox) -> None:
     )
 
     gb = da.groupby(labels1=UniqueGrouper(), labels2=UniqueGrouper())
+    if shuffle:
+        gb = gb.shuffle()
     repr(gb)
 
     expected = DataArray(
@@ -2716,6 +2719,8 @@ def test_multiple_groupers(use_flox) -> None:
     coords = {"a": ("x", [0, 0, 1, 1]), "b": ("y", [0, 0, 1, 1])}
     square = DataArray(np.arange(16).reshape(4, 4), coords=coords, dims=["x", "y"])
     gb = square.groupby(a=UniqueGrouper(), b=UniqueGrouper())
+    if shuffle:
+        gb = gb.shuffle()
     repr(gb)
     with xr.set_options(use_flox=use_flox):
         actual = gb.mean()
@@ -2739,11 +2744,15 @@ def test_multiple_groupers(use_flox) -> None:
         dims=["x", "y", "z"],
     )
     gb = b.groupby(x=UniqueGrouper(), y=UniqueGrouper())
+    if shuffle:
+        gb = gb.shuffle()
     repr(gb)
     with xr.set_options(use_flox=use_flox):
         assert_identical(gb.mean("z"), b.mean("z"))
 
     gb = b.groupby(x=UniqueGrouper(), xy=UniqueGrouper())
+    if shuffle:
+        gb = gb.shuffle()
     repr(gb)
     with xr.set_options(use_flox=use_flox):
         actual = gb.mean()
@@ -2758,13 +2767,16 @@ def test_multiple_groupers(use_flox) -> None:
 
 
 @pytest.mark.parametrize("use_flox", [True, False])
-def test_multiple_groupers_mixed(use_flox) -> None:
+@pytest.mark.parametrize("shuffle", [True, False])
+def test_multiple_groupers_mixed(use_flox: bool, shuffle: bool) -> None:
     # This groupby has missing groups
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.arange(12).reshape((4, 3)))},
         coords={"x": [10, 20, 30, 40], "letters": ("x", list("abba"))},
     )
     gb = ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper())
+    if shuffle:
+        gb = gb.shuffle()
     expected_data = np.array(
         [
             [[0.0, np.nan], [np.nan, 3.0]],
@@ -2801,27 +2813,6 @@ def test_multiple_groupers_mixed(use_flox) -> None:
     # gb - gb.mean()
 
     # ------
-
-
-@requires_dask
-def test_groupby_shuffle():
-    import dask
-
-    da = DataArray(
-        dask.array.from_array(np.array([1, 2, 3, 0, 2, np.nan]), chunks=2),
-        dims="d",
-        coords=dict(
-            labels1=("d", np.array(["a", "b", "c", "c", "b", "a"])),
-            labels2=("d", np.array(["x", "y", "z", "z", "y", "x"])),
-        ),
-        name="foo",
-    )
-
-    gb = da.groupby("labels1")
-    shuffled = gb.shuffle()
-    shuffled_obj = shuffled._obj
-    with xr.set_options(use_flox=False):
-        xr.testing.assert_identical(gb.mean(), shuffled.mean())
 
 
 # Possible property tests

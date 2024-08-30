@@ -608,19 +608,21 @@ class GroupBy(Generic[T_Xarray]):
         dask.dataframe.DataFrame.shuffle
         dask.array.shuffle
         """
-        (grouper,) = self.groupers
-        return self._shuffle_obj(chunks).groupby(
+        new_groupers = {
             # Using group.name handles the BinGrouper case
             # It does *not* handle the TimeResampler case,
             # so we just override this method in Resample
-            {grouper.group.name: grouper.grouper.reset()},
+            grouper.group.name: grouper.grouper.reset()
+            for grouper in self.groupers
+        }
+        return self._shuffle_obj(chunks).groupby(
+            new_groupers,
             restore_coord_dims=self._restore_coord_dims,
         )
 
     def _shuffle_obj(self, chunks: T_Chunks) -> T_Xarray:
         from xarray.core.dataarray import DataArray
 
-        (grouper,) = self.groupers
         dim = self._group_dim
         size = self._obj.sizes[dim]
         was_array = isinstance(self._obj, DataArray)
@@ -629,9 +631,11 @@ class GroupBy(Generic[T_Xarray]):
             list(range(*idx.indices(size))) if isinstance(idx, slice) else idx
             for idx in self.encoded.group_indices
         ]
+        no_slices = [idx for idx in no_slices if idx]
 
-        if grouper.name not in as_dataset._variables:
-            as_dataset.coords[grouper.name] = grouper.group
+        for grouper in self.groupers:
+            if grouper.name not in as_dataset._variables:
+                as_dataset.coords[grouper.name] = grouper.group
 
         # Shuffling is only different from `isel` for chunked arrays.
         # Extract them out, and treat them specially. The rest, we route through isel.
@@ -644,10 +648,13 @@ class GroupBy(Generic[T_Xarray]):
         subset = as_dataset[
             [name for name in as_dataset._variables if name not in is_chunked]
         ]
+
         shuffled = subset.isel({dim: np.concatenate(no_slices)})
         for name, var in is_chunked.items():
             shuffled[name] = var._shuffle(
-                indices=list(self.encoded.group_indices), dim=dim, chunks=chunks
+                indices=list(idx for idx in self.encoded.group_indices if idx),
+                dim=dim,
+                chunks=chunks,
             )
         shuffled = self._maybe_unstack(shuffled)
         new_obj = self._obj._from_temp_dataset(shuffled) if was_array else shuffled
@@ -861,7 +868,9 @@ class GroupBy(Generic[T_Xarray]):
             #       and `inserted_dims`
             # if multiple groupers all share the same single dimension, then
             # we don't stack/unstack. Do that manually now.
-            obj = obj.unstack(*self.encoded.unique_coord.dims)
+            dims_to_unstack = self.encoded.unique_coord.dims
+            if all(dim in obj.dims for dim in dims_to_unstack):
+                obj = obj.unstack(*dims_to_unstack)
             to_drop = [
                 grouper.name
                 for grouper in self.groupers
