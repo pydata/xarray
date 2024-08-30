@@ -2648,7 +2648,7 @@ def test_multiple_groupers_string(as_dataset) -> None:
     )
 
     if as_dataset:
-        obj = obj.to_dataset()
+        obj = obj.to_dataset()  # type: ignore
 
     expected = obj.groupby(labels1=UniqueGrouper(), labels2=UniqueGrouper()).mean()
     actual = obj.groupby(("labels1", "labels2")).mean()

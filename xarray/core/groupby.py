@@ -320,7 +320,7 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
 
 
 def _parse_group_and_groupers(
-    obj, group: GroupInput, groupers: dict[str, Grouper]
+    obj: T_Xarray, group: GroupInput, groupers: dict[str, Grouper]
 ) -> tuple[ResolvedGrouper, ...]:
     from xarray.core.dataarray import DataArray
     from xarray.core.variable import Variable
