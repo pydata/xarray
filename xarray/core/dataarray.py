@@ -6716,7 +6716,7 @@ class DataArray(
 
         Parameters
         ----------
-        group : str or DataArray or IndexVariable or iterable of Hashable or mapping of Hashable to Grouper
+        group : str or DataArray or IndexVariable or sequence of hashable or mapping of hashable to Grouper
             Array whose unique values should be used to group this array. If a
             Hashable, must be the name of a coordinate contained in this dataarray. If a dictionary,
             must map an existing variable name to a :py:class:`Grouper` instance.
@@ -6786,40 +6786,16 @@ class DataArray(
         Dataset.resample
         DataArray.resample
         """
-        from xarray.core.dataarray import DataArray
         from xarray.core.groupby import (
             DataArrayGroupBy,
-            ResolvedGrouper,
+            _parse_group_and_groupers,
             _validate_group_and_groupers,
             _validate_groupby_squeeze,
         )
-        from xarray.core.variable import Variable
-        from xarray.groupers import UniqueGrouper
 
         _validate_groupby_squeeze(squeeze)
         _validate_group_and_groupers(group, groupers)
-
-        if isinstance(group, Mapping):
-            groupers = either_dict_or_kwargs(group, groupers, "groupby")  # type: ignore
-            group = None
-
-        rgroupers: tuple[ResolvedGrouper, ...]
-        if isinstance(group, DataArray | Variable):
-            rgroupers = (ResolvedGrouper(UniqueGrouper(), group, self),)
-        else:
-            if group is not None:
-                if TYPE_CHECKING:
-                    assert isinstance(group, str | Iterable)
-                group_iter: Iterable[Hashable] = (
-                    (group,) if isinstance(group, str) else group
-                )
-                groupers = {g: UniqueGrouper() for g in group_iter}
-
-            rgroupers = tuple(
-                ResolvedGrouper(grouper, group, self)
-                for group, grouper in groupers.items()
-            )
-
+        rgroupers = _parse_group_and_groupers(self, group, groupers)
         return DataArrayGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
     @_deprecate_positional_args("v2024.07.0")

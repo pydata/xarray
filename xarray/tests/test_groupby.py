@@ -2655,9 +2655,11 @@ def test_multiple_groupers_string(as_dataset) -> None:
     assert_identical(expected, actual)
 
     with pytest.raises(TypeError):
-        obj.groupby("labels1", "labels2")
+        obj.groupby("labels1", "labels2")  # type: ignore
     with pytest.raises(ValueError):
-        obj.groupby("labels1", foo="bar")
+        obj.groupby("labels1", foo="bar")  # type: ignore
+    with pytest.raises(ValueError):
+        obj.groupby("labels1", foo=UniqueGrouper())
 
 
 @pytest.mark.parametrize("use_flox", [True, False])

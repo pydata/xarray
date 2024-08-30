@@ -6,7 +6,7 @@ import itertools
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Generic, Literal, Union
+from typing import TYPE_CHECKING, Any, Generic, Literal, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -317,6 +317,38 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
     def __len__(self) -> int:
         """Number of groups."""
         return len(self.encoded.full_index)
+
+
+def _parse_group_and_groupers(
+    obj, group: GroupInput, groupers: dict[str, Grouper]
+) -> tuple[ResolvedGrouper, ...]:
+    from xarray.core.dataarray import DataArray
+    from xarray.core.variable import Variable
+    from xarray.groupers import UniqueGrouper
+
+    if isinstance(group, Mapping):
+        grouper_mapping = either_dict_or_kwargs(group, groupers, "groupby")
+        group = None
+
+    rgroupers: tuple[ResolvedGrouper, ...]
+    if isinstance(group, DataArray | Variable):
+        rgroupers = (ResolvedGrouper(UniqueGrouper(), group, obj),)
+    else:
+        if group is not None:
+            if TYPE_CHECKING:
+                assert isinstance(group, str | Sequence)
+            group_iter: Sequence[Hashable] = (
+                (group,) if isinstance(group, str) else group
+            )
+            grouper_mapping = {g: UniqueGrouper() for g in group_iter}
+        else:
+            grouper_mapping = cast("Mapping[Hashable, Grouper]", groupers)
+
+        rgroupers = tuple(
+            ResolvedGrouper(grouper, group, obj)
+            for group, grouper in grouper_mapping.items()
+        )
+    return rgroupers
 
 
 def _validate_group_and_groupers(group: GroupInput, groupers: dict[str, Grouper]):
