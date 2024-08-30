@@ -11,6 +11,7 @@ import pandas as pd
 
 from xarray.core import formatting, nputils, utils
 from xarray.core.indexing import (
+    ExplicitlyIndexedNDArrayMixin,
     IndexSelResult,
     PandasIndexingAdapter,
     PandasMultiIndexingAdapter,
@@ -644,7 +645,13 @@ class PandasIndex(Index):
 
         # preserve wrapped pd.Index (if any)
         # accessing `.data` can load data from disk, so we only access if needed
-        data = getattr(var._data, "array") if hasattr(var._data, "array") else var.data
+        if isinstance(var._data, ExplicitlyIndexedNDArrayMixin) and hasattr(
+            var._data, "array"
+        ):
+            data = getattr(var._data, "array")
+        else:
+            data = var.data
+
         # multi-index level variable: get level index
         if isinstance(var._data, PandasMultiIndexingAdapter):
             level = var._data.level
@@ -1384,7 +1391,10 @@ def create_default_index_implicit(
         all_variables = {k: None for k in all_variables}
 
     name = dim_variable.dims[0]
-    array = getattr(dim_variable._data, "array", None)
+    if isinstance(dim_variable._data, ExplicitlyIndexedNDArrayMixin):
+        array = getattr(dim_variable._data, "array", None)
+    else:
+        array = None
     index: PandasIndex
 
     if isinstance(array, pd.MultiIndex):
