@@ -566,7 +566,7 @@ class GroupBy(Generic[T_Xarray]):
             self._sizes = self._obj.isel({self._group_dim: index}).sizes
         return self._sizes
 
-    def shuffle(self, chunks: T_Chunks = None) -> DataArrayGroupBy | DatasetGroupBy:
+    def shuffle(self, chunks: T_Chunks = None):
         """
         Sort or "shuffle" the underlying object.
 
@@ -610,7 +610,10 @@ class GroupBy(Generic[T_Xarray]):
         """
         (grouper,) = self.groupers
         return self._shuffle_obj(chunks).groupby(
-            {grouper.name: grouper.grouper.reset()},
+            # Using group.name handles the BinGrouper case
+            # It does *not* handle the TimeResampler case,
+            # so we just override this method in Resample
+            {grouper.group.name: grouper.grouper.reset()},
             restore_coord_dims=self._restore_coord_dims,
         )
 
@@ -624,11 +627,11 @@ class GroupBy(Generic[T_Xarray]):
         as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
         no_slices: list[list[int]] = [
             list(range(*idx.indices(size))) if isinstance(idx, slice) else idx
-            for idx in self._group_indices
+            for idx in self.encoded.group_indices
         ]
 
         if grouper.name not in as_dataset._variables:
-            as_dataset.coords[grouper.name] = grouper.group1d
+            as_dataset.coords[grouper.name] = grouper.group
 
         # Shuffling is only different from `isel` for chunked arrays.
         # Extract them out, and treat them specially. The rest, we route through isel.
@@ -644,7 +647,7 @@ class GroupBy(Generic[T_Xarray]):
         shuffled = subset.isel({dim: np.concatenate(no_slices)})
         for name, var in is_chunked.items():
             shuffled[name] = var._shuffle(
-                indices=list(self._group_indices), dim=dim, chunks=chunks
+                indices=list(self.encoded.group_indices), dim=dim, chunks=chunks
             )
         shuffled = self._maybe_unstack(shuffled)
         new_obj = self._obj._from_temp_dataset(shuffled) if was_array else shuffled

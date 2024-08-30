@@ -1659,13 +1659,14 @@ class TestDataArrayGroupBy:
         )
 
         with xr.set_options(use_flox=use_flox):
-            actual = array.groupby_bins("dim_0", bins=bins, **cut_kwargs).sum()
+            gb = array.groupby_bins("dim_0", bins=bins, **cut_kwargs)
+            actual = gb.sum()
             assert_identical(expected, actual)
+            assert_identical(expected, gb.shuffle().sum())
 
-            actual = array.groupby_bins("dim_0", bins=bins, **cut_kwargs).map(
-                lambda x: x.sum()
-            )
+            actual = gb.map(lambda x: x.sum())
             assert_identical(expected, actual)
+            assert_identical(expected, gb.shuffle().map(lambda x: x.sum()))
 
             # make sure original array dims are unchanged
             assert len(array.dim_0) == 4
@@ -1810,8 +1811,9 @@ class TestDataArrayGroupBy:
 
 
 class TestDataArrayResample:
+    @pytest.mark.parametrize("shuffle", [True, False])
     @pytest.mark.parametrize("use_cftime", [True, False])
-    def test_resample(self, use_cftime: bool) -> None:
+    def test_resample(self, use_cftime: bool, shuffle: bool) -> None:
         if use_cftime and not has_cftime:
             pytest.skip()
         times = xr.date_range(
@@ -1833,16 +1835,22 @@ class TestDataArrayResample:
 
         array = DataArray(np.arange(10), [("time", times)])
 
-        actual = array.resample(time="24h").mean()
+        rs = array.resample(time="24h")
+
+        actual = rs.mean()
         expected = resample_as_pandas(array, "24h")
         assert_identical(expected, actual)
+        assert_identical(expected, rs.shuffle().mean())
 
-        actual = array.resample(time="24h").reduce(np.mean)
-        assert_identical(expected, actual)
+        assert_identical(expected, rs.reduce(np.mean))
+        assert_identical(expected, rs.shuffle().reduce(np.mean))
 
-        actual = array.resample(time="24h", closed="right").mean()
+        rs = array.resample(time="24h", closed="right")
+        actual = rs.mean()
+        shuffled = rs.shuffle().mean()
         expected = resample_as_pandas(array, "24h", closed="right")
         assert_identical(expected, actual)
+        assert_identical(expected, shuffled)
 
         with pytest.raises(ValueError, match=r"Index must be monotonic"):
             array[[2, 0, 1]].resample(time="1D")
@@ -2793,6 +2801,27 @@ def test_multiple_groupers_mixed(use_flox) -> None:
     # gb - gb.mean()
 
     # ------
+
+
+@requires_dask
+def test_groupby_shuffle():
+    import dask
+
+    da = DataArray(
+        dask.array.from_array(np.array([1, 2, 3, 0, 2, np.nan]), chunks=2),
+        dims="d",
+        coords=dict(
+            labels1=("d", np.array(["a", "b", "c", "c", "b", "a"])),
+            labels2=("d", np.array(["x", "y", "z", "z", "y", "x"])),
+        ),
+        name="foo",
+    )
+
+    gb = da.groupby("labels1")
+    shuffled = gb.shuffle()
+    shuffled_obj = shuffled._obj
+    with xr.set_options(use_flox=False):
+        xr.testing.assert_identical(gb.mean(), shuffled.mean())
 
 
 # Possible property tests
