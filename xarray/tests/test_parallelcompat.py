@@ -159,7 +159,7 @@ class TestGetChunkManager:
             assert isinstance(chunkmanager, DummyChunkManager)
 
     def test_fail_on_nonexistent_chunkmanager(self) -> None:
-        with pytest.raises(ValueError, match="unrecognized chunk manager foo"):
+        with pytest.raises(ValueError, match="requested chunk manager 'foo' not found"):
             guess_chunkmanager("foo")
 
     @requires_dask
@@ -169,7 +169,9 @@ class TestGetChunkManager:
 
     @pytest.mark.skipif(has_dask, reason="requires dask not to be installed")
     def test_dont_get_dask_if_not_installed(self) -> None:
-        with pytest.raises(ValueError, match="unrecognized chunk manager dask"):
+        with pytest.raises(
+            ValueError, match="requested chunk manager 'dask' not found"
+        ):
             guess_chunkmanager("dask")
 
     @requires_dask
