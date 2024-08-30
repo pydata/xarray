@@ -341,7 +341,7 @@ def _parse_group_and_groupers(
                 (group,) if isinstance(group, str) else group
             )
             grouper_mapping = {g: UniqueGrouper() for g in group_iter}
-        else:
+        elif groupers:
             grouper_mapping = cast("Mapping[Hashable, Grouper]", groupers)
 
         rgroupers = tuple(
