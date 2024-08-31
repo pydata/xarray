@@ -22,10 +22,19 @@ v2024.07.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Make chunk manager an option in ``set_options`` (:pull:`9362`).
+  By `Tom White <https://github.com/tomwhite>`_.
+- Support for :ref:`grouping by multiple variables <groupby.multiple>`.
+  This is quite new, so please check your results and report bugs.
+  Binary operations after grouping by multiple arrays are not supported yet.
+  (:issue:`1056`, :issue:`9332`, :issue:`324`, :pull:`9372`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Allow data variable specific ``constant_values`` in the dataset ``pad`` function (:pull:`9353``).
+  By `Tiago Sanona <https://github.com/tsanona>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Support for ``python 3.9`` has been dropped (:pull:`8937`)
 
 
 Deprecations
@@ -35,6 +44,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix bug with rechunking to a frequency when some periods contain no data (:issue:`9360`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix bug causing `DataTree.from_dict` to be sensitive to insertion order (:issue:`9276`, :pull:`9292`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Fix resampling error with monthly, quarterly, or yearly frequencies with
@@ -43,6 +54,12 @@ Bug fixes
   date "0001-01-01". (:issue:`9108`, :pull:`9116`) By `Spencer Clark
   <https://github.com/spencerkclark>`_ and `Deepak Cherian
   <https://github.com/dcherian>`_.
+- Fix issue with passing parameters to ZarrStore.open_store when opening
+  datatree in zarr format (:issue:`9376`, :pull:`9377`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_
+- Fix deprecation warning that was raised when calling ``np.array`` on an ``xr.DataArray``
+  in NumPy 2.0 (:issue:`9312`, :pull:`9393`)
+  By `Andrew Scherer <https://github.com/andrew-s28>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -50,6 +67,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Re-enable testing ``pydap`` backend with ``numpy>=2`` (:pull:`9391`).
+  By `Miguel Jimenez <https://github.com/Mikejmnez>`_ .
 
 
 
@@ -87,6 +107,8 @@ New Features
   to return an object without ``attrs``. A ``deep`` parameter controls whether
   variables' ``attrs`` are also dropped.
   By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
+  By `Eni Awowale <https://github.com/eni-awowale>`_.
+- Add `open_groups` method for unaligned datasets (:issue:`9137`, :pull:`9243`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

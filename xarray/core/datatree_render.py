@@ -238,7 +238,7 @@ class RenderDataTree:
                     if callable(attrname)
                     else getattr(node, attrname, "")
                 )
-                if isinstance(attr, (list, tuple)):
+                if isinstance(attr, list | tuple):
                     lines = attr
                 else:
                     lines = str(attr).split("\n")
