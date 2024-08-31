@@ -118,9 +118,9 @@ class TestFormatting:
                 np.arange(4) * np.timedelta64(500, "ms"),
                 "00:00:00 00:00:00.500000 00:00:01 00:00:01.500000",
             ),
-            (pd.to_timedelta(["NaT", "0s", "1s", "NaT"]), "NaT 00:00:00 00:00:01 NaT"),
+            (pd.to_timedelta(["NaT", "0s", "1s", "NaT"]), "NaT 00:00:00 00:00:01 NaT"),  # type: ignore[arg-type, unused-ignore]
             (
-                pd.to_timedelta(["1 day 1 hour", "1 day", "0 hours"]),
+                pd.to_timedelta(["1 day 1 hour", "1 day", "0 hours"]),  # type: ignore[arg-type, unused-ignore]
                 "1 days 01:00:00 1 days 00:00:00 0 days 00:00:00",
             ),
             ([1, 2, 3], "1 2 3"),

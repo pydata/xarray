@@ -234,8 +234,7 @@ class DatasetView(Dataset):
         ...
 
     @overload
-    def __getitem__(self, key: Hashable) -> DataArray:  # type: ignore[overload-overlap]
-        ...
+    def __getitem__(self, key: Hashable) -> DataArray: ...
 
     # See: https://github.com/pydata/xarray/issues/8855
     @overload

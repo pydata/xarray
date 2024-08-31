@@ -21,22 +21,22 @@ importlib_metadata_mock = "importlib.metadata"
 
 
 class DummyBackendEntrypointArgs(common.BackendEntrypoint):
-    def open_dataset(filename_or_obj, *args):
+    def open_dataset(filename_or_obj, *args):  # type: ignore[override]
         pass
 
 
 class DummyBackendEntrypointKwargs(common.BackendEntrypoint):
-    def open_dataset(filename_or_obj, **kwargs):
+    def open_dataset(filename_or_obj, **kwargs):  # type: ignore[override]
         pass
 
 
 class DummyBackendEntrypoint1(common.BackendEntrypoint):
-    def open_dataset(self, filename_or_obj, *, decoder):
+    def open_dataset(self, filename_or_obj, *, decoder):  # type: ignore[override]
         pass
 
 
 class DummyBackendEntrypoint2(common.BackendEntrypoint):
-    def open_dataset(self, filename_or_obj, *, decoder):
+    def open_dataset(self, filename_or_obj, *, decoder):  # type: ignore[override]
         pass
 
 

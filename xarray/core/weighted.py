@@ -182,7 +182,7 @@ class Weighted(Generic[T_Xarray]):
         if is_duck_dask_array(weights.data):
             # assign to copy - else the check is not triggered
             weights = weights.copy(
-                data=weights.data.map_blocks(_weight_check, dtype=weights.dtype),
+                data=weights.data.map_blocks(_weight_check, dtype=weights.dtype),  # type: ignore[call-arg, arg-type]
                 deep=False,
             )
 
@@ -264,7 +264,9 @@ class Weighted(Generic[T_Xarray]):
 
         demeaned = da - da.weighted(self.weights).mean(dim=dim)
 
-        return self._reduce((demeaned**2), self.weights, dim=dim, skipna=skipna)
+        # TODO: unsure why mypy complains about these being DataArray return types
+        # rather than T_DataArray?
+        return self._reduce((demeaned**2), self.weights, dim=dim, skipna=skipna)  # type: ignore[return-value]
 
     def _weighted_sum(
         self,
@@ -274,7 +276,7 @@ class Weighted(Generic[T_Xarray]):
     ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``sum`` along some dimension(s)."""
 
-        return self._reduce(da, self.weights, dim=dim, skipna=skipna)
+        return self._reduce(da, self.weights, dim=dim, skipna=skipna)  # type: ignore[return-value]
 
     def _weighted_mean(
         self,

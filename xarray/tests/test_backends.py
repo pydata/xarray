@@ -595,7 +595,7 @@ class DatasetIOBase:
                     assert actual.t.encoding["calendar"] == expected_calendar
 
     def test_roundtrip_timedelta_data(self) -> None:
-        time_deltas = pd.to_timedelta(["1h", "2h", "NaT"])
+        time_deltas = pd.to_timedelta(["1h", "2h", "NaT"])  # type: ignore[arg-type, unused-ignore]
         expected = Dataset({"td": ("td", time_deltas), "td0": time_deltas[0]})
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
@@ -2204,7 +2204,7 @@ class ZarrBase(CFEncodedBase):
                 store_target, mode="w", **self.version_kwargs
             )
 
-    def save(self, dataset, store_target, **kwargs):
+    def save(self, dataset, store_target, **kwargs):  # type: ignore[override]
         return dataset.to_zarr(store=store_target, **kwargs, **self.version_kwargs)
 
     @contextlib.contextmanager
