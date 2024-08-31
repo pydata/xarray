@@ -2654,13 +2654,10 @@ def test_multiple_groupers_string(as_dataset) -> None:
     actual = obj.groupby(("labels1", "labels2")).mean()
     assert_identical(expected, actual)
 
-    if as_dataset:
-        with pytest.warns(FutureWarning):
-            # Passes `"labels2"` to squeeze; will raise an error in the future like the
-            # dataarray case
-            obj.groupby("labels1", "labels2")  # type: ignore
-    else:
-        with pytest.raises(ValueError):
+    # Passes `"labels2"` to squeeze; will raise an error around kwargs rather than the
+    # warning & type error in the future
+    with pytest.warns(FutureWarning):
+        with pytest.raises(TypeError):
             obj.groupby("labels1", "labels2")  # type: ignore
     with pytest.raises(ValueError):
         obj.groupby("labels1", foo="bar")  # type: ignore
