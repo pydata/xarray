@@ -127,7 +127,7 @@ jobs:
 
       - name: Run mypy
         run: |
-          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report 
+          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
       - name: Upload mypy coverage to Codecov
         uses: codecov/codecov-action@v4.5.0
