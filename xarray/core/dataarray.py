@@ -12,6 +12,7 @@ from collections.abc import (
 )
 from functools import partial
 from os import PathLike
+from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -2841,7 +2842,7 @@ class DataArray(
         dim: Mapping[Any, Sequence[Hashable]] | None = None,
         create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
-        **dim_kwargs: Sequence[Hashable],
+        **dim_kwargs: Sequence[Hashable | EllipsisType],
     ) -> Self:
         """
         Stack any number of existing dimensions into a single new dimension.

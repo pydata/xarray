@@ -23,6 +23,7 @@ from html import escape
 from numbers import Number
 from operator import methodcaller
 from os import PathLike
+from types import EllipsisType
 from typing import IO, TYPE_CHECKING, Any, Generic, Literal, cast, overload
 
 import numpy as np
@@ -5364,10 +5365,10 @@ class Dataset(
     @partial(deprecate_dims, old_name="dimensions")
     def stack(
         self,
-        dim: Mapping[Any, Sequence[Hashable | ellipsis]] | None = None,
+        dim: Mapping[Any, Sequence[Hashable | EllipsisType]] | None = None,
         create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
-        **dim_kwargs: Sequence[Hashable | ellipsis],
+        **dim_kwargs: Sequence[Hashable | EllipsisType],
     ) -> Self:
         """
         Stack any number of existing dimensions into a single new dimension.
