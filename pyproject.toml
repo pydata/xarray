@@ -236,7 +236,6 @@ reportMissingTypeStubs = false
 # ]
 
 [tool.ruff]
-builtins = ["ellipsis"]
 extend-exclude = [
   "doc",
   "_typed_ops.pyi",
@@ -254,7 +253,7 @@ ignore = [
   "E402",
   "E501",
   "E731",
-  "UP007"
+  "UP007",
 ]
 select = [
   "F", # Pyflakes

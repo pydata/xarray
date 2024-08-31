@@ -5305,7 +5305,7 @@ class Dataset(
 
     def _stack_once(
         self,
-        dims: Sequence[Hashable | ellipsis],
+        dims: Sequence[Hashable | EllipsisType],
         new_dim: Hashable,
         index_cls: type[Index],
         create_index: bool | None = True,
