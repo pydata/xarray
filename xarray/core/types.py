@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import sys
 from collections.abc import Callable, Collection, Hashable, Iterator, Mapping, Sequence
+from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -188,7 +189,7 @@ GroupByCompatible = Union["Dataset", "DataArray"]
 
 # Don't change to Hashable | Collection[Hashable]
 # Read: https://github.com/pydata/xarray/issues/6142
-Dims = Union[str, Collection[Hashable], "ellipsis", None]
+Dims = Union[str, Collection[Hashable], EllipsisType, None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
