@@ -116,7 +116,7 @@ class _IInfo(Protocol):
     bits: int
     max: int
     min: int
-    dtype: _dtype
+    dtype: _dtype[Any]
 
 
 class _FInfo(Protocol):
@@ -125,7 +125,7 @@ class _FInfo(Protocol):
     max: float
     min: float
     smallest_normal: float
-    dtype: _dtype
+    dtype: _dtype[Any]
 
 
 _Capabilities = TypedDict(
@@ -135,28 +135,28 @@ _Capabilities = TypedDict(
 _DefaultDataTypes = TypedDict(
     "_DefaultDataTypes",
     {
-        "real floating": _dtype,
-        "complex floating": _dtype,
-        "integral": _dtype,
-        "indexing": _dtype,
+        "real floating": _dtype[Any],
+        "complex floating": _dtype[Any],
+        "integral": _dtype[Any],
+        "indexing": _dtype[Any],
     },
 )
 
 
 class _DataTypes(TypedDict, total=False):
-    bool: _dtype
-    float32: _dtype
-    float64: _dtype
-    complex64: _dtype
-    complex128: _dtype
-    int8: _dtype
-    int16: _dtype
-    int32: _dtype
-    int64: _dtype
-    uint8: _dtype
-    uint16: _dtype
-    uint32: _dtype
-    uint64: _dtype
+    bool: _dtype[Any]
+    float32: _dtype[Any]
+    float64: _dtype[Any]
+    complex64: _dtype[Any]
+    complex128: _dtype[Any]
+    int8: _dtype[Any]
+    int16: _dtype[Any]
+    int32: _dtype[Any]
+    int64: _dtype[Any]
+    uint8: _dtype[Any]
+    uint16: _dtype[Any]
+    uint32: _dtype[Any]
+    uint64: _dtype[Any]
 
 
 @runtime_checkable
