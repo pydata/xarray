@@ -244,7 +244,10 @@ def meshgrid(*arrays: NamedArray, indexing: str = "xy") -> list[NamedArray]:
 def ones(
     shape: _Shape, *, dtype: _DType | None = None, device: _Device | None = None
 ) -> NamedArray[_ShapeType, _DType]:
-    return full(shape, 1.0, dtype=dtype, device=device)
+    xp = _get_namespace_dtype(dtype)
+    _data = xp.ones(shape, dtype=dtype, device=device)
+    _dims = _infer_dims(_data.shape)
+    return NamedArray(_dims, _data)
 
 
 def ones_like(
@@ -255,9 +258,7 @@ def ones_like(
     device: _Device | None = None,
 ) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
-    _dtype = x.dtype if dtype is None else dtype
-    _device = x.device if device is None else device
-    _data = xp.ones(x.shape, dtype=_dtype, device=_device)
+    _data = xp.ones_like(x, dtype=dtype, device=device)
     return x._new(data=_data)
 
 
@@ -284,7 +285,10 @@ def triu(
 def zeros(
     shape: _Shape, *, dtype: _DType | None = None, device: _Device | None = None
 ) -> NamedArray[_ShapeType, _DType]:
-    return full(shape, 0.0, dtype=dtype, device=device)
+    xp = _get_namespace_dtype(dtype)
+    _data = xp.zeros(shape, dtype=dtype, device=device)
+    _dims = _infer_dims(_data.shape)
+    return NamedArray(_dims, _data)
 
 
 def zeros_like(
@@ -295,7 +299,5 @@ def zeros_like(
     device: _Device | None = None,
 ) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
-    _dtype = x.dtype if dtype is None else dtype
-    _device = x.device if device is None else device
-    _data = xp.zeros(x.shape, dtype=_dtype, device=_device)
+    _data = xp.zeros_like(x, dtype=dtype, device=device)
     return x._new(data=_data)
