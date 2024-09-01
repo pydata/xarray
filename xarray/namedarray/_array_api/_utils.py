@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable
 from itertools import zip_longest
-import math
 from types import ModuleType
 from typing import TYPE_CHECKING, Any
 

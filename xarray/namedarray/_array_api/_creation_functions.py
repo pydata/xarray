@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any, overload
 
-import numpy as np
-
 from xarray.namedarray._array_api._utils import (
     _get_data_namespace,
     _get_namespace,
@@ -11,7 +9,6 @@ from xarray.namedarray._array_api._utils import (
     _infer_dims,
 )
 from xarray.namedarray._typing import (
-    _arrayfunction_or_api,
     _ArrayLike,
     _default,
     _Device,
@@ -23,9 +20,6 @@ from xarray.namedarray._typing import (
 )
 from xarray.namedarray.core import (
     NamedArray,
-)
-from xarray.namedarray.utils import (
-    to_0d_object_array,
 )
 
 
