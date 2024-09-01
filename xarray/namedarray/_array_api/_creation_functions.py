@@ -141,7 +141,7 @@ def empty_like(
     device: _Device | None = None,
 ) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
-    _data = xp.empty(x._data, dtype=dtype, device=device)
+    _data = xp.empty_like(x._data, dtype=dtype, device=device)
     return x._new(data=_data)
 
 
