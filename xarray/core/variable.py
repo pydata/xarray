@@ -8,6 +8,7 @@ import warnings
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
+from types import EllipsisType
 from typing import TYPE_CHECKING, Any, NoReturn, cast
 
 import numpy as np
@@ -1287,7 +1288,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     @deprecate_dims
     def transpose(
         self,
-        *dim: Hashable | ellipsis,
+        *dim: Hashable | EllipsisType,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Self:
         """Return a new Variable object with transposed dimensions.
