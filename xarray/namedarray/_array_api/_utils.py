@@ -50,7 +50,7 @@ def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
     return _get_namespace(x._data)
 
 
-def _get_namespace_dtype(dtype: _dtype | None = None) -> ModuleType:
+def _get_namespace_dtype(dtype: _dtype[Any] | None = None) -> ModuleType:
     if dtype is None:
         return _maybe_default_namespace()
 
@@ -195,14 +195,6 @@ def _insert_dim(dims: _Dims, dim: _Dim | Default, axis: _Axis) -> _Dims:
     return tuple(d)
 
 
-def _atleast_0d(x, xp):
-    """
-    Workaround for numpy sometimes returning scalars instead of 0d arrays.
-    """
-    return xp.asarray(x)
-
-
-# %%
 def _raise_if_any_duplicate_dimensions(
     dims: _Dims, err_context: str = "This function"
 ) -> None:
