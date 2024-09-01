@@ -259,9 +259,7 @@ def _get_broadcasted_dims(*arrays: NamedArray) -> tuple[_Dims, _Shape]:
         zip_longest(*map(reversed, dims), fillvalue=_default),
         zip_longest(*map(reversed, shapes), fillvalue=-1),
     ):
-        _d = dict.fromkeys(d)
-        _d.pop(_default, None)
-        _d = list(_d)
+        _d = tuple(set(d) - {_default})
 
         dim = None if any(_isnone(sizes)) else max(sizes)
 
