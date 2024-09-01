@@ -141,9 +141,7 @@ def empty_like(
     device: _Device | None = None,
 ) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
-    _dtype = x.dtype if dtype is None else dtype
-    _device = x.device if device is None else device
-    _data = xp.empty(x.shape, dtype=_dtype, device=_device)
+    _data = xp.empty(x._data, dtype=dtype, device=device)
     return x._new(data=_data)
 
 
@@ -197,9 +195,7 @@ def full_like(
     device: _Device | None = None,
 ) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
-    _dtype = x.dtype if dtype is None else dtype
-    _device = x.device if device is None else device
-    _data = xp.full(x.shape, fill_value, dtype=_dtype, device=_device)
+    _data = xp.full_like(x._data, fill_value, dtype=dtype, device=device)
     return x._new(data=_data)
 
 
@@ -252,7 +248,7 @@ def ones_like(
     device: _Device | None = None,
 ) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
-    _data = xp.ones_like(x, dtype=dtype, device=device)
+    _data = xp.ones_like(x._data, dtype=dtype, device=device)
     return x._new(data=_data)
 
 
@@ -293,5 +289,5 @@ def zeros_like(
     device: _Device | None = None,
 ) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
-    _data = xp.zeros_like(x, dtype=dtype, device=device)
+    _data = xp.zeros_like(x._data, dtype=dtype, device=device)
     return x._new(data=_data)
