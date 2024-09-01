@@ -336,7 +336,7 @@ class TimeResampler(Resampler):
 
     Attributes
     ----------
-    freq : str, pandas.Timestamp, pandas.BaseOffset, datetime.timedelta, BaseCFTimeOffset
+    freq : str, datetime.timedelta, pandas.Timestamp, pandas.DateOffset
         Frequency to resample to. See `Pandas frequency
         aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
         for a list of possible values.
@@ -358,7 +358,7 @@ class TimeResampler(Resampler):
         An offset timedelta added to the origin.
     """
 
-    freq: str | pd.Timedelta | pd.offsets.BaseOffset | datetime.timedelta
+    freq: str | datetime.timedelta | pd.Timedelta | pd.DateOffset
     closed: SideOptions | None = field(default=None)
     label: SideOptions | None = field(default=None)
     origin: str | DatetimeLike = field(default="start_day")

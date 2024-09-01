@@ -1059,7 +1059,6 @@ class DataWithCoords(AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
-        from xarray.coding.cftime_offsets import BaseCFTimeOffset
         from xarray.core.dataarray import DataArray
         from xarray.core.groupby import ResolvedGrouper
         from xarray.core.resample import RESAMPLE_DIM
@@ -1078,14 +1077,7 @@ class DataWithCoords(AttrAccessMixin):
         )
 
         grouper: Resampler
-        if isinstance(
-            freq,
-            str
-            | datetime.timedelta
-            | pd.Timedelta
-            | pd.offsets.BaseOffset
-            | BaseCFTimeOffset,
-        ):
+        if isinstance(freq, str | datetime.timedelta | pd.Timedelta | pd.DateOffset):
             grouper = TimeResampler(
                 freq=freq, closed=closed, label=label, origin=origin, offset=offset
             )
@@ -1094,8 +1086,8 @@ class DataWithCoords(AttrAccessMixin):
         else:
             raise ValueError(
                 "freq must be an object of type 'str', 'datetime.timedelta', "
-                "'pandas.Timedelta', 'pandas.offsets.BaseOffset', 'BaseCFTimeOffset', "
-                f" or 'TimeResampler'. Received {type(freq)} instead."
+                "'pandas.Timedelta', 'pandas.DateOffset', or 'TimeResampler'. "
+                f"Received {type(freq)} instead."
             )
 
         rgrouper = ResolvedGrouper(grouper, group, self)
