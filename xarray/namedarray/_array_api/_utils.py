@@ -226,6 +226,10 @@ def _get_broadcasted_dims(*arrays: NamedArray) -> tuple[_Dims, _Shape]:
     Examples
     --------
     >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
+    >>> _get_broadcasted_dims(a)
+    (('x', 'y', 'z'), (5, 3, 4))
+
+    >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
     >>> b = NamedArray(("y", "z"), np.zeros((3, 4)))
     >>> _get_broadcasted_dims(a, b)
     (('x', 'y', 'z'), (5, 3, 4))
@@ -257,9 +261,6 @@ def _get_broadcasted_dims(*arrays: NamedArray) -> tuple[_Dims, _Shape]:
     dims = tuple(a.dims for a in arrays)
     shapes = tuple(a.shape for a in arrays)
 
-    if len(shapes) == 1:
-        return shapes[0]
-
     out_dims = []
     out_shape = []
     for d, sizes in zip(
@@ -279,4 +280,5 @@ def _get_broadcasted_dims(*arrays: NamedArray) -> tuple[_Dims, _Shape]:
 
         out_dims.append(_d[0])
         out_shape.append(dim)
+
     return tuple(reversed(out_dims)), tuple(reversed(out_shape))
