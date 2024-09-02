@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Literal, NamedTuple, Any, overload
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, overload
 
 from xarray.namedarray._array_api._utils import _get_data_namespace, _infer_dims
 from xarray.namedarray.core import NamedArray
