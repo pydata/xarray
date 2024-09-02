@@ -260,6 +260,14 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
 
     def __array_namespace__(self) -> ModuleType: ...
 
+    def to_device(self, device: _Device, /, stream: None = None) -> Self: ...
+
+    @property
+    def device(self) -> _Device: ...
+
+    @property
+    def mT(self) -> _arrayapi[Any, _DType_co]: ...
+
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _arrayfunction_or_api = (_arrayfunction, _arrayapi)

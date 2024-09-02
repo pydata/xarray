@@ -799,7 +799,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             raise NotImplementedError("self._data missing device")
 
     @property
-    def mT(self):
+    def mT(self) -> NamedArray[Any, _DType_co]:
         if isinstance(self._data, _arrayapi):
             from xarray.namedarray._array_api._utils import _infer_dims
 
