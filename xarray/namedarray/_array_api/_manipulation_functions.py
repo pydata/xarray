@@ -19,11 +19,12 @@ from xarray.namedarray._typing import (
     _Dim,
     _DType,
     _Shape,
+    _ShapeType,
 )
 from xarray.namedarray.core import NamedArray
 
 
-def broadcast_arrays(*arrays: NamedArray) -> list[NamedArray]:
+def broadcast_arrays(*arrays: NamedArray[Any, Any]) -> list[NamedArray[Any, Any]]:
     """
     Broadcasts one or more arrays against one another.
 
@@ -41,7 +42,9 @@ def broadcast_arrays(*arrays: NamedArray) -> list[NamedArray]:
     return [arr._new(_dims, _data) for arr, _data in zip(arrays, _datas)]
 
 
-def broadcast_to(x: NamedArray, /, shape: _Shape) -> NamedArray:
+def broadcast_to(
+    x: NamedArray[Any, _DType], /, shape: _ShapeType
+) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
     _data = xp.broadcast_to(x._data, shape=shape)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
@@ -49,12 +52,15 @@ def broadcast_to(x: NamedArray, /, shape: _Shape) -> NamedArray:
 
 
 def concat(
-    arrays: tuple[NamedArray, ...] | list[NamedArray], /, *, axis: _Axis | None = 0
-) -> NamedArray:
+    arrays: tuple[NamedArray[Any, Any], ...] | list[NamedArray[Any, Any]],
+    /,
+    *,
+    axis: _Axis | None = 0,
+) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(arrays[0])
     dtype = result_type(*arrays)
-    arrays = tuple(a._data for a in arrays)
-    _data = xp.concat(arrays, axis=axis, dtype=dtype)
+    _arrays = tuple(a._data for a in arrays)
+    _data = xp.concat(_arrays, axis=axis, dtype=dtype)
     _dims = _infer_dims(_data.shape)
     return NamedArray(_dims, _data)
 
@@ -102,14 +108,18 @@ def expand_dims(
     return x._new(_dims, _data)
 
 
-def flip(x: NamedArray, /, *, axis: _Axes | None = None) -> NamedArray:
+def flip(
+    x: NamedArray[_ShapeType, _DType], /, *, axis: _Axes | None = None
+) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
     _data = xp.flip(x._data, axis=axis)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
 
-def moveaxis(x: NamedArray, source: _Axes, destination: _Axes, /) -> NamedArray:
+def moveaxis(
+    x: NamedArray[Any, _DType], source: _Axes, destination: _Axes, /
+) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _data = xp.moveaxis(x._data, source=source, destination=destination)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
@@ -146,41 +156,40 @@ def permute_dims(x: NamedArray[Any, _DType], axes: _Axes) -> NamedArray[Any, _DT
 
 
 def repeat(
-    x: NamedArray,
-    repeats: int | NamedArray,
+    x: NamedArray[Any, _DType],
+    repeats: int | NamedArray[Any, Any],
     /,
     *,
     axis: _Axis | None = None,
-) -> NamedArray:
+) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _data = xp.repeat(x._data, repeats, axis=axis)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
 
-def reshape(x, /, shape: _Shape, *, copy: bool | None = None):
+def reshape(
+    x: NamedArray[Any, _DType], /, shape: _ShapeType, *, copy: bool | None = None
+) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
-    _data = xp.reshape(x._data, shape)
-    out = asarray(_data, copy=copy)
-    # TODO: Have better control where the dims went.
-    # TODO: If reshaping should we save the dims?
-    # TODO: What's the xarray equivalent?
-    return out
+    _data = xp.reshape(x._data, shape, copy=copy)
+    _dims = _infer_dims(_data.shape)  # TODO: Fix dims
+    return x._new(_dims, _data)
 
 
 def roll(
-    x: NamedArray,
+    x: NamedArray[_ShapeType, _DType],
     /,
     shift: int | tuple[int, ...],
     *,
     axis: _Axes | None = None,
-) -> NamedArray:
+) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
     _data = xp.roll(x._data, shift=shift, axis=axis)
     return x._new(data=_data)
 
 
-def squeeze(x: NamedArray, /, axis: _Axes) -> NamedArray:
+def squeeze(x: NamedArray[Any, _DType], /, axis: _Axes) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _data = xp.squeeze(x._data, axis=axis)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
@@ -188,27 +197,34 @@ def squeeze(x: NamedArray, /, axis: _Axes) -> NamedArray:
 
 
 def stack(
-    arrays: tuple[NamedArray, ...] | list[NamedArray], /, *, axis: _Axis = 0
-) -> NamedArray:
+    arrays: tuple[NamedArray[Any, Any], ...] | list[NamedArray[Any, Any]],
+    /,
+    *,
+    axis: _Axis = 0,
+) -> NamedArray[Any, Any]:
     x = arrays[0]
     xp = _get_data_namespace(x)
-    arrays = tuple(a._data for a in arrays)
-    _data = xp.stack(arrays, axis=axis)
+    _arrays = tuple(a._data for a in arrays)
+    _data = xp.stack(_arrays, axis=axis)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
 
-def tile(x: NamedArray, repetitions: tuple[int, ...], /) -> NamedArray:
+def tile(
+    x: NamedArray[Any, _DType], repetitions: tuple[int, ...], /
+) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _data = xp.tile(x._data, repetitions)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
 
-def unstack(x: NamedArray, /, *, axis: _Axis = 0) -> tuple[NamedArray, ...]:
+def unstack(
+    x: NamedArray[Any, Any], /, *, axis: _Axis = 0
+) -> tuple[NamedArray[Any, Any], ...]:
     xp = _get_data_namespace(x)
     _datas = xp.unstack(x._data, axis=axis)
-    out = ()
+    out: tuple[NamedArray[Any, Any], ...] = ()
     for _data in _datas:
         _dims = _infer_dims(_data.shape)  # TODO: Fix dims
         out += (x._new(_dims, _data),)
