@@ -1404,6 +1404,13 @@ class NetCDFBase(CFEncodedBase):
                     a.close()
                     b.close()
 
+    def test_byte_attrs(self, byte_attrs_dataset: dict[str, Any]) -> None:
+        # test for issue #9407
+        input = byte_attrs_dataset["input"]
+        expected = byte_attrs_dataset["expected"]
+        with self.roundtrip(input) as actual:
+            assert_identical(actual, expected)
+
 
 _counter = itertools.count()
 
@@ -3860,6 +3867,10 @@ class TestH5NetCDFData(NetCDF4Base):
                 ds = xr.load_dataset(tmp_file, engine="h5netcdf")
                 assert ds.title == title
                 assert "attribute 'title' of h5netcdf object '/'" in str(w[0].message)
+
+    def test_byte_attrs(self, byte_attrs_dataset: dict[str, Any]) -> None:
+        with pytest.raises(ValueError, match=byte_attrs_dataset["h5netcdf_error"]):
+            super().test_byte_attrs(byte_attrs_dataset)
 
 
 @requires_h5netcdf
