@@ -139,6 +139,26 @@ def d(request, backend, type) -> DataArray | Dataset:
         raise ValueError
 
 
+@pytest.fixture
+def byte_attrs_dataset():
+    """For testing issue #9407"""
+    null_byte = b"\x00"
+    other_bytes = bytes(range(1, 256))
+    ds = Dataset({"x": 1}, coords={"x_coord": [1]})
+    ds["x"].attrs["null_byte"] = null_byte
+    ds["x"].attrs["other_bytes"] = other_bytes
+
+    expected = ds.copy()
+    expected["x"].attrs["null_byte"] = ""
+    expected["x"].attrs["other_bytes"] = other_bytes.decode(errors="replace")
+
+    return {
+        "input": ds,
+        "expected": expected,
+        "h5netcdf_error": r"Invalid value provided for attribute .*: .*\. Null characters .*",
+    }
+
+
 @pytest.fixture(scope="module")
 def create_test_datatree():
     """
