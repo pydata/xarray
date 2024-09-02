@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import Any
 
 import numpy as np
@@ -8,8 +9,8 @@ from xarray.namedarray._array_api._utils import (
     _get_data_namespace,
 )
 from xarray.namedarray._typing import (
-    _ScalarType,
     _DType,
+    _ScalarType,
     _ShapeType,
     _SupportsImag,
     _SupportsReal,
