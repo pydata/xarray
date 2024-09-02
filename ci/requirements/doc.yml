@@ -39,7 +39,7 @@ dependencies:
   - sphinx-copybutton
   - sphinx-design
   - sphinx-inline-tabs
-  - sphinx=6.2.1  # sphinx-book-theme issue: 749
+  - sphinx>=5.0
   - sphinxcontrib-srclinks
   - sphinx-remove-toctrees
   - sphinxext-opengraph
