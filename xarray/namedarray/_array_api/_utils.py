@@ -4,7 +4,7 @@ import math
 from collections.abc import Iterable
 from itertools import zip_longest
 from types import ModuleType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeGuard, cast, overload
 
 from xarray.namedarray._typing import (
     Default,
@@ -89,6 +89,11 @@ def _infer_dims(
         return dims
 
 
+def _is_single_dim(dims: _Dim | _Dims) -> TypeGuard[_Dim]:
+    # TODO: https://peps.python.org/pep-0742/
+    return isinstance(dims, str) or not isinstance(dims, Iterable)
+
+
 def _normalize_dimensions(dims: _Dim | _Dims) -> _Dims:
     """
     Normalize dimensions.
@@ -108,10 +113,10 @@ def _normalize_dimensions(dims: _Dim | _Dims) -> _Dims:
     >>> _normalize_dimensions([("time", "x", "y")])
     (('time', 'x', 'y'),)
     """
-    if isinstance(dims, str) or not isinstance(dims, Iterable):
+    if _is_single_dim(dims):
         return (dims,)
-
-    return tuple(dims)
+    else:
+        return tuple(cast(_Dims, dims))
 
 
 def _assert_either_dim_or_axis(
@@ -121,6 +126,14 @@ def _assert_either_dim_or_axis(
         raise ValueError("cannot supply both 'axis' and 'dim(s)' arguments")
 
 
+@overload
+def _dims_to_axis(x: NamedArray[Any, Any], dims: Default, axis: None) -> None: ...
+@overload
+def _dims_to_axis(x: NamedArray[Any, Any], dims: Default, axis: _AxisLike) -> _Axes: ...
+@overload
+def _dims_to_axis(
+    x: NamedArray[Any, Any], dims: _Dim | _Dims, axis: _AxisLike
+) -> _Axes: ...
 def _dims_to_axis(
     x: NamedArray[Any, Any], dims: _Dim | _Dims | Default, axis: _AxisLike | None
 ) -> _Axes | None:
@@ -129,18 +142,35 @@ def _dims_to_axis(
 
     Examples
     --------
+
+    Convert to dims to axis values
+
     >>> x = NamedArray(("x", "y"), np.array([[1, 2, 3], [5, 6, 7]]))
     >>> _dims_to_axis(x, ("y",), None)
     (1,)
     >>> _dims_to_axis(x, _default, 0)
     (0,)
+    >>> _dims_to_axis(x, _default, None)
+
+    Using Hashable dims
+
+    >>> x = NamedArray(("x", None), np.array([[1, 2, 3], [5, 6, 7]]))
     >>> _dims_to_axis(x, None, None)
+    (1,)
+
+    Defining both dims and axis raises an error
+
+    >>> _dims_to_axis(x, "x", 1)
+    Traceback (most recent call last):
+     ...
+    ValueError: cannot supply both 'axis' and 'dim(s)' arguments
     """
     _assert_either_dim_or_axis(dims, axis)
-
     if dims is not _default:
+        _dims = _normalize_dimensions(dims)
+
         axis = ()
-        for dim in dims:
+        for dim in _dims:
             try:
                 axis = (x.dims.index(dim),)
             except ValueError:
@@ -211,7 +241,7 @@ def _isnone(shape: _Shape) -> tuple[bool, ...]:
     return tuple(v is None and math.isnan(v) for v in shape)
 
 
-def _get_broadcasted_dims(*arrays: NamedArray) -> tuple[_Dims, _Shape]:
+def _get_broadcasted_dims(*arrays: NamedArray[Any, Any]) -> tuple[_Dims, _Shape]:
     """
     Get the expected broadcasted dims.
 
@@ -253,8 +283,8 @@ def _get_broadcasted_dims(*arrays: NamedArray) -> tuple[_Dims, _Shape]:
     dims = tuple(a.dims for a in arrays)
     shapes = tuple(a.shape for a in arrays)
 
-    out_dims = []
-    out_shape = []
+    out_dims: tuple[_Dim, ...] = ()
+    out_shape: tuple[_Axis | None, ...] = ()
     for d, sizes in zip(
         zip_longest(*map(reversed, dims), fillvalue=_default),
         zip_longest(*map(reversed, shapes), fillvalue=-1),
@@ -268,7 +298,7 @@ def _get_broadcasted_dims(*arrays: NamedArray) -> tuple[_Dims, _Shape]:
                 f"operands could not be broadcast together with {dims = } and {shapes = }"
             )
 
-        out_dims.append(_d[0])
-        out_shape.append(dim)
+        out_dims += (_d[0],)
+        out_shape += (dim,)
 
-    return tuple(reversed(out_dims)), tuple(reversed(out_shape))
+    return out_dims[::-1], out_shape[::-1]

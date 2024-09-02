@@ -101,7 +101,7 @@ _DimsLike = Union[str, Iterable[_Dim]]
 # TODO: np.array_api was bugged and didn't allow (None,), but should!
 # https://github.com/numpy/numpy/pull/25022
 # https://github.com/data-apis/array-api/pull/674
-_IndexKey = Union[int, slice, "ellipsis"]
+_IndexKey = Union[int, slice, "ellipsis", None]
 _IndexKeys = tuple[_IndexKey, ...]  #  tuple[Union[_IndexKey, None], ...]
 _IndexKeyLike = Union[_IndexKey, _IndexKeys]
 
