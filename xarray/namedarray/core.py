@@ -5,6 +5,7 @@ import math
 import sys
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
+from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1397,7 +1398,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def permute_dims(
         self,
-        *dim: Iterable[_Dim] | ellipsis,
+        *dim: Iterable[_Dim] | EllipsisType,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> NamedArray[Any, _DType_co]:
         """Return a new object with transposed dimensions.
