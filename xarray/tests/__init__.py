@@ -184,6 +184,14 @@ has_netCDF4_1_6_2_or_above, requires_netCDF4_1_6_2_or_above = _importorskip(
     "netCDF4", "1.6.2"
 )
 
+has_h5netcdf_1_4_0_or_above, requires_h5netcdf_1_4_0_or_above = _importorskip(
+    "h5netcdf", "1.4.0.dev"
+)
+
+has_netCDF4_1_7_0_or_above, requires_netCDF4_1_7_0_or_above = _importorskip(
+    "netCDF4", "1.7.0"
+)
+
 # change some global options for tests
 set_options(warn_for_unclosed_files=True)
 

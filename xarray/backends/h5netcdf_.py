@@ -6,6 +6,8 @@ import os
 from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
+
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendEntrypoint,
@@ -17,6 +19,7 @@ from xarray.backends.file_manager import CachingFileManager, DummyFileManager
 from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from xarray.backends.netCDF4_ import (
     BaseNetCDF4Array,
+    _build_and_get_enum,
     _encode_nc4_variable,
     _ensure_no_forward_slash_in_name,
     _extract_nc4_variable_encoding,
@@ -195,6 +198,7 @@ class H5NetCDFStore(WritableCFDataStore):
         return self._acquire()
 
     def open_store_variable(self, name, var):
+        import h5netcdf
         import h5py
 
         dimensions = var.dimensions
@@ -230,6 +234,14 @@ class H5NetCDFStore(WritableCFDataStore):
         elif vlen_dtype is not None:  # pragma: no cover
             # xarray doesn't support writing arbitrary vlen dtypes yet.
             pass
+        elif isinstance(var.datatype, h5netcdf.core.EnumType):
+            encoding["dtype"] = np.dtype(
+                data.dtype,
+                metadata={
+                    "enum": var.datatype.enum_dict,
+                    "enum_name": var.datatype.name,
+                },
+            )
         else:
             encoding["dtype"] = var.dtype
 
@@ -281,6 +293,13 @@ class H5NetCDFStore(WritableCFDataStore):
         if dtype is str:
             dtype = h5py.special_dtype(vlen=str)
 
+        # check enum metadata and use netCDF4.EnumType
+        if (
+            (meta := np.dtype(dtype).metadata)
+            and (e_name := meta.get("enum_name"))
+            and (e_dict := meta.get("enum"))
+        ):
+            dtype = _build_and_get_enum(self, name, dtype, e_name, e_dict)
         encoding = _extract_h5nc_encoding(variable, raise_on_invalid=check_encoding)
         kwargs = {}
 

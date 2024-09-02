@@ -537,6 +537,7 @@ def _choose_float_dtype(
     if dtype.itemsize <= 2 and np.issubdtype(dtype, np.integer):
         return np.float32
     # For all other types and circumstances, we just use float64.
+    # Todo: with nc-complex from netcdf4-python >= 1.7.0 this is available
     # (safe because eg. complex numbers are not supported in NetCDF)
     return np.float64
 
