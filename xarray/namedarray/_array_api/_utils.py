@@ -89,7 +89,7 @@ def _infer_dims(
         return dims
 
 
-def _normalize_dimensions(dims: _DimsLike) -> _Dims:
+def _normalize_dimensions(dims: _Dim | _Dims) -> _Dims:
     """
     Normalize dimensions.
 
@@ -129,12 +129,12 @@ def _dims_to_axis(
 
     Examples
     --------
-    >>> narr = NamedArray(("x", "y"), np.array([[1, 2, 3], [5, 6, 7]]))
-    >>> _dims_to_axis(narr, ("y",), None)
+    >>> x = NamedArray(("x", "y"), np.array([[1, 2, 3], [5, 6, 7]]))
+    >>> _dims_to_axis(x, ("y",), None)
     (1,)
-    >>> _dims_to_axis(narr, _default, 0)
+    >>> _dims_to_axis(x, _default, 0)
     (0,)
-    >>> _dims_to_axis(narr, None, None)
+    >>> _dims_to_axis(x, None, None)
     """
     _assert_either_dim_or_axis(dims, axis)
 
