@@ -125,7 +125,7 @@ class TestPaths:
 
         annie_result = john["Annie"]
         if isinstance(annie_result, DataTree):
-            annie : DataTree = annie_result
+            annie: DataTree = annie_result
 
         assert sue.relative_to(john) == "Mary/Sue"
         assert john.relative_to(sue) == "../.."
