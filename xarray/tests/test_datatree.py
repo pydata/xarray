@@ -37,13 +37,13 @@ class TestTreeCreation:
 class TestFamilyTree:
     def test_dont_modify_parent_inplace(self):
         # GH issue 9196
-        root = DataTree()
+        root: DataTree = DataTree()
         DataTree(name="child", parent=root)
         assert root.children == {}
 
     def test_dont_modify_children_inplace(self):
         # GH issue 9196
-        child = DataTree()
+        child: DataTree = DataTree()
         DataTree(children={"child": child})
         assert child.parent is None
 
@@ -422,7 +422,7 @@ class TestSetItem:
 
     def test_setitem_new_grandchild_node(self):
         john = DataTree.from_dict({"/Mary/Rose": DataTree()})
-        new_rose = DataTree(data=xr.Dataset({"x": 0}))
+        new_rose: DataTree = DataTree(data=xr.Dataset({"x": 0}))
         john["Mary/Rose"] = new_rose
 
         grafted_rose = john["Mary/Rose"]
