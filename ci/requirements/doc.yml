@@ -4,7 +4,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.10
+  - python=3.12
   - bottleneck
   - cartopy
   - cfgrib
@@ -41,6 +41,7 @@ dependencies:
   - sphinx-inline-tabs
   - sphinx=6.2.1  # sphinx-book-theme issue: 749
   - sphinxcontrib-srclinks
+  - sphinx-remove-toctrees
   - sphinxext-opengraph
   - sphinxext-rediraffe
   - zarr>=2.10

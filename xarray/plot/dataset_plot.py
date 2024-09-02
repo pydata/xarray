@@ -697,7 +697,7 @@ def _update_doc_to_dataset(dataarray_plotfunc: Callable) -> Callable[[F], F]:
         dataset_plotfunc.__doc__ = ds_doc
         return dataset_plotfunc
 
-    return wrapper
+    return wrapper  # type: ignore[return-value]
 
 
 def _normalize_args(
