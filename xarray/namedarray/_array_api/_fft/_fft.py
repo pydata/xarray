@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, Any
 
 from xarray.namedarray._array_api._utils import (
     _get_data_namespace,
@@ -11,19 +11,19 @@ from xarray.namedarray._array_api._utils import (
 from xarray.namedarray.core import NamedArray
 
 if TYPE_CHECKING:
-    from xarray.namedarray._typing import _Axes, _Axis, _Device
+    from xarray.namedarray._typing import _Axes, _Axis, _Device, _DType
 
     _Norm = Literal["backward", "ortho", "forward"]
 
 
 def fft(
-    x: NamedArray,
+    x: NamedArray[Any, _DType],
     /,
     *,
     n: int | None = None,
     axis: _Axis = -1,
     norm: _Norm = "backward",
-) -> NamedArray:
+) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _data = xp.fft.fft(x._data, n=n, axis=axis, norm=norm)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
@@ -31,13 +31,13 @@ def fft(
 
 
 def ifft(
-    x: NamedArray,
+    x: NamedArray[Any, _DType],
     /,
     *,
     n: int | None = None,
     axis: _Axis = -1,
     norm: _Norm = "backward",
-) -> NamedArray:
+) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _data = xp.fft.ifft(x._data, n=n, axis=axis, norm=norm)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
@@ -45,13 +45,13 @@ def ifft(
 
 
 def fftn(
-    x: NamedArray,
+    x: NamedArray[Any, _DType],
     /,
     *,
     s: Sequence[int] | None = None,
     axes: Sequence[int] | None = None,
     norm: _Norm = "backward",
-) -> NamedArray:
+) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _data = xp.fft.fftn(x._data, s=s, axes=axes, norm=norm)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
@@ -59,13 +59,13 @@ def fftn(
 
 
 def ifftn(
-    x: NamedArray,
+    x: NamedArray[Any, _DType],
     /,
     *,
     s: Sequence[int] | None = None,
     axes: Sequence[int] | None = None,
     norm: _Norm = "backward",
-) -> NamedArray:
+) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _data = xp.fft.ifftn(x._data, s=s, axes=axes, norm=norm)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
@@ -73,13 +73,13 @@ def ifftn(
 
 
 def rfft(
-    x: NamedArray,
+    x: NamedArray[Any, Any],
     /,
     *,
     n: int | None = None,
     axis: _Axis = -1,
     norm: _Norm = "backward",
-) -> NamedArray:
+) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x)
     _data = xp.fft.rfft(x._data, n=n, axis=axis, norm=norm)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
@@ -87,13 +87,13 @@ def rfft(
 
 
 def irfft(
-    x: NamedArray,
+    x: NamedArray[Any, Any],
     /,
     *,
     n: int | None = None,
     axis: _Axis = -1,
     norm: _Norm = "backward",
-) -> NamedArray:
+) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x)
     _data = xp.fft.irfft(x._data, n=n, axis=axis, norm=norm)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
@@ -101,13 +101,13 @@ def irfft(
 
 
 def rfftn(
-    x: NamedArray,
+    x: NamedArray[Any, Any],
     /,
     *,
     s: Sequence[int] | None = None,
     axes: Sequence[int] | None = None,
     norm: _Norm = "backward",
-) -> NamedArray:
+) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x)
     _data = xp.fft.rfftn(x._data, s=s, axes=axes, norm=norm)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
@@ -115,13 +115,13 @@ def rfftn(
 
 
 def irfftn(
-    x: NamedArray,
+    x: NamedArray[Any, Any],
     /,
     *,
     s: Sequence[int] | None = None,
     axes: Sequence[int] | None = None,
     norm: _Norm = "backward",
-) -> NamedArray:
+) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x)
     _data = xp.fft.irfftn(x._data, s=s, axes=axes, norm=norm)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
@@ -129,13 +129,13 @@ def irfftn(
 
 
 def hfft(
-    x: NamedArray,
+    x: NamedArray[Any, Any],
     /,
     *,
     n: int | None = None,
     axis: _Axis = -1,
     norm: _Norm = "backward",
-) -> NamedArray:
+) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x)
     _data = xp.fft.hfft(x._data, n=n, axis=axis, norm=norm)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
@@ -143,41 +143,49 @@ def hfft(
 
 
 def ihfft(
-    x: NamedArray,
+    x: NamedArray[Any, Any],
     /,
     *,
     n: int | None = None,
     axis: _Axis = -1,
     norm: _Norm = "backward",
-) -> NamedArray:
+) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x)
     _data = xp.fft.ihfft(x._data, n=n, axis=axis, norm=norm)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
 
-def fftfreq(n: int, /, *, d: float = 1.0, device: _Device | None = None) -> NamedArray:
+def fftfreq(
+    n: int, /, *, d: float = 1.0, device: _Device | None = None
+) -> NamedArray[Any, Any]:
     xp = _maybe_default_namespace()  # TODO: Can use device?
     _data = xp.fft.fftfreq(n, d=d, device=device)
     _dims = _infer_dims(_data.shape)
     return NamedArray(_dims, _data)
 
 
-def rfftfreq(n: int, /, *, d: float = 1.0, device: _Device | None = None) -> NamedArray:
+def rfftfreq(
+    n: int, /, *, d: float = 1.0, device: _Device | None = None
+) -> NamedArray[Any, Any]:
     xp = _maybe_default_namespace()  # TODO: Can use device?
     _data = xp.fft.rfftfreq(n, d=d, device=device)
     _dims = _infer_dims(_data.shape)
     return NamedArray(_dims, _data)
 
 
-def fftshift(x: NamedArray, /, *, axes: _Axes | None = None) -> NamedArray:
+def fftshift(
+    x: NamedArray[Any, _DType], /, *, axes: _Axes | None = None
+) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _data = xp.fft.fftshift(x._data, axes=axes)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
     return x._new(_dims, _data)
 
 
-def ifftshift(x: NamedArray, /, *, axes: _Axes | None = None) -> NamedArray:
+def ifftshift(
+    x: NamedArray[Any, _DType], /, *, axes: _Axes | None = None
+) -> NamedArray[Any, _DType]:
     xp = _get_data_namespace(x)
     _data = xp.fft.ifftshift(x._data, axes=axes)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
