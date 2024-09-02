@@ -136,7 +136,7 @@ def dtypes(
             "complex128": complex128,
         }
     if isinstance(kind, tuple):
-        res = {}
+        res: _DataTypes = {}
         for k in kind:
             res.update(dtypes(kind=k))
         return res
