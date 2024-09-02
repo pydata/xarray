@@ -113,14 +113,19 @@ class TestPaths:
         assert john["/Mary"].same_tree(john["/Kate"])
 
     def test_relative_paths(self):
-        john = DataTree.from_dict(
+        john: DataTree = DataTree.from_dict(
             {
                 "/Mary/Sue": DataTree(),
                 "/Annie": DataTree(),
             }
         )
-        sue = john["Mary/Sue"]
-        annie = john["Annie"]
+        sue_result = john["Mary/Sue"]
+        if isinstance(sue_result, DataTree):
+            sue: DataTree = sue_result
+
+        annie_result = john["Annie"]
+        if isinstance(annie_result, DataTree):
+            annie : DataTree = annie_result
 
         assert sue.relative_to(john) == "Mary/Sue"
         assert john.relative_to(sue) == "../.."
