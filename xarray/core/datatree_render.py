@@ -51,13 +51,16 @@ class ContStyle(AbstractStyle):
 
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree
-        >>> root = DataTree.from_dict({
-        ...     "/": None,
-        ...     "/sub0": None,
-        ...     "/sub0/sub0B": None,
-        ...     "/sub0/sub0A": None,
-        ...     "/sub1" : None,
-        ... }, name="root")
+        >>> root = DataTree.from_dict(
+        ...     {
+        ...         "/": None,
+        ...         "/sub0": None,
+        ...         "/sub0/sub0B": None,
+        ...         "/sub0/sub0A": None,
+        ...         "/sub1": None,
+        ...     },
+        ...     name="root",
+        ... )
         >>> print(RenderDataTree(root))
         <xarray.DataTree 'root'>
         Group: /
@@ -100,13 +103,16 @@ class RenderDataTree:
         >>> from xarray import Dataset
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree
-        >>> root = DataTree.from_dict({
-        ...     "/": Dataset({"a": 0, "b": 1}),
-        ...     "/sub0": Dataset({"c": 2, "d": 3}),
-        ...     "/sub0/sub0B": Dataset({"e": 4}),
-        ...     "/sub0/sub0A": Dataset({"f": 5, "g": 6}),
-        ...     "/sub1": Dataset({"h": 7})
-        ... },name="root")
+        >>> root = DataTree.from_dict(
+        ...     {
+        ...         "/": Dataset({"a": 0, "b": 1}),
+        ...         "/sub0": Dataset({"c": 2, "d": 3}),
+        ...         "/sub0/sub0B": Dataset({"e": 4}),
+        ...         "/sub0/sub0A": Dataset({"f": 5, "g": 6}),
+        ...         "/sub1": Dataset({"h": 7}),
+        ...     },
+        ...     name="root",
+        ... )
 
         # Simple one line:
 
@@ -212,13 +218,16 @@ class RenderDataTree:
         >>> from xarray import Dataset
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree
-        >>> root = DataTree.from_dict({
-        ...     "/sub0/sub0B": Dataset({"foo": 4, "bar": 109}),
-        ...     "/sub0/sub0A": None,
-        ...     "/sub1/sub1A" : None,
-        ...     "/sub1/sub1B": Dataset({"bar": 8}),
-        ...     "/sub1/sub1C/sub1Ca": None
-        ... }, name="root")
+        >>> root = DataTree.from_dict(
+        ...     {
+        ...         "/sub0/sub0B": Dataset({"foo": 4, "bar": 109}),
+        ...         "/sub0/sub0A": None,
+        ...         "/sub1/sub1A": None,
+        ...         "/sub1/sub1B": Dataset({"bar": 8}),
+        ...         "/sub1/sub1C/sub1Ca": None,
+        ...     },
+        ...     name="root",
+        ... )
         >>> print(RenderDataTree(root).by_attr("name"))
         root
         ├── sub0

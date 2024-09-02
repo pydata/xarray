@@ -28,12 +28,9 @@ class LevelOrderIter(Iterator):
     --------
     >>> from xarray.core.datatree import DataTree
     >>> from xarray.core.iterators import LevelOrderIter
-    >>> f = DataTree.from_dict({
-    ...     "/b/a": None,
-    ...     "/b/d/c": None,
-    ...     "/b/d/e": None,
-    ...     "/g/h/i": None
-    ... },name="f")
+    >>> f = DataTree.from_dict(
+    ...     {"/b/a": None, "/b/d/c": None, "/b/d/e": None, "/g/h/i": None}, name="f"
+    ... )
     >>> print(f)
     <xarray.DataTree 'f'>
     Group: /
