@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from xarray.namedarray._array_api._creation_functions import asarray
 from xarray.namedarray._array_api._data_type_functions import result_type
 from xarray.namedarray._array_api._utils import (
     _get_broadcasted_dims,
@@ -18,7 +17,6 @@ from xarray.namedarray._typing import (
     _default,
     _Dim,
     _DType,
-    _Shape,
     _ShapeType,
 )
 from xarray.namedarray.core import NamedArray
