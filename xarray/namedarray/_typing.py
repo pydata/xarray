@@ -34,6 +34,7 @@ except ImportError:
 
 # Singleton type, as per https://github.com/python/typing/pull/240
 class Default(Enum):
+    __hash__ = None
     token: Final = 0
 
 
@@ -95,6 +96,7 @@ T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim]
 
 _Dim = Hashable
 _Dims = tuple[_Dim, ...]
+_DimsLike2 = Union[_Dim, _Dims]
 _DimsLike = Union[str, Iterable[_Dim]]
 
 # https://data-apis.org/array-api/latest/API_specification/indexing.html
