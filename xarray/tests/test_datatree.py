@@ -50,7 +50,8 @@ class TestFamilyTree:
     def test_setparent_unnamed_child_node_fails(self):
         john: DataTree = DataTree(name="john")
         with pytest.raises(ValueError, match="unnamed"):
-            DataTree(parent=john)
+            child = DataTree(name=None)
+            child.parent = john
 
     def test_create_two_children(self):
         root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
