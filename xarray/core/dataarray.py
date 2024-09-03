@@ -6775,11 +6775,13 @@ class DataArray(
         ... )
 
         Grouping by a single variable is easy
+
         >>> da.groupby("letters")
         <DataArrayGroupBy, grouped over 1 grouper(s), 2 groups in total:
             'letters': 2 groups with labels 'a', 'b'>
 
         Execute a reduction
+
         >>> da.groupby("letters").sum()
         <xarray.DataArray (letters: 2, y: 3)> Size: 48B
         array([[ 9., 11., 13.],
@@ -6789,12 +6791,14 @@ class DataArray(
         Dimensions without coordinates: y
 
         Grouping by multiple variables
+
         >>> da.groupby(["letters", "x"])
         <DataArrayGroupBy, grouped over 2 grouper(s), 8 groups in total:
             'letters': 2 groups with labels 'a', 'b'
             'x': 4 groups with labels 10, 20, 30, 40>
 
         Use Grouper objects to express more complicated GroupBy operations
+
         >>> from xarray.groupers import BinGrouper, UniqueGrouper
         >>>
         >>> da.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper()).sum()
