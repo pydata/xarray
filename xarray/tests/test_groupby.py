@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import operator
 import warnings
 from unittest import mock
@@ -1812,6 +1813,30 @@ class TestDataArrayResample:
         reverse = array.isel(time=slice(-1, None, -1))
         with pytest.raises(ValueError):
             reverse.resample(time="1D").mean()
+
+    @pytest.mark.parametrize("use_cftime", [True, False])
+    def test_resample_dtype(self, use_cftime: bool) -> None:
+        if use_cftime and not has_cftime:
+            pytest.skip()
+        array = DataArray(
+            np.arange(10),
+            [
+                (
+                    "time",
+                    xr.date_range(
+                        "2000-01-01", freq="6h", periods=10, use_cftime=use_cftime
+                    ),
+                )
+            ],
+        )
+        test_resample_freqs = [
+            "10min",
+            pd.Timedelta(hours=2),
+            pd.offsets.MonthBegin(),
+            datetime.timedelta(days=1, hours=6),
+        ]
+        for freq in test_resample_freqs:
+            array.resample(time=freq)
 
     @pytest.mark.parametrize("use_cftime", [True, False])
     def test_resample_doctest(self, use_cftime: bool) -> None:
