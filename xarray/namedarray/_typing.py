@@ -34,7 +34,7 @@ except ImportError:
 
 # Singleton type, as per https://github.com/python/typing/pull/240
 class Default(Enum):
-    __hash__ = None
+    __hash__ = None  # type: ignore[assignment] # TODO: Better way to set unhashable?
     token: Final = 0
 
 
