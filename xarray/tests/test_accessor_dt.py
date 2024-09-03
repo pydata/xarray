@@ -143,10 +143,14 @@ class TestDatetimeAccessor:
         )
 
     @requires_cftime
-    @pytest.mark.parametrize("calendar,expected", [('standard', 366), ('noleap', 365), ('360_day', 360), ('all_leap', 366)])
+    @pytest.mark.parametrize(
+        "calendar,expected",
+        [("standard", 366), ("noleap", 365), ("360_day", 360), ("all_leap", 366)],
+    )
     def test_days_in_year(self, calendar, expected) -> None:
         assert (
-            self.data.convert_calendar(calendar, align_on='year').time.dt.days_in_year == expected
+            self.data.convert_calendar(calendar, align_on="year").time.dt.days_in_year
+            == expected
         ).all()
 
     @requires_cftime
@@ -154,7 +158,7 @@ class TestDatetimeAccessor:
         h_per_yr = 366 * 24
         np.testing.assert_array_equal(
             self.data.time.dt.decimal_year[0:3],
-            [2000, 2000 + 1 / h_per_yr, 2000 + 2 / h_per_yr]
+            [2000, 2000 + 1 / h_per_yr, 2000 + 2 / h_per_yr],
         )
 
     def test_not_datetime_type(self) -> None:
@@ -192,6 +196,8 @@ class TestDatetimeAccessor:
             "is_year_start",
             "is_year_end",
             "is_leap_year",
+            "days_in_year",
+            "decimal_year",
         ],
     )
     def test_dask_field_access(self, field) -> None:
