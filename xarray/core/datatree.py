@@ -424,7 +424,6 @@ class DataTree(
     def __init__(
         self,
         data: Dataset | DataArray | None = None,
-        parent: DataTree | None = None,
         children: Mapping[str, DataTree] | None = None,
         name: str | None = None,
     ):
@@ -440,8 +439,6 @@ class DataTree(
         data : Dataset, DataArray, or None, optional
             Data to store under the .ds attribute of this node. DataArrays will
             be promoted to Datasets. Default is None.
-        parent : DataTree, optional
-            Parent node to this node. Default is None.
         children : Mapping[str, DataTree], optional
             Any child nodes of this node. Default is None.
         name : str, optional
@@ -462,7 +459,6 @@ class DataTree(
         self._set_node_data(_coerce_to_dataset(data))
 
         # shallow copy to avoid modifying arguments in-place (see GH issue #9196)
-        self.parent = parent.copy() if parent is not None else None
         self.children = {name: child.copy() for name, child in children.items()}
 
     def _set_node_data(self, ds: Dataset):
@@ -1100,7 +1096,7 @@ class DataTree(
             obj = root_data.copy()
             obj.orphan()
         else:
-            obj = cls(name=name, data=root_data, parent=None, children=None)
+            obj = cls(name=name, data=root_data, children=None)
 
         def depth(item) -> int:
             pathstr, _ = item
