@@ -690,7 +690,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     ) -> DataTree:
 
         from xarray.core.datatree import DataTree
-
         groups_dict = self.open_groups_as_dict(
             filename_or_obj,
             mask_and_scale=mask_and_scale,
