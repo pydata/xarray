@@ -16,9 +16,7 @@ from xarray.namedarray._typing import (
     _DType,
     _ShapeType,
 )
-from xarray.namedarray.core import (
-    NamedArray,
-)
+from xarray.namedarray.core import NamedArray
 
 
 def cumulative_sum(
@@ -33,7 +31,23 @@ def cumulative_sum(
     xp = _get_data_namespace(x)
 
     a = _dims_to_axis(x, dim, axis)
-    _axis = a if a is None else a[0]
+    _axis_none: int | None
+    if a is None:
+        _axis_none = a
+    else:
+        _axis_none = a[0]
+
+    # TODO: The standard is not clear about what should happen when x.ndim == 0.
+    _axis: int
+    if _axis_none is None:
+        if x.ndim > 1:
+            raise ValueError(
+                "axis must be specified in cumulative_sum for more than one dimension"
+            )
+        _axis = 0
+    else:
+        _axis = _axis_none
+
     try:
         _data = xp.cumulative_sum(
             x._data, axis=_axis, dtype=dtype, include_initial=include_initial
@@ -42,20 +56,20 @@ def cumulative_sum(
         # Use np.cumsum until new name is introduced:
         # np.cumsum does not support include_initial
         if include_initial:
-            if axis < 0:
-                axis += x.ndim
+            if _axis < 0:
+                _axis += x.ndim
             d = xp.concat(
                 [
                     xp.zeros(
-                        x.shape[:axis] + (1,) + x.shape[axis + 1 :], dtype=x.dtype
+                        x.shape[:_axis] + (1,) + x.shape[_axis + 1 :], dtype=x.dtype
                     ),
                     x._data,
                 ],
-                axis=axis,
+                axis=_axis,
             )
         else:
             d = x._data
-        _data = xp.cumsum(d, axis=axis, dtype=dtype)
+        _data = xp.cumsum(d, axis=_axis, dtype=dtype)
     return x._new(dims=x.dims, data=_data)
 
 
