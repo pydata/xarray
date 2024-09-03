@@ -11,10 +11,7 @@ from xarray.namedarray._typing import (
     Default,
     _AxisLike,
     _default,
-    _Dim,
-    _Dims,
     _DimsLike2,
-    _DType,
 )
 from xarray.namedarray.core import (
     NamedArray,

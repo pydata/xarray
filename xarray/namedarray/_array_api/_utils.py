@@ -4,7 +4,7 @@ import math
 from collections.abc import Iterable
 from itertools import zip_longest
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, TypeGuard, cast, overload, NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn, TypeGuard, cast, overload
 
 from xarray.namedarray._typing import (
     Default,
@@ -15,7 +15,6 @@ from xarray.namedarray._typing import (
     _default,
     _Dim,
     _Dims,
-    _DimsLike,
     _DimsLike2,
     _DType,
     _dtype,
