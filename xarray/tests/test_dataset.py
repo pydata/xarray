@@ -1217,7 +1217,7 @@ class TestDataset:
         ΔN = 28
         time = xr.date_range(
             "2001-01-01", periods=N + ΔN, freq="D", calendar=calendar
-        ).to_numpy()
+        ).to_numpy(copy=True)
         if add_gap:
             # introduce an empty bin
             time[31 : 31 + ΔN] = np.datetime64("NaT")
