@@ -11,7 +11,9 @@ from xarray.namedarray._typing import (
     Default,
     _AxisLike,
     _default,
+    _Dim,
     _Dims,
+    _DimsLike2,
     _DType,
 )
 from xarray.namedarray.core import (
@@ -20,13 +22,13 @@ from xarray.namedarray.core import (
 
 
 def all(
-    x,
+    x: NamedArray[Any, Any],
     /,
     *,
-    dims: _Dims | Default = _default,
+    dims: _DimsLike2 | Default = _default,
     keepdims: bool = False,
     axis: _AxisLike | None = None,
-) -> NamedArray[Any, _DType]:
+) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x)
     axis_ = _dims_to_axis(x, dims, axis)
     d = xp.all(x._data, axis=axis_, keepdims=False)
@@ -36,13 +38,13 @@ def all(
 
 
 def any(
-    x,
+    x: NamedArray[Any, Any],
     /,
     *,
-    dims: _Dims | Default = _default,
+    dims: _DimsLike2 | Default = _default,
     keepdims: bool = False,
     axis: _AxisLike | None = None,
-) -> NamedArray[Any, _DType]:
+) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x)
     axis_ = _dims_to_axis(x, dims, axis)
     d = xp.any(x._data, axis=axis_, keepdims=False)

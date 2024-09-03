@@ -4,7 +4,7 @@ import math
 from collections.abc import Iterable
 from itertools import zip_longest
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, TypeGuard, cast, overload
+from typing import TYPE_CHECKING, Any, TypeGuard, cast, overload, NoReturn
 
 from xarray.namedarray._typing import (
     Default,
@@ -16,6 +16,7 @@ from xarray.namedarray._typing import (
     _Dim,
     _Dims,
     _DimsLike,
+    _DimsLike2,
     _DType,
     _dtype,
     _Shape,
@@ -66,35 +67,12 @@ def _get_namespace_dtype(dtype: _dtype[Any] | None = None) -> ModuleType:
     return xp
 
 
-def _infer_dims(
-    shape: _Shape,
-    dims: _DimsLike | Default = _default,
-) -> _DimsLike:
-    """
-    Create default dim names if no dims were supplied.
-
-    Examples
-    --------
-    >>> _infer_dims(())
-    ()
-    >>> _infer_dims((1,))
-    ('dim_0',)
-    >>> _infer_dims((3, 1))
-    ('dim_1', 'dim_0')
-    """
-    if dims is _default:
-        ndim = len(shape)
-        return tuple(f"dim_{ndim - 1 - n}" for n in range(ndim))
-    else:
-        return dims
-
-
-def _is_single_dim(dims: _Dim | _Dims) -> TypeGuard[_Dim]:
+def _is_single_dim(dims: _DimsLike2) -> TypeGuard[_Dim]:
     # TODO: https://peps.python.org/pep-0742/
     return isinstance(dims, str) or not isinstance(dims, Iterable)
 
 
-def _normalize_dimensions(dims: _Dim | _Dims) -> _Dims:
+def _normalize_dimensions(dims: _DimsLike2) -> _Dims:
     """
     Normalize dimensions.
 
@@ -119,6 +97,36 @@ def _normalize_dimensions(dims: _Dim | _Dims) -> _Dims:
         return tuple(cast(_Dims, dims))
 
 
+def _infer_dims(
+    shape: _Shape,
+    dims: _DimsLike2 | Default = _default,
+) -> _Dims:
+    """
+    Create default dim names if no dims were supplied.
+
+    Examples
+    --------
+    >>> _infer_dims(())
+    ()
+    >>> _infer_dims((1,))
+    ('dim_0',)
+    >>> _infer_dims((3, 1))
+    ('dim_1', 'dim_0')
+
+    >>> _infer_dims((1,), "x")
+    ('x',)
+    >>> _infer_dims((1,), None)
+    (None,)
+    >>> _infer_dims((1,), ("x",))
+    ('x',)
+    """
+    if dims is _default:
+        ndim = len(shape)
+        return tuple(f"dim_{ndim - 1 - n}" for n in range(ndim))
+    else:
+        return _normalize_dimensions(dims)
+
+
 def _assert_either_dim_or_axis(
     dims: _Dim | _Dims | Default, axis: _AxisLike | None
 ) -> None:
@@ -127,15 +135,17 @@ def _assert_either_dim_or_axis(
 
 
 @overload
+def _dims_to_axis(
+    x: NamedArray[Any, Any], dims: _DimsLike2, axis: _AxisLike
+) -> NoReturn: ...
+@overload
+def _dims_to_axis(x: NamedArray[Any, Any], dims: _DimsLike2, axis: None) -> None: ...
+@overload
+def _dims_to_axis(x: NamedArray[Any, Any], dims: Default, axis: _AxisLike) -> None: ...
+@overload
 def _dims_to_axis(x: NamedArray[Any, Any], dims: Default, axis: None) -> None: ...
-@overload
-def _dims_to_axis(x: NamedArray[Any, Any], dims: Default, axis: _AxisLike) -> _Axes: ...
-@overload
 def _dims_to_axis(
-    x: NamedArray[Any, Any], dims: _Dim | _Dims, axis: _AxisLike
-) -> _Axes: ...
-def _dims_to_axis(
-    x: NamedArray[Any, Any], dims: _Dim | _Dims | Default, axis: _AxisLike | None
+    x: NamedArray[Any, Any], dims: _DimsLike2 | Default, axis: _AxisLike | None
 ) -> _Axes | None:
     """
     Convert dims to axis indices.
@@ -177,10 +187,13 @@ def _dims_to_axis(
                 raise ValueError(f"{dim!r} not found in array dimensions {x.dims!r}")
         return axis
 
-    if isinstance(axis, int):
-        return (axis,)
+    if axis is None:
+        return axis
 
-    return axis
+    if isinstance(axis, tuple):
+        return axis
+    else:
+        return (axis,)
 
 
 def _get_remaining_dims(
