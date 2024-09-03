@@ -450,6 +450,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     ) -> DataTree:
 
         from xarray.core.datatree import DataTree
+
         groups_dict = self.open_groups_as_dict(
             filename_or_obj,
             mask_and_scale=mask_and_scale,
@@ -467,7 +468,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             decode_vlen_strings=decode_vlen_strings,
             driver=driver,
             driver_kwds=driver_kwds,
-            **kwargs
+            **kwargs,
         )
 
         return DataTree.from_dict(groups_dict)
