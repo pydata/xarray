@@ -29,9 +29,6 @@ New Features
 Performance
 ~~~~~~~~~~~
 
-- Small optimization to the netCDF4 and h5netcdf backends (:issue:`9058`, :pull:`9067`).
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-
 - Make chunk manager an option in ``set_options`` (:pull:`9362`).
   By `Tom White <https://github.com/tomwhite>`_.
 - Support for :ref:`grouping by multiple variables <groupby.multiple>`.

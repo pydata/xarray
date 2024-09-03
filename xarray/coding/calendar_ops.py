@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pandas as pd
 
@@ -340,12 +342,9 @@ def _decimal_year(times):
     """
     years = times.dt.year
     deltas = times - _yearstart(times)
-    # astype on the data to avoid warning about timedelta64[D] being automatically converted to ns in Variable constructor.
-    days_in_years = deltas.copy(
-        data=times.dt.days_in_year.data.astype("timedelta64[D]").astype(
-            "timedelta64[ns]"
-        )
-    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="Converting non-nanosecond")
+        days_in_years = times.dt.days_in_year.astype("timedelta64[D]")
     return years + deltas / days_in_years
 
 

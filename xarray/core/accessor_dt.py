@@ -547,19 +547,29 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
 
     @property
     def days_in_year(self) -> T_DataArray:
-        """The number of days in the year."""
+        """Each datetime as the year plus the fraction of the year elapsed."""
         if self.calendar == "360_day":
             result = full_like(self.year, 360)
         else:
             result = self.is_leap_year.astype(int) + 365
-        newvar = self._obj.variable.copy(data=result, deep=False)
+        newvar = Variable(
+            dims=self._obj.dims,
+            attrs=self._obj.attrs,
+            encoding=self._obj.encoding,
+            data=result,
+        )
         return self._obj._replace(newvar, name="days_in_year")
 
     @property
     def decimal_year(self) -> T_DataArray:
         """Convert the dates as a fractional year."""
         result = _decimal_year(self._obj)
-        newvar = self._obj.variable.copy(data=result, deep=False)
+        newvar = Variable(
+            dims=self._obj.dims,
+            attrs=self._obj.attrs,
+            encoding=self._obj.encoding,
+            data=result,
+        )
         return self._obj._replace(newvar, name="decimal_year")
 
 
