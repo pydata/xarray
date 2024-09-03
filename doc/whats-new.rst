@@ -61,6 +61,12 @@ Bug fixes
   in NumPy 2.0 (:issue:`9312`, :pull:`9393`)
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
 
+Performance
+~~~~~~~~~~~
+
+- Speed up grouping by avoiding deep-copy of non-dimension coordinates (:issue:`9426`, :pull:`9393`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 Documentation
 ~~~~~~~~~~~~~
 
