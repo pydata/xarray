@@ -1491,7 +1491,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dim: Hashable,
         fill_value=dtypes.NA,
         sparse: bool = False,
-    ) -> Self:
+    ) -> Variable:
         """
         Unstacks this variable given an index to unstack and the name of the
         dimension to which the index refers.
@@ -1551,10 +1551,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             # case the destinations will be NaN / zero.
             data[(..., *indexer)] = reordered
 
-        return self._replace(dims=new_dims, data=data)
+        return self.to_base_variable()._replace(dims=new_dims, data=data)
 
     @partial(deprecate_dims, old_name="dimensions")
-    def unstack(self, dim=None, **dim_kwargs):
+    def unstack(self, dim=None, **dim_kwargs) -> Variable:
         """
         Unstack an existing dimension into multiple new dimensions.
 
