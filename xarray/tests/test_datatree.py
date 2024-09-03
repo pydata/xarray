@@ -37,8 +37,9 @@ class TestTreeCreation:
 class TestFamilyTree:
     def test_dont_modify_parent_inplace(self):
         # GH issue 9196
-        root: DataTree = DataTree()
-        DataTree(name="child", parent=root)
+        root: DataTree = DataTree(name="root")
+        child: DataTree = DataTree(name="child")
+        child.parent = root
         assert root.children == {}
 
     def test_dont_modify_children_inplace(self):
