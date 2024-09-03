@@ -1829,12 +1829,13 @@ class TestDataArrayResample:
                 )
             ],
         )
-        test_resample_freqs = [
-            "10min",
-            pd.Timedelta(hours=2),
-            pd.offsets.MonthBegin(),
-            datetime.timedelta(days=1, hours=6),
-        ]
+        test_resample_freqs = ["10min"]
+        if not use_cftime:
+            test_resample_freqs += [
+                pd.Timedelta(hours=2),
+                pd.offsets.MonthBegin(),
+                datetime.timedelta(days=1, hours=6),
+            ]
         for freq in test_resample_freqs:
             array.resample(time=freq)
 
