@@ -5,7 +5,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from xarray.coding.cftime_offsets import date_range_like, get_date_type
+from xarray.coding.cftime_offsets import date_range_like, get_date_type, to_offset
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.times import (
     _should_cftime_be_used,
@@ -306,30 +306,12 @@ def _convert_to_new_calendar_with_new_day_of_year(
         return np.nan
 
 
-def _yearstart_cftime(year, date_class):
-    return date_class(year, 1, 1)
-
-
-def _yearstart_np(year, dtype):
-    return np.datetime64(int(year) - 1970, "Y").astype(dtype)
-
-
-def _yearstart(times):
-    if times.dtype == "O":
-        return apply_ufunc(
-            _yearstart_cftime,
-            times.dt.year,
-            kwargs={"date_class": get_date_type(times.dt.calendar, True)},
-            vectorize=True,
-            dask="parallelized",
-        )
-    return apply_ufunc(
-        _yearstart_np,
-        times.dt.year,
-        kwargs={"dtype": times.dtype},
-        vectorize=True,
-        dask="parallelized",
-    )
+def _rollback(times, freq):
+    if times.dtype.kind == "M":
+        offset = pd.tseries.frequencies.to_offset(freq)
+    else:
+        offset = to_offset(freq)
+    return apply_ufunc(offset.rollback, times, vectorize=True, dask="parallelized")
 
 
 def _decimal_year(times):
@@ -341,7 +323,8 @@ def _decimal_year(times):
       2000.16301 in a "noleap" or 2000.16806 in a "360_day".
     """
     years = times.dt.year
-    deltas = times - _yearstart(times)
+    floored_times = times.dt.floor("D")
+    deltas = times - _rollback(floored_times, "YS")
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message="Converting non-nanosecond")
         days_in_years = times.dt.days_in_year.astype("timedelta64[D]")
