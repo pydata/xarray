@@ -3,8 +3,8 @@ from __future__ import annotations
 import functools
 import inspect
 import warnings
-from collections.abc import Hashable, Iterable
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
+from collections.abc import Callable, Hashable, Iterable
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 from xarray.core.alignment import broadcast
 from xarray.plot import dataarray_plot
@@ -697,7 +697,7 @@ def _update_doc_to_dataset(dataarray_plotfunc: Callable) -> Callable[[F], F]:
         dataset_plotfunc.__doc__ = ds_doc
         return dataset_plotfunc
 
-    return wrapper
+    return wrapper  # type: ignore[return-value]
 
 
 def _normalize_args(

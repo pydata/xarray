@@ -379,7 +379,7 @@ def interp_calendar(source, target, dim="time"):
     """
     from xarray.core.dataarray import DataArray
 
-    if isinstance(target, (pd.DatetimeIndex, CFTimeIndex)):
+    if isinstance(target, pd.DatetimeIndex | CFTimeIndex):
         target = DataArray(target, dims=(dim,), name=dim)
 
     if not _contains_datetime_like_objects(

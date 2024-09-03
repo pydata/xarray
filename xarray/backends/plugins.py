@@ -3,22 +3,17 @@ from __future__ import annotations
 import functools
 import inspect
 import itertools
-import sys
 import warnings
+from collections.abc import Callable
 from importlib.metadata import entry_points
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 from xarray.core.utils import module_available
 
 if TYPE_CHECKING:
     import os
-    from importlib.metadata import EntryPoint
-
-    if sys.version_info >= (3, 10):
-        from importlib.metadata import EntryPoints
-    else:
-        EntryPoints = list[EntryPoint]
+    from importlib.metadata import EntryPoint, EntryPoints
     from io import BufferedIOBase
 
     from xarray.backends.common import AbstractDataStore
@@ -129,13 +124,8 @@ def list_engines() -> dict[str, BackendEntrypoint]:
     -----
     This function lives in the backends namespace (``engs=xr.backends.list_engines()``).
     If available, more information is available about each backend via ``engs["eng_name"]``.
-
-    # New selection mechanism introduced with Python 3.10. See GH6514.
     """
-    if sys.version_info >= (3, 10):
-        entrypoints = entry_points(group="xarray.backends")
-    else:
-        entrypoints = entry_points().get("xarray.backends", [])
+    entrypoints = entry_points(group="xarray.backends")
     return build_engines(entrypoints)
 
 
@@ -203,7 +193,7 @@ def get_backend(engine: str | type[BackendEntrypoint]) -> BackendEntrypoint:
         engines = list_engines()
         if engine not in engines:
             raise ValueError(
-                f"unrecognized engine {engine} must be one of: {list(engines)}"
+                f"unrecognized engine {engine} must be one of your download engines: {list(engines)}"
                 "To install additional dependencies, see:\n"
                 "https://docs.xarray.dev/en/stable/user-guide/io.html \n"
                 "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html"

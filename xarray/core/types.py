@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import datetime
 import sys
-from collections.abc import Collection, Hashable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Hashable, Iterator, Mapping, Sequence
+from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Literal,
     Protocol,
     SupportsIndex,
@@ -21,7 +21,9 @@ try:
     if sys.version_info >= (3, 11):
         from typing import Self, TypeAlias
     else:
-        from typing_extensions import Self, TypeAlias
+        from typing import TypeAlias
+
+        from typing_extensions import Self
 except ImportError:
     if TYPE_CHECKING:
         raise
@@ -47,7 +49,7 @@ if TYPE_CHECKING:
     try:
         from dask.array import Array as DaskArray
     except ImportError:
-        DaskArray = np.ndarray
+        DaskArray = np.ndarray  # type: ignore[misc, assignment, unused-ignore]
 
     try:
         from cubed import Array as CubedArray
@@ -96,9 +98,9 @@ try:
 except ImportError:
     CFTimeDatetime = np.datetime64
 
-DatetimeLike: TypeAlias = Union[
-    pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime
-]
+DatetimeLike: TypeAlias = (
+    pd.Timestamp | datetime.datetime | np.datetime64 | CFTimeDatetime
+)
 
 
 class Alignable(Protocol):
@@ -187,15 +189,15 @@ GroupByCompatible = Union["Dataset", "DataArray"]
 
 # Don't change to Hashable | Collection[Hashable]
 # Read: https://github.com/pydata/xarray/issues/6142
-Dims = Union[str, Collection[Hashable], "ellipsis", None]
+Dims = Union[str, Collection[Hashable], EllipsisType, None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
-T_ChunkDim: TypeAlias = Union[str, int, Literal["auto"], None, tuple[int, ...]]
+T_ChunkDim: TypeAlias = str | int | Literal["auto"] | None | tuple[int, ...]
 T_ChunkDimFreq: TypeAlias = Union["TimeResampler", T_ChunkDim]
-T_ChunksFreq: TypeAlias = Union[T_ChunkDim, Mapping[Any, T_ChunkDimFreq]]
+T_ChunksFreq: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
-T_Chunks: TypeAlias = Union[T_ChunkDim, Mapping[Any, T_ChunkDim]]
+T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim]
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 DataVars = Mapping[Any, Any]
@@ -242,6 +244,11 @@ PadModeOptions = Literal[
     "symmetric",
     "wrap",
 ]
+T_PadConstantValues = float | tuple[float, float]
+T_VarPadConstantValues = T_PadConstantValues | Mapping[Any, T_PadConstantValues]
+T_DatasetPadConstantValues = (
+    T_VarPadConstantValues | Mapping[Any, T_VarPadConstantValues]
+)
 PadReflectOptions = Literal["even", "odd", None]
 
 CFCalendar = Literal[
