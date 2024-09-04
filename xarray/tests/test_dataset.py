@@ -6704,6 +6704,14 @@ class TestDataset:
         assert "dim2" not in out
         assert "dim3" not in out
 
+    def test_polyfit_coord_output(self) -> None:
+        da = xr.DataArray(
+            [1, 3, 2], dims=["x"], coords=dict(x=["a", "b", "c"], y=("x", [0, 1, 2]))
+        )
+        out = da.polyfit("y", deg=1)["polyfit_coefficients"]
+        assert out.sel(degree=0).item() == pytest.approx(1.5)
+        assert out.sel(degree=1).item() == pytest.approx(0.5)
+
     def test_polyfit_warnings(self) -> None:
         ds = create_test_data(seed=1)
 
