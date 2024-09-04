@@ -86,6 +86,7 @@ from xarray.core.merge import (
     merge_coordinates_without_align,
     merge_core,
 )
+from xarray.core.missing import _floatize_x
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Bins,
@@ -9025,17 +9026,8 @@ class Dataset(
         variables = {}
         skipna_da = skipna
 
-        x: Any = self.coords[dim].to_index()
-        # Special case for non-standard calendar indexes
-        # Numerical datetime values are defined with respect to 1970-01-01T00:00:00 in units of nanoseconds.
-        if isinstance(x, CFTimeIndex | pd.DatetimeIndex):
-            offset = type(x[0])(1970, 1, 1)
-            if isinstance(x, CFTimeIndex):
-                x = x.values
-            x = Variable(
-                data=datetime_to_numeric(x, offset=offset, datetime_unit="ns"),
-                dims=(dim,),
-            )
+        x: Any = self.coords[dim].variable
+        x = _floatize_x((x,), (x,))[0][0]
 
         try:
             x = x.values.astype(np.float64)
