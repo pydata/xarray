@@ -1773,20 +1773,18 @@ class TestDataArrayGroupBy:
 
 
 class TestDataArrayResample:
+    @pytest.mark.parametrize("use_cftime", [True, False])
     @pytest.mark.parametrize(
-        "use_cftime,resample_freq",
-        product(
-            [True, False],
-            [
-                "24h",
-                "123456s",
-                "1234567890us",
-                pd.Timedelta(hours=2),
-                pd.offsets.MonthBegin(),
-                pd.offsets.Second(123456),
-                datetime.timedelta(days=1, hours=6),
-            ],
-        ),
+        "resample_freq",
+        [
+            "24h",
+            "123456s",
+            "1234567890us",
+            pd.Timedelta(hours=2),
+            pd.offsets.MonthBegin(),
+            pd.offsets.Second(123456),
+            datetime.timedelta(days=1, hours=6),
+        ],
     )
     def test_resample(
         self, use_cftime: bool, resample_freq: ResampleCompatible
@@ -2223,20 +2221,18 @@ class TestDataArrayResample:
 
 
 class TestDatasetResample:
+    @pytest.mark.parametrize("use_cftime", [True, False])
     @pytest.mark.parametrize(
-        "use_cftime,resample_freq",
-        product(
-            [True, False],
-            [
-                "24h",
-                "123456s",
-                "1234567890us",
-                pd.Timedelta(hours=2),
-                pd.offsets.MonthBegin(),
-                pd.offsets.Second(123456),
-                datetime.timedelta(days=1, hours=6),
-            ],
-        ),
+        "resample_freq",
+        [
+            "24h",
+            "123456s",
+            "1234567890us",
+            pd.Timedelta(hours=2),
+            pd.offsets.MonthBegin(),
+            pd.offsets.Second(123456),
+            datetime.timedelta(days=1, hours=6),
+        ],
     )
     def test_resample(
         self, use_cftime: bool, resample_freq: ResampleCompatible
