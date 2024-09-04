@@ -14,6 +14,7 @@ import pandas as pd
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
 from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.types import ResampleCompatible
 from xarray.core.utils import (
     Frozen,
     either_dict_or_kwargs,
@@ -27,9 +28,6 @@ try:
     import cftime
 except ImportError:
     cftime = None
-
-if TYPE_CHECKING:
-    from xarray.core.types import ResampleCompatible
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ...

@@ -2270,12 +2270,12 @@ class TestDatasetResample:
                 "time": times,
             }
         )
-        test_resample_freqs = [
+        test_resample_freqs = (
             "10min",
             pd.Timedelta(hours=2),
             pd.offsets.MonthBegin(),
             datetime.timedelta(days=1, hours=6),
-        ]
+        )
         for freq in test_resample_freqs:
             ds.resample(time=freq)
 
