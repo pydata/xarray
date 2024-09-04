@@ -91,17 +91,13 @@ def _collect_data_and_coord_variables(
     return data_variables, coord_variables
 
 
-def _coerce_to_dataset(data: Dataset | DataArray | None) -> Dataset:
-    if isinstance(data, DataArray):
-        ds = data.to_dataset()
-    elif isinstance(data, Dataset):
+def _to_new_dataset(data: Dataset | None) -> Dataset:
+    if isinstance(data, Dataset):
         ds = data.copy(deep=False)
     elif data is None:
         ds = Dataset()
     else:
-        raise TypeError(
-            f"data object is not an xarray Dataset, DataArray, or None, it is of type {type(data)}"
-        )
+        raise TypeError(f"data object is not an xarray.Dataset, dict, or None: {data}")
     return ds
 
 
@@ -422,7 +418,7 @@ class DataTree(
 
     def __init__(
         self,
-        data: Dataset | DataArray | None = None,
+        data: Dataset | None = None,
         parent: DataTree | None = None,
         children: Mapping[str, DataTree] | None = None,
         name: str | None = None,
@@ -436,9 +432,8 @@ class DataTree(
 
         Parameters
         ----------
-        data : Dataset, DataArray, or None, optional
-            Data to store under the .ds attribute of this node. DataArrays will
-            be promoted to Datasets. Default is None.
+        data : Dataset, optional
+            Data to store under the .ds attribute of this node.
         parent : DataTree, optional
             Parent node to this node. Default is None.
         children : Mapping[str, DataTree], optional
@@ -458,7 +453,7 @@ class DataTree(
             children = {}
 
         super().__init__(name=name)
-        self._set_node_data(_coerce_to_dataset(data))
+        self._set_node_data(_to_new_dataset(data))
         self.parent = parent
         self.children = children
 
@@ -553,8 +548,8 @@ class DataTree(
         return self._to_dataset_view(rebuild_dims=True)
 
     @ds.setter
-    def ds(self, data: Dataset | DataArray | None = None) -> None:
-        ds = _coerce_to_dataset(data)
+    def ds(self, data: Dataset | None = None) -> None:
+        ds = _to_new_dataset(data)
         self._replace_node(ds)
 
     def to_dataset(self, inherited: bool = True) -> Dataset:
@@ -1096,8 +1091,12 @@ class DataTree(
         if isinstance(root_data, DataTree):
             obj = root_data.copy()
             obj.orphan()
-        else:
+        elif root_data is None or isinstance(root_data, Dataset):
             obj = cls(name=name, data=root_data, parent=None, children=None)
+        else:
+            raise TypeError(
+                f'root node data (at "/") must be a Dataset or DataTree, got {type(root_data)}'
+            )
 
         def depth(item) -> int:
             pathstr, _ = item
