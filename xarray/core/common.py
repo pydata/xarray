@@ -900,7 +900,7 @@ class DataWithCoords(AttrAccessMixin):
         offset: pd.Timedelta | datetime.timedelta | str | None,
         origin: str | DatetimeLike,
         restore_coord_dims: bool | None,
-        **indexer_kwargs: str | Resampler,
+        **indexer_kwargs: ResampleCompatible | Resampler,
     ) -> T_Resample:
         """Returns a Resample object for performing resampling operations.
 
