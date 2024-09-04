@@ -1244,25 +1244,25 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         return DataTree.from_dict(groups_dicts)
 
     def open_groups_as_dict(
-            self,
-            filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-            *,
-            mask_and_scale=True,
-            decode_times=True,
-            concat_characters=True,
-            decode_coords=True,
-            drop_variables: str | Iterable[str] | None = None,
-            use_cftime=None,
-            decode_timedelta=None,
-            group: str | Iterable[str] | Callable | None = None,
-            mode="r",
-            synchronizer=None,
-            consolidated=None,
-            chunk_store=None,
-            storage_options=None,
-            stacklevel=3,
-            zarr_version=None,
-            **kwargs,
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group: str | Iterable[str] | Callable | None = None,
+        mode="r",
+        synchronizer=None,
+        consolidated=None,
+        chunk_store=None,
+        storage_options=None,
+        stacklevel=3,
+        zarr_version=None,
+        **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.backends.api import open_dataset
         from xarray.core.treenode import NodePath
@@ -1315,7 +1315,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 drop_variables=drop_variables,
                 use_cftime=use_cftime,
                 decode_timedelta=decode_timedelta,
-                **kwargs
+                **kwargs,
             )
             # store_entrypoint = StoreBackendEntrypoint()       # |
             # with close_on_error(group_store):                 # |
@@ -1329,7 +1329,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             #             use_cftime=use_cftime,                # |
             #             decode_timedelta=decode_timedelta,    # |
             #         )                                         # |
-            group_name = str(NodePath(path_group))              # |
+            group_name = str(NodePath(path_group))  # |
             groups_dict[group_name] = group_ds
         return groups_dict
 
