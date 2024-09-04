@@ -2784,6 +2784,54 @@ def test_multiple_groupers_mixed(use_flox) -> None:
     # ------
 
 
+@pytest.mark.parametrize(
+    "reduction", ["max", "min", "nanmax", "nanmin", "sum", "nansum", "prod", "nanprod"]
+)
+def test_groupby_preserve_dtype(reduction):
+    # all groups are present, we should follow numpy exactly
+    ds = xr.Dataset(
+        {
+            "test": (
+                ["x", "y"],
+                np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype="int16"),
+            )
+        },
+        coords={"idx": ("x", [1, 2, 1])},
+    )
+
+    kwargs = {}
+    if "nan" in reduction:
+        kwargs["skipna"] = True
+        reduction = reduction.removeprefix("nan")
+    actual = getattr(ds.groupby("idx"), reduction)(**kwargs).test.dtype
+    expected = getattr(np, reduction)(ds.test.data, axis=0).dtype
+    assert actual == expected
+
+
+@requires_flox
+@pytest.mark.parametrize("reduction", ["any", "all", "count"])
+def test_gappy_resample_reductions(reduction):
+    # GH8090
+    dates = (("1988-12-01", "1990-11-30"), ("2000-12-01", "2001-11-30"))
+    times = [xr.date_range(*d, freq="D") for d in dates]
+
+    da = xr.concat(
+        [
+            xr.DataArray(np.random.rand(len(t)), coords={"time": t}, dims="time")
+            for t in times
+        ],
+        dim="time",
+    ).chunk(time=100)
+
+    rs = (da > 0.5).resample(time="YS-DEC")
+    method = getattr(rs, reduction)
+    with xr.set_options(use_flox=True):
+        actual = method(dim="time")
+    with xr.set_options(use_flox=False):
+        expected = method(dim="time")
+    assert_identical(expected, actual)
+
+
 # Possible property tests
 # 1. lambda x: x
 # 2. grouped-reduce on unique coords is identical to array

@@ -849,10 +849,6 @@ class GroupBy(Generic[T_Xarray]):
             else obj._coords
         )
 
-        any_isbin = any(
-            isinstance(grouper.grouper, BinGrouper) for grouper in self.groupers
-        )
-
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
 
@@ -926,14 +922,14 @@ class GroupBy(Generic[T_Xarray]):
             ):
                 raise ValueError(f"cannot reduce over dimensions {dim}.")
 
-        if kwargs["func"] not in ["all", "any", "count"]:
-            kwargs.setdefault("fill_value", np.nan)
-        if any_isbin and kwargs["func"] == "count":
-            # This is an annoying hack. Xarray returns np.nan
-            # when there are no observations in a bin, instead of 0.
-            # We can fake that here by forcing min_count=1.
-            # note min_count makes no sense in the xarray world
-            # as a kwarg for count, so this should be OK
+        has_missing_groups = (
+            self.encoded.unique_coord.size != self.encoded.full_index.size
+        )
+        if has_missing_groups or kwargs.get("min_count", 0) > 0:
+            # Xarray *always* returns np.nan when there are no observations in a group,
+            # We can fake that here by forcing min_count=1 when it is not set.
+            # This handles boolean reductions, and count
+            # See GH8090, GH9398
             kwargs.setdefault("fill_value", np.nan)
             kwargs.setdefault("min_count", 1)
 
