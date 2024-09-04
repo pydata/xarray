@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 import operator
 import warnings
-from itertools import product
 from unittest import mock
 
 import numpy as np
