@@ -6,7 +6,7 @@ import itertools
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Generic, Literal, Union
+from typing import TYPE_CHECKING, Any, Generic, Literal, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.types import GroupIndex, GroupIndices, GroupKey
+    from xarray.core.types import GroupIndex, GroupIndices, GroupInput, GroupKey
     from xarray.core.utils import Frozen
     from xarray.groupers import EncodedGroups, Grouper
 
@@ -319,6 +319,51 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
         return len(self.encoded.full_index)
 
 
+def _parse_group_and_groupers(
+    obj: T_Xarray, group: GroupInput, groupers: dict[str, Grouper]
+) -> tuple[ResolvedGrouper, ...]:
+    from xarray.core.dataarray import DataArray
+    from xarray.core.variable import Variable
+    from xarray.groupers import UniqueGrouper
+
+    if group is not None and groupers:
+        raise ValueError(
+            "Providing a combination of `group` and **groupers is not supported."
+        )
+
+    if group is None and not groupers:
+        raise ValueError("Either `group` or `**groupers` must be provided.")
+
+    if isinstance(group, np.ndarray | pd.Index):
+        raise TypeError(
+            f"`group` must be a DataArray. Received {type(group).__name__!r} instead"
+        )
+
+    if isinstance(group, Mapping):
+        grouper_mapping = either_dict_or_kwargs(group, groupers, "groupby")
+        group = None
+
+    rgroupers: tuple[ResolvedGrouper, ...]
+    if isinstance(group, DataArray | Variable):
+        rgroupers = (ResolvedGrouper(UniqueGrouper(), group, obj),)
+    else:
+        if group is not None:
+            if TYPE_CHECKING:
+                assert isinstance(group, str | Sequence)
+            group_iter: Sequence[Hashable] = (
+                (group,) if isinstance(group, str) else group
+            )
+            grouper_mapping = {g: UniqueGrouper() for g in group_iter}
+        elif groupers:
+            grouper_mapping = cast("Mapping[Hashable, Grouper]", groupers)
+
+        rgroupers = tuple(
+            ResolvedGrouper(grouper, group, obj)
+            for group, grouper in grouper_mapping.items()
+        )
+    return rgroupers
+
+
 def _validate_groupby_squeeze(squeeze: Literal[False]) -> None:
     # While we don't generally check the type of every arg, passing
     # multiple dimensions as multiple arguments is common enough, and the
@@ -327,7 +372,7 @@ def _validate_groupby_squeeze(squeeze: Literal[False]) -> None:
     # A future version could make squeeze kwarg only, but would face
     # backward-compat issues.
     if squeeze is not False:
-        raise TypeError(f"`squeeze` must be False, but {squeeze} was supplied.")
+        raise TypeError(f"`squeeze` must be False, but {squeeze!r} was supplied.")
 
 
 def _resolve_group(
@@ -626,7 +671,7 @@ class GroupBy(Generic[T_Xarray]):
         for grouper in self.groupers:
             coord = grouper.unique_coord
             labels = ", ".join(format_array_flat(coord, 30).split())
-            text += f"\n\t{grouper.name!r}: {coord.size} groups with labels {labels}"
+            text += f"\n    {grouper.name!r}: {coord.size} groups with labels {labels}"
         return text + ">"
 
     def _iter_grouped(self) -> Iterator[T_Xarray]:

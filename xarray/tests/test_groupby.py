@@ -583,7 +583,7 @@ def test_groupby_repr(obj, dim) -> None:
     N = len(np.unique(obj[dim]))
     expected = f"<{obj.__class__.__name__}GroupBy"
     expected += f", grouped over 1 grouper(s), {N} groups in total:"
-    expected += f"\n\t{dim!r}: {N} groups with labels "
+    expected += f"\n    {dim!r}: {N} groups with labels "
     if dim == "x":
         expected += "1, 2, 3, 4, 5>"
     elif dim == "y":
@@ -600,7 +600,7 @@ def test_groupby_repr_datetime(obj) -> None:
     actual = repr(obj.groupby("t.month"))
     expected = f"<{obj.__class__.__name__}GroupBy"
     expected += ", grouped over 1 grouper(s), 12 groups in total:\n"
-    expected += "\t'month': 12 groups with labels "
+    expected += "    'month': 12 groups with labels "
     expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12>"
     assert actual == expected
 
@@ -2633,6 +2633,36 @@ def test_weather_data_resample(use_flox):
 
     assert expected.time.attrs == ds.time.attrs
     assert expected.location.attrs == ds.location.attrs
+
+
+@pytest.mark.parametrize("as_dataset", [True, False])
+def test_multiple_groupers_string(as_dataset) -> None:
+    obj = DataArray(
+        np.array([1, 2, 3, 0, 2, np.nan]),
+        dims="d",
+        coords=dict(
+            labels1=("d", np.array(["a", "b", "c", "c", "b", "a"])),
+            labels2=("d", np.array(["x", "y", "z", "z", "y", "x"])),
+        ),
+        name="foo",
+    )
+
+    if as_dataset:
+        obj = obj.to_dataset()  # type: ignore
+
+    expected = obj.groupby(labels1=UniqueGrouper(), labels2=UniqueGrouper()).mean()
+    actual = obj.groupby(("labels1", "labels2")).mean()
+    assert_identical(expected, actual)
+
+    # Passes `"labels2"` to squeeze; will raise an error around kwargs rather than the
+    # warning & type error in the future
+    with pytest.warns(FutureWarning):
+        with pytest.raises(TypeError):
+            obj.groupby("labels1", "labels2")  # type: ignore
+    with pytest.raises(ValueError):
+        obj.groupby("labels1", foo="bar")  # type: ignore
+    with pytest.raises(ValueError):
+        obj.groupby("labels1", foo=UniqueGrouper())
 
 
 @pytest.mark.parametrize("use_flox", [True, False])
