@@ -21,7 +21,13 @@ from xarray.core.dataarray import DataArray
 from xarray.core.groupby import T_Group, _DummyGroup
 from xarray.core.indexes import safe_cast_to_index
 from xarray.core.resample_cftime import CFTimeGrouper
-from xarray.core.types import Bins, DatetimeLike, GroupIndices, SideOptions
+from xarray.core.types import (
+    Bins,
+    DatetimeLike,
+    GroupIndices,
+    ResampleCompatible,
+    SideOptions,
+)
 from xarray.core.variable import Variable
 
 __all__ = [
@@ -336,7 +342,7 @@ class TimeResampler(Resampler):
 
     Attributes
     ----------
-    freq : str, datetime.timedelta, pandas.Timestamp, pandas.DateOffset
+    freq : str, datetime.timedelta, pandas.Timestamp, or pandas.DateOffset
         Frequency to resample to. See `Pandas frequency
         aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
         for a list of possible values.
@@ -358,7 +364,7 @@ class TimeResampler(Resampler):
         An offset timedelta added to the origin.
     """
 
-    freq: str | datetime.timedelta | pd.Timedelta | pd.DateOffset
+    freq: ResampleCompatible
     closed: SideOptions | None = field(default=None)
     label: SideOptions | None = field(default=None)
     origin: str | DatetimeLike = field(default="start_day")

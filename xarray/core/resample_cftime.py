@@ -58,7 +58,7 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core.types import SideOptions
 
 if typing.TYPE_CHECKING:
-    from xarray.core.types import CFTimeDatetime
+    from xarray.core.types import CFTimeDatetime, ResampleCompatible
 
 
 class CFTimeGrouper:
@@ -75,11 +75,7 @@ class CFTimeGrouper:
 
     def __init__(
         self,
-        freq: str
-        | datetime.timedelta
-        | pd.Timedelta
-        | pd.DateOffset
-        | BaseCFTimeOffset,
+        freq: ResampleCompatible | BaseCFTimeOffset,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
         origin: str | CFTimeDatetime = "start_day",

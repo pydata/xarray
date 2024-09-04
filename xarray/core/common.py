@@ -28,6 +28,9 @@ try:
 except ImportError:
     cftime = None
 
+if TYPE_CHECKING:
+    from xarray.core.types import ResampleCompatible
+
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ...
 
@@ -890,7 +893,7 @@ class DataWithCoords(AttrAccessMixin):
     def _resample(
         self,
         resample_cls: type[T_Resample],
-        indexer: Mapping[Hashable, str | Resampler] | None,
+        indexer: Mapping[Hashable, ResampleCompatible | Resampler] | None,
         skipna: bool | None,
         closed: SideOptions | None,
         label: SideOptions | None,
@@ -1077,7 +1080,7 @@ class DataWithCoords(AttrAccessMixin):
         )
 
         grouper: Resampler
-        if isinstance(freq, str | datetime.timedelta | pd.Timedelta | pd.DateOffset):
+        if isinstance(freq, ResampleCompatible):
             grouper = TimeResampler(
                 freq=freq, closed=closed, label=label, origin=origin, offset=offset
             )

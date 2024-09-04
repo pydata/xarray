@@ -309,3 +309,5 @@ GroupIndices = tuple[GroupIndex, ...]
 Bins = Union[
     int, Sequence[int], Sequence[float], Sequence[pd.Timestamp], np.ndarray, pd.Index
 ]
+
+ResampleCompatible = Union[str, datetime.timedelta, pd.Timedelta, pd.DateOffset]
