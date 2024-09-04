@@ -10693,7 +10693,11 @@ class Dataset(
         offset: pd.Timedelta | datetime.timedelta | str | None = None,
         origin: str | DatetimeLike = "start_day",
         restore_coord_dims: bool | None = None,
-        **indexer_kwargs: str | Resampler,
+        **indexer_kwargs: str
+        | datetime.timedelta
+        | pd.Timedelta
+        | pd.DateOffset
+        | Resampler,
     ) -> DatasetResample:
         """Returns a Resample object for performing resampling operations.
 

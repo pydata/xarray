@@ -380,13 +380,6 @@ class TimeResampler(Resampler):
         if isinstance(group_as_index, CFTimeIndex):
             from xarray.core.resample_cftime import CFTimeGrouper
 
-            if not isinstance(self.freq, str | BaseCFTimeOffset):
-                raise ValueError(
-                    "Resample frequency must be a string or 'BaseCFTimeOffset' "
-                    "object when resampling a 'CFTimeIndex'. Received "
-                    f"{type(self.freq)} instead."
-                )
-
             self.index_grouper = CFTimeGrouper(
                 freq=self.freq,
                 closed=self.closed,

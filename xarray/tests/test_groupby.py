@@ -758,7 +758,6 @@ def test_groupby_none_group_name() -> None:
 
 
 def test_groupby_getitem(dataset) -> None:
-
     assert_identical(dataset.sel(x=["a"]), dataset.groupby("x")["a"])
     assert_identical(dataset.sel(z=[1]), dataset.groupby("z")[1])
     assert_identical(dataset.foo.sel(x=["a"]), dataset.foo.groupby("x")["a"])
@@ -1829,13 +1828,12 @@ class TestDataArrayResample:
                 )
             ],
         )
-        test_resample_freqs = ["10min"]
-        if not use_cftime:
-            test_resample_freqs += [
-                pd.Timedelta(hours=2),
-                pd.offsets.MonthBegin(),
-                datetime.timedelta(days=1, hours=6),
-            ]
+        test_resample_freqs = (
+            "10min",
+            pd.Timedelta(hours=2),
+            pd.offsets.MonthBegin(),
+            datetime.timedelta(days=1, hours=6),
+        )
         for freq in test_resample_freqs:
             array.resample(time=freq)
 
@@ -2257,6 +2255,29 @@ class TestDatasetResample:
         for method in [np.mean]:
             result = actual.reduce(method)
             assert_equal(expected, result)
+
+    @pytest.mark.parametrize("use_cftime", [True, False])
+    def test_resample_dtype(self, use_cftime: bool) -> None:
+        if use_cftime and not has_cftime:
+            pytest.skip()
+        times = xr.date_range(
+            "2000-01-01", freq="6h", periods=10, use_cftime=use_cftime
+        )
+        ds = Dataset(
+            {
+                "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
+                "bar": ("time", np.random.randn(10), {"meta": "data"}),
+                "time": times,
+            }
+        )
+        test_resample_freqs = [
+            "10min",
+            pd.Timedelta(hours=2),
+            pd.offsets.MonthBegin(),
+            datetime.timedelta(days=1, hours=6),
+        ]
+        for freq in test_resample_freqs:
+            ds.resample(time=freq)
 
     def test_resample_min_count(self) -> None:
         times = pd.date_range("2000-01-01", freq="6h", periods=10)

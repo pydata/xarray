@@ -75,7 +75,11 @@ class CFTimeGrouper:
 
     def __init__(
         self,
-        freq: str | BaseCFTimeOffset,
+        freq: str
+        | datetime.timedelta
+        | pd.Timedelta
+        | pd.DateOffset
+        | BaseCFTimeOffset,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
         origin: str | CFTimeDatetime = "start_day",

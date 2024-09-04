@@ -772,11 +772,18 @@ def _emit_freq_deprecation_warning(deprecated_freq):
     emit_user_level_warning(message, FutureWarning)
 
 
-def to_offset(freq: BaseCFTimeOffset | str, warn: bool = True) -> BaseCFTimeOffset:
+def to_offset(
+    freq: BaseCFTimeOffset | str | timedelta | pd.Timedelta | pd.DateOffset,
+    warn: bool = True,
+) -> BaseCFTimeOffset:
     """Convert a frequency string to the appropriate subclass of
     BaseCFTimeOffset."""
     if isinstance(freq, BaseCFTimeOffset):
         return freq
+    if isinstance(freq, timedelta | pd.Timedelta):
+        return delta_to_tick(freq)
+    if isinstance(freq, pd.DateOffset):
+        freq = freq.freqstr
 
     match = re.match(_PATTERN, freq)
     if match is None:
@@ -789,6 +796,34 @@ def to_offset(freq: BaseCFTimeOffset | str, warn: bool = True) -> BaseCFTimeOffs
     multiples = freq_data["multiple"]
     multiples = 1 if multiples is None else int(multiples)
     return _FREQUENCIES[freq](n=multiples)
+
+
+def delta_to_tick(delta: timedelta | pd.Timedelta) -> Tick:
+    """Adapted from pandas.tslib.delta_to_tick"""
+    if isinstance(delta, pd.Timedelta) and delta.nanoseconds != 0:
+        # pandas.Timedelta has nanoseconds, but these are not supported
+        raise ValueError(
+            "Unable to convert 'pandas.Timedelta' object with non-zero "
+            "nanoseconds to 'CFTimeOffset' object"
+        )
+    if delta.microseconds == 0:
+        if delta.seconds == 0:
+            return Day(n=delta.days)
+        else:
+            seconds = delta.days * 86400 + delta.seconds
+            if seconds % 3600 == 0:
+                return Hour(n=seconds // 3600)
+            elif seconds % 60 == 0:
+                return Minute(n=seconds // 60)
+            else:
+                return Second(n=seconds)
+    else:
+        # Regardless of the days and seconds this will always be a Millsecond
+        # or Microsecond object
+        if delta.microseconds % 1_000 == 0:
+            return Millisecond(n=delta.microseconds // 1_000)
+        else:
+            return Microsecond(n=delta.microseconds)
 
 
 def to_cftime_datetime(date_str_or_date, calendar=None):
