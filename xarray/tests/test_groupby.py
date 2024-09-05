@@ -2812,6 +2812,7 @@ def test_groupby_preserve_dtype(reduction):
     assert actual == expected
 
 
+@requires_dask
 @requires_flox
 @pytest.mark.parametrize("reduction", ["any", "all", "count"])
 def test_gappy_resample_reductions(reduction):
