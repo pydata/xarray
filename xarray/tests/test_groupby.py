@@ -30,7 +30,7 @@ from xarray.tests import (
     create_test_data,
     has_cftime,
     has_flox,
-    has_pandas_ge_2_1,
+    has_pandas_ge_2_2,
     requires_cftime,
     requires_dask,
     requires_flox,
@@ -136,7 +136,7 @@ def test_multi_index_groupby_sum() -> None:
         )
         assert_equal(expected, ds)
 
-    if not has_pandas_ge_2_1:
+    if not has_pandas_ge_2_2:
         # the next line triggers a mysterious multiindex error on pandas 2.0
         return
 
