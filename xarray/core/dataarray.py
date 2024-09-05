@@ -6785,8 +6785,8 @@ class DataArray(
 
         >>> da.groupby("letters").sum()
         <xarray.DataArray (letters: 2, y: 3)> Size: 48B
-        array([[ 9., 11., 13.],
-               [ 9., 11., 13.]])
+        array([[ 9, 11, 13],
+               [ 9, 11, 13]])
         Coordinates:
           * letters  (letters) object 16B 'a' 'b'
         Dimensions without coordinates: y

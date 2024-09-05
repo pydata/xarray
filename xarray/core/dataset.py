@@ -10387,7 +10387,7 @@ class Dataset(
           * letters  (letters) object 16B 'a' 'b'
         Dimensions without coordinates: y
         Data variables:
-            foo      (letters, y) float64 48B 9.0 11.0 13.0 9.0 11.0 13.0
+            foo      (letters, y) int64 48B 9 11 13 9 11 13
 
         Grouping by multiple variables
 
