@@ -184,7 +184,7 @@ class UniqueGrouper(Grouper):
             raise ValueError(
                 "Failed to group data. Are you grouping by a variable that is all NaN?"
             )
-        codes = self.group.copy(data=codes_.reshape(self.group.shape))
+        codes = self.group.copy(data=codes_.reshape(self.group.shape), deep=False)
         unique_coord = Variable(
             dims=codes.name, data=unique_values, attrs=self.group.attrs
         )
@@ -212,7 +212,7 @@ class UniqueGrouper(Grouper):
             full_index = pd.RangeIndex(self.group.size)
             coords = Coordinates()
         else:
-            codes = self.group.copy(data=size_range)
+            codes = self.group.copy(data=size_range, deep=False)
             unique_coord = self.group.variable.to_base_variable()
             full_index = self.group_as_index
             if isinstance(full_index, pd.MultiIndex):
@@ -438,7 +438,7 @@ class TimeResampler(Resampler):
         unique_coord = Variable(
             dims=group.name, data=first_items.index, attrs=group.attrs
         )
-        codes = group.copy(data=codes_.reshape(group.shape))
+        codes = group.copy(data=codes_.reshape(group.shape), deep=False)
 
         return EncodedGroups(
             codes=codes,
