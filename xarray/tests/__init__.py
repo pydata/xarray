@@ -325,7 +325,7 @@ def create_test_data(
             "dim1",
             pd.Categorical(
                 np.random.choice(
-                    list(string.ascii_lowercase[: np.random.randint(5)]),
+                    list(string.ascii_lowercase[: np.random.randint(1, 5)]),
                     size=dim_sizes[0],
                 )
             ),
