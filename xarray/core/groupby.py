@@ -787,14 +787,12 @@ class GroupBy(Generic[T_Xarray]):
         """Our index contained empty groups (e.g., from a resampling or binning). If we
         reduced on that dimension, we want to restore the full index.
         """
-        from xarray.groupers import BinGrouper, TimeResampler
-
+        has_missing_groups = (
+            self.encoded.unique_coord.size != self.encoded.full_index.size
+        )
         indexers = {}
         for grouper in self.groupers:
-            if (
-                isinstance(grouper.grouper, BinGrouper | TimeResampler)
-                and grouper.name in combined.dims
-            ):
+            if has_missing_groups and grouper.name in combined._indexes:
                 indexers[grouper.name] = grouper.full_index
         if indexers:
             combined = combined.reindex(**indexers)
