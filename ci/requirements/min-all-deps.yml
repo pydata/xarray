@@ -34,7 +34,7 @@ dependencies:
   - nc-time-axis=1.4
   # netcdf follows a 1.major.minor[.patch] convention
   # (see https://github.com/Unidata/netcdf4-python/issues/1090)
-  - netcdf4=1.6.0
+  - netcdf4=1.6.4
   - numba=0.57
   - numbagg=0.2.1
   - numpy=1.24
