@@ -35,6 +35,24 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - Support for ``python 3.9`` has been dropped (:pull:`8937`)
+- The minimum versions of some dependencies were changed
+
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+    boto3                   1.26      1.28
+    cartopy                 0.21      0.22
+    dask-core             2023.4    2023.9
+    distributed           2023.4    2023.9
+    h5netcdf                1.1        1.2
+    iris                    3.4        3.7
+    numba                   0.56      0.57
+    numpy                   1.23      1.24
+    pandas                  2.0        2.1
+    scipy                   1.10      1.11
+    typing_extensions       4.5        4.7
+    zarr                    2.14      2.16
+  ===================== =========  =======
 
 
 Deprecations
