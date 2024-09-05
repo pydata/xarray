@@ -65,6 +65,12 @@ Bug fixes
   (:issue:`9408`, :pull:`9413`).
   By `Oliver Higgs <https://github.com/oliverhiggs>`_.
 
+Performance
+~~~~~~~~~~~
+
+- Speed up grouping by avoiding deep-copy of non-dimension coordinates (:issue:`9426`, :pull:`9393`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 Documentation
 ~~~~~~~~~~~~~
 
