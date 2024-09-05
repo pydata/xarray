@@ -8,7 +8,7 @@ from collections.abc import Hashable
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
-from typing import Any, Literal
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -39,7 +39,7 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.types import ArrayLike
+from xarray.core.types import ArrayLike, ToDictDataOptions
 from xarray.core.utils import is_scalar
 from xarray.groupers import TimeResampler
 from xarray.namedarray.pycompat import array_type, integer_types
@@ -5040,9 +5040,7 @@ class TestDataset:
 
     @pytest.mark.parametrize("encoding", [True, False])
     @pytest.mark.parametrize("data", [True, "list", "array"])
-    def test_to_and_from_dict(
-        self, encoding: bool, data: bool | Literal["list", "array"]
-    ) -> None:
+    def test_to_and_from_dict(self, encoding: bool, data: ToDictDataOptions) -> None:
         # <xarray.Dataset>
         # Dimensions:  (t: 10)
         # Coordinates:
@@ -5153,7 +5151,8 @@ class TestDataset:
 
     @pytest.mark.parametrize("data", [True, "list", "array"])
     def test_to_and_from_dict_with_nan_nat(
-        self, data: bool | Literal["list", "array"]
+        self,
+        data: ToDictDataOptions,
     ) -> None:
         x = np.random.randn(10, 3)
         y = np.random.randn(10, 3)

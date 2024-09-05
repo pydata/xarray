@@ -7,7 +7,7 @@ import warnings
 from collections.abc import Hashable
 from copy import deepcopy
 from textwrap import dedent
-from typing import Any, Final, Literal, cast
+from typing import Any, Final, cast
 
 import numpy as np
 import pandas as pd
@@ -34,7 +34,7 @@ from xarray.core import dtypes
 from xarray.core.common import full_like
 from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
-from xarray.core.types import QueryEngineOptions, QueryParserOptions
+from xarray.core.types import QueryEngineOptions, QueryParserOptions, ToDictDataOptions
 from xarray.core.utils import is_scalar
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
@@ -3571,7 +3571,7 @@ class TestDataArray:
     @pytest.mark.parametrize("data", ["list", "array", True])
     @pytest.mark.parametrize("encoding", [True, False])
     def test_to_and_from_dict(
-        self, encoding: bool, data: bool | Literal["list", "array"], use_dask: bool
+        self, encoding: bool, data: ToDictDataOptions, use_dask: bool
     ) -> None:
         if use_dask and not has_dask:
             pytest.skip("requires dask")

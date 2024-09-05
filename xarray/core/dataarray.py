@@ -116,6 +116,7 @@ if TYPE_CHECKING:
         T_ChunkDimFreq,
         T_ChunksFreq,
         T_Xarray,
+        ToDictDataOptions,
     )
     from xarray.core.weighted import DataArrayWeighted
     from xarray.groupers import Grouper, Resampler
@@ -4369,7 +4370,7 @@ class DataArray(
         )
 
     def to_dict(
-        self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
+        self, data: ToDictDataOptions = "list", encoding: bool = False
     ) -> dict[str, Any]:
         """
         Convert this xarray.DataArray into a dictionary following xarray

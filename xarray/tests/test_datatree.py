@@ -1,15 +1,19 @@
+import datetime
 import re
 import typing
 from copy import copy, deepcopy
 from textwrap import dedent
+from typing import Any
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import xarray as xr
 from xarray.core.datatree import DataTree
 from xarray.core.datatree_ops import _MAPPED_DOCSTRING_ADDENDUM, insert_doc_addendum
 from xarray.core.treenode import NotFoundInTreeError
+from xarray.core.types import ToDictDataOptions
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import create_test_data, source_ndarray
 
@@ -1218,3 +1222,314 @@ class TestDocInsertion:
     def test_none(self):
         actual_doc = insert_doc_addendum(None, _MAPPED_DOCSTRING_ADDENDUM)
         assert actual_doc is None
+
+
+class TestDictSerialization:
+
+    @staticmethod
+    def create_test_data() -> DataTree[Any]:
+        # DataTree('(root)', parent=None)
+        # │   Dimensions:  (time: 2)
+        # │   Coordinates:
+        # │     * time     (time) datetime64[ns] 16B 2020-12-01 2020-12-02
+        # │   Data variables:
+        # │       *empty*
+        # │   Attributes:
+        # │       description:  Root Hypothetical DataTree with heterogeneous data: weather...
+        # ├── DataTree('weather_data')
+        # │   │   Dimensions:     (station: 6, time: 2)
+        # │   │   Coordinates:
+        # │   │     * station     (station) <U1 24B 'a' 'b' 'c' 'd' 'e' 'f'
+        # │   │   Dimensions without coordinates: time
+        # │   │   Data variables:
+        # │   │       wind_speed  (time, station) float64 96B 2.0 2.0 2.0 2.0 ... 2.0 2.0 2.0 2.0
+        # │   │       pressure    (time, station) float64 96B 3.0 3.0 3.0 3.0 ... 3.0 3.0 3.0 3.0
+        # │   │   Attributes:
+        # │   │       description:  Weather data node, inheriting the 'time' dimension
+        # │   └── DataTree('temperature')
+        # │           Dimensions:          (time: 2, station: 6)
+        # │           Dimensions without coordinates: time, station
+        # │           Data variables:
+        # │               air_temperature  (time, station) float64 96B 3.0 3.0 3.0 3.0 ... 3.0 3.0 3.0
+        # │               dewpoint_temp    (time, station) float64 96B 4.0 4.0 4.0 4.0 ... 4.0 4.0 4.0
+        # │           Attributes:
+        # │               description:  Temperature, subnode of the weather data node, inheriting t...
+        # └── DataTree('satellite_image')
+        #         Dimensions:     (x: 3, y: 3, time: 2)
+        #         Coordinates:
+        #           * x           (x) int64 24B 10 20 30
+        #           * y           (y) int64 24B 90 80 70
+        #         Dimensions without coordinates: time
+        #         Data variables:
+        #             infrared    (time, y, x) float64 144B 5.0 5.0 5.0 5.0 ... 5.0 5.0 5.0 5.0
+        #             true_color  (time, y, x) float64 144B 6.0 6.0 6.0 6.0 ... 6.0 6.0 6.0 6.0
+
+        xdt = DataTree.from_dict(
+            name="(root)",
+            d={
+                "/": xr.Dataset(
+                    coords={
+                        "time": xr.DataArray(
+                            data=pd.date_range(
+                                start="2020-12-01", end="2020-12-02", freq="D"
+                            )[:2],
+                            dims="time",
+                            attrs={
+                                "units": "date",
+                                "long_name": "Time of acquisition",
+                            },
+                        )
+                    },
+                    attrs={
+                        "description": (
+                            "Root Hypothetical DataTree with heterogeneous data: "
+                            "weather and satellite"
+                        )
+                    },
+                ),
+                "/weather_data": xr.Dataset(
+                    coords={
+                        "station": xr.DataArray(
+                            data=list("abcdef"),
+                            dims="station",
+                            attrs={
+                                "units": "dl",
+                                "long_name": "Station of acquisition",
+                            },
+                        )
+                    },
+                    data_vars={
+                        "wind_speed": xr.DataArray(
+                            np.ones((2, 6)) * 2,
+                            dims=("time", "station"),
+                            attrs={
+                                "units": "meter/sec",
+                                "long_name": "Wind speed",
+                            },
+                        ),
+                        "pressure": xr.DataArray(
+                            np.ones((2, 6)) * 3,
+                            dims=("time", "station"),
+                            attrs={
+                                "units": "hectopascals",
+                                "long_name": "Time of acquisition",
+                            },
+                        ),
+                    },
+                    attrs={
+                        "description": "Weather data node, inheriting the 'time' dimension"
+                    },
+                ),
+                "/weather_data/temperature": xr.Dataset(
+                    data_vars={
+                        "air_temperature": xr.DataArray(
+                            np.ones((2, 6)) * 3,
+                            dims=("time", "station"),
+                            attrs={
+                                "units": "kelvin",
+                                "long_name": "Air temperature",
+                            },
+                        ),
+                        "dewpoint_temp": xr.DataArray(
+                            np.ones((2, 6)) * 4,
+                            dims=("time", "station"),
+                            attrs={
+                                "units": "kelvin",
+                                "long_name": "Dew point temperature",
+                            },
+                        ),
+                    },
+                    attrs={
+                        "description": (
+                            "Temperature, subnode of the weather data node, "
+                            "inheriting the 'time' dimension from root and 'station' "
+                            "dimension from the Temperature group."
+                        )
+                    },
+                ),
+                "/satellite_image": xr.Dataset(
+                    coords={"x": [10, 20, 30], "y": [90, 80, 70]},
+                    data_vars={
+                        "infrared": xr.DataArray(
+                            np.ones((2, 3, 3)) * 5, dims=("time", "y", "x")
+                        ),
+                        "true_color": xr.DataArray(
+                            np.ones((2, 3, 3)) * 6, dims=("time", "y", "x")
+                        ),
+                    },
+                ),
+            },
+        )
+        return xdt
+
+    @pytest.mark.parametrize("absolute_details", [False])
+    @pytest.mark.parametrize("encoding", [False])
+    @pytest.mark.parametrize("data", ["list"])
+    def test_to_native_dict_basic(
+        self,
+        encoding: bool,
+        data: ToDictDataOptions,
+        absolute_details: bool,
+    ):
+        # Test conversion of a DataTree with default parameters of the `to_dict` method.
+        original_xdt = TestDictSerialization.create_test_data()
+
+        # Note: coordinates are duplicated when serialized ; each sub-datatree is self-sufficient
+        # and loadable as-is without requiring higher-up context, at the cost of redundancy.
+        time_coords = {
+            "dims": ("time",),
+            "attrs": {"units": "date", "long_name": "Time of acquisition"},
+            "data": [
+                datetime.datetime(2020, 12, 1, 0, 0),
+                datetime.datetime(2020, 12, 2, 0, 0),
+            ],
+        }
+        station_coords = {
+            "dims": ("station",),
+            "attrs": {
+                "units": "dl",
+                "long_name": "Station of acquisition",
+            },
+            "data": ["a", "b", "c", "d", "e", "f"],
+        }
+        expected_basic_dict = {
+            "coords": {
+                "time": time_coords,
+            },
+            "attrs": {
+                "description": "Root Hypothetical DataTree with heterogeneous data: weather and satellite"
+            },
+            "dims": {"time": 2},
+            "data_vars": {},
+            "name": "(root)",
+            "children": {
+                "weather_data": {
+                    "coords": {
+                        "time": time_coords,
+                        "station": station_coords,
+                    },
+                    "attrs": {
+                        "description": "Weather data node, inheriting the 'time' dimension"
+                    },
+                    "dims": {"station": 6, "time": 2},
+                    "data_vars": {
+                        "wind_speed": {
+                            "dims": ("time", "station"),
+                            "attrs": {"units": "meter/sec", "long_name": "Wind speed"},
+                            "data": [
+                                [2.0, 2.0, 2.0, 2.0, 2.0, 2.0],
+                                [2.0, 2.0, 2.0, 2.0, 2.0, 2.0],
+                            ],
+                        },
+                        "pressure": {
+                            "dims": ("time", "station"),
+                            "attrs": {
+                                "units": "hectopascals",
+                                "long_name": "Time of acquisition",
+                            },
+                            "data": [
+                                [3.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+                                [3.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+                            ],
+                        },
+                    },
+                    "name": "weather_data",
+                    "children": {
+                        "temperature": {
+                            "coords": {
+                                "time": time_coords,
+                                "station": station_coords,
+                            },
+                            "attrs": {
+                                "description": "Temperature, subnode of the weather data node, inheriting the 'time' dimension from root and 'station' dimension from the Temperature group."
+                            },
+                            "dims": {"time": 2, "station": 6},
+                            "data_vars": {
+                                "air_temperature": {
+                                    "dims": ("time", "station"),
+                                    "attrs": {
+                                        "units": "kelvin",
+                                        "long_name": "Air temperature",
+                                    },
+                                    "data": [
+                                        [3.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+                                        [3.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+                                    ],
+                                },
+                                "dewpoint_temp": {
+                                    "dims": ("time", "station"),
+                                    "attrs": {
+                                        "units": "kelvin",
+                                        "long_name": "Dew point temperature",
+                                    },
+                                    "data": [
+                                        [4.0, 4.0, 4.0, 4.0, 4.0, 4.0],
+                                        [4.0, 4.0, 4.0, 4.0, 4.0, 4.0],
+                                    ],
+                                },
+                            },
+                            "name": "temperature",
+                            "children": {},
+                        }
+                    },
+                },
+                "satellite_image": {
+                    "coords": {
+                        "time": time_coords,
+                        "x": {"dims": ("x",), "attrs": {}, "data": [10, 20, 30]},
+                        "y": {"dims": ("y",), "attrs": {}, "data": [90, 80, 70]},
+                    },
+                    "attrs": {},
+                    "dims": {"x": 3, "y": 3, "time": 2},
+                    "data_vars": {
+                        "infrared": {
+                            "dims": ("time", "y", "x"),
+                            "attrs": {},
+                            "data": [
+                                [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+                                [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+                            ],
+                        },
+                        "true_color": {
+                            "dims": ("time", "y", "x"),
+                            "attrs": {},
+                            "data": [
+                                [[6.0, 6.0, 6.0], [6.0, 6.0, 6.0], [6.0, 6.0, 6.0]],
+                                [[6.0, 6.0, 6.0], [6.0, 6.0, 6.0], [6.0, 6.0, 6.0]],
+                            ],
+                        },
+                    },
+                    "name": "satellite_image",
+                    "children": {},
+                },
+            },
+        }
+
+        actual_dict = original_xdt.to_native_dict(
+            data=data, encoding=encoding, absolute_details=absolute_details
+        )
+
+        # Check that the dictified datatree is expected
+        # (only for a subset of parameters)
+        np.testing.assert_equal(expected_basic_dict, actual_dict)
+
+    @pytest.mark.parametrize("absolute_details", [True, False])
+    @pytest.mark.parametrize("encoding", [True, False])
+    @pytest.mark.parametrize("data", [True, "list", "array"])
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")  # when data="array"
+    def test_to_and_from_native_dict_roundtrip(
+        self,
+        encoding: bool,
+        data: ToDictDataOptions,
+        absolute_details: bool,
+    ) -> None:
+        # Test roundtrip for all the parameter space permitted by the `to_dict` method.
+        original_xdt = TestDictSerialization.create_test_data()
+
+        actual_dict = original_xdt.to_native_dict(
+            data=data, encoding=encoding, absolute_details=absolute_details
+        )
+
+        # Check the roundtrip: DataTree -> dict -> DataTree
+        roundtripped_xdt = DataTree.from_native_dict(actual_dict)
+        assert_identical(original_xdt, roundtripped_xdt)

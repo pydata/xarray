@@ -59,7 +59,12 @@ if TYPE_CHECKING:
 
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
     from xarray.core.merge import CoercibleMapping, CoercibleValue
-    from xarray.core.types import ErrorOptions, NetcdfWriteModes, ZarrWriteModes
+    from xarray.core.types import (
+        ErrorOptions,
+        NetcdfWriteModes,
+        ToDictDataOptions,
+        ZarrWriteModes,
+    )
 
 # """
 # DEVELOPERS' NOTE
@@ -1059,6 +1064,288 @@ class DataTree(
         }
         result._replace_node(children=children_to_keep)
         return result
+
+    @classmethod
+    def from_native_dict(cls, node_dict: Mapping[Any, Any]) -> DataTree[Any]:
+        """Convert a dictionary into a DataTree.
+
+        Parameters
+        ----------
+        d : dict-like
+            Mapping representing a serialized DataTree
+
+        Returns
+        -------
+        obj : DataTree
+
+        See also
+        --------
+        DataTree.to_native_dict
+        Dataset.to_dict
+        DataArray.from_dict
+
+        Examples
+        --------
+        >>> import xarray.core.datatree as dt
+        >>> basic_dict = {
+        ...     "coords": {
+        ...         "time": {
+        ...             "dims": ("time",),
+        ...             "attrs": {"units": "date", "long_name": "Time of acquisition"},
+        ...             "data": ["2020-12-01", "2020-12-02"],
+        ...         }
+        ...     },
+        ...     "attrs": {
+        ...         "description": "Root Hypothetical DataTree with heterogeneous data: weather and satellite"
+        ...     },
+        ...     "dims": {"time": 2},
+        ...     "data_vars": {},
+        ...     "name": "(root)",
+        ...     "children": {
+        ...         "weather_data": {
+        ...             "coords": {
+        ...                 "station": {
+        ...                     "dims": ("station",),
+        ...                     "attrs": {
+        ...                         "units": "dl",
+        ...                         "long_name": "Station of acquisition",
+        ...                     },
+        ...                     "data": ["a", "b", "c", "d", "e", "f"],
+        ...                 }
+        ...             },
+        ...             "attrs": {
+        ...                 "description": "Weather data node, inheriting the 'time' dimension"
+        ...             },
+        ...             "dims": {"station": 6, "time": 2},
+        ...             "data_vars": {
+        ...                 "wind_speed": {
+        ...                     "dims": ("time", "station"),
+        ...                     "attrs": {
+        ...                         "units": "meter/sec",
+        ...                         "long_name": "Wind speed",
+        ...                     },
+        ...                     "data": [
+        ...                         [2.0, 2.0, 2.0, 2.0, 2.0, 2.0],
+        ...                         [2.0, 2.0, 2.0, 2.0, 2.0, 2.0],
+        ...                     ],
+        ...                 },
+        ...                 "pressure": {
+        ...                     "dims": ("time", "station"),
+        ...                     "attrs": {
+        ...                         "units": "hectopascals",
+        ...                         "long_name": "Time of acquisition",
+        ...                     },
+        ...                     "data": [
+        ...                         [3.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+        ...                         [3.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+        ...                     ],
+        ...                 },
+        ...             },
+        ...             "name": "weather_data",
+        ...             "children": {
+        ...                 "temperature": {
+        ...                     "coords": {},
+        ...                     "attrs": {
+        ...                         "description": "Temperature, subnode of the weather data node, inheriting the 'time' dimension from root and 'station' dimension from the Temperature group."
+        ...                     },
+        ...                     "dims": {"time": 2, "station": 6},
+        ...                     "data_vars": {
+        ...                         "air_temperature": {
+        ...                             "dims": ("time", "station"),
+        ...                             "attrs": {
+        ...                                 "units": "kelvin",
+        ...                                 "long_name": "Air temperature",
+        ...                             },
+        ...                             "data": [
+        ...                                 [3.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+        ...                                 [3.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+        ...                             ],
+        ...                         },
+        ...                         "dewpoint_temp": {
+        ...                             "dims": ("time", "station"),
+        ...                             "attrs": {
+        ...                                 "units": "kelvin",
+        ...                                 "long_name": "Dew point temperature",
+        ...                             },
+        ...                             "data": [
+        ...                                 [4.0, 4.0, 4.0, 4.0, 4.0, 4.0],
+        ...                                 [4.0, 4.0, 4.0, 4.0, 4.0, 4.0],
+        ...                             ],
+        ...                         },
+        ...                     },
+        ...                     "name": "temperature",
+        ...                     "children": {},
+        ...                 }
+        ...             },
+        ...         },
+        ...         "satellite_image": {
+        ...             "coords": {
+        ...                 "x": {"dims": ("x",), "attrs": {}, "data": [10, 20, 30]},
+        ...                 "y": {"dims": ("y",), "attrs": {}, "data": [90, 80, 70]},
+        ...             },
+        ...             "attrs": {},
+        ...             "dims": {"x": 3, "y": 3, "time": 2},
+        ...             "data_vars": {
+        ...                 "infrared": {
+        ...                     "dims": ("time", "y", "x"),
+        ...                     "attrs": {},
+        ...                     "data": [
+        ...                         [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+        ...                         [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+        ...                     ],
+        ...                 },
+        ...                 "true_color": {
+        ...                     "dims": ("time", "y", "x"),
+        ...                     "attrs": {},
+        ...                     "data": [
+        ...                         [[6.0, 6.0, 6.0], [6.0, 6.0, 6.0], [6.0, 6.0, 6.0]],
+        ...                         [[6.0, 6.0, 6.0], [6.0, 6.0, 6.0], [6.0, 6.0, 6.0]],
+        ...                     ],
+        ...                 },
+        ...             },
+        ...             "name": "satellite_image",
+        ...             "children": {},
+        ...         },
+        ...     },
+        ... }
+        >>> dt.DataTree.from_native_dict(basic_dict)
+        <xarray.DataTree '(root)'>
+        Group: /
+        │   Dimensions:  (time: 2)
+        │   Coordinates:
+        │     * time     (time) <U10 80B '2020-12-01' '2020-12-02'
+        │   Data variables:
+        │       *empty*
+        │   Attributes:
+        │       description:  Root Hypothetical DataTree with heterogeneous data: weather...
+        ├── Group: /weather_data
+        │   │   Dimensions:     (time: 2, station: 6)
+        │   │   Coordinates:
+        │   │     * time        (time) <U10 80B '2020-12-01' '2020-12-02'
+        │   │     * station     (station) <U1 24B 'a' 'b' 'c' 'd' 'e' 'f'
+        │   │   Data variables:
+        │   │       wind_speed  (time, station) float64 96B 2.0 2.0 2.0 2.0 ... 2.0 2.0 2.0 2.0
+        │   │       pressure    (time, station) float64 96B 3.0 3.0 3.0 3.0 ... 3.0 3.0 3.0 3.0
+        │   │   Attributes:
+        │   │       description:  Weather data node, inheriting the 'time' dimension
+        │   └── Group: /weather_data/temperature
+        │           Dimensions:          (time: 2, station: 6)
+        │           Coordinates:
+        │             * time             (time) <U10 80B '2020-12-01' '2020-12-02'
+        │             * station          (station) <U1 24B 'a' 'b' 'c' 'd' 'e' 'f'
+        │           Data variables:
+        │               air_temperature  (time, station) float64 96B 3.0 3.0 3.0 3.0 ... 3.0 3.0 3.0
+        │               dewpoint_temp    (time, station) float64 96B 4.0 4.0 4.0 4.0 ... 4.0 4.0 4.0
+        │           Attributes:
+        │               description:  Temperature, subnode of the weather data node, inheriting t...
+        └── Group: /satellite_image
+                Dimensions:     (time: 2, x: 3, y: 3)
+                Coordinates:
+                  * time        (time) <U10 80B '2020-12-01' '2020-12-02'
+                  * x           (x) int64 24B 10 20 30
+                  * y           (y) int64 24B 90 80 70
+                Data variables:
+                    infrared    (time, y, x) float64 144B 5.0 5.0 5.0 5.0 ... 5.0 5.0 5.0 5.0
+                    true_color  (time, y, x) float64 144B 6.0 6.0 6.0 6.0 ... 6.0 6.0 6.0 6.0
+        """
+
+        obj = cls(
+            name=node_dict.get("name", None),
+            data=Dataset.from_dict(node_dict),
+            children={
+                child_name: cls.from_native_dict(child_node_dict)
+                for child_name, child_node_dict in node_dict.get("children", {}).items()
+            },
+        )
+        return obj
+
+    def to_native_dict(
+        self,
+        data: ToDictDataOptions = "list",
+        encoding: bool = False,
+        absolute_details: bool = False,
+    ) -> dict[str, Any]:
+        """
+        Convert this DataTree to a dictionary following xarray naming conventions.
+
+        The iteration over the tree is effectuated with :py:meth:`DataTree.subtree`.
+
+        The initial creation of node dictionaries is delegated to :py:meth:`Dataset.to_dict`,
+        using the immutable Dataset-like view provided by :py:attr:`Datatree.ds`.
+
+        If this method is used with the final aim of dumping the tree to JSON, be cautious
+        that while Python dictionaries are ordered, their equivalent JSON objects are not.
+        Thus, the order of children nodes as well as data variables is not guaranteed
+        with the JSON representation.
+
+        The children key will be associated to the children nodes, while the data_vars
+        key will be associated to data variables. The ``data_vars`` associated lists will
+        be empty if the tree is hollow, ie. if only leaves carry data.
+
+        The ``name`` attribute is an addition to the Dataset dict serialization.
+        Like a Dataset contains named DataArrays, each Dataset is enriched by becoming
+        a named node in the DataTree. ``children`` is to DataTree as
+        ``data_vars`` is to Dataset.
+
+        Parameters
+        ----------
+        data : bool or {"list", "array"}, default: "list"
+            Whether to include the actual data in the dictionary. When set to
+            False, returns just the schema. If set to "array", returns data as
+            underlying array type. If set to "list" (or True for backwards
+            compatibility), returns data in lists of Python data types. Note
+            that for obtaining the "list" output efficiently, use
+            ``ds.compute().to_dict(data="list")``.
+
+        encoding : bool, default: False
+            Whether to include the Dataset's encoding in the dictionary.
+
+        absolute_details : bool, default: False
+            Whether to include additional absolute details: ``path``, ``level``,
+            ``depth``, `width`, ``is_root`` and ``is_leaf`` in the dictionary.
+            Absolute is in the sense that such information contribute to situating
+            a node in the root-tree hierarchy. These are not mandatory information
+            to reconstruct the root DataTree. Disable if the nodes must remain
+            agnostic of their surrounding hierarchy.
+
+        Returns
+        -------
+        d : dict
+            Recursive dictionary inherited key from :py:meth:`Dataset.to_dict`:
+            "coords", "attrs", "dims", "data_vars" and optionally "encoding", as
+            well as DataTree-specific keys: "name", "children" and optionally
+            "path", "is_root", "is_leaf", "level", "depth", "width"
+
+        See Also
+        --------
+        DataTree.from_native_dict
+        Dataset.from_dict
+        Dataset.to_dict
+        """
+
+        super_root_dict: dict[str, Any] = {"children": {}}
+        for node in self.subtree:
+            node_dict = node.ds.to_dict(data=data, encoding=encoding)
+            node_dict["name"] = node.name
+            if absolute_details:
+                node_dict.update(
+                    {
+                        "path": node.path,
+                        "is_root": node.is_root,
+                        "is_leaf": node.is_leaf,
+                        "level": node.level,
+                        "depth": node.depth,
+                        "width": node.width,
+                    }
+                )
+            node_dict["children"] = {}
+            parts = NodePath(node.path).parts
+            current_dict = super_root_dict
+            for part in parts[:-1]:
+                current_dict = current_dict["children"].get(part, {})
+            current_dict["children"][parts[-1]] = node_dict
+        root_dict = super_root_dict["children"]["/"]
+        return root_dict
 
     @classmethod
     def from_dict(

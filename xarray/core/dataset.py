@@ -167,6 +167,7 @@ if TYPE_CHECKING:
         T_ChunkDimFreq,
         T_DatasetPadConstantValues,
         T_Xarray,
+        ToDictDataOptions,
     )
     from xarray.core.weighted import DatasetWeighted
     from xarray.groupers import Grouper, Resampler
@@ -7611,7 +7612,7 @@ class Dataset(
         return df
 
     def to_dict(
-        self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
+        self, data: ToDictDataOptions = "list", encoding: bool = False
     ) -> dict[str, Any]:
         """
         Convert this dataset to a dictionary following xarray naming

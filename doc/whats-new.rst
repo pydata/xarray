@@ -134,6 +134,13 @@ New Features
   By `Eni Awowale <https://github.com/eni-awowale>`_.
 - Add `open_groups` method for unaligned datasets (:issue:`9137`, :pull:`9243`)
 
+- New ``DataTree`` methods :py:meth:`xarray.core.datatree.DataTree.to_native_dict`
+  and :py:meth:`xarray.core.datatree.DataTree.from_native_dict` to allow easy conversion between
+  dictionaries and xarray objects
+  (:issue:`9074`, :pull:`9080`).
+  By `Etienne Schalk <https://github.com/etienneschalk>`_
+
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - The ``base`` and ``loffset`` parameters to :py:meth:`Dataset.resample` and
