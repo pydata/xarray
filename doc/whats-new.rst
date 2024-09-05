@@ -35,7 +35,7 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - Support for ``python 3.9`` has been dropped (:pull:`8937`)
-- The minimum versions of some dependencies were changed, in particular our minimum supported pandas version is now Pandas 2.
+- The minimum versions of some dependencies were changed
 
   ===================== =========  =======
    Package                    Old      New
