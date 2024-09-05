@@ -63,6 +63,12 @@ Bug fixes
 - Fix a few bugs affecting groupby reductions with `flox`. (:issue:`8090`, :issue:`9398`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
+Performance
+~~~~~~~~~~~
+
+- Speed up grouping by avoiding deep-copy of non-dimension coordinates (:issue:`9426`, :pull:`9393`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 Documentation
 ~~~~~~~~~~~~~
 
