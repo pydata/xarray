@@ -13,9 +13,7 @@ from xarray.namedarray._typing import (
     _default,
     _DimsLike2,
 )
-from xarray.namedarray.core import (
-    NamedArray,
-)
+from xarray.namedarray.core import NamedArray
 
 
 def all(
