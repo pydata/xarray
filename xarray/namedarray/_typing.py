@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
-from enum import Enum
+from enum import Enum, EnumType
 from types import EllipsisType, ModuleType
 from typing import (
     TYPE_CHECKING,
@@ -16,6 +16,8 @@ from typing import (
     Union,
     overload,
     runtime_checkable,
+    NoReturn,
+    Never,
 )
 
 import numpy as np
@@ -32,13 +34,42 @@ except ImportError:
         Self: Any = None
 
 
-# Singleton type, as per https://github.com/python/typing/pull/240
-class Default(Enum):
-    __hash__ = None  # type: ignore[assignment] # TODO: Better way to set unhashable?
-    token: Final = 0
+class Default(list[Never]):
+    """
+    Non-Hashable default value.
+
+    A replacement value for Optional None since it is Hashable.
+    Same idea as https://github.com/python/typing/pull/240
+
+    Examples
+    --------
+
+    Runtime checks:
+
+    >>> _default = Default()
+    >>> isinstance(_default, Hashable)
+    False
+    >>> _default == _default
+    True
+    >>> _default is _default
+    True
+
+    Typing usage:
+
+    >>> x: Hashable | Default = _default
+    >>> if isinstance(x, Default):
+    >>>     y: Default = x
+    >>> else:
+    >>>     h: Hashable = x
+
+    TODO: if x is _default does not narrow typing, use isinstance check instead.
+    """
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}>"
 
 
-_default = Default.token
+_default: Final[Default] = Default()
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 _T = TypeVar("_T")
