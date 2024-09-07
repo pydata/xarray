@@ -55,6 +55,15 @@ class TestFamilyTree:
         assert steve.children["Mary"] is mary
         assert "Mary" not in john.children
 
+    def test_forbid_setting_parent_directly(self):
+        john: TreeNode = TreeNode()
+        mary: TreeNode = TreeNode()
+
+        with pytest.raises(
+            AttributeError, match="Cannot set parent attribute directly"
+        ):
+            mary.parent = john
+
     def test_multi_child_family(self):
         mary: TreeNode = TreeNode()
         kate: TreeNode = TreeNode()
