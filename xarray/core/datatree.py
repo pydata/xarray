@@ -704,7 +704,7 @@ class DataTree(
     def __bool__(self) -> bool:
         return bool(self._data_variables) or bool(self._children)
 
-    def __iter__(self) -> Iterator[Hashable]:
+    def __iter__(self) -> Iterator[str]:
         return itertools.chain(self._data_variables, self._children)
 
     def __array__(self, dtype=None, copy=None):
