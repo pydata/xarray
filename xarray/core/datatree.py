@@ -1046,7 +1046,7 @@ class DataTree(
     @classmethod
     def from_dict(
         cls,
-        d: Mapping[str, Dataset | DataArray | DataTree | None],
+        d: Mapping[str, Dataset | DataTree | None],
         name: str | None = None,
     ) -> DataTree:
         """
@@ -1055,10 +1055,10 @@ class DataTree(
         Parameters
         ----------
         d : dict-like
-            A mapping from path names to xarray.Dataset, xarray.DataArray, or DataTree objects.
+            A mapping from path names to xarray.Dataset or DataTree objects.
 
-            Path names are to be given as unix-like path. If path names containing more than one part are given, new
-            tree nodes will be constructed as necessary.
+            Path names are to be given as unix-like path. If path names containing more than one
+            part are given, new tree nodes will be constructed as necessary.
 
             To assign data to the root node of the tree use "/" as the path.
         name : Hashable | None, optional
