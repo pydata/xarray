@@ -86,6 +86,12 @@ class TreeNode(Generic[Tree]):
         """Parent of this node."""
         return self._parent
 
+    @parent.setter
+    def parent(self: Tree, new_parent: Tree) -> None:
+        raise AttributeError(
+            "Cannot set parent attribute directly, you must modify the children of the other node instead using dict-like syntax"
+        )
+
     def _set_parent(
         self, new_parent: Tree | None, child_name: str | None = None
     ) -> None:
