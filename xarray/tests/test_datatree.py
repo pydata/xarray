@@ -1025,6 +1025,27 @@ class TestSubset:
         )
         assert_identical(result, expected)
 
+    def test_match_names(self):
+        # TODO is this example going to cause problems with case sensitivity?
+        dt: DataTree = DataTree.from_dict(
+            {
+                "/a/A": None,
+                "/a/B": None,
+                "/a/C": None,
+                "/C/D": None,
+                "/E/F": None,
+            }
+        )
+        result = dt.match_names(["A", "C"])
+        expected = DataTree.from_dict(
+            {
+                "/a/A": None,
+                "/a/C": None,
+                "/C": None,
+            }
+        )
+        assert_identical(result, expected)
+
     def test_filter(self):
         simpsons: DataTree = DataTree.from_dict(
             d={
