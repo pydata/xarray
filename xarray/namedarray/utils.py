@@ -20,8 +20,8 @@ if TYPE_CHECKING:
         from dask.array.core import Array as DaskArray
         from dask.typing import DaskCollection
     except ImportError:
-        DaskArray = NDArray  # type: ignore
-        DaskCollection: Any = NDArray  # type: ignore
+        DaskArray = NDArray  # type: ignore[assignment, misc]
+        DaskCollection: Any = NDArray  # type: ignore[no-redef]
 
     from xarray.namedarray._typing import _Dim, duckarray
 

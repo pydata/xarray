@@ -2723,7 +2723,7 @@ def test_multiple_groupers_string(as_dataset) -> None:
     )
 
     if as_dataset:
-        obj = obj.to_dataset()  # type: ignore
+        obj = obj.to_dataset()  # type: ignore[assignment]
 
     expected = obj.groupby(labels1=UniqueGrouper(), labels2=UniqueGrouper()).mean()
     actual = obj.groupby(("labels1", "labels2")).mean()
@@ -2733,9 +2733,9 @@ def test_multiple_groupers_string(as_dataset) -> None:
     # warning & type error in the future
     with pytest.warns(FutureWarning):
         with pytest.raises(TypeError):
-            obj.groupby("labels1", "labels2")  # type: ignore
+            obj.groupby("labels1", "labels2")  # type: ignore[arg-type, misc]
     with pytest.raises(ValueError):
-        obj.groupby("labels1", foo="bar")  # type: ignore
+        obj.groupby("labels1", foo="bar")  # type: ignore[arg-type]
     with pytest.raises(ValueError):
         obj.groupby("labels1", foo=UniqueGrouper())
 

@@ -1190,7 +1190,7 @@ def test_apply_dask() -> None:
 
     # unknown setting for dask array handling
     with pytest.raises(ValueError):
-        apply_ufunc(identity, array, dask="unknown")  # type: ignore
+        apply_ufunc(identity, array, dask="unknown")  # type: ignore[arg-type]
 
     def dask_safe_identity(x):
         return apply_ufunc(identity, x, dask="allowed")

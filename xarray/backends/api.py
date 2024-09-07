@@ -51,7 +51,7 @@ if TYPE_CHECKING:
     try:
         from dask.delayed import Delayed
     except ImportError:
-        Delayed = None  # type: ignore
+        Delayed = None  # type: ignore[assignment, misc]
     from io import BufferedIOBase
 
     from xarray.backends.common import BackendEntrypoint

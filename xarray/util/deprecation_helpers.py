@@ -142,4 +142,4 @@ def deprecate_dims(func: T, old_name="dims") -> T:
 
     # We're quite confident we're just returning `T` from this function, so it's fine to ignore typing
     # within the function.
-    return wrapper  # type: ignore
+    return wrapper  # type: ignore[return-value]

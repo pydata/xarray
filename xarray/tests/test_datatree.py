@@ -39,7 +39,7 @@ class TestTreeCreation:
         assert_identical(tree.to_dataset(), ds)
 
         with pytest.raises(TypeError):
-            DataTree(data=xr.DataArray(42, name="foo"))  # type: ignore
+            DataTree(data=xr.DataArray(42, name="foo"))  # type: ignore[arg-type]
 
 
 class TestFamilyTree:
@@ -624,7 +624,7 @@ class TestTreeFromDict:
     def test_array_values(self):
         data = {"foo": xr.DataArray(1, name="bar")}
         with pytest.raises(TypeError):
-            DataTree.from_dict(data)  # type: ignore
+            DataTree.from_dict(data)  # type: ignore[arg-type]
 
 
 class TestDatasetView:
@@ -910,7 +910,7 @@ class TestInheritance:
             )
 
         dt = DataTree()
-        dt.ds = xr.Dataset(coords={"x": [1.0]})  # type: ignore
+        dt.ds = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment]
         dt["/b"] = DataTree()
         with pytest.raises(ValueError, match=expected_msg):
             dt["/b"].ds = xr.Dataset(coords={"x": [2.0]})
@@ -945,7 +945,7 @@ class TestInheritance:
             )
 
         dt = DataTree()
-        dt.ds = xr.Dataset(coords={"x": [1.0]})  # type: ignore
+        dt.ds = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment]
         dt["/b/c"] = DataTree()
         with pytest.raises(ValueError, match=expected_msg):
             dt["/b/c"].ds = xr.Dataset(coords={"x": [2.0]})

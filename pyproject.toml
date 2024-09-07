@@ -84,7 +84,7 @@ source = ["xarray"]
 exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 
 [tool.mypy]
-enable_error_code = "redundant-self"
+enable_error_code = ["ignore-without-code", "redundant-self"]
 exclude = [
   'build',
   'xarray/util/generate_.*\.py',
