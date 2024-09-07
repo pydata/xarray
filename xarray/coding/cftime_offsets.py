@@ -47,7 +47,7 @@ import warnings
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar, Literal, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -80,6 +80,7 @@ if TYPE_CHECKING:
 
 
 DayOption: TypeAlias = Literal["start", "end"]
+T_FreqStr = TypeVar("T_FreqStr", str, None)
 
 
 def _nanosecond_precision_timestamp(*args, **kwargs):
@@ -783,7 +784,7 @@ def to_offset(
     if isinstance(freq, timedelta | pd.Timedelta):
         return delta_to_tick(freq)
     if isinstance(freq, pd.DateOffset):
-        freq = _legacy_to_new_freq(freq.freqstr)
+        freq = _new_freq(freq.freqstr)
 
     match = re.match(_PATTERN, freq)
     if match is None:
@@ -1367,7 +1368,7 @@ def _new_to_legacy_freq(freq):
     return freq
 
 
-def _legacy_to_new_freq(freq):
+def _legacy_to_new_freq(freq: T_FreqStr) -> T_FreqStr:
     # to avoid internal deprecation warnings when freq is determined using pandas < 2.2
 
     # TODO: remove once requiring pandas >= 2.2
