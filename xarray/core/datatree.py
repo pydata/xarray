@@ -705,7 +705,7 @@ class DataTree(
         return bool(self._data_variables) or bool(self._children)
 
     def __iter__(self) -> Iterator[str]:
-        return itertools.chain(self._data_variables, self._children)
+        return itertools.chain(self._data_variables, self._children)  # type: ignore
 
     def __array__(self, dtype=None, copy=None):
         raise TypeError(
