@@ -423,7 +423,6 @@ class DataTree(
     def __init__(
         self,
         data: Dataset | DataArray | None = None,
-        parent: DataTree | None = None,
         children: Mapping[str, DataTree] | None = None,
         name: str | None = None,
     ):
@@ -439,8 +438,6 @@ class DataTree(
         data : Dataset, DataArray, or None, optional
             Data to store under the .ds attribute of this node. DataArrays will
             be promoted to Datasets. Default is None.
-        parent : DataTree, optional
-            Parent node to this node. Default is None.
         children : Mapping[str, DataTree], optional
             Any child nodes of this node. Default is None.
         name : str, optional
@@ -459,8 +456,9 @@ class DataTree(
 
         super().__init__(name=name)
         self._set_node_data(_coerce_to_dataset(data))
-        self.parent = parent
-        self.children = children
+
+        # shallow copy to avoid modifying arguments in-place (see GH issue #9196)
+        self.children = {name: child.copy() for name, child in children.items()}
 
     def _set_node_data(self, ds: Dataset):
         data_vars, coord_vars = _collect_data_and_coord_variables(ds)
@@ -496,17 +494,6 @@ class DataTree(
     @property
     def _indexes(self) -> ChainMap[Hashable, Index]:
         return ChainMap(self._node_indexes, *(p._node_indexes for p in self.parents))
-
-    @property
-    def parent(self: DataTree) -> DataTree | None:
-        """Parent of this node."""
-        return self._parent
-
-    @parent.setter
-    def parent(self: DataTree, new_parent: DataTree) -> None:
-        if new_parent and self.name is None:
-            raise ValueError("Cannot set an unnamed node as a child of another node")
-        self._set_parent(new_parent, self.name)
 
     def _to_dataset_view(self, rebuild_dims: bool) -> DatasetView:
         variables = dict(self._data_variables)
@@ -896,7 +883,7 @@ class DataTree(
             # create and assign a shallow copy here so as not to alter original name of node in grafted tree
             new_node = val.copy(deep=False)
             new_node.name = key
-            new_node.parent = self
+            new_node._set_parent(new_parent=self, child_name=key)
         else:
             if not isinstance(val, DataArray | Variable):
                 # accommodate other types that can be coerced into Variables
@@ -1097,7 +1084,7 @@ class DataTree(
             obj = root_data.copy()
             obj.orphan()
         else:
-            obj = cls(name=name, data=root_data, parent=None, children=None)
+            obj = cls(name=name, data=root_data, children=None)
 
         def depth(item) -> int:
             pathstr, _ = item
