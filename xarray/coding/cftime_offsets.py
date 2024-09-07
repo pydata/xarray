@@ -783,7 +783,7 @@ def to_offset(
     if isinstance(freq, timedelta | pd.Timedelta):
         return delta_to_tick(freq)
     if isinstance(freq, pd.DateOffset):
-        freq = freq.freqstr
+        freq = _legacy_to_new_freq(freq.freqstr)
 
     match = re.match(_PATTERN, freq)
     if match is None:
@@ -818,7 +818,7 @@ def delta_to_tick(delta: timedelta | pd.Timedelta) -> Tick:
             else:
                 return Second(n=seconds)
     else:
-        # Regardless of the days and seconds this will always be a Millsecond
+        # Regardless of the days and seconds this will always be a Millisecond
         # or Microsecond object
         if delta.microseconds % 1_000 == 0:
             return Millisecond(n=delta.microseconds // 1_000)
