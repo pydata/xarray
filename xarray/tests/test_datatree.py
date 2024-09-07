@@ -33,6 +33,14 @@ class TestTreeCreation:
         with pytest.raises(ValueError):
             DataTree(name="folder/data")
 
+    def test_data_arg(self):
+        ds = xr.Dataset({"foo": 42})
+        tree: DataTree = DataTree(data=ds)
+        assert_identical(tree.to_dataset(), ds)
+
+        with pytest.raises(TypeError):
+            DataTree(data=xr.DataArray(42, name="foo"))  # type: ignore
+
 
 class TestFamilyTree:
     def test_dont_modify_children_inplace(self):
@@ -612,6 +620,11 @@ class TestTreeFromDict:
         # Check that Bart and Lisa's order is still preserved within the group,
         # despite 'Bart' coming before 'Lisa' when sorted alphabetically
         assert list(reversed["Homer"].children.keys()) == ["Lisa", "Bart"]
+
+    def test_array_values(self):
+        data = {"foo": xr.DataArray(1, name="bar")}
+        with pytest.raises(TypeError):
+            DataTree.from_dict(data)  # type: ignore
 
 
 class TestDatasetView:
