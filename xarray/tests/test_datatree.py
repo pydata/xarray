@@ -137,7 +137,7 @@ class TestStoreDatasets:
         assert_identical(john.to_dataset(), dat)
 
         with pytest.raises(TypeError):
-            DataTree(name="mary", parent=john, data="junk")  # type: ignore[arg-type]
+            DataTree(name="mary", data="junk")  # type: ignore[arg-type]
 
     def test_set_data(self):
         john: DataTree = DataTree(name="john")
