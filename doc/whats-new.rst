@@ -24,10 +24,35 @@ New Features
 ~~~~~~~~~~~~
 - Make chunk manager an option in ``set_options`` (:pull:`9362`).
   By `Tom White <https://github.com/tomwhite>`_.
+- Support for :ref:`grouping by multiple variables <groupby.multiple>`.
+  This is quite new, so please check your results and report bugs.
+  Binary operations after grouping by multiple arrays are not supported yet.
+  (:issue:`1056`, :issue:`9332`, :issue:`324`, :pull:`9372`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Allow data variable specific ``constant_values`` in the dataset ``pad`` function (:pull:`9353``).
+  By `Tiago Sanona <https://github.com/tsanona>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - Support for ``python 3.9`` has been dropped (:pull:`8937`)
+- The minimum versions of some dependencies were changed
+
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+    boto3                   1.26      1.28
+    cartopy                 0.21      0.22
+    dask-core             2023.4    2023.9
+    distributed           2023.4    2023.9
+    h5netcdf                1.1        1.2
+    iris                    3.4        3.7
+    numba                   0.56      0.57
+    numpy                   1.23      1.24
+    pandas                  2.0        2.1
+    scipy                   1.10      1.11
+    typing_extensions       4.5        4.7
+    zarr                    2.14      2.16
+  ===================== =========  =======
 
 
 Deprecations
@@ -50,6 +75,15 @@ Bug fixes
 - Fix issue with passing parameters to ZarrStore.open_store when opening
   datatree in zarr format (:issue:`9376`, :pull:`9377`).
   By `Alfonso Ladino <https://github.com/aladinor>`_
+- Fix deprecation warning that was raised when calling ``np.array`` on an ``xr.DataArray``
+  in NumPy 2.0 (:issue:`9312`, :pull:`9393`)
+  By `Andrew Scherer <https://github.com/andrew-s28>`_.
+
+Performance
+~~~~~~~~~~~
+
+- Speed up grouping by avoiding deep-copy of non-dimension coordinates (:issue:`9426`, :pull:`9393`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -57,6 +91,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Re-enable testing ``pydap`` backend with ``numpy>=2`` (:pull:`9391`).
+  By `Miguel Jimenez <https://github.com/Mikejmnez>`_ .
 
 
 

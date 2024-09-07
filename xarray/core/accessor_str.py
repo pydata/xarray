@@ -847,7 +847,7 @@ class StringAccessor(Generic[T_DataArray]):
         normalized : same type as values
 
         """
-        return self._apply(func=lambda x: normalize(form, x))
+        return self._apply(func=lambda x: normalize(form, x))  # type: ignore[arg-type]
 
     def isalnum(self) -> T_DataArray:
         """
