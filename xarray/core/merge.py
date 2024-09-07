@@ -267,7 +267,7 @@ def merge_collected(
                         index, other_index, variable, other_var, index_cmp_cache
                     ):
                         raise MergeError(
-                            f"conflicting values/indexes on objects to be combined fo coordinate {name!r}\n"
+                            f"conflicting values/indexes on objects to be combined for coordinate {name!r}\n"
                             f"first index: {index!r}\nsecond index: {other_index!r}\n"
                             f"first variable: {variable!r}\nsecond variable: {other_var!r}\n"
                         )

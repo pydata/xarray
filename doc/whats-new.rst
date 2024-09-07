@@ -118,7 +118,7 @@ New Features
   (:issue:`6610`, :pull:`8840`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Allow rechunking to a frequency using ``Dataset.chunk(time=TimeResampler("YE"))`` syntax. (:issue:`7559`, :pull:`9109`)
-  Such rechunking allows many time domain analyses to be executed in an embarassingly parallel fashion.
+  Such rechunking allows many time domain analyses to be executed in an embarrassingly parallel fashion.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Allow per-variable specification of ```mask_and_scale``, ``decode_times``, ``decode_timedelta``
   ``use_cftime`` and ``concat_characters`` params in :py:func:`~xarray.open_dataset`  (:pull:`9218`).
@@ -151,7 +151,7 @@ Breaking changes
 
 Bug fixes
 ~~~~~~~~~
-- Fix scatter plot broadcasting unneccesarily. (:issue:`9129`, :pull:`9206`)
+- Fix scatter plot broadcasting unnecessarily. (:issue:`9129`, :pull:`9206`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Don't convert custom indexes to ``pandas`` indexes when computing a diff (:pull:`9157`)
   By `Justus Magin <https://github.com/keewis>`_.
@@ -614,7 +614,7 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 - The implementation of :py:func:`map_blocks` has changed to minimize graph size and duplication of data.
-  This should be a strict improvement even though the graphs are not always embarassingly parallel any more.
+  This should be a strict improvement even though the graphs are not always embarrassingly parallel any more.
   Please open an issue if you spot a regression. (:pull:`8412`, :issue:`8409`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Remove null values before plotting. (:pull:`8535`).

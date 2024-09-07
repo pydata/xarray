@@ -739,7 +739,7 @@ def _generate_anchored_deprecated_frequencies(
     return pairs
 
 
-_DEPRECATED_FREQUENICES: dict[str, str] = {
+_DEPRECATED_FREQUENCIES: dict[str, str] = {
     "A": "YE",
     "Y": "YE",
     "AS": "YS",
@@ -765,7 +765,7 @@ _DEPRECATION_MESSAGE = (
 
 
 def _emit_freq_deprecation_warning(deprecated_freq):
-    recommended_freq = _DEPRECATED_FREQUENICES[deprecated_freq]
+    recommended_freq = _DEPRECATED_FREQUENCIES[deprecated_freq]
     message = _DEPRECATION_MESSAGE.format(
         deprecated_freq=deprecated_freq, recommended_freq=recommended_freq
     )
@@ -784,7 +784,7 @@ def to_offset(freq: BaseCFTimeOffset | str, warn: bool = True) -> BaseCFTimeOffs
     freq_data = match.groupdict()
 
     freq = freq_data["freq"]
-    if warn and freq in _DEPRECATED_FREQUENICES:
+    if warn and freq in _DEPRECATED_FREQUENCIES:
         _emit_freq_deprecation_warning(freq)
     multiples = freq_data["multiple"]
     multiples = 1 if multiples is None else int(multiples)

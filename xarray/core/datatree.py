@@ -1520,7 +1520,7 @@ class DataTree(
         mode : {"w", "a"}, default: "w"
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
-            will be overwritten. Only appies to the root group.
+            will be overwritten. Only applies to the root group.
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,

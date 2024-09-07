@@ -9749,7 +9749,7 @@ class Dataset(
         Calculate an expression supplied as a string in the context of the dataset.
 
         This is currently experimental; the API may change particularly around
-        assignments, which currently returnn a ``Dataset`` with the additional variable.
+        assignments, which currently return a ``Dataset`` with the additional variable.
         Currently only the ``python`` engine is supported, which has the same
         performance as executing in python.
 
