@@ -91,7 +91,6 @@ exclude = [
   'xarray/datatree_/doc/.*\.py',
 ]
 files = "xarray"
-show_error_codes = true
 show_error_context = true
 warn_redundant_casts = true
 warn_unused_configs = true
