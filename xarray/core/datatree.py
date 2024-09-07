@@ -495,11 +495,6 @@ class DataTree(
     def _indexes(self) -> ChainMap[Hashable, Index]:
         return ChainMap(self._node_indexes, *(p._node_indexes for p in self.parents))
 
-    @property
-    def parent(self: DataTree) -> DataTree | None:
-        """Parent of this node."""
-        return self._parent
-
     def _to_dataset_view(self, rebuild_dims: bool) -> DatasetView:
         variables = dict(self._data_variables)
         variables |= self._coord_variables
