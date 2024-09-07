@@ -784,7 +784,7 @@ def to_offset(
     if isinstance(freq, timedelta | pd.Timedelta):
         return delta_to_tick(freq)
     if isinstance(freq, pd.DateOffset):
-        freq = _new_freq(freq.freqstr)
+        freq = _legacy_to_new_freq(freq.freqstr)
 
     match = re.match(_PATTERN, freq)
     if match is None:
