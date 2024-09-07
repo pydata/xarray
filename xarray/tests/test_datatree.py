@@ -57,13 +57,11 @@ class TestFamilyTree:
     def test_create_two_children(self):
         root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
         set1_data = xr.Dataset({"a": 0, "b": 1})
-        # root = DataTree.from_dict(
-        #     {"/": root_data, "/set1": set1_data, "/set1/set2": None}
-        # )
-        root: DataTree = DataTree(data=root_data)
-        set1: DataTree = DataTree(name="set1", parent=root, data=set1_data)
-        DataTree(name="set1", parent=root)
-        DataTree(name="set2", parent=set1)
+        root = DataTree.from_dict(
+            {"/": root_data, "/set1": set1_data, "/set1/set2": None}
+        )
+        assert root["/set1"].name == "set1"
+        assert root["/set1/set2"].name == "set2"
 
     def test_create_full_tree(self, simple_datatree):
         d = simple_datatree.to_dict()
