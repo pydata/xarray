@@ -1862,7 +1862,7 @@ class TestPcolormesh(Common2dMixin, PlotTestCase):
         # Regression for GH 781
         ax = plt.gca()
         # Simulate a Cartopy Axis
-        setattr(ax, "projection", True)
+        ax.projection = True  # type: ignore[attr-defined]
         artist = self.plotmethod(x="x2d", y="y2d", ax=ax)
         assert isinstance(artist, mpl.collections.QuadMesh)
         # Let cartopy handle the axis limits and artist size

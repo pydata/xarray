@@ -3740,7 +3740,7 @@ class TestDataset:
                 return cls(options["opt"])
 
         indexed = ds.set_xindex("foo", IndexWithOptions, opt=1)
-        assert getattr(indexed.xindexes["foo"], "opt") == 1
+        assert indexed.xindexes["foo"].opt == 1  # type: ignore[attr-defined]
 
     def test_stack(self) -> None:
         ds = Dataset(

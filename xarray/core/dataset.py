@@ -9636,7 +9636,7 @@ class Dataset(
         ):
             # Return int index if single dimension is passed, and is not part of a
             # sequence
-            argmin_func = getattr(duck_array_ops, "argmin")
+            argmin_func = duck_array_ops.argmin
             return self.reduce(
                 argmin_func, dim=None if dim is None else [dim], **kwargs
             )
@@ -9729,7 +9729,7 @@ class Dataset(
         ):
             # Return int index if single dimension is passed, and is not part of a
             # sequence
-            argmax_func = getattr(duck_array_ops, "argmax")
+            argmax_func = duck_array_ops.argmax
             return self.reduce(
                 argmax_func, dim=None if dim is None else [dim], **kwargs
             )

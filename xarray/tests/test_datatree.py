@@ -700,7 +700,7 @@ class TestAccess:
             assert key in dir(dt)
 
         # dims
-        assert_equal(dt["a"]["y"], getattr(dt.a, "y"))
+        assert_equal(dt["a"]["y"], dt.a.y)
         assert "y" in dir(dt["a"])
 
         # children

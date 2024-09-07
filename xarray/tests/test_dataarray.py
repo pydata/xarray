@@ -2226,7 +2226,7 @@ class TestDataArray:
 
         indexed = da.set_xindex("foo", IndexWithOptions, opt=1)
         assert "foo" in indexed.xindexes
-        assert getattr(indexed.xindexes["foo"], "opt") == 1
+        assert indexed.xindexes["foo"].opt == 1  # type: ignore[attr-defined]
 
     def test_dataset_getitem(self) -> None:
         dv = self.ds["foo"]

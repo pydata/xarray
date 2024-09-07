@@ -644,7 +644,7 @@ class PandasIndex(Index):
 
         # preserve wrapped pd.Index (if any)
         # accessing `.data` can load data from disk, so we only access if needed
-        data = getattr(var._data, "array") if hasattr(var._data, "array") else var.data
+        data = var._data.array if hasattr(var._data, "array") else var.data
         # multi-index level variable: get level index
         if isinstance(var._data, PandasMultiIndexingAdapter):
             level = var._data.level

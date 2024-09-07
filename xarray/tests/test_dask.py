@@ -737,7 +737,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         nonindex_coord = build_dask_array("coord")
         a = DataArray(data, dims=["x"], coords={"y": ("x", nonindex_coord)})
         with suppress(AttributeError):
-            getattr(a, "NOTEXIST")
+            a.NOTEXIST
         assert kernel_call_count == 0
 
     def test_dataset_getattr(self):
@@ -747,7 +747,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         nonindex_coord = build_dask_array("coord")
         ds = Dataset(data_vars={"a": ("x", data)}, coords={"y": ("x", nonindex_coord)})
         with suppress(AttributeError):
-            getattr(ds, "NOTEXIST")
+            ds.NOTEXIST
         assert kernel_call_count == 0
 
     def test_values(self):
