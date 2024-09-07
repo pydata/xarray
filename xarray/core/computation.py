@@ -71,9 +71,9 @@ class _UFuncSignature:
 
     Attributes
     ----------
-    input_core_dims : tuple[tuple]
+    input_core_dims : tuple[tuple, ...]
         Core dimension names on each input variable.
-    output_core_dims : tuple[tuple]
+    output_core_dims : tuple[tuple, ...]
         Core dimension names on each output variable.
     """
 

@@ -197,7 +197,7 @@ class _DummyGroup(Generic[T_Xarray]):
         return np.arange(self.size)
 
     @property
-    def shape(self) -> tuple[int]:
+    def shape(self) -> tuple[int, ...]:
         return (self.size,)
 
     @property
