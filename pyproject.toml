@@ -239,7 +239,6 @@ extend-exclude = [
   "doc",
   "_typed_ops.pyi",
 ]
-target-version = "py310"
 
 [tool.ruff.lint]
 # E402: module level import not at top of file
