@@ -1059,7 +1059,7 @@ class TestSubset:
 
     def test_filter(self):
         simpsons: DataTree = DataTree.from_dict(
-            d={
+            {
                 "/": xr.Dataset({"age": 83}),
                 "/Herbert": xr.Dataset({"age": 40}),
                 "/Homer": xr.Dataset({"age": 39}),
@@ -1070,7 +1070,7 @@ class TestSubset:
             name="Abe",
         )
         expected = DataTree.from_dict(
-            d={
+            {
                 "/": xr.Dataset({"age": 83}),
                 "/Herbert": xr.Dataset({"age": 40}),
                 "/Homer": xr.Dataset({"age": 39}),
