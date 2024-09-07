@@ -311,7 +311,13 @@ def _rollback(times, freq):
         offset = pd.tseries.frequencies.to_offset(freq)
     else:
         offset = to_offset(freq)
-    return apply_ufunc(offset.rollback, times, vectorize=True, dask="parallelized")
+    return apply_ufunc(
+        offset.rollback,
+        times,
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[times.dtype],
+    )
 
 
 def _decimal_year(times):
@@ -324,7 +330,12 @@ def _decimal_year(times):
     """
     years = times.dt.year
     floored_times = times.dt.floor("D")
-    deltas = times - _rollback(floored_times, "YS")
+
+    # Explicitly cast to timedelta64[ns], since xarray's automatic conversion
+    # from datetime.timedelta to timedelta64[ns] does not occur for dask
+    # arrays of datetime.timedelta objects.
+    deltas = (times - _rollback(floored_times, "YS")).astype("timedelta64[ns]")
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message="Converting non-nanosecond")
         days_in_years = times.dt.days_in_year.astype("timedelta64[D]")
