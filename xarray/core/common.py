@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
@@ -13,6 +14,7 @@ import pandas as pd
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
 from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.types import ResampleCompatible
 from xarray.core.utils import (
     Frozen,
     either_dict_or_kwargs,
@@ -32,8 +34,6 @@ ALL_DIMS = ...
 
 
 if TYPE_CHECKING:
-    import datetime
-
     from numpy.typing import DTypeLike
 
     from xarray.core.dataarray import DataArray
@@ -891,14 +891,14 @@ class DataWithCoords(AttrAccessMixin):
     def _resample(
         self,
         resample_cls: type[T_Resample],
-        indexer: Mapping[Hashable, str | Resampler] | None,
+        indexer: Mapping[Hashable, ResampleCompatible | Resampler] | None,
         skipna: bool | None,
         closed: SideOptions | None,
         label: SideOptions | None,
         offset: pd.Timedelta | datetime.timedelta | str | None,
         origin: str | DatetimeLike,
         restore_coord_dims: bool | None,
-        **indexer_kwargs: str | Resampler,
+        **indexer_kwargs: ResampleCompatible | Resampler,
     ) -> T_Resample:
         """Returns a Resample object for performing resampling operations.
 
@@ -1078,14 +1078,18 @@ class DataWithCoords(AttrAccessMixin):
         )
 
         grouper: Resampler
-        if isinstance(freq, str):
+        if isinstance(freq, ResampleCompatible):
             grouper = TimeResampler(
                 freq=freq, closed=closed, label=label, origin=origin, offset=offset
             )
         elif isinstance(freq, Resampler):
             grouper = freq
         else:
-            raise ValueError("freq must be a str or a Resampler object")
+            raise ValueError(
+                "freq must be an object of type 'str', 'datetime.timedelta', "
+                "'pandas.Timedelta', 'pandas.DateOffset', or 'TimeResampler'. "
+                f"Received {type(freq)} instead."
+            )
 
         rgrouper = ResolvedGrouper(grouper, group, self)
 
