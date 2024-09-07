@@ -500,12 +500,6 @@ class DataTree(
         """Parent of this node."""
         return self._parent
 
-    @parent.setter
-    def parent(self: DataTree, new_parent: DataTree) -> None:
-        if new_parent and self.name is None:
-            raise ValueError("Cannot set an unnamed node as a child of another node")
-        self._set_parent(new_parent, self.name)
-
     def _to_dataset_view(self, rebuild_dims: bool) -> DatasetView:
         variables = dict(self._data_variables)
         variables |= self._coord_variables
@@ -894,7 +888,7 @@ class DataTree(
             # create and assign a shallow copy here so as not to alter original name of node in grafted tree
             new_node = val.copy(deep=False)
             new_node.name = key
-            new_node.parent = self
+            new_node._set_parent(new_parent=self, child_name=key)
         else:
             if not isinstance(val, DataArray | Variable):
                 # accommodate other types that can be coerced into Variables

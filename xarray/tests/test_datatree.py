@@ -35,24 +35,11 @@ class TestTreeCreation:
 
 
 class TestFamilyTree:
-    def test_dont_modify_parent_inplace(self):
-        # GH issue 9196
-        root: DataTree = DataTree(name="root")
-        child: DataTree = DataTree(name="child")
-        child.parent = root
-        assert root.children == {}
-
     def test_dont_modify_children_inplace(self):
         # GH issue 9196
         child: DataTree = DataTree()
         DataTree(children={"child": child})
         assert child.parent is None
-
-    def test_setparent_unnamed_child_node_fails(self):
-        john: DataTree = DataTree(name="john")
-        with pytest.raises(ValueError, match="unnamed"):
-            child = DataTree(name=None)
-            child.parent = john
 
     def test_create_two_children(self):
         root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
