@@ -1113,7 +1113,7 @@ def open_mfdataset(
             list(combined_ids_paths.keys()),
             list(combined_ids_paths.values()),
         )
-    elif combine == "by_coords" and concat_dim is not None:
+    elif concat_dim is not None:
         raise ValueError(
             "When combine='by_coords', passing a value for `concat_dim` has no "
             "effect. To manually combine along a specific dimension you should "
@@ -1432,7 +1432,7 @@ def to_netcdf(
             store.sync()
             return target.getvalue()
     finally:
-        if not multifile and compute:
+        if not multifile and compute:  # type: ignore[redundant-expr]
             store.close()
 
     if not compute:

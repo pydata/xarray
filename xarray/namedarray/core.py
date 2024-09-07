@@ -1038,8 +1038,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             # or dims are in same order
             return self.copy(deep=False)
 
-        axes_result = self.get_axis_num(dims)
-        axes = (axes_result,) if isinstance(axes_result, int) else axes_result
+        axes = self.get_axis_num(dims)
+        assert isinstance(axes, tuple)
 
         return permute_dims(self, axes)
 

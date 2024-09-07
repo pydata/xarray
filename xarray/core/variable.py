@@ -319,7 +319,7 @@ def as_compatible_data(
     # validate whether the data is valid data types.
     data = np.asarray(data)
 
-    if isinstance(data, np.ndarray) and data.dtype.kind in "OMm":
+    if data.dtype.kind in "OMm":
         data = _possibly_convert_objects(data)
     return _maybe_wrap_data(data)
 

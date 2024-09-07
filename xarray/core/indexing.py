@@ -1711,7 +1711,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         # a NumPy array.
         return to_0d_array(item)
 
-    def _prepare_key(self, key: tuple[Any, ...]) -> tuple[Any, ...]:
+    def _prepare_key(self, key: Any | tuple[Any, ...]) -> tuple[Any, ...]:
         if isinstance(key, tuple) and len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
             # objects don't like tuples)

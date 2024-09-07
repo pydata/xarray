@@ -204,7 +204,7 @@ def _unpack_time_units_and_ref_date(units: str) -> tuple[str, pd.Timestamp]:
 
 
 def _decode_cf_datetime_dtype(
-    data, units: str, calendar: str, use_cftime: bool | None
+    data, units: str, calendar: str | None, use_cftime: bool | None
 ) -> np.dtype:
     # Verify that at least the first and last date can be decoded
     # successfully. Otherwise, tracebacks end up swallowed by

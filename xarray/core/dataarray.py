@@ -441,7 +441,7 @@ class DataArray(
         name: Hashable | None = None,
         attrs: Mapping | None = None,
         # internal parameters
-        indexes: Mapping[Any, Index] | None = None,
+        indexes: Mapping[Hashable, Index] | None = None,
         fastpath: bool = False,
     ) -> None:
         if fastpath:
@@ -489,7 +489,7 @@ class DataArray(
         assert isinstance(coords, dict)
         self._coords = coords
         self._name = name
-        self._indexes = indexes  # type: ignore[assignment]
+        self._indexes = dict(indexes)
 
         self._close = None
 

@@ -845,7 +845,7 @@ class GroupBy(Generic[T_Xarray]):
         obj = self._original_obj
         variables = (
             {k: v.variable for k, v in obj.data_vars.items()}
-            if isinstance(obj, Dataset)
+            if isinstance(obj, Dataset)  # type: ignore[redundant-expr]  # seems to be a mypy bug
             else obj._coords
         )
 
