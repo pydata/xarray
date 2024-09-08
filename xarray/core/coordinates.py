@@ -912,7 +912,7 @@ class DataTreeCoordinates(Coordinates):
         return [
             key
             for key in self._data._ipython_key_completions_()
-            if key not in self._data.data_vars
+            if key in self._data._coord_variables
         ]
 
 
