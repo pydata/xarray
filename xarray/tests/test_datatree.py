@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
+from xarray import Dataset
 from xarray.core.datatree import DataTree
 from xarray.core.datatree_ops import _MAPPED_DOCSTRING_ADDENDUM, insert_doc_addendum
 from xarray.core.treenode import NotFoundInTreeError
@@ -525,7 +526,28 @@ class TestSetItem:
         assert_identical(results.to_dataset(), expected)
 
 
-class TestDictionaryInterface: ...
+def test_delitem():
+    ds = Dataset({"a": 0}, coords={"x": ("x", [1, 2]), "z": "a"})
+    dt = DataTree(ds, children={"c": DataTree()})
+
+    # test delete children
+    del dt["c"]
+    assert dt.children == {}
+    assert set(dt.variables) == {"x", "z", "a"}
+
+    # test delete variables
+    del dt["a"]
+    assert set(dt.coords) == {"x", "z"}
+
+    # test delete coordinates
+    del dt["z"]
+    assert set(dt.coords) == {"x"}
+
+    # test delete indexed coordinates
+    del dt["x"]
+    assert dt.variables == {}
+    assert dt.coords == {}
+    assert dt.indexes == {}
 
 
 class TestTreeFromDict:
