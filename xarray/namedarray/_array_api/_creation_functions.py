@@ -9,16 +9,16 @@ from xarray.namedarray._array_api._utils import (
     _infer_dims,
 )
 from xarray.namedarray._typing import (
+    Default,
     _ArrayLike,
     _default,
     _Device,
     _DimsLike2,
     _DType,
     _Shape,
+    _Shape1D,
     _ShapeType,
     duckarray,
-    Default,
-    _Shape1D,
 )
 from xarray.namedarray.core import NamedArray
 
