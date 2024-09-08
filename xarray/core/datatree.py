@@ -910,6 +910,26 @@ class DataTree(
         else:
             raise ValueError("Invalid format for key")
 
+    def __delitem__(self, key: str) -> None:
+        """Remove a variable or child node from this datatree node."""
+        if key in self.children:
+            super().__delitem__(key)
+
+        elif key in self._node_coord_variables:
+            if key in self._node_indexes:
+                del self._node_indexes[key]
+            del self._node_coord_variables[key]
+            self._node_dims = calculate_dimensions(self.variables)
+
+        elif key in self._data_variables:
+            del self._data_variables[key]
+            self._node_dims = calculate_dimensions(self.variables)
+
+        else:
+            raise KeyError(
+                f"Cannot delete {key} as it was not found on this datatree node. Must be one of {list(self)}"
+            )
+
     @overload
     def update(self, other: Dataset) -> None: ...
 
