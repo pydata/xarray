@@ -638,8 +638,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return bitwise_xor(self, self._maybe_asarray(other))
 
     def __iadd__(self, other: int | float | NamedArray, /):
-
-        self._data.__iadd__(self._maybe_asarray(other)._data)
+        self._data += self._maybe_asarray(other)._data
         return self
 
     def __radd__(self, other: int | float | NamedArray, /):
@@ -649,7 +648,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def __iand__(self, other: int | bool | NamedArray, /):
 
-        self._data.__iand__(self._maybe_asarray(other)._data)
+        self._data &= self._maybe_asarray(other)._data
         return self
 
     def __rand__(self, other: int | bool | NamedArray, /):
@@ -658,8 +657,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return bitwise_and(self._maybe_asarray(other), self)
 
     def __ifloordiv__(self, other: int | float | NamedArray, /):
-
-        self._data.__ifloordiv__(self._maybe_asarray(other)._data)
+        self._data //= self._maybe_asarray(other)._data
         return self
 
     def __rfloordiv__(self, other: int | float | NamedArray, /):
@@ -678,7 +676,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return bitwise_left_shift(self._maybe_asarray(other), self)
 
     def __imatmul__(self, other: NamedArray, /):
-        self._data.__imatmul__(other._data)
+        self._data @= other._data
         return self
 
     def __rmatmul__(self, other: NamedArray, /):
@@ -687,8 +685,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return matmul(self._maybe_asarray(other), self)
 
     def __imod__(self, other: int | float | NamedArray, /):
-
-        self._data.__imod__(self._maybe_asarray(other)._data)
+        self._data %= self._maybe_asarray(other)._data
         return self
 
     def __rmod__(self, other: int | float | NamedArray, /):
@@ -697,8 +694,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return remainder(self._maybe_asarray(other), self)
 
     def __imul__(self, other: int | float | NamedArray, /):
-
-        self._data.__imul__(self._maybe_asarray(other)._data)
+        self._data *= self._maybe_asarray(other)._data
         return self
 
     def __rmul__(self, other: int | float | NamedArray, /):
@@ -707,8 +703,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return multiply(self._maybe_asarray(other), self)
 
     def __ior__(self, other: int | bool | NamedArray, /):
+        self._data |= self._maybe_asarray(other)._data
 
-        self._data.__ior__(self._maybe_asarray(other)._data)
         return self
 
     def __ror__(self, other: int | bool | NamedArray, /):
@@ -717,8 +713,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return bitwise_or(self._maybe_asarray(other), self)
 
     def __ipow__(self, other: int | float | NamedArray, /):
-
-        self._data.__ipow__(self._maybe_asarray(other)._data)
+        self._data **= self._maybe_asarray(other)._data
         return self
 
     def __rpow__(self, other: int | float | NamedArray, /):
@@ -727,8 +722,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return pow(self._maybe_asarray(other), self)
 
     def __irshift__(self, other: int | NamedArray, /):
-
-        self._data.__irshift__(self._maybe_asarray(other)._data)
+        self._data >>= self._maybe_asarray(other)._data
         return self
 
     def __rrshift__(self, other: int | NamedArray, /):
@@ -738,7 +732,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def __isub__(self, other: int | float | NamedArray, /):
 
-        self._data.__isub__(self._maybe_asarray(other)._data)
+        self._data -= self._maybe_asarray(other)._data
         return self
 
     def __rsub__(self, other: int | float | NamedArray, /):
@@ -747,8 +741,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return subtract(self._maybe_asarray(other), self)
 
     def __itruediv__(self, other: float | NamedArray, /):
-
-        self._data.__itruediv__(self._maybe_asarray(other)._data)
+        self._data /= self._maybe_asarray(other)
         return self
 
     def __rtruediv__(self, other: float | NamedArray, /):
@@ -758,7 +751,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def __ixor__(self, other: int | bool | NamedArray, /):
 
-        self._data.__ixor__(self._maybe_asarray(other)._data)
+        self._data ^= self._maybe_asarray(other)._data
         return self
 
     def __rxor__(self, other, /):
