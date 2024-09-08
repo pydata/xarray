@@ -19,8 +19,8 @@ class TestCheckTreesIsomorphic:
             check_isomorphic("s", 1)  # type: ignore[arg-type]
 
     def test_different_widths(self):
-        dt1 = DataTree.from_dict(d={"a": empty})
-        dt2 = DataTree.from_dict(d={"b": empty, "c": empty})
+        dt1 = DataTree.from_dict({"a": empty})
+        dt2 = DataTree.from_dict({"b": empty, "c": empty})
         expected_err_str = (
             "Number of children on node '/' of the left object: 1\n"
             "Number of children on node '/' of the right object: 2"
@@ -320,7 +320,7 @@ class TestMutableOperations:
 
     def test_alter_inplace_forbidden(self):
         simpsons = DataTree.from_dict(
-            d={
+            {
                 "/": xr.Dataset({"age": 83}),
                 "/Herbert": xr.Dataset({"age": 40}),
                 "/Homer": xr.Dataset({"age": 39}),
