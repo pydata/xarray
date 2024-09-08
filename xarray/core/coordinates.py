@@ -874,7 +874,7 @@ class DataTreeCoordinates(DatasetCoordinates):
                 new_coord_names.add(dim)
 
         # TODO we need to upgrade these variables to coord variables somehow
-        #coord_variables.update(new_coord_names)
+        # coord_variables.update(new_coord_names)
 
         self._data._coord_variables = coord_variables
         self._data._dims = dims
