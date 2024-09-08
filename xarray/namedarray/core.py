@@ -143,15 +143,15 @@ def _new(
         attributes you want to store with the array.
         Will copy the attrs from x by default.
     """
-    dims_ = copy.copy(x._dims) if dims is _default else dims
+    dims_ = copy.copy(x._dims) if isinstance(dims, Default) else dims
 
     attrs_: Mapping[Any, Any] | None
-    if attrs is _default:
+    if isinstance(attrs, _default):
         attrs_ = None if x._attrs is None else x._attrs.copy()
     else:
         attrs_ = attrs
 
-    if data is _default:
+    if isinstance(data, Default):
         return type(x)(dims_, copy.copy(x._data), attrs_)
     else:
         cls_ = cast("type[NamedArray[_ShapeType, _DType]]", type(x))
@@ -1351,12 +1351,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         from xarray.namedarray._array_api import astype
 
         # TODO: what to do if dask-backended?
-        if fill_value is _default:
+        if isinstance(fill_value, Default):
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
         else:
             dtype = dtypes.result_type(self.dtype, fill_value)
 
-        if sparse_format is _default:
+        if isinstance(sparse_format, Default):
             sparse_format = "coo"
         try:
             as_sparse = getattr(sparse, f"as_{sparse_format.lower()}")
