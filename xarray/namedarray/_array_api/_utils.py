@@ -22,8 +22,7 @@ from xarray.namedarray._typing import (
     duckarray,
 )
 
-if TYPE_CHECKING:
-    from xarray.namedarray.core import NamedArray
+from xarray.namedarray.core import NamedArray
 
 
 def _maybe_default_namespace(xp: ModuleType | None = None) -> ModuleType:
