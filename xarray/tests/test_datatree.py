@@ -372,7 +372,7 @@ class TestCopy:
             {"/": xr.Dataset(coords={"x": [0, 1]}), "/c": DataTree()}
         )
         tree2 = tree.copy()
-        node_ds = tree2["/c"].to_dataset(inherited=False)
+        node_ds = tree2.children["c"].to_dataset(inherited=False)
         assert_identical(node_ds, xr.Dataset())
 
     def test_deepcopy(self, create_test_datatree):
