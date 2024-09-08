@@ -498,16 +498,26 @@ class DataTree(
             dims = calculate_dimensions(variables)
         else:
             # Note: rebuild_dims=False can create technically invalid Dataset
-            # objects because it may not contain all dimensions on its direct
-            # member variables, e.g., consider:
-            #     tree = DataTree.from_dict(
-            #         {
-            #             "/": xr.Dataset({"a": (("x",), [1, 2])}),  # x has size 2
-            #             "/b/c": xr.Dataset({"d": (("x",), [3])}),  # x has size1
-            #         }
-            #     )
-            # However, they are fine for internal use cases, for align() or
-            # building a repr().
+            # objects because it still includes dimensions that are only
+            # defined on parent data variables, e.g., consider:
+            #     >>> tree = DataTree.from_dict(
+            #     ...     {
+            #     ...         "/": xr.Dataset({"foo": ("x", [1, 2])}),  # x has size 2
+            #     ...         "/b": xr.Dataset(),
+            #     ...     }
+            #     ... )
+            #     >>> ds = tree["b"]._to_dataset_view(rebuild_dims=False)
+            #     >>> ds
+            #     <xarray.DatasetView> Size: 0B
+            #     Dimensions:  (x: 2)
+            #     Dimensions without coordinates: x
+            #     Data variables:
+            #         *empty*
+            #
+            # The "x" dimension is still defined, even though there are no
+            # variables or coordinates. This is useful for use cases where we
+            # want to inherit everything from parents nodes, e.g., for align()
+            # and repr().
             dims = dict(self._dims)
         return DatasetView._constructor(
             variables=variables,
