@@ -10,9 +10,9 @@ from xarray.namedarray._array_api._utils import (
 )
 from xarray.namedarray._typing import (
     Default,
+    _arrayapi,
     _default,
     _Dim,
-    _arrayapi,
 )
 from xarray.namedarray.core import (
     NamedArray,
