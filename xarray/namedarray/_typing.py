@@ -56,9 +56,9 @@ class Default(list[Never]):
 
     >>> x: Hashable | Default = _default
     >>> if isinstance(x, Default):
-    >>>     y: Default = x
-    >>> else:
-    >>>     h: Hashable = x
+    ...     y: Default = x
+    ... else:
+    ...     h: Hashable = x
 
     TODO: if x is _default does not narrow typing, use isinstance check instead.
     """
