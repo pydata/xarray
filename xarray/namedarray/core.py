@@ -654,8 +654,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return floor_divide(self._maybe_asarray(other), self)
 
     def __ilshift__(self, other: int | NamedArray, /):
-
-        self._data.__ilshift__(self._maybe_asarray(other)._data)
+        self._data <<= self._maybe_asarray(other)._data
         return self
 
     def __rlshift__(self, other: int | NamedArray, /):
@@ -729,7 +728,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return subtract(self._maybe_asarray(other), self)
 
     def __itruediv__(self, other: float | NamedArray, /):
-        self._data /= self._maybe_asarray(other)
+        self._data /= self._maybe_asarray(other)._data
         return self
 
     def __rtruediv__(self, other: float | NamedArray, /):
