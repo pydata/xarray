@@ -23,7 +23,9 @@ try:
     if sys.version_info >= (3, 11):
         from typing import Never, TypeAlias
     else:
-        from typing_extensions import Never, TypeAlias
+        from typing import TypeAlias
+
+        from typing_extensions import Never
 except ImportError:
     if TYPE_CHECKING:
         raise
