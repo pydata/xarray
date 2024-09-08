@@ -842,8 +842,7 @@ class DataTreeCoordinates(Coordinates):
 
     @property
     def variables(self) -> Mapping[Hashable, Variable]:
-        variables = self._data._data_variables | self._data._coord_variables
-        return Frozen({k: v for k, v in variables.items() if k in self._names})
+        return Frozen(self._data._coord_variables)
 
     def __getitem__(self, key: Hashable) -> DataArray:
         if key in self._data._data_variables or key in self._data.children:
