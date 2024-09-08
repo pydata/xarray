@@ -657,8 +657,11 @@ class TestFormatting:
 
     def test_datatree_printout_nested_node(self):
         dat = xr.Dataset({"a": [0, 2]})
-        root: DataTree = DataTree(name="root")
-        DataTree(name="results", data=dat, parent=root)
+        root = DataTree.from_dict(
+            {
+                "/results": dat,
+            }
+        )
         printout = str(root)
         assert printout.splitlines()[3].startswith("    ")
 
