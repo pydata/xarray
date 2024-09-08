@@ -15,6 +15,7 @@ from xarray.namedarray._typing import (
     _default,
     _Dim,
     _Dims,
+    _DimsLike,
     _DimsLike2,
     _DType,
     _dtype,
@@ -119,7 +120,7 @@ def _infer_dims(
     >>> _infer_dims((1,), ("x",))
     ('x',)
     """
-    if dims is _default:
+    if isinstance(dims, Default):
         ndim = len(shape)
         return tuple(f"dim_{ndim - 1 - n}" for n in range(ndim))
     else:
@@ -127,22 +128,18 @@ def _infer_dims(
 
 
 def _assert_either_dim_or_axis(
-    dims: _Dim | _Dims | Default, axis: _AxisLike | None
+    dims: _DimsLike2 | Default, axis: _AxisLike | None
 ) -> None:
     if dims is not _default and axis is not None:
         raise ValueError("cannot supply both 'axis' and 'dim(s)' arguments")
 
 
-@overload
-def _dims_to_axis(
-    x: NamedArray[Any, Any], dims: _DimsLike2, axis: _AxisLike
-) -> NoReturn: ...
-@overload
-def _dims_to_axis(x: NamedArray[Any, Any], dims: _DimsLike2, axis: None) -> None: ...
-@overload
-def _dims_to_axis(x: NamedArray[Any, Any], dims: Default, axis: _AxisLike) -> None: ...
-@overload
-def _dims_to_axis(x: NamedArray[Any, Any], dims: Default, axis: None) -> None: ...
+# @overload
+# def _dims_to_axis(x: NamedArray[Any, Any], dims: Default, axis: None) -> None: ...
+# @overload
+# def _dims_to_axis(x: NamedArray[Any, Any], dims: _DimsLike2, axis: None) -> _Axes: ...
+# @overload
+# def _dims_to_axis(x: NamedArray[Any, Any], dims: Default, axis: _AxisLike) -> _Axes: ...
 def _dims_to_axis(
     x: NamedArray[Any, Any], dims: _DimsLike2 | Default, axis: _AxisLike | None
 ) -> _Axes | None:
@@ -175,7 +172,7 @@ def _dims_to_axis(
     ValueError: cannot supply both 'axis' and 'dim(s)' arguments
     """
     _assert_either_dim_or_axis(dims, axis)
-    if dims is not _default:
+    if not isinstance(dims, Default):
         _dims = _normalize_dimensions(dims)
 
         axis = ()
@@ -193,6 +190,23 @@ def _dims_to_axis(
         return axis
     else:
         return (axis,)
+
+
+def _dim_to_optional_axis(
+    x: NamedArray[Any, Any], dim: _Dim | Default, axis: int | None
+) -> int | None:
+    a = _dims_to_axis(x, dim, axis)
+    if a is None:
+        return a
+
+    return a[0]
+
+
+def _dim_to_axis(x: NamedArray[Any, Any], dim: _Dim | Default, axis: int) -> int:
+    _dim: _Dim = x.dims[axis] if isinstance(dim, Default) else dim
+    _axis = _dim_to_optional_axis(x, _dim, None)
+    assert _axis is not None  # Not supposed to happen.
+    return _axis
 
 
 def _get_remaining_dims(
@@ -230,10 +244,13 @@ def _get_remaining_dims(
 
 
 def _insert_dim(dims: _Dims, dim: _Dim | Default, axis: _Axis) -> _Dims:
-    if dim is _default:
-        dim = f"dim_{len(dims)}"
+    if isinstance(dim, Default):
+        _dim: _Dim = f"dim_{len(dims)}"
+    else:
+        _dim = dim
+
     d = list(dims)
-    d.insert(axis, dim)
+    d.insert(axis, _dim)
     return tuple(d)
 
 

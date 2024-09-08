@@ -1,25 +1,31 @@
 from __future__ import annotations
-
-from xarray.namedarray._array_api._utils import _dims_to_axis, _get_data_namespace
+from typing import Any
+from xarray.namedarray._array_api._utils import (
+    _get_data_namespace,
+    _dim_to_axis,
+)
 from xarray.namedarray._typing import (
     Default,
     _default,
     _Dim,
+    _DType,
+    _ShapeType,
 )
 from xarray.namedarray.core import NamedArray
 
 
 def argsort(
-    x: NamedArray,
+    x: NamedArray[_ShapeType, Any],
     /,
     *,
     dim: _Dim | Default = _default,
     descending: bool = False,
     stable: bool = True,
     axis: int = -1,
-) -> NamedArray:
+) -> NamedArray[_ShapeType, Any]:
     xp = _get_data_namespace(x)
-    _axis = _dims_to_axis(x, dim, axis)[0]
+    _axis = _dim_to_axis(x, dim, axis)
+
     # TODO: As NumPy currently has no native descending sort, we imitate it here:
     if not descending:
         _data = xp.argsort(x._data, axis=_axis, stable=stable)
@@ -36,16 +42,17 @@ def argsort(
 
 
 def sort(
-    x: NamedArray,
+    x: NamedArray[_ShapeType, _DType],
     /,
     *,
     dim: _Dim | Default = _default,
     descending: bool = False,
     stable: bool = True,
     axis: int = -1,
-) -> NamedArray:
+) -> NamedArray[_ShapeType, _DType]:
     xp = _get_data_namespace(x)
-    _axis = _dims_to_axis(x, dim, axis)[0]
+    _axis = _dim_to_axis(x, dim, axis)
+
     _data = xp.sort(x._data, axis=_axis, stable=stable)
     # TODO: As NumPy currently has no native descending sort, we imitate it here:
     if descending:
