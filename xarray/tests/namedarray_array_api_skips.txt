@@ -37,3 +37,8 @@ array_api_tests/test_statistical_functions.py::test_prod
 # https://github.com/numpy/numpy/pull/26237
 array_api_tests/test_signatures.py::test_func_signature[vecdot]
 array_api_tests/test_signatures.py::test_extension_func_signature[linalg.vecdot]
+
+# numpy scalars missing __complex__:
+# AttributeError: 'numpy.uint64' object has no attribute '__complex__'
+# https://github.com/numpy/numpy/issues/27305
+array_api_tests/test_statistical_functions.py::test_cumulative_sum
