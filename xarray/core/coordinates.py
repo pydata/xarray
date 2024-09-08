@@ -860,29 +860,27 @@ class DataTreeCoordinates(Coordinates):
         # TODO I don't know how to update coordinates that live in parent nodes
         # TODO We would have to find the correct node and update `._node_coord_variables`
 
-        coord_variables = self._data._coord_variables.copy()
-        coord_variables.update(coords)
+        # create updated node (`.to_dataset` makes a copy so this doesn't modify in-place)
+        node_ds = self._data.to_dataset(inherited=False)
+        node_ds.coords._update_coords(coords, indexes)
 
-        # check for inconsistent state *before* modifying anything in-place
-        variables = coord_variables | self._data._data_variables.copy()
-        # TODO is there a subtlety here with rebuild_dims?
-        dims = calculate_dimensions(variables)
-        new_coord_names = set(coords)
-        for dim, size in dims.items():
-            if dim in variables:
-                new_coord_names.add(dim)
+        from xarray.core.datatree import _check_alignment
 
-        # TODO we need to upgrade these variables to coord variables somehow
-        # coord_variables.update(new_coord_names)
+        # check consistency *before* modifying anything in-place
+        # TODO can we clean up the signature of _check_alignment to make this less awkward?
+        if self._data.parent is not None:
+            parent_ds = self._data.parent._to_dataset_view(rebuild_dims=False)
+        else:
+            parent_ds = None
+        _check_alignment(self._data.path, node_ds, parent_ds, self._data.children)
 
+        # assign updated attributes
+        coord_variables = {
+            k: v for k, v in node_ds.variables.items() if k in node_ds._coord_names
+        }
         self._data._node_coord_variables = coord_variables
-        self._data._node_dims = dims
-
-        # TODO(shoyer): once ._indexes is always populated by a dict, modify
-        # it to update inplace instead.
-        original_indexes = dict(self._data.xindexes)
-        original_indexes.update(indexes)
-        self._data._node_indexes = original_indexes
+        self._data._node_dims = node_ds._dims
+        self._data._indexes = node_ds._indexes
 
     def _drop_coords(self, coord_names):
         # should drop indexed coordinates only
