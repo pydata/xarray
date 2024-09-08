@@ -12,21 +12,15 @@ from xarray.namedarray._typing import (
     _ArrayLike,
     _default,
     _Device,
-    _DimsLike,
+    _DimsLike2,
     _DType,
     _Shape,
     _ShapeType,
     duckarray,
+    Default,
+    _Shape1D,
 )
-from xarray.namedarray.core import (
-    NamedArray,
-)
-
-
-def _like_args(x, dtype=None, device: _Device | None = None):
-    if dtype is None:
-        dtype = x.dtype
-    return dict(shape=x.shape, dtype=dtype, device=device)
+from xarray.namedarray.core import NamedArray
 
 
 def arange(
@@ -37,7 +31,7 @@ def arange(
     *,
     dtype: _DType | None = None,
     device: _Device | None = None,
-) -> NamedArray[_ShapeType, _DType]:
+) -> NamedArray[_Shape1D, _DType]:
     xp = _get_namespace_dtype(dtype)
     _data = xp.arange(start, stop=stop, step=step, dtype=dtype, device=device)
     _dims = _infer_dims(_data.shape)
@@ -52,7 +46,7 @@ def asarray(
     dtype: _DType,
     device: _Device | None = ...,
     copy: bool | None = ...,
-    dims: _DimsLike = ...,
+    dims: _DimsLike2 | Default = ...,
 ) -> NamedArray[_ShapeType, _DType]: ...
 @overload
 def asarray(
@@ -62,7 +56,7 @@ def asarray(
     dtype: _DType,
     device: _Device | None = ...,
     copy: bool | None = ...,
-    dims: _DimsLike = ...,
+    dims: _DimsLike2 | Default = ...,
 ) -> NamedArray[Any, _DType]: ...
 @overload
 def asarray(
@@ -72,7 +66,7 @@ def asarray(
     dtype: None,
     device: _Device | None = None,
     copy: bool | None = None,
-    dims: _DimsLike = ...,
+    dims: _DimsLike2 | Default = ...,
 ) -> NamedArray[_ShapeType, _DType]: ...
 @overload
 def asarray(
@@ -82,7 +76,7 @@ def asarray(
     dtype: None,
     device: _Device | None = ...,
     copy: bool | None = ...,
-    dims: _DimsLike = ...,
+    dims: _DimsLike2 | Default = ...,
 ) -> NamedArray[Any, _DType]: ...
 def asarray(
     obj: duckarray[_ShapeType, _DType] | _ArrayLike,
@@ -91,7 +85,7 @@ def asarray(
     dtype: _DType | None = None,
     device: _Device | None = None,
     copy: bool | None = None,
-    dims: _DimsLike = _default,
+    dims: _DimsLike2 | Default = _default,
 ) -> NamedArray[_ShapeType, _DType] | NamedArray[Any, Any]:
     """
     Create a Named array from an array-like object.
@@ -166,11 +160,18 @@ def from_dlpack(
     *,
     device: _Device | None = None,
     copy: bool | None = None,
-) -> NamedArray:
-    xp = _get_data_namespace(x)
-    _device = x.device if device is None else device
-    _data = xp.from_dlpack(x, device=_device, copy=copy)
-    return x._new(data=_data)
+) -> NamedArray[Any, Any]:
+    if isinstance(x, NamedArray):
+        xp = _get_data_namespace(x)
+        _device = x.device if device is None else device
+        _data = xp.from_dlpack(x, device=_device, copy=copy)
+        _dims = x.dims
+    else:
+        xp = _get_namespace(x)
+        _device = device
+        _data = xp.from_dlpack(x, device=_device, copy=copy)
+        _dims = _infer_dims(_data.shape)
+    return NamedArray(_dims, _data)
 
 
 def full(
@@ -208,7 +209,7 @@ def linspace(
     dtype: _DType | None = None,
     device: _Device | None = None,
     endpoint: bool = True,
-) -> NamedArray[_ShapeType, _DType]:
+) -> NamedArray[_Shape1D, _DType]:
     xp = _get_namespace_dtype(dtype)
     _data = xp.linspace(
         start,
@@ -222,7 +223,9 @@ def linspace(
     return NamedArray(_dims, _data)
 
 
-def meshgrid(*arrays: NamedArray, indexing: str = "xy") -> list[NamedArray]:
+def meshgrid(
+    *arrays: NamedArray[Any, Any], indexing: str = "xy"
+) -> list[NamedArray[Any, Any]]:
     arr = arrays[0]
     xp = _get_data_namespace(arr)
     _datas = xp.meshgrid(*[a._data for a in arrays], indexing=indexing)
