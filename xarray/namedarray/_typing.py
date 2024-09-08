@@ -28,6 +28,7 @@ except ImportError:
     if TYPE_CHECKING:
         raise
     else:
+        Never: Any = None
         Self: Any = None
 
 
