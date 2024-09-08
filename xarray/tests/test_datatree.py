@@ -549,6 +549,9 @@ def test_delitem():
     assert dt.coords == {}
     assert dt.indexes == {}
 
+    with pytest.raises(KeyError, match="Cannot delete key 'foo' as it was not found"):
+        del dt["foo"]
+
 
 class TestTreeFromDict:
     def test_data_in_root(self):

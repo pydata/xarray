@@ -927,7 +927,7 @@ class DataTree(
 
         else:
             raise KeyError(
-                f"Cannot delete {key} as it was not found on this datatree node. Must be one of {list(self)}"
+                f"Cannot delete key '{key}' as it was not found on this datatree node. Must be one of {list(self)}"
             )
 
     @overload
