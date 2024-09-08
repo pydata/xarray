@@ -876,14 +876,14 @@ class DataTreeCoordinates(DatasetCoordinates):
         # TODO we need to upgrade these variables to coord variables somehow
         # coord_variables.update(new_coord_names)
 
-        self._data._coord_variables = coord_variables
-        self._data._dims = dims
+        self._data._node_coord_variables = coord_variables
+        self._data._node_dims = dims
 
         # TODO(shoyer): once ._indexes is always populated by a dict, modify
         # it to update inplace instead.
         original_indexes = dict(self._data.xindexes)
         original_indexes.update(indexes)
-        self._data._indexes = original_indexes
+        self._data._node_indexes = original_indexes
 
     def _drop_coords(self, coord_names):
         # should drop indexed coordinates only
