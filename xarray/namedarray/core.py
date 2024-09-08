@@ -264,10 +264,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         data: duckarray[Any, _DType_co],
         attrs: _AttrsLike = None,
     ):
-        if not isinstance(data, _arrayfunction_or_api):
-            raise NotImplementedError(
-                f"data is not a valid duckarray, got {data=}, {dims=}"
-            )
         self._data = data
         self._dims = self._parse_dimensions(dims)
         self._attrs = dict(attrs) if attrs else None
@@ -324,10 +320,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             attributes you want to store with the array.
             Will copy the attrs from x by default.
         """
-        if not isinstance(data, _arrayfunction_or_api):
-            raise NotImplementedError(
-                f"data is not a valid duckarray, got {data=}, {dims=}"
-            )
         return _new(self, dims, data, attrs)
 
     def _replace(
@@ -356,10 +348,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             attributes you want to store with the array.
             Will copy the attrs from x by default.
         """
-        if not isinstance(data, _arrayfunction_or_api):
-            raise NotImplementedError(
-                f"data is not a valid duckarray, got {data=}, {dims=}"
-            )
         return cast("Self", self._new(dims, data, attrs))
 
     def _copy(
