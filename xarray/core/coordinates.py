@@ -845,7 +845,7 @@ class DataTreeCoordinates(Coordinates):
         return Frozen(self._data._coord_variables)
 
     def __getitem__(self, key: Hashable) -> DataArray:
-        if key not in self._coord_variables:
+        if key not in self._data._coord_variables:
             raise KeyError(key)
         return self._data[key]
 
