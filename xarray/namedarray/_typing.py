@@ -112,6 +112,7 @@ _Shape = tuple[_IntOrUnknown, ...]
 _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
 _ShapeType = TypeVar("_ShapeType", bound=Any)
 _ShapeType_co = TypeVar("_ShapeType_co", bound=Any, covariant=True)
+_Shape1D = tuple[int]
 
 _Axis = int
 _Axes = tuple[_Axis, ...]
