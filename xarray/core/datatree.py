@@ -502,12 +502,17 @@ class DataTree(
             # member variables, e.g., consider:
             #     tree = DataTree.from_dict(
             #         {
-            #             "/": xr.Dataset({"a": (("x",), [1, 2])}),  # x has size 2
-            #             "/b/c": xr.Dataset({"d": (("x",), [3])}),  # x has size1
+            #             "/": xr.Dataset(coords={"x": [1, 2]}),  # x has size 2
+            #             "/b": xr.Dataset(),
             #         }
             #     )
-            # However, they are fine for internal use cases, for align() or
-            # building a repr().
+            #     ds = tree.b._to_dataset_view(rebuild_dims=False)
+            # `ds` still has a dimension of size 2, even though it has no
+            # variables.
+            # However, creating these objects are quite useful (and safe to use)
+            # for internal use cases that want a Dataset object with everything
+            # inherited from parents nodes, e.g., for align() and building
+            # repr().
             dims = dict(self._dims)
         return DatasetView._constructor(
             variables=variables,
