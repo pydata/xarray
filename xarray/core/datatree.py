@@ -926,9 +926,7 @@ class DataTree(
             self._node_dims = calculate_dimensions(self.variables)
 
         else:
-            raise KeyError(
-                f"Cannot delete key '{key}' as it was not found on this datatree node. Must be one of {list(self)}"
-            )
+            raise KeyError(key)
 
     @overload
     def update(self, other: Dataset) -> None: ...
