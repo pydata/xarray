@@ -11,7 +11,7 @@ from collections.abc import (
     Mapping,
 )
 from html import escape
-from typing import TYPE_CHECKING, Any, Generic, Literal, NoReturn, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, Union, overload
 
 from xarray.core import utils
 from xarray.core.alignment import align
@@ -37,7 +37,7 @@ from xarray.core.formatting_html import (
 from xarray.core.indexes import Index, Indexes
 from xarray.core.merge import dataset_update_method
 from xarray.core.options import OPTIONS as XR_OPTS
-from xarray.core.treenode import NamedNode, NodePath, Tree
+from xarray.core.treenode import NamedNode, NodePath
 from xarray.core.utils import (
     Default,
     Frozen,
@@ -365,8 +365,7 @@ class DataTree(
     MappedDataWithCoords,
     DataTreeArithmeticMixin,
     TreeAttrAccessMixin,
-    Generic[Tree],
-    Mapping,
+    Mapping[str, "DataArray | DataTree"],
 ):
     """
     A tree-like hierarchical collection of xarray objects.
@@ -701,8 +700,8 @@ class DataTree(
     def __bool__(self) -> bool:
         return bool(self._data_variables) or bool(self._children)
 
-    def __iter__(self) -> Iterator[Hashable]:
-        return itertools.chain(self._data_variables, self._children)
+    def __iter__(self) -> Iterator[str]:
+        return itertools.chain(self._data_variables, self._children)  # type: ignore
 
     def __array__(self, dtype=None, copy=None):
         raise TypeError(
