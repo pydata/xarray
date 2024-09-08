@@ -11,7 +11,7 @@ from collections.abc import (
     Mapping,
 )
 from html import escape
-from typing import TYPE_CHECKING, Any, Generic, Literal, NoReturn, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, Union, overload
 
 from xarray.core import utils
 from xarray.core.alignment import align
@@ -37,7 +37,7 @@ from xarray.core.formatting_html import (
 from xarray.core.indexes import Index, Indexes
 from xarray.core.merge import dataset_update_method
 from xarray.core.options import OPTIONS as XR_OPTS
-from xarray.core.treenode import NamedNode, NodePath, Tree
+from xarray.core.treenode import NamedNode, NodePath
 from xarray.core.utils import (
     Default,
     Frozen,
@@ -365,8 +365,7 @@ class DataTree(
     MappedDataWithCoords,
     DataTreeArithmeticMixin,
     TreeAttrAccessMixin,
-    Generic[Tree],
-    Mapping,
+    Mapping[str, "DataArray | DataTree"],
 ):
     """
     A tree-like hierarchical collection of xarray objects.
@@ -701,8 +700,8 @@ class DataTree(
     def __bool__(self) -> bool:
         return bool(self._data_variables) or bool(self._children)
 
-    def __iter__(self) -> Iterator[Hashable]:
-        return itertools.chain(self._data_variables, self._children)
+    def __iter__(self) -> Iterator[str]:
+        return itertools.chain(self._data_variables, self._children)  # type: ignore
 
     def __array__(self, dtype=None, copy=None):
         raise TypeError(
@@ -910,6 +909,26 @@ class DataTree(
             return self._set_item(path, value, new_nodes_along_path=True)
         else:
             raise ValueError("Invalid format for key")
+
+    def __delitem__(self, key: str) -> None:
+        """Remove a variable or child node from this datatree node."""
+        if key in self.children:
+            super().__delitem__(key)
+
+        elif key in self._node_coord_variables:
+            if key in self._node_indexes:
+                del self._node_indexes[key]
+            del self._node_coord_variables[key]
+            self._node_dims = calculate_dimensions(self.variables)
+
+        elif key in self._data_variables:
+            del self._data_variables[key]
+            self._node_dims = calculate_dimensions(self.variables)
+
+        else:
+            raise KeyError(
+                f"Cannot delete key '{key}' as it was not found on this datatree node. Must be one of {list(self)}"
+            )
 
     @overload
     def update(self, other: Dataset) -> None: ...
@@ -1507,7 +1526,7 @@ class DataTree(
         mode : {"w", "a"}, default: "w"
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
-            will be overwritten. Only appies to the root group.
+            will be overwritten. Only applies to the root group.
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
