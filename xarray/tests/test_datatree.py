@@ -7,6 +7,8 @@ import numpy as np
 import pytest
 
 import xarray as xr
+from xarray import Dataset
+from xarray.core.coordinates import DataTreeCoordinates
 from xarray.core.datatree import DataTree
 from xarray.core.datatree_ops import _MAPPED_DOCSTRING_ADDENDUM, insert_doc_addendum
 from xarray.core.treenode import NotFoundInTreeError
@@ -523,6 +525,72 @@ class TestSetItem:
         results["pressure"] = p
         expected = t.assign(pressure=p)
         assert_identical(results.to_dataset(), expected)
+
+
+class TestCoordsInterface:
+    def test_properties(self):
+        # use int64 for repr consistency on windows
+        ds = Dataset(
+            data_vars={
+                "foo": (["x", "y"], np.random.randn(2, 3)),
+            },
+            coords={
+                "x": ("x", np.array([-1, -2], "int64")),
+                "y": ("y", np.array([0, 1, 2], "int64")),
+                "a": ("x", np.array([4, 5], "int64")),
+                "b": np.int64(-10),
+            },
+        )
+        dt = DataTree(data=ds)
+        dt["child"] = DataTree()
+
+        coords = dt.coords
+        assert isinstance(coords, DataTreeCoordinates)
+
+        # len
+        assert len(coords) == 4
+
+        # iter
+        assert list(coords) == ["x", "y", "a", "b"]
+
+        assert_identical(coords["x"].variable, dt["x"].variable)
+        assert_identical(coords["y"].variable, dt["y"].variable)
+
+        assert "x" in coords
+        assert "a" in coords
+        assert 0 not in coords
+        assert "foo" not in coords
+        assert "child" not in coords
+
+        with pytest.raises(KeyError):
+            coords["foo"]
+
+        # TODO this currently raises a ValueError instead of a KeyError
+        # with pytest.raises(KeyError):
+        #     coords[0]
+
+        # repr
+        expected = dedent(
+            """\
+        Coordinates:
+          * x        (x) int64 16B -1 -2
+          * y        (y) int64 24B 0 1 2
+            a        (x) int64 16B 4 5
+            b        int64 8B -10"""
+        )
+        actual = repr(coords)
+        assert expected == actual
+
+        # dims
+        assert coords.sizes == {"x": 2, "y": 3}
+
+        # dtypes
+        assert coords.dtypes == {
+            "x": np.dtype("int64"),
+            "y": np.dtype("int64"),
+            "a": np.dtype("int64"),
+            "b": np.dtype("int64"),
+        }
 
 
 class TestDictionaryInterface: ...
