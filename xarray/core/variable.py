@@ -1658,7 +1658,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             _get_keep_attrs(default=False) if keep_attrs is None else keep_attrs
         )
 
-        # Noe that the call order for Variable.mean is
+        # Note that the call order for Variable.mean is
         #    Variable.mean -> NamedArray.mean -> Variable.reduce
         #    -> NamedArray.reduce
         result = super().reduce(

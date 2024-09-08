@@ -1170,7 +1170,7 @@ def _legend_add_subtitle(handles, labels, text):
 
     if text and len(handles) > 1:
         # Create a blank handle that's not visible, the
-        # invisibillity will be used to discern which are subtitles
+        # invisibility will be used to discern which are subtitles
         # or not:
         blank_handle = plt.Line2D([], [], label=text)
         blank_handle.set_visible(False)

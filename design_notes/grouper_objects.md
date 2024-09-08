@@ -166,7 +166,7 @@ where `|` represents chunk boundaries. A simple rechunking to
 ```
 000|111122|3333
 ```
-would make this resampling reduction an embarassingly parallel blockwise problem.
+would make this resampling reduction an embarrassingly parallel blockwise problem.
 
 Similarly consider monthly-mean climatologies for which the month numbers might be
 ```

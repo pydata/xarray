@@ -1802,7 +1802,7 @@ def indexes_all_equal(
 
 def _apply_indexes_fast(indexes: Indexes[Index], args: Mapping[Any, Any], func: str):
     # This function avoids the call to indexes.group_by_index
-    # which is really slow when repeatidly iterating through
+    # which is really slow when repeatedly iterating through
     # an array. However, it fails to return the correct ID for
     # multi-index arrays
     indexes_fast, coords = indexes._indexes, indexes._variables

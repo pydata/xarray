@@ -298,7 +298,7 @@ Automatic parallelization with ``apply_ufunc`` and ``map_blocks``
 
 .. tip::
 
-   Some problems can become embarassingly parallel and thus easy to parallelize
+   Some problems can become embarrassingly parallel and thus easy to parallelize
    automatically by rechunking to a frequency, e.g. ``ds.chunk(time=TimeResampler("YE"))``.
    See :py:meth:`Dataset.chunk` for more.
 
@@ -559,7 +559,7 @@ larger chunksizes.
 
 .. tip::
 
-   Many time domain problems become amenable to an embarassingly parallel or blockwise solution
+   Many time domain problems become amenable to an embarrassingly parallel or blockwise solution
    (e.g. using :py:func:`xarray.map_blocks`, :py:func:`dask.array.map_blocks`, or
    :py:func:`dask.array.blockwise`) by rechunking to a frequency along the time dimension.
    Provide :py:class:`xarray.groupers.TimeResampler` objects to :py:meth:`Dataset.chunk` to do so.

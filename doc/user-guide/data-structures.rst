@@ -289,7 +289,7 @@ pressure that were made under various conditions:
 * the measurements were made on four different days;
 * they were made at two separate locations, which we will represent using
   their latitude and longitude; and
-* they were made using instruments by three different manufacutrers, which we
+* they were made using instruments by three different manufacturers, which we
   will refer to as `'manufac1'`, `'manufac2'`, and `'manufac3'`.
 
 .. ipython:: python

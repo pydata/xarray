@@ -2004,7 +2004,7 @@ class TestImshow(Common2dMixin, PlotTestCase):
             easy_array((4, 10, 15), start=0), dims=["band", "y", "x"]
         ).plot.imshow()
 
-    def test_warns_ambigious_dim(self) -> None:
+    def test_warns_ambiguous_dim(self) -> None:
         arr = DataArray(easy_array((3, 3, 3)), dims=["y", "x", "band"])
         with pytest.warns(UserWarning):
             arr.plot.imshow()

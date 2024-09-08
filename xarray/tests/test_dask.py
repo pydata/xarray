@@ -1797,6 +1797,6 @@ def test_minimize_graph_size():
         actual = len([key for key in graph if var in key[0]])
         # assert that we only include each chunk of an index variable
         # is only included once, not the product of number of chunks of
-        # all the other dimenions.
+        # all the other dimensions.
         # e.g. previously for 'x',  actual == numchunks['y'] * numchunks['z']
         assert actual == numchunks[var], (actual, numchunks[var])
