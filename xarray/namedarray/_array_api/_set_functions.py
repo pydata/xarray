@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from xarray.namedarray._array_api._utils import (
     _get_data_namespace,
@@ -10,23 +10,23 @@ from xarray.namedarray.core import NamedArray
 
 
 class UniqueAllResult(NamedTuple):
-    values: NamedArray
-    indices: NamedArray
-    inverse_indices: NamedArray
-    counts: NamedArray
+    values: NamedArray[Any, Any]
+    indices: NamedArray[Any, Any]
+    inverse_indices: NamedArray[Any, Any]
+    counts: NamedArray[Any, Any]
 
 
 class UniqueCountsResult(NamedTuple):
-    values: NamedArray
-    counts: NamedArray
+    values: NamedArray[Any, Any]
+    counts: NamedArray[Any, Any]
 
 
 class UniqueInverseResult(NamedTuple):
-    values: NamedArray
-    inverse_indices: NamedArray
+    values: NamedArray[Any, Any]
+    inverse_indices: NamedArray[Any, Any]
 
 
-def unique_all(x: NamedArray, /) -> UniqueAllResult:
+def unique_all(x: NamedArray[Any, Any], /) -> UniqueAllResult:
     xp = _get_data_namespace(x)
     values, indices, inverse_indices, counts = xp.unique_all(x._data)
     _dims_values = _infer_dims(values.shape)  # TODO: Fix
@@ -41,7 +41,7 @@ def unique_all(x: NamedArray, /) -> UniqueAllResult:
     )
 
 
-def unique_counts(x: NamedArray, /) -> UniqueCountsResult:
+def unique_counts(x: NamedArray[Any, Any], /) -> UniqueCountsResult:
     xp = _get_data_namespace(x)
     values, counts = xp.unique_counts(x._data)
     _dims_values = _infer_dims(values.shape)  # TODO:  Fix dims
@@ -52,7 +52,7 @@ def unique_counts(x: NamedArray, /) -> UniqueCountsResult:
     )
 
 
-def unique_inverse(x: NamedArray, /) -> UniqueInverseResult:
+def unique_inverse(x: NamedArray[Any, Any], /) -> UniqueInverseResult:
     xp = _get_data_namespace(x)
     values, inverse_indices = xp.unique_inverse(x._data)
     _dims_values = _infer_dims(values.shape)  # TODO: Fix
@@ -63,7 +63,7 @@ def unique_inverse(x: NamedArray, /) -> UniqueInverseResult:
     )
 
 
-def unique_values(x: NamedArray, /) -> NamedArray:
+def unique_values(x: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x)
     _data = xp.unique_values(x._data)
     _dims = _infer_dims(_data.shape)  # TODO: Fix
