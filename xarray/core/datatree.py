@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, NoReturn, Union, overlo
 from xarray.core import utils
 from xarray.core.alignment import align
 from xarray.core.common import TreeAttrAccessMixin
-from xarray.core.coordinates import DatasetCoordinates
+from xarray.core.coordinates import DataTreeCoordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, DataVariables
 from xarray.core.datatree_mapping import (
@@ -1148,11 +1148,11 @@ class DataTree(
         )
 
     @property
-    def coords(self) -> DatasetCoordinates:
+    def coords(self) -> DataTreeCoordinates:
         """Dictionary of xarray.DataArray objects corresponding to coordinate
         variables
         """
-        return DatasetCoordinates(self.to_dataset())
+        return DataTreeCoordinates(self)
 
     @property
     def data_vars(self) -> DataVariables:
