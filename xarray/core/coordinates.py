@@ -198,12 +198,12 @@ class Coordinates(AbstractCoordinates):
 
     Coordinates are either:
 
-    - returned via the :py:attr:`Dataset.coords` and :py:attr:`DataArray.coords`
-      properties
+    - returned via the :py:attr:`Dataset.coords`, :py:attr:`DataArray.coords`,
+      and :py:attr:`DataTree.coords` properties,
     - built from Pandas or other index objects
-      (e.g., :py:meth:`Coordinates.from_pandas_multiindex`)
+      (e.g., :py:meth:`Coordinates.from_pandas_multiindex`),
     - built directly from coordinate data and Xarray ``Index`` objects (beware that
-      no consistency check is done on those inputs)
+      no consistency check is done on those inputs),
 
     Parameters
     ----------
@@ -857,6 +857,10 @@ class DataTreeCoordinates(DatasetCoordinates):
     def _update_coords(
         self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
     ) -> None:
+
+        # TODO I don't know how to update coordinates that live in parent nodes
+        # TODO We would have to find the correct node and update `._node_coord_variables`
+
         coord_variables = self._data._coord_variables.copy()
         coord_variables.update(coords)
 
@@ -869,8 +873,10 @@ class DataTreeCoordinates(DatasetCoordinates):
             if dim in variables:
                 new_coord_names.add(dim)
 
-        self._data._variables = variables
-        self._data._coord_names.update(new_coord_names)
+        # TODO we need to upgrade these variables to coord variables somehow
+        #coord_variables.update(new_coord_names)
+
+        self._data._coord_variables = coord_variables
         self._data._dims = dims
 
         # TODO(shoyer): once ._indexes is always populated by a dict, modify
@@ -882,17 +888,17 @@ class DataTreeCoordinates(DatasetCoordinates):
     def _drop_coords(self, coord_names):
         # should drop indexed coordinates only
         for name in coord_names:
-            del self._data._variables[name]
+            del self._data._coord_variables[name]
             del self._data._indexes[name]
-        self._data._coord_names.difference_update(coord_names)
+        # self._data._coord_names.difference_update(coord_names)
 
     def _drop_indexed_coords(self, coords_to_drop: set[Hashable]) -> None:
         assert self._data.xindexes is not None
         new_coords = drop_indexed_coords(coords_to_drop, self)
         for name in self._data._coord_names - new_coords._names:
-            del self._data._variables[name]
+            del self._data._coord_variables[name]
         self._data._indexes = dict(new_coords.xindexes)
-        self._data._coord_names.intersection_update(new_coords._names)
+        # self._data._coord_names.intersection_update(new_coords._names)
 
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
