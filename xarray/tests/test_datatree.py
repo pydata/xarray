@@ -13,7 +13,7 @@ from xarray.core.datatree import DataTree
 from xarray.core.datatree_ops import _MAPPED_DOCSTRING_ADDENDUM, insert_doc_addendum
 from xarray.core.treenode import NotFoundInTreeError
 from xarray.testing import assert_equal, assert_identical
-from xarray.tests import create_test_data, source_ndarray
+from xarray.tests import assert_array_equal, create_test_data, source_ndarray
 
 
 class TestTreeCreation:
@@ -591,6 +591,56 @@ class TestCoordsInterface:
             "a": np.dtype("int64"),
             "b": np.dtype("int64"),
         }
+
+    def test_modify(self):
+        ds = Dataset(
+            data_vars={
+                "foo": (["x", "y"], np.random.randn(2, 3)),
+            },
+            coords={
+                "x": ("x", np.array([-1, -2], "int64")),
+                "y": ("y", np.array([0, 1, 2], "int64")),
+                "a": ("x", np.array([4, 5], "int64")),
+                "b": np.int64(-10),
+            },
+        )
+        dt = DataTree(data=ds)
+        dt["child"] = DataTree()
+
+        actual = dt.copy(deep=True)
+        actual.coords["x"] = ("x", ["a", "b"])
+        assert_array_equal(actual["x"], ["a", "b"])
+
+        actual = dt.copy(deep=True)
+        actual.coords["z"] = ("z", ["a", "b"])
+        assert_array_equal(actual["z"], ["a", "b"])
+
+        actual = dt.copy(deep=True)
+        with pytest.raises(ValueError, match=r"conflicting dimension sizes"):
+            actual.coords["x"] = ("x", [-1])
+        assert_identical(actual, dt)  # should not be modified
+
+        actual = dt.copy()
+        del actual.coords["b"]
+        expected = dt.reset_coords("b", drop=True)
+        assert_identical(expected, actual)
+
+        with pytest.raises(KeyError):
+            del dt.coords["not_found"]
+
+        with pytest.raises(KeyError):
+            del dt.coords["foo"]
+
+        actual = dt.copy(deep=True)
+        actual.coords.update({"c": 11})
+        expected = dt.merge({"c": 11}).set_coords("c")
+        assert_identical(expected, actual)
+
+        # regression test for GH3746
+        del actual.coords["x"]
+        assert "x" not in actual.xindexes
+
+    # TODO test with coordinate inheritance too...
 
 
 class TestDictionaryInterface: ...
