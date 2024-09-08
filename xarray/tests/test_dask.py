@@ -104,7 +104,8 @@ class TestVariable(DaskTestCase):
             self.assertLazyAndIdentical(self.eager_var, rechunked)
 
             expected_chunksizes = {
-                dim: chunks for dim, chunks in zip(self.lazy_var.dims, expected)
+                dim: chunks
+                for dim, chunks in zip(self.lazy_var.dims, expected, strict=True)
             }
             assert rechunked.chunksizes == expected_chunksizes
 
@@ -354,7 +355,8 @@ class TestDataArrayAndDataset(DaskTestCase):
             self.assertLazyAndIdentical(self.eager_array, rechunked)
 
             expected_chunksizes = {
-                dim: chunks for dim, chunks in zip(self.lazy_array.dims, expected)
+                dim: chunks
+                for dim, chunks in zip(self.lazy_array.dims, expected, strict=True)
             }
             assert rechunked.chunksizes == expected_chunksizes
 
@@ -362,7 +364,8 @@ class TestDataArrayAndDataset(DaskTestCase):
             lazy_dataset = self.lazy_array.to_dataset()
             eager_dataset = self.eager_array.to_dataset()
             expected_chunksizes = {
-                dim: chunks for dim, chunks in zip(lazy_dataset.dims, expected)
+                dim: chunks
+                for dim, chunks in zip(lazy_dataset.dims, expected, strict=True)
             }
             rechunked = lazy_dataset.chunk(chunks)
 

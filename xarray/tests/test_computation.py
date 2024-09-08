@@ -578,7 +578,7 @@ def test_apply_exclude() -> None:
     variables = [xr.Variable("x", a) for a in arrays]
     data_arrays = [
         xr.DataArray(v, {"x": c, "y": ("x", range(len(c)))})
-        for v, c in zip(variables, [["a"], ["b", "c"]])
+        for v, c in zip(variables, [["a"], ["b", "c"]], strict=True)
     ]
     datasets = [xr.Dataset({"data": data_array}) for data_array in data_arrays]
 

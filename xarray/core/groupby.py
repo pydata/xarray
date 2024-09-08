@@ -646,7 +646,11 @@ class GroupBy(Generic[T_Xarray]):
         # provided to mimic pandas.groupby
         if self._groups is None:
             self._groups = dict(
-                zip(self.encoded.unique_coord.data, self.encoded.group_indices)
+                zip(
+                    self.encoded.unique_coord.data,
+                    self.encoded.group_indices,
+                    strict=True,
+                )
             )
         return self._groups
 
@@ -660,7 +664,7 @@ class GroupBy(Generic[T_Xarray]):
         return self._len
 
     def __iter__(self) -> Iterator[tuple[GroupKey, T_Xarray]]:
-        return zip(self.encoded.unique_coord.data, self._iter_grouped())
+        return zip(self.encoded.unique_coord.data, self._iter_grouped(), strict=True)
 
     def __repr__(self) -> str:
         text = (

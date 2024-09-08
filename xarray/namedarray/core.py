@@ -737,14 +737,14 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """
         data = self._data
         if isinstance(data, _chunkedarray):
-            return dict(zip(self.dims, data.chunks))
+            return dict(zip(self.dims, data.chunks, strict=True))
         else:
             return {}
 
     @property
     def sizes(self) -> dict[_Dim, _IntOrUnknown]:
         """Ordered mapping from dimension names to lengths."""
-        return dict(zip(self.dims, self.shape))
+        return dict(zip(self.dims, self.shape, strict=True))
 
     def chunk(
         self,
@@ -948,7 +948,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         _attrs = self.attrs
         return tuple(
             cast("T_NamedArrayInteger", self._new((dim,), nz, _attrs))
-            for nz, dim in zip(nonzeros, self.dims)
+            for nz, dim in zip(nonzeros, self.dims, strict=True)
         )
 
     def __repr__(self) -> str:

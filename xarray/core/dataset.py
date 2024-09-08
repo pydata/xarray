@@ -243,13 +243,13 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
     # Determine the explicit requested chunks.
     preferred_chunks = var.encoding.get("preferred_chunks", {})
     preferred_chunk_shape = tuple(
-        preferred_chunks.get(dim, size) for dim, size in zip(dims, shape)
+        preferred_chunks.get(dim, size) for dim, size in zip(dims, shape, strict=True)
     )
     if isinstance(chunks, Number) or (chunks == "auto"):
         chunks = dict.fromkeys(dims, chunks)
     chunk_shape = tuple(
         chunks.get(dim, None) or preferred_chunk_sizes
-        for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape)
+        for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape, strict=True)
     )
 
     chunk_shape = chunkmanager.normalize_chunks(
@@ -259,7 +259,7 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
     # Warn where requested chunks break preferred chunks, provided that the variable
     # contains data.
     if var.size:
-        for dim, size, chunk_sizes in zip(dims, shape, chunk_shape):
+        for dim, size, chunk_sizes in zip(dims, shape, chunk_shape, strict=True):
             try:
                 preferred_chunk_sizes = preferred_chunks[dim]
             except KeyError:
@@ -285,7 +285,7 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
                     "degrade performance. Instead, consider rechunking after loading."
                 )
 
-    return dict(zip(dims, chunk_shape))
+    return dict(zip(dims, chunk_shape, strict=True))
 
 
 def _maybe_chunk(
@@ -871,7 +871,7 @@ class Dataset(
                 *lazy_data.values(), **kwargs
             )
 
-            for k, data in zip(lazy_data, evaluated_data):
+            for k, data in zip(lazy_data, evaluated_data, strict=False):
                 self.variables[k].data = data
 
         # load everything else sequentially
@@ -1054,7 +1054,7 @@ class Dataset(
             # evaluate all the dask arrays simultaneously
             evaluated_data = dask.persist(*lazy_data.values(), **kwargs)
 
-            for k, data in zip(lazy_data, evaluated_data):
+            for k, data in zip(lazy_data, evaluated_data, strict=False):
                 self.variables[k].data = data
 
         return self
@@ -1654,11 +1654,13 @@ class Dataset(
                         f"setting ({len(value)})"
                     )
                 if isinstance(value, Dataset):
-                    self.update(dict(zip(keylist, value.data_vars.values())))
+                    self.update(
+                        dict(zip(keylist, value.data_vars.values(), strict=True))
+                    )
                 elif isinstance(value, DataArray):
                     raise ValueError("Cannot assign single DataArray to multiple keys")
                 else:
-                    self.update(dict(zip(keylist, value)))
+                    self.update(dict(zip(keylist, value, strict=True)))
 
         else:
             raise ValueError(f"Unsupported key-type {type(key)}")
@@ -3050,7 +3052,7 @@ class Dataset(
                         coord_names.remove(name)
                         continue
             variables[name] = var
-            dims.update(zip(var.dims, var.shape))
+            dims.update(zip(var.dims, var.shape, strict=True))
 
         return self._construct_direct(
             variables=variables,
@@ -4274,7 +4276,7 @@ class Dataset(
             new_index_vars = new_index.create_variables(
                 {
                     new: self._variables[old]
-                    for old, new in zip(coord_names, new_coord_names)
+                    for old, new in zip(coord_names, new_coord_names, strict=True)
                 }
             )
             variables.update(new_index_vars)
@@ -4781,9 +4783,9 @@ class Dataset(
                         raise ValueError("axis should not contain duplicate values")
                     # We need to sort them to make sure `axis` equals to the
                     # axis positions of the result array.
-                    zip_axis_dim = sorted(zip(axis_pos, dim.items()))
+                    zip_axis_dim = sorted(zip(axis_pos, dim.items(), strict=True))
 
-                    all_dims = list(zip(v.dims, v.shape))
+                    all_dims = list(zip(v.dims, v.shape, strict=True))
                     for d, c in zip_axis_dim:
                         all_dims.insert(d, c)
                     variables[k] = v.set_dims(dict(all_dims))
@@ -7326,7 +7328,7 @@ class Dataset(
         ]
         index = self.coords.to_index([*ordered_dims])
         broadcasted_df = pd.DataFrame(
-            dict(zip(non_extension_array_columns, data)), index=index
+            dict(zip(non_extension_array_columns, data, strict=True)), index=index
         )
         for extension_array_column in extension_array_columns:
             extension_array = self.variables[extension_array_column].data.array
@@ -7504,7 +7506,7 @@ class Dataset(
                 name if name is not None else "level_%i" % n  # type: ignore[redundant-expr]
                 for n, name in enumerate(idx.names)
             )
-            for dim, lev in zip(dims, idx.levels):
+            for dim, lev in zip(dims, idx.levels, strict=True):
                 xr_idx = PandasIndex(lev, dim)
                 indexes[dim] = xr_idx
                 index_vars.update(xr_idx.create_variables())
@@ -10028,7 +10030,7 @@ class Dataset(
                         f"dimensions {preserved_dims}."
                     )
         for param, (lb, ub) in bounds.items():
-            for label, bound in zip(("Lower", "Upper"), (lb, ub)):
+            for label, bound in zip(("Lower", "Upper"), (lb, ub), strict=True):
                 if isinstance(bound, DataArray):
                     unexpected = set(bound.dims) - set(preserved_dims)
                     if unexpected:

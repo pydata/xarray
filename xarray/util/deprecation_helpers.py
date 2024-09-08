@@ -108,7 +108,9 @@ def _deprecate_positional_args(version) -> Callable[[T], T]:
                     stacklevel=2,
                 )
 
-                zip_args = zip(kwonly_args[:n_extra_args], args[-n_extra_args:])
+                zip_args = zip(
+                    kwonly_args[:n_extra_args], args[-n_extra_args:], strict=True
+                )
                 kwargs.update({name: arg for name, arg in zip_args})
 
                 return func(*args[:-n_extra_args], **kwargs)

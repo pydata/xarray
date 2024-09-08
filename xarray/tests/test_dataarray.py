@@ -2913,7 +2913,8 @@ class TestDataArray:
     @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
-        "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
+        "axis, dim",
+        zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]], strict=True),
     )
     def test_quantile(self, q, axis, dim, skipna, compute_backend) -> None:
         va = self.va.copy(deep=True)
@@ -5342,7 +5343,7 @@ class TestReduce2D(TestReduce):
 
         minindex = [
             x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(minindex, nanindex)
+            for x, y in zip(minindex, nanindex, strict=True)
         ]
         expected2list = [
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(minindex)
@@ -5387,7 +5388,7 @@ class TestReduce2D(TestReduce):
 
         maxindex = [
             x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(maxindex, nanindex)
+            for x, y in zip(maxindex, nanindex, strict=True)
         ]
         expected2list = [
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(maxindex)
@@ -5439,7 +5440,7 @@ class TestReduce2D(TestReduce):
 
         minindex = [
             x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(minindex, nanindex)
+            for x, y in zip(minindex, nanindex, strict=True)
         ]
         expected2list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
@@ -5492,7 +5493,7 @@ class TestReduce2D(TestReduce):
 
         maxindex = [
             x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(maxindex, nanindex)
+            for x, y in zip(maxindex, nanindex, strict=True)
         ]
         expected2list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
@@ -5588,7 +5589,7 @@ class TestReduce2D(TestReduce):
         # skipna=False
         minindex3 = [
             x if y is None or ar0.dtype.kind == "O" else y
-            for x, y in zip(minindex0, nanindex)
+            for x, y in zip(minindex0, nanindex, strict=True)
         ]
         expected3list = [
             coordarr0.isel(y=yi).isel(x=indi, drop=True)
@@ -5730,7 +5731,7 @@ class TestReduce2D(TestReduce):
         # skipna=False
         maxindex3 = [
             x if y is None or ar0.dtype.kind == "O" else y
-            for x, y in zip(maxindex0, nanindex)
+            for x, y in zip(maxindex0, nanindex, strict=True)
         ]
         expected3list = [
             coordarr0.isel(y=yi).isel(x=indi, drop=True)
@@ -5830,7 +5831,7 @@ class TestReduce2D(TestReduce):
 
         minindex = [
             x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(minindex, nanindex)
+            for x, y in zip(minindex, nanindex, strict=True)
         ]
         expected2list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
@@ -5897,7 +5898,7 @@ class TestReduce2D(TestReduce):
 
         maxindex = [
             x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(maxindex, nanindex)
+            for x, y in zip(maxindex, nanindex, strict=True)
         ]
         expected2list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
@@ -6650,7 +6651,7 @@ class TestIrisConversion:
             ),
         )
 
-        for coord, original_key in zip((actual.coords()), original.coords):
+        for coord, original_key in zip((actual.coords()), original.coords, strict=True):
             original_coord = original.coords[original_key]
             assert coord.var_name == original_coord.name
             assert_array_equal(
@@ -6726,7 +6727,7 @@ class TestIrisConversion:
             ),
         )
 
-        for coord, original_key in zip((actual.coords()), original.coords):
+        for coord, original_key in zip((actual.coords()), original.coords, strict=True):
             original_coord = original.coords[original_key]
             assert coord.var_name == original_coord.name
             assert_array_equal(

@@ -1024,14 +1024,16 @@ class PandasMultiIndex(PandasIndex):
         _check_dim_compat(variables, all_dims="different")
 
         level_indexes = [safe_cast_to_index(var) for var in variables.values()]
-        for name, idx in zip(variables, level_indexes):
+        for name, idx in zip(variables, level_indexes, strict=True):
             if isinstance(idx, pd.MultiIndex):
                 raise ValueError(
                     f"cannot create a multi-index along stacked dimension {dim!r} "
                     f"from variable {name!r} that wraps a multi-index"
                 )
 
-        split_labels, levels = zip(*[lev.factorize() for lev in level_indexes])
+        split_labels, levels = zip(
+            *[lev.factorize() for lev in level_indexes], strict=True
+        )
         labels_mesh = np.meshgrid(*split_labels, indexing="ij")
         labels = [x.ravel() for x in labels_mesh]
 
@@ -1051,7 +1053,7 @@ class PandasMultiIndex(PandasIndex):
             )
 
         new_indexes: dict[Hashable, Index] = {}
-        for name, lev in zip(clean_index.names, clean_index.levels):
+        for name, lev in zip(clean_index.names, clean_index.levels, strict=True):
             idx = PandasIndex(
                 lev.copy(), name, coord_dtype=self.level_coords_dtype[name]
             )
@@ -1258,7 +1260,9 @@ class PandasMultiIndex(PandasIndex):
                 else:
                     levels = [self.index.names[i] for i in range(len(label))]
                     indexer, new_index = self.index.get_loc_level(label, level=levels)
-                    scalar_coord_values.update({k: v for k, v in zip(levels, label)})
+                    scalar_coord_values.update(
+                        {k: v for k, v in zip(levels, label, strict=True)}
+                    )
 
             else:
                 label_array = normalize_label(label)
@@ -1360,7 +1364,8 @@ class PandasMultiIndex(PandasIndex):
 
         new_dim = dims_dict.get(self.dim, self.dim)
         new_level_coords_dtype = {
-            k: v for k, v in zip(new_names, self.level_coords_dtype.values())
+            k: v
+            for k, v in zip(new_names, self.level_coords_dtype.values(), strict=True)
         }
         return self._replace(
             index, dim=new_dim, level_coords_dtype=new_level_coords_dtype

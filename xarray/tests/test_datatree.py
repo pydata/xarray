@@ -343,7 +343,9 @@ class TestCopy:
         for copied in [dt.copy(deep=False), copy(dt)]:
             assert_identical(dt, copied)
 
-            for node, copied_node in zip(dt.root.subtree, copied.root.subtree):
+            for node, copied_node in zip(
+                dt.root.subtree, copied.root.subtree, strict=True
+            ):
                 assert node.encoding == copied_node.encoding
                 # Note: IndexVariable objects with string dtype are always
                 # copied because of xarray.core.util.safe_cast_to_index.
@@ -376,7 +378,9 @@ class TestCopy:
         for copied in [dt.copy(deep=True), deepcopy(dt)]:
             assert_identical(dt, copied)
 
-            for node, copied_node in zip(dt.root.subtree, copied.root.subtree):
+            for node, copied_node in zip(
+                dt.root.subtree, copied.root.subtree, strict=True
+            ):
                 assert node.encoding == copied_node.encoding
                 # Note: IndexVariable objects with string dtype are always
                 # copied because of xarray.core.util.safe_cast_to_index.

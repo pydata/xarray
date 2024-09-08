@@ -186,7 +186,7 @@ def equivalent(first: T, second: T) -> bool:
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    for f, s in zip(first, second):
+    for f, s in zip(first, second, strict=True):
         if not equivalent(f, s):
             return False
     return True

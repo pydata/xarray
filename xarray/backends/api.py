@@ -1585,8 +1585,9 @@ def save_mfdataset(
                 multifile=True,
                 **kwargs,
             )
-            for ds, path, group in zip(datasets, paths, groups)
-        ]
+            for ds, path, group in zip(datasets, paths, groups, strict=True)
+        ],
+        strict=True,
     )
 
     try:
@@ -1600,7 +1601,10 @@ def save_mfdataset(
         import dask
 
         return dask.delayed(
-            [dask.delayed(_finalize_store)(w, s) for w, s in zip(writes, stores)]
+            [
+                dask.delayed(_finalize_store)(w, s)
+                for w, s in zip(writes, stores, strict=True)
+            ]
         )
 
 

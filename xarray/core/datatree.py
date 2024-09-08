@@ -1229,7 +1229,7 @@ class DataTree(
         return all(
             [
                 node.ds.equals(other_node.ds)
-                for node, other_node in zip(self.subtree, other.subtree)
+                for node, other_node in zip(self.subtree, other.subtree, strict=True)
             ]
         )
 
@@ -1259,7 +1259,7 @@ class DataTree(
 
         return all(
             node.ds.identical(other_node.ds)
-            for node, other_node in zip(self.subtree, other.subtree)
+            for node, other_node in zip(self.subtree, other.subtree, strict=True)
         )
 
     def filter(self: DataTree, filterfunc: Callable[[DataTree], bool]) -> DataTree:

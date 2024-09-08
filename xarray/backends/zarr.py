@@ -186,7 +186,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # TODO: incorporate synchronizer to allow writes from multiple dask
     # threads
     if var_chunks and enc_chunks_tuple:
-        for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks):
+        for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks, strict=True):
             for dchunk in dchunks[:-1]:
                 if dchunk % zchunk:
                     base_error = (
@@ -548,7 +548,7 @@ class ZarrStore(AbstractWritableDataStore):
 
         encoding = {
             "chunks": zarr_array.chunks,
-            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks)),
+            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks, strict=True)),
             "compressor": zarr_array.compressor,
             "filters": zarr_array.filters,
         }
@@ -576,7 +576,7 @@ class ZarrStore(AbstractWritableDataStore):
         dimensions = {}
         for k, v in self.zarr_group.arrays():
             dim_names, _ = _get_zarr_dims_and_attrs(v, DIMENSION_KEY, try_nczarr)
-            for d, s in zip(dim_names, v.shape):
+            for d, s in zip(dim_names, v.shape, strict=True):
                 if d in dimensions and dimensions[d] != s:
                     raise ValueError(
                         f"found conflicting lengths for dimension {d} "

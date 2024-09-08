@@ -3212,7 +3212,7 @@ class TestDataset:
         # test propagate attrs/encoding to new variable(s) created from Index object
         original = Dataset(coords={"x": ("x", [0, 1, 2])})
         expected = Dataset(coords={"y": ("y", [0, 1, 2])})
-        for ds, dim in zip([original, expected], ["x", "y"]):
+        for ds, dim in zip([original, expected], ["x", "y"], strict=True):
             ds[dim].attrs = {"foo": "bar"}
             ds[dim].encoding = {"foo": "bar"}
 

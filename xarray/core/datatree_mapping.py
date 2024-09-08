@@ -157,6 +157,7 @@ def map_over_subtree(func: Callable) -> Callable:
             first_tree.subtree,
             *args_as_tree_length_iterables,
             *list(kwargs_as_tree_length_iterables.values()),
+            strict=False,
         ):
             node_args_as_datasetviews = [
                 a.ds if isinstance(a, DataTree) else a for a in all_node_args[:n_args]
@@ -168,6 +169,7 @@ def map_over_subtree(func: Callable) -> Callable:
                         v.ds if isinstance(v, DataTree) else v
                         for v in all_node_args[n_args:]
                     ],
+                    strict=True,
                 )
             )
             func_with_error_context = _handle_errors_with_path_context(
