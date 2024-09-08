@@ -317,8 +317,7 @@ def _get_broadcasted_dims(*arrays: NamedArray[Any, Any]) -> tuple[_Dims, _Shape]
         zip_longest(*map(reversed, dims), fillvalue=_default),
         zip_longest(*map(reversed, shapes), fillvalue=-1),
     ):
-        _d = tuple(set(d) - {_default})
-
+        _d = tuple(v for v in d if v is not _default)
         if any(_isnone(sizes)):
             # dim = None
             raise NotImplementedError("TODO: Handle None in shape, {shapes = }")
