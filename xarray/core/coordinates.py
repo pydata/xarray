@@ -797,7 +797,7 @@ class DatasetCoordinates(Coordinates):
         ]
 
 
-class DataTreeCoordinates(DatasetCoordinates):
+class DataTreeCoordinates(Coordinates):
     """
     Dictionary like container for coordinates of a DataTree node (variables + indexes).
     """
