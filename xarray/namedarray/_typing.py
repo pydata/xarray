@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
-from enum import Enum, EnumType
 from types import EllipsisType, ModuleType
 from typing import (
     TYPE_CHECKING,
     Any,
     Final,
     Literal,
+    Never,
     Protocol,
     SupportsIndex,
     TypedDict,
@@ -16,8 +16,6 @@ from typing import (
     Union,
     overload,
     runtime_checkable,
-    NoReturn,
-    Never,
 )
 
 import numpy as np
