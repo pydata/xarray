@@ -287,7 +287,7 @@ pressure that were made under various conditions:
 * the measurements were made on four different days;
 * they were made at two separate locations, which we will represent using
   their latitude and longitude; and
-* they were made using instruments by three different manufacutrers, which we
+* they were made using instruments by three different manufacturers, which we
   will refer to as `'manufac1'`, `'manufac2'`, and `'manufac3'`.
 
 .. ipython:: python
@@ -514,7 +514,7 @@ keys), and so has the same key properties:
   in this node,
 - ``coords``: another dict-like container of DataArrays, corresponding to
   coordinate variables in this node, and this node's ancestors,
-- ``attrs``: dict to hold arbitary metadata relevant to data in this node.
+- ``attrs``: dict to hold arbitrary metadata relevant to data in this node.
 
 A single :py:class:`~xarray.DataTree` object acts much like a single :py:class:`~xarray.Dataset` object, and
 has a similar set of dict-like methods defined upon it. However, :py:class:`~xarray.DataTree`\s

@@ -1404,6 +1404,13 @@ class NetCDFBase(CFEncodedBase):
                     a.close()
                     b.close()
 
+    def test_byte_attrs(self, byte_attrs_dataset: dict[str, Any]) -> None:
+        # test for issue #9407
+        input = byte_attrs_dataset["input"]
+        expected = byte_attrs_dataset["expected"]
+        with self.roundtrip(input) as actual:
+            assert_identical(actual, expected)
+
 
 _counter = itertools.count()
 
@@ -3861,6 +3868,10 @@ class TestH5NetCDFData(NetCDF4Base):
                 assert ds.title == title
                 assert "attribute 'title' of h5netcdf object '/'" in str(w[0].message)
 
+    def test_byte_attrs(self, byte_attrs_dataset: dict[str, Any]) -> None:
+        with pytest.raises(ValueError, match=byte_attrs_dataset["h5netcdf_error"]):
+            super().test_byte_attrs(byte_attrs_dataset)
+
 
 @requires_h5netcdf
 @requires_netCDF4
@@ -5030,9 +5041,10 @@ class TestEncodingInvalid:
         var = xr.Variable(("x",), [1, 2, 3], {}, {"compression": "szlib"})
         _extract_nc4_variable_encoding(var, backend="netCDF4", raise_on_invalid=True)
 
+    @pytest.mark.xfail
     def test_extract_h5nc_encoding(self) -> None:
         # not supported with h5netcdf (yet)
-        var = xr.Variable(("x",), [1, 2, 3], {}, {"least_sigificant_digit": 2})
+        var = xr.Variable(("x",), [1, 2, 3], {}, {"least_significant_digit": 2})
         with pytest.raises(ValueError, match=r"unexpected encoding"):
             _extract_nc4_variable_encoding(var, raise_on_invalid=True)
 

@@ -224,7 +224,7 @@ def insert_doc_addendum(docstring: str | None, addendum: str) -> str | None:
     Dataset directly as well as the mixins: DataWithCoords, DatasetAggregations, and DatasetOpsMixin.
 
     The majority of the docstrings fall into a parseable pattern. Those that
-    don't, just have the addendum appeneded after. None values are returned.
+    don't, just have the addendum appended after. None values are returned.
 
     """
     if docstring is None:

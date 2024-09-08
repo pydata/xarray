@@ -85,10 +85,9 @@ class TestCheckTreesIsomorphic:
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
         real_root: xr.DataTree = xr.DataTree(name="real root")
-        dt2.name = "not_real_root"
-        dt2.parent = real_root
+        real_root["not_real_root"] = dt2
         with pytest.raises(TreeIsomorphismError):
-            check_isomorphic(dt1, dt2, check_from_root=True)
+            check_isomorphic(dt1, real_root, check_from_root=True)
 
 
 class TestMapOverSubTree:

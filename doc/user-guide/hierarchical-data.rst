@@ -131,7 +131,7 @@ We can add Herbert to the family tree without displacing Homer by :py:meth:`~xar
 
 .. note::
    This example shows a minor subtlety - the returned tree has Homer's brother listed as ``"Herbert"``,
-   but the original node was named "Herbert". Not only are names overriden when stored as keys like this,
+   but the original node was named "Herbert". Not only are names overridden when stored as keys like this,
    but the new node is a copy, so that the original node that was reference is unchanged (i.e. ``herbert.name == "Herb"`` still).
    In other words, nodes are copied into trees, not inserted into them.
    This is intentional, and mirrors the behaviour when storing named :py:class:`~xarray.DataArray` objects inside datasets.
