@@ -146,7 +146,7 @@ def _new(
     dims_ = copy.copy(x._dims) if isinstance(dims, Default) else dims
 
     attrs_: Mapping[Any, Any] | None
-    if isinstance(attrs, _default):
+    if isinstance(attrs, Default):
         attrs_ = None if x._attrs is None else x._attrs.copy()
     else:
         attrs_ = attrs
