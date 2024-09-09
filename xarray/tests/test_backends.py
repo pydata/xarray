@@ -39,7 +39,7 @@ from xarray import (
     open_mfdataset,
     save_mfdataset,
 )
-from xarray.backends.common import robust_getitem
+from xarray.backends.common import ArrayWriter, robust_getitem
 from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
 from xarray.backends.netCDF4_ import (
@@ -272,6 +272,11 @@ def create_encoded_unsigned_false_masked_scaled_data(dtype: np.dtype) -> Dataset
 def create_boolean_data() -> Dataset:
     attributes = {"units": "-"}
     return Dataset({"x": ("t", [True, False, False, True], attributes)})
+
+
+class CustomArrayWriter(ArrayWriter):
+    def add(self, source, target, region=None):
+        raise NotImplementedError("Custom Array Writer")
 
 
 class TestCommon:
@@ -2591,6 +2596,13 @@ class ZarrBase(CFEncodedBase):
             original, save_kwargs={"group": group}, open_kwargs={"group": group}
         ) as actual:
             assert_identical(original, actual)
+
+    def test_zarr_custom_array_writer(self) -> None:
+        ds = Dataset({"foo": ("x", [1])})
+        with self.create_zarr_target() as store_target:
+            with pytest.raises(NotImplementedError) as exc:
+                ds.to_zarr(store_target, mode="w", writer=CustomArrayWriter())
+        assert str(exc.value) == "Custom Array Writer"
 
     def test_zarr_mode_w_overwrites_encoding(self) -> None:
         import zarr

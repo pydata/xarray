@@ -1624,6 +1624,7 @@ def to_zarr(
     zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
+    writer: ArrayWriter | None = None,
 ) -> backends.ZarrStore: ...
 
 
@@ -1647,6 +1648,7 @@ def to_zarr(
     zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
+    writer: ArrayWriter | None = None,
 ) -> Delayed: ...
 
 
@@ -1668,6 +1670,7 @@ def to_zarr(
     zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
+    writer: ArrayWriter | None = None,
 ) -> backends.ZarrStore | Delayed:
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
@@ -1775,7 +1778,6 @@ def to_zarr(
                     f"variable {var_name!r} already exists, but encoding was provided"
                 )
 
-    writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
     dump_to_store(dataset, zstore, writer, encoding=encoding)
     writes = writer.sync(
