@@ -386,7 +386,7 @@ children_section = partial(
 def datatree_node_repr(group_title: str, dt: DataTree) -> str:
     header_components = [f"<div class='xr-obj-type'>{escape(group_title)}</div>"]
 
-    ds = dt._to_dataset_view(rebuild_dims=False)
+    ds = dt._to_dataset_view(rebuild_dims=False, inherited=True)
 
     sections = [
         children_section(dt.children),
