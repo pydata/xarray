@@ -1052,7 +1052,7 @@ def _single_node_repr(node: DataTree) -> str:
     """Information about this node, not including its relationships to other nodes."""
     if node.has_data or node.has_attrs:
         # TODO: change this to inherited=False, in order to clarify what is
-        # inherited?
+        # inherited? https://github.com/pydata/xarray/issues/9463
         node_view = node._to_dataset_view(rebuild_dims=False, inherited=True)
         ds_info = "\n" + repr(node_view)
     else:
