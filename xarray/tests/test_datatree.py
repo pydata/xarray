@@ -798,20 +798,16 @@ class TestRepr:
             │       e        (x) float64 16B 1.0 2.0
             └── Group: /b
                 │   Dimensions:  (x: 2, y: 1)
-                │   Coordinates:
-                │     * x        (x) float64 16B 2.0 3.0
                 │   Dimensions without coordinates: y
                 │   Data variables:
                 │       f        (y) float64 8B 3.0
                 ├── Group: /b/c
                 └── Group: /b/d
                         Dimensions:  (x: 2, y: 1)
-                        Coordinates:
-                          * x        (x) float64 16B 2.0 3.0
                         Dimensions without coordinates: y
                         Data variables:
                             g        float64 8B 4.0
-            """
+                        """
         ).strip()
         assert result == expected
 
@@ -821,7 +817,7 @@ class TestRepr:
             <xarray.DataTree 'b'>
             Group: /b
             │   Dimensions:  (x: 2, y: 1)
-            │   Coordinates:
+            │   Inherited coordinates:
             │     * x        (x) float64 16B 2.0 3.0
             │   Dimensions without coordinates: y
             │   Data variables:
@@ -829,8 +825,6 @@ class TestRepr:
             ├── Group: /b/c
             └── Group: /b/d
                     Dimensions:  (x: 2, y: 1)
-                    Coordinates:
-                      * x        (x) float64 16B 2.0 3.0
                     Dimensions without coordinates: y
                     Data variables:
                         g        float64 8B 4.0
