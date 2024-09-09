@@ -40,7 +40,7 @@ stored under hashable keys), and so has the same key properties:
 - ``dims``: a dictionary mapping of dimension names to lengths, for the variables in this node,
 - ``data_vars``: a dict-like container of DataArrays corresponding to variables in this node,
 - ``coords``: another dict-like container of DataArrays, corresponding to coordinate variables in this node,
-- ``attrs``: dict to hold arbitary metadata relevant to data in this node.
+- ``attrs``: dict to hold arbitrary metadata relevant to data in this node.
 
 A single ``DataTree`` object acts much like a single ``Dataset`` object, and has a similar set of dict-like methods
 defined upon it. However, ``DataTree``'s can also contain other ``DataTree`` objects, so they can be thought of as nested dict-like

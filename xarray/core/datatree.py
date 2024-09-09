@@ -11,7 +11,7 @@ from collections.abc import (
     Mapping,
 )
 from html import escape
-from typing import TYPE_CHECKING, Any, Generic, Literal, NoReturn, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, Union, overload
 
 from xarray.core import utils
 from xarray.core.alignment import align
@@ -37,7 +37,7 @@ from xarray.core.formatting_html import (
 from xarray.core.indexes import Index, Indexes
 from xarray.core.merge import dataset_update_method
 from xarray.core.options import OPTIONS as XR_OPTS
-from xarray.core.treenode import NamedNode, NodePath, Tree
+from xarray.core.treenode import NamedNode, NodePath
 from xarray.core.utils import (
     Default,
     Frozen,
@@ -91,17 +91,13 @@ def _collect_data_and_coord_variables(
     return data_variables, coord_variables
 
 
-def _coerce_to_dataset(data: Dataset | DataArray | None) -> Dataset:
-    if isinstance(data, DataArray):
-        ds = data.to_dataset()
-    elif isinstance(data, Dataset):
+def _to_new_dataset(data: Dataset | None) -> Dataset:
+    if isinstance(data, Dataset):
         ds = data.copy(deep=False)
     elif data is None:
         ds = Dataset()
     else:
-        raise TypeError(
-            f"data object is not an xarray Dataset, DataArray, or None, it is of type {type(data)}"
-        )
+        raise TypeError(f"data object is not an xarray.Dataset, dict, or None: {data}")
     return ds
 
 
@@ -369,8 +365,7 @@ class DataTree(
     MappedDataWithCoords,
     DataTreeArithmeticMixin,
     TreeAttrAccessMixin,
-    Generic[Tree],
-    Mapping,
+    Mapping[str, "DataArray | DataTree"],
 ):
     """
     A tree-like hierarchical collection of xarray objects.
@@ -422,7 +417,7 @@ class DataTree(
 
     def __init__(
         self,
-        data: Dataset | DataArray | None = None,
+        data: Dataset | None = None,
         parent: DataTree | None = None,
         children: Mapping[str, DataTree] | None = None,
         name: str | None = None,
@@ -436,11 +431,8 @@ class DataTree(
 
         Parameters
         ----------
-        data : Dataset, DataArray, or None, optional
-            Data to store under the .ds attribute of this node. DataArrays will
-            be promoted to Datasets. Default is None.
-        parent : DataTree, optional
-            Parent node to this node. Default is None.
+        data : Dataset, optional
+            Data to store under the .ds attribute of this node.
         children : Mapping[str, DataTree], optional
             Any child nodes of this node. Default is None.
         name : str, optional
@@ -458,9 +450,10 @@ class DataTree(
             children = {}
 
         super().__init__(name=name)
-        self._set_node_data(_coerce_to_dataset(data))
-        self.parent = parent
-        self.children = children
+        self._set_node_data(_to_new_dataset(data))
+
+        # shallow copy to avoid modifying arguments in-place (see GH issue #9196)
+        self.children = {name: child.copy() for name, child in children.items()}
 
     def _set_node_data(self, ds: Dataset):
         data_vars, coord_vars = _collect_data_and_coord_variables(ds)
@@ -496,17 +489,6 @@ class DataTree(
     @property
     def _indexes(self) -> ChainMap[Hashable, Index]:
         return ChainMap(self._node_indexes, *(p._node_indexes for p in self.parents))
-
-    @property
-    def parent(self: DataTree) -> DataTree | None:
-        """Parent of this node."""
-        return self._parent
-
-    @parent.setter
-    def parent(self: DataTree, new_parent: DataTree) -> None:
-        if new_parent and self.name is None:
-            raise ValueError("Cannot set an unnamed node as a child of another node")
-        self._set_parent(new_parent, self.name)
 
     def _to_dataset_view(self, rebuild_dims: bool) -> DatasetView:
         variables = dict(self._data_variables)
@@ -553,8 +535,8 @@ class DataTree(
         return self._to_dataset_view(rebuild_dims=True)
 
     @ds.setter
-    def ds(self, data: Dataset | DataArray | None = None) -> None:
-        ds = _coerce_to_dataset(data)
+    def ds(self, data: Dataset | None = None) -> None:
+        ds = _to_new_dataset(data)
         self._replace_node(ds)
 
     def to_dataset(self, inherited: bool = True) -> Dataset:
@@ -718,8 +700,8 @@ class DataTree(
     def __bool__(self) -> bool:
         return bool(self._data_variables) or bool(self._children)
 
-    def __iter__(self) -> Iterator[Hashable]:
-        return itertools.chain(self._data_variables, self._children)
+    def __iter__(self) -> Iterator[str]:
+        return itertools.chain(self._data_variables, self._children)  # type: ignore
 
     def __array__(self, dtype=None, copy=None):
         raise TypeError(
@@ -896,7 +878,7 @@ class DataTree(
             # create and assign a shallow copy here so as not to alter original name of node in grafted tree
             new_node = val.copy(deep=False)
             new_node.name = key
-            new_node.parent = self
+            new_node._set_parent(new_parent=self, child_name=key)
         else:
             if not isinstance(val, DataArray | Variable):
                 # accommodate other types that can be coerced into Variables
@@ -1063,7 +1045,8 @@ class DataTree(
     @classmethod
     def from_dict(
         cls,
-        d: Mapping[str, Dataset | DataArray | DataTree | None],
+        d: Mapping[str, Dataset | DataTree | None],
+        /,
         name: str | None = None,
     ) -> DataTree:
         """
@@ -1072,10 +1055,10 @@ class DataTree(
         Parameters
         ----------
         d : dict-like
-            A mapping from path names to xarray.Dataset, xarray.DataArray, or DataTree objects.
+            A mapping from path names to xarray.Dataset or DataTree objects.
 
-            Path names are to be given as unix-like path. If path names containing more than one part are given, new
-            tree nodes will be constructed as necessary.
+            Path names are to be given as unix-like path. If path names containing more than one
+            part are given, new tree nodes will be constructed as necessary.
 
             To assign data to the root node of the tree use "/" as the path.
         name : Hashable | None, optional
@@ -1096,8 +1079,12 @@ class DataTree(
         if isinstance(root_data, DataTree):
             obj = root_data.copy()
             obj.orphan()
+        elif root_data is None or isinstance(root_data, Dataset):
+            obj = cls(name=name, data=root_data, children=None)
         else:
-            obj = cls(name=name, data=root_data, parent=None, children=None)
+            raise TypeError(
+                f'root node data (at "/") must be a Dataset or DataTree, got {type(root_data)}'
+            )
 
         def depth(item) -> int:
             pathstr, _ = item
@@ -1520,7 +1507,7 @@ class DataTree(
         mode : {"w", "a"}, default: "w"
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
-            will be overwritten. Only appies to the root group.
+            will be overwritten. Only applies to the root group.
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,

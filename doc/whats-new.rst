@@ -42,6 +42,24 @@ Performance
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - Support for ``python 3.9`` has been dropped (:pull:`8937`)
+- The minimum versions of some dependencies were changed
+
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+    boto3                   1.26      1.28
+    cartopy                 0.21      0.22
+    dask-core             2023.4    2023.9
+    distributed           2023.4    2023.9
+    h5netcdf                1.1        1.2
+    iris                    3.4        3.7
+    numba                   0.56      0.57
+    numpy                   1.23      1.24
+    pandas                  2.0        2.1
+    scipy                   1.10      1.11
+    typing_extensions       4.5        4.7
+    zarr                    2.14      2.16
+  ===================== =========  =======
 
 
 Deprecations
@@ -67,6 +85,16 @@ Bug fixes
 - Fix deprecation warning that was raised when calling ``np.array`` on an ``xr.DataArray``
   in NumPy 2.0 (:issue:`9312`, :pull:`9393`)
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fix support for using ``pandas.DateOffset``, ``pandas.Timedelta``, and
+  ``datetime.timedelta`` objects as ``resample`` frequencies
+  (:issue:`9408`, :pull:`9413`).
+  By `Oliver Higgs <https://github.com/oliverhiggs>`_.
+
+Performance
+~~~~~~~~~~~
+
+- Speed up grouping by avoiding deep-copy of non-dimension coordinates (:issue:`9426`, :pull:`9393`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -101,7 +129,7 @@ New Features
   (:issue:`6610`, :pull:`8840`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Allow rechunking to a frequency using ``Dataset.chunk(time=TimeResampler("YE"))`` syntax. (:issue:`7559`, :pull:`9109`)
-  Such rechunking allows many time domain analyses to be executed in an embarassingly parallel fashion.
+  Such rechunking allows many time domain analyses to be executed in an embarrassingly parallel fashion.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Allow per-variable specification of ```mask_and_scale``, ``decode_times``, ``decode_timedelta``
   ``use_cftime`` and ``concat_characters`` params in :py:func:`~xarray.open_dataset`  (:pull:`9218`).
@@ -134,7 +162,7 @@ Breaking changes
 
 Bug fixes
 ~~~~~~~~~
-- Fix scatter plot broadcasting unneccesarily. (:issue:`9129`, :pull:`9206`)
+- Fix scatter plot broadcasting unnecessarily. (:issue:`9129`, :pull:`9206`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Don't convert custom indexes to ``pandas`` indexes when computing a diff (:pull:`9157`)
   By `Justus Magin <https://github.com/keewis>`_.
@@ -597,7 +625,7 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 - The implementation of :py:func:`map_blocks` has changed to minimize graph size and duplication of data.
-  This should be a strict improvement even though the graphs are not always embarassingly parallel any more.
+  This should be a strict improvement even though the graphs are not always embarrassingly parallel any more.
   Please open an issue if you spot a regression. (:pull:`8412`, :issue:`8409`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Remove null values before plotting. (:pull:`8535`).
