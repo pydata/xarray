@@ -641,7 +641,7 @@ class TestCoordsInterface:
 
         actual = dt.copy(deep=True)
         actual.coords.update({"c": 11})
-        expected = dt.merge({"c": 11}).set_coords("c")
+        expected = dt.assign_coords({"c": 11})
         assert_identical(expected, actual)
 
         # regression test for GH3746
