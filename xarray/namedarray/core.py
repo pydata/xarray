@@ -27,6 +27,7 @@ from xarray.core.indexing import (
 )
 from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray._typing import (
+    Default,
     ErrorOptionsWithWarn,
     _arrayapi,
     _arrayfunction_or_api,
@@ -58,7 +59,6 @@ if TYPE_CHECKING:
 
     from xarray.core.types import Dims, T_Chunks
     from xarray.namedarray._typing import (
-        Default,
         _AttrsLike,
         _Chunks,
         _Device,
