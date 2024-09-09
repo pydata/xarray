@@ -647,27 +647,35 @@ def test_delitem():
     ds = Dataset({"a": 0}, coords={"x": ("x", [1, 2]), "z": "a"})
     dt = DataTree(ds, children={"c": DataTree()})
 
+    with pytest.raises(KeyError):
+        del dt["foo"]
+
     # test delete children
     del dt["c"]
     assert dt.children == {}
     assert set(dt.variables) == {"x", "z", "a"}
+    with pytest.raises(KeyError):
+        del dt["c"]
 
     # test delete variables
     del dt["a"]
     assert set(dt.coords) == {"x", "z"}
+    with pytest.raises(KeyError):
+        del dt["a"]
 
     # test delete coordinates
     del dt["z"]
     assert set(dt.coords) == {"x"}
+    with pytest.raises(KeyError):
+        del dt["z"]
 
     # test delete indexed coordinates
     del dt["x"]
     assert dt.variables == {}
     assert dt.coords == {}
     assert dt.indexes == {}
-
-    with pytest.raises(KeyError, match="Cannot delete key 'foo' as it was not found"):
-        del dt["foo"]
+    with pytest.raises(KeyError):
+        del dt["x"]
 
 
 class TestTreeFromDict:
@@ -1214,7 +1222,7 @@ class TestSubset:
 
     def test_filter(self):
         simpsons = DataTree.from_dict(
-            d={
+            {
                 "/": xr.Dataset({"age": 83}),
                 "/Herbert": xr.Dataset({"age": 40}),
                 "/Homer": xr.Dataset({"age": 39}),
@@ -1225,7 +1233,7 @@ class TestSubset:
             name="Abe",
         )
         expected = DataTree.from_dict(
-            d={
+            {
                 "/": xr.Dataset({"age": 83}),
                 "/Herbert": xr.Dataset({"age": 40}),
                 "/Homer": xr.Dataset({"age": 39}),

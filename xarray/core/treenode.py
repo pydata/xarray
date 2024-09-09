@@ -566,7 +566,7 @@ class TreeNode(Generic[Tree]):
             del self._children[key]
             child.orphan()
         else:
-            raise KeyError(f"Child node {key} not found")
+            raise KeyError(key)
 
     def same_tree(self, other: Tree) -> bool:
         """True if other node is in the same tree as this node."""
