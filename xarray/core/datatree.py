@@ -1114,7 +1114,6 @@ class DataTree(
         root_data = d_cast.pop("/", None)
         if isinstance(root_data, DataTree):
             obj = root_data.copy()
-            obj.orphan()
         elif root_data is None or isinstance(root_data, Dataset):
             obj = cls(name=name, data=root_data, children=None)
         else:
@@ -1134,9 +1133,10 @@ class DataTree(
                 node_name = NodePath(path).name
                 if isinstance(data, DataTree):
                     new_node = data.copy()
-                    new_node.orphan()
-                else:
+                elif isinstance(data, Dataset) or data is None:
                     new_node = cls(name=node_name, data=data)
+                else:
+                    raise TypeError(f"invalid values: {data}")
                 obj._set_item(
                     path,
                     new_node,
