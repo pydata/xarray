@@ -807,7 +807,7 @@ class TestRepr:
                         Dimensions without coordinates: y
                         Data variables:
                             g        float64 8B 4.0
-                        """
+            """
         ).strip()
         assert result == expected
 
