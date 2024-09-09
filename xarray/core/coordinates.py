@@ -880,7 +880,7 @@ class DataTreeCoordinates(Coordinates):
         }
         self._data._node_coord_variables = coord_variables
         self._data._node_dims = node_ds._dims
-        self._data._indexes = node_ds._indexes
+        self._data._node_indexes = node_ds._indexes
 
     def _drop_coords(self, coord_names):
         # should drop indexed coordinates only
