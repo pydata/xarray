@@ -1064,6 +1064,7 @@ class DataTree(
     def from_dict(
         cls,
         d: Mapping[str, Dataset | DataTree | None],
+        /,
         name: str | None = None,
     ) -> DataTree:
         """
