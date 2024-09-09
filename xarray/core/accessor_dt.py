@@ -563,7 +563,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     @property
     def decimal_year(self) -> T_DataArray:
         """Convert the dates as a fractional year."""
-        result = _decimal_year(self._obj).astype(float)
+        result = _decimal_year(self._obj)
         newvar = Variable(
             dims=self._obj.dims,
             attrs=self._obj.attrs,

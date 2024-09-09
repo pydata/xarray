@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import warnings
-
 import numpy as np
 import pandas as pd
 
@@ -306,30 +304,19 @@ def _convert_to_new_calendar_with_new_day_of_year(
         return np.nan
 
 
-def _yearstart_cftime(year, date_class):
-    return date_class(year, 1, 1)
+def _decimal_year_cftime(time, year, days_in_year, *, date_class):
+    year_start = date_class(year, 1, 1)
+    delta = np.timedelta64(time - year_start, "ns")
+    days_in_year = np.timedelta64(days_in_year, "D")
+    return year + delta / days_in_year
 
 
-def _yearstart_np(year, dtype):
-    return np.datetime64(int(year) - 1970, "Y").astype(dtype)
-
-
-def _yearstart(times):
-    if times.dtype == "O":
-        return apply_ufunc(
-            _yearstart_cftime,
-            times.dt.year,
-            kwargs={"date_class": get_date_type(times.dt.calendar, True)},
-            vectorize=True,
-            dask="parallelized",
-        )
-    return apply_ufunc(
-        _yearstart_np,
-        times.dt.year,
-        kwargs={"dtype": times.dtype},
-        vectorize=True,
-        dask="parallelized",
-    )
+def _decimal_year_numpy(time, year, days_in_year, *, dtype):
+    time = np.asarray(time).astype(dtype)
+    year_start = np.datetime64(int(year) - 1970, "Y").astype(dtype)
+    delta = time - year_start
+    days_in_year = np.timedelta64(days_in_year, "D")
+    return year + delta / days_in_year
 
 
 def _decimal_year(times):
@@ -340,12 +327,22 @@ def _decimal_year(times):
     Ex: '2000-03-01 12:00' is 2000.1653 in a standard calendar,
       2000.16301 in a "noleap" or 2000.16806 in a "360_day".
     """
-    years = times.dt.year
-    deltas = times - _yearstart(times)
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message="Converting non-nanosecond")
-        days_in_years = times.dt.days_in_year.astype("timedelta64[D]")
-    return years + deltas / days_in_years
+    if times.dtype == "O":
+        function = _decimal_year_cftime
+        kwargs = {"date_class": get_date_type(times.dt.calendar, True)}
+    else:
+        function = _decimal_year_numpy
+        kwargs = {"dtype": times.dtype}
+    return apply_ufunc(
+        function,
+        times,
+        times.dt.year,
+        times.dt.days_in_year,
+        kwargs=kwargs,
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[np.float64],
+    )
 
 
 def interp_calendar(source, target, dim="time"):
