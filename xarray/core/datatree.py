@@ -516,7 +516,7 @@ class DataTree(
             #         *empty*
             #
             # Notice the "x" dimension is still defined, even though there are no
-            # variables or coordinates. 
+            # variables or coordinates.
             # Normally this is not supposed to be possible in xarray's data model, but here it is useful internally for use cases where we
             # want to inherit everything from parents nodes, e.g., for align()
             # and repr().
