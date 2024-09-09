@@ -368,6 +368,14 @@ class TestCopy:
 
         assert_identical(actual, expected)
 
+    def test_copy_coord_inheritance(self) -> None:
+        tree = DataTree.from_dict(
+            {"/": xr.Dataset(coords={"x": [0, 1]}), "/c": DataTree()}
+        )
+        tree2 = tree.copy()
+        node_ds = tree2.children["c"].to_dataset(inherited=False)
+        assert_identical(node_ds, xr.Dataset())
+
     def test_deepcopy(self, create_test_datatree):
         dt = create_test_datatree()
 
