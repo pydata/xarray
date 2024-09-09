@@ -120,7 +120,7 @@ Particularly after a roundtrip, the following deviations are noted:
 
 - a non-dimension Dataset ``coordinate`` is converted into ``variable``
 - a non-dimension DataArray ``coordinate`` is not converted
-- ``dtype`` is not allways the same (e.g. "str" is converted to "object")
+- ``dtype`` is not always the same (e.g. "str" is converted to "object")
 - ``attrs`` metadata is not conserved
 
 To avoid these problems, the third-party `ntv-pandas <https://github.com/loco-philippe/ntv-pandas>`__ library offers lossless and reversible conversions between

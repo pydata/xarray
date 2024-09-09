@@ -1217,7 +1217,7 @@ class TestDataset:
         ΔN = 28
         time = xr.date_range(
             "2001-01-01", periods=N + ΔN, freq="D", calendar=calendar
-        ).to_numpy()
+        ).to_numpy(copy=True)
         if add_gap:
             # introduce an empty bin
             time[31 : 31 + ΔN] = np.datetime64("NaT")
@@ -6742,7 +6742,7 @@ class TestDataset:
             else:
                 np.testing.assert_equal(padded.sizes[ds_dim_name], ds_dim)
 
-        # check if coord "numbers" with dimention dim3 is paded correctly
+        # check if coord "numbers" with dimension dim3 is padded correctly
         if padded_dim_name == "dim3":
             assert padded["numbers"][[0, -1]].isnull().all()
             # twarning: passes but dtype changes from int to float

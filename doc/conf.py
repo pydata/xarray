@@ -88,6 +88,7 @@ extensions = [
     "sphinxext.rediraffe",
     "sphinx_design",
     "sphinx_inline_tabs",
+    "sphinx_remove_toctrees",
 ]
 
 
@@ -198,6 +199,8 @@ templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
 # The master toctree document.
 master_doc = "index"
 
+remove_from_toctrees = ["generated/*"]
+
 # General information about the project.
 project = "xarray"
 copyright = f"2014-{datetime.datetime.now().year}, xarray Developers"
@@ -244,6 +247,7 @@ html_theme_options = dict(
     repository_url="https://github.com/pydata/xarray",
     repository_branch="main",
     navigation_with_keys=False,  # pydata/pydata-sphinx-theme#1492
+    navigation_depth=4,
     path_to_docs="doc",
     use_edit_page_button=True,
     use_repository_button=True,
