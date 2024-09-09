@@ -1273,10 +1273,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         groups_dict = {}
 
         for path_group, store in stores.items():
-            print("store items", stores.items())
-            print("------")
-            print(path_group)
-            # group_store = ZarrStore(store, zarr_group=path_group, **kwargs)
             store_entrypoint = StoreBackendEntrypoint()
 
             with close_on_error(store):
