@@ -8,6 +8,7 @@ from xarray.namedarray._array_api._utils import (
     _get_data_namespace,
     _infer_dims,
     _insert_dim,
+    _dims_to_axis,
 )
 from xarray.namedarray._typing import (
     Default,
@@ -18,6 +19,7 @@ from xarray.namedarray._typing import (
     _Dim,
     _DType,
     _ShapeType,
+    _Dims,
 )
 from xarray.namedarray.core import NamedArray
 
@@ -124,7 +126,13 @@ def moveaxis(
     return x._new(_dims, _data)
 
 
-def permute_dims(x: NamedArray[Any, _DType], axes: _Axes) -> NamedArray[Any, _DType]:
+def permute_dims(
+    x: NamedArray[Any, _DType],
+    /,
+    axes: _Axes | None = None,
+    *,
+    dims: _Dims | Default = _default,
+) -> NamedArray[Any, _DType]:
     """
     Permutes the dimensions of an array.
 
@@ -141,16 +149,24 @@ def permute_dims(x: NamedArray[Any, _DType], axes: _Axes) -> NamedArray[Any, _DT
         An array with permuted dimensions. The returned array must have the same
         data type as x.
 
+    Examples
+    --------
+    >>> x = NamedArray(("x", "y", "z"), np.zeros((3, 4, 5)))
+    >>> y = permute_dims(x, (2, 1, 0))
+    >>> y.dims, y.shape
+    (('z', 'y', 'x'), (5, 4, 3))
+    >>> y = permute_dims(x, dims=("y", "x", "z"))
+    >>> y.dims, y.shape
+    (('y', 'x', 'z'), (4, 3, 5))
     """
-
-    dims = x.dims
-    new_dims = tuple(dims[i] for i in axes)
-    if isinstance(x._data, _arrayapi):
-        xp = _get_data_namespace(x)
-        out = x._new(dims=new_dims, data=xp.permute_dims(x._data, axes))
-    else:
-        out = x._new(dims=new_dims, data=x._data.transpose(axes))  # type: ignore[attr-defined]
-    return out
+    xp = _get_data_namespace(x)
+    _axis = _dims_to_axis(x, dims, axes)
+    if _axis is None:
+        raise TypeError("permute_dims missing argument axes or dims")
+    old_dims = x.dims
+    _dims = tuple(old_dims[i] for i in _axis)
+    _data = xp.permute_dims(x._data, _axis)
+    return x._new(_dims, _data)
 
 
 def repeat(
