@@ -160,10 +160,9 @@ def _check_for_slashes_in_names(variables: Iterable[Hashable]) -> None:
     ]
     if len(offending_variable_names) > 0:
         raise KeyError(
-            "Given Dataset contains variable names with '/': "
+            "Given variables have names containing the '/' character: "
             f"{offending_variable_names}. "
-            "A Dataset represents a group, and a single group "
-            "cannot have path-like variable names with '/' characters in them. "
+            "Variables stored in DataTree objects cannot have names containing '/' characters, as this would make path-like access to variables ambiguous."
         )
 
 
