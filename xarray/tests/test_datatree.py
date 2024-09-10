@@ -89,7 +89,7 @@ class TestNames:
         )
         xds: xr.Dataset = xr.Dataset({"group/subgroup/my_variable": xda})
         with pytest.raises(
-            KeyError,
+            ValueError,
             match=re.escape(
                 "Given Dataset contains variable names with '/': "
                 "['R30m/y', 'group/subgroup/my_variable']. "
