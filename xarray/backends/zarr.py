@@ -1253,9 +1253,9 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
         # Check for a group and make it a parent if it exists
         if group:
-            parent = NodePath("/") / NodePath(group)
+            parent = str(NodePath("/") / NodePath(group))
         else:
-            parent = NodePath("/")
+            parent = str(NodePath("/"))
 
         stores = ZarrStore.open_store(
             filename_or_obj,

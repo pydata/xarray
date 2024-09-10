@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -157,7 +158,16 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
 
     def test_open_datatree(self, unaligned_datatree_nc) -> None:
         """Test if `open_datatree` fails to open a netCDF4 with an unaligned group hierarchy."""
-        with pytest.raises(ValueError):
+
+        with pytest.raises(
+            ValueError,
+            match=(
+                re.escape(
+                    "group '/Group1/subgroup1' is not aligned with its parents:\nGroup:\n"
+                )
+                + ".*"
+            ),
+        ):
             open_datatree(unaligned_datatree_nc)
 
     def test_open_groups(self, unaligned_datatree_nc) -> None:
@@ -325,7 +335,12 @@ class TestZarrDatatreeIO:
 
     def test_open_datatree(self, unaligned_datatree_zarr) -> None:
         """Test if `open_datatree` fails to open a zarr store with an unaligned group hierarchy."""
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match=(
+                re.escape("group '/Group2' is not aligned with its parents:") + ".*"
+            ),
+        ):
             open_datatree(unaligned_datatree_zarr, engine="zarr")
 
     def test_open_groups(self, unaligned_datatree_zarr) -> None:
