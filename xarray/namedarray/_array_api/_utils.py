@@ -149,6 +149,8 @@ def _dims_to_axis(
     Convert to dims to axis values
 
     >>> x = NamedArray(("x", "y"), np.array([[1, 2, 3], [5, 6, 7]]))
+    >>> _dims_to_axis(x, ("y", "x"), None)
+    (1, 0)
     >>> _dims_to_axis(x, ("y",), None)
     (1,)
     >>> _dims_to_axis(x, _default, 0)
@@ -175,7 +177,7 @@ def _dims_to_axis(
         axis = ()
         for dim in _dims:
             try:
-                axis = (x.dims.index(dim),)
+                axis += (x.dims.index(dim),)
             except ValueError:
                 raise ValueError(f"{dim!r} not found in array dimensions {x.dims!r}")
         return axis
