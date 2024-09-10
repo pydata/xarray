@@ -1241,31 +1241,25 @@ class DataTree(
     def _matching(
         self,
         other: DataTree,
-        from_root: bool,
         nodes_match: Callable[[DataTree, DataTree], bool],
     ) -> bool:
-        if not self.isomorphic(other, from_root=from_root, strict_names=True):
+        if not self.isomorphic(other, from_root=True, strict_names=True):
             return False
 
         return all(
             nodes_match(node, other_node)
-            for node, other_node in zip(self.subtree, other.subtree)
+            for node, other_node in zip(self.descendants, other.descendants)
         )
 
-    def equals(self, other: DataTree, from_root: bool = True) -> bool:
+    def equals(self, other: DataTree) -> bool:
         """
         Two DataTrees are equal if they have isomorphic node structures, with matching node names,
         and if they have matching variables and coordinates, all of which are equal.
-
-        By default this method will check the whole tree above the given node.
 
         Parameters
         ----------
         other : DataTree
             The other tree object to compare to.
-        from_root : bool, optional, default is True
-            Whether or not to first traverse to the root of the two trees before checking for isomorphism.
-            If neither tree has a parent then this has no effect.
 
         See Also
         --------
@@ -1275,23 +1269,20 @@ class DataTree(
         """
         to_ds = lambda x: x._to_dataset_view(inherited=True, rebuild_dims=False)
         matcher = lambda x, y: to_ds(x).equals(to_ds(y))
-        return self._matching(other, from_root, nodes_match=matcher)
+        if not matcher(self, other):
+            return False
+        return self._matching(other, nodes_match=matcher)
 
-    def identical(self, other: DataTree, from_root=True) -> bool:
+    def identical(self, other: DataTree) -> bool:
         """
         Like equals, but will also check all dataset attributes and the attributes on
         all variables and coordinates, and requires the coordinates are defined at the
         exact same levels of the DataTree hierarchy.
 
-        By default this method will check the whole tree above the given node.
-
         Parameters
         ----------
         other : DataTree
             The other tree object to compare to.
-        from_root : bool, optional, default is True
-            Whether or not to first traverse to the root of the two trees before checking for isomorphism.
-            If neither tree has a parent then this has no effect.
 
         See Also
         --------
@@ -1299,9 +1290,15 @@ class DataTree(
         DataTree.isomorphic
         DataTree.equals
         """
+        # include inherited coordinates only at the root; otherwise require that
+        # everything is also defined at the same level
+        self_view = self._to_dataset_view(inherited=True, rebuild_dims=False)
+        other_view = other._to_dataset_view(inherited=True, rebuild_dims=False)
+        if not self_view.identical(other_view):
+            return False
         to_ds = lambda x: x._to_dataset_view(inherited=False, rebuild_dims=False)
         matcher = lambda x, y: to_ds(x).identical(to_ds(y))
-        return self._matching(other, from_root, nodes_match=matcher)
+        return self._matching(other, nodes_match=matcher)
 
     def filter(self: DataTree, filterfunc: Callable[[DataTree], bool]) -> DataTree:
         """

@@ -116,7 +116,7 @@ def assert_equal(a: DataTree, b: DataTree, from_root: bool = True): ...
 
 
 @ensure_warnings
-def assert_equal(a, b, from_root=True, check_dim_order: bool = True):
+def assert_equal(a, b, check_dim_order: bool = True):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
     objects.
 
@@ -135,10 +135,6 @@ def assert_equal(a, b, from_root=True, check_dim_order: bool = True):
         or xarray.core.datatree.DataTree. The first object to compare.
     b : xarray.Dataset, xarray.DataArray, xarray.Variable, xarray.Coordinates
         or xarray.core.datatree.DataTree. The second object to compare.
-    from_root : bool, optional, default is True
-        Only used when comparing DataTree objects. Indicates whether or not to
-        first traverse to the root of the trees before checking for isomorphism.
-        If a & b have no parents then this has no effect.
     check_dim_order : bool, optional, default is True
         Whether dimensions must be in the same order.
 
@@ -159,11 +155,7 @@ def assert_equal(a, b, from_root=True, check_dim_order: bool = True):
     elif isinstance(a, Coordinates):
         assert a.equals(b), formatting.diff_coords_repr(a, b, "equals")
     elif isinstance(a, DataTree):
-        if from_root:
-            a = a.root
-            b = b.root
-
-        assert a.equals(b, from_root=from_root), diff_datatree_repr(a, b, "equals")
+        assert a.equals(b), diff_datatree_repr(a, b, "equals")
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
@@ -173,11 +165,11 @@ def assert_identical(a, b): ...
 
 
 @overload
-def assert_identical(a: DataTree, b: DataTree, from_root: bool = True): ...
+def assert_identical(a: DataTree, b: DataTree): ...
 
 
 @ensure_warnings
-def assert_identical(a, b, from_root=True):
+def assert_identical(a, b):
     """Like :py:func:`xarray.testing.assert_equal`, but also matches the
     objects' names and attributes.
 
@@ -193,10 +185,6 @@ def assert_identical(a, b, from_root=True):
         The first object to compare.
     b : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
         The second object to compare.
-    from_root : bool, optional, default is True
-        Only used when comparing DataTree objects. Indicates whether or not to
-        first traverse to the root of the trees before checking for isomorphism.
-        If a & b have no parents then this has no effect.
     check_dim_order : bool, optional, default is True
         Whether dimensions must be in the same order.
 
@@ -220,13 +208,7 @@ def assert_identical(a, b, from_root=True):
     elif isinstance(a, Coordinates):
         assert a.identical(b), formatting.diff_coords_repr(a, b, "identical")
     elif isinstance(a, DataTree):
-        if from_root:
-            a = a.root
-            b = b.root
-
-        assert a.identical(b, from_root=from_root), diff_datatree_repr(
-            a, b, "identical"
-        )
+        assert a.identical(b), diff_datatree_repr(a, b, "identical")
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
