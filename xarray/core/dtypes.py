@@ -64,7 +64,7 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     if isdtype(dtype, "real floating"):
         dtype_ = dtype
         fill_value = np.nan
-    elif isinstance(dtype, np.dtype) and np.issubdtype(dtype, np.timedelta64):
+    elif np.issubdtype(dtype, np.timedelta64):
         # See https://github.com/numpy/numpy/issues/10685
         # np.timedelta64 is a subclass of np.integer
         # Check np.timedelta64 before np.integer
@@ -76,7 +76,7 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     elif isdtype(dtype, "complex floating"):
         dtype_ = dtype
         fill_value = np.nan + np.nan * 1j
-    elif isinstance(dtype, np.dtype) and np.issubdtype(dtype, np.datetime64):
+    elif np.issubdtype(dtype, np.datetime64):
         dtype_ = dtype
         fill_value = np.datetime64("NaT")
     else:
@@ -200,7 +200,7 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
     # numpy>=2 and pandas extensions arrays are implemented in
     # Xarray via the array API
     if not isinstance(kind, str) and not (
-        isinstance(kind, tuple) and all(isinstance(k, str) for k in kind)
+        isinstance(kind, tuple) and all(isinstance(k, str) for k in kind)  # type: ignore[redundant-expr]
     ):
         raise TypeError(f"kind must be a string or a tuple of strings: {repr(kind)}")
 

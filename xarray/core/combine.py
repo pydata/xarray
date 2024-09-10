@@ -139,7 +139,8 @@ def _infer_concat_order_from_coords(datasets):
                 # Append positions along extra dimension to structure which
                 # encodes the multi-dimensional concatenation order
                 tile_ids = [
-                    tile_id + (position,) for tile_id, position in zip(tile_ids, order)
+                    tile_id + (position,)
+                    for tile_id, position in zip(tile_ids, order, strict=True)
                 ]
 
     if len(datasets) > 1 and not concat_dims:
@@ -148,7 +149,7 @@ def _infer_concat_order_from_coords(datasets):
             "order the datasets for concatenation"
         )
 
-    combined_ids = dict(zip(tile_ids, datasets))
+    combined_ids = dict(zip(tile_ids, datasets, strict=True))
 
     return combined_ids, concat_dims
 
@@ -349,7 +350,7 @@ def _nested_combine(
         combined_ids = _infer_concat_order_from_positions(datasets)
     else:
         # Already sorted so just use the ids already passed
-        combined_ids = dict(zip(ids, datasets))
+        combined_ids = dict(zip(ids, datasets, strict=True))
 
     # Check that the inferred shape is combinable
     _check_shape_tile_ids(combined_ids)

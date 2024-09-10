@@ -615,7 +615,7 @@ class TestFormatting:
 
         # Test numpy arrays raises:
         var = xr.DataArray([0.1, 0.2])
-        with pytest.raises(NotImplementedError) as excinfo:  # type: ignore
+        with pytest.raises(NotImplementedError) as excinfo:  # type: ignore[assignment]
             format(var, ".2f")
         assert "Using format_spec is only supported" in str(excinfo.value)
 
@@ -652,7 +652,9 @@ class TestFormatting:
             "Data variables",
             "*empty*",
         ]
-        for expected_line, printed_line in zip(expected, printout.splitlines()):
+        for expected_line, printed_line in zip(
+            expected, printout.splitlines(), strict=True
+        ):
             assert expected_line in printed_line
 
     def test_datatree_printout_nested_node(self):
@@ -844,7 +846,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     attrs = {k: 2 for k in b}
     coords = {_c: np.array([0, 1], dtype=np.uint64) for _c in c}
     data_vars = dict()
-    for v, _c in zip(a, coords.items()):
+    for v, _c in zip(a, coords.items(), strict=True):
         data_vars[v] = xr.DataArray(
             name=v,
             data=np.array([3, 4], dtype=np.uint64),

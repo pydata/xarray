@@ -254,7 +254,7 @@ class AbstractArray:
         --------
         Dataset.sizes
         """
-        return Frozen(dict(zip(self.dims, self.shape)))
+        return Frozen(dict(zip(self.dims, self.shape, strict=True)))
 
 
 class AttrAccessMixin:

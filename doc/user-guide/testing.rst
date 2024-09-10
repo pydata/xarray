@@ -193,7 +193,7 @@ different type:
 
 .. ipython:: python
 
-    def sparse_random_arrays(shape: tuple[int]) -> sparse._coo.core.COO:
+    def sparse_random_arrays(shape: tuple[int, ...]) -> sparse._coo.core.COO:
         """Strategy which generates random sparse.COO arrays"""
         if shape is None:
             shape = npst.array_shapes()

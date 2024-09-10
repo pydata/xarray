@@ -199,7 +199,7 @@ def get_backend(engine: str | type[BackendEntrypoint]) -> BackendEntrypoint:
                 "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html"
             )
         backend = engines[engine]
-    elif isinstance(engine, type) and issubclass(engine, BackendEntrypoint):
+    elif issubclass(engine, BackendEntrypoint):
         backend = engine()
     else:
         raise TypeError(

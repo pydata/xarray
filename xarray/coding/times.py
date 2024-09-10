@@ -204,7 +204,7 @@ def _unpack_time_units_and_ref_date(units: str) -> tuple[str, pd.Timestamp]:
 
 
 def _decode_cf_datetime_dtype(
-    data, units: str, calendar: str, use_cftime: bool | None
+    data, units: str, calendar: str | None, use_cftime: bool | None
 ) -> np.dtype:
     # Verify that at least the first and last date can be decoded
     # successfully. Otherwise, tracebacks end up swallowed by
@@ -704,7 +704,7 @@ def _cast_to_dtype_if_safe(num: np.ndarray, dtype: np.dtype) -> np.ndarray:
 
 
 def encode_cf_datetime(
-    dates: T_DuckArray,  # type: ignore
+    dates: T_DuckArray,  # type: ignore[misc]
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
@@ -726,7 +726,7 @@ def encode_cf_datetime(
 
 
 def _eagerly_encode_cf_datetime(
-    dates: T_DuckArray,  # type: ignore
+    dates: T_DuckArray,  # type: ignore[misc]
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
@@ -809,7 +809,7 @@ def _eagerly_encode_cf_datetime(
 
 
 def _encode_cf_datetime_within_map_blocks(
-    dates: T_DuckArray,  # type: ignore
+    dates: T_DuckArray,  # type: ignore[misc]
     units: str,
     calendar: str,
     dtype: np.dtype,
@@ -859,7 +859,7 @@ def _lazily_encode_cf_datetime(
 
 
 def encode_cf_timedelta(
-    timedeltas: T_DuckArray,  # type: ignore
+    timedeltas: T_DuckArray,  # type: ignore[misc]
     units: str | None = None,
     dtype: np.dtype | None = None,
 ) -> tuple[T_DuckArray, str]:
@@ -871,7 +871,7 @@ def encode_cf_timedelta(
 
 
 def _eagerly_encode_cf_timedelta(
-    timedeltas: T_DuckArray,  # type: ignore
+    timedeltas: T_DuckArray,  # type: ignore[misc]
     units: str | None = None,
     dtype: np.dtype | None = None,
     allow_units_modification: bool = True,
@@ -923,7 +923,7 @@ def _eagerly_encode_cf_timedelta(
 
 
 def _encode_cf_timedelta_within_map_blocks(
-    timedeltas: T_DuckArray,  # type:ignore
+    timedeltas: T_DuckArray,  # type: ignore[misc]
     units: str,
     dtype: np.dtype,
 ) -> T_DuckArray:

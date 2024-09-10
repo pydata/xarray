@@ -431,7 +431,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         for v in unlimited_dims:  # put unlimited_dims first
             dims[v] = None
         for v in variables.values():
-            dims.update(dict(zip(v.dims, v.shape)))
+            dims.update(dict(zip(v.dims, v.shape, strict=True)))
 
         for dim, length in dims.items():
             if dim in existing_dims and length != existing_dims[dim]:

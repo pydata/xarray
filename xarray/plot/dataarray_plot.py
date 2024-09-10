@@ -210,7 +210,7 @@ def _prepare_plot1d_data(
     plts.update(
         {k: darray.coords[v] for k, v in coords_to_plot.items() if v is not None}
     )
-    plts = dict(zip(plts.keys(), broadcast(*(plts.values()))))
+    plts = dict(zip(plts.keys(), broadcast(*(plts.values())), strict=True))
 
     return plts
 
@@ -1089,7 +1089,9 @@ def _add_labels(
     """Set x, y, z labels."""
     add_labels = [add_labels] * 3 if isinstance(add_labels, bool) else add_labels
     axes: tuple[Literal["x", "y", "z"], ...] = ("x", "y", "z")
-    for axis, add_label, darray, suffix in zip(axes, add_labels, darrays, suffixes):
+    for axis, add_label, darray, suffix in zip(
+        axes, add_labels, darrays, suffixes, strict=True
+    ):
         if darray is None:
             continue
 

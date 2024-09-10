@@ -214,7 +214,7 @@ def _wrap_then_attach_to_cls(
                 new_method_docstring = insert_doc_addendum(
                     orig_method_docstring, _MAPPED_DOCSTRING_ADDENDUM
                 )
-                setattr(target_cls_dict[method_name], "__doc__", new_method_docstring)
+                target_cls_dict[method_name].__doc__ = new_method_docstring
 
 
 def insert_doc_addendum(docstring: str | None, addendum: str) -> str | None:

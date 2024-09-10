@@ -68,7 +68,7 @@ def test_broadcast(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     expected = xr.broadcast(np_arr, np_arr2)
     actual = xr.broadcast(xp_arr, xp_arr2)
     assert len(actual) == len(expected)
-    for a, e in zip(actual, expected):
+    for a, e in zip(actual, expected, strict=True):
         assert isinstance(a.data, Array)
         assert_equal(a, e)
 

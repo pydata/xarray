@@ -474,7 +474,7 @@ def summarize_index(
 
     preformatted = [
         pretty_print(f"  {prefix} {name}", col_width)
-        for prefix, name in zip(prefixes(len(names)), names)
+        for prefix, name in zip(prefixes(len(names)), names, strict=True)
     ]
 
     head, *tail = preformatted
@@ -862,7 +862,7 @@ def _diff_mapping_repr(
 
                 temp = [
                     "\n".join([var_s, attr_s]) if attr_s else var_s
-                    for var_s, attr_s in zip(temp, attrs_summary)
+                    for var_s, attr_s in zip(temp, attrs_summary, strict=True)
                 ]
 
                 # TODO: It should be possible recursively use _diff_mapping_repr
@@ -877,7 +877,9 @@ def _diff_mapping_repr(
                 # )
                 # temp += [newdiff]
 
-            diff_items += [ab_side + s[1:] for ab_side, s in zip(("L", "R"), temp)]
+            diff_items += [
+                ab_side + s[1:] for ab_side, s in zip(("L", "R"), temp, strict=True)
+            ]
 
     if diff_items:
         summary += [f"Differing {title.lower()}:"] + diff_items
@@ -941,7 +943,7 @@ def diff_array_repr(a, b, compat):
         temp = [wrap_indent(short_array_repr(obj), start="    ") for obj in (a, b)]
         diff_data_repr = [
             ab_side + "\n" + ab_data_repr
-            for ab_side, ab_data_repr in zip(("L", "R"), temp)
+            for ab_side, ab_data_repr in zip(("L", "R"), temp, strict=True)
         ]
         summary += ["Differing values:"] + diff_data_repr
 
@@ -966,7 +968,7 @@ def diff_treestructure(a: DataTree, b: DataTree, require_names_equal: bool) -> s
     # Walking nodes in "level-order" fashion means walking down from the root breadth-first.
     # Checking for isomorphism by walking in this way implicitly assumes that the tree is an ordered tree
     # (which it is so long as children are stored in a tuple or list rather than in a set).
-    for node_a, node_b in zip(LevelOrderIter(a), LevelOrderIter(b)):
+    for node_a, node_b in zip(LevelOrderIter(a), LevelOrderIter(b), strict=True):
         path_a, path_b = node_a.path, node_b.path
 
         if require_names_equal and node_a.name != node_b.name:
@@ -1013,7 +1015,7 @@ def diff_nodewise_summary(a: DataTree, b: DataTree, compat):
     compat_str = _compat_to_str(compat)
 
     summary = []
-    for node_a, node_b in zip(a.subtree, b.subtree):
+    for node_a, node_b in zip(a.subtree, b.subtree, strict=True):
         a_ds, b_ds = node_a.ds, node_b.ds
 
         if not a_ds._all_compat(b_ds, compat):

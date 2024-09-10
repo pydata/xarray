@@ -66,7 +66,7 @@ def broadcast_dimension_size(variables: list[Variable]) -> dict[Hashable, int]:
     """
     dims: dict[Hashable, int] = {}
     for var in variables:
-        for dim, size in zip(var.dims, var.shape):
+        for dim, size in zip(var.dims, var.shape, strict=True):
             if dim in dims and size != dims[dim]:
                 raise ValueError(f"index {dim!r} not aligned")
             dims[dim] = size

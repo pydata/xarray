@@ -64,7 +64,7 @@ class Rolling:
     def time_rolling_np(self, window_, min_periods, use_bottleneck):
         with xr.set_options(use_bottleneck=use_bottleneck):
             self.ds.rolling(x=window_, center=False, min_periods=min_periods).reduce(
-                getattr(np, "nansum")
+                np.nansum
             ).load()
 
     @parameterized(

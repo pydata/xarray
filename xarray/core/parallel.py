@@ -29,7 +29,7 @@ class ExpectedDict(TypedDict):
 
 
 def unzip(iterable):
-    return zip(*iterable)
+    return zip(*iterable, strict=True)
 
 
 def assert_chunks_compatible(a: Dataset, b: Dataset):
@@ -345,7 +345,7 @@ def map_blocks(
 
         converted_args = [
             dataset_to_dataarray(arg) if is_array else arg
-            for is_array, arg in zip(arg_is_array, args)
+            for is_array, arg in zip(arg_is_array, args, strict=True)
         ]
 
         result = func(*converted_args, **kwargs)
@@ -440,7 +440,10 @@ def map_blocks(
     merged_coordinates = merge([arg.coords for arg in aligned]).coords
 
     _, npargs = unzip(
-        sorted(list(zip(xarray_indices, xarray_objs)) + others, key=lambda x: x[0])
+        sorted(
+            list(zip(xarray_indices, xarray_objs, strict=True)) + others,
+            key=lambda x: x[0],
+        )
     )
 
     # check that chunk sizes are compatible
@@ -534,7 +537,7 @@ def map_blocks(
     # iterate over all possible chunk combinations
     for chunk_tuple in itertools.product(*ichunk.values()):
         # mapping from dimension name to chunk index
-        chunk_index = dict(zip(ichunk.keys(), chunk_tuple))
+        chunk_index = dict(zip(ichunk.keys(), chunk_tuple, strict=True))
 
         blocked_args = [
             (
@@ -544,7 +547,7 @@ def map_blocks(
                 if isxr
                 else arg
             )
-            for isxr, arg in zip(is_xarray, npargs)
+            for isxr, arg in zip(is_xarray, npargs, strict=True)
         ]
 
         # raise nice error messages in _wrapper

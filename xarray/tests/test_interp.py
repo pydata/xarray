@@ -406,7 +406,7 @@ def test_errors(use_dask: bool) -> None:
 
     for method in ["akima", "spline"]:
         with pytest.raises(ValueError):
-            da.interp(x=[0.5, 1.5], method=method)  # type: ignore
+            da.interp(x=[0.5, 1.5], method=method)  # type: ignore[arg-type]
 
     # not sorted
     if use_dask:
@@ -421,9 +421,9 @@ def test_errors(use_dask: bool) -> None:
 
     # invalid method
     with pytest.raises(ValueError):
-        da.interp(x=[2, 0], method="boo")  # type: ignore
+        da.interp(x=[2, 0], method="boo")  # type: ignore[arg-type]
     with pytest.raises(ValueError):
-        da.interp(y=[2, 0], method="boo")  # type: ignore
+        da.interp(y=[2, 0], method="boo")  # type: ignore[arg-type]
 
     # object-type DataArray cannot be interpolated
     da = xr.DataArray(["a", "b", "c"], dims="x", coords={"x": [0, 1, 2]})
