@@ -847,7 +847,8 @@ class DataTreeCoordinates(Coordinates):
     def __getitem__(self, key: Hashable) -> DataArray:
         if key not in self._data._coord_variables:
             raise KeyError(key)
-        return self._data[key]
+        item = self._data[key]  # type: ignore[index]  # see https://github.com/pydata/xarray/issues/8836
+        return cast(DataArray, item)
 
     def to_dataset(self) -> Dataset:
         """Convert these coordinates into a new Dataset"""
@@ -897,7 +898,7 @@ class DataTreeCoordinates(Coordinates):
 
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
-            del self._data[key]
+            del self._data[key]  # type: ignore[arg-type]  # see https://github.com/pydata/xarray/issues/8836
         else:
             raise KeyError(
                 f"{key!r} is not in coordinate variables {tuple(self.keys())}"
