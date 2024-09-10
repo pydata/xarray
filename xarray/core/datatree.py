@@ -1238,6 +1238,20 @@ class DataTree(
         except (TypeError, TreeIsomorphismError):
             return False
 
+    def _matching(
+        self,
+        other: DataTree,
+        from_root: bool,
+        nodes_match: Callable[[DataTree, DataTree], bool],
+    ) -> bool:
+        if not self.isomorphic(other, from_root=from_root, strict_names=True):
+            return False
+
+        return all(
+            nodes_match(node, other_node)
+            for node, other_node in zip(self.subtree, other.subtree)
+        )
+
     def equals(self, other: DataTree, from_root: bool = True) -> bool:
         """
         Two DataTrees are equal if they have isomorphic node structures, with matching node names,
@@ -1259,20 +1273,15 @@ class DataTree(
         DataTree.isomorphic
         DataTree.identical
         """
-        if not self.isomorphic(other, from_root=from_root, strict_names=True):
-            return False
-
-        return all(
-            [
-                node.ds.equals(other_node.ds)
-                for node, other_node in zip(self.subtree, other.subtree)
-            ]
-        )
+        to_ds = lambda x: x._to_dataset_view(inherited=True, rebuild_dims=False)
+        matcher = lambda x, y: to_ds(x).equals(to_ds(y))
+        return self._matching(other, from_root, nodes_match=matcher)
 
     def identical(self, other: DataTree, from_root=True) -> bool:
         """
         Like equals, but will also check all dataset attributes and the attributes on
-        all variables and coordinates.
+        all variables and coordinates, and requires the coordinates are defined at the
+        exact same levels of the DataTree hierarchy.
 
         By default this method will check the whole tree above the given node.
 
@@ -1290,13 +1299,9 @@ class DataTree(
         DataTree.isomorphic
         DataTree.equals
         """
-        if not self.isomorphic(other, from_root=from_root, strict_names=True):
-            return False
-
-        return all(
-            node.ds.identical(other_node.ds)
-            for node, other_node in zip(self.subtree, other.subtree)
-        )
+        to_ds = lambda x: x._to_dataset_view(inherited=False, rebuild_dims=False)
+        matcher = lambda x, y: to_ds(x).identical(to_ds(y))
+        return self._matching(other, from_root, nodes_match=matcher)
 
     def filter(self: DataTree, filterfunc: Callable[[DataTree], bool]) -> DataTree:
         """
