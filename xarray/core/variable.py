@@ -8,6 +8,7 @@ import warnings
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
+from types import EllipsisType
 from typing import TYPE_CHECKING, Any, NoReturn, cast
 
 import numpy as np
@@ -65,6 +66,7 @@ if TYPE_CHECKING:
         Self,
         T_Chunks,
         T_DuckArray,
+        T_VarPadConstantValues,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
@@ -1121,9 +1123,14 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def _pad_options_dim_to_index(
         self,
-        pad_option: Mapping[Any, int | tuple[int, int]],
+        pad_option: Mapping[Any, int | float | tuple[int, int] | tuple[float, float]],
         fill_with_shape=False,
     ):
+        # change number values to a tuple of two of those values
+        for k, v in pad_option.items():
+            if isinstance(v, numbers.Number):
+                pad_option[k] = (v, v)
+
         if fill_with_shape:
             return [
                 (n, n) if d not in pad_option else pad_option[d]
@@ -1138,9 +1145,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         stat_length: (
             int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
         ) = None,
-        constant_values: (
-            float | tuple[float, float] | Mapping[Any, tuple[float, float]] | None
-        ) = None,
+        constant_values: T_VarPadConstantValues | None = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
         keep_attrs: bool | None = None,
@@ -1160,7 +1165,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         stat_length : int, tuple or mapping of hashable to tuple
             Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
             values at edge of each axis used to calculate the statistic value.
-        constant_values : scalar, tuple or mapping of hashable to tuple
+        constant_values : scalar, tuple or mapping of hashable to scalar or tuple
             Used in 'constant'.  The values to set the padded values for each
             axis.
         end_values : scalar, tuple or mapping of hashable to tuple
@@ -1207,10 +1212,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
             stat_length = [(n, n) for n in self.data.shape]  # type: ignore[assignment]
 
-        # change integer values to a tuple of two of those values and change pad_width to index
-        for k, v in pad_width.items():
-            if isinstance(v, numbers.Number):
-                pad_width[k] = (v, v)
         pad_width_by_index = self._pad_options_dim_to_index(pad_width)
 
         # create pad_options_kwargs, numpy/dask requires only relevant kwargs to be nonempty
@@ -1287,7 +1288,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     @deprecate_dims
     def transpose(
         self,
-        *dim: Hashable | ellipsis,
+        *dim: Hashable | EllipsisType,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Self:
         """Return a new Variable object with transposed dimensions.
@@ -1490,7 +1491,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dim: Hashable,
         fill_value=dtypes.NA,
         sparse: bool = False,
-    ) -> Self:
+    ) -> Variable:
         """
         Unstacks this variable given an index to unstack and the name of the
         dimension to which the index refers.
@@ -1550,10 +1551,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             # case the destinations will be NaN / zero.
             data[(..., *indexer)] = reordered
 
-        return self._replace(dims=new_dims, data=data)
+        return self.to_base_variable()._replace(dims=new_dims, data=data)
 
     @partial(deprecate_dims, old_name="dimensions")
-    def unstack(self, dim=None, **dim_kwargs):
+    def unstack(self, dim=None, **dim_kwargs) -> Variable:
         """
         Unstack an existing dimension into multiple new dimensions.
 
@@ -1657,7 +1658,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             _get_keep_attrs(default=False) if keep_attrs is None else keep_attrs
         )
 
-        # Noe that the call order for Variable.mean is
+        # Note that the call order for Variable.mean is
         #    Variable.mean -> NamedArray.mean -> Variable.reduce
         #    -> NamedArray.reduce
         result = super().reduce(

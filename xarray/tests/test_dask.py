@@ -1381,7 +1381,7 @@ def test_map_blocks_roundtrip_string_index():
     ds = xr.Dataset(
         {"data": (["label"], [1, 2, 3])}, coords={"label": ["foo", "bar", "baz"]}
     ).chunk(label=1)
-    assert ds.label.dtype == np.dtype("<U3")
+    assert ds.label.dtype == np.dtype("=U3")
 
     mapped = ds.map_blocks(lambda x: x, template=ds)
     assert mapped.label.dtype == ds.label.dtype
@@ -1797,6 +1797,6 @@ def test_minimize_graph_size():
         actual = len([key for key in graph if var in key[0]])
         # assert that we only include each chunk of an index variable
         # is only included once, not the product of number of chunks of
-        # all the other dimenions.
+        # all the other dimensions.
         # e.g. previously for 'x',  actual == numchunks['y'] * numchunks['z']
         assert actual == numchunks[var], (actual, numchunks[var])

@@ -47,7 +47,7 @@ import warnings
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar, Literal, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -80,6 +80,7 @@ if TYPE_CHECKING:
 
 
 DayOption: TypeAlias = Literal["start", "end"]
+T_FreqStr = TypeVar("T_FreqStr", str, None)
 
 
 def _nanosecond_precision_timestamp(*args, **kwargs):
@@ -145,7 +146,7 @@ class BaseCFTimeOffset:
 
         if isinstance(other, cftime.datetime):
             raise TypeError("Cannot subtract a cftime.datetime from a time offset.")
-        elif type(other) == type(self):
+        elif type(other) is type(self):
             return type(self)(self.n - other.n)
         else:
             return NotImplemented
@@ -165,7 +166,7 @@ class BaseCFTimeOffset:
         return self.__add__(other)
 
     def __rsub__(self, other):
-        if isinstance(other, BaseCFTimeOffset) and type(self) != type(other):
+        if isinstance(other, BaseCFTimeOffset) and type(self) is not type(other):
             raise TypeError("Cannot subtract cftime offsets of differing types")
         return -self + other
 
@@ -462,7 +463,7 @@ class QuarterOffset(BaseCFTimeOffset):
 
         if isinstance(other, cftime.datetime):
             raise TypeError("Cannot subtract cftime.datetime from offset.")
-        if type(other) == type(self) and other.month == self.month:
+        if type(other) is type(self) and other.month == self.month:
             return type(self)(self.n - other.n, month=self.month)
         return NotImplemented
 
@@ -548,7 +549,7 @@ class YearOffset(BaseCFTimeOffset):
 
         if isinstance(other, cftime.datetime):
             raise TypeError("Cannot subtract cftime.datetime from offset.")
-        elif type(other) == type(self) and other.month == self.month:
+        elif type(other) is type(self) and other.month == self.month:
             return type(self)(self.n - other.n, month=self.month)
         else:
             return NotImplemented
@@ -739,7 +740,7 @@ def _generate_anchored_deprecated_frequencies(
     return pairs
 
 
-_DEPRECATED_FREQUENICES: dict[str, str] = {
+_DEPRECATED_FREQUENCIES: dict[str, str] = {
     "A": "YE",
     "Y": "YE",
     "AS": "YS",
@@ -765,18 +766,25 @@ _DEPRECATION_MESSAGE = (
 
 
 def _emit_freq_deprecation_warning(deprecated_freq):
-    recommended_freq = _DEPRECATED_FREQUENICES[deprecated_freq]
+    recommended_freq = _DEPRECATED_FREQUENCIES[deprecated_freq]
     message = _DEPRECATION_MESSAGE.format(
         deprecated_freq=deprecated_freq, recommended_freq=recommended_freq
     )
     emit_user_level_warning(message, FutureWarning)
 
 
-def to_offset(freq: BaseCFTimeOffset | str, warn: bool = True) -> BaseCFTimeOffset:
+def to_offset(
+    freq: BaseCFTimeOffset | str | timedelta | pd.Timedelta | pd.DateOffset,
+    warn: bool = True,
+) -> BaseCFTimeOffset:
     """Convert a frequency string to the appropriate subclass of
     BaseCFTimeOffset."""
     if isinstance(freq, BaseCFTimeOffset):
         return freq
+    if isinstance(freq, timedelta | pd.Timedelta):
+        return delta_to_tick(freq)
+    if isinstance(freq, pd.DateOffset):
+        freq = _legacy_to_new_freq(freq.freqstr)
 
     match = re.match(_PATTERN, freq)
     if match is None:
@@ -784,11 +792,39 @@ def to_offset(freq: BaseCFTimeOffset | str, warn: bool = True) -> BaseCFTimeOffs
     freq_data = match.groupdict()
 
     freq = freq_data["freq"]
-    if warn and freq in _DEPRECATED_FREQUENICES:
+    if warn and freq in _DEPRECATED_FREQUENCIES:
         _emit_freq_deprecation_warning(freq)
     multiples = freq_data["multiple"]
     multiples = 1 if multiples is None else int(multiples)
     return _FREQUENCIES[freq](n=multiples)
+
+
+def delta_to_tick(delta: timedelta | pd.Timedelta) -> Tick:
+    """Adapted from pandas.tslib.delta_to_tick"""
+    if isinstance(delta, pd.Timedelta) and delta.nanoseconds != 0:
+        # pandas.Timedelta has nanoseconds, but these are not supported
+        raise ValueError(
+            "Unable to convert 'pandas.Timedelta' object with non-zero "
+            "nanoseconds to 'CFTimeOffset' object"
+        )
+    if delta.microseconds == 0:
+        if delta.seconds == 0:
+            return Day(n=delta.days)
+        else:
+            seconds = delta.days * 86400 + delta.seconds
+            if seconds % 3600 == 0:
+                return Hour(n=seconds // 3600)
+            elif seconds % 60 == 0:
+                return Minute(n=seconds // 60)
+            else:
+                return Second(n=seconds)
+    else:
+        # Regardless of the days and seconds this will always be a Millisecond
+        # or Microsecond object
+        if delta.microseconds % 1_000 == 0:
+            return Millisecond(n=delta.microseconds // 1_000)
+        else:
+            return Microsecond(n=delta.microseconds)
 
 
 def to_cftime_datetime(date_str_or_date, calendar=None):
@@ -1332,7 +1368,7 @@ def _new_to_legacy_freq(freq):
     return freq
 
 
-def _legacy_to_new_freq(freq):
+def _legacy_to_new_freq(freq: T_FreqStr) -> T_FreqStr:
     # to avoid internal deprecation warnings when freq is determined using pandas < 2.2
 
     # TODO: remove once requiring pandas >= 2.2

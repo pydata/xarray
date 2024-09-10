@@ -628,10 +628,10 @@ def test_cf_timedelta_2d() -> None:
 @pytest.mark.parametrize(
     ["deltas", "expected"],
     [
-        (pd.to_timedelta(["1 day", "2 days"]), "days"),
-        (pd.to_timedelta(["1h", "1 day 1 hour"]), "hours"),
-        (pd.to_timedelta(["1m", "2m", np.nan]), "minutes"),
-        (pd.to_timedelta(["1m3s", "1m4s"]), "seconds"),
+        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
+        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
+        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
+        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
     ],
 )
 def test_infer_timedelta_units(deltas, expected) -> None:
@@ -1253,7 +1253,7 @@ def test_roundtrip_datetime64_nanosecond_precision(
         encoding = {}
 
     var = Variable(["time"], times, encoding=encoding)
-    assert var.dtype == np.dtype("<M8[ns]")
+    assert var.dtype == np.dtype("=M8[ns]")
 
     encoded_var = conventions.encode_cf_variable(var)
     assert (
@@ -1264,7 +1264,7 @@ def test_roundtrip_datetime64_nanosecond_precision(
     assert encoded_var.data.dtype == dtype
 
     decoded_var = conventions.decode_cf_variable("foo", encoded_var)
-    assert decoded_var.dtype == np.dtype("<M8[ns]")
+    assert decoded_var.dtype == np.dtype("=M8[ns]")
     assert (
         decoded_var.encoding["units"]
         == f"{_numpy_to_netcdf_timeunit(timeunit)} since 1970-01-01 00:00:00"

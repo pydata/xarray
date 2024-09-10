@@ -19,8 +19,8 @@ class TestCheckTreesIsomorphic:
             check_isomorphic("s", 1)  # type: ignore[arg-type]
 
     def test_different_widths(self):
-        dt1 = DataTree.from_dict(d={"a": empty})
-        dt2 = DataTree.from_dict(d={"b": empty, "c": empty})
+        dt1 = DataTree.from_dict({"a": empty})
+        dt2 = DataTree.from_dict({"b": empty, "c": empty})
         expected_err_str = (
             "Number of children on node '/' of the left object: 1\n"
             "Number of children on node '/' of the right object: 2"
@@ -74,10 +74,9 @@ class TestCheckTreesIsomorphic:
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
         real_root: DataTree = DataTree(name="real root")
-        dt2.name = "not_real_root"
-        dt2.parent = real_root
+        real_root["not_real_root"] = dt2
         with pytest.raises(TreeIsomorphismError):
-            check_isomorphic(dt1, dt2, check_from_root=True)
+            check_isomorphic(dt1, real_root, check_from_root=True)
 
 
 class TestMapOverSubTree:
@@ -321,7 +320,7 @@ class TestMutableOperations:
 
     def test_alter_inplace_forbidden(self):
         simpsons = DataTree.from_dict(
-            d={
+            {
                 "/": xr.Dataset({"age": 83}),
                 "/Herbert": xr.Dataset({"age": 40}),
                 "/Homer": xr.Dataset({"age": 39}),
