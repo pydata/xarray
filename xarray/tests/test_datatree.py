@@ -91,10 +91,10 @@ class TestNames:
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "Given Dataset contains variable names with '/': "
+                "Given variables have names containing the '/' character: "
                 "['R30m/y', 'group/subgroup/my_variable']. "
-                "A Dataset represents a group, and a single group "
-                "cannot have path-like variable names with '/' characters in them. "
+                "Variables stored in DataTree objects cannot have names containing '/' characters, "
+                "as this would make path-like access to variables ambiguous."
             ),
         ):
             DataTree(xds)
