@@ -852,9 +852,6 @@ class DataTreeCoordinates(Coordinates):
         self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
     ) -> None:
 
-        # TODO I don't know how to update coordinates that live in parent nodes
-        # TODO We would have to find the correct node and update `._node_coord_variables`
-
         # create updated node (`.to_dataset` makes a copy so this doesn't modify in-place)
         node_ds = self._data.to_dataset(inherited=False)
         node_ds.coords._update_coords(coords, indexes)

@@ -658,7 +658,35 @@ class TestCoords:
         dt2 = DataTree(data=dt.coords)
         assert_identical(dt2.coords, dt.coords)
 
-    # TODO test with coordinate inheritance too...
+    def test_inherited(self):
+        ds = Dataset(
+            data_vars={
+                "foo": (["x", "y"], np.random.randn(2, 3)),
+            },
+            coords={
+                "x": ("x", np.array([-1, -2], "int64")),
+                "y": ("y", np.array([0, 1, 2], "int64")),
+                "a": ("x", np.array([4, 5], "int64")),
+                "b": np.int64(-10),
+            },
+        )
+        dt = DataTree(data=ds)
+        dt["child"] = DataTree()
+        child = dt["child"]
+
+        assert set(child.coords) == {"x", "y", "a", "b"}
+
+        actual = child.copy(deep=True)
+        actual.coords["x"] = ("x", ["a", "b"])
+        assert_array_equal(actual["x"], ["a", "b"])
+
+        # TODO requires fix to GH issue #9472
+        # actual = child.copy(deep=True)
+        # actual.coords.update({"c": 11})
+        # expected = child.assign_coords({"c": 11})
+        # assert_identical(expected, actual)
+        # with pytest.raises(KeyError):
+        #     dt.coords['c']
 
 
 def test_delitem():
