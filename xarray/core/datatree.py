@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, Literal, NoReturn, Union, overload
 from xarray.core import utils
 from xarray.core.alignment import align
 from xarray.core.common import TreeAttrAccessMixin
-from xarray.core.coordinates import DataTreeCoordinates
+from xarray.core.coordinates import Coordinates, DataTreeCoordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, DataVariables
 from xarray.core.datatree_mapping import (
@@ -91,9 +91,11 @@ def _collect_data_and_coord_variables(
     return data_variables, coord_variables
 
 
-def _to_new_dataset(data: Dataset | None) -> Dataset:
+def _to_new_dataset(data: Dataset | Coordinates | None) -> Dataset:
     if isinstance(data, Dataset):
         ds = data.copy(deep=False)
+    elif isinstance(data, Coordinates):
+        ds = data.to_dataset()
     elif data is None:
         ds = Dataset()
     else:
@@ -417,7 +419,7 @@ class DataTree(
 
     def __init__(
         self,
-        data: Dataset | None = None,
+        data: Dataset | Coordinates | None = None,
         children: Mapping[str, DataTree] | None = None,
         name: str | None = None,
     ):

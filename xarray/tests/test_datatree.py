@@ -654,6 +654,10 @@ class TestCoords:
         da = DataArray(coords=dt.coords)
         assert_identical(da.coords, dt.coords)
 
+        # DataTree constructor doesn't accept coords= but should still be able to handle DatasetCoordinates
+        dt2 = DataTree(data=dt.coords)
+        assert_identical(dt2.coords, dt.coords)
+
     # TODO test with coordinate inheritance too...
 
 
