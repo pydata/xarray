@@ -835,9 +835,9 @@ class TestRepr:
     def test_repr2(self):
         tree = DataTree.from_dict(
             {
-                "/": Dataset(coords={"x": [1]}),
+                "/": Dataset(coords={"x": [1.0]}),
                 "/first_child": None,
-                "/second_child": Dataset({"foo": ("x", [0])}),
+                "/second_child": Dataset({"foo": ("x", [0.0])}),
             }
         )
 
@@ -848,12 +848,12 @@ class TestRepr:
             Group: /
             │   Dimensions:  (x: 1)
             │   Coordinates:
-            │     * x        (x) int64 8B 1
+            │     * x        (x) float64 8B 1.0
             ├── Group: /first_child
             └── Group: /second_child
                     Dimensions:  (x: 1)
                     Data variables:
-                        foo      (x) int64 8B 0
+                        foo      (x) float64 8B 0.0
             """
         ).strip()
         assert result == expected
@@ -865,7 +865,7 @@ class TestRepr:
             Group: /first_child
                 Dimensions:  (x: 1)
                 Inherited coordinates:
-                  * x        (x) int64 8B 1
+                  * x        (x) float64 8B 1.0
             """
         ).strip()
         assert result == expected
@@ -877,9 +877,9 @@ class TestRepr:
             Group: /second_child
                 Dimensions:  (x: 1)
                 Inherited coordinates:
-                  * x        (x) int64 8B 1
+                  * x        (x) float64 8B 1.0
                 Data variables:
-                    foo      (x) int64 8B 0
+                    foo      (x) float64 8B 0.0
             """
         ).strip()
         assert result == expected
