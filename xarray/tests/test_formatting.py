@@ -883,7 +883,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
         col_width = formatting._calculate_col_width(ds.variables)
         dims_start = formatting.pretty_print("Dimensions:", col_width)
         dims_values = formatting.dim_summary_limited(
-            ds, col_width=col_width + 1, max_rows=display_max_rows
+            ds.sizes, col_width=col_width + 1, max_rows=display_max_rows
         )
         expected_size = "1kB"
         expected = f"""\

@@ -7,12 +7,12 @@ import contextlib
 import functools
 import math
 from collections import ChainMap, defaultdict
-from collections.abc import Collection, Hashable, Sequence
+from collections.abc import Collection, Hashable, Mapping, Sequence
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
 from reprlib import recursive_repr
 from textwrap import dedent
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -587,8 +587,10 @@ def _element_formatter(
     return "".join(out)
 
 
-def dim_summary_limited(obj, col_width: int, max_rows: int | None = None) -> str:
-    elements = [f"{k}: {v}" for k, v in obj.sizes.items()]
+def dim_summary_limited(
+    sizes: Mapping[Any, int], col_width: int, max_rows: int | None = None
+) -> str:
+    elements = [f"{k}: {v}" for k, v in sizes.items()]
     return _element_formatter(elements, col_width, max_rows)
 
 
@@ -692,7 +694,7 @@ def array_repr(arr):
         data_repr = inline_variable_array_repr(arr.variable, OPTIONS["display_width"])
 
     start = f"<xarray.{type(arr).__name__} {name_str}"
-    dims = dim_summary_limited(arr, col_width=len(start) + 1, max_rows=max_rows)
+    dims = dim_summary_limited(arr.sizes, col_width=len(start) + 1, max_rows=max_rows)
     nbytes_str = render_human_readable_nbytes(arr.nbytes)
     summary = [
         f"{start}({dims})> Size: {nbytes_str}",
@@ -737,7 +739,9 @@ def dataset_repr(ds):
     max_rows = OPTIONS["display_max_rows"]
 
     dims_start = pretty_print("Dimensions:", col_width)
-    dims_values = dim_summary_limited(ds, col_width=col_width + 1, max_rows=max_rows)
+    dims_values = dim_summary_limited(
+        ds.sizes, col_width=col_width + 1, max_rows=max_rows
+    )
     summary.append(f"{dims_start}({dims_values})")
 
     if ds.coords:
@@ -772,7 +776,9 @@ def dims_and_coords_repr(ds) -> str:
     max_rows = OPTIONS["display_max_rows"]
 
     dims_start = pretty_print("Dimensions:", col_width)
-    dims_values = dim_summary_limited(ds, col_width=col_width + 1, max_rows=max_rows)
+    dims_values = dim_summary_limited(
+        ds.sizes, col_width=col_width + 1, max_rows=max_rows
+    )
     summary.append(f"{dims_start}({dims_values})")
 
     if ds.coords:
@@ -1083,11 +1089,13 @@ def _datatree_node_repr(node: DataTree, show_inherited: bool) -> str:
         or node._data_variables
     )
 
+    dim_sizes = node.sizes if show_inherited else node._node_dims
+
     if show_dims:
         # Includes inherited dimensions.
         dims_start = pretty_print("Dimensions:", col_width)
         dims_values = dim_summary_limited(
-            node, col_width=col_width + 1, max_rows=max_rows
+            dim_sizes, col_width=col_width + 1, max_rows=max_rows
         )
         summary.append(f"{dims_start}({dims_values})")
 
@@ -1101,7 +1109,7 @@ def _datatree_node_repr(node: DataTree, show_inherited: bool) -> str:
 
     if show_dims:
         unindexed_dims_str = unindexed_dims_repr(
-            node.dims, node.coords, max_rows=max_rows
+            dim_sizes, node.coords, max_rows=max_rows
         )
         if unindexed_dims_str:
             summary.append(unindexed_dims_str)

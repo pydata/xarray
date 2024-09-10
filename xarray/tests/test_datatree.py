@@ -773,7 +773,8 @@ class TestAccess:
 
 
 class TestRepr:
-    def test_repr(self):
+
+    def test_repr_four_nodes(self):
         dt = DataTree.from_dict(
             {
                 "/": xr.Dataset(
@@ -797,14 +798,13 @@ class TestRepr:
             │   Data variables:
             │       e        (x) float64 16B 1.0 2.0
             └── Group: /b
-                │   Dimensions:  (x: 2, y: 1)
+                │   Dimensions:  (y: 1)
                 │   Dimensions without coordinates: y
                 │   Data variables:
                 │       f        (y) float64 8B 3.0
                 ├── Group: /b/c
                 └── Group: /b/d
-                        Dimensions:  (x: 2, y: 1)
-                        Dimensions without coordinates: y
+                        Dimensions:  ()
                         Data variables:
                             g        float64 8B 4.0
             """
@@ -824,15 +824,29 @@ class TestRepr:
             │       f        (y) float64 8B 3.0
             ├── Group: /b/c
             └── Group: /b/d
-                    Dimensions:  (x: 2, y: 1)
-                    Dimensions without coordinates: y
+                    Dimensions:  ()
                     Data variables:
                         g        float64 8B 4.0
             """
         ).strip()
         assert result == expected
 
-    def test_repr2(self):
+        result = repr(dt.b.d)
+        expected = dedent(
+            """
+            <xarray.DataTree 'd'>
+            Group: /b/d
+                Dimensions:  (x: 2, y: 1)
+                Inherited coordinates:
+                  * x        (x) float64 16B 2.0 3.0
+                Dimensions without coordinates: y
+                Data variables:
+                    g        float64 8B 4.0
+            """
+        ).strip()
+        assert result == expected
+
+    def test_repr_two_children(self):
         tree = DataTree.from_dict(
             {
                 "/": Dataset(coords={"x": [1.0]}),
@@ -880,6 +894,45 @@ class TestRepr:
                   * x        (x) float64 8B 1.0
                 Data variables:
                     foo      (x) float64 8B 0.0
+            """
+        ).strip()
+        assert result == expected
+
+    def test_repr_inherited_dims(self):
+        tree = DataTree.from_dict(
+            {
+                "/": Dataset({"foo": ("x", [1.0])}),
+                "/child": Dataset({"bar": ("y", [2.0])}),
+            }
+        )
+
+        result = repr(tree)
+        expected = dedent(
+            """
+            <xarray.DataTree>
+            Group: /
+            │   Dimensions:  (x: 1)
+            │   Dimensions without coordinates: x
+            │   Data variables:
+            │       foo      (x) float64 8B 1.0
+            └── Group: /child
+                    Dimensions:  (y: 1)
+                    Dimensions without coordinates: y
+                    Data variables:
+                        bar      (y) float64 8B 2.0
+            """
+        ).strip()
+        assert result == expected
+
+        result = repr(tree["child"])
+        expected = dedent(
+            """
+            <xarray.DataTree 'child'>
+            Group: /child
+                Dimensions:  (x: 1, y: 1)
+                Dimensions without coordinates: x, y
+                Data variables:
+                    bar      (y) float64 8B 2.0
             """
         ).strip()
         assert result == expected
