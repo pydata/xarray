@@ -28,6 +28,13 @@ New Features
   ``xarray.testing.assert_isomorphic``.
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
   `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+- Add :py:attr:`~core.accessor_dt.DatetimeAccessor.days_in_year` and :py:attr:`~core.accessor_dt.DatetimeAccessor.decimal_year` to the Datetime accessor on DataArrays. (:pull:`9105`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
+
+Performance
+~~~~~~~~~~~
+
 - Make chunk manager an option in ``set_options`` (:pull:`9362`).
   By `Tom White <https://github.com/tomwhite>`_.
 - Support for :ref:`grouping by multiple variables <groupby.multiple>`.
@@ -102,7 +109,6 @@ Documentation
   `datatree's historical release notes <https://xarray-datatree.readthedocs.io/en/latest/>`_.
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie <https://github.com/flamingbear>`_, and
   `Tom Nicholas <https://github.com/TomNicholas>`_.
-
 
 
 Internal Changes

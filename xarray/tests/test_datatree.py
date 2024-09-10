@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
+from xarray import Dataset
 from xarray.core.datatree import DataTree
 from xarray.core.datatree_ops import _MAPPED_DOCSTRING_ADDENDUM, insert_doc_addendum
 from xarray.core.treenode import NotFoundInTreeError
@@ -367,6 +368,14 @@ class TestCopy:
 
         assert_identical(actual, expected)
 
+    def test_copy_coord_inheritance(self) -> None:
+        tree = DataTree.from_dict(
+            {"/": xr.Dataset(coords={"x": [0, 1]}), "/c": DataTree()}
+        )
+        tree2 = tree.copy()
+        node_ds = tree2.children["c"].to_dataset(inherited=False)
+        assert_identical(node_ds, xr.Dataset())
+
     def test_deepcopy(self, create_test_datatree):
         dt = create_test_datatree()
 
@@ -525,7 +534,39 @@ class TestSetItem:
         assert_identical(results.to_dataset(), expected)
 
 
-class TestDictionaryInterface: ...
+def test_delitem():
+    ds = Dataset({"a": 0}, coords={"x": ("x", [1, 2]), "z": "a"})
+    dt = DataTree(ds, children={"c": DataTree()})
+
+    with pytest.raises(KeyError):
+        del dt["foo"]
+
+    # test delete children
+    del dt["c"]
+    assert dt.children == {}
+    assert set(dt.variables) == {"x", "z", "a"}
+    with pytest.raises(KeyError):
+        del dt["c"]
+
+    # test delete variables
+    del dt["a"]
+    assert set(dt.coords) == {"x", "z"}
+    with pytest.raises(KeyError):
+        del dt["a"]
+
+    # test delete coordinates
+    del dt["z"]
+    assert set(dt.coords) == {"x"}
+    with pytest.raises(KeyError):
+        del dt["z"]
+
+    # test delete indexed coordinates
+    del dt["x"]
+    assert dt.variables == {}
+    assert dt.coords == {}
+    assert dt.indexes == {}
+    with pytest.raises(KeyError):
+        del dt["x"]
 
 
 class TestTreeFromDict:
@@ -1072,7 +1113,7 @@ class TestSubset:
 
     def test_filter(self):
         simpsons = DataTree.from_dict(
-            d={
+            {
                 "/": xr.Dataset({"age": 83}),
                 "/Herbert": xr.Dataset({"age": 40}),
                 "/Homer": xr.Dataset({"age": 39}),
@@ -1083,7 +1124,7 @@ class TestSubset:
             name="Abe",
         )
         expected = DataTree.from_dict(
-            d={
+            {
                 "/": xr.Dataset({"age": 83}),
                 "/Herbert": xr.Dataset({"age": 40}),
                 "/Homer": xr.Dataset({"age": 39}),
