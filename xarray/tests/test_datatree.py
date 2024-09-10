@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray import Dataset
+from xarray import DataArray, Dataset
 from xarray.core.coordinates import DataTreeCoordinates
 from xarray.core.datatree import DataTree
 from xarray.core.datatree_ops import _MAPPED_DOCSTRING_ADDENDUM, insert_doc_addendum
@@ -535,7 +535,7 @@ class TestSetItem:
         assert_identical(results.to_dataset(), expected)
 
 
-class TestCoordsInterface:
+class TestCoords:
     def test_properties(self):
         # use int64 for repr consistency on windows
         ds = Dataset(
@@ -647,6 +647,12 @@ class TestCoordsInterface:
         # regression test for GH3746
         del actual.coords["x"]
         assert "x" not in actual.xindexes
+
+        # test that constructors can also handle the `DataTreeCoordinates` object
+        ds2 = Dataset(coords=dt.coords)
+        assert_identical(ds2.coords, dt.coords)
+        da = DataArray(coords=dt.coords)
+        assert_identical(da.coords, dt.coords)
 
     # TODO test with coordinate inheritance too...
 

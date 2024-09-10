@@ -792,11 +792,11 @@ class DatasetCoordinates(Coordinates):
 class DataTreeCoordinates(Coordinates):
     """
     Dictionary like container for coordinates of a DataTree node (variables + indexes).
-    """
 
-    # TODO: This collection can be passed directly to the :py:class:`~xarray.Dataset`
-    # and :py:class:`~xarray.DataArray` constructors via their `coords` argument.
-    # This will add both the coordinates variables and their index.
+    This collection can be passed directly to the :py:class:`~xarray.Dataset`
+    and :py:class:`~xarray.DataArray` constructors via their `coords` argument.
+    This will add both the coordinates variables and their index.
+    """
 
     # TODO: This only needs to be a separate class from `DatasetCoordinates` because DataTree nodes store their variables differently
     # internally than how Datasets do, see https://github.com/pydata/xarray/issues/9203.
