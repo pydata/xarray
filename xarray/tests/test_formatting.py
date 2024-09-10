@@ -632,9 +632,6 @@ class TestFormatting:
             """\
             <xarray.DataTree 'root'>
             Group: /
-                Dimensions:  ()
-                Data variables:
-                    *empty*
                 Attributes:
                     note:     has attrs"""
         )

@@ -832,6 +832,58 @@ class TestRepr:
         ).strip()
         assert result == expected
 
+    def test_repr2(self):
+        tree = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [1]}),
+                "/first_child": None,
+                "/second_child": Dataset({"foo": ("x", [0])}),
+            }
+        )
+
+        result = repr(tree)
+        expected = dedent(
+            """
+            <xarray.DataTree>
+            Group: /
+            │   Dimensions:  (x: 1)
+            │   Coordinates:
+            │     * x        (x) int64 8B 1
+            ├── Group: /first_child
+            └── Group: /second_child
+                    Dimensions:  (x: 1)
+                    Data variables:
+                        foo      (x) int64 8B 0
+            """
+        ).strip()
+        assert result == expected
+
+        result = repr(tree["first_child"])
+        expected = dedent(
+            """
+            <xarray.DataTree 'first_child'>
+            Group: /first_child
+                Dimensions:  (x: 1)
+                Inherited coordinates:
+                  * x        (x) int64 8B 1
+            """
+        ).strip()
+        assert result == expected
+
+        result = repr(tree["second_child"])
+        expected = dedent(
+            """
+            <xarray.DataTree 'second_child'>
+            Group: /second_child
+                Dimensions:  (x: 1)
+                Inherited coordinates:
+                  * x        (x) int64 8B 1
+                Data variables:
+                    foo      (x) int64 8B 0
+            """
+        ).strip()
+        assert result == expected
+
 
 def _exact_match(message: str) -> str:
     return re.escape(dedent(message).strip())
