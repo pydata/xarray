@@ -159,7 +159,7 @@ def _check_for_slashes_in_names(variables: Iterable[Hashable]) -> None:
         name for name in variables if isinstance(name, str) and "/" in name
     ]
     if len(offending_variable_names) > 0:
-        raise KeyError(
+        raise ValueError(
             "Given variables have names containing the '/' character: "
             f"{offending_variable_names}. "
             "Variables stored in DataTree objects cannot have names containing '/' characters, as this would make path-like access to variables ambiguous."
