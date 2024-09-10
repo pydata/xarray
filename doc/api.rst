@@ -529,9 +529,11 @@ Datetimelike properties
    DataArray.dt.quarter
    DataArray.dt.days_in_month
    DataArray.dt.daysinmonth
+   DataArray.dt.days_in_year
    DataArray.dt.season
    DataArray.dt.time
    DataArray.dt.date
+   DataArray.dt.decimal_year
    DataArray.dt.calendar
    DataArray.dt.is_month_start
    DataArray.dt.is_month_end

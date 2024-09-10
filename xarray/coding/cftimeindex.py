@@ -801,6 +801,11 @@ class CFTimeIndex(pd.Index):
         """
         return self._round_via_method(freq, _round_to_nearest_half_even)
 
+    @property
+    def is_leap_year(self):
+        func = np.vectorize(cftime.is_leap_year)
+        return func(self.year, calendar=self.calendar)
+
 
 def _parse_iso8601_without_reso(date_type, datetime_str):
     date, _ = _parse_iso8601_with_reso(date_type, datetime_str)
