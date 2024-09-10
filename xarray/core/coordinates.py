@@ -772,14 +772,6 @@ class DatasetCoordinates(Coordinates):
             del self._data._indexes[name]
         self._data._coord_names.difference_update(coord_names)
 
-    def _drop_indexed_coords(self, coords_to_drop: set[Hashable]) -> None:
-        assert self._data.xindexes is not None
-        new_coords = drop_indexed_coords(coords_to_drop, self)
-        for name in self._data._coord_names - new_coords._names:
-            del self._data._variables[name]
-        self._data._indexes = dict(new_coords.xindexes)
-        self._data._coord_names.intersection_update(new_coords._names)
-
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
             del self._data[key]
@@ -888,13 +880,6 @@ class DataTreeCoordinates(Coordinates):
         for name in coord_names:
             del self._data._node_coord_variables[name]
             del self._data._node_indexes[name]
-
-    def _drop_indexed_coords(self, coords_to_drop: set[Hashable]) -> None:
-        assert self._data.xindexes is not None
-        new_coords = drop_indexed_coords(coords_to_drop, self)
-        for name in self._data._node_coord_variables - new_coords._names:
-            del self._data._node_coord_variables[name]
-        self._data._node_indexes = dict(new_coords.xindexes)
 
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
