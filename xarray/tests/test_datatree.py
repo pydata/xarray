@@ -1091,6 +1091,62 @@ class TestPipe:
         assert actual is dt and actual.attrs == attrs
 
 
+class TestEqualsAndIdentical:
+    def test_basics(self, create_test_datatree):
+        dt = create_test_datatree()
+        assert dt.equals(dt)
+        assert dt.identical(dt)
+
+        other = DataTree()
+        assert not dt.equals(other)
+        assert not dt.identical(other)
+        assert not other.equals(dt)
+        assert not other.identical(dt)
+
+    def test_isomormorphic(self, create_test_datatree):
+        dt = create_test_datatree()
+
+        dt_new_node = dt.copy()
+        dt_new_node["/something_new"] = DataTree()
+        assert not dt.equals(dt_new_node)
+        assert not dt.identical(dt_new_node)
+        assert not dt_new_node.equals(dt)
+        assert not dt_new_node.identical(dt)
+
+        dt_new_array = dt.copy()
+        dt_new_array["/something_else"] = xr.DataArray(1234)
+        assert not dt.equals(dt_new_array)
+        assert not dt.identical(dt_new_array)
+        assert not dt_new_array.equals(dt)
+        assert not dt_new_array.identical(dt)
+
+    def test_equal_but_not_identical_inheritance(self):
+        duplicated_coords = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [1]}),
+                "/sub": Dataset(coords={"x": [1]}),
+            }
+        )
+        inherited_coords = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [1]}),
+                "/sub": Dataset(),
+            }
+        )
+        assert duplicated_coords.equals(inherited_coords)
+        assert inherited_coords.equals(duplicated_coords)
+        assert not duplicated_coords.identical(inherited_coords)
+        assert not inherited_coords.identical(duplicated_coords)
+
+    def test_equal_but_not_identical_attrs(self):
+        without_attrs = DataTree()
+        with_attrs = DataTree(Dataset(attrs={"foo": "bar"}))
+        assert without_attrs.equals(with_attrs)
+        assert with_attrs.equals(without_attrs)
+        assert not without_attrs.identical(with_attrs)
+        assert not with_attrs.identical(without_attrs)
+
+
 class TestSubset:
     def test_match(self):
         # TODO is this example going to cause problems with case sensitivity?
