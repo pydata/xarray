@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     try:
         import matplotlib.pyplot as plt
     except ImportError:
-        plt: Any = None  # type: ignore
+        plt: Any = None  # type: ignore[no-redef]
 
 ROBUST_PERCENTILE = 2.0
 
@@ -577,8 +577,12 @@ def _interval_to_double_bound_points(
     xarray1 = np.array([x.left for x in xarray])
     xarray2 = np.array([x.right for x in xarray])
 
-    xarray_out = np.array(list(itertools.chain.from_iterable(zip(xarray1, xarray2))))
-    yarray_out = np.array(list(itertools.chain.from_iterable(zip(yarray, yarray))))
+    xarray_out = np.array(
+        list(itertools.chain.from_iterable(zip(xarray1, xarray2, strict=True)))
+    )
+    yarray_out = np.array(
+        list(itertools.chain.from_iterable(zip(yarray, yarray, strict=True)))
+    )
 
     return xarray_out, yarray_out
 
@@ -1148,7 +1152,7 @@ def legend_elements(
     kw = dict(markeredgewidth=self.get_linewidths()[0], alpha=self.get_alpha())
     kw.update(kwargs)
 
-    for val, lab in zip(values, label_values):
+    for val, lab in zip(values, label_values, strict=True):
         color, size = _get_color_and_size(val)
 
         if isinstance(self, mpl.collections.PathCollection):
@@ -1170,7 +1174,7 @@ def _legend_add_subtitle(handles, labels, text):
 
     if text and len(handles) > 1:
         # Create a blank handle that's not visible, the
-        # invisibillity will be used to discern which are subtitles
+        # invisibility will be used to discern which are subtitles
         # or not:
         blank_handle = plt.Line2D([], [], label=text)
         blank_handle.set_visible(False)
@@ -1347,7 +1351,7 @@ def _parse_size(
     widths = np.asarray(min_width + scl * (max_width - min_width))
     if scl.mask.any():
         widths[scl.mask] = 0
-    sizes = dict(zip(levels, widths))
+    sizes = dict(zip(levels, widths, strict=True))
 
     return pd.Series(sizes)
 
@@ -1606,7 +1610,7 @@ class _Normalize(Sequence):
         if self._values_unique is None:
             raise ValueError("self.data can't be None.")
 
-        return pd.Series(dict(zip(self._values_unique, self._data_unique)))
+        return pd.Series(dict(zip(self._values_unique, self._data_unique, strict=True)))
 
     def _lookup_arr(self, x) -> np.ndarray:
         # Use reindex to be less sensitive to float errors. reindex only
@@ -1818,7 +1822,9 @@ def _guess_coords_to_plot(
     # one of related mpl kwargs has been used. This should have similar behaviour as
     # * plt.plot(x, y) -> Multiple lines with different colors if y is 2d.
     # * plt.plot(x, y, color="red") -> Multiple red lines if y is 2d.
-    for k, dim, ign_kws in zip(default_guess, available_coords, ignore_guess_kwargs):
+    for k, dim, ign_kws in zip(
+        default_guess, available_coords, ignore_guess_kwargs, strict=False
+    ):
         if coords_to_plot.get(k, None) is None and all(
             kwargs.get(ign_kw, None) is None for ign_kw in ign_kws
         ):

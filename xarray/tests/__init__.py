@@ -134,7 +134,6 @@ has_cartopy, requires_cartopy = _importorskip("cartopy")
 has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
-has_pandas_ge_2_1, __ = _importorskip("pandas", "2.1")
 has_pandas_ge_2_2, __ = _importorskip("pandas", "2.2")
 has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0.dev0")
 
@@ -324,8 +323,8 @@ def create_test_data(
         obj["var4"] = (
             "dim1",
             pd.Categorical(
-                np.random.choice(
-                    list(string.ascii_lowercase[: np.random.randint(5)]),
+                rs.choice(
+                    list(string.ascii_lowercase[: rs.randint(1, 5)]),
                     size=dim_sizes[0],
                 )
             ),
@@ -333,7 +332,7 @@ def create_test_data(
     if dim_sizes == _DEFAULT_TEST_DIM_SIZES:
         numbers_values = np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64")
     else:
-        numbers_values = np.random.randint(0, 3, _dims["dim3"], dtype="int64")
+        numbers_values = rs.randint(0, 3, _dims["dim3"], dtype="int64")
     obj.coords["numbers"] = ("dim3", numbers_values)
     obj.encoding = {"foo": "bar"}
     assert_writeable(obj)

@@ -118,9 +118,9 @@ class TestFormatting:
                 np.arange(4) * np.timedelta64(500, "ms"),
                 "00:00:00 00:00:00.500000 00:00:01 00:00:01.500000",
             ),
-            (pd.to_timedelta(["NaT", "0s", "1s", "NaT"]), "NaT 00:00:00 00:00:01 NaT"),
+            (pd.to_timedelta(["NaT", "0s", "1s", "NaT"]), "NaT 00:00:00 00:00:01 NaT"),  # type: ignore[arg-type, unused-ignore]
             (
-                pd.to_timedelta(["1 day 1 hour", "1 day", "0 hours"]),
+                pd.to_timedelta(["1 day 1 hour", "1 day", "0 hours"]),  # type: ignore[arg-type, unused-ignore]
                 "1 days 01:00:00 1 days 00:00:00 0 days 00:00:00",
             ),
             ([1, 2, 3], "1 2 3"),
@@ -615,7 +615,7 @@ class TestFormatting:
 
         # Test numpy arrays raises:
         var = xr.DataArray([0.1, 0.2])
-        with pytest.raises(NotImplementedError) as excinfo:  # type: ignore
+        with pytest.raises(NotImplementedError) as excinfo:  # type: ignore[assignment]
             format(var, ".2f")
         assert "Using format_spec is only supported" in str(excinfo.value)
 
@@ -652,13 +652,18 @@ class TestFormatting:
             "Data variables",
             "*empty*",
         ]
-        for expected_line, printed_line in zip(expected, printout.splitlines()):
+        for expected_line, printed_line in zip(
+            expected, printout.splitlines(), strict=True
+        ):
             assert expected_line in printed_line
 
     def test_datatree_printout_nested_node(self):
         dat = xr.Dataset({"a": [0, 2]})
-        root: DataTree = DataTree(name="root")
-        DataTree(name="results", data=dat, parent=root)
+        root = DataTree.from_dict(
+            {
+                "/results": dat,
+            }
+        )
         printout = str(root)
         assert printout.splitlines()[3].startswith("    ")
 
@@ -841,7 +846,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     attrs = {k: 2 for k in b}
     coords = {_c: np.array([0, 1], dtype=np.uint64) for _c in c}
     data_vars = dict()
-    for v, _c in zip(a, coords.items()):
+    for v, _c in zip(a, coords.items(), strict=True):
         data_vars[v] = xr.DataArray(
             name=v,
             data=np.array([3, 4], dtype=np.uint64),

@@ -63,6 +63,7 @@ from collections.abc import (
 )
 from enum import Enum
 from pathlib import Path
+from types import EllipsisType
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeGuard, TypeVar, overload
 
 import numpy as np
@@ -185,7 +186,7 @@ def equivalent(first: T, second: T) -> bool:
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    for f, s in zip(first, second):
+    for f, s in zip(first, second, strict=True):
         if not equivalent(f, s):
             return False
     return True
@@ -839,7 +840,7 @@ def parse_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | ellipsis: ...
+) -> tuple[Hashable, ...] | None | EllipsisType: ...
 
 
 def parse_dims(
@@ -848,7 +849,7 @@ def parse_dims(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | ellipsis:
+) -> tuple[Hashable, ...] | None | EllipsisType:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -900,7 +901,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | ellipsis: ...
+) -> tuple[Hashable, ...] | None | EllipsisType: ...
 
 
 def parse_ordered_dims(
@@ -909,7 +910,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | ellipsis:
+) -> tuple[Hashable, ...] | None | EllipsisType:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -936,7 +937,7 @@ def parse_ordered_dims(
         Input dimensions as a tuple.
     """
     if dim is not None and dim is not ... and not isinstance(dim, str) and ... in dim:
-        dims_set: set[Hashable | ellipsis] = set(dim)
+        dims_set: set[Hashable | EllipsisType] = set(dim)
         all_dims_set = set(all_dims)
         if check_exists:
             _check_dims(dims_set, all_dims_set)
@@ -991,7 +992,7 @@ class UncachedAccessor(Generic[_Accessor]):
         if obj is None:
             return self._accessor
 
-        return self._accessor(obj)  # type: ignore  # assume it is a valid accessor!
+        return self._accessor(obj)  # type: ignore[call-arg]  # assume it is a valid accessor!
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240

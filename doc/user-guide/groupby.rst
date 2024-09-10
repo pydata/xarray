@@ -305,6 +305,12 @@ Use grouper objects to group by multiple dimensions:
 
     from xarray.groupers import UniqueGrouper
 
+    da.groupby(["lat", "lon"]).sum()
+
+The above is sugar for using ``UniqueGrouper`` objects directly:
+
+.. ipython:: python
+
     da.groupby(lat=UniqueGrouper(), lon=UniqueGrouper()).sum()
 
 
