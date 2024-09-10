@@ -80,7 +80,7 @@ def test_roundtrip_dataarray(data, arr) -> None:
             tuple
         )
     )
-    coords = {name: np.arange(n) for (name, n) in zip(names, arr.shape)}
+    coords = {name: np.arange(n) for (name, n) in zip(names, arr.shape, strict=True)}
     original = xr.DataArray(arr, dims=names, coords=coords)
     roundtripped = xr.DataArray(original.to_pandas())
     xr.testing.assert_identical(original, roundtripped)

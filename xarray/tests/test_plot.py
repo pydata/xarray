@@ -1146,6 +1146,7 @@ class TestDetermineCmapParams:
             ],
             ["neither", "neither", "both", "max", "min"],
             [7, None, None, None, None],
+            strict=True,
         ):
             test_min = vmin if norm.vmin is None else norm.vmin
             test_max = vmax if norm.vmax is None else norm.vmax
@@ -1167,7 +1168,7 @@ class TestDiscreteColorMap:
         y = np.arange(start=9, stop=-7, step=-3)
         xy = np.dstack(np.meshgrid(x, y))
         distance = np.linalg.norm(xy, axis=2)
-        self.darray = DataArray(distance, list(zip(("y", "x"), (y, x))))
+        self.darray = DataArray(distance, list(zip(("y", "x"), (y, x), strict=True)))
         self.data_min = distance.min()
         self.data_max = distance.max()
         yield
@@ -1862,7 +1863,7 @@ class TestPcolormesh(Common2dMixin, PlotTestCase):
         # Regression for GH 781
         ax = plt.gca()
         # Simulate a Cartopy Axis
-        setattr(ax, "projection", True)
+        ax.projection = True  # type: ignore[attr-defined]
         artist = self.plotmethod(x="x2d", y="y2d", ax=ax)
         assert isinstance(artist, mpl.collections.QuadMesh)
         # Let cartopy handle the axis limits and artist size
@@ -2208,7 +2209,7 @@ class TestFacetGrid(PlotTestCase):
     def test_names_appear_somewhere(self) -> None:
         self.darray.name = "testvar"
         self.g.map_dataarray(xplt.contourf, "x", "y")
-        for k, ax in zip("abc", self.g.axs.flat):
+        for k, ax in zip("abc", self.g.axs.flat, strict=True):
             assert f"z = {k}" == ax.get_title()
 
         alltxt = text_in_fig()
@@ -2450,11 +2451,15 @@ class TestFacetGrid4d(PlotTestCase):
         g.set_titles(template="{value}", weight="bold")
 
         # Rightmost column titles should be bold
-        for label, ax in zip(self.darray.coords["row"].values, g.axs[:, -1]):
+        for label, ax in zip(
+            self.darray.coords["row"].values, g.axs[:, -1], strict=True
+        ):
             assert property_in_axes_text("weight", "bold", label, ax)
 
         # Top row titles should be bold
-        for label, ax in zip(self.darray.coords["col"].values, g.axs[0, :]):
+        for label, ax in zip(
+            self.darray.coords["col"].values, g.axs[0, :], strict=True
+        ):
             assert property_in_axes_text("weight", "bold", label, ax)
 
     @pytest.mark.slow
@@ -2465,21 +2470,29 @@ class TestFacetGrid4d(PlotTestCase):
         g.map_dataarray(xplt.imshow, "x", "y")
 
         # Rightmost column should be labeled
-        for label, ax in zip(self.darray.coords["row"].values, g.axs[:, -1]):
+        for label, ax in zip(
+            self.darray.coords["row"].values, g.axs[:, -1], strict=True
+        ):
             assert substring_in_axes(label, ax)
 
         # Top row should be labeled
-        for label, ax in zip(self.darray.coords["col"].values, g.axs[0, :]):
+        for label, ax in zip(
+            self.darray.coords["col"].values, g.axs[0, :], strict=True
+        ):
             assert substring_in_axes(label, ax)
 
         # ensure that row & col labels can be changed
         g.set_titles("abc={value}")
-        for label, ax in zip(self.darray.coords["row"].values, g.axs[:, -1]):
+        for label, ax in zip(
+            self.darray.coords["row"].values, g.axs[:, -1], strict=True
+        ):
             assert substring_in_axes(f"abc={label}", ax)
             # previous labels were "row=row0" etc.
             assert substring_not_in_axes("row=", ax)
 
-        for label, ax in zip(self.darray.coords["col"].values, g.axs[0, :]):
+        for label, ax in zip(
+            self.darray.coords["col"].values, g.axs[0, :], strict=True
+        ):
             assert substring_in_axes(f"abc={label}", ax)
             # previous labels were "col=row0" etc.
             assert substring_not_in_axes("col=", ax)
@@ -2534,11 +2547,15 @@ class TestFacetedLinePlots(PlotTestCase):
     def test_default_labels(self) -> None:
         g = self.darray.plot(row="row", col="col", hue="hue")  # type: ignore[call-arg]
         # Rightmost column should be labeled
-        for label, ax in zip(self.darray.coords["row"].values, g.axs[:, -1]):
+        for label, ax in zip(
+            self.darray.coords["row"].values, g.axs[:, -1], strict=True
+        ):
             assert substring_in_axes(label, ax)
 
         # Top row should be labeled
-        for label, ax in zip(self.darray.coords["col"].values, g.axs[0, :]):
+        for label, ax in zip(
+            self.darray.coords["col"].values, g.axs[0, :], strict=True
+        ):
             assert substring_in_axes(str(label), ax)
 
         # Leftmost column should have array name
@@ -2784,7 +2801,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         g = self.ds.plot.scatter(x="A", y="B", row="row", col="col", hue="hue")
 
         # Top row should be labeled
-        for label, ax in zip(self.ds.coords["col"].values, g.axs[0, :]):
+        for label, ax in zip(self.ds.coords["col"].values, g.axs[0, :], strict=True):
             assert substring_in_axes(str(label), ax)
 
         # Bottom row should have name of x array name and units

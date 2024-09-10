@@ -40,7 +40,7 @@ class TestTreeCreation:
         assert_identical(tree.to_dataset(), ds)
 
         with pytest.raises(TypeError):
-            DataTree(data=xr.DataArray(42, name="foo"))  # type: ignore
+            DataTree(data=xr.DataArray(42, name="foo"))  # type: ignore[arg-type]
 
 
 class TestFamilyTree:
@@ -344,7 +344,9 @@ class TestCopy:
         for copied in [dt.copy(deep=False), copy(dt)]:
             assert_identical(dt, copied)
 
-            for node, copied_node in zip(dt.root.subtree, copied.root.subtree):
+            for node, copied_node in zip(
+                dt.root.subtree, copied.root.subtree, strict=True
+            ):
                 assert node.encoding == copied_node.encoding
                 # Note: IndexVariable objects with string dtype are always
                 # copied because of xarray.core.util.safe_cast_to_index.
@@ -385,7 +387,9 @@ class TestCopy:
         for copied in [dt.copy(deep=True), deepcopy(dt)]:
             assert_identical(dt, copied)
 
-            for node, copied_node in zip(dt.root.subtree, copied.root.subtree):
+            for node, copied_node in zip(
+                dt.root.subtree, copied.root.subtree, strict=True
+            ):
                 assert node.encoding == copied_node.encoding
                 # Note: IndexVariable objects with string dtype are always
                 # copied because of xarray.core.util.safe_cast_to_index.
@@ -665,7 +669,7 @@ class TestTreeFromDict:
     def test_array_values(self):
         data = {"foo": xr.DataArray(1, name="bar")}
         with pytest.raises(TypeError):
-            DataTree.from_dict(data)  # type: ignore
+            DataTree.from_dict(data)  # type: ignore[arg-type]
 
 
 class TestDatasetView:
@@ -741,7 +745,7 @@ class TestAccess:
             assert key in dir(dt)
 
         # dims
-        assert_equal(dt["a"]["y"], getattr(dt.a, "y"))
+        assert_equal(dt["a"]["y"], dt.a.y)
         assert "y" in dir(dt["a"])
 
         # children
@@ -951,7 +955,7 @@ class TestInheritance:
             )
 
         dt = DataTree()
-        dt.ds = xr.Dataset(coords={"x": [1.0]})  # type: ignore
+        dt.ds = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment]
         dt["/b"] = DataTree()
         with pytest.raises(ValueError, match=expected_msg):
             dt["/b"].ds = xr.Dataset(coords={"x": [2.0]})
@@ -986,7 +990,7 @@ class TestInheritance:
             )
 
         dt = DataTree()
-        dt.ds = xr.Dataset(coords={"x": [1.0]})  # type: ignore
+        dt.ds = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment]
         dt["/b/c"] = DataTree()
         with pytest.raises(ValueError, match=expected_msg):
             dt["/b/c"].ds = xr.Dataset(coords={"x": [2.0]})

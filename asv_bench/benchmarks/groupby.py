@@ -174,7 +174,7 @@ class GroupByLongTime:
         # GH9426 - deep-copying CFTime object arrays is weirdly slow
         asda = xr.DataArray(time)
         labeled_time = []
-        for year, month in zip(asda.dt.year, asda.dt.month):
+        for year, month in zip(asda.dt.year, asda.dt.month, strict=True):
             labeled_time.append(cftime.datetime(year, month, 1))
 
         self.da = xr.DataArray(

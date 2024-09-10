@@ -283,7 +283,7 @@ class TestDataArray:
         assert array.sizes == {"x": 3, "y": 4}
         assert tuple(array.sizes) == array.dims
         with pytest.raises(TypeError):
-            array.sizes["foo"] = 5  # type: ignore
+            array.sizes["foo"] = 5  # type: ignore[index]
 
     def test_encoding(self) -> None:
         expected = {"foo": "bar"}
@@ -575,8 +575,8 @@ class TestDataArray:
     def test_equals_failures(self) -> None:
         orig = DataArray(np.arange(5.0), {"a": 42}, dims="x")
         assert not orig.equals(np.arange(5))  # type: ignore[arg-type]
-        assert not orig.identical(123)  # type: ignore
-        assert not orig.broadcast_equals({1: 2})  # type: ignore
+        assert not orig.identical(123)  # type: ignore[arg-type]
+        assert not orig.broadcast_equals({1: 2})  # type: ignore[arg-type]
 
     def test_broadcast_equals(self) -> None:
         a = DataArray([0, 0], {"y": 0}, dims="x")
@@ -889,7 +889,7 @@ class TestDataArray:
         first_dask_name = blocked.data.name
 
         with pytest.warns(DeprecationWarning):
-            blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))  # type: ignore
+            blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))  # type: ignore[arg-type]
             assert blocked.chunks == ((2, 1), (2, 2))
             assert blocked.data.name != first_dask_name
 
@@ -2226,7 +2226,7 @@ class TestDataArray:
 
         indexed = da.set_xindex("foo", IndexWithOptions, opt=1)
         assert "foo" in indexed.xindexes
-        assert getattr(indexed.xindexes["foo"], "opt") == 1
+        assert indexed.xindexes["foo"].opt == 1  # type: ignore[attr-defined]
 
     def test_dataset_getitem(self) -> None:
         dv = self.ds["foo"]
@@ -2707,7 +2707,7 @@ class TestDataArray:
         assert_identical(actual, expected)
 
         with pytest.warns(DeprecationWarning):
-            arr.drop([0, 1, 3], dim="y", errors="ignore")  # type: ignore
+            arr.drop([0, 1, 3], dim="y", errors="ignore")  # type: ignore[arg-type]
 
     def test_drop_index_positions(self) -> None:
         arr = DataArray(np.random.randn(2, 3), dims=["x", "y"])
@@ -2913,7 +2913,8 @@ class TestDataArray:
     @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
-        "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
+        "axis, dim",
+        zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]], strict=True),
     )
     def test_quantile(self, q, axis, dim, skipna, compute_backend) -> None:
         va = self.va.copy(deep=True)
@@ -4055,7 +4056,7 @@ class TestDataArray:
         with pytest.raises(NotImplementedError):
             da.dot(dm3.to_dataset(name="dm"))
         with pytest.raises(TypeError):
-            da.dot(dm3.values)  # type: ignore
+            da.dot(dm3.values)  # type: ignore[type-var]
 
     def test_dot_align_coords(self) -> None:
         # GH 3694
@@ -4520,7 +4521,7 @@ class TestDataArray:
 
         # test error handling
         with pytest.raises(ValueError):
-            aa.query("a > 5")  # type: ignore  # must be dict or kwargs
+            aa.query("a > 5")  # type: ignore[arg-type]  # must be dict or kwargs
         with pytest.raises(ValueError):
             aa.query(x=(a > 5))  # must be query string
         with pytest.raises(UndefinedVariableError):
@@ -5342,7 +5343,7 @@ class TestReduce2D(TestReduce):
 
         minindex = [
             x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(minindex, nanindex)
+            for x, y in zip(minindex, nanindex, strict=True)
         ]
         expected2list = [
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(minindex)
@@ -5387,7 +5388,7 @@ class TestReduce2D(TestReduce):
 
         maxindex = [
             x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(maxindex, nanindex)
+            for x, y in zip(maxindex, nanindex, strict=True)
         ]
         expected2list = [
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(maxindex)
@@ -5439,7 +5440,7 @@ class TestReduce2D(TestReduce):
 
         minindex = [
             x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(minindex, nanindex)
+            for x, y in zip(minindex, nanindex, strict=True)
         ]
         expected2list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
@@ -5492,7 +5493,7 @@ class TestReduce2D(TestReduce):
 
         maxindex = [
             x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(maxindex, nanindex)
+            for x, y in zip(maxindex, nanindex, strict=True)
         ]
         expected2list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
@@ -5588,7 +5589,7 @@ class TestReduce2D(TestReduce):
         # skipna=False
         minindex3 = [
             x if y is None or ar0.dtype.kind == "O" else y
-            for x, y in zip(minindex0, nanindex)
+            for x, y in zip(minindex0, nanindex, strict=True)
         ]
         expected3list = [
             coordarr0.isel(y=yi).isel(x=indi, drop=True)
@@ -5730,7 +5731,7 @@ class TestReduce2D(TestReduce):
         # skipna=False
         maxindex3 = [
             x if y is None or ar0.dtype.kind == "O" else y
-            for x, y in zip(maxindex0, nanindex)
+            for x, y in zip(maxindex0, nanindex, strict=True)
         ]
         expected3list = [
             coordarr0.isel(y=yi).isel(x=indi, drop=True)
@@ -5830,7 +5831,7 @@ class TestReduce2D(TestReduce):
 
         minindex = [
             x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(minindex, nanindex)
+            for x, y in zip(minindex, nanindex, strict=True)
         ]
         expected2list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
@@ -5897,7 +5898,7 @@ class TestReduce2D(TestReduce):
 
         maxindex = [
             x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(maxindex, nanindex)
+            for x, y in zip(maxindex, nanindex, strict=True)
         ]
         expected2list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
@@ -6650,7 +6651,7 @@ class TestIrisConversion:
             ),
         )
 
-        for coord, original_key in zip((actual.coords()), original.coords):
+        for coord, original_key in zip((actual.coords()), original.coords, strict=True):
             original_coord = original.coords[original_key]
             assert coord.var_name == original_coord.name
             assert_array_equal(
@@ -6726,7 +6727,7 @@ class TestIrisConversion:
             ),
         )
 
-        for coord, original_key in zip((actual.coords()), original.coords):
+        for coord, original_key in zip((actual.coords()), original.coords, strict=True):
             original_coord = original.coords[original_key]
             assert coord.var_name == original_coord.name
             assert_array_equal(
@@ -7159,7 +7160,7 @@ class TestStackEllipsis:
     def test_error_on_ellipsis_without_list(self) -> None:
         da = DataArray([[1, 2], [1, 2]], dims=("x", "y"))
         with pytest.raises(ValueError):
-            da.stack(flat=...)  # type: ignore
+            da.stack(flat=...)  # type: ignore[arg-type]
 
 
 def test_nD_coord_dataarray() -> None:

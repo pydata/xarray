@@ -51,12 +51,12 @@ class TestAccessor:
         # check descriptor
         assert ds.demo.__doc__ == "Demo accessor."
         # TODO: typing doesn't seem to work with accessors
-        assert xr.Dataset.demo.__doc__ == "Demo accessor."  # type: ignore
+        assert xr.Dataset.demo.__doc__ == "Demo accessor."  # type: ignore[attr-defined]
         assert isinstance(ds.demo, DemoAccessor)
-        assert xr.Dataset.demo is DemoAccessor  # type: ignore
+        assert xr.Dataset.demo is DemoAccessor  # type: ignore[attr-defined]
 
         # ensure we can remove it
-        del xr.Dataset.demo  # type: ignore
+        del xr.Dataset.demo  # type: ignore[attr-defined]
         assert not hasattr(xr.Dataset, "demo")
 
         with pytest.warns(Warning, match="overriding a preexisting attribute"):

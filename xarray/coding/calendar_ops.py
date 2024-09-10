@@ -198,7 +198,7 @@ def convert_calendar(
                 _convert_to_new_calendar_with_new_day_of_year(
                     date, newdoy, calendar, use_cftime
                 )
-                for date, newdoy in zip(time.variable._data.array, new_doy)
+                for date, newdoy in zip(time.variable._data.array, new_doy, strict=True)
             ],
             dims=(dim,),
             name=dim,

@@ -64,7 +64,7 @@ class DatatreeIOBase:
         assert roundtrip_dt["/set2/a"].encoding["zlib"] == comp["zlib"]
         assert roundtrip_dt["/set2/a"].encoding["complevel"] == comp["complevel"]
 
-        enc["/not/a/group"] = {"foo": "bar"}  # type: ignore
+        enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
         with pytest.raises(ValueError, match="unexpected encoding group.*"):
             original_dt.to_netcdf(filepath, encoding=enc, engine=self.engine)
 
@@ -253,7 +253,7 @@ class TestZarrDatatreeIO:
         print(roundtrip_dt["/set2/a"].encoding)
         assert roundtrip_dt["/set2/a"].encoding["compressor"] == comp["compressor"]
 
-        enc["/not/a/group"] = {"foo": "bar"}  # type: ignore
+        enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
         with pytest.raises(ValueError, match="unexpected encoding group.*"):
             original_dt.to_zarr(filepath, encoding=enc, engine="zarr")
 
