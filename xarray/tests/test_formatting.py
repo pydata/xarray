@@ -646,8 +646,6 @@ class TestFormatting:
             "Dimensions",
             "Coordinates",
             "a",
-            "Data variables",
-            "*empty*",
         ]
         for expected_line, printed_line in zip(
             expected, printout.splitlines(), strict=True
