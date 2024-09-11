@@ -419,7 +419,7 @@ class DataTree(
 
     def __init__(
         self,
-        dataset: Dataset | None = None,
+        dataset: Dataset | Coordinates | None = None,
         children: Mapping[str, DataTree] | None = None,
         name: str | None = None,
     ):
