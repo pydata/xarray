@@ -680,13 +680,18 @@ class TestCoords:
         actual.coords["x"] = ("x", ["a", "b"])
         assert_array_equal(actual["x"], ["a", "b"])
 
-        # TODO requires fix to GH issue #9472
+        actual = child.copy(deep=True)
+        actual.coords.update({"c": 11})
+        expected = child.copy(deep=True)
+        expected.coords["c"] = 11
+        # check we have only altered the child node
+        assert_identical(expected.root, actual.root)
+
+        # TODO requires a fix for #9472
         # actual = child.copy(deep=True)
         # actual.coords.update({"c": 11})
         # expected = child.assign_coords({"c": 11})
         # assert_identical(expected, actual)
-        # with pytest.raises(KeyError):
-        #     dt.coords['c']
 
 
 def test_delitem():

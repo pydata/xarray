@@ -801,9 +801,6 @@ class DataTreeCoordinates(Coordinates):
     # TODO: This only needs to be a separate class from `DatasetCoordinates` because DataTree nodes store their variables differently
     # internally than how Datasets do, see https://github.com/pydata/xarray/issues/9203.
 
-    # TODO should inherited coordinates be here? It would be very hard to allow updating them...
-    # But actually maybe the ChainMap approach would make this work okay??
-
     _data: DataTree  # type: ignore[assignment]  # complaining that DataTree is not a subclass of DataWithCoords - this can be fixed by refactoring, see #9203
 
     __slots__ = ("_data",)
@@ -861,7 +858,9 @@ class DataTreeCoordinates(Coordinates):
         # check consistency *before* modifying anything in-place
         # TODO can we clean up the signature of _check_alignment to make this less awkward?
         if self._data.parent is not None:
-            parent_ds = self._data.parent._to_dataset_view(rebuild_dims=False)
+            parent_ds = self._data.parent._to_dataset_view(
+                inherited=True, rebuild_dims=False
+            )
         else:
             parent_ds = None
         _check_alignment(self._data.path, node_ds, parent_ds, self._data.children)
