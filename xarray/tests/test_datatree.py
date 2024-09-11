@@ -691,6 +691,10 @@ class TestCoords:
         # check we have only altered the child node
         assert_identical(expected.root, actual.root)
 
+        with pytest.raises(KeyError):
+            # cannot delete inherited coordinate from child node
+            del child["b"]
+
         # TODO requires a fix for #9472
         # actual = child.copy(deep=True)
         # actual.coords.update({"c": 11})
