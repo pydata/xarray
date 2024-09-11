@@ -553,7 +553,7 @@ class TestCoords:
                 "b": np.int64(-10),
             },
         )
-        dt = DataTree(data=ds)
+        dt = DataTree(dataset=ds)
         dt["child"] = DataTree()
 
         coords = dt.coords
@@ -616,7 +616,7 @@ class TestCoords:
                 "b": np.int64(-10),
             },
         )
-        dt = DataTree(data=ds)
+        dt = DataTree(dataset=ds)
         dt["child"] = DataTree()
 
         actual = dt.copy(deep=True)
@@ -659,7 +659,7 @@ class TestCoords:
         assert_identical(da.coords, dt.coords)
 
         # DataTree constructor doesn't accept coords= but should still be able to handle DatasetCoordinates
-        dt2 = DataTree(data=dt.coords)
+        dt2 = DataTree(dataset=dt.coords)
         assert_identical(dt2.coords, dt.coords)
 
     def test_inherited(self):
@@ -674,7 +674,7 @@ class TestCoords:
                 "b": np.int64(-10),
             },
         )
-        dt = DataTree(data=ds)
+        dt = DataTree(dataset=ds)
         dt["child"] = DataTree()
         child = dt["child"]
 
