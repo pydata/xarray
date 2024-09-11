@@ -62,7 +62,7 @@ class Children(Mapping[str, Tree], Generic[Tree]):
 
     @property
     def _names(self) -> set[str]:
-        return set(self._treenode.children.keys())
+        return set(self._treenode._children.keys())
 
     def __iter__(self) -> Iterator[str]:
         return iter(self._names)
