@@ -836,10 +836,7 @@ class DataTreeCoordinates(Coordinates):
     def __getitem__(self, key: Hashable) -> DataArray:
         if key not in self._data._coord_variables:
             raise KeyError(key)
-        item = self._data[key]  # type: ignore[index]  # see https://github.com/pydata/xarray/issues/8836
-
-        # TODO perhaps instead use an internal `DataTree` getter method which always returns DataArrays here?
-        return cast("DataArray", item)
+        return self._data.dataset[key]
 
     def to_dataset(self) -> Dataset:
         """Convert these coordinates into a new Dataset"""
