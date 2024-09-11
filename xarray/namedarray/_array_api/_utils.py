@@ -124,6 +124,107 @@ def _infer_dims(
         return _normalize_dimensions(dims)
 
 
+def _normalize_axis_index(axis: int, ndim: int) -> int:
+    """
+    Parameters
+    ----------
+    axis : int
+        The un-normalized index of the axis. Can be negative
+    ndim : int
+        The number of dimensions of the array that `axis` should be normalized
+        against
+
+    Returns
+    -------
+    normalized_axis : int
+        The normalized axis index, such that `0 <= normalized_axis < ndim`
+
+    Raises
+    ------
+    AxisError
+        If the axis index is invalid, when `-ndim <= axis < ndim` is false.
+
+    Examples
+    --------
+    >>> _normalize_axis_index(0, ndim=3)
+    0
+    >>> _normalize_axis_index(1, ndim=3)
+    1
+    >>> _normalize_axis_index(-1, ndim=3)
+    2
+
+    >>> _normalize_axis_index(3, ndim=3)
+    Traceback (most recent call last):
+    ...
+    AxisError: axis 3 is out of bounds for array of dimension 3
+    >>> _normalize_axis_index(-4, ndim=3, msg_prefix='axes_arg')
+    Traceback (most recent call last):
+    ...
+    AxisError: axes_arg: axis -4 is out of bounds for array of dimension 3
+    """
+
+    if -ndim > axis >= ndim:
+        raise ValueError(f"axis {axis} is out of bounds for array of dimension {ndim}")
+
+    return axis % ndim
+
+
+def _normalize_axis_tuple(
+    axis: _AxisLike,
+    ndim: int,
+    argname: str | None = None,
+    allow_duplicate: bool = False,
+) -> _Axes:
+    """
+    Normalizes an axis argument into a tuple of non-negative integer axes.
+
+    This handles shorthands such as ``1`` and converts them to ``(1,)``,
+    as well as performing the handling of negative indices covered by
+    `normalize_axis_index`.
+
+    By default, this forbids axes from being specified multiple times.
+
+
+    Parameters
+    ----------
+    axis : int, iterable of int
+        The un-normalized index or indices of the axis.
+    ndim : int
+        The number of dimensions of the array that `axis` should be normalized
+        against.
+    argname : str, optional
+        A prefix to put before the error message, typically the name of the
+        argument.
+    allow_duplicate : bool, optional
+        If False, the default, disallow an axis from being specified twice.
+
+    Returns
+    -------
+    normalized_axes : tuple of int
+        The normalized axis index, such that `0 <= normalized_axis < ndim`
+
+    Raises
+    ------
+    AxisError
+        If any axis provided is out of range
+    ValueError
+        If an axis is repeated
+    """
+    if not isinstance(axis, tuple):
+        _axis = (axis,)
+    else:
+        _axis = axis
+
+    # Going via an iterator directly is slower than via list comprehension.
+    _axis = tuple([_normalize_axis_index(ax, ndim) for ax in _axis])
+    if not allow_duplicate and len(set(_axis)) != len(_axis):
+        if argname:
+            raise ValueError(f"repeated axis in `{argname}` argument")
+        else:
+            raise ValueError("repeated axis")
+    return _axis
+
+
 def _assert_either_dim_or_axis(
     dims: _DimsLike2 | Default, axis: _AxisLike | None
 ) -> None:
@@ -148,18 +249,26 @@ def _dims_to_axis(
 
     Convert to dims to axis values
 
-    >>> x = NamedArray(("x", "y"), np.array([[1, 2, 3], [5, 6, 7]]))
+    >>> x = NamedArray(("x", "y", "z"), np.zeros((1, 2, 3)))
     >>> _dims_to_axis(x, ("y", "x"), None)
     (1, 0)
     >>> _dims_to_axis(x, ("y",), None)
     (1,)
     >>> _dims_to_axis(x, _default, 0)
     (0,)
-    >>> _dims_to_axis(x, _default, None)
+    >>> type(_dims_to_axis(x, _default, None))
+    NoneType
+
+    Normalizes negative integers
+
+    >>> _dims_to_axis(x, _default, -1)
+    (2,)
+    >>> _dims_to_axis(x, _default, (-2, -1))
+    (1, 2)
 
     Using Hashable dims
 
-    >>> x = NamedArray(("x", None), np.array([[1, 2, 3], [5, 6, 7]]))
+    >>> x = NamedArray(("x", None), np.zeros((1, 2)))
     >>> _dims_to_axis(x, None, None)
     (1,)
 
@@ -185,10 +294,7 @@ def _dims_to_axis(
     if axis is None:
         return axis
 
-    if isinstance(axis, tuple):
-        return axis
-    else:
-        return (axis,)
+    return _normalize_axis_tuple(axis, x.ndim)
 
 
 def _dim_to_optional_axis(
