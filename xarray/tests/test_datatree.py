@@ -36,11 +36,11 @@ class TestTreeCreation:
 
     def test_data_arg(self):
         ds = xr.Dataset({"foo": 42})
-        tree: DataTree = DataTree(data=ds)
+        tree: DataTree = DataTree(dataset=ds)
         assert_identical(tree.to_dataset(), ds)
 
         with pytest.raises(TypeError):
-            DataTree(data=xr.DataArray(42, name="foo"))  # type: ignore[arg-type]
+            DataTree(dataset=xr.DataArray(42, name="foo"))  # type: ignore[arg-type]
 
 
 class TestFamilyTree:
@@ -141,38 +141,38 @@ class TestPaths:
 class TestStoreDatasets:
     def test_create_with_data(self):
         dat = xr.Dataset({"a": 0})
-        john = DataTree(name="john", data=dat)
+        john = DataTree(name="john", dataset=dat)
 
         assert_identical(john.to_dataset(), dat)
 
         with pytest.raises(TypeError):
-            DataTree(name="mary", data="junk")  # type: ignore[arg-type]
+            DataTree(name="mary", dataset="junk")  # type: ignore[arg-type]
 
     def test_set_data(self):
         john = DataTree(name="john")
         dat = xr.Dataset({"a": 0})
-        john.ds = dat  # type: ignore[assignment]
+        john.dataset = dat  # type: ignore[assignment]
 
         assert_identical(john.to_dataset(), dat)
 
         with pytest.raises(TypeError):
-            john.ds = "junk"  # type: ignore[assignment]
+            john.dataset = "junk"  # type: ignore[assignment]
 
     def test_has_data(self):
-        john = DataTree(name="john", data=xr.Dataset({"a": 0}))
+        john = DataTree(name="john", dataset=xr.Dataset({"a": 0}))
         assert john.has_data
 
-        john_no_data = DataTree(name="john", data=None)
+        john_no_data = DataTree(name="john", dataset=None)
         assert not john_no_data.has_data
 
     def test_is_hollow(self):
-        john = DataTree(data=xr.Dataset({"a": 0}))
+        john = DataTree(dataset=xr.Dataset({"a": 0}))
         assert john.is_hollow
 
         eve = DataTree(children={"john": john})
         assert eve.is_hollow
 
-        eve.ds = xr.Dataset({"a": 1})  # type: ignore[assignment]
+        eve.dataset = xr.Dataset({"a": 1})  # type: ignore[assignment]
         assert not eve.is_hollow
 
 
@@ -197,7 +197,7 @@ class TestVariablesChildrenNameCollisions:
             DataTree.from_dict({"/": xr.Dataset({"a": [0], "b": 1}), "/a": None})
 
     def test_parent_already_has_variable_with_childs_name_update(self):
-        dt = DataTree(data=xr.Dataset({"a": [0], "b": 1}))
+        dt = DataTree(dataset=xr.Dataset({"a": [0], "b": 1}))
         with pytest.raises(ValueError, match="already contains a variable named a"):
             dt.update({"a": DataTree()})
 
@@ -209,13 +209,13 @@ class TestVariablesChildrenNameCollisions:
         )
 
         with pytest.raises(ValueError, match="node already contains a variable"):
-            dt.ds = xr.Dataset({"a": 0})  # type: ignore[assignment]
+            dt.dataset = xr.Dataset({"a": 0})  # type: ignore[assignment]
 
-        dt.ds = xr.Dataset()  # type: ignore[assignment]
+        dt.dataset = xr.Dataset()  # type: ignore[assignment]
 
         new_ds = dt.to_dataset().assign(a=xr.DataArray(0))
         with pytest.raises(ValueError, match="node already contains a variable"):
-            dt.ds = new_ds  # type: ignore[assignment]
+            dt.dataset = new_ds  # type: ignore[assignment]
 
 
 class TestGet: ...
@@ -238,7 +238,7 @@ class TestGetItem:
 
     def test_getitem_single_data_variable(self):
         data = xr.Dataset({"temp": [0, 50]})
-        results = DataTree(name="results", data=data)
+        results = DataTree(name="results", dataset=data)
         assert_identical(results["temp"], data["temp"])
 
     def test_getitem_single_data_variable_from_node(self):
@@ -257,14 +257,14 @@ class TestGetItem:
 
     def test_getitem_nonexistent_variable(self):
         data = xr.Dataset({"temp": [0, 50]})
-        results = DataTree(name="results", data=data)
+        results = DataTree(name="results", dataset=data)
         with pytest.raises(KeyError):
             results["pressure"]
 
     @pytest.mark.xfail(reason="Should be deprecated in favour of .subset")
     def test_getitem_multiple_data_variables(self):
         data = xr.Dataset({"temp": [0, 50], "p": [5, 8, 7]})
-        results = DataTree(name="results", data=data)
+        results = DataTree(name="results", dataset=data)
         assert_identical(results[["temp", "p"]], data[["temp", "p"]])  # type: ignore[index]
 
     @pytest.mark.xfail(
@@ -272,7 +272,7 @@ class TestGetItem:
     )
     def test_getitem_dict_like_selection_access_to_dataset(self):
         data = xr.Dataset({"temp": [0, 50]})
-        results = DataTree(name="results", data=data)
+        results = DataTree(name="results", dataset=data)
         assert_identical(results[{"temp": 1}], data[{"temp": 1}])  # type: ignore[index]
 
 
@@ -440,7 +440,7 @@ class TestSetItem:
 
     def test_setitem_new_grandchild_node(self):
         john = DataTree.from_dict({"/Mary/Rose": DataTree()})
-        new_rose = DataTree(data=xr.Dataset({"x": 0}))
+        new_rose = DataTree(dataset=xr.Dataset({"x": 0}))
         john["Mary/Rose"] = new_rose
 
         grafted_rose = john["Mary/Rose"]
@@ -466,7 +466,7 @@ class TestSetItem:
         john["mary"] = DataTree()
         assert_identical(john["mary"].to_dataset(), xr.Dataset())
 
-        john.ds = xr.Dataset()  # type: ignore[assignment]
+        john.dataset = xr.Dataset()  # type: ignore[assignment]
         with pytest.raises(ValueError, match="has no name"):
             john["."] = DataTree()
 
@@ -518,20 +518,20 @@ class TestSetItem:
     def test_setitem_add_new_variable_to_empty_node(self):
         results = DataTree(name="results")
         results["pressure"] = xr.DataArray(data=[2, 3])
-        assert "pressure" in results.ds
+        assert "pressure" in results.dataset
         results["temp"] = xr.Variable(data=[10, 11], dims=["x"])
-        assert "temp" in results.ds
+        assert "temp" in results.dataset
 
         # What if there is a path to traverse first?
         results_with_path = DataTree(name="results")
         results_with_path["highres/pressure"] = xr.DataArray(data=[2, 3])
-        assert "pressure" in results_with_path["highres"].ds
+        assert "pressure" in results_with_path["highres"].dataset
         results_with_path["highres/temp"] = xr.Variable(data=[10, 11], dims=["x"])
-        assert "temp" in results_with_path["highres"].ds
+        assert "temp" in results_with_path["highres"].dataset
 
     def test_setitem_dataarray_replace_existing_node(self):
         t = xr.Dataset({"temp": [0, 50]})
-        results = DataTree(name="results", data=t)
+        results = DataTree(name="results", dataset=t)
         p = xr.DataArray(data=[2, 3])
         results["pressure"] = p
         expected = t.assign(pressure=p)
@@ -620,7 +620,7 @@ class TestTreeFromDict:
         ]
 
     def test_datatree_values(self):
-        dat1 = DataTree(data=xr.Dataset({"a": 1}))
+        dat1 = DataTree(dataset=xr.Dataset({"a": 1}))
         expected = DataTree()
         expected["a"] = dat1
 
@@ -675,11 +675,11 @@ class TestTreeFromDict:
 class TestDatasetView:
     def test_view_contents(self):
         ds = create_test_data()
-        dt = DataTree(data=ds)
+        dt = DataTree(dataset=ds)
         assert ds.identical(
-            dt.ds
+            dt.dataset
         )  # this only works because Dataset.identical doesn't check types
-        assert isinstance(dt.ds, xr.Dataset)
+        assert isinstance(dt.dataset, xr.Dataset)
 
     def test_immutability(self):
         # See issue https://github.com/xarray-contrib/datatree/issues/38
@@ -694,28 +694,28 @@ class TestDatasetView:
         with pytest.raises(
             AttributeError, match="Mutation of the DatasetView is not allowed"
         ):
-            dt.ds["a"] = xr.DataArray(0)
+            dt.dataset["a"] = xr.DataArray(0)
 
         with pytest.raises(
             AttributeError, match="Mutation of the DatasetView is not allowed"
         ):
-            dt.ds.update({"a": 0})
+            dt.dataset.update({"a": 0})
 
         # TODO are there any other ways you can normally modify state (in-place)?
         # (not attribute-like assignment because that doesn't work on Dataset anyway)
 
     def test_methods(self):
         ds = create_test_data()
-        dt = DataTree(data=ds)
-        assert ds.mean().identical(dt.ds.mean())
-        assert isinstance(dt.ds.mean(), xr.Dataset)
+        dt = DataTree(dataset=ds)
+        assert ds.mean().identical(dt.dataset.mean())
+        assert isinstance(dt.dataset.mean(), xr.Dataset)
 
     def test_arithmetic(self, create_test_datatree):
         dt = create_test_datatree()
         expected = create_test_datatree(modify=lambda ds: 10.0 * ds)[
             "set1"
         ].to_dataset()
-        result = 10.0 * dt["set1"].ds
+        result = 10.0 * dt["set1"].dataset
         assert result.identical(expected)
 
     def test_init_via_type(self):
@@ -727,12 +727,12 @@ class TestDatasetView:
             dims=["x", "y", "time"],
             coords={"area": (["x", "y"], np.random.rand(3, 4))},
         ).to_dataset(name="data")
-        dt = DataTree(data=a)
+        dt = DataTree(dataset=a)
 
         def weighted_mean(ds):
             return ds.weighted(ds.area).mean(["x", "y"])
 
-        weighted_mean(dt.ds)
+        weighted_mean(dt.dataset)
 
 
 class TestAccess:
@@ -961,7 +961,7 @@ class TestInheritance:
         assert dt.b.sizes == {"x": 2, "y": 1}
         assert dt.c.sizes == {"x": 2, "y": 3}
         # dataset objects created from nodes should not
-        assert dt.b.ds.sizes == {"y": 1}
+        assert dt.b.dataset.sizes == {"y": 1}
         assert dt.b.to_dataset(inherited=True).sizes == {"y": 1}
         assert dt.b.to_dataset(inherited=False).sizes == {"y": 1}
 
@@ -1021,10 +1021,10 @@ class TestInheritance:
         with pytest.raises(ValueError, match=expected_msg):
             dt["/b/c"] = xr.DataArray([3.0], dims=["x"])
 
-        b = DataTree(data=xr.Dataset({"c": (("x",), [3.0])}))
+        b = DataTree(dataset=xr.Dataset({"c": (("x",), [3.0])}))
         with pytest.raises(ValueError, match=expected_msg):
             DataTree(
-                data=xr.Dataset({"a": (("x",), [1.0, 2.0])}),
+                dataset=xr.Dataset({"a": (("x",), [1.0, 2.0])}),
                 children={"b": b},
             )
 
@@ -1054,14 +1054,14 @@ class TestInheritance:
             )
 
         dt = DataTree()
-        dt.ds = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment]
+        dt.dataset = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment]
         dt["/b"] = DataTree()
         with pytest.raises(ValueError, match=expected_msg):
-            dt["/b"].ds = xr.Dataset(coords={"x": [2.0]})
+            dt["/b"].dataset = xr.Dataset(coords={"x": [2.0]})
 
         b = DataTree(xr.Dataset(coords={"x": [2.0]}))
         with pytest.raises(ValueError, match=expected_msg):
-            DataTree(data=xr.Dataset(coords={"x": [1.0]}), children={"b": b})
+            DataTree(dataset=xr.Dataset(coords={"x": [1.0]}), children={"b": b})
 
     def test_inconsistent_grandchild_indexes(self):
         expected_msg = _exact_match(
@@ -1089,15 +1089,15 @@ class TestInheritance:
             )
 
         dt = DataTree()
-        dt.ds = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment]
+        dt.dataset = xr.Dataset(coords={"x": [1.0]})  # type: ignore[assignment]
         dt["/b/c"] = DataTree()
         with pytest.raises(ValueError, match=expected_msg):
-            dt["/b/c"].ds = xr.Dataset(coords={"x": [2.0]})
+            dt["/b/c"].dataset = xr.Dataset(coords={"x": [2.0]})
 
         c = DataTree(xr.Dataset(coords={"x": [2.0]}))
         b = DataTree(children={"c": c})
         with pytest.raises(ValueError, match=expected_msg):
-            DataTree(data=xr.Dataset(coords={"x": [1.0]}), children={"b": b})
+            DataTree(dataset=xr.Dataset(coords={"x": [1.0]}), children={"b": b})
 
     def test_inconsistent_grandchild_dims(self):
         expected_msg = _exact_match(
