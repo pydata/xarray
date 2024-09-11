@@ -645,7 +645,7 @@ class DataTree(
         self._encoding = dict(value)
 
     @property
-    def dims(self) -> Frozen[Hashable, int]:
+    def dims(self) -> Mapping[Hashable, int]:
         """Mapping from dimension names to lengths.
 
         Cannot be modified directly, but is updated when adding new variables.
@@ -657,7 +657,7 @@ class DataTree(
         return Frozen(self._dims)
 
     @property
-    def sizes(self) -> Frozen[Hashable, int]:
+    def sizes(self) -> Mapping[Hashable, int]:
         """Mapping from dimension names to lengths.
 
         Cannot be modified directly, but is updated when adding new variables.
