@@ -815,7 +815,7 @@ class DataTreeCoordinates(Coordinates):
     @property
     def dims(self) -> Frozen[Hashable, int]:
         # TODO is there a potential bug here? What happens if a dim is only present on data variables?
-        return self._data.dims
+        return Frozen(self._data.dims)
 
     @property
     def dtypes(self) -> Frozen[Hashable, np.dtype]:
