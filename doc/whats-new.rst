@@ -14,6 +14,34 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2024.09.1:
+
+v2024.09.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
 
 .. _whats-new.2024.09.0:
 
