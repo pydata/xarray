@@ -219,7 +219,7 @@ class Test_summarize_datatree_children:
 
         def _childfree_tree_factory():
             return xr.DataTree(
-                data=xr.Dataset({"z": ("y", [randint(1, 100) for _ in range(3)])})
+                dataset=xr.Dataset({"z": ("y", [randint(1, 100) for _ in range(3)])})
             )
 
         return _childfree_tree_factory

@@ -722,7 +722,7 @@ class IOReadCustomEngine:
             def open_dataset(
                 self,
                 filename_or_obj: str | os.PathLike | None,
-                drop_variables: tuple[str] = None,
+                drop_variables: tuple[str, ...] = None,
                 *,
                 mask_and_scale=True,
                 decode_times=True,

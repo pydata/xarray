@@ -303,7 +303,7 @@ def _obj_repr(obj, header_components, sections):
 
 
 def array_repr(arr) -> str:
-    dims = OrderedDict((k, v) for k, v in zip(arr.dims, arr.shape))
+    dims = OrderedDict((k, v) for k, v in zip(arr.dims, arr.shape, strict=True))
     if hasattr(arr, "xindexes"):
         indexed_dims = arr.xindexes.dims
     else:

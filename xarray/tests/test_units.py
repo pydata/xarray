@@ -1997,7 +1997,7 @@ class TestVariable:
     def test_squeeze(self, dim, dtype):
         shape = (2, 1, 3, 1, 1, 2)
         names = list("abcdef")
-        dim_lengths = dict(zip(names, shape))
+        dim_lengths = dict(zip(names, shape, strict=True))
         array = np.ones(shape=shape) * unit_registry.m
         variable = xr.Variable(names, array)
 
@@ -3429,7 +3429,7 @@ class TestDataArray:
     )
     def test_squeeze(self, shape, dim, dtype):
         names = "xyzt"
-        dim_lengths = dict(zip(names, shape))
+        dim_lengths = dict(zip(names, shape, strict=False))
         names = "xyzt"
         array = np.arange(10 * 20).astype(dtype).reshape(shape) * unit_registry.J
         data_array = xr.DataArray(data=array, dims=tuple(names[: len(shape)]))
@@ -3659,7 +3659,10 @@ class TestDataArray:
 
         expected = attach_units(
             func(strip_units(data_array)),
-            {"y": y.units, **dict(zip(x.magnitude, [array.units] * len(y)))},
+            {
+                "y": y.units,
+                **dict(zip(x.magnitude, [array.units] * len(y), strict=True)),
+            },
         ).rename({elem.magnitude: elem for elem in x})
         actual = func(data_array)
 
@@ -5072,7 +5075,7 @@ class TestDataset:
     )
     def test_squeeze(self, shape, dim, dtype):
         names = "xyzt"
-        dim_lengths = dict(zip(names, shape))
+        dim_lengths = dict(zip(names, shape, strict=False))
         array1 = (
             np.linspace(0, 1, 10 * 20).astype(dtype).reshape(shape) * unit_registry.degK
         )

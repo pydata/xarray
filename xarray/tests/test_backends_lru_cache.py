@@ -33,7 +33,7 @@ def test_trivial() -> None:
 
 def test_invalid() -> None:
     with pytest.raises(TypeError):
-        LRUCache(maxsize=None)  # type: ignore
+        LRUCache(maxsize=None)  # type: ignore[arg-type]
     with pytest.raises(ValueError):
         LRUCache(maxsize=-1)
 

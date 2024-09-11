@@ -112,7 +112,9 @@ class TestOps:
             array([[8, 5, 2, nan], [nan, 13, 14, 15]]),
             array([[2, 5, 8], [13, 17, 21]]),
         ]
-        for axis, expected in zip([0, 1, 2, -3, -2, -1], 2 * expected_results):
+        for axis, expected in zip(
+            [0, 1, 2, -3, -2, -1], 2 * expected_results, strict=True
+        ):
             actual = first(self.x, axis)
             assert_array_equal(expected, actual)
 
@@ -133,7 +135,9 @@ class TestOps:
             array([[8, 9, 10, nan], [nan, 21, 18, 15]]),
             array([[2, 6, 10], [15, 18, 21]]),
         ]
-        for axis, expected in zip([0, 1, 2, -3, -2, -1], 2 * expected_results):
+        for axis, expected in zip(
+            [0, 1, 2, -3, -2, -1], 2 * expected_results, strict=True
+        ):
             actual = last(self.x, axis)
             assert_array_equal(expected, actual)
 
