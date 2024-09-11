@@ -804,7 +804,7 @@ class DataTreeCoordinates(Coordinates):
     # TODO should inherited coordinates be here? It would be very hard to allow updating them...
     # But actually maybe the ChainMap approach would make this work okay??
 
-    _data: DataTree
+    _data: DataTree  # type: ignore[assignment]  # complaining that DataTree is not a subclass of DataWithCoords - this can be fixed by refactoring, see #9203
 
     __slots__ = ("_data",)
 
