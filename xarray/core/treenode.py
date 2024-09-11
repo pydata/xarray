@@ -276,15 +276,13 @@ class TreeNode(Generic[Tree]):
         deep: bool = False,
         memo: dict[int, Any] | None = None,
     ) -> Tree:
-        """Copy entire subtree"""
-        new_tree = self._copy_node(deep=deep)
+        """Copy entire subtree recursively."""
 
-        # TODO if I can write this to use recursion then it might not need to use .relative_to
-        for node in self.descendants:
-            # TODO these will currently fail because .relative_to is only defined on NamedNode, not TreeNode
-            path = node.relative_to(self)
-            # TODO and __setitem__ is only only defined on DataTree (though ._set_item is defined on TreeNode)
-            new_tree[path] = node._copy_node(deep=deep)
+        new_tree = self._copy_node(deep=deep)
+        for name, child in self.children.items():
+            # TODO use `.children[name] = ...` once #9477 is implemented
+            new_tree._set(name, child._copy_subtree(deep=deep))
+
         return new_tree
 
     def _copy_node(
@@ -292,14 +290,14 @@ class TreeNode(Generic[Tree]):
         deep: bool = False,
     ) -> Tree:
         """Copy just one node of a tree"""
-        # TODO is this correct??
-        new_empty_node = type(self)()
-        return new_empty_node
 
-        # TODO could I just do
+        # TODO could I just do this and then not have to override this class?
         # new_instance = type(self).__new__(type(self))
         # new_instance.__dict__.update(self.__dict__)
         # return new_instance
+
+        new_empty_node = type(self)()
+        return new_empty_node
 
     def __copy__(self: Tree) -> Tree:
         return self._copy_subtree(deep=False)
@@ -690,6 +688,15 @@ class NamedNode(TreeNode, Generic[Tree]):
     def _post_attach(self: AnyNamedNode, parent: AnyNamedNode, name: str) -> None:
         """Ensures child has name attribute corresponding to key under which it has been stored."""
         self.name = name
+
+    def _copy_node(
+        self: NamedNode,
+        deep: bool = False,
+    ) -> NamedNode:
+        """Copy just one node of a tree"""
+        new_node = super()._copy_node()
+        new_node._name = self.name
+        return new_node
 
     @property
     def path(self) -> str:
