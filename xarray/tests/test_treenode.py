@@ -233,25 +233,29 @@ class TestSetNodes:
 class TestChildren:
     def test_properties(self):
         sue: TreeNode = TreeNode()
+        mary: TreeNode = TreeNode(children={"Sue": sue})
         kate: TreeNode = TreeNode()
-        mary = TreeNode(children={"Sue": sue, "Kate": kate})
+        john = TreeNode(children={"Mary": mary, "Kate": kate})
 
-        children = mary.children
+        children = john.children
         assert isinstance(children, Children)
 
         # len
         assert len(children) == 2
 
         # iter
-        assert list(children) == ["Sue", "Kate"]
+        assert list(children) == ["Mary", "Kate"]
 
-        assert mary.children["Sue"] is sue
-        assert mary.children["Kate"] is kate
+        assert john.children["Mary"] is mary
+        assert john.children["Kate"] is kate
 
-        assert "Sue" in mary.children
-        assert "Kate" in mary.children
-        assert 0 not in mary.children
-        assert "foo" not in mary.children
+        assert "Mary" in john.children
+        assert "Kate" in john.children
+        assert 0 not in john.children
+        assert "foo" not in john.children
+
+        # only immediate children should be accessible
+        assert "sue" not in john.children
 
         with pytest.raises(KeyError):
             children["foo"]
