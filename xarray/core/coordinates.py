@@ -705,6 +705,7 @@ class DatasetCoordinates(Coordinates):
 
     @property
     def dims(self) -> Frozen[Hashable, int]:
+        # deliberately display all dims, not just those on coordinate variables - see https://github.com/pydata/xarray/issues/9466
         return self._data.dims
 
     @property
@@ -814,7 +815,7 @@ class DataTreeCoordinates(Coordinates):
 
     @property
     def dims(self) -> Frozen[Hashable, int]:
-        # TODO is there a potential bug here? What happens if a dim is only present on data variables?
+        # deliberately display all dims, not just those on coordinate variables - see https://github.com/pydata/xarray/issues/9466
         return Frozen(self._data.dims)
 
     @property
