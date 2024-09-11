@@ -39,7 +39,7 @@ dependencies:
   - sphinx-copybutton
   - sphinx-design
   - sphinx-inline-tabs
-  - sphinx>=5.0
+  - sphinx>=5.0,<7.0 # https://github.com/executablebooks/sphinx-book-theme/issues/749
   - sphinxcontrib-srclinks
   - sphinx-remove-toctrees
   - sphinxext-opengraph
