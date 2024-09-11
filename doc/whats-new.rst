@@ -14,10 +14,9 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2024.09.1:
 
-.. _whats-new.2024.07.1:
-
-v2024.07.1 (unreleased)
+v2024.09.1 (unreleased)
 -----------------------
 
 New Features
@@ -29,7 +28,42 @@ New Features
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
   `Tom Nicholas <https://github.com/TomNicholas>`_.
 
-- Add :py:attr:`~core.accessor_dt.DatetimeAccessor.days_in_year` and :py:attr:`~core.accessor_dt.DatetimeAccessor.decimal_year` to the Datetime accessor on DataArrays. (:pull:`9105`).
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2024.09.0:
+
+v2024.09.0 (Sept 11, 2024)
+--------------------------
+This release drops support for Python 3.9, and adds support for grouping by :ref:`multiple arrays <groupby.multiple>`, while providing numerous performance improvements and bug fixes.
+
+Thanks to the 33 contributors to this release:
+Alfonso Ladino, Andrew Scherer, Anurag Nayak, David Hoese, Deepak Cherian, Diogo Teles Sant'Anna, Dom, Elliott Sales de Andrade, Eni, Holly Mandel, Illviljan, Jack Kelly, Julius Busecke, Justus Magin, Kai Mühlbauer, Manish Kumar Gupta, Matt Savoie, Maximilian Roos, Michele Claus, Miguel Jimenez, Niclas Rieger, Pascal Bourgault, Philip Chmielowiec, Spencer Clark, Stephan Hoyer, Tao Xin, Tiago Sanona, TimothyCera-NOAA, Tom Nicholas, Tom White, Virgile Andreani, oliverhiggs and tiago
+
+New Features
+~~~~~~~~~~~~
+
+- Add :py:attr:`~core.accessor_dt.DatetimeAccessor.days_in_year` and
+  :py:attr:`~core.accessor_dt.DatetimeAccessor.decimal_year` to the
+  ``DatetimeAccessor`` on ``xr.DataArray``. (:pull:`9105`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 Performance
@@ -44,6 +78,8 @@ Performance
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Allow data variable specific ``constant_values`` in the dataset ``pad`` function (:pull:`9353``).
   By `Tiago Sanona <https://github.com/tsanona>`_.
+- Speed up grouping by avoiding deep-copy of non-dimension coordinates (:issue:`9426`, :pull:`9393`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -66,11 +102,6 @@ Breaking changes
     typing_extensions       4.5        4.7
     zarr                    2.14      2.16
   ===================== =========  =======
-
-
-Deprecations
-~~~~~~~~~~~~
-
 
 Bug fixes
 ~~~~~~~~~
@@ -116,8 +147,6 @@ Internal Changes
 
 - Re-enable testing ``pydap`` backend with ``numpy>=2`` (:pull:`9391`).
   By `Miguel Jimenez <https://github.com/Mikejmnez>`_ .
-
-
 
 .. _whats-new.2024.07.0:
 
