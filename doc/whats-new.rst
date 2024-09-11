@@ -38,6 +38,10 @@ Performance
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Allow data variable specific ``constant_values`` in the dataset ``pad`` function (:pull:`9353``).
   By `Tiago Sanona <https://github.com/tsanona>`_.
+- Added a suite of hypothesis strategies for generating xarray objects containing arbitrary data, useful for testing.
+  Accessible under :py:func:`testing.strategies`, and documented in a new page on testing in the User Guide.
+  (:issue:`6911`, :pull:`6908`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

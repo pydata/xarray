@@ -1109,6 +1109,10 @@ See the :ref:`documentation page on testing <testing.hypothesis>` for a guide on
    testing.strategies.dimension_sizes
    testing.strategies.attrs
    testing.strategies.variables
+   testing.strategies.coordinate_variables
+   testing.strategies.dataarrays
+   testing.strategies.data_variables
+   testing.strategies.datasets
    testing.strategies.unique_subset_of
 
 Exceptions

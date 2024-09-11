@@ -333,6 +333,8 @@ htmlhelp_basename = "xarraydoc"
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     "cftime": ("https://unidata.github.io/cftime", None),
+    "sparse": ("https://sparse.pydata.org/en/latest/", None),
+    "hypothesis": ("https://hypothesis.readthedocs.io/en/latest/", None),
     "cubed": ("https://cubed-dev.github.io/cubed/", None),
     "dask": ("https://docs.dask.org/en/latest", None),
     "datatree": ("https://xarray-datatree.readthedocs.io/en/latest/", None),
