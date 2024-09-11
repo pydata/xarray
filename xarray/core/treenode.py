@@ -74,10 +74,13 @@ class Children(Mapping[str, Tree], Generic[Tree]):
         return key in self._names
 
     def __repr__(self) -> str:
-        # TODO
-        from xarray.core import formatting
+        return f"Children({dict(self._treenode._children)})"
 
-        return formatting.children_repr(self)
+    # def __repr__(self) -> str:
+    #     # TODO
+    #     from xarray.core import formatting
+
+    #     return formatting.children_repr(self)
 
     def __getitem__(self, key: str) -> Tree:
         return self._treenode._children[key]
