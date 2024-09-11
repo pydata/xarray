@@ -447,10 +447,10 @@ class DataTree(
         --------
         DataTree.from_dict
         """
-        # TODO set after setting node data as this will check for name conflicts?
-        super().__init__(name=name, children=children)
-
         self._set_node_data(_to_new_dataset(dataset))
+
+        # comes after setting node data as this will check for clashes between child names and existing variable names
+        super().__init__(name=name, children=children)
 
     def _set_node_data(self, dataset: Dataset):
         data_vars, coord_vars = _collect_data_and_coord_variables(dataset)
