@@ -290,12 +290,6 @@ class TreeNode(Generic[Tree]):
         deep: bool = False,
     ) -> Tree:
         """Copy just one node of a tree"""
-
-        # TODO could I just do this and then not have to override this class?
-        # new_instance = type(self).__new__(type(self))
-        # new_instance.__dict__.update(self.__dict__)
-        # return new_instance
-
         new_empty_node = type(self)()
         return new_empty_node
 
@@ -690,9 +684,9 @@ class NamedNode(TreeNode, Generic[Tree]):
         self.name = name
 
     def _copy_node(
-        self: NamedNode,
+        self: AnyNamedNode,
         deep: bool = False,
-    ) -> NamedNode:
+    ) -> AnyNamedNode:
         """Copy just one node of a tree"""
         new_node = super()._copy_node()
         new_node._name = self.name
