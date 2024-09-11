@@ -7,12 +7,13 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray import Dataset
+from xarray import DataArray, Dataset
+from xarray.core.coordinates import DataTreeCoordinates
 from xarray.core.datatree import DataTree
 from xarray.core.datatree_ops import _MAPPED_DOCSTRING_ADDENDUM, insert_doc_addendum
 from xarray.core.treenode import NotFoundInTreeError
 from xarray.testing import assert_equal, assert_identical
-from xarray.tests import create_test_data, source_ndarray
+from xarray.tests import assert_array_equal, create_test_data, source_ndarray
 
 
 class TestTreeCreation:
@@ -536,6 +537,169 @@ class TestSetItem:
         results["pressure"] = p
         expected = t.assign(pressure=p)
         assert_identical(results.to_dataset(), expected)
+
+
+class TestCoords:
+    def test_properties(self):
+        # use int64 for repr consistency on windows
+        ds = Dataset(
+            data_vars={
+                "foo": (["x", "y"], np.random.randn(2, 3)),
+            },
+            coords={
+                "x": ("x", np.array([-1, -2], "int64")),
+                "y": ("y", np.array([0, 1, 2], "int64")),
+                "a": ("x", np.array([4, 5], "int64")),
+                "b": np.int64(-10),
+            },
+        )
+        dt = DataTree(dataset=ds)
+        dt["child"] = DataTree()
+
+        coords = dt.coords
+        assert isinstance(coords, DataTreeCoordinates)
+
+        # len
+        assert len(coords) == 4
+
+        # iter
+        assert list(coords) == ["x", "y", "a", "b"]
+
+        assert_identical(coords["x"].variable, dt["x"].variable)
+        assert_identical(coords["y"].variable, dt["y"].variable)
+
+        assert "x" in coords
+        assert "a" in coords
+        assert 0 not in coords
+        assert "foo" not in coords
+        assert "child" not in coords
+
+        with pytest.raises(KeyError):
+            coords["foo"]
+
+        # TODO this currently raises a ValueError instead of a KeyError
+        # with pytest.raises(KeyError):
+        #     coords[0]
+
+        # repr
+        expected = dedent(
+            """\
+        Coordinates:
+          * x        (x) int64 16B -1 -2
+          * y        (y) int64 24B 0 1 2
+            a        (x) int64 16B 4 5
+            b        int64 8B -10"""
+        )
+        actual = repr(coords)
+        assert expected == actual
+
+        # dims
+        assert coords.sizes == {"x": 2, "y": 3}
+
+        # dtypes
+        assert coords.dtypes == {
+            "x": np.dtype("int64"),
+            "y": np.dtype("int64"),
+            "a": np.dtype("int64"),
+            "b": np.dtype("int64"),
+        }
+
+    def test_modify(self):
+        ds = Dataset(
+            data_vars={
+                "foo": (["x", "y"], np.random.randn(2, 3)),
+            },
+            coords={
+                "x": ("x", np.array([-1, -2], "int64")),
+                "y": ("y", np.array([0, 1, 2], "int64")),
+                "a": ("x", np.array([4, 5], "int64")),
+                "b": np.int64(-10),
+            },
+        )
+        dt = DataTree(dataset=ds)
+        dt["child"] = DataTree()
+
+        actual = dt.copy(deep=True)
+        actual.coords["x"] = ("x", ["a", "b"])
+        assert_array_equal(actual["x"], ["a", "b"])
+
+        actual = dt.copy(deep=True)
+        actual.coords["z"] = ("z", ["a", "b"])
+        assert_array_equal(actual["z"], ["a", "b"])
+
+        actual = dt.copy(deep=True)
+        with pytest.raises(ValueError, match=r"conflicting dimension sizes"):
+            actual.coords["x"] = ("x", [-1])
+        assert_identical(actual, dt)  # should not be modified
+
+        actual = dt.copy()
+        del actual.coords["b"]
+        expected = dt.reset_coords("b", drop=True)
+        assert_identical(expected, actual)
+
+        with pytest.raises(KeyError):
+            del dt.coords["not_found"]
+
+        with pytest.raises(KeyError):
+            del dt.coords["foo"]
+
+        actual = dt.copy(deep=True)
+        actual.coords.update({"c": 11})
+        expected = dt.assign_coords({"c": 11})
+        assert_identical(expected, actual)
+
+        # regression test for GH3746
+        del actual.coords["x"]
+        assert "x" not in actual.xindexes
+
+        # test that constructors can also handle the `DataTreeCoordinates` object
+        ds2 = Dataset(coords=dt.coords)
+        assert_identical(ds2.coords, dt.coords)
+        da = DataArray(coords=dt.coords)
+        assert_identical(da.coords, dt.coords)
+
+        # DataTree constructor doesn't accept coords= but should still be able to handle DatasetCoordinates
+        dt2 = DataTree(dataset=dt.coords)
+        assert_identical(dt2.coords, dt.coords)
+
+    def test_inherited(self):
+        ds = Dataset(
+            data_vars={
+                "foo": (["x", "y"], np.random.randn(2, 3)),
+            },
+            coords={
+                "x": ("x", np.array([-1, -2], "int64")),
+                "y": ("y", np.array([0, 1, 2], "int64")),
+                "a": ("x", np.array([4, 5], "int64")),
+                "b": np.int64(-10),
+            },
+        )
+        dt = DataTree(dataset=ds)
+        dt["child"] = DataTree()
+        child = dt["child"]
+
+        assert set(child.coords) == {"x", "y", "a", "b"}
+
+        actual = child.copy(deep=True)
+        actual.coords["x"] = ("x", ["a", "b"])
+        assert_array_equal(actual["x"], ["a", "b"])
+
+        actual = child.copy(deep=True)
+        actual.coords.update({"c": 11})
+        expected = child.copy(deep=True)
+        expected.coords["c"] = 11
+        # check we have only altered the child node
+        assert_identical(expected.root, actual.root)
+
+        with pytest.raises(KeyError):
+            # cannot delete inherited coordinate from child node
+            del child["b"]
+
+        # TODO requires a fix for #9472
+        # actual = child.copy(deep=True)
+        # actual.coords.update({"c": 11})
+        # expected = child.assign_coords({"c": 11})
+        # assert_identical(expected, actual)
 
 
 def test_delitem():
