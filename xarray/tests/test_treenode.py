@@ -66,7 +66,7 @@ class TestFamilyTree:
 
     def test_dont_modify_children_inplace(self):
         # GH issue 9196
-        child = TreeNode()
+        child: TreeNode = TreeNode()
         TreeNode(children={"child": child})
         assert child.parent is None
 
@@ -106,7 +106,7 @@ class TestFamilyTree:
         assert john.children["Kate"] is evil_kate
 
     def test_sibling_relationships(self):
-        john = TreeNode(
+        john: TreeNode = TreeNode(
             children={"Mary": TreeNode(), "Kate": TreeNode(), "Ashley": TreeNode()}
         )
         kate = john.children["Kate"]
@@ -123,7 +123,7 @@ class TestFamilyTree:
         assert copied_tony is not tony
 
     def test_parents(self):
-        vito = TreeNode(
+        vito: TreeNode = TreeNode(
             children={"Michael": TreeNode(children={"Tony": TreeNode()})},
         )
         michael = vito.children["Michael"]
@@ -135,7 +135,7 @@ class TestFamilyTree:
 
 class TestGetNodes:
     def test_get_child(self):
-        john = TreeNode(
+        john: TreeNode = TreeNode(
             children={
                 "Mary": TreeNode(
                     children={"Sue": TreeNode(children={"Steven": TreeNode()})}
@@ -164,7 +164,7 @@ class TestGetNodes:
         assert mary._get_item("Sue/Steven") is steven
 
     def test_get_upwards(self):
-        john = TreeNode(
+        john: TreeNode = TreeNode(
             children={
                 "Mary": TreeNode(children={"Sue": TreeNode(), "Kate": TreeNode()})
             }
@@ -180,7 +180,9 @@ class TestGetNodes:
         assert sue._get_item("../Kate") is kate
 
     def test_get_from_root(self):
-        john = TreeNode(children={"Mary": TreeNode(children={"Sue": TreeNode()})})
+        john: TreeNode = TreeNode(
+            children={"Mary": TreeNode(children={"Sue": TreeNode()})}
+        )
         mary = john.children["Mary"]
         sue = mary.children["Sue"]
 
