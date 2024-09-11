@@ -122,21 +122,29 @@ class TestFamilyTree:
         copied_tony = vito.children["Michael"].children["Tony"]
         assert copied_tony is not tony
 
-    def test_ancestors(self):
-        tony: TreeNode = TreeNode()
-        michael: TreeNode = TreeNode(children={"Tony": tony})
-        vito = TreeNode(children={"Michael": michael})
+    def test_parents(self):
+        vito = TreeNode(
+            children={"Michael": TreeNode(children={"Tony": TreeNode()})},
+        )
+        michael = vito.children["Michael"]
+        tony = michael.children["Tony"]
+
         assert tony.root is vito
         assert tony.parents == (michael, vito)
-        assert tony.ancestors == (vito, michael, tony)
 
 
 class TestGetNodes:
     def test_get_child(self):
-        steven: TreeNode = TreeNode()
-        sue = TreeNode(children={"Steven": steven})
-        mary = TreeNode(children={"Sue": sue})
-        john = TreeNode(children={"Mary": mary})
+        john = TreeNode(
+            children={
+                "Mary": TreeNode(
+                    children={"Sue": TreeNode(children={"Steven": TreeNode()})}
+                )
+            }
+        )
+        mary = john.children["Mary"]
+        sue = mary.children["Sue"]
+        steven = sue.children["Steven"]
 
         # get child
         assert john._get_item("Mary") is mary
@@ -156,10 +164,14 @@ class TestGetNodes:
         assert mary._get_item("Sue/Steven") is steven
 
     def test_get_upwards(self):
-        sue: TreeNode = TreeNode()
-        kate: TreeNode = TreeNode()
-        mary = TreeNode(children={"Sue": sue, "Kate": kate})
-        john = TreeNode(children={"Mary": mary})
+        john = TreeNode(
+            children={
+                "Mary": TreeNode(children={"Sue": TreeNode(), "Kate": TreeNode()})
+            }
+        )
+        mary = john.children["Mary"]
+        sue = mary.children["Sue"]
+        kate = mary.children["Kate"]
 
         assert sue._get_item("../") is mary
         assert sue._get_item("../../") is john
@@ -168,9 +180,9 @@ class TestGetNodes:
         assert sue._get_item("../Kate") is kate
 
     def test_get_from_root(self):
-        sue: TreeNode = TreeNode()
-        mary = TreeNode(children={"Sue": sue})
-        john = TreeNode(children={"Mary": mary})  # noqa
+        john = TreeNode(children={"Mary": TreeNode(children={"Sue": TreeNode()})})
+        mary = john.children["Mary"]
+        sue = mary.children["Sue"]
 
         assert sue._get_item("/Mary") is mary
 
@@ -385,11 +397,14 @@ class TestAncestry:
 
 class TestRenderTree:
     def test_render_nodetree(self):
-        sam: NamedNode = NamedNode()
-        ben: NamedNode = NamedNode()
-        mary: NamedNode = NamedNode(children={"Sam": sam, "Ben": ben})
-        kate: NamedNode = NamedNode()
-        john: NamedNode = NamedNode(children={"Mary": mary, "Kate": kate})
+        john: NamedNode = NamedNode(
+            children={
+                "Mary": NamedNode(children={"Sam": NamedNode(), "Ben": NamedNode()}),
+                "Kate": NamedNode(),
+            }
+        )
+        mary = john.children["Mary"]
+
         expected_nodes = [
             "NamedNode()",
             "\tNamedNode('Mary')",
