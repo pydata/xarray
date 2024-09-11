@@ -78,8 +78,10 @@ class TreeNode(Generic[Tree]):
         """Create a parentless node."""
         self._parent = None
         self._children = {}
-        if children is not None:
-            self.children = children
+
+        if children:
+            # shallow copy to avoid modifying arguments in-place (see GH issue #9196)
+            self.children = {name: child.copy() for name, child in children.items()}
 
     @property
     def parent(self) -> Tree | None:

@@ -447,14 +447,10 @@ class DataTree(
         --------
         DataTree.from_dict
         """
-        if children is None:
-            children = {}
+        # TODO set after setting node data as this will check for name conflicts?
+        super().__init__(name=name, children=children)
 
-        super().__init__(name=name)
         self._set_node_data(_to_new_dataset(dataset))
-
-        # shallow copy to avoid modifying arguments in-place (see GH issue #9196)
-        self.children = {name: child.copy() for name, child in children.items()}
 
     def _set_node_data(self, dataset: Dataset):
         data_vars, coord_vars = _collect_data_and_coord_variables(dataset)
