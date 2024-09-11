@@ -582,7 +582,7 @@ class TestDataset:
 
         for a in das:
             pandas_obj = a.to_pandas()
-            ds_based_on_pandas = Dataset(pandas_obj)  # type: ignore  # TODO: improve typing of __init__
+            ds_based_on_pandas = Dataset(pandas_obj)  # type: ignore[arg-type]  # TODO: improve typing of __init__
             for dim in ds_based_on_pandas.data_vars:
                 assert isinstance(dim, int)
                 assert_array_equal(ds_based_on_pandas[dim], pandas_obj[dim])
@@ -3212,7 +3212,7 @@ class TestDataset:
         # test propagate attrs/encoding to new variable(s) created from Index object
         original = Dataset(coords={"x": ("x", [0, 1, 2])})
         expected = Dataset(coords={"y": ("y", [0, 1, 2])})
-        for ds, dim in zip([original, expected], ["x", "y"]):
+        for ds, dim in zip([original, expected], ["x", "y"], strict=True):
             ds[dim].attrs = {"foo": "bar"}
             ds[dim].encoding = {"foo": "bar"}
 
@@ -3713,7 +3713,7 @@ class TestDataset:
         class NotAnIndex: ...
 
         with pytest.raises(TypeError, match=".*not a subclass of xarray.Index"):
-            ds.set_xindex("foo", NotAnIndex)  # type: ignore
+            ds.set_xindex("foo", NotAnIndex)  # type: ignore[arg-type]
 
         with pytest.raises(ValueError, match="those variables don't exist"):
             ds.set_xindex("not_a_coordinate", PandasIndex)
@@ -3740,7 +3740,7 @@ class TestDataset:
                 return cls(options["opt"])
 
         indexed = ds.set_xindex("foo", IndexWithOptions, opt=1)
-        assert getattr(indexed.xindexes["foo"], "opt") == 1
+        assert indexed.xindexes["foo"].opt == 1  # type: ignore[attr-defined]
 
     def test_stack(self) -> None:
         ds = Dataset(
@@ -6450,8 +6450,8 @@ class TestDataset:
 
         expected = ds.copy(deep=True)
         # https://github.com/python/mypy/issues/3004
-        expected["d1"].values = [2, 2, 2]  # type: ignore
-        expected["d2"].values = [2.0, 2.0, 2.0]  # type: ignore
+        expected["d1"].values = [2, 2, 2]  # type: ignore[assignment]
+        expected["d2"].values = [2.0, 2.0, 2.0]  # type: ignore[assignment]
         assert expected["d1"].dtype == int
         assert expected["d2"].dtype == float
         assert_identical(expected, actual)
@@ -6459,8 +6459,8 @@ class TestDataset:
         # override dtype
         actual = full_like(ds, fill_value=True, dtype=bool)
         expected = ds.copy(deep=True)
-        expected["d1"].values = [True, True, True]  # type: ignore
-        expected["d2"].values = [True, True, True]  # type: ignore
+        expected["d1"].values = [True, True, True]  # type: ignore[assignment]
+        expected["d2"].values = [True, True, True]  # type: ignore[assignment]
         assert expected["d1"].dtype == bool
         assert expected["d2"].dtype == bool
         assert_identical(expected, actual)
@@ -6975,7 +6975,7 @@ class TestDataset:
 
         # test error handling
         with pytest.raises(ValueError):
-            ds.query("a > 5")  # type: ignore # must be dict or kwargs
+            ds.query("a > 5")  # type: ignore[arg-type] # must be dict or kwargs
         with pytest.raises(ValueError):
             ds.query(x=(a > 5))
         with pytest.raises(IndexError):
@@ -7615,4 +7615,4 @@ def test_transpose_error() -> None:
             "transpose requires dim to be passed as multiple arguments. Expected `'y', 'x'`. Received `['y', 'x']` instead"
         ),
     ):
-        ds.transpose(["y", "x"])  # type: ignore
+        ds.transpose(["y", "x"])  # type: ignore[arg-type]

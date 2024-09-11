@@ -722,7 +722,7 @@ class DataTree(
         return bool(self._data_variables) or bool(self._children)
 
     def __iter__(self) -> Iterator[str]:
-        return itertools.chain(self._data_variables, self._children)  # type: ignore
+        return itertools.chain(self._data_variables, self._children)  # type: ignore[arg-type]
 
     def __array__(self, dtype=None, copy=None):
         raise TypeError(
@@ -1271,7 +1271,7 @@ class DataTree(
         return all(
             [
                 node.ds.equals(other_node.ds)
-                for node, other_node in zip(self.subtree, other.subtree)
+                for node, other_node in zip(self.subtree, other.subtree, strict=True)
             ]
         )
 
@@ -1301,7 +1301,7 @@ class DataTree(
 
         return all(
             node.ds.identical(other_node.ds)
-            for node, other_node in zip(self.subtree, other.subtree)
+            for node, other_node in zip(self.subtree, other.subtree, strict=True)
         )
 
     def filter(self: DataTree, filterfunc: Callable[[DataTree], bool]) -> DataTree:

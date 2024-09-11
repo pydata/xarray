@@ -977,7 +977,7 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
         assert_no_index_corrupted(self._data.xindexes, {key})
 
         del self._data._coords[key]
-        if self._data._indexes is not None and key in self._data._indexes:
+        if key in self._data._indexes:
             del self._data._indexes[key]
 
     def _ipython_key_completions_(self):

@@ -788,7 +788,7 @@ def test_groupby_dataset() -> None:
         ("b", data.isel(x=[1])),
         ("c", data.isel(x=[2])),
     ]
-    for actual1, expected1 in zip(groupby, expected_items):
+    for actual1, expected1 in zip(groupby, expected_items, strict=True):
         assert actual1[0] == expected1[0]
         assert_equal(actual1[1], expected1[1])
 
@@ -1235,12 +1235,12 @@ class TestDataArrayGroupBy:
 
     def test_groupby_iter(self) -> None:
         for (act_x, act_dv), (exp_x, exp_ds) in zip(
-            self.dv.groupby("y"), self.ds.groupby("y")
+            self.dv.groupby("y"), self.ds.groupby("y"), strict=True
         ):
             assert exp_x == act_x
             assert_identical(exp_ds["foo"], act_dv)
             for (_, exp_dv), (_, act_dv) in zip(
-                self.dv.groupby("x"), self.dv.groupby("x")
+                self.dv.groupby("x"), self.dv.groupby("x"), strict=True
             ):
                 assert_identical(exp_dv, act_dv)
 
@@ -1706,7 +1706,7 @@ class TestDataArrayGroupBy:
         bincoord = np.array(
             [
                 pd.Interval(left, right, closed="right")
-                for left, right in zip(bins[:-1], bins[1:])
+                for left, right in zip(bins[:-1], bins[1:], strict=True)
             ],
             dtype=object,
         )
@@ -2723,7 +2723,7 @@ def test_multiple_groupers_string(as_dataset) -> None:
     )
 
     if as_dataset:
-        obj = obj.to_dataset()  # type: ignore
+        obj = obj.to_dataset()  # type: ignore[assignment]
 
     expected = obj.groupby(labels1=UniqueGrouper(), labels2=UniqueGrouper()).mean()
     actual = obj.groupby(("labels1", "labels2")).mean()
@@ -2733,9 +2733,9 @@ def test_multiple_groupers_string(as_dataset) -> None:
     # warning & type error in the future
     with pytest.warns(FutureWarning):
         with pytest.raises(TypeError):
-            obj.groupby("labels1", "labels2")  # type: ignore
+            obj.groupby("labels1", "labels2")  # type: ignore[arg-type, misc]
     with pytest.raises(ValueError):
-        obj.groupby("labels1", foo="bar")  # type: ignore
+        obj.groupby("labels1", foo="bar")  # type: ignore[arg-type]
     with pytest.raises(ValueError):
         obj.groupby("labels1", foo=UniqueGrouper())
 

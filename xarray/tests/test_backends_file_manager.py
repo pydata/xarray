@@ -53,7 +53,7 @@ def test_file_manager_autoclose(warn_for_unclosed_files) -> None:
     if warn_for_unclosed_files:
         ctx = pytest.warns(RuntimeWarning)
     else:
-        ctx = assert_no_warnings()  # type: ignore
+        ctx = assert_no_warnings()  # type: ignore[assignment]
 
     with set_options(warn_for_unclosed_files=warn_for_unclosed_files):
         with ctx:

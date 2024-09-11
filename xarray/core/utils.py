@@ -186,7 +186,7 @@ def equivalent(first: T, second: T) -> bool:
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    for f, s in zip(first, second):
+    for f, s in zip(first, second, strict=True):
         if not equivalent(f, s):
             return False
     return True
@@ -992,7 +992,7 @@ class UncachedAccessor(Generic[_Accessor]):
         if obj is None:
             return self._accessor
 
-        return self._accessor(obj)  # type: ignore  # assume it is a valid accessor!
+        return self._accessor(obj)  # type: ignore[call-arg]  # assume it is a valid accessor!
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
