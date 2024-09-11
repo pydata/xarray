@@ -1292,7 +1292,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         return groups_dict
 
 
-
 def _iter_zarr_groups(root, parent="/"):
     from xarray.core.treenode import NodePath
 
