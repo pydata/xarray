@@ -42,7 +42,7 @@ dev = [
   "ruff",
   "xarray[complete]",
 ]
-io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
+io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr<3", "fsspec", "cftime", "pooch"]
 parallel = ["dask[complete]"]
 viz = ["matplotlib", "seaborn", "nc-time-axis"]
 
