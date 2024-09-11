@@ -64,6 +64,12 @@ class TestFamilyTree:
         ):
             mary.parent = john
 
+    def test_dont_modify_children_inplace(self):
+        # GH issue 9196
+        child = TreeNode()
+        TreeNode(children={"child": child})
+        assert child.parent is None
+
     def test_multi_child_family(self):
         mary: TreeNode = TreeNode()
         kate: TreeNode = TreeNode()
