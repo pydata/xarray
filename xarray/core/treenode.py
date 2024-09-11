@@ -5,11 +5,12 @@ from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
 from typing import (
     TYPE_CHECKING,
+    Any,
     Generic,
     TypeVar,
 )
 
-from xarray.core.utils import Frozen, is_dict_like
+from xarray.core.utils import is_dict_like
 
 if TYPE_CHECKING:
     from xarray.core.types import T_DataArray
@@ -42,6 +43,68 @@ class NodePath(PurePosixPath):
 
 
 Tree = TypeVar("Tree", bound="TreeNode")
+
+
+class Children(Mapping[str, Tree], Generic[Tree]):
+    """
+    Dictionary-like container for the immediate children of a single DataTree node.
+
+    This collection can be passed directly to the :py:class:`~xarray.DataTree` constructor via its `children` argument.
+    """
+
+    _treenode: Tree
+
+    # TODO add slots?
+    # __slots__ = ("_data",)
+
+    def __init__(self, treenode: Tree):
+        self._treenode = treenode
+
+    def _names(self) -> set[str]:
+        return set(self._treenode.children.keys())
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._names)
+
+    def __len__(self) -> int:
+        return len(self._names)
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._names
+
+    def __repr__(self) -> str:
+        # TODO
+        from xarray.core import formatting
+
+        return formatting.children_repr(self)
+
+    def __getitem__(self, key: str) -> Tree:
+        return self._treenode._children[key]
+
+    def __delitem__(self, key: str) -> None:
+        if key in self._names:
+            child = self._treenode._children[key]
+            del self._treenode._children[key]
+            child.orphan()
+        else:
+            raise KeyError(key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.update({key: value})
+
+    def update(self, other: Mapping[Any, Any]) -> None:
+        """Update with other child nodes."""
+        # TODO
+        ...
+
+    def _ipython_key_completions_(self):
+        """Provide method for the key-autocompletions in IPython."""
+        # TODO
+        return [
+            key
+            for key in self._treenode._ipython_key_completions_()
+            if key not in self._treenode.variables
+        ]
 
 
 class TreeNode(Generic[Tree]):
@@ -160,9 +223,9 @@ class TreeNode(Generic[Tree]):
         self._set_parent(new_parent=None)
 
     @property
-    def children(self: Tree) -> Mapping[str, Tree]:
+    def children(self: Tree) -> Children[str, Tree]:
         """Child nodes of this node, stored under a mapping via their names."""
-        return Frozen(self._children)
+        return Children(self)
 
     @children.setter
     def children(self: Tree, children: Mapping[str, Tree]) -> None:
