@@ -674,13 +674,15 @@ class TestIndexes:
         copied, index_vars = indexes.copy_indexes()
 
         assert copied.keys() == indexes.keys()
-        for new, original in zip(copied.values(), indexes.values()):
+        for new, original in zip(copied.values(), indexes.values(), strict=True):
             assert new.equals(original)
         # check unique index objects preserved
         assert copied["z"] is copied["one"] is copied["two"]
 
         assert index_vars.keys() == indexes.variables.keys()
-        for new, original in zip(index_vars.values(), indexes.variables.values()):
+        for new, original in zip(
+            index_vars.values(), indexes.variables.values(), strict=True
+        ):
             assert_identical(new, original)
 
 

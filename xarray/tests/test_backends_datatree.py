@@ -139,7 +139,7 @@ class DatatreeIOBase:
 
         # add compression
         comp = dict(zlib=True, complevel=9)
-        enc = {"/set2": {var: comp for var in original_dt["/set2"].ds.data_vars}}
+        enc = {"/set2": {var: comp for var in original_dt["/set2"].dataset.data_vars}}
 
         original_dt.to_netcdf(filepath, encoding=enc, engine=self.engine)
         roundtrip_dt = open_datatree(filepath, engine=self.engine)
@@ -147,7 +147,7 @@ class DatatreeIOBase:
         assert roundtrip_dt["/set2/a"].encoding["zlib"] == comp["zlib"]
         assert roundtrip_dt["/set2/a"].encoding["complevel"] == comp["complevel"]
 
-        enc["/not/a/group"] = {"foo": "bar"}  # type: ignore
+        enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
         with pytest.raises(ValueError, match="unexpected encoding group.*"):
             original_dt.to_netcdf(filepath, encoding=enc, engine=self.engine)
 
@@ -262,14 +262,14 @@ class TestZarrDatatreeIO:
         original_dt = simple_datatree
 
         comp = {"compressor": zarr.Blosc(cname="zstd", clevel=3, shuffle=2)}
-        enc = {"/set2": {var: comp for var in original_dt["/set2"].ds.data_vars}}
+        enc = {"/set2": {var: comp for var in original_dt["/set2"].dataset.data_vars}}
         original_dt.to_zarr(filepath, encoding=enc)
         roundtrip_dt = open_datatree(filepath, engine="zarr")
 
         print(roundtrip_dt["/set2/a"].encoding)
         assert roundtrip_dt["/set2/a"].encoding["compressor"] == comp["compressor"]
 
-        enc["/not/a/group"] = {"foo": "bar"}  # type: ignore
+        enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
         with pytest.raises(ValueError, match="unexpected encoding group.*"):
             original_dt.to_zarr(filepath, encoding=enc, engine="zarr")
 

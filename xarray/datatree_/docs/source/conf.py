@@ -17,9 +17,9 @@ import inspect
 import os
 import sys
 
-import sphinx_autosummary_accessors # type: ignore
+import sphinx_autosummary_accessors # type: ignore[import-not-found]
 
-import datatree # type: ignore
+import datatree # type: ignore[import-not-found]
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
