@@ -877,9 +877,7 @@ class DataTreeCoordinates(Coordinates):
         if key in self:
             del self._data[key]  # type: ignore[arg-type]  # see https://github.com/pydata/xarray/issues/8836
         else:
-            raise KeyError(
-                f"{key!r} is not in coordinate variables {tuple(self.keys())}"
-            )
+            raise KeyError(key)
 
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython."""
