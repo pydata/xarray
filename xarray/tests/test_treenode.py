@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from textwrap import dedent
 from typing import cast
 
 import pytest
@@ -261,14 +260,14 @@ class TestChildren:
 
         # TODO not sure what this should look like...
         # repr
-        expected = dedent(
-            """\
-        Children:
-          * x        (x) int64 16B -1 -2
-          * y        (y) int64 24B 0 1 2
-            a        (x) int64 16B 4 5
-            b        int64 8B -10"""
-        )
+        # expected = dedent(
+        #     """\
+        # Children:
+        #   * x        (x) int64 16B -1 -2
+        #   * y        (y) int64 24B 0 1 2
+        #     a        (x) int64 16B 4 5
+        #     b        int64 8B -10"""
+        # )
         # actual = repr(coords)
         # assert expected == actual
 
