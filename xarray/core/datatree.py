@@ -419,7 +419,7 @@ class DataTree(
 
     def __init__(
         self,
-        data: Dataset | Coordinates | None = None,
+        dataset: Dataset | None = None,
         children: Mapping[str, DataTree] | None = None,
         name: str | None = None,
     ):
@@ -432,12 +432,12 @@ class DataTree(
 
         Parameters
         ----------
-        data : Dataset, optional
-            Data to store under the .ds attribute of this node.
+        dataset : Dataset, optional
+            Data to store directly at this node.
         children : Mapping[str, DataTree], optional
-            Any child nodes of this node. Default is None.
+            Any child nodes of this node.
         name : str, optional
-            Name for this node of the tree. Default is None.
+            Name for this node of the tree.
 
         Returns
         -------
@@ -451,24 +451,24 @@ class DataTree(
             children = {}
 
         super().__init__(name=name)
-        self._set_node_data(_to_new_dataset(data))
+        self._set_node_data(_to_new_dataset(dataset))
 
         # shallow copy to avoid modifying arguments in-place (see GH issue #9196)
         self.children = {name: child.copy() for name, child in children.items()}
 
-    def _set_node_data(self, ds: Dataset):
-        data_vars, coord_vars = _collect_data_and_coord_variables(ds)
+    def _set_node_data(self, dataset: Dataset):
+        data_vars, coord_vars = _collect_data_and_coord_variables(dataset)
         self._data_variables = data_vars
         self._node_coord_variables = coord_vars
-        self._node_dims = ds._dims
-        self._node_indexes = ds._indexes
-        self._encoding = ds._encoding
-        self._attrs = ds._attrs
-        self._close = ds._close
+        self._node_dims = dataset._dims
+        self._node_indexes = dataset._indexes
+        self._encoding = dataset._encoding
+        self._attrs = dataset._attrs
+        self._close = dataset._close
 
     def _pre_attach(self: DataTree, parent: DataTree, name: str) -> None:
         super()._pre_attach(parent, name)
-        if name in parent.ds.variables:
+        if name in parent.dataset.variables:
             raise KeyError(
                 f"parent {parent.name} already contains a variable named {name}"
             )
@@ -540,7 +540,7 @@ class DataTree(
         )
 
     @property
-    def ds(self) -> DatasetView:
+    def dataset(self) -> DatasetView:
         """
         An immutable Dataset-like view onto the data in this node.
 
@@ -555,10 +555,14 @@ class DataTree(
         """
         return self._to_dataset_view(rebuild_dims=True, inherited=True)
 
-    @ds.setter
-    def ds(self, data: Dataset | None = None) -> None:
+    @dataset.setter
+    def dataset(self, data: Dataset | None = None) -> None:
         ds = _to_new_dataset(data)
         self._replace_node(ds)
+
+    # soft-deprecated alias, to facilitate the transition from
+    # xarray-contrib/datatree
+    ds = dataset
 
     def to_dataset(self, inherited: bool = True) -> Dataset:
         """
@@ -572,7 +576,7 @@ class DataTree(
 
         See Also
         --------
-        DataTree.ds
+        DataTree.dataset
         """
         coord_vars = self._coord_variables if inherited else self._node_coord_variables
         variables = dict(self._data_variables)
@@ -851,8 +855,8 @@ class DataTree(
         """
         if key in self.children:
             return self.children[key]
-        elif key in self.ds:
-            return self.ds[key]
+        elif key in self.dataset:
+            return self.dataset[key]
         else:
             return default
 
@@ -1120,7 +1124,7 @@ class DataTree(
         if isinstance(root_data, DataTree):
             obj = root_data.copy()
         elif root_data is None or isinstance(root_data, Dataset):
-            obj = cls(name=name, data=root_data, children=None)
+            obj = cls(name=name, dataset=root_data, children=None)
         else:
             raise TypeError(
                 f'root node data (at "/") must be a Dataset or DataTree, got {type(root_data)}'
@@ -1139,7 +1143,7 @@ class DataTree(
                 if isinstance(data, DataTree):
                     new_node = data.copy()
                 elif isinstance(data, Dataset) or data is None:
-                    new_node = cls(name=node_name, data=data)
+                    new_node = cls(name=node_name, dataset=data)
                 else:
                     raise TypeError(f"invalid values: {data}")
                 obj._set_item(
@@ -1270,7 +1274,7 @@ class DataTree(
 
         return all(
             [
-                node.ds.equals(other_node.ds)
+                node.dataset.equals(other_node.dataset)
                 for node, other_node in zip(self.subtree, other.subtree, strict=True)
             ]
         )
@@ -1300,7 +1304,7 @@ class DataTree(
             return False
 
         return all(
-            node.ds.identical(other_node.ds)
+            node.dataset.identical(other_node.dataset)
             for node, other_node in zip(self.subtree, other.subtree, strict=True)
         )
 
@@ -1327,7 +1331,7 @@ class DataTree(
         map_over_subtree
         """
         filtered_nodes = {
-            node.path: node.ds for node in self.subtree if filterfunc(node)
+            node.path: node.dataset for node in self.subtree if filterfunc(node)
         }
         return DataTree.from_dict(filtered_nodes, name=self.root.name)
 
@@ -1371,7 +1375,7 @@ class DataTree(
             └── Group: /b/B
         """
         matching_nodes = {
-            node.path: node.ds
+            node.path: node.dataset
             for node in self.subtree
             if NodePath(node.path).match(pattern)
         }
@@ -1395,7 +1399,7 @@ class DataTree(
         ----------
         func : callable
             Function to apply to datasets with signature:
-            `func(node.ds, *args, **kwargs) -> Dataset`.
+            `func(node.dataset, *args, **kwargs) -> Dataset`.
 
             Function will not be applied to any nodes without datasets.
         *args : tuple, optional
@@ -1426,7 +1430,7 @@ class DataTree(
         ----------
         func : callable
             Function to apply to datasets with signature:
-            `func(node.ds, *args, **kwargs) -> Dataset`.
+            `func(node.dataset, *args, **kwargs) -> Dataset`.
 
             Function will not be applied to any nodes without datasets,
         *args : tuple, optional
@@ -1439,7 +1443,7 @@ class DataTree(
 
         for node in self.subtree:
             if node.has_data:
-                node.ds = func(node.ds, *args, **kwargs)
+                node.dataset = func(node.dataset, *args, **kwargs)
 
     def pipe(
         self, func: Callable | tuple[Callable, str], *args: Any, **kwargs: Any
@@ -1505,7 +1509,7 @@ class DataTree(
         """Print tree structure, including any data stored at each node."""
         for pre, fill, node in RenderDataTree(self):
             print(f"{pre}DataTree('{self.name}')")
-            for ds_line in repr(node.ds)[1:]:
+            for ds_line in repr(node.dataset)[1:]:
                 print(f"{fill}{ds_line}")
 
     def merge(self, datatree: DataTree) -> DataTree:
@@ -1519,7 +1523,7 @@ class DataTree(
     # TODO some kind of .collapse() or .flatten() method to merge a subtree
 
     def to_dataarray(self) -> DataArray:
-        return self.ds.to_dataarray()
+        return self.dataset.to_dataarray()
 
     @property
     def groups(self):

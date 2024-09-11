@@ -56,7 +56,7 @@ class DatatreeIOBase:
 
         # add compression
         comp = dict(zlib=True, complevel=9)
-        enc = {"/set2": {var: comp for var in original_dt["/set2"].ds.data_vars}}
+        enc = {"/set2": {var: comp for var in original_dt["/set2"].dataset.data_vars}}
 
         original_dt.to_netcdf(filepath, encoding=enc, engine=self.engine)
         roundtrip_dt = open_datatree(filepath, engine=self.engine)
@@ -246,7 +246,7 @@ class TestZarrDatatreeIO:
         original_dt = simple_datatree
 
         comp = {"compressor": zarr.Blosc(cname="zstd", clevel=3, shuffle=2)}
-        enc = {"/set2": {var: comp for var in original_dt["/set2"].ds.data_vars}}
+        enc = {"/set2": {var: comp for var in original_dt["/set2"].dataset.data_vars}}
         original_dt.to_zarr(filepath, encoding=enc)
         roundtrip_dt = open_datatree(filepath, engine="zarr")
 
