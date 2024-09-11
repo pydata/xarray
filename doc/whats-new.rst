@@ -19,7 +19,7 @@ What's New
 
 v2024.09.0 (Sept 11, 2024)
 --------------------------
-This release drops support for Python 3.9, while providing numerous performance improvements and bug fixes.
+This release drops support for Python 3.9, and adds support for grouping by :ref:`multiple arrays <groupby.multiple>`, while providing numerous performance improvements and bug fixes.
 
 Thanks to the 33 contributors to this release:
 Alfonso Ladino, Andrew Scherer, Anurag Nayak, David Hoese, Deepak Cherian, Diogo Teles Sant'Anna, Dom, Elliott Sales de Andrade, Eni, Holly Mandel, Illviljan, Jack Kelly, Julius Busecke, Justus Magin, Kai Mühlbauer, Manish Kumar Gupta, Matt Savoie, Maximilian Roos, Michele Claus, Miguel Jimenez, Niclas Rieger, Pascal Bourgault, Philip Chmielowiec, Spencer Clark, Stephan Hoyer, Tao Xin, Tiago Sanona, TimothyCera-NOAA, Tom Nicholas, Tom White, Virgile Andreani, oliverhiggs and tiago
