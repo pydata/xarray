@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from textwrap import dedent
 from typing import cast
 
 import pytest
 
 from xarray.core.iterators import LevelOrderIter
-from xarray.core.treenode import InvalidTreeError, NamedNode, NodePath, TreeNode
+from xarray.core.treenode import (
+    Children,
+    InvalidTreeError,
+    NamedNode,
+    NodePath,
+    TreeNode,
+)
 
 
 class TestFamilyTree:
@@ -222,6 +229,52 @@ class TestSetNodes:
         john._set_item("Mary", marys_evil_twin, allow_overwrite=True)
         assert john.children["Mary"] is marys_evil_twin
         assert marys_evil_twin.parent is john
+
+
+class TestChildren:
+    def test_properties(self):
+        sue: TreeNode = TreeNode()
+        kate: TreeNode = TreeNode()
+        mary = TreeNode(children={"Sue": sue, "Kate": kate})
+
+        children = mary.children
+        assert isinstance(children, Children)
+
+        # len
+        assert len(children) == 2
+
+        # iter
+        assert list(children) == ["Sue", "Kate"]
+
+        assert mary.children["Sue"] is sue
+        assert mary.children["Kate"] is kate
+
+        assert "Sue" in mary.children
+        assert "Kate" in mary.children
+        assert 0 not in mary.children
+        assert "foo" not in mary.children
+
+        with pytest.raises(KeyError):
+            children["foo"]
+        with pytest.raises(KeyError):
+            children[0]
+
+        # TODO not sure what this should look like...
+        # repr
+        expected = dedent(
+            """\
+        Children:
+          * x        (x) int64 16B -1 -2
+          * y        (y) int64 24B 0 1 2
+            a        (x) int64 16B 4 5
+            b        int64 8B -10"""
+        )
+        # actual = repr(coords)
+        # assert expected == actual
+
+    def test_modify(self):
+        # TODO
+        ...
 
 
 class TestPruning:
