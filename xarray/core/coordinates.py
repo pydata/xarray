@@ -845,22 +845,21 @@ class DataTreeCoordinates(Coordinates):
     def _update_coords(
         self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
     ) -> None:
+        from xarray.core.datatree import check_alignment
 
         # create updated node (`.to_dataset` makes a copy so this doesn't modify in-place)
         node_ds = self._data.to_dataset(inherited=False)
         node_ds.coords._update_coords(coords, indexes)
 
-        from xarray.core.datatree import _check_alignment
-
         # check consistency *before* modifying anything in-place
-        # TODO can we clean up the signature of _check_alignment to make this less awkward?
+        # TODO can we clean up the signature of check_alignment to make this less awkward?
         if self._data.parent is not None:
             parent_ds = self._data.parent._to_dataset_view(
                 inherited=True, rebuild_dims=False
             )
         else:
             parent_ds = None
-        _check_alignment(self._data.path, node_ds, parent_ds, self._data.children)
+        check_alignment(self._data.path, node_ds, parent_ds, self._data.children)
 
         # assign updated attributes
         coord_variables = {

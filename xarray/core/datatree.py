@@ -127,7 +127,7 @@ def _indented(text: str) -> str:
     return textwrap.indent(text, prefix="    ")
 
 
-def _check_alignment(
+def check_alignment(
     path: str,
     node_ds: Dataset,
     parent_ds: Dataset | None,
@@ -153,7 +153,7 @@ def _check_alignment(
         for child_name, child in children.items():
             child_path = str(NodePath(path) / child_name)
             child_ds = child.to_dataset(inherited=False)
-            _check_alignment(child_path, child_ds, base_ds, child.children)
+            check_alignment(child_path, child_ds, base_ds, child.children)
 
 
 class DatasetView(Dataset):
@@ -475,7 +475,7 @@ class DataTree(
         path = str(NodePath(parent.path) / name)
         node_ds = self.to_dataset(inherited=False)
         parent_ds = parent._to_dataset_view(rebuild_dims=False, inherited=True)
-        _check_alignment(path, node_ds, parent_ds, self.children)
+        check_alignment(path, node_ds, parent_ds, self.children)
 
     @property
     def _coord_variables(self) -> ChainMap[Hashable, Variable]:
@@ -768,7 +768,7 @@ class DataTree(
             if self.parent is not None
             else None
         )
-        _check_alignment(self.path, ds, parent_ds, children)
+        check_alignment(self.path, ds, parent_ds, children)
 
         if data is not _default:
             self._set_node_data(ds)
