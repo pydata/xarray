@@ -862,9 +862,7 @@ class DataTreeCoordinates(Coordinates):
         check_alignment(self._data.path, node_ds, parent_ds, self._data.children)
 
         # assign updated attributes
-        coord_variables = {
-            k: v for k, v in node_ds.variables.items() if k in node_ds._coord_names
-        }
+        coord_variables = dict(node_ds.coords.variables)
         self._data._node_coord_variables = coord_variables
         self._data._node_dims = node_ds._dims
         self._data._node_indexes = node_ds._indexes
