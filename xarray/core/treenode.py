@@ -5,6 +5,7 @@ from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
 from typing import (
     TYPE_CHECKING,
+    Any,
     Generic,
     TypeVar,
 )
@@ -236,6 +237,75 @@ class TreeNode(Generic[Tree]):
     def _post_attach_children(self: Tree, children: Mapping[str, Tree]) -> None:
         """Method call after attaching `children`."""
         pass
+
+    def copy(
+        self: Tree,
+        deep: bool = False,
+    ) -> Tree:
+        """
+        Returns a copy of this subtree.
+
+        Copies this node and all child nodes.
+
+        If `deep=True`, a deep copy is made of each of the component variables.
+        Otherwise, a shallow copy of each of the component variable is made, so
+        that the underlying memory region of the new datatree is the same as in
+        the original datatree.
+
+        Parameters
+        ----------
+        deep : bool, default: False
+            Whether each component variable is loaded into memory and copied onto
+            the new object. Default is False.
+
+        Returns
+        -------
+        object : DataTree
+            New object with dimensions, attributes, coordinates, name, encoding,
+            and data of this node and all child nodes copied from original.
+
+        See Also
+        --------
+        xarray.Dataset.copy
+        pandas.DataFrame.copy
+        """
+        return self._copy_subtree(deep=deep)
+
+    def _copy_subtree(
+        self: Tree,
+        deep: bool = False,
+        memo: dict[int, Any] | None = None,
+    ) -> Tree:
+        """Copy entire subtree"""
+        new_tree = self._copy_node(deep=deep)
+
+        # TODO if I can write this to use recursion then it might not need to use .relative_to
+        for node in self.descendants:
+            # TODO these will currently fail because .relative_to is only defined on NamedNode, not TreeNode
+            path = node.relative_to(self)
+            # TODO and __setitem__ is only only defined on DataTree (though ._set_item is defined on TreeNode)
+            new_tree[path] = node._copy_node(deep=deep)
+        return new_tree
+
+    def _copy_node(
+        self: Tree,
+        deep: bool = False,
+    ) -> Tree:
+        """Copy just one node of a tree"""
+        # TODO is this correct??
+        new_empty_node = type(self)()
+        return new_empty_node
+
+        # TODO could I just do
+        # new_instance = type(self).__new__(type(self))
+        # new_instance.__dict__.update(self.__dict__)
+        # return new_instance
+
+    def __copy__(self: Tree) -> Tree:
+        return self._copy_subtree(deep=False)
+
+    def __deepcopy__(self: Tree, memo: dict[int, Any] | None = None) -> Tree:
+        return self._copy_subtree(deep=True, memo=memo)
 
     def _iter_parents(self: Tree) -> Iterator[Tree]:
         """Iterate up the tree, starting from the current node's parent."""
