@@ -99,10 +99,10 @@ def map_over_subtree(func: Callable) -> Callable:
         Function will not be applied to any nodes without datasets.
     *args : tuple, optional
         Positional arguments passed on to `func`. If DataTrees any data-containing nodes will be converted to Datasets
-        via `.ds`.
+        via `.dataset`.
     **kwargs : Any
         Keyword arguments passed on to `func`. If DataTrees any data-containing nodes will be converted to Datasets
-        via `.ds`.
+        via `.dataset`.
 
     Returns
     -------
@@ -160,13 +160,14 @@ def map_over_subtree(func: Callable) -> Callable:
             strict=False,
         ):
             node_args_as_datasetviews = [
-                a.ds if isinstance(a, DataTree) else a for a in all_node_args[:n_args]
+                a.dataset if isinstance(a, DataTree) else a
+                for a in all_node_args[:n_args]
             ]
             node_kwargs_as_datasetviews = dict(
                 zip(
                     [k for k in kwargs_as_tree_length_iterables.keys()],
                     [
-                        v.ds if isinstance(v, DataTree) else v
+                        v.dataset if isinstance(v, DataTree) else v
                         for v in all_node_args[n_args:]
                     ],
                     strict=True,
@@ -183,7 +184,7 @@ def map_over_subtree(func: Callable) -> Callable:
                 )
             elif node_of_first_tree.has_attrs:
                 # propagate attrs
-                results = node_of_first_tree.ds
+                results = node_of_first_tree.dataset
             else:
                 # nothing to propagate so use fastpath to create empty node in new tree
                 results = None

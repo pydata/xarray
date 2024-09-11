@@ -1262,7 +1262,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             ds = open_dataset(
                 filename_or_obj, store=store, group=path_group, engine="zarr", **kwargs
             )
-            new_node: DataTree = DataTree(name=NodePath(path_group).name, data=ds)
+            new_node = DataTree(name=NodePath(path_group).name, dataset=ds)
             tree_root._set_item(
                 path_group,
                 new_node,
