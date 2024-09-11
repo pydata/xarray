@@ -113,6 +113,15 @@ class TestFamilyTree:
         assert list(kate.siblings) == ["Mary", "Ashley"]
         assert "Kate" not in kate.siblings
 
+    def test_copy_subtree(self):
+        tony: TreeNode = TreeNode()
+        michael: TreeNode = TreeNode(children={"Tony": tony})
+        vito = TreeNode(children={"Michael": michael})
+
+        # check that children of assigned children are also copied (i.e. that ._copy_subtree works)
+        copied_tony = vito.children["Michael"].children["Tony"]
+        assert copied_tony is not tony
+
     def test_ancestors(self):
         tony: TreeNode = TreeNode()
         michael: TreeNode = TreeNode(children={"Tony": tony})
