@@ -573,44 +573,47 @@ Let's make a single datatree node with some example data in it:
 .. ipython:: python
 
     ds1 = xr.Dataset({"foo": "orange"})
-    dt = xr.DataTree(name="root", data=ds1)  # create root node
+    dt = xr.DataTree(name="root", dataset=ds1)  # create root node
     dt
 
 At this point our node is also the root node, as every tree has a root node.
 
-We can add a second node to this tree either by referring to the first node in
-the constructor of the second:
+We can add (a copy of) a second node to this tree, assigning it to the parent node dt:
 
 .. ipython:: python
 
-    ds2 = xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])})
-    # add a child by referring to the parent node
-    node2 = xr.DataTree(name="a", parent=dt, data=ds2)
+    dataset2 = xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])})
+    dt2 = xr.DataTree(name="a", dataset=dataset2)
+    # Make the second datatree a child of the original
+    dt.children = {"child-node": dt2}
+    dt
 
-or by dynamically updating the properties of one node to refer to another:
+
+Or more idomatically you can create a tree from a dictionary of Datasets and
+DataTrees. In this case we add a new node under ``dt``s 'child-node' by
+providing the explicit path under 'child-node' as the dictionary key:
 
 .. ipython:: python
 
-    # add a second child by first creating a new node ...
+    # create a third Dataset
     ds3 = xr.Dataset({"zed": np.nan})
-    node3 = xr.DataTree(name="b", data=ds3)
-    # ... then updating its .parent property
-    node3.parent = dt
+    # create a tree from a dictionary of DataTrees and Datasets
+    dt = xr.DataTree.from_dict({"/": dt, "/child-node/new-zed-node": ds3})
 
-Our tree now has three nodes within it:
+We have created a tree with three nodes in it:
 
 .. ipython:: python
 
     dt
 
-It is at tree construction time that consistency checks are enforced. For
-instance, if we try to create a `cycle`, where the root node is also a child of a decendent, the constructor will raise an
-(:py:class:`~xarray.InvalidTreeError`):
+Consistency checks are enforced. For instance, if we try to create a `cycle`,
+where the root node is also a child of a decendent, the constructor will raise
+an (:py:class:`~xarray.InvalidTreeError`):
 
 .. ipython:: python
     :okexcept:
 
-    dt.parent = node3
+    dt.children = {"child": dt}
 
 Alternatively you can also create a :py:class:`~xarray.DataTree` object from:
 
@@ -633,7 +636,7 @@ but with values given by either :py:class:`~xarray.DataArray` objects or other
 
 .. ipython:: python
 
-    dt["a"]
+    dt["child-node"]
     dt["foo"]
 
 Iterating over keys will iterate over both the names of variables and child nodes.
@@ -642,7 +645,7 @@ We can also access all the data in a single node, and its inerited coordinates, 
 
 .. ipython:: python
 
-    dt["a"].ds
+    dt["child-node"].dataset
 
 This demonstrates the fact that the data in any one node is equivalent to the
 contents of a single :py:class:`~xarray.Dataset` object. The :py:attr:`DataTree.ds <xarray.DataTree.ds>` property
@@ -652,7 +655,7 @@ as a new and mutable :py:class:`~xarray.Dataset` object via
 
 .. ipython:: python
 
-    dt["a"].to_dataset()
+    dt["child-node"].to_dataset()
 
 This same call can be made to get only the local node variables without any
 inherited ones, by setting the inherited keyword to False, but in this example
@@ -660,7 +663,7 @@ there are no inherited coordinates so the result is the same as the previous cal
 
 .. ipython:: python
 
-    dt["a"].to_dataset(inherited=False)
+    dt["child-node"].to_dataset(inherited=False)
 
 
 Like with :py:class:`~xarray.Dataset`, you can access the data and coordinate variables of a
@@ -668,8 +671,8 @@ node separately via the :py:attr:`~xarray.DataTree.data_vars` and :py:attr:`~xar
 
 .. ipython:: python
 
-    dt["a"].data_vars
-    dt["a"].coords
+    dt["child-node"].data_vars
+    dt["child-node"].coords
 
 
 Dictionary-like methods
@@ -683,7 +686,9 @@ datatree from scratch, we could have written:
 
     dt = xr.DataTree(name="root")
     dt["foo"] = "orange"
-    dt["a"] = xr.DataTree(data=xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])}))
+    dt["a"] = xr.DataTree(
+        dataset=xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])})
+    )
     dt["a/b/zed"] = np.nan
     dt
 
