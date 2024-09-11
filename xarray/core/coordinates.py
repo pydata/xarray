@@ -840,7 +840,7 @@ class DataTreeCoordinates(Coordinates):
 
     def to_dataset(self) -> Dataset:
         """Convert these coordinates into a new Dataset"""
-        return self._data.to_dataset()._copy_listed(self._names)
+        return self._data.dataset._copy_listed(self._names)
 
     def _update_coords(
         self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
