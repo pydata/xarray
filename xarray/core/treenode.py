@@ -93,10 +93,17 @@ class Children(Mapping[str, Tree], Generic[Tree]):
     def __setitem__(self, key: str, value: Any) -> None:
         self.update({key: value})
 
-    def update(self, other: Mapping[Any, Any]) -> None:
+    def update(self, other: Mapping[str, Tree]) -> None:
         """Update with other child nodes."""
-        # TODO
-        ...
+
+        # TODO forbid strings with `/` in here?
+
+        if not len(other):
+            return
+
+        children = self._treenode._children.copy()
+        children.update(other)
+        self._treenode.children = children
 
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython."""
