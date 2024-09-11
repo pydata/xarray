@@ -276,7 +276,28 @@ class TestChildren:
         # assert expected == actual
 
     def test_modify(self):
-        # TODO
+        sue: TreeNode = TreeNode()
+        mary: TreeNode = TreeNode(children={"Sue": sue})
+        kate: TreeNode = TreeNode()
+        john = TreeNode(children={"Mary": mary, "Kate": kate})
+
+        children = john.children
+
+        # test assignment
+        ashley: TreeNode = TreeNode()
+        children["Ashley"] = ashley
+        assert john.children["Ashley"] is ashley
+
+        # test deletion
+        del children["Ashley"]
+        assert "Ashley" not in john.children
+
+        # test constructor
+        john2 = TreeNode(children=children)
+        assert john2.children == children
+
+    def test_modify_below_root(self):
+        # TODO test that modifying .children doesn't affect grandparent
         ...
 
 
