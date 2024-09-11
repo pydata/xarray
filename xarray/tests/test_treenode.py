@@ -71,17 +71,21 @@ class TestFamilyTree:
         assert child.parent is None
 
     def test_multi_child_family(self):
-        mary: TreeNode = TreeNode()
-        kate: TreeNode = TreeNode()
-        john: TreeNode = TreeNode(children={"Mary": mary, "Kate": kate})
-        assert john.children["Mary"] is mary
-        assert john.children["Kate"] is kate
+        john: TreeNode = TreeNode(children={"Mary": TreeNode(), "Kate": TreeNode()})
+
+        assert "Mary" in john.children
+        mary = john.children["Mary"]
+        assert isinstance(mary, TreeNode)
         assert mary.parent is john
+
+        assert "Kate" in john.children
+        kate = john.children["Kate"]
+        assert isinstance(kate, TreeNode)
         assert kate.parent is john
 
     def test_disown_child(self):
-        mary: TreeNode = TreeNode()
-        john: TreeNode = TreeNode(children={"Mary": mary})
+        john: TreeNode = TreeNode(children={"Mary": TreeNode()})
+        mary = john.children["Mary"]
         mary.orphan()
         assert mary.parent is None
         assert "Mary" not in john.children
@@ -102,12 +106,11 @@ class TestFamilyTree:
         assert john.children["Kate"] is evil_kate
 
     def test_sibling_relationships(self):
-        mary: TreeNode = TreeNode()
-        kate: TreeNode = TreeNode()
-        ashley: TreeNode = TreeNode()
-        TreeNode(children={"Mary": mary, "Kate": kate, "Ashley": ashley})
-        assert kate.siblings["Mary"] is mary
-        assert kate.siblings["Ashley"] is ashley
+        john = TreeNode(
+            children={"Mary": TreeNode(), "Kate": TreeNode(), "Ashley": TreeNode()}
+        )
+        kate = john.children["Kate"]
+        assert list(kate.siblings) == ["Mary", "Ashley"]
         assert "Kate" not in kate.siblings
 
     def test_ancestors(self):
