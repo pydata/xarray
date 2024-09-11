@@ -15,6 +15,7 @@ from xarray.namedarray._typing import (
     _arrayapi,
     _Axes,
     _Axis,
+    _AxisLike,
     _default,
     _Dim,
     _DType,
@@ -164,8 +165,8 @@ def permute_dims(
     if _axis is None:
         raise TypeError("permute_dims missing argument axes or dims")
     old_dims = x.dims
-    _dims = tuple(old_dims[i] for i in _axis)
     _data = xp.permute_dims(x._data, _axis)
+    _dims = tuple(old_dims[i] for i in _axis)
     return x._new(_dims, _data)
 
 
