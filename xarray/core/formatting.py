@@ -1038,7 +1038,7 @@ def diff_nodewise_summary(a: DataTree, b: DataTree, compat):
 
     summary = []
     for node_a, node_b in zip(a.subtree, b.subtree, strict=True):
-        a_ds, b_ds = node_a.ds, node_b.ds
+        a_ds, b_ds = node_a.dataset, node_b.dataset
 
         if not a_ds._all_compat(b_ds, compat):
             dataset_diff = diff_dataset_repr(a_ds, b_ds, compat_str)

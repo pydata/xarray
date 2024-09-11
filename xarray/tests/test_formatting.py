@@ -626,7 +626,7 @@ class TestFormatting:
 
     def test_datatree_print_empty_node_with_attrs(self):
         dat = xr.Dataset(attrs={"note": "has attrs"})
-        dt: DataTree = DataTree(name="root", data=dat)
+        dt: DataTree = DataTree(name="root", dataset=dat)
         printout = str(dt)
         assert printout == dedent(
             """\
@@ -638,7 +638,7 @@ class TestFormatting:
 
     def test_datatree_print_node_with_data(self):
         dat = xr.Dataset({"a": [0, 2]})
-        dt: DataTree = DataTree(name="root", data=dat)
+        dt: DataTree = DataTree(name="root", dataset=dat)
         printout = str(dt)
         expected = [
             "<xarray.DataTree 'root'>",
@@ -666,7 +666,7 @@ class TestFormatting:
 
     def test_datatree_repr_of_node_with_data(self):
         dat = xr.Dataset({"a": [0, 2]})
-        dt: DataTree = DataTree(name="root", data=dat)
+        dt: DataTree = DataTree(name="root", dataset=dat)
         assert "Coordinates" in repr(dt)
 
     def test_diff_datatree_repr_structure(self):
