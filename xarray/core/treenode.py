@@ -60,6 +60,7 @@ class Children(Mapping[str, Tree], Generic[Tree]):
     def __init__(self, treenode: Tree):
         self._treenode = treenode
 
+    @property
     def _names(self) -> set[str]:
         return set(self._treenode.children.keys())
 
