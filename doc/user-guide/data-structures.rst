@@ -528,7 +528,7 @@ nested dict-like containers of both :py:class:`xarray.DataArray`\s and :py:class
 A single datatree object is known as a "node", and its position relative to
 other nodes is defined by two more key properties:
 
-- ``children``: An ordered dictionary mapping from names to other :py:class:`~xarray.DataTree`
+- ``children``: An dictionary mapping from names to other :py:class:`~xarray.DataTree`
   objects, known as its "child nodes".
 - ``parent``: The single :py:class:`~xarray.DataTree` object whose children this datatree is a
   member of, known as its "parent node".
