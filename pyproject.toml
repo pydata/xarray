@@ -42,7 +42,7 @@ dev = [
   "ruff",
   "xarray[complete]",
 ]
-io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
+io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr<3", "fsspec", "cftime", "pooch"]
 parallel = ["dask[complete]"]
 viz = ["matplotlib", "seaborn", "nc-time-axis"]
 
@@ -84,14 +84,13 @@ source = ["xarray"]
 exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 
 [tool.mypy]
-enable_error_code = "redundant-self"
+enable_error_code = ["ignore-without-code", "redundant-self", "redundant-expr"]
 exclude = [
   'build',
   'xarray/util/generate_.*\.py',
   'xarray/datatree_/doc/.*\.py',
 ]
 files = "xarray"
-show_error_codes = true
 show_error_context = true
 warn_redundant_casts = true
 warn_unused_configs = true
@@ -240,7 +239,6 @@ extend-exclude = [
   "doc",
   "_typed_ops.pyi",
 ]
-target-version = "py310"
 
 [tool.ruff.lint]
 # E402: module level import not at top of file
@@ -249,13 +247,13 @@ target-version = "py310"
 extend-safe-fixes = [
   "TID252", # absolute imports
 ]
-ignore = [
+extend-ignore = [
   "E402",
   "E501",
   "E731",
   "UP007",
 ]
-select = [
+extend-select = [
   "F", # Pyflakes
   "E", # Pycodestyle
   "W",
