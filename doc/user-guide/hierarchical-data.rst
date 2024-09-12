@@ -19,7 +19,7 @@ Why Hierarchical Data?
 ----------------------
 
 Many real-world datasets are composed of multiple differing components,
-and it can often be be useful to think of these in terms of a hierarchy of related groups of data.
+and it can often be useful to think of these in terms of a hierarchy of related groups of data.
 Examples of data which one might want organise in a grouped or hierarchical manner include:
 
 - Simulation data at multiple resolutions,
