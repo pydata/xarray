@@ -294,7 +294,7 @@ individual DataArrays in a similar fashion.
 
     dt["simulation/coarse/foo"]
 
-We can also view the data in a particular group as a readonly :py:class:`~xarray.datatree.DatasetView` using :py:attr:`xarray.datatree.dataset`:
+We can also view the data in a particular group as a readonly :py:class:`~xarray.Datatree.DatasetView` using :py:attr:`xarray.Datatree.dataset`:
 
 .. ipython:: python
 

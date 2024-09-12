@@ -577,7 +577,7 @@ Let's make a single datatree node with some example data in it:
 .. ipython:: python
 
     ds1 = xr.Dataset({"foo": "orange"})
-    dt = xr.DataTree(name="root", dataset=ds1)  # create root node
+    dt = xr.DataTree(name="root", dataset=ds1)
     dt
 
 At this point we have created a single node datatree with no parent and no children.
@@ -587,18 +587,18 @@ At this point we have created a single node datatree with no parent and no child
     dt.parent is None
     dt.children
 
-We can add a copy of a second node to this tree, assigning it to the parent node ``dt``:
+We can add a second node to this tree, assigning it to the parent node ``dt``:
 
 .. ipython:: python
 
     dataset2 = xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])})
     dt2 = xr.DataTree(name="a", dataset=dataset2)
-    # Add a copy of the second Datatree to the root
+    # Add the child Datatree to the root node
     dt.children = {"child-node": dt2}
     dt
 
 
-Or more idiomatically you can create a tree from a dictionary of ``Datasets`` and
+More idiomatically you can create a tree from a dictionary of ``Datasets`` and
 `DataTrees`. In this case we add a new node under ``dt["child-node"]`` by
 providing the explicit path under ``"child-node"`` as the dictionary key:
 
@@ -781,6 +781,7 @@ Some examples:
             ),
         },
     )
+    dt2
 
 
 Here there are four different coordinate variables, which apply to variables in the DataTree in different ways:

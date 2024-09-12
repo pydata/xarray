@@ -76,7 +76,7 @@ The nodes representing Bart and Lisa are now connected - we can confirm their si
 
 .. ipython:: python
 
-    list(bart.siblings)
+    list(homer["Bart"].siblings)
 
 But oops, we forgot Homer's third daughter, Maggie! Let's add her by updating Homer's :py:class:`~xarray.DataTree.children` property to include her:
 
