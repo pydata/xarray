@@ -1,6 +1,6 @@
 .. _hierarchical-data:
 
-Working With Hierarchical Data
+Hierarchical data
 ==============================
 
 .. ipython:: python
