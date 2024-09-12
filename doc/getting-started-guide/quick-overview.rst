@@ -281,7 +281,7 @@ child nodes.  You can see this inheritance in the above representation of the Da
 ``people`` and ``species`` defined in the root ``/`` node are shown in the child nodes both
 ``/simulation/coarse`` and ``/simulation/fine``.  All coordinates in parent-descendent lineage must be
 alignable to form a DataTree.  If your input data is not aligned, you can still get a nested ``dict`` of
-:py:class:`~xarray.Dataset` objects with :py:func:`~xarray.open_group` and then apply any required changes to ensure alignment
+:py:class:`~xarray.Dataset` objects with :py:func:`~xarray.open_groups` and then apply any required changes to ensure alignment
 before converting to a :py:class:`~xarray.DataTree`.
 
 The constraints on each group are the same as the constraint on DataArrays within a single dataset with the
