@@ -778,7 +778,6 @@ class DataTree(
         """Copy just one node of a tree"""
 
         new_node = super()._copy_node()
-        new_node._name = self.name
 
         data = self._to_dataset_view(rebuild_dims=False, inherited=False)
         if deep:
