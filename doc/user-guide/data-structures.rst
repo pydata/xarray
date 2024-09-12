@@ -731,7 +731,7 @@ The constraint that this puts on a DataTree is that dimensions and indices that
 are inherited must be aligned with any direct decendent node's existing
 dimension or index.  This allows decendents to use dimensions defined in
 ancestor nodes, without duplicating that information. But as a consequence, if
-a dimension dimension-name is defined in on a node and that same dimension-name
+a dimension-name is defined in on a node and that same dimension-name
 exists in one of its ancestors, they must align (have the same index and
 size).
 
