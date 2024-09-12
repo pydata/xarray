@@ -83,6 +83,23 @@ class TestNames:
         mary = DataTree(children={"Sue": sue})  # noqa
         assert mary.children["Sue"].name == "Sue"
 
+    def test_dataset_containing_slashes(self):
+        xda: xr.DataArray = xr.DataArray(
+            [[1, 2]],
+            coords={"label": ["a"], "R30m/y": [30, 60]},
+        )
+        xds: xr.Dataset = xr.Dataset({"group/subgroup/my_variable": xda})
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Given variables have names containing the '/' character: "
+                "['R30m/y', 'group/subgroup/my_variable']. "
+                "Variables stored in DataTree objects cannot have names containing '/' characters, "
+                "as this would make path-like access to variables ambiguous."
+            ),
+        ):
+            DataTree(xds)
+
 
 class TestPaths:
     def test_path_property(self):
