@@ -20,6 +20,7 @@ from xarray.backends.common import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
+from xarray.core.treenode import NodePath
 from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
@@ -32,6 +33,8 @@ from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
+
+    from zarr import Group as ZarrGroup
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
@@ -1292,8 +1295,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         return groups_dict
 
 
-def _iter_zarr_groups(root, parent="/"):
-    from xarray.core.treenode import NodePath
+def _iter_zarr_groups(root: ZarrGroup, parent: str = "/"):
 
     parent = NodePath(parent)
     yield str(parent)
