@@ -469,7 +469,7 @@ class DataTree(
         self.children = {name: child.copy() for name, child in children.items()}
 
     def _set_node_data(self, dataset: Dataset):
-        _check_for_slashes_in_names(ds.variables)
+        _check_for_slashes_in_names(dataset.variables)
         data_vars, coord_vars = _collect_data_and_coord_variables(dataset)
         self._data_variables = data_vars
         self._node_coord_variables = coord_vars
