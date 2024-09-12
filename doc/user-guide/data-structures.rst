@@ -658,15 +658,6 @@ as a new and mutable :py:class:`~xarray.Dataset` object via
 
     dt["child-node"].to_dataset()
 
-This same call can be made to get only the local node variables without any
-inherited ones, by setting the inherited keyword to False, but in this example
-there are no inherited coordinates so the result is the same as the previous call.
-
-.. ipython:: python
-
-    dt["child-node"].to_dataset(inherited=False)
-
-
 Like with :py:class:`~xarray.Dataset`, you can access the data and coordinate variables of a
 node separately via the :py:attr:`~xarray.DataTree.data_vars` and :py:attr:`~xarray.DataTree.coords` attributes:
 
