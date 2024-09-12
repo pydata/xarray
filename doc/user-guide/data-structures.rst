@@ -703,7 +703,7 @@ underlying data arrays by calling ``dt.copy(deep=True)``.
 DataTree Inheritance
 ~~~~~~~~~~~~~~~~~~~~
 
-DataTree implements a simple inheritance mechanism. Coordinates and their
+DataTree implements a simple inheritance mechanism. Coordinates, dimensions and their
 associated indices are propagated from downward starting from the root node to
 all descendent nodes.  Coordinate inheritance was inspired by the NetCDF-CF
 inherited dimensions, but DataTree's inheritance is slightly stricter yet
