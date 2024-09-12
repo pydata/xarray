@@ -691,7 +691,7 @@ Dictionary-like methods
 
 We can update a datatree in-place using Python's standard dictionary syntax,
 similar to how we can for Dataset objects. For example, to create this example
-datatree from scratch, we could have written:
+DataTree from scratch, we could have written:
 
 .. ipython:: python
 
