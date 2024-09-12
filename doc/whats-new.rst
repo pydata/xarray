@@ -116,6 +116,9 @@ Breaking changes
 Bug fixes
 ~~~~~~~~~
 
+- Make illegal path-like variable names when constructing a DataTree from a Dataset
+  (:issue:`9339`, :pull:`9378`)
+  By `Etienne Schalk <https://github.com/etienneschalk>`_.
 - Fix bug with rechunking to a frequency when some periods contain no data (:issue:`9360`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix bug causing `DataTree.from_dict` to be sensitive to insertion order (:issue:`9276`, :pull:`9292`).
