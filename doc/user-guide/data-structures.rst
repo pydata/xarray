@@ -567,7 +567,6 @@ The :py:class:`~xarray.DataTree` constructor takes:
 
 - ``dataset``: The data that will be stored in this node, represented by a single
   :py:class:`xarray.Dataset`, or a named :py:class:`xarray.DataArray`.
-- ``parent``: The parent node (if there is one), given as a :py:class:`~xarray.DataTree` object.
 - ``children``: The various child nodes (if there are any), given as a mapping
   from string keys to :py:class:`~xarray.DataTree` objects.
 - ``name``: A string to use as the name of this node.
