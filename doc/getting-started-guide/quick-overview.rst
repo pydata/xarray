@@ -267,7 +267,7 @@ Now we'll put these datasets into a hierarchical DataTree:
     dt
 
 This created a DataTree with nested groups. We have one root group, containing information about individual
-people.  This root group can be named, but here is unnamed, so is referred to with ``"/"``, same as the root of a
+people.  This root group can be named, but here it is unnamed, and is referenced with ``"/"``. This structure is similar to a
 unix-like filesystem.  The root group then has one subgroup ``simulation``, which contains no data itself but does
 contain another two subgroups, named ``fine`` and ``coarse``.
 
