@@ -21,6 +21,15 @@ v2024.09.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- ``DataTree`` related functionality is now exposed in the main ``xarray`` public
+  API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``, ``xarray.open_groups``,
+  ``xarray.map_over_subtree``, ``xarray.register_datatree_accessor`` and
+  ``xarray.testing.assert_isomorphic``.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_,
+  `Eni Awowale <https://github.com/eni-awowale>`_,
+  `Matt Savoie <https://github.com/flamingbear>`_,
+  `Stephan Hoyer <https://github.com/shoyer>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 Breaking changes
@@ -34,9 +43,21 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Make illegal path-like variable names when constructing a DataTree from a Dataset
+  (:issue:`9339`, :pull:`9378`)
+  By `Etienne Schalk <https://github.com/etienneschalk>`_.
+
+
 
 Documentation
 ~~~~~~~~~~~~~
+
+- Migrate documentation for ``datatree`` into main ``xarray`` documentation (:pull:`9033`).
+  For information on previous ``datatree`` releases, please see:
+  `datatree's historical release notes <https://xarray-datatree.readthedocs.io/en/latest/>`_.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie <https://github.com/flamingbear>`_, and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 
 
 Internal Changes
@@ -100,9 +121,6 @@ Breaking changes
 Bug fixes
 ~~~~~~~~~
 
-- Make illegal path-like variable names when constructing a DataTree from a Dataset
-  (:issue:`9339`, :pull:`9378`)
-  By `Etienne Schalk <https://github.com/etienneschalk>`_.
 - Fix bug with rechunking to a frequency when some periods contain no data (:issue:`9360`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix bug causing `DataTree.from_dict` to be sensitive to insertion order (:issue:`9276`, :pull:`9292`).

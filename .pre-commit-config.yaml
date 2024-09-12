@@ -2,7 +2,6 @@
 ci:
     autoupdate_schedule: monthly
     autoupdate_commit_msg: 'Update pre-commit hooks'
-exclude: 'xarray/datatree_.*'
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0

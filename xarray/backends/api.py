@@ -1733,7 +1733,7 @@ def to_zarr(
     _validate_dataset_names(dataset)
 
     if zarr_version is None:
-        # default to 2 if store doesn't specify it's version (e.g. a path)
+        # default to 2 if store doesn't specify its version (e.g. a path)
         zarr_version = int(getattr(store, "_store_version", 2))
 
     if consolidated is None and zarr_version > 2:
