@@ -652,7 +652,7 @@ but with values given by either :py:class:`~xarray.DataArray` objects or other
 
 Iterating over keys will iterate over both the names of variables and child nodes.
 
-We can also access all the data in a single node, and its inerited coordinates, through a dataset-like view
+We can also access all the data in a single node, and its inherited coordinates, through a dataset-like view
 
 .. ipython:: python
 
