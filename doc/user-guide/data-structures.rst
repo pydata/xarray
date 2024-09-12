@@ -775,15 +775,30 @@ Coordinate variables are inherited to descendent nodes, which means that
 variables at different levels of a hierarchical DataTree are always
 aligned. Placing the ``time`` variable at the root node automatically indicates
 that it applies to all descendent nodes. Similarly, ``station`` is in the base
-``weather`` node, because it applies to all weather variables, both directly
-in ``weather`` and in the ``temperature`` sub-tree.
+``weather`` node, because it applies to all weather variables, both directly in
+``weather`` and in the ``temperature`` sub-tree.  Notice the inherited coordinates are
+explicitly shown in the tree representation under ``Inherited coordinates:``.
 
-Accessing any of the lower level trees as an ``xarray.Dataset`` would
-automatically include coordinates from higher levels (e.g., ``time`` and ``station``):
+.. ipython:: python
+
+    dt2["/weather"]
+
+Accessing any of the lower level trees through the :py:func:`.dataset <xarray.DataTree.dataset>` property
+automatically includes coordinates from higher levels (e.g., ``time`` and
+``station``):
 
 .. ipython:: python
 
     dt2["/weather/temperature"].dataset
+
+Similarly, when you retrieve a Dataset through :py:func:`~xarray.DataTree.to_dataset`  , the inherited coordinates are
+included by default unless you exclude them with the ``inherited`` flag:
+
+.. ipython:: python
+
+    dt2["/weather/temperature"].to_dataset()
+
+    dt2["/weather/temperature"].to_dataset(inherited=False)
 
 
 .. _coordinates:
