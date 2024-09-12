@@ -899,7 +899,7 @@ def open_groups(
 
 def open_mfdataset(
     paths: str | NestedSequence[str | os.PathLike],
-    chunks: T_Chunks | None = None,
+    chunks: T_Chunks | None = {},
     concat_dim: (
         str
         | DataArray
@@ -940,7 +940,7 @@ def open_mfdataset(
         concatenation along more than one dimension is desired, then ``paths`` must be a
         nested list-of-lists (see ``combine_nested`` for details). (A string glob will
         be expanded to a 1-dimensional list.)
-    chunks : int, dict, 'auto' or None, optional
+    chunks : int, dict, 'auto' or None, default: {}
         Dictionary with keys given by dimension names and values given by chunk sizes.
         In general, these should divide the dimensions of each dataset. If int, chunk
         each dimension by ``chunks``. By default, chunks will be chosen to load entire
@@ -1120,7 +1120,7 @@ def open_mfdataset(
             "instead specify combine='nested' along with a value for `concat_dim`.",
         )
 
-    open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)
+    open_kwargs = dict(engine=engine, chunks=chunks, **kwargs)
 
     if parallel:
         import dask

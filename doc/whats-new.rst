@@ -34,6 +34,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Allow in-memory arrays with :py:func:`xarray.open_mfdataset` by passing ``chunks=None``. (:pull:`5704`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Documentation
 ~~~~~~~~~~~~~

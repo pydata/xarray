@@ -4080,7 +4080,7 @@ def parallel(request):
     return request.param
 
 
-@pytest.fixture(params=[None, 5])
+@pytest.fixture(params=[None, {}, 5])
 def chunks(request):
     return request.param
 
@@ -4132,16 +4132,21 @@ def test_open_mfdataset_manyfiles(
                 subds.to_zarr(store=tmpfiles[ii])
 
         # check that calculation on opened datasets works properly
+        chunks = chunks if (not chunks and readengine != "zarr") else "auto"
         with open_mfdataset(
             tmpfiles,
             combine="nested",
             concat_dim="x",
             engine=readengine,
             parallel=parallel,
-            chunks=chunks if (not chunks and readengine != "zarr") else "auto",
+            chunks=chunks,
         ) as actual:
             # check that using open_mfdataset returns dask arrays for variables
-            assert isinstance(actual["foo"].data, dask_array_type)
+            # when a chunks parameter has been defined:
+            if chunks is None:
+                assert isinstance(actual["foo"].data, np.ndarray)
+            else:
+                assert isinstance(actual["foo"].data, dask_array_type)
 
             assert_identical(original, actual)
 
