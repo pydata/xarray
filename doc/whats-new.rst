@@ -22,10 +22,13 @@ v2024.09.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 - ``DataTree`` related functionality is now exposed in the main ``xarray`` public
-  API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``,
+  API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``, ``xarray.open_groups``,
   ``xarray.map_over_subtree``, ``xarray.register_datatree_accessor`` and
   ``xarray.testing.assert_isomorphic``.
-  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_,
+  `Eni Awowale <https://github.com/eni-awowale>`_,
+  `Matt Savoie <https://github.com/flamingbear>`_,
+  `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
@@ -133,15 +136,6 @@ Bug fixes
   ``datetime.timedelta`` objects as ``resample`` frequencies
   (:issue:`9408`, :pull:`9413`).
   By `Oliver Higgs <https://github.com/oliverhiggs>`_.
-
-Performance
-~~~~~~~~~~~
-
-- Speed up grouping by avoiding deep-copy of non-dimension coordinates (:issue:`9426`, :pull:`9393`)
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-
-Documentation
-~~~~~~~~~~~~~
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
