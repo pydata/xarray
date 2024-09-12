@@ -156,6 +156,18 @@ def check_alignment(
             check_alignment(child_path, child_ds, base_ds, child.children)
 
 
+def _check_for_slashes_in_names(variables: Iterable[Hashable]) -> None:
+    offending_variable_names = [
+        name for name in variables if isinstance(name, str) and "/" in name
+    ]
+    if len(offending_variable_names) > 0:
+        raise ValueError(
+            "Given variables have names containing the '/' character: "
+            f"{offending_variable_names}. "
+            "Variables stored in DataTree objects cannot have names containing '/' characters, as this would make path-like access to variables ambiguous."
+        )
+
+
 class DatasetView(Dataset):
     """
     An immutable Dataset-like view onto the data in a single DataTree node.
@@ -453,6 +465,7 @@ class DataTree(
         super().__init__(name=name, children=children)
 
     def _set_node_data(self, dataset: Dataset):
+        _check_for_slashes_in_names(dataset.variables)
         data_vars, coord_vars = _collect_data_and_coord_variables(dataset)
         self._data_variables = data_vars
         self._node_coord_variables = coord_vars
