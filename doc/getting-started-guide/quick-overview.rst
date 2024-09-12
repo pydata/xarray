@@ -294,11 +294,11 @@ individual DataArrays in a similar fashion.
 
     dt["simulation/coarse/foo"]
 
-We can also view the data in a particular group as a readonly :py:class:`~xarray.datatree.DatasetView` using :py:attr:`xarray.datatree.ds`:
+We can also view the data in a particular group as a readonly :py:class:`~xarray.datatree.DatasetView` using :py:attr:`xarray.datatree.dataset`:
 
 .. ipython:: python
 
-    dt["simulation/coarse"].ds
+    dt["simulation/coarse"].dataset
 
 We can get a copy of the :py:class:`~xarray.Dataset` including the inherited coordinates by calling the :py:class:`~xarray.datatree.to_dataset` method:
 

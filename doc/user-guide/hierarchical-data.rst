@@ -363,7 +363,7 @@ then rebuilding a new tree using only the paths of those nodes:
 
 .. ipython:: python
 
-    non_empty_nodes = {node.path: node.ds for node in dt.subtree if node.has_data}
+    non_empty_nodes = {node.path: node.dataset for node in dt.subtree if node.has_data}
     xr.DataTree.from_dict(non_empty_nodes)
 
 You can see this tree is similar to the ``dt`` object above, except that it is missing the empty nodes ``a/c`` and ``a/c/d``.

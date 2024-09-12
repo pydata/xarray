@@ -650,7 +650,7 @@ This interface echoes that of ``xarray.Dataset``.
    DataTree.encoding
    DataTree.indexes
    DataTree.nbytes
-   DataTree.ds
+   DataTree.dataset
    DataTree.to_dataset
    DataTree.has_data
    DataTree.has_attrs

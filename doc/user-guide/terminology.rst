@@ -258,7 +258,7 @@ complete examples, please consult the relevant documentation.*
 
     DataTree
         A tree-like collection of ``Dataset`` objects. A *tree* is made up of one or more *nodes*,
-        each of which can store the same information as a single ``Dataset`` (accessed via ``.ds``).
+        each of which can store the same information as a single ``Dataset`` (accessed via ``.dataset``).
         This data is stored in the same way as in a ``Dataset``, i.e. in the form of data
         :term:`variables<Variable>`, :term:`dimensions<Dimension>`, :term:`coordinates<Coordinate>`,
         and attributes.

@@ -539,7 +539,7 @@ otherwise known as a `"Tree" <https://en.wikipedia.org/wiki/Tree_(graph_theory)>
 
 .. note::
 
-    Technically a `:py:class:`~xarray.DataTree` with more than one child node forms an
+    Technically a :py:class:`~xarray.DataTree` with more than one child node forms an
     `"Ordered Tree" <https://en.wikipedia.org/wiki/Tree_(graph_theory)#Ordered_tree>`_,
     because the children are stored in an Ordered Dictionary. However, this
     distinction only really matters for a few edge cases involving operations
@@ -559,7 +559,7 @@ Creating a DataTree
 One way to create a :py:class:`~xarray.DataTree` from scratch is to create each node individually,
 specifying the nodes' relationship to one another as you create each one.
 
-The :py:class:`~xarray.DataTree`` constructor takes:
+The :py:class:`~xarray.DataTree` constructor takes:
 
 - ``data``: The data that will be stored in this node, represented by a single
   :py:class:`xarray.Dataset`, or a named :py:class:`xarray.DataArray`.
@@ -576,9 +576,14 @@ Let's make a single datatree node with some example data in it:
     dt = xr.DataTree(name="root", dataset=ds1)  # create root node
     dt
 
-At this point our node is also the root node, as every tree has a root node.
+At this point we have created a single node datatree with no parent and no children.
 
-We can add (a copy of) a second node to this tree, assigning it to the parent node dt:
+.. ipython:: python
+
+    dt.parent is None
+    dt.children
+
+We can add a copy of a second node to this tree, assigning it to the parent node ``dt``:
 
 .. ipython:: python
 
@@ -590,8 +595,8 @@ We can add (a copy of) a second node to this tree, assigning it to the parent no
 
 
 Or more idomatically you can create a tree from a dictionary of Datasets and
-DataTrees. In this case we add a new node under ``dt``s 'child-node' by
-providing the explicit path under 'child-node' as the dictionary key:
+DataTrees. In this case we add a new node under ``dt["child-node"]`` by
+providing the explicit path under ``"child-node"`` as the dictionary key:
 
 .. ipython:: python
 
@@ -605,6 +610,8 @@ We have created a tree with three nodes in it:
 .. ipython:: python
 
     dt
+
+
 
 Consistency checks are enforced. For instance, if we try to create a `cycle`,
 where the root node is also a child of a decendent, the constructor will raise
@@ -648,7 +655,7 @@ We can also access all the data in a single node, and its inerited coordinates, 
     dt["child-node"].dataset
 
 This demonstrates the fact that the data in any one node is equivalent to the
-contents of a single :py:class:`~xarray.Dataset` object. The :py:attr:`DataTree.ds <xarray.DataTree.ds>` property
+contents of a single :py:class:`~xarray.Dataset` object. The :py:attr:`DataTree.dataset <xarray.DataTree.dataset>` property
 returns an immutable view, but we can instead extract the node's data contents
 as a new and mutable :py:class:`~xarray.Dataset` object via
 :py:meth:`DataTree.to_dataset() <xarray.DataTree.to_dataset>`:
@@ -790,7 +797,7 @@ automatically include coordinates from higher levels (e.g., ``time`` and ``stati
 
 .. ipython:: python
 
-    dt2["/weather/temperature"].ds
+    dt2["/weather/temperature"].dataset
 
 
 .. _coordinates:
