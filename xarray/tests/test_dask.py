@@ -104,7 +104,8 @@ class TestVariable(DaskTestCase):
             self.assertLazyAndIdentical(self.eager_var, rechunked)
 
             expected_chunksizes = {
-                dim: chunks for dim, chunks in zip(self.lazy_var.dims, expected)
+                dim: chunks
+                for dim, chunks in zip(self.lazy_var.dims, expected, strict=True)
             }
             assert rechunked.chunksizes == expected_chunksizes
 
@@ -354,7 +355,8 @@ class TestDataArrayAndDataset(DaskTestCase):
             self.assertLazyAndIdentical(self.eager_array, rechunked)
 
             expected_chunksizes = {
-                dim: chunks for dim, chunks in zip(self.lazy_array.dims, expected)
+                dim: chunks
+                for dim, chunks in zip(self.lazy_array.dims, expected, strict=True)
             }
             assert rechunked.chunksizes == expected_chunksizes
 
@@ -362,7 +364,8 @@ class TestDataArrayAndDataset(DaskTestCase):
             lazy_dataset = self.lazy_array.to_dataset()
             eager_dataset = self.eager_array.to_dataset()
             expected_chunksizes = {
-                dim: chunks for dim, chunks in zip(lazy_dataset.dims, expected)
+                dim: chunks
+                for dim, chunks in zip(lazy_dataset.dims, expected, strict=True)
             }
             rechunked = lazy_dataset.chunk(chunks)
 
@@ -737,7 +740,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         nonindex_coord = build_dask_array("coord")
         a = DataArray(data, dims=["x"], coords={"y": ("x", nonindex_coord)})
         with suppress(AttributeError):
-            getattr(a, "NOTEXIST")
+            a.NOTEXIST
         assert kernel_call_count == 0
 
     def test_dataset_getattr(self):
@@ -747,7 +750,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         nonindex_coord = build_dask_array("coord")
         ds = Dataset(data_vars={"a": ("x", data)}, coords={"y": ("x", nonindex_coord)})
         with suppress(AttributeError):
-            getattr(ds, "NOTEXIST")
+            ds.NOTEXIST
         assert kernel_call_count == 0
 
     def test_values(self):
@@ -1797,6 +1800,6 @@ def test_minimize_graph_size():
         actual = len([key for key in graph if var in key[0]])
         # assert that we only include each chunk of an index variable
         # is only included once, not the product of number of chunks of
-        # all the other dimenions.
+        # all the other dimensions.
         # e.g. previously for 'x',  actual == numchunks['y'] * numchunks['z']
         assert actual == numchunks[var], (actual, numchunks[var])

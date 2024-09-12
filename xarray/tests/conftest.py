@@ -139,6 +139,26 @@ def d(request, backend, type) -> DataArray | Dataset:
         raise ValueError
 
 
+@pytest.fixture
+def byte_attrs_dataset():
+    """For testing issue #9407"""
+    null_byte = b"\x00"
+    other_bytes = bytes(range(1, 256))
+    ds = Dataset({"x": 1}, coords={"x_coord": [1]})
+    ds["x"].attrs["null_byte"] = null_byte
+    ds["x"].attrs["other_bytes"] = other_bytes
+
+    expected = ds.copy()
+    expected["x"].attrs["null_byte"] = ""
+    expected["x"].attrs["other_bytes"] = other_bytes.decode(errors="replace")
+
+    return {
+        "input": ds,
+        "expected": expected,
+        "h5netcdf_error": r"Invalid value provided for attribute .*: .*\. Null characters .*",
+    }
+
+
 @pytest.fixture(scope="module")
 def create_test_datatree():
     """
@@ -176,14 +196,17 @@ def create_test_datatree():
         set2_data = modify(xr.Dataset({"a": ("x", [2, 3]), "b": ("x", [0.1, 0.2])}))
         root_data = modify(xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])}))
 
-        # Avoid using __init__ so we can independently test it
-        root: DataTree = DataTree(data=root_data)
-        set1: DataTree = DataTree(name="set1", parent=root, data=set1_data)
-        DataTree(name="set1", parent=set1)
-        DataTree(name="set2", parent=set1)
-        set2: DataTree = DataTree(name="set2", parent=root, data=set2_data)
-        DataTree(name="set1", parent=set2)
-        DataTree(name="set3", parent=root)
+        root = DataTree.from_dict(
+            {
+                "/": root_data,
+                "/set1": set1_data,
+                "/set1/set1": None,
+                "/set1/set2": None,
+                "/set2": set2_data,
+                "/set2/set1": None,
+                "/set3": None,
+            }
+        )
 
         return root
 

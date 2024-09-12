@@ -71,9 +71,9 @@ class _UFuncSignature:
 
     Attributes
     ----------
-    input_core_dims : tuple[tuple]
+    input_core_dims : tuple[tuple, ...]
         Core dimension names on each input variable.
-    output_core_dims : tuple[tuple]
+    output_core_dims : tuple[tuple, ...]
         Core dimension names on each output variable.
     """
 
@@ -326,7 +326,7 @@ def apply_dataarray_vfunc(
                 variable, coords=coords, indexes=indexes, name=name, fastpath=True
             )
             for variable, coords, indexes in zip(
-                result_var, result_coords, result_indexes
+                result_var, result_coords, result_indexes, strict=True
             )
         )
     else:
@@ -407,7 +407,7 @@ def _unpack_dict_tuples(
 ) -> tuple[dict[Hashable, Variable], ...]:
     out: tuple[dict[Hashable, Variable], ...] = tuple({} for _ in range(num_outputs))
     for name, values in result_vars.items():
-        for value, results_dict in zip(values, out):
+        for value, results_dict in zip(values, out, strict=True):
             results_dict[name] = value
     return out
 
@@ -422,7 +422,7 @@ def _check_core_dims(signature, variable_args, name):
     """
     missing = []
     for i, (core_dims, variable_arg) in enumerate(
-        zip(signature.input_core_dims, variable_args)
+        zip(signature.input_core_dims, variable_args, strict=True)
     ):
         # Check whether all the dims are on the variable. Note that we need the
         # `hasattr` to check for a dims property, to protect against the case where
@@ -454,7 +454,7 @@ def apply_dict_of_variables_vfunc(
     grouped_by_name = collect_dict_values(args, names, fill_value)
 
     result_vars = {}
-    for name, variable_args in zip(names, grouped_by_name):
+    for name, variable_args in zip(names, grouped_by_name, strict=True):
         core_dim_present = _check_core_dims(signature, variable_args, name)
         if core_dim_present is True:
             result_vars[name] = func(*variable_args)
@@ -546,7 +546,7 @@ def apply_dataset_vfunc(
     if signature.num_outputs > 1:
         out = tuple(
             _fast_dataset(*args)
-            for args in zip(result_vars, list_of_coords, list_of_indexes)
+            for args in zip(result_vars, list_of_coords, list_of_indexes, strict=True)
         )
     else:
         (coord_vars,) = list_of_coords
@@ -616,11 +616,13 @@ def apply_groupby_func(func, *args):
             iterator = itertools.repeat(arg)
         iterators.append(iterator)
 
-    applied: Iterator = (func(*zipped_args) for zipped_args in zip(*iterators))
+    applied: Iterator = (
+        func(*zipped_args) for zipped_args in zip(*iterators, strict=False)
+    )
     applied_example, applied = peek_at(applied)
     combine = first_groupby._combine  # type: ignore[attr-defined]
     if isinstance(applied_example, tuple):
-        combined = tuple(combine(output) for output in zip(*applied))
+        combined = tuple(combine(output) for output in zip(*applied, strict=True))
     else:
         combined = combine(applied)
     return combined
@@ -637,7 +639,7 @@ def unified_dim_sizes(
                 "broadcasting cannot handle duplicate "
                 f"dimensions on a variable: {list(var.dims)}"
             )
-        for dim, size in zip(var.dims, var.shape):
+        for dim, size in zip(var.dims, var.shape, strict=True):
             if dim not in exclude_dims:
                 if dim not in dim_sizes:
                     dim_sizes[dim] = size
@@ -741,7 +743,7 @@ def apply_variable_ufunc(
             if isinstance(arg, Variable)
             else arg
         )
-        for arg, core_dims in zip(args, signature.input_core_dims)
+        for arg, core_dims in zip(args, signature.input_core_dims, strict=True)
     ]
 
     if any(is_chunked_array(array) for array in input_data):
@@ -766,7 +768,7 @@ def apply_variable_ufunc(
             allow_rechunk = dask_gufunc_kwargs.get("allow_rechunk", None)
             if allow_rechunk is None:
                 for n, (data, core_dims) in enumerate(
-                    zip(input_data, signature.input_core_dims)
+                    zip(input_data, signature.input_core_dims, strict=True)
                 ):
                     if is_chunked_array(data):
                         # core dimensions cannot span multiple chunks
@@ -848,7 +850,7 @@ def apply_variable_ufunc(
     )
 
     output: list[Variable] = []
-    for dims, data in zip(output_dims, result_data):
+    for dims, data in zip(output_dims, result_data, strict=True):
         data = as_compatible_data(data)
         if data.ndim != len(dims):
             raise ValueError(
@@ -2179,7 +2181,7 @@ def _calc_idxminmax(
     # Handle chunked arrays (e.g. dask).
     if is_chunked_array(array.data):
         chunkmanager = get_chunked_array_type(array.data)
-        chunks = dict(zip(array.dims, array.chunks))
+        chunks = dict(zip(array.dims, array.chunks, strict=True))
         dask_coord = chunkmanager.from_array(array[dim].data, chunks=chunks[dim])
         data = dask_coord[duck_array_ops.ravel(indx.data)]
         res = indx.copy(data=duck_array_ops.reshape(data, indx.shape))
@@ -2268,7 +2270,7 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
     _, chunked_data = chunkmanager.unify_chunks(*unify_chunks_args)
     chunked_data_iter = iter(chunked_data)
     out: list[Dataset | DataArray] = []
-    for obj, ds in zip(objects, datasets):
+    for obj, ds in zip(objects, datasets, strict=True):
         for k, v in ds._variables.items():
             if v.chunks is not None:
                 ds._variables[k] = v.copy(data=next(chunked_data_iter))

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import operator
 import warnings
 from typing import Literal
@@ -14,7 +15,7 @@ import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core.alignment import broadcast
 from xarray.core.groupby import _consolidate_slices
-from xarray.core.types import InterpOptions
+from xarray.core.types import InterpOptions, ResampleCompatible
 from xarray.groupers import (
     BinGrouper,
     EncodedGroups,
@@ -32,7 +33,7 @@ from xarray.tests import (
     has_dask,
     has_dask_ge_2024_08_1,
     has_flox,
-    has_pandas_ge_2_1,
+    has_pandas_ge_2_2,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
@@ -139,7 +140,7 @@ def test_multi_index_groupby_sum() -> None:
         )
         assert_equal(expected, ds)
 
-    if not has_pandas_ge_2_1:
+    if not has_pandas_ge_2_2:
         # the next line triggers a mysterious multiindex error on pandas 2.0
         return
 
@@ -587,7 +588,7 @@ def test_groupby_repr(obj, dim) -> None:
     N = len(np.unique(obj[dim]))
     expected = f"<{obj.__class__.__name__}GroupBy"
     expected += f", grouped over 1 grouper(s), {N} groups in total:"
-    expected += f"\n\t{dim!r}: {N} groups with labels "
+    expected += f"\n    {dim!r}: {N} groups with labels "
     if dim == "x":
         expected += "1, 2, 3, 4, 5>"
     elif dim == "y":
@@ -604,7 +605,7 @@ def test_groupby_repr_datetime(obj) -> None:
     actual = repr(obj.groupby("t.month"))
     expected = f"<{obj.__class__.__name__}GroupBy"
     expected += ", grouped over 1 grouper(s), 12 groups in total:\n"
-    expected += "\t'month': 12 groups with labels "
+    expected += "    'month': 12 groups with labels "
     expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12>"
     assert actual == expected
 
@@ -810,7 +811,7 @@ def test_groupby_dataset() -> None:
         ("b", data.isel(x=[1])),
         ("c", data.isel(x=[2])),
     ]
-    for actual1, expected1 in zip(groupby, expected_items):
+    for actual1, expected1 in zip(groupby, expected_items, strict=True):
         assert actual1[0] == expected1[0]
         assert_equal(actual1[1], expected1[1])
 
@@ -1257,12 +1258,12 @@ class TestDataArrayGroupBy:
 
     def test_groupby_iter(self) -> None:
         for (act_x, act_dv), (exp_x, exp_ds) in zip(
-            self.dv.groupby("y"), self.ds.groupby("y")
+            self.dv.groupby("y"), self.ds.groupby("y"), strict=True
         ):
             assert exp_x == act_x
             assert_identical(exp_ds["foo"], act_dv)
             for (_, exp_dv), (_, act_dv) in zip(
-                self.dv.groupby("x"), self.dv.groupby("x")
+                self.dv.groupby("x"), self.dv.groupby("x"), strict=True
             ):
                 assert_identical(exp_dv, act_dv)
 
@@ -1745,7 +1746,7 @@ class TestDataArrayGroupBy:
         bincoord = np.array(
             [
                 pd.Interval(left, right, closed="right")
-                for left, right in zip(bins[:-1], bins[1:])
+                for left, right in zip(bins[:-1], bins[1:], strict=True)
             ],
             dtype=object,
         )
@@ -1813,7 +1814,21 @@ class TestDataArrayGroupBy:
 class TestDataArrayResample:
     @pytest.mark.parametrize("shuffle", [True, False])
     @pytest.mark.parametrize("use_cftime", [True, False])
-    def test_resample(self, use_cftime: bool, shuffle: bool) -> None:
+    @pytest.mark.parametrize(
+        "resample_freq",
+        [
+            "24h",
+            "123456s",
+            "1234567890us",
+            pd.Timedelta(hours=2),
+            pd.offsets.MonthBegin(),
+            pd.offsets.Second(123456),
+            datetime.timedelta(days=1, hours=6),
+        ],
+    )
+    def test_resample(
+        self, use_cftime: bool, shuffle: bool, resample_freq: ResampleCompatible
+    ) -> None:
         if use_cftime and not has_cftime:
             pytest.skip()
         times = xr.date_range(
@@ -1835,10 +1850,9 @@ class TestDataArrayResample:
 
         array = DataArray(np.arange(10), [("time", times)])
 
-        rs = array.resample(time="24h")
-
+        rs = array.resample(time=resample_freq)
         actual = rs.mean()
-        expected = resample_as_pandas(array, "24h")
+        expected = resample_as_pandas(array, resample_freq)
         assert_identical(expected, actual)
         assert_identical(expected, rs.shuffle().mean())
 
@@ -1853,11 +1867,11 @@ class TestDataArrayResample:
         assert_identical(expected, shuffled)
 
         with pytest.raises(ValueError, match=r"Index must be monotonic"):
-            array[[2, 0, 1]].resample(time="1D")
+            array[[2, 0, 1]].resample(time=resample_freq)
 
         reverse = array.isel(time=slice(-1, None, -1))
         with pytest.raises(ValueError):
-            reverse.resample(time="1D").mean()
+            reverse.resample(time=resample_freq).mean()
 
     @pytest.mark.parametrize("use_cftime", [True, False])
     def test_resample_doctest(self, use_cftime: bool) -> None:
@@ -2252,6 +2266,67 @@ class TestDataArrayResample:
 
 
 class TestDatasetResample:
+    @pytest.mark.parametrize("use_cftime", [True, False])
+    @pytest.mark.parametrize(
+        "resample_freq",
+        [
+            "24h",
+            "123456s",
+            "1234567890us",
+            pd.Timedelta(hours=2),
+            pd.offsets.MonthBegin(),
+            pd.offsets.Second(123456),
+            datetime.timedelta(days=1, hours=6),
+        ],
+    )
+    def test_resample(
+        self, use_cftime: bool, resample_freq: ResampleCompatible
+    ) -> None:
+        if use_cftime and not has_cftime:
+            pytest.skip()
+        times = xr.date_range(
+            "2000-01-01", freq="6h", periods=10, use_cftime=use_cftime
+        )
+
+        def resample_as_pandas(ds, *args, **kwargs):
+            ds_ = ds.copy(deep=True)
+            if use_cftime:
+                ds_["time"] = times.to_datetimeindex()
+            result = Dataset.from_dataframe(
+                ds_.to_dataframe().resample(*args, **kwargs).mean()
+            )
+            if use_cftime:
+                result = result.convert_calendar(
+                    calendar="standard", use_cftime=use_cftime
+                )
+            return result
+
+        ds = Dataset(
+            {
+                "foo": ("time", np.random.randint(1, 1000, 10)),
+                "bar": ("time", np.random.randint(1, 1000, 10)),
+                "time": times,
+            }
+        )
+
+        actual = ds.resample(time=resample_freq).mean()
+        expected = resample_as_pandas(ds, resample_freq)
+        assert_identical(expected, actual)
+
+        actual = ds.resample(time=resample_freq).reduce(np.mean)
+        assert_identical(expected, actual)
+
+        actual = ds.resample(time=resample_freq, closed="right").mean()
+        expected = resample_as_pandas(ds, resample_freq, closed="right")
+        assert_identical(expected, actual)
+
+        with pytest.raises(ValueError, match=r"Index must be monotonic"):
+            ds.isel(time=[2, 0, 1]).resample(time=resample_freq)
+
+        reverse = ds.isel(time=slice(-1, None, -1))
+        with pytest.raises(ValueError):
+            reverse.resample(time=resample_freq).mean()
+
     def test_resample_and_first(self) -> None:
         times = pd.date_range("2000-01-01", freq="6h", periods=10)
         ds = Dataset(

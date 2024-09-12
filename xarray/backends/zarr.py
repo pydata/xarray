@@ -186,7 +186,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # TODO: incorporate synchronizer to allow writes from multiple dask
     # threads
     if var_chunks and enc_chunks_tuple:
-        for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks):
+        for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks, strict=True):
             for dchunk in dchunks[:-1]:
                 if dchunk % zchunk:
                     base_error = (
@@ -548,13 +548,13 @@ class ZarrStore(AbstractWritableDataStore):
 
         encoding = {
             "chunks": zarr_array.chunks,
-            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks)),
+            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks, strict=True)),
             "compressor": zarr_array.compressor,
             "filters": zarr_array.filters,
         }
         # _FillValue needs to be in attributes, not encoding, so it will get
         # picked up by decode_cf
-        if getattr(zarr_array, "fill_value") is not None:
+        if zarr_array.fill_value is not None:
             attributes["_FillValue"] = zarr_array.fill_value
 
         return Variable(dimensions, data, attributes, encoding)
@@ -576,7 +576,7 @@ class ZarrStore(AbstractWritableDataStore):
         dimensions = {}
         for k, v in self.zarr_group.arrays():
             dim_names, _ = _get_zarr_dims_and_attrs(v, DIMENSION_KEY, try_nczarr)
-            for d, s in zip(dim_names, v.shape):
+            for d, s in zip(dim_names, v.shape, strict=True):
                 if d in dimensions and dimensions[d] != s:
                     raise ValueError(
                         f"found conflicting lengths for dimension {d} "
@@ -1262,7 +1262,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             ds = open_dataset(
                 filename_or_obj, store=store, group=path_group, engine="zarr", **kwargs
             )
-            new_node: DataTree = DataTree(name=NodePath(path_group).name, data=ds)
+            new_node = DataTree(name=NodePath(path_group).name, dataset=ds)
             tree_root._set_item(
                 path_group,
                 new_node,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from enum import Enum
-from types import ModuleType
+from types import EllipsisType, ModuleType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -92,7 +92,7 @@ _DimsLike = Union[str, Iterable[_Dim]]
 # TODO: np.array_api was bugged and didn't allow (None,), but should!
 # https://github.com/numpy/numpy/pull/25022
 # https://github.com/data-apis/array-api/pull/674
-_IndexKey = Union[int, slice, "ellipsis"]
+_IndexKey = Union[int, slice, EllipsisType]
 _IndexKeys = tuple[_IndexKey, ...]  #  tuple[Union[_IndexKey, None], ...]
 _IndexKeyLike = Union[_IndexKey, _IndexKeys]
 

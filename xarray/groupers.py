@@ -14,14 +14,21 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 import numpy as np
 import pandas as pd
 
-from xarray.coding.cftime_offsets import _new_to_legacy_freq
+from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
 from xarray.core import duck_array_ops
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.groupby import T_Group, _DummyGroup
 from xarray.core.indexes import safe_cast_to_index
 from xarray.core.resample_cftime import CFTimeGrouper
-from xarray.core.types import Bins, DatetimeLike, GroupIndices, Self, SideOptions
+from xarray.core.types import (
+    Bins,
+    DatetimeLike,
+    GroupIndices,
+    ResampleCompatible,
+    Self,
+    SideOptions,
+)
 from xarray.core.variable import Variable
 
 __all__ = [
@@ -194,7 +201,7 @@ class UniqueGrouper(Grouper):
             raise ValueError(
                 "Failed to group data. Are you grouping by a variable that is all NaN?"
             )
-        codes = self.group.copy(data=codes_.reshape(self.group.shape))
+        codes = self.group.copy(data=codes_.reshape(self.group.shape), deep=False)
         unique_coord = Variable(
             dims=codes.name, data=unique_values, attrs=self.group.attrs
         )
@@ -222,7 +229,7 @@ class UniqueGrouper(Grouper):
             full_index = pd.RangeIndex(self.group.size)
             coords = Coordinates()
         else:
-            codes = self.group.copy(data=size_range)
+            codes = self.group.copy(data=size_range, deep=False)
             unique_coord = self.group.variable.to_base_variable()
             full_index = self.group_as_index
             if isinstance(full_index, pd.MultiIndex):
@@ -356,7 +363,7 @@ class TimeResampler(Resampler):
 
     Attributes
     ----------
-    freq : str
+    freq : str, datetime.timedelta, pandas.Timestamp, or pandas.DateOffset
         Frequency to resample to. See `Pandas frequency
         aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
         for a list of possible values.
@@ -378,7 +385,7 @@ class TimeResampler(Resampler):
         An offset timedelta added to the origin.
     """
 
-    freq: str
+    freq: ResampleCompatible
     closed: SideOptions | None = field(default=None)
     label: SideOptions | None = field(default=None)
     origin: str | DatetimeLike = field(default="start_day")
@@ -417,6 +424,12 @@ class TimeResampler(Resampler):
                 offset=offset,
             )
         else:
+            if isinstance(self.freq, BaseCFTimeOffset):
+                raise ValueError(
+                    "'BaseCFTimeOffset' resample frequencies are only supported "
+                    "when resampling a 'CFTimeIndex'"
+                )
+
             self.index_grouper = pd.Grouper(
                 # TODO remove once requiring pandas >= 2.2
                 freq=_new_to_legacy_freq(self.freq),
@@ -460,14 +473,14 @@ class TimeResampler(Resampler):
         full_index, first_items, codes_ = self._get_index_and_items()
         sbins = first_items.values.astype(np.int64)
         group_indices: GroupIndices = tuple(
-            [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])]
+            [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:], strict=True)]
             + [slice(sbins[-1], None)]
         )
 
         unique_coord = Variable(
             dims=group.name, data=first_items.index, attrs=group.attrs
         )
-        codes = group.copy(data=codes_.reshape(group.shape))
+        codes = group.copy(data=codes_.reshape(group.shape), deep=False)
 
         return EncodedGroups(
             codes=codes,
