@@ -581,7 +581,7 @@ class DataTree(
         ----------
         inherited : bool, optional
             If False, only include coordinates and indexes defined at the level
-            of this DataTree node, excluding inherited coordinates.
+            of this DataTree node, excluding any inherited coordinates and indexes.
 
         See Also
         --------
