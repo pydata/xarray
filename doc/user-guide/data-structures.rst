@@ -13,6 +13,10 @@ Data Structures
     np.random.seed(123456)
     np.set_printoptions(threshold=10)
 
+    %xmode minimal
+
+
+
 DataArray
 ---------
 
@@ -589,13 +593,13 @@ We can add a copy of a second node to this tree, assigning it to the parent node
 
     dataset2 = xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])})
     dt2 = xr.DataTree(name="a", dataset=dataset2)
-    # Make the second datatree a child of the original
+    # Add a copy of the second Datatree to the root
     dt.children = {"child-node": dt2}
     dt
 
 
-Or more idomatically you can create a tree from a dictionary of Datasets and
-DataTrees. In this case we add a new node under ``dt["child-node"]`` by
+Or more idiomatically you can create a tree from a dictionary of ``Datasets`` and
+`DataTrees`. In this case we add a new node under ``dt["child-node"]`` by
 providing the explicit path under ``"child-node"`` as the dictionary key:
 
 .. ipython:: python
@@ -620,7 +624,7 @@ an (:py:class:`~xarray.InvalidTreeError`):
 .. ipython:: python
     :okexcept:
 
-    dt.children = {"child": dt}
+    dt["child-node"].children = {"new-child": dt}
 
 Alternatively you can also create a :py:class:`~xarray.DataTree` object from:
 
@@ -628,7 +632,7 @@ Alternatively you can also create a :py:class:`~xarray.DataTree` object from:
 - A well formed netCDF or Zarr file on disk with :py:func:`~xarray.open_datatree()`. See :ref:`reading and writing files <io>`.
 
 For data files with groups that do not not align see
-:py:func:`xarray.open_group` or target each group individually
+:py:func:`xarray.open_groups` or target each group individually
 :py:func:`xarray.open_dataset(group='groupname') <xarray.open_dataset>`. For
 more information about coordinate alignment see :ref:`datatree-inheritance`
 
@@ -693,10 +697,10 @@ datatree from scratch, we could have written:
 
     dt = xr.DataTree(name="root")
     dt["foo"] = "orange"
-    dt["a"] = xr.DataTree(
+    dt["child-node"] = xr.DataTree(
         dataset=xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])})
     )
-    dt["a/b/zed"] = np.nan
+    dt["child-node/new-zed-node/zed"] = np.nan
     dt
 
 To change the variables in a node of a :py:class:`~xarray.DataTree`, you can use all the

@@ -104,7 +104,7 @@ Homer is currently listed as having no parent (the so-called "root node" of this
 .. ipython:: python
 
     abe = xr.DataTree(name="Abe")
-    homer.parent = abe
+    abe.children = {"Homer": homer}
 
 Abe is now the "root" of this tree, which we can see by examining the :py:class:`~xarray.DataTree.root` property of any node in the tree
 
@@ -117,9 +117,8 @@ We can see the whole tree by printing Abe's node or just part of the tree by pri
 .. ipython:: python
 
     abe
-    homer
+    abe["Homer"]
 
-We can see that Homer is aware of his parentage, and we say that Homer and his children form a "subtree" of the larger Simpson family tree.
 
 In episode 28, Abe Simpson reveals that he had another son, Herbert "Herb" Simpson.
 We can add Herbert to the family tree without displacing Homer by :py:meth:`~xarray.DataTree.assign`-ing another child to Abe:
@@ -128,10 +127,14 @@ We can add Herbert to the family tree without displacing Homer by :py:meth:`~xar
 
     herbert = xr.DataTree(name="Herb")
     abe = abe.assign({"Herbert": herbert})
+    abe
+
+    abe["Herbert"].name
+    herbert.name
 
 .. note::
-   This example shows a minor subtlety - the returned tree has Homer's brother listed as ``"Herbert"``,
-   but the original node was named "Herbert". Not only are names overridden when stored as keys like this,
+   This example shows a subtlety - the returned tree has Homer's brother listed as ``"Herbert"``,
+   but the original node was named "Herb". Not only are names overridden when stored as keys like this,
    but the new node is a copy, so that the original node that was reference is unchanged (i.e. ``herbert.name == "Herb"`` still).
    In other words, nodes are copied into trees, not inserted into them.
    This is intentional, and mirrors the behaviour when storing named :py:class:`~xarray.DataArray` objects inside datasets.
@@ -143,7 +146,7 @@ If we try similar time-travelling hijinks with Homer, we get a :py:class:`~xarra
 .. ipython:: python
     :okexcept:
 
-    abe.parent = homer
+    abe["Homer"].children = {"Abe": abe}
 
 .. _evolutionary tree:
 
@@ -155,8 +158,7 @@ Let's use a different example of a tree to discuss more complex relationships be
 .. ipython:: python
 
     vertebrates = xr.DataTree.from_dict(
-        name="Vertebrae",
-        d={
+        {
             "/Sharks": None,
             "/Bony Skeleton/Ray-finned Fish": None,
             "/Bony Skeleton/Four Limbs/Amphibians": None,
@@ -165,6 +167,7 @@ Let's use a different example of a tree to discuss more complex relationships be
             "/Bony Skeleton/Four Limbs/Amniotic Egg/Two Fenestrae/Dinosaurs": None,
             "/Bony Skeleton/Four Limbs/Amniotic Egg/Two Fenestrae/Birds": None,
         },
+        name="Vertebrae",
     )
 
     primates = vertebrates["/Bony Skeleton/Four Limbs/Amniotic Egg/Hair/Primates"]
@@ -172,7 +175,7 @@ Let's use a different example of a tree to discuss more complex relationships be
         "/Bony Skeleton/Four Limbs/Amniotic Egg/Two Fenestrae/Dinosaurs"
     ]
 
-We have used the :py:meth:`~xarray.DataTree.from_dict` constructor method as an alternate way to quickly create a whole tree,
+We have used the :py:meth:`~xarray.DataTree.from_dict` constructor method as a prefered way to quickly create a whole tree,
 and :ref:`filesystem paths` (to be explained shortly) to select two nodes of interest.
 
 .. ipython:: python
@@ -250,7 +253,7 @@ names of data variables:
 .. ipython:: python
 
     dt = xr.DataTree(
-        data=xr.Dataset({"foo": 0, "bar": 1}),
+        dataset=xr.Dataset({"foo": 0, "bar": 1}),
         children={"a": xr.DataTree(), "b": xr.DataTree()},
     )
     print(dt)
@@ -303,8 +306,11 @@ The root node is referred to by ``"/"``, so the path from the root node to its g
 
 .. ipython:: python
 
-    # absolute path will start from root node
-    lisa["/Homer/Bart"].name
+    # access lisa's sibling by a relative path.
+    lisa["../Bart"]
+    # or from absolute path
+    lisa["/Homer/Bart"]
+
 
 Relative paths between nodes also support the ``"../"`` syntax to mean the parent of the current node.
 We can use this with ``__setitem__`` to add a missing entry to our evolutionary tree, but add it relative to a more familiar node of interest:
@@ -338,7 +344,7 @@ we can construct a complex tree quickly using the alternative constructor :py:me
 .. note::
 
     Notice that using the path-like syntax will also create any intermediate empty nodes necessary to reach the end of the specified path
-    (i.e. the node labelled `"/a/c"` in this case.)
+    (i.e. the node labelled ``"/a/c"`` in this case.)
     This is to help avoid lots of redundant entries when creating deeply-nested trees using :py:meth:`xarray.DataTree.from_dict`.
 
 .. _iterating over trees:
@@ -404,7 +410,7 @@ First lets recreate the tree but with an `age` data variable in every node:
 .. ipython:: python
 
     simpsons = xr.DataTree.from_dict(
-        d={
+        {
             "/": xr.Dataset({"age": 83}),
             "/Herbert": xr.Dataset({"age": 40}),
             "/Homer": xr.Dataset({"age": 39}),
@@ -542,13 +548,13 @@ Mapping Custom Functions Over Trees
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can map custom computation over each node in a tree using :py:meth:`xarray.DataTree.map_over_subtree`.
-You can map any function, so long as it takes `xarray.Dataset` objects as one (or more) of the input arguments,
+You can map any function, so long as it takes :py:class:`xarray.Dataset` objects as one (or more) of the input arguments,
 and returns one (or more) xarray datasets.
 
 .. note::
 
-    Functions passed to :py:func:`map_over_subtree` cannot alter nodes in-place.
-    Instead they must return new `xarray.Dataset` objects.
+    Functions passed to :py:func:`~xarray.DataTree.map_over_subtree` cannot alter nodes in-place.
+    Instead they must return new :py:class:`xarray.Dataset` objects.
 
 For example, we can define a function to calculate the Root Mean Square of a timeseries
 
