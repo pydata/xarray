@@ -541,15 +541,6 @@ has at most one parent, there can only ever be one root node in a given tree.
 The overall structure is technically a `connected acyclic undirected rooted graph`,
 otherwise known as a `"Tree" <https://en.wikipedia.org/wiki/Tree_(graph_theory)>`_.
 
-.. note::
-
-    Technically a :py:class:`~xarray.DataTree` with more than one child node forms an
-    `"Ordered Tree" <https://en.wikipedia.org/wiki/Tree_(graph_theory)#Ordered_tree>`_,
-    because the children are stored in an Ordered Dictionary. However, this
-    distinction only really matters for a few edge cases involving operations
-    on multiple trees simultaneously, and can safely be ignored by most users.
-
-
 :py:class:`~xarray.DataTree` objects can also optionally have a ``name`` as well as ``attrs``,
 just like a :py:class:`~xarray.DataArray`. Again these are not normally used unless explicitly
 accessed by the user.
