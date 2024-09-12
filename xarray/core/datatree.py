@@ -468,14 +468,9 @@ class DataTree(
         # shallow copy to avoid modifying arguments in-place (see GH issue #9196)
         self.children = {name: child.copy() for name, child in children.items()}
 
-<<<<<<< eschalk/make-illegal-path-like-variable-names-when-dt-from-ds
-    def _set_node_data(self, ds: Dataset):
-        _check_for_slashes_in_names(ds.variables)
-        data_vars, coord_vars = _collect_data_and_coord_variables(ds)
-=======
     def _set_node_data(self, dataset: Dataset):
+        _check_for_slashes_in_names(ds.variables)
         data_vars, coord_vars = _collect_data_and_coord_variables(dataset)
->>>>>>> main
         self._data_variables = data_vars
         self._node_coord_variables = coord_vars
         self._node_dims = dataset._dims
