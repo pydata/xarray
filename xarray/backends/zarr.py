@@ -1295,12 +1295,12 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         return groups_dict
 
 
-def _iter_zarr_groups(root: ZarrGroup, parent: str = "/"):
+def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
 
-    parent = NodePath(parent)
-    yield str(parent)
+    parent_nodepath = NodePath(parent)
+    yield str(parent_nodepath)
     for path, group in root.groups():
-        gpath = parent / path
+        gpath = parent_nodepath / path
         yield str(gpath)
         yield from _iter_zarr_groups(group, parent=gpath)
 
