@@ -205,6 +205,8 @@ class TreeNode(Generic[Tree]):
 
         seen = set()
         for name, child in children.items():
+            if not isinstance(name, str):
+                raise TypeError("child name must be a string or None")
             if "/" in name:
                 raise ValueError("child names cannot contain forward slashes")
 
