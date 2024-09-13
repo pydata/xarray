@@ -205,6 +205,9 @@ class TreeNode(Generic[Tree]):
 
         seen = set()
         for name, child in children.items():
+            if "/" in name:
+                raise ValueError("child names cannot contain forward slashes")
+
             if not isinstance(child, TreeNode):
                 raise TypeError(
                     f"Cannot add object {name}. It is of type {type(child)}, "
