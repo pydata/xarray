@@ -24,9 +24,27 @@ class TestTreeCreation:
         assert dt.children == {}
         assert_identical(dt.to_dataset(), xr.Dataset())
 
-    def test_unnamed(self):
+    def test_name(self):
         dt = DataTree()
         assert dt.name is None
+
+        dt = DataTree(name="foo")
+        assert dt.name == "foo"
+
+        dt.name = "bar"
+        assert dt.name == "bar"
+
+        dt = DataTree(children={"foo": DataTree()})
+        assert dt["/foo"].name == "foo"
+        with pytest.raises(
+            ValueError, match="cannot set the name of a node with a parent"
+        ):
+            dt["/foo"].name = "bar"
+
+        detached = dt["/foo"].copy()
+        assert detached.name == "foo"
+        detached.name = "bar"
+        assert detached.name == "bar"
 
     def test_bad_names(self):
         with pytest.raises(TypeError):
