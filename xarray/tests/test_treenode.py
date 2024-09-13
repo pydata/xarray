@@ -270,15 +270,22 @@ class TestPruning:
             del john["Mary"]
 
 
-class TestNamesCannotContainSlashes:
+class TestValidNames:
     def test_child_keys(self):
         parent = TreeNode()
         with pytest.raises(ValueError, match="cannot contain forward slashes"):
             parent.children = {"a/b": TreeNode()}
 
+        parent = TreeNode()
+        with pytest.raises(TypeError, match="must be a string or None"):
+            parent.children = {0: TreeNode()}
+
     def test_node_names(self):
         with pytest.raises(ValueError, match="cannot contain forward slashes"):
             NamedNode(name="a/b")
+
+        with pytest.raises(TypeError, match="must be a string or None"):
+            NamedNode(name=0)
 
 
 def create_test_tree() -> tuple[NamedNode, NamedNode]:
