@@ -852,6 +852,37 @@ class TestTreeFromDict:
         with pytest.raises(TypeError):
             DataTree.from_dict(data)  # type: ignore[arg-type]
 
+    def test_conflicting_coords(self):
+        tree = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": 1}),
+                "/sub": xr.Dataset(coords={"x": 2}),
+            },
+            conflicting_coords="ignore",
+        )
+        expected = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": 1}),
+                "/sub": xr.Dataset(),
+            }
+        )
+        assert_identical(tree, expected)
+
+        with pytest.raises(
+            ValueError,
+            match="coordinate 'x' on node '/sub' is also found on a parent node",
+        ):
+            DataTree.from_dict(
+                {
+                    "/": xr.Dataset(coords={"x": 1}),
+                    "/sub": xr.Dataset(coords={"x": 2}),
+                },
+                conflicting_coords="error",
+            )
+
+        with pytest.raises(ValueError, match="conflicting coordinates mode must be in"):
+            DataTree.from_dict({"/sub": xr.Dataset()}, conflicting_coords="invalid")  # type: ignore
+
 
 class TestDatasetView:
     def test_view_contents(self):
@@ -1166,11 +1197,11 @@ class TestInheritance:
         )
         assert dt.coords.keys() == {"x", "y"}
         root_coords = {"x": 1, "y": 2}
-        sub_coords = {"x": 4, "y": 2, "z": 3}
+        sub_coords = {"x": 1, "y": 2, "z": 3}
         xr.testing.assert_equal(dt["/x"], xr.DataArray(1, coords=root_coords))
         xr.testing.assert_equal(dt["/y"], xr.DataArray(2, coords=root_coords))
         assert dt["/b"].coords.keys() == {"x", "y", "z"}
-        xr.testing.assert_equal(dt["/b/x"], xr.DataArray(4, coords=sub_coords))
+        xr.testing.assert_equal(dt["/b/x"], xr.DataArray(1, coords=sub_coords))
         xr.testing.assert_equal(dt["/b/y"], xr.DataArray(2, coords=sub_coords))
         xr.testing.assert_equal(dt["/b/z"], xr.DataArray(3, coords=sub_coords))
 
@@ -1517,6 +1548,15 @@ class TestOps:
         # TODO: Remove ignore when ops.py is migrated?
         result = dt * dt  # type: ignore[operator]
         assert_equal(result, expected)
+
+    def test_arithmetic_inherited_coords(self):
+        tree = DataTree(xr.Dataset(coords={"x": [1, 2, 3]}))
+        tree["/foo"] = DataTree(xr.Dataset({"bar": ("x", [4, 5, 6])}))
+        actual = 2 * tree
+        expected = tree.copy()
+        expected["/foo/bar"].data = np.array([8, 10, 12])
+        assert "x" not in tree.children["foo"].to_dataset(inherited=False).coords
+        assert_identical(actual, tree)
 
 
 class TestUFuncs:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import itertools
 import textwrap
 from collections import ChainMap
@@ -373,6 +374,10 @@ class DatasetView(Dataset):
         return Dataset(variables)
 
 
+CONFLICTING_COORDS_MODES = {"error", "ignore"}
+ConflictingCoordsMode = Literal["ignore", "raise"]
+
+
 class DataTree(
     NamedNode,
     MappedDatasetMethodsMixin,
@@ -414,6 +419,7 @@ class DataTree(
     _attrs: dict[Hashable, Any] | None
     _encoding: dict[Hashable, Any] | None
     _close: Callable[[], None] | None
+    _conflicting_coords_mode: ConflictingCoordsMode
 
     __slots__ = (
         "_name",
@@ -427,6 +433,7 @@ class DataTree(
         "_attrs",
         "_encoding",
         "_close",
+        "_conflicting_coords_mode",
     )
 
     def __init__(
@@ -459,9 +466,10 @@ class DataTree(
         --------
         DataTree.from_dict
         """
+        self._conflicting_coords_mode: str = "ignore"
         self._set_node_data(_to_new_dataset(dataset))
-
-        # comes after setting node data as this will check for clashes between child names and existing variable names
+        # comes after setting node data as this will check for clashes between
+        # child names and existing variable names
         super().__init__(name=name, children=children)
 
     def _set_node_data(self, dataset: Dataset):
@@ -485,6 +493,55 @@ class DataTree(
         node_ds = self.to_dataset(inherited=False)
         parent_ds = parent._to_dataset_view(rebuild_dims=False, inherited=True)
         check_alignment(path, node_ds, parent_ds, self.children)
+
+    @contextlib.contextmanager
+    def _with_conflicting_coords_mode(self, mode: ConflictingCoordsMode):
+        """Set handling of duplicated inherited coordinates on this object.
+
+        This private context manager is an indirect way to control the handling
+        of duplicated inherited coordinates, which is done inside _post_attach()
+        and hence is difficult to directly parameterize.
+        """
+        if mode not in CONFLICTING_COORDS_MODES:
+            raise ValueError(
+                f"conflicting coordinates mode must be in {CONFLICTING_COORDS_MODES}, got {mode!r}"
+            )
+        assert self.parent is None
+        original_mode = self._conflicting_coords_mode
+        self._conflicting_coords_mode = mode
+        try:
+            yield
+        finally:
+            self._conflicting_coords_mode = original_mode
+
+    def _dedup_inherited_coordinates(self):
+        removed_something = False
+        for name in self._coord_variables.parents:
+            if name in self._node_coord_variables:
+                indexed = name in self._node_indexes
+                if indexed:
+                    del self._node_indexes[name]
+                elif self.root._conflicting_coords_mode == "error":
+                    # error only for non-indexed coordinates, which are not
+                    # checked for equality
+                    raise ValueError(
+                        f"coordinate {name!r} on node {self.path!r} is also found on a parent node"
+                    )
+
+                del self._node_coord_variables[name]
+                removed_something = True
+
+        if removed_something:
+            self._node_dims = calculate_dimensions(
+                self._data_variables | self._node_coord_variables
+            )
+
+        for child in self._children.values():
+            child._dedup_inherited_coordinates()
+
+    def _post_attach(self: DataTree, parent: DataTree, name: str) -> None:
+        super()._post_attach(parent, name)
+        self._dedup_inherited_coordinates()
 
     @property
     def _coord_variables(self) -> ChainMap[Hashable, Variable]:
@@ -1055,6 +1112,7 @@ class DataTree(
         d: Mapping[str, Dataset | DataTree | None],
         /,
         name: str | None = None,
+        conflicting_coords: ConflictingCoordsMode = "ignore",
     ) -> DataTree:
         """
         Create a datatree from a dictionary of data objects, organised by paths into the tree.
@@ -1070,6 +1128,11 @@ class DataTree(
             To assign data to the root node of the tree use "/" as the path.
         name : Hashable | None, optional
             Name for the root node of the tree. Default is None.
+        conflicting_coords : "ignore" or "error"
+            How to handle repeated coordinates without an associated index
+            between parent and child nodes. By default, such coordinates are
+            dropped from child nodes. Alternatively, an error can be raise when
+            they are encountered.
 
         Returns
         -------
@@ -1097,23 +1160,27 @@ class DataTree(
             return len(NodePath(pathstr).parts)
 
         if d_cast:
-            # Populate tree with children determined from data_objects mapping
-            # Sort keys by depth so as to insert nodes from root first (see GH issue #9276)
-            for path, data in sorted(d_cast.items(), key=depth):
-                # Create and set new node
-                node_name = NodePath(path).name
-                if isinstance(data, DataTree):
-                    new_node = data.copy()
-                elif isinstance(data, Dataset) or data is None:
-                    new_node = cls(name=node_name, dataset=data)
-                else:
-                    raise TypeError(f"invalid values: {data}")
-                obj._set_item(
-                    path,
-                    new_node,
-                    allow_overwrite=False,
-                    new_nodes_along_path=True,
-                )
+            # Populate tree with children determined from data_objects mapping.
+            # Ensure the result object has the right handling of conflicting
+            # coordinates.
+            with obj._with_conflicting_coords_mode(conflicting_coords):
+                # Sort keys by depth so as to insert nodes from root first (see
+                # GH issue #9276)
+                for path, data in sorted(d_cast.items(), key=depth):
+                    # Create and set new node
+                    node_name = NodePath(path).name
+                    if isinstance(data, DataTree):
+                        new_node = data.copy()
+                    elif isinstance(data, Dataset) or data is None:
+                        new_node = cls(name=node_name, dataset=data)
+                    else:
+                        raise TypeError(f"invalid values: {data}")
+                    obj._set_item(
+                        path,
+                        new_node,
+                        allow_overwrite=False,
+                        new_nodes_along_path=True,
+                    )
 
         return obj
 
