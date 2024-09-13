@@ -276,7 +276,6 @@ class TestValidNames:
         with pytest.raises(ValueError, match="cannot contain forward slashes"):
             parent.children = {"a/b": TreeNode()}
 
-        parent: TreeNode = TreeNode()
         with pytest.raises(TypeError, match="must be a string or None"):
             parent.children = {0: TreeNode()}  # type: ignore[dict-item]
 
