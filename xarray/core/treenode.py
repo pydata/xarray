@@ -205,6 +205,8 @@ class TreeNode(Generic[Tree]):
 
         seen = set()
         for name, child in children.items():
+            _validate_name(name)
+
             if not isinstance(child, TreeNode):
                 raise TypeError(
                     f"Cannot add object {name}. It is of type {type(child)}, "
@@ -673,8 +675,8 @@ class NamedNode(TreeNode, Generic[Tree]):
     def name(self, name: str | None) -> None:
         if self.parent is not None:
             raise ValueError(
-                "cannot set the name of a node which already has a parent. Consider creating "
-                "a detached copy of this node via .copy()."
+                "cannot set the name of a node which already has a parent. "
+                "Consider creating a detached copy of this node via .copy() "
                 "on the parent node."
             )
         _validate_name(name)
@@ -687,12 +689,8 @@ class NamedNode(TreeNode, Generic[Tree]):
         return repr_value
 
     def __str__(self) -> str:
-        return f"NamedNode('{self.name}')" if self.name else "NamedNode()"
-
-    def _post_attach(self: AnyNamedNode, parent: AnyNamedNode, name: str) -> None:
-        """Ensures child has name attribute corresponding to key under which it has been stored."""
-        _validate_name(name)  # is this check redundant?
-        self._name = name
+        name_repr = repr(self.name) if self.name is not None else ""
+        return f"NamedNode({name_repr})"
 
     def _copy_node(
         self: AnyNamedNode,
