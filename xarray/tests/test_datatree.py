@@ -37,7 +37,7 @@ class TestTreeCreation:
         dt = DataTree(children={"foo": DataTree()})
         assert dt["/foo"].name == "foo"
         with pytest.raises(
-            ValueError, match="cannot set the name of a node with a parent"
+            ValueError, match="cannot set the name of a node which already has a parent"
         ):
             dt["/foo"].name = "bar"
 
