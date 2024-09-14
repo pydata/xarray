@@ -14,7 +14,7 @@ If you’ve been using Xarray to read in large datasets or split up data across 
     import xarray
 
     ds = xr.open_zarr("/path/to/data.zarr")
-    timeseries = ds["temp"].mean(dim=["x", "y"]).compute() # Compute result
+    timeseries = ds["temp"].mean(dim=["x", "y"]).compute()  # Compute result
 
 Using Dask with Xarray feels similar to working with NumPy arrays, but on much larger datasets. The Dask integration is transparent, so you don’t need to manage the parallelism directly; Xarray and Dask handle these aspects behind the scenes. This makes it easy to write code that scales from small, in-memory datasets on a single machine to large datasets that are distributed across a cluster, with minimal code changes.
 
@@ -53,15 +53,15 @@ When reading data, Dask automatically divides your dataset into smaller chunks. 
     The `Zarr <https://zarr.readthedocs.io/en/stable/>`_ format is ideal for working with large datasets. Each chunk is stored in a separate file, allowing parallel reading and writing with Dask. When you open a Zarr dataset with :py:func:`~xarray.open_zarr`, it is loaded as a Dask array by default::
 
         ds = xr.open_zarr("path/to/directory.zarr")
-    
+
     Save data to a local Zarr dataset::
 
         ds.to_zarr("path/to/directory.zarr")
-    
+
     Or to an S3 bucket::
-        
+
         ds.to_zarr("s3://my-bucket/data.zarr")
-    
+
     See :ref:`io.zarr` for more details.
 
 .. tab:: NetCDF
@@ -69,27 +69,27 @@ When reading data, Dask automatically divides your dataset into smaller chunks. 
     Open a single netCDF file with :py:func:`~xarray.open_dataset` and supplying a ``chunks`` argument::
 
         ds = xr.open_dataset("example-data.nc", chunks={"time": 10})
-    
+
     Or open multiple files with py:func:`~xarray.open_mfdataset`::
 
         xr.open_mfdataset('my/files/*.nc', parallel=True)
 
     .. tip::
-    
+
         When reading in many netCDF files with py:func:`~xarray.open_mfdataset`, using ``engine=h5netcdf`` can
         be faster than the default which uses the netCDF4 package.
-    
+
     Saving a larger-than-memory netCDF file::
 
        delayed_write = ds.to_netcdf("my-big-file.nc", compute=False)
        delayed_write.compute()
-    
+
     .. note::
 
         When using Dask’s distributed scheduler to write NETCDF4 files, it may be necessary to set the environment variable ``HDF5_USE_FILE_LOCKING=FALSE`` to avoid competing locks within the HDF5 SWMR file locking scheme. Note that writing netCDF files with Dask’s distributed scheduler is only supported for the netcdf4 backend.
 
     See :ref:`io.netcdf` for more details.
-        
+
 .. tab:: HDF5
 
     Open HDF5 files with :py:func:`~xarray.open_dataset`::
@@ -457,23 +457,22 @@ Dask is pretty easy to use but there are some gotchas, many of which are under a
     from flox.xarray import xarray_reduce
     import xarray
 
-    ds = xr.open_zarr(                          # Since we're doing a spatial reduction, increase chunk size in x, y
-        "my-data.zarr",
-        chunks={'x': 100, 'y': 100}
+    ds = xr.open_zarr(  # Since we're doing a spatial reduction, increase chunk size in x, y
+        "my-data.zarr", chunks={"x": 100, "y": 100}
     )
 
     time_subset = ds.sea_temperature.sel(
         time=slice("2020-01-01", "2020-12-31")  # Filter early
     )
 
-    zonal_mean = xarray_reduce(                 # Faster groupby with flox
+    zonal_mean = xarray_reduce(  # Faster groupby with flox
         time_subset,
         chunked_zones,
         func="mean",
         expected_groups=(zone_labels,),
     )
 
-    zonal_mean.load()                          # Pull smaller results into memory after reducing the dataset
+    zonal_mean.load()  # Pull smaller results into memory after reducing the dataset
 
 
 1. Do your spatial and temporal indexing (e.g. ``.sel()`` or ``.isel()``) early, especially before calling ``resample()`` or ``groupby()``. Grouping and resampling triggers some computation on all the blocks, which in theory should commute with indexing, but this optimization hasn't been implemented in Dask yet. (See `Dask issue #746 <https://github.com/dask/dask/issues/746>`_).
