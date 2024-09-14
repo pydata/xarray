@@ -640,6 +640,14 @@ class TreeNode(Generic[Tree]):
 AnyNamedNode = TypeVar("AnyNamedNode", bound="NamedNode")
 
 
+def _validate_name(name: str | None) -> None:
+    if name is not None:
+        if not isinstance(name, str):
+            raise TypeError("node name must be a string or None")
+        if "/" in name:
+            raise ValueError("node names cannot contain forward slashes")
+
+
 class NamedNode(TreeNode, Generic[Tree]):
     """
     A TreeNode which knows its own name.
@@ -653,8 +661,8 @@ class NamedNode(TreeNode, Generic[Tree]):
 
     def __init__(self, name=None, children=None):
         super().__init__(children=children)
-        self._name = None
-        self.name = name
+        _validate_name(name)
+        self._name = name
 
     @property
     def name(self) -> str | None:
@@ -663,11 +671,13 @@ class NamedNode(TreeNode, Generic[Tree]):
 
     @name.setter
     def name(self, name: str | None) -> None:
-        if name is not None:
-            if not isinstance(name, str):
-                raise TypeError("node name must be a string or None")
-            if "/" in name:
-                raise ValueError("node names cannot contain forward slashes")
+        if self.parent is not None:
+            raise ValueError(
+                "cannot set the name of a node which already has a parent. "
+                "Consider creating a detached copy of this node via .copy() "
+                "on the parent node."
+            )
+        _validate_name(name)
         self._name = name
 
     def __repr__(self, level=0):
@@ -677,11 +687,13 @@ class NamedNode(TreeNode, Generic[Tree]):
         return repr_value
 
     def __str__(self) -> str:
-        return f"NamedNode('{self.name}')" if self.name else "NamedNode()"
+        name_repr = repr(self.name) if self.name is not None else ""
+        return f"NamedNode({name_repr})"
 
     def _post_attach(self: AnyNamedNode, parent: AnyNamedNode, name: str) -> None:
         """Ensures child has name attribute corresponding to key under which it has been stored."""
-        self.name = name
+        _validate_name(name)  # is this check redundant?
+        self._name = name
 
     def _copy_node(
         self: AnyNamedNode,
