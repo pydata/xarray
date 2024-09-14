@@ -673,8 +673,8 @@ class NamedNode(TreeNode, Generic[Tree]):
     def name(self, name: str | None) -> None:
         if self.parent is not None:
             raise ValueError(
-                "cannot set the name of a node with a parent. Consider creating "
-                "a detached copy of this node via .copy(), or using .rename() "
+                "cannot set the name of a node which already has a parent. Consider creating "
+                "a detached copy of this node via .copy()."
                 "on the parent node."
             )
         _validate_name(name)
