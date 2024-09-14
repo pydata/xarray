@@ -5,7 +5,7 @@
 Parallel Computing with Dask
 ============================
 
-`Dask <https://dask.org/?utm_source=xarray-docs>`__, a general purpose library for parallel computing, integrates with Xarray to handle larger-than-memory computations.
+`Dask <https://dask.org/?utm_source=xarray-docs>`_, a general purpose library for parallel computing, integrates with Xarray to handle larger-than-memory computations.
 
 If you’ve been using Xarray to read in large datasets or split up data across a number of files, you may already be using Dask:
 
