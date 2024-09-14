@@ -5,7 +5,7 @@
 Parallel Computing with Dask
 ============================
 
-`Dask <https://dask.org/?utm_source=xarray-docs>`_, a general purpose library for parallel computing, integrates with Xarray to handle larger-than-memory computations.
+`Dask <https://dask.org/?utm_source=xarray-docs>`__, a general purpose library for parallel computing, integrates with Xarray to handle larger-than-memory computations.
 
 If you’ve been using Xarray to read in large datasets or split up data across a number of files, you may already be using Dask:
 
@@ -224,7 +224,7 @@ each block of your xarray object, you have three options:
 where a function written for processing NumPy arrays should be repeatedly
 applied to Xarray objects containing Dask Arrays. It works similarly to
 :py:func:`dask.array.map_blocks` and :py:func:`dask.array.blockwise`, but without
-requiring an intermediate layer of abstraction. See the `Dask documentation <https://docs.dask.org/en/stable/array-gufunc.html?utm_source=xarray-docs>`_ for more details.
+requiring an intermediate layer of abstraction. See the `Dask documentation <https://docs.dask.org/en/stable/array-gufunc.html?utm_source=xarray-docs>`__ for more details.
 
 For the best performance when using Dask's multi-threaded scheduler, wrap a
 function that already releases the global interpreter lock, which fortunately
@@ -357,7 +357,7 @@ Notice that the :py:meth:`map_blocks` call printed
 ``func`` is received 0-sized blocks! :py:meth:`map_blocks` needs to know what the final result
 looks like in terms of dimensions, shapes etc. It does so by running the provided function on 0-shaped
 inputs (*automated inference*). This works in many cases, but not all. If automatic inference does not
-work for your function, provide the ``template`` kwarg (see `below <template-note>`).
+work for your function, provide the ``template`` kwarg (see :ref:`below <template-note>`).
 
 In this case, automatic inference has worked so let's check that the result is as expected.
 
@@ -444,7 +444,7 @@ By default, Dask distributes work across multiple cores on a single machine, whi
 - You are limited by the size of your hard drive
 - Downloading data can be slow and expensive
 
-Instead, it can be faster and cheaper to run your computations close to where your data is stored, distributed across many machines on a Dask cluster. Often, this means deploying Dask on HPC clusters or on the cloud. See the `Dask documentation <https://docs.dask.org/en/stable/deploying.html?utm_source=xarray-docs>`_ for more details.
+Instead, it can be faster and cheaper to run your computations close to where your data is stored, distributed across many machines on a Dask cluster. Often, this means deploying Dask on HPC clusters or on the cloud. See the `Dask documentation <https://docs.dask.org/en/stable/deploying.html?utm_source=xarray-docs>`__ for more details.
 
 
 Best Practices
