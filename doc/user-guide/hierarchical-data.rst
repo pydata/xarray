@@ -645,12 +645,12 @@ We could use this feature to quickly calculate the electrical power in our signa
     power = currents * voltages
     power
 
-.. _alignment and coordinate inheritance:
+.. _alignment-and-coordinate-inheritance:
 
 Alignment and Coordinate Inheritance
 ------------------------------------
 
-.. _data alignment:
+.. _data-alignment:
 
 Data Alignment
 ~~~~~~~~~~~~~~
@@ -660,7 +660,7 @@ The data in different datatree nodes are not totally independent. In particular 
 .. note::
     If you were a previous user of the prototype `xarray-contrib/datatree <https://github.com/xarray-contrib/datatree>`_ package, this is different from what you're used to!
     In that package the data model was that nodes actually were completely unrelated. The data model is now slightly stricter.
-    This allows us to provide features like :ref:`coordinate inheritance`. See the migration guide for more details on the differences (LINK).
+    This allows us to provide features like :ref:`coordinate-inheritance`. See the migration guide for more details on the differences (LINK).
 
 To demonstrate, let's first generate some example datasets which are not aligned with one another:
 
@@ -703,7 +703,7 @@ This is because DataTree checks that data in child nodes align exactly with thei
 .. note::
     This requirement of aligned dimensions is similar to netCDF's concept of inherited dimensions (LINK TO NETCDF DOCUMENTATION?).
 
-This alignment check is performed up through the tree, all the way to the root, and so is therefore equivalent to requiring that this :py:func:`xr.align` command succeeds:
+This alignment check is performed up through the tree, all the way to the root, and so is therefore equivalent to requiring that this :py:func:`~xarray.align` command succeeds:
 
 .. code::
 
@@ -733,16 +733,18 @@ or compute the standard deviation of each timeseries to find out how it varies w
 
     dt.std(dim="time")
 
-.. _coordinate inheritance:
+.. _coordinate-inheritance:
 
 Coordinate Inheritance
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Notice that in the tree we constructed above (LINK OR DISPLAY AGAIN?) there is some redundancy - the ``lat`` and ``lon`` variables appear in each sibling group, but are identical in each group.
+Notice that in the trees we constructed above (LINK OR DISPLAY AGAIN?) there is some redundancy - the ``lat`` and ``lon`` variables appear in each sibling group, but are identical across the groups.
 We can use "Coordinate Inheritance" to define them only once in a parent group and remove this redundancy, whilst still being able to access those coordinate variables from the child groups.
 
 .. note::
     This is also a new feature relative to the prototype `xarray-contrib/datatree <https://github.com/xarray-contrib/datatree>`_ package.
+
+Let's instead place only the time-dependent variables in the child groups, and put the non-time-dependent ``lat`` and ``lon`` variables in the parent (root) group:
 
 .. ipython:: python
 
@@ -758,7 +760,7 @@ We can use "Coordinate Inheritance" to define them only once in a parent group a
 
 (TODO: They are being displayed in child groups still, see https://github.com/pydata/xarray/issues/9499)
 
-This is preferred to the previous representation because it makes it clear that all of these datasets share common spatial grid coordinates.
+This is preferred to the previous representation because it now makes it clear that all of these datasets share common spatial grid coordinates.
 Defining the common coordinates just once also ensures that the spatial coordinates for each group cannot become out of sync with one another during operations.
 
 We can still access the coordinates defined in the parent groups from any of the child groups as if they were actually present on the child groups:
@@ -790,6 +792,8 @@ We can also still perform all the same operations on the whole tree:
     dt.std(dim="time")
 
 (TODO: The second one fails due to https://github.com/pydata/xarray/issues/8949)
+
+.. _overriding-inherited-coordinates:
 
 Overriding Inherited Coordinates
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
