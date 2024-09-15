@@ -714,3 +714,54 @@ or compute the standard deviation of each timeseries to find out how it varies w
 .. ipython:: python
 
     dt.std(dim="time")
+
+Coordinate Inheritance
+~~~~~~~~~~~~~~~~~~~~~~
+
+Notice that in the tree we constructed above (LINK OR DISPLAY AGAIN?) there is some redundancy - the ``lat`` and ``lon`` variables appear in each sibling group, but are identical in each group.
+We can use "Coordinate Inheritance" to define them only once in a parent group and remove this redundancy, whilst still being able to access those coordinate variables from the child groups.
+
+.. note::
+    This is also a new feature relative to the prototype `xarray-contrib/datatree <https://github.com/xarray-contrib/datatree>`_ package.
+
+.. ipython:: python
+
+    dt = xr.DataTree.from_dict(
+        {
+            "/": ds.drop_dims("time"),
+            "daily": ds_daily.drop_vars(["lat", "lon"]),
+            "weekly": ds_weekly.drop_vars(["lat", "lon"]),
+            "monthly": ds_monthly.drop_vars(["lat", "lon"]),
+        }
+    )
+    dt
+
+We say that the `lat` and `lon` coordinates in the child groups have been "inherited" from their common parent group.
+
+This is preferred to the previous representation because it makes it clear that all of these datasets share common spatial grid coordinates.
+Defining the common coordinates just once also ensures that the spatial coordinates for each group cannot become out of sync with one another during operations.
+
+We can still access the coordinates defined in the parent groups from any of the child groups as if they were actually present on the child groups:
+
+.. ipython:: python
+
+    dt.daily.coords
+    dt["daily/lat"]
+
+(TODO: the repr of ``dt.coords`` should display which coordinates are inherited)
+
+If we print just one of the child nodes, it will still display inherited coordinates, but explicitly mark them as such:
+
+.. ipython:: python
+
+    dt["/daily"]
+
+We can also still perform all the same operations on the whole tree:
+
+.. ipython:: python
+
+    dt.sel(lat=75, lon=300)
+
+    dt.std(dim="time")
+
+EXPLAIN DEDUPLICATION?
