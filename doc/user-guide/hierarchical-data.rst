@@ -1,7 +1,7 @@
 .. _hierarchical-data:
 
 Hierarchical data
-==============================
+=================
 
 .. ipython:: python
     :suppress:
