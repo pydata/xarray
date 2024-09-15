@@ -312,7 +312,7 @@ class TestDataArrayRolling:
             DataArray([np.nan, np.nan, 2, 3, 3, 4, 5, 5, 5, 5, 5], dims="time"),
         ]
 
-        for kwarg, expected in zip(kwargs, expecteds):
+        for kwarg, expected in zip(kwargs, expecteds, strict=True):
             result = da.rolling(**kwarg).count()
             assert_equal(result, expected)
 

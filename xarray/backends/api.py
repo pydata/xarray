@@ -51,7 +51,7 @@ if TYPE_CHECKING:
     try:
         from dask.delayed import Delayed
     except ImportError:
-        Delayed = None  # type: ignore
+        Delayed = None  # type: ignore[assignment, misc]
     from io import BufferedIOBase
 
     from xarray.backends.common import BackendEntrypoint
@@ -1113,7 +1113,7 @@ def open_mfdataset(
             list(combined_ids_paths.keys()),
             list(combined_ids_paths.values()),
         )
-    elif combine == "by_coords" and concat_dim is not None:
+    elif concat_dim is not None:
         raise ValueError(
             "When combine='by_coords', passing a value for `concat_dim` has no "
             "effect. To manually combine along a specific dimension you should "
@@ -1432,7 +1432,7 @@ def to_netcdf(
             store.sync()
             return target.getvalue()
     finally:
-        if not multifile and compute:
+        if not multifile and compute:  # type: ignore[redundant-expr]
             store.close()
 
     if not compute:
@@ -1585,8 +1585,9 @@ def save_mfdataset(
                 multifile=True,
                 **kwargs,
             )
-            for ds, path, group in zip(datasets, paths, groups)
-        ]
+            for ds, path, group in zip(datasets, paths, groups, strict=True)
+        ],
+        strict=True,
     )
 
     try:
@@ -1600,7 +1601,10 @@ def save_mfdataset(
         import dask
 
         return dask.delayed(
-            [dask.delayed(_finalize_store)(w, s) for w, s in zip(writes, stores)]
+            [
+                dask.delayed(_finalize_store)(w, s)
+                for w, s in zip(writes, stores, strict=True)
+            ]
         )
 
 
@@ -1729,7 +1733,7 @@ def to_zarr(
     _validate_dataset_names(dataset)
 
     if zarr_version is None:
-        # default to 2 if store doesn't specify it's version (e.g. a path)
+        # default to 2 if store doesn't specify its version (e.g. a path)
         zarr_version = int(getattr(store, "_store_version", 2))
 
     if consolidated is None and zarr_version > 2:

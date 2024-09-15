@@ -197,7 +197,7 @@ class _DummyGroup(Generic[T_Xarray]):
         return np.arange(self.size)
 
     @property
-    def shape(self) -> tuple[int]:
+    def shape(self) -> tuple[int, ...]:
         return (self.size,)
 
     @property
@@ -458,7 +458,7 @@ class ComposedGrouper:
         )
         # NaNs; as well as values outside the bins are coded by -1
         # Restore these after the raveling
-        mask = functools.reduce(np.logical_or, [(code == -1) for code in broadcasted_codes])  # type: ignore
+        mask = functools.reduce(np.logical_or, [(code == -1) for code in broadcasted_codes])  # type: ignore[arg-type]
         _flatcodes[mask] = -1
 
         midx = pd.MultiIndex.from_product(
@@ -646,7 +646,11 @@ class GroupBy(Generic[T_Xarray]):
         # provided to mimic pandas.groupby
         if self._groups is None:
             self._groups = dict(
-                zip(self.encoded.unique_coord.data, self.encoded.group_indices)
+                zip(
+                    self.encoded.unique_coord.data,
+                    self.encoded.group_indices,
+                    strict=True,
+                )
             )
         return self._groups
 
@@ -660,7 +664,7 @@ class GroupBy(Generic[T_Xarray]):
         return self._len
 
     def __iter__(self) -> Iterator[tuple[GroupKey, T_Xarray]]:
-        return zip(self.encoded.unique_coord.data, self._iter_grouped())
+        return zip(self.encoded.unique_coord.data, self._iter_grouped(), strict=True)
 
     def __repr__(self) -> str:
         text = (
@@ -843,7 +847,7 @@ class GroupBy(Generic[T_Xarray]):
         obj = self._original_obj
         variables = (
             {k: v.variable for k, v in obj.data_vars.items()}
-            if isinstance(obj, Dataset)
+            if isinstance(obj, Dataset)  # type: ignore[redundant-expr]  # seems to be a mypy bug
             else obj._coords
         )
 

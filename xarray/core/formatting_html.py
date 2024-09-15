@@ -303,7 +303,7 @@ def _obj_repr(obj, header_components, sections):
 
 
 def array_repr(arr) -> str:
-    dims = OrderedDict((k, v) for k, v in zip(arr.dims, arr.shape))
+    dims = OrderedDict((k, v) for k, v in zip(arr.dims, arr.shape, strict=True))
     if hasattr(arr, "xindexes"):
         indexed_dims = arr.xindexes.dims
     else:
@@ -386,7 +386,7 @@ children_section = partial(
 def datatree_node_repr(group_title: str, dt: DataTree) -> str:
     header_components = [f"<div class='xr-obj-type'>{escape(group_title)}</div>"]
 
-    ds = dt._to_dataset_view(rebuild_dims=False)
+    ds = dt._to_dataset_view(rebuild_dims=False, inherited=True)
 
     sections = [
         children_section(dt.children),

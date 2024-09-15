@@ -576,7 +576,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         # lets just ensure that deep copy works without RecursionError
         v.copy(deep=True)
 
-        # indirect recusrion
+        # indirect recursion
         v2 = self.cls("y", [2, 3])
         v.attrs["other"] = v2
         v2.attrs["other"] = v
@@ -654,7 +654,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         expected = Variable((), 0.5 + 1j)
         assert_allclose(v.mean(), expected)
 
-    def test_pandas_cateogrical_dtype(self):
+    def test_pandas_categorical_dtype(self):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         v = self.cls("x", data)
         print(v)  # should not error
@@ -1017,7 +1017,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             fill_value=np.nan,
         )
         expected = x
-        for dim, win, cent in zip(dims, window, center):
+        for dim, win, cent in zip(dims, window, center, strict=True):
             expected = expected.rolling_window(
                 dim=dim,
                 window=win,
@@ -1575,13 +1575,13 @@ class TestVariable(VariableSubclassobjects):
             actual = variable.transpose()
             assert_identical(actual, variable)
 
-    def test_pandas_cateogrical_dtype(self):
+    def test_pandas_categorical_dtype(self):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         v = self.cls("x", data)
         print(v)  # should not error
         assert pd.api.types.is_extension_array_dtype(v.dtype)
 
-    def test_pandas_cateogrical_no_chunk(self):
+    def test_pandas_categorical_no_chunk(self):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         v = self.cls("x", data)
         with pytest.raises(
@@ -1806,7 +1806,8 @@ class TestVariable(VariableSubclassobjects):
     @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
-        "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
+        "axis, dim",
+        zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]], strict=True),
     )
     def test_quantile(self, q, axis, dim, skipna):
         d = self.d.copy()
@@ -2386,7 +2387,7 @@ class TestVariableWithDask(VariableSubclassobjects):
     def test_pad(self, mode, xr_arg, np_arg):
         super().test_pad(mode, xr_arg, np_arg)
 
-    def test_pandas_cateogrical_dtype(self):
+    def test_pandas_categorical_dtype(self):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         with pytest.raises(ValueError, match="was found to be a Pandas ExtensionArray"):
             self.cls("x", data)
