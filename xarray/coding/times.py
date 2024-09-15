@@ -796,11 +796,14 @@ def _eagerly_encode_cf_datetime(
 
     except (OutOfBoundsDatetime, OverflowError, ValueError):
         time_units, ref_date = _unpack_time_units_and_ref_date_cftime(units, calendar)
-        time_delta = _time_units_to_timedelta(time_units)
+        time_delta_cftime = _time_units_to_timedelta(time_units)
         needed_units = _infer_needed_units_cftime(ref_date, data_units, calendar)
-        needed_time_delta = _time_units_to_timedelta(needed_units)
+        needed_time_delta_cftime = _time_units_to_timedelta(needed_units)
 
-        if np.issubdtype(dtype, np.integer) and time_delta > needed_time_delta:
+        if (
+            np.issubdtype(dtype, np.integer)
+            and time_delta_cftime > needed_time_delta_cftime
+        ):
             new_units = f"{needed_units} since {format_cftime_datetime(ref_date)}"
             if allow_units_modification:
                 units = new_units
