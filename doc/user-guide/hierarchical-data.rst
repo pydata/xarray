@@ -686,7 +686,7 @@ We cannot store these non-alignable variables on a single :py:class:`~xarray.Dat
 .. ipython:: python
     :okexcept:
 
-    xr.align(ds_daily, ds_weekly, join="exact")
+    xr.align(ds_daily, ds_weekly, ds_monthly, join="exact")
 
 But we previously said that multi-resolution data is a good use case for :py:class:`~xarray.DataTree`, so surely we should be able to store these in a single :py:class:`~xarray.DataTree`?
 If we first try to create a :py:class:`~xarray.DataTree` with these different-length time dimensions present in both parents and children, we will still get an alignment error:
