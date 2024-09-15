@@ -645,8 +645,12 @@ We could use this feature to quickly calculate the electrical power in our signa
     power = currents * voltages
     power
 
+.. _alignment and coordinate inheritance:
+
 Alignment and Coordinate Inheritance
 ------------------------------------
+
+.. _data alignment:
 
 Data Alignment
 ~~~~~~~~~~~~~~
@@ -656,7 +660,7 @@ The data in different datatree nodes are not totally independent. In particular 
 .. note::
     If you were a previous user of the prototype `xarray-contrib/datatree <https://github.com/xarray-contrib/datatree>`_ package, this is different from what you're used to!
     In that package the data model was that nodes actually were completely unrelated. The data model is now slightly stricter.
-    This allows us to provide features like Coordinate Inheritance (LINK BELOW). See the migration guide for more details on the differences (LINK).
+    This allows us to provide features like :ref:`coordinate inheritance`. See the migration guide for more details on the differences (LINK).
 
 To demonstrate, let's first generate some example datasets which are not aligned with one another:
 
@@ -677,21 +681,35 @@ These datasets have different lengths along the ``time`` dimension, and are ther
     ds_weekly.sizes
     ds_monthly.sizes
 
-Whilst we cannot store these non-alignable variables on a single :py:class:`~xarray.Dataset` object (DEMONSTRATE THIS?), this could be a good use for :py:class:`~xarray.DataTree`!
+We cannot store these non-alignable variables on a single :py:class:`~xarray.Dataset` object, because they do not exactly align:
 
-However, if we try to create a :py:class:`~xarray.DataTree` with these different-length time dimensions present in both parents and children, we will still get an alignment error.
+.. ipython:: python
+    :okexcept:
+
+    xr.align(ds_daily, ds_weekly, join="exact")
+
+But we previously said that multi-resolution data is a good use case for :py:class:`~xarray.DataTree`, so surely we should be able to store these in a single :py:class:`~xarray.DataTree`?
+If we first try to create a :py:class:`~xarray.DataTree` with these different-length time dimensions present in both parents and children, we will still get an alignment error:
 
 .. ipython:: python
     :okexcept:
 
     xr.DataTree.from_dict({"daily": ds_daily, "daily/weekly": ds_weekly})
 
-This is because DataTree checks alignment up through the tree, all the way to the root.
+(TODO: Looks like this error message could be improved by including information about which sizes are not equal.)
+
+This is because DataTree checks that data in child nodes align exactly with their parents.
 
 .. note::
-    This is similar to netCDF's concept of inherited dimensions.
+    This requirement of aligned dimensions is similar to netCDF's concept of inherited dimensions (LINK TO NETCDF DOCUMENTATION?).
 
-To represent this unalignable data in a single :py:class:`~xarray.DataTree`, we must instead place all variables which are a function of these different-length dimensions into nodes that are not parents of one another, i.e. organize them as siblings.
+This alignment check is performed up through the tree, all the way to the root, and so is therefore equivalent to requiring that this :py:func:`xr.align` command succeeds:
+
+.. code::
+
+    xr.align(child, *child.parents, join="exact")
+
+To represent our unalignable data in a single :py:class:`~xarray.DataTree`, we must instead place all variables which are a function of these different-length dimensions into nodes that are not parents of one another, i.e. organize them as siblings.
 
 .. ipython:: python
 
@@ -715,6 +733,8 @@ or compute the standard deviation of each timeseries to find out how it varies w
 
     dt.std(dim="time")
 
+.. _coordinate inheritance:
+
 Coordinate Inheritance
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -736,7 +756,7 @@ We can use "Coordinate Inheritance" to define them only once in a parent group a
     )
     dt
 
-We say that the `lat` and `lon` coordinates in the child groups have been "inherited" from their common parent group.
+(TODO: They are being displayed in child groups still, see https://github.com/pydata/xarray/issues/9499)
 
 This is preferred to the previous representation because it makes it clear that all of these datasets share common spatial grid coordinates.
 Defining the common coordinates just once also ensures that the spatial coordinates for each group cannot become out of sync with one another during operations.
@@ -750,18 +770,34 @@ We can still access the coordinates defined in the parent groups from any of the
 
 (TODO: the repr of ``dt.coords`` should display which coordinates are inherited)
 
+As we can still access them, we say that the ``lat`` and ``lon`` coordinates in the child groups have been "inherited" from their common parent group.
+
 If we print just one of the child nodes, it will still display inherited coordinates, but explicitly mark them as such:
 
 .. ipython:: python
 
-    dt["/daily"]
+    print(dt["/daily"])
+
+This helps to differentiate which variables are defined on the datatree node that you are currently looking at, and which were defined somewhere above it.
 
 We can also still perform all the same operations on the whole tree:
 
 .. ipython:: python
+    :okexcept:
 
     dt.sel(lat=75, lon=300)
 
     dt.std(dim="time")
+
+(TODO: The second one fails due to https://github.com/pydata/xarray/issues/8949)
+
+Overriding Inherited Coordinates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can override inherited coordinates with newly-defined ones, as long as those newly-defined coordinates also align with the parent nodes.
+
+EXAMPLE OF THIS? WOULD IT MAKE MORE SENSE TO USE DIFFERENT DATA TO DEMONSTRATE THIS?
+
+EXAMPLE OF INHERITING FROM A GRANDPARENT?
 
 EXPLAIN DEDUPLICATION?
