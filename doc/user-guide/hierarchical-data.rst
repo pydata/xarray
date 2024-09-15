@@ -720,7 +720,7 @@ To represent our unalignable data in a single :py:class:`~xarray.DataTree`, we m
     )
     dt
 
-Now we have a valid :py:class:`~xarray.DataTree` structure which contains the data at different time frequencies.
+Now we have a valid :py:class:`~xarray.DataTree` structure which contains all the data at each different time frequency, stored in a separate group.
 
 This is a useful way to organise our data because we can still operate on all the groups at once.
 For example we can extract all three timeseries at a specific lat-lon location:
@@ -741,6 +741,7 @@ Coordinate Inheritance
 ~~~~~~~~~~~~~~~~~~~~~~
 
 Notice that in the trees we constructed above (LINK OR DISPLAY AGAIN?) there is some redundancy - the ``lat`` and ``lon`` variables appear in each sibling group, but are identical across the groups.
+
 We can use "Coordinate Inheritance" to define them only once in a parent group and remove this redundancy, whilst still being able to access those coordinate variables from the child groups.
 
 .. note::
