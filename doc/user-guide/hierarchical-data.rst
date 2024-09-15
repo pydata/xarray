@@ -644,3 +644,70 @@ We could use this feature to quickly calculate the electrical power in our signa
 
     power = currents * voltages
     power
+
+Alignment and Coordinate Inheritance
+------------------------------------
+
+Data Alignment
+~~~~~~~~~~~~~~
+
+The data in different datatree nodes are not totally independent. In particular dimensions (and indexes) in child nodes must be aligned (LINK HERE) "vertically", i.e. aligned with those in their parent nodes.
+
+.. note::
+    If you were a previous user of the prototype `xarray-contrib/datatree <https://github.com/xarray-contrib/datatree>`_ package, this is different from what you're used to!
+    In that package the data model was that nodes actually were completely unrelated. The data model is now slightly stricter.
+    This allows us to provide features like Coordinate Inheritance (LINK BELOW). See the migration guide for more details on the differences (LINK).
+
+To demonstrate, let's first generate some example datasets which are not aligned with one another
+
+.. ipython:: python
+
+    da_daily = ds.resample(time="d").mean("time")
+    da_weekly = ds.resample(time="w").mean("time")
+    da_monthly = ds.resample(time="ME").mean("time")
+
+These datasets have different lengths along the time dimension, and are therefore not aligned along that dimension.
+
+.. ipython:: python
+
+    da.daily.sizes
+    da.weekly.sizes
+    da.monthly.sizes
+
+Whilst we cannot store these non-alignable variables on a single `Dataset` object (DEMONSTRATE THIS?), this could be a good use for `DataTree`!
+
+However, if we try to create a `DataTree` with these different-length time dimensions present in both parents and children, we will still get an alignment error.
+
+.. ipython:: python
+    :okexcept:
+
+    DataTree.from_dict({"daily": ds_daily, "daily/weekly": ds_weekly})
+
+This is because DataTree checks alignment up through the tree, all the way to the root.
+
+.. note::
+    This is similar to netCDF's concept of inherited dimensions.
+
+To represent this unalignable data in a single `DataTree`, we must place all variables which are a function of these different-length dimensions into nodes that are not parents of one another, i.e. organize them as siblings.
+
+.. ipython:: python
+
+    dt = DataTree.from_dict(
+        {"daily": ds_daily, "weekly": ds_weekly, "monthly": ds_monthly}
+    )
+    dt
+
+Now we have a valid `DataTree` structure which contains the data at different time frequencies.
+
+We is a useful way to organise our data because we can still operate on all the groups at once.
+For example we can extract all three timeseries at a specific lat-lon location
+
+.. ipython:: python
+
+    dt.sel(lat=75, lon=300)
+
+or find how the standard deviation of these timeseries has been affected by the averaging we did
+
+.. ipython:: python
+
+    dt.std(dim="time")
