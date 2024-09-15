@@ -15,6 +15,8 @@ Hierarchical data
 
     %xmode minimal
 
+.. _why:
+
 Why Hierarchical Data?
 ----------------------
 
@@ -688,7 +690,7 @@ We cannot store these non-alignable variables on a single :py:class:`~xarray.Dat
 
     xr.align(ds_daily, ds_weekly, ds_monthly, join="exact")
 
-But we previously said that multi-resolution data is a good use case for :py:class:`~xarray.DataTree`, so surely we should be able to store these in a single :py:class:`~xarray.DataTree`?
+But we :ref:`previously said <why>` that multi-resolution data is a good use case for :py:class:`~xarray.DataTree`, so surely we should be able to store these in a single :py:class:`~xarray.DataTree`?
 If we first try to create a :py:class:`~xarray.DataTree` with these different-length time dimensions present in both parents and children, we will still get an alignment error:
 
 .. ipython:: python
