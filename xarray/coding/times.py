@@ -685,42 +685,6 @@ def _division(deltas, delta, floor):
     return num
 
 
-def _cast_to_dtype_if_safe(num: np.ndarray, dtype: np.dtype) -> np.ndarray:
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message="overflow")
-        cast_num = np.asarray(num, dtype=dtype)
-
-    if np.issubdtype(dtype, np.integer):
-        if not (num == cast_num).all():
-            if np.issubdtype(num.dtype, np.floating):
-                raise ValueError(
-                    f"Not possible to cast all encoded times from "
-                    f"{num.dtype!r} to {dtype!r} without losing precision. "
-                    f"Consider modifying the units such that integer values "
-                    f"can be used, or removing the units and dtype encoding, "
-                    f"at which point xarray will make an appropriate choice."
-                )
-            else:
-                raise OverflowError(
-                    f"Not possible to cast encoded times from "
-                    f"{num.dtype!r} to {dtype!r} without overflow. Consider "
-                    f"removing the dtype encoding, at which point xarray will "
-                    f"make an appropriate choice, or explicitly switching to "
-                    "a larger integer dtype."
-                )
-    else:
-        if np.isinf(cast_num).any():
-            raise OverflowError(
-                f"Not possible to cast encoded times from {num.dtype!r} to "
-                f"{dtype!r} without overflow.  Consider removing the dtype "
-                f"encoding, at which point xarray will make an appropriate "
-                f"choice, or explicitly switching to a larger floating point "
-                f"dtype."
-            )
-
-    return cast_num
-
-
 def encode_cf_datetime(
     dates: T_DuckArray,  # type: ignore[misc]
     units: str | None = None,
@@ -969,12 +933,16 @@ def _eagerly_encode_cf_timedelta(
             units = needed_units
             time_delta = needed_time_delta
             floor_division = True
+        elif np.issubdtype(dtype, np.integer) and not allow_units_modification:
+            raise ValueError(
+                f"Timedeltas can't be serialized faithfully to int64 with requested units {units!r}. "
+                f"Consider setting encoding['dtype'] to a floating point dtype to serialize with "
+                f"units {units!r}. Consider setting encoding['units'] to {needed_units!r} to "
+                f"serialize with an integer dtype."
+            )
 
     num = _division(time_deltas, time_delta, floor_division)
     num = reshape(num.values, timedeltas.shape)
-
-    if dtype is not None:
-        num = _cast_to_dtype_if_safe(num, dtype)
 
     return num, units
 

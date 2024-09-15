@@ -1581,38 +1581,37 @@ def test_encode_cf_timedelta_via_dask(
 
 
 @pytest.mark.parametrize("use_dask", [False, pytest.param(True, marks=requires_dask)])
-def test_encode_cf_timedelta_casting_value_error(use_dask) -> None:
+def test_encode_cf_timedelta_units_change(use_dask) -> None:
     timedeltas = pd.timedelta_range(start="0h", freq="12h", periods=3)
     encoding = dict(units="days", dtype=np.dtype("int64"))
     variable = Variable(["time"], timedeltas, encoding=encoding)
 
     if use_dask:
         variable = variable.chunk({"time": 1})
-
-    if not use_dask:
-        # In this particular case we automatically modify the encoding units to
-        # continue encoding with integer values.
+        with pytest.raises(ValueError, match="Timedeltas can't be serialized"):
+            conventions.encode_cf_variable(variable).compute()
+    else:
+        # In this case we automatically modify the encoding units to continue
+        # encoding with integer values.
         with pytest.warns(UserWarning, match="Timedeltas can't be serialized"):
             encoded = conventions.encode_cf_variable(variable)
         assert encoded.attrs["units"] == "hours"
         decoded = conventions.decode_cf_variable("name", encoded)
         assert_equal(variable, decoded)
-    else:
-        with pytest.raises(ValueError, match="Not possible"):
-            encoded = conventions.encode_cf_variable(variable)
-            encoded.compute()
 
 
 @pytest.mark.parametrize("use_dask", [False, pytest.param(True, marks=requires_dask)])
-@pytest.mark.parametrize("dtype", [np.dtype("int16"), np.dtype("float16")])
-def test_encode_cf_timedelta_casting_overflow_error(use_dask, dtype) -> None:
-    timedeltas = pd.timedelta_range(start="0h", freq="5h", periods=3)
-    encoding = dict(units="microseconds", dtype=dtype)
+def test_encode_cf_timedelta_small_dtype_missing_value(use_dask):
+    # Regression test for GitHub issue #9134
+    timedeltas = np.array([1, 2, "NaT", 4], dtype="timedelta64[D]").astype(
+        "timedelta64[ns]"
+    )
+    encoding = dict(units="days", dtype=np.dtype("int16"), _FillValue=np.int16(-1))
     variable = Variable(["time"], timedeltas, encoding=encoding)
 
     if use_dask:
         variable = variable.chunk({"time": 1})
 
-    with pytest.raises(OverflowError, match="Not possible"):
-        encoded = conventions.encode_cf_variable(variable)
-        encoded.compute()
+    encoded = conventions.encode_cf_variable(variable)
+    decoded = conventions.decode_cf_variable("name", encoded)
+    assert_equal(variable, decoded)
