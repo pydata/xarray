@@ -4748,11 +4748,11 @@ class TestDataset:
         test_args: list[list] = [[], [["x"]], [["x", "z"]]]
         for args in test_args:
 
-            def get_args(v):
+            def get_args(args, v):
                 return [set(args[0]) & set(v.dims)] if args else []
 
             expected = Dataset(
-                {k: v.squeeze(*get_args(v)) for k, v in data.variables.items()}
+                {k: v.squeeze(*get_args(args, v)) for k, v in data.variables.items()}
             )
             expected = expected.set_coords(data.coords)
             assert_identical(expected, data.squeeze(*args))
