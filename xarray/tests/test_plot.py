@@ -2161,7 +2161,7 @@ class TestSurface(Common2dMixin, PlotTestCase):
         g = self.plotfunc(d, x="x", y="y", col="z", col_wrap=2)  # type: ignore[arg-type] # https://github.com/python/mypy/issues/15015
 
         assert_array_equal(g.axs.shape, [2, 2])
-        for (y, x), ax in np.ndenumerate(g.axs):
+        for (_y, _x), ax in np.ndenumerate(g.axs):
             assert ax.has_data()
             assert "y" == ax.get_ylabel()
             assert "x" == ax.get_xlabel()
@@ -2169,7 +2169,7 @@ class TestSurface(Common2dMixin, PlotTestCase):
         # Inferring labels
         g = self.plotfunc(d, col="z", col_wrap=2)  # type: ignore[arg-type] # https://github.com/python/mypy/issues/15015
         assert_array_equal(g.axs.shape, [2, 2])
-        for (y, x), ax in np.ndenumerate(g.axs):
+        for (_y, _x), ax in np.ndenumerate(g.axs):
             assert ax.has_data()
             assert "y" == ax.get_ylabel()
             assert "x" == ax.get_xlabel()

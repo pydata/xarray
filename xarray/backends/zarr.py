@@ -577,7 +577,7 @@ class ZarrStore(AbstractWritableDataStore):
     def get_dimensions(self):
         try_nczarr = self._mode == "r"
         dimensions = {}
-        for k, v in self.zarr_group.arrays():
+        for _k, v in self.zarr_group.arrays():
             dim_names, _ = _get_zarr_dims_and_attrs(v, DIMENSION_KEY, try_nczarr)
             for d, s in zip(dim_names, v.shape, strict=True):
                 if d in dimensions and dimensions[d] != s:

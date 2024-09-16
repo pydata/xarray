@@ -1268,7 +1268,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         metadata
         """
         var = self._obj.variable
-        for idx, indices in enumerate(self.encoded.group_indices):
+        for _idx, indices in enumerate(self.encoded.group_indices):
             if indices:
                 yield var[{self._group_dim: indices}]
 

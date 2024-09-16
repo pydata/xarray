@@ -818,7 +818,7 @@ class DatasetIOBase:
                     else:
                         raise TypeError(f"{type(obj.array)} is wrapped by {type(obj)}")
 
-        for k, v in ds.variables.items():
+        for _k, v in ds.variables.items():
             find_and_validate_array(v._data)
 
     def test_array_type_after_indexing(self) -> None:
