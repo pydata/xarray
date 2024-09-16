@@ -11,12 +11,12 @@ If you’ve been using Xarray to read in large datasets or split up data across 
 
 .. code-block:: python
 
-    import xarray
+    import xarray as xr
 
     ds = xr.open_zarr("/path/to/data.zarr")
     timeseries = ds["temp"].mean(dim=["x", "y"]).compute()  # Compute result
 
-Using Dask with Xarray feels similar to working with NumPy arrays, but on much larger datasets. The Dask integration is transparent, so you don’t need to manage the parallelism directly; Xarray and Dask handle these aspects behind the scenes. This makes it easy to write code that scales from small, in-memory datasets on a single machine to large datasets that are distributed across a cluster, with minimal code changes.
+Using Dask with Xarray feels similar to working with NumPy arrays, but on much larger datasets. The Dask integration is transparent, so you usually don’t need to manage the parallelism directly; Xarray and Dask handle these aspects behind the scenes. This makes it easy to write code that scales from small, in-memory datasets on a single machine to large datasets that are distributed across a cluster, with minimal code changes.
 
 Examples
 --------
