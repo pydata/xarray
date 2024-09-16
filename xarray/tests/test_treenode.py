@@ -286,6 +286,28 @@ class TestValidNames:
         with pytest.raises(TypeError, match="must be a string or None"):
             NamedNode(name=0)
 
+    def test_names(self):
+        nn = NamedNode()
+        assert nn.name is None
+
+        nn = NamedNode(name="foo")
+        assert nn.name == "foo"
+
+        nn.name = "bar"
+        assert nn.name == "bar"
+
+        nn = NamedNode(children={"foo": NamedNode()})
+        assert nn.children["foo"].name == "foo"
+        with pytest.raises(
+            ValueError, match="cannot set the name of a node which already has a parent"
+        ):
+            nn.children["foo"].name = "bar"
+
+        detached = nn.children["foo"].copy()
+        assert detached.name == "foo"
+        detached.name = "bar"
+        assert detached.name == "bar"
+
 
 def create_test_tree() -> tuple[NamedNode, NamedNode]:
     # a
