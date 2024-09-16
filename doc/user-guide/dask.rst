@@ -56,7 +56,7 @@ When reading data, Dask divides your dataset into smaller chunks. You can specif
 .. tab:: Zarr
 
     The `Zarr <https://zarr.readthedocs.io/en/stable/>`_ format is ideal for working with large datasets. Each chunk is stored in a separate file, allowing parallel reading and writing with Dask. You can also use Zarr to read/write directly from cloud storage buckets (see the `Dask documentation on connecting to remote data <https://docs.dask.org/en/stable/how-to/connect-to-remote-data.html?utm_source=xarray-docs>`__)
-    
+
     When you open a Zarr dataset with :py:func:`~xarray.open_zarr`, it is loaded as a Dask array by default (if Dask is installed)::
 
         ds = xr.open_zarr("path/to/directory.zarr")
@@ -81,7 +81,7 @@ When reading data, Dask divides your dataset into smaller chunks. You can specif
     Save larger-than-memory netCDF files::
 
         ds.to_netcdf("my-big-file.nc")
-    
+
     Or set ``compute=False`` to return a dask.delayed object that can be computed later::
 
        delayed_write = ds.to_netcdf("my-big-file.nc", compute=False)
@@ -494,4 +494,3 @@ Here's an example of a simplified workflow putting some of these tips together:
     )
 
     zonal_mean.load()  # Pull smaller results into memory after reducing the dataset
-
