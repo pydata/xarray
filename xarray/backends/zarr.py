@@ -20,6 +20,7 @@ from xarray.backends.common import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
+from xarray.core.treenode import NodePath
 from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
@@ -32,6 +33,8 @@ from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
+
+    from zarr import Group as ZarrGroup
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
@@ -186,7 +189,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # TODO: incorporate synchronizer to allow writes from multiple dask
     # threads
     if var_chunks and enc_chunks_tuple:
-        for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks):
+        for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks, strict=True):
             for dchunk in dchunks[:-1]:
                 if dchunk % zchunk:
                     base_error = (
@@ -548,13 +551,13 @@ class ZarrStore(AbstractWritableDataStore):
 
         encoding = {
             "chunks": zarr_array.chunks,
-            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks)),
+            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks, strict=True)),
             "compressor": zarr_array.compressor,
             "filters": zarr_array.filters,
         }
         # _FillValue needs to be in attributes, not encoding, so it will get
         # picked up by decode_cf
-        if getattr(zarr_array, "fill_value") is not None:
+        if zarr_array.fill_value is not None:
             attributes["_FillValue"] = zarr_array.fill_value
 
         return Variable(dimensions, data, attributes, encoding)
@@ -576,7 +579,7 @@ class ZarrStore(AbstractWritableDataStore):
         dimensions = {}
         for k, v in self.zarr_group.arrays():
             dim_names, _ = _get_zarr_dims_and_attrs(v, DIMENSION_KEY, try_nczarr)
-            for d, s in zip(dim_names, v.shape):
+            for d, s in zip(dim_names, v.shape, strict=True):
                 if d in dimensions and dimensions[d] != s:
                     raise ValueError(
                         f"found conflicting lengths for dimension {d} "
@@ -1218,44 +1221,86 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         zarr_version=None,
         **kwargs,
     ) -> DataTree:
-        from xarray.backends.api import open_dataset
         from xarray.core.datatree import DataTree
+
+        filename_or_obj = _normalize_path(filename_or_obj)
+        groups_dict = self.open_groups_as_dict(filename_or_obj, **kwargs)
+
+        return DataTree.from_dict(groups_dict)
+
+    def open_groups_as_dict(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group: str | Iterable[str] | Callable | None = None,
+        mode="r",
+        synchronizer=None,
+        consolidated=None,
+        chunk_store=None,
+        storage_options=None,
+        stacklevel=3,
+        zarr_version=None,
+        **kwargs,
+    ) -> dict[str, Dataset]:
+
         from xarray.core.treenode import NodePath
 
         filename_or_obj = _normalize_path(filename_or_obj)
+
+        # Check for a group and make it a parent if it exists
         if group:
-            parent = NodePath("/") / NodePath(group)
-            stores = ZarrStore.open_store(filename_or_obj, group=parent)
-            if not stores:
-                ds = open_dataset(
-                    filename_or_obj, group=parent, engine="zarr", **kwargs
-                )
-                return DataTree.from_dict({str(parent): ds})
+            parent = str(NodePath("/") / NodePath(group))
         else:
-            parent = NodePath("/")
-            stores = ZarrStore.open_store(filename_or_obj, group=parent)
-        ds = open_dataset(filename_or_obj, group=parent, engine="zarr", **kwargs)
-        tree_root = DataTree.from_dict({str(parent): ds})
+            parent = str(NodePath("/"))
+
+        stores = ZarrStore.open_store(
+            filename_or_obj,
+            group=parent,
+            mode=mode,
+            synchronizer=synchronizer,
+            consolidated=consolidated,
+            consolidate_on_close=False,
+            chunk_store=chunk_store,
+            storage_options=storage_options,
+            stacklevel=stacklevel + 1,
+            zarr_version=zarr_version,
+        )
+
+        groups_dict = {}
+
         for path_group, store in stores.items():
-            ds = open_dataset(
-                filename_or_obj, store=store, group=path_group, engine="zarr", **kwargs
-            )
-            new_node: DataTree = DataTree(name=NodePath(path_group).name, data=ds)
-            tree_root._set_item(
-                path_group,
-                new_node,
-                allow_overwrite=False,
-                new_nodes_along_path=True,
-            )
-        return tree_root
+            store_entrypoint = StoreBackendEntrypoint()
+
+            with close_on_error(store):
+                group_ds = store_entrypoint.open_dataset(
+                    store,
+                    mask_and_scale=mask_and_scale,
+                    decode_times=decode_times,
+                    concat_characters=concat_characters,
+                    decode_coords=decode_coords,
+                    drop_variables=drop_variables,
+                    use_cftime=use_cftime,
+                    decode_timedelta=decode_timedelta,
+                )
+            group_name = str(NodePath(path_group))
+            groups_dict[group_name] = group_ds
+
+        return groups_dict
 
 
-def _iter_zarr_groups(root, parent="/"):
-    from xarray.core.treenode import NodePath
+def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
 
-    parent = NodePath(parent)
+    parent_nodepath = NodePath(parent)
+    yield str(parent_nodepath)
     for path, group in root.groups():
-        gpath = parent / path
+        gpath = parent_nodepath / path
         yield str(gpath)
         yield from _iter_zarr_groups(group, parent=gpath)
 

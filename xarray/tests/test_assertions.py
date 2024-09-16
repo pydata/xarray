@@ -11,7 +11,7 @@ from xarray.tests import has_dask
 try:
     from dask.array import from_array as dask_from_array
 except ImportError:
-    dask_from_array = lambda x: x  # type: ignore
+    dask_from_array = lambda x: x  # type: ignore[assignment, misc]
 
 try:
     import pint

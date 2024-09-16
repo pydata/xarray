@@ -278,7 +278,9 @@ def _extract_nc4_variable_encoding(
         chunksizes = encoding["chunksizes"]
         chunks_too_big = any(
             c > d and dim not in unlimited_dims
-            for c, d, dim in zip(chunksizes, variable.shape, variable.dims)
+            for c, d, dim in zip(
+                chunksizes, variable.shape, variable.dims, strict=False
+            )
         )
         has_original_shape = "original_shape" in encoding
         changed_shape = (
@@ -446,7 +448,9 @@ class NetCDF4DataStore(WritableCFDataStore):
             else:
                 encoding["contiguous"] = False
                 encoding["chunksizes"] = tuple(chunking)
-                encoding["preferred_chunks"] = dict(zip(var.dimensions, chunking))
+                encoding["preferred_chunks"] = dict(
+                    zip(var.dimensions, chunking, strict=True)
+                )
         # TODO: figure out how to round-trip "endian-ness" without raising
         # warnings from netCDF4
         # encoding['endian'] = var.endian()

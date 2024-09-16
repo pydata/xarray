@@ -582,7 +582,7 @@ class TestDataset:
 
         for a in das:
             pandas_obj = a.to_pandas()
-            ds_based_on_pandas = Dataset(pandas_obj)  # type: ignore  # TODO: improve typing of __init__
+            ds_based_on_pandas = Dataset(pandas_obj)  # type: ignore[arg-type]  # TODO: improve typing of __init__
             for dim in ds_based_on_pandas.data_vars:
                 assert isinstance(dim, int)
                 assert_array_equal(ds_based_on_pandas[dim], pandas_obj[dim])
@@ -1217,7 +1217,7 @@ class TestDataset:
         ΔN = 28
         time = xr.date_range(
             "2001-01-01", periods=N + ΔN, freq="D", calendar=calendar
-        ).to_numpy()
+        ).to_numpy(copy=True)
         if add_gap:
             # introduce an empty bin
             time[31 : 31 + ΔN] = np.datetime64("NaT")
@@ -3212,7 +3212,7 @@ class TestDataset:
         # test propagate attrs/encoding to new variable(s) created from Index object
         original = Dataset(coords={"x": ("x", [0, 1, 2])})
         expected = Dataset(coords={"y": ("y", [0, 1, 2])})
-        for ds, dim in zip([original, expected], ["x", "y"]):
+        for ds, dim in zip([original, expected], ["x", "y"], strict=True):
             ds[dim].attrs = {"foo": "bar"}
             ds[dim].encoding = {"foo": "bar"}
 
@@ -3713,7 +3713,7 @@ class TestDataset:
         class NotAnIndex: ...
 
         with pytest.raises(TypeError, match=".*not a subclass of xarray.Index"):
-            ds.set_xindex("foo", NotAnIndex)  # type: ignore
+            ds.set_xindex("foo", NotAnIndex)  # type: ignore[arg-type]
 
         with pytest.raises(ValueError, match="those variables don't exist"):
             ds.set_xindex("not_a_coordinate", PandasIndex)
@@ -3740,7 +3740,7 @@ class TestDataset:
                 return cls(options["opt"])
 
         indexed = ds.set_xindex("foo", IndexWithOptions, opt=1)
-        assert getattr(indexed.xindexes["foo"], "opt") == 1
+        assert indexed.xindexes["foo"].opt == 1  # type: ignore[attr-defined]
 
     def test_stack(self) -> None:
         ds = Dataset(
@@ -6450,8 +6450,8 @@ class TestDataset:
 
         expected = ds.copy(deep=True)
         # https://github.com/python/mypy/issues/3004
-        expected["d1"].values = [2, 2, 2]  # type: ignore
-        expected["d2"].values = [2.0, 2.0, 2.0]  # type: ignore
+        expected["d1"].values = [2, 2, 2]  # type: ignore[assignment]
+        expected["d2"].values = [2.0, 2.0, 2.0]  # type: ignore[assignment]
         assert expected["d1"].dtype == int
         assert expected["d2"].dtype == float
         assert_identical(expected, actual)
@@ -6459,8 +6459,8 @@ class TestDataset:
         # override dtype
         actual = full_like(ds, fill_value=True, dtype=bool)
         expected = ds.copy(deep=True)
-        expected["d1"].values = [True, True, True]  # type: ignore
-        expected["d2"].values = [True, True, True]  # type: ignore
+        expected["d1"].values = [True, True, True]  # type: ignore[assignment]
+        expected["d2"].values = [True, True, True]  # type: ignore[assignment]
         assert expected["d1"].dtype == bool
         assert expected["d2"].dtype == bool
         assert_identical(expected, actual)
@@ -6704,18 +6704,80 @@ class TestDataset:
             ds.var1.polyfit("dim2", 10, full=True)
             assert len(ws) == 1
 
-    def test_pad(self) -> None:
+    @staticmethod
+    def _test_data_var_interior(
+        original_data_var, padded_data_var, padded_dim_name, expected_pad_values
+    ):
+        np.testing.assert_equal(
+            np.unique(padded_data_var.isel({padded_dim_name: [0, -1]})),
+            expected_pad_values,
+        )
+        np.testing.assert_array_equal(
+            padded_data_var.isel({padded_dim_name: slice(1, -1)}), original_data_var
+        )
+
+    @pytest.mark.parametrize("padded_dim_name", ["dim1", "dim2", "dim3", "time"])
+    @pytest.mark.parametrize(
+        ["constant_values"],
+        [
+            pytest.param(None, id="default"),
+            pytest.param(42, id="scalar"),
+            pytest.param((42, 43), id="tuple"),
+            pytest.param({"dim1": 42, "dim2": 43}, id="per dim scalar"),
+            pytest.param({"dim1": (42, 43), "dim2": (43, 44)}, id="per dim tuple"),
+            pytest.param({"var1": 42, "var2": (42, 43)}, id="per var"),
+            pytest.param({"var1": 42, "dim1": (42, 43)}, id="mixed"),
+        ],
+    )
+    def test_pad(self, padded_dim_name, constant_values) -> None:
         ds = create_test_data(seed=1)
-        padded = ds.pad(dim2=(1, 1), constant_values=42)
+        padded = ds.pad({padded_dim_name: (1, 1)}, constant_values=constant_values)
 
-        assert padded["dim2"].shape == (11,)
-        assert padded["var1"].shape == (8, 11)
-        assert padded["var2"].shape == (8, 11)
-        assert padded["var3"].shape == (10, 8)
-        assert dict(padded.sizes) == {"dim1": 8, "dim2": 11, "dim3": 10, "time": 20}
+        # test padded dim values and size
+        for ds_dim_name, ds_dim in ds.sizes.items():
+            if ds_dim_name == padded_dim_name:
+                np.testing.assert_equal(padded.sizes[ds_dim_name], ds_dim + 2)
+                if ds_dim_name in padded.coords:
+                    assert padded[ds_dim_name][[0, -1]].isnull().all()
+            else:
+                np.testing.assert_equal(padded.sizes[ds_dim_name], ds_dim)
 
-        np.testing.assert_equal(padded["var1"].isel(dim2=[0, -1]).data, 42)
-        np.testing.assert_equal(padded["dim2"][[0, -1]].data, np.nan)
+        # check if coord "numbers" with dimension dim3 is padded correctly
+        if padded_dim_name == "dim3":
+            assert padded["numbers"][[0, -1]].isnull().all()
+            # twarning: passes but dtype changes from int to float
+            np.testing.assert_array_equal(padded["numbers"][1:-1], ds["numbers"])
+
+        # test if data_vars are paded with correct values
+        for data_var_name, data_var in padded.data_vars.items():
+            if padded_dim_name in data_var.dims:
+                if utils.is_dict_like(constant_values):
+                    if (
+                        expected := constant_values.get(data_var_name, None)
+                    ) is not None:
+                        self._test_data_var_interior(
+                            ds[data_var_name], data_var, padded_dim_name, expected
+                        )
+                    elif (
+                        expected := constant_values.get(padded_dim_name, None)
+                    ) is not None:
+                        self._test_data_var_interior(
+                            ds[data_var_name], data_var, padded_dim_name, expected
+                        )
+                    else:
+                        self._test_data_var_interior(
+                            ds[data_var_name], data_var, padded_dim_name, 0
+                        )
+                elif constant_values:
+                    self._test_data_var_interior(
+                        ds[data_var_name], data_var, padded_dim_name, constant_values
+                    )
+                else:
+                    self._test_data_var_interior(
+                        ds[data_var_name], data_var, padded_dim_name, np.nan
+                    )
+            else:
+                assert_array_equal(data_var, ds[data_var_name])
 
     @pytest.mark.parametrize(
         ["keep_attrs", "attrs", "expected"],
@@ -6913,7 +6975,7 @@ class TestDataset:
 
         # test error handling
         with pytest.raises(ValueError):
-            ds.query("a > 5")  # type: ignore # must be dict or kwargs
+            ds.query("a > 5")  # type: ignore[arg-type] # must be dict or kwargs
         with pytest.raises(ValueError):
             ds.query(x=(a > 5))
         with pytest.raises(IndexError):
@@ -7553,4 +7615,4 @@ def test_transpose_error() -> None:
             "transpose requires dim to be passed as multiple arguments. Expected `'y', 'x'`. Received `['y', 'x']` instead"
         ),
     ):
-        ds.transpose(["y", "x"])  # type: ignore
+        ds.transpose(["y", "x"])  # type: ignore[arg-type]

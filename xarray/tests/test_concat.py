@@ -276,7 +276,10 @@ def test_concat_multiple_datasets_missing_vars(include_day: bool) -> None:
             expected[name][i : i + 1, ...] = np.nan
 
     # set up the test data
-    datasets = [ds.drop_vars(varname) for ds, varname in zip(datasets, vars_to_drop)]
+    datasets = [
+        ds.drop_vars(varname)
+        for ds, varname in zip(datasets, vars_to_drop, strict=True)
+    ]
 
     actual = concat(datasets, dim="day")
 
@@ -1326,12 +1329,12 @@ def test_concat_preserve_coordinate_order() -> None:
     actual = concat([ds1, ds2], dim="time")
 
     # check dimension order
-    for act, exp in zip(actual.dims, expected.dims):
+    for act, exp in zip(actual.dims, expected.dims, strict=True):
         assert act == exp
         assert actual.sizes[act] == expected.sizes[exp]
 
     # check coordinate order
-    for act, exp in zip(actual.coords, expected.coords):
+    for act, exp in zip(actual.coords, expected.coords, strict=True):
         assert act == exp
         assert_identical(actual.coords[act], expected.coords[exp])
 
@@ -1345,12 +1348,12 @@ def test_concat_typing_check() -> None:
         TypeError,
         match="The elements in the input list need to be either all 'Dataset's or all 'DataArray's",
     ):
-        concat([ds, da], dim="foo")  # type: ignore
+        concat([ds, da], dim="foo")  # type: ignore[type-var]
     with pytest.raises(
         TypeError,
         match="The elements in the input list need to be either all 'Dataset's or all 'DataArray's",
     ):
-        concat([da, ds], dim="foo")  # type: ignore
+        concat([da, ds], dim="foo")  # type: ignore[type-var]
 
 
 def test_concat_not_all_indexes() -> None:
