@@ -755,7 +755,8 @@ def _push(array, n: int | None = None, axis: int = -1):
 
         if pycompat.mod_version("numbagg") < Version("0.6.2"):
             warnings.warn(
-                f"numbagg >= 0.6.2 is required for bfill & ffill; {pycompat.mod_version('numbagg')} is installed. We'll attempt with bottleneck instead."
+                f"numbagg >= 0.6.2 is required for bfill & ffill; {pycompat.mod_version('numbagg')} is installed. We'll attempt with bottleneck instead.",
+                stacklevel=2,
             )
         else:
             return numbagg.ffill(array, limit=n, axis=axis)

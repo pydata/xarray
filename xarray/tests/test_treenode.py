@@ -330,11 +330,13 @@ class TestAncestry:
     def test_lineage(self):
         _, leaf_f = create_test_tree()
         expected = ["f", "e", "b", "a"]
-        assert [node.name for node in leaf_f.lineage] == expected
+        with pytest.warns(DeprecationWarning):
+            assert [node.name for node in leaf_f.lineage] == expected
 
     def test_ancestors(self):
         _, leaf_f = create_test_tree()
-        ancestors = leaf_f.ancestors
+        with pytest.warns(DeprecationWarning):
+            ancestors = leaf_f.ancestors
         expected = ["a", "b", "e", "f"]
         for node, expected_name in zip(ancestors, expected, strict=True):
             assert node.name == expected_name

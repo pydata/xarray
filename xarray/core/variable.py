@@ -901,7 +901,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def reset_encoding(self) -> Self:
         warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead"
+            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
+            stacklevel=2,
         )
         return self.drop_encoding()
 
@@ -1895,6 +1896,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             warnings.warn(
                 "The `interpolation` argument to quantile was renamed to `method`.",
                 FutureWarning,
+                stacklevel=2,
             )
 
             if method != "linear":

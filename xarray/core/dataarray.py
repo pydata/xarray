@@ -963,7 +963,8 @@ class DataArray(
 
     def reset_encoding(self) -> Self:
         warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead"
+            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
+            stacklevel=2,
         )
         return self.drop_encoding()
 
@@ -1427,6 +1428,7 @@ class DataArray(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
                 category=FutureWarning,
+                stacklevel=2,
             )
             chunk_mapping = {}
 

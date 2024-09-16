@@ -282,7 +282,8 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
                 warnings.warn(
                     "The specified chunks separate the stored chunks along "
                     f'dimension "{dim}" starting at index {min(breaks)}. This could '
-                    "degrade performance. Instead, consider rechunking after loading."
+                    "degrade performance. Instead, consider rechunking after loading.",
+                    stacklevel=2,
                 )
 
     return dict(zip(dims, chunk_shape, strict=True))
@@ -779,7 +780,8 @@ class Dataset(
 
     def reset_encoding(self) -> Self:
         warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead"
+            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
+            stacklevel=2,
         )
         return self.drop_encoding()
 
@@ -2725,6 +2727,7 @@ class Dataset(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
                 category=DeprecationWarning,
+                stacklevel=2,
             )
             chunks = {}
         chunks_mapping: Mapping[Any, Any]
@@ -4803,6 +4806,7 @@ class Dataset(
                                 f"No index created for dimension {k} because variable {k} is not a coordinate. "
                                 f"To create an index for {k}, please first call `.set_coords('{k}')` on this object.",
                                 UserWarning,
+                                stacklevel=2,
                             )
 
                         # create 1D variable without creating a new index
@@ -8333,6 +8337,7 @@ class Dataset(
             warnings.warn(
                 "The `interpolation` argument to quantile was renamed to `method`.",
                 FutureWarning,
+                stacklevel=2,
             )
 
             if method != "linear":

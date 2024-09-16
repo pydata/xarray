@@ -517,6 +517,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 "We recommend you rename the dims immediately to become distinct, as most xarray functionality is likely to fail silently if you do not. "
                 "To rename the dimensions you will need to set the ``.dims`` attribute of each variable, ``e.g. var.dims=('x0', 'x1')``.",
                 UserWarning,
+                stacklevel=2,
             )
         return dims
 
@@ -801,6 +802,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
                 category=FutureWarning,
+                stacklevel=2,
             )
             chunks = {}
 

@@ -881,7 +881,8 @@ class DataWithCoords(AttrAccessMixin):
             warnings.warn(
                 "Passing ``keep_attrs`` to ``rolling_exp`` has no effect. Pass"
                 " ``keep_attrs`` directly to the applied function, e.g."
-                " ``rolling_exp(...).mean(keep_attrs=False)``."
+                " ``rolling_exp(...).mean(keep_attrs=False)``.",
+                stacklevel=2,
             )
 
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
