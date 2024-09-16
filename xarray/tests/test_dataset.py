@@ -1264,10 +1264,10 @@ class TestDataset:
         with pytest.raises(UnexpectedDataAccess):
             ds.load()
         with pytest.raises(UnexpectedDataAccess):
-            ds["var1"].values
+            _ = ds["var1"].values
 
         # these should not raise UnexpectedDataAccess:
-        ds.var1.data
+        _ = ds.var1.data
         ds.isel(time=10)
         ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
         ds.transpose()
@@ -3087,7 +3087,7 @@ class TestDataset:
         data["var1"] = (var1.dims, InaccessibleArray(var1.values))
         renamed = data.rename(newnames)
         with pytest.raises(UnexpectedDataAccess):
-            renamed["renamed_var1"].values
+            _ = renamed["renamed_var1"].values
 
         # https://github.com/python/mypy/issues/10008
         renamed_kwargs = data.rename(**newnames)  # type: ignore[arg-type]
@@ -5210,7 +5210,7 @@ class TestDataset:
             with pytest.raises(UnexpectedDataAccess):
                 ds.load()
             with pytest.raises(UnexpectedDataAccess):
-                ds["var1"].values
+                _ = ds["var1"].values
 
             # these should not raise UnexpectedDataAccess:
             ds.isel(time=10)
@@ -5223,10 +5223,10 @@ class TestDataset:
         for decode_cf in [True, False]:
             ds = open_dataset(store, decode_cf=decode_cf)
             with pytest.raises(UnexpectedDataAccess):
-                ds["var1"].values
+                _ = ds["var1"].values
 
             # these should not raise UnexpectedDataAccess:
-            ds.var1.data
+            _ = ds.var1.data
             ds.isel(time=10)
             ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
             repr(ds)
@@ -5989,9 +5989,9 @@ class TestDataset:
 
         # don't actually patch these methods in
         with pytest.raises(AttributeError):
-            ds.item
+            _ = ds.item
         with pytest.raises(AttributeError):
-            ds.searchsorted
+            _ = ds.searchsorted
 
     def test_dataset_array_math(self) -> None:
         ds = self.make_example_math_dataset()
@@ -7416,7 +7416,7 @@ def test_trapezoid_datetime(dask, which_datetime) -> None:
 def test_no_dict() -> None:
     d = Dataset()
     with pytest.raises(AttributeError):
-        d.__dict__
+        _ = d.__dict__
 
 
 def test_subclass_slots() -> None:

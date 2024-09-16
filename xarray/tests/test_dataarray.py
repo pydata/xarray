@@ -155,7 +155,7 @@ class TestDataArray:
         for k, v in self.dv.coords.items():
             assert_array_equal(v, self.ds.coords[k])
         with pytest.raises(AttributeError):
-            self.dv.dataset
+            _ = self.dv.dataset
         assert isinstance(self.ds["x"].to_index(), pd.Index)
         with pytest.raises(ValueError, match=r"must be 1-dimensional"):
             self.ds["foo"].to_index()
@@ -6868,7 +6868,7 @@ class TestIrisConversion:
 def test_no_dict() -> None:
     d = DataArray()
     with pytest.raises(AttributeError):
-        d.__dict__
+        _ = d.__dict__
 
 
 def test_subclass_slots() -> None:

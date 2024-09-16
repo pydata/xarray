@@ -488,13 +488,13 @@ class DatasetIOBase:
         with self.roundtrip(expected) as actual:
             assert isinstance(actual.foo.variable._data, indexing.MemoryCachedArray)
             assert not actual.foo.variable._in_memory
-            actual.foo.values  # cache
+            _ = actual.foo.values  # cache
             assert actual.foo.variable._in_memory
 
         with self.roundtrip(expected, open_kwargs={"cache": False}) as actual:
             assert isinstance(actual.foo.variable._data, indexing.CopyOnWriteArray)
             assert not actual.foo.variable._in_memory
-            actual.foo.values  # no caching
+            _ = actual.foo.values  # no caching
             assert not actual.foo.variable._in_memory
 
     @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
@@ -2000,7 +2000,7 @@ class TestNetCDF4Data(NetCDF4Base):
             # Older versions of NetCDF4 raise an exception here, and if so we
             # want to ensure we improve (that is, replace) the error message
             try:
-                ds2.randovar.values
+                _ = ds2.randovar.values
             except IndexError as err:
                 assert "first by calling .load" in str(err)
 
@@ -4450,7 +4450,7 @@ class TestDask(DatasetIOBase):
         expected = Dataset({"foo": ("x", [5, 6, 7])})
         with self.roundtrip(expected) as actual:
             assert not actual.foo.variable._in_memory
-            actual.foo.values  # no caching
+            _ = actual.foo.values  # no caching
             assert not actual.foo.variable._in_memory
 
     def test_open_mfdataset(self) -> None:
@@ -4576,7 +4576,7 @@ class TestDask(DatasetIOBase):
                     assert actual.test1 == ds1.test1
                     # attributes from ds2 are not retained, e.g.,
                     with pytest.raises(AttributeError, match=r"no attribute"):
-                        actual.test2
+                        _ = actual.test2
 
     def test_open_mfdataset_attrs_file(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})

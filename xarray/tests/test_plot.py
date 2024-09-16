@@ -3381,7 +3381,7 @@ def test_facetgrid_axes_raises_deprecation_warning() -> None:
         with figure_context():
             ds = xr.tutorial.scatter_example_dataset()
             g = ds.plot.scatter(x="A", y="B", col="x")
-            g.axes
+            _ = g.axes
 
 
 @requires_matplotlib
