@@ -287,16 +287,16 @@ class TestValidNames:
             NamedNode(name=0)
 
     def test_names(self):
-        nn = NamedNode()
+        nn: NamedNode = NamedNode()
         assert nn.name is None
 
-        nn = NamedNode(name="foo")
+        nn: NamedNode = NamedNode(name="foo")
         assert nn.name == "foo"
 
         nn.name = "bar"
         assert nn.name == "bar"
 
-        nn = NamedNode(children={"foo": NamedNode()})
+        nn: NamedNode = NamedNode(children={"foo": NamedNode()})
         assert nn.children["foo"].name == "foo"
         with pytest.raises(
             ValueError, match="cannot set the name of a node which already has a parent"
