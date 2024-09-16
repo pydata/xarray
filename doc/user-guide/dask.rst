@@ -5,7 +5,7 @@
 Parallel Computing with Dask
 ============================
 
-`Dask <https://dask.org/?utm_source=xarray-docs>`__, a general purpose library for parallel computing, integrates with Xarray to handle larger-than-memory computations.
+Xarray integrates with `Dask <https://dask.org/?utm_source=xarray-docs>`__, a general purpose library for parallel computing, to handle larger-than-memory computations.
 
 If you’ve been using Xarray to read in large datasets or split up data across a number of files, you may already be using Dask:
 
@@ -21,19 +21,24 @@ Using Dask with Xarray feels similar to working with NumPy arrays, but on much l
 Examples
 --------
 
+If you're new to using Xarray with Dask, we recommend the `Xarray + Dask Tutorial <https://tutorial.xarray.dev/intermediate/xarray_and_dask.html>`_.
+
+Here are some examples for using Xarray with Dask at scale:
+
 - `Zonal averaging with the NOAA National Water Model <https://docs.coiled.io/user_guide/xarray.html?utm_source=xarray-docs>`_
 - `CMIP6 Precipitation Frequency Analysis <https://gallery.pangeo.io/repos/pangeo-gallery/cmip6/precip_frequency_change.html>`_
 - `Using Dask + Cloud Optimized GeoTIFFs <https://gallery.pangeo.io/repos/pangeo-data/landsat-8-tutorial-gallery/landsat8.html#Dask-Chunks-and-Cloud-Optimized-Geotiffs>`_
-- `Xarray + Dask Tutorial <https://tutorial.xarray.dev/intermediate/xarray_and_dask.html>`_
 
 
 Using Dask with Xarray
 ----------------------
 
-.. image:: https://docs.dask.org/en/stable/_images/dask-array.svg
+.. image:: ../_static/dask-array.svg
    :width: 50 %
    :align: right
    :alt: A Dask array
+
+Dask divides arrays into smaller parts called chunks. These chunks are small, manageable pieces of the larger dataset, that Dask is able to process in parallel (see the `Dask Array docs on chunks <https://docs.dask.org/en/stable/array-chunks.html?utm_source=xarray-docs>`_).
 
 Xarray operations on Dask-backed arrays are lazy. This means computations are not executed immediately, but are instead queued up as tasks in a Dask graph.
 
@@ -46,21 +51,15 @@ Nearly all Xarray methods have been extended to work automatically with Dask Arr
 Reading and writing data
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-When reading data, Dask automatically divides your dataset into smaller chunks. These chunks are essentially small, manageable blocks of the larger dataset. You can specify the size of chunks with the ``chunks`` argument (see the `Dask Array docs on chunks <https://docs.dask.org/en/stable/array-chunks.html?utm_source=xarray-docs>`_).
+When reading data, Dask divides your dataset into smaller chunks. You can specify the size of chunks with the ``chunks`` argument.
 
 .. tab:: Zarr
 
-    The `Zarr <https://zarr.readthedocs.io/en/stable/>`_ format is ideal for working with large datasets. Each chunk is stored in a separate file, allowing parallel reading and writing with Dask. When you open a Zarr dataset with :py:func:`~xarray.open_zarr`, it is loaded as a Dask array by default::
+    The `Zarr <https://zarr.readthedocs.io/en/stable/>`_ format is ideal for working with large datasets. Each chunk is stored in a separate file, allowing parallel reading and writing with Dask. You can also use Zarr to read/write directly from cloud storage buckets (see the `Dask documentation on connecting to remote data <https://docs.dask.org/en/stable/how-to/connect-to-remote-data.html?utm_source=xarray-docs>`__)
+    
+    When you open a Zarr dataset with :py:func:`~xarray.open_zarr`, it is loaded as a Dask array by default (if Dask is installed)::
 
         ds = xr.open_zarr("path/to/directory.zarr")
-
-    Save data to a local Zarr dataset::
-
-        ds.to_zarr("path/to/directory.zarr")
-
-    Or to an S3 bucket::
-
-        ds.to_zarr("s3://my-bucket/data.zarr")
 
     See :ref:`io.zarr` for more details.
 
@@ -70,7 +69,7 @@ When reading data, Dask automatically divides your dataset into smaller chunks. 
 
         ds = xr.open_dataset("example-data.nc", chunks={"time": 10})
 
-    Or open multiple files with py:func:`~xarray.open_mfdataset`::
+    Or open multiple files in parallel with py:func:`~xarray.open_mfdataset`::
 
         xr.open_mfdataset('my/files/*.nc', parallel=True)
 
@@ -79,7 +78,11 @@ When reading data, Dask automatically divides your dataset into smaller chunks. 
         When reading in many netCDF files with py:func:`~xarray.open_mfdataset`, using ``engine=h5netcdf`` can
         be faster than the default which uses the netCDF4 package.
 
-    Saving a larger-than-memory netCDF file::
+    Save larger-than-memory netCDF files::
+
+        ds.to_netcdf("my-big-file.nc")
+    
+    Or set ``compute=False`` to return a dask.delayed object that can be computed later::
 
        delayed_write = ds.to_netcdf("my-big-file.nc", compute=False)
        delayed_write.compute()
@@ -135,16 +138,21 @@ Loading Dask Arrays
     )
     ds.to_netcdf("example-data.nc")
 
-There are a couple common cases where you may want to convert lazy Dask arrays into eager, in-memory Xarray data structures:
+There are a few common cases where you may want to convert lazy Dask arrays into eager, in-memory Xarray data structures:
 
 - You want to inspect smaller intermediate results when working interactively or debugging
 - You've reduced the dataset (by filtering or with a groupby, for example) and now have something much smaller that fits in memory
+- You need to compute intermediate results since Dask is unable (or struggles) to perform a certain computation. The canonical example of this is normalizing a dataset, e.g., ``ds - ds.mean()``, when ``ds`` is larger than memory. Typically, you should either save ``ds`` to disk or compute ``ds.mean()`` eagerly.
 
-To do this, you can use :py:meth:`~xarray.Dataset.load`, which is similar to :py:meth:`~xarray.Dataset.compute`, but instead changes results in-place:
+To do this, you can use :py:meth:`~xarray.Dataset.compute`:
 
 .. ipython:: python
 
-    ds.load()
+    ds.compute()
+
+.. note::
+
+    Using :py:meth:`~xarray.Dataset.compute` is preferred to :py:meth:`~xarray.Dataset.load`, which changes the results in-place.
 
 You can also access :py:attr:`~xarray.DataArray.values`, which will always be a NumPy array:
 
@@ -188,7 +196,7 @@ If you're using a Dask cluster, you can also use :py:meth:`~xarray.Dataset.persi
 Chunking and performance
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-The way a dataset is chunked can be critical to performance when working with large datasets. You'll want have chunk sizes large enough to reduce the number of chunks that Dask has to think about (to reduce overhead from the task graph) but also small enough so that many of them can fit in memory at once.
+The way a dataset is chunked can be critical to performance when working with large datasets. You'll want chunk sizes large enough to reduce the number of chunks that Dask has to think about (to reduce overhead from the task graph) but also small enough so that many of them can fit in memory at once.
 
 .. tip::
 
@@ -198,8 +206,11 @@ It can be helpful to choose chunk sizes based on your downstream analyses and to
 
 You can rechunk a dataset by:
 
-- Specifying ``chunks={}`` when reading in your dataset. If you know you'll want to do some spatial subsetting, for example, you could use ``chunks={'latitude': 10, 'longitude': 10}`` to specify small chunks across space. This can avoid loading subsets of data that span multiple chunks, thus reducing the number of file reads.
+- Specifying ``chunks={}`` when reading in your dataset. If you know you'll want to do some spatial subsetting, for example, you could use ``chunks={'latitude': 10, 'longitude': 10}`` to specify small chunks across space. This can avoid loading subsets of data that span multiple chunks, thus reducing the number of file reads. Note that this will only work, though, for chunks that are similar to how the data is chunked on disk. Otherwise, it will be very slow and require a lot of network bandwidth.
 - Using :py:meth:`Dataset.chunk` after you've already read in your dataset. For time domain problems, for example, you can use ``ds.chunk(time=TimeResampler())`` to rechunk according to a specified unit of time. ``ds.chunk(time=TimeResampler("MS"))``, for example, will set the chunks so that a month of data is contained in one chunk.
+
+
+For large-scale rechunking tasks (e.g., converting a simulation dataset stored with chunking only along time to a dataset with chunking only across space), consider writing another copy of your data on disk and/or using dedicated tools such as `Rechunker <https://rechunker.readthedocs.io/en/latest/>`_.
 
 .. _dask.automatic-parallelization:
 
@@ -210,10 +221,10 @@ Almost all of Xarray's built-in operations work on Dask arrays. If you want to
 use a function that isn't wrapped by Xarray, and have it applied in parallel on
 each block of your xarray object, you have three options:
 
-1. Extract Dask Arrays from xarray objects with ``.data`` and use Dask directly.
-2. Use :py:func:`~xarray.apply_ufunc` to apply functions that consume and return NumPy arrays.
-3. Use :py:func:`~xarray.map_blocks`, :py:meth:`Dataset.map_blocks` or :py:meth:`DataArray.map_blocks`
+1. Use :py:func:`~xarray.apply_ufunc` to apply functions that consume and return NumPy arrays.
+2. Use :py:func:`~xarray.map_blocks`, :py:meth:`Dataset.map_blocks` or :py:meth:`DataArray.map_blocks`
    to apply functions that consume and return xarray objects.
+3. Extract Dask Arrays from xarray objects with ``.data`` and use Dask directly.
 
 
 ``apply_ufunc``
@@ -439,18 +450,28 @@ Notice that the 0-shaped sizes were not printed to screen. Since ``template`` ha
 Deploying Dask
 --------------
 
-By default, Dask distributes work across multiple cores on a single machine, which lets you process as much data as you can download and fit onto your hard drive. However, this has two limitations:
+By default, Dask uses the multi-threaded scheduler, which distributes work across multiple cores on a single machine and allows for processing some datasets that do not fit into memory. However, this has two limitations:
 
 - You are limited by the size of your hard drive
 - Downloading data can be slow and expensive
 
-Instead, it can be faster and cheaper to run your computations close to where your data is stored, distributed across many machines on a Dask cluster. Often, this means deploying Dask on HPC clusters or on the cloud. See the `Dask documentation <https://docs.dask.org/en/stable/deploying.html?utm_source=xarray-docs>`__ for more details.
-
+Instead, it can be faster and cheaper to run your computations close to where your data is stored, distributed across many machines on a Dask cluster. Often, this means deploying Dask on HPC clusters or on the cloud. See the `Dask deployment documentation <https://docs.dask.org/en/stable/deploying.html?utm_source=xarray-docs>`__ for more details.
 
 Best Practices
 --------------
 
 Dask is pretty easy to use but there are some gotchas, many of which are under active development. Here are some tips we have found through experience. We also recommend checking out the `Dask best practices <https://docs.dask.org/en/stable/array-best-practices.html?utm_source=xarray-docs>`_.
+
+1. Do your spatial and temporal indexing (e.g. ``.sel()`` or ``.isel()``) early, especially before calling ``resample()`` or ``groupby()``. Grouping and resampling triggers some computation on all the blocks, which in theory should commute with indexing, but this optimization hasn't been implemented in Dask yet. (See `Dask issue #746 <https://github.com/dask/dask/issues/746>`_).
+
+2. More generally, ``groupby()`` is a costly operation and will perform a lot better if the ``flox`` package is installed.
+   See the `flox documentation <https://flox.readthedocs.io>`_ for more. By default Xarray will use ``flox`` if installed.
+
+3. Save intermediate results to disk as a netCDF files (using ``to_netcdf()``) and then load them again with ``open_dataset()`` for further computations. For example, if subtracting temporal mean from a dataset, save the temporal mean to disk before subtracting. Again, in theory, Dask should be able to do the computation in a streaming fashion, but in practice this is a fail case for the Dask scheduler, because it tries to keep every chunk of an array that it computes in memory. (See `Dask issue #874 <https://github.com/dask/dask/issues/874>`_)
+
+4. Use the `Dask dashboard <https://docs.dask.org/en/latest/dashboard.html?utm_source=xarray-docs>`_ to identify performance bottlenecks.
+
+Here's an example of a simplified workflow putting some of these tips together:
 
 .. code-block:: python
 
@@ -474,12 +495,3 @@ Dask is pretty easy to use but there are some gotchas, many of which are under a
 
     zonal_mean.load()  # Pull smaller results into memory after reducing the dataset
 
-
-1. Do your spatial and temporal indexing (e.g. ``.sel()`` or ``.isel()``) early, especially before calling ``resample()`` or ``groupby()``. Grouping and resampling triggers some computation on all the blocks, which in theory should commute with indexing, but this optimization hasn't been implemented in Dask yet. (See `Dask issue #746 <https://github.com/dask/dask/issues/746>`_).
-
-2. More generally, ``groupby()`` is a costly operation and will perform a lot better if the ``flox`` package is installed.
-   See the `flox documentation <https://flox.readthedocs.io>`_ for more. By default Xarray will use ``flox`` if installed.
-
-3. Save intermediate results to disk as a netCDF files (using ``to_netcdf()``) and then load them again with ``open_dataset()`` for further computations. For example, if subtracting temporal mean from a dataset, save the temporal mean to disk before subtracting. Again, in theory, Dask should be able to do the computation in a streaming fashion, but in practice this is a fail case for the Dask scheduler, because it tries to keep every chunk of an array that it computes in memory. (See `Dask issue #874 <https://github.com/dask/dask/issues/874>`_)
-
-4. Use the `Dask dashboard <https://docs.dask.org/en/latest/dashboard.html?utm_source=xarray-docs>`_ to identify performance bottlenecks.
