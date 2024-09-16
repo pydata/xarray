@@ -846,11 +846,11 @@ class DataTreeCoordinates(Coordinates):
     def _update_coords(
         self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
     ) -> None:
-        from xarray.core.datatree import check_alignment, check_for_slashes_in_names
+        from xarray.core.datatree import check_alignment, validate_variable_names
 
         # create updated node (`.to_dataset` makes a copy so this doesn't modify in-place)
         node_ds = self._data.to_dataset(inherited=False)
-        check_for_slashes_in_names(list(coords.keys()))
+        validate_variable_names(list(coords.keys()))
         node_ds.coords._update_coords(coords, indexes)
 
         # check consistency *before* modifying anything in-place
