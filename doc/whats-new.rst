@@ -30,7 +30,8 @@ New Features
   `Matt Savoie <https://github.com/flamingbear>`_,
   `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Tom Nicholas <https://github.com/TomNicholas>`_.
-
+- Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
+  By `Eni Awowale <https://github.com/eni-awowale>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -182,8 +183,8 @@ New Features
   to return an object without ``attrs``. A ``deep`` parameter controls whether
   variables' ``attrs`` are also dropped.
   By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
+- Added :py:func:`open_groups` for h5netcdf and netCDF4 backends (:issue:`9137`, :pull:`9243`).
   By `Eni Awowale <https://github.com/eni-awowale>`_.
-- Add `open_groups` method for unaligned datasets (:issue:`9137`, :pull:`9243`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
