@@ -694,7 +694,7 @@ class NamedNode(TreeNode, Generic[Tree]):
 
     def _post_attach(self: AnyNamedNode, parent: AnyNamedNode, name: str) -> None:
         """Ensures child has name attribute corresponding to key under which it has been stored."""
-        _validate_name(name)  # is this check redundant?
+        # we have already validated `name`, since it has already been set as the name of another node (the parent)
         self._name = name
 
     def _copy_node(
