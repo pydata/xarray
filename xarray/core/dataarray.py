@@ -177,7 +177,7 @@ def _infer_coords_and_dims(
             else:
                 for n, (dim, coord) in enumerate(zip(dims, coords, strict=True)):
                     coord = as_variable(
-                        coord, name=dims[n], auto_convert=False
+                        coord, name=dim, auto_convert=False
                     ).to_index_variable()
                     dims[n] = coord.name
     dims_tuple = tuple(dims)

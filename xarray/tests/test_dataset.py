@@ -3038,12 +3038,12 @@ class TestDataset:
         vencoding = {"scale_factor": 10}
         orig.encoding = {"foo": "bar"}
 
-        for k, v in orig.variables.items():
+        for k, _v in orig.variables.items():
             orig[k].encoding = vencoding
 
         actual = orig.drop_encoding()
         assert actual.encoding == {}
-        for k, v in actual.variables.items():
+        for _k, v in actual.variables.items():
             assert v.encoding == {}
 
         assert_equal(actual, orig)

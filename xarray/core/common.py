@@ -1515,7 +1515,7 @@ def full_like(
     fill_value: Any,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = {},
+    chunks: T_Chunks = {},  # noqa: B006
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray: ...
