@@ -619,12 +619,12 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
 
     result = var
     # decompose the interpolation into a succession of independent interpolation
-    for indexes_coords in decompose_interp(indexes_coords):
+    for indep_indexes_coords in decompose_interp(indexes_coords):
         var = result
 
         # target dimensions
-        dims = list(indexes_coords)
-        x, new_x = zip(*[indexes_coords[d] for d in dims], strict=True)
+        dims = list(indep_indexes_coords)
+        x, new_x = zip(*[indep_indexes_coords[d] for d in dims], strict=True)
         destination = broadcast_variables(*new_x)
 
         # transpose to make the interpolated axis to the last position
@@ -641,7 +641,7 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
         out_dims: OrderedSet = OrderedSet()
         for d in var.dims:
             if d in dims:
-                out_dims.update(indexes_coords[d][1].dims)
+                out_dims.update(indep_indexes_coords[d][1].dims)
             else:
                 out_dims.add(d)
         if len(out_dims) > 1:
