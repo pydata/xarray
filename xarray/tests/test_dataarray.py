@@ -6590,7 +6590,7 @@ def test_isin(da) -> None:
 
 def test_raise_no_warning_for_nan_in_binary_ops() -> None:
     with assert_no_warnings():
-        xr.DataArray([1, 2, np.nan]) > 0
+        _ = xr.DataArray([1, 2, np.nan]) > 0
 
 
 @pytest.mark.filterwarnings("error")

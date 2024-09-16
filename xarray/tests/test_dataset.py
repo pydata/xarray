@@ -763,7 +763,7 @@ class TestDataset:
         with assert_no_warnings():
             len(ds.dims)
             ds.dims.__iter__()
-            "dim1" in ds.dims
+            _ = "dim1" in ds.dims
 
     def test_asarray(self) -> None:
         ds = Dataset({"x": 0})
@@ -7106,7 +7106,7 @@ def test_dir_unicode(ds) -> None:
 
 def test_raise_no_warning_for_nan_in_binary_ops() -> None:
     with assert_no_warnings():
-        Dataset(data_vars={"x": ("y", [1, 2, np.nan])}) > 0
+        _ = Dataset(data_vars={"x": ("y", [1, 2, np.nan])}) > 0
 
 
 @pytest.mark.filterwarnings("error")
