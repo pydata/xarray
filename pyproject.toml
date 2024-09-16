@@ -246,7 +246,7 @@ extend-exclude = [
 extend-safe-fixes = [
   "TID252", # absolute imports
 ]
-extend-ignore = [
+ignore = [
   "E402",
   "E501",
   "E731",
