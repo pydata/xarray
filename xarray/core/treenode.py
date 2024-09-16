@@ -42,6 +42,14 @@ class NodePath(PurePosixPath):
         # TODO should we also forbid suffixes to avoid node names with dots in them?
 
 
+def validate_name(name: str | None) -> None:
+    if name is not None:
+        if not isinstance(name, str):
+            raise TypeError("node name must be a string or None")
+        if "/" in name:
+            raise ValueError("node names cannot contain forward slashes")
+
+
 Tree = TypeVar("Tree", bound="TreeNode")
 
 
@@ -205,7 +213,7 @@ class TreeNode(Generic[Tree]):
 
         seen = set()
         for name, child in children.items():
-            _validate_name(name)
+            validate_name(name)
 
             if not isinstance(child, TreeNode):
                 raise TypeError(
@@ -642,14 +650,6 @@ class TreeNode(Generic[Tree]):
 AnyNamedNode = TypeVar("AnyNamedNode", bound="NamedNode")
 
 
-def _validate_name(name: str | None) -> None:
-    if name is not None:
-        if not isinstance(name, str):
-            raise TypeError("node name must be a string or None")
-        if "/" in name:
-            raise ValueError("node names cannot contain forward slashes")
-
-
 class NamedNode(TreeNode, Generic[Tree]):
     """
     A TreeNode which knows its own name.
@@ -663,7 +663,7 @@ class NamedNode(TreeNode, Generic[Tree]):
 
     def __init__(self, name=None, children=None):
         super().__init__(children=children)
-        _validate_name(name)
+        validate_name(name)
         self._name = name
 
     @property
@@ -679,7 +679,7 @@ class NamedNode(TreeNode, Generic[Tree]):
                 "Consider creating a detached copy of this node via .copy() "
                 "on the parent node."
             )
-        _validate_name(name)
+        validate_name(name)
         self._name = name
 
     def __repr__(self, level=0):
