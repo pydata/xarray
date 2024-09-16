@@ -46,13 +46,7 @@ from xarray.core.utils import (
     either_dict_or_kwargs,
     maybe_wrap_array,
 )
-from xarray.core.variable import Variable
-
-try:
-    from xarray.core.variable import calculate_dimensions
-except ImportError:
-    # for xarray versions 2022.03.0 and earlier
-    from xarray.core.dataset import calculate_dimensions
+from xarray.core.variable import Variable, calculate_dimensions
 
 if TYPE_CHECKING:
     import pandas as pd
