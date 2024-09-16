@@ -3160,7 +3160,7 @@ class TestInstrumentedZarrStore:
             for call in patch_.mock_calls:
                 if "zarr.json" not in call.args:
                     count += 1
-            summary[name.strip("__")] = count
+            summary[name.strip("_")] = count
         return summary
 
     def check_requests(self, expected, patches):
