@@ -586,7 +586,6 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         return target, variable.data
 
-
     def sync(self):
         self.ds.sync()
 
