@@ -586,32 +586,6 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         return target, variable.data
 
-    # def _build_and_get_enum(
-    #     self, var_name: str, dtype: np.dtype, enum_name: str, enum_dict: dict[str, int]
-    # ) -> Any:
-    #     """
-    #     Add or get the netCDF4 Enum based on the dtype in encoding.
-    #     The return type should be ``netCDF4.EnumType``,
-    #     but we avoid importing netCDF4 globally for performances.
-    #     """
-    #     if enum_name not in self.ds.enumtypes:
-    #         return self.ds.createEnumType(
-    #             dtype,
-    #             enum_name,
-    #             enum_dict,
-    #         )
-    #     datatype = self.ds.enumtypes[enum_name]
-    #     if datatype.enum_dict != enum_dict:
-    #         error_msg = (
-    #             f"Cannot save variable `{var_name}` because an enum"
-    #             f" `{enum_name}` already exists in the Dataset but have"
-    #             " a different definition. To fix this error, make sure"
-    #             " each variable have a uniquely named enum in their"
-    #             " `encoding['dtype'].metadata` or, if they should share"
-    #             " the same enum type, make sure the enums are identical."
-    #         )
-    #         raise ValueError(error_msg)
-    #     return datatype
 
     def sync(self):
         self.ds.sync()
