@@ -1,4 +1,5 @@
 import itertools
+import warnings
 
 import numpy as np
 import pytest
@@ -184,7 +185,10 @@ class DatasetStateMachine(RuleBasedStateMachine):
             )
         )
         note(f"> drop_dims: {dims}")
-        self.dataset = self.dataset.drop_dims(dims)
+        # TODO: dropping a multi-index dimension raises a DeprecationWarning
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=DeprecationWarning)
+            self.dataset = self.dataset.drop_dims(dims)
 
         for dim in dims:
             if dim in self.indexed_dims:
