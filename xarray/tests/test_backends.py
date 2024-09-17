@@ -1847,7 +1847,7 @@ class NetCDF4Base(NetCDFBase):
     @requires_netCDF4
     def test_encoding_enum__no_fill_value(self):
         with create_tmp_file() as tmp_file:
-            cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
+            cloud_type_dict = {"clear": 0, "cloudy": 1}
             with nc4.Dataset(tmp_file, mode="w") as nc:
                 nc.createDimension("time", size=2)
                 cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
