@@ -710,7 +710,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         autoclose=False,
         **kwargs,
     ) -> DataTree:
-
         from xarray.core.datatree import DataTree
 
         groups_dict = self.open_groups_as_dict(
