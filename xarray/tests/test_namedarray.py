@@ -57,7 +57,6 @@ class CustomArray(
     def __array__(
         self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
     ) -> np.ndarray[Any, np.dtype[np.generic]]:
-
         if Version(np.__version__) >= Version("2.0.0"):
             return np.asarray(self.array, dtype=dtype, copy=copy)
         else:

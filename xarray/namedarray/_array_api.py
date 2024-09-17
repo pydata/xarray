@@ -79,7 +79,8 @@ def astype(
 
 
 def imag(
-    x: NamedArray[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]], /  # type: ignore[type-var]
+    x: NamedArray[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]],
+    /,  # type: ignore[type-var]
 ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
     """
     Returns the imaginary component of a complex number for each element x_i of the
@@ -111,7 +112,8 @@ def imag(
 
 
 def real(
-    x: NamedArray[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]], /  # type: ignore[type-var]
+    x: NamedArray[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]],
+    /,  # type: ignore[type-var]
 ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
     """
     Returns the real component of a complex number for each element x_i of the
