@@ -132,8 +132,10 @@ def as_variable(
     elif isinstance(obj, tuple):
         try:
             dims_, data_, *attrs = obj
-        except ValueError:
-            raise ValueError(f"Tuple {obj} is not in the form (dims, data[, attrs])")
+        except ValueError as err:
+            raise ValueError(
+                f"Tuple {obj} is not in the form (dims, data[, attrs])"
+            ) from err
 
         if isinstance(data_, DataArray):
             raise TypeError(
@@ -146,7 +148,7 @@ def as_variable(
             raise error.__class__(
                 f"Variable {name!r}: Could not convert tuple of form "
                 f"(dims, data[, attrs, encoding]): {obj} to Variable."
-            )
+            ) from error
     elif utils.is_scalar(obj):
         obj = Variable([], obj)
     elif isinstance(obj, pd.Index | IndexVariable) and obj.name is not None:
@@ -768,8 +770,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         try:
             variables = _broadcast_compat_variables(*variables)
-        except ValueError:
-            raise IndexError(f"Dimensions of indexers mismatch: {key}")
+        except ValueError as err:
+            raise IndexError(f"Dimensions of indexers mismatch: {key}") from err
 
         out_key = [variable.data for variable in variables]
         out_dims = tuple(out_dims_set)
@@ -896,8 +898,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def encoding(self, value):
         try:
             self._encoding = dict(value)
-        except ValueError:
-            raise ValueError("encoding must be castable to a dictionary")
+        except ValueError as err:
+            raise ValueError("encoding must be castable to a dictionary") from err
 
     def reset_encoding(self) -> Self:
         warnings.warn(

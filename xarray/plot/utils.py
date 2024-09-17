@@ -454,8 +454,8 @@ def get_axis(
     try:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
-    except ImportError:
-        raise ImportError("matplotlib is required for plot.utils.get_axis")
+    except ImportError as err:
+        raise ImportError("matplotlib is required for plot.utils.get_axis") from err
 
     if figsize is not None:
         if ax is not None:

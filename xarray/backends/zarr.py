@@ -1374,8 +1374,10 @@ def _get_open_params(
                     RuntimeWarning,
                     stacklevel=stacklevel,
                 )
-            except zarr.errors.GroupNotFoundError:
-                raise FileNotFoundError(f"No such file or directory: '{store}'")
+            except zarr.errors.GroupNotFoundError as err:
+                raise FileNotFoundError(
+                    f"No such file or directory: '{store}'"
+                ) from err
     elif consolidated:
         # TODO: an option to pass the metadata_key keyword
         zarr_group = zarr.open_consolidated(store, **open_kwargs)

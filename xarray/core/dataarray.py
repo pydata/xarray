@@ -3860,11 +3860,11 @@ class DataArray(
         constructors = {0: lambda x: x, 1: pd.Series, 2: pd.DataFrame}
         try:
             constructor = constructors[self.ndim]
-        except KeyError:
+        except KeyError as err:
             raise ValueError(
                 f"Cannot convert arrays with {self.ndim} dimensions into "
                 "pandas objects. Requires 2 or fewer dimensions."
-            )
+            ) from err
         indexes = [self.get_index(dim) for dim in self.dims]
         return constructor(self.values, *indexes)  # type: ignore[operator]
 
@@ -4468,11 +4468,11 @@ class DataArray(
                 raise ValueError(
                     "cannot convert dict when coords are missing the key "
                     f"'{str(e.args[0])}'"
-                )
+                ) from e
         try:
             data = d["data"]
-        except KeyError:
-            raise ValueError("cannot convert dict without the key 'data''")
+        except KeyError as err:
+            raise ValueError("cannot convert dict without the key 'data''") from err
         else:
             obj = cls(data, coords, d.get("dims"), d.get("name"), d.get("attrs"))
 

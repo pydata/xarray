@@ -390,8 +390,8 @@ def _resolve_group(
     if isinstance(group, DataArray):
         try:
             align(obj, group, join="exact", copy=False)
-        except ValueError:
-            raise ValueError(error_msg)
+        except ValueError as err:
+            raise ValueError(error_msg) from err
 
         newgroup = group.copy(deep=False)
         newgroup.name = group.name or "group"

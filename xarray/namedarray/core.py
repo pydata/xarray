@@ -697,8 +697,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         _raise_if_any_duplicate_dimensions(self.dims)
         try:
             return self.dims.index(dim)  # type: ignore[no-any-return]
-        except ValueError:
-            raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
+        except ValueError as err:
+            raise ValueError(
+                f"{dim!r} not found in array dimensions {self.dims!r}"
+            ) from err
 
     @property
     def chunks(self) -> _Chunks | None:

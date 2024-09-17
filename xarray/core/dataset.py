@@ -359,12 +359,12 @@ def _get_func_args(func, param_names):
     """
     try:
         func_args = inspect.signature(func).parameters
-    except ValueError:
+    except ValueError as err:
         func_args = {}
         if not param_names:
             raise ValueError(
                 "Unable to inspect `func` signature, and `param_names` was not provided."
-            )
+            ) from err
     if param_names:
         params = param_names
     else:
@@ -6213,8 +6213,10 @@ class Dataset(
             labels_for_dim = np.asarray(labels_for_dim)
             try:
                 index = self.get_index(dim)
-            except KeyError:
-                raise ValueError(f"dimension {dim!r} does not have coordinate labels")
+            except KeyError as err:
+                raise ValueError(
+                    f"dimension {dim!r} does not have coordinate labels"
+                ) from err
             new_index = index.drop(labels_for_dim, errors=errors)
             ds = ds.loc[{dim: new_index}]
         return ds
@@ -7747,7 +7749,9 @@ class Dataset(
                 for k, v in variables
             }
         except KeyError as e:
-            raise ValueError(f"cannot convert dict without the key '{str(e.args[0])}'")
+            raise ValueError(
+                f"cannot convert dict without the key '{str(e.args[0])}'"
+            ) from e
         obj = cls(variable_dict)
 
         # what if coords aren't dims?

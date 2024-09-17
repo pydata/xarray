@@ -298,13 +298,13 @@ def get_clean_interp_index(
     # raise if index cannot be cast to a float (e.g. MultiIndex)
     try:
         index = index.values.astype(np.float64)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as err:
         # pandas raises a TypeError
         # xarray/numpy raise a ValueError
         raise TypeError(
             f"Index {index.name!r} must be castable to float64 to support "
             f"interpolation or curve fitting, got {type(index).__name__}."
-        )
+        ) from err
 
     return index
 

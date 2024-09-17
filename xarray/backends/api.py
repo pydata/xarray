@@ -99,11 +99,11 @@ def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
             import pydap  # noqa: F401
 
             engine = "pydap"
-        except ImportError:
+        except ImportError as err:
             raise ValueError(
                 "netCDF4 or pydap is required for accessing "
                 "remote datasets via OPeNDAP"
-            )
+            ) from err
     return engine
 
 
@@ -112,8 +112,8 @@ def _get_default_engine_gz() -> Literal["scipy"]:
         import scipy  # noqa: F401
 
         engine: Final = "scipy"
-    except ImportError:  # pragma: no cover
-        raise ValueError("scipy is required for accessing .gz files")
+    except ImportError as err:  # pragma: no cover
+        raise ValueError("scipy is required for accessing .gz files") from err
     return engine
 
 
@@ -128,11 +128,11 @@ def _get_default_engine_netcdf() -> Literal["netcdf4", "scipy"]:
             import scipy.io.netcdf  # noqa: F401
 
             engine = "scipy"
-        except ImportError:
+        except ImportError as err:
             raise ValueError(
                 "cannot read or write netCDF files without "
                 "netCDF4-python or scipy installed"
-            )
+            ) from err
     return engine
 
 
@@ -1374,8 +1374,8 @@ def to_netcdf(
 
     try:
         store_open = WRITEABLE_STORES[engine]
-    except KeyError:
-        raise ValueError(f"unrecognized engine for to_netcdf: {engine!r}")
+    except KeyError as err:
+        raise ValueError(f"unrecognized engine for to_netcdf: {engine!r}") from err
 
     if format is not None:
         format = format.upper()  # type: ignore[assignment]

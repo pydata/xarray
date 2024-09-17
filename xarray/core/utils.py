@@ -570,8 +570,8 @@ class NdimSizeLenMixin:
     def __len__(self: Any) -> int:
         try:
             return self.shape[0]
-        except IndexError:
-            raise TypeError("len() of unsized object")
+        except IndexError as err:
+            raise TypeError("len() of unsized object") from err
 
 
 class NDArrayMixin(NdimSizeLenMixin):

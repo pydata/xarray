@@ -216,7 +216,7 @@ def _decode_cf_datetime_dtype(
 
     try:
         result = decode_cf_datetime(example_value, units, calendar, use_cftime)
-    except Exception:
+    except Exception as err:
         calendar_msg = (
             "the default calendar" if calendar is None else f"calendar {calendar!r}"
         )
@@ -225,7 +225,7 @@ def _decode_cf_datetime_dtype(
             "opening your dataset with decode_times=False or installing cftime "
             "if it is not installed."
         )
-        raise ValueError(msg)
+        raise ValueError(msg) from err
     else:
         dtype = getattr(result, "dtype", np.dtype("object"))
 
@@ -269,10 +269,10 @@ def _decode_datetime_with_pandas(
         # TODO: the strict enforcement of nanosecond precision Timestamps can be
         # relaxed when addressing GitHub issue #7493.
         ref_date = nanosecond_precision_timestamp(ref_date_str)
-    except ValueError:
+    except ValueError as err:
         # ValueError is raised by pd.Timestamp for non-ISO timestamp
         # strings, in which case we fall back to using cftime
-        raise OutOfBoundsDatetime
+        raise OutOfBoundsDatetime from err
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "invalid value encountered", RuntimeWarning)
@@ -497,7 +497,7 @@ def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
                 raise ValueError(
                     f"Cannot convert date {t} to a date in the "
                     f"standard calendar.  Reason: {e}."
-                )
+                ) from e
             else:
                 dt = "NaT"
         new[i] = np.datetime64(dt)
@@ -530,7 +530,7 @@ def convert_times(times, date_type, raise_on_invalid: bool = True) -> np.ndarray
                 raise ValueError(
                     f"Cannot convert date {t} to a date in the "
                     f"{date_type(2000, 1, 1).calendar} calendar.  Reason: {e}."
-                )
+                ) from e
             else:
                 dt = np.nan
 

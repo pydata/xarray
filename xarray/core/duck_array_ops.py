@@ -451,10 +451,10 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
             try:  # dask/dask#3133 dask sometimes needs dtype argument
                 # if func does not accept dtype, then raises TypeError
                 return func(values, axis=axis, dtype=values.dtype, **kwargs)
-            except (AttributeError, TypeError):
+            except (AttributeError, TypeError) as err:
                 raise NotImplementedError(
                     f"{name} is not yet implemented on dask arrays"
-                )
+                ) from err
 
     f.__name__ = name
     return f
@@ -592,10 +592,10 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
     elif isinstance(value, str):
         try:
             a = pd.to_timedelta(value)
-        except ValueError:
+        except ValueError as err:
             raise ValueError(
                 f"Could not convert {value!r} to timedelta64 using pandas.to_timedelta"
-            )
+            ) from err
         return py_timedelta_to_float(a, datetime_unit)
     else:
         raise TypeError(
