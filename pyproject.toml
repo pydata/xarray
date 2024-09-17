@@ -253,6 +253,7 @@ ignore = [
   "UP007",
 ]
 extend-select = [
+  "B", # flake8-bugbear
   "F", # Pyflakes
   "E", # Pycodestyle
   "W",
