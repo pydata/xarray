@@ -293,7 +293,7 @@ class H5NetCDFStore(WritableCFDataStore):
         if dtype is str:
             dtype = h5py.special_dtype(vlen=str)
 
-        # check enum metadata and use netCDF4.EnumType
+        # check enum metadata and use h5netcdf.core.EnumType
         if (
             (meta := np.dtype(dtype).metadata)
             and (e_name := meta.get("enum_name"))
