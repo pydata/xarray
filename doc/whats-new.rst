@@ -14,6 +14,59 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2024.09.1:
+
+v2024.09.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+- ``DataTree`` related functionality is now exposed in the main ``xarray`` public
+  API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``, ``xarray.open_groups``,
+  ``xarray.map_over_subtree``, ``xarray.register_datatree_accessor`` and
+  ``xarray.testing.assert_isomorphic``.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_,
+  `Eni Awowale <https://github.com/eni-awowale>`_,
+  `Matt Savoie <https://github.com/flamingbear>`_,
+  `Stephan Hoyer <https://github.com/shoyer>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
+  By `Eni Awowale <https://github.com/eni-awowale>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+- Make illegal path-like variable names when constructing a DataTree from a Dataset
+  (:issue:`9339`, :pull:`9378`)
+  By `Etienne Schalk <https://github.com/etienneschalk>`_.
+- Fix bug when encoding times with missing values as floats in the case when
+  the non-missing times could in theory be encoded with integers
+  (:issue:`9488`, :pull:`9497`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
+- Migrate documentation for ``datatree`` into main ``xarray`` documentation (:pull:`9033`).
+  For information on previous ``datatree`` releases, please see:
+  `datatree's historical release notes <https://xarray-datatree.readthedocs.io/en/latest/>`_.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie <https://github.com/flamingbear>`_, and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
 
 .. _whats-new.2024.09.0:
 
@@ -133,8 +186,8 @@ New Features
   to return an object without ``attrs``. A ``deep`` parameter controls whether
   variables' ``attrs`` are also dropped.
   By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
+- Added :py:func:`open_groups` for h5netcdf and netCDF4 backends (:issue:`9137`, :pull:`9243`).
   By `Eni Awowale <https://github.com/eni-awowale>`_.
-- Add `open_groups` method for unaligned datasets (:issue:`9137`, :pull:`9243`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

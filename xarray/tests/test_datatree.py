@@ -24,9 +24,27 @@ class TestTreeCreation:
         assert dt.children == {}
         assert_identical(dt.to_dataset(), xr.Dataset())
 
-    def test_unnamed(self):
+    def test_name(self):
         dt = DataTree()
         assert dt.name is None
+
+        dt = DataTree(name="foo")
+        assert dt.name == "foo"
+
+        dt.name = "bar"
+        assert dt.name == "bar"
+
+        dt = DataTree(children={"foo": DataTree()})
+        assert dt["/foo"].name == "foo"
+        with pytest.raises(
+            ValueError, match="cannot set the name of a node which already has a parent"
+        ):
+            dt["/foo"].name = "bar"
+
+        detached = dt["/foo"].copy()
+        assert detached.name == "foo"
+        detached.name = "bar"
+        assert detached.name == "bar"
 
     def test_bad_names(self):
         with pytest.raises(TypeError):
@@ -82,6 +100,23 @@ class TestNames:
         sue = DataTree()
         mary = DataTree(children={"Sue": sue})  # noqa
         assert mary.children["Sue"].name == "Sue"
+
+    def test_dataset_containing_slashes(self):
+        xda: xr.DataArray = xr.DataArray(
+            [[1, 2]],
+            coords={"label": ["a"], "R30m/y": [30, 60]},
+        )
+        xds: xr.Dataset = xr.Dataset({"group/subgroup/my_variable": xda})
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Given variables have names containing the '/' character: "
+                "['R30m/y', 'group/subgroup/my_variable']. "
+                "Variables stored in DataTree objects cannot have names containing '/' characters, "
+                "as this would make path-like access to variables ambiguous."
+            ),
+        ):
+            DataTree(xds)
 
 
 class TestPaths:
@@ -1543,9 +1578,10 @@ class TestDocInsertion:
                     Unlike compute, the original dataset is modified and returned.
 
                     .. note::
-                        This method was copied from xarray.Dataset, but has been altered to
-                        call the method on the Datasets stored in every node of the
-                        subtree. See the `map_over_subtree` function for more details.
+                        This method was copied from :py:class:`xarray.Dataset`, but has
+                        been altered to call the method on the Datasets stored in every
+                        node of the subtree. See the `map_over_subtree` function for more
+                        details.
 
                     Normally, it should not be necessary to call this method in user code,
                     because all xarray functions should either work on deferred data or
@@ -1573,9 +1609,9 @@ class TestDocInsertion:
             """\
             Same as abs(a).
 
-            This method was copied from xarray.Dataset, but has been altered to call the
-                method on the Datasets stored in every node of the subtree. See the
-                `map_over_subtree` function for more details."""
+            This method was copied from :py:class:`xarray.Dataset`, but has been altered to
+                call the method on the Datasets stored in every node of the subtree. See
+                the `map_over_subtree` function for more details."""
         )
 
         actual_doc = insert_doc_addendum(mixin_doc, _MAPPED_DOCSTRING_ADDENDUM)
