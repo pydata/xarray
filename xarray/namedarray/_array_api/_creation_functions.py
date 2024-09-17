@@ -31,10 +31,11 @@ def arange(
     *,
     dtype: _DType | None = None,
     device: _Device | None = None,
+    dims: _DimsLike2 | Default = _default,
 ) -> NamedArray[_Shape1D, _DType]:
     xp = _get_namespace_dtype(dtype)
     _data = xp.arange(start, stop=stop, step=step, dtype=dtype, device=device)
-    _dims = _infer_dims(_data.shape)
+    _dims = _infer_dims(_data.shape, dims)
     return NamedArray(_dims, _data)
 
 
@@ -209,6 +210,7 @@ def linspace(
     dtype: _DType | None = None,
     device: _Device | None = None,
     endpoint: bool = True,
+    dims: _DimsLike2 | Default = _default,
 ) -> NamedArray[_Shape1D, _DType]:
     xp = _get_namespace_dtype(dtype)
     _data = xp.linspace(
@@ -219,7 +221,7 @@ def linspace(
         device=device,
         endpoint=endpoint,
     )
-    _dims = _infer_dims(_data.shape)
+    _dims = _infer_dims(_data.shape, dims)
     return NamedArray(_dims, _data)
 
 
