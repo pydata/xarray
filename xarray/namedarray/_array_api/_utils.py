@@ -385,12 +385,7 @@ def _get_broadcasted_dims(*arrays: NamedArray[Any, Any]) -> tuple[_Dims, _Shape]
     >>> _get_broadcasted_dims(a)
     (('x', 'y', 'z'), (5, 3, 4))
 
-    >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
-    >>> b = NamedArray(("y", "z"), np.zeros((3, 4)))
-    >>> _get_broadcasted_dims(a, b)
-    (('x', 'y', 'z'), (5, 3, 4))
-    >>> _get_broadcasted_dims(b, a)
-    (('x', 'y', 'z'), (5, 3, 4))
+    Broadcasting 0- and 1-sized dims
 
     >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
     >>> b = NamedArray(("x", "y", "z"), np.zeros((0, 3, 4)))
@@ -407,6 +402,23 @@ def _get_broadcasted_dims(*arrays: NamedArray[Any, Any]) -> tuple[_Dims, _Shape]
     >>> _get_broadcasted_dims(a, b)
     (('x', 'y', 'z'), (5, 3, 4))
 
+    Broadcasting different dims
+
+    >>> a = NamedArray(("x",), np.zeros((5,)))
+    >>> b = NamedArray(("y",), np.zeros((3,)))
+    >>> _get_broadcasted_dims(a, b)
+    (('x', 'y'), (5, 3))
+
+    >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
+    >>> b = NamedArray(("y", "z"), np.zeros((3, 4)))
+    >>> _get_broadcasted_dims(a, b)
+    (('x', 'y', 'z'), (5, 3, 4))
+    >>> _get_broadcasted_dims(b, a)
+    (('x', 'y', 'z'), (5, 3, 4))
+
+
+    # Errors
+
     >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
     >>> b = NamedArray(("x", "y", "z"), np.zeros((2, 3, 4)))
     >>> _get_broadcasted_dims(a, b)
@@ -414,21 +426,34 @@ def _get_broadcasted_dims(*arrays: NamedArray[Any, Any]) -> tuple[_Dims, _Shape]
      ...
     ValueError: operands could not be broadcast together with dims = (('x', 'y', 'z'), ('x', 'y', 'z')) and shapes = ((5, 3, 4), (2, 3, 4))
     """
-    dims = tuple(a.dims for a in arrays)
-    shapes = tuple(a.shape for a in arrays)
+    arrays_dims = tuple(a.dims for a in arrays)
+    arrays_shapes = tuple(a.shape for a in arrays)
 
-    out_dims: _Dims = ()
-    out_shape: _Shape = ()
-    for d, sizes in zip(
-        zip_longest(*map(reversed, dims), fillvalue=_default),
-        zip_longest(*map(reversed, shapes), fillvalue=-1),
+    sizes: dict[Any, Any] = {}
+    for dims, shape in zip(
+        zip_longest(*map(reversed, arrays_dims), fillvalue=_default),
+        zip_longest(*map(reversed, arrays_shapes), fillvalue=-1),
     ):
-        _d = tuple(set(v for v in d if v is not _default))
-        if any(_isnone(sizes)):
-            # dim = None
-            raise NotImplementedError("TODO: Handle None in shape, {shapes = }")
-        else:
-            dim = max(sizes)
+        for d, s in zip(reversed(dims), reversed(shape)):
+            if isinstance(d, Default):
+                continue
+
+            if s is None:
+                raise NotImplementedError("TODO: Handle None in shape, {shapes = }")
+
+            s_prev = sizes.get(d, -1)
+            if s_prev not in (-1, 0, 1, s):
+                raise ValueError(
+                    "operands could not be broadcast together with "
+                    f"dims = {arrays_dims} and shapes = {arrays_shapes}"
+                )
+
+            sizes[d] = max(s, s_prev)
+
+    out_dims: _Dims = tuple(reversed(sizes.keys()))
+    out_shape: _Shape = tuple(reversed(sizes.values()))
+    return out_dims, out_shape
+
 
         if any(i not in [-1, 0, 1, dim] for i in sizes) or len(_d) != 1:
             raise ValueError(
