@@ -34,6 +34,7 @@ from xarray.tests import (
     requires_cftime,
     requires_dask,
     requires_flox,
+    requires_flox_0_9_12,
     requires_scipy,
 )
 
@@ -2859,6 +2860,7 @@ def test_multiple_groupers_mixed(use_flox) -> None:
     # ------
 
 
+@requires_flox_0_9_12
 @pytest.mark.parametrize(
     "reduction", ["max", "min", "nanmax", "nanmin", "sum", "nansum", "prod", "nanprod"]
 )
@@ -2888,7 +2890,7 @@ def test_groupby_preserve_dtype(reduction):
 
 
 @requires_dask
-@requires_flox
+@requires_flox_0_9_12
 @pytest.mark.parametrize("reduction", ["any", "all", "count"])
 def test_gappy_resample_reductions(reduction):
     # GH8090
