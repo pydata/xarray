@@ -51,6 +51,8 @@ Bug fixes
   the non-missing times could in theory be encoded with integers
   (:issue:`9488`, :pull:`9497`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- Fix a few bugs affecting groupby reductions with `flox`. (:issue:`8090`, :issue:`9398`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Documentation
@@ -141,18 +143,6 @@ Bug fixes
 - Fix deprecation warning that was raised when calling ``np.array`` on an ``xr.DataArray``
   in NumPy 2.0 (:issue:`9312`, :pull:`9393`)
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
-- Fix a few bugs affecting groupby reductions with `flox`. (:issue:`8090`, :issue:`9398`).
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-
-Performance
-~~~~~~~~~~~
-
-- Speed up grouping by avoiding deep-copy of non-dimension coordinates (:issue:`9426`, :pull:`9393`)
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-
-Documentation
-~~~~~~~~~~~~~
-
 - Fix support for using ``pandas.DateOffset``, ``pandas.Timedelta``, and
   ``datetime.timedelta`` objects as ``resample`` frequencies
   (:issue:`9408`, :pull:`9413`).
