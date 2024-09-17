@@ -465,8 +465,9 @@ class ComposedGrouper:
         # NaNs; as well as values outside the bins are coded by -1
         # Restore these after the raveling
         mask = functools.reduce(
-            np.logical_or, [(code == -1) for code in broadcasted_codes]
-        )  # type: ignore[arg-type]
+            np.logical_or,  # type: ignore[arg-type]
+            [(code == -1) for code in broadcasted_codes],
+        )
         _flatcodes[mask] = -1
 
         midx = pd.MultiIndex.from_product(
