@@ -112,7 +112,7 @@ class ZarrArrayWrapper(BackendArray):
         # could possibly have a work-around for 0d data here
 
 
-def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
+def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks, region):
     """
     Given encoding chunks (possibly None or []) and variable chunks
     (possibly None or []).
@@ -163,7 +163,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
 
     if len(enc_chunks_tuple) != ndim:
         # throw away encoding chunks, start over
-        return _determine_zarr_chunks(None, var_chunks, ndim, name, safe_chunks)
+        return _determine_zarr_chunks(None, var_chunks, ndim, name, safe_chunks, region)
 
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
@@ -189,20 +189,36 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # TODO: incorporate synchronizer to allow writes from multiple dask
     # threads
     if var_chunks and enc_chunks_tuple:
-        for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks, strict=True):
-            for dchunk in dchunks[:-1]:
+        base_error = (
+            f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
+            f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r}. "
+            f"Writing this array in parallel with dask could lead to corrupted data."
+            f"Consider either rechunking using `chunk()`, deleting "
+            f"or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
+        )
+
+        for zchunk, dchunks, interval in zip(enc_chunks_tuple, var_chunks, region, strict=True):
+            if not safe_chunks or len(dchunks) <= 1:
+                # It is not necessary to perform any additional validation if the
+                # safe_chunks is False, or there are less than two dchunks
+                continue
+
+            start = 0
+            if interval.start:
+                # If the start of the interval is not None or 0, it means that the data
+                # is being appended or updated, and in both cases it is mandatory that
+                # the residue of the division between the first dchunk and the zchunk
+                # being equal to the border size
+                border_size = zchunk - interval.start % zchunk
+                if dchunks[0] % zchunk != border_size:
+                    raise ValueError(base_error)
+                # Avoid validating the first chunk inside the loop
+                start = 1
+
+            for dchunk in dchunks[start:-1]:
                 if dchunk % zchunk:
-                    base_error = (
-                        f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
-                        f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r}. "
-                        f"Writing this array in parallel with dask could lead to corrupted data."
-                    )
-                    if safe_chunks:
-                        raise ValueError(
-                            base_error
-                            + " Consider either rechunking using `chunk()`, deleting "
-                            "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
-                        )
+                    raise ValueError(base_error)
+
         return enc_chunks_tuple
 
     raise AssertionError("We should never get here. Function logic must be wrong.")
@@ -243,7 +259,7 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
 
 
 def extract_zarr_variable_encoding(
-    variable, raise_on_invalid=False, name=None, safe_chunks=True
+    variable, region, raise_on_invalid=False, name=None, safe_chunks=True
 ):
     """
     Extract zarr encoding dictionary from xarray Variable
@@ -251,6 +267,7 @@ def extract_zarr_variable_encoding(
     Parameters
     ----------
     variable : Variable
+    region: tuple[slice]
     raise_on_invalid : bool, optional
 
     Returns
@@ -285,7 +302,7 @@ def extract_zarr_variable_encoding(
                 del encoding[k]
 
     chunks = _determine_zarr_chunks(
-        encoding.get("chunks"), variable.chunks, variable.ndim, name, safe_chunks
+        encoding.get("chunks"), variable.chunks, variable.ndim, name, safe_chunks, region
     )
     encoding["chunks"] = chunks
     return encoding
@@ -762,16 +779,9 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
-            # We need to do this for both new and existing variables to ensure we're not
-            # writing to a partial chunk, even though we don't use the `encoding` value
-            # when writing to an existing variable. See
-            # https://github.com/pydata/xarray/issues/8371 for details.
-            encoding = extract_zarr_variable_encoding(
-                v,
-                raise_on_invalid=vn in check_encoding_set,
-                name=vn,
-                safe_chunks=self._safe_chunks,
-            )
+            zarr_array = None
+            write_region = self._write_region if self._write_region is not None else {}
+            write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
 
             if name in existing_keys:
                 # existing variable
@@ -801,7 +811,36 @@ class ZarrStore(AbstractWritableDataStore):
                     )
                 else:
                     zarr_array = self.zarr_group[name]
-            else:
+
+                if self._append_dim is not None and self._append_dim in dims:
+                    # resize existing variable
+                    append_axis = dims.index(self._append_dim)
+                    assert write_region[self._append_dim] == slice(None)
+                    write_region[self._append_dim] = slice(
+                        zarr_array.shape[append_axis], None
+                    )
+
+                    new_shape = list(zarr_array.shape)
+                    new_shape[append_axis] += v.shape[append_axis]
+                    zarr_array.resize(new_shape)
+
+            region = tuple(write_region[dim] for dim in dims)
+
+            # We need to do this for both new and existing variables to ensure we're not
+            # writing to a partial chunk, even though we don't use the `encoding` value
+            # when writing to an existing variable. See
+            # https://github.com/pydata/xarray/issues/8371 for details.
+            # Note: Ideally there should be two functions, one for validating the chunks and
+            # another one for extracting the encoding.
+            encoding = extract_zarr_variable_encoding(
+                v,
+                region=region,
+                raise_on_invalid=vn in check_encoding_set,
+                name=vn,
+                safe_chunks=self._safe_chunks,
+            )
+
+            if name not in existing_keys:
                 # new variable
                 encoded_attrs = {}
                 # the magic for storing the hidden dimension data
@@ -833,22 +872,6 @@ class ZarrStore(AbstractWritableDataStore):
                 )
                 zarr_array = _put_attrs(zarr_array, encoded_attrs)
 
-            write_region = self._write_region if self._write_region is not None else {}
-            write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
-
-            if self._append_dim is not None and self._append_dim in dims:
-                # resize existing variable
-                append_axis = dims.index(self._append_dim)
-                assert write_region[self._append_dim] == slice(None)
-                write_region[self._append_dim] = slice(
-                    zarr_array.shape[append_axis], None
-                )
-
-                new_shape = list(zarr_array.shape)
-                new_shape[append_axis] += v.shape[append_axis]
-                zarr_array.resize(new_shape)
-
-            region = tuple(write_region[dim] for dim in dims)
             writer.add(v.data, zarr_array, region)
 
     def close(self) -> None:

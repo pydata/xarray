@@ -5496,24 +5496,26 @@ def test_encode_zarr_attr_value() -> None:
 
 @requires_zarr
 def test_extract_zarr_variable_encoding() -> None:
+    # The region is not useful in these cases, but I still think that it must be mandatory
+    # because the validation of the chunks is in the same function
     var = xr.Variable("x", [1, 2])
-    actual = backends.zarr.extract_zarr_variable_encoding(var)
+    actual = backends.zarr.extract_zarr_variable_encoding(var, region=tuple())
     assert "chunks" in actual
     assert actual["chunks"] is None
 
     var = xr.Variable("x", [1, 2], encoding={"chunks": (1,)})
-    actual = backends.zarr.extract_zarr_variable_encoding(var)
+    actual = backends.zarr.extract_zarr_variable_encoding(var, region=tuple())
     assert actual["chunks"] == (1,)
 
     # does not raise on invalid
     var = xr.Variable("x", [1, 2], encoding={"foo": (1,)})
-    actual = backends.zarr.extract_zarr_variable_encoding(var)
+    actual = backends.zarr.extract_zarr_variable_encoding(var, region=tuple())
 
     # raises on invalid
     var = xr.Variable("x", [1, 2], encoding={"foo": (1,)})
     with pytest.raises(ValueError, match=r"unexpected encoding parameters"):
         actual = backends.zarr.extract_zarr_variable_encoding(
-            var, raise_on_invalid=True
+            var, raise_on_invalid=True, region=tuple()
         )
 
 
@@ -6096,6 +6098,58 @@ def test_zarr_region_chunk_partial_offset(tmp_path):
         store, safe_chunks=False, region="auto"
     )
 
-    # This write is unsafe, and should raise an error, but does not.
-    # with pytest.raises(ValueError):
-    #     da.isel(x=slice(5, 25)).chunk(x=(10, 10)).to_zarr(store, region="auto")
+    with pytest.raises(ValueError):
+        da.isel(x=slice(5, 25)).chunk(x=(10, 10)).to_zarr(store, region="auto")
+
+
+@requires_zarr
+@requires_dask
+def test_zarr_safe_chunk(tmp_path):
+    # https://github.com/pydata/xarray/pull/8459#issuecomment-1819417545
+    store = tmp_path / "foo.zarr"
+    data = np.ones((20,))
+    da = xr.DataArray(data, dims=["x"], coords={"x": range(20)}, name="foo").chunk(x=5)
+
+    da.isel(x=slice(0, 7)).to_zarr(store, safe_chunks=True, mode="w")
+    with pytest.raises(ValueError):
+        # If the first chunk is smaller than the border size then raise an error
+        da.isel(x=slice(7, 11)).chunk(x=(2, 2)).to_zarr(
+            store, append_dim="x", safe_chunks=True
+        )
+
+    da.isel(x=slice(0, 7)).to_zarr(store, safe_chunks=True, mode="w")
+    # If the first chunk is of the size of the border size then it is valid
+    da.isel(x=slice(7, 11)).chunk(x=(3, 1)).to_zarr(
+        store, safe_chunks=True, append_dim="x"
+    )
+    assert xr.open_zarr(store)["foo"].equals(da.isel(x=slice(0, 11)))
+
+    da.isel(x=slice(0, 7)).to_zarr(store, safe_chunks=True, mode="w")
+    # If the first chunk is of the size of the border size + N * zchunk then it is valid
+    da.isel(x=slice(7, 17)).chunk(x=(8, 2)).to_zarr(
+        store, safe_chunks=True, append_dim="x"
+    )
+    assert xr.open_zarr(store)["foo"].equals(da.isel(x=slice(0, 17)))
+
+    da.isel(x=slice(0, 7)).to_zarr(store, safe_chunks=True, mode="w")
+    with pytest.raises(ValueError):
+        # If the first chunk is valid but the other are not then raise an error
+        da.isel(x=slice(7, 14)).chunk(x=(3, 3, 1)).to_zarr(
+            store, append_dim="x", safe_chunks=True
+        )
+
+    da.isel(x=slice(0, 7)).to_zarr(store, safe_chunks=True, mode="w")
+    with pytest.raises(ValueError):
+        # If the first chunk have a size bigger than the border size but not enough
+        # to complete the size of the next chunk then an error must be raised
+        da.isel(x=slice(7, 14)).chunk(x=(4, 3)).to_zarr(
+            store, append_dim="x", safe_chunks=True
+        )
+
+    da.isel(x=slice(0, 7)).to_zarr(store, safe_chunks=True, mode="w")
+    # Append with a single chunk it's totally valid,
+    # and it does not matter the size of the chunk
+    da.isel(x=slice(7, 19)).chunk(x=-1).to_zarr(
+        store, append_dim="x", safe_chunks=True
+    )
+    assert xr.open_zarr(store)["foo"].equals(da.isel(x=slice(0, 19)))
