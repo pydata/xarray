@@ -148,6 +148,7 @@ requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_numbagg_or_bottleneck, reason="requires numbagg or bottleneck"
 )
 has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
+_, requires_flox_0_9_12 = _importorskip("flox", "0.9.12")
 
 has_array_api_strict, requires_array_api_strict = _importorskip("array_api_strict")
 
