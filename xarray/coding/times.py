@@ -780,7 +780,7 @@ def _eagerly_encode_cf_datetime(
         # needed time delta to encode faithfully to int64
         needed_time_delta = _time_units_to_timedelta64(needed_units)
 
-        floor_division = True
+        floor_division = np.issubdtype(dtype, np.integer) or dtype is None
         if time_delta > needed_time_delta:
             floor_division = False
             if dtype is None:
@@ -901,7 +901,7 @@ def _eagerly_encode_cf_timedelta(
     # needed time delta to encode faithfully to int64
     needed_time_delta = _time_units_to_timedelta64(needed_units)
 
-    floor_division = True
+    floor_division = np.issubdtype(dtype, np.integer) or dtype is None
     if time_delta > needed_time_delta:
         floor_division = False
         if dtype is None:

@@ -52,6 +52,12 @@ Bug fixes
   decode times encoded with ``np.int32`` values in environments with NumPy 2.0
   or greater without needing to fall back to cftime (:pull:`9518`). By `Spencer
   Clark <https://github.com/spencerkclark>`_.
+- Fix bug when encoding times with missing values as floats in the case when
+  the non-missing times could in theory be encoded with integers
+  (:issue:`9488`, :pull:`9497`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Fix a few bugs affecting groupby reductions with `flox`. (:issue:`8090`, :issue:`9398`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Documentation
