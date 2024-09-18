@@ -6104,7 +6104,7 @@ def test_zarr_region_chunk_partial_offset(tmp_path):
 
 @requires_zarr
 @requires_dask
-def test_zarr_safe_chunk(tmp_path):
+def test_zarr_safe_chunk_append_dim(tmp_path):
     # https://github.com/pydata/xarray/pull/8459#issuecomment-1819417545
     store = tmp_path / "foo.zarr"
     data = np.ones((20,))
