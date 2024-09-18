@@ -228,18 +228,24 @@ class H5NetCDFStore(WritableCFDataStore):
         encoding["source"] = self._filename
         encoding["original_shape"] = data.shape
 
+        print("XX", var)
+
         vlen_dtype = h5py.check_dtype(vlen=var.dtype)
         if vlen_dtype is str:
             encoding["dtype"] = str
         elif vlen_dtype is not None:  # pragma: no cover
             # xarray doesn't support writing arbitrary vlen dtypes yet.
             pass
-        elif isinstance(var.datatype, h5netcdf.core.EnumType):
+        # just check if datatype is available and create dtype
+        # this check can be removed if h5netcdf >= 1.4.0 for any environment
+        elif (datatype := getattr(var, "datatype", None)) and isinstance(
+            datatype, h5netcdf.core.EnumType
+        ):
             encoding["dtype"] = np.dtype(
                 data.dtype,
                 metadata={
-                    "enum": var.datatype.enum_dict,
-                    "enum_name": var.datatype.name,
+                    "enum": datatype.enum_dict,
+                    "enum_name": datatype.name,
                 },
             )
         else:
