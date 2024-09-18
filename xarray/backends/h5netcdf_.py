@@ -228,8 +228,6 @@ class H5NetCDFStore(WritableCFDataStore):
         encoding["source"] = self._filename
         encoding["original_shape"] = data.shape
 
-        print("XX", var)
-
         vlen_dtype = h5py.check_dtype(vlen=var.dtype)
         if vlen_dtype is str:
             encoding["dtype"] = str
@@ -301,7 +299,8 @@ class H5NetCDFStore(WritableCFDataStore):
 
         # check enum metadata and use h5netcdf.core.EnumType
         if (
-            (meta := np.dtype(dtype).metadata)
+            hasattr(self.ds, "enumtypes")
+            and (meta := np.dtype(dtype).metadata)
             and (e_name := meta.get("enum_name"))
             and (e_dict := meta.get("enum"))
         ):
