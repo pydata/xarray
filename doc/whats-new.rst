@@ -47,7 +47,11 @@ Bug fixes
 - Make illegal path-like variable names when constructing a DataTree from a Dataset
   (:issue:`9339`, :pull:`9378`)
   By `Etienne Schalk <https://github.com/etienneschalk>`_.
-
+- Work around `upstream pandas issue
+  <https://github.com/pandas-dev/pandas/issues/56996>`_ to ensure that we can
+  decode times encoded with ``np.int32`` values in environments with NumPy 2.0
+  or greater without needing to fall back to cftime (:pull:`9518`). By `Spencer
+  Clark <https://github.com/spencerkclark>`_.
 
 
 Documentation

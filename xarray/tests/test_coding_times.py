@@ -8,7 +8,7 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 import pytest
-from pandas.errors import OutOfBoundsDatetime
+from pandas.errors import OutOfBoundsDatetime, OutOfBoundsTimedelta
 
 from xarray import (
     DataArray,
@@ -1136,11 +1136,16 @@ def test_should_cftime_be_used_target_not_npable():
         _should_cftime_be_used(src, "noleap", False)
 
 
-@pytest.mark.parametrize("dtype", [np.uint8, np.uint16, np.uint32, np.uint64])
-def test_decode_cf_datetime_uint(dtype):
+@pytest.mark.parametrize(
+    "dtype",
+    [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64],
+)
+def test_decode_cf_datetime_varied_integer_dtypes(dtype):
     units = "seconds since 2018-08-22T03:23:03Z"
     num_dates = dtype(50)
-    result = decode_cf_datetime(num_dates, units)
+    # Set use_cftime=False to ensure we cannot mask a failure by falling back
+    # to cftime.
+    result = decode_cf_datetime(num_dates, units, use_cftime=False)
     expected = np.asarray(np.datetime64("2018-08-22T03:23:53", "ns"))
     np.testing.assert_equal(result, expected)
 
@@ -1152,6 +1157,14 @@ def test_decode_cf_datetime_uint64_with_cftime():
     result = decode_cf_datetime(num_dates, units)
     expected = np.asarray(np.datetime64("2200-01-01", "ns"))
     np.testing.assert_equal(result, expected)
+
+
+def test_decode_cf_datetime_uint64_with_pandas_overflow_error():
+    units = "nanoseconds since 1970-01-01"
+    calendar = "standard"
+    num_dates = np.uint64(1_000_000 * 86_400 * 360 * 500_000)
+    with pytest.raises(OutOfBoundsTimedelta):
+        decode_cf_datetime(num_dates, units, calendar, use_cftime=False)
 
 
 @requires_cftime
@@ -1416,10 +1429,8 @@ _ENCODE_DATETIME64_VIA_DASK_TESTS = {
         "days since 1700-01-01",
         np.dtype("int32"),
     ),
-    "mixed-cftime-pandas-encoding-with-prescribed-units-and-dtype": (
-        "250YS",
-        "days since 1700-01-01",
-        np.dtype("int32"),
+    "mixed-cftime-pandas-encoding-with-prescribed-units-and-dtype": pytest.param(
+        "250YS", "days since 1700-01-01", np.dtype("int32"), marks=requires_cftime
     ),
     "pandas-encoding-with-default-units-and-dtype": ("250YS", None, None),
 }

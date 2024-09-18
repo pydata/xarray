@@ -254,6 +254,15 @@ def _decode_datetime_with_pandas(
             "pandas."
         )
 
+    # Work around pandas.to_timedelta issue with dtypes smaller than int64 and
+    # NumPy 2.0 by casting all int and uint data to int64 and uint64,
+    # respectively. See https://github.com/pandas-dev/pandas/issues/56996 for
+    # more details.
+    if flat_num_dates.dtype.kind == "i":
+        flat_num_dates = flat_num_dates.astype(np.int64)
+    elif flat_num_dates.dtype.kind == "u":
+        flat_num_dates = flat_num_dates.astype(np.uint64)
+
     time_units, ref_date_str = _unpack_netcdf_time_units(units)
     time_units = _netcdf_to_numpy_timeunit(time_units)
     try:
