@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import datetime as dt
 import warnings
-from collections.abc import Hashable, Sequence
+from collections.abc import Callable, Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, Callable, get_args
+from typing import TYPE_CHECKING, Any, get_args
 
 import numpy as np
 import pandas as pd
@@ -286,7 +286,7 @@ def get_clean_interp_index(
 
     # Special case for non-standard calendar indexes
     # Numerical datetime values are defined with respect to 1970-01-01T00:00:00 in units of nanoseconds
-    if isinstance(index, (CFTimeIndex, pd.DatetimeIndex)):
+    if isinstance(index, CFTimeIndex | pd.DatetimeIndex):
         offset = type(index[0])(1970, 1, 1)
         if isinstance(index, CFTimeIndex):
             index = index.values
@@ -315,7 +315,9 @@ def interp_na(
     use_coordinate: bool | str = True,
     method: InterpOptions = "linear",
     limit: int | None = None,
-    max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta = None,
+    max_gap: (
+        int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta | None
+    ) = None,
     keep_attrs: bool | None = None,
     **kwargs,
 ):
@@ -336,7 +338,7 @@ def interp_na(
         if (
             dim in self._indexes
             and isinstance(
-                self._indexes[dim].to_pandas_index(), (pd.DatetimeIndex, CFTimeIndex)
+                self._indexes[dim].to_pandas_index(), pd.DatetimeIndex | CFTimeIndex
             )
             and use_coordinate
         ):
@@ -344,7 +346,7 @@ def interp_na(
             max_gap = timedelta_to_numeric(max_gap)
 
         if not use_coordinate:
-            if not isinstance(max_gap, (Number, np.number)):
+            if not isinstance(max_gap, Number | np.number):
                 raise TypeError(
                     f"Expected integer or floating point max_gap since use_coordinate=False. Received {max_type}."
                 )
@@ -622,7 +624,7 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
 
         # target dimensions
         dims = list(indexes_coords)
-        x, new_x = zip(*[indexes_coords[d] for d in dims])
+        x, new_x = zip(*[indexes_coords[d] for d in dims], strict=True)
         destination = broadcast_variables(*new_x)
 
         # transpose to make the interpolated axis to the last position
@@ -708,7 +710,9 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
 
         _, rechunked = chunkmanager.unify_chunks(*args)
 
-        args = tuple(elem for pair in zip(rechunked, args[1::2]) for elem in pair)
+        args = tuple(
+            elem for pair in zip(rechunked, args[1::2], strict=True) for elem in pair
+        )
 
         new_x = rechunked[1 + (len(rechunked) - 1) // 2 :]
 
@@ -796,11 +800,13 @@ def _chunked_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=T
         # _localize expect var to be a Variable
         var = Variable([f"dim_{dim}" for dim in range(len(var.shape))], var)
 
-        indexes_coords = {_x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x)}
+        indexes_coords = {
+            _x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x, strict=True)
+        }
 
         # simple speed up for the local interpolation
         var, indexes_coords = _localize(var, indexes_coords)
-        x, new_x = zip(*[indexes_coords[d] for d in indexes_coords])
+        x, new_x = zip(*[indexes_coords[d] for d in indexes_coords], strict=True)
 
         # put var back as a ndarray
         var = var.data

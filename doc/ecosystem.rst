@@ -17,6 +17,7 @@ Geosciences
 - `climpred <https://climpred.readthedocs.io>`_: Analysis of ensemble forecast models for climate prediction.
 - `geocube <https://corteva.github.io/geocube>`_: Tool to convert geopandas vector data into rasterized xarray data.
 - `GeoWombat <https://github.com/jgrss/geowombat>`_: Utilities for analysis of remotely sensed and gridded raster data at scale (easily tame Landsat, Sentinel, Quickbird, and PlanetScope).
+- `grib2io <https://github.com/NOAA-MDL/grib2io>`_: Utility to work with GRIB2 files including an xarray backend, DASK support for parallel reading in open_mfdataset, lazy loading of data, editing of GRIB2 attributes and GRIB2IO DataArray attrs, and spatial interpolation and reprojection of GRIB2 messages and GRIB2IO Datasets/DataArrays for both grid to grid and grid to stations.
 - `gsw-xarray <https://github.com/DocOtak/gsw-xarray>`_: a wrapper around `gsw <https://teos-10.github.io/GSW-Python>`_ that adds CF compliant attributes when possible, units, name.
 - `infinite-diff <https://github.com/spencerahill/infinite-diff>`_: xarray-based finite-differencing, focused on gridded climate/meteorology data
 - `marc_analysis <https://github.com/darothen/marc_analysis>`_: Analysis package for CESM/MARC experiments and output.

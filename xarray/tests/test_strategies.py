@@ -138,7 +138,9 @@ class TestVariablesStrategy:
             return st.just(arr)
 
         dim_names = data.draw(dimension_names(min_dims=arr.ndim, max_dims=arr.ndim))
-        dim_sizes = {name: size for name, size in zip(dim_names, arr.shape)}
+        dim_sizes = {
+            name: size for name, size in zip(dim_names, arr.shape, strict=True)
+        }
 
         var = data.draw(
             variables(
@@ -217,7 +219,7 @@ class TestVariablesStrategy:
                 warnings.filterwarnings(
                     "ignore", category=UserWarning, message=".+See NEP 47."
                 )
-                from numpy import (  # type: ignore[no-redef,unused-ignore]
+                from numpy import (  # type: ignore[attr-defined,no-redef,unused-ignore]
                     array_api as nxp,
                 )
 

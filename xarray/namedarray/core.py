@@ -4,11 +4,11 @@ import copy
 import math
 import sys
 import warnings
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
+from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     Literal,
     TypeVar,
@@ -53,7 +53,7 @@ from xarray.namedarray.utils import (
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
-    from xarray.core.types import Dims
+    from xarray.core.types import Dims, T_Chunks
     from xarray.namedarray._typing import (
         Default,
         _AttrsLike,
@@ -737,18 +737,18 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """
         data = self._data
         if isinstance(data, _chunkedarray):
-            return dict(zip(self.dims, data.chunks))
+            return dict(zip(self.dims, data.chunks, strict=True))
         else:
             return {}
 
     @property
     def sizes(self) -> dict[_Dim, _IntOrUnknown]:
         """Ordered mapping from dimension names to lengths."""
-        return dict(zip(self.dims, self.shape))
+        return dict(zip(self.dims, self.shape, strict=True))
 
     def chunk(
         self,
-        chunks: int | Literal["auto"] | Mapping[Any, None | int | tuple[int, ...]] = {},
+        chunks: T_Chunks = {},
         chunked_array_type: str | ChunkManagerEntrypoint[Any] | None = None,
         from_array_kwargs: Any = None,
         **chunks_kwargs: Any,
@@ -804,7 +804,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             )
             chunks = {}
 
-        if isinstance(chunks, (float, str, int, tuple, list)):
+        if isinstance(chunks, float | str | int | tuple | list):
             # TODO we shouldn't assume here that other chunkmanagers can handle these types
             # TODO should we call normalize_chunks here?
             pass  # dask.array.from_array can handle these directly
@@ -839,7 +839,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)  # type: ignore[assignment]
 
             if is_dict_like(chunks):
-                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))  # type: ignore[assignment]
+                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
 
             data_chunked = chunkmanager.from_array(ndata, chunks, **from_array_kwargs)  # type: ignore[arg-type]
 
@@ -948,7 +948,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         _attrs = self.attrs
         return tuple(
             cast("T_NamedArrayInteger", self._new((dim,), nz, _attrs))
-            for nz, dim in zip(nonzeros, self.dims)
+            for nz, dim in zip(nonzeros, self.dims, strict=True)
         )
 
     def __repr__(self) -> str:
@@ -997,7 +997,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def permute_dims(
         self,
-        *dim: Iterable[_Dim] | ellipsis,
+        *dim: Iterable[_Dim] | EllipsisType,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> NamedArray[Any, _DType_co]:
         """Return a new object with transposed dimensions.
@@ -1038,8 +1038,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             # or dims are in same order
             return self.copy(deep=False)
 
-        axes_result = self.get_axis_num(dims)
-        axes = (axes_result,) if isinstance(axes_result, int) else axes_result
+        axes = self.get_axis_num(dims)
+        assert isinstance(axes, tuple)
 
         return permute_dims(self, axes)
 

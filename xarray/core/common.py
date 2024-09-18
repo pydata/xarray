@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import datetime
 import warnings
-from collections.abc import Hashable, Iterable, Iterator, Mapping
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, TypeVar, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -13,6 +14,7 @@ import pandas as pd
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
 from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.types import ResampleCompatible
 from xarray.core.utils import (
     Frozen,
     either_dict_or_kwargs,
@@ -32,8 +34,6 @@ ALL_DIMS = ...
 
 
 if TYPE_CHECKING:
-    import datetime
-
     from numpy.typing import DTypeLike
 
     from xarray.core.dataarray import DataArray
@@ -52,6 +52,7 @@ if TYPE_CHECKING:
         T_Variable,
     )
     from xarray.core.variable import Variable
+    from xarray.groupers import Resampler
 
     DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
@@ -161,8 +162,22 @@ class AbstractArray:
     def __complex__(self: Any) -> complex:
         return complex(self.values)
 
-    def __array__(self: Any, dtype: DTypeLike | None = None) -> np.ndarray:
-        return np.asarray(self.values, dtype=dtype)
+    def __array__(
+        self: Any, dtype: DTypeLike | None = None, copy: bool | None = None
+    ) -> np.ndarray:
+        if not copy:
+            if np.lib.NumpyVersion(np.__version__) >= "2.0.0":
+                copy = None
+            elif np.lib.NumpyVersion(np.__version__) <= "1.28.0":
+                copy = False
+            else:
+                # 2.0.0 dev versions, handle cases where copy may or may not exist
+                try:
+                    np.array([1]).__array__(copy=None)
+                    copy = None
+                except TypeError:
+                    copy = False
+        return np.array(self.values, dtype=dtype, copy=copy)
 
     def __repr__(self) -> str:
         return formatting.array_repr(self)
@@ -239,7 +254,7 @@ class AbstractArray:
         --------
         Dataset.sizes
         """
-        return Frozen(dict(zip(self.dims, self.shape)))
+        return Frozen(dict(zip(self.dims, self.shape, strict=True)))
 
 
 class AttrAccessMixin:
@@ -876,16 +891,14 @@ class DataWithCoords(AttrAccessMixin):
     def _resample(
         self,
         resample_cls: type[T_Resample],
-        indexer: Mapping[Any, str] | None,
+        indexer: Mapping[Hashable, ResampleCompatible | Resampler] | None,
         skipna: bool | None,
         closed: SideOptions | None,
         label: SideOptions | None,
-        base: int | None,
         offset: pd.Timedelta | datetime.timedelta | str | None,
         origin: str | DatetimeLike,
-        loffset: datetime.timedelta | str | None,
         restore_coord_dims: bool | None,
-        **indexer_kwargs: str,
+        **indexer_kwargs: ResampleCompatible | Resampler,
     ) -> T_Resample:
         """Returns a Resample object for performing resampling operations.
 
@@ -905,16 +918,6 @@ class DataWithCoords(AttrAccessMixin):
             Side of each interval to treat as closed.
         label : {"left", "right"}, optional
             Side of each interval to use for labeling.
-        base : int, optional
-            For frequencies that evenly subdivide 1 day, the "origin" of the
-            aggregated intervals. For example, for "24H" frequency, base could
-            range from 0 through 23.
-
-            .. deprecated:: 2023.03.0
-                Following pandas, the ``base`` parameter is deprecated in favor
-                of the ``origin`` and ``offset`` parameters, and will be removed
-                in a future version of xarray.
-
         origin : {'epoch', 'start', 'start_day', 'end', 'end_day'}, pd.Timestamp, datetime.datetime, np.datetime64, or cftime.datetime, default 'start_day'
             The datetime on which to adjust the grouping. The timezone of origin
             must match the timezone of the index.
@@ -927,15 +930,6 @@ class DataWithCoords(AttrAccessMixin):
             - 'end_day': `origin` is the ceiling midnight of the last day
         offset : pd.Timedelta, datetime.timedelta, or str, default is None
             An offset timedelta added to the origin.
-        loffset : timedelta or str, optional
-            Offset used to adjust the resampled time labels. Some pandas date
-            offset strings are supported.
-
-            .. deprecated:: 2023.03.0
-                Following pandas, the ``loffset`` parameter is deprecated in favor
-                of using time offset arithmetic, and will be removed in a future
-                version of xarray.
-
         restore_coord_dims : bool, optional
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -1068,20 +1062,8 @@ class DataWithCoords(AttrAccessMixin):
 
         from xarray.core.dataarray import DataArray
         from xarray.core.groupby import ResolvedGrouper
-        from xarray.core.groupers import TimeResampler
         from xarray.core.resample import RESAMPLE_DIM
-
-        # note: the second argument (now 'skipna') use to be 'dim'
-        if (
-            (skipna is not None and not isinstance(skipna, bool))
-            or ("how" in indexer_kwargs and "how" not in self.dims)
-            or ("dim" in indexer_kwargs and "dim" not in self.dims)
-        ):
-            raise TypeError(
-                "resample() no longer supports the `how` or "
-                "`dim` arguments. Instead call methods on resample "
-                "objects, e.g., data.resample(time='1D').mean()"
-            )
+        from xarray.groupers import Resampler, TimeResampler
 
         indexer = either_dict_or_kwargs(indexer, indexer_kwargs, "resample")
         if len(indexer) != 1:
@@ -1092,21 +1074,22 @@ class DataWithCoords(AttrAccessMixin):
         dim_coord = self[dim]
 
         group = DataArray(
-            dim_coord,
-            coords=dim_coord.coords,
-            dims=dim_coord.dims,
-            name=RESAMPLE_DIM,
+            dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
         )
 
-        grouper = TimeResampler(
-            freq=freq,
-            closed=closed,
-            label=label,
-            origin=origin,
-            offset=offset,
-            loffset=loffset,
-            base=base,
-        )
+        grouper: Resampler
+        if isinstance(freq, ResampleCompatible):
+            grouper = TimeResampler(
+                freq=freq, closed=closed, label=label, origin=origin, offset=offset
+            )
+        elif isinstance(freq, Resampler):
+            grouper = freq
+        else:
+            raise ValueError(
+                "freq must be an object of type 'str', 'datetime.timedelta', "
+                "'pandas.Timedelta', 'pandas.DateOffset', or 'TimeResampler'. "
+                f"Received {type(freq)} instead."
+            )
 
         rgrouper = ResolvedGrouper(grouper, group, self)
 
@@ -1216,7 +1199,7 @@ class DataWithCoords(AttrAccessMixin):
             other = other(self)
 
         if drop:
-            if not isinstance(cond, (Dataset, DataArray)):
+            if not isinstance(cond, Dataset | DataArray):
                 raise TypeError(
                     f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r} (or a callable than returns one)."
                 )
@@ -1390,7 +1373,7 @@ class DataWithCoords(AttrAccessMixin):
             raise TypeError(
                 f"isin() argument must be convertible to an array: {test_elements}"
             )
-        elif isinstance(test_elements, (Variable, DataArray)):
+        elif isinstance(test_elements, Variable | DataArray):
             # need to explicitly pull out data to support dask arrays as the
             # second argument
             test_elements = test_elements.data

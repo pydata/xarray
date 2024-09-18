@@ -9,6 +9,7 @@ import sys
 import warnings
 from collections import defaultdict
 from collections.abc import (
+    Callable,
     Collection,
     Hashable,
     Iterable,
@@ -22,16 +23,17 @@ from html import escape
 from numbers import Number
 from operator import methodcaller
 from os import PathLike
-from typing import IO, TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
+from types import EllipsisType
+from typing import IO, TYPE_CHECKING, Any, Generic, Literal, cast, overload
 
 import numpy as np
 from pandas.api.types import is_extension_array_dtype
 
 # remove once numpy 2.0 is the oldest supported version
 try:
-    from numpy.exceptions import RankWarning  # type: ignore[attr-defined,unused-ignore]
+    from numpy.exceptions import RankWarning
 except ImportError:
-    from numpy import RankWarning
+    from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
 
 import pandas as pd
 
@@ -88,11 +90,12 @@ from xarray.core.merge import (
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
+    Bins,
     NetcdfWriteModes,
     QuantileMethods,
     Self,
     T_ChunkDim,
-    T_Chunks,
+    T_ChunksFreq,
     T_DataArray,
     T_DataArrayOrSet,
     T_Dataset,
@@ -152,6 +155,7 @@ if TYPE_CHECKING:
         DsCompatible,
         ErrorOptions,
         ErrorOptionsWithWarn,
+        GroupInput,
         InterpOptions,
         JoinOptions,
         PadModeOptions,
@@ -159,10 +163,14 @@ if TYPE_CHECKING:
         QueryEngineOptions,
         QueryParserOptions,
         ReindexMethodOptions,
+        ResampleCompatible,
         SideOptions,
+        T_ChunkDimFreq,
+        T_DatasetPadConstantValues,
         T_Xarray,
     )
     from xarray.core.weighted import DatasetWeighted
+    from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
@@ -235,13 +243,13 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
     # Determine the explicit requested chunks.
     preferred_chunks = var.encoding.get("preferred_chunks", {})
     preferred_chunk_shape = tuple(
-        preferred_chunks.get(dim, size) for dim, size in zip(dims, shape)
+        preferred_chunks.get(dim, size) for dim, size in zip(dims, shape, strict=True)
     )
     if isinstance(chunks, Number) or (chunks == "auto"):
         chunks = dict.fromkeys(dims, chunks)
     chunk_shape = tuple(
         chunks.get(dim, None) or preferred_chunk_sizes
-        for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape)
+        for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape, strict=True)
     )
 
     chunk_shape = chunkmanager.normalize_chunks(
@@ -251,7 +259,7 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
     # Warn where requested chunks break preferred chunks, provided that the variable
     # contains data.
     if var.size:
-        for dim, size, chunk_sizes in zip(dims, shape, chunk_shape):
+        for dim, size, chunk_sizes in zip(dims, shape, chunk_shape, strict=True):
             try:
                 preferred_chunk_sizes = preferred_chunks[dim]
             except KeyError:
@@ -277,22 +285,21 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
                     "degrade performance. Instead, consider rechunking after loading."
                 )
 
-    return dict(zip(dims, chunk_shape))
+    return dict(zip(dims, chunk_shape, strict=True))
 
 
 def _maybe_chunk(
-    name,
-    var,
-    chunks,
+    name: Hashable,
+    var: Variable,
+    chunks: Mapping[Any, T_ChunkDim] | None,
     token=None,
     lock=None,
-    name_prefix="xarray-",
-    overwrite_encoded_chunks=False,
-    inline_array=False,
+    name_prefix: str = "xarray-",
+    overwrite_encoded_chunks: bool = False,
+    inline_array: bool = False,
     chunked_array_type: str | ChunkManagerEntrypoint | None = None,
     from_array_kwargs=None,
-):
-
+) -> Variable:
     from xarray.namedarray.daskmanager import DaskManager
 
     if chunks is not None:
@@ -864,7 +871,7 @@ class Dataset(
                 *lazy_data.values(), **kwargs
             )
 
-            for k, data in zip(lazy_data, evaluated_data):
+            for k, data in zip(lazy_data, evaluated_data, strict=False):
                 self.variables[k].data = data
 
         # load everything else sequentially
@@ -1047,7 +1054,7 @@ class Dataset(
             # evaluate all the dask arrays simultaneously
             evaluated_data = dask.persist(*lazy_data.values(), **kwargs)
 
-            for k, data in zip(lazy_data, evaluated_data):
+            for k, data in zip(lazy_data, evaluated_data, strict=False):
                 self.variables[k].data = data
 
         return self
@@ -1573,9 +1580,11 @@ class Dataset(
             try:
                 return self._construct_dataarray(key)
             except KeyError as e:
-                raise KeyError(
-                    f"No variable named {key!r}. Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
-                ) from e
+                message = f"No variable named {key!r}. Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
+                # If someone attempts `ds['foo' , 'bar']` instead of `ds[['foo', 'bar']]`
+                if isinstance(key, tuple):
+                    message += f"\nHint: use a list to select multiple variables, for example `ds[{[d for d in key]}]`"
+                raise KeyError(message) from e
 
         if utils.iterable_of_hashable(key):
             return self._copy_listed(key)
@@ -1645,11 +1654,13 @@ class Dataset(
                         f"setting ({len(value)})"
                     )
                 if isinstance(value, Dataset):
-                    self.update(dict(zip(keylist, value.data_vars.values())))
+                    self.update(
+                        dict(zip(keylist, value.data_vars.values(), strict=True))
+                    )
                 elif isinstance(value, DataArray):
                     raise ValueError("Cannot assign single DataArray to multiple keys")
                 else:
-                    self.update(dict(zip(keylist, value)))
+                    self.update(dict(zip(keylist, value, strict=True)))
 
         else:
             raise ValueError(f"Unsupported key-type {type(key)}")
@@ -2324,7 +2335,7 @@ class Dataset(
             encoding = {}
         from xarray.backends.api import to_netcdf
 
-        return to_netcdf(  # type: ignore  # mypy cannot resolve the overloads:(
+        return to_netcdf(  # type: ignore[return-value]  # mypy cannot resolve the overloads:(
             self,
             path,
             mode=mode,
@@ -2646,14 +2657,14 @@ class Dataset(
 
     def chunk(
         self,
-        chunks: T_Chunks = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        chunks: T_ChunksFreq = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
         chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs=None,
-        **chunks_kwargs: T_ChunkDim,
+        **chunks_kwargs: T_ChunkDimFreq,
     ) -> Self:
         """Coerce all arrays in this dataset into dask arrays with the given
         chunks.
@@ -2665,11 +2676,13 @@ class Dataset(
         sizes along that dimension will not be updated; non-dask arrays will be
         converted into dask arrays with a single block.
 
+        Along datetime-like dimensions, a :py:class:`groupers.TimeResampler` object is also accepted.
+
         Parameters
         ----------
-        chunks : int, tuple of int, "auto" or mapping of hashable to int, optional
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
             Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
-            ``{"x": 5, "y": 5}``.
+            ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": TimeResampler(freq="YE")}``.
         name_prefix : str, default: "xarray-"
             Prefix for the name of any new dask arrays.
         token : str, optional
@@ -2704,6 +2717,9 @@ class Dataset(
         xarray.unify_chunks
         dask.array.from_array
         """
+        from xarray.core.dataarray import DataArray
+        from xarray.groupers import TimeResampler
+
         if chunks is None and not chunks_kwargs:
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
@@ -2713,7 +2729,7 @@ class Dataset(
             chunks = {}
         chunks_mapping: Mapping[Any, Any]
         if not isinstance(chunks, Mapping) and chunks is not None:
-            if isinstance(chunks, (tuple, list)):
+            if isinstance(chunks, tuple | list):
                 utils.emit_user_level_warning(
                     "Supplying chunks as dimension-order tuples is deprecated. "
                     "It will raise an error in the future. Instead use a dict with dimensions as keys.",
@@ -2729,6 +2745,46 @@ class Dataset(
                 f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.sizes.keys())}"
             )
 
+        def _resolve_frequency(
+            name: Hashable, resampler: TimeResampler
+        ) -> tuple[int, ...]:
+            variable = self._variables.get(name, None)
+            if variable is None:
+                raise ValueError(
+                    f"Cannot chunk by resampler {resampler!r} for virtual variables."
+                )
+            elif not _contains_datetime_like_objects(variable):
+                raise ValueError(
+                    f"chunks={resampler!r} only supported for datetime variables. "
+                    f"Received variable {name!r} with dtype {variable.dtype!r} instead."
+                )
+
+            assert variable.ndim == 1
+            chunks = (
+                DataArray(
+                    np.ones(variable.shape, dtype=int),
+                    dims=(name,),
+                    coords={name: variable},
+                )
+                .resample({name: resampler})
+                .sum()
+            )
+            # When bins (binning) or time periods are missing (resampling)
+            # we can end up with NaNs. Drop them.
+            if chunks.dtype.kind == "f":
+                chunks = chunks.dropna(name).astype(int)
+            chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
+            return chunks_tuple
+
+        chunks_mapping_ints: Mapping[Any, T_ChunkDim] = {
+            name: (
+                _resolve_frequency(name, chunks)
+                if isinstance(chunks, TimeResampler)
+                else chunks
+            )
+            for name, chunks in chunks_mapping.items()
+        }
+
         chunkmanager = guess_chunkmanager(chunked_array_type)
         if from_array_kwargs is None:
             from_array_kwargs = {}
@@ -2737,7 +2793,7 @@ class Dataset(
             k: _maybe_chunk(
                 k,
                 v,
-                chunks_mapping,
+                chunks_mapping_ints,
                 token,
                 lock,
                 name_prefix,
@@ -2765,7 +2821,7 @@ class Dataset(
 
         # all indexers should be int, slice, np.ndarrays, or Variable
         for k, v in indexers.items():
-            if isinstance(v, (int, slice, Variable)):
+            if isinstance(v, int | slice | Variable):
                 yield k, v
             elif isinstance(v, DataArray):
                 yield k, v.variable
@@ -3519,7 +3575,7 @@ class Dataset(
         self,
         other: T_Xarray,
         method: ReindexMethodOptions = None,
-        tolerance: int | float | Iterable[int | float] | None = None,
+        tolerance: float | Iterable[float] | str | None = None,
         copy: bool = True,
         fill_value: Any = xrdtypes.NA,
     ) -> Self:
@@ -3546,7 +3602,7 @@ class Dataset(
             - "backfill" / "bfill": propagate next valid index value backward
             - "nearest": use nearest valid index value
 
-        tolerance : optional
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
@@ -3589,7 +3645,7 @@ class Dataset(
         self,
         indexers: Mapping[Any, Any] | None = None,
         method: ReindexMethodOptions = None,
-        tolerance: int | float | Iterable[int | float] | None = None,
+        tolerance: float | Iterable[float] | str | None = None,
         copy: bool = True,
         fill_value: Any = xrdtypes.NA,
         **indexers_kwargs: Any,
@@ -3614,7 +3670,7 @@ class Dataset(
             - "backfill" / "bfill": propagate next valid index value backward
             - "nearest": use nearest valid index value
 
-        tolerance : optional
+        tolerance : float | Iterable[float] | str | None, default: None
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
@@ -4176,15 +4232,15 @@ class Dataset(
             kwargs = {}
 
         # pick only dimension coordinates with a single index
-        coords = {}
+        coords: dict[Hashable, Variable] = {}
         other_indexes = other.xindexes
         for dim in self.dims:
             other_dim_coords = other_indexes.get_all_coords(dim, errors="ignore")
             if len(other_dim_coords) == 1:
                 coords[dim] = other_dim_coords[dim]
 
-        numeric_coords: dict[Hashable, pd.Index] = {}
-        object_coords: dict[Hashable, pd.Index] = {}
+        numeric_coords: dict[Hashable, Variable] = {}
+        object_coords: dict[Hashable, Variable] = {}
         for k, v in coords.items():
             if v.dtype.kind in "uifcMm":
                 numeric_coords[k] = v
@@ -4240,7 +4296,7 @@ class Dataset(
             new_index_vars = new_index.create_variables(
                 {
                     new: self._variables[old]
-                    for old, new in zip(coord_names, new_coord_names)
+                    for old, new in zip(coord_names, new_coord_names, strict=True)
                 }
             )
             variables.update(new_index_vars)
@@ -4747,9 +4803,9 @@ class Dataset(
                         raise ValueError("axis should not contain duplicate values")
                     # We need to sort them to make sure `axis` equals to the
                     # axis positions of the result array.
-                    zip_axis_dim = sorted(zip(axis_pos, dim.items()))
+                    zip_axis_dim = sorted(zip(axis_pos, dim.items(), strict=True))
 
-                    all_dims = list(zip(v.dims, v.shape))
+                    all_dims = list(zip(v.dims, v.shape, strict=True))
                     for d, c in zip_axis_dim:
                         all_dims.insert(d, c)
                     variables[k] = v.set_dims(dict(all_dims))
@@ -5273,7 +5329,7 @@ class Dataset(
 
     def _stack_once(
         self,
-        dims: Sequence[Hashable | ellipsis],
+        dims: Sequence[Hashable | EllipsisType],
         new_dim: Hashable,
         index_cls: type[Index],
         create_index: bool | None = True,
@@ -5333,10 +5389,10 @@ class Dataset(
     @partial(deprecate_dims, old_name="dimensions")
     def stack(
         self,
-        dim: Mapping[Any, Sequence[Hashable | ellipsis]] | None = None,
+        dim: Mapping[Any, Sequence[Hashable | EllipsisType]] | None = None,
         create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
-        **dim_kwargs: Sequence[Hashable | ellipsis],
+        **dim_kwargs: Sequence[Hashable | EllipsisType],
     ) -> Self:
         """
         Stack any number of existing dimensions into a single new dimension.
@@ -6389,7 +6445,7 @@ class Dataset(
         Data variables:
             temperature  (time, location) float64 64B 23.4 24.1 nan ... 24.2 20.5 25.3
 
-        # Drop NaN values from the dataset
+        Drop NaN values from the dataset
 
         >>> dataset.dropna(dim="time")
         <xarray.Dataset> Size: 80B
@@ -6400,7 +6456,7 @@ class Dataset(
         Data variables:
             temperature  (time, location) float64 48B 23.4 24.1 21.8 24.2 20.5 25.3
 
-        # Drop labels with any NAN values
+        Drop labels with any NaN values
 
         >>> dataset.dropna(dim="time", how="any")
         <xarray.Dataset> Size: 80B
@@ -6411,7 +6467,7 @@ class Dataset(
         Data variables:
             temperature  (time, location) float64 48B 23.4 24.1 21.8 24.2 20.5 25.3
 
-        # Drop labels with all NAN values
+        Drop labels with all NAN values
 
         >>> dataset.dropna(dim="time", how="all")
         <xarray.Dataset> Size: 104B
@@ -6422,7 +6478,7 @@ class Dataset(
         Data variables:
             temperature  (time, location) float64 64B 23.4 24.1 nan ... 24.2 20.5 25.3
 
-        # Drop labels with less than 2 non-NA values
+        Drop labels with less than 2 non-NA values
 
         >>> dataset.dropna(dim="time", thresh=2)
         <xarray.Dataset> Size: 80B
@@ -6436,6 +6492,11 @@ class Dataset(
         Returns
         -------
         Dataset
+
+        See Also
+        --------
+        DataArray.dropna
+        pandas.DataFrame.dropna
         """
         # TODO: consider supporting multiple dimensions? Or not, given that
         # there are some ugly edge cases, e.g., pandas's dropna differs
@@ -6559,7 +6620,13 @@ class Dataset(
         limit: int | None = None,
         use_coordinate: bool | Hashable = True,
         max_gap: (
-            int | float | str | pd.Timedelta | np.timedelta64 | datetime.timedelta
+            int
+            | float
+            | str
+            | pd.Timedelta
+            | np.timedelta64
+            | datetime.timedelta
+            | None
         ) = None,
         **kwargs: Any,
     ) -> Self:
@@ -6593,7 +6660,8 @@ class Dataset(
             or None for no limit. This filling is done regardless of the size of
             the gap in the data. To only interpolate over gaps less than a given length,
             see ``max_gap``.
-        max_gap : int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta, default: None
+        max_gap : int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta \
+            or None, default: None
             Maximum size of gap, a continuous sequence of NaNs, that will be filled.
             Use None for no limit. When interpolating along a datetime64 dimension
             and ``use_coordinate=True``, ``max_gap`` can be one of the following:
@@ -7280,7 +7348,7 @@ class Dataset(
         ]
         index = self.coords.to_index([*ordered_dims])
         broadcasted_df = pd.DataFrame(
-            dict(zip(non_extension_array_columns, data)), index=index
+            dict(zip(non_extension_array_columns, data, strict=True)), index=index
         )
         for extension_array_column in extension_array_columns:
             extension_array = self.variables[extension_array_column].data.array
@@ -7444,7 +7512,7 @@ class Dataset(
         extension_arrays = []
         for k, v in dataframe.items():
             if not is_extension_array_dtype(v) or isinstance(
-                v.array, (pd.arrays.DatetimeArray, pd.arrays.TimedeltaArray)
+                v.array, pd.arrays.DatetimeArray | pd.arrays.TimedeltaArray
             ):
                 arrays.append((k, np.asarray(v)))
             else:
@@ -7455,10 +7523,10 @@ class Dataset(
 
         if isinstance(idx, pd.MultiIndex):
             dims = tuple(
-                name if name is not None else "level_%i" % n
+                name if name is not None else "level_%i" % n  # type: ignore[redundant-expr]
                 for n, name in enumerate(idx.names)
             )
-            for dim, lev in zip(dims, idx.levels):
+            for dim, lev in zip(dims, idx.levels, strict=True):
                 xr_idx = PandasIndex(lev, dim)
                 indexes[dim] = xr_idx
                 index_vars.update(xr_idx.create_variables())
@@ -7729,7 +7797,7 @@ class Dataset(
         if isinstance(other, GroupBy):
             return NotImplemented
         align_type = OPTIONS["arithmetic_join"] if join is None else join
-        if isinstance(other, (DataArray, Dataset)):
+        if isinstance(other, DataArray | Dataset):
             self, other = align(self, other, join=align_type, copy=False)
         g = f if not reflexive else lambda x, y: f(y, x)
         ds = self._calculate_binary_op(g, other, join=align_type)
@@ -7749,7 +7817,7 @@ class Dataset(
             )
         # we don't actually modify arrays in-place with in-place Dataset
         # arithmetic -- this lets us automatically align things
-        if isinstance(other, (DataArray, Dataset)):
+        if isinstance(other, DataArray | Dataset):
             other = other.reindex_like(self, copy=False)
         g = ops.inplace_to_noninplace_op(f)
         ds = self._calculate_binary_op(g, other, inplace=True)
@@ -8528,7 +8596,7 @@ class Dataset(
             a        float64 8B 20.0
             b        float64 8B 4.0
         """
-        if not isinstance(coord, (list, tuple)):
+        if not isinstance(coord, list | tuple):
             coord = (coord,)
         result = self
         for c in coord:
@@ -8657,7 +8725,7 @@ class Dataset(
             a        (x) float64 32B 0.0 30.0 8.0 20.0
             b        (x) float64 32B 0.0 9.0 3.0 4.0
         """
-        if not isinstance(coord, (list, tuple)):
+        if not isinstance(coord, list | tuple):
             coord = (coord,)
         result = self
         for c in coord:
@@ -9111,9 +9179,7 @@ class Dataset(
         stat_length: (
             int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
         ) = None,
-        constant_values: (
-            float | tuple[float, float] | Mapping[Any, tuple[float, float]] | None
-        ) = None,
+        constant_values: T_DatasetPadConstantValues | None = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
         keep_attrs: bool | None = None,
@@ -9169,17 +9235,19 @@ class Dataset(
             (stat_length,) or int is a shortcut for before = after = statistic
             length for all axes.
             Default is ``None``, to use the entire axis.
-        constant_values : scalar, tuple or mapping of hashable to tuple, default: 0
-            Used in 'constant'.  The values to set the padded values for each
-            axis.
+        constant_values : scalar, tuple, mapping of dim name to scalar or tuple, or \
+            mapping of var name to scalar, tuple or to mapping of dim name to scalar or tuple, default: None
+            Used in 'constant'. The values to set the padded values for each data variable / axis.
+            ``{var_1: {dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}, ...
+            var_M: (before, after)}`` unique pad constants per data variable.
             ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
             pad constants along each dimension.
             ``((before, after),)`` yields same before and after constants for each
             dimension.
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all dimensions.
-            Default is 0.
-        end_values : scalar, tuple or mapping of hashable to tuple, default: 0
+            Default is ``None``, pads with ``np.nan``.
+        end_values : scalar, tuple or mapping of hashable to tuple, default: None
             Used in 'linear_ramp'.  The values used for the ending value of the
             linear_ramp and that will form the edge of the padded array.
             ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
@@ -9188,7 +9256,7 @@ class Dataset(
             axis.
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all axes.
-            Default is 0.
+            Default is None.
         reflect_type : {"even", "odd", None}, optional
             Used in "reflect", and "symmetric".  The "even" style is the
             default with an unaltered reflection around the edge value.  For
@@ -9262,11 +9330,22 @@ class Dataset(
             if not var_pad_width:
                 variables[name] = var
             elif name in self.data_vars:
+                if utils.is_dict_like(constant_values):
+                    if name in constant_values.keys():
+                        filtered_constant_values = constant_values[name]
+                    elif not set(var.dims).isdisjoint(constant_values.keys()):
+                        filtered_constant_values = {
+                            k: v for k, v in constant_values.items() if k in var.dims
+                        }
+                    else:
+                        filtered_constant_values = 0  # TODO: https://github.com/pydata/xarray/pull/9353#discussion_r1724018352
+                else:
+                    filtered_constant_values = constant_values
                 variables[name] = var.pad(
                     pad_width=var_pad_width,
                     mode=mode,
                     stat_length=stat_length,
-                    constant_values=constant_values,
+                    constant_values=filtered_constant_values,
                     end_values=end_values,
                     reflect_type=reflect_type,
                     keep_attrs=keep_attrs,
@@ -9579,7 +9658,7 @@ class Dataset(
         ):
             # Return int index if single dimension is passed, and is not part of a
             # sequence
-            argmin_func = getattr(duck_array_ops, "argmin")
+            argmin_func = duck_array_ops.argmin
             return self.reduce(
                 argmin_func, dim=None if dim is None else [dim], **kwargs
             )
@@ -9672,7 +9751,7 @@ class Dataset(
         ):
             # Return int index if single dimension is passed, and is not part of a
             # sequence
-            argmax_func = getattr(duck_array_ops, "argmax")
+            argmax_func = duck_array_ops.argmax
             return self.reduce(
                 argmax_func, dim=None if dim is None else [dim], **kwargs
             )
@@ -9693,7 +9772,7 @@ class Dataset(
         Calculate an expression supplied as a string in the context of the dataset.
 
         This is currently experimental; the API may change particularly around
-        assignments, which currently returnn a ``Dataset`` with the additional variable.
+        assignments, which currently return a ``Dataset`` with the additional variable.
         Currently only the ``python`` engine is supported, which has the same
         performance as executing in python.
 
@@ -9735,7 +9814,7 @@ class Dataset(
             c        (x) float64 40B 0.0 1.25 2.5 3.75 5.0
         """
 
-        return pd.eval(
+        return pd.eval(  # type: ignore[return-value]
             statement,
             resolvers=[self],
             target=self,
@@ -9971,7 +10050,7 @@ class Dataset(
                         f"dimensions {preserved_dims}."
                     )
         for param, (lb, ub) in bounds.items():
-            for label, bound in zip(("Lower", "Upper"), (lb, ub)):
+            for label, bound in zip(("Lower", "Upper"), (lb, ub), strict=True):
                 if isinstance(bound, DataArray):
                     unexpected = set(bound.dims) - set(preserved_dims)
                     if unexpected:
@@ -10274,19 +10353,23 @@ class Dataset(
         """
         return interp_calendar(self, target, dim=dim)
 
+    @_deprecate_positional_args("v2024.07.0")
     def groupby(
         self,
-        group: Hashable | DataArray | IndexVariable,
-        squeeze: bool | None = None,
+        group: GroupInput = None,
+        *,
+        squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
+        **groupers: Grouper,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
 
         Parameters
         ----------
-        group : Hashable, DataArray or IndexVariable
+        group : str or DataArray or IndexVariable or sequence of hashable or mapping of hashable to Grouper
             Array whose unique values should be used to group this array. If a
-            string, must be the name of a variable contained in this dataset.
+            Hashable, must be the name of a coordinate contained in this dataarray. If a dictionary,
+            must map an existing variable name to a :py:class:`Grouper` instance.
         squeeze : bool, default: True
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
@@ -10294,12 +10377,61 @@ class Dataset(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
+        **groupers : Mapping of str to Grouper or Resampler
+            Mapping of variable name to group by to :py:class:`Grouper` or :py:class:`Resampler` object.
+            One of ``group`` or ``groupers`` must be provided.
+            Only a single ``grouper`` is allowed at present.
 
         Returns
         -------
         grouped : DatasetGroupBy
             A `DatasetGroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {"foo": (("x", "y"), np.arange(12).reshape((4, 3)))},
+        ...     coords={"x": [10, 20, 30, 40], "letters": ("x", list("abba"))},
+        ... )
+
+        Grouping by a single variable is easy
+
+        >>> ds.groupby("letters")
+        <DatasetGroupBy, grouped over 1 grouper(s), 2 groups in total:
+            'letters': 2 groups with labels 'a', 'b'>
+
+        Execute a reduction
+
+        >>> ds.groupby("letters").sum()
+        <xarray.Dataset> Size: 64B
+        Dimensions:  (letters: 2, y: 3)
+        Coordinates:
+          * letters  (letters) object 16B 'a' 'b'
+        Dimensions without coordinates: y
+        Data variables:
+            foo      (letters, y) float64 48B 9.0 11.0 13.0 9.0 11.0 13.0
+
+        Grouping by multiple variables
+
+        >>> ds.groupby(["letters", "x"])
+        <DatasetGroupBy, grouped over 2 grouper(s), 8 groups in total:
+            'letters': 2 groups with labels 'a', 'b'
+            'x': 4 groups with labels 10, 20, 30, 40>
+
+        Use Grouper objects to express more complicated GroupBy operations
+
+        >>> from xarray.groupers import BinGrouper, UniqueGrouper
+        >>>
+        >>> ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper()).sum()
+        <xarray.Dataset> Size: 128B
+        Dimensions:  (y: 3, x_bins: 2, letters: 2)
+        Coordinates:
+          * x_bins   (x_bins) object 16B (5, 15] (15, 25]
+          * letters  (letters) object 16B 'a' 'b'
+        Dimensions without coordinates: y
+        Data variables:
+            foo      (y, x_bins, letters) float64 96B 0.0 nan nan 3.0 ... nan nan 5.0
 
         See Also
         --------
@@ -10322,31 +10454,27 @@ class Dataset(
         """
         from xarray.core.groupby import (
             DatasetGroupBy,
-            ResolvedGrouper,
+            _parse_group_and_groupers,
             _validate_groupby_squeeze,
         )
-        from xarray.core.groupers import UniqueGrouper
 
         _validate_groupby_squeeze(squeeze)
-        rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
+        rgroupers = _parse_group_and_groupers(self, group, groupers)
 
-        return DatasetGroupBy(
-            self,
-            (rgrouper,),
-            squeeze=squeeze,
-            restore_coord_dims=restore_coord_dims,
-        )
+        return DatasetGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
+    @_deprecate_positional_args("v2024.07.0")
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
-        bins: ArrayLike,
+        bins: Bins,
         right: bool = True,
         labels: ArrayLike | None = None,
         precision: int = 3,
         include_lowest: bool = False,
-        squeeze: bool | None = None,
+        squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
+        duplicates: Literal["raise", "drop"] = "raise",
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
 
@@ -10376,13 +10504,13 @@ class Dataset(
             The precision at which to store and display the bins labels.
         include_lowest : bool, default: False
             Whether the first interval should be left-inclusive or not.
-        squeeze : bool, default: True
-            If "group" is a dimension of any arrays in this dataset, `squeeze`
-            controls whether the subarrays have a dimension of length 1 along
-            that dimension or if the dimension is squeezed out.
+        squeeze : False
+            This argument is deprecated.
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
+        duplicates : {"raise", "drop"}, default: "raise"
+            If bin edges are not unique, raise ValueError or drop non-uniques.
 
         Returns
         -------
@@ -10410,24 +10538,21 @@ class Dataset(
             ResolvedGrouper,
             _validate_groupby_squeeze,
         )
-        from xarray.core.groupers import BinGrouper
+        from xarray.groupers import BinGrouper
 
         _validate_groupby_squeeze(squeeze)
         grouper = BinGrouper(
             bins=bins,
-            cut_kwargs={
-                "right": right,
-                "labels": labels,
-                "precision": precision,
-                "include_lowest": include_lowest,
-            },
+            right=right,
+            labels=labels,
+            precision=precision,
+            include_lowest=include_lowest,
         )
         rgrouper = ResolvedGrouper(grouper, group, self)
 
         return DatasetGroupBy(
             self,
             (rgrouper,),
-            squeeze=squeeze,
             restore_coord_dims=restore_coord_dims,
         )
 
@@ -10605,18 +10730,18 @@ class Dataset(
             coord_func=coord_func,
         )
 
+    @_deprecate_positional_args("v2024.07.0")
     def resample(
         self,
-        indexer: Mapping[Any, str] | None = None,
+        indexer: Mapping[Any, ResampleCompatible | Resampler] | None = None,
+        *,
         skipna: bool | None = None,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
-        base: int | None = None,
         offset: pd.Timedelta | datetime.timedelta | str | None = None,
         origin: str | DatetimeLike = "start_day",
-        loffset: datetime.timedelta | str | None = None,
         restore_coord_dims: bool | None = None,
-        **indexer_kwargs: str,
+        **indexer_kwargs: ResampleCompatible | Resampler,
     ) -> DatasetResample:
         """Returns a Resample object for performing resampling operations.
 
@@ -10627,7 +10752,7 @@ class Dataset(
 
         Parameters
         ----------
-        indexer : Mapping of Hashable to str, optional
+        indexer : Mapping of Hashable to str, datetime.timedelta, pd.Timedelta, pd.DateOffset, or Resampler, optional
             Mapping from the dimension name to resample frequency [1]_. The
             dimension must be datetime-like.
         skipna : bool, optional
@@ -10636,10 +10761,6 @@ class Dataset(
             Side of each interval to treat as closed.
         label : {"left", "right"}, optional
             Side of each interval to use for labeling.
-        base : int, optional
-            For frequencies that evenly subdivide 1 day, the "origin" of the
-            aggregated intervals. For example, for "24H" frequency, base could
-            range from 0 through 23.
         origin : {'epoch', 'start', 'start_day', 'end', 'end_day'}, pd.Timestamp, datetime.datetime, np.datetime64, or cftime.datetime, default 'start_day'
             The datetime on which to adjust the grouping. The timezone of origin
             must match the timezone of the index.
@@ -10652,19 +10773,10 @@ class Dataset(
             - 'end_day': `origin` is the ceiling midnight of the last day
         offset : pd.Timedelta, datetime.timedelta, or str, default is None
             An offset timedelta added to the origin.
-        loffset : timedelta or str, optional
-            Offset used to adjust the resampled time labels. Some pandas date
-            offset strings are supported.
-
-            .. deprecated:: 2023.03.0
-                Following pandas, the ``loffset`` parameter is deprecated in favor
-                of using time offset arithmetic, and will be removed in a future
-                version of xarray.
-
         restore_coord_dims : bool, optional
             If True, also restore the dimension order of multi-dimensional
             coordinates.
-        **indexer_kwargs : str
+        **indexer_kwargs : str, datetime.timedelta, pd.Timedelta, pd.DateOffset, or Resampler
             The keyword arguments form of ``indexer``.
             One of indexer or indexer_kwargs must be provided.
 
@@ -10693,10 +10805,50 @@ class Dataset(
             skipna=skipna,
             closed=closed,
             label=label,
-            base=base,
             offset=offset,
             origin=origin,
-            loffset=loffset,
             restore_coord_dims=restore_coord_dims,
             **indexer_kwargs,
         )
+
+    def drop_attrs(self, *, deep: bool = True) -> Self:
+        """
+        Removes all attributes from the Dataset and its variables.
+
+        Parameters
+        ----------
+        deep : bool, default True
+            Removes attributes from all variables.
+
+        Returns
+        -------
+        Dataset
+        """
+        # Remove attributes from the dataset
+        self = self._replace(attrs={})
+
+        if not deep:
+            return self
+
+        # Remove attributes from each variable in the dataset
+        for var in self.variables:
+            # variables don't have a `._replace` method, so we copy and then remove
+            # attrs. If we added a `._replace` method, we could use that instead.
+            if var not in self.indexes:
+                self[var] = self[var].copy()
+                self[var].attrs = {}
+
+        new_idx_variables = {}
+        # Not sure this is the most elegant way of doing this, but it works.
+        # (Should we have a more general "map over all variables, including
+        # indexes" approach?)
+        for idx, idx_vars in self.xindexes.group_by_index():
+            # copy each coordinate variable of an index and drop their attrs
+            temp_idx_variables = {k: v.copy() for k, v in idx_vars.items()}
+            for v in temp_idx_variables.values():
+                v.attrs = {}
+            # re-wrap the index object in new coordinate variables
+            new_idx_variables.update(idx.create_variables(temp_idx_variables))
+        self = self.assign(new_idx_variables)
+
+        return self

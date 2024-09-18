@@ -42,11 +42,11 @@ from __future__ import annotations
 import codecs
 import re
 import textwrap
-from collections.abc import Hashable, Mapping
+from collections.abc import Callable, Hashable, Mapping
 from functools import reduce
 from operator import or_ as set_union
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Callable, Generic
+from typing import TYPE_CHECKING, Any, Generic
 from unicodedata import normalize
 
 import numpy as np
@@ -90,7 +90,7 @@ def _contains_obj_type(*, pat: Any, checker: Any) -> bool:
 
 def _contains_str_like(pat: Any) -> bool:
     """Determine if the object is a str-like or array of str-like."""
-    if isinstance(pat, (str, bytes)):
+    if isinstance(pat, str | bytes):
         return True
 
     if not hasattr(pat, "dtype"):
@@ -847,7 +847,7 @@ class StringAccessor(Generic[T_DataArray]):
         normalized : same type as values
 
         """
-        return self._apply(func=lambda x: normalize(form, x))
+        return self._apply(func=lambda x: normalize(form, x))  # type: ignore[arg-type]
 
     def isalnum(self) -> T_DataArray:
         """

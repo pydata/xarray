@@ -89,10 +89,12 @@ def _infer_concat_order_from_coords(datasets):
             # Need to read coordinate values to do ordering
             indexes = [ds._indexes.get(dim) for ds in datasets]
             if any(index is None for index in indexes):
-                raise ValueError(
-                    "Every dimension needs a coordinate for "
-                    "inferring concatenation order"
+                error_msg = (
+                    f"Every dimension requires a corresponding 1D coordinate "
+                    f"and index for inferring concatenation order but the "
+                    f"coordinate '{dim}' has no corresponding index"
                 )
+                raise ValueError(error_msg)
 
             # TODO (benbovy, flexible indexes): support flexible indexes?
             indexes = [index.to_pandas_index() for index in indexes]
@@ -137,7 +139,8 @@ def _infer_concat_order_from_coords(datasets):
                 # Append positions along extra dimension to structure which
                 # encodes the multi-dimensional concatenation order
                 tile_ids = [
-                    tile_id + (position,) for tile_id, position in zip(tile_ids, order)
+                    tile_id + (position,)
+                    for tile_id, position in zip(tile_ids, order, strict=True)
                 ]
 
     if len(datasets) > 1 and not concat_dims:
@@ -146,7 +149,7 @@ def _infer_concat_order_from_coords(datasets):
             "order the datasets for concatenation"
         )
 
-    combined_ids = dict(zip(tile_ids, datasets))
+    combined_ids = dict(zip(tile_ids, datasets, strict=True))
 
     return combined_ids, concat_dims
 
@@ -347,7 +350,7 @@ def _nested_combine(
         combined_ids = _infer_concat_order_from_positions(datasets)
     else:
         # Already sorted so just use the ids already passed
-        combined_ids = dict(zip(ids, datasets))
+        combined_ids = dict(zip(ids, datasets, strict=True))
 
     # Check that the inferred shape is combinable
     _check_shape_tile_ids(combined_ids)
@@ -570,7 +573,7 @@ def combine_nested(
     if mixed_datasets_and_arrays:
         raise ValueError("Can't combine datasets with unnamed arrays.")
 
-    if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
+    if isinstance(concat_dim, str | DataArray) or concat_dim is None:
         concat_dim = [concat_dim]
 
     # The IDs argument tells _nested_combine that datasets aren't yet sorted

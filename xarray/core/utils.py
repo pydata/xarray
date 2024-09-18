@@ -47,6 +47,7 @@ import re
 import sys
 import warnings
 from collections.abc import (
+    Callable,
     Collection,
     Container,
     Hashable,
@@ -57,19 +58,13 @@ from collections.abc import (
     Mapping,
     MutableMapping,
     MutableSet,
+    Sequence,
     ValuesView,
 )
 from enum import Enum
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Literal,
-    TypeVar,
-    overload,
-)
+from types import EllipsisType
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeGuard, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -117,26 +112,27 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
     return wrapper
 
 
-def get_valid_numpy_dtype(array: np.ndarray | pd.Index):
+def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
     """Return a numpy compatible dtype from either
     a numpy array or a pandas.Index.
 
-    Used for wrapping a pandas.Index as an xarray,Variable.
+    Used for wrapping a pandas.Index as an xarray.Variable.
 
     """
     if isinstance(array, pd.PeriodIndex):
-        dtype = np.dtype("O")
-    elif hasattr(array, "categories"):
+        return np.dtype("O")
+
+    if hasattr(array, "categories"):
         # category isn't a real numpy dtype
         dtype = array.categories.dtype
         if not is_valid_numpy_dtype(dtype):
             dtype = np.dtype("O")
-    elif not is_valid_numpy_dtype(array.dtype):
-        dtype = np.dtype("O")
-    else:
-        dtype = array.dtype
+        return dtype
 
-    return dtype
+    if not is_valid_numpy_dtype(array.dtype):
+        return np.dtype("O")
+
+    return array.dtype  # type: ignore[return-value]
 
 
 def maybe_coerce_to_str(index, original_coords):
@@ -183,18 +179,17 @@ def equivalent(first: T, second: T) -> bool:
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
     if isinstance(first, list) or isinstance(second, list):
-        return list_equiv(first, second)
-    return (first == second) or (pd.isnull(first) and pd.isnull(second))
+        return list_equiv(first, second)  # type: ignore[arg-type]
+    return (first == second) or (pd.isnull(first) and pd.isnull(second))  # type: ignore[call-overload]
 
 
-def list_equiv(first, second):
-    equiv = True
+def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    else:
-        for f, s in zip(first, second):
-            equiv = equiv and equivalent(f, s)
-    return equiv
+    for f, s in zip(first, second, strict=True):
+        if not equivalent(f, s):
+            return False
+    return True
 
 
 def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
@@ -262,7 +257,7 @@ def is_full_slice(value: Any) -> bool:
 
 
 def is_list_like(value: Any) -> TypeGuard[list | tuple]:
-    return isinstance(value, (list, tuple))
+    return isinstance(value, list | tuple)
 
 
 def _is_scalar(value, include_0d):
@@ -272,7 +267,7 @@ def _is_scalar(value, include_0d):
         include_0d = getattr(value, "ndim", None) == 0
     return (
         include_0d
-        or isinstance(value, (str, bytes))
+        or isinstance(value, str | bytes)
         or not (
             isinstance(value, (Iterable,) + NON_NUMPY_SUPPORTED_ARRAY_TYPES)
             or hasattr(value, "__array_function__")
@@ -281,34 +276,12 @@ def _is_scalar(value, include_0d):
     )
 
 
-# See GH5624, this is a convoluted way to allow type-checking to use `TypeGuard` without
-# requiring typing_extensions as a required dependency to _run_ the code (it is required
-# to type-check).
-try:
-    if sys.version_info >= (3, 10):
-        from typing import TypeGuard
-    else:
-        from typing_extensions import TypeGuard
-except ImportError:
-    if TYPE_CHECKING:
-        raise
-    else:
+def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
+    """Whether to treat a value as a scalar.
 
-        def is_scalar(value: Any, include_0d: bool = True) -> bool:
-            """Whether to treat a value as a scalar.
-
-            Any non-iterable, string, or 0-D array
-            """
-            return _is_scalar(value, include_0d)
-
-else:
-
-    def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
-        """Whether to treat a value as a scalar.
-
-        Any non-iterable, string, or 0-D array
-        """
-        return _is_scalar(value, include_0d)
+    Any non-iterable, string, or 0-D array
+    """
+    return _is_scalar(value, include_0d)
 
 
 def is_valid_numpy_dtype(dtype: Any) -> bool:
@@ -867,7 +840,7 @@ def parse_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | ellipsis: ...
+) -> tuple[Hashable, ...] | None | EllipsisType: ...
 
 
 def parse_dims(
@@ -876,7 +849,7 @@ def parse_dims(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | ellipsis:
+) -> tuple[Hashable, ...] | None | EllipsisType:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -928,7 +901,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | ellipsis: ...
+) -> tuple[Hashable, ...] | None | EllipsisType: ...
 
 
 def parse_ordered_dims(
@@ -937,7 +910,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | ellipsis:
+) -> tuple[Hashable, ...] | None | EllipsisType:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -964,7 +937,7 @@ def parse_ordered_dims(
         Input dimensions as a tuple.
     """
     if dim is not None and dim is not ... and not isinstance(dim, str) and ... in dim:
-        dims_set: set[Hashable | ellipsis] = set(dim)
+        dims_set: set[Hashable | EllipsisType] = set(dim)
         all_dims_set = set(all_dims)
         if check_exists:
             _check_dims(dims_set, all_dims_set)
@@ -1019,7 +992,7 @@ class UncachedAccessor(Generic[_Accessor]):
         if obj is None:
             return self._accessor
 
-        return self._accessor(obj)  # type: ignore  # assume it is a valid accessor!
+        return self._accessor(obj)  # type: ignore[call-arg]  # assume it is a valid accessor!
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240

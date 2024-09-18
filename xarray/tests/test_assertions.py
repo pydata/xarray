@@ -11,7 +11,7 @@ from xarray.tests import has_dask
 try:
     from dask.array import from_array as dask_from_array
 except ImportError:
-    dask_from_array = lambda x: x  # type: ignore
+    dask_from_array = lambda x: x  # type: ignore[assignment, misc]
 
 try:
     import pint
@@ -51,6 +51,11 @@ def test_allclose_regression() -> None:
             xr.Dataset({"a": ("x", [1e-17, 2]), "b": ("y", [-2e-18, 2])}),
             xr.Dataset({"a": ("x", [0, 2]), "b": ("y", [0, 1])}),
             id="Dataset",
+        ),
+        pytest.param(
+            xr.DataArray(np.array("a", dtype="|S1")),
+            xr.DataArray(np.array("b", dtype="|S1")),
+            id="DataArray_with_character_dtype",
         ),
     ),
 )

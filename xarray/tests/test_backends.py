@@ -54,6 +54,7 @@ from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
+from xarray.core.utils import module_available
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     assert_allclose,
@@ -166,7 +167,7 @@ def create_encoded_masked_and_scaled_data(dtype: np.dtype) -> Dataset:
 
 def create_unsigned_masked_scaled_data(dtype: np.dtype) -> Dataset:
     encoding = {
-        "_FillValue": 255,
+        "_FillValue": -1,
         "_Unsigned": "true",
         "dtype": "i1",
         "add_offset": dtype.type(10),
@@ -239,6 +240,32 @@ def create_encoded_signed_masked_scaled_data(dtype: np.dtype) -> Dataset:
     }
     # Create signed data corresponding to [0, 1, 127, 128, 255] unsigned
     sb = np.asarray([-110, 1, 127, -127], dtype="i1")
+    return Dataset({"x": ("t", sb, attributes)})
+
+
+def create_unsigned_false_masked_scaled_data(dtype: np.dtype) -> Dataset:
+    encoding = {
+        "_FillValue": 255,
+        "_Unsigned": "false",
+        "dtype": "u1",
+        "add_offset": dtype.type(10),
+        "scale_factor": dtype.type(0.1),
+    }
+    x = np.array([-1.0, 10.1, 22.7, np.nan], dtype=dtype)
+    return Dataset({"x": ("t", x, {}, encoding)})
+
+
+def create_encoded_unsigned_false_masked_scaled_data(dtype: np.dtype) -> Dataset:
+    # These are values as written to the file: the _FillValue will
+    # be represented in the unsigned form.
+    attributes = {
+        "_FillValue": 255,
+        "_Unsigned": "false",
+        "add_offset": dtype.type(10),
+        "scale_factor": dtype.type(0.1),
+    }
+    # Create unsigned data corresponding to [-110, 1, 127, 255] signed
+    sb = np.asarray([146, 1, 127, 255], dtype="u1")
     return Dataset({"x": ("t", sb, attributes)})
 
 
@@ -568,7 +595,7 @@ class DatasetIOBase:
                     assert actual.t.encoding["calendar"] == expected_calendar
 
     def test_roundtrip_timedelta_data(self) -> None:
-        time_deltas = pd.to_timedelta(["1h", "2h", "NaT"])
+        time_deltas = pd.to_timedelta(["1h", "2h", "NaT"])  # type: ignore[arg-type, unused-ignore]
         expected = Dataset({"td": ("td", time_deltas), "td0": time_deltas[0]})
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
@@ -863,16 +890,16 @@ class CFEncodedBase(DatasetIOBase):
         # checks preserving vlen dtype for empty arrays GH7862
         dtype = create_vlen_dtype(str)
         original = Dataset({"a": np.array([], dtype=dtype)})
-        assert check_vlen_dtype(original["a"].dtype) == str
+        assert check_vlen_dtype(original["a"].dtype) is str
         with self.roundtrip(original) as actual:
             assert_identical(original, actual)
             if np.issubdtype(actual["a"].dtype, object):
                 # only check metadata for capable backends
                 # eg. NETCDF3 based backends do not roundtrip metadata
                 if actual["a"].dtype.metadata is not None:
-                    assert check_vlen_dtype(actual["a"].dtype) == str
+                    assert check_vlen_dtype(actual["a"].dtype) is str
             else:
-                assert actual["a"].dtype == np.dtype("<U1")
+                assert actual["a"].dtype == np.dtype("=U1")
 
     @pytest.mark.parametrize(
         "decoded_fn, encoded_fn",
@@ -890,6 +917,10 @@ class CFEncodedBase(DatasetIOBase):
                 create_signed_masked_scaled_data,
                 create_encoded_signed_masked_scaled_data,
             ),
+            (
+                create_unsigned_false_masked_scaled_data,
+                create_encoded_unsigned_false_masked_scaled_data,
+            ),
             (create_masked_and_scaled_data, create_encoded_masked_and_scaled_data),
         ],
     )
@@ -899,9 +930,21 @@ class CFEncodedBase(DatasetIOBase):
             pytest.skip("float32 will be treated as float64 in zarr")
         decoded = decoded_fn(dtype)
         encoded = encoded_fn(dtype)
+        if decoded["x"].encoding["dtype"] == "u1" and not (
+            self.engine == "netcdf4"
+            and self.file_format is None
+            or self.file_format == "NETCDF4"
+        ):
+            pytest.skip("uint8 data can't be written to non-NetCDF4 data")
+
         with self.roundtrip(decoded) as actual:
             for k in decoded.variables:
                 assert decoded.variables[k].dtype == actual.variables[k].dtype
+                # CF _FillValue is always on-disk type
+                assert (
+                    decoded.variables[k].encoding["_FillValue"]
+                    == actual.variables[k].encoding["_FillValue"]
+                )
             assert_allclose(decoded, actual, decode_bytes=False)
 
         with self.roundtrip(decoded, open_kwargs=dict(decode_cf=False)) as actual:
@@ -909,11 +952,21 @@ class CFEncodedBase(DatasetIOBase):
             # encode.  Is that something we want to test for?
             for k in encoded.variables:
                 assert encoded.variables[k].dtype == actual.variables[k].dtype
+                # CF _FillValue is always on-disk type
+                assert (
+                    decoded.variables[k].encoding["_FillValue"]
+                    == actual.variables[k].attrs["_FillValue"]
+                )
             assert_allclose(encoded, actual, decode_bytes=False)
 
         with self.roundtrip(encoded, open_kwargs=dict(decode_cf=False)) as actual:
             for k in encoded.variables:
                 assert encoded.variables[k].dtype == actual.variables[k].dtype
+                # CF _FillValue is always on-disk type
+                assert (
+                    encoded.variables[k].attrs["_FillValue"]
+                    == actual.variables[k].attrs["_FillValue"]
+                )
             assert_allclose(encoded, actual, decode_bytes=False)
 
         # make sure roundtrip encoding didn't change the
@@ -924,6 +977,68 @@ class CFEncodedBase(DatasetIOBase):
             for k in decoded.variables:
                 assert decoded.variables[k].dtype == actual.variables[k].dtype
             assert_allclose(decoded, actual, decode_bytes=False)
+
+    @pytest.mark.parametrize(
+        ("fill_value", "exp_fill_warning"),
+        [
+            (np.int8(-1), False),
+            (np.uint8(255), True),
+            (-1, False),
+            (255, True),
+        ],
+    )
+    def test_roundtrip_unsigned(self, fill_value, exp_fill_warning):
+        @contextlib.contextmanager
+        def _roundtrip_with_warnings(*args, **kwargs):
+            is_np2 = module_available("numpy", minversion="2.0.0.dev0")
+            if exp_fill_warning and is_np2:
+                warn_checker: contextlib.AbstractContextManager = pytest.warns(
+                    SerializationWarning,
+                    match="_FillValue attribute can't be represented",
+                )
+            else:
+                warn_checker = contextlib.nullcontext()
+            with warn_checker:
+                with self.roundtrip(*args, **kwargs) as actual:
+                    yield actual
+
+        # regression/numpy2 test for
+        encoding = {
+            "_FillValue": fill_value,
+            "_Unsigned": "true",
+            "dtype": "i1",
+        }
+        x = np.array([0, 1, 127, 128, 254, np.nan], dtype=np.float32)
+        decoded = Dataset({"x": ("t", x, {}, encoding)})
+
+        attributes = {
+            "_FillValue": fill_value,
+            "_Unsigned": "true",
+        }
+        # Create unsigned data corresponding to [0, 1, 127, 128, 255] unsigned
+        sb = np.asarray([0, 1, 127, -128, -2, -1], dtype="i1")
+        encoded = Dataset({"x": ("t", sb, attributes)})
+        unsigned_dtype = np.dtype(f"u{sb.dtype.itemsize}")
+
+        with _roundtrip_with_warnings(decoded) as actual:
+            for k in decoded.variables:
+                assert decoded.variables[k].dtype == actual.variables[k].dtype
+                exp_fv = decoded.variables[k].encoding["_FillValue"]
+                if exp_fill_warning:
+                    exp_fv = np.array(exp_fv, dtype=unsigned_dtype).view(sb.dtype)
+                assert exp_fv == actual.variables[k].encoding["_FillValue"]
+            assert_allclose(decoded, actual, decode_bytes=False)
+
+        with _roundtrip_with_warnings(
+            decoded, open_kwargs=dict(decode_cf=False)
+        ) as actual:
+            for k in encoded.variables:
+                assert encoded.variables[k].dtype == actual.variables[k].dtype
+                exp_fv = encoded.variables[k].attrs["_FillValue"]
+                if exp_fill_warning:
+                    exp_fv = np.array(exp_fv, dtype=unsigned_dtype).view(sb.dtype)
+                assert exp_fv == actual.variables[k].attrs["_FillValue"]
+            assert_allclose(encoded, actual, decode_bytes=False)
 
     @staticmethod
     def _create_cf_dataset():
@@ -1108,7 +1223,9 @@ class CFEncodedBase(DatasetIOBase):
         ve = (ValueError, "string must be length 1 or")
         data = np.random.random((2, 2))
         da = xr.DataArray(data)
-        for name, (error, msg) in zip([0, (4, 5), True, ""], [te, te, te, ve]):
+        for name, (error, msg) in zip(
+            [0, (4, 5), True, ""], [te, te, te, ve], strict=True
+        ):
             ds = Dataset({name: da})
             with pytest.raises(error) as excinfo:
                 with self.roundtrip(ds):
@@ -1289,6 +1406,13 @@ class NetCDFBase(CFEncodedBase):
                     a.close()
                     b.close()
 
+    def test_byte_attrs(self, byte_attrs_dataset: dict[str, Any]) -> None:
+        # test for issue #9407
+        input = byte_attrs_dataset["input"]
+        expected = byte_attrs_dataset["expected"]
+        with self.roundtrip(input) as actual:
+            assert_identical(actual, expected)
+
 
 _counter = itertools.count()
 
@@ -1401,8 +1525,8 @@ class NetCDF4Base(NetCDFBase):
         expected = Dataset({"x": expected_string})
         kwargs = dict(encoding={"x": {"dtype": str}})
         with self.roundtrip(original, save_kwargs=kwargs) as actual:
-            assert actual["x"].encoding["dtype"] == "<U3"
-            assert actual["x"].dtype == "<U3"
+            assert actual["x"].encoding["dtype"] == "=U3"
+            assert actual["x"].dtype == "=U3"
             assert_identical(actual, expected)
 
     @pytest.mark.parametrize("fill_value", ["XXX", "", "bár"])
@@ -1586,7 +1710,7 @@ class NetCDF4Base(NetCDFBase):
             open_kwargs={"chunks": {}},
         ) as ds:
             for chunksizes, expected in zip(
-                ds["image"].data.chunks, (1, y_chunksize, x_chunksize)
+                ds["image"].data.chunks, (1, y_chunksize, x_chunksize), strict=True
             ):
                 assert all(np.asanyarray(chunksizes) == expected)
 
@@ -2067,6 +2191,11 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
             assert actual["x"].encoding["chunksizes"] == (50, 100)
             assert actual["y"].encoding["chunksizes"] == (100, 50)
 
+    # Flaky test. Very open to contributions on fixing this
+    @pytest.mark.flaky
+    def test_roundtrip_coordinates(self) -> None:
+        super().test_roundtrip_coordinates()
+
 
 @requires_zarr
 class ZarrBase(CFEncodedBase):
@@ -2084,7 +2213,7 @@ class ZarrBase(CFEncodedBase):
                 store_target, mode="w", **self.version_kwargs
             )
 
-    def save(self, dataset, store_target, **kwargs):
+    def save(self, dataset, store_target, **kwargs):  # type: ignore[override]
         return dataset.to_zarr(store=store_target, **kwargs, **self.version_kwargs)
 
     @contextlib.contextmanager
@@ -3741,6 +3870,10 @@ class TestH5NetCDFData(NetCDF4Base):
                 assert ds.title == title
                 assert "attribute 'title' of h5netcdf object '/'" in str(w[0].message)
 
+    def test_byte_attrs(self, byte_attrs_dataset: dict[str, Any]) -> None:
+        with pytest.raises(ValueError, match=byte_attrs_dataset["h5netcdf_error"]):
+            super().test_byte_attrs(byte_attrs_dataset)
+
 
 @requires_h5netcdf
 @requires_netCDF4
@@ -4285,7 +4418,7 @@ class TestDask(DatasetIOBase):
     def test_roundtrip_numpy_datetime_data(self) -> None:
         # Override method in DatasetIOBase - remove not applicable
         # save_kwargs
-        times = pd.to_datetime(["2000-01-01", "2000-01-02", "NaT"])
+        times = pd.to_datetime(["2000-01-01", "2000-01-02", "NaT"], unit="ns")
         expected = Dataset({"t": ("t", times), "t0": times[0]})
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
@@ -4910,9 +5043,10 @@ class TestEncodingInvalid:
         var = xr.Variable(("x",), [1, 2, 3], {}, {"compression": "szlib"})
         _extract_nc4_variable_encoding(var, backend="netCDF4", raise_on_invalid=True)
 
+    @pytest.mark.xfail
     def test_extract_h5nc_encoding(self) -> None:
         # not supported with h5netcdf (yet)
-        var = xr.Variable(("x",), [1, 2, 3], {}, {"least_sigificant_digit": 2})
+        var = xr.Variable(("x",), [1, 2, 3], {}, {"least_significant_digit": 2})
         with pytest.raises(ValueError, match=r"unexpected encoding"):
             _extract_nc4_variable_encoding(var, raise_on_invalid=True)
 
@@ -5148,6 +5282,21 @@ def test_source_encoding_always_present_with_pathlib() -> None:
     with create_tmp_file() as tmp:
         original.to_netcdf(tmp)
         with open_dataset(Path(tmp)) as ds:
+            assert ds.encoding["source"] == tmp
+
+
+@requires_h5netcdf
+@requires_fsspec
+def test_source_encoding_always_present_with_fsspec() -> None:
+    import fsspec
+
+    rnddata = np.random.randn(10)
+    original = Dataset({"foo": ("x", rnddata)})
+    with create_tmp_file() as tmp:
+        original.to_netcdf(tmp)
+
+        fs = fsspec.filesystem("file")
+        with fs.open(tmp) as f, open_dataset(f) as ds:
             assert ds.encoding["source"] == tmp
 
 
@@ -5583,7 +5732,9 @@ def test_h5netcdf_entrypoint(tmp_path: Path) -> None:
 
 @requires_netCDF4
 @pytest.mark.parametrize("str_type", (str, np.str_))
-def test_write_file_from_np_str(str_type, tmpdir) -> None:
+def test_write_file_from_np_str(
+    str_type: type[str] | type[np.str_], tmpdir: str
+) -> None:
     # https://github.com/pydata/xarray/pull/5264
     scenarios = [str_type(v) for v in ["scenario_a", "scenario_b", "scenario_c"]]
     years = range(2015, 2100 + 1)
@@ -5594,7 +5745,7 @@ def test_write_file_from_np_str(str_type, tmpdir) -> None:
     )
     tdf.index.name = "scenario"
     tdf.columns.name = "year"
-    tdf = tdf.stack()
+    tdf = cast(pd.DataFrame, tdf.stack())
     tdf.name = "tas"
 
     txr = tdf.to_xarray()
@@ -5795,7 +5946,7 @@ class TestZarrRegionAuto:
         ds.to_zarr(tmp_path / "test.zarr")
 
         region: Mapping[str, slice] | Literal["auto"]
-        for region in [region_slice, "auto"]:  # type: ignore
+        for region in [region_slice, "auto"]:  # type: ignore[assignment]
             with patch.object(
                 ZarrStore,
                 "set_variables",

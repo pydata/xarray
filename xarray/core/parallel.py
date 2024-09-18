@@ -3,8 +3,8 @@ from __future__ import annotations
 import collections
 import itertools
 import operator
-from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypedDict
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 import numpy as np
 
@@ -29,7 +29,7 @@ class ExpectedDict(TypedDict):
 
 
 def unzip(iterable):
-    return zip(*iterable)
+    return zip(*iterable, strict=True)
 
 
 def assert_chunks_compatible(a: Dataset, b: Dataset):
@@ -131,7 +131,7 @@ def infer_template(
             "Please supply the 'template' kwarg to map_blocks."
         ) from e
 
-    if not isinstance(template, (Dataset, DataArray)):
+    if not isinstance(template, Dataset | DataArray):
         raise TypeError(
             "Function must return an xarray DataArray or Dataset. Instead it returned "
             f"{type(template)}"
@@ -345,13 +345,13 @@ def map_blocks(
 
         converted_args = [
             dataset_to_dataarray(arg) if is_array else arg
-            for is_array, arg in zip(arg_is_array, args)
+            for is_array, arg in zip(arg_is_array, args, strict=True)
         ]
 
         result = func(*converted_args, **kwargs)
 
         merged_coordinates = merge(
-            [arg.coords for arg in args if isinstance(arg, (Dataset, DataArray))]
+            [arg.coords for arg in args if isinstance(arg, Dataset | DataArray)]
         ).coords
 
         # check all dims are present
@@ -387,7 +387,7 @@ def map_blocks(
 
         return make_dict(result)
 
-    if template is not None and not isinstance(template, (DataArray, Dataset)):
+    if template is not None and not isinstance(template, DataArray | Dataset):
         raise TypeError(
             f"template must be a DataArray or Dataset. Received {type(template).__name__} instead."
         )
@@ -417,7 +417,7 @@ def map_blocks(
         pass
 
     all_args = [obj] + list(args)
-    is_xarray = [isinstance(arg, (Dataset, DataArray)) for arg in all_args]
+    is_xarray = [isinstance(arg, Dataset | DataArray) for arg in all_args]
     is_array = [isinstance(arg, DataArray) for arg in all_args]
 
     # there should be a better way to group this. partition?
@@ -440,7 +440,10 @@ def map_blocks(
     merged_coordinates = merge([arg.coords for arg in aligned]).coords
 
     _, npargs = unzip(
-        sorted(list(zip(xarray_indices, xarray_objs)) + others, key=lambda x: x[0])
+        sorted(
+            list(zip(xarray_indices, xarray_objs, strict=True)) + others,
+            key=lambda x: x[0],
+        )
     )
 
     # check that chunk sizes are compatible
@@ -534,7 +537,7 @@ def map_blocks(
     # iterate over all possible chunk combinations
     for chunk_tuple in itertools.product(*ichunk.values()):
         # mapping from dimension name to chunk index
-        chunk_index = dict(zip(ichunk.keys(), chunk_tuple))
+        chunk_index = dict(zip(ichunk.keys(), chunk_tuple, strict=True))
 
         blocked_args = [
             (
@@ -544,7 +547,7 @@ def map_blocks(
                 if isxr
                 else arg
             )
-            for isxr, arg in zip(is_xarray, npargs)
+            for isxr, arg in zip(is_xarray, npargs, strict=True)
         ]
 
         # raise nice error messages in _wrapper

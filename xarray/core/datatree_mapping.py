@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import functools
 import sys
+from collections.abc import Callable
 from itertools import repeat
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
@@ -98,10 +99,10 @@ def map_over_subtree(func: Callable) -> Callable:
         Function will not be applied to any nodes without datasets.
     *args : tuple, optional
         Positional arguments passed on to `func`. If DataTrees any data-containing nodes will be converted to Datasets
-        via `.ds`.
+        via `.dataset`.
     **kwargs : Any
         Keyword arguments passed on to `func`. If DataTrees any data-containing nodes will be converted to Datasets
-        via `.ds`.
+        via `.dataset`.
 
     Returns
     -------
@@ -156,17 +157,20 @@ def map_over_subtree(func: Callable) -> Callable:
             first_tree.subtree,
             *args_as_tree_length_iterables,
             *list(kwargs_as_tree_length_iterables.values()),
+            strict=False,
         ):
             node_args_as_datasetviews = [
-                a.ds if isinstance(a, DataTree) else a for a in all_node_args[:n_args]
+                a.dataset if isinstance(a, DataTree) else a
+                for a in all_node_args[:n_args]
             ]
             node_kwargs_as_datasetviews = dict(
                 zip(
                     [k for k in kwargs_as_tree_length_iterables.keys()],
                     [
-                        v.ds if isinstance(v, DataTree) else v
+                        v.dataset if isinstance(v, DataTree) else v
                         for v in all_node_args[n_args:]
                     ],
+                    strict=True,
                 )
             )
             func_with_error_context = _handle_errors_with_path_context(
@@ -180,7 +184,7 @@ def map_over_subtree(func: Callable) -> Callable:
                 )
             elif node_of_first_tree.has_attrs:
                 # propagate attrs
-                results = node_of_first_tree.ds
+                results = node_of_first_tree.dataset
             else:
                 # nothing to propagate so use fastpath to create empty node in new tree
                 results = None
@@ -257,11 +261,11 @@ def _check_single_set_return_values(
     path_to_node: str, obj: Dataset | DataArray | tuple[Dataset | DataArray]
 ):
     """Check types returned from single evaluation of func, and return number of return values received from func."""
-    if isinstance(obj, (Dataset, DataArray)):
+    if isinstance(obj, Dataset | DataArray):
         return 1
     elif isinstance(obj, tuple):
         for r in obj:
-            if not isinstance(r, (Dataset, DataArray)):
+            if not isinstance(r, Dataset | DataArray):
                 raise TypeError(
                     f"One of the results of calling func on datasets on the nodes at position {path_to_node} is "
                     f"of type {type(r)}, not Dataset or DataArray."

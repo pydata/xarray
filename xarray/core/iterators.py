@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
-from typing import Callable
+from collections.abc import Callable, Iterator
 
 from xarray.core.treenode import Tree
 
@@ -29,36 +28,31 @@ class LevelOrderIter(Iterator):
     --------
     >>> from xarray.core.datatree import DataTree
     >>> from xarray.core.iterators import LevelOrderIter
-    >>> f = DataTree(name="f")
-    >>> b = DataTree(name="b", parent=f)
-    >>> a = DataTree(name="a", parent=b)
-    >>> d = DataTree(name="d", parent=b)
-    >>> c = DataTree(name="c", parent=d)
-    >>> e = DataTree(name="e", parent=d)
-    >>> g = DataTree(name="g", parent=f)
-    >>> i = DataTree(name="i", parent=g)
-    >>> h = DataTree(name="h", parent=i)
+    >>> f = DataTree.from_dict(
+    ...     {"/b/a": None, "/b/d/c": None, "/b/d/e": None, "/g/h/i": None}, name="f"
+    ... )
     >>> print(f)
-    DataTree('f', parent=None)
-    ├── DataTree('b')
-    │   ├── DataTree('a')
-    │   └── DataTree('d')
-    │       ├── DataTree('c')
-    │       └── DataTree('e')
-    └── DataTree('g')
-        └── DataTree('i')
-            └── DataTree('h')
+    <xarray.DataTree 'f'>
+    Group: /
+    ├── Group: /b
+    │   ├── Group: /b/a
+    │   └── Group: /b/d
+    │       ├── Group: /b/d/c
+    │       └── Group: /b/d/e
+    └── Group: /g
+        └── Group: /g/h
+            └── Group: /g/h/i
     >>> [node.name for node in LevelOrderIter(f)]
-    ['f', 'b', 'g', 'a', 'd', 'i', 'c', 'e', 'h']
+    ['f', 'b', 'g', 'a', 'd', 'h', 'c', 'e', 'i']
     >>> [node.name for node in LevelOrderIter(f, maxlevel=3)]
-    ['f', 'b', 'g', 'a', 'd', 'i']
+    ['f', 'b', 'g', 'a', 'd', 'h']
     >>> [
     ...     node.name
     ...     for node in LevelOrderIter(f, filter_=lambda n: n.name not in ("e", "g"))
     ... ]
-    ['f', 'b', 'a', 'd', 'i', 'c', 'h']
+    ['f', 'b', 'a', 'd', 'h', 'c', 'i']
     >>> [node.name for node in LevelOrderIter(f, stop=lambda n: n.name == "d")]
-    ['f', 'b', 'g', 'a', 'i', 'h']
+    ['f', 'b', 'g', 'a', 'h', 'i']
     """
 
     def __init__(
