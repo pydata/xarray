@@ -2583,7 +2583,9 @@ def test_groupby_math_auto_chunk() -> None:
     sub = xr.DataArray(
         InaccessibleArray(np.array([1, 2])), dims="label", coords={"label": [1, 2]}
     )
-    actual = da.chunk(x=1, y=2).groupby("label") - sub
+    chunked = da.chunk(x=1, y=2)
+    chunked.label.load()
+    actual = chunked.groupby("label") - sub
     assert actual.chunksizes == {"x": (1, 1, 1), "y": (2, 1)}
 
 
