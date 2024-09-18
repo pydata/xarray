@@ -6149,7 +6149,5 @@ def test_zarr_safe_chunk(tmp_path):
     da.isel(x=slice(0, 7)).to_zarr(store, safe_chunks=True, mode="w")
     # Append with a single chunk it's totally valid,
     # and it does not matter the size of the chunk
-    da.isel(x=slice(7, 19)).chunk(x=-1).to_zarr(
-        store, append_dim="x", safe_chunks=True
-    )
+    da.isel(x=slice(7, 19)).chunk(x=-1).to_zarr(store, append_dim="x", safe_chunks=True)
     assert xr.open_zarr(store)["foo"].equals(da.isel(x=slice(0, 19)))

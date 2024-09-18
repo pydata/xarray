@@ -197,7 +197,9 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks, regi
             f"or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
         )
 
-        for zchunk, dchunks, interval in zip(enc_chunks_tuple, var_chunks, region, strict=True):
+        for zchunk, dchunks, interval in zip(
+            enc_chunks_tuple, var_chunks, region, strict=True
+        ):
             if not safe_chunks or len(dchunks) <= 1:
                 # It is not necessary to perform any additional validation if the
                 # safe_chunks is False, or there are less than two dchunks
@@ -302,7 +304,12 @@ def extract_zarr_variable_encoding(
                 del encoding[k]
 
     chunks = _determine_zarr_chunks(
-        encoding.get("chunks"), variable.chunks, variable.ndim, name, safe_chunks, region
+        encoding.get("chunks"),
+        variable.chunks,
+        variable.ndim,
+        name,
+        safe_chunks,
+        region,
     )
     encoding["chunks"] = chunks
     return encoding
