@@ -259,7 +259,7 @@ html_theme_options = dict(
     Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
     twitter_url="https://twitter.com/xarray_dev",
     icon_links=[],  # workaround for pydata/pydata-sphinx-theme#1220
-    announcement="<a href='https://forms.gle/KEq7WviCdz9xTaJX6'>Xarray's 2024 User Survey is live now. Please take ~5 minutes to fill it out and help us improve Xarray.</a>",
+    # announcement="<a href='https://forms.gle/KEq7WviCdz9xTaJX6'>Xarray's 2024 User Survey is live now. Please take ~5 minutes to fill it out and help us improve Xarray.</a>",
 )
 
 
