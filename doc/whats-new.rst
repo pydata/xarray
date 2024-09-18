@@ -32,6 +32,8 @@ New Features
   `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
   By `Eni Awowale <https://github.com/eni-awowale>`_.
+- Implement handling of complex numbers (netcdf4/h5netcdf) and enums (h5netcdf) (:issue:`9246`, :issue:`3297`, :pull:`9509`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

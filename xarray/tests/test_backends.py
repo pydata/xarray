@@ -1858,7 +1858,7 @@ class NetCDF4Base(NetCDFBase):
                     fill_value=None,
                 )
                 v[:] = 1
-            with open_dataset(tmp_file, engine=self.engine) as original:
+            with open_dataset(tmp_file) as original:
                 save_kwargs = {}
                 # We don't expect any errors.
                 # This is effectively a void context manager
