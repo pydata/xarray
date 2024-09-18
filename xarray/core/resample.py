@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
@@ -14,6 +14,8 @@ from xarray.core.types import Dims, InterpOptions, T_Xarray
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.types import T_Chunks
+    from xarray.groupers import Resampler
 
 from xarray.groupers import RESAMPLE_DIM
 
@@ -57,6 +59,60 @@ class Resample(GroupBy[T_Xarray]):
         result = super()._flox_reduce(dim=dim, keep_attrs=keep_attrs, **kwargs)
         result = result.rename({RESAMPLE_DIM: self._group_dim})
         return result
+
+    def shuffle(self, chunks: T_Chunks = None):
+        """
+        Sort or "shuffle" the underlying object.
+
+        "Shuffle" means the object is sorted so that all group members occur sequentially,
+        in the same chunk. Multiple groups may occur in the same chunk.
+        This method is particularly useful for chunked arrays (e.g. dask, cubed).
+        particularly when you need to map a function that requires all members of a group
+        to be present in a single chunk. For chunked array types, the order of appearance
+        is not guaranteed, but will depend on the input chunking.
+
+        .. warning::
+
+           With resampling it is a lot better to use ``.chunk`` instead of ``.shuffle``,
+           since one can only resample a sorted time coordinate.
+
+        Parameters
+        ----------
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or tuple of int, optional
+            How to adjust chunks along dimensions not present in the array being grouped by.
+
+        Returns
+        -------
+        DataArrayGroupBy or DatasetGroupBy
+
+        Examples
+        --------
+        >>> import dask
+        >>> da = xr.DataArray(
+        ...     dims="x",
+        ...     data=dask.array.arange(10, chunks=3),
+        ...     coords={"x": [1, 2, 3, 1, 2, 3, 1, 2, 3, 0]},
+        ...     name="a",
+        ... )
+        >>> shuffled = da.groupby("x").shuffle()
+        >>> shuffled.quantile(q=0.5).compute()
+        <xarray.DataArray 'a' (x: 4)> Size: 32B
+        array([9., 3., 4., 5.])
+        Coordinates:
+            quantile  float64 8B 0.5
+          * x         (x) int64 32B 0 1 2 3
+
+        See Also
+        --------
+        dask.dataframe.DataFrame.shuffle
+        dask.array.shuffle
+        """
+        (grouper,) = self.groupers
+        shuffled = self._shuffle_obj(chunks).drop_vars(RESAMPLE_DIM)
+        return shuffled.resample(
+            {self._group_dim: cast("Resampler", grouper.grouper.reset())},
+            restore_coord_dims=self._restore_coord_dims,
+        )
 
     def _drop_coords(self) -> T_Xarray:
         """Drop non-dimension coordinates along the resampled dimension."""
