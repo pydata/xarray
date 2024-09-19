@@ -132,8 +132,10 @@ def as_variable(
     elif isinstance(obj, tuple):
         try:
             dims_, data_, *attrs = obj
-        except ValueError:
-            raise ValueError(f"Tuple {obj} is not in the form (dims, data[, attrs])")
+        except ValueError as err:
+            raise ValueError(
+                f"Tuple {obj} is not in the form (dims, data[, attrs])"
+            ) from err
 
         if isinstance(data_, DataArray):
             raise TypeError(
@@ -146,7 +148,7 @@ def as_variable(
             raise error.__class__(
                 f"Variable {name!r}: Could not convert tuple of form "
                 f"(dims, data[, attrs, encoding]): {obj} to Variable."
-            )
+            ) from error
     elif utils.is_scalar(obj):
         obj = Variable([], obj)
     elif isinstance(obj, pd.Index | IndexVariable) and obj.name is not None:
@@ -768,8 +770,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         try:
             variables = _broadcast_compat_variables(*variables)
-        except ValueError:
-            raise IndexError(f"Dimensions of indexers mismatch: {key}")
+        except ValueError as err:
+            raise IndexError(f"Dimensions of indexers mismatch: {key}") from err
 
         out_key = [variable.data for variable in variables]
         out_dims = tuple(out_dims_set)
@@ -896,12 +898,13 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def encoding(self, value):
         try:
             self._encoding = dict(value)
-        except ValueError:
-            raise ValueError("encoding must be castable to a dictionary")
+        except ValueError as err:
+            raise ValueError("encoding must be castable to a dictionary") from err
 
     def reset_encoding(self) -> Self:
         warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead"
+            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
+            stacklevel=2,
         )
         return self.drop_encoding()
 
@@ -1895,6 +1898,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             warnings.warn(
                 "The `interpolation` argument to quantile was renamed to `method`.",
                 FutureWarning,
+                stacklevel=2,
             )
 
             if method != "linear":
@@ -2528,7 +2532,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def chunk(  # type: ignore[override]
         self,
-        chunks: T_Chunks = {},
+        chunks: T_Chunks = {},  # noqa: B006  # even though it's technically unsafe, it is being used intentionally here (#4667)
         name: str | None = None,
         lock: bool | None = None,
         inline_array: bool | None = None,
@@ -2663,7 +2667,7 @@ class IndexVariable(Variable):
 
     def chunk(
         self,
-        chunks={},
+        chunks={},  # noqa: B006  # even though it's unsafe, it is being used intentionally here (#4667)
         name=None,
         lock=False,
         inline_array=False,

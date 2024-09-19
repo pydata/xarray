@@ -92,4 +92,4 @@ class TestAccessor:
                 raise AttributeError("broken")
 
         with pytest.raises(RuntimeError, match=r"error initializing"):
-            xr.Dataset().stupid_accessor
+            _ = xr.Dataset().stupid_accessor

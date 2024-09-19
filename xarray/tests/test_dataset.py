@@ -763,7 +763,7 @@ class TestDataset:
         with assert_no_warnings():
             len(ds.dims)
             ds.dims.__iter__()
-            "dim1" in ds.dims
+            _ = "dim1" in ds.dims
 
     def test_asarray(self) -> None:
         ds = Dataset({"x": 0})
@@ -1264,10 +1264,10 @@ class TestDataset:
         with pytest.raises(UnexpectedDataAccess):
             ds.load()
         with pytest.raises(UnexpectedDataAccess):
-            ds["var1"].values
+            _ = ds["var1"].values
 
         # these should not raise UnexpectedDataAccess:
-        ds.var1.data
+        _ = ds.var1.data
         ds.isel(time=10)
         ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
         ds.transpose()
@@ -3038,12 +3038,12 @@ class TestDataset:
         vencoding = {"scale_factor": 10}
         orig.encoding = {"foo": "bar"}
 
-        for k, v in orig.variables.items():
+        for k, _v in orig.variables.items():
             orig[k].encoding = vencoding
 
         actual = orig.drop_encoding()
         assert actual.encoding == {}
-        for k, v in actual.variables.items():
+        for _k, v in actual.variables.items():
             assert v.encoding == {}
 
         assert_equal(actual, orig)
@@ -3087,7 +3087,7 @@ class TestDataset:
         data["var1"] = (var1.dims, InaccessibleArray(var1.values))
         renamed = data.rename(newnames)
         with pytest.raises(UnexpectedDataAccess):
-            renamed["renamed_var1"].values
+            _ = renamed["renamed_var1"].values
 
         # https://github.com/python/mypy/issues/10008
         renamed_kwargs = data.rename(**newnames)  # type: ignore[arg-type]
@@ -4748,11 +4748,11 @@ class TestDataset:
         test_args: list[list] = [[], [["x"]], [["x", "z"]]]
         for args in test_args:
 
-            def get_args(v):
+            def get_args(args, v):
                 return [set(args[0]) & set(v.dims)] if args else []
 
             expected = Dataset(
-                {k: v.squeeze(*get_args(v)) for k, v in data.variables.items()}
+                {k: v.squeeze(*get_args(args, v)) for k, v in data.variables.items()}
             )
             expected = expected.set_coords(data.coords)
             assert_identical(expected, data.squeeze(*args))
@@ -5210,7 +5210,7 @@ class TestDataset:
             with pytest.raises(UnexpectedDataAccess):
                 ds.load()
             with pytest.raises(UnexpectedDataAccess):
-                ds["var1"].values
+                _ = ds["var1"].values
 
             # these should not raise UnexpectedDataAccess:
             ds.isel(time=10)
@@ -5223,10 +5223,10 @@ class TestDataset:
         for decode_cf in [True, False]:
             ds = open_dataset(store, decode_cf=decode_cf)
             with pytest.raises(UnexpectedDataAccess):
-                ds["var1"].values
+                _ = ds["var1"].values
 
             # these should not raise UnexpectedDataAccess:
-            ds.var1.data
+            _ = ds.var1.data
             ds.isel(time=10)
             ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
             repr(ds)
@@ -5989,9 +5989,9 @@ class TestDataset:
 
         # don't actually patch these methods in
         with pytest.raises(AttributeError):
-            ds.item
+            _ = ds.item
         with pytest.raises(AttributeError):
-            ds.searchsorted
+            _ = ds.searchsorted
 
     def test_dataset_array_math(self) -> None:
         ds = self.make_example_math_dataset()
@@ -7106,7 +7106,7 @@ def test_dir_unicode(ds) -> None:
 
 def test_raise_no_warning_for_nan_in_binary_ops() -> None:
     with assert_no_warnings():
-        Dataset(data_vars={"x": ("y", [1, 2, np.nan])}) > 0
+        _ = Dataset(data_vars={"x": ("y", [1, 2, np.nan])}) > 0
 
 
 @pytest.mark.filterwarnings("error")
@@ -7416,7 +7416,7 @@ def test_trapezoid_datetime(dask, which_datetime) -> None:
 def test_no_dict() -> None:
     d = Dataset()
     with pytest.raises(AttributeError):
-        d.__dict__
+        _ = d.__dict__
 
 
 def test_subclass_slots() -> None:

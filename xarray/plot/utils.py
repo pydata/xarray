@@ -372,7 +372,8 @@ def _infer_xy_labels_3d(
             "Several dimensions of this array could be colors.  Xarray "
             f"will use the last possible dimension ({rgb!r}) to match "
             "matplotlib.pyplot.imshow.  You can pass names of x, y, "
-            "and/or rgb dimensions to override this guess."
+            "and/or rgb dimensions to override this guess.",
+            stacklevel=2,
         )
     assert rgb is not None
 
@@ -453,8 +454,8 @@ def get_axis(
     try:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
-    except ImportError:
-        raise ImportError("matplotlib is required for plot.utils.get_axis")
+    except ImportError as err:
+        raise ImportError("matplotlib is required for plot.utils.get_axis") from err
 
     if figsize is not None:
         if ax is not None:
@@ -1053,7 +1054,8 @@ def legend_elements(
             warnings.warn(
                 "Collection without array used. Make sure to "
                 "specify the values to be colormapped via the "
-                "`c` argument."
+                "`c` argument.",
+                stacklevel=2,
             )
             return handles, labels
         _size = kwargs.pop("size", mpl.rcParams["lines.markersize"])
