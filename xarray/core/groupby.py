@@ -249,7 +249,9 @@ def _ensure_1d(group: T_Group, obj: T_DataWithCoords) -> tuple[
         stacked_dim = "stacked_" + "_".join(map(str, orig_dims))
         # these dimensions get created by the stack operation
         inserted_dims = [dim for dim in group.dims if dim not in group.coords]
-        newgroup = group.stack({stacked_dim: orig_dims})
+        # `newgroup` construction is optimized so we don't create an index unnecessarily,
+        # or stack any non-dim coords unnecessarily
+        newgroup = DataArray(group.variable.stack({stacked_dim: orig_dims}))
         newobj = obj.stack({stacked_dim: orig_dims})
         return newgroup, newobj, stacked_dim, inserted_dims
 
