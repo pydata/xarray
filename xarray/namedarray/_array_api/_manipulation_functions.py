@@ -78,7 +78,7 @@ def broadcast_to(
     """
     xp = _get_data_namespace(x)
     _data = xp.broadcast_to(x._data, shape=shape)
-    _dims = _infer_dims(_data.shape)  # TODO: Fix dims
+    _dims = _infer_dims(_data.shape, x.dims if isinstance(dims, Default) else dims)
     return x._new(_dims, _data)
 
 
@@ -114,7 +114,7 @@ def expand_dims(
     dim :
         Dimension name. New dimension will be stored in the axis position.
     axis :
-        (Not recommended) Axis position (zero-based). Default is 0.
+        Axis position (zero-based). Default is 0.
 
     Returns
     -------
@@ -132,6 +132,9 @@ def expand_dims(
     >>> x_new.dims, x_new.shape
     (('z', 'x', 'y'), (1, 2, 2))
     """
+    # Array Api does not support multiple axes, but maybe in the future:
+    # https://github.com/data-apis/array-api/issues/760
+    # xref: https://github.com/numpy/numpy/blob/3b246c6488cf246d488bbe5726ca58dc26b6ea74/numpy/lib/_shape_base_impl.py#L509C17-L509C24
     xp = _get_data_namespace(x)
     _data = xp.expand_dims(x._data, axis=axis)
     _dims = _insert_dim(x.dims, dim, axis)
