@@ -132,8 +132,10 @@ def as_variable(
     elif isinstance(obj, tuple):
         try:
             dims_, data_, *attrs = obj
-        except ValueError:
-            raise ValueError(f"Tuple {obj} is not in the form (dims, data[, attrs])")
+        except ValueError as err:
+            raise ValueError(
+                f"Tuple {obj} is not in the form (dims, data[, attrs])"
+            ) from err
 
         if isinstance(data_, DataArray):
             raise TypeError(
@@ -146,7 +148,7 @@ def as_variable(
             raise error.__class__(
                 f"Variable {name!r}: Could not convert tuple of form "
                 f"(dims, data[, attrs, encoding]): {obj} to Variable."
-            )
+            ) from error
     elif utils.is_scalar(obj):
         obj = Variable([], obj)
     elif isinstance(obj, pd.Index | IndexVariable) and obj.name is not None:
@@ -319,7 +321,7 @@ def as_compatible_data(
     # validate whether the data is valid data types.
     data = np.asarray(data)
 
-    if isinstance(data, np.ndarray) and data.dtype.kind in "OMm":
+    if data.dtype.kind in "OMm":
         data = _possibly_convert_objects(data)
     return _maybe_wrap_data(data)
 
@@ -647,7 +649,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         # If all key is 1-dimensional and there are no duplicate labels,
         # key can be mapped as an OuterIndexer.
         dims = []
-        for k, d in zip(key, self.dims):
+        for k, d in zip(key, self.dims, strict=True):
             if isinstance(k, Variable):
                 if len(k.dims) > 1:
                     return self._broadcast_indexes_vectorized(key)
@@ -661,13 +663,15 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def _broadcast_indexes_basic(self, key):
         dims = tuple(
-            dim for k, dim in zip(key, self.dims) if not isinstance(k, integer_types)
+            dim
+            for k, dim in zip(key, self.dims, strict=True)
+            if not isinstance(k, integer_types)
         )
         return dims, BasicIndexer(key), None
 
     def _validate_indexers(self, key):
         """Make sanity checks"""
-        for dim, k in zip(self.dims, key):
+        for dim, k in zip(self.dims, key, strict=True):
             if not isinstance(k, BASIC_INDEXING_TYPES):
                 if not isinstance(k, Variable):
                     if not is_duck_array(k):
@@ -706,7 +710,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         # drop dim if k is integer or if k is a 0d dask array
         dims = tuple(
             k.dims[0] if isinstance(k, Variable) else dim
-            for k, dim in zip(key, self.dims)
+            for k, dim in zip(key, self.dims, strict=True)
             if (not isinstance(k, integer_types) and not is_0d_dask_array(k))
         )
 
@@ -729,7 +733,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def _broadcast_indexes_vectorized(self, key):
         variables = []
         out_dims_set = OrderedSet()
-        for dim, value in zip(self.dims, key):
+        for dim, value in zip(self.dims, key, strict=True):
             if isinstance(value, slice):
                 out_dims_set.add(dim)
             else:
@@ -751,7 +755,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             variable_dims.update(variable.dims)
 
         slices = []
-        for i, (dim, value) in enumerate(zip(self.dims, key)):
+        for i, (dim, value) in enumerate(zip(self.dims, key, strict=True)):
             if isinstance(value, slice):
                 if dim in variable_dims:
                     # We only convert slice objects to variables if they share
@@ -766,8 +770,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         try:
             variables = _broadcast_compat_variables(*variables)
-        except ValueError:
-            raise IndexError(f"Dimensions of indexers mismatch: {key}")
+        except ValueError as err:
+            raise IndexError(f"Dimensions of indexers mismatch: {key}") from err
 
         out_key = [variable.data for variable in variables]
         out_dims = tuple(out_dims_set)
@@ -894,12 +898,13 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def encoding(self, value):
         try:
             self._encoding = dict(value)
-        except ValueError:
-            raise ValueError("encoding must be castable to a dictionary")
+        except ValueError as err:
+            raise ValueError("encoding must be castable to a dictionary") from err
 
     def reset_encoding(self) -> Self:
         warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead"
+            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
+            stacklevel=2,
         )
         return self.drop_encoding()
 
@@ -1134,7 +1139,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if fill_with_shape:
             return [
                 (n, n) if d not in pad_option else pad_option[d]
-                for d, n in zip(self.dims, self.data.shape)
+                for d, n in zip(self.dims, self.data.shape, strict=True)
             ]
         return [(0, 0) if d not in pad_option else pad_option[d] for d in self.dims]
 
@@ -1377,7 +1382,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             # writeable if possible
             expanded_data = self.data
         elif shape is not None:
-            dims_map = dict(zip(dim, shape))
+            dims_map = dict(zip(dim, shape, strict=True))
             tmp_shape = tuple(dims_map[d] for d in expanded_dims)
             expanded_data = duck_array_ops.broadcast_to(self.data, tmp_shape)
         else:
@@ -1527,13 +1532,13 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             # unstacking a dense multitindexed array to a sparse array
             from sparse import COO
 
-            codes = zip(*index.codes)
+            codes = zip(*index.codes, strict=True)
             if reordered.ndim == 1:
                 indexes = codes
             else:
                 sizes = itertools.product(*[range(s) for s in reordered.shape[:-1]])
                 tuple_indexes = itertools.product(sizes, codes)
-                indexes = map(lambda x: list(itertools.chain(*x)), tuple_indexes)  # type: ignore
+                indexes = map(lambda x: list(itertools.chain(*x)), tuple_indexes)  # type: ignore[assignment]
 
             data = COO(
                 coords=np.array(list(indexes)).T,
@@ -1893,6 +1898,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             warnings.warn(
                 "The `interpolation` argument to quantile was renamed to `method`.",
                 FutureWarning,
+                stacklevel=2,
             )
 
             if method != "linear":
@@ -2061,7 +2067,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         if utils.is_scalar(dim):
             for name, arg in zip(
-                ["window", "window_dim", "center"], [window, window_dim, center]
+                ["window", "window_dim", "center"],
+                [window, window_dim, center],
+                strict=True,
             ):
                 if not utils.is_scalar(arg):
                     raise ValueError(
@@ -2089,7 +2097,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             )
 
         pads = {}
-        for d, win, cent in zip(dim, window, center):
+        for d, win, cent in zip(dim, window, center, strict=True):
             if cent:
                 start = win // 2  # 10 -> 5,  9 -> 4
                 end = win - 1 - start
@@ -2399,7 +2407,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         result = {
             d: Variable(dims=result_dims, data=i)
-            for d, i in zip(dim, result_unravelled_indices)
+            for d, i in zip(dim, result_unravelled_indices, strict=True)
         }
 
         if keep_attrs is None:
@@ -2524,7 +2532,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def chunk(  # type: ignore[override]
         self,
-        chunks: T_Chunks = {},
+        chunks: T_Chunks = {},  # noqa: B006  # even though it's technically unsafe, it is being used intentionally here (#4667)
         name: str | None = None,
         lock: bool | None = None,
         inline_array: bool | None = None,
@@ -2659,7 +2667,7 @@ class IndexVariable(Variable):
 
     def chunk(
         self,
-        chunks={},
+        chunks={},  # noqa: B006  # even though it's unsafe, it is being used intentionally here (#4667)
         name=None,
         lock=False,
         inline_array=False,
@@ -2870,7 +2878,7 @@ def _unified_dims(variables):
         var_dims = var.dims
         _raise_if_any_duplicate_dimensions(var_dims, err_context="Broadcasting")
 
-        for d, s in zip(var_dims, var.shape):
+        for d, s in zip(var_dims, var.shape, strict=True):
             if d not in all_dims:
                 all_dims[d] = s
             elif all_dims[d] != s:
@@ -2998,7 +3006,7 @@ def calculate_dimensions(variables: Mapping[Any, Variable]) -> dict[Hashable, in
     last_used = {}
     scalar_vars = {k for k, v in variables.items() if not v.dims}
     for k, var in variables.items():
-        for dim, size in zip(var.dims, var.shape):
+        for dim, size in zip(var.dims, var.shape, strict=True):
             if dim in scalar_vars:
                 raise ValueError(
                     f"dimension {dim!r} already exists as a scalar variable"

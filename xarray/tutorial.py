@@ -60,22 +60,22 @@ def _check_netcdf_engine_installed(name):
         except ImportError:
             try:
                 import netCDF4  # noqa
-            except ImportError:
+            except ImportError as err:
                 raise ImportError(
                     f"opening tutorial dataset {name} requires either scipy or "
                     "netCDF4 to be installed."
-                )
+                ) from err
     if version == 4:
         try:
             import h5netcdf  # noqa
         except ImportError:
             try:
                 import netCDF4  # noqa
-            except ImportError:
+            except ImportError as err:
                 raise ImportError(
                     f"opening tutorial dataset {name} requires either h5netcdf "
                     "or netCDF4 to be installed."
-                )
+                ) from err
 
 
 # idea borrowed from Seaborn

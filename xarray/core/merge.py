@@ -66,7 +66,7 @@ def broadcast_dimension_size(variables: list[Variable]) -> dict[Hashable, int]:
     """
     dims: dict[Hashable, int] = {}
     for var in variables:
-        for dim, size in zip(var.dims, var.shape):
+        for dim, size in zip(var.dims, var.shape, strict=True):
             if dim in dims and size != dims[dim]:
                 raise ValueError(f"index {dim!r} not aligned")
             dims[dim] = size
@@ -710,7 +710,7 @@ def merge_core(
         coord_names.intersection_update(variables)
     if explicit_coords is not None:
         coord_names.update(explicit_coords)
-    for dim, size in dims.items():
+    for dim, _size in dims.items():
         if dim in variables:
             coord_names.add(dim)
     ambiguous_coords = coord_names.intersection(noncoord_names)

@@ -252,8 +252,8 @@ def concat(
 
     try:
         first_obj, objs = utils.peek_at(objs)
-    except StopIteration:
-        raise ValueError("must supply at least one object to concatenate")
+    except StopIteration as err:
+        raise ValueError("must supply at least one object to concatenate") from err
 
     if compat not in _VALID_COMPAT:
         raise ValueError(
@@ -400,7 +400,9 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
                                     equals[k] = False
                                     # computed variables are not to be re-computed
                                     # again in the future
-                                    for ds, v in zip(datasets[1:], computed):
+                                    for ds, v in zip(
+                                        datasets[1:], computed, strict=False
+                                    ):
                                         ds.variables[k].data = v.data
                                     break
                             else:
@@ -583,7 +585,7 @@ def _dataset_concat(
         common_dims = tuple(utils.OrderedSet(d for v in vars for d in v.dims))
         if dim_name not in common_dims:
             common_dims = (dim_name,) + common_dims
-        for var, dim_len in zip(vars, concat_dim_lengths):
+        for var, dim_len in zip(vars, concat_dim_lengths, strict=True):
             if var.dims != common_dims:
                 common_shape = tuple(dims_sizes.get(d, dim_len) for d in common_dims)
                 var = var.set_dims(common_dims, common_shape)

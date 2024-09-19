@@ -1017,7 +1017,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             fill_value=np.nan,
         )
         expected = x
-        for dim, win, cent in zip(dims, window, center):
+        for dim, win, cent in zip(dims, window, center, strict=True):
             expected = expected.rolling_window(
                 dim=dim,
                 window=win,
@@ -1806,7 +1806,8 @@ class TestVariable(VariableSubclassobjects):
     @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
-        "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
+        "axis, dim",
+        zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]], strict=True),
     )
     def test_quantile(self, q, axis, dim, skipna):
         d = self.d.copy()
@@ -2760,7 +2761,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
 
 def test_raise_no_warning_for_nan_in_binary_ops():
     with assert_no_warnings():
-        Variable("x", [1, 2, np.nan]) > 0
+        _ = Variable("x", [1, 2, np.nan]) > 0
 
 
 class TestBackendIndexing:

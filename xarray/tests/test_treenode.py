@@ -64,18 +64,28 @@ class TestFamilyTree:
         ):
             mary.parent = john
 
+    def test_dont_modify_children_inplace(self):
+        # GH issue 9196
+        child: TreeNode = TreeNode()
+        TreeNode(children={"child": child})
+        assert child.parent is None
+
     def test_multi_child_family(self):
-        mary: TreeNode = TreeNode()
-        kate: TreeNode = TreeNode()
-        john: TreeNode = TreeNode(children={"Mary": mary, "Kate": kate})
-        assert john.children["Mary"] is mary
-        assert john.children["Kate"] is kate
+        john: TreeNode = TreeNode(children={"Mary": TreeNode(), "Kate": TreeNode()})
+
+        assert "Mary" in john.children
+        mary = john.children["Mary"]
+        assert isinstance(mary, TreeNode)
         assert mary.parent is john
+
+        assert "Kate" in john.children
+        kate = john.children["Kate"]
+        assert isinstance(kate, TreeNode)
         assert kate.parent is john
 
     def test_disown_child(self):
-        mary: TreeNode = TreeNode()
-        john: TreeNode = TreeNode(children={"Mary": mary})
+        john: TreeNode = TreeNode(children={"Mary": TreeNode()})
+        mary = john.children["Mary"]
         mary.orphan()
         assert mary.parent is None
         assert "Mary" not in john.children
@@ -96,29 +106,45 @@ class TestFamilyTree:
         assert john.children["Kate"] is evil_kate
 
     def test_sibling_relationships(self):
-        mary: TreeNode = TreeNode()
-        kate: TreeNode = TreeNode()
-        ashley: TreeNode = TreeNode()
-        TreeNode(children={"Mary": mary, "Kate": kate, "Ashley": ashley})
-        assert kate.siblings["Mary"] is mary
-        assert kate.siblings["Ashley"] is ashley
+        john: TreeNode = TreeNode(
+            children={"Mary": TreeNode(), "Kate": TreeNode(), "Ashley": TreeNode()}
+        )
+        kate = john.children["Kate"]
+        assert list(kate.siblings) == ["Mary", "Ashley"]
         assert "Kate" not in kate.siblings
 
-    def test_ancestors(self):
+    def test_copy_subtree(self):
         tony: TreeNode = TreeNode()
         michael: TreeNode = TreeNode(children={"Tony": tony})
         vito = TreeNode(children={"Michael": michael})
+
+        # check that children of assigned children are also copied (i.e. that ._copy_subtree works)
+        copied_tony = vito.children["Michael"].children["Tony"]
+        assert copied_tony is not tony
+
+    def test_parents(self):
+        vito: TreeNode = TreeNode(
+            children={"Michael": TreeNode(children={"Tony": TreeNode()})},
+        )
+        michael = vito.children["Michael"]
+        tony = michael.children["Tony"]
+
         assert tony.root is vito
         assert tony.parents == (michael, vito)
-        assert tony.ancestors == (vito, michael, tony)
 
 
 class TestGetNodes:
     def test_get_child(self):
-        steven: TreeNode = TreeNode()
-        sue = TreeNode(children={"Steven": steven})
-        mary = TreeNode(children={"Sue": sue})
-        john = TreeNode(children={"Mary": mary})
+        john: TreeNode = TreeNode(
+            children={
+                "Mary": TreeNode(
+                    children={"Sue": TreeNode(children={"Steven": TreeNode()})}
+                )
+            }
+        )
+        mary = john.children["Mary"]
+        sue = mary.children["Sue"]
+        steven = sue.children["Steven"]
 
         # get child
         assert john._get_item("Mary") is mary
@@ -138,10 +164,14 @@ class TestGetNodes:
         assert mary._get_item("Sue/Steven") is steven
 
     def test_get_upwards(self):
-        sue: TreeNode = TreeNode()
-        kate: TreeNode = TreeNode()
-        mary = TreeNode(children={"Sue": sue, "Kate": kate})
-        john = TreeNode(children={"Mary": mary})
+        john: TreeNode = TreeNode(
+            children={
+                "Mary": TreeNode(children={"Sue": TreeNode(), "Kate": TreeNode()})
+            }
+        )
+        mary = john.children["Mary"]
+        sue = mary.children["Sue"]
+        kate = mary.children["Kate"]
 
         assert sue._get_item("../") is mary
         assert sue._get_item("../../") is john
@@ -150,9 +180,11 @@ class TestGetNodes:
         assert sue._get_item("../Kate") is kate
 
     def test_get_from_root(self):
-        sue: TreeNode = TreeNode()
-        mary = TreeNode(children={"Sue": sue})
-        john = TreeNode(children={"Mary": mary})  # noqa
+        john: TreeNode = TreeNode(
+            children={"Mary": TreeNode(children={"Sue": TreeNode()})}
+        )
+        mary = john.children["Mary"]
+        sue = mary.children["Sue"]
 
         assert sue._get_item("/Mary") is mary
 
@@ -298,13 +330,15 @@ class TestAncestry:
     def test_lineage(self):
         _, leaf_f = create_test_tree()
         expected = ["f", "e", "b", "a"]
-        assert [node.name for node in leaf_f.lineage] == expected
+        with pytest.warns(DeprecationWarning):
+            assert [node.name for node in leaf_f.lineage] == expected
 
     def test_ancestors(self):
         _, leaf_f = create_test_tree()
-        ancestors = leaf_f.ancestors
+        with pytest.warns(DeprecationWarning):
+            ancestors = leaf_f.ancestors
         expected = ["a", "b", "e", "f"]
-        for node, expected_name in zip(ancestors, expected):
+        for node, expected_name in zip(ancestors, expected, strict=True):
             assert node.name == expected_name
 
     def test_subtree(self):
@@ -321,7 +355,7 @@ class TestAncestry:
             "g",
             "i",
         ]
-        for node, expected_name in zip(subtree, expected):
+        for node, expected_name in zip(subtree, expected, strict=True):
             assert node.name == expected_name
 
     def test_descendants(self):
@@ -337,7 +371,7 @@ class TestAncestry:
             "g",
             "i",
         ]
-        for node, expected_name in zip(descendants, expected):
+        for node, expected_name in zip(descendants, expected, strict=True):
             assert node.name == expected_name
 
     def test_leaves(self):
@@ -349,7 +383,7 @@ class TestAncestry:
             "g",
             "i",
         ]
-        for node, expected_name in zip(leaves, expected):
+        for node, expected_name in zip(leaves, expected, strict=True):
             assert node.name == expected_name
 
     def test_levels(self):
@@ -367,11 +401,14 @@ class TestAncestry:
 
 class TestRenderTree:
     def test_render_nodetree(self):
-        sam: NamedNode = NamedNode()
-        ben: NamedNode = NamedNode()
-        mary: NamedNode = NamedNode(children={"Sam": sam, "Ben": ben})
-        kate: NamedNode = NamedNode()
-        john: NamedNode = NamedNode(children={"Mary": mary, "Kate": kate})
+        john: NamedNode = NamedNode(
+            children={
+                "Mary": NamedNode(children={"Sam": NamedNode(), "Ben": NamedNode()}),
+                "Kate": NamedNode(),
+            }
+        )
+        mary = john.children["Mary"]
+
         expected_nodes = [
             "NamedNode()",
             "\tNamedNode('Mary')",
@@ -387,7 +424,7 @@ class TestRenderTree:
 
         john_nodes = john_repr.splitlines()
         assert len(john_nodes) == len(expected_nodes)
-        for expected_node, repr_node in zip(expected_nodes, john_nodes):
+        for expected_node, repr_node in zip(expected_nodes, john_nodes, strict=True):
             assert expected_node == repr_node
 
 

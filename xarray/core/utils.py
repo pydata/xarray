@@ -186,7 +186,7 @@ def equivalent(first: T, second: T) -> bool:
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    for f, s in zip(first, second):
+    for f, s in zip(first, second, strict=True):
         if not equivalent(f, s):
             return False
     return True
@@ -570,8 +570,8 @@ class NdimSizeLenMixin:
     def __len__(self: Any) -> int:
         try:
             return self.shape[0]
-        except IndexError:
-            raise TypeError("len() of unsized object")
+        except IndexError as err:
+            raise TypeError("len() of unsized object") from err
 
 
 class NDArrayMixin(NdimSizeLenMixin):
@@ -807,7 +807,8 @@ def drop_dims_from_indexers(
         invalid = indexers.keys() - set(dims)
         if invalid:
             warnings.warn(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}",
+                stacklevel=2,
             )
         for key in invalid:
             indexers.pop(key)
@@ -992,7 +993,7 @@ class UncachedAccessor(Generic[_Accessor]):
         if obj is None:
             return self._accessor
 
-        return self._accessor(obj)  # type: ignore  # assume it is a valid accessor!
+        return self._accessor(obj)  # type: ignore[call-arg]  # assume it is a valid accessor!
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240

@@ -63,7 +63,7 @@ class DaskTestCase:
         elif isinstance(actual, Variable):
             assert isinstance(actual.data, da.Array)
         else:
-            assert False
+            raise AssertionError()
 
 
 class TestVariable(DaskTestCase):
@@ -104,7 +104,8 @@ class TestVariable(DaskTestCase):
             self.assertLazyAndIdentical(self.eager_var, rechunked)
 
             expected_chunksizes = {
-                dim: chunks for dim, chunks in zip(self.lazy_var.dims, expected)
+                dim: chunks
+                for dim, chunks in zip(self.lazy_var.dims, expected, strict=True)
             }
             assert rechunked.chunksizes == expected_chunksizes
 
@@ -354,7 +355,8 @@ class TestDataArrayAndDataset(DaskTestCase):
             self.assertLazyAndIdentical(self.eager_array, rechunked)
 
             expected_chunksizes = {
-                dim: chunks for dim, chunks in zip(self.lazy_array.dims, expected)
+                dim: chunks
+                for dim, chunks in zip(self.lazy_array.dims, expected, strict=True)
             }
             assert rechunked.chunksizes == expected_chunksizes
 
@@ -362,7 +364,8 @@ class TestDataArrayAndDataset(DaskTestCase):
             lazy_dataset = self.lazy_array.to_dataset()
             eager_dataset = self.eager_array.to_dataset()
             expected_chunksizes = {
-                dim: chunks for dim, chunks in zip(lazy_dataset.dims, expected)
+                dim: chunks
+                for dim, chunks in zip(lazy_dataset.dims, expected, strict=True)
             }
             rechunked = lazy_dataset.chunk(chunks)
 
@@ -737,7 +740,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         nonindex_coord = build_dask_array("coord")
         a = DataArray(data, dims=["x"], coords={"y": ("x", nonindex_coord)})
         with suppress(AttributeError):
-            getattr(a, "NOTEXIST")
+            _ = a.NOTEXIST
         assert kernel_call_count == 0
 
     def test_dataset_getattr(self):
@@ -747,7 +750,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         nonindex_coord = build_dask_array("coord")
         ds = Dataset(data_vars={"a": ("x", data)}, coords={"y": ("x", nonindex_coord)})
         with suppress(AttributeError):
-            getattr(ds, "NOTEXIST")
+            _ = ds.NOTEXIST
         assert kernel_call_count == 0
 
     def test_values(self):
@@ -1101,7 +1104,7 @@ def test_unify_chunks(map_ds):
     ds_copy["cxy"] = ds_copy.cxy.chunk({"y": 10})
 
     with pytest.raises(ValueError, match=r"inconsistent chunks"):
-        ds_copy.chunks
+        _ = ds_copy.chunks
 
     expected_chunks = {"x": (4, 4, 2), "y": (5, 5, 5, 5)}
     with raise_if_dask_computes():
