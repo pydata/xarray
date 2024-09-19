@@ -114,7 +114,9 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
             # TODO: gzipped loading only works with NetCDF3 files.
             errmsg = e.args[0]
             if "is not a valid NetCDF 3 file" in errmsg:
-                raise ValueError("gzipped file loading only supports NetCDF 3 files.")
+                raise ValueError(
+                    "gzipped file loading only supports NetCDF 3 files."
+                ) from e
             else:
                 raise
 
@@ -134,7 +136,7 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
             $ pip install netcdf4
             """
             errmsg += msg
-            raise TypeError(errmsg)
+            raise TypeError(errmsg) from e
         else:
             raise
 

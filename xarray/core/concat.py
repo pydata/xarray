@@ -252,8 +252,8 @@ def concat(
 
     try:
         first_obj, objs = utils.peek_at(objs)
-    except StopIteration:
-        raise ValueError("must supply at least one object to concatenate")
+    except StopIteration as err:
+        raise ValueError("must supply at least one object to concatenate") from err
 
     if compat not in _VALID_COMPAT:
         raise ValueError(

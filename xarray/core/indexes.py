@@ -1206,12 +1206,12 @@ class PandasMultiIndex(PandasIndex):
                 label_array = normalize_label(v, dtype=self.level_coords_dtype[k])
                 try:
                     label_values[k] = as_scalar(label_array)
-                except ValueError:
+                except ValueError as err:
                     # label should be an item not an array-like
                     raise ValueError(
                         "Vectorized selection is not "
                         f"available along coordinate {k!r} (multi-index level)"
-                    )
+                    ) from err
 
             has_slice = any([isinstance(v, slice) for v in label_values.values()])
 

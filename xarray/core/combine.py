@@ -308,7 +308,7 @@ def _combine_1d(
                     "xarray.combine_by_coords, or do it manually "
                     "with xarray.concat, xarray.merge and "
                     "xarray.align"
-                )
+                ) from err
             else:
                 raise
     else:

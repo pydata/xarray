@@ -18,15 +18,15 @@ def parameterized(names, params):
 def requires_dask():
     try:
         import dask  # noqa: F401
-    except ImportError:
-        raise NotImplementedError()
+    except ImportError as err:
+        raise NotImplementedError() from err
 
 
 def requires_sparse():
     try:
         import sparse  # noqa: F401
-    except ImportError:
-        raise NotImplementedError()
+    except ImportError as err:
+        raise NotImplementedError() from err
 
 
 def randn(shape, frac_nan=None, chunks=None, seed=0):

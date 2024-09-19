@@ -609,6 +609,7 @@ def test_groupby_repr_datetime(obj) -> None:
 
 @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
+@pytest.mark.filterwarnings("ignore:No index created for dimension id:UserWarning")
 def test_groupby_drops_nans() -> None:
     # GH2383
     # nan in 2D data variable (requires stacking)

@@ -454,6 +454,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
             "dt.weekofyear and dt.week have been deprecated. Please use "
             "dt.isocalendar().week instead.",
             FutureWarning,
+            stacklevel=2,
         )
 
         weekofyear = self.isocalendar().week

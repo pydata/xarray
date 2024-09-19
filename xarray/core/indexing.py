@@ -1527,7 +1527,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 raise ValueError(
                     "Assignment destination is a view.  "
                     "Do you want to .copy() array first?"
-                )
+                ) from exc
             else:
                 raise exc
 
