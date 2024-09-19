@@ -31,9 +31,21 @@ def broadcast_arrays(*arrays: NamedArray[Any, Any]) -> list[NamedArray[Any, Any]
 
     Examples
     --------
-    >>> x = xp.asarray([[1, 2, 3]])
-    >>> y = xp.asarray([[4], [5]])
-    >>> xp.broadcast_arrays(x, y)
+    >>> import numpy as np
+    >>> x = NamedArray(("x",), np.zeros((3,)))
+    >>> y = NamedArray(("y", "x"), np.zeros((2, 1)))
+    >>> x_new, y_new = broadcast_arrays(x, y)
+    >>> x_new.dims, x_new.shape, y_new.dims, y_new.shape
+    (('y', 'x'), (2, 3), ('y', 'x'), (2, 3))
+
+    Errors
+
+    >>> x = NamedArray(("x",), np.zeros((3,)))
+    >>> y = NamedArray(("x",), np.zeros((2)))
+    >>> x_new, y_new = broadcast_arrays(x, y)
+    Traceback (most recent call last):
+     ...
+    ValueError: operands could not be broadcast together with dims = (('x',), ('x',)) and shapes = ((3,), (2,))
     """
     x = arrays[0]
     xp = _get_data_namespace(x)
@@ -46,6 +58,20 @@ def broadcast_arrays(*arrays: NamedArray[Any, Any]) -> list[NamedArray[Any, Any]
 def broadcast_to(
     x: NamedArray[Any, _DType], /, shape: _ShapeType
 ) -> NamedArray[_ShapeType, _DType]:
+    """
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x",), np.arange(0, 3))
+    >>> x_new = broadcast_to(x, (1, 1, 3))
+    >>> x_new.dims, x_new.shape
+    (('dim_1', 'dim_0', 'x'), (1, 1, 3))
+
+    >>> x_new = broadcast_to(x, shape=(1, 1, 3), dims=("y", "x"))
+    >>> x_new.dims, x_new.shape
+    (('dim_0', 'y', 'x'), (1, 1, 3))
+    """
     xp = _get_data_namespace(x)
     _data = xp.broadcast_to(x._data, shape=shape)
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims
@@ -93,15 +119,14 @@ def expand_dims(
 
     Examples
     --------
+    >>> import numpy as np
     >>> x = NamedArray(("x", "y"), np.asarray([[1.0, 2.0], [3.0, 4.0]]))
-    >>> expand_dims(x)
-    <xarray.NamedArray (dim_2: 1, x: 2, y: 2)> Size: 32B
-    array([[[1., 2.],
-            [3., 4.]]])
-    >>> expand_dims(x, dim="z")
-    <xarray.NamedArray (z: 1, x: 2, y: 2)> Size: 32B
-    array([[[1., 2.],
-            [3., 4.]]])
+    >>> x_new = expand_dims(x)
+    >>> x_new.dims, x_new.shape
+    (('dim_2', 'x', 'y'), (1, 2, 2))
+    >>> x_new = expand_dims(x, dim="z")
+    >>> x_new.dims, x_new.shape
+    (('z', 'x', 'y'), (1, 2, 2))
     """
     xp = _get_data_namespace(x)
     _data = xp.expand_dims(x._data, axis=axis)
@@ -152,6 +177,7 @@ def permute_dims(
 
     Examples
     --------
+    >>> import numpy as np
     >>> x = NamedArray(("x", "y", "z"), np.zeros((3, 4, 5)))
     >>> y = permute_dims(x, (2, 1, 0))
     >>> y.dims, y.shape
