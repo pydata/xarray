@@ -2972,6 +2972,30 @@ def test_lazy_grouping(grouper, expect_index):
 
 
 @requires_dask
+def test_lazy_grouping_errors():
+    import dask.array
+
+    data = DataArray(
+        dims=("x",),
+        data=dask.array.arange(20, chunks=3),
+        name="foo",
+        coords={"y": ("x", dask.array.arange(20, chunks=3))},
+    )
+
+    gb = data.groupby(y=UniqueGrouper(labels=np.arange(5, 10)))
+    message = "not supported when lazily grouping by"
+    with pytest.raises(ValueError, match=message):
+        gb.map(lambda x: x)
+
+    with pytest.raises(ValueError, match=message):
+        gb.reduce(np.mean)
+
+    with pytest.raises(ValueError, match=message):
+        for _, _ in gb:
+            pass
+
+
+@requires_dask
 def test_lazy_int_bins_error():
     import dask.array
 
