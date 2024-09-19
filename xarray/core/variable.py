@@ -553,7 +553,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     @values.setter
     def values(self, values):
-        self.data = np.asarray(values)
+        self.data = values
 
     def to_base_variable(self) -> Variable:
         """Return this variable as a base xarray.Variable"""
