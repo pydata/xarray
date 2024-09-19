@@ -287,9 +287,12 @@ def as_compatible_data(
     if isinstance(data, DataArray):
         return cast("T_DuckArray", data._variable._data)
 
-    if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
+    def convert_non_numpy_type(data):
         data = _possibly_convert_datetime_or_timedelta_index(data)
         return cast("T_DuckArray", _maybe_wrap_data(data))
+
+    if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
+        return convert_non_numpy_type(data)
 
     if isinstance(data, tuple):
         data = utils.to_0d_object_array(data)
@@ -303,7 +306,9 @@ def as_compatible_data(
 
     # we don't want nested self-described arrays
     if isinstance(data, pd.Series | pd.DataFrame):
-        data = data.values  # type: ignore[assignment]
+        data = data.values
+        if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
+            return convert_non_numpy_type(data)
 
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)
@@ -542,6 +547,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     @property
     def values(self):
         """The variable's data as a numpy.ndarray"""
+        if isinstance(self._data, PandasExtensionArray):
+            return self._data.array
         return _as_array_or_item(self._data)
 
     @values.setter

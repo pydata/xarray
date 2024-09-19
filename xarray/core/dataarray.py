@@ -3866,7 +3866,10 @@ class DataArray(
                 "pandas objects. Requires 2 or fewer dimensions."
             ) from err
         indexes = [self.get_index(dim) for dim in self.dims]
-        return constructor(self.values, *indexes)  # type: ignore[operator]
+        pandas_object = constructor(self.values, *indexes)
+        if isinstance(pandas_object, pd.Series):
+            pandas_object.name = self.name
+        return pandas_object
 
     def to_dataframe(
         self, name: Hashable | None = None, dim_order: Sequence[Hashable] | None = None
