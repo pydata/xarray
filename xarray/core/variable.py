@@ -306,9 +306,9 @@ def as_compatible_data(
 
     # we don't want nested self-described arrays
     if isinstance(data, pd.Series | pd.DataFrame):
-        data = data.values
-        if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
-            return convert_non_numpy_type(data)
+        pandas_data = data.values
+        if isinstance(pandas_data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
+            return convert_non_numpy_type(pandas_data)
 
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)

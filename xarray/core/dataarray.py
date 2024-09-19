@@ -3857,7 +3857,11 @@ class DataArray(
         """
         # TODO: consolidate the info about pandas constructors and the
         # attributes that correspond to their indexes into a separate module?
-        constructors = {0: lambda x: x, 1: pd.Series, 2: pd.DataFrame}
+        constructors: dict[int, Callable] = {
+            0: lambda x: x,
+            1: pd.Series,
+            2: pd.DataFrame,
+        }
         try:
             constructor = constructors[self.ndim]
         except KeyError as err:
