@@ -340,9 +340,9 @@ def _build_and_get_enum(
     if datatype.enum_dict != enum_dict:
         error_msg = (
             f"Cannot save variable `{var_name}` because an enum"
-            f" `{enum_name}` already exists in the Dataset but have"
+            f" `{enum_name}` already exists in the Dataset but has"
             " a different definition. To fix this error, make sure"
-            " each variable have a uniquely named enum in their"
+            " all variables have a uniquely named enum in their"
             " `encoding['dtype'].metadata` or, if they should share"
             " the same enum type, make sure the enums are identical."
         )
