@@ -534,14 +534,10 @@ class DataArray(
         variable: Variable,
         name: Hashable | None | Default = _default,
     ) -> Self:
-        dims_are_equal = set(variable.dims) == set(self.dims)
-        size_is_equal = (
-            self.sizes[dim] == size for dim, size in variable.sizes.items()
-        )
-        if dims_are_equal and all(size_is_equal):
+        if self.sizes == variable.sizes:
             coords = self._coords.copy()
             indexes = self._indexes
-        elif dims_are_equal:
+        elif set(self.dims) == set(variable.dims):
             # Shape has changed (e.g. from reduce(..., keepdims=True)
             new_sizes = dict(zip(self.dims, variable.shape, strict=True))
             coords = {
