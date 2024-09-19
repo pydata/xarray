@@ -210,6 +210,7 @@ class UniqueGrouper(Grouper):
             kwargs={"labels": self.labels},
             dask="parallelized",
             output_dtypes=[np.int64],
+            keep_attrs=True,
         )
         return EncodedGroups(
             codes=codes,
@@ -350,7 +351,7 @@ class BinGrouper(Grouper):
                 self.bins = bins
             return binned.codes.reshape(data.shape)
 
-        return apply_ufunc(_wrapper, group, dask="parallelized")
+        return apply_ufunc(_wrapper, group, dask="parallelized", keep_attrs=True)
 
     def factorize(self, group: T_Group) -> EncodedGroups:
         if isinstance(group, _DummyGroup):
