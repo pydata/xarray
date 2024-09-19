@@ -21,6 +21,8 @@ from xarray.namedarray._typing import (
     _DType,
     _ShapeType,
     _Dims,
+    _DimsLike2,
+    _Shape,
 )
 from xarray.namedarray.core import NamedArray
 
@@ -277,3 +279,138 @@ def unstack(
         _dims = _infer_dims(_data.shape)  # TODO: Fix dims
         out += (x._new(_dims, _data),)
     return out
+
+
+# %% Automatic broadcasting
+_OPTIONS = {}
+_OPTIONS["arithmetic_broadcast"] = True
+
+
+def _set_dims(
+    x: NamedArray[Any, Any], dim: _Dims, shape: _Shape | None
+) -> NamedArray[Any, Any]:
+    """
+    Return a new array with given set of dimensions.
+    This method might be used to attach new dimension(s) to array.
+
+    When possible, this operation does not copy this variable's data.
+
+    Parameters
+    ----------
+    dim :
+        Dimensions to include on the new variable.
+    shape :
+        Shape of the dimensions. If None, new dimensions are inserted with length 1.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x",), np.asarray([1, 2, 3]))
+    >>> x_new = _set_dims(x, ("y", "x"), None)
+    >>> x_new.dims, x_new.shape
+    (('y', 'x'), (1, 3))
+    >>> x_new = _set_dims(x, ("x", "y"), None)
+    >>> x_new.dims, x_new.shape
+    (('x', 'y'), (3, 1))
+
+    With shape:
+
+    >>> x_new = _set_dims(x, ("y", "x"), (2, 3))
+    >>> x_new.dims, x_new.shape
+    (('y', 'x'), (2, 3))
+
+    No operation
+
+    >>> x_new = _set_dims(x, ("x",), None)
+    >>> x_new.dims, x_new.shape
+    (('x',), (3,))
+
+    Error
+
+    >>> x_new = _set_dims(x, (), None)
+    Traceback (most recent call last):
+     ...
+    ValueError: new dimensions () must be a superset of existing dimensions ('x',)
+    """
+    if x.dims == dim:
+        # No operation. Don't use broadcast_to unless necessary so the result
+        # remains writeable as long as possible:
+        return x
+
+    extra_dims = tuple(d for d in dim if d not in x.dims)
+    if not extra_dims:
+        raise ValueError(
+            f"new dimensions {dim!r} must be a superset of "
+            f"existing dimensions {x.dims!r}"
+        )
+
+    if shape is not None:
+        # Add dimensions, with same size as shape:
+        dims_map = dict(zip(dim, shape))
+        expanded_dims = extra_dims + x.dims
+        tmp_shape = tuple(dims_map[d] for d in expanded_dims)
+        return permute_dims(broadcast_to(x, tmp_shape, dims=expanded_dims), dims=dim)
+    else:
+        # Add dimensions, with size 1 only:
+        out = x
+        for d in extra_dims:
+            out = expand_dims(out, dim=d)
+        return permute_dims(out, dims=dim)
+
+
+def _broadcast_arrays(*arrays: NamedArray[Any, Any]):
+    """
+    TODO: Can this become xp.broadcast_arrays?
+
+    Given any number of variables, return variables with matching dimensions
+    and broadcast data.
+
+    The data on the returned variables may be a view of the data on the
+    corresponding original arrays but dimensions will be reordered and
+    inserted so that both broadcast arrays have the same dimensions. The new
+    dimensions are sorted in order of appearance in the first variable's
+    dimensions followed by the second variable's dimensions.
+    """
+    dims, shape = _get_broadcasted_dims(*arrays)
+    return tuple(_set_dims(var, dims, shape) for var in arrays)
+
+
+def _broadcast_arrays_with_minimal_size(*arrays: NamedArray[Any, Any]):
+    """
+    Given any number of variables, return variables with matching dimensions.
+
+    Unlike the result of broadcast_variables(), variables with missing dimensions
+    will have them added with size 1 instead of the size of the broadcast dimension.
+    """
+    dims, _ = _get_broadcasted_dims(*arrays)
+    return tuple(_set_dims(var, dims, None) for var in arrays)
+
+
+def _arithmetic_broadcast(x1: NamedArray[Any, Any], x2: NamedArray[Any, Any]):
+    """
+    Fu
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x",), np.asarray([1, 2, 3]))
+    >>> y = NamedArray(("y",), np.asarray([4, 5]))
+    >>> x_new, y_new = _arithmetic_broadcast(x, y)
+    >>> x_new.dims, x_new.shape, y_new.dims, y_new.shape
+    (('x', 'y'), (3, 1), ('x', 'y'), (1, 2))
+    """
+    if not _OPTIONS["arithmetic_broadcast"]:
+        if x1.dims != x2.dims:
+            raise ValueError(
+                "Broadcasting is necessary but automatic broadcasting is disabled via "
+                "global option `'arithmetic_broadcast'`. "
+                "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
+            )
+
+    return _broadcast_arrays_with_minimal_size(x1, x2)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
