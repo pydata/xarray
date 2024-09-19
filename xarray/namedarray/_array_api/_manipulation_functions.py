@@ -56,7 +56,11 @@ def broadcast_arrays(*arrays: NamedArray[Any, Any]) -> list[NamedArray[Any, Any]
 
 
 def broadcast_to(
-    x: NamedArray[Any, _DType], /, shape: _ShapeType
+    x: NamedArray[Any, _DType],
+    /,
+    shape: _ShapeType,
+    *,
+    dims: _DimsLike2 | Default = _default,
 ) -> NamedArray[_ShapeType, _DType]:
     """
 
@@ -96,8 +100,8 @@ def expand_dims(
     x: NamedArray[Any, _DType],
     /,
     *,
-    dim: _Dim | Default = _default,
     axis: _Axis = 0,
+    dim: _Dim | Default = _default,
 ) -> NamedArray[Any, _DType]:
     """
     Expands the shape of an array by inserting a new dimension of size one at the
