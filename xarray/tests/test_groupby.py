@@ -2919,3 +2919,16 @@ def test_gappy_resample_reductions(reduction):
 # 1. lambda x: x
 # 2. grouped-reduce on unique coords is identical to array
 # 3. group_over == groupby-reduce along other dimensions
+
+
+def test_groupby_transpose():
+    # GH5361
+    data = xr.DataArray(
+        np.random.randn(4, 2),
+        dims=["x", "z"],
+        coords={"x": ["a", "b", "a", "c"], "y": ("x", [0, 1, 0, 2])},
+    )
+    first = data.T.groupby("x").sum()
+    second = data.groupby("x").sum()
+
+    assert_identical(first, second.transpose(*first.dims))
