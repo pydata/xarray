@@ -309,6 +309,8 @@ def as_compatible_data(
         pandas_data = data.values
         if isinstance(pandas_data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
             return convert_non_numpy_type(pandas_data)
+        else:
+            data = pandas_data
 
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)
@@ -545,10 +547,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return Variable(self._dims, data, attrs=self._attrs, encoding=self._encoding)
 
     @property
-    def values(self):
+    def values(self) -> np.ndarray:
         """The variable's data as a numpy.ndarray"""
-        if isinstance(self._data, PandasExtensionArray):
-            return self._data.array
         return _as_array_or_item(self._data)
 
     @values.setter

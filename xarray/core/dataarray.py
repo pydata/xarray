@@ -47,6 +47,7 @@ from xarray.core.coordinates import (
     create_coords_with_default_indexes,
 )
 from xarray.core.dataset import Dataset
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.formatting import format_item
 from xarray.core.indexes import (
     Index,
@@ -3870,7 +3871,11 @@ class DataArray(
                 "pandas objects. Requires 2 or fewer dimensions."
             ) from err
         indexes = [self.get_index(dim) for dim in self.dims]
-        pandas_object = constructor(self.values, *indexes)
+        if isinstance(self._variable._data, PandasExtensionArray):
+            values = self._variable._data.array
+        else:
+            values = self.values
+        pandas_object = constructor(values, *indexes)
         if isinstance(pandas_object, pd.Series):
             pandas_object.name = self.name
         return pandas_object
