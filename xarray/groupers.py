@@ -155,7 +155,17 @@ class Resampler(Grouper):
 
 @dataclass
 class UniqueGrouper(Grouper):
-    """Grouper object for grouping by a categorical variable."""
+    """
+    Grouper object for grouping by a categorical variable.
+
+    Parameters
+    ----------
+    labels: array-like, optional
+        Group labels to aggregate on. This is required when grouping by a chunked array type
+        (e.g. dask or cubed) since it is used to construct the coordinate on the output.
+        Grouped operations will only be run on the specified group labels. Any group that is not
+        present in ``labels`` will be ignored.
+    """
 
     _group_as_index: pd.Index | None = field(default=None, repr=False)
     labels: np.ndarray | None = field(default=None)
