@@ -4,25 +4,23 @@ from typing import Any
 
 from xarray.namedarray._array_api._data_type_functions import result_type
 from xarray.namedarray._array_api._utils import (
+    _dims_to_axis,
     _get_broadcasted_dims,
     _get_data_namespace,
     _infer_dims,
     _insert_dim,
-    _dims_to_axis,
 )
 from xarray.namedarray._typing import (
     Default,
-    _arrayapi,
     _Axes,
     _Axis,
-    _AxisLike,
     _default,
     _Dim,
-    _DType,
-    _ShapeType,
     _Dims,
     _DimsLike2,
+    _DType,
     _Shape,
+    _ShapeType,
 )
 from xarray.namedarray.core import NamedArray
 
@@ -54,7 +52,7 @@ def broadcast_arrays(*arrays: NamedArray[Any, Any]) -> list[NamedArray[Any, Any]
     _dims, _ = _get_broadcasted_dims(*arrays)
     _arrays = tuple(a._data for a in arrays)
     _datas = xp.broadcast_arrays(*_arrays)
-    return [arr._new(_dims, _data) for arr, _data in zip(arrays, _datas)]
+    return [arr._new(_dims, _data) for arr, _data in zip(arrays, _datas, strict=False)]
 
 
 def broadcast_to(
@@ -346,7 +344,7 @@ def _set_dims(
 
     if shape is not None:
         # Add dimensions, with same size as shape:
-        dims_map = dict(zip(dim, shape))
+        dims_map = dict(zip(dim, shape, strict=False))
         expanded_dims = extra_dims + x.dims
         tmp_shape = tuple(dims_map[d] for d in expanded_dims)
         return permute_dims(broadcast_to(x, tmp_shape, dims=expanded_dims), dims=dim)

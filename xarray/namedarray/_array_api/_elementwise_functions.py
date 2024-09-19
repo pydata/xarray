@@ -6,7 +6,6 @@ import numpy as np
 
 from xarray.namedarray._array_api._manipulation_functions import _arithmetic_broadcast
 from xarray.namedarray._array_api._utils import (
-    _get_broadcasted_dims,
     _get_data_namespace,
 )
 from xarray.namedarray._typing import (

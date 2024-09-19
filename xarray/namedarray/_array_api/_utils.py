@@ -450,8 +450,9 @@ def _get_broadcasted_dims(*arrays: NamedArray[Any, Any]) -> tuple[_Dims, _Shape]
     for dims, shape in zip(
         zip_longest(*map(reversed, arrays_dims), fillvalue=_default),
         zip_longest(*map(reversed, arrays_shapes), fillvalue=-1),
+        strict=False,
     ):
-        for d, s in zip(reversed(dims), reversed(shape)):
+        for d, s in zip(reversed(dims), reversed(shape), strict=False):
             if isinstance(d, Default):
                 continue
 

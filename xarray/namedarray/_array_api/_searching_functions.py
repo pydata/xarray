@@ -58,7 +58,9 @@ def nonzero(x: NamedArray[Any, Any], /) -> tuple[NamedArray[Any, Any], ...]:
     xp = _get_data_namespace(x)
     _datas: tuple[_arrayapi[Any, Any], ...] = xp.nonzero(x._data)
     # TODO: Verify that dims and axis matches here:
-    return tuple(x._new((dim,), data) for dim, data in zip(x.dims, _datas))
+    return tuple(
+        x._new((dim,), data) for dim, data in zip(x.dims, _datas, strict=False)
+    )
 
 
 def searchsorted(
