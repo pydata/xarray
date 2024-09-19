@@ -577,7 +577,7 @@ class ZarrStore(AbstractWritableDataStore):
     def get_dimensions(self):
         try_nczarr = self._mode == "r"
         dimensions = {}
-        for k, v in self.zarr_group.arrays():
+        for _k, v in self.zarr_group.arrays():
             dim_names, _ = _get_zarr_dims_and_attrs(v, DIMENSION_KEY, try_nczarr)
             for d, s in zip(dim_names, v.shape, strict=True):
                 if d in dimensions and dimensions[d] != s:
@@ -1374,8 +1374,10 @@ def _get_open_params(
                     RuntimeWarning,
                     stacklevel=stacklevel,
                 )
-            except zarr.errors.GroupNotFoundError:
-                raise FileNotFoundError(f"No such file or directory: '{store}'")
+            except zarr.errors.GroupNotFoundError as err:
+                raise FileNotFoundError(
+                    f"No such file or directory: '{store}'"
+                ) from err
     elif consolidated:
         # TODO: an option to pass the metadata_key keyword
         zarr_group = zarr.open_consolidated(store, **open_kwargs)
