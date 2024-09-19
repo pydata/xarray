@@ -4,6 +4,7 @@ from typing import Any
 
 import numpy as np
 
+from xarray.namedarray._array_api._manipulation_functions import _arithmetic_broadcast
 from xarray.namedarray._array_api._utils import (
     _get_broadcasted_dims,
     _get_data_namespace,
@@ -41,8 +42,9 @@ def acosh(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
 
 def add(x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.add(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.add(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -71,8 +73,9 @@ def atan2(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.atan2(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.atan2(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -87,8 +90,9 @@ def bitwise_and(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.bitwise_and(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.bitwise_and(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -103,8 +107,9 @@ def bitwise_left_shift(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.bitwise_left_shift(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.bitwise_left_shift(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -112,8 +117,9 @@ def bitwise_or(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.bitwise_or(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.bitwise_or(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -121,8 +127,9 @@ def bitwise_right_shift(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.bitwise_right_shift(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.bitwise_right_shift(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -130,8 +137,9 @@ def bitwise_xor(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.bitwise_xor(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.bitwise_xor(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -165,8 +173,9 @@ def copysign(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.copysign(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.copysign(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -188,8 +197,9 @@ def divide(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.divide(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.divide(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -211,8 +221,9 @@ def equal(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.equal(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.equal(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -227,8 +238,9 @@ def floor_divide(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.floor_divide(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.floor_divide(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -236,8 +248,9 @@ def greater(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.greater(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.greater(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -245,8 +258,9 @@ def greater_equal(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.greater_equal(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.greater_equal(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -254,8 +268,9 @@ def hypot(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.hypot(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.hypot(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -315,8 +330,9 @@ def isnan(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
 
 def less(x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.less(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.less(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -324,8 +340,9 @@ def less_equal(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.less_equal(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.less_equal(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -361,8 +378,9 @@ def logaddexp(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.logaddexp(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.logaddexp(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -370,8 +388,9 @@ def logical_and(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.logical_and(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.logical_and(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -386,8 +405,9 @@ def logical_or(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.logical_or(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.logical_or(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -395,8 +415,9 @@ def logical_xor(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.logical_xor(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.logical_xor(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -404,8 +425,9 @@ def maximum(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.maximum(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.maximum(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -413,8 +435,9 @@ def minimum(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.minimum(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.minimum(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -422,8 +445,9 @@ def multiply(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.multiply(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.multiply(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -438,8 +462,9 @@ def not_equal(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.not_equal(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.not_equal(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -452,8 +477,9 @@ def positive(x: NamedArray[_ShapeType, Any], /) -> NamedArray[_ShapeType, Any]:
 
 def pow(x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.pow(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.pow(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -494,8 +520,9 @@ def remainder(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.remainder(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.remainder(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
@@ -552,8 +579,9 @@ def subtract(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x1)
-    _dims, _ = _get_broadcasted_dims(x1, x2)
-    _data = xp.subtract(x1._data, x2._data)
+    x1_new, x2_new = _arithmetic_broadcast(x1, x2)
+    _dims = x1_new.dims
+    _data = xp.subtract(x1_new._data, x2_new._data)
     return NamedArray(_dims, _data)
 
 
