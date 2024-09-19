@@ -356,7 +356,7 @@ def _set_dims(
         return permute_dims(out, dims=dim)
 
 
-def _broadcast_arrays(*arrays: NamedArray[Any, Any]):
+def _broadcast_arrays(*arrays: NamedArray[Any, Any]) -> NamedArray[Any, Any]:
     """
     TODO: Can this become xp.broadcast_arrays?
 
@@ -373,7 +373,9 @@ def _broadcast_arrays(*arrays: NamedArray[Any, Any]):
     return tuple(_set_dims(var, dims, shape) for var in arrays)
 
 
-def _broadcast_arrays_with_minimal_size(*arrays: NamedArray[Any, Any]):
+def _broadcast_arrays_with_minimal_size(
+    *arrays: NamedArray[Any, Any]
+) -> NamedArray[Any, Any]:
     """
     Given any number of variables, return variables with matching dimensions.
 
@@ -384,7 +386,9 @@ def _broadcast_arrays_with_minimal_size(*arrays: NamedArray[Any, Any]):
     return tuple(_set_dims(var, dims, None) for var in arrays)
 
 
-def _arithmetic_broadcast(x1: NamedArray[Any, Any], x2: NamedArray[Any, Any]):
+def _arithmetic_broadcast(
+    x1: NamedArray[Any, Any], x2: NamedArray[Any, Any]
+) -> NamedArray[Any, Any]:
     """
     Fu
 
