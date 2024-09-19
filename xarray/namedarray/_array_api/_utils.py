@@ -303,8 +303,10 @@ def _dims_to_axis(
         for dim in _dims:
             try:
                 axis += (x.dims.index(dim),)
-            except ValueError:
-                raise ValueError(f"{dim!r} not found in array dimensions {x.dims!r}")
+            except ValueError as err:
+                raise ValueError(
+                    f"{dim!r} not found in array dimensions {x.dims!r}"
+                ) from err
         return axis
 
     if axis is None:
