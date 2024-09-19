@@ -1350,11 +1350,11 @@ def to_netcdf(
     if path_or_file is None:
         if engine is None:
             engine = "scipy"
-        elif engine != "scipy":
+        elif engine not in ["scipy", "netcdf4"]:
             raise ValueError(
                 "invalid engine for creating bytes with "
-                f"to_netcdf: {engine!r}. Only the default engine "
-                "or engine='scipy' is supported"
+                f"to_netcdf: {engine!r}. Only 'netcdf4' and 'scipy' "
+                "engines are supported"
             )
         if not compute:
             raise NotImplementedError(
@@ -1400,7 +1400,19 @@ def to_netcdf(
             raise ValueError(
                 f"unrecognized option 'invalid_netcdf' for engine {engine}"
             )
-    store = store_open(target, mode, format, group, **kwargs)
+    if engine == "netcdf4" and path_or_file is None:
+        # 65_000 is the initial buffer size for netCDF4
+        store = store_open(
+            "memory.nc",
+            mode,
+            format,
+            group,
+            memory=65_000,
+            diskless=True,
+            persist=False,
+        )
+    else:
+        store = store_open(target, mode, format, group, **kwargs)
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get("unlimited_dims", None)
@@ -1428,7 +1440,9 @@ def to_netcdf(
 
         writes = writer.sync(compute=compute)
 
-        if isinstance(target, BytesIO):
+        if engine == "netcdf4" and path_or_file is None:
+            return store._manager.close().tobytes()
+        elif isinstance(target, BytesIO):
             store.sync()
             return target.getvalue()
     finally:
