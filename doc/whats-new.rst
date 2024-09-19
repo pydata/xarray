@@ -32,6 +32,9 @@ New Features
   `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
   By `Eni Awowale <https://github.com/eni-awowale>`_.
+- Support lazy grouping by dask arrays, and allow specifying groups with ``UniqueGrouper(labels=["a", "b", "c"])``
+  (:issue:`2852`, :issue:`757`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
