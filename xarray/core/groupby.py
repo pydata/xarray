@@ -585,6 +585,7 @@ class GroupBy(Generic[T_Xarray]):
         # specification for the groupby operation
         # TODO: handle obj having variables that are not present on any of the groupers
         #       simple broadcasting fails for ExtensionArrays.
+        # FIXME: Skip this stacking when grouping by a dask array, it's useless in that case.
         (self.group1d, self._obj, self._stacked_dim, self._inserted_dims) = _ensure_1d(
             group=self.encoded.codes, obj=obj
         )

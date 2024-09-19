@@ -31,6 +31,7 @@ from xarray.tests import (
     has_cftime,
     has_flox,
     has_pandas_ge_2_2,
+    raise_if_dask_computes,
     requires_cftime,
     requires_dask,
     requires_flox,
@@ -2917,12 +2918,6 @@ def test_gappy_resample_reductions(reduction):
     assert_identical(expected, actual)
 
 
-# Possible property tests
-# 1. lambda x: x
-# 2. grouped-reduce on unique coords is identical to array
-# 3. group_over == groupby-reduce along other dimensions
-
-
 def test_groupby_transpose():
     # GH5361
     data = xr.DataArray(
@@ -2934,3 +2929,59 @@ def test_groupby_transpose():
     second = data.groupby("x").sum()
 
     assert_identical(first, second.transpose(*first.dims))
+
+
+@requires_dask
+@pytest.mark.parametrize(
+    "grouper, expect_index",
+    [
+        [UniqueGrouper(labels=np.arange(1, 5)), pd.Index(np.arange(1, 5))],
+        [UniqueGrouper(labels=np.arange(1, 5)[::-1]), pd.Index(np.arange(1, 5)[::-1])],
+        [
+            BinGrouper(bins=np.arange(1, 5)),
+            pd.IntervalIndex.from_breaks(np.arange(1, 5)),
+        ],
+    ],
+)
+def test_lazy_grouping(grouper, expect_index):
+    import dask.array
+
+    data = DataArray(
+        dims=("x", "y"),
+        data=dask.array.arange(20, chunks=3).reshape((4, 5)),
+        name="zoo",
+    )
+    with raise_if_dask_computes():
+        encoded = grouper.factorize(data)
+    assert encoded.codes.ndim == data.ndim
+    pd.testing.assert_index_equal(encoded.full_index, expect_index)
+    np.testing.assert_array_equal(encoded.unique_coord.values, np.array(expect_index))
+
+    lazy = xr.Dataset({"foo": data}, coords={"zoo": data}).groupby(zoo=grouper).count()
+    eager = (
+        xr.Dataset({"foo": data}, coords={"zoo": data.compute()})
+        .groupby(zoo=grouper)
+        .count()
+    )
+    expected = Dataset(
+        {"foo": (encoded.codes.name, np.ones(encoded.full_index.size))},
+        coords={encoded.codes.name: expect_index},
+    )
+    assert_identical(eager, lazy)
+    assert_identical(eager, expected)
+
+
+@requires_dask
+def test_lazy_int_bins_error():
+    import dask.array
+
+    with pytest.raises(ValueError, match="Bin edges must be provided"):
+        with raise_if_dask_computes():
+            _ = BinGrouper(bins=4).factorize(DataArray(dask.array.arange(3)))
+
+
+# Possible property tests
+# 1. lambda x: x
+# 2. grouped-reduce on unique coords is identical to array
+# 3. group_over == groupby-reduce along other dimensions
+# 4. result is equivalent for transposed input

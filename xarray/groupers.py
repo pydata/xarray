@@ -160,10 +160,6 @@ class UniqueGrouper(Grouper):
     _group_as_index: pd.Index | None = field(default=None, repr=False)
     labels: np.ndarray | None = field(default=None)
 
-    def __post_init__(self) -> None:
-        if self.labels is not None:
-            self.labels = np.sort(self.labels)
-
     @property
     def group_as_index(self) -> pd.Index:
         """Caches the group DataArray as a pandas Index."""
@@ -364,8 +360,8 @@ class BinGrouper(Grouper):
         codes.name = new_dim_name
 
         # This seems silly, but it lets us have Pandas handle the complexity
-        # of labels, precision, and include_lowest, even when group is a chunked array
-        dummy, _ = self._cut(np.array([1, 2, 3]).astype(group.dtype))
+        # of `labels`, `precision`, and `include_lowest`, even when group is a chunked array
+        dummy, _ = self._cut(np.array([0]).astype(group.dtype))
         full_index = dummy.categories
         if not by_is_chunked:
             uniques = np.sort(pd.unique(codes.data.ravel()))
@@ -512,14 +508,14 @@ class TimeResampler(Resampler):
 
 def _factorize_given_labels(data: np.ndarray, labels: np.ndarray) -> np.ndarray:
     # Copied from flox
-    sort = False  # use labels as provided
     sorter = np.argsort(labels)
+    is_sorted = (sorter == np.arange(sorter.size)).all()
     codes = np.searchsorted(labels, data, sorter=sorter)
     mask = ~np.isin(data, labels) | isnull(data) | (codes == len(labels))
-    if not sort:
-        # codes is the index in to the sorted array.
-        # if we didn't want sorting, unsort it back
-        codes[(codes == len(labels),)] = -1
+    # codes is the index in to the sorted array.
+    # if we didn't want sorting, unsort it back
+    if not is_sorted:
+        codes[codes == len(labels)] = -1
         codes = sorter[(codes,)]
     codes[mask] = -1
     return codes
