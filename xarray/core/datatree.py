@@ -895,6 +895,8 @@ class DataTree(
             # TODO should possibly deal with hashables in general?
             # path-like: a name of a node/variable, or path to a node/variable
             path = NodePath(key)
+            if isinstance(value, Dataset):
+                value = DataTree(dataset=value)
             return self._set_item(path, value, new_nodes_along_path=True)
         else:
             raise ValueError("Invalid format for key")
