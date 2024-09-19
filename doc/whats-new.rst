@@ -49,9 +49,9 @@ Bug fixes
   By `Etienne Schalk <https://github.com/etienneschalk>`_.
 - Work around `upstream pandas issue
   <https://github.com/pandas-dev/pandas/issues/56996>`_ to ensure that we can
-  decode times encoded with ``np.int32`` values in environments with NumPy 2.0
-  or greater without needing to fall back to cftime (:pull:`9518`). By `Spencer
-  Clark <https://github.com/spencerkclark>`_.
+  decode times encoded with small integer dtype values (e.g. ``np.int32``) in
+  environments with NumPy 2.0 or greater without needing to fall back to cftime
+  (:pull:`9518`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Fix bug when encoding times with missing values as floats in the case when
   the non-missing times could in theory be encoded with integers
   (:issue:`9488`, :pull:`9497`). By `Spencer Clark
