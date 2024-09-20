@@ -313,12 +313,14 @@ def as_compatible_data(
         else:
             data = np.asarray(data)
 
+    # immediately return array-like types except `numpy.ndarray` subclasses and `numpy` scalars
     if not isinstance(data, np.ndarray | np.generic) and (
         hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
     ):
         return cast("T_DuckArray", data)
 
-    # validate whether the data is valid data types.
+    # validate whether the data is valid data types. Also, explicitly cast `numpy`
+    # subclasses and `numpy` scalars to `numpy.ndarray`
     data = np.asarray(data)
 
     if data.dtype.kind in "OMm":
