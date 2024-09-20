@@ -195,12 +195,9 @@ def _determine_zarr_chunks(
     if var_chunks and enc_chunks_tuple:
         # If it is possible to write on partial chunks then it is not necessary to check
         # the last one contained on the region
-        allow_partial_chunks = True
-        end = -1
-        if mode == "r+":
-            # This mode forces to write only on full chunks, even on the last one
-            allow_partial_chunks = False
-            end = None
+        allow_partial_chunks = mode != "r+"
+        # The r+ mode force to write only on full chunks, even on the last one
+        end = None if mode == "r+" else -1
 
         base_error = (
             f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
@@ -225,7 +222,7 @@ def _determine_zarr_chunks(
 
             if not allow_partial_chunks and first_border_size < zchunk:
                 # If the border is smaller than zchunk, then it is a partial chunk write
-                raise ValueError(first_border_size)
+                raise ValueError(base_error)
 
             for dchunk in dchunks[:end]:
                 if (dchunk - first_border_size) % zchunk:
@@ -278,6 +275,7 @@ def extract_zarr_variable_encoding(
     variable,
     raise_on_invalid=False,
     name=None,
+    *,
     safe_chunks=True,
     region=None,
     mode=None,
@@ -288,10 +286,10 @@ def extract_zarr_variable_encoding(
     Parameters
     ----------
     variable : Variable
-    region: tuple[slice], optional
+    name: str | Hashable, optional
     raise_on_invalid : bool, optional
     safe_chunks: bool, optional
-    name: str | Hashable, optional
+    region: tuple[slice], optional
     mode: str, optional
 
     Returns
