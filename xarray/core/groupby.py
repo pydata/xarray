@@ -191,8 +191,8 @@ class _DummyGroup(Generic[T_Xarray]):
         return range(self.size)
 
     @property
-    def data(self) -> range:
-        return range(self.size)
+    def data(self) -> np.ndarray:
+        return np.arange(self.size, dtype=int)
 
     def __array__(self) -> np.ndarray:
         return np.arange(self.size)
@@ -517,6 +517,7 @@ class GroupBy(Generic[T_Xarray]):
         "_dims",
         "_sizes",
         "_len",
+        "_by_chunked",
         # Save unstacked object for flox
         "_original_obj",
         "_codes",

@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike
 
 from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
 from xarray.core import duck_array_ops
@@ -99,12 +100,18 @@ class EncodedGroups:
         assert isinstance(full_index, pd.Index)
         self.full_index = full_index
 
-        if group_indices is None and not is_chunked_array(codes.data):
-            self.group_indices = tuple(
-                g
-                for g in _codes_to_group_indices(codes.data.ravel(), len(full_index))
-                if g
-            )
+        if group_indices is None:
+            if not is_chunked_array(codes.data):
+                self.group_indices = tuple(
+                    g
+                    for g in _codes_to_group_indices(
+                        codes.data.ravel(), len(full_index)
+                    )
+                    if g
+                )
+            else:
+                # We will not use this when grouping by a chunked array
+                self.group_indices = tuple()
         else:
             self.group_indices = group_indices
 
@@ -168,13 +175,11 @@ class UniqueGrouper(Grouper):
     """
 
     _group_as_index: pd.Index | None = field(default=None, repr=False)
-    labels: np.ndarray | None = field(default=None)
+    labels: ArrayLike | None = field(default=None)
 
     @property
     def group_as_index(self) -> pd.Index:
         """Caches the group DataArray as a pandas Index."""
-        if is_chunked_array(self.group):
-            raise ValueError("Please call compute manually.")
         if self._group_as_index is None:
             if self.group.ndim == 1:
                 self._group_as_index = self.group.to_index()
@@ -214,7 +219,7 @@ class UniqueGrouper(Grouper):
         )
         return EncodedGroups(
             codes=codes,
-            full_index=pd.Index(self.labels),
+            full_index=pd.Index(self.labels),  # type: ignore[arg-type]
             unique_coord=Variable(
                 dims=codes.name,
                 data=self.labels,
@@ -332,7 +337,7 @@ class BinGrouper(Grouper):
             raise ValueError("All bin edges are NaN.")
 
     def _cut(self, data):
-        return pd.cut(  # type: ignore [call-overload]
+        return pd.cut(
             np.asarray(data).ravel(),
             bins=self.bins,
             right=self.right,
