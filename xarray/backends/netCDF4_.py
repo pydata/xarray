@@ -42,6 +42,9 @@ from xarray.core.variable import Variable
 if TYPE_CHECKING:
     from io import BufferedIOBase
 
+    from h5netcdf.core import EnumType as h5EnumType
+    from netCDF4 import EnumType as ncEnumType
+
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
@@ -319,7 +322,7 @@ def _is_list_of_strings(value) -> bool:
 
 def _build_and_get_enum(
     store, var_name: str, dtype: np.dtype, enum_name: str, enum_dict: dict[str, int]
-) -> Any:
+) -> ncEnumType | h5EnumType:
     """
     Add or get the netCDF4 Enum based on the dtype in encoding.
     The return type should be ``netCDF4.EnumType``,
