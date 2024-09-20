@@ -3004,6 +3004,15 @@ def test_lazy_int_bins_error():
             _ = BinGrouper(bins=4).factorize(DataArray(dask.array.arange(3)))
 
 
+def test_time_grouping_seasons_specified():
+    time = xr.date_range("2001-01-01", "2002-01-01", freq="D")
+    ds = xr.Dataset({"foo": np.arange(time.size)}, coords={"time": ("time", time)})
+    labels = ["DJF", "MAM", "JJA", "SON"]
+    actual = ds.groupby({"time.season": UniqueGrouper(labels=labels)}).sum()
+    expected = ds.groupby("time.season").sum()
+    assert_identical(actual, expected.reindex(season=labels))
+
+
 # Possible property tests
 # 1. lambda x: x
 # 2. grouped-reduce on unique coords is identical to array
