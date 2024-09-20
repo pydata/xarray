@@ -5991,9 +5991,10 @@ class TestZarrRegionAuto:
             }
         )
 
-        # Don't allow auto region detection in append mode due to complexities in
-        # implementing the overlap logic and lack of safety with parallel writes
-        with pytest.raises(ValueError):
+        # Now it is valid to use auto region detection with the append mode,
+        # but it is still unsafe to modify dimensions or metadata using the region
+        # parameter.
+        with pytest.raises(KeyError):
             ds_new.to_zarr(
                 tmp_path / "test.zarr", mode="a", append_dim="x", region="auto"
             )
@@ -6105,7 +6106,6 @@ def test_zarr_region_chunk_partial_offset(tmp_path):
 @requires_zarr
 @requires_dask
 def test_zarr_safe_chunk_append_dim(tmp_path):
-    # https://github.com/pydata/xarray/pull/8459#issuecomment-1819417545
     store = tmp_path / "foo.zarr"
     data = np.ones((20,))
     da = xr.DataArray(data, dims=["x"], coords={"x": range(20)}, name="foo").chunk(x=5)
@@ -6151,3 +6151,78 @@ def test_zarr_safe_chunk_append_dim(tmp_path):
     # and it does not matter the size of the chunk
     da.isel(x=slice(7, 19)).chunk(x=-1).to_zarr(store, append_dim="x", safe_chunks=True)
     assert xr.open_zarr(store)["foo"].equals(da.isel(x=slice(0, 19)))
+
+
+@requires_zarr
+@requires_dask
+def test_zarr_safe_chunk_region(tmp_path):
+    store = tmp_path / "foo.zarr"
+
+    arr = xr.DataArray(
+        list(range(10)),
+        dims=["a"],
+        coords={"a": list(range(10))},
+        name="foo"
+    ).chunk(a=3)
+    arr.to_zarr(store, mode="w")
+
+    for mode in ["r+", "a"]:
+        with pytest.raises(ValueError):
+            # There are two Dask chunks on the same Zarr chunk,
+            # which means that it is unsafe in any mode
+            arr.isel(a=slice(0, 3)).chunk(a=(2, 1)).to_zarr(store, region="auto", mode=mode)
+
+        with pytest.raises(ValueError):
+            # the first chunk is covering the border size, but it is not
+            # completely covering the second chunk, which means that it is
+            # unsafe in any mode
+            arr.isel(a=slice(1, 5)).chunk(a=(3, 1)).to_zarr(store, region="auto", mode=mode)
+
+        with pytest.raises(ValueError):
+            # The first chunk is safe but the other two chunks are overlapping with
+            # the same Zarr chunk
+            arr.isel(a=slice(0, 5)).chunk(a=(3, 1, 1)).to_zarr(store, region="auto", mode=mode)
+
+        # Fully update two contiguous chunks is safe in any mode
+        arr.isel(a=slice(3, 9)).to_zarr(store, region="auto", mode=mode)
+
+    # Write the last chunk partially is safe in "a" mode
+    arr.isel(a=slice(3, 8)).to_zarr(store, region="auto", mode="a")
+    with pytest.raises(ValueError):
+        # with "r+" mode it is invalid to write partial chunk even on the last one
+        arr.isel(a=slice(3, 8)).to_zarr(store, region="auto", mode="r+")
+
+    # This is safe with mode "a", the border size is covered by the first chunk of Dask
+    arr.isel(a=slice(1, 4)).chunk(a=(2, 1)).to_zarr(store, region="auto", mode="a")
+
+    with pytest.raises(ValueError):
+        # This is considered unsafe in mode "r+" because it is writing in a partial chunk
+        arr.isel(a=slice(1, 4)).chunk(a=(2, 1)).to_zarr(store, region="auto", mode="r+")
+
+    # This is safe on mode "a" because there is a single dask chunk
+    arr.isel(a=slice(1, 5)).chunk(a=(4,)).to_zarr(store, region="auto", mode="a")
+
+    with pytest.raises(ValueError):
+        # This is unsafe on mode "r+", because there is a single dask
+        # chunk smaller than the Zarr chunk
+        arr.isel(a=slice(1, 5)).chunk(a=(4,)).to_zarr(store, region="auto", mode="r+")
+
+    # The first chunk is completely covering the first Zarr chunk
+    # and the last chunk is a partial chunk
+    arr.isel(a=slice(0, 5)).chunk(a=(3, 2)).to_zarr(store, region="auto", mode="a")
+
+    with pytest.raises(ValueError):
+        # The last chunk is partial, so it is considered unsafe on mode "r+"
+        arr.isel(a=slice(0, 5)).chunk(a=(3, 2)).to_zarr(store, region="auto", mode="r+")
+
+    # The first chunk is covering the border size (2 elements)
+    # and also the second chunk (3 elements), so it is valid
+    arr.isel(a=slice(1, 8)).chunk(a=(5, 2)).to_zarr(store, region="auto", mode="a")
+
+    with pytest.raises(ValueError):
+        # The first chunk is not fully covering the first zarr chunk
+        arr.isel(a=slice(1, 8)).chunk(a=(5, 2)).to_zarr(store, region="auto", mode="r+")
+
+    with pytest.raises(ValueError):
+        # Validate that the border condition is not affecting the "r+" mode
+        arr.isel(a=slice(1, 9)).to_zarr(store, region="auto", mode="r+")

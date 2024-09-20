@@ -112,7 +112,7 @@ class ZarrArrayWrapper(BackendArray):
         # could possibly have a work-around for 0d data here
 
 
-def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks, region):
+def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks, region, mode):
     """
     Given encoding chunks (possibly None or []) and variable chunks
     (possibly None or []).
@@ -163,7 +163,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks, regi
 
     if len(enc_chunks_tuple) != ndim:
         # throw away encoding chunks, start over
-        return _determine_zarr_chunks(None, var_chunks, ndim, name, safe_chunks, region)
+        return _determine_zarr_chunks(None, var_chunks, ndim, name, safe_chunks, region, mode)
 
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
@@ -189,9 +189,19 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks, regi
     # TODO: incorporate synchronizer to allow writes from multiple dask
     # threads
     if var_chunks and enc_chunks_tuple:
+        # If it is possible to write on partial chunks then it is not necessary to check
+        # the last one contained on the region
+        allow_partial_chunks = True
+        end = -1
+        if mode == "r+":
+            # This mode forces to write only on full chunks, even on the last one
+            allow_partial_chunks = False
+            end = None
+
         base_error = (
             f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
-            f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r}. "
+            f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r} "
+            f"on the region {region}. "
             f"Writing this array in parallel with dask could lead to corrupted data."
             f"Consider either rechunking using `chunk()`, deleting "
             f"or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
@@ -200,26 +210,26 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks, regi
         for zchunk, dchunks, interval in zip(
             enc_chunks_tuple, var_chunks, region, strict=True
         ):
-            if not safe_chunks or len(dchunks) <= 1:
-                # It is not necessary to perform any additional validation if the
-                # safe_chunks is False, or there are less than two dchunks
+            if not safe_chunks:
                 continue
 
-            start = 0
+            # The first border size is the amount of data that needs to be updated on the
+            # first chunk taking into account the region slice.
+            first_border_size = zchunk
             if interval.start:
-                # If the start of the interval is not None or 0, it means that the data
-                # is being appended or updated, and in both cases it is mandatory that
-                # the residue of the division between the first dchunk and the zchunk
-                # being equal to the border size
-                border_size = zchunk - interval.start % zchunk
-                if dchunks[0] % zchunk != border_size:
-                    raise ValueError(base_error)
-                # Avoid validating the first chunk inside the loop
-                start = 1
+                first_border_size = zchunk - interval.start % zchunk
 
-            for dchunk in dchunks[start:-1]:
-                if dchunk % zchunk:
+            if not allow_partial_chunks and first_border_size < zchunk:
+                # If the border is smaller than zchunk, then it is a partial chunk write
+                raise ValueError(first_border_size)
+
+            for dchunk in dchunks[:end]:
+                if (dchunk - first_border_size) % zchunk:
                     raise ValueError(base_error)
+
+                # The first border is only useful during the first iteration,
+                # so ignore it in the next validations
+                first_border_size = 0
 
         return enc_chunks_tuple
 
@@ -261,7 +271,12 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
 
 
 def extract_zarr_variable_encoding(
-    variable, region, raise_on_invalid=False, name=None, safe_chunks=True
+    variable,
+    raise_on_invalid=False,
+    name=None,
+    safe_chunks=True,
+    region=None,
+    mode=None
 ):
     """
     Extract zarr encoding dictionary from xarray Variable
@@ -269,8 +284,11 @@ def extract_zarr_variable_encoding(
     Parameters
     ----------
     variable : Variable
-    region: tuple[slice]
+    region: tuple[slice], optional
     raise_on_invalid : bool, optional
+    safe_chunks: bool, optional
+    name: str | Hashable, optional
+    mode: str, optional
 
     Returns
     -------
@@ -304,12 +322,13 @@ def extract_zarr_variable_encoding(
                 del encoding[k]
 
     chunks = _determine_zarr_chunks(
-        encoding.get("chunks"),
-        variable.chunks,
-        variable.ndim,
-        name,
-        safe_chunks,
-        region,
+        enc_chunks=encoding.get("chunks"),
+        var_chunks=variable.chunks,
+        ndim=variable.ndim,
+        name=name,
+        safe_chunks=safe_chunks,
+        region=region,
+        mode=mode
     )
     encoding["chunks"] = chunks
     return encoding
@@ -845,6 +864,7 @@ class ZarrStore(AbstractWritableDataStore):
                 raise_on_invalid=vn in check_encoding_set,
                 name=vn,
                 safe_chunks=self._safe_chunks,
+                mode=self._mode
             )
 
             if name not in existing_keys:
@@ -927,9 +947,9 @@ class ZarrStore(AbstractWritableDataStore):
         if not isinstance(region, dict):
             raise TypeError(f"``region`` must be a dict, got {type(region)}")
         if any(v == "auto" for v in region.values()):
-            if self._mode != "r+":
+            if self._mode not in ["r+", "a"]:
                 raise ValueError(
-                    f"``mode`` must be 'r+' when using ``region='auto'``, got {self._mode!r}"
+                    f"``mode`` must be 'r+' or 'a' when using ``region='auto'``, got {self._mode!r}"
                 )
             region = self._auto_detect_regions(ds, region)
 
