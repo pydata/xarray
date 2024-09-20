@@ -286,8 +286,8 @@ def extract_zarr_variable_encoding(
     Parameters
     ----------
     variable : Variable
-    name: str | Hashable, optional
     raise_on_invalid : bool, optional
+    name: str | Hashable, optional
     safe_chunks: bool, optional
     region: tuple[slice], optional
     mode: str, optional
