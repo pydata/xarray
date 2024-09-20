@@ -9,9 +9,11 @@ from __future__ import annotations
 import datetime
 import itertools
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from itertools import pairwise
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
@@ -75,9 +77,9 @@ class EncodedGroups:
 
     codes: DataArray
     full_index: pd.Index
-    group_indices: GroupIndices
-    unique_coord: Variable | _DummyGroup
-    coords: Coordinates
+    group_indices: GroupIndices = field(init=False, repr=False)
+    unique_coord: Variable | _DummyGroup = field(init=False, repr=False)
+    coords: Coordinates = field(init=False, repr=False)
 
     def __init__(
         self,
@@ -587,6 +589,55 @@ def season_to_month_tuple(seasons: Sequence[str]) -> tuple[tuple[int, ...], ...]
     return tuple(result)
 
 
+def inds_to_string(asints: tuple[tuple[int, ...], ...]) -> tuple[str, ...]:
+    inits = "JFMAMJJASOND"
+    return tuple("".join([inits[i_ - 1] for i_ in t]) for t in asints)
+
+
+@dataclass
+class SeasonsGroup:
+    seasons: tuple[str, ...]
+    inds: tuple[tuple[int, ...], ...]
+    codes: Sequence[int]
+
+
+def find_independent_seasons(seasons: Sequence[str]) -> Sequence[SeasonsGroup]:
+    """
+    Iterates though a list of seasons e.g. ["DJF", "FMA", ...],
+    and splits that into multiple sequences of non-overlapping seasons.
+    """
+    sinds = season_to_month_tuple(seasons)
+    grouped = defaultdict(list)
+    codes = defaultdict(list)
+    seen: set[tuple[int, ...]] = set()
+    idx = 0
+    # This is quadratic, but the length of seasons is at most 12
+    for i, current in enumerate(sinds):
+        # Start with a group
+        if current not in seen:
+            grouped[idx].append(current)
+            codes[idx].append(i)
+            seen.add(current)
+
+        # Loop through remaining groups, and look for overlaps
+        for j, second in enumerate(sinds[i:]):
+            if not (set(chain(*grouped[idx])) & set(second)):
+                if second not in seen:
+                    grouped[idx].append(second)
+                    codes[idx].append(j + i)
+                    seen.add(second)
+        if len(seen) == len(seasons):
+            break
+        # found all non-overlapping groups for this row, increment and start over
+        idx += 1
+
+    grouped_ints = tuple(tuple(idx) for idx in grouped.values() if idx)
+    return [
+        SeasonsGroup(seasons=inds_to_string(inds), inds=inds, codes=codes)
+        for inds, codes in zip(grouped_ints, codes.values(), strict=False)
+    ]
+
+
 @dataclass
 class SeasonGrouper(Grouper):
     """Allows grouping using a custom definition of seasons.
@@ -599,15 +650,19 @@ class SeasonGrouper(Grouper):
     Examples
     --------
     >>> SeasonGrouper(["JF", "MAM", "JJAS", "OND"])
-    >>> SeasonGrouper(["DJFM", "AM", "JJA", "SON"])
+    SeasonGrouper(seasons=['JF', 'MAM', 'JJAS', 'OND'])
+
+    The ordering is preserved
+    >>> SeasonGrouper(["MAM", "JJAS", "OND", "JF"])
+    SeasonGrouper(seasons=['MAM', 'JJAS', 'OND', 'JF'])
+
+    Overlapping seasons are allowed
+    >>> SeasonGrouper(["DJFM", "MAMJ", "JJAS", "SOND"])
+    SeasonGrouper(seasons=['DJFM', 'MAMJ', 'JJAS', 'SOND'])
     """
 
     seasons: Sequence[str]
-    season_inds: Sequence[Sequence[int]] = field(init=False, repr=False)
     # drop_incomplete: bool = field(default=True) # TODO
-
-    def __post_init__(self) -> None:
-        self.season_inds = season_to_month_tuple(self.seasons)
 
     def factorize(self, group: T_Group) -> EncodedGroups:
         if TYPE_CHECKING:
@@ -616,27 +671,32 @@ class SeasonGrouper(Grouper):
             raise ValueError(
                 "SeasonGrouper can only be used to group by datetime-like arrays."
             )
-
-        seasons = self.seasons
-        season_inds = self.season_inds
-
-        months = group.dt.month
-        codes_ = np.full(group.shape, -1)
-        group_indices: list[list[int]] = [[]] * len(seasons)
-
-        index = np.arange(group.size)
-        for idx, season_tuple in enumerate(season_inds):
-            mask = months.isin(season_tuple)
-            codes_[mask] = idx
-            group_indices[idx] = index[mask]
+        months = group.dt.month.data
+        seasons_groups = find_independent_seasons(self.seasons)
+        codes_ = np.full((len(seasons_groups),) + group.shape, -1, dtype=np.int8)
+        group_indices: list[list[int]] = [[]] * len(self.seasons)
+        for axis_index, seasgroup in enumerate(seasons_groups):
+            for season_tuple, code in zip(
+                seasgroup.inds, seasgroup.codes, strict=False
+            ):
+                mask = np.isin(months, season_tuple)
+                codes_[axis_index, mask] = code
+                (indices,) = mask.nonzero()
+                group_indices[code] = indices.tolist()
 
         if np.all(codes_ == -1):
             raise ValueError(
                 "Failed to group data. Are you grouping by a variable that is all NaN?"
             )
-        codes = group.copy(data=codes_, deep=False).rename("season")
-        unique_coord = Variable("season", seasons, attrs=group.attrs)
-        full_index = pd.Index(seasons)
+        needs_dummy_dim = len(seasons_groups) > 1
+        codes = DataArray(
+            dims=(("__season_dim__",) if needs_dummy_dim else tuple()) + group.dims,
+            data=codes_ if needs_dummy_dim else codes_.squeeze(),
+            attrs=group.attrs,
+            name="season",
+        )
+        unique_coord = Variable("season", self.seasons, attrs=group.attrs)
+        full_index = pd.Index(self.seasons)
         return EncodedGroups(
             codes=codes,
             group_indices=tuple(group_indices),
@@ -662,7 +722,10 @@ class SeasonResampler(Resampler):
     Examples
     --------
     >>> SeasonResampler(["JF", "MAM", "JJAS", "OND"])
+    SeasonResampler(seasons=['JF', 'MAM', 'JJAS', 'OND'], drop_incomplete=True)
+
     >>> SeasonResampler(["DJFM", "AM", "JJA", "SON"])
+    SeasonResampler(seasons=['DJFM', 'AM', 'JJA', 'SON'], drop_incomplete=True)
     """
 
     seasons: Sequence[str]
