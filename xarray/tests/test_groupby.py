@@ -22,6 +22,7 @@ from xarray.groupers import (
     TimeResampler,
     UniqueGrouper,
 )
+from xarray.namedarray.pycompat import is_chunked_array
 from xarray.tests import (
     InaccessibleArray,
     assert_allclose,
@@ -29,6 +30,7 @@ from xarray.tests import (
     assert_identical,
     create_test_data,
     has_cftime,
+    has_dask,
     has_flox,
     has_pandas_ge_2_2,
     raise_if_dask_computes,
@@ -2796,7 +2798,7 @@ def test_multiple_groupers(use_flox) -> None:
 
     b = xr.DataArray(
         np.random.RandomState(0).randn(2, 3, 4),
-        coords={"xy": (("x", "y"), [["a", "b", "c"], ["b", "c", "c"]])},
+        coords={"xy": (("x", "y"), [["a", "b", "c"], ["b", "c", "c"]], {"foo": "bar"})},
         dims=["x", "y", "z"],
     )
     gb = b.groupby(x=UniqueGrouper(), y=UniqueGrouper())
@@ -2813,9 +2815,23 @@ def test_multiple_groupers(use_flox) -> None:
     expected.loc[dict(x=1, xy=1)] = expected.sel(x=1, xy=0).data
     expected.loc[dict(x=1, xy=0)] = np.nan
     expected.loc[dict(x=1, xy=2)] = newval
-    expected["xy"] = ("xy", ["a", "b", "c"])
+    expected["xy"] = ("xy", ["a", "b", "c"], {"foo": "bar"})
     # TODO: is order of dims correct?
     assert_identical(actual, expected.transpose("z", "x", "xy"))
+
+    if has_dask:
+        b["xy"] = b["xy"].chunk()
+        with raise_if_dask_computes():
+            gb = b.groupby(x=UniqueGrouper(), xy=UniqueGrouper(labels=["a", "b", "c"]))
+
+        expected = xr.DataArray(
+            [[[1, 1, 1], [0, 1, 2]]] * 4,
+            dims=("z", "x", "xy"),
+            coords={"xy": ("xy", ["a", "b", "c"], {"foo": "bar"})},
+        )
+        assert_identical(gb.count(), expected)
+        assert is_chunked_array(gb.encoded.codes.data)
+        assert not gb.encoded.group_indices
 
 
 @pytest.mark.parametrize("use_flox", [True, False])

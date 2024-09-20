@@ -22,6 +22,7 @@ from xarray.core.arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyAri
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
 from xarray.core.concat import concat
 from xarray.core.coordinates import Coordinates
+from xarray.core.duck_array_ops import where
 from xarray.core.formatting import format_array_flat
 from xarray.core.indexes import (
     PandasIndex,
@@ -462,20 +463,26 @@ class ComposedGrouper:
         # NaNs; as well as values outside the bins are coded by -1
         # Restore these after the raveling
         mask = functools.reduce(np.logical_or, [(code == -1) for code in broadcasted_codes])  # type: ignore[arg-type]
-        _flatcodes[mask] = -1
-
-        midx = pd.MultiIndex.from_product(
-            (grouper.unique_coord.data for grouper in groupers),
-            names=tuple(grouper.name for grouper in groupers),
-        )
-        # Constructing an index from the product is wrong when there are missing groups
-        # (e.g. binning, resampling). Account for that now.
-        midx = midx[np.sort(pd.unique(_flatcodes[~mask]))]
+        _flatcodes = where(mask, -1, _flatcodes)
 
         full_index = pd.MultiIndex.from_product(
             (grouper.full_index.values for grouper in groupers),
             names=tuple(grouper.name for grouper in groupers),
         )
+        # This will be unused when grouping by dask arrays, so skip..
+        if not is_chunked_array(_flatcodes):
+            midx = pd.MultiIndex.from_product(
+                (grouper.unique_coord.data for grouper in groupers),
+                names=tuple(grouper.name for grouper in groupers),
+            )
+            # Constructing an index from the product is wrong when there are missing groups
+            # (e.g. binning, resampling). Account for that now.
+            midx = midx[np.sort(pd.unique(_flatcodes[~mask]))]
+            group_indices = _codes_to_group_indices(_flatcodes.ravel(), len(full_index))
+        else:
+            midx = full_index
+            group_indices = None
+
         dim_name = "stacked_" + "_".join(str(grouper.name) for grouper in groupers)
 
         coords = Coordinates.from_pandas_multiindex(midx, dim=dim_name)
@@ -484,7 +491,7 @@ class ComposedGrouper:
         return EncodedGroups(
             codes=first_codes.copy(data=_flatcodes),
             full_index=full_index,
-            group_indices=_codes_to_group_indices(_flatcodes.ravel(), len(full_index)),
+            group_indices=group_indices,
             unique_coord=Variable(dims=(dim_name,), data=midx.values),
             coords=coords,
         )

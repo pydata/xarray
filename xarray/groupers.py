@@ -191,7 +191,10 @@ class UniqueGrouper(Grouper):
         self.group = group
 
         if is_chunked_array(group.data) and self.labels is None:
-            raise ValueError("When grouping by a dask array, `labels` must be passed.")
+            raise ValueError(
+                "When grouping by a dask array, `labels` must be passed using "
+                "a UniqueGrouper object."
+            )
         if self.labels is not None:
             return self._factorize_given_labels(group)
 
