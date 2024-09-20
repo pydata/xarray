@@ -659,7 +659,7 @@ class TestConcatDataset:
 
         with pytest.raises(ValueError, match=r"compat.* invalid"):
             concat(split_data, "dim1", compat="foobar")
-        
+
         with pytest.raises(ValueError, match=r"compat.* invalid"):
             concat(split_data, "dim1", compat="minimal")
 
