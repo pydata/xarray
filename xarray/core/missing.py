@@ -298,13 +298,13 @@ def get_clean_interp_index(
     # raise if index cannot be cast to a float (e.g. MultiIndex)
     try:
         index = index.values.astype(np.float64)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as err:
         # pandas raises a TypeError
         # xarray/numpy raise a ValueError
         raise TypeError(
             f"Index {index.name!r} must be castable to float64 to support "
             f"interpolation or curve fitting, got {type(index).__name__}."
-        )
+        ) from err
 
     return index
 
@@ -619,12 +619,12 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
 
     result = var
     # decompose the interpolation into a succession of independent interpolation
-    for indexes_coords in decompose_interp(indexes_coords):
+    for indep_indexes_coords in decompose_interp(indexes_coords):
         var = result
 
         # target dimensions
-        dims = list(indexes_coords)
-        x, new_x = zip(*[indexes_coords[d] for d in dims])
+        dims = list(indep_indexes_coords)
+        x, new_x = zip(*[indep_indexes_coords[d] for d in dims], strict=True)
         destination = broadcast_variables(*new_x)
 
         # transpose to make the interpolated axis to the last position
@@ -641,7 +641,7 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
         out_dims: OrderedSet = OrderedSet()
         for d in var.dims:
             if d in dims:
-                out_dims.update(indexes_coords[d][1].dims)
+                out_dims.update(indep_indexes_coords[d][1].dims)
             else:
                 out_dims.add(d)
         if len(out_dims) > 1:
@@ -710,7 +710,9 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
 
         _, rechunked = chunkmanager.unify_chunks(*args)
 
-        args = tuple(elem for pair in zip(rechunked, args[1::2]) for elem in pair)
+        args = tuple(
+            elem for pair in zip(rechunked, args[1::2], strict=True) for elem in pair
+        )
 
         new_x = rechunked[1 + (len(rechunked) - 1) // 2 :]
 
@@ -798,11 +800,13 @@ def _chunked_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=T
         # _localize expect var to be a Variable
         var = Variable([f"dim_{dim}" for dim in range(len(var.shape))], var)
 
-        indexes_coords = {_x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x)}
+        indexes_coords = {
+            _x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x, strict=True)
+        }
 
         # simple speed up for the local interpolation
         var, indexes_coords = _localize(var, indexes_coords)
-        x, new_x = zip(*[indexes_coords[d] for d in indexes_coords])
+        x, new_x = zip(*[indexes_coords[d] for d in indexes_coords], strict=True)
 
         # put var back as a ndarray
         var = var.data

@@ -29,7 +29,7 @@ from xarray.tests.test_dataset import create_test_data
 
 def assert_combined_tile_ids_equal(dict1, dict2):
     assert len(dict1) == len(dict2)
-    for k, v in dict1.items():
+    for k, _v in dict1.items():
         assert k in dict2.keys()
         assert_equal(dict1[k], dict2[k])
 
@@ -249,7 +249,10 @@ def create_combined_ids():
 def _create_combined_ids(shape):
     tile_ids = _create_tile_ids(shape)
     nums = range(len(tile_ids))
-    return {tile_id: create_test_data(num) for tile_id, num in zip(tile_ids, nums)}
+    return {
+        tile_id: create_test_data(num)
+        for tile_id, num in zip(tile_ids, nums, strict=True)
+    }
 
 
 def _create_tile_ids(shape):

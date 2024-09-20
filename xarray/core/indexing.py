@@ -617,7 +617,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         self.key = key
 
         shape: _Shape = ()
-        for size, k in zip(self.array.shape, self.key.tuple):
+        for size, k in zip(self.array.shape, self.key.tuple, strict=True):
             if isinstance(k, slice):
                 shape += (len(range(*k.indices(size))),)
             elif isinstance(k, np.ndarray):
@@ -627,7 +627,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def _updated_key(self, new_key: ExplicitIndexer) -> BasicIndexer | OuterIndexer:
         iter_new_key = iter(expanded_indexer(new_key.tuple, self.ndim))
         full_key = []
-        for size, k in zip(self.array.shape, self.key.tuple):
+        for size, k in zip(self.array.shape, self.key.tuple, strict=True):
             if isinstance(k, integer_types):
                 full_key.append(k)
             else:
@@ -907,7 +907,7 @@ def _outer_to_vectorized_indexer(
     n_dim = len([k for k in key if not isinstance(k, integer_types)])
     i_dim = 0
     new_key = []
-    for k, size in zip(key, shape):
+    for k, size in zip(key, shape, strict=True):
         if isinstance(k, integer_types):
             new_key.append(np.array(k).reshape((1,) * n_dim))
         else:  # np.ndarray or slice
@@ -1127,10 +1127,10 @@ def _decompose_vectorized_indexer(
     # convert negative indices
     indexer_elems = [
         np.where(k < 0, k + s, k) if isinstance(k, np.ndarray) else k
-        for k, s in zip(indexer.tuple, shape)
+        for k, s in zip(indexer.tuple, shape, strict=True)
     ]
 
-    for k, s in zip(indexer_elems, shape):
+    for k, s in zip(indexer_elems, shape, strict=True):
         if isinstance(k, slice):
             # If it is a slice, then we will slice it as-is
             # (but make its step positive) in the backend,
@@ -1207,7 +1207,7 @@ def _decompose_outer_indexer(
     assert isinstance(indexer, OuterIndexer | BasicIndexer)
 
     if indexing_support == IndexingSupport.VECTORIZED:
-        for k, s in zip(indexer.tuple, shape):
+        for k, s in zip(indexer.tuple, shape, strict=False):
             if isinstance(k, slice):
                 # If it is a slice, then we will slice it as-is
                 # (but make its step positive) in the backend,
@@ -1222,7 +1222,7 @@ def _decompose_outer_indexer(
 
     # make indexer positive
     pos_indexer: list[np.ndarray | int | np.number] = []
-    for k, s in zip(indexer.tuple, shape):
+    for k, s in zip(indexer.tuple, shape, strict=False):
         if isinstance(k, np.ndarray):
             pos_indexer.append(np.where(k < 0, k + s, k))
         elif isinstance(k, integer_types) and k < 0:
@@ -1244,7 +1244,7 @@ def _decompose_outer_indexer(
         ]
         array_index = np.argmax(np.array(gains)) if len(gains) > 0 else None
 
-        for i, (k, s) in enumerate(zip(indexer_elems, shape)):
+        for i, (k, s) in enumerate(zip(indexer_elems, shape, strict=False)):
             if isinstance(k, np.ndarray) and i != array_index:
                 # np.ndarray key is converted to slice that covers the entire
                 # entries of this key.
@@ -1265,7 +1265,7 @@ def _decompose_outer_indexer(
         return (OuterIndexer(tuple(backend_indexer)), OuterIndexer(tuple(np_indexer)))
 
     if indexing_support == IndexingSupport.OUTER:
-        for k, s in zip(indexer_elems, shape):
+        for k, s in zip(indexer_elems, shape, strict=False):
             if isinstance(k, slice):
                 # slice:  convert positive step slice for backend
                 bk_slice, np_slice = _decompose_slice(k, s)
@@ -1287,7 +1287,7 @@ def _decompose_outer_indexer(
     # basic indexer
     assert indexing_support == IndexingSupport.BASIC
 
-    for k, s in zip(indexer_elems, shape):
+    for k, s in zip(indexer_elems, shape, strict=False):
         if isinstance(k, np.ndarray):
             # np.ndarray key is converted to slice that covers the entire
             # entries of this key.
@@ -1315,7 +1315,7 @@ def _arrayize_vectorized_indexer(
     n_dim = arrays[0].ndim if len(arrays) > 0 else 0
     i_dim = 0
     new_key = []
-    for v, size in zip(indexer.tuple, shape):
+    for v, size in zip(indexer.tuple, shape, strict=True):
         if isinstance(v, np.ndarray):
             new_key.append(np.reshape(v, v.shape + (1,) * len(slices)))
         else:  # slice
@@ -1333,7 +1333,7 @@ def _chunked_array_with_chunks_hint(
     if len(chunks) < array.ndim:
         raise ValueError("not enough chunks in hint")
     new_chunks = []
-    for chunk, size in zip(chunks, array.shape):
+    for chunk, size in zip(chunks, array.shape, strict=False):
         new_chunks.append(chunk if size > 1 else (1,))
     return chunkmanager.from_array(array, new_chunks)  # type: ignore[arg-type]
 
@@ -1399,7 +1399,7 @@ def create_mask(
         base_mask = _masked_result_drop_slice(key, data)
         slice_shape = tuple(
             np.arange(*k.indices(size)).size
-            for k, size in zip(key, shape)
+            for k, size in zip(key, shape, strict=False)
             if isinstance(k, slice)
         )
         expanded_mask = base_mask[(Ellipsis,) + (np.newaxis,) * len(slice_shape)]
@@ -1527,7 +1527,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 raise ValueError(
                     "Assignment destination is a view.  "
                     "Do you want to .copy() array first?"
-                )
+                ) from exc
             else:
                 raise exc
 
@@ -1711,7 +1711,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         # a NumPy array.
         return to_0d_array(item)
 
-    def _prepare_key(self, key: tuple[Any, ...]) -> tuple[Any, ...]:
+    def _prepare_key(self, key: Any | tuple[Any, ...]) -> tuple[Any, ...]:
         if isinstance(key, tuple) and len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
             # objects don't like tuples)

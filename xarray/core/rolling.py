@@ -133,7 +133,7 @@ class Rolling(Generic[T_Xarray]):
 
         attrs = [
             "{k}->{v}{c}".format(k=k, v=w, c="(center)" if c else "")
-            for k, w, c in zip(self.dim, self.window, self.center)
+            for k, w, c in zip(self.dim, self.window, self.center, strict=True)
         ]
         return "{klass} [{attrs}]".format(
             klass=self.__class__.__name__, attrs=",".join(attrs)
@@ -303,7 +303,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         starts = stops - window0
         starts[: window0 - offset] = 0
 
-        for label, start, stop in zip(self.window_labels, starts, stops):
+        for label, start, stop in zip(self.window_labels, starts, stops, strict=True):
             window = self.obj.isel({dim0: slice(start, stop)})
 
             counts = window.count(dim=[dim0])
@@ -424,7 +424,9 @@ class DataArrayRolling(Rolling["DataArray"]):
             attrs=attrs,
             name=obj.name,
         )
-        return result.isel({d: slice(None, None, s) for d, s in zip(self.dim, strides)})
+        return result.isel(
+            {d: slice(None, None, s) for d, s in zip(self.dim, strides, strict=True)}
+        )
 
     def reduce(
         self, func: Callable, keep_attrs: bool | None = None, **kwargs: Any
@@ -520,7 +522,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         counts = (
             self.obj.notnull(keep_attrs=keep_attrs)
             .rolling(
-                {d: w for d, w in zip(self.dim, self.window)},
+                {d: w for d, w in zip(self.dim, self.window, strict=True)},
                 center={d: self.center[i] for i, d in enumerate(self.dim)},
             )
             .construct(rolling_dim, fill_value=False, keep_attrs=keep_attrs)
@@ -887,7 +889,7 @@ class DatasetRolling(Rolling["Dataset"]):
 
         # Need to stride coords as well. TODO: is there a better way?
         coords = self.obj.isel(
-            {d: slice(None, None, s) for d, s in zip(self.dim, strides)}
+            {d: slice(None, None, s) for d, s in zip(self.dim, strides, strict=True)}
         ).coords
 
         attrs = self.obj.attrs if keep_attrs else {}

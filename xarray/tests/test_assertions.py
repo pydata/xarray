@@ -11,7 +11,7 @@ from xarray.tests import has_dask
 try:
     from dask.array import from_array as dask_from_array
 except ImportError:
-    dask_from_array = lambda x: x  # type: ignore
+    dask_from_array = lambda x: x  # type: ignore[assignment, misc]
 
 try:
     import pint
@@ -170,11 +170,11 @@ def test_ensure_warnings_not_elevated(func) -> None:
     class WarningVariable(xr.Variable):
         @property  # type: ignore[misc]
         def dims(self):
-            warnings.warn("warning in test")
+            warnings.warn("warning in test", stacklevel=2)
             return super().dims
 
         def __array__(self, dtype=None, copy=None):
-            warnings.warn("warning in test")
+            warnings.warn("warning in test", stacklevel=2)
             return super().__array__()
 
     a = WarningVariable("x", [1])
@@ -190,7 +190,7 @@ def test_ensure_warnings_not_elevated(func) -> None:
 
         # ensure warnings still raise outside of assert_*
         with pytest.raises(UserWarning):
-            warnings.warn("test")
+            warnings.warn("test", stacklevel=2)
 
     # ensure warnings stay ignored in assert_*
     with warnings.catch_warnings(record=True) as w:

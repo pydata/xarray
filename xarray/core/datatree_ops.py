@@ -15,7 +15,7 @@ xarray's internals directly, only the public-facing xarray.Dataset class.
 
 
 _MAPPED_DOCSTRING_ADDENDUM = (
-    "This method was copied from xarray.Dataset, but has been altered to "
+    "This method was copied from :py:class:`xarray.Dataset`, but has been altered to "
     "call the method on the Datasets stored in every node of the subtree. "
     "See the `map_over_subtree` function for more details."
 )
@@ -214,7 +214,7 @@ def _wrap_then_attach_to_cls(
                 new_method_docstring = insert_doc_addendum(
                     orig_method_docstring, _MAPPED_DOCSTRING_ADDENDUM
                 )
-                setattr(target_cls_dict[method_name], "__doc__", new_method_docstring)
+                target_cls_dict[method_name].__doc__ = new_method_docstring
 
 
 def insert_doc_addendum(docstring: str | None, addendum: str) -> str | None:
@@ -224,7 +224,7 @@ def insert_doc_addendum(docstring: str | None, addendum: str) -> str | None:
     Dataset directly as well as the mixins: DataWithCoords, DatasetAggregations, and DatasetOpsMixin.
 
     The majority of the docstrings fall into a parseable pattern. Those that
-    don't, just have the addendum appeneded after. None values are returned.
+    don't, just have the addendum appended after. None values are returned.
 
     """
     if docstring is None:
