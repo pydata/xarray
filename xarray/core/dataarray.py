@@ -177,7 +177,7 @@ def _infer_coords_and_dims(
             else:
                 for n, (dim, coord) in enumerate(zip(dims, coords, strict=True)):
                     coord = as_variable(
-                        coord, name=dims[n], auto_convert=False
+                        coord, name=dim, auto_convert=False
                     ).to_index_variable()
                     dims[n] = coord.name
     dims_tuple = tuple(dims)
@@ -534,10 +534,10 @@ class DataArray(
         variable: Variable,
         name: Hashable | None | Default = _default,
     ) -> Self:
-        if variable.dims == self.dims and variable.shape == self.shape:
+        if self.sizes == variable.sizes:
             coords = self._coords.copy()
             indexes = self._indexes
-        elif variable.dims == self.dims:
+        elif set(self.dims) == set(variable.dims):
             # Shape has changed (e.g. from reduce(..., keepdims=True)
             new_sizes = dict(zip(self.dims, variable.shape, strict=True))
             coords = {
@@ -963,7 +963,8 @@ class DataArray(
 
     def reset_encoding(self) -> Self:
         warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead"
+            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
+            stacklevel=2,
         )
         return self.drop_encoding()
 
@@ -1360,7 +1361,7 @@ class DataArray(
     @_deprecate_positional_args("v2023.10.0")
     def chunk(
         self,
-        chunks: T_ChunksFreq = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        chunks: T_ChunksFreq = {},  # noqa: B006  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         *,
         name_prefix: str = "xarray-",
         token: str | None = None,
@@ -1427,6 +1428,7 @@ class DataArray(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
                 category=FutureWarning,
+                stacklevel=2,
             )
             chunk_mapping = {}
 
@@ -3858,11 +3860,11 @@ class DataArray(
         constructors = {0: lambda x: x, 1: pd.Series, 2: pd.DataFrame}
         try:
             constructor = constructors[self.ndim]
-        except KeyError:
+        except KeyError as err:
             raise ValueError(
                 f"Cannot convert arrays with {self.ndim} dimensions into "
                 "pandas objects. Requires 2 or fewer dimensions."
-            )
+            ) from err
         indexes = [self.get_index(dim) for dim in self.dims]
         return constructor(self.values, *indexes)  # type: ignore[operator]
 
@@ -4466,11 +4468,11 @@ class DataArray(
                 raise ValueError(
                     "cannot convert dict when coords are missing the key "
                     f"'{str(e.args[0])}'"
-                )
+                ) from e
         try:
             data = d["data"]
-        except KeyError:
-            raise ValueError("cannot convert dict without the key 'data''")
+        except KeyError as err:
+            raise ValueError("cannot convert dict without the key 'data''") from err
         else:
             obj = cls(data, coords, d.get("dims"), d.get("name"), d.get("attrs"))
 

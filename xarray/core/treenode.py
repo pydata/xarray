@@ -314,6 +314,7 @@ class TreeNode(Generic[Tree]):
             "`iter_lineage` has been deprecated, and in the future will raise an error."
             "Please use `parents` from now on.",
             DeprecationWarning,
+            stacklevel=2,
         )
         return tuple((self, *self.parents))
 
@@ -326,6 +327,7 @@ class TreeNode(Generic[Tree]):
             "`lineage` has been deprecated, and in the future will raise an error."
             "Please use `parents` from now on.",
             DeprecationWarning,
+            stacklevel=2,
         )
         return self.iter_lineage()
 
@@ -344,6 +346,7 @@ class TreeNode(Generic[Tree]):
             "`ancestors` has been deprecated, and in the future will raise an error."
             "Please use `parents`. Example: `tuple(reversed(node.parents))`",
             DeprecationWarning,
+            stacklevel=2,
         )
         return tuple((*reversed(self.parents), self))
 
