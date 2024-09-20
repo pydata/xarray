@@ -331,7 +331,7 @@ def _set_dims(
     >>> x_new.dims, x_new.shape
     (('x', 'y'), (3, 2))
 
-    Error
+    Errors
 
     >>> x = NamedArray(("x",), np.asarray([1, 2, 3]))
     >>> x_new = _set_dims(x, (), None)
