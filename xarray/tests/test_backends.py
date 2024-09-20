@@ -6159,10 +6159,7 @@ def test_zarr_safe_chunk_region(tmp_path):
     store = tmp_path / "foo.zarr"
 
     arr = xr.DataArray(
-        list(range(10)),
-        dims=["a"],
-        coords={"a": list(range(10))},
-        name="foo"
+        list(range(10)), dims=["a"], coords={"a": list(range(10))}, name="foo"
     ).chunk(a=3)
     arr.to_zarr(store, mode="w")
 
@@ -6170,18 +6167,24 @@ def test_zarr_safe_chunk_region(tmp_path):
         with pytest.raises(ValueError):
             # There are two Dask chunks on the same Zarr chunk,
             # which means that it is unsafe in any mode
-            arr.isel(a=slice(0, 3)).chunk(a=(2, 1)).to_zarr(store, region="auto", mode=mode)
+            arr.isel(a=slice(0, 3)).chunk(a=(2, 1)).to_zarr(
+                store, region="auto", mode=mode
+            )
 
         with pytest.raises(ValueError):
             # the first chunk is covering the border size, but it is not
             # completely covering the second chunk, which means that it is
             # unsafe in any mode
-            arr.isel(a=slice(1, 5)).chunk(a=(3, 1)).to_zarr(store, region="auto", mode=mode)
+            arr.isel(a=slice(1, 5)).chunk(a=(3, 1)).to_zarr(
+                store, region="auto", mode=mode
+            )
 
         with pytest.raises(ValueError):
             # The first chunk is safe but the other two chunks are overlapping with
             # the same Zarr chunk
-            arr.isel(a=slice(0, 5)).chunk(a=(3, 1, 1)).to_zarr(store, region="auto", mode=mode)
+            arr.isel(a=slice(0, 5)).chunk(a=(3, 1, 1)).to_zarr(
+                store, region="auto", mode=mode
+            )
 
         # Fully update two contiguous chunks is safe in any mode
         arr.isel(a=slice(3, 9)).to_zarr(store, region="auto", mode=mode)
