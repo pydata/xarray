@@ -112,7 +112,9 @@ class ZarrArrayWrapper(BackendArray):
         # could possibly have a work-around for 0d data here
 
 
-def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks, region, mode):
+def _determine_zarr_chunks(
+    enc_chunks, var_chunks, ndim, name, safe_chunks, region, mode
+):
     """
     Given encoding chunks (possibly None or []) and variable chunks
     (possibly None or []).
@@ -163,7 +165,9 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks, regi
 
     if len(enc_chunks_tuple) != ndim:
         # throw away encoding chunks, start over
-        return _determine_zarr_chunks(None, var_chunks, ndim, name, safe_chunks, region, mode)
+        return _determine_zarr_chunks(
+            None, var_chunks, ndim, name, safe_chunks, region, mode
+        )
 
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
@@ -276,7 +280,7 @@ def extract_zarr_variable_encoding(
     name=None,
     safe_chunks=True,
     region=None,
-    mode=None
+    mode=None,
 ):
     """
     Extract zarr encoding dictionary from xarray Variable
@@ -328,7 +332,7 @@ def extract_zarr_variable_encoding(
         name=name,
         safe_chunks=safe_chunks,
         region=region,
-        mode=mode
+        mode=mode,
     )
     encoding["chunks"] = chunks
     return encoding
@@ -864,7 +868,7 @@ class ZarrStore(AbstractWritableDataStore):
                 raise_on_invalid=vn in check_encoding_set,
                 name=vn,
                 safe_chunks=self._safe_chunks,
-                mode=self._mode
+                mode=self._mode,
             )
 
             if name not in existing_keys:
