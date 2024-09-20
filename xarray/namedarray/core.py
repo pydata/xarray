@@ -432,6 +432,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             # x is proper array. Respect the chosen dtype.
             return x
         # x is a scalar. Use the same dtype as self.
+        # TODO: Is this a good idea? x[Any, int] + 1.4 => int result then.
         return asarray(x, dtype=self.dtype)
 
     # Required methods below:

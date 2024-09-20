@@ -323,8 +323,17 @@ def _set_dims(
     >>> x_new.dims, x_new.shape
     (('x',), (3,))
 
+
+    Unordered dims
+
+    >>> x = NamedArray(("y", "x"), np.zeros((2, 3)))
+    >>> x_new = _set_dims(x, ("x", "y"), None)
+    >>> x_new.dims, x_new.shape
+    (('x', 'y'), (3, 2))
+
     Error
 
+    >>> x = NamedArray(("x",), np.asarray([1, 2, 3]))
     >>> x_new = _set_dims(x, (), None)
     Traceback (most recent call last):
      ...
@@ -335,12 +344,14 @@ def _set_dims(
         # remains writeable as long as possible:
         return x
 
-    extra_dims = tuple(d for d in dim if d not in x.dims)
-    if not extra_dims:
+    missing_dims = set(x.dims) - set(dim)
+    if missing_dims:
         raise ValueError(
             f"new dimensions {dim!r} must be a superset of "
             f"existing dimensions {x.dims!r}"
         )
+
+    extra_dims = tuple(d for d in dim if d not in x.dims)
 
     if shape is not None:
         # Add dimensions, with same size as shape:
@@ -404,9 +415,10 @@ def _arithmetic_broadcast(
     if not _OPTIONS["arithmetic_broadcast"]:
         if x1.dims != x2.dims:
             raise ValueError(
-                "Broadcasting is necessary but automatic broadcasting is disabled via "
-                "global option `'arithmetic_broadcast'`. "
-                "Use `xr.set_options(arithmetic_broadcast=True)` to enable automatic broadcasting."
+                "Broadcasting is necessary but automatic broadcasting is disabled "
+                "via global option `'arithmetic_broadcast'`. "
+                "Use `xr.set_options(arithmetic_broadcast=True)` to enable "
+                "automatic broadcasting."
             )
 
     return _broadcast_arrays_with_minimal_size(x1, x2)
