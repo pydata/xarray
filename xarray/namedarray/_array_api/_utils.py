@@ -433,6 +433,10 @@ def dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
     return tuple(_dims)
 
 
+def _flattened_dims(dims: _Dims, ndim: int) -> _Dims:
+    return (dims,) if ndim > 1 else dims
+
+
 def _raise_if_any_duplicate_dimensions(
     dims: _Dims, err_context: str = "This function"
 ) -> None:
