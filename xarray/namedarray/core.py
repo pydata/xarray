@@ -504,16 +504,82 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return greater_equal(self, self._maybe_asarray(other))
 
     def __getitem__(self, key: _IndexKeyLike | NamedArray) -> NamedArray:
-        from xarray.namedarray._array_api._utils import _infer_dims
+        """
+        sdfd
+
+        Some rules
+        * Integers removes the dim.
+        * Slices and ellipsis maintains same dim.
+        * None adds a dim.
+        * tuple follows above but on that specific axis.
+
+        Examples
+        --------
+
+        1D
+
+        >>> x = NamedArray(("x",), np.array([0, 1, 2]))
+        >>> mask = NamedArray(("x",), np.array([1, 0, 0], dtype=bool))
+        >>> xm = x[mask]
+        >>> xm.dims, xm.shape
+        (('x',), (1,))
+
+        >>> x = NamedArray(("x",), np.array([0, 1, 2]))
+        >>> mask = NamedArray(("x",), np.array([0, 0, 0], dtype=bool))
+        >>> xm = x[mask]
+        >>> xm.dims, xm.shape
+        (('x',), (0,))
+
+        Setup a ND array:
+
+        >>> x = NamedArray(("x", "y"), np.arange(3*4).reshape((3, 4)))
+        >>> xm = x[0]
+        >>> xm.dims, xm.shape
+        (('y',), (4,))
+        >>> xm = x[slice(0)]
+        >>> xm.dims, xm.shape
+        (('x', 'y'), (0, 4))
+        >>> xm = x[None]
+        >>> xm.dims, xm.shape
+        (('dim_2', 'x', 'y'), (1, 3, 4))
+
+        >>> mask = NamedArray(("x", "y"), np.ones((3, 4), dtype=bool))
+        >>> xm = x[mask]
+        >>> xm.dims, xm.shape
+        ((('x', 'y'),), (12,))
+        """
+        from xarray.namedarray._array_api._manipulation_functions import (
+            _broadcast_arrays,
+            expand_dims,
+        )
+        from xarray.namedarray._array_api._utils import dims_from_tuple_indexing
 
         if isinstance(key, NamedArray):
-            _key = key._data  # TODO: Transpose, unordered dims shouldn't matter.
-            _data = self._data[_key]
-            _dims = _infer_dims(_data.shape)  # TODO: fix
+            self_new, key_new = _broadcast_arrays(self, key)
+            _data = self_new._data[key_new._data]
+            if self_new.ndim > 1:
+                # ND-arrays are raveled and then masked:
+                # _dims = f"{'_'.join(self_new.dims)}_ravel"
+                _dims = (self_new.dims,)
+            else:
+                _dims = self_new.dims
             return self._new(_dims, _data)
+        # elif isinstance(key, int):
+        #     return self._new(self.dims[1:], self._data[key])
+        # elif isinstance(key, slice) or key is ...:
+        #     return self._new(self.dims, self._data[key])
+        # elif key is None:
+        #     return expand_dims(self)
+        # elif isinstance(key, tuple):
+        #     _dims = dims_from_tuple_indexing(self.dims, key)
+        #     return self._new(_dims, self._data[key])
+
         elif isinstance(key, int | slice | tuple) or key is None or key is ...:
+            # TODO: __getitem__ not always available, use expand_dims
             _data = self._data[key]
-            _dims = _infer_dims(_data.shape)  # TODO: fix
+            _dims = dims_from_tuple_indexing(
+                self.dims, key if isinstance(key, tuple) else (key,)
+            )
             return self._new(_dims, _data)
         else:
             raise NotImplementedError(f"{key=} is not supported")
@@ -1456,7 +1522,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         Examples
         --------
         >>> data = np.asarray([[1.0, 2.0], [3.0, 4.0]])
-        >>> array = xr.NamedArray(("x", "y"), data)
+        >>> array = NamedArray(("x", "y"), data)
         >>> array.sizes
         {'x': 2, 'y': 2}
 
@@ -1511,16 +1577,11 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         Examples
         --------
-
         >>> data = np.asarray([[1.0, 2.0], [3.0, 4.0]])
-        >>> array = xr.NamedArray(("x", "y"), data)
-
-
-        # expand dimensions by specifying a new dimension name
-        >>> expanded = array.expand_dims(dim="z")
+        >>> x = NamedArray(("x", "y"), data)
+        >>> expanded = x.expand_dims(dim="z")
         >>> expanded.dims
         ('z', 'x', 'y')
-
         """
 
         from xarray.namedarray._array_api import expand_dims
@@ -1539,3 +1600,9 @@ def _raise_if_any_duplicate_dimensions(
         raise ValueError(
             f"{err_context} cannot handle duplicate dimensions, but dimensions {repeated_dims} appear more than once on this object's dims: {dims}"
         )
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
