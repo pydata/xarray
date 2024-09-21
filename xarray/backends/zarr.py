@@ -196,8 +196,6 @@ def _determine_zarr_chunks(
         # If it is possible to write on partial chunks then it is not necessary to check
         # the last one contained on the region
         allow_partial_chunks = mode != "r+"
-        # The r+ mode force to write only on full chunks, even on the last one
-        end = None if mode == "r+" else -1
 
         base_error = (
             f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
@@ -231,14 +229,21 @@ def _determine_zarr_chunks(
                     raise ValueError(base_error)
 
             if not allow_partial_chunks:
-                region_stop = interval.stop if interval.stop else size
-                cover_last_chunk = region_stop > size - size % zchunk
+                chunk_start = sum(dchunks[:-1]) + region_start
+                if chunk_start % zchunk:
+                    # The last chunk which can also be the only one is a partial chunk
+                    # if it is not aligned at the beginning
+                    raise ValueError(base_error)
 
-                if not cover_last_chunk:
-                    if dchunks[-1] % zchunk:
+                region_stop = interval.stop if interval.stop else size
+
+                if size - region_stop + 1 < zchunk:
+                    # If the region is covering the last chunk then check
+                    # if the reminder with the default chunk size
+                    # is equal to the size of the last chunk
+                    if dchunks[-1] % zchunk != size % zchunk:
                         raise ValueError(base_error)
-                elif dchunks[-1] % zchunk != size % zchunk:
-                    # The remainder must be equal to the size of the last Zarr chunk
+                elif dchunks[-1] % zchunk:
                     raise ValueError(base_error)
 
         return enc_chunks_tuple
@@ -307,6 +312,8 @@ def extract_zarr_variable_encoding(
     encoding : dict
         Zarr encoding for `variable`
     """
+
+    shape = shape if shape else variable.shape
     encoding = variable.encoding.copy()
 
     safe_to_drop = {"source", "original_shape"}
