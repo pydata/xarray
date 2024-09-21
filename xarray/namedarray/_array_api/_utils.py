@@ -423,10 +423,10 @@ def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
     """
     _dims = list(dims)
     j = 0
-    for i, v in enumerate(key):
-        if v is None:
+    for k in key:
+        if k is None:
             _dims.insert(j, _new_unique_dim_name(tuple(_dims)))
-        elif isinstance(v, int):
+        elif isinstance(k, int):
             _dims.pop(j)
             j -= 1
         j += 1
