@@ -244,7 +244,8 @@ def _ensure_1d(group: T_Group, obj: T_DataWithCoords) -> tuple[
     from xarray.core.dataarray import DataArray
 
     if isinstance(group, DataArray):
-        group, obj = broadcast(group, obj)
+        for dim in set(group.dims) - set(obj.dims):
+            obj = obj.expand_dims(dim)
         # try to stack the dims of the group into a single dim
         orig_dims = group.dims
         stacked_dim = "stacked_" + "_".join(map(str, orig_dims))
