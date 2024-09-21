@@ -71,7 +71,6 @@ if TYPE_CHECKING:
         _ScalarType,
         _Shape,
         _ShapeType,
-        _IndexKeys,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
@@ -553,8 +552,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             _broadcast_arrays,
         )
         from xarray.namedarray._array_api._utils import (
-            dims_from_tuple_indexing,
             _flattened_dims,
+            dims_from_tuple_indexing,
         )
 
         if isinstance(key, NamedArray):
