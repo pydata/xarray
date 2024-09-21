@@ -4,11 +4,11 @@ import copy
 import sys
 from abc import abstractmethod
 from collections.abc import Mapping
-from packaging import Version
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
 import numpy as np
 import pytest
+from packaging import Version
 
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.namedarray._typing import (
