@@ -9,11 +9,11 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
-from packaging.version import Version
 from typing import TYPE_CHECKING, Any, overload
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 from xarray.core import duck_array_ops
 from xarray.core.nputils import NumpyVIndexAdapter
