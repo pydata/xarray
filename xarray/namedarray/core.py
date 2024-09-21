@@ -552,8 +552,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             _broadcast_arrays,
         )
         from xarray.namedarray._array_api._utils import (
+            _dims_from_tuple_indexing,
             _flattened_dims,
-            dims_from_tuple_indexing,
         )
 
         if isinstance(key, NamedArray):
@@ -568,13 +568,13 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         # elif key is None:
         #     return expand_dims(self)
         # elif isinstance(key, tuple):
-        #     _dims = dims_from_tuple_indexing(self.dims, key)
+        #     _dims = _dims_from_tuple_indexing(self.dims, key)
         #     return self._new(_dims, self._data[key])
 
         elif isinstance(key, int | slice | tuple) or key is None or key is ...:
             # TODO: __getitem__ not always available, use expand_dims
             _data = self._data[key]
-            _dims = dims_from_tuple_indexing(
+            _dims = _dims_from_tuple_indexing(
                 self.dims, key if isinstance(key, tuple) else (key,)
             )
             return self._new(_dims, _data)

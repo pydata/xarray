@@ -400,7 +400,7 @@ def _insert_dim(dims: _Dims, dim: _Dim | Default, axis: _Axis) -> _Dims:
     return tuple(d)
 
 
-def dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
+def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
     """
     Get the expected dims when using tuples in __getitem__.
 
