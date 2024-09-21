@@ -519,7 +519,7 @@ def season_to_month_tuple(seasons: Sequence[str]) -> tuple[tuple[int, ...], ...]
     return tuple(result)
 
 
-def inds_to_string(asints: tuple[tuple[int, ...]]) -> tuple[str, ...]:
+def inds_to_string(asints: tuple[tuple[int, ...], ...]) -> tuple[str, ...]:
     inits = "JFMAMJJASOND"
     return tuple("".join([inits[i_ - 1] for i_ in t]) for t in asints)
 
@@ -611,7 +611,8 @@ class SeasonGrouper(Grouper):
             ):
                 mask = np.isin(months, season_tuple)
                 codes_[axis_index, mask] = code
-                (group_indices[code],) = mask.nonzero()
+                (indices,) = mask.nonzero()
+                group_indices[code] = indices.tolist()
 
         if np.all(codes_ == -1):
             raise ValueError(
