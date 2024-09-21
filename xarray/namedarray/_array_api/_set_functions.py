@@ -3,9 +3,8 @@ from __future__ import annotations
 from typing import Any, NamedTuple
 
 from xarray.namedarray._array_api._utils import (
-    _get_data_namespace,
-    _infer_dims,
     _flattened_dims,
+    _get_data_namespace,
 )
 from xarray.namedarray.core import NamedArray
 

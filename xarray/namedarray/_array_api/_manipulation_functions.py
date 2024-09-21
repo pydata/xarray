@@ -6,13 +6,12 @@ from typing import Any
 from xarray.namedarray._array_api._data_type_functions import result_type
 from xarray.namedarray._array_api._utils import (
     _dims_to_axis,
-    _dim_to_optional_axis,
+    _flattened_dims,
     _get_broadcasted_dims,
     _get_data_namespace,
     _infer_dims,
     _insert_dim,
     _new_unique_dim_name,
-    _flattened_dims,
 )
 from xarray.namedarray._typing import (
     Default,
@@ -99,12 +98,12 @@ def concat(
     --------
     >>> import numpy as np
     >>> x = NamedArray(("x",), np.zeros((3,)))
-    >>> x1 = concat((x, 1+x))
+    >>> x1 = concat((x, 1 + x))
     >>> x1.dims, x1.shape
     (('x',), (6,))
 
     >>> x = NamedArray(("x", "y"), np.zeros((3, 4)))
-    >>> x1 = concat((x, 1+x))
+    >>> x1 = concat((x, 1 + x))
     >>> x1.dims, x1.shape
     (('x', 'y'), (6, 4))
     """
