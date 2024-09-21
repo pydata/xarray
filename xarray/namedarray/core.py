@@ -71,6 +71,7 @@ if TYPE_CHECKING:
         _ScalarType,
         _Shape,
         _ShapeType,
+        _IndexKeys,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
@@ -551,17 +552,15 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         from xarray.namedarray._array_api._manipulation_functions import (
             _broadcast_arrays,
         )
-        from xarray.namedarray._array_api._utils import dims_from_tuple_indexing
+        from xarray.namedarray._array_api._utils import (
+            dims_from_tuple_indexing,
+            _flattened_dims,
+        )
 
         if isinstance(key, NamedArray):
             self_new, key_new = _broadcast_arrays(self, key)
             _data = self_new._data[key_new._data]
-            if self_new.ndim > 1:
-                # ND-arrays are raveled and then masked:
-                # _dims = f"{'_'.join(self_new.dims)}_ravel"
-                _dims = (self_new.dims,)
-            else:
-                _dims = self_new.dims
+            _dims = _flattened_dims(self_new.dims, self_new.ndim)
             return self._new(_dims, _data)
         # elif isinstance(key, int):
         #     return self._new(self.dims[1:], self._data[key])
