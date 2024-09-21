@@ -113,7 +113,7 @@ class ZarrArrayWrapper(BackendArray):
 
 
 def _determine_zarr_chunks(
-    enc_chunks, var_chunks, ndim, name, safe_chunks, region, mode
+    enc_chunks, var_chunks, ndim, name, safe_chunks, region, mode, shape
 ):
     """
     Given encoding chunks (possibly None or []) and variable chunks
@@ -166,7 +166,7 @@ def _determine_zarr_chunks(
     if len(enc_chunks_tuple) != ndim:
         # throw away encoding chunks, start over
         return _determine_zarr_chunks(
-            None, var_chunks, ndim, name, safe_chunks, region, mode
+            None, var_chunks, ndim, name, safe_chunks, region, mode, shape
         )
 
     for x in enc_chunks_tuple:
@@ -208,29 +208,38 @@ def _determine_zarr_chunks(
             f"or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
         )
 
-        for zchunk, dchunks, interval in zip(
-            enc_chunks_tuple, var_chunks, region, strict=True
+        for zchunk, dchunks, interval, size in zip(
+            enc_chunks_tuple, var_chunks, region, shape, strict=True
         ):
             if not safe_chunks:
                 continue
 
-            # The first border size is the amount of data that needs to be updated on the
-            # first chunk taking into account the region slice.
-            first_border_size = zchunk
-            if interval.start:
-                first_border_size = zchunk - interval.start % zchunk
-
-            if not allow_partial_chunks and first_border_size < zchunk:
-                # If the border is smaller than zchunk, then it is a partial chunk write
-                raise ValueError(base_error)
-
-            for dchunk in dchunks[:end]:
-                if (dchunk - first_border_size) % zchunk:
+            for dchunk in dchunks[1:-1]:
+                if dchunk % zchunk:
                     raise ValueError(base_error)
 
-                # The first border is only useful during the first iteration,
-                # so ignore it in the next validations
-                first_border_size = 0
+            region_start = interval.start if interval.start else 0
+
+            if len(dchunks) > 1:
+                # The first border size is the amount of data that needs to be updated on the
+                # first chunk taking into account the region slice.
+                first_border_size = zchunk
+                if allow_partial_chunks:
+                    first_border_size = zchunk - region_start % zchunk
+
+                if (dchunks[0] - first_border_size) % zchunk:
+                    raise ValueError(base_error)
+
+            if not allow_partial_chunks:
+                region_stop = interval.stop if interval.stop else size
+                cover_last_chunk = region_stop > size - size % zchunk
+
+                if not cover_last_chunk:
+                    if dchunks[-1] % zchunk:
+                        raise ValueError(base_error)
+                elif dchunks[-1] % zchunk != size % zchunk:
+                    # The remainder must be equal to the size of the last Zarr chunk
+                    raise ValueError(base_error)
 
         return enc_chunks_tuple
 
@@ -279,6 +288,7 @@ def extract_zarr_variable_encoding(
     safe_chunks=True,
     region=None,
     mode=None,
+    shape=None
 ):
     """
     Extract zarr encoding dictionary from xarray Variable
@@ -289,9 +299,9 @@ def extract_zarr_variable_encoding(
     raise_on_invalid : bool, optional
     name: str | Hashable, optional
     safe_chunks: bool, optional
-    region: tuple[slice], optional
+    region: tuple[slice, ...], optional
     mode: str, optional
-
+    shape: tuple[int, ...], optional
     Returns
     -------
     encoding : dict
@@ -331,6 +341,7 @@ def extract_zarr_variable_encoding(
         safe_chunks=safe_chunks,
         region=region,
         mode=mode,
+        shape=shape
     )
     encoding["chunks"] = chunks
     return encoding
@@ -808,6 +819,7 @@ class ZarrStore(AbstractWritableDataStore):
                 v.encoding = {}
 
             zarr_array = None
+            zarr_shape = None
             write_region = self._write_region if self._write_region is not None else {}
             write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
 
@@ -852,6 +864,8 @@ class ZarrStore(AbstractWritableDataStore):
                     new_shape[append_axis] += v.shape[append_axis]
                     zarr_array.resize(new_shape)
 
+                zarr_shape = zarr_array.shape
+
             region = tuple(write_region[dim] for dim in dims)
 
             # We need to do this for both new and existing variables to ensure we're not
@@ -862,11 +876,12 @@ class ZarrStore(AbstractWritableDataStore):
             # another one for extracting the encoding.
             encoding = extract_zarr_variable_encoding(
                 v,
-                region=region,
                 raise_on_invalid=vn in check_encoding_set,
                 name=vn,
                 safe_chunks=self._safe_chunks,
+                region=region,
                 mode=self._mode,
+                shape=zarr_shape
             )
 
             if name not in existing_keys:

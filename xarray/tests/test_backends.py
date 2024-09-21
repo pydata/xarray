@@ -6157,7 +6157,7 @@ def test_zarr_safe_chunk_region(tmp_path):
     store = tmp_path / "foo.zarr"
 
     arr = xr.DataArray(
-        list(range(10)), dims=["a"], coords={"a": list(range(10))}, name="foo"
+        list(range(11)), dims=["a"], coords={"a": list(range(11))}, name="foo"
     ).chunk(a=3)
     arr.to_zarr(store, mode="w")
 
@@ -6187,10 +6187,14 @@ def test_zarr_safe_chunk_region(tmp_path):
         # Fully update two contiguous chunks is safe in any mode
         arr.isel(a=slice(3, 9)).to_zarr(store, region="auto", mode=mode)
 
-    # Write the last chunk partially is safe in "a" mode
+        # The last chunk is considered full based on their current size (2)
+        arr.isel(a=slice(9, 11)).to_zarr(store, region="auto", mode=mode)
+        arr.isel(a=slice(6, None)).chunk(a=-1).to_zarr(store, region="auto", mode=mode)
+
+    # Write the last chunk of a region partially is safe in "a" mode
     arr.isel(a=slice(3, 8)).to_zarr(store, region="auto", mode="a")
     with pytest.raises(ValueError):
-        # with "r+" mode it is invalid to write partial chunk even on the last one
+        # with "r+" mode it is invalid to write partial chunk
         arr.isel(a=slice(3, 8)).to_zarr(store, region="auto", mode="r+")
 
     # This is safe with mode "a", the border size is covered by the first chunk of Dask
@@ -6204,12 +6208,12 @@ def test_zarr_safe_chunk_region(tmp_path):
     arr.isel(a=slice(1, 5)).chunk(a=(4,)).to_zarr(store, region="auto", mode="a")
 
     with pytest.raises(ValueError):
-        # This is unsafe on mode "r+", because there is a single dask
-        # chunk smaller than the Zarr chunk
+        # This is unsafe on mode "r+", because the Dask chunk is partially writing
+        # in the first chunk of Zarr
         arr.isel(a=slice(1, 5)).chunk(a=(4,)).to_zarr(store, region="auto", mode="r+")
 
     # The first chunk is completely covering the first Zarr chunk
-    # and the last chunk is a partial chunk
+    # and the last chunk is a partial one
     arr.isel(a=slice(0, 5)).chunk(a=(3, 2)).to_zarr(store, region="auto", mode="a")
 
     with pytest.raises(ValueError):
@@ -6227,3 +6231,28 @@ def test_zarr_safe_chunk_region(tmp_path):
     with pytest.raises(ValueError):
         # Validate that the border condition is not affecting the "r+" mode
         arr.isel(a=slice(1, 9)).to_zarr(store, region="auto", mode="r+")
+
+    arr.isel(a=slice(10, 11)).to_zarr(store, region="auto", mode="a")
+    with pytest.raises(ValueError):
+        # Validate that even if we write with a single Dask chunk on the last Zarr
+        # chunk it is still unsafe if it is not fully covering it
+        # (the last Zarr chunk has size 2)
+        arr.isel(a=slice(10, 11)).to_zarr(store, region="auto", mode="r+")
+
+    # Validate the same than the above test but in the beginning of the last chunk
+    arr.isel(a=slice(9, 10)).to_zarr(store, region="auto", mode="a")
+    with pytest.raises(ValueError):
+        arr.isel(a=slice(9, 10)).to_zarr(store, region="auto", mode="r+")
+
+    arr.isel(a=slice(7, None)).chunk(a=-1).to_zarr(store, region="auto", mode="a")
+    with pytest.raises(ValueError):
+        # Test that even a Dask chunk that covers the last Zarr chunk can be unsafe
+        # if it is partial covering other Zarr chunks
+        arr.isel(a=slice(7, None)).chunk(a=-1).to_zarr(store, region="auto", mode="r+")
+
+    with pytest.raises(ValueError):
+        # If the chunk is of size equal to the one in the Zarr encoding, but
+        # it is partially writing in the last chunk then raise an error
+        arr.isel(a=slice(8, None)).chunk(a=3).to_zarr(store, region="auto", mode="r+")
+
+
