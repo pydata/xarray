@@ -5,6 +5,7 @@ from typing import Any, NamedTuple
 from xarray.namedarray._array_api._utils import (
     _get_data_namespace,
     _infer_dims,
+    _flattened_dims,
 )
 from xarray.namedarray.core import NamedArray
 
@@ -29,42 +30,85 @@ class UniqueInverseResult(NamedTuple):
 def unique_all(x: NamedArray[Any, Any], /) -> UniqueAllResult:
     xp = _get_data_namespace(x)
     values, indices, inverse_indices, counts = xp.unique_all(x._data)
-    _dims_values = _infer_dims(values.shape)  # TODO: Fix
-    _dims_indices = _infer_dims(indices.shape)  # TODO: Fix dims
-    _dims_inverse_indices = _infer_dims(inverse_indices.shape)  # TODO: Fix dims
-    _dims_counts = _infer_dims(counts.shape)  # TODO: Fix dims
+    _dims = _flattened_dims(x.dims, x.ndim)
     return UniqueAllResult(
-        NamedArray(_dims_values, values),
-        NamedArray(_dims_indices, indices),
-        NamedArray(_dims_inverse_indices, inverse_indices),
-        NamedArray(_dims_counts, counts),
+        NamedArray(_dims, values),
+        NamedArray(_dims, indices),
+        NamedArray(_dims, inverse_indices),
+        NamedArray(_dims, counts),
     )
 
 
 def unique_counts(x: NamedArray[Any, Any], /) -> UniqueCountsResult:
+    """
+    Returns the unique elements of an input array x and the corresponding
+    counts for each unique element in x.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x",), np.array([0, 1, 2, 2], dtype=int))
+    >>> x_unique = unique_counts(x)
+    >>> x_unique.values
+    >>> x_unique.counts
+
+    >>> x = NamedArray(("x", "y"), np.array([0, 1, 2, 2], dtype=int).reshape((2, 2)))
+    >>> x_unique = unique_counts(x)
+    >>> x_unique.values
+    >>> x_unique.counts
+    """
     xp = _get_data_namespace(x)
     values, counts = xp.unique_counts(x._data)
-    _dims_values = _infer_dims(values.shape)  # TODO:  Fix dims
-    _dims_counts = _infer_dims(counts.shape)  # TODO: Fix dims
+    _dims = _flattened_dims(x.dims, x.ndim)
     return UniqueCountsResult(
-        NamedArray(_dims_values, values),
-        NamedArray(_dims_counts, counts),
+        NamedArray(_dims, values),
+        NamedArray(_dims, counts),
     )
 
 
 def unique_inverse(x: NamedArray[Any, Any], /) -> UniqueInverseResult:
+    """
+    Returns the unique elements of an input array x and the indices
+    from the set of unique elements that reconstruct x.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x",), np.array([0, 1, 2, 2], dtype=int))
+    >>> x_unique = unique_inverse(x)
+    >>> x_unique.values
+    >>> x_unique.counts
+    >>> x = NamedArray(("x", "y"), np.array([0, 1, 2, 2], dtype=int).reshape((2, 2)))
+    >>> x_unique = unique_inverse(x)
+    >>> x_unique.dims, x_unique.shape
+    (('x',), (3,))
+    """
     xp = _get_data_namespace(x)
     values, inverse_indices = xp.unique_inverse(x._data)
-    _dims_values = _infer_dims(values.shape)  # TODO: Fix
-    _dims_inverse_indices = _infer_dims(inverse_indices.shape)  # TODO: Fix dims
+    _dims = _flattened_dims(x.dims, x.ndim)
     return UniqueInverseResult(
-        NamedArray(_dims_values, values),
-        NamedArray(_dims_inverse_indices, inverse_indices),
+        NamedArray(_dims, values),
+        NamedArray(_dims, inverse_indices),
     )
 
 
 def unique_values(x: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
+    """
+    Returns the unique elements of an input array x.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x",), np.array([0, 1, 2, 2], dtype=int))
+    >>> x_unique = unique_values(x)
+    >>> x_unique.dims, x_unique.shape
+    (('x',), (3,))
+    >>> x = NamedArray(("x", "y"), np.array([0, 1, 2, 2], dtype=int).reshape((2, 2)))
+    >>> x_unique = unique_values(x)
+    >>> x_unique.dims, x_unique.shape
+    (('x',), (3,))
+    """
     xp = _get_data_namespace(x)
     _data = xp.unique_values(x._data)
-    _dims = _infer_dims(_data.shape)  # TODO: Fix
+    _dims = _flattened_dims(x.dims, x.ndim)
     return x._new(_dims, _data)

@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from xarray.namedarray._array_api._data_type_functions import result_type
 from xarray.namedarray._array_api._utils import (
     _dims_to_axis,
+    _dim_to_optional_axis,
     _get_broadcasted_dims,
     _get_data_namespace,
     _infer_dims,
     _insert_dim,
+    _new_unique_dim_name,
+    _flattened_dims,
 )
 from xarray.namedarray._typing import (
     Default,
@@ -88,12 +92,29 @@ def concat(
     *,
     axis: _Axis | None = 0,
 ) -> NamedArray[Any, Any]:
-    xp = _get_data_namespace(arrays[0])
+    """
+    Joins a sequence of arrays along an existing axis.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x",), np.zeros((3,)))
+    >>> x1 = concat((x, 1+x))
+    >>> x1.dims, x1.shape
+    (('x',), (6,))
+
+    >>> x = NamedArray(("x", "y"), np.zeros((3, 4)))
+    >>> x1 = concat((x, 1+x))
+    >>> x1.dims, x1.shape
+    (('x', 'y'), (6, 4))
+    """
+    x = arrays[0]
+    xp = _get_data_namespace(x)
+    _axis = axis  # TODO: add support for dim?
     dtype = result_type(*arrays)
     _arrays = tuple(a._data for a in arrays)
-    _data = xp.concat(_arrays, axis=axis, dtype=dtype)
-    _dims = _infer_dims(_data.shape)
-    return NamedArray(_dims, _data)
+    _data = xp.concat(_arrays, axis=_axis, dtype=dtype)
+    return NamedArray(x.dims, _data)
 
 
 def expand_dims(
@@ -219,9 +240,41 @@ def repeat(
 def reshape(
     x: NamedArray[Any, _DType], /, shape: _ShapeType, *, copy: bool | None = None
 ) -> NamedArray[_ShapeType, _DType]:
+    """
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x",), np.zeros((3,)))
+    >>> x1 = reshape(x, (-1,))
+    >>> x1.dims, x1.shape
+    (('x',), (3,))
+
+    To N-dimensions
+
+    >>> x1 = reshape(x, (1, -1, 1))
+    >>> x1.dims, x1.shape
+    (('dim_0', 'x', 'dim_2'), (1, 3, 1))
+
+    >>> x = NamedArray(("x", "y"), np.zeros((3, 4)))
+    >>> x1 = reshape(x, (-1,))
+    >>> x1.dims, x1.shape
+    ((('x', 'y'),), (12,))
+
+    """
     xp = _get_data_namespace(x)
     _data = xp.reshape(x._data, shape, copy=copy)
-    _dims = _infer_dims(_data.shape)  # TODO: Fix dims
+
+    if math.prod(shape) == -1:
+        # Flattening operations merges all dimensions to 1:
+        dims_raveled = _flattened_dims(x.dims, x.ndim)
+        dim = dims_raveled[0]
+        d = []
+        for v in shape:
+            d.append(dim if v == -1 else _new_unique_dim_name(tuple(d)))
+        _dims = tuple(d)
+    else:
+        _dims = _infer_dims(_data.shape, x.dims)
     return x._new(_dims, _data)
 
 
