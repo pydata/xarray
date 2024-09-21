@@ -163,7 +163,7 @@ class AbstractArray:
         return complex(self.values)
 
     def __array__(
-        self: Any, dtype: np.typing.DTypeLike = None, copy: bool | None = None
+        self: Any, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if not copy:
             if np.lib.NumpyVersion(np.__version__) >= "2.0.0":
