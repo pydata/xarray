@@ -264,7 +264,7 @@ def reshape(
     xp = _get_data_namespace(x)
     _data = xp.reshape(x._data, shape, copy=copy)
 
-    if math.prod(shape) == -1:
+    if math.prod(shape) == -1 and False:
         # Flattening operations merges all dimensions to 1:
         dims_raveled = _flattened_dims(x.dims, x.ndim)
         dim = dims_raveled[0]
