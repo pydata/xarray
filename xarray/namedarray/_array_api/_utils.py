@@ -20,6 +20,7 @@ from xarray.namedarray._typing import (
     _dtype,
     _Shape,
     duckarray,
+    _IndexKeys,
 )
 from xarray.namedarray.core import NamedArray
 
@@ -366,15 +367,70 @@ def _get_remaining_dims(
     return dims, data
 
 
+def _new_unique_dim_name(dims: _Dims, i=None) -> _Dim:
+    """
+    Get a new unique dimension name.
+
+    Examples
+    --------
+    >>> _new_unique_dim_name(())
+    'dim_0'
+    >>> _new_unique_dim_name(("dim_0",))
+    'dim_1'
+    >>> _new_unique_dim_name(("dim_1", "dim_0"))
+    'dim_2'
+    >>> _new_unique_dim_name(("dim_0", "dim_2"))
+    'dim_3'
+    >>> _new_unique_dim_name(("dim_3", "dim_2"))
+    'dim_4'
+    """
+    i = len(dims) if i is None else i
+    _dim: _Dim = f"dim_{i}"
+    return _new_unique_dim_name(dims, i=i + 1) if _dim in dims else _dim
+
+
 def _insert_dim(dims: _Dims, dim: _Dim | Default, axis: _Axis) -> _Dims:
     if isinstance(dim, Default):
-        _dim: _Dim = f"dim_{len(dims)}"
+        _dim: _Dim = _new_unique_dim_name(dims)
     else:
         _dim = dim
 
     d = list(dims)
     d.insert(axis, _dim)
     return tuple(d)
+
+
+def dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
+    """
+    Get the expected dims when using tuples in __getitem__.
+
+    Examples
+    --------
+    >>> dims_from_tuple_indexing(("x", "y"), ())
+    ('x', 'y')
+    >>> dims_from_tuple_indexing(("x", "y"), (0,))
+    ('y',)
+    >>> dims_from_tuple_indexing(("x", "y"), (0, 0))
+    ()
+    >>> dims_from_tuple_indexing(("x", "y"), (0, ...))
+    ('y',)
+    >>> dims_from_tuple_indexing(("x", "y"), (0, slice(0)))
+    ('y',)
+    >>> dims_from_tuple_indexing(("x", "y"), (None,))
+    ('dim_2', 'x', 'y')
+    >>> dims_from_tuple_indexing(("x", "y"), (0, None, None, 0))
+    ('dim_1', 'dim_2')
+    """
+    _dims = list(dims)
+    j = 0
+    for i, v in enumerate(key):
+        if v is None:
+            _dims.insert(j, _new_unique_dim_name(tuple(_dims)))
+        elif isinstance(v, int):
+            _dims.pop(j)
+            j -= 1
+        j += 1
+    return tuple(_dims)
 
 
 def _raise_if_any_duplicate_dimensions(
