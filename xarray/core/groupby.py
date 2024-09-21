@@ -1159,9 +1159,6 @@ class GroupBy(Generic[T_Xarray]):
            "Sample quantiles in statistical packages,"
            The American Statistician, 50(4), pp. 361-365, 1996
         """
-        if dim is None:
-            dim = (self._group_dim,)
-
         # Dataset.quantile does this, do it for flox to ensure same output.
         q = np.asarray(q, dtype=np.float64)
 
@@ -1180,7 +1177,7 @@ class GroupBy(Generic[T_Xarray]):
                 self._obj.__class__.quantile,
                 shortcut=False,
                 q=q,
-                dim=dim,
+                dim=dim or self._group_dim,
                 method=method,
                 keep_attrs=keep_attrs,
                 skipna=skipna,
