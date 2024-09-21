@@ -9,6 +9,7 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
+from packaging.version import Version
 from typing import TYPE_CHECKING, Any, overload
 
 import numpy as np
@@ -509,7 +510,10 @@ class ExplicitlyIndexed:
         self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         # Leave casting to an array up to the underlying array type.
-        return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
+        if Version(np.__version__) >= Version("2.0.0"):
+            return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
+        else:
+            return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def get_duck_array(self):
         return self.array
