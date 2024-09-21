@@ -18,9 +18,9 @@ from xarray.namedarray._typing import (
     _DimsLike2,
     _DType,
     _dtype,
+    _IndexKeys,
     _Shape,
     duckarray,
-    _IndexKeys,
 )
 from xarray.namedarray.core import NamedArray
 

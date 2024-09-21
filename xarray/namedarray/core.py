@@ -532,7 +532,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         Setup a ND array:
 
-        >>> x = NamedArray(("x", "y"), np.arange(3*4).reshape((3, 4)))
+        >>> x = NamedArray(("x", "y"), np.arange(3 * 4).reshape((3, 4)))
         >>> xm = x[0]
         >>> xm.dims, xm.shape
         (('y',), (4,))
@@ -550,7 +550,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """
         from xarray.namedarray._array_api._manipulation_functions import (
             _broadcast_arrays,
-            expand_dims,
         )
         from xarray.namedarray._array_api._utils import dims_from_tuple_indexing
 
