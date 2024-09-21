@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
 import numpy as np
 import pytest
-from packaging import Version
+from packaging.version import Version
 
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.namedarray._typing import (
