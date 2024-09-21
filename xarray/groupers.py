@@ -9,8 +9,10 @@ from __future__ import annotations
 import datetime
 import itertools
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
@@ -517,9 +519,8 @@ def season_to_month_tuple(seasons: Sequence[str]) -> tuple[tuple[int, ...], ...]
     return tuple(result)
 
 
-def to_string(asints: tuple[tuple[tuple[int]]]):
+def inds_to_string(asints: tuple[tuple[int, ...]]) -> tuple[str, ...]:
     inits = "JFMAMJJASOND"
-
     return tuple("".join([inits[i_ - 1] for i_ in t]) for t in asints)
 
 
@@ -530,33 +531,39 @@ class SeasonsGroup:
     codes: Sequence[int]
 
 
-def find_independent_seasons(seasons: Sequence[str]):
-    from collections import defaultdict
-    from itertools import chain
-
+def find_independent_seasons(seasons: Sequence[str]) -> Sequence[SeasonsGroup]:
+    """
+    Iterates though a list of seasons e.g. ["DJF", "FMA", ...],
+    and splits that into multiple sequences of non-overlapping seasons.
+    """
     sinds = season_to_month_tuple(seasons)
     grouped = defaultdict(list)
     codes = defaultdict(list)
+    seen: set[tuple[int, ...]] = set()
     idx = 0
-    seen: set[int] = set()
-    for i, first in enumerate(sinds):
-        if first not in seen:
-            grouped[idx].append(first)
+    # This is quadratic, but the length of seasons is at most 12
+    for i, current in enumerate(sinds):
+        # Start with a group
+        if current not in seen:
+            grouped[idx].append(current)
             codes[idx].append(i)
-            seen.update((first,))
+            seen.add(current)
 
+        # Loop through remaining groups, and look for overlaps
         for j, second in enumerate(sinds[i:]):
             if not (set(chain(*grouped[idx])) & set(second)):
                 if second not in seen:
                     grouped[idx].append(second)
                     codes[idx].append(j + i)
-                    seen.update((second,))
+                    seen.add(second)
+        if len(seen) == len(seasons):
+            break
+        # found all non-overlapping groups for this row, increment and start over
         idx += 1
 
-    grouped_ints = [idx for idx in grouped.values() if idx]
-    # TODO: inds is unncessary
+    grouped_ints = tuple(tuple(idx) for idx in grouped.values() if idx)
     return [
-        SeasonsGroup(seasons=to_string(inds), inds=inds, codes=codes)
+        SeasonsGroup(seasons=inds_to_string(inds), inds=inds, codes=codes)
         for inds, codes in zip(grouped_ints, codes.values(), strict=False)
     ]
 
@@ -573,15 +580,19 @@ class SeasonGrouper(Grouper):
     Examples
     --------
     >>> SeasonGrouper(["JF", "MAM", "JJAS", "OND"])
-    >>> SeasonGrouper(["DJFM", "AM", "JJA", "SON"])
+    SeasonGrouper(seasons=['JF', 'MAM', 'JJAS', 'OND'])
+
+    The ordering is preserved
+    >>> SeasonGrouper(["MAM", "JJAS", "OND", "JF"])
+    SeasonGrouper(seasons=['MAM', 'JJAS', 'OND', 'JF'])
+
+    Overlapping seasons are allowed
+    >>> SeasonGrouper(["DJFM", "MAMJ", "JJAS", "SOND"])
+    SeasonGrouper(seasons=['DJFM', 'MAMJ', 'JJAS', 'SOND'])
     """
 
     seasons: Sequence[str]
-    # season_inds: Sequence[Sequence[int]] = field(init=False, repr=False)
     # drop_incomplete: bool = field(default=True) # TODO
-
-    # def __post_init__(self) -> None:
-    # self.season_inds = season_to_month_tuple(self.seasons)
 
     def factorize(self, group: T_Group) -> EncodedGroups:
         if TYPE_CHECKING:
@@ -640,7 +651,10 @@ class SeasonResampler(Resampler):
     Examples
     --------
     >>> SeasonResampler(["JF", "MAM", "JJAS", "OND"])
+    SeasonResampler(seasons=['JF', 'MAM', 'JJAS', 'OND'], drop_incomplete=True)
+
     >>> SeasonResampler(["DJFM", "AM", "JJA", "SON"])
+    SeasonResampler(seasons=['DJFM', 'AM', 'JJA', 'SON'], drop_incomplete=True)
     """
 
     seasons: Sequence[str]
