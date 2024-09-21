@@ -574,7 +574,10 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
     def __array__(
         self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
-        return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
+        if Version(np.__version__) >= Version("2.0.0"):
+            return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
+        else:
+            return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def get_duck_array(self):
         return self.array.get_duck_array()
@@ -1684,7 +1687,11 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             with suppress(AttributeError):
                 # this might not be public API
                 array = array.astype("object")
-        return np.asarray(array.values, dtype=dtype, copy=copy)
+
+        if Version(np.__version__) >= Version("2.0.0"):
+            return np.asarray(array.values, dtype=dtype, copy=copy)
+        else:
+            return np.asarray(array.values, dtype=dtype)
 
     def get_duck_array(self) -> np.ndarray:
         return np.asarray(self)

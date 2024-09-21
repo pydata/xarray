@@ -4,6 +4,7 @@ import copy
 import sys
 from abc import abstractmethod
 from collections.abc import Mapping
+from packaging import Version
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
 import numpy as np
@@ -56,7 +57,11 @@ class CustomArray(
     def __array__(
         self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
     ) -> np.ndarray[Any, np.dtype[np.generic]]:
-        return np.asarray(self.array, dtype=dtype, copy=copy)
+
+        if Version(np.__version__) >= Version("2.0.0"):
+            return np.asarray(self.array, dtype=dtype, copy=copy)
+        else:
+            return np.asarray(self.array, dtype=dtype)
 
 
 class CustomArrayIndexable(
