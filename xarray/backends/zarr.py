@@ -288,7 +288,7 @@ def extract_zarr_variable_encoding(
     safe_chunks=True,
     region=None,
     mode=None,
-    shape=None
+    shape=None,
 ):
     """
     Extract zarr encoding dictionary from xarray Variable
@@ -341,7 +341,7 @@ def extract_zarr_variable_encoding(
         safe_chunks=safe_chunks,
         region=region,
         mode=mode,
-        shape=shape
+        shape=shape,
     )
     encoding["chunks"] = chunks
     return encoding
@@ -881,7 +881,7 @@ class ZarrStore(AbstractWritableDataStore):
                 safe_chunks=self._safe_chunks,
                 region=region,
                 mode=self._mode,
-                shape=zarr_shape
+                shape=zarr_shape,
             )
 
             if name not in existing_keys:

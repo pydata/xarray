@@ -6254,5 +6254,3 @@ def test_zarr_safe_chunk_region(tmp_path):
         # If the chunk is of size equal to the one in the Zarr encoding, but
         # it is partially writing in the last chunk then raise an error
         arr.isel(a=slice(8, None)).chunk(a=3).to_zarr(store, region="auto", mode="r+")
-
-
