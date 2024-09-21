@@ -507,7 +507,7 @@ class ExplicitlyIndexed:
 
     def __array__(self, dtype: np.typing.DTypeLike = None) -> np.ndarray:
         # Leave casting to an array up to the underlying array type.
-        return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
+        return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def get_duck_array(self):
         return self.array
@@ -1682,7 +1682,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             with suppress(AttributeError):
                 # this might not be public API
                 array = array.astype("object")
-        return np.asarray(array.values, dtype=dtype, copy=copy)
+        return np.asarray(array.values, dtype=dtype)
 
     def get_duck_array(self) -> np.ndarray:
         return np.asarray(self)
@@ -1839,7 +1839,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
                 self.array.get_level_values(self.level).values, dtype=dtype
             )
         else:
-            return super().__array__(dtype, copy=copy)
+            return super().__array__(dtype)
 
     def _convert_scalar(self, item):
         if isinstance(item, tuple) and self.level is not None:
