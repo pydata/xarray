@@ -34,7 +34,7 @@ def matmul(
 
     >>> a = NamedArray(("z", "y", "x"), np.arange(2 * 2 * 4).reshape((2, 2, 4)))
     >>> b = NamedArray(("z", "y", "x"), np.arange(2 * 2 * 4).reshape((2, 4, 2)))
-    >>> axb = matmul(a,b)
+    >>> axb = matmul(a, b)
     >>> axb.dims, axb.shape
     """
     xp = _get_data_namespace(x1)
