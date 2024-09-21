@@ -111,6 +111,8 @@ def _infer_dims(
     >>> _infer_dims((3, 1))
     ('dim_1', 'dim_0')
 
+    >>> _infer_dims((), ())
+    ()
     >>> _infer_dims((1,), "x")
     ('x',)
     >>> _infer_dims((1,), None)
@@ -406,19 +408,19 @@ def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
 
     Examples
     --------
-    >>> dims_from_tuple_indexing(("x", "y"), ())
+    >>> _dims_from_tuple_indexing(("x", "y"), ())
     ('x', 'y')
-    >>> dims_from_tuple_indexing(("x", "y"), (0,))
+    >>> _dims_from_tuple_indexing(("x", "y"), (0,))
     ('y',)
-    >>> dims_from_tuple_indexing(("x", "y"), (0, 0))
+    >>> _dims_from_tuple_indexing(("x", "y"), (0, 0))
     ()
-    >>> dims_from_tuple_indexing(("x", "y"), (0, ...))
+    >>> _dims_from_tuple_indexing(("x", "y"), (0, ...))
     ('y',)
-    >>> dims_from_tuple_indexing(("x", "y"), (0, slice(0)))
+    >>> _dims_from_tuple_indexing(("x", "y"), (0, slice(0)))
     ('y',)
-    >>> dims_from_tuple_indexing(("x", "y"), (None,))
+    >>> _dims_from_tuple_indexing(("x", "y"), (None,))
     ('dim_2', 'x', 'y')
-    >>> dims_from_tuple_indexing(("x", "y"), (0, None, None, 0))
+    >>> _dims_from_tuple_indexing(("x", "y"), (0, None, None, 0))
     ('dim_1', 'dim_2')
     """
     _dims = list(dims)

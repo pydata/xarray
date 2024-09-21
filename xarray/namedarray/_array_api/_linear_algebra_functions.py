@@ -10,6 +10,33 @@ from xarray.namedarray.core import NamedArray
 def matmul(
     x1: NamedArray[Any, Any], x2: NamedArray[Any, Any], /
 ) -> NamedArray[Any, Any]:
+    """
+    Matrix product of two arrays.
+
+    Examples
+    --------
+    For 2-D arrays it is the matrix product:
+
+    >>> import numpy as np
+    >>> a = NamedArray(("y", "x"), np.array([[1, 0], [0, 1]]))
+    >>> b = NamedArray(("y", "x"), np.array([[4, 1], [2, 2]]))
+    >>> matmul(a, b)
+    <Namedarray, shape=(2, 2), dims=('y', 'x'), dtype=int64, data=[[4 1]
+     [2 2]]>
+
+    For 2-D mixed with 1-D, the result is the usual.
+
+    >>> a = NamedArray(("y", "x"), np.array([[1, 0], [0, 1]]))
+    >>> b = NamedArray(("x",), np.array([1, 2]))
+    >>> matmul(a, b)
+
+    Broadcasting is conventional for stacks of arrays
+
+    >>> a = NamedArray(("z", "y", "x"), np.arange(2 * 2 * 4).reshape((2, 2, 4)))
+    >>> b = NamedArray(("z", "y", "x"), np.arange(2 * 2 * 4).reshape((2, 4, 2)))
+    >>> axb = matmul(a,b)
+    >>> axb.dims, axb.shape
+    """
     xp = _get_data_namespace(x1)
     _data = xp.matmul(x1._data, x2._data)
     # TODO: Figure out a better way:
