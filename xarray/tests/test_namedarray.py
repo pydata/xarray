@@ -53,8 +53,10 @@ class CustomArrayBase(Generic[_ShapeType_co, _DType_co]):
 class CustomArray(
     CustomArrayBase[_ShapeType_co, _DType_co], Generic[_ShapeType_co, _DType_co]
 ):
-    def __array__(self) -> np.ndarray[Any, np.dtype[np.generic]]:
-        return np.array(self.array)
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray[Any, np.dtype[np.generic]]:
+        return np.asarray(self.array, dtype=dtype, copy=copy)
 
 
 class CustomArrayIndexable(

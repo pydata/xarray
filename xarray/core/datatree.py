@@ -55,6 +55,7 @@ except ImportError:
     from xarray.core.dataset import calculate_dimensions
 
 if TYPE_CHECKING:
+    import numpy as np
     import pandas as pd
 
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
@@ -737,7 +738,9 @@ class DataTree(
     def __iter__(self) -> Iterator[str]:
         return itertools.chain(self._data_variables, self._children)  # type: ignore[arg-type]
 
-    def __array__(self, dtype=None, copy=None):
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray:
         raise TypeError(
             "cannot directly convert a DataTree into a "
             "numpy array. Instead, create an xarray.DataArray "
