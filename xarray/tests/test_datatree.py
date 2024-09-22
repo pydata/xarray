@@ -1553,7 +1553,7 @@ class TestOps:
     def test_arithmetic_inherited_coords(self):
         tree = DataTree(xr.Dataset(coords={"x": [1, 2, 3]}))
         tree["/foo"] = DataTree(xr.Dataset({"bar": ("x", [4, 5, 6])}))
-        actual = 2 * tree  # type: ignore
+        actual: DataTree = 2 * tree  # type: ignore[assignment,operator]
 
         actual_dataset = actual.children["foo"].to_dataset(inherited=False)
         assert "x" not in actual_dataset.coords
