@@ -273,7 +273,9 @@ def reshape(
             d.append(dim if v == -1 else _new_unique_dim_name(tuple(d)))
         _dims = tuple(d)
     else:
-        _dims = _infer_dims(_data.shape, x.dims)
+        # _dims = _infer_dims(_data.shape, x.dims)
+        _dims = _infer_dims(_data.shape)
+
     return x._new(_dims, _data)
 
 
