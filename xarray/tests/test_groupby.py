@@ -3177,6 +3177,9 @@ def test_season_resampler():
     # skip september
     da.groupby(time=SeasonResampler(["DJF", "MAM", "JJA", "ON"])).sum()
 
+    # "subsampling"
+    da.groupby(time=SeasonResampler(["JJAS"])).sum()
+
     # overlapping
     with pytest.raises(ValueError):
         da.groupby(time=SeasonResampler(["DJFM", "MAMJ", "JJAS", "SOND"])).sum()
