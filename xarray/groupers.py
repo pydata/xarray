@@ -21,14 +21,21 @@ import pandas as pd
 from numpy.typing import ArrayLike
 
 from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
+from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops
 from xarray.core.computation import apply_ufunc
 from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.coordinates import Coordinates
 from xarray.core.common import _contains_datetime_like_objects
+from xarray.core.common import _contains_datetime_like_objects
+from xarray.core.common import (
+    _contains_cftime_datetimes,
+    _contains_datetime_like_objects,
+)
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.duck_array_ops import isnull
+from xarray.core.formatting import first_n_items
 from xarray.core.groupby import T_Group, _DummyGroup
 from xarray.core.indexes import safe_cast_to_index
 from xarray.core.resample_cftime import CFTimeGrouper
@@ -567,7 +574,7 @@ def season_to_month_tuple(seasons: Sequence[str]) -> tuple[tuple[int, ...], ...]
     initials = "JFMAMJJASOND"
     starts = dict(
         ("".join(s), i + 1)
-        for s, i in zip(sliding_window(2, initials + "J"), range(12), strict=False)
+        for s, i in zip(sliding_window(2, initials + "J"), range(12), strict=True)
     )
     result: list[tuple[int, ...]] = []
     for i, season in enumerate(seasons):
@@ -757,7 +764,7 @@ class SeasonResampler(Resampler):
         season_label = np.full(group.shape, "", dtype=f"U{nstr}")
 
         # offset years for seasons with December and January
-        for season_str, season_ind in zip(seasons, season_inds, strict=False):
+        for season_str, season_ind in zip(seasons, season_inds, strict=True):
             season_label[month.isin(season_ind)] = season_str
             if "DJ" in season_str:
                 after_dec = season_ind[season_str.index("D") + 1 :]
@@ -775,10 +782,17 @@ class SeasonResampler(Resampler):
         first_items = g.first()
         counts = g.count()
 
+        if _contains_cftime_datetimes(group.data):
+            index_class = CFTimeIndex
+            datetime_class = type(first_n_items(group.data, 1).item())
+        else:
+            index_class = pd.DatetimeIndex
+            datetime_class = datetime.datetime
+
         # these are the seasons that are present
-        unique_coord = pd.DatetimeIndex(
+        unique_coord = index_class(
             [
-                pd.Timestamp(year=year, month=season_tuples[season][0], day=1)
+                datetime_class(year=year, month=season_tuples[season][0], day=1)
                 for year, season in first_items.index
             ]
         )
@@ -806,12 +820,12 @@ class SeasonResampler(Resampler):
                     unique_codes[idx] = -1
 
         # all years and seasons
-        complete_index = pd.DatetimeIndex(
+        complete_index = index_class(
             # This sorted call is a hack. It's hard to figure out how
             # to start the iteration
             sorted(
                 [
-                    pd.Timestamp(f"{y}-{m}-01")
+                    datetime_class(year=y, month=m, day=1)
                     for y, m in itertools.product(
                         range(year[0].item(), year[-1].item() + 1),
                         [s[0] for s in season_inds],
