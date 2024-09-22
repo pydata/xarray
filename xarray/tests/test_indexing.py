@@ -913,7 +913,10 @@ class ArrayWithNamespaceAndArrayFunction:
 
 
 def as_dask_array(arr, chunks):
-    import dask.array as da
+    try:
+        import dask.array as da
+    except ImportError:
+        return None
 
     return da.from_array(arr, chunks=chunks)
 
