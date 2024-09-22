@@ -1,4 +1,5 @@
 import re
+import sys
 import typing
 from copy import copy, deepcopy
 from textwrap import dedent
@@ -14,6 +15,8 @@ from xarray.core.datatree_ops import _MAPPED_DOCSTRING_ADDENDUM, insert_doc_adde
 from xarray.core.treenode import NotFoundInTreeError
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import assert_array_equal, create_test_data, source_ndarray
+
+ON_WINDOWS = sys.platform == "win32"
 
 
 class TestTreeCreation:
@@ -1052,7 +1055,7 @@ class TestRepr:
             {
                 "/": Dataset(coords={"x": [1.0]}),
                 "/first_child": None,
-                "/second_child": Dataset({"foo": ("x", [0.0])}, coords={"z": 1}),
+                "/second_child": Dataset({"foo": ("x", [0.0])}, coords={"z": 1.0}),
             }
         )
 
@@ -1068,7 +1071,7 @@ class TestRepr:
             └── Group: /second_child
                     Dimensions:  (x: 1)
                     Coordinates:
-                        z        int64 8B 1
+                        z        float64 8B 1.0
                     Data variables:
                         foo      (x) float64 8B 0.0
             """
@@ -1094,7 +1097,7 @@ class TestRepr:
             Group: /second_child
                 Dimensions:  (x: 1)
                 Coordinates:
-                    z        int64 8B 1
+                    z        float64 8B 1.0
                 Inherited coordinates:
                   * x        (x) float64 8B 1.0
                 Data variables:
@@ -1142,6 +1145,9 @@ class TestRepr:
         ).strip()
         assert result == expected
 
+    @pytest.mark.skipif(
+        ON_WINDOWS, reason="windows (pre NumPy2) uses int32 instead of int64"
+    )
     def test_doc_example(self):
         # regression test for https://github.com/pydata/xarray/issues/9499
         time = xr.DataArray(data=["2022-01", "2023-01"], dims="time")
