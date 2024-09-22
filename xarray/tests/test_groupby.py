@@ -12,7 +12,7 @@ import pytest
 from packaging.version import Version
 
 import xarray as xr
-from xarray import DataArray, Dataset, Variable
+from xarray import DataArray, Dataset, Variable, cftime_range
 from xarray.core.alignment import broadcast
 from xarray.core.groupby import _consolidate_slices
 from xarray.core.types import InterpOptions, ResampleCompatible
@@ -20,6 +20,7 @@ from xarray.groupers import (
     BinGrouper,
     EncodedGroups,
     Grouper,
+    SeasonResampler,
     TimeResampler,
     UniqueGrouper,
     season_to_month_tuple,
@@ -3161,6 +3162,24 @@ def test_season_to_month_tuple():
         (6, 7, 8, 9),
         (10, 11),
     )
+
+
+def test_season_resampler():
+    time = cftime_range("2001-01-01", "2002-12-30", freq="D", calendar="360_day")
+    da = DataArray(np.ones(time.size), dims="time", coords={"time": time})
+
+    # through resample
+    da.resample(time=SeasonResampler(["DJF", "MAM", "JJA", "SON"])).sum()
+
+    # through groupby
+    da.groupby(time=SeasonResampler(["DJF", "MAM", "JJA", "SON"])).sum()
+
+    # skip september
+    da.groupby(time=SeasonResampler(["DJF", "MAM", "JJA", "ON"])).sum()
+
+    # overlapping
+    with pytest.raises(ValueError):
+        da.groupby(time=SeasonResampler(["DJFM", "MAMJ", "JJAS", "SOND"])).sum()
 
 
 # Possible property tests
