@@ -6161,7 +6161,8 @@ def test_zarr_safe_chunk_region(tmp_path):
     ).chunk(a=3)
     arr.to_zarr(store, mode="w")
 
-    for mode in ["r+", "a"]:
+    modes: list[Literal["r+", "a"]] = ["r+", "a"]
+    for mode in modes:
         with pytest.raises(ValueError):
             # There are two Dask chunks on the same Zarr chunk,
             # which means that it is unsafe in any mode
