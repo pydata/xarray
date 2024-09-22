@@ -1190,6 +1190,22 @@ class TestInheritance:
         xr.testing.assert_equal(dt["/b/y"], xr.DataArray(2, coords=sub_coords))
         xr.testing.assert_equal(dt["/b/z"], xr.DataArray(3, coords=sub_coords))
 
+    def test_inherited_coords_with_index_are_deduplicated(self):
+        dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2]}),
+                "/b": xr.Dataset(coords={"x": [1, 2]}),
+            }
+        )
+        child_dataset = dt.children["b"].to_dataset(inherited=False)
+        expected = xr.Dataset()
+        assert_identical(child_dataset, expected)
+
+        dt["/c"] = xr.Dataset({"foo": ("x", [4, 5])}, coords={"x": [1, 2]})
+        child_dataset = dt.children["c"].to_dataset(inherited=False)
+        expected = xr.Dataset({"foo": ("x", [4, 5])})
+        assert_identical(child_dataset, expected)
+
     def test_inconsistent_dims(self):
         expected_msg = _exact_match(
             """
@@ -1533,6 +1549,18 @@ class TestOps:
         # TODO: Remove ignore when ops.py is migrated?
         result = dt * dt  # type: ignore[operator]
         assert_equal(result, expected)
+
+    def test_arithmetic_inherited_coords(self):
+        tree = DataTree(xr.Dataset(coords={"x": [1, 2, 3]}))
+        tree["/foo"] = DataTree(xr.Dataset({"bar": ("x", [4, 5, 6])}))
+        actual = 2 * tree  # type: ignore
+
+        actual_dataset = actual.children["foo"].to_dataset(inherited=False)
+        assert "x" not in actual_dataset.coords
+
+        expected = tree.copy()
+        expected["/foo/bar"].data = np.array([8, 10, 12])
+        assert_identical(actual, expected)
 
 
 class TestUFuncs:

@@ -374,7 +374,7 @@ class DatasetView(Dataset):
 
 
 class DataTree(
-    NamedNode,
+    NamedNode["DataTree"],
     MappedDatasetMethodsMixin,
     MappedDataWithCoords,
     DataTreeArithmeticMixin,
@@ -485,6 +485,35 @@ class DataTree(
         node_ds = self.to_dataset(inherited=False)
         parent_ds = parent._to_dataset_view(rebuild_dims=False, inherited=True)
         check_alignment(path, node_ds, parent_ds, self.children)
+
+    def _dedup_inherited_coordinates(self):
+        # This method removes repeated indexes (and correpsonding coordinates)
+        # that are repeated between a DataTree and its parents.
+        #
+        # TODO(shoyer): Decide how to handle repeated coordinates *without* an
+        # index. Should these be allowed, in which case we probably want to
+        # exclude them from inheritance, or should they be automatically
+        # dropped?
+        # https://github.com/pydata/xarray/issues/9475#issuecomment-2357004264
+        removed_something = False
+        for name in self._indexes.parents:
+            if name in self._node_indexes:
+                # Indexes on a Dataset always have a corresponding coordinate
+                del self._node_indexes[name]
+                del self._node_coord_variables[name]
+                removed_something = True
+
+        if removed_something:
+            self._node_dims = calculate_dimensions(
+                self._data_variables | self._node_coord_variables
+            )
+
+        for child in self._children.values():
+            child._dedup_inherited_coordinates()
+
+    def _post_attach(self: DataTree, parent: DataTree, name: str) -> None:
+        super()._post_attach(parent, name)
+        self._dedup_inherited_coordinates()
 
     @property
     def _coord_variables(self) -> ChainMap[Hashable, Variable]:
