@@ -904,6 +904,14 @@ class ArrayWithArrayFunction:
         pass
 
 
+class ArrayWithNamespaceAndArrayFunction:
+    def __array_namespace__(self, version=None):
+        pass
+
+    def __array_function__(self, func, types, args, kwargs):
+        pass
+
+
 @pytest.mark.parametrize(
     ["array", "expected_type"],
     (
@@ -925,6 +933,11 @@ class ArrayWithArrayFunction:
             ArrayWithArrayFunction(),
             indexing.NdArrayLikeIndexingAdapter,
             id="array_like",
+        ),
+        pytest.param(
+            ArrayWithNamespaceAndArrayFunction(),
+            indexing.ArrayApiIndexingAdapter,
+            id="array_api_with_fallback",
         ),
     ),
 )

@@ -875,10 +875,10 @@ def as_indexable(array):
         return PandasIndexingAdapter(array)
     if is_duck_dask_array(array):
         return DaskIndexingAdapter(array)
-    if hasattr(array, "__array_function__"):
-        return NdArrayLikeIndexingAdapter(array)
     if hasattr(array, "__array_namespace__"):
         return ArrayApiIndexingAdapter(array)
+    if hasattr(array, "__array_function__"):
+        return NdArrayLikeIndexingAdapter(array)
 
     raise TypeError(f"Invalid array type: {type(array)}")
 
