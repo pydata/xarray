@@ -1,3 +1,5 @@
+import itertools
+
 import pytest
 
 pytest.importorskip("hypothesis")
@@ -37,12 +39,10 @@ def test_property_season_month_tuple(roll, breaks):
     if breaks[-1] != 12:
         breaks = breaks + [12]
     seasons = tuple(
-        "".join(rolled_chars[start:stop])
-        for start, stop in zip(breaks[:-1], breaks[1:], strict=False)
+        "".join(rolled_chars[start:stop]) for start, stop in itertools.pairwise(breaks)
     )
     actual = season_to_month_tuple(seasons)
     expected = tuple(
-        rolled_months[start:stop]
-        for start, stop in zip(breaks[:-1], breaks[1:], strict=False)
+        rolled_months[start:stop] for start, stop in itertools.pairwise(breaks)
     )
     assert expected == actual

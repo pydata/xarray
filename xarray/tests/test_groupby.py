@@ -12,7 +12,7 @@ import pytest
 from packaging.version import Version
 
 import xarray as xr
-from xarray import DataArray, Dataset, Variable, cftime_range
+from xarray import DataArray, Dataset, Variable, cftime_range, date_range
 from xarray.core.alignment import broadcast
 from xarray.core.groupby import _consolidate_slices
 from xarray.core.types import InterpOptions, ResampleCompatible
@@ -20,6 +20,7 @@ from xarray.groupers import (
     BinGrouper,
     EncodedGroups,
     Grouper,
+    SeasonGrouper,
     SeasonResampler,
     TimeResampler,
     UniqueGrouper,
@@ -44,6 +45,7 @@ from xarray.tests import (
     requires_pandas_ge_2_2,
     requires_scipy,
 )
+from xarray.tests.test_coding_times import _ALL_CALENDARS
 
 
 @pytest.fixture
@@ -3144,48 +3146,127 @@ def test_groupby_dask_eager_load_warnings():
     ds.groupby_bins("x", bins=[1, 2, 3], eagerly_compute_group=False)
 
 
+class TestSeasonGrouperAndResampler:
+    def test_season_to_month_tuple(self):
+        assert season_to_month_tuple(["JF", "MAM", "JJAS", "OND"]) == (
+            (1, 2),
+            (3, 4, 5),
+            (6, 7, 8, 9),
+            (10, 11, 12),
+        )
+        assert season_to_month_tuple(["DJFM", "AM", "JJAS", "ON"]) == (
+            (12, 1, 2, 3),
+            (4, 5),
+            (6, 7, 8, 9),
+            (10, 11),
+        )
+
+    @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
+    def test_season_grouper_simple(self, calendar) -> None:
+        time = cftime_range("2001-01-01", "2002-12-30", freq="D", calendar=calendar)
+        da = DataArray(np.ones(time.size), dims="time", coords={"time": time})
+        expected = da.groupby("time.season").mean()
+        # note season order matches expected
+        actual = da.groupby(
+            time=SeasonGrouper(
+                ["DJF", "JJA", "MAM", "SON"],  # drop_incomplete=False
+            )
+        ).mean()
+        assert_identical(expected, actual)
+
+    # TODO: drop_incomplete
+    @requires_cftime
+    @pytest.mark.parametrize("drop_incomplete", [True, False])
+    @pytest.mark.parametrize(
+        "seasons",
+        [
+            pytest.param(["DJF", "MAM", "JJA", "SON"], id="standard"),
+            pytest.param(["MAM", "JJA", "SON", "DJF"], id="standard-diff-order"),
+            pytest.param(["JFM", "AMJ", "JAS", "OND"], id="december-same-year"),
+            pytest.param(["DJF", "MAM", "JJA", "ON"], id="skip-september"),
+            pytest.param(["JJAS"], id="jjas-only"),
+            pytest.param(["MAM", "JJA", "SON", "DJF"], id="different-order"),
+            pytest.param(["JJA", "MAM", "SON", "DJF"], id="out-of-order"),
+        ],
+    )
+    def test_season_resampler(self, seasons: list[str], drop_incomplete: bool) -> None:
+        calendar = "standard"
+        time = date_range("2001-01-01", "2002-12-30", freq="D", calendar=calendar)
+        da = DataArray(np.ones(time.size), dims="time", coords={"time": time})
+        counts = da.resample(time="ME").count()
+
+        seasons_as_ints = season_to_month_tuple(seasons)
+        month = counts.time.dt.month.data
+        year = counts.time.dt.year.data
+        for season, as_ints in zip(seasons, seasons_as_ints, strict=True):
+            if "DJ" in season:
+                for imonth in as_ints[season.index("D") + 1 :]:
+                    year[month == imonth] -= 1
+        counts["time"] = (
+            "time",
+            [pd.Timestamp(f"{y}-{m}-01") for y, m in zip(year, month, strict=True)],
+        )
+        counts = counts.convert_calendar(calendar, "time", align_on="date")
+
+        expected_vals = []
+        expected_time = []
+        for year in [2001, 2002]:
+            for season, as_ints in zip(seasons, seasons_as_ints, strict=True):
+                out_year = year
+                if "DJ" in season:
+                    out_year = year - 1
+                available = [
+                    counts.sel(time=f"{out_year}-{month:02d}").data for month in as_ints
+                ]
+                if any(len(a) == 0 for a in available) and drop_incomplete:
+                    continue
+                output_label = pd.Timestamp(f"{out_year}-{as_ints[0]:02d}-01")
+                expected_time.append(output_label)
+                # use concatenate to handle empty array when dec value does not exist
+                expected_vals.append(np.concatenate(available).sum())
+
+        expected = xr.DataArray(
+            expected_vals, dims="time", coords={"time": expected_time}
+        ).convert_calendar(calendar, align_on="date")
+        rs = SeasonResampler(seasons, drop_incomplete=drop_incomplete)
+        # through resample
+        actual = da.resample(time=rs).sum()
+        assert_identical(actual, expected)
+
+    def test_season_resampler_errors(self):
+        time = cftime_range("2001-01-01", "2002-12-30", freq="D", calendar="360_day")
+        da = DataArray(np.ones(time.size), dims="time", coords={"time": time})
+
+        # non-datetime array
+        with pytest.raises(ValueError):
+            DataArray(np.ones(5), dims="time").groupby(time=SeasonResampler(["DJF"]))
+
+        # ndim > 1 array
+        with pytest.raises(ValueError):
+            DataArray(
+                np.ones((5, 5)), dims=("t", "x"), coords={"x": np.arange(5)}
+            ).groupby(x=SeasonResampler(["DJF"]))
+
+        # overlapping seasons
+        with pytest.raises(ValueError):
+            da.groupby(time=SeasonResampler(["DJFM", "MAMJ", "JJAS", "SOND"])).sum()
+
+    @requires_cftime
+    def test_season_resampler_groupby_identical(self):
+        time = date_range("2001-01-01", "2002-12-30", freq="D")
+        da = DataArray(np.ones(time.size), dims="time", coords={"time": time})
+
+        # through resample
+        resampler = SeasonResampler(["DJF", "MAM", "JJA", "SON"])
+        rs = da.resample(time=resampler).sum()
+
+        # through groupby
+        gb = da.groupby(time=resampler).sum()
+        assert_identical(rs, gb)
+
+
 # TODO: Possible property tests to add to this module
 # 1. lambda x: x
 # 2. grouped-reduce on unique coords is identical to array
 # 3. group_over == groupby-reduce along other dimensions
 # 4. result is equivalent for transposed input
-def test_season_to_month_tuple():
-    assert season_to_month_tuple(["JF", "MAM", "JJAS", "OND"]) == (
-        (1, 2),
-        (3, 4, 5),
-        (6, 7, 8, 9),
-        (10, 11, 12),
-    )
-    assert season_to_month_tuple(["DJFM", "AM", "JJAS", "ON"]) == (
-        (12, 1, 2, 3),
-        (4, 5),
-        (6, 7, 8, 9),
-        (10, 11),
-    )
-
-
-def test_season_resampler():
-    time = cftime_range("2001-01-01", "2002-12-30", freq="D", calendar="360_day")
-    da = DataArray(np.ones(time.size), dims="time", coords={"time": time})
-
-    # through resample
-    da.resample(time=SeasonResampler(["DJF", "MAM", "JJA", "SON"])).sum()
-
-    # through groupby
-    da.groupby(time=SeasonResampler(["DJF", "MAM", "JJA", "SON"])).sum()
-
-    # skip september
-    da.groupby(time=SeasonResampler(["DJF", "MAM", "JJA", "ON"])).sum()
-
-    # "subsampling"
-    da.groupby(time=SeasonResampler(["JJAS"])).sum()
-
-    # overlapping
-    with pytest.raises(ValueError):
-        da.groupby(time=SeasonResampler(["DJFM", "MAMJ", "JJAS", "SOND"])).sum()
-
-
-# Possible property tests
-# 1. lambda x: x
-# 2. grouped-reduce on unique coords is identical to array
-# 3. group_over == groupby-reduce along other dimensions

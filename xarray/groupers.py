@@ -14,8 +14,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from itertools import pairwise
-from itertools import chain
+from itertools import chain, pairwise
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
@@ -25,16 +24,12 @@ from numpy.typing import ArrayLike
 from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops
-from xarray.core.computation import apply_ufunc
-from xarray.core.coordinates import Coordinates, _coordinates_from_variable
-from xarray.core.coordinates import Coordinates
-from xarray.core.common import _contains_datetime_like_objects
-from xarray.core.common import _contains_datetime_like_objects
 from xarray.core.common import (
     _contains_cftime_datetimes,
     _contains_datetime_like_objects,
 )
-from xarray.core.coordinates import Coordinates
+from xarray.core.computation import apply_ufunc
+from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.dataarray import DataArray
 from xarray.core.duck_array_ops import isnull
 from xarray.core.formatting import first_n_items
@@ -751,14 +746,16 @@ class SeasonResampler(Resampler):
             )
         self.season_tuples = dict(zip(self.seasons, self.season_inds, strict=True))
 
-    def factorize(self, group):
+    def factorize(self, group: T_Group) -> EncodedGroups:
         if group.ndim != 1:
             raise ValueError(
                 "SeasonResampler can only be used to resample by 1D arrays."
             )
-        if not _contains_datetime_like_objects(group.variable):
+        if not isinstance(group, DataArray) or not _contains_datetime_like_objects(
+            group.variable
+        ):
             raise ValueError(
-                "SeasonResampler can only be used to group by datetime-like arrays."
+                "SeasonResampler can only be used to group by datetime-like DataArrays."
             )
 
         seasons = self.seasons
@@ -775,13 +772,14 @@ class SeasonResampler(Resampler):
             season_label[month.isin(season_ind)] = season_str
             if "DJ" in season_str:
                 after_dec = season_ind[season_str.index("D") + 1 :]
-                # important this is assuming non-overlapping seasons
+                # important: this is assuming non-overlapping seasons
                 year[month.isin(after_dec)] -= 1
 
         # Allow users to skip one or more months?
-        # present_seasons is a mask that is True for months that are requestsed in the output
+        # present_seasons is a mask that is True for months that are requested in the output
         present_seasons = season_label != ""
         if present_seasons.all():
+            # avoid copies if we can.
             present_seasons = slice(None)
         frame = pd.DataFrame(
             data={
@@ -794,10 +792,13 @@ class SeasonResampler(Resampler):
             ),
         )
 
-        series = frame["index"]
-        g = series.groupby(["year", "season"], sort=False)
-        first_items = g.first()
-        counts = g.count()
+        agged = (
+            frame["index"]
+            .groupby(["year", "season"], sort=False)
+            .agg(["first", "count"])
+        )
+        first_items = agged["first"]
+        counts = agged["count"]
 
         if _contains_cftime_datetimes(group.data):
             index_class = CFTimeIndex
@@ -814,32 +815,18 @@ class SeasonResampler(Resampler):
             ]
         )
 
-        sbins = first_items.values.astype(int)
-        group_indices = [
-            slice(i, j) for i, j in zip(sbins[:-1], sbins[1:], strict=True)
-        ]
-        group_indices += [slice(sbins[-1], None)]
+        # sbins = first_items.values.astype(int)
+        # group_indices = [
+        #     slice(i, j) for i, j in zip(sbins[:-1], sbins[1:], strict=True)
+        # ]
+        # group_indices += [slice(sbins[-1], None)]
 
-        # Make sure the first and last timestamps
-        # are for the correct months,if not we have incomplete seasons
-        unique_codes = np.arange(len(unique_coord))
-        if self.drop_incomplete:
-            for idx, slicer in zip([0, -1], (slice(1, None), slice(-1)), strict=True):
-                stamp_year, stamp_season = frame.index[idx]
-                code = seasons.index(stamp_season)
-                stamp_month = season_inds[code][idx]
-                if stamp_month != month[present_seasons][idx].item():
-                    # we have an incomplete season!
-                    group_indices = group_indices[slicer]
-                    unique_coord = unique_coord[slicer]
-                    if idx == 0:
-                        unique_codes -= 1
-                    unique_codes[idx] = -1
-
-        # all years and seasons
+        # This sorted call is a hack. It's hard to figure out how
+        # to start the iteration for arbitrary season ordering
+        # for example "DJF" as first entry or last entry
+        # So we construct the largest possible index and slice it to the
+        # range present in the data.
         complete_index = index_class(
-            # This sorted call is a hack. It's hard to figure out how
-            # to start the iteration
             sorted(
                 [
                     datetime_class(year=y, month=m, day=1)
@@ -850,22 +837,56 @@ class SeasonResampler(Resampler):
                 ]
             )
         )
-        # only keep that included in data
-        range_ = complete_index.get_indexer(unique_coord[[0, -1]])
-        full_index = complete_index[slice(range_[0], range_[-1] + 1)]
+
+        # all years and seasons
+        def get_label(year, season):
+            month = season_tuples[season][0]
+            return f"{year}-{month}-01"
+
+        unique_codes = np.arange(len(unique_coord))
+        first_valid_season = season_label[0]
+        last_valid_season = season_label[-1]
+        first_year, last_year = year.data[[0, -1]]
+        if self.drop_incomplete:
+            if month.data[0] != season_tuples[first_valid_season][0]:
+                if "DJ" in first_valid_season:
+                    first_year += 1
+                first_valid_season = seasons[
+                    (seasons.index(first_valid_season) + 1) % len(seasons)
+                ]
+                # group_indices = group_indices[slice(1, None)]
+                unique_codes -= 1
+
+            if month.data[-1] != season_tuples[last_valid_season][-1]:
+                last_valid_season = seasons[seasons.index(last_valid_season) - 1]
+                if "DJ" in last_valid_season:
+                    last_year -= 1
+                # group_indices = group_indices[slice(-1)]
+                unique_codes[-1] = -1
+
+        first_label = get_label(first_year, first_valid_season)
+        last_label = get_label(last_year, last_valid_season)
+
+        slicer = complete_index.slice_indexer(first_label, last_label)
+        full_index = complete_index[slicer]
+        # TODO: group must be sorted
+        # codes = np.searchsorted(edges, group.data, side="left")
+        # codes -= 1
+        # codes[~present_seasons | group.data >= edges[-1]] = -1
+        # codes[isnull(group.data)] = -1
+        # import ipdb; ipdb.set_trace()
         # check that there are no "missing" seasons in the middle
-        # print(full_index, unique_coord)
-        if not full_index.equals(unique_coord):
-            raise ValueError("Are there seasons missing in the middle of the dataset?")
+        # if not full_index.equals(unique_coord):
+        # raise ValueError("Are there seasons missing in the middle of the dataset?")
 
         final_codes = np.full(group.data.size, -1)
         final_codes[present_seasons] = np.repeat(unique_codes, counts)
         codes = group.copy(data=final_codes, deep=False)
-        unique_coord_var = Variable(group.name, unique_coord, group.attrs)
+        # unique_coord_var = Variable(group.name, unique_coord, group.attrs)
 
         return EncodedGroups(
             codes=codes,
-            group_indices=group_indices,
-            unique_coord=unique_coord_var,
+            # group_indices=group_indices,
+            # unique_coord=unique_coord_var,
             full_index=full_index,
         )
