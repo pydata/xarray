@@ -912,6 +912,12 @@ class ArrayWithNamespaceAndArrayFunction:
         pass
 
 
+def as_dask_array(arr, chunks):
+    import dask.array as da
+
+    return da.from_array(arr, chunks=chunks)
+
+
 @pytest.mark.parametrize(
     ["array", "expected_type"],
     (
@@ -925,6 +931,12 @@ class ArrayWithNamespaceAndArrayFunction:
         ),
         pytest.param(
             pd.Index([1, 2]), indexing.PandasIndexingAdapter, id="pandas.Index"
+        ),
+        pytest.param(
+            as_dask_array(np.array([1, 2]), chunks=(1,)),
+            indexing.DaskIndexingAdapter,
+            id="dask.array",
+            marks=requires_dask,
         ),
         pytest.param(
             ArrayWithNamespace(), indexing.ArrayApiIndexingAdapter, id="array_api"
