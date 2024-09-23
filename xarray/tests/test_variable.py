@@ -3068,3 +3068,12 @@ def test_pandas_indexing_adapter_non_nanosecond_conversion(index, dtype) -> None
     with pytest.warns(UserWarning, match="non-nanosecond precision"):
         var = Variable(["time"], data)
     assert var.dtype == np.dtype(f"{dtype}[ns]")
+
+
+def test_numpy_strings():
+    # https://github.com/pydata/xarray/issues/9535
+    data = np.full((5,), fill_value="nothing")
+    da = DataArray(data)
+    values = np.asarray(["foo", "bar"])
+    da[1:2] = values[0]
+    assert da.sel(dim_0=1).item() == "foo"

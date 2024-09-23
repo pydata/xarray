@@ -320,8 +320,16 @@ def as_compatible_data(
         else:
             data = np.asarray(data)
 
-    if not isinstance(data, np.ndarray) and (
-        hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
+    if (
+        not isinstance(data, np.ndarray)
+        and (
+            hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
+        )
+        # Not exactly sure why this is a special case but
+        # https://github.com/pydata/xarray/issues/9535
+        # (possibly numpy strings can be
+        # indexed but it's indexing the string rather than as an array?)
+        and not isinstance(data, np.str_)
     ):
         return cast("T_DuckArray", data)
 
