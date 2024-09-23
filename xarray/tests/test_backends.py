@@ -111,13 +111,12 @@ try:
 except ImportError:
     KVStore = None
 
-have_zarr_v3 = False
+have_zarr_v3 = backends.zarr._zarr_v3()
+
 try:
     # as of Zarr v2.13 these imports require environment variable
     # ZARR_V3_EXPERIMENTAL_API=1
-    from zarr import DirectoryStoreV3, KVStoreV3
-
-    have_zarr_v3 = True
+    from zarr.store.memory import MemoryStore as KVStoreV3
 except ImportError:
     KVStoreV3 = None
 

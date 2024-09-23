@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import json
 import os
 import warnings
@@ -7,6 +8,7 @@ from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+import packaging.version
 import pandas as pd
 
 from xarray import coding, conventions
@@ -39,6 +41,18 @@ if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
+
+
+
+@functools.lru_cache
+def _zarr_v3() -> bool:
+    try:
+        import zarr
+    except ImportError:
+        return False
+    else:
+        return packaging.version.parse(zarr.__version__).major >= 3
+
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
