@@ -34,6 +34,7 @@ from xarray.tests import (
     requires_cftime,
     requires_dask,
     requires_flox,
+    requires_flox_0_9_12,
     requires_scipy,
 )
 
@@ -608,6 +609,7 @@ def test_groupby_repr_datetime(obj) -> None:
 
 @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
+@pytest.mark.filterwarnings("ignore:No index created for dimension id:UserWarning")
 def test_groupby_drops_nans() -> None:
     # GH2383
     # nan in 2D data variable (requires stacking)
@@ -2859,7 +2861,74 @@ def test_multiple_groupers_mixed(use_flox) -> None:
     # ------
 
 
+@requires_flox_0_9_12
+@pytest.mark.parametrize(
+    "reduction", ["max", "min", "nanmax", "nanmin", "sum", "nansum", "prod", "nanprod"]
+)
+def test_groupby_preserve_dtype(reduction):
+    # all groups are present, we should follow numpy exactly
+    ds = xr.Dataset(
+        {
+            "test": (
+                ["x", "y"],
+                np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype="int16"),
+            )
+        },
+        coords={"idx": ("x", [1, 2, 1])},
+    )
+
+    kwargs = {}
+    if "nan" in reduction:
+        kwargs["skipna"] = True
+    # TODO: fix dtype with numbagg/bottleneck and use_flox=False
+    with xr.set_options(use_numbagg=False, use_bottleneck=False):
+        actual = getattr(ds.groupby("idx"), reduction.removeprefix("nan"))(
+            **kwargs
+        ).test.dtype
+    expected = getattr(np, reduction)(ds.test.data, axis=0).dtype
+
+    assert actual == expected
+
+
+@requires_dask
+@requires_flox_0_9_12
+@pytest.mark.parametrize("reduction", ["any", "all", "count"])
+def test_gappy_resample_reductions(reduction):
+    # GH8090
+    dates = (("1988-12-01", "1990-11-30"), ("2000-12-01", "2001-11-30"))
+    times = [xr.date_range(*d, freq="D") for d in dates]
+
+    da = xr.concat(
+        [
+            xr.DataArray(np.random.rand(len(t)), coords={"time": t}, dims="time")
+            for t in times
+        ],
+        dim="time",
+    ).chunk(time=100)
+
+    rs = (da > 0.5).resample(time="YS-DEC")
+    method = getattr(rs, reduction)
+    with xr.set_options(use_flox=True):
+        actual = method(dim="time")
+    with xr.set_options(use_flox=False):
+        expected = method(dim="time")
+    assert_identical(expected, actual)
+
+
 # Possible property tests
 # 1. lambda x: x
 # 2. grouped-reduce on unique coords is identical to array
 # 3. group_over == groupby-reduce along other dimensions
+
+
+def test_groupby_transpose():
+    # GH5361
+    data = xr.DataArray(
+        np.random.randn(4, 2),
+        dims=["x", "z"],
+        coords={"x": ["a", "b", "a", "c"], "y": ("x", [0, 1, 0, 2])},
+    )
+    first = data.T.groupby("x").sum()
+    second = data.groupby("x").sum()
+
+    assert_identical(first, second.transpose(*first.dims))

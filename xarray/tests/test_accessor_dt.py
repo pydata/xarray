@@ -158,7 +158,7 @@ class TestDatetimeAccessor:
         int_data = np.arange(len(self.data.time)).astype("int8")
         nontime_data = nontime_data.assign_coords(time=int_data)
         with pytest.raises(AttributeError, match=r"dt"):
-            nontime_data.time.dt
+            _ = nontime_data.time.dt
 
     @pytest.mark.filterwarnings("ignore:dt.weekofyear and dt.week have been deprecated")
     @requires_dask
@@ -326,7 +326,7 @@ class TestTimedeltaAccessor:
         int_data = np.arange(len(self.data.time)).astype("int8")
         nontime_data = nontime_data.assign_coords(time=int_data)
         with pytest.raises(AttributeError, match=r"dt"):
-            nontime_data.time.dt
+            _ = nontime_data.time.dt
 
     @pytest.mark.parametrize(
         "field", ["days", "seconds", "microseconds", "nanoseconds"]

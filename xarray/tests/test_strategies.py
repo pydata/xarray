@@ -73,7 +73,7 @@ class TestDimensionSizesStrategy:
 
 def check_dict_values(dictionary: dict, allowed_attrs_values_types) -> bool:
     """Helper function to assert that all values in recursive dict match one of a set of types."""
-    for key, value in dictionary.items():
+    for _key, value in dictionary.items():
         if isinstance(value, allowed_attrs_values_types) or value is None:
             continue
         elif isinstance(value, dict):
