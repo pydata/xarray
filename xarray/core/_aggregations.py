@@ -900,12 +900,17 @@ class DatasetAggregations:
         numpy.cumsum
         dask.array.cumsum
         DataArray.cumsum
+        Dataset.cumulative
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
         Notes
         -----
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -976,12 +981,17 @@ class DatasetAggregations:
         numpy.cumprod
         dask.array.cumprod
         DataArray.cumprod
+        Dataset.cumulative
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
         Notes
         -----
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -1871,12 +1881,17 @@ class DataArrayAggregations:
         numpy.cumsum
         dask.array.cumsum
         Dataset.cumsum
+        DataArray.cumulative
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
         Notes
         -----
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -1945,12 +1960,17 @@ class DataArrayAggregations:
         numpy.cumprod
         dask.array.cumprod
         Dataset.cumprod
+        DataArray.cumulative
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
         Notes
         -----
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -3095,6 +3115,7 @@ class DatasetGroupByAggregations:
         numpy.cumsum
         dask.array.cumsum
         Dataset.cumsum
+        Dataset.cumulative
         :ref:`groupby`
             User guide on groupby operations.
 
@@ -3106,6 +3127,10 @@ class DatasetGroupByAggregations:
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -3177,6 +3202,7 @@ class DatasetGroupByAggregations:
         numpy.cumprod
         dask.array.cumprod
         Dataset.cumprod
+        Dataset.cumulative
         :ref:`groupby`
             User guide on groupby operations.
 
@@ -3188,6 +3214,10 @@ class DatasetGroupByAggregations:
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -4334,6 +4364,7 @@ class DatasetResampleAggregations:
         numpy.cumsum
         dask.array.cumsum
         Dataset.cumsum
+        Dataset.cumulative
         :ref:`resampling`
             User guide on resampling operations.
 
@@ -4345,6 +4376,10 @@ class DatasetResampleAggregations:
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -4416,6 +4451,7 @@ class DatasetResampleAggregations:
         numpy.cumprod
         dask.array.cumprod
         Dataset.cumprod
+        Dataset.cumulative
         :ref:`resampling`
             User guide on resampling operations.
 
@@ -4427,6 +4463,10 @@ class DatasetResampleAggregations:
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -5541,6 +5581,7 @@ class DataArrayGroupByAggregations:
         numpy.cumsum
         dask.array.cumsum
         DataArray.cumsum
+        DataArray.cumulative
         :ref:`groupby`
             User guide on groupby operations.
 
@@ -5552,6 +5593,10 @@ class DataArrayGroupByAggregations:
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -5621,6 +5666,7 @@ class DataArrayGroupByAggregations:
         numpy.cumprod
         dask.array.cumprod
         DataArray.cumprod
+        DataArray.cumulative
         :ref:`groupby`
             User guide on groupby operations.
 
@@ -5632,6 +5678,10 @@ class DataArrayGroupByAggregations:
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -6744,6 +6794,7 @@ class DataArrayResampleAggregations:
         numpy.cumsum
         dask.array.cumsum
         DataArray.cumsum
+        DataArray.cumulative
         :ref:`resampling`
             User guide on resampling operations.
 
@@ -6755,6 +6806,10 @@ class DataArrayResampleAggregations:
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -6824,6 +6879,7 @@ class DataArrayResampleAggregations:
         numpy.cumprod
         dask.array.cumprod
         DataArray.cumprod
+        DataArray.cumulative
         :ref:`resampling`
             User guide on resampling operations.
 
@@ -6835,6 +6891,10 @@ class DataArrayResampleAggregations:
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
