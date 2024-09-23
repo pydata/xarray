@@ -1845,7 +1845,7 @@ class NetCDF4Base(NetCDFBase):
                     pass
 
     @requires_netCDF4
-    def test_encoding_enum__no_fill_value(self):
+    def test_encoding_enum__no_fill_value(self, recwarn):
         with create_tmp_file() as tmp_file:
             cloud_type_dict = {"clear": 0, "cloudy": 1}
             with nc4.Dataset(tmp_file, mode="w") as nc:
@@ -1862,29 +1862,32 @@ class NetCDF4Base(NetCDFBase):
                 save_kwargs = {}
                 # We don't expect any errors.
                 # This is effectively a void context manager
-                expected_warnings = memoryview(b"")
+                expected_warnings = 0
                 if self.engine == "h5netcdf":
                     if not has_h5netcdf_1_4_0_or_above:
                         save_kwargs["invalid_netcdf"] = True
                     else:
-                        expected_warnings = pytest.warns()
+                        expected_warnings = 1
+                        expected_msg = "Creating variable with default fill_value 0 which IS defined in enum type"
 
-                with expected_warnings:
-                    with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
-                        assert_equal(original, actual)
+                with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
+                    assert len(recwarn) == expected_warnings
+                    if expected_warnings:
+                        assert issubclass(recwarn[0].category, UserWarning)
+                        assert str(recwarn[0].message).startswith(expected_msg)
+                    assert_equal(original, actual)
+                    assert (
+                        actual.clouds.encoding["dtype"].metadata["enum"]
+                        == cloud_type_dict
+                    )
+                    if not (
+                        self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above
+                    ):
+                        # not implemented in h5netcdf yet
                         assert (
-                            actual.clouds.encoding["dtype"].metadata["enum"]
-                            == cloud_type_dict
+                            actual.clouds.encoding["dtype"].metadata["enum_name"]
+                            == "cloud_type"
                         )
-                        if not (
-                            self.engine == "h5netcdf"
-                            and not has_h5netcdf_1_4_0_or_above
-                        ):
-                            # not implemented in h5netcdf yet
-                            assert (
-                                actual.clouds.encoding["dtype"].metadata["enum_name"]
-                                == "cloud_type"
-                            )
 
     @requires_netCDF4
     def test_encoding_enum__multiple_variable_with_enum(self):
