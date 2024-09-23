@@ -845,8 +845,9 @@ For example:
 .. ipython:: python
 
     import zarr
+    from numcodecs.blosc import Blosc
 
-    compressor = zarr.Blosc(cname="zstd", clevel=3, shuffle=2)
+    compressor = Blosc(cname="zstd", clevel=3, shuffle=2)
     ds.to_zarr("foo.zarr", encoding={"foo": {"compressor": compressor}})
 
 .. note::

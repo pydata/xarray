@@ -89,7 +89,7 @@ class ZarrArrayWrapper(BackendArray):
         self.shape = self._array.shape
 
         # preserve vlen string object dtype (GH 7328)
-        if self._array.filters is not None and any(
+        if not _zarr_v3() and self._array.filters is not None and any(
             [filt.codec_id == "vlen-utf8" for filt in self._array.filters]
         ):
             dtype = coding.strings.create_vlen_dtype(str)
@@ -337,6 +337,7 @@ def extract_zarr_variable_encoding(
         "filters",
         "cache_metadata",
         "write_empty_chunks",
+        "codec_pipeline",
     }
 
     for k in safe_to_drop:
@@ -629,9 +630,21 @@ class ZarrStore(AbstractWritableDataStore):
         encoding = {
             "chunks": zarr_array.chunks,
             "preferred_chunks": dict(zip(dimensions, zarr_array.chunks, strict=True)),
-            "compressor": zarr_array.compressor,
-            "filters": zarr_array.filters,
         }
+
+        if _zarr_v3() and zarr_array.metadata.zarr_format == 3:
+            encoding["codec_pipeline"] = [x.to_dict() for x in zarr_array.metadata.codecs]
+        elif _zarr_v3():
+            encoding.update({
+                "compressor": zarr_array.metadata.compressor,
+                "filters": zarr_array.metadata.filters,
+            })
+        else:
+            encoding.update({
+                "compressor": zarr_array.compressor,
+                "filters": zarr_array.filters,
+            })
+
         # _FillValue needs to be in attributes, not encoding, so it will get
         # picked up by decode_cf
         if zarr_array.fill_value is not None:
@@ -865,8 +878,14 @@ class ZarrStore(AbstractWritableDataStore):
                     #     - Existing variables already have their attrs included in the consolidated metadata file.
                     #     - The size of dimensions can not be expanded, that would require a call using `append_dim`
                     #        which is mutually exclusive with `region`
+                    kwargs = {}
+                    if _zarr_v3():
+                        kwargs["store"] = self.zarr_group.store
+                    else:
+                        kwargs["store"] = self.zarr_group.chunk_store
+
                     zarr_array = zarr.open(
-                        store=self.zarr_group.chunk_store,
+                        **kwargs,
                         path=f"{self.zarr_group.name}/{name}",
                         write_empty_chunks=self._write_empty,
                     )
@@ -927,6 +946,12 @@ class ZarrStore(AbstractWritableDataStore):
                         )
                     else:
                         encoding["write_empty_chunks"] = self._write_empty
+
+                if "codec_pipeline" in encoding:
+                    # In zarr v3, the keyword argument is
+                    # `codecs` but the serialized form is `codec_pipeline`
+                    pipeline = encoding.pop("codec_pipeline")
+                    encoding["codecs"] = pipeline
 
                 zarr_array = self.zarr_group.create(
                     name,

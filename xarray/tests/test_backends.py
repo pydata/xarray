@@ -2576,10 +2576,17 @@ class ZarrBase(CFEncodedBase):
     def test_compressor_encoding(self) -> None:
         original = create_test_data()
         # specify a custom compressor
-        import zarr
+        from numcodecs.blosc import Blosc
 
-        blosc_comp = zarr.Blosc(cname="zstd", clevel=3, shuffle=2)
-        save_kwargs = dict(encoding={"var1": {"compressor": blosc_comp}})
+        blosc_comp = Blosc(cname="zstd", clevel=3, shuffle=2)
+
+        if have_zarr_v3:
+            encoding = {"codec_pipeline": [blosc_comp]}
+        else:
+            encoding = {"compressor": blosc_comp}
+
+        save_kwargs = dict(encoding={"var1": encoding})
+
         with self.roundtrip(original, save_kwargs=save_kwargs) as ds:
             actual = ds["var1"].encoding["compressor"]
             # get_config returns a dictionary of compressor attributes
