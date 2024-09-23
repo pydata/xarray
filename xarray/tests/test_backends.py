@@ -498,7 +498,7 @@ class DatasetIOBase:
 
     @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
     def test_roundtrip_None_variable(self) -> None:
-        expected = Dataset({None: (("x", "y"), [[0, 1], [2, 3]])})
+        expected = Dataset({None: (("x", "y"), [[1, 1], [2, 3]])})
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
@@ -615,7 +615,7 @@ class DatasetIOBase:
 
     def test_roundtrip_coordinates(self) -> None:
         original = Dataset(
-            {"foo": ("x", [0, 1])}, {"x": [2, 3], "y": ("a", [42]), "z": ("x", [4, 5])}
+            {"foo": ("x", [1, 1])}, {"x": [2, 3], "y": ("a", [42]), "z": ("x", [4, 5])}
         )
 
         with self.roundtrip(original) as actual:
@@ -631,7 +631,7 @@ class DatasetIOBase:
 
     def test_roundtrip_global_coordinates(self) -> None:
         original = Dataset(
-            {"foo": ("x", [0, 1])}, {"x": [2, 3], "y": ("a", [42]), "z": ("x", [4, 5])}
+            {"foo": ("x", [1, 1])}, {"x": [2, 3], "y": ("a", [42]), "z": ("x", [4, 5])}
         )
         with self.roundtrip(original) as actual:
             assert_identical(original, actual)
@@ -647,8 +647,8 @@ class DatasetIOBase:
             assert attrs["coordinates"] == "foo"
 
     def test_roundtrip_coordinates_with_space(self) -> None:
-        original = Dataset(coords={"x": 0, "y z": 1})
-        expected = Dataset({"y z": 1}, {"x": 0})
+        original = Dataset(coords={"x": 1, "y z": 1})
+        expected = Dataset({"y z": 1}, {"x": 1})
         with pytest.warns(SerializationWarning):
             with self.roundtrip(original) as actual:
                 assert_identical(expected, actual)
@@ -840,7 +840,7 @@ class DatasetIOBase:
         a = np.random.randn(4, 3)
         a[1, 1] = np.nan
         in_memory = xr.Dataset(
-            {"a": (("y", "x"), a)}, coords={"y": np.arange(4), "x": np.arange(3)}
+            {"a": (("y", "x"), a)}, coords={"y": np.arange(1, 5), "x": np.arange(1, 4)}
         )
 
         assert_identical(
@@ -1060,11 +1060,11 @@ class CFEncodedBase(DatasetIOBase):
                 ),
             ),
             dict(
-                latitude=("latitude", [0, 1], {"units": "degrees_north"}),
-                longitude=("longitude", [0, 1], {"units": "degrees_east"}),
+                latitude=("latitude", [-1, 1], {"units": "degrees_north"}),
+                longitude=("longitude", [-1, 1], {"units": "degrees_east"}),
                 latlon=((), -1, {"grid_mapping_name": "latitude_longitude"}),
-                latitude_bnds=(("latitude", "bnds2"), [[0, 1], [1, 2]]),
-                longitude_bnds=(("longitude", "bnds2"), [[0, 1], [1, 2]]),
+                latitude_bnds=(("latitude", "bnds2"), [[-1, 1], [1, 2]]),
+                longitude_bnds=(("longitude", "bnds2"), [[-1, 1], [1, 2]]),
                 areas=(
                     ("latitude", "longitude"),
                     [[1, 1], [1, 1]],
@@ -1158,7 +1158,7 @@ class CFEncodedBase(DatasetIOBase):
             return obj == "lat lon" or obj == "lon lat"
 
         original = Dataset(
-            {"temp": ("x", [0, 1]), "precip": ("x", [0, -1])},
+            {"temp": ("x", [1, 1]), "precip": ("x", [-1, -1])},
             {"lat": ("x", [2, 3]), "lon": ("x", [4, 5])},
         )
         with self.roundtrip(original) as actual:
@@ -3032,7 +3032,7 @@ class ZarrBase(CFEncodedBase):
         # see also test_encoding_chunksizes_unlimited
         nx, ny, nt = 4, 4, 5
         original = xr.Dataset(
-            {}, coords={"x": np.arange(nx), "y": np.arange(ny), "t": np.arange(nt)}
+            {}, coords={"x": np.arange(nx) + 1 , "y": np.arange(ny) + 1, "t": np.arange(nt) + 1}
         )
         original["v"] = xr.Variable(("x", "y", "t"), np.zeros((nx, ny, nt)))
         original = original.chunk({"t": 1, "x": 2, "y": 2})
@@ -5214,7 +5214,7 @@ class TestDataArrayToNetCDF:
 @requires_zarr
 class TestDataArrayToZarr:
     def test_dataarray_to_zarr_no_name(self, tmp_store) -> None:
-        original_da = DataArray(np.arange(12).reshape((3, 4)))
+        original_da = DataArray(np.arange(1, 13).reshape((3, 4)))
 
         original_da.to_zarr(tmp_store)
 
@@ -5820,7 +5820,7 @@ def test_pickle_open_mfdataset_dataset():
 @requires_zarr
 def test_zarr_closing_internal_zip_store():
     store_name = "tmp.zarr.zip"
-    original_da = DataArray(np.arange(12).reshape((3, 4)))
+    original_da = DataArray(np.arange(1, 13).reshape((3, 4)))
     original_da.to_zarr(store_name, mode="w")
 
     with open_dataarray(store_name, engine="zarr") as loaded_da:
