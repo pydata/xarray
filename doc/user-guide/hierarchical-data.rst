@@ -703,7 +703,7 @@ If we first try to create a :py:class:`~xarray.DataTree` with these different-le
 This is because DataTree checks that data in child nodes align exactly with their parents.
 
 .. note::
-    This requirement of aligned dimensions is similar to netCDF's concept of inherited dimensions (LINK TO NETCDF DOCUMENTATION?).
+    This requirement of aligned dimensions is similar to netCDF's concept of `inherited dimensions <https://www.unidata.ucar.edu/software/netcdf/workshops/2007/groups-types/Introduction.html>`_, as in netCDF-4 files dimensions are `visible to all child groups <https://docs.unidata.ucar.edu/netcdf-c/current/groups.html>`_.
 
 This alignment check is performed up through the tree, all the way to the root, and so is therefore equivalent to requiring that this :py:func:`~xarray.align` command succeeds:
 
