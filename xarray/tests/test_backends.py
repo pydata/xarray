@@ -1866,6 +1866,8 @@ class NetCDF4Base(NetCDFBase):
                 if self.engine == "h5netcdf":
                     if not has_h5netcdf_1_4_0_or_above:
                         save_kwargs["invalid_netcdf"] = True
+                        expected_warnings = 1
+                        expected_msg = "You are writing invalid netcdf features to file"
                     else:
                         expected_warnings = 1
                         expected_msg = "Creating variable with default fill_value 0 which IS defined in enum type"
