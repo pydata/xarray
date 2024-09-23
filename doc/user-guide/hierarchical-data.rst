@@ -792,6 +792,8 @@ We can also still perform all the same operations on the whole tree:
 
     dt.std(dim="time")
 
+(TODO: The first one repeats coordinates in the result due to https://github.com/pydata/xarray/issues/9475)
+
 (TODO: The second one fails due to https://github.com/pydata/xarray/issues/8949)
 
 .. _overriding-inherited-coordinates:
