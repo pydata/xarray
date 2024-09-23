@@ -707,9 +707,9 @@ This is because DataTree checks that data in child nodes align exactly with thei
 
 This alignment check is performed up through the tree, all the way to the root, and so is therefore equivalent to requiring that this :py:func:`~xarray.align` command succeeds:
 
-.. code::
+.. code:: python
 
-    xr.align(child, *child.parents, join="exact")
+    xr.align(child.dataset, parent.dataset for parent in child.parents, join="exact")
 
 To represent our unalignable data in a single :py:class:`~xarray.DataTree`, we must instead place all variables which are a function of these different-length dimensions into nodes that are not direct descendents of one another, e.g. organize them as siblings.
 
