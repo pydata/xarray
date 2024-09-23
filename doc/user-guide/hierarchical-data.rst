@@ -761,8 +761,6 @@ Let's instead place only the time-dependent variables in the child groups, and p
     )
     dt
 
-(TODO: They are being displayed in child groups still, see https://github.com/pydata/xarray/issues/9499)
-
 This is preferred to the previous representation because it now makes it clear that all of these datasets share common spatial grid coordinates.
 Defining the common coordinates just once also ensures that the spatial coordinates for each group cannot become out of sync with one another during operations.
 
