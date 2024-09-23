@@ -76,7 +76,7 @@ class RenderDataTree:
     def __init__(
         self,
         node: DataTree,
-        style=ContStyle(),
+        style=None,
         childiter: type = list,
         maxlevel: int | None = None,
     ):
@@ -161,6 +161,8 @@ class RenderDataTree:
         ├── sub0
         └── sub1
         """
+        if style is None:
+            style = ContStyle()
         if not isinstance(style, AbstractStyle):
             style = style()
         self.node = node

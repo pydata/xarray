@@ -202,7 +202,7 @@ and even the distinguishing feature of the common ancestor of any two species (t
 
 .. ipython:: python
 
-    [node.name for node in primates.ancestors]
+    [node.name for node in reversed(primates.parents)]
     primates.root.name
     primates.find_common_ancestor(dinosaurs).name
 
