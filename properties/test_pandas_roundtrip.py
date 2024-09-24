@@ -132,3 +132,12 @@ def test_roundtrip_pandas_dataframe_datetime(df) -> None:
     roundtripped.columns.name = "cols"  # why?
     pd.testing.assert_frame_equal(df, roundtripped)
     xr.testing.assert_identical(dataset, roundtripped.to_xarray())
+
+
+def test_roundtrip_1d_pandas_extension_array() -> None:
+    df = pd.DataFrame({"cat": pd.Categorical(["a", "b", "c"])})
+    arr = xr.Dataset.from_dataframe(df)["cat"]
+    roundtripped = arr.to_pandas()
+    assert (df["cat"] == roundtripped).all()
+    assert df["cat"].dtype == roundtripped.dtype
+    xr.testing.assert_identical(arr, roundtripped.to_xarray())
