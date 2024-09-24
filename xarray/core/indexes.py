@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import formatting, nputils, utils
+from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.indexing import (
     IndexSelResult,
     PandasIndexingAdapter,
@@ -1370,6 +1371,116 @@ class PandasMultiIndex(PandasIndex):
         return self._replace(
             index, dim=new_dim, level_coords_dtype=new_level_coords_dtype
         )
+
+
+class CoordinateTransformIndex(Index):
+    """Xarray index abstract class for transformation between "pixel"
+    and "world" coordinates.
+
+    """
+
+    transform: CoordinateTransform
+
+    def __init__(
+        self,
+        transform: CoordinateTransform,
+    ):
+        self.transform = transform
+
+    def create_variables(
+        self, variables: Mapping[Any, Variable] | None = None
+    ) -> IndexVars:
+        new_variables = {}
+
+        for name in self.transform.coord_names:
+            # copy attributes, if any
+            attrs: Mapping[Hashable, Any] | None
+
+            if variables is not None and name in variables:
+                var = variables[name]
+                attrs = var.attrs
+            else:
+                attrs = None
+
+            data = CoordinateTransformIndexingAdapter(self.transform, name)
+            new_variables[name] = Variable(self.transform.dims, data, attrs=attrs)
+
+        return new_variables
+
+    def create_coordinates(self) -> Coordinates:
+        # TODO: move this in xarray.Index base class?
+        variables = self.create_variables()
+        indexes = {name: self for name in variables}
+        return xr.Coordinates(coords=variables, indexes=indexes)
+
+    def isel(
+        self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
+    ) -> Self | None:
+        # TODO: support returning a new index (e.g., possible to re-calculate the
+        # the transform or calculate another transform on a reduced dimension space)
+        return None
+
+    def sel(
+        self, labels: dict[Any, Any], method=None, tolerance=None
+    ) -> IndexSelResult:
+        if method != "nearest":
+            raise ValueError(
+                "CoordinateTransformIndex only supports selection with method='nearest'"
+            )
+
+        labels_set = set(labels)
+        coord_names_set = set(self.transform.coord_names)
+
+        missing_labels = coord_names_set - labels_set
+        if missing_labels:
+            raise ValueError(
+                f"missing labels for coordinate(s): {','.join(missing_labels)}."
+            )
+
+        label0_obj = next(iter(labels.values()))
+        dim_size0 = getattr(label0_obj, "sizes", None)
+
+        is_xr_obj = [
+            isinstance(label, (xr.DataArray, xr.Variable)) for label in labels.values()
+        ]
+        if not all(is_xr_obj):
+            raise TypeError(
+                "CoordinateTransformIndex only supports advanced (point-wise) indexing "
+                "with either xarray.DataArray or xarray.Variable objects."
+            )
+        dim_size = [getattr(label, "sizes", None) for label in labels.values()]
+        if any([ds != dim_size0 for ds in dim_size]):
+            raise ValueError(
+                "CoordinateTransformIndex only supports advanced (point-wise) indexing "
+                "with xarray.DataArray or xarray.Variable objects of macthing dimensions."
+            )
+
+        coord_labels = {
+            name: labels[name].values for name in self.transform.coord_names
+        }
+        dim_positions = self.transform.reverse(coord_labels)
+
+        results = {}
+        for dim, pos in dim_positions.items():
+            if isinstance(label0_obj, Variable):
+                xr_pos = Variable(label.dims, idx)
+            else:
+                # dataarray
+                xr_pos = DataArray(idx, dims=label.dims)
+            results[dim] = idx
+
+        return IndexSelResult(results)
+
+    def equals(self, other: Self) -> bool:
+        return self.transform.equals(other.transform)
+
+    def rename(
+        self,
+        name_dict: Mapping[Any, Hashable],
+        dims_dict: Mapping[Any, Hashable],
+    ) -> Self:
+        # TODO: maybe update self.transform coord_names, dim_size and dims attributes
+        return self
 
 
 def create_default_index_implicit(
