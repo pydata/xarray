@@ -5,6 +5,7 @@ from typing import Any
 
 from xarray.namedarray._array_api._data_type_functions import result_type
 from xarray.namedarray._array_api._utils import (
+    _atleast1d_dims,
     _dims_to_axis,
     _flatten_dims,
     _get_broadcasted_dims,
@@ -98,14 +99,22 @@ def concat(
     --------
     >>> import numpy as np
     >>> x = NamedArray(("x",), np.zeros((3,)))
-    >>> x1 = concat((x, 1 + x))
-    >>> x1.dims, x1.shape
+    >>> xc = concat((x, 1 + x))
+    >>> xc.dims, xc.shape
     (('x',), (6,))
 
     >>> x = NamedArray(("x", "y"), np.zeros((3, 4)))
-    >>> x1 = concat((x, 1 + x))
-    >>> x1.dims, x1.shape
+    >>> xc = concat((x, 1 + x))
+    >>> xc.dims, xc.shape
     (('x', 'y'), (6, 4))
+
+    0D
+
+    >>> x1 = NamedArray((), np.array(0))
+    >>> x2 = NamedArray((), np.array(0))
+    >>> xc = concat((x1, x2), axis=None)
+    >>> xc.dims, xc.shape
+    (('dim_0',), (2,))
     """
     x = arrays[0]
     xp = _get_data_namespace(x)
@@ -113,7 +122,8 @@ def concat(
     dtype = result_type(*arrays)
     _arrays = tuple(a._data for a in arrays)
     _data = xp.concat(_arrays, axis=_axis, dtype=dtype)
-    return NamedArray(x.dims, _data)
+    _dims = _atleast1d_dims(x.dims) if axis is None else x.dims
+    return NamedArray(_dims, _data)
 
 
 def expand_dims(
