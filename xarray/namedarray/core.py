@@ -505,9 +505,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def __getitem__(self, key: _IndexKeyLike | NamedArray) -> NamedArray:
         """
-        sdfd
+        Returns self[key].
 
-        Some rules
+        Some rules:
         * Integers removes the dim.
         * Slices and ellipsis maintains same dim.
         * None adds a dim.
@@ -519,14 +519,14 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         1D
 
         >>> x = NamedArray(("x",), np.array([0, 1, 2]))
-        >>> mask = NamedArray(("x",), np.array([1, 0, 0], dtype=bool))
-        >>> xm = x[mask]
+        >>> key = NamedArray(("x",), np.array([1, 0, 0], dtype=bool))
+        >>> xm = x[key]
         >>> xm.dims, xm.shape
         (('x',), (1,))
 
         >>> x = NamedArray(("x",), np.array([0, 1, 2]))
-        >>> mask = NamedArray(("x",), np.array([0, 0, 0], dtype=bool))
-        >>> xm = x[mask]
+        >>> key = NamedArray(("x",), np.array([0, 0, 0], dtype=bool))
+        >>> xm = x[key]
         >>> xm.dims, xm.shape
         (('x',), (0,))
 
@@ -543,15 +543,24 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         >>> xm.dims, xm.shape
         (('dim_2', 'x', 'y'), (1, 3, 4))
 
-        >>> mask = NamedArray(("x", "y"), np.ones((3, 4), dtype=bool))
-        >>> xm = x[mask]
+        >>> key = NamedArray(("x", "y"), np.ones((3, 4), dtype=bool))
+        >>> xm = x[key]
         >>> xm.dims, xm.shape
         ((('x', 'y'),), (12,))
+
+        0D
+
+        >>> x = NamedArray((), np.array(False, dtype=np.bool))
+        >>> key = NamedArray((), np.array(False, dtype=np.bool))
+        >>> xm = x[key]
+        >>> xm.dims, xm.shape
+        (('dim_0',), (0,))
         """
         from xarray.namedarray._array_api._manipulation_functions import (
             _broadcast_arrays,
         )
         from xarray.namedarray._array_api._utils import (
+            _atleast1d_dims,
             _dims_from_tuple_indexing,
             _flatten_dims,
         )
@@ -559,7 +568,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if isinstance(key, NamedArray):
             self_new, key_new = _broadcast_arrays(self, key)
             _data = self_new._data[key_new._data]
-            _dims = _flatten_dims(self_new.dims)
+            _dims = _flatten_dims(_atleast1d_dims(self_new.dims))
             return self._new(_dims, _data)
         # elif isinstance(key, int):
         #     return self._new(self.dims[1:], self._data[key])
