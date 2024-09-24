@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any, NamedTuple
 
 from xarray.namedarray._array_api._utils import (
-    _flattened_dims,
+    _atleast1d_dims,
+    _flatten_dims,
     _get_data_namespace,
 )
 from xarray.namedarray.core import NamedArray
@@ -29,7 +30,7 @@ class UniqueInverseResult(NamedTuple):
 def unique_all(x: NamedArray[Any, Any], /) -> UniqueAllResult:
     xp = _get_data_namespace(x)
     values, indices, inverse_indices, counts = xp.unique_all(x._data)
-    _dims = _flattened_dims(x.dims, x.ndim)
+    _dims = _atleast1d_dims(_flatten_dims(x.dims))
     return UniqueAllResult(
         NamedArray(_dims, values),
         NamedArray(_dims, indices),
@@ -58,7 +59,7 @@ def unique_counts(x: NamedArray[Any, Any], /) -> UniqueCountsResult:
     """
     xp = _get_data_namespace(x)
     values, counts = xp.unique_counts(x._data)
-    _dims = _flattened_dims(x.dims, x.ndim)
+    _dims = _flatten_dims(_atleast1d_dims(x.dims))
     return UniqueCountsResult(
         NamedArray(_dims, values),
         NamedArray(_dims, counts),
@@ -76,7 +77,7 @@ def unique_inverse(x: NamedArray[Any, Any], /) -> UniqueInverseResult:
     >>> x = NamedArray(("x",), np.array([0, 1, 2, 2], dtype=int))
     >>> x_unique = unique_inverse(x)
     >>> x_unique.values
-    >>> x_unique.counts
+    >>> x_unique.inverse_indices
     >>> x = NamedArray(("x", "y"), np.array([0, 1, 2, 2], dtype=int).reshape((2, 2)))
     >>> x_unique = unique_inverse(x)
     >>> x_unique.dims, x_unique.shape
@@ -84,7 +85,7 @@ def unique_inverse(x: NamedArray[Any, Any], /) -> UniqueInverseResult:
     """
     xp = _get_data_namespace(x)
     values, inverse_indices = xp.unique_inverse(x._data)
-    _dims = _flattened_dims(x.dims, x.ndim)
+    _dims = _flatten_dims(_atleast1d_dims(x.dims))
     return UniqueInverseResult(
         NamedArray(_dims, values),
         NamedArray(_dims, inverse_indices),
@@ -106,8 +107,15 @@ def unique_values(x: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
     >>> x_unique = unique_values(x)
     >>> x_unique.dims, x_unique.shape
     (('x',), (3,))
+
+    # Scalars becomes 1-dimensional
+
+    >>> x = NamedArray((), np.array(0, dtype=int))
+    x_unique = unique_values(x)
+    >>> x_unique.dims, x_unique.shape
+    (('dim_0',), (1,))
     """
     xp = _get_data_namespace(x)
     _data = xp.unique_values(x._data)
-    _dims = _flattened_dims(x.dims, x.ndim)
+    _dims = _flatten_dims(_atleast1d_dims(x.dims))
     return x._new(_dims, _data)
