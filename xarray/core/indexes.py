@@ -1397,6 +1397,8 @@ class CoordinateTransformIndex(Index):
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
+        from xarray.core.variable import Variable
+
         new_variables = {}
 
         for name in self.transform.coord_names:
