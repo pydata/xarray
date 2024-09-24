@@ -427,10 +427,15 @@ def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
     j = 0
     for k in key:
         if k is None:
+            # None adds 1 dimension:
             _dims.insert(j, _new_unique_dim_name(tuple(_dims)))
         elif isinstance(k, int):
+            # Integer removes 1 dimension:
             _dims.pop(j)
             j -= 1
+        else:
+            # Slices and Ellipsis maintains same dimensions:
+            pass
         j += 1
     return tuple(_dims)
 
