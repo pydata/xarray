@@ -34,7 +34,7 @@ def unique_all(x: NamedArray[Any, Any], /) -> UniqueAllResult:
     return UniqueAllResult(
         NamedArray(_dims, values),
         NamedArray(_dims, indices),
-        NamedArray(_dims, inverse_indices),
+        NamedArray(_flatten_dims(x.dims), inverse_indices),
         NamedArray(_dims, counts),
     )
 
