@@ -12,6 +12,7 @@ import pandas as pd
 from xarray.core import formatting, nputils, utils
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.indexing import (
+    CoordinateTransformIndexingAdapter,
     IndexSelResult,
     PandasIndexingAdapter,
     PandasMultiIndexingAdapter,
@@ -25,6 +26,7 @@ from xarray.core.utils import (
 )
 
 if TYPE_CHECKING:
+    from xarray.core.coordinate import Coordinates
     from xarray.core.types import ErrorOptions, JoinOptions, Self
     from xarray.core.variable import Variable
 
@@ -1374,8 +1376,13 @@ class PandasMultiIndex(PandasIndex):
 
 
 class CoordinateTransformIndex(Index):
-    """Xarray index abstract class for transformation between "pixel"
-    and "world" coordinates.
+    """Helper class for creating Xarray indexes based on coordinate transforms.
+
+    - wraps a :py:class:`CoordinateTransform` instance
+    - takes care of creating the index (lazy) coordinates
+    - supports point-wise label-based selection
+    - supports exact alignment only, by comparing indexes based on their transform
+      (not on their explicit coordinate labels)
 
     """
 
@@ -1409,9 +1416,11 @@ class CoordinateTransformIndex(Index):
 
     def create_coordinates(self) -> Coordinates:
         # TODO: move this in xarray.Index base class?
+        from xarray.core.coordinates import Coordinates
+
         variables = self.create_variables()
         indexes = {name: self for name in variables}
-        return xr.Coordinates(coords=variables, indexes=indexes)
+        return Coordinates(coords=variables, indexes=indexes)
 
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
@@ -1423,6 +1432,9 @@ class CoordinateTransformIndex(Index):
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
     ) -> IndexSelResult:
+        from xarray.core.dataarray import DataArray
+        from xarray.core.variable import Variable
+
         if method != "nearest":
             raise ValueError(
                 "CoordinateTransformIndex only supports selection with method='nearest'"
@@ -1433,15 +1445,14 @@ class CoordinateTransformIndex(Index):
 
         missing_labels = coord_names_set - labels_set
         if missing_labels:
-            raise ValueError(
-                f"missing labels for coordinate(s): {','.join(missing_labels)}."
-            )
+            missing_labels_str = ",".join([f"{name}" for name in missing_labels])
+            raise ValueError(f"missing labels for coordinate(s): {missing_labels_str}.")
 
         label0_obj = next(iter(labels.values()))
         dim_size0 = getattr(label0_obj, "sizes", None)
 
         is_xr_obj = [
-            isinstance(label, (xr.DataArray, xr.Variable)) for label in labels.values()
+            isinstance(label, DataArray | Variable) for label in labels.values()
         ]
         if not all(is_xr_obj):
             raise TypeError(
@@ -1461,13 +1472,14 @@ class CoordinateTransformIndex(Index):
         dim_positions = self.transform.reverse(coord_labels)
 
         results = {}
+        dims0 = tuple(dim_size0)
         for dim, pos in dim_positions.items():
             if isinstance(label0_obj, Variable):
-                xr_pos = Variable(label.dims, idx)
+                xr_pos = Variable(dims0, pos)
             else:
                 # dataarray
-                xr_pos = DataArray(idx, dims=label.dims)
-            results[dim] = idx
+                xr_pos = DataArray(pos, dims=dims0)
+            results[dim] = xr_pos
 
         return IndexSelResult(results)
 

@@ -1,4 +1,5 @@
-from typing import Any, Iterable, Hashable, Mapping
+from collections.abc import Hashable, Iterable, Mapping
+from typing import Any
 
 import numpy as np
 
@@ -15,11 +16,14 @@ class CoordinateTransform:
         self,
         coord_names: Iterable[Hashable],
         dim_size: Mapping[str, int],
-        dtype: Any = np.dtype(np.float64),
+        dtype: Any = None,
     ):
         self.coord_names = tuple(coord_names)
         self.dims = tuple(dim_size)
         self.dim_size = dict(dim_size)
+
+        if dtype is None:
+            dtype = np.dtype(np.float64)
         self.dtype = dtype
 
     def forward(self, dim_positions: dict[str, Any]) -> dict[Hashable, Any]:
@@ -61,7 +65,7 @@ class CoordinateTransform:
         raise NotImplementedError
 
     def generate_coords(self, dims: tuple[str] | None = None) -> dict[Hashable, Any]:
-        """Returns all "world" coordinate labels."""
+        """Compute all coordinate labels at once."""
         if dims is None:
             dims = self.dims
 

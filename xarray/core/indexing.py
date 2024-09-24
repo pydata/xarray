@@ -1961,8 +1961,9 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
 
 
 class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
-    """Wrap a CoordinateTransform to support explicit indexing and
-    lazy coordinate labels.
+    """Wrap a CoordinateTransform as a lazy coordinate array.
+
+    Supports explicit indexing (both outer and vectorized).
 
     """
 
@@ -2036,7 +2037,7 @@ class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         self._check_and_raise_if_non_basic_indexer(indexer)
 
         # also works with basic indexing
-        return self._oindex_get(indexer)
+        return self._oindex_get(OuterIndexer(indexer.tuple))
 
     def __setitem__(self, indexer: ExplicitIndexer, value: Any) -> None:
         raise TypeError(
