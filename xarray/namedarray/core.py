@@ -553,13 +553,13 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         )
         from xarray.namedarray._array_api._utils import (
             _dims_from_tuple_indexing,
-            _flattened_dims,
+            _flatten_dims,
         )
 
         if isinstance(key, NamedArray):
             self_new, key_new = _broadcast_arrays(self, key)
             _data = self_new._data[key_new._data]
-            _dims = _flattened_dims(self_new.dims, self_new.ndim)
+            _dims = _flatten_dims(self_new.dims)
             return self._new(_dims, _data)
         # elif isinstance(key, int):
         #     return self._new(self.dims[1:], self._data[key])
