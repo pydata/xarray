@@ -1476,6 +1476,9 @@ class CoordinateTransformIndex(Index):
         results = {}
         dims0 = tuple(dim_size0)
         for dim, pos in dim_positions.items():
+            # TODO: rounding the decimal positions is not always the behavior we expect
+            # (there are different ways to represent implicit intervals)
+            # we should probably make this customizable.
             pos = np.round(pos).astype("int")
             if isinstance(label0_obj, Variable):
                 xr_pos = Variable(dims0, pos)
