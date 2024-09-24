@@ -10627,7 +10627,7 @@ class Dataset(
         --------
         Dataset.cumulative
         DataArray.rolling
-        core.rolling.DatasetRolling
+        DataArray.rolling_exp
         """
         from xarray.core.rolling import DatasetRolling
 
@@ -10657,9 +10657,9 @@ class Dataset(
 
         See Also
         --------
-        Dataset.rolling
         DataArray.cumulative
-        core.rolling.DatasetRolling
+        Dataset.rolling
+        Dataset.rolling_exp
         """
         from xarray.core.rolling import DatasetRolling
 
