@@ -30,7 +30,7 @@ class UniqueInverseResult(NamedTuple):
 def unique_all(x: NamedArray[Any, Any], /) -> UniqueAllResult:
     xp = _get_data_namespace(x)
     values, indices, inverse_indices, counts = xp.unique_all(x._data)
-    _dims = _atleast1d_dims(_flatten_dims(x.dims))
+    _dims = _flatten_dims(_atleast1d_dims(x.dims))
     return UniqueAllResult(
         NamedArray(_dims, values),
         NamedArray(_dims, indices),
@@ -85,10 +85,9 @@ def unique_inverse(x: NamedArray[Any, Any], /) -> UniqueInverseResult:
     """
     xp = _get_data_namespace(x)
     values, inverse_indices = xp.unique_inverse(x._data)
-    _dims = _flatten_dims(_atleast1d_dims(x.dims))
     return UniqueInverseResult(
-        NamedArray(_dims, values),
-        NamedArray(_dims, inverse_indices),
+        NamedArray(_flatten_dims(_atleast1d_dims(x.dims)), values),
+        NamedArray(_flatten_dims(x.dims), inverse_indices),
     )
 
 
