@@ -1476,6 +1476,7 @@ class CoordinateTransformIndex(Index):
         results = {}
         dims0 = tuple(dim_size0)
         for dim, pos in dim_positions.items():
+            pos = np.round(pos).astype("int")
             if isinstance(label0_obj, Variable):
                 xr_pos = Variable(dims0, pos)
             else:
