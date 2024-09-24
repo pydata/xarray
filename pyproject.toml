@@ -246,13 +246,14 @@ extend-exclude = [
 extend-safe-fixes = [
   "TID252", # absolute imports
 ]
-extend-ignore = [
+ignore = [
   "E402",
   "E501",
   "E731",
   "UP007",
 ]
 extend-select = [
+  "B", # flake8-bugbear
   "F", # Pyflakes
   "E", # Pycodestyle
   "W",

@@ -282,7 +282,8 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
                 warnings.warn(
                     "The specified chunks separate the stored chunks along "
                     f'dimension "{dim}" starting at index {min(breaks)}. This could '
-                    "degrade performance. Instead, consider rechunking after loading."
+                    "degrade performance. Instead, consider rechunking after loading.",
+                    stacklevel=2,
                 )
 
     return dict(zip(dims, chunk_shape, strict=True))
@@ -358,12 +359,12 @@ def _get_func_args(func, param_names):
     """
     try:
         func_args = inspect.signature(func).parameters
-    except ValueError:
+    except ValueError as err:
         func_args = {}
         if not param_names:
             raise ValueError(
                 "Unable to inspect `func` signature, and `param_names` was not provided."
-            )
+            ) from err
     if param_names:
         params = param_names
     else:
@@ -779,7 +780,8 @@ class Dataset(
 
     def reset_encoding(self) -> Self:
         warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead"
+            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
+            stacklevel=2,
         )
         return self.drop_encoding()
 
@@ -2507,6 +2509,14 @@ class Dataset(
             if Zarr arrays are written in parallel. This option may be useful in combination
             with ``compute=False`` to initialize a Zarr from an existing
             Dataset with arbitrary chunk structure.
+            In addition to the many-to-one relationship validation, it also detects partial
+            chunks writes when using the region parameter,
+            these partial chunks are considered unsafe in the mode "r+" but safe in
+            the mode "a".
+            Note: Even with these validations it can still be unsafe to write
+            two or more chunked arrays in the same location in parallel if they are
+            not writing in independent regions, for those cases it is better to use
+            a synchronizer.
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
@@ -2657,7 +2667,7 @@ class Dataset(
 
     def chunk(
         self,
-        chunks: T_ChunksFreq = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        chunks: T_ChunksFreq = {},  # noqa: B006  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str | None = None,
         lock: bool = False,
@@ -2725,6 +2735,7 @@ class Dataset(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
                 category=DeprecationWarning,
+                stacklevel=2,
             )
             chunks = {}
         chunks_mapping: Mapping[Any, Any]
@@ -4803,6 +4814,7 @@ class Dataset(
                                 f"No index created for dimension {k} because variable {k} is not a coordinate. "
                                 f"To create an index for {k}, please first call `.set_coords('{k}')` on this object.",
                                 UserWarning,
+                                stacklevel=2,
                             )
 
                         # create 1D variable without creating a new index
@@ -5541,7 +5553,7 @@ class Dataset(
         new_indexes, clean_index = index.unstack()
         indexes.update(new_indexes)
 
-        for name, idx in new_indexes.items():
+        for _name, idx in new_indexes.items():
             variables.update(idx.create_variables(index_vars))
 
         for name, var in self.variables.items():
@@ -5582,7 +5594,7 @@ class Dataset(
         indexes.update(new_indexes)
 
         new_index_variables = {}
-        for name, idx in new_indexes.items():
+        for _name, idx in new_indexes.items():
             new_index_variables.update(idx.create_variables(index_vars))
 
         new_dim_sizes = {k: v.size for k, v in new_index_variables.items()}
@@ -6209,8 +6221,10 @@ class Dataset(
             labels_for_dim = np.asarray(labels_for_dim)
             try:
                 index = self.get_index(dim)
-            except KeyError:
-                raise ValueError(f"dimension {dim!r} does not have coordinate labels")
+            except KeyError as err:
+                raise ValueError(
+                    f"dimension {dim!r} does not have coordinate labels"
+                ) from err
             new_index = index.drop(labels_for_dim, errors=errors)
             ds = ds.loc[{dim: new_index}]
         return ds
@@ -7743,7 +7757,9 @@ class Dataset(
                 for k, v in variables
             }
         except KeyError as e:
-            raise ValueError(f"cannot convert dict without the key '{str(e.args[0])}'")
+            raise ValueError(
+                f"cannot convert dict without the key '{str(e.args[0])}'"
+            ) from e
         obj = cls(variable_dict)
 
         # what if coords aren't dims?
@@ -8333,6 +8349,7 @@ class Dataset(
             warnings.warn(
                 "The `interpolation` argument to quantile was renamed to `method`.",
                 FutureWarning,
+                stacklevel=2,
             )
 
             if method != "linear":
@@ -10390,7 +10407,7 @@ class Dataset(
           * letters  (letters) object 16B 'a' 'b'
         Dimensions without coordinates: y
         Data variables:
-            foo      (letters, y) float64 48B 9.0 11.0 13.0 9.0 11.0 13.0
+            foo      (letters, y) int64 48B 9 11 13 9 11 13
 
         Grouping by multiple variables
 
@@ -10604,7 +10621,7 @@ class Dataset(
         --------
         Dataset.cumulative
         DataArray.rolling
-        core.rolling.DatasetRolling
+        DataArray.rolling_exp
         """
         from xarray.core.rolling import DatasetRolling
 
@@ -10634,9 +10651,9 @@ class Dataset(
 
         See Also
         --------
-        Dataset.rolling
         DataArray.cumulative
-        core.rolling.DatasetRolling
+        Dataset.rolling
+        Dataset.rolling_exp
         """
         from xarray.core.rolling import DatasetRolling
 
