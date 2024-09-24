@@ -456,6 +456,20 @@ def _flatten_dims(dims: _Dims) -> _Dims:
     return (dims,) if len(dims) > 1 else dims
 
 
+def _atleast1d_dims(dims: _Dims) -> _Dims:
+    """
+    Set dims atleast 1-dimensional.
+
+    Examples
+    --------
+    >>> _atleast1d_dims(())
+    ('dim_0',)
+    >>> _atleast1d_dims(("x",))
+    ('x',)
+    >>> _atleast1d_dims(("x", "y"))
+    ('x', 'y')
+    """
+    return (_new_unique_dim_name(dims),) if len(dims) < 1 else dims
 
 
 def _raise_if_any_duplicate_dimensions(
