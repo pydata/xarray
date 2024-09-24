@@ -6,7 +6,7 @@ from typing import Any
 from xarray.namedarray._array_api._data_type_functions import result_type
 from xarray.namedarray._array_api._utils import (
     _dims_to_axis,
-    _flattened_dims,
+    _flatten_dims,
     _get_broadcasted_dims,
     _get_data_namespace,
     _infer_dims,
@@ -259,14 +259,13 @@ def reshape(
     >>> x1 = reshape(x, (-1,))
     >>> x1.dims, x1.shape
     ((('x', 'y'),), (12,))
-
     """
     xp = _get_data_namespace(x)
     _data = xp.reshape(x._data, shape, copy=copy)
 
     if math.prod(shape) == -1 and False:
         # Flattening operations merges all dimensions to 1:
-        dims_raveled = _flattened_dims(x.dims, x.ndim)
+        dims_raveled = _flatten_dims(x.dims)
         dim = dims_raveled[0]
         d = []
         for v in shape:
