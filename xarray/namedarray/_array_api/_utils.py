@@ -440,8 +440,22 @@ def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
     return tuple(_dims)
 
 
-def _flattened_dims(dims: _Dims, ndim: int) -> _Dims:
-    return (dims,) if ndim > 1 else dims
+def _flatten_dims(dims: _Dims) -> _Dims:
+    """
+    Flatten multidimensional dims to 1-dimensional.
+
+    Examples
+    --------
+    >>> _flatten_dims(())
+    ()
+    >>> _flatten_dims(("x",))
+    ('x',)
+    >>> _flatten_dims(("x", "y"))
+    (('x', 'y'),)
+    """
+    return (dims,) if len(dims) > 1 else dims
+
+
 
 
 def _raise_if_any_duplicate_dimensions(
