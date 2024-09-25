@@ -6,6 +6,7 @@ from typing import Any
 from xarray.namedarray._array_api._data_type_functions import result_type
 from xarray.namedarray._array_api._utils import (
     _atleast1d_dims,
+    _dims_from_tuple_indexing,
     _dims_to_axis,
     _flatten_dims,
     _get_broadcasted_dims,
@@ -333,11 +334,26 @@ def tile(
 def unstack(
     x: NamedArray[Any, Any], /, *, axis: _Axis = 0
 ) -> tuple[NamedArray[Any, Any], ...]:
+    """
+    Splits an array into a sequence of arrays along the given axis.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x", "y", "z"), np.arange(1*2*3).reshape((1, 2, 3)))
+    >>> x_y0, x_y1 = unstack(x, axis=1)
+    >>> x_y0
+    <Namedarray, shape=(1, 3), dims=('x', 'z'), dtype=int64, data=[[0 1 2]]>
+    >>> x_y1
+    <Namedarray, shape=(1, 3), dims=('x', 'z'), dtype=int64, data=[[3 4 5]]>
+    """
     xp = _get_data_namespace(x)
     _datas = xp.unstack(x._data, axis=axis)
+    key = [slice(None)] * x.ndim
+    key[axis] = 0
+    _dims = _dims_from_tuple_indexing(x.dims, tuple(key))
     out: tuple[NamedArray[Any, Any], ...] = ()
     for _data in _datas:
-        _dims = _infer_dims(_data.shape)  # TODO: Fix dims
         out += (x._new(_dims, _data),)
     return out
 
