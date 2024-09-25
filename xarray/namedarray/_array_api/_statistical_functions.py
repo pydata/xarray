@@ -6,6 +6,7 @@ from xarray.namedarray._array_api._utils import (
     _dims_to_axis,
     _get_data_namespace,
     _get_remaining_dims,
+    _reduce_dims,
 )
 from xarray.namedarray._typing import (
     Default,
@@ -131,7 +132,8 @@ def mean(
 
     Examples
     --------
-    >>> x = NamedArray(("x", "y"), nxp.asarray([[1.0, 2.0], [3.0, 4.0]]))
+    >>> import numpy as np
+    >>> x = NamedArray(("x", "y"), np.asarray([[1.0, 2.0], [3.0, 4.0]]))
     >>> mean(x).data
     Array(2.5, dtype=float64)
     >>> mean(x, dims=("x",)).data
@@ -149,11 +151,9 @@ def mean(
     """
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dims, axis)
-    _data = xp.mean(x._data, axis=_axis, keepdims=False)
-    # TODO: Why do we need to do the keepdims ourselves?
-    dims_, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
-    out = x._new(dims=dims_, data=data_)
-    return out
+    _data = xp.mean(x._data, axis=_axis, keepdims=keepdims)
+    _dims = _reduce_dims(x.dims, axis=_axis, keepdims=keepdims)
+    return x._new(dims=_dims, data=_data)
 
 
 def min(

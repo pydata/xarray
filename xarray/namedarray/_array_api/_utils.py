@@ -369,6 +369,40 @@ def _get_remaining_dims(
     return dims, data
 
 
+def _reduce_dims(dims: _Dims, *, axis: _AxisLike | None, keepdims: False) -> _Dims:
+    """
+    Reduce dims according to axis.
+
+    Examples
+    --------
+    >>> _reduce_dims(("x", "y", "z"), axis=None, keepdims=False)
+    ()
+    >>> _reduce_dims(("x", "y", "z"), axis=1, keepdims=False)
+    ('x', 'z')
+    >>> _reduce_dims(("x", "y", "z"), axis=-1, keepdims=False)
+    ('x', 'y')
+
+    keepdims retains the same dims
+
+    >>> _reduce_dims(("x", "y", "z"), axis=-1, keepdims=True)
+    ('x', 'y', 'z')
+    """
+    if keepdims:
+        return dims
+
+    ndim = len(dims)
+    if axis is None:
+        _axis = tuple(v for v in range(ndim))
+    else:
+        _axis = _normalize_axis_tuple(axis, ndim)
+
+    key = [slice(None)] * ndim
+    for i, v in enumerate(_axis):
+        key[v] = 0
+
+    return _dims_from_tuple_indexing(dims, tuple(key))
+
+
 def _new_unique_dim_name(dims: _Dims, i: int | None = None) -> _Dim:
     """
     Get a new unique dimension name.
