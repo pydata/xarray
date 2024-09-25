@@ -1,0 +1,54 @@
+name: xarray-tests
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  # Pin a "very new numpy" (updated Sept 24, 2024)
+  - numpy>=2.1.1
+  - aiobotocore
+  - array-api-strict
+  - boto3
+  - bottleneck
+  - cartopy
+  - cftime
+  - dask-core
+  - dask-expr # dask raises a deprecation warning without this, breaking doctests
+  - distributed
+  - flox
+  - fsspec
+  - h5netcdf
+  - h5py
+  - hdf5
+  - hypothesis
+  - iris
+  - lxml # Optional dep of pydap
+  - matplotlib-base
+  - nc-time-axis
+  - netcdf4
+  # numba, sparse, numbagg, numexpr often conflicts with newer versions of numpy.
+  # This environment helps us test xarray with the latest versions
+  # of numpy
+  # - numba
+  # - numbagg
+  # - numexpr
+  # - sparse
+  - opt_einsum
+  - packaging
+  - pandas
+  # - pint>=0.22
+  - pip
+  - pooch
+  - pre-commit
+  - pyarrow # pandas raises a deprecation warning without this, breaking doctests
+  - pydap
+  - pytest
+  - pytest-cov
+  - pytest-env
+  - pytest-xdist
+  - pytest-timeout
+  - rasterio
+  - scipy
+  - seaborn
+  - toolz
+  - typing_extensions
+  - zarr
