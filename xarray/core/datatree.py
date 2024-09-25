@@ -46,13 +46,7 @@ from xarray.core.utils import (
     either_dict_or_kwargs,
     maybe_wrap_array,
 )
-from xarray.core.variable import Variable
-
-try:
-    from xarray.core.variable import calculate_dimensions
-except ImportError:
-    # for xarray versions 2022.03.0 and earlier
-    from xarray.core.dataset import calculate_dimensions
+from xarray.core.variable import Variable, calculate_dimensions
 
 if TYPE_CHECKING:
     import numpy as np
@@ -157,7 +151,7 @@ def check_alignment(
             check_alignment(child_path, child_ds, base_ds, child.children)
 
 
-def _check_for_slashes_in_names(variables: Iterable[Hashable]) -> None:
+def validate_variable_names(variables: Iterable[Hashable]) -> None:
     offending_variable_names = [
         name for name in variables if isinstance(name, str) and "/" in name
     ]
@@ -466,7 +460,7 @@ class DataTree(
         super().__init__(name=name, children=children)
 
     def _set_node_data(self, dataset: Dataset):
-        _check_for_slashes_in_names(dataset.variables)
+        validate_variable_names(dataset.variables)
         data_vars, coord_vars = _collect_data_and_coord_variables(dataset)
         self._data_variables = data_vars
         self._node_coord_variables = coord_vars

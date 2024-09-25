@@ -270,6 +270,45 @@ class TestPruning:
             del john["Mary"]
 
 
+class TestValidNames:
+    def test_child_keys(self):
+        parent: TreeNode = TreeNode()
+        with pytest.raises(ValueError, match="cannot contain forward slashes"):
+            parent.children = {"a/b": TreeNode()}
+
+        with pytest.raises(TypeError, match="must be a string or None"):
+            parent.children = {0: TreeNode()}  # type: ignore[dict-item]
+
+    def test_node_names(self):
+        with pytest.raises(ValueError, match="cannot contain forward slashes"):
+            NamedNode(name="a/b")
+
+        with pytest.raises(TypeError, match="must be a string or None"):
+            NamedNode(name=0)
+
+    def test_names(self):
+        nn: NamedNode = NamedNode()
+        assert nn.name is None
+
+        nn = NamedNode(name="foo")
+        assert nn.name == "foo"
+
+        nn.name = "bar"
+        assert nn.name == "bar"
+
+        nn = NamedNode(children={"foo": NamedNode()})
+        assert nn.children["foo"].name == "foo"
+        with pytest.raises(
+            ValueError, match="cannot set the name of a node which already has a parent"
+        ):
+            nn.children["foo"].name = "bar"
+
+        detached = nn.children["foo"].copy()
+        assert detached.name == "foo"
+        detached.name = "bar"
+        assert detached.name == "bar"
+
+
 def create_test_tree() -> tuple[NamedNode, NamedNode]:
     # a
     # ├── b

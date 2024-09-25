@@ -737,6 +737,12 @@ class TestCoords:
         # expected = child.assign_coords({"c": 11})
         # assert_identical(expected, actual)
 
+    def test_forbid_paths_as_names(self):
+        # regression test for GH issue #9485
+        dt = DataTree(Dataset(coords={"x": 0}), children={"child": DataTree()})
+        with pytest.raises(ValueError, match="cannot have names containing"):
+            dt.coords["/child/y"] = 2
+
 
 def test_delitem():
     ds = Dataset({"a": 0}, coords={"x": ("x", [1, 2]), "z": "a"})
