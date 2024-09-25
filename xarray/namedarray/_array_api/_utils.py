@@ -497,7 +497,7 @@ def _atleast1d_dims(dims: _Dims) -> _Dims:
     return (_new_unique_dim_name(dims),) if len(dims) < 1 else dims
 
 
-def _reduce_dims(dims: _Dims, *, axis: _AxisLike | None, keepdims: False) -> _Dims:
+def _reduce_dims(dims: _Dims, *, axis: _AxisLike | None, keepdims: bool) -> _Dims:
     """
     Reduce dims according to axis.
 
@@ -524,7 +524,8 @@ def _reduce_dims(dims: _Dims, *, axis: _AxisLike | None, keepdims: False) -> _Di
     else:
         _axis = _normalize_axis_tuple(axis, ndim)
 
-    key = [slice(None)] * ndim
+    k: _IndexKeys = (slice(None),) * ndim
+    key = list(k)
     for i, v in enumerate(_axis):
         key[v] = 0
 
