@@ -173,9 +173,11 @@ def test_ensure_warnings_not_elevated(func) -> None:
             warnings.warn("warning in test", stacklevel=2)
             return super().dims
 
-        def __array__(self, dtype=None, copy=None):
+        def __array__(
+            self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        ) -> np.ndarray:
             warnings.warn("warning in test", stacklevel=2)
-            return super().__array__()
+            return super().__array__(dtype, copy=copy)
 
     a = WarningVariable("x", [1])
     b = WarningVariable("x", [2])

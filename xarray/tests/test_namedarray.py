@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
 import numpy as np
 import pytest
+from packaging.version import Version
 
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.namedarray._typing import (
@@ -53,8 +54,14 @@ class CustomArrayBase(Generic[_ShapeType_co, _DType_co]):
 class CustomArray(
     CustomArrayBase[_ShapeType_co, _DType_co], Generic[_ShapeType_co, _DType_co]
 ):
-    def __array__(self) -> np.ndarray[Any, np.dtype[np.generic]]:
-        return np.array(self.array)
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray[Any, np.dtype[np.generic]]:
+
+        if Version(np.__version__) >= Version("2.0.0"):
+            return np.asarray(self.array, dtype=dtype, copy=copy)
+        else:
+            return np.asarray(self.array, dtype=dtype)
 
 
 class CustomArrayIndexable(

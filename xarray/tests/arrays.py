@@ -24,7 +24,9 @@ class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
     def get_duck_array(self):
         raise UnexpectedDataAccess("Tried accessing data")
 
-    def __array__(self, dtype: np.typing.DTypeLike = None):
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray:
         raise UnexpectedDataAccess("Tried accessing data")
 
     def __getitem__(self, key):
@@ -49,7 +51,9 @@ class DuckArrayWrapper(utils.NDArrayMixin):
     def __getitem__(self, key):
         return type(self)(self.array[key])
 
-    def __array__(self, dtype: np.typing.DTypeLike = None):
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray:
         raise UnexpectedDataAccess("Tried accessing data")
 
     def __array_namespace__(self):
@@ -140,7 +144,9 @@ class ConcatenatableArray:
     def get_duck_array(self):
         raise UnexpectedDataAccess("Tried accessing data")
 
-    def __array__(self, dtype: np.typing.DTypeLike = None):
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray:
         raise UnexpectedDataAccess("Tried accessing data")
 
     def __getitem__(self, key) -> "ConcatenatableArray":

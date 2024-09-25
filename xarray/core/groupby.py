@@ -193,7 +193,11 @@ class _DummyGroup(Generic[T_Xarray]):
     def data(self) -> range:
         return range(self.size)
 
-    def __array__(self) -> np.ndarray:
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray:
+        if copy is False:
+            raise NotImplementedError(f"An array copy is necessary, got {copy = }.")
         return np.arange(self.size)
 
     @property
