@@ -17,12 +17,10 @@ from xarray.namedarray._typing import (
     _Dim,
     _Dims,
     _DimsLike2,
-    _DType,
     _dtype,
     _IndexKeys,
     _IndexKeysNoEllipsis,
     _Shape,
-    duckarray,
 )
 from xarray.namedarray.core import NamedArray
 
