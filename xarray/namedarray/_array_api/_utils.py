@@ -526,7 +526,7 @@ def _reduce_dims(dims: _Dims, *, axis: _AxisLike | None, keepdims: bool) -> _Dim
 
     k: _IndexKeys = (slice(None),) * ndim
     key = list(k)
-    for i, v in enumerate(_axis):
+    for v in _axis:
         key[v] = 0
 
     return _dims_from_tuple_indexing(dims, tuple(key))
