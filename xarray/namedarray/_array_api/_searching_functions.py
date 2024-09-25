@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any
 from xarray.namedarray._array_api._utils import (
     _dim_to_optional_axis,
     _get_data_namespace,
-    _get_remaining_dims,
     _infer_dims,
+    _reduce_dims,
 )
 from xarray.namedarray._typing import (
     Default,
@@ -32,10 +32,9 @@ def argmax(
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x)
     _axis = _dim_to_optional_axis(x, dim, axis)
-    _data = xp.argmax(x._data, axis=_axis, keepdims=False)  # We fix keepdims later
-    # TODO: Why do we need to do the keepdims ourselves?
-    _dims, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
-    return x._new(dims=_dims, data=data_)
+    _data = xp.argmax(x._data, axis=_axis, keepdims=keepdims)
+    _dims = _reduce_dims(x.dims, axis=_axis, keepdims=keepdims)
+    return x._new(dims=_dims, data=_data)
 
 
 def argmin(
@@ -48,10 +47,9 @@ def argmin(
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x)
     _axis = _dim_to_optional_axis(x, dim, axis)
-    _data = xp.argmin(x._data, axis=_axis, keepdims=False)  # We fix keepdims later
-    # TODO: Why do we need to do the keepdims ourselves?
-    _dims, data_ = _get_remaining_dims(x, _data, _axis, keepdims=keepdims)
-    return x._new(dims=_dims, data=data_)
+    _data = xp.argmin(x._data, axis=_axis, keepdims=keepdims)
+    _dims = _reduce_dims(x.dims, axis=_axis, keepdims=keepdims)
+    return x._new(dims=_dims, data=_data)
 
 
 def nonzero(x: NamedArray[Any, Any], /) -> tuple[NamedArray[Any, Any], ...]:

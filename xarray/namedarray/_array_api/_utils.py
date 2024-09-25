@@ -337,72 +337,6 @@ def _dim_to_axis(x: NamedArray[Any, Any], dim: _Dim | Default, axis: int) -> int
     return _axis
 
 
-def _get_remaining_dims(
-    x: NamedArray[Any, _DType],
-    data: duckarray[Any, _DType],
-    axis: _AxisLike | None,
-    *,
-    keepdims: bool,
-) -> tuple[_Dims, duckarray[Any, _DType]]:
-    """
-    Get the reamining dims after a reduce operation.
-    """
-    if data.shape == x.shape:
-        return x.dims, data
-
-    removed_axes: tuple[int, ...]
-    if axis is None:
-        removed_axes = tuple(v for v in range(x.ndim))
-    else:
-        removed_axes = _normalize_axis_tuple(axis, x.ndim)
-
-    if keepdims:
-        # Insert None (aka newaxis) for removed dims
-        slices = tuple(
-            None if i in removed_axes else slice(None, None) for i in range(x.ndim)
-        )
-        data = data[slices]
-        dims = x.dims
-    else:
-        dims = tuple(adim for n, adim in enumerate(x.dims) if n not in removed_axes)
-
-    return dims, data
-
-
-def _reduce_dims(dims: _Dims, *, axis: _AxisLike | None, keepdims: False) -> _Dims:
-    """
-    Reduce dims according to axis.
-
-    Examples
-    --------
-    >>> _reduce_dims(("x", "y", "z"), axis=None, keepdims=False)
-    ()
-    >>> _reduce_dims(("x", "y", "z"), axis=1, keepdims=False)
-    ('x', 'z')
-    >>> _reduce_dims(("x", "y", "z"), axis=-1, keepdims=False)
-    ('x', 'y')
-
-    keepdims retains the same dims
-
-    >>> _reduce_dims(("x", "y", "z"), axis=-1, keepdims=True)
-    ('x', 'y', 'z')
-    """
-    if keepdims:
-        return dims
-
-    ndim = len(dims)
-    if axis is None:
-        _axis = tuple(v for v in range(ndim))
-    else:
-        _axis = _normalize_axis_tuple(axis, ndim)
-
-    key = [slice(None)] * ndim
-    for i, v in enumerate(_axis):
-        key[v] = 0
-
-    return _dims_from_tuple_indexing(dims, tuple(key))
-
-
 def _new_unique_dim_name(dims: _Dims, i: int | None = None) -> _Dim:
     """
     Get a new unique dimension name.
@@ -563,6 +497,40 @@ def _atleast1d_dims(dims: _Dims) -> _Dims:
     ('x', 'y')
     """
     return (_new_unique_dim_name(dims),) if len(dims) < 1 else dims
+
+
+def _reduce_dims(dims: _Dims, *, axis: _AxisLike | None, keepdims: False) -> _Dims:
+    """
+    Reduce dims according to axis.
+
+    Examples
+    --------
+    >>> _reduce_dims(("x", "y", "z"), axis=None, keepdims=False)
+    ()
+    >>> _reduce_dims(("x", "y", "z"), axis=1, keepdims=False)
+    ('x', 'z')
+    >>> _reduce_dims(("x", "y", "z"), axis=-1, keepdims=False)
+    ('x', 'y')
+
+    keepdims retains the same dims
+
+    >>> _reduce_dims(("x", "y", "z"), axis=-1, keepdims=True)
+    ('x', 'y', 'z')
+    """
+    if keepdims:
+        return dims
+
+    ndim = len(dims)
+    if axis is None:
+        _axis = tuple(v for v in range(ndim))
+    else:
+        _axis = _normalize_axis_tuple(axis, ndim)
+
+    key = [slice(None)] * ndim
+    for i, v in enumerate(_axis):
+        key[v] = 0
+
+    return _dims_from_tuple_indexing(dims, tuple(key))
 
 
 def _raise_if_any_duplicate_dimensions(

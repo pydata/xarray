@@ -5,7 +5,7 @@ from typing import Any
 from xarray.namedarray._array_api._utils import (
     _dims_to_axis,
     _get_data_namespace,
-    _get_remaining_dims,
+    _reduce_dims,
 )
 from xarray.namedarray._typing import (
     Default,
@@ -25,11 +25,10 @@ def all(
     axis: _AxisLike | None = None,
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x)
-    axis_ = _dims_to_axis(x, dims, axis)
-    d = xp.all(x._data, axis=axis_, keepdims=False)
-    dims_, data_ = _get_remaining_dims(x, d, axis_, keepdims=keepdims)
-    out = x._new(dims=dims_, data=data_)
-    return out
+    _axis = _dims_to_axis(x, dims, axis)
+    _data = xp.all(x._data, axis=_axis, keepdims=keepdims)
+    _dims = _reduce_dims(x.dims, axis=_axis, keepdims=keepdims)
+    return x._new(dims=_dims, data=_data)
 
 
 def any(
@@ -41,8 +40,7 @@ def any(
     axis: _AxisLike | None = None,
 ) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x)
-    axis_ = _dims_to_axis(x, dims, axis)
-    d = xp.any(x._data, axis=axis_, keepdims=False)
-    dims_, data_ = _get_remaining_dims(x, d, axis_, keepdims=keepdims)
-    out = x._new(dims=dims_, data=data_)
-    return out
+    _axis = _dims_to_axis(x, dims, axis)
+    _data = xp.any(x._data, axis=_axis, keepdims=keepdims)
+    _dims = _reduce_dims(x.dims, axis=_axis, keepdims=keepdims)
+    return x._new(dims=_dims, data=_data)
