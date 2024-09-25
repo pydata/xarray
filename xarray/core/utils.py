@@ -1017,6 +1017,7 @@ def contains_only_chunked_or_numpy(obj) -> bool:
 
     Expects obj to be Dataset or DataArray"""
     from xarray.core.dataarray import DataArray
+    from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.pycompat import is_chunked_array
 
     if isinstance(obj, DataArray):
@@ -1024,8 +1025,10 @@ def contains_only_chunked_or_numpy(obj) -> bool:
 
     return all(
         [
-            isinstance(var.data, np.ndarray) or is_chunked_array(var.data)
-            for var in obj.variables.values()
+            isinstance(var._data, ExplicitlyIndexed)
+            or isinstance(var._data, np.ndarray)
+            or is_chunked_array(var._data)
+            for var in obj._variables.values()
         ]
     )
 
