@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from itertools import zip_longest
 from types import ModuleType
-from typing import Any, TypeGuard, cast
+from typing import Any, TypeGuard, cast, Callable
 
 from xarray.namedarray._typing import (
     Default,
@@ -19,7 +19,9 @@ from xarray.namedarray._typing import (
     _DType,
     _dtype,
     _IndexKeys,
+    _IndexKeysNoEllipsis,
     _Shape,
+    _T,
     duckarray,
 )
 from xarray.namedarray.core import NamedArray
@@ -229,10 +231,10 @@ def _normalize_axis_tuple(
     ValueError
         If an axis is repeated
     """
-    if not isinstance(axis, tuple):
-        _axis = (axis,)
-    else:
+    if isinstance(axis, tuple):
         _axis = axis
+    else:
+        _axis = (axis,)
 
     # Going via an iterator directly is slower than via list comprehension.
     _axis = tuple([_normalize_axis_index(ax, ndim) for ax in _axis])
@@ -351,10 +353,8 @@ def _get_remaining_dims(
     removed_axes: tuple[int, ...]
     if axis is None:
         removed_axes = tuple(v for v in range(x.ndim))
-    elif isinstance(axis, tuple):
-        removed_axes = tuple(a % x.ndim for a in axis)
     else:
-        removed_axes = (axis % x.ndim,)
+        removed_axes = _normalize_axis_tuple(axis, x.ndim)
 
     if keepdims:
         # Insert None (aka newaxis) for removed dims
@@ -369,7 +369,7 @@ def _get_remaining_dims(
     return dims, data
 
 
-def _new_unique_dim_name(dims: _Dims, i=None) -> _Dim:
+def _new_unique_dim_name(dims: _Dims, i: int | None = None) -> _Dim:
     """
     Get a new unique dimension name.
 
@@ -402,22 +402,78 @@ def _insert_dim(dims: _Dims, dim: _Dim | Default, axis: _Axis) -> _Dims:
     return tuple(d)
 
 
+def _filter_next_false(
+    predicate: Callable[..., bool], iterable: Iterable[_T]
+) -> Iterator[_T]:
+    """
+    Make an iterator that filters elements from the iterable returning only those
+    for which the predicate returns a false value for the second time.
+
+    Variant on itertools.filterfalse but doesn't filter until the 2 second False.
+
+    Examples
+    --------
+    >>> tuple(_filter_next_false(lambda x: x is not None, (1, None, 3, None, 4)))
+    (1, None, 3, 4)
+    """
+    predicate_has_been_false = False
+    for x in iterable:
+        if not predicate(x):
+            if predicate_has_been_false:
+                continue
+            predicate_has_been_false = True
+        yield x
+
+
+def _replace_ellipsis(key: _IndexKeys, ndim: int) -> _IndexKeysNoEllipsis:
+    """
+    Replace ... with slices, :, : ,:
+
+    >>> _replace_ellipsis((3, Ellipsis, 2), 4)
+    (3, slice(None, None, None), slice(None, None, None), 2)
+
+    >>> _replace_ellipsis((Ellipsis, None), 2)
+    (slice(None, None, None), slice(None, None, None), None)
+    >>> _replace_ellipsis((Ellipsis, None, Ellipsis), 2)
+    (slice(None, None, None), slice(None, None, None), None)
+    """
+    # https://github.com/dask/dask/blob/569abf8e8048cbfb1d750900468dda0de7c56358/dask/array/slicing.py#L701
+    key = tuple(_filter_next_false(lambda x: x is not Ellipsis, key))
+    expanded_dims = sum(i is None for i in key)
+    extra_dimensions = ndim - (len(key) - expanded_dims - 1)
+    replaced_slices = (slice(None, None, None),) * extra_dimensions
+
+    out: _IndexKeysNoEllipsis = ()
+    for k in key:
+        if k is Ellipsis:
+            out += replaced_slices
+        else:
+            out += (k,)
+    return out
+
+
 def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
     """
     Get the expected dims when using tuples in __getitem__.
 
     Examples
     --------
-    >>> _dims_from_tuple_indexing(("x", "y"), ())
-    ('x', 'y')
-    >>> _dims_from_tuple_indexing(("x", "y"), (0,))
-    ('y',)
-    >>> _dims_from_tuple_indexing(("x", "y"), (0, 0))
+    >>> _dims_from_tuple_indexing(("x", "y", "z"), ())
+    ('x', 'y', 'z')
+    >>> _dims_from_tuple_indexing(("x", "y", "z"), (0,))
+    ('y', 'z')
+    >>> _dims_from_tuple_indexing(("x", "y", "z"), (0, 0))
+    ('z',)
+    >>> _dims_from_tuple_indexing(("x", "y", "z"), (0, 0, 0))
     ()
-    >>> _dims_from_tuple_indexing(("x", "y"), (0, ...))
+    >>> _dims_from_tuple_indexing(("x", "y", "z"), (0, 0, 0, ...))
+    ()
+    >>> _dims_from_tuple_indexing(("x", "y", "z"), (0, ...))
+    ('y', 'z')
+    >>> _dims_from_tuple_indexing(("x", "y", "z"), (0, ..., 0))
     ('y',)
-    >>> _dims_from_tuple_indexing(("x", "y"), (0, slice(0)))
-    ('y',)
+    >>> _dims_from_tuple_indexing(("x", "y", "z"), (0, slice(0)))
+    ('y', 'z')
     >>> _dims_from_tuple_indexing(("x", "y"), (None,))
     ('dim_2', 'x', 'y')
     >>> _dims_from_tuple_indexing(("x", "y"), (0, None, None, 0))
@@ -425,9 +481,10 @@ def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
     >>> _dims_from_tuple_indexing(("x",), (..., 0))
     ()
     """
+    key_no_ellipsis = _replace_ellipsis(key, len(dims))
     _dims = list(dims)
     j = 0
-    for k in key:
+    for k in key_no_ellipsis:
         if k is None:
             # None adds 1 dimension:
             _dims.insert(j, _new_unique_dim_name(tuple(_dims)))
@@ -435,9 +492,9 @@ def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
         elif isinstance(k, int):
             # Integer removes 1 dimension:
             _dims.pop(j)
-        else:
-            # Slices and Ellipsis maintains same dimensions:
-            pass
+        elif isinstance(k, slice):
+            # Slice retains the dimension.
+            j += 1
 
     return tuple(_dims)
 
