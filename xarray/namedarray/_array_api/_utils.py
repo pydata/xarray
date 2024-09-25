@@ -540,7 +540,7 @@ def _squeeze_dims(dims: _Dims, shape: _Shape, axis: _AxisLike) -> _Dims:
     >>> _squeeze_dims(("x", "y", "z"), (0, 2, 1), (0, 2))
     ('y',)
     """
-    sizes = dict(zip(dims, shape))
+    sizes = dict(zip(dims, shape, strict=False))
     for a in _normalize_axis_tuple(axis, len(dims)):
         d = dims[a]
         if sizes[d] < 2:
