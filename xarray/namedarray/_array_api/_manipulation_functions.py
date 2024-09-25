@@ -340,7 +340,7 @@ def unstack(
     Examples
     --------
     >>> import numpy as np
-    >>> x = NamedArray(("x", "y", "z"), np.arange(1*2*3).reshape((1, 2, 3)))
+    >>> x = NamedArray(("x", "y", "z"), np.arange(1 * 2 * 3).reshape((1, 2, 3)))
     >>> x_y0, x_y1 = unstack(x, axis=1)
     >>> x_y0
     <Namedarray, shape=(1, 3), dims=('x', 'z'), dtype=int64, data=[[0 1 2]]>
