@@ -533,6 +533,24 @@ def _reduce_dims(dims: _Dims, *, axis: _AxisLike | None, keepdims: False) -> _Di
     return _dims_from_tuple_indexing(dims, tuple(key))
 
 
+def _squeeze_dims(dims: _Dims, shape: _Shape, axis: _AxisLike) -> _Dims:
+    """
+    Squeeze dims.
+
+    Examples
+    --------
+    >>> _squeeze_dims(("x", "y", "z"), (0, 2, 1), (0, 2))
+    ('y',)
+    """
+    sizes = dict(zip(dims, shape))
+    for a in _normalize_axis_tuple(axis, len(dims)):
+        d = dims[a]
+        if sizes[d] < 2:
+            sizes.pop(d)
+
+    return tuple(sizes.keys())
+
+
 def _raise_if_any_duplicate_dimensions(
     dims: _Dims, err_context: str = "This function"
 ) -> None:

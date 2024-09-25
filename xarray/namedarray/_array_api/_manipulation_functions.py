@@ -14,11 +14,13 @@ from xarray.namedarray._array_api._utils import (
     _infer_dims,
     _insert_dim,
     _new_unique_dim_name,
+    _squeeze_dims,
 )
 from xarray.namedarray._typing import (
     Default,
     _Axes,
     _Axis,
+    _AxisLike,
     _default,
     _Dim,
     _Dims,
@@ -301,10 +303,21 @@ def roll(
     return x._new(data=_data)
 
 
-def squeeze(x: NamedArray[Any, _DType], /, axis: _Axes) -> NamedArray[Any, _DType]:
+def squeeze(x: NamedArray[Any, _DType], /, axis: _AxisLike) -> NamedArray[Any, _DType]:
+    """
+    Removes singleton dimensions (axes) from x.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x", "y", "z"), np.arange(1 * 2 * 3).reshape((1, 2, 3)))
+    >>> xs = squeeze(x, axis=0)
+    >>> xs.dims, xs.shape
+    (('y', 'z'), (2, 3))
+    """
     xp = _get_data_namespace(x)
     _data = xp.squeeze(x._data, axis=axis)
-    _dims = _infer_dims(_data.shape)  # TODO: Fix dims
+    _dims = _squeeze_dims(x.dims, x.shape, axis)
     return x._new(_dims, _data)
 
 
