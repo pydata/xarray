@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from itertools import zip_longest
 from types import ModuleType
-from typing import Any, TypeGuard, cast, Callable
+from typing import Any, TypeGuard, cast
 
 from xarray.namedarray._typing import (
+    _T,
     Default,
     _arrayapi,
     _Axes,
@@ -21,7 +22,6 @@ from xarray.namedarray._typing import (
     _IndexKeys,
     _IndexKeysNoEllipsis,
     _Shape,
-    _T,
     duckarray,
 )
 from xarray.namedarray.core import NamedArray
