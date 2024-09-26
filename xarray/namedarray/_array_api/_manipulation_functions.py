@@ -6,10 +6,10 @@ from typing import Any
 from xarray.namedarray._array_api._data_type_functions import result_type
 from xarray.namedarray._array_api._utils import (
     _atleast1d_dims,
+    _broadcast_dims,
     _dims_from_tuple_indexing,
     _dims_to_axis,
     _flatten_dims,
-    _broadcast_dims,
     _get_data_namespace,
     _infer_dims,
     _insert_dim,
