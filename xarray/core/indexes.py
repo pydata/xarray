@@ -1417,6 +1417,11 @@ class CoordinateTransformIndex(Index):
         return new_variables
 
     def create_coordinates(self) -> Coordinates:
+        # TODO: remove this alias before merging https://github.com/pydata/xarray/pull/9543!
+        # (we keep it there so it doesn't break the code of those who are experimenting with this)
+        return self.create_coords()
+
+    def create_coords(self) -> Coordinates:
         # TODO: move this in xarray.Index base class?
         from xarray.core.coordinates import Coordinates
 
