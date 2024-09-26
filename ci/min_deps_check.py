@@ -17,7 +17,6 @@ from dateutil.relativedelta import relativedelta
 
 CHANNELS = ["conda-forge", "defaults"]
 IGNORE_DEPS = {
-    "black",
     "coveralls",
     "flake8",
     "hypothesis",
