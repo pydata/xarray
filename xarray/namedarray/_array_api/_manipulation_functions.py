@@ -9,7 +9,7 @@ from xarray.namedarray._array_api._utils import (
     _dims_from_tuple_indexing,
     _dims_to_axis,
     _flatten_dims,
-    _get_broadcasted_dims,
+    _broadcast_dims,
     _get_data_namespace,
     _infer_dims,
     _insert_dim,
@@ -56,7 +56,7 @@ def broadcast_arrays(*arrays: NamedArray[Any, Any]) -> list[NamedArray[Any, Any]
     """
     x = arrays[0]
     xp = _get_data_namespace(x)
-    _dims, _ = _get_broadcasted_dims(*arrays)
+    _dims, _ = _broadcast_dims(*arrays)
     _arrays = tuple(a._data for a in arrays)
     _datas = xp.broadcast_arrays(*_arrays)
     return [arr._new(_dims, _data) for arr, _data in zip(arrays, _datas, strict=False)]
@@ -472,7 +472,7 @@ def _broadcast_arrays(*arrays: NamedArray[Any, Any]) -> NamedArray[Any, Any]:
     dimensions are sorted in order of appearance in the first variable's
     dimensions followed by the second variable's dimensions.
     """
-    dims, shape = _get_broadcasted_dims(*arrays)
+    dims, shape = _broadcast_dims(*arrays)
     return tuple(_set_dims(var, dims, shape) for var in arrays)
 
 
@@ -485,7 +485,7 @@ def _broadcast_arrays_with_minimal_size(
     Unlike the result of broadcast_variables(), variables with missing dimensions
     will have them added with size 1 instead of the size of the broadcast dimension.
     """
-    dims, _ = _get_broadcasted_dims(*arrays)
+    dims, _ = _broadcast_dims(*arrays)
     return tuple(_set_dims(var, dims, None) for var in arrays)
 
 

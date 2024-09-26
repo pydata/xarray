@@ -566,7 +566,7 @@ def _isnone(shape: _Shape) -> tuple[bool, ...]:
     return tuple(v is None and math.isnan(v) for v in shape)
 
 
-def _get_broadcasted_dims(*arrays: NamedArray[Any, Any]) -> tuple[_Dims, _Shape]:
+def _broadcast_dims(*arrays: NamedArray[Any, Any]) -> tuple[_Dims, _Shape]:
     """
     Get the expected broadcasted dims.
 
@@ -574,40 +574,40 @@ def _get_broadcasted_dims(*arrays: NamedArray[Any, Any]) -> tuple[_Dims, _Shape]
     --------
     >>> import numpy as np
     >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
-    >>> _get_broadcasted_dims(a)
+    >>> _broadcast_dims(a)
     (('x', 'y', 'z'), (5, 3, 4))
 
     Broadcasting 0- and 1-sized dims
 
     >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
     >>> b = NamedArray(("x", "y", "z"), np.zeros((0, 3, 4)))
-    >>> _get_broadcasted_dims(a, b)
+    >>> _broadcast_dims(a, b)
     (('x', 'y', 'z'), (5, 3, 4))
-    >>> _get_broadcasted_dims(b, a)
+    >>> _broadcast_dims(b, a)
     (('x', 'y', 'z'), (5, 3, 4))
 
     >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
     >>> b = NamedArray(("x", "y", "z"), np.zeros((1, 3, 4)))
-    >>> _get_broadcasted_dims(a, b)
+    >>> _broadcast_dims(a, b)
     (('x', 'y', 'z'), (5, 3, 4))
 
     >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
     >>> b = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
-    >>> _get_broadcasted_dims(a, b)
+    >>> _broadcast_dims(a, b)
     (('x', 'y', 'z'), (5, 3, 4))
 
     Broadcasting different dims
 
     >>> a = NamedArray(("x",), np.zeros((5,)))
     >>> b = NamedArray(("y",), np.zeros((3,)))
-    >>> _get_broadcasted_dims(a, b)
+    >>> _broadcast_dims(a, b)
     (('x', 'y'), (5, 3))
 
     >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
     >>> b = NamedArray(("y", "z"), np.zeros((3, 4)))
-    >>> _get_broadcasted_dims(a, b)
+    >>> _broadcast_dims(a, b)
     (('x', 'y', 'z'), (5, 3, 4))
-    >>> _get_broadcasted_dims(b, a)
+    >>> _broadcast_dims(b, a)
     (('x', 'y', 'z'), (5, 3, 4))
 
 
@@ -615,7 +615,7 @@ def _get_broadcasted_dims(*arrays: NamedArray[Any, Any]) -> tuple[_Dims, _Shape]
 
     >>> a = NamedArray(("x", "y", "z"), np.zeros((5, 3, 4)))
     >>> b = NamedArray(("x", "y", "z"), np.zeros((2, 3, 4)))
-    >>> _get_broadcasted_dims(a, b)
+    >>> _broadcast_dims(a, b)
     Traceback (most recent call last):
      ...
     ValueError: operands could not be broadcast together with dims = (('x', 'y', 'z'), ('x', 'y', 'z')) and shapes = ((5, 3, 4), (2, 3, 4))
