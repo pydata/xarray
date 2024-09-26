@@ -59,10 +59,24 @@ def tensordot(
 
 
 def matrix_transpose(x: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
+    """
+    Transposes a matrix (or a stack of matrices) x.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x", "y", "z"), np.zeros((2, 3, 4)))
+    >>> xT = matrix_transpose(x)
+    >>> xT.dims, xT.shape
+    (('x', 'z', 'y'), (2, 4, 3))
+
+    >>> x = NamedArray(("x", "y"), np.zeros((2, 3)))
+    >>> xT = matrix_transpose(x)
+    >>> xT.dims, xT.shape
+    (('y', 'x'), (3, 2))
     xp = _get_data_namespace(x)
     _data = xp.matrix_transpose(x._data)
-    # TODO: Figure out a better way:
-    _dims = _infer_dims(_data.shape)
+    d = x.dims
     return NamedArray(_dims, _data)
 
 
