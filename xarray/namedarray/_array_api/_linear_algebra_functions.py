@@ -74,9 +74,11 @@ def matrix_transpose(x: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
     >>> xT = matrix_transpose(x)
     >>> xT.dims, xT.shape
     (('y', 'x'), (3, 2))
+    """
     xp = _get_data_namespace(x)
     _data = xp.matrix_transpose(x._data)
     d = x.dims
+    _dims = d[:-2] + d[-2:][::-1]  # (..., M, N) -> (..., N, M)
     return NamedArray(_dims, _data)
 
 
