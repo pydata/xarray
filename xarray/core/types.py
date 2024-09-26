@@ -228,7 +228,9 @@ JoinOptions = Literal["outer", "inner", "left", "right", "exact", "override"]
 Interp1dOptions = Literal[
     "linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial"
 ]
-InterpolantOptions = Literal["barycentric", "krogh", "pchip", "spline", "akima"]
+InterpolantOptions = Literal[
+    "barycentric", "krogh", "pchip", "spline", "akima", "makima"
+]
 InterpOptions = Union[Interp1dOptions, InterpolantOptions]
 
 DatetimeUnitOptions = Literal[

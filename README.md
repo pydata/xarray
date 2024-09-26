@@ -88,7 +88,7 @@ Xarray is a fiscally sponsored project of
 [NumFOCUS](https://numfocus.org), a nonprofit dedicated to supporting
 the open source scientific computing community. If you like Xarray and
 want to support our mission, please consider making a
-[donation](https://numfocus.salsalabs.org/donate-to-xarray/) to support
+[donation](https://numfocus.org/donate-to-xarray) to support
 our efforts.
 
 ## History
