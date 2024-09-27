@@ -132,20 +132,22 @@ def mean(
     --------
     >>> import numpy as np
     >>> x = NamedArray(("x", "y"), np.asarray([[1.0, 2.0], [3.0, 4.0]]))
-    >>> mean(x).data
-    Array(2.5, dtype=float64)
-    >>> mean(x, dims=("x",)).data
-    Array([2., 3.], dtype=float64)
+    >>> mean(x)
+    <xarray.NamedArray ()> Size: 8B
+    np.float64(2.5)
+    >>> mean(x, dims=("x",))
+    <xarray.NamedArray (y: 2)> Size: 16B
+    array([2., 3.])
 
     Using keepdims:
 
     >>> mean(x, dims=("x",), keepdims=True)
-    <xarray.NamedArray (x: 1, y: 2)>
-    Array([[2., 3.]], dtype=float64)
+    <xarray.NamedArray (x: 1, y: 2)> Size: 16B
+    array([[2., 3.]])
     >>> mean(x, dims=("y",), keepdims=True)
-    <xarray.NamedArray (x: 2, y: 1)>
-    Array([[1.5],
-           [3.5]], dtype=float64)
+    <xarray.NamedArray (x: 2, y: 1)> Size: 16B
+    array([[1.5],
+           [3.5]])
     """
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dims, axis)
@@ -231,3 +233,9 @@ def var(
     _data = xp.var(x._data, axis=_axis, correction=correction, keepdims=keepdims)
     _dims = _reduce_dims(x.dims, axis=_axis, keepdims=keepdims)
     return x._new(dims=_dims, data=_data)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
