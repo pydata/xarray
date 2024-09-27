@@ -594,12 +594,12 @@ class TestNamedArray(NamedArraySubclassobjects):
 
 
 def test_repr() -> None:
-    x: NamedArray[Any, np.dtype[np.int64]]
-    x = NamedArray(("x",), np.array([1, 2, 3], dtype=np.int64))
+    x: NamedArray[Any, np.dtype[np.uint64]]
+    x = NamedArray(("x",), np.array([0], dtype=np.uint64))
 
     # Reprs should not crash:
     r = x.__repr__()
     x._repr_html_()
 
     # Basic comparison:
-    assert r == "<xarray.NamedArray (x: 3)> Size: 24B\narray([1, 2, 3])"
+    assert r == "<xarray.NamedArray (x: 1)> Size: 8B\narray([0], dtype=uint64)"
