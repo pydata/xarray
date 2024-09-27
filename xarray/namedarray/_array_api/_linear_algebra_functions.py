@@ -26,8 +26,9 @@ def matmul(
     >>> a = NamedArray(("y", "x"), np.array([[1, 0], [0, 1]]))
     >>> b = NamedArray(("y", "x"), np.array([[4, 1], [2, 2]]))
     >>> matmul(a, b)
-    <Namedarray, shape=(2, 2), dims=('y', 'x'), dtype=int64, data=[[4 1]
-     [2 2]]>
+    <xarray.NamedArray (y: 2, x: 2)> Size: 32B
+    array([[4, 1],
+           [2, 2]])
 
     For 2-D mixed with 1-D, the result is the usual.
 
@@ -39,13 +40,18 @@ def matmul(
 
     >>> a = NamedArray(("z", "y", "x"), np.arange(2 * 2 * 4).reshape((2, 2, 4)))
     >>> b = NamedArray(("z", "y", "x"), np.arange(2 * 2 * 4).reshape((2, 4, 2)))
-    >>> axb = matmul(a, b)
-    >>> axb.dims, axb.shape
+    >>> matmul(a, b)
+    <xarray.NamedArray (z: 2, y: 2, x: 2)> Size: 64B
+    array([[[ 28,  34],
+            [ 76,  98]],
+    <BLANKLINE>
+           [[428, 466],
+            [604, 658]]])
     """
     xp = _get_data_namespace(x1)
     _data = xp.matmul(x1._data, x2._data)
     # TODO: Figure out a better way:
-    _dims = _infer_dims(_data.shape)
+    _dims = x1.dims  # _infer_dims(_data.shape)
     return NamedArray(_dims, _data)
 
 
@@ -70,15 +76,19 @@ def matrix_transpose(x: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
     Examples
     --------
     >>> import numpy as np
-    >>> x = NamedArray(("x", "y", "z"), np.zeros((2, 3, 4)))
-    >>> xT = matrix_transpose(x)
-    >>> xT.dims, xT.shape
-    (('x', 'z', 'y'), (2, 4, 3))
+    >>> x = NamedArray(("x", "y", "z"), np.zeros((1, 2, 3)))
+    >>> matrix_transpose(x)
+    <xarray.NamedArray (x: 1, z: 3, y: 2)> Size: 48B
+    array([[[0., 0.],
+            [0., 0.],
+            [0., 0.]]])
 
     >>> x = NamedArray(("x", "y"), np.zeros((2, 3)))
-    >>> xT = matrix_transpose(x)
-    >>> xT.dims, xT.shape
-    (('y', 'x'), (3, 2))
+    >>> matrix_transpose(x)
+    <xarray.NamedArray (y: 3, x: 2)> Size: 48B
+    array([[0., 0.],
+           [0., 0.],
+           [0., 0.]])
     """
     xp = _get_data_namespace(x)
     _data = xp.matrix_transpose(x._data)
@@ -95,6 +105,7 @@ def vecdot(
 
     Examples
     --------
+    >>> import numpy as np
     >>> v = NamedArray(
     ...     ("y", "x"),
     ...     np.array(
@@ -102,12 +113,18 @@ def vecdot(
     ...     ),
     ... )
     >>> n = NamedArray(("x",), np.array([0.0, 0.6, 0.8]))
-    >>> xdot = vecdot(v, n)
-    >>> xdot.dims, xdot.shape
-    (('y',), (4,))
+    >>> vecdot(v, n)
+    <xarray.NamedArray (y: 4)> Size: 32B
+    array([ 3.,  8., 10., 10.])
     """
     xp = _get_data_namespace(x1)
     _data = xp.vecdot(x1._data, x2._data, axis=axis)
     d, _ = _broadcast_dims(x1, x2)
     _dims = _reduce_dims(d, axis=axis, keepdims=False)
     return NamedArray(_dims, _data)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
