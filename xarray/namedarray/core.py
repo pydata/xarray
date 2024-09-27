@@ -19,7 +19,7 @@ from typing import (
 import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
-from xarray.core import dtypes
+from xarray.core import dtypes, formatting, formatting_html
 from xarray.core.indexing import (
     ExplicitlyIndexed,
     ImplicitToExplicitIndexingAdapter,
@@ -1408,12 +1408,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         )
 
     def __repr__(self) -> str:
-        # return formatting.array_repr(self)
-        return f"<Namedarray, shape={self.shape}, dims={self.dims}, dtype={self.dtype}, data={self.data}>"
+        return formatting.array_repr(self)
 
     def _repr_html_(self) -> str:
-        # return formatting_html.array_repr(self)
-        return f"<Namedarray, shape={self.shape}, dims={self.dims}, dtype={self.dtype}, data={self.data}>"
+        return formatting_html.array_repr(self)
 
     def _as_sparse(
         self,
