@@ -594,7 +594,8 @@ class TestNamedArray(NamedArraySubclassobjects):
 
 
 def test_repr() -> None:
-    x = NamedArray(("x",), np.array([1, 2, 3]))
+    x: NamedArray[Any, np.dtype[np.int64]]
+    x = NamedArray(("x",), np.array([1, 2, 3], dtype=np.int64))
 
     # Reprs should not crash:
     r = x.__repr__()
