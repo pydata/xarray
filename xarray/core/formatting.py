@@ -303,7 +303,7 @@ def inline_variable_array_repr(var, max_width):
     """Build a one-line summary of a variable's data."""
     if hasattr(var._data, "_repr_inline_"):
         return var._data._repr_inline_(max_width)
-    if var._in_memory:
+    if getattr(var, "_in_memory", False):
         return format_array_flat(var, max_width)
     dask_array_type = array_type("dask")
     if isinstance(var._data, dask_array_type):
