@@ -75,13 +75,13 @@ def broadcast_to(
     --------
     >>> import numpy as np
     >>> x = NamedArray(("x",), np.arange(0, 3))
-    >>> x_new = broadcast_to(x, (1, 1, 3))
-    >>> x_new.dims, x_new.shape
-    (('dim_1', 'dim_0', 'x'), (1, 1, 3))
+    >>> broadcast_to(x, (1, 1, 3))
+    <xarray.NamedArray (dim_1: 1, dim_0: 1, x: 3)> Size: 24B
+    array([[[0, 1, 2]]])
 
-    >>> x_new = broadcast_to(x, shape=(1, 1, 3), dims=("y", "x"))
-    >>> x_new.dims, x_new.shape
-    (('dim_0', 'y', 'x'), (1, 1, 3))
+    >>> broadcast_to(x, shape=(1, 1, 3), dims=("y", "x"))
+    <xarray.NamedArray (dim_0: 1, y: 1, x: 3)> Size: 24B
+    array([[[0, 1, 2]]])
     """
     xp = _get_data_namespace(x)
     _data = xp.broadcast_to(x._data, shape=shape)
@@ -102,22 +102,23 @@ def concat(
     --------
     >>> import numpy as np
     >>> x = NamedArray(("x",), np.zeros((3,)))
-    >>> xc = concat((x, 1 + x))
-    >>> xc.dims, xc.shape
-    (('x',), (6,))
+    >>> concat((x, 1 + x))
+    <xarray.NamedArray (x: 6)> Size: 48B
+    array([0., 0., 0., 1., 1., 1.])
 
-    >>> x = NamedArray(("x", "y"), np.zeros((3, 4)))
-    >>> xc = concat((x, 1 + x))
-    >>> xc.dims, xc.shape
-    (('x', 'y'), (6, 4))
+    >>> x = NamedArray(("x", "y"), np.zeros((1, 3)))
+    >>> concat((x, 1 + x))
+    <xarray.NamedArray (x: 2, y: 3)> Size: 48B
+    array([[0., 0., 0.],
+           [1., 1., 1.]])
 
     0D
 
     >>> x1 = NamedArray((), np.array(0))
-    >>> x2 = NamedArray((), np.array(0))
-    >>> xc = concat((x1, x2), axis=None)
-    >>> xc.dims, xc.shape
-    (('dim_0',), (2,))
+    >>> x2 = NamedArray((), np.array(1))
+    >>> concat((x1, x2), axis=None)
+    <xarray.NamedArray (dim_0: 2)> Size: 16B
+    array([0, 1])
     """
     x = arrays[0]
     xp = _get_data_namespace(x)
@@ -158,12 +159,17 @@ def expand_dims(
     --------
     >>> import numpy as np
     >>> x = NamedArray(("x", "y"), np.asarray([[1.0, 2.0], [3.0, 4.0]]))
-    >>> x_new = expand_dims(x)
-    >>> x_new.dims, x_new.shape
-    (('dim_2', 'x', 'y'), (1, 2, 2))
-    >>> x_new = expand_dims(x, dim="z")
-    >>> x_new.dims, x_new.shape
-    (('z', 'x', 'y'), (1, 2, 2))
+    >>> expand_dims(x)
+    <xarray.NamedArray (dim_2: 1, x: 2, y: 2)> Size: 32B
+    array([[[1., 2.],
+            [3., 4.]]])
+
+    Specify dimension name
+
+    >>> expand_dims(x, dim="z")
+    <xarray.NamedArray (z: 1, x: 2, y: 2)> Size: 32B
+    array([[[1., 2.],
+            [3., 4.]]])
     """
     # Array Api does not support multiple axes, but maybe in the future:
     # https://github.com/data-apis/array-api/issues/760
@@ -218,13 +224,23 @@ def permute_dims(
     Examples
     --------
     >>> import numpy as np
-    >>> x = NamedArray(("x", "y", "z"), np.zeros((3, 4, 5)))
-    >>> y = permute_dims(x, (2, 1, 0))
-    >>> y.dims, y.shape
-    (('z', 'y', 'x'), (5, 4, 3))
-    >>> y = permute_dims(x, dims=("y", "x", "z"))
-    >>> y.dims, y.shape
-    (('y', 'x', 'z'), (4, 3, 5))
+    >>> x = NamedArray(("x", "y", "z"), np.zeros((1, 2, 3)))
+    >>> permute_dims(x, (2, 1, 0))
+    <xarray.NamedArray (z: 3, y: 2, x: 1)> Size: 48B
+    array([[[0.],
+            [0.]],
+    <BLANKLINE>
+           [[0.],
+            [0.]],
+    <BLANKLINE>
+           [[0.],
+            [0.]]])
+
+    >>> permute_dims(x, dims=("y", "x", "z"))
+    <xarray.NamedArray (y: 2, x: 1, z: 3)> Size: 48B
+    array([[[0., 0., 0.]],
+    <BLANKLINE>
+           [[0., 0., 0.]]])
     """
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dims, axes)
@@ -258,20 +274,22 @@ def reshape(
     --------
     >>> import numpy as np
     >>> x = NamedArray(("x",), np.zeros((3,)))
-    >>> x1 = reshape(x, (-1,))
-    >>> x1.dims, x1.shape
-    (('x',), (3,))
+    >>> reshape(x, (-1,))
+    <xarray.NamedArray (x: 3)> Size: 24B
+    array([0., 0., 0.])
 
     To N-dimensions
 
-    >>> x1 = reshape(x, (1, -1, 1))
-    >>> x1.dims, x1.shape
-    (('dim_0', 'x', 'dim_2'), (1, 3, 1))
+    >>> reshape(x, (1, -1, 1))
+    <xarray.NamedArray (dim_0: 1, x: 3, dim_2: 1)> Size: 24B
+    array([[[0.],
+            [0.],
+            [0.]]])
 
     >>> x = NamedArray(("x", "y"), np.zeros((3, 4)))
-    >>> x1 = reshape(x, (-1,))
-    >>> x1.dims, x1.shape
-    ((('x', 'y'),), (12,))
+    >>> reshape(x, (-1,))
+    <xarray.NamedArray (('x', 'y'): 12)> Size: 96B
+    array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.])
     """
     xp = _get_data_namespace(x)
     _data = xp.reshape(x._data, shape, copy=copy)
@@ -311,9 +329,10 @@ def squeeze(x: NamedArray[Any, _DType], /, axis: _AxisLike) -> NamedArray[Any, _
     --------
     >>> import numpy as np
     >>> x = NamedArray(("x", "y", "z"), np.arange(1 * 2 * 3).reshape((1, 2, 3)))
-    >>> xs = squeeze(x, axis=0)
-    >>> xs.dims, xs.shape
-    (('y', 'z'), (2, 3))
+    >>> squeeze(x, axis=0)
+    <xarray.NamedArray (y: 2, z: 3)> Size: 48B
+    array([[0, 1, 2],
+           [3, 4, 5]])
     """
     xp = _get_data_namespace(x)
     _data = xp.squeeze(x._data, axis=axis)
@@ -356,9 +375,11 @@ def unstack(
     >>> x = NamedArray(("x", "y", "z"), np.arange(1 * 2 * 3).reshape((1, 2, 3)))
     >>> x_y0, x_y1 = unstack(x, axis=1)
     >>> x_y0
-    <Namedarray, shape=(1, 3), dims=('x', 'z'), dtype=int64, data=[[0 1 2]]>
+    <xarray.NamedArray (x: 1, z: 3)> Size: 24B
+    array([[0, 1, 2]])
     >>> x_y1
-    <Namedarray, shape=(1, 3), dims=('x', 'z'), dtype=int64, data=[[3 4 5]]>
+    <xarray.NamedArray (x: 1, z: 3)> Size: 24B
+    array([[3, 4, 5]])
     """
     xp = _get_data_namespace(x)
     _datas = xp.unstack(x._data, axis=axis)
@@ -396,37 +417,41 @@ def _set_dims(
     --------
     >>> import numpy as np
     >>> x = NamedArray(("x",), np.asarray([1, 2, 3]))
-    >>> x_new = _set_dims(x, ("y", "x"), None)
-    >>> x_new.dims, x_new.shape
-    (('y', 'x'), (1, 3))
-    >>> x_new = _set_dims(x, ("x", "y"), None)
-    >>> x_new.dims, x_new.shape
-    (('x', 'y'), (3, 1))
+    >>> _set_dims(x, ("y", "x"), None)
+    <xarray.NamedArray (y: 1, x: 3)> Size: 24B
+    array([[1, 2, 3]])
+    >>> _set_dims(x, ("x", "y"), None)
+    <xarray.NamedArray (x: 3, y: 1)> Size: 24B
+    array([[1],
+           [2],
+           [3]])
 
     With shape:
 
-    >>> x_new = _set_dims(x, ("y", "x"), (2, 3))
-    >>> x_new.dims, x_new.shape
-    (('y', 'x'), (2, 3))
+    >>> _set_dims(x, ("y", "x"), (2, 3))
+    <xarray.NamedArray (y: 2, x: 3)> Size: 48B
+    array([[1, 2, 3],
+           [1, 2, 3]])
 
     No operation
 
-    >>> x_new = _set_dims(x, ("x",), None)
-    >>> x_new.dims, x_new.shape
-    (('x',), (3,))
-
+    >>> _set_dims(x, ("x",), None)
+    <xarray.NamedArray (x: 3)> Size: 24B
+    array([1, 2, 3])
 
     Unordered dims
 
     >>> x = NamedArray(("y", "x"), np.zeros((2, 3)))
-    >>> x_new = _set_dims(x, ("x", "y"), None)
-    >>> x_new.dims, x_new.shape
-    (('x', 'y'), (3, 2))
+    >>> _set_dims(x, ("x", "y"), None)
+    <xarray.NamedArray (x: 3, y: 2)> Size: 48B
+    array([[0., 0.],
+           [0., 0.],
+           [0., 0.]])
 
     Errors
 
     >>> x = NamedArray(("x",), np.asarray([1, 2, 3]))
-    >>> x_new = _set_dims(x, (), None)
+    >>> _set_dims(x, (), None)
     Traceback (most recent call last):
      ...
     ValueError: new dimensions () must be a superset of existing dimensions ('x',)
