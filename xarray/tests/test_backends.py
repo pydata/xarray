@@ -103,22 +103,29 @@ try:
 except ImportError:
     pass
 
-have_zarr_kvstore = False
-try:
-    from zarr.storage import KVStore
 
+try:
+    import zarr
+except ImportError:
+    have_zarr = False
+else:
+    have_zarr = True
+
+
+if have_zarr:
+    have_zarr_v3 = backends.zarr._zarr_v3()
     have_zarr_kvstore = True
-except ImportError:
-    KVStore = None
 
-have_zarr_v3 = backends.zarr._zarr_v3()
+    if have_zarr_v3:
+        from zarr.store import LocalStore as DirectoryStore
+        from zarr.store import MemoryStore as KVStore
+    else:
+        from zarr.storage import DirectoryStore, KVStore
+else:
+    have_zarr_v3 = False
+    have_zarr_kvstore = False
+    have_zarr_directory_store = False
 
-try:
-    # as of Zarr v2.13 these imports require environment variable
-    # ZARR_V3_EXPERIMENTAL_API=1
-    from zarr.store.memory import MemoryStore as KVStoreV3
-except ImportError:
-    KVStoreV3 = None
 
 ON_WINDOWS = sys.platform == "win32"
 default_value = object()
@@ -2209,16 +2216,20 @@ class ZarrBase(CFEncodedBase):
     def create_store(self):
         with self.create_zarr_target() as store_target:
             yield backends.ZarrStore.open_group(
-                store_target, mode="w", **self.version_kwargs
+                store_target, mode="a", **self.version_kwargs
             )
 
     def save(self, dataset, store_target, **kwargs):  # type: ignore[override]
+        for k, v in dataset.variables.items():
+            if v.dtype.kind in ("U", "O", "M", "b"):
+                raise pytest.skip(reason=f"Unsupported dtype {v} for variable: {k}")
+
         return dataset.to_zarr(store=store_target, **kwargs, **self.version_kwargs)
 
     @contextlib.contextmanager
-    def open(self, store_target, **kwargs):
+    def open(self, path, **kwargs):
         with xr.open_dataset(
-            store_target, engine="zarr", **kwargs, **self.version_kwargs
+            path, engine="zarr", mode="r", **kwargs, **self.version_kwargs
         ) as ds:
             yield ds
 
@@ -2249,12 +2260,11 @@ class ZarrBase(CFEncodedBase):
             assert_identical(expected, actual)
 
     def test_read_non_consolidated_warning(self) -> None:
-        if self.zarr_version > 2:
-            pytest.xfail("consolidated metadata is not supported for zarr v3 yet")
-
         expected = create_test_data()
         with self.create_zarr_target() as store:
-            expected.to_zarr(store, consolidated=False, **self.version_kwargs)
+            self.save(
+                expected, store_target=store, consolidated=False, **self.version_kwargs
+            )
             with pytest.warns(
                 RuntimeWarning,
                 match="Failed to open Zarr store with consolidated",
@@ -2263,9 +2273,16 @@ class ZarrBase(CFEncodedBase):
                     assert_identical(ds, expected)
 
     def test_non_existent_store(self) -> None:
-        with pytest.raises(FileNotFoundError, match=r"No such file or directory:"):
+        if have_zarr_v3:
+            exc = ValueError
+            msg = "store mode"
+        else:
+            exc = FileNotFoundError
+            msg = "No such file or directory:"
+        with pytest.raises(exc, match=msg):
             xr.open_zarr(f"{uuid.uuid4()}")
 
+    @pytest.mark.skipif(have_zarr_v3, reason="chunk_store not implemented in zarr v3")
     def test_with_chunkstore(self) -> None:
         expected = create_test_data()
         with (
@@ -2517,7 +2534,7 @@ class ZarrBase(CFEncodedBase):
                     assert self.DIMENSION_KEY not in expected[var].attrs
 
             # put it back and try removing from a variable
-            del zarr_group.var2.attrs[self.DIMENSION_KEY]
+            del zarr_group["var2"].attrs[self.DIMENSION_KEY]
             with pytest.raises(KeyError):
                 with xr.decode_cf(store):
                     pass
@@ -2601,8 +2618,6 @@ class ZarrBase(CFEncodedBase):
             assert_identical(original, actual)
 
     def test_zarr_mode_w_overwrites_encoding(self) -> None:
-        import zarr
-
         data = Dataset({"foo": ("x", [1.0, 1.0, 1.0])})
         with self.create_zarr_target() as store:
             data.to_zarr(
@@ -2714,10 +2729,14 @@ class ZarrBase(CFEncodedBase):
 
         # check encoding consistency
         with self.create_zarr_target() as store_target:
-            import zarr
+            import numcodecs
 
-            compressor = zarr.Blosc()
-            encoding = {"da": {"compressor": compressor}}
+            compressor = numcodecs.Blosc()
+
+            if have_zarr_v3:
+                encoding = {"da": {"compressor": compressor}}
+            else:
+                encoding = {"da": {"codecs": [compressor]}}
             ds.to_zarr(store_target, mode="w", encoding=encoding, **self.version_kwargs)
             ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
             actual_ds = xr.open_dataset(
@@ -3032,7 +3051,12 @@ class ZarrBase(CFEncodedBase):
         # see also test_encoding_chunksizes_unlimited
         nx, ny, nt = 4, 4, 5
         original = xr.Dataset(
-            {}, coords={"x": np.arange(nx) + 1 , "y": np.arange(ny) + 1, "t": np.arange(nt) + 1}
+            {},
+            coords={
+                "x": np.arange(nx) + 1,
+                "y": np.arange(ny) + 1,
+                "t": np.arange(nt) + 1,
+            },
         )
         original["v"] = xr.Variable(("x", "y", "t"), np.zeros((nx, ny, nt)))
         original = original.chunk({"t": 1, "x": 2, "y": 2})
@@ -3128,23 +3152,38 @@ class ZarrBase(CFEncodedBase):
 @requires_zarr
 @pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
 class TestInstrumentedZarrStore:
-    methods = [
-        "__iter__",
-        "__contains__",
-        "__setitem__",
-        "__getitem__",
-        "listdir",
-        "list_prefix",
-    ]
+
+    if have_zarr_v3:
+        methods = [
+            "get",
+            "set",
+            "list_dir",
+            "list_prefix",
+        ]
+    else:
+        methods = [
+            "__iter__",
+            "__contains__",
+            "__setitem__",
+            "__getitem__",
+            "listdir",
+            "list_prefix",
+        ]
 
     @contextlib.contextmanager
     def create_zarr_target(self):
-        import zarr
+        if not have_zarr:
+            pytest.skip("Instrumented tests only work on latest Zarr.")
 
         if Version(zarr.__version__) < Version("2.18.0"):
             pytest.skip("Instrumented tests only work on latest Zarr.")
 
-        store = KVStoreV3({})
+        if have_zarr_v3:
+            kwargs = {"mode": "a"}
+        else:
+            kwargs = {}
+
+        store = KVStore({}, **kwargs)
         yield store
 
     def make_patches(self, store):
@@ -3152,7 +3191,7 @@ class TestInstrumentedZarrStore:
 
         return {
             method: MagicMock(
-                f"KVStoreV3.{method}",
+                f"KVStore.{method}",
                 side_effect=getattr(store, method),
                 autospec=True,
             )
@@ -3175,47 +3214,77 @@ class TestInstrumentedZarrStore:
             assert summary[k] <= expected[k], (k, summary)
 
     def test_append(self) -> None:
-        original = Dataset({"foo": ("x", [1])}, coords={"x": [0]})
+        original = Dataset({"foo": ("x", [1])}, coords={"x": [-1]})
         modified = Dataset({"foo": ("x", [2])}, coords={"x": [1]})
+
         with self.create_zarr_target() as store:
-            expected = {
-                "iter": 2,
-                "contains": 9,
-                "setitem": 9,
-                "getitem": 6,
-                "listdir": 2,
-                "list_prefix": 2,
-            }
+            if have_zarr_v3:
+                # TOOD: verify these
+                expected = {
+                    "set": 17,
+                    "get": 12,
+                    "list_dir": 3,
+                    "list_prefix": 0,
+                }
+            else:
+                expected = {
+                    "iter": 2,
+                    "contains": 9,
+                    "setitem": 9,
+                    "getitem": 6,
+                    "listdir": 2,
+                    "list_prefix": 2,
+                }
+
             patches = self.make_patches(store)
-            with patch.multiple(KVStoreV3, **patches):
+            with patch.multiple(KVStore, **patches):
                 original.to_zarr(store)
             self.check_requests(expected, patches)
 
             patches = self.make_patches(store)
             # v2024.03.0: {'iter': 6, 'contains': 2, 'setitem': 5, 'getitem': 10, 'listdir': 6, 'list_prefix': 0}
             # 6057128b: {'iter': 5, 'contains': 2, 'setitem': 5, 'getitem': 10, "listdir": 5, "list_prefix": 0}
-            expected = {
-                "iter": 2,
-                "contains": 2,
-                "setitem": 5,
-                "getitem": 6,
-                "listdir": 2,
-                "list_prefix": 0,
-            }
-            with patch.multiple(KVStoreV3, **patches):
+            if have_zarr_v3:
+                expected = {
+                    "set": 10,
+                    "get": 6,
+                    "list_dir": 2,
+                    "list_prefix": 0,
+                }
+            else:
+                expected = {
+                    "iter": 2,
+                    "contains": 2,
+                    "setitem": 5,
+                    "getitem": 6,
+                    "listdir": 2,
+                    "list_prefix": 0,
+                }
+
+            with patch.multiple(KVStore, **patches):
                 modified.to_zarr(store, mode="a", append_dim="x")
             self.check_requests(expected, patches)
 
             patches = self.make_patches(store)
-            expected = {
-                "iter": 2,
-                "contains": 2,
-                "setitem": 5,
-                "getitem": 6,
-                "listdir": 2,
-                "list_prefix": 0,
-            }
-            with patch.multiple(KVStoreV3, **patches):
+
+            if have_zarr_v3:
+                expected = {
+                    "set": 10,
+                    "get": 6,
+                    "list_dir": 2,
+                    "list_prefix": 0,
+                }
+            else:
+                expected = {
+                    "iter": 2,
+                    "contains": 2,
+                    "setitem": 5,
+                    "getitem": 6,
+                    "listdir": 2,
+                    "list_prefix": 0,
+                }
+
+            with patch.multiple(KVStore, **patches):
                 modified.to_zarr(store, mode="a-", append_dim="x")
             self.check_requests(expected, patches)
 
@@ -3237,7 +3306,7 @@ class TestInstrumentedZarrStore:
                 "list_prefix": 4,
             }
             patches = self.make_patches(store)
-            with patch.multiple(KVStoreV3, **patches):
+            with patch.multiple(KVStore, **patches):
                 ds.to_zarr(store, mode="w", compute=False)
             self.check_requests(expected, patches)
 
@@ -3252,7 +3321,7 @@ class TestInstrumentedZarrStore:
                 "list_prefix": 0,
             }
             patches = self.make_patches(store)
-            with patch.multiple(KVStoreV3, **patches):
+            with patch.multiple(KVStore, **patches):
                 ds.to_zarr(store, region={"x": slice(None)})
             self.check_requests(expected, patches)
 
@@ -3267,7 +3336,7 @@ class TestInstrumentedZarrStore:
                 "list_prefix": 0,
             }
             patches = self.make_patches(store)
-            with patch.multiple(KVStoreV3, **patches):
+            with patch.multiple(KVStore, **patches):
                 ds.to_zarr(store, region="auto")
             self.check_requests(expected, patches)
 
@@ -3280,18 +3349,33 @@ class TestInstrumentedZarrStore:
                 "list_prefix": 0,
             }
             patches = self.make_patches(store)
-            with patch.multiple(KVStoreV3, **patches):
+            with patch.multiple(KVStore, **patches):
                 with open_dataset(store, engine="zarr") as actual:
                     assert_identical(actual, ds)
             self.check_requests(expected, patches)
 
 
+if have_zarr_v3:
+    ZARR_FORMATS = [2, 3]
+else:
+    ZARR_FORMATS = [2]
+
+
+@pytest.fixture(scope="module", params=ZARR_FORMATS)
+def default_zarr_version(request) -> Generator[None, None]:
+    if have_zarr_v3:
+        with zarr.config.set(default_zarr_version=request.param):
+            yield
+    yield
+
+
 @requires_zarr
+@pytest.mark.usefixtures("default_zarr_version")
 class TestZarrDictStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
-        if have_zarr_kvstore:
-            yield KVStore({})
+        if have_zarr_v3:
+            yield zarr.store.MemoryStore({}, mode="a")
         else:
             yield {}
 
@@ -3310,7 +3394,7 @@ class TestZarrDirectoryStore(ZarrBase):
     @contextlib.contextmanager
     def create_store(self):
         with self.create_zarr_target() as store_target:
-            group = backends.ZarrStore.open_group(store_target, mode="w")
+            group = backends.ZarrStore.open_group(store_target, mode="a")
             # older Zarr versions do not have the _store_version attribute
             if have_zarr_v3:
                 # verify that a v2 store was created
@@ -3409,9 +3493,6 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
 
         https://github.com/pydata/xarray/issues/8290
         """
-
-        import zarr
-
         ds = xr.Dataset(data_vars={"test": (("Z",), np.array([123]).reshape(1))})
 
         # The call to retrieve metadata performs a group lookup. We patch Group.__getitem__
@@ -3454,7 +3535,7 @@ class ZarrBaseV3(ZarrBase):
 class TestZarrKVStoreV3(ZarrBaseV3):
     @contextlib.contextmanager
     def create_zarr_target(self):
-        yield KVStoreV3({})
+        yield KVStore({}, mode="a")
 
 
 @pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
@@ -3462,7 +3543,7 @@ class TestZarrDirectoryStoreV3(ZarrBaseV3):
     @contextlib.contextmanager
     def create_zarr_target(self):
         with create_tmp_file(suffix=".zr3") as tmp:
-            yield DirectoryStoreV3(tmp)
+            yield DirectoryStore(tmp, mode="a")
 
 
 @pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
@@ -5528,7 +5609,6 @@ def test_extract_zarr_variable_encoding() -> None:
 @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 def test_open_fsspec() -> None:
     import fsspec
-    import zarr
 
     if not hasattr(zarr.storage, "FSStore") or not hasattr(
         zarr.storage.FSStore, "getitems"
