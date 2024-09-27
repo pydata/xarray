@@ -591,3 +591,14 @@ class TestNamedArray(NamedArraySubclassobjects):
     def test_warn_on_repeated_dimension_names(self) -> None:
         with pytest.warns(UserWarning, match="Duplicate dimension names"):
             NamedArray(("x", "x"), np.arange(4).reshape(2, 2))
+
+
+def test_repr() -> None:
+    x = NamedArray(("x",), np.array([1, 2, 3]))
+
+    # Reprs should not crash:
+    r = x.__repr__()
+    x._repr_html_()
+
+    # Basic comparison:
+    assert r == "<xarray.NamedArray (x: 3)> Size: 24B\narray([1, 2, 3])"
