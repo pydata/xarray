@@ -438,6 +438,7 @@ class DataTree(
     _cache: dict[str, Any]  # used by _CachedAccessor
     _data_variables: dict[Hashable, Variable]
     _node_coord_variables: dict[Hashable, Variable]
+    _node_indexed_coord_variables: dict[Hashable, Variable]
     _node_dims: dict[Hashable, int]
     _node_indexes: dict[Hashable, Index]
     _attrs: dict[Hashable, Any] | None
@@ -451,6 +452,7 @@ class DataTree(
         "_cache",  # used by _CachedAccessor
         "_data_variables",
         "_node_coord_variables",
+        "_node_indexed_coord_variables",
         "_node_dims",
         "_node_indexes",
         "_attrs",
@@ -498,6 +500,9 @@ class DataTree(
         data_vars, coord_vars = _collect_data_and_coord_variables(dataset)
         self._data_variables = data_vars
         self._node_coord_variables = coord_vars
+        self._node_indexed_coord_variables = {
+            k: coord_vars[k] for k in dataset._indexes
+        }
         self._node_dims = dataset._dims
         self._node_indexes = dataset._indexes
         self._encoding = dataset._encoding
@@ -519,7 +524,8 @@ class DataTree(
     @property
     def _coord_variables(self) -> ChainMap[Hashable, Variable]:
         return ChainMap(
-            self._node_coord_variables, *(p._node_coord_variables for p in self.parents)
+            self._node_coord_variables,
+            *(p._node_indexed_coord_variables for p in self.parents),
         )
 
     @property
