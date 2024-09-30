@@ -6259,10 +6259,10 @@ def test_zarr_safe_chunk_region(tmp_path):
 
     # Test if the code is detecting the last chunk correctly
     data = np.random.RandomState(0).randn(2920, 25, 53)
-    ds = xr.Dataset({'temperature': (('time', 'lat', 'lon'), data)})
-    chunks = {'time': 1000, 'lat': 25, 'lon': 53}
+    ds = xr.Dataset({"temperature": (("time", "lat", "lon"), data)})
+    chunks = {"time": 1000, "lat": 25, "lon": 53}
     ds.chunk(chunks).to_zarr(store, compute=False)
-    region = {'time': slice(1000, 2000, 1)}
+    region = {"time": slice(1000, 2000, 1)}
     chunk = ds.isel(region)
     chunk = chunk.chunk()
     chunk.chunk().to_zarr(store, region=region)
