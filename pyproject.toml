@@ -116,6 +116,7 @@ module = [
   "nc_time_axis.*",
   "netCDF4.*",
   "netcdftime.*",
+  "numcodecs.*",
   "opt_einsum.*",
   "pint.*",
   "pooch.*",

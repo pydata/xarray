@@ -2273,6 +2273,7 @@ class ZarrBase(CFEncodedBase):
                     assert_identical(ds, expected)
 
     def test_non_existent_store(self) -> None:
+        exc: type[Exception]
         if have_zarr_v3:
             exc = ValueError
             msg = "store mode"
