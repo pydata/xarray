@@ -1206,21 +1206,3 @@ def check_zarr_installed(strict=True):
     """Import zarr if available, otherwise raise an ImportError."""
     purpose = "working with Zarr stores"
     return soft_import("zarr", purpose=purpose, strict=strict)
-
-
-def _soft_import(name, purpose, strict=True):
-    pip_name = {
-        "matplotlib.pyplot": "matplotlib",
-        "sklearn": "scikit-learn",
-    }
-    package_name = pip_name.get(name, name)
-
-    try:
-        return importlib.import_module(name)
-    except ImportError:
-        if strict:
-            raise ImportError(
-                f"For {purpose}, {package_name} is required. "
-                f"Please install it via pip or conda."
-            )
-        return
