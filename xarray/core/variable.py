@@ -28,7 +28,7 @@ from xarray.core.indexing import (
     VectorizedIndexer,
     as_indexable,
 )
-from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.options import OPTIONS, _get_datetime_resolution, _get_keep_attrs
 from xarray.core.utils import (
     OrderedSet,
     _default,
@@ -71,13 +71,11 @@ if TYPE_CHECKING:
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
-NON_NANOSECOND_WARNING = (
-    "Converting non-nanosecond precision {case} values to nanosecond precision. "
-    "This behavior can eventually be relaxed in xarray, as it is an artifact from "
-    "pandas which is now beginning to support non-nanosecond precision values. "
-    "This warning is caused by passing non-nanosecond np.datetime64 or "
+NON_DEFAULTPRECISION_WARNING = (
+    "Converting non-default precision {case} values to default precision. "
+    "This warning is caused by passing non-default np.datetime64 or "
     "np.timedelta64 values to the DataArray or Variable constructor; it can be "
-    "silenced by converting the values to nanosecond precision ahead of time."
+    "silenced by converting the values to default precision {res!r} ahead of time."
 )
 
 
@@ -198,34 +196,42 @@ def _maybe_wrap_data(data):
     return data
 
 
-def _as_nanosecond_precision(data):
+def _as_default_precision(data):
+    default_unit = _get_datetime_resolution()
     dtype = data.dtype
-    non_ns_datetime64 = (
+    non_default_datetime64 = (
         dtype.kind == "M"
         and isinstance(dtype, np.dtype)
-        and dtype != np.dtype("datetime64[ns]")
+        and dtype != np.dtype(f"datetime64[{default_unit}]")
     )
-    non_ns_datetime_tz_dtype = (
-        isinstance(dtype, pd.DatetimeTZDtype) and dtype.unit != "ns"
+    non_default_datetime_tz_dtype = (
+        isinstance(dtype, pd.DatetimeTZDtype) and dtype.unit != default_unit
     )
-    if non_ns_datetime64 or non_ns_datetime_tz_dtype:
-        utils.emit_user_level_warning(NON_NANOSECOND_WARNING.format(case="datetime"))
+    if non_default_datetime64 or non_default_datetime_tz_dtype:
+        utils.emit_user_level_warning(
+            NON_DEFAULTPRECISION_WARNING.format(
+                case="datetime", res=f"'{default_unit}'"
+            )
+        )
         if isinstance(dtype, pd.DatetimeTZDtype):
-            nanosecond_precision_dtype = pd.DatetimeTZDtype("ns", dtype.tz)
+            default_precision_dtype = pd.DatetimeTZDtype(default_unit, dtype.tz)
         else:
-            nanosecond_precision_dtype = "datetime64[ns]"
-        return duck_array_ops.astype(data, nanosecond_precision_dtype)
+            default_precision_dtype = f"datetime64[{default_unit}]"
+        return duck_array_ops.astype(data, default_precision_dtype)
     elif dtype.kind == "m" and dtype != np.dtype("timedelta64[ns]"):
-        utils.emit_user_level_warning(NON_NANOSECOND_WARNING.format(case="timedelta"))
+        utils.emit_user_level_warning(
+            NON_DEFAULTPRECISION_WARNING.format(case="timedelta", res="'ns'")
+        )
         return duck_array_ops.astype(data, "timedelta64[ns]")
     else:
         return data
 
 
 def _possibly_convert_objects(values):
+    # todo: check wording wrt default precision vs non-nanosecond precision
     """Convert arrays of datetime.datetime and datetime.timedelta objects into
     datetime64 and timedelta64, according to the pandas convention. For the time
-    being, convert any non-nanosecond precision DatetimeIndex or TimedeltaIndex
+    being, convert any Converting non-default precision DatetimeIndex or TimedeltaIndex
     objects to nanosecond precision.  While pandas is relaxing this in version
     2.0.0, in xarray we will need to make sure we are ready to handle
     non-nanosecond precision datetimes or timedeltas in our code before allowing
@@ -236,7 +242,7 @@ def _possibly_convert_objects(values):
     """
     as_series = pd.Series(values.ravel(), copy=False)
     if as_series.dtype.kind in "mM":
-        as_series = _as_nanosecond_precision(as_series)
+        as_series = _as_default_precision(as_series)
     result = np.asarray(as_series).reshape(values.shape)
     if not result.flags.writeable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
@@ -255,9 +261,9 @@ def _possibly_convert_datetime_or_timedelta_index(data):
     before allowing such values to pass through unchanged."""
     if isinstance(data, PandasIndexingAdapter):
         if isinstance(data.array, pd.DatetimeIndex | pd.TimedeltaIndex):
-            data = PandasIndexingAdapter(_as_nanosecond_precision(data.array))
+            data = PandasIndexingAdapter(_as_default_precision(data.array))
     elif isinstance(data, pd.DatetimeIndex | pd.TimedeltaIndex):
-        data = _as_nanosecond_precision(data)
+        data = _as_default_precision(data)
     return data
 
 

@@ -641,7 +641,7 @@ def test_interp_like() -> None:
         pytest.param("2000-01-01T12:00", 0.5, marks=pytest.mark.xfail),
     ],
 )
-@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
+@pytest.mark.filterwarnings("ignore:Converting non-default")
 def test_datetime(x_new, expected) -> None:
     da = xr.DataArray(
         np.arange(24),
