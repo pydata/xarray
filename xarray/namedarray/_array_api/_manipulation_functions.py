@@ -183,10 +183,28 @@ def expand_dims(
 def flip(
     x: NamedArray[_ShapeType, _DType], /, *, axis: _Axes | None = None
 ) -> NamedArray[_ShapeType, _DType]:
+    """
+    Reverse the order of elements in an array along the given axis.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> A = NamedArray(("x",), np.arange(8))
+    >>> flip(A, axis=0)
+    <xarray.NamedArray (x: 8)> Size: 64B
+    array([7, 6, 5, 4, 3, 2, 1, 0])
+    >>> A = NamedArray(("z", "y", "x"), np.arange(8).reshape((2, 2, 2)))
+    >>> flip(A, axis=0)
+    <xarray.NamedArray (z: 2, y: 2, x: 2)> Size: 64B
+    array([[[4, 5],
+            [6, 7]],
+    <BLANKLINE>
+           [[0, 1],
+            [2, 3]]])
+    """
     xp = _get_data_namespace(x)
     _data = xp.flip(x._data, axis=axis)
-    _dims = _infer_dims(_data.shape)  # TODO: Fix dims
-    return x._new(_dims, _data)
+    return x._new(x.dims, _data)
 
 
 def moveaxis(
