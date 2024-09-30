@@ -61,9 +61,7 @@ Bug fixes
   <https://github.com/spencerkclark>`_.
 - Fix a few bugs affecting groupby reductions with `flox`. (:issue:`8090`, :issue:`9398`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Fix the safe_chunks validation option on the to_zarr method
-  (:issue:`5511`, :pull:`9513`). By `Joseph Nowak
-  <https://github.com/josephnowak>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
