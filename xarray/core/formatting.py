@@ -303,7 +303,7 @@ def inline_variable_array_repr(var, max_width):
     """Build a one-line summary of a variable's data."""
     if hasattr(var._data, "_repr_inline_"):
         return var._data._repr_inline_(max_width)
-    if var._in_memory:
+    if getattr(var, "_in_memory", False):
         return format_array_flat(var, max_width)
     dask_array_type = array_type("dask")
     if isinstance(var._data, dask_array_type):
@@ -1102,7 +1102,8 @@ def _datatree_node_repr(node: DataTree, show_inherited: bool) -> str:
         summary.append(f"{dims_start}({dims_values})")
 
     if node._node_coord_variables:
-        summary.append(coords_repr(node.coords, col_width=col_width, max_rows=max_rows))
+        node_coords = node.to_dataset(inherited=False).coords
+        summary.append(coords_repr(node_coords, col_width=col_width, max_rows=max_rows))
 
     if show_inherited and inherited_coords:
         summary.append(

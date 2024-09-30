@@ -32,6 +32,9 @@ New Features
   `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
   By `Eni Awowale <https://github.com/eni-awowale>`_.
+- Added support for vectorized interpolation using additional interpolators
+  from the ``scipy.interpolate`` module (:issue:`9049`, :pull:`9526`).
+  By `Holly Mandel <https://github.com/hollymandel>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
