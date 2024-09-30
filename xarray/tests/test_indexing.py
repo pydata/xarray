@@ -894,6 +894,74 @@ def test_posify_mask_subindexer(indices, expected) -> None:
     np.testing.assert_array_equal(expected, actual)
 
 
+class ArrayWithNamespace:
+    def __array_namespace__(self, version=None):
+        pass
+
+
+class ArrayWithArrayFunction:
+    def __array_function__(self, func, types, args, kwargs):
+        pass
+
+
+class ArrayWithNamespaceAndArrayFunction:
+    def __array_namespace__(self, version=None):
+        pass
+
+    def __array_function__(self, func, types, args, kwargs):
+        pass
+
+
+def as_dask_array(arr, chunks):
+    try:
+        import dask.array as da
+    except ImportError:
+        return None
+
+    return da.from_array(arr, chunks=chunks)
+
+
+@pytest.mark.parametrize(
+    ["array", "expected_type"],
+    (
+        pytest.param(
+            indexing.CopyOnWriteArray(np.array([1, 2])),
+            indexing.CopyOnWriteArray,
+            id="ExplicitlyIndexed",
+        ),
+        pytest.param(
+            np.array([1, 2]), indexing.NumpyIndexingAdapter, id="numpy.ndarray"
+        ),
+        pytest.param(
+            pd.Index([1, 2]), indexing.PandasIndexingAdapter, id="pandas.Index"
+        ),
+        pytest.param(
+            as_dask_array(np.array([1, 2]), chunks=(1,)),
+            indexing.DaskIndexingAdapter,
+            id="dask.array",
+            marks=requires_dask,
+        ),
+        pytest.param(
+            ArrayWithNamespace(), indexing.ArrayApiIndexingAdapter, id="array_api"
+        ),
+        pytest.param(
+            ArrayWithArrayFunction(),
+            indexing.NdArrayLikeIndexingAdapter,
+            id="array_like",
+        ),
+        pytest.param(
+            ArrayWithNamespaceAndArrayFunction(),
+            indexing.ArrayApiIndexingAdapter,
+            id="array_api_with_fallback",
+        ),
+    ),
+)
+def test_as_indexable(array, expected_type):
+    actual = indexing.as_indexable(array)
+
+    assert isinstance(actual, expected_type)
+
+
 def test_indexing_1d_object_array() -> None:
     items = (np.arange(3), np.arange(6))
     arr = DataArray(np.array(items, dtype=object))
