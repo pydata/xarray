@@ -58,6 +58,9 @@ jobs:
             python-version: "3.10"
             os: ubuntu-latest
           # Latest python version:
+          - env: "all-but-numba"
+            python-version: "3.12"
+            os: ubuntu-latest
           - env: "all-but-dask"
             # Not 3.12 because of pint
             python-version: "3.11"

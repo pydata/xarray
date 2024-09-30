@@ -3891,12 +3891,12 @@ class Dataset(
 
         Performs univariate or multivariate interpolation of a Dataset onto
         new coordinates using scipy's interpolation routines. If interpolating
-        along an existing dimension, :py:class:`scipy.interpolate.interp1d` is
-        called.  When interpolating along multiple existing dimensions, an
+        along an existing dimension, either :py:class:`scipy.interpolate.interp1d`
+        or a 1-dimensional scipy interpolator (e.g. :py:class:`scipy.interpolate.KroghInterpolator`)
+        is called.  When interpolating along multiple existing dimensions, an
         attempt is made to decompose the interpolation into multiple
-        1-dimensional interpolations. If this is possible,
-        :py:class:`scipy.interpolate.interp1d` is called. Otherwise,
-        :py:func:`scipy.interpolate.interpn` is called.
+        1-dimensional interpolations. If this is possible, the 1-dimensional interpolator
+        is called. Otherwise, :py:func:`scipy.interpolate.interpn` is called.
 
         Parameters
         ----------
