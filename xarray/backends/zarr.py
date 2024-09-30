@@ -43,7 +43,6 @@ if TYPE_CHECKING:
     from xarray.core.datatree import DataTree
 
 
-
 @functools.lru_cache
 def _zarr_v3() -> bool:
     try:
@@ -90,8 +89,10 @@ class ZarrArrayWrapper(BackendArray):
         self.shape = self._array.shape
 
         # preserve vlen string object dtype (GH 7328)
-        if not _zarr_v3() and self._array.filters is not None and any(
-            [filt.codec_id == "vlen-utf8" for filt in self._array.filters]
+        if (
+            not _zarr_v3()
+            and self._array.filters is not None
+            and any([filt.codec_id == "vlen-utf8" for filt in self._array.filters])
         ):
             dtype = coding.strings.create_vlen_dtype(str)
         else:
@@ -634,17 +635,23 @@ class ZarrStore(AbstractWritableDataStore):
         }
 
         if _zarr_v3() and zarr_array.metadata.zarr_format == 3:
-            encoding["codec_pipeline"] = [x.to_dict() for x in zarr_array.metadata.codecs]
+            encoding["codec_pipeline"] = [
+                x.to_dict() for x in zarr_array.metadata.codecs
+            ]
         elif _zarr_v3():
-            encoding.update({
-                "compressor": zarr_array.metadata.compressor,
-                "filters": zarr_array.metadata.filters,
-            })
+            encoding.update(
+                {
+                    "compressor": zarr_array.metadata.compressor,
+                    "filters": zarr_array.metadata.filters,
+                }
+            )
         else:
-            encoding.update({
-                "compressor": zarr_array.compressor,
-                "filters": zarr_array.filters,
-            })
+            encoding.update(
+                {
+                    "compressor": zarr_array.compressor,
+                    "filters": zarr_array.filters,
+                }
+            )
 
         # _FillValue needs to be in attributes, not encoding, so it will get
         # picked up by decode_cf
