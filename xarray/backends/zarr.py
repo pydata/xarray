@@ -5,7 +5,7 @@ import json
 import os
 import warnings
 from collections.abc import Callable, Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import packaging.version
@@ -56,6 +56,7 @@ def _zarr_v3() -> bool:
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
+ZarrFormat = Literal[2, 3]
 
 
 def encode_zarr_attr_value(value):
@@ -1436,10 +1437,6 @@ def _get_open_params(
     if isinstance(store, os.PathLike):
         store = os.fspath(store)
 
-    if zarr_version is None:
-        # default to 2 if store doesn't specify it's version (e.g. a path)
-        zarr_version = getattr(store, "_store_version", 2)
-
     open_kwargs = dict(
         # mode='a-' is a handcrafted xarray specialty
         mode="a" if mode == "a-" else mode,
@@ -1447,19 +1444,11 @@ def _get_open_params(
         path=group,
     )
     open_kwargs["storage_options"] = storage_options
-    if zarr_version > 2:
+
+    if _zarr_v3():
+        open_kwargs["zarr_format"] = zarr_version
+    else:
         open_kwargs["zarr_version"] = zarr_version
-
-        if consolidated or consolidate_on_close:
-            raise ValueError(
-                "consolidated metadata has not been implemented for zarr "
-                f"version {zarr_version} yet. Set consolidated=False for "
-                f"zarr version {zarr_version}. See also "
-                "https://github.com/zarr-developers/zarr-specs/issues/136"
-            )
-
-        if consolidated is None:
-            consolidated = False
 
     if chunk_store is not None:
         open_kwargs["chunk_store"] = chunk_store
