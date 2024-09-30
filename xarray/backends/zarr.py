@@ -892,9 +892,13 @@ class ZarrStore(AbstractWritableDataStore):
                     else:
                         kwargs["store"] = self.zarr_group.chunk_store
 
+                    # TODO: see if zarr should normalize these strings.
                     zarr_array = zarr.open(
                         **kwargs,
-                        path=f"{self.zarr_group.name}/{name}",
+                        # path=f"{self.zarr_group.name}/{name}",
+                        path="/".join([self.zarr_group.name.rstrip("/"), name]).lstrip(
+                            "/"
+                        ),
                         write_empty_chunks=self._write_empty,
                     )
                 else:
