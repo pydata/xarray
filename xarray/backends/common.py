@@ -12,7 +12,12 @@ import numpy as np
 
 from xarray.conventions import cf_encoder
 from xarray.core import indexing
-from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
+from xarray.core.utils import (
+    FrozenDict,
+    NdimSizeLenMixin,
+    check_fsspec_installed,
+    is_remote_uri,
+)
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 
@@ -83,14 +88,9 @@ def _find_absolute_paths(
     """
     if isinstance(paths, str):
         if is_remote_uri(paths) and kwargs.get("engine", None) == "zarr":
-            try:
-                from fsspec.core import get_fs_token_paths
-            except ImportError as e:
-                raise ImportError(
-                    "The use of remote URLs for opening zarr requires the package fsspec"
-                ) from e
+            fsspec = check_fsspec_installed()
 
-            fs, _, _ = get_fs_token_paths(
+            fs, _, _ = fsspec.core.get_fs_token_paths(
                 paths,
                 mode="rb",
                 storage_options=kwargs.get("backend_kwargs", {}).get(

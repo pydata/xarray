@@ -43,7 +43,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.indexes import Index
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
-from xarray.core.utils import is_remote_uri
+from xarray.core.utils import check_fsspec_installed, is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
 
@@ -1692,15 +1692,15 @@ def to_zarr(
         mapper = store
         chunk_mapper = chunk_store
     else:
-        from fsspec import get_mapper
+        fsspec = check_fsspec_installed()
 
         if not isinstance(store, str):
             raise ValueError(
                 f"store must be a string to use storage_options. Got {type(store)}"
             )
-        mapper = get_mapper(store, **storage_options)
+        mapper = fsspec.get_mapper(store, **storage_options)
         if chunk_store is not None:
-            chunk_mapper = get_mapper(chunk_store, **storage_options)
+            chunk_mapper = fsspec.get_mapper(chunk_store, **storage_options)
         else:
             chunk_mapper = chunk_store
 
