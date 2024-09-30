@@ -2734,9 +2734,9 @@ class ZarrBase(CFEncodedBase):
             compressor = numcodecs.Blosc()
 
             if have_zarr_v3:
-                encoding = {"da": {"compressor": compressor}}
-            else:
                 encoding = {"da": {"codecs": [compressor]}}
+            else:
+                encoding = {"da": {"compressor": compressor}}
             ds.to_zarr(store_target, mode="w", encoding=encoding, **self.version_kwargs)
             ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
             actual_ds = xr.open_dataset(
