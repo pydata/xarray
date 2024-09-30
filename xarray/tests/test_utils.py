@@ -12,6 +12,7 @@ from xarray.core.utils import (
     either_dict_or_kwargs,
     infix_dims,
     iterate_nested,
+    soft_import,
 )
 from xarray.tests import assert_array_equal, requires_dask
 
@@ -361,3 +362,15 @@ def test_find_stack_level():
         return utils.find_stack_level(test_mode=True)
 
     assert f() == 3
+
+
+def test_soft_import():
+    """Test optional dependency handling."""
+    numpy = soft_import("numpy", purpose="array operations")
+    assert numpy.__name__ == "numpy"
+
+    with pytest.raises(ImportError, match="For bar, foo is required"):
+        soft_import(name="foo", purpose="bar")
+
+    foo = soft_import(name="foo", purpose="bar", strict=False)
+    assert foo is None

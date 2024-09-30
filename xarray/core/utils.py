@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import importlib
 import inspect
 import io
 import itertools
@@ -63,7 +64,7 @@ from collections.abc import (
 )
 from enum import Enum
 from pathlib import Path
-from types import EllipsisType
+from types import EllipsisType, ModuleType
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeGuard, TypeVar, overload
 
 import numpy as np
@@ -1146,3 +1147,80 @@ def _resolve_doubly_passed_kwarg(
         )
 
     return kwargs_dict
+
+
+def soft_import(
+    name: str,
+    *,
+    purpose: str,
+    strict: bool = True,
+) -> ModuleType | None:
+    """Import optional dependencies, providing informative errors on failure.
+
+    Parameters
+    ----------
+    name : str
+        The name of the module to import. For example, ``'matplotlib'``.
+    purpose : str
+        A very brief statement explaining why the package is needed.
+        For example, ``'plotting'``.
+    strict : bool
+        If ``True``, raise an ImportError if the package is not found. If ``False``,
+        return ``None`` if the package is not found. Default is ``True``.
+
+    Returns
+    -------
+    module | None
+        The imported module, or ``None`` if the package is not found and strict=False.
+    """
+    install_mapping = {
+        "matplotlib.pyplot": "matplotlib",
+        "hypothesis.strategies": "hypothesis",
+        "nc_time_axis": "nc-time-axis",
+    }
+    package_name = install_mapping.get(name, name)
+
+    if module_available(name):
+        return importlib.import_module(name)
+    if strict:
+        raise ImportError(
+            f"For {purpose}, {package_name} is required. "
+            f"Please install it via pip or conda."
+        )
+    return
+
+
+def check_fsspec_installed(strict=True):
+    """Import fsspec if available, otherwise raise an ImportError."""
+    purpose = "opening Zarr stores with remote URLs"
+    return soft_import("fsspec", purpose=purpose, strict=strict)
+
+
+def check_cftime_installed(strict=True):
+    """Import cftime if available, otherwise raise an ImportError."""
+    purpose = "working with dates with non-standard calendars"
+    return soft_import("cftime", purpose=purpose, strict=strict)
+
+
+def check_zarr_installed(strict=True):
+    """Import zarr if available, otherwise raise an ImportError."""
+    purpose = "working with Zarr stores"
+    return soft_import("zarr", purpose=purpose, strict=strict)
+
+
+def _soft_import(name, purpose, strict=True):
+    pip_name = {
+        "matplotlib.pyplot": "matplotlib",
+        "sklearn": "scikit-learn",
+    }
+    package_name = pip_name.get(name, name)
+
+    try:
+        return importlib.import_module(name)
+    except ImportError:
+        if strict:
+            raise ImportError(
+                f"For {purpose}, {package_name} is required. "
+                f"Please install it via pip or conda."
+            )
+        return
