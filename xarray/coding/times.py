@@ -25,7 +25,7 @@ from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
 from xarray.core.duck_array_ops import asarray, ravel, reshape
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
 from xarray.core.pdcompat import nanosecond_precision_timestamp
-from xarray.core.utils import emit_user_level_warning
+from xarray.core.utils import check_cftime_installed, emit_user_level_warning
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import T_ChunkedArray, get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
@@ -235,8 +235,7 @@ def _decode_cf_datetime_dtype(
 def _decode_datetime_with_cftime(
     num_dates: np.ndarray, units: str, calendar: str
 ) -> np.ndarray:
-    if cftime is None:
-        raise ModuleNotFoundError("No module named 'cftime'")
+    cftime = check_cftime_installed()
     if num_dates.size > 0:
         return np.asarray(
             cftime.num2date(num_dates, units, calendar, only_use_cftime_datetimes=True)
@@ -625,8 +624,7 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
     This method is more flexible than xarray's parsing using datetime64[ns]
     arrays but also slower because it loops over each element.
     """
-    if cftime is None:
-        raise ModuleNotFoundError("No module named 'cftime'")
+    cftime = check_cftime_installed()
 
     if np.issubdtype(dates.dtype, np.datetime64):
         # numpy's broken datetime conversion only works for us precision
