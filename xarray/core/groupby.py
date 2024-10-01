@@ -193,11 +193,15 @@ class _DummyGroup(Generic[T_Xarray]):
     def data(self) -> range:
         return range(self.size)
 
-    def __array__(self) -> np.ndarray:
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray:
+        if copy is False:
+            raise NotImplementedError(f"An array copy is necessary, got {copy = }.")
         return np.arange(self.size)
 
     @property
-    def shape(self) -> tuple[int]:
+    def shape(self) -> tuple[int, ...]:
         return (self.size,)
 
     @property
@@ -390,8 +394,8 @@ def _resolve_group(
     if isinstance(group, DataArray):
         try:
             align(obj, group, join="exact", copy=False)
-        except ValueError:
-            raise ValueError(error_msg)
+        except ValueError as err:
+            raise ValueError(error_msg) from err
 
         newgroup = group.copy(deep=False)
         newgroup.name = group.name or "group"
@@ -458,7 +462,7 @@ class ComposedGrouper:
         )
         # NaNs; as well as values outside the bins are coded by -1
         # Restore these after the raveling
-        mask = functools.reduce(np.logical_or, [(code == -1) for code in broadcasted_codes])  # type: ignore
+        mask = functools.reduce(np.logical_or, [(code == -1) for code in broadcasted_codes])  # type: ignore[arg-type]
         _flatcodes[mask] = -1
 
         midx = pd.MultiIndex.from_product(
@@ -646,7 +650,11 @@ class GroupBy(Generic[T_Xarray]):
         # provided to mimic pandas.groupby
         if self._groups is None:
             self._groups = dict(
-                zip(self.encoded.unique_coord.data, self.encoded.group_indices)
+                zip(
+                    self.encoded.unique_coord.data,
+                    self.encoded.group_indices,
+                    strict=True,
+                )
             )
         return self._groups
 
@@ -660,7 +668,7 @@ class GroupBy(Generic[T_Xarray]):
         return self._len
 
     def __iter__(self) -> Iterator[tuple[GroupKey, T_Xarray]]:
-        return zip(self.encoded.unique_coord.data, self._iter_grouped())
+        return zip(self.encoded.unique_coord.data, self._iter_grouped(), strict=True)
 
     def __repr__(self) -> str:
         text = (
@@ -787,14 +795,12 @@ class GroupBy(Generic[T_Xarray]):
         """Our index contained empty groups (e.g., from a resampling or binning). If we
         reduced on that dimension, we want to restore the full index.
         """
-        from xarray.groupers import BinGrouper, TimeResampler
-
+        has_missing_groups = (
+            self.encoded.unique_coord.size != self.encoded.full_index.size
+        )
         indexers = {}
         for grouper in self.groupers:
-            if (
-                isinstance(grouper.grouper, BinGrouper | TimeResampler)
-                and grouper.name in combined.dims
-            ):
+            if has_missing_groups and grouper.name in combined._indexes:
                 indexers[grouper.name] = grouper.full_index
         if indexers:
             combined = combined.reindex(**indexers)
@@ -845,12 +851,8 @@ class GroupBy(Generic[T_Xarray]):
         obj = self._original_obj
         variables = (
             {k: v.variable for k, v in obj.data_vars.items()}
-            if isinstance(obj, Dataset)
+            if isinstance(obj, Dataset)  # type: ignore[redundant-expr]  # seems to be a mypy bug
             else obj._coords
-        )
-
-        any_isbin = any(
-            isinstance(grouper.grouper, BinGrouper) for grouper in self.groupers
         )
 
         if keep_attrs is None:
@@ -926,14 +928,14 @@ class GroupBy(Generic[T_Xarray]):
             ):
                 raise ValueError(f"cannot reduce over dimensions {dim}.")
 
-        if kwargs["func"] not in ["all", "any", "count"]:
-            kwargs.setdefault("fill_value", np.nan)
-        if any_isbin and kwargs["func"] == "count":
-            # This is an annoying hack. Xarray returns np.nan
-            # when there are no observations in a bin, instead of 0.
-            # We can fake that here by forcing min_count=1.
-            # note min_count makes no sense in the xarray world
-            # as a kwarg for count, so this should be OK
+        has_missing_groups = (
+            self.encoded.unique_coord.size != self.encoded.full_index.size
+        )
+        if has_missing_groups or kwargs.get("min_count", 0) > 0:
+            # Xarray *always* returns np.nan when there are no observations in a group,
+            # We can fake that here by forcing min_count=1 when it is not set.
+            # This handles boolean reductions, and count
+            # See GH8090, GH9398
             kwargs.setdefault("fill_value", np.nan)
             kwargs.setdefault("min_count", 1)
 
@@ -1270,7 +1272,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         metadata
         """
         var = self._obj.variable
-        for idx, indices in enumerate(self.encoded.group_indices):
+        for _idx, indices in enumerate(self.encoded.group_indices):
             if indices:
                 yield var[{self._group_dim: indices}]
 

@@ -103,7 +103,7 @@ DataFrames:
     xr.DataArray.from_series(s)
 
 Both the ``from_series`` and ``from_dataframe`` methods use reindexing, so they
-work even if not the hierarchical index is not a full tensor product:
+work even if the hierarchical index is not a full tensor product:
 
 .. ipython:: python
 
@@ -120,13 +120,13 @@ Particularly after a roundtrip, the following deviations are noted:
 
 - a non-dimension Dataset ``coordinate`` is converted into ``variable``
 - a non-dimension DataArray ``coordinate`` is not converted
-- ``dtype`` is not allways the same (e.g. "str" is converted to "object")
+- ``dtype`` is not always the same (e.g. "str" is converted to "object")
 - ``attrs`` metadata is not conserved
 
 To avoid these problems, the third-party `ntv-pandas <https://github.com/loco-philippe/ntv-pandas>`__ library offers lossless and reversible conversions between
 ``Dataset``/ ``DataArray`` and pandas ``DataFrame`` objects.
 
-This solution is particularly interesting for converting any ``DataFrame`` into a ``Dataset`` (the converter find the multidimensional structure hidden by the tabular structure).
+This solution is particularly interesting for converting any ``DataFrame`` into a ``Dataset`` (the converter finds the multidimensional structure hidden by the tabular structure).
 
 The `ntv-pandas examples <https://github.com/loco-philippe/ntv-pandas/tree/main/example>`__ show how to improve the conversion for the previous ``Dataset`` example and for more complex examples.
 

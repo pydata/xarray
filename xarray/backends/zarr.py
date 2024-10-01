@@ -20,6 +20,7 @@ from xarray.backends.common import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
+from xarray.core.treenode import NodePath
 from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
@@ -32,6 +33,8 @@ from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
+
+    from zarr import Group as ZarrGroup
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
@@ -109,7 +112,9 @@ class ZarrArrayWrapper(BackendArray):
         # could possibly have a work-around for 0d data here
 
 
-def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
+def _determine_zarr_chunks(
+    enc_chunks, var_chunks, ndim, name, safe_chunks, region, mode, shape
+):
     """
     Given encoding chunks (possibly None or []) and variable chunks
     (possibly None or []).
@@ -160,7 +165,9 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
 
     if len(enc_chunks_tuple) != ndim:
         # throw away encoding chunks, start over
-        return _determine_zarr_chunks(None, var_chunks, ndim, name, safe_chunks)
+        return _determine_zarr_chunks(
+            None, var_chunks, ndim, name, safe_chunks, region, mode, shape
+        )
 
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
@@ -186,20 +193,58 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # TODO: incorporate synchronizer to allow writes from multiple dask
     # threads
     if var_chunks and enc_chunks_tuple:
-        for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks):
-            for dchunk in dchunks[:-1]:
+        # If it is possible to write on partial chunks then it is not necessary to check
+        # the last one contained on the region
+        allow_partial_chunks = mode != "r+"
+
+        base_error = (
+            f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
+            f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r} "
+            f"on the region {region}. "
+            f"Writing this array in parallel with dask could lead to corrupted data."
+            f"Consider either rechunking using `chunk()`, deleting "
+            f"or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
+        )
+
+        for zchunk, dchunks, interval, size in zip(
+            enc_chunks_tuple, var_chunks, region, shape, strict=True
+        ):
+            if not safe_chunks:
+                continue
+
+            for dchunk in dchunks[1:-1]:
                 if dchunk % zchunk:
-                    base_error = (
-                        f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
-                        f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r}. "
-                        f"Writing this array in parallel with dask could lead to corrupted data."
-                    )
-                    if safe_chunks:
-                        raise ValueError(
-                            base_error
-                            + " Consider either rechunking using `chunk()`, deleting "
-                            "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
-                        )
+                    raise ValueError(base_error)
+
+            region_start = interval.start if interval.start else 0
+
+            if len(dchunks) > 1:
+                # The first border size is the amount of data that needs to be updated on the
+                # first chunk taking into account the region slice.
+                first_border_size = zchunk
+                if allow_partial_chunks:
+                    first_border_size = zchunk - region_start % zchunk
+
+                if (dchunks[0] - first_border_size) % zchunk:
+                    raise ValueError(base_error)
+
+            if not allow_partial_chunks:
+                region_stop = interval.stop if interval.stop else size
+
+                if region_start % zchunk:
+                    # The last chunk which can also be the only one is a partial chunk
+                    # if it is not aligned at the beginning
+                    raise ValueError(base_error)
+
+                if np.ceil(region_stop / zchunk) == np.ceil(size / zchunk):
+                    # If the region is covering the last chunk then check
+                    # if the reminder with the default chunk size
+                    # is equal to the size of the last chunk
+                    if dchunks[-1] % zchunk != size % zchunk:
+                        raise ValueError(base_error)
+                elif dchunks[-1] % zchunk:
+                    raise ValueError(base_error)
+
         return enc_chunks_tuple
 
     raise AssertionError("We should never get here. Function logic must be wrong.")
@@ -240,7 +285,14 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
 
 
 def extract_zarr_variable_encoding(
-    variable, raise_on_invalid=False, name=None, safe_chunks=True
+    variable,
+    raise_on_invalid=False,
+    name=None,
+    *,
+    safe_chunks=True,
+    region=None,
+    mode=None,
+    shape=None,
 ):
     """
     Extract zarr encoding dictionary from xarray Variable
@@ -249,12 +301,18 @@ def extract_zarr_variable_encoding(
     ----------
     variable : Variable
     raise_on_invalid : bool, optional
-
+    name: str | Hashable, optional
+    safe_chunks: bool, optional
+    region: tuple[slice, ...], optional
+    mode: str, optional
+    shape: tuple[int, ...], optional
     Returns
     -------
     encoding : dict
         Zarr encoding for `variable`
     """
+
+    shape = shape if shape else variable.shape
     encoding = variable.encoding.copy()
 
     safe_to_drop = {"source", "original_shape"}
@@ -282,7 +340,14 @@ def extract_zarr_variable_encoding(
                 del encoding[k]
 
     chunks = _determine_zarr_chunks(
-        encoding.get("chunks"), variable.chunks, variable.ndim, name, safe_chunks
+        enc_chunks=encoding.get("chunks"),
+        var_chunks=variable.chunks,
+        ndim=variable.ndim,
+        name=name,
+        safe_chunks=safe_chunks,
+        region=region,
+        mode=mode,
+        shape=shape,
     )
     encoding["chunks"] = chunks
     return encoding
@@ -548,13 +613,13 @@ class ZarrStore(AbstractWritableDataStore):
 
         encoding = {
             "chunks": zarr_array.chunks,
-            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks)),
+            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks, strict=True)),
             "compressor": zarr_array.compressor,
             "filters": zarr_array.filters,
         }
         # _FillValue needs to be in attributes, not encoding, so it will get
         # picked up by decode_cf
-        if getattr(zarr_array, "fill_value") is not None:
+        if zarr_array.fill_value is not None:
             attributes["_FillValue"] = zarr_array.fill_value
 
         return Variable(dimensions, data, attributes, encoding)
@@ -574,9 +639,9 @@ class ZarrStore(AbstractWritableDataStore):
     def get_dimensions(self):
         try_nczarr = self._mode == "r"
         dimensions = {}
-        for k, v in self.zarr_group.arrays():
+        for _k, v in self.zarr_group.arrays():
             dim_names, _ = _get_zarr_dims_and_attrs(v, DIMENSION_KEY, try_nczarr)
-            for d, s in zip(dim_names, v.shape):
+            for d, s in zip(dim_names, v.shape, strict=True):
                 if d in dimensions and dimensions[d] != s:
                     raise ValueError(
                         f"found conflicting lengths for dimension {d} "
@@ -759,16 +824,10 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
-            # We need to do this for both new and existing variables to ensure we're not
-            # writing to a partial chunk, even though we don't use the `encoding` value
-            # when writing to an existing variable. See
-            # https://github.com/pydata/xarray/issues/8371 for details.
-            encoding = extract_zarr_variable_encoding(
-                v,
-                raise_on_invalid=vn in check_encoding_set,
-                name=vn,
-                safe_chunks=self._safe_chunks,
-            )
+            zarr_array = None
+            zarr_shape = None
+            write_region = self._write_region if self._write_region is not None else {}
+            write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
 
             if name in existing_keys:
                 # existing variable
@@ -798,7 +857,40 @@ class ZarrStore(AbstractWritableDataStore):
                     )
                 else:
                     zarr_array = self.zarr_group[name]
-            else:
+
+                if self._append_dim is not None and self._append_dim in dims:
+                    # resize existing variable
+                    append_axis = dims.index(self._append_dim)
+                    assert write_region[self._append_dim] == slice(None)
+                    write_region[self._append_dim] = slice(
+                        zarr_array.shape[append_axis], None
+                    )
+
+                    new_shape = list(zarr_array.shape)
+                    new_shape[append_axis] += v.shape[append_axis]
+                    zarr_array.resize(new_shape)
+
+                zarr_shape = zarr_array.shape
+
+            region = tuple(write_region[dim] for dim in dims)
+
+            # We need to do this for both new and existing variables to ensure we're not
+            # writing to a partial chunk, even though we don't use the `encoding` value
+            # when writing to an existing variable. See
+            # https://github.com/pydata/xarray/issues/8371 for details.
+            # Note: Ideally there should be two functions, one for validating the chunks and
+            # another one for extracting the encoding.
+            encoding = extract_zarr_variable_encoding(
+                v,
+                raise_on_invalid=vn in check_encoding_set,
+                name=vn,
+                safe_chunks=self._safe_chunks,
+                region=region,
+                mode=self._mode,
+                shape=zarr_shape,
+            )
+
+            if name not in existing_keys:
                 # new variable
                 encoded_attrs = {}
                 # the magic for storing the hidden dimension data
@@ -830,22 +922,6 @@ class ZarrStore(AbstractWritableDataStore):
                 )
                 zarr_array = _put_attrs(zarr_array, encoded_attrs)
 
-            write_region = self._write_region if self._write_region is not None else {}
-            write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
-
-            if self._append_dim is not None and self._append_dim in dims:
-                # resize existing variable
-                append_axis = dims.index(self._append_dim)
-                assert write_region[self._append_dim] == slice(None)
-                write_region[self._append_dim] = slice(
-                    zarr_array.shape[append_axis], None
-                )
-
-                new_shape = list(zarr_array.shape)
-                new_shape[append_axis] += v.shape[append_axis]
-                zarr_array.resize(new_shape)
-
-            region = tuple(write_region[dim] for dim in dims)
             writer.add(v.data, zarr_array, region)
 
     def close(self) -> None:
@@ -894,9 +970,9 @@ class ZarrStore(AbstractWritableDataStore):
         if not isinstance(region, dict):
             raise TypeError(f"``region`` must be a dict, got {type(region)}")
         if any(v == "auto" for v in region.values()):
-            if self._mode != "r+":
+            if self._mode not in ["r+", "a"]:
                 raise ValueError(
-                    f"``mode`` must be 'r+' when using ``region='auto'``, got {self._mode!r}"
+                    f"``mode`` must be 'r+' or 'a' when using ``region='auto'``, got {self._mode!r}"
                 )
             region = self._auto_detect_regions(ds, region)
 
@@ -1218,66 +1294,86 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         zarr_version=None,
         **kwargs,
     ) -> DataTree:
-        from xarray.backends.api import open_dataset
         from xarray.core.datatree import DataTree
+
+        filename_or_obj = _normalize_path(filename_or_obj)
+        groups_dict = self.open_groups_as_dict(filename_or_obj, **kwargs)
+
+        return DataTree.from_dict(groups_dict)
+
+    def open_groups_as_dict(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group: str | Iterable[str] | Callable | None = None,
+        mode="r",
+        synchronizer=None,
+        consolidated=None,
+        chunk_store=None,
+        storage_options=None,
+        stacklevel=3,
+        zarr_version=None,
+        **kwargs,
+    ) -> dict[str, Dataset]:
+
         from xarray.core.treenode import NodePath
 
         filename_or_obj = _normalize_path(filename_or_obj)
+
+        # Check for a group and make it a parent if it exists
         if group:
-            parent = NodePath("/") / NodePath(group)
-            stores = ZarrStore.open_store(
-                filename_or_obj,
-                group=parent,
-                mode=mode,
-                synchronizer=synchronizer,
-                consolidated=consolidated,
-                consolidate_on_close=False,
-                chunk_store=chunk_store,
-                storage_options=storage_options,
-                stacklevel=stacklevel + 1,
-                zarr_version=zarr_version,
-            )
-            if not stores:
-                ds = open_dataset(
-                    filename_or_obj, group=parent, engine="zarr", **kwargs
-                )
-                return DataTree.from_dict({str(parent): ds})
+            parent = str(NodePath("/") / NodePath(group))
         else:
-            parent = NodePath("/")
-            stores = ZarrStore.open_store(
-                filename_or_obj,
-                group=parent,
-                mode=mode,
-                synchronizer=synchronizer,
-                consolidated=consolidated,
-                consolidate_on_close=False,
-                chunk_store=chunk_store,
-                storage_options=storage_options,
-                stacklevel=stacklevel + 1,
-                zarr_version=zarr_version,
-            )
-        ds = open_dataset(filename_or_obj, group=parent, engine="zarr", **kwargs)
-        tree_root = DataTree.from_dict({str(parent): ds})
+            parent = str(NodePath("/"))
+
+        stores = ZarrStore.open_store(
+            filename_or_obj,
+            group=parent,
+            mode=mode,
+            synchronizer=synchronizer,
+            consolidated=consolidated,
+            consolidate_on_close=False,
+            chunk_store=chunk_store,
+            storage_options=storage_options,
+            stacklevel=stacklevel + 1,
+            zarr_version=zarr_version,
+        )
+
+        groups_dict = {}
+
         for path_group, store in stores.items():
-            ds = open_dataset(
-                filename_or_obj, store=store, group=path_group, engine="zarr", **kwargs
-            )
-            new_node: DataTree = DataTree(name=NodePath(path_group).name, data=ds)
-            tree_root._set_item(
-                path_group,
-                new_node,
-                allow_overwrite=False,
-                new_nodes_along_path=True,
-            )
-        return tree_root
+            store_entrypoint = StoreBackendEntrypoint()
+
+            with close_on_error(store):
+                group_ds = store_entrypoint.open_dataset(
+                    store,
+                    mask_and_scale=mask_and_scale,
+                    decode_times=decode_times,
+                    concat_characters=concat_characters,
+                    decode_coords=decode_coords,
+                    drop_variables=drop_variables,
+                    use_cftime=use_cftime,
+                    decode_timedelta=decode_timedelta,
+                )
+            group_name = str(NodePath(path_group))
+            groups_dict[group_name] = group_ds
+
+        return groups_dict
 
 
-def _iter_zarr_groups(root, parent="/"):
-    from xarray.core.treenode import NodePath
+def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
 
-    parent = NodePath(parent)
+    parent_nodepath = NodePath(parent)
+    yield str(parent_nodepath)
     for path, group in root.groups():
-        gpath = parent / path
+        gpath = parent_nodepath / path
         yield str(gpath)
         yield from _iter_zarr_groups(group, parent=gpath)
 
@@ -1351,8 +1447,10 @@ def _get_open_params(
                     RuntimeWarning,
                     stacklevel=stacklevel,
                 )
-            except zarr.errors.GroupNotFoundError:
-                raise FileNotFoundError(f"No such file or directory: '{store}'")
+            except zarr.errors.GroupNotFoundError as err:
+                raise FileNotFoundError(
+                    f"No such file or directory: '{store}'"
+                ) from err
     elif consolidated:
         # TODO: an option to pass the metadata_key keyword
         zarr_group = zarr.open_consolidated(store, **open_kwargs)

@@ -111,7 +111,7 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
             with self.datastore.lock:
                 original_array = self.get_array(needs_lock=False)
                 array = getitem(original_array, key)
-        except IndexError:
+        except IndexError as err:
             # Catch IndexError in netCDF4 and return a more informative
             # error message.  This is most often called when an unsorted
             # indexer is used before the data is loaded from disk.
@@ -120,7 +120,7 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
                 "is not valid on netCDF4.Variable object. Try loading "
                 "your data into memory first by calling .load()."
             )
-            raise IndexError(msg)
+            raise IndexError(msg) from err
         return array
 
 
@@ -192,7 +192,7 @@ def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
                     ds = create_group(ds, key)
                 else:
                     # wrap error to provide slightly more helpful message
-                    raise OSError(f"group not found: {key}", e)
+                    raise OSError(f"group not found: {key}", e) from e
         return ds
 
 
@@ -278,7 +278,9 @@ def _extract_nc4_variable_encoding(
         chunksizes = encoding["chunksizes"]
         chunks_too_big = any(
             c > d and dim not in unlimited_dims
-            for c, d, dim in zip(chunksizes, variable.shape, variable.dims)
+            for c, d, dim in zip(
+                chunksizes, variable.shape, variable.dims, strict=False
+            )
         )
         has_original_shape = "original_shape" in encoding
         changed_shape = (
@@ -446,7 +448,9 @@ class NetCDF4DataStore(WritableCFDataStore):
             else:
                 encoding["contiguous"] = False
                 encoding["chunksizes"] = tuple(chunking)
-                encoding["preferred_chunks"] = dict(zip(var.dimensions, chunking))
+                encoding["preferred_chunks"] = dict(
+                    zip(var.dimensions, chunking, strict=True)
+                )
         # TODO: figure out how to round-trip "endian-ness" without raising
         # warnings from netCDF4
         # encoding['endian'] = var.endian()

@@ -9,7 +9,6 @@ import pytest
 
 import xarray as xr
 from xarray.core import formatting
-from xarray.core.datatree import DataTree  # TODO: Remove when can do xr.DataTree
 from xarray.core.indexes import Index
 from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
 
@@ -615,33 +614,30 @@ class TestFormatting:
 
         # Test numpy arrays raises:
         var = xr.DataArray([0.1, 0.2])
-        with pytest.raises(NotImplementedError) as excinfo:  # type: ignore
+        with pytest.raises(NotImplementedError) as excinfo:  # type: ignore[assignment]
             format(var, ".2f")
         assert "Using format_spec is only supported" in str(excinfo.value)
 
     def test_datatree_print_empty_node(self):
-        dt: DataTree = DataTree(name="root")
+        dt: xr.DataTree = xr.DataTree(name="root")
         printout = str(dt)
         assert printout == "<xarray.DataTree 'root'>\nGroup: /"
 
     def test_datatree_print_empty_node_with_attrs(self):
         dat = xr.Dataset(attrs={"note": "has attrs"})
-        dt: DataTree = DataTree(name="root", data=dat)
+        dt: xr.DataTree = xr.DataTree(name="root", dataset=dat)
         printout = str(dt)
         assert printout == dedent(
             """\
             <xarray.DataTree 'root'>
             Group: /
-                Dimensions:  ()
-                Data variables:
-                    *empty*
                 Attributes:
                     note:     has attrs"""
         )
 
     def test_datatree_print_node_with_data(self):
         dat = xr.Dataset({"a": [0, 2]})
-        dt: DataTree = DataTree(name="root", data=dat)
+        dt: xr.DataTree = xr.DataTree(name="root", dataset=dat)
         printout = str(dt)
         expected = [
             "<xarray.DataTree 'root'>",
@@ -649,15 +645,15 @@ class TestFormatting:
             "Dimensions",
             "Coordinates",
             "a",
-            "Data variables",
-            "*empty*",
         ]
-        for expected_line, printed_line in zip(expected, printout.splitlines()):
+        for expected_line, printed_line in zip(
+            expected, printout.splitlines(), strict=True
+        ):
             assert expected_line in printed_line
 
     def test_datatree_printout_nested_node(self):
         dat = xr.Dataset({"a": [0, 2]})
-        root = DataTree.from_dict(
+        root = xr.DataTree.from_dict(
             {
                 "/results": dat,
             }
@@ -667,12 +663,12 @@ class TestFormatting:
 
     def test_datatree_repr_of_node_with_data(self):
         dat = xr.Dataset({"a": [0, 2]})
-        dt: DataTree = DataTree(name="root", data=dat)
+        dt: xr.DataTree = xr.DataTree(name="root", dataset=dat)
         assert "Coordinates" in repr(dt)
 
     def test_diff_datatree_repr_structure(self):
-        dt_1: DataTree = DataTree.from_dict({"a": None, "a/b": None, "a/c": None})
-        dt_2: DataTree = DataTree.from_dict({"d": None, "d/e": None})
+        dt_1: xr.DataTree = xr.DataTree.from_dict({"a": None, "a/b": None, "a/c": None})
+        dt_2: xr.DataTree = xr.DataTree.from_dict({"d": None, "d/e": None})
 
         expected = dedent(
             """\
@@ -685,8 +681,8 @@ class TestFormatting:
         assert actual == expected
 
     def test_diff_datatree_repr_node_names(self):
-        dt_1: DataTree = DataTree.from_dict({"a": None})
-        dt_2: DataTree = DataTree.from_dict({"b": None})
+        dt_1: xr.DataTree = xr.DataTree.from_dict({"a": None})
+        dt_2: xr.DataTree = xr.DataTree.from_dict({"b": None})
 
         expected = dedent(
             """\
@@ -702,10 +698,10 @@ class TestFormatting:
         # casting to int64 explicitly ensures that int64s are created on all architectures
         ds1 = xr.Dataset({"u": np.int64(0), "v": np.int64(1)})
         ds3 = xr.Dataset({"w": np.int64(5)})
-        dt_1: DataTree = DataTree.from_dict({"a": ds1, "a/b": ds3})
+        dt_1: xr.DataTree = xr.DataTree.from_dict({"a": ds1, "a/b": ds3})
         ds2 = xr.Dataset({"u": np.int64(0)})
         ds4 = xr.Dataset({"w": np.int64(6)})
-        dt_2: DataTree = DataTree.from_dict({"a": ds2, "a/b": ds4})
+        dt_2: xr.DataTree = xr.DataTree.from_dict({"a": ds2, "a/b": ds4})
 
         expected = dedent(
             """\
@@ -844,7 +840,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     attrs = {k: 2 for k in b}
     coords = {_c: np.array([0, 1], dtype=np.uint64) for _c in c}
     data_vars = dict()
-    for v, _c in zip(a, coords.items()):
+    for v, _c in zip(a, coords.items(), strict=True):
         data_vars[v] = xr.DataArray(
             name=v,
             data=np.array([3, 4], dtype=np.uint64),
@@ -886,7 +882,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
         col_width = formatting._calculate_col_width(ds.variables)
         dims_start = formatting.pretty_print("Dimensions:", col_width)
         dims_values = formatting.dim_summary_limited(
-            ds, col_width=col_width + 1, max_rows=display_max_rows
+            ds.sizes, col_width=col_width + 1, max_rows=display_max_rows
         )
         expected_size = "1kB"
         expected = f"""\
@@ -946,7 +942,9 @@ def test_lazy_array_wont_compute() -> None:
     from xarray.core.indexing import LazilyIndexedArray
 
     class LazilyIndexedArrayNotComputable(LazilyIndexedArray):
-        def __array__(self, dtype=None, copy=None):
+        def __array__(
+            self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        ) -> np.ndarray:
             raise NotImplementedError("Computing this array is not possible.")
 
     arr = LazilyIndexedArrayNotComputable(np.array([1, 2]))

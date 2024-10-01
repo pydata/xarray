@@ -14,14 +14,92 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2024.09.1:
 
-.. _whats-new.2024.07.1:
-
-v2024.07.1 (unreleased)
+v2024.09.1 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
+- ``DataTree`` related functionality is now exposed in the main ``xarray`` public
+  API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``, ``xarray.open_groups``,
+  ``xarray.map_over_subtree``, ``xarray.register_datatree_accessor`` and
+  ``xarray.testing.assert_isomorphic``.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_,
+  `Eni Awowale <https://github.com/eni-awowale>`_,
+  `Matt Savoie <https://github.com/flamingbear>`_,
+  `Stephan Hoyer <https://github.com/shoyer>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
+  By `Eni Awowale <https://github.com/eni-awowale>`_.
+- Added support for vectorized interpolation using additional interpolators
+  from the ``scipy.interpolate`` module (:issue:`9049`, :pull:`9526`).
+  By `Holly Mandel <https://github.com/hollymandel>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+- Make illegal path-like variable names when constructing a DataTree from a Dataset
+  (:issue:`9339`, :pull:`9378`)
+  By `Etienne Schalk <https://github.com/etienneschalk>`_.
+- Work around `upstream pandas issue
+  <https://github.com/pandas-dev/pandas/issues/56996>`_ to ensure that we can
+  decode times encoded with small integer dtype values (e.g. ``np.int32``) in
+  environments with NumPy 2.0 or greater without needing to fall back to cftime
+  (:pull:`9518`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix bug when encoding times with missing values as floats in the case when
+  the non-missing times could in theory be encoded with integers
+  (:issue:`9488`, :pull:`9497`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Fix a few bugs affecting groupby reductions with `flox`. (:issue:`8090`, :issue:`9398`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix the safe_chunks validation option on the to_zarr method
+  (:issue:`5511`, :pull:`9559`). By `Joseph Nowak
+  <https://github.com/josephnowak>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Migrate documentation for ``datatree`` into main ``xarray`` documentation (:pull:`9033`).
+  For information on previous ``datatree`` releases, please see:
+  `datatree's historical release notes <https://xarray-datatree.readthedocs.io/en/latest/>`_.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie <https://github.com/flamingbear>`_, and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2024.09.0:
+
+v2024.09.0 (Sept 11, 2024)
+--------------------------
+This release drops support for Python 3.9, and adds support for grouping by :ref:`multiple arrays <groupby.multiple>`, while providing numerous performance improvements and bug fixes.
+
+Thanks to the 33 contributors to this release:
+Alfonso Ladino, Andrew Scherer, Anurag Nayak, David Hoese, Deepak Cherian, Diogo Teles Sant'Anna, Dom, Elliott Sales de Andrade, Eni, Holly Mandel, Illviljan, Jack Kelly, Julius Busecke, Justus Magin, Kai Mühlbauer, Manish Kumar Gupta, Matt Savoie, Maximilian Roos, Michele Claus, Miguel Jimenez, Niclas Rieger, Pascal Bourgault, Philip Chmielowiec, Spencer Clark, Stephan Hoyer, Tao Xin, Tiago Sanona, TimothyCera-NOAA, Tom Nicholas, Tom White, Virgile Andreani, oliverhiggs and tiago
+
+New Features
+~~~~~~~~~~~~
+
+- Add :py:attr:`~core.accessor_dt.DatetimeAccessor.days_in_year` and
+  :py:attr:`~core.accessor_dt.DatetimeAccessor.decimal_year` to the
+  ``DatetimeAccessor`` on ``xr.DataArray``. (:pull:`9105`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
+
+Performance
+~~~~~~~~~~~
+
 - Make chunk manager an option in ``set_options`` (:pull:`9362`).
   By `Tom White <https://github.com/tomwhite>`_.
 - Support for :ref:`grouping by multiple variables <groupby.multiple>`.
@@ -31,6 +109,8 @@ New Features
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Allow data variable specific ``constant_values`` in the dataset ``pad`` function (:pull:`9353``).
   By `Tiago Sanona <https://github.com/tsanona>`_.
+- Speed up grouping by avoiding deep-copy of non-dimension coordinates (:issue:`9426`, :pull:`9393`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -53,11 +133,6 @@ Breaking changes
     typing_extensions       4.5        4.7
     zarr                    2.14      2.16
   ===================== =========  =======
-
-
-Deprecations
-~~~~~~~~~~~~
-
 
 Bug fixes
 ~~~~~~~~~
@@ -86,23 +161,11 @@ Bug fixes
   (:issue:`9408`, :pull:`9413`).
   By `Oliver Higgs <https://github.com/oliverhiggs>`_.
 
-Performance
-~~~~~~~~~~~
-
-- Speed up grouping by avoiding deep-copy of non-dimension coordinates (:issue:`9426`, :pull:`9393`)
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-
-Documentation
-~~~~~~~~~~~~~
-
-
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
 - Re-enable testing ``pydap`` backend with ``numpy>=2`` (:pull:`9391`).
   By `Miguel Jimenez <https://github.com/Mikejmnez>`_ .
-
-
 
 .. _whats-new.2024.07.0:
 
@@ -125,7 +188,7 @@ New Features
   (:issue:`6610`, :pull:`8840`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Allow rechunking to a frequency using ``Dataset.chunk(time=TimeResampler("YE"))`` syntax. (:issue:`7559`, :pull:`9109`)
-  Such rechunking allows many time domain analyses to be executed in an embarassingly parallel fashion.
+  Such rechunking allows many time domain analyses to be executed in an embarrassingly parallel fashion.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Allow per-variable specification of ```mask_and_scale``, ``decode_times``, ``decode_timedelta``
   ``use_cftime`` and ``concat_characters`` params in :py:func:`~xarray.open_dataset`  (:pull:`9218`).
@@ -138,8 +201,8 @@ New Features
   to return an object without ``attrs``. A ``deep`` parameter controls whether
   variables' ``attrs`` are also dropped.
   By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
+- Added :py:func:`open_groups` for h5netcdf and netCDF4 backends (:issue:`9137`, :pull:`9243`).
   By `Eni Awowale <https://github.com/eni-awowale>`_.
-- Add `open_groups` method for unaligned datasets (:issue:`9137`, :pull:`9243`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -158,7 +221,7 @@ Breaking changes
 
 Bug fixes
 ~~~~~~~~~
-- Fix scatter plot broadcasting unneccesarily. (:issue:`9129`, :pull:`9206`)
+- Fix scatter plot broadcasting unnecessarily. (:issue:`9129`, :pull:`9206`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Don't convert custom indexes to ``pandas`` indexes when computing a diff (:pull:`9157`)
   By `Justus Magin <https://github.com/keewis>`_.
@@ -621,7 +684,7 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 - The implementation of :py:func:`map_blocks` has changed to minimize graph size and duplication of data.
-  This should be a strict improvement even though the graphs are not always embarassingly parallel any more.
+  This should be a strict improvement even though the graphs are not always embarrassingly parallel any more.
   Please open an issue if you spot a regression. (:pull:`8412`, :issue:`8409`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Remove null values before plotting. (:pull:`8535`).

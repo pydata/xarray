@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from xarray.core.utils import FrozenDict
 
@@ -92,7 +92,7 @@ _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
 _DISPLAY_OPTIONS = frozenset(["text", "html"])
 
 
-def _positive_integer(value: int) -> bool:
+def _positive_integer(value: Any) -> bool:
     return isinstance(value, int) and value > 0
 
 
@@ -131,6 +131,7 @@ def _warn_on_setting_enable_cftimeindex(enable_cftimeindex):
         "The enable_cftimeindex option is now a no-op "
         "and will be removed in a future version of xarray.",
         FutureWarning,
+        stacklevel=2,
     )
 
 
