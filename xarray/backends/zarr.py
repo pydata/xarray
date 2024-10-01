@@ -334,12 +334,12 @@ def extract_zarr_variable_encoding(
 
     safe_to_drop = {"source", "original_shape"}
     valid_encodings = {
+        "codecs",
         "chunks",
         "compressor",
         "filters",
         "cache_metadata",
         "write_empty_chunks",
-        "codec_pipeline",
     }
 
     for k in safe_to_drop:
@@ -635,9 +635,7 @@ class ZarrStore(AbstractWritableDataStore):
         }
 
         if _zarr_v3() and zarr_array.metadata.zarr_format == 3:
-            encoding["codec_pipeline"] = [
-                x.to_dict() for x in zarr_array.metadata.codecs
-            ]
+            encoding["codecs"] = [x.to_dict() for x in zarr_array.metadata.codecs]
         elif _zarr_v3():
             encoding.update(
                 {
@@ -959,10 +957,8 @@ class ZarrStore(AbstractWritableDataStore):
                     else:
                         encoding["write_empty_chunks"] = self._write_empty
 
-                if "codec_pipeline" in encoding:
-                    # In zarr v3, the keyword argument is
-                    # `codecs` but the serialized form is `codec_pipeline`
-                    pipeline = encoding.pop("codec_pipeline")
+                if "codecs" in encoding:
+                    pipeline = encoding.pop("codecs")
                     encoding["codecs"] = pipeline
 
                 zarr_array = self.zarr_group.create(
@@ -1466,10 +1462,16 @@ def _get_open_params(
         if consolidated is None:
             consolidated = False
 
+    if _zarr_v3():
+        missing_exc: type[Exception] = ValueError
+    else:
+        missing_exc = zarr.errors.GroupNotFoundError
+
     if consolidated is None:
         try:
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
-        except KeyError:
+        except (ValueError, KeyError):
+            # ValueError in zarr-python 3.x, KeyError in 2.x.
             try:
                 zarr_group = zarr.open_group(store, **open_kwargs)
                 warnings.warn(
@@ -1487,7 +1489,7 @@ def _get_open_params(
                     RuntimeWarning,
                     stacklevel=stacklevel,
                 )
-            except zarr.errors.GroupNotFoundError as err:
+            except missing_exc as err:
                 raise FileNotFoundError(
                     f"No such file or directory: '{store}'"
                 ) from err

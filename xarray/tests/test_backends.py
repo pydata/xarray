@@ -117,14 +117,32 @@ if have_zarr:
     have_zarr_kvstore = True
 
     if have_zarr_v3:
-        from zarr.store import LocalStore as DirectoryStore
-        from zarr.store import MemoryStore as KVStore
+        from zarr.storage import MemoryStore as KVStore
+
+        ZARR_FORMATS = [2, 3]
     else:
-        from zarr.storage import DirectoryStore, KVStore
+        from zarr.storage import KVStore
+
+        ZARR_FORMATS = [2]
 else:
     have_zarr_v3 = False
     have_zarr_kvstore = False
     have_zarr_directory_store = False
+    ZARR_FORMATS = []
+
+
+@pytest.fixture(scope="module", params=ZARR_FORMATS)
+def default_zarr_version(request) -> Generator[None, None]:
+    if have_zarr_v3:
+        with zarr.config.set(default_zarr_version=request.param):
+            yield
+    else:
+        yield
+
+
+def skip_if_zarr_format_3(reason: str):
+    if have_zarr_v3 and zarr.config["default_zarr_version"] == 3:
+        pytest.xfail(reason=f"Unsupported with zarr_format=3: {reason}")
 
 
 ON_WINDOWS = sys.platform == "win32"
@@ -1295,6 +1313,7 @@ class CFEncodedBase(DatasetIOBase):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", ".*floating point data as an integer")
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+                # XXX: zarr v3 always writes fill_value so this fails.
                 assert "_FillValue" not in actual.x.encoding
         assert ds.x.encoding == {}
 
@@ -2204,6 +2223,7 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
 
 
 @requires_zarr
+@pytest.mark.usefixtures("default_zarr_version")
 class ZarrBase(CFEncodedBase):
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
     zarr_version = 2
@@ -2220,9 +2240,10 @@ class ZarrBase(CFEncodedBase):
             )
 
     def save(self, dataset, store_target, **kwargs):  # type: ignore[override]
-        for k, v in dataset.variables.items():
-            if v.dtype.kind in ("U", "O", "M", "b"):
-                raise pytest.skip(reason=f"Unsupported dtype {v} for variable: {k}")
+        if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
+            for k, v in dataset.variables.items():
+                if v.dtype.kind in ("U", "O", "M", "b"):
+                    pytest.skip(reason=f"Unsupported dtype {v} for variable: {k}")
 
         return dataset.to_zarr(store=store_target, **kwargs, **self.version_kwargs)
 
@@ -2248,8 +2269,6 @@ class ZarrBase(CFEncodedBase):
 
     @pytest.mark.parametrize("consolidated", [False, True, None])
     def test_roundtrip_consolidated(self, consolidated) -> None:
-        if consolidated and self.zarr_version > 2:
-            pytest.xfail("consolidated metadata is not supported for zarr v3 yet")
         expected = create_test_data()
         with self.roundtrip(
             expected,
@@ -2273,14 +2292,7 @@ class ZarrBase(CFEncodedBase):
                     assert_identical(ds, expected)
 
     def test_non_existent_store(self) -> None:
-        exc: type[Exception]
-        if have_zarr_v3:
-            exc = ValueError
-            msg = "store mode"
-        else:
-            exc = FileNotFoundError
-            msg = "No such file or directory:"
-        with pytest.raises(exc, match=msg):
+        with pytest.raises(FileNotFoundError, match="No such file or directory"):
             xr.open_zarr(f"{uuid.uuid4()}")
 
     @pytest.mark.skipif(have_zarr_v3, reason="chunk_store not implemented in zarr v3")
@@ -2567,7 +2579,7 @@ class ZarrBase(CFEncodedBase):
             self.save(original, store, mode="w", group=group)
             with self.open(store, group=group) as actual:
                 assert_identical(original, actual)
-                with pytest.raises(ValueError):
+                with pytest.raises((ValueError, FileExistsError)):
                     self.save(original, store, mode="w-")
 
         # check append mode for normal write
@@ -2598,8 +2610,8 @@ class ZarrBase(CFEncodedBase):
 
         blosc_comp = Blosc(cname="zstd", clevel=3, shuffle=2)
 
-        if have_zarr_v3:
-            encoding = {"codec_pipeline": [blosc_comp]}
+        if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
+            encoding = {"codecs": [blosc_comp]}
         else:
             encoding = {"compressor": blosc_comp}
 
@@ -2734,16 +2746,20 @@ class ZarrBase(CFEncodedBase):
 
             compressor = numcodecs.Blosc()
 
-            if have_zarr_v3:
-                encoding = {"da": {"codecs": [compressor]}}
+            if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
+                encoding_key = "codecs"
+                encoding_value = [compressor]
             else:
-                encoding = {"da": {"compressor": compressor}}
+                encoding_key = "compressor"
+                encoding_value = compressor
+
+            encoding = {"da": {encoding_key: encoding_value}}
             ds.to_zarr(store_target, mode="w", encoding=encoding, **self.version_kwargs)
             ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
             actual_ds = xr.open_dataset(
                 store_target, engine="zarr", **self.version_kwargs
             )
-            actual_encoding = actual_ds["da"].encoding["compressor"]
+            actual_encoding = actual_ds["da"].encoding[encoding_key]
             assert actual_encoding.get_config() == compressor.get_config()
             assert_identical(
                 xr.open_dataset(
@@ -2876,8 +2892,6 @@ class ZarrBase(CFEncodedBase):
     def test_write_region(self, consolidated, compute, use_dask, write_empty) -> None:
         if (use_dask or not compute) and not has_dask:
             pytest.skip("requires dask")
-        if consolidated and self.zarr_version > 2:
-            pytest.xfail("consolidated metadata is not supported for zarr v3 yet")
 
         zeros = Dataset({"u": (("x",), np.zeros(10))})
         nonzeros = Dataset({"u": (("x",), np.arange(1, 11))})
@@ -3149,6 +3163,38 @@ class ZarrBase(CFEncodedBase):
                 assert original[name].chunks == actual_var.chunks
             assert original.chunks == actual.chunks
 
+    def test_write_store(self) -> None:
+        skip_if_zarr_format_3(reason="unsupported dtypes")
+        return super().test_write_store()
+
+    def test_roundtrip_endian(self) -> None:
+        skip_if_zarr_format_3(reason="unsupported dtypes")
+        return super().test_roundtrip_endian()
+
+    def test_roundtrip_bytes_with_fill_value(self) -> None:
+        skip_if_zarr_format_3(reason="unsupported dtypes")
+        return super().test_roundtrip_bytes_with_fill_value()
+
+    def test_default_fill_value(self) -> None:
+        skip_if_zarr_format_3(reason="fill_value always written")
+        return super().test_default_fill_value()
+
+    def test_explicitly_omit_fill_value(self) -> None:
+        skip_if_zarr_format_3(reason="fill_value always written")
+        return super().test_explicitly_omit_fill_value()
+
+    def test_explicitly_omit_fill_value_via_encoding_kwarg(self) -> None:
+        skip_if_zarr_format_3(reason="fill_value always written")
+        return super().test_explicitly_omit_fill_value_via_encoding_kwarg()
+
+    def test_explicitly_omit_fill_value_in_coord(self) -> None:
+        skip_if_zarr_format_3(reason="fill_value always written")
+        return super().test_explicitly_omit_fill_value_in_coord()
+
+    def test_explicitly_omit_fill_value_in_coord_via_encoding_kwarg(self) -> None:
+        skip_if_zarr_format_3(reason="fill_value always written")
+        return super().test_explicitly_omit_fill_value_in_coord_via_encoding_kwarg()
+
 
 @requires_zarr
 @pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
@@ -3356,27 +3402,12 @@ class TestInstrumentedZarrStore:
             self.check_requests(expected, patches)
 
 
-if have_zarr_v3:
-    ZARR_FORMATS = [2, 3]
-else:
-    ZARR_FORMATS = [2]
-
-
-@pytest.fixture(scope="module", params=ZARR_FORMATS)
-def default_zarr_version(request) -> Generator[None, None]:
-    if have_zarr_v3:
-        with zarr.config.set(default_zarr_version=request.param):
-            yield
-    yield
-
-
 @requires_zarr
-@pytest.mark.usefixtures("default_zarr_version")
 class TestZarrDictStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
         if have_zarr_v3:
-            yield zarr.store.MemoryStore({}, mode="a")
+            yield zarr.storage.MemoryStore({}, mode="a")
         else:
             yield {}
 
@@ -3396,10 +3427,6 @@ class TestZarrDirectoryStore(ZarrBase):
     def create_store(self):
         with self.create_zarr_target() as store_target:
             group = backends.ZarrStore.open_group(store_target, mode="a")
-            # older Zarr versions do not have the _store_version attribute
-            if have_zarr_v3:
-                # verify that a v2 store was created
-                assert group.zarr_group.store._store_version == 2
             yield group
 
 
@@ -3518,45 +3545,6 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
             # we assert that the number of calls has not increased after fetchhing the array
             xrds.test.compute(scheduler="sync")
             assert mock.call_count == call_count
-
-
-class ZarrBaseV3(ZarrBase):
-    zarr_version = 3
-
-    def test_roundtrip_coordinates_with_space(self):
-        original = Dataset(coords={"x": 0, "y z": 1})
-        with pytest.warns(SerializationWarning):
-            # v3 stores do not allow spaces in the key name
-            with pytest.raises(ValueError):
-                with self.roundtrip(original):
-                    pass
-
-
-@pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
-class TestZarrKVStoreV3(ZarrBaseV3):
-    @contextlib.contextmanager
-    def create_zarr_target(self):
-        yield KVStore({}, mode="a")
-
-
-@pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
-class TestZarrDirectoryStoreV3(ZarrBaseV3):
-    @contextlib.contextmanager
-    def create_zarr_target(self):
-        with create_tmp_file(suffix=".zr3") as tmp:
-            yield DirectoryStore(tmp, mode="a")
-
-
-@pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
-class TestZarrDirectoryStoreV3FromPath(TestZarrDirectoryStoreV3):
-    # Must specify zarr_version=3 to get a v3 store because create_zarr_target
-    # is a string path.
-    version_kwargs = {"zarr_version": 3}
-
-    @contextlib.contextmanager
-    def create_zarr_target(self):
-        with create_tmp_file(suffix=".zr3") as tmp:
-            yield tmp
 
 
 @requires_zarr
