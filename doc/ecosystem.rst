@@ -26,7 +26,7 @@ Geosciences
 - `OGGM <https://oggm.org/>`_: Open Global Glacier Model
 - `Oocgcm <https://oocgcm.readthedocs.io/>`_: Analysis of large gridded geophysical datasets
 - `Open Data Cube <https://www.opendatacube.org/>`_: Analysis toolkit of continental scale Earth Observation data from satellites.
-- `Pangaea: <https://pangaea.readthedocs.io/en/latest/>`_: xarray extension for gridded land surface & weather model output).
+- `Pangaea <https://pangaea.readthedocs.io/en/latest/>`_: xarray extension for gridded land surface & weather model output).
 - `Pangeo <https://pangeo.io>`_: A community effort for big data geoscience in the cloud.
 - `PyGDX <https://pygdx.readthedocs.io/en/latest/>`_: Python 3 package for
   accessing data stored in GAMS Data eXchange (GDX) files. Also uses a custom
