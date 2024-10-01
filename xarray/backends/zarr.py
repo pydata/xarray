@@ -820,7 +820,11 @@ class ZarrStore(AbstractWritableDataStore):
             variables_to_set, check_encoding_set, writer, unlimited_dims=unlimited_dims
         )
         if self._consolidate_on_close:
-            zarr.consolidate_metadata(self.zarr_group.store)
+            kwargs = {}
+            if _zarr_v3():
+                # https://github.com/zarr-developers/zarr-python/pull/2113#issuecomment-2386718323
+                kwargs["path"] = self.zarr_group.name.lstrip("/")
+            zarr.consolidate_metadata(self.zarr_group.store, **kwargs)
 
     def sync(self):
         pass
