@@ -2985,7 +2985,7 @@ class ZarrBase(CFEncodedBase):
                 assert_identical(actual, only_new_data)
 
     def test_write_region_errors(self) -> None:
-        data = Dataset({"u": (("x",), np.arange(5))})
+        data = Dataset({"u": (("x",), np.arange(1, 6))})
         data2 = Dataset({"u": (("x",), np.array([10, 11]))})
 
         @contextlib.contextmanager
@@ -2997,7 +2997,7 @@ class ZarrBase(CFEncodedBase):
                     assert_identical(actual, expected)
 
         # verify the base case works
-        expected = Dataset({"u": (("x",), np.array([10, 11, 2, 3, 4]))})
+        expected = Dataset({"u": (("x",), np.array([10, 11, 3, 4, 5]))})
         with setup_and_verify_store(expected) as store:
             data2.to_zarr(store, region={"x": slice(2)}, **self.version_kwargs)
 
