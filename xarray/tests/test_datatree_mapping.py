@@ -7,7 +7,7 @@ from xarray.core.datatree_mapping import (
     check_isomorphic,
     map_over_subtree,
 )
-from xarray.testing import assert_equal
+from xarray.testing import assert_equal, assert_identical
 
 empty = xr.Dataset()
 
@@ -305,6 +305,17 @@ class TestMapOverSubTree:
             ValueError, match="Raised whilst mapping function over node /set1"
         ):
             dt.map_over_subtree(fail_on_specific_node)
+
+    def test_inherited_coordinates_with_index(self):
+        root = xr.Dataset(coords={"x": [1, 2]})
+        child = xr.Dataset({"foo": ("x", [0, 1])})  # no coordinates
+        tree = xr.DataTree.from_dict({"/": root, "/child": child})
+        actual = tree.map_over_subtree(lambda ds: ds)  # identity
+        assert isinstance(actual, xr.DataTree)
+        assert_identical(tree, actual)
+
+        actual_child = actual.children["child"].to_dataset(inherited=False)
+        assert_identical(actual_child, child)
 
 
 class TestMutableOperations:

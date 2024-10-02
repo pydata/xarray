@@ -201,7 +201,7 @@ def _determine_zarr_chunks(
             f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
             f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r} "
             f"on the region {region}. "
-            f"Writing this array in parallel with dask could lead to corrupted data."
+            f"Writing this array in parallel with dask could lead to corrupted data. "
             f"Consider either rechunking using `chunk()`, deleting "
             f"or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
         )
@@ -229,15 +229,14 @@ def _determine_zarr_chunks(
                     raise ValueError(base_error)
 
             if not allow_partial_chunks:
-                chunk_start = sum(dchunks[:-1]) + region_start
-                if chunk_start % zchunk:
+                region_stop = interval.stop if interval.stop else size
+
+                if region_start % zchunk:
                     # The last chunk which can also be the only one is a partial chunk
                     # if it is not aligned at the beginning
                     raise ValueError(base_error)
 
-                region_stop = interval.stop if interval.stop else size
-
-                if size - region_stop + 1 < zchunk:
+                if np.ceil(region_stop / zchunk) == np.ceil(size / zchunk):
                     # If the region is covering the last chunk then check
                     # if the reminder with the default chunk size
                     # is equal to the size of the last chunk

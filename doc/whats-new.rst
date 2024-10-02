@@ -32,6 +32,11 @@ New Features
   `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
   By `Eni Awowale <https://github.com/eni-awowale>`_.
+- Added support for vectorized interpolation using additional interpolators
+  from the ``scipy.interpolate`` module (:issue:`9049`, :pull:`9526`).
+  By `Holly Mandel <https://github.com/hollymandel>`_.
+- Implement handling of complex numbers (netcdf4/h5netcdf) and enums (h5netcdf) (:issue:`9246`, :issue:`3297`, :pull:`9509`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -59,7 +64,7 @@ Bug fixes
 - Fix a few bugs affecting groupby reductions with `flox`. (:issue:`8090`, :issue:`9398`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix the safe_chunks validation option on the to_zarr method
-  (:issue:`5511`, :pull:`9513`). By `Joseph Nowak
+  (:issue:`5511`, :pull:`9559`). By `Joseph Nowak
   <https://github.com/josephnowak>`_.
 
 Documentation
