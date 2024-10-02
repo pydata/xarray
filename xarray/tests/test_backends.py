@@ -5902,12 +5902,14 @@ class TestNCZarr:
 
 @requires_netCDF4
 @requires_dask
+@pytest.mark.usefixtures("default_zarr_version")
 def test_pickle_open_mfdataset_dataset():
     with open_example_mfdataset(["bears.nc"]) as ds:
         assert_identical(ds, pickle.loads(pickle.dumps(ds)))
 
 
 @requires_zarr
+@pytest.mark.usefixtures("default_zarr_version")
 def test_zarr_closing_internal_zip_store():
     store_name = "tmp.zarr.zip"
     original_da = DataArray(np.arange(1, 13).reshape((3, 4)))
@@ -6096,6 +6098,7 @@ class TestZarrRegionAuto:
 
 
 @requires_zarr
+@pytest.mark.usefixtures("default_zarr_version")
 def test_zarr_region(tmp_path):
     x = np.arange(0, 50, 10)
     y = np.arange(0, 20, 2)
@@ -6124,6 +6127,7 @@ def test_zarr_region(tmp_path):
 
 @requires_zarr
 @requires_dask
+@pytest.mark.usefixtures("default_zarr_version")
 def test_zarr_region_chunk_partial(tmp_path):
     """
     Check that writing to partial chunks with `region` fails, assuming `safe_chunks=False`.
@@ -6144,6 +6148,7 @@ def test_zarr_region_chunk_partial(tmp_path):
 
 @requires_zarr
 @requires_dask
+@pytest.mark.usefixtures("default_zarr_version")
 def test_zarr_append_chunk_partial(tmp_path):
     t_coords = np.array([np.datetime64("2020-01-01").astype("datetime64[ns]")])
     data = np.ones((10, 10))
@@ -6181,11 +6186,14 @@ def test_zarr_append_chunk_partial(tmp_path):
 
 @requires_zarr
 @requires_dask
+@pytest.mark.usefixtures("default_zarr_version")
 def test_zarr_region_chunk_partial_offset(tmp_path):
     # https://github.com/pydata/xarray/pull/8459#issuecomment-1819417545
     store = tmp_path / "foo.zarr"
     data = np.ones((30,))
-    da = xr.DataArray(data, dims=["x"], coords={"x": range(30)}, name="foo").chunk(x=10)
+    da = xr.DataArray(data, dims=["x"], coords={"x": range(1, 31)}, name="foo").chunk(
+        x=10
+    )
     da.to_zarr(store, compute=False)
 
     da.isel(x=slice(10)).chunk(x=(10,)).to_zarr(store, region="auto")
@@ -6200,10 +6208,13 @@ def test_zarr_region_chunk_partial_offset(tmp_path):
 
 @requires_zarr
 @requires_dask
+@pytest.mark.usefixtures("default_zarr_version")
 def test_zarr_safe_chunk_append_dim(tmp_path):
     store = tmp_path / "foo.zarr"
     data = np.ones((20,))
-    da = xr.DataArray(data, dims=["x"], coords={"x": range(20)}, name="foo").chunk(x=5)
+    da = xr.DataArray(data, dims=["x"], coords={"x": range(1, 21)}, name="foo").chunk(
+        x=5
+    )
 
     da.isel(x=slice(0, 7)).to_zarr(store, safe_chunks=True, mode="w")
     with pytest.raises(ValueError):
@@ -6250,11 +6261,12 @@ def test_zarr_safe_chunk_append_dim(tmp_path):
 
 @requires_zarr
 @requires_dask
+@pytest.mark.usefixtures("default_zarr_version")
 def test_zarr_safe_chunk_region(tmp_path):
     store = tmp_path / "foo.zarr"
 
     arr = xr.DataArray(
-        list(range(11)), dims=["a"], coords={"a": list(range(11))}, name="foo"
+        list(range(1, 12)), dims=["a"], coords={"a": list(range(1, 12))}, name="foo"
     ).chunk(a=3)
     arr.to_zarr(store, mode="w")
 
