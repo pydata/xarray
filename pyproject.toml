@@ -207,12 +207,6 @@ warn_return_any = true
 module = ["xarray.namedarray.*", "xarray.tests.test_namedarray"]
 
 [tool.pyright]
-# include = ["src"]
-# exclude = ["**/node_modules",
-# "**/__pycache__",
-# "src/experimental",
-# "src/typestubs"
-# ]
 defineConstant = {DEBUG = true}
 
 # Enabling this means that developers who have disabled the warning locally —
