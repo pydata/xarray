@@ -29,7 +29,7 @@ dependencies = [
 
 [project.optional-dependencies]
 accel = ["scipy", "bottleneck", "numbagg", "flox", "opt_einsum"]
-complete = ["xarray[accel,io,parallel,viz,dev]"]
+complete = ["xarray[accel,etc,io,parallel,viz]"]
 dev = [
   "hypothesis",
   "mypy",
@@ -43,6 +43,7 @@ dev = [
   "xarray[complete]",
 ]
 io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr<3", "fsspec", "cftime", "pooch"]
+etc = ["sparse"]
 parallel = ["dask[complete]"]
 viz = ["matplotlib", "seaborn", "nc-time-axis"]
 
