@@ -223,7 +223,7 @@ Pass flox-specific keyword arguments in ``**kwargs``.
 See the `flox documentation <https://flox.readthedocs.io>`_ for more."""
 _FLOX_GROUPBY_NOTES = _FLOX_NOTES_TEMPLATE.format(kind="groupby")
 _FLOX_RESAMPLE_NOTES = _FLOX_NOTES_TEMPLATE.format(kind="resampling")
-_CUM_NOTES = """Note that the methods on the ``cumulative`` method are more performant
+_CUM_NOTES = """Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
 and better supported. ``cumsum`` and ``cumprod`` may be deprecated
 in the future."""
 
