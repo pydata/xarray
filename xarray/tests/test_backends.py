@@ -5295,7 +5295,9 @@ class TestDataArrayToZarr:
 
     def skip_if_zarr_python_3_and_zip_store(self, store) -> None:
         if isinstance(store, zarr.storage.ZipStore):
-            pytest.skip(reason="zarr-python 3.x doesn't support reopening ZipStore with a new mode.")
+            pytest.skip(
+                reason="zarr-python 3.x doesn't support reopening ZipStore with a new mode."
+            )
 
     def test_dataarray_to_zarr_no_name(self, tmp_store) -> None:
         skip_if_zarr_format_3(tmp_store)
@@ -5318,7 +5320,7 @@ class TestDataArrayToZarr:
     def test_dataarray_to_zarr_coord_name_clash(self, tmp_store) -> None:
         skip_if_zarr_format_3(tmp_store)
         original_da = DataArray(
-            np.arange(12).reshape((3, 4)), dims=["x", "y"], name="x"
+            np.arange(12).reshape((3, 4)) + 1, dims=["x", "y"], name="x"
         )
 
         original_da.to_zarr(tmp_store)
@@ -5340,8 +5342,8 @@ class TestDataArrayToZarr:
     def test_dataarray_to_zarr_compute_false(self, tmp_store) -> None:
         from dask.delayed import Delayed
 
-        original_da = DataArray(np.arange(12).reshape((3, 4)))
         skip_if_zarr_format_3(tmp_store)
+        original_da = DataArray(np.arange(12).reshape((3, 4)) + 1)
 
         output = original_da.to_zarr(tmp_store, compute=False)
         assert isinstance(output, Delayed)
@@ -5916,10 +5918,11 @@ def test_zarr_closing_internal_zip_store():
 
 
 @requires_zarr
+@pytest.mark.usefixtures("default_zarr_version")
 class TestZarrRegionAuto:
     def test_zarr_region_auto_all(self, tmp_path):
-        x = np.arange(0, 50, 10)
-        y = np.arange(0, 20, 2)
+        x = np.arange(0, 50, 10) + 1
+        y = np.arange(0, 20, 2) + 1
         data = np.ones((5, 10))
         ds = xr.Dataset(
             {
@@ -5942,8 +5945,8 @@ class TestZarrRegionAuto:
         assert_identical(ds_updated, expected)
 
     def test_zarr_region_auto_mixed(self, tmp_path):
-        x = np.arange(0, 50, 10)
-        y = np.arange(0, 20, 2)
+        x = np.arange(0, 50, 10) + 1
+        y = np.arange(0, 20, 2) + 1
         data = np.ones((5, 10))
         ds = xr.Dataset(
             {
@@ -5968,8 +5971,8 @@ class TestZarrRegionAuto:
         assert_identical(ds_updated, expected)
 
     def test_zarr_region_auto_noncontiguous(self, tmp_path):
-        x = np.arange(0, 50, 10)
-        y = np.arange(0, 20, 2)
+        x = np.arange(0, 50, 10) + 1
+        y = np.arange(0, 20, 2) + 1
         data = np.ones((5, 10))
         ds = xr.Dataset(
             {
