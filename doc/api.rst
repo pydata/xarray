@@ -167,6 +167,7 @@ Missing value handling
    Dataset.fillna
    Dataset.ffill
    Dataset.bfill
+   Dataset.fill_gaps
    Dataset.interpolate_na
    Dataset.where
    Dataset.isin
@@ -357,6 +358,7 @@ Missing value handling
   DataArray.fillna
   DataArray.ffill
   DataArray.bfill
+  DataArray.fill_gaps
   DataArray.interpolate_na
   DataArray.where
   DataArray.isin
