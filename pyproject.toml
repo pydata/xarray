@@ -207,8 +207,8 @@ warn_return_any = true
 module = ["xarray.namedarray.*", "xarray.tests.test_namedarray"]
 
 # We disable pyright here for now, since including it means that all errors show
-# up in dev's vscode, which then makes it more difficult to work with the actual
-# errors. It also overrides local VS Code settings.
+# up in devs' vscode, which then makes it more difficult to work with the actual
+# errors. It overrides local VS Code settings.
 
 # [tool.pyright]
 # defineConstant = {DEBUG = true}
