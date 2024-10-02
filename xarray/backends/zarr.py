@@ -201,7 +201,7 @@ def _determine_zarr_chunks(
             f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
             f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r} "
             f"on the region {region}. "
-            f"Writing this array in parallel with dask could lead to corrupted data."
+            f"Writing this array in parallel with dask could lead to corrupted data. "
             f"Consider either rechunking using `chunk()`, deleting "
             f"or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
         )
