@@ -5292,7 +5292,13 @@ class TestDataArrayToNetCDF:
 
 @requires_zarr
 class TestDataArrayToZarr:
+
+    def skip_if_zarr_python_3_and_zip_store(self, store) -> None:
+        if isinstance(store, zarr.storage.ZipStore):
+            pytest.skip(reason="zarr-python 3.x doesn't support reopening ZipStore with a new mode.")
+
     def test_dataarray_to_zarr_no_name(self, tmp_store) -> None:
+        skip_if_zarr_format_3(tmp_store)
         original_da = DataArray(np.arange(1, 13).reshape((3, 4)))
 
         original_da.to_zarr(tmp_store)
@@ -5301,7 +5307,8 @@ class TestDataArrayToZarr:
             assert_identical(original_da, loaded_da)
 
     def test_dataarray_to_zarr_with_name(self, tmp_store) -> None:
-        original_da = DataArray(np.arange(12).reshape((3, 4)), name="test")
+        skip_if_zarr_format_3(tmp_store)
+        original_da = DataArray(np.arange(12).reshape((3, 4)) + 1, name="test")
 
         original_da.to_zarr(tmp_store)
 
@@ -5309,6 +5316,7 @@ class TestDataArrayToZarr:
             assert_identical(original_da, loaded_da)
 
     def test_dataarray_to_zarr_coord_name_clash(self, tmp_store) -> None:
+        skip_if_zarr_format_3(tmp_store)
         original_da = DataArray(
             np.arange(12).reshape((3, 4)), dims=["x", "y"], name="x"
         )
@@ -5319,7 +5327,8 @@ class TestDataArrayToZarr:
             assert_identical(original_da, loaded_da)
 
     def test_open_dataarray_options(self, tmp_store) -> None:
-        data = DataArray(np.arange(5), coords={"y": ("x", range(5))}, dims=["x"])
+        skip_if_zarr_format_3(tmp_store)
+        data = DataArray(np.arange(5) + 1, coords={"y": ("x", range(1, 6))}, dims=["x"])
 
         data.to_zarr(tmp_store)
 
@@ -5332,6 +5341,7 @@ class TestDataArrayToZarr:
         from dask.delayed import Delayed
 
         original_da = DataArray(np.arange(12).reshape((3, 4)))
+        skip_if_zarr_format_3(tmp_store)
 
         output = original_da.to_zarr(tmp_store, compute=False)
         assert isinstance(output, Delayed)
