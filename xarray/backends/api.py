@@ -1213,6 +1213,7 @@ def to_netcdf(
     *,
     multifile: Literal[True],
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> tuple[ArrayWriter, AbstractDataStore]: ...
 
 
@@ -1230,6 +1231,7 @@ def to_netcdf(
     compute: bool = True,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> bytes: ...
 
 
@@ -1248,6 +1250,7 @@ def to_netcdf(
     compute: Literal[False],
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> Delayed: ...
 
 
@@ -1265,6 +1268,7 @@ def to_netcdf(
     compute: Literal[True] = True,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> None: ...
 
 
@@ -1283,6 +1287,7 @@ def to_netcdf(
     compute: bool = False,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> Delayed | None: ...
 
 
@@ -1301,6 +1306,7 @@ def to_netcdf(
     compute: bool = False,
     multifile: bool = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> tuple[ArrayWriter, AbstractDataStore] | Delayed | None: ...
 
 
@@ -1318,6 +1324,7 @@ def to_netcdf(
     compute: bool = False,
     multifile: bool = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None: ...
 
 
@@ -1333,6 +1340,7 @@ def to_netcdf(
     compute: bool = True,
     multifile: bool = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
@@ -1400,6 +1408,9 @@ def to_netcdf(
             raise ValueError(
                 f"unrecognized option 'invalid_netcdf' for engine {engine}"
             )
+    if auto_complex is not None:
+        kwargs["auto_complex"] = auto_complex
+
     store = store_open(target, mode, format, group, **kwargs)
 
     if unlimited_dims is None:
