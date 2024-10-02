@@ -4,8 +4,8 @@ For internal xarray development use only.
 
 Usage:
     python xarray/util/generate_aggregations.py
-    pytest --doctest-modules xarray/core/_aggregations.py xarray/namedarray/_aggregations.py --accept || true
-    pytest --doctest-modules xarray/core/_aggregations.py xarray/namedarray/_aggregations.py
+    pytest --doctest-modules xarray/{core,namedarray}/_aggregations.py --accept || true
+    pytest --doctest-modules xarray/{core,namedarray}/_aggregations.py
 
 This requires [pytest-accept](https://github.com/max-sixty/pytest-accept).
 The second run of pytest is deliberate, since the first will return an error
@@ -24,8 +24,8 @@ MODULE_PREAMBLE = '''\
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, Any
 
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
@@ -45,8 +45,8 @@ NAMED_ARRAY_MODULE_PREAMBLE = '''\
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Any, Callable
+from collections.abc import Callable, Sequence
+from typing import Any
 
 from xarray.core import duck_array_ops
 from xarray.core.types import Dims, Self
