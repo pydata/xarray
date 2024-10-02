@@ -4,8 +4,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, Any
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
@@ -1077,7 +1077,7 @@ class DatasetAggregations:
         -----
         Non-numeric variables will be removed prior to reducing.
 
-        Note that the methods on the ``cumulative`` method are more performant
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
         in the future.
 
@@ -1175,7 +1175,7 @@ class DatasetAggregations:
         -----
         Non-numeric variables will be removed prior to reducing.
 
-        Note that the methods on the ``cumulative`` method are more performant
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
         in the future.
 
@@ -2193,7 +2193,7 @@ class DataArrayAggregations:
         -----
         Non-numeric variables will be removed prior to reducing.
 
-        Note that the methods on the ``cumulative`` method are more performant
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
         in the future.
 
@@ -2287,7 +2287,7 @@ class DataArrayAggregations:
         -----
         Non-numeric variables will be removed prior to reducing.
 
-        Note that the methods on the ``cumulative`` method are more performant
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
         in the future.
 
@@ -3677,7 +3677,7 @@ class DatasetGroupByAggregations:
 
         Non-numeric variables will be removed prior to reducing.
 
-        Note that the methods on the ``cumulative`` method are more performant
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
         in the future.
 
@@ -3781,7 +3781,7 @@ class DatasetGroupByAggregations:
 
         Non-numeric variables will be removed prior to reducing.
 
-        Note that the methods on the ``cumulative`` method are more performant
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
         in the future.
 
@@ -5175,7 +5175,7 @@ class DatasetResampleAggregations:
 
         Non-numeric variables will be removed prior to reducing.
 
-        Note that the methods on the ``cumulative`` method are more performant
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
         in the future.
 
@@ -5279,7 +5279,7 @@ class DatasetResampleAggregations:
 
         Non-numeric variables will be removed prior to reducing.
 
-        Note that the methods on the ``cumulative`` method are more performant
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
         in the future.
 
@@ -6573,7 +6573,7 @@ class DataArrayGroupByAggregations:
 
         Non-numeric variables will be removed prior to reducing.
 
-        Note that the methods on the ``cumulative`` method are more performant
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
         in the future.
 
@@ -6673,7 +6673,7 @@ class DataArrayGroupByAggregations:
 
         Non-numeric variables will be removed prior to reducing.
 
-        Note that the methods on the ``cumulative`` method are more performant
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
         in the future.
 
@@ -7963,7 +7963,7 @@ class DataArrayResampleAggregations:
 
         Non-numeric variables will be removed prior to reducing.
 
-        Note that the methods on the ``cumulative`` method are more performant
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
         in the future.
 
@@ -8063,7 +8063,7 @@ class DataArrayResampleAggregations:
 
         Non-numeric variables will be removed prior to reducing.
 
-        Note that the methods on the ``cumulative`` method are more performant
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
         in the future.
 

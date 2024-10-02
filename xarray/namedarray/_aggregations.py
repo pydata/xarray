@@ -1,11 +1,10 @@
 """Mixin classes with reduction operations."""
-
 # This file was generated using xarray.util.generate_aggregations. Do not edit manually.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
-from typing import Any
+from collections.abc import Sequence
+from typing import Any, Callable
 
 from xarray.core import duck_array_ops
 from xarray.core.types import Dims, Self
@@ -850,7 +849,7 @@ class NamedArrayAggregations:
         -----
         Non-numeric variables will be removed prior to reducing.
 
-        Note that the methods on the ``cumulative`` method are more performant
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
         in the future.
 
@@ -927,7 +926,7 @@ class NamedArrayAggregations:
         -----
         Non-numeric variables will be removed prior to reducing.
 
-        Note that the methods on the ``cumulative`` method are more performant
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
         in the future.
 
