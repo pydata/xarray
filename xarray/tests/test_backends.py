@@ -3460,6 +3460,9 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
 
     @pytest.mark.parametrize("consolidated", [True, False, None])
     @pytest.mark.parametrize("write_empty", [True, False, None])
+    @pytest.mark.skipif(
+        have_zarr_v3, reason="zarr-python 3.x removed write_empty_chunks"
+    )
     def test_write_empty(
         self, consolidated: bool | None, write_empty: bool | None
     ) -> None:
@@ -3527,13 +3530,19 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         # so that we can inspect calls to this method - specifically count of calls.
         # Use of side_effect means that calls are passed through to the original method
         # rather than a mocked method.
-        Group = zarr.hierarchy.Group
-        with (
-            self.create_zarr_target() as store,
-            patch.object(
+
+        if have_zarr_v3:
+            Group = zarr.AsyncGroup
+            patched = patch.object(
+                Group, "getitem", side_effect=Group.getitem, autospec=True
+            )
+        else:
+            Group = zarr.Group
+            patched = patch.object(
                 Group, "__getitem__", side_effect=Group.__getitem__, autospec=True
-            ) as mock,
-        ):
+            )
+
+        with self.create_zarr_target() as store, patched as mock:
             ds.to_zarr(store, mode="w")
 
             # We expect this to request array metadata information, so call_count should be == 1,
