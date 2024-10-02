@@ -206,13 +206,17 @@ warn_return_any = true
 
 module = ["xarray.namedarray.*", "xarray.tests.test_namedarray"]
 
-[tool.pyright]
-defineConstant = {DEBUG = true}
+# We disable pyright here for now, since including it means that all errors show
+# up in dev's vscode, which then makes it more difficult to work with the actual
+# errors. It also overrides local VS Code settings.
 
-# Enabling this means that developers who have disabled the warning locally —
-# because not all dependencies are installable — are overridden
-# reportMissingImports = true
-reportMissingTypeStubs = false
+# [tool.pyright]
+# defineConstant = {DEBUG = true}
+
+# # Enabling this means that developers who have disabled the warning locally —
+# # because not all dependencies are installable — are overridden
+# # reportMissingImports = true
+# reportMissingTypeStubs = false
 
 [tool.ruff]
 extend-exclude = [
