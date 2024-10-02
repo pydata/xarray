@@ -3342,16 +3342,24 @@ class TestInstrumentedZarrStore:
 
     @requires_dask
     def test_region_write(self) -> None:
-        ds = Dataset({"foo": ("x", [1, 2, 3])}, coords={"x": [0, 1, 2]}).chunk()
+        ds = Dataset({"foo": ("x", [1, 2, 3])}, coords={"x": [1, 2, 3]}).chunk()
         with self.create_zarr_target() as store:
-            expected = {
-                "iter": 2,
-                "contains": 7,
-                "setitem": 8,
-                "getitem": 6,
-                "listdir": 2,
-                "list_prefix": 4,
-            }
+            if have_zarr_v3:
+                expected = {
+                    "set": 5,
+                    "get": 10,
+                    "list_dir": 3,
+                    "list_prefix": 0,
+                }
+            else:
+                expected = {
+                    "iter": 2,
+                    "contains": 7,
+                    "setitem": 8,
+                    "getitem": 6,
+                    "listdir": 2,
+                    "list_prefix": 4,
+                }
             patches = self.make_patches(store)
             with patch.multiple(KVStore, **patches):
                 ds.to_zarr(store, mode="w", compute=False)
@@ -3359,14 +3367,22 @@ class TestInstrumentedZarrStore:
 
             # v2024.03.0: {'iter': 5, 'contains': 2, 'setitem': 1, 'getitem': 6, 'listdir': 5, 'list_prefix': 0}
             # 6057128b: {'iter': 4, 'contains': 2, 'setitem': 1, 'getitem': 5, 'listdir': 4, 'list_prefix': 0}
-            expected = {
-                "iter": 2,
-                "contains": 2,
-                "setitem": 1,
-                "getitem": 3,
-                "listdir": 2,
-                "list_prefix": 0,
-            }
+            if have_zarr_v3:
+                expected = {
+                    "set": 1,
+                    "get": 3,
+                    "list_dir": 2,
+                    "list_prefix": 0,
+                }
+            else:
+                expected = {
+                    "iter": 2,
+                    "contains": 2,
+                    "setitem": 1,
+                    "getitem": 3,
+                    "listdir": 2,
+                    "list_prefix": 0,
+                }
             patches = self.make_patches(store)
             with patch.multiple(KVStore, **patches):
                 ds.to_zarr(store, region={"x": slice(None)})
@@ -3374,27 +3390,43 @@ class TestInstrumentedZarrStore:
 
             # v2024.03.0: {'iter': 6, 'contains': 4, 'setitem': 1, 'getitem': 11, 'listdir': 6, 'list_prefix': 0}
             # 6057128b: {'iter': 4, 'contains': 2, 'setitem': 1, 'getitem': 7, 'listdir': 4, 'list_prefix': 0}
-            expected = {
-                "iter": 2,
-                "contains": 2,
-                "setitem": 1,
-                "getitem": 5,
-                "listdir": 2,
-                "list_prefix": 0,
-            }
+            if have_zarr_v3:
+                expected = {
+                    "set": 1,
+                    "get": 5,
+                    "list_dir": 2,
+                    "list_prefix": 0,
+                }
+            else:
+                expected = {
+                    "iter": 2,
+                    "contains": 2,
+                    "setitem": 1,
+                    "getitem": 5,
+                    "listdir": 2,
+                    "list_prefix": 0,
+                }
             patches = self.make_patches(store)
             with patch.multiple(KVStore, **patches):
                 ds.to_zarr(store, region="auto")
             self.check_requests(expected, patches)
 
-            expected = {
-                "iter": 1,
-                "contains": 2,
-                "setitem": 0,
-                "getitem": 5,
-                "listdir": 1,
-                "list_prefix": 0,
-            }
+            if have_zarr_v3:
+                expected = {
+                    "set": 0,
+                    "get": 5,
+                    "list_dir": 1,
+                    "list_prefix": 0,
+                }
+            else:
+                expected = {
+                    "iter": 1,
+                    "contains": 2,
+                    "setitem": 0,
+                    "getitem": 5,
+                    "listdir": 1,
+                    "list_prefix": 0,
+                }
             patches = self.make_patches(store)
             with patch.multiple(KVStore, **patches):
                 with open_dataset(store, engine="zarr") as actual:
