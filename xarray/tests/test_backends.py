@@ -3294,8 +3294,8 @@ class TestInstrumentedZarrStore:
             if have_zarr_v3:
                 expected = {
                     "set": 10,
-                    "get": 6,
-                    "list_dir": 2,
+                    "get": 8,
+                    "list_dir": 1,
                     "list_prefix": 0,
                 }
             else:
@@ -3317,7 +3317,7 @@ class TestInstrumentedZarrStore:
             if have_zarr_v3:
                 expected = {
                     "set": 10,
-                    "get": 6,
+                    "get": 8,
                     "list_dir": 2,
                     "list_prefix": 0,
                 }
