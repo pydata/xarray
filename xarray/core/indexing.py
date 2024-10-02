@@ -2055,8 +2055,12 @@ class CoordinateTransformIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         threshold = max(100, OPTIONS["display_values_threshold"] + 2)
         if self.size > threshold:
             pos = threshold // 2
-            indices = np.concatenate([np.arange(0, pos), np.arange(-pos, 0)])
-            subset = self.vindex[VectorizedIndexer((indices,) * self.ndim)]
+            flat_indices = np.concatenate(
+                [np.arange(0, pos), np.arange(self.size - pos, self.size)]
+            )
+            subset = self.vindex[
+                VectorizedIndexer(np.unravel_index(flat_indices, self.shape))
+            ]
         else:
             subset = self
 
