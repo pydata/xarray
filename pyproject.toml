@@ -1,5 +1,7 @@
 [project]
-authors = [{ name = "xarray Developers", email = "xarray@googlegroups.com" }]
+authors = [
+  {name = "xarray Developers", email = "xarray@googlegroups.com"},
+]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "License :: OSI Approved :: Apache Software License",
@@ -14,12 +16,16 @@ classifiers = [
 ]
 description = "N-D labeled arrays and datasets in Python"
 dynamic = ["version"]
-license = { text = "Apache-2.0" }
+license = {text = "Apache-2.0"}
 name = "xarray"
 readme = "README.md"
 requires-python = ">=3.10"
 
-dependencies = ["numpy>=1.24", "packaging>=23.1", "pandas>=2.1"]
+dependencies = [
+  "numpy>=1.24",
+  "packaging>=23.1",
+  "pandas>=2.1",
+]
 
 # We don't encode minimum requirements here (though if we can write a script to
 # generate the text from `min_deps_check.py`, that's welcome...). We do add
@@ -43,16 +49,7 @@ dev = [
   "sphinx_autosummary_accessors",
   "xarray[complete]",
 ]
-io = [
-  "netCDF4",
-  "h5netcdf",
-  "scipy",
-  'pydap; python_version<"3.10"',
-  "zarr<3",
-  "fsspec",
-  "cftime",
-  "pooch",
-]
+io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr<3", "fsspec", "cftime", "pooch"]
 etc = ["sparse"]
 parallel = ["dask[complete]"]
 viz = ["cartopy", "matplotlib", "nc-time-axis", "seaborn"]
@@ -69,7 +66,10 @@ dask = "xarray.namedarray.daskmanager:DaskManager"
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=42", "setuptools-scm>=7"]
+requires = [
+  "setuptools>=42",
+  "setuptools-scm>=7",
+]
 
 [tool.setuptools]
 packages = ["xarray"]
@@ -93,7 +93,10 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 
 [tool.mypy]
 enable_error_code = ["ignore-without-code", "redundant-self", "redundant-expr"]
-exclude = ['build', 'xarray/util/generate_.*\.py']
+exclude = [
+  'build',
+  'xarray/util/generate_.*\.py',
+]
 files = "xarray"
 show_error_context = true
 warn_redundant_casts = true
@@ -223,7 +226,10 @@ module = ["xarray.namedarray.*", "xarray.tests.test_namedarray"]
 # reportMissingTypeStubs = false
 
 [tool.ruff]
-extend-exclude = ["doc", "_typed_ops.pyi"]
+extend-exclude = [
+  "doc",
+  "_typed_ops.pyi",
+]
 
 [tool.ruff.lint]
 # E402: module level import not at top of file
@@ -232,15 +238,20 @@ extend-exclude = ["doc", "_typed_ops.pyi"]
 extend-safe-fixes = [
   "TID252", # absolute imports
 ]
-ignore = ["E402", "E501", "E731", "UP007"]
+ignore = [
+  "E402",
+  "E501",
+  "E731",
+  "UP007",
+]
 extend-select = [
-  "B",   # flake8-bugbear
-  "F",   # Pyflakes
-  "E",   # Pycodestyle
+  "B", # flake8-bugbear
+  "F", # Pyflakes
+  "E", # Pycodestyle
   "W",
   "TID", # flake8-tidy-imports (absolute imports)
-  "I",   # isort
-  "UP",  # Pyupgrade
+  "I", # isort
+  "UP", # Pyupgrade
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -303,7 +314,7 @@ filterwarnings = [
   "default:the `pandas.MultiIndex` object:FutureWarning:xarray.tests.test_variable",
   "default:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
   "default:Duplicate dimension names present:UserWarning:xarray.namedarray.core",
-  "default:::xarray.tests.test_strategies",                                                                                                      # TODO: remove once we know how to deal with a changed signature in protocols
+  "default:::xarray.tests.test_strategies", # TODO: remove once we know how to deal with a changed signature in protocols
 ]
 
 log_cli_level = "INFO"
