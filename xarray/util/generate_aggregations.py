@@ -3,9 +3,9 @@
 For internal xarray development use only.
 
 Usage:
-    python xarray/util/generate_aggregations.py \
-        && pytest --doctest-modules xarray/{core,named}/_aggregations.py --accept \
-        || pytest --doctest-modules xarray/{core,named}/_aggregations.py
+    python xarray/util/generate_aggregations.py
+    pytest --doctest-modules xarray/{core,namedarray}/_aggregations.py --accept || true
+    pytest --doctest-modules xarray/{core,namedarray}/_aggregations.py
 
 This requires [pytest-accept](https://github.com/max-sixty/pytest-accept).
 The second run of pytest is deliberate, since the first will return an error
@@ -45,8 +45,8 @@ NAMED_ARRAY_MODULE_PREAMBLE = '''\
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Any, Callable
+from collections.abc import Callable, Sequence
+from typing import Any
 
 from xarray.core import duck_array_ops
 from xarray.core.types import Dims, Self
@@ -223,6 +223,9 @@ Pass flox-specific keyword arguments in ``**kwargs``.
 See the `flox documentation <https://flox.readthedocs.io>`_ for more."""
 _FLOX_GROUPBY_NOTES = _FLOX_NOTES_TEMPLATE.format(kind="groupby")
 _FLOX_RESAMPLE_NOTES = _FLOX_NOTES_TEMPLATE.format(kind="resampling")
+_CUM_NOTES = """Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+in the future."""
 
 ExtraKwarg = collections.namedtuple("ExtraKwarg", "docs kwarg call example")
 skipna = ExtraKwarg(
@@ -271,13 +274,17 @@ class Method:
         extra_kwargs=tuple(),
         numeric_only=False,
         see_also_modules=("numpy", "dask.array"),
+        see_also_methods=(),
         min_flox_version=None,
+        additional_notes="",
     ):
         self.name = name
         self.extra_kwargs = extra_kwargs
         self.numeric_only = numeric_only
         self.see_also_modules = see_also_modules
+        self.see_also_methods = see_also_methods
         self.min_flox_version = min_flox_version
+        self.additional_notes = additional_notes
         if bool_reduce:
             self.array_method = f"array_{name}"
             self.np_example_array = """
@@ -315,7 +322,7 @@ class AggregationGenerator:
         for method in self.methods:
             yield self.generate_method(method)
 
-    def generate_method(self, method):
+    def generate_method(self, method: Method):
         has_kw_only = method.extra_kwargs or self.has_keep_attrs
 
         template_kwargs = dict(
@@ -360,9 +367,16 @@ class AggregationGenerator:
             if self.cls == ""
             else (self.datastructure.name,)
         )
-        see_also_methods = "\n".join(
+        see_also_methods_from_modules = (
             " " * 8 + f"{mod}.{method.name}"
             for mod in (method.see_also_modules + others)
+        )
+        see_also_methods_from_methods = (
+            " " * 8 + f"{self.datastructure.name}.{method}"
+            for method in method.see_also_methods
+        )
+        see_also_methods = "\n".join(
+            [*see_also_methods_from_modules, *see_also_methods_from_methods]
         )
         # Fixes broken links mentioned in #8055
         yield TEMPLATE_SEE_ALSO.format(
@@ -377,6 +391,11 @@ class AggregationGenerator:
             if notes != "":
                 notes += "\n\n"
             notes += _NUMERIC_ONLY_NOTES
+
+        if method.additional_notes:
+            if notes != "":
+                notes += "\n\n"
+            notes += method.additional_notes
 
         if notes != "":
             yield TEMPLATE_NOTES.format(notes=textwrap.indent(notes, 8 * " "))
@@ -505,8 +524,20 @@ AGGREGATION_METHODS = (
         "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.2"
     ),
     # Cumulatives:
-    Method("cumsum", extra_kwargs=(skipna,), numeric_only=True),
-    Method("cumprod", extra_kwargs=(skipna,), numeric_only=True),
+    Method(
+        "cumsum",
+        extra_kwargs=(skipna,),
+        numeric_only=True,
+        see_also_methods=("cumulative",),
+        additional_notes=_CUM_NOTES,
+    ),
+    Method(
+        "cumprod",
+        extra_kwargs=(skipna,),
+        numeric_only=True,
+        see_also_methods=("cumulative",),
+        additional_notes=_CUM_NOTES,
+    ),
 )
 
 
