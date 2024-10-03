@@ -55,6 +55,7 @@ except ImportError:
     from xarray.core.dataset import calculate_dimensions
 
 if TYPE_CHECKING:
+    import numpy as np
     import pandas as pd
 
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
@@ -154,6 +155,34 @@ def check_alignment(
             child_path = str(NodePath(path) / child_name)
             child_ds = child.to_dataset(inherited=False)
             check_alignment(child_path, child_ds, base_ds, child.children)
+
+
+def _deduplicate_inherited_coordinates(child: DataTree, parent: DataTree) -> None:
+    # This method removes repeated indexes (and corresponding coordinates)
+    # that are repeated between a DataTree and its parents.
+    #
+    # TODO(shoyer): Decide how to handle repeated coordinates *without* an
+    # index. Should these be allowed, in which case we probably want to
+    # exclude them from inheritance, or should they be automatically
+    # dropped?
+    # https://github.com/pydata/xarray/issues/9475#issuecomment-2357004264
+    removed_something = False
+    for name in parent._indexes:
+        if name in child._node_indexes:
+            # Indexes on a Dataset always have a corresponding coordinate.
+            # We already verified that these coordinates match in the
+            # check_alignment() call from _pre_attach().
+            del child._node_indexes[name]
+            del child._node_coord_variables[name]
+            removed_something = True
+
+    if removed_something:
+        child._node_dims = calculate_dimensions(
+            child._data_variables | child._node_coord_variables
+        )
+
+    for grandchild in child._children.values():
+        _deduplicate_inherited_coordinates(grandchild, child)
 
 
 def _check_for_slashes_in_names(variables: Iterable[Hashable]) -> None:
@@ -374,7 +403,7 @@ class DatasetView(Dataset):
 
 
 class DataTree(
-    NamedNode,
+    NamedNode["DataTree"],
     MappedDatasetMethodsMixin,
     MappedDataWithCoords,
     DataTreeArithmeticMixin,
@@ -485,6 +514,7 @@ class DataTree(
         node_ds = self.to_dataset(inherited=False)
         parent_ds = parent._to_dataset_view(rebuild_dims=False, inherited=True)
         check_alignment(path, node_ds, parent_ds, self.children)
+        _deduplicate_inherited_coordinates(self, parent)
 
     @property
     def _coord_variables(self) -> ChainMap[Hashable, Variable]:
@@ -737,7 +767,9 @@ class DataTree(
     def __iter__(self) -> Iterator[str]:
         return itertools.chain(self._data_variables, self._children)  # type: ignore[arg-type]
 
-    def __array__(self, dtype=None, copy=None):
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray:
         raise TypeError(
             "cannot directly convert a DataTree into a "
             "numpy array. Instead, create an xarray.DataArray "
@@ -895,6 +927,8 @@ class DataTree(
             # TODO should possibly deal with hashables in general?
             # path-like: a name of a node/variable, or path to a node/variable
             path = NodePath(key)
+            if isinstance(value, Dataset):
+                value = DataTree(dataset=value)
             return self._set_item(path, value, new_nodes_along_path=True)
         else:
             raise ValueError("Invalid format for key")
@@ -1348,7 +1382,7 @@ class DataTree(
         func: Callable,
         *args: Iterable[Any],
         **kwargs: Any,
-    ) -> DataTree | tuple[DataTree]:
+    ) -> DataTree | tuple[DataTree, ...]:
         """
         Apply a function to every dataset in this subtree, returning a new tree which stores the results.
 

@@ -372,7 +372,8 @@ def _infer_xy_labels_3d(
             "Several dimensions of this array could be colors.  Xarray "
             f"will use the last possible dimension ({rgb!r}) to match "
             "matplotlib.pyplot.imshow.  You can pass names of x, y, "
-            "and/or rgb dimensions to override this guess."
+            "and/or rgb dimensions to override this guess.",
+            stacklevel=2,
         )
     assert rgb is not None
 
@@ -1051,7 +1052,8 @@ def legend_elements(
             warnings.warn(
                 "Collection without array used. Make sure to "
                 "specify the values to be colormapped via the "
-                "`c` argument."
+                "`c` argument.",
+                stacklevel=2,
             )
             return handles, labels
         _size = kwargs.pop("size", mpl.rcParams["lines.markersize"])

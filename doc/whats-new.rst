@@ -32,6 +32,11 @@ New Features
   `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
   By `Eni Awowale <https://github.com/eni-awowale>`_.
+- Added support for vectorized interpolation using additional interpolators
+  from the ``scipy.interpolate`` module (:issue:`9049`, :pull:`9526`).
+  By `Holly Mandel <https://github.com/hollymandel>`_.
+- Implement handling of complex numbers (netcdf4/h5netcdf) and enums (h5netcdf) (:issue:`9246`, :issue:`3297`, :pull:`9509`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -47,13 +52,20 @@ Bug fixes
 - Make illegal path-like variable names when constructing a DataTree from a Dataset
   (:issue:`9339`, :pull:`9378`)
   By `Etienne Schalk <https://github.com/etienneschalk>`_.
+- Work around `upstream pandas issue
+  <https://github.com/pandas-dev/pandas/issues/56996>`_ to ensure that we can
+  decode times encoded with small integer dtype values (e.g. ``np.int32``) in
+  environments with NumPy 2.0 or greater without needing to fall back to cftime
+  (:pull:`9518`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Fix bug when encoding times with missing values as floats in the case when
   the non-missing times could in theory be encoded with integers
   (:issue:`9488`, :pull:`9497`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
 - Fix a few bugs affecting groupby reductions with `flox`. (:issue:`8090`, :issue:`9398`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
+- Fix the safe_chunks validation option on the to_zarr method
+  (:issue:`5511`, :pull:`9559`). By `Joseph Nowak
+  <https://github.com/josephnowak>`_.
 
 Documentation
 ~~~~~~~~~~~~~

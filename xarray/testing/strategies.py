@@ -104,7 +104,7 @@ def names() -> st.SearchStrategy[str]:
 
 def dimension_names(
     *,
-    name_strategy=names(),
+    name_strategy=None,
     min_dims: int = 0,
     max_dims: int = 3,
 ) -> st.SearchStrategy[list[Hashable]]:
@@ -122,6 +122,8 @@ def dimension_names(
     max_dims
         Maximum number of dimensions in generated list.
     """
+    if name_strategy is None:
+        name_strategy = names()
 
     return st.lists(
         elements=name_strategy,
@@ -133,7 +135,7 @@ def dimension_names(
 
 def dimension_sizes(
     *,
-    dim_names: st.SearchStrategy[Hashable] = names(),
+    dim_names: st.SearchStrategy[Hashable] = names(),  # noqa: B008
     min_dims: int = 0,
     max_dims: int = 3,
     min_side: int = 1,
@@ -216,14 +218,17 @@ def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
     )
 
 
+ATTRS = attrs()
+
+
 @st.composite
 def variables(
     draw: st.DrawFn,
     *,
     array_strategy_fn: ArrayStrategyFn | None = None,
     dims: st.SearchStrategy[Sequence[Hashable] | Mapping[Hashable, int]] | None = None,
-    dtype: st.SearchStrategy[np.dtype] = supported_dtypes(),
-    attrs: st.SearchStrategy[Mapping] = attrs(),
+    dtype: st.SearchStrategy[np.dtype] | None = None,
+    attrs: st.SearchStrategy[Mapping] = ATTRS,
 ) -> xr.Variable:
     """
     Generates arbitrary xarray.Variable objects.
@@ -306,6 +311,8 @@ def variables(
     --------
     :ref:`testing.hypothesis`_
     """
+    if dtype is None:
+        dtype = supported_dtypes()
 
     if not isinstance(dims, st.SearchStrategy) and dims is not None:
         raise InvalidArgument(

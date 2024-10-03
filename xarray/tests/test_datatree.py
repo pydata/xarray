@@ -1,4 +1,5 @@
 import re
+import sys
 import typing
 from copy import copy, deepcopy
 from textwrap import dedent
@@ -14,6 +15,8 @@ from xarray.core.datatree_ops import _MAPPED_DOCSTRING_ADDENDUM, insert_doc_adde
 from xarray.core.treenode import NotFoundInTreeError
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import assert_array_equal, create_test_data, source_ndarray
+
+ON_WINDOWS = sys.platform == "win32"
 
 
 class TestTreeCreation:
@@ -513,14 +516,12 @@ class TestSetItem:
         results["."] = data
         assert_identical(results.to_dataset(), data)
 
-    @pytest.mark.xfail(reason="assigning Datasets doesn't yet create new nodes")
     def test_setitem_dataset_as_new_node(self):
         data = xr.Dataset({"temp": [0, 50]})
         folder1 = DataTree(name="folder1")
         folder1["results"] = data
         assert_identical(folder1["results"].to_dataset(), data)
 
-    @pytest.mark.xfail(reason="assigning Datasets doesn't yet create new nodes")
     def test_setitem_dataset_as_new_node_requiring_intermediate_nodes(self):
         data = xr.Dataset({"temp": [0, 50]})
         folder1 = DataTree(name="folder1")
@@ -1054,7 +1055,7 @@ class TestRepr:
             {
                 "/": Dataset(coords={"x": [1.0]}),
                 "/first_child": None,
-                "/second_child": Dataset({"foo": ("x", [0.0])}),
+                "/second_child": Dataset({"foo": ("x", [0.0])}, coords={"z": 1.0}),
             }
         )
 
@@ -1069,6 +1070,8 @@ class TestRepr:
             ├── Group: /first_child
             └── Group: /second_child
                     Dimensions:  (x: 1)
+                    Coordinates:
+                        z        float64 8B 1.0
                     Data variables:
                         foo      (x) float64 8B 0.0
             """
@@ -1093,6 +1096,8 @@ class TestRepr:
             <xarray.DataTree 'second_child'>
             Group: /second_child
                 Dimensions:  (x: 1)
+                Coordinates:
+                    z        float64 8B 1.0
                 Inherited coordinates:
                   * x        (x) float64 8B 1.0
                 Data variables:
@@ -1136,6 +1141,104 @@ class TestRepr:
                 Dimensions without coordinates: x, y
                 Data variables:
                     bar      (y) float64 8B 2.0
+            """
+        ).strip()
+        assert result == expected
+
+    @pytest.mark.skipif(
+        ON_WINDOWS, reason="windows (pre NumPy2) uses int32 instead of int64"
+    )
+    def test_doc_example(self):
+        # regression test for https://github.com/pydata/xarray/issues/9499
+        time = xr.DataArray(data=["2022-01", "2023-01"], dims="time")
+        stations = xr.DataArray(data=list("abcdef"), dims="station")
+        lon = [-100, -80, -60]
+        lat = [10, 20, 30]
+        # Set up fake data
+        wind_speed = xr.DataArray(np.ones((2, 6)) * 2, dims=("time", "station"))
+        pressure = xr.DataArray(np.ones((2, 6)) * 3, dims=("time", "station"))
+        air_temperature = xr.DataArray(np.ones((2, 6)) * 4, dims=("time", "station"))
+        dewpoint = xr.DataArray(np.ones((2, 6)) * 5, dims=("time", "station"))
+        infrared = xr.DataArray(np.ones((2, 3, 3)) * 6, dims=("time", "lon", "lat"))
+        true_color = xr.DataArray(np.ones((2, 3, 3)) * 7, dims=("time", "lon", "lat"))
+        tree = xr.DataTree.from_dict(
+            {
+                "/": xr.Dataset(
+                    coords={"time": time},
+                ),
+                "/weather": xr.Dataset(
+                    coords={"station": stations},
+                    data_vars={
+                        "wind_speed": wind_speed,
+                        "pressure": pressure,
+                    },
+                ),
+                "/weather/temperature": xr.Dataset(
+                    data_vars={
+                        "air_temperature": air_temperature,
+                        "dewpoint": dewpoint,
+                    },
+                ),
+                "/satellite": xr.Dataset(
+                    coords={"lat": lat, "lon": lon},
+                    data_vars={
+                        "infrared": infrared,
+                        "true_color": true_color,
+                    },
+                ),
+            },
+        )
+
+        result = repr(tree)
+        expected = dedent(
+            """
+            <xarray.DataTree>
+            Group: /
+            │   Dimensions:  (time: 2)
+            │   Coordinates:
+            │     * time     (time) <U7 56B '2022-01' '2023-01'
+            ├── Group: /weather
+            │   │   Dimensions:     (station: 6, time: 2)
+            │   │   Coordinates:
+            │   │     * station     (station) <U1 24B 'a' 'b' 'c' 'd' 'e' 'f'
+            │   │   Data variables:
+            │   │       wind_speed  (time, station) float64 96B 2.0 2.0 2.0 2.0 ... 2.0 2.0 2.0 2.0
+            │   │       pressure    (time, station) float64 96B 3.0 3.0 3.0 3.0 ... 3.0 3.0 3.0 3.0
+            │   └── Group: /weather/temperature
+            │           Dimensions:          (time: 2, station: 6)
+            │           Data variables:
+            │               air_temperature  (time, station) float64 96B 4.0 4.0 4.0 4.0 ... 4.0 4.0 4.0
+            │               dewpoint         (time, station) float64 96B 5.0 5.0 5.0 5.0 ... 5.0 5.0 5.0
+            └── Group: /satellite
+                    Dimensions:     (lat: 3, lon: 3, time: 2)
+                    Coordinates:
+                      * lat         (lat) int64 24B 10 20 30
+                      * lon         (lon) int64 24B -100 -80 -60
+                    Data variables:
+                        infrared    (time, lon, lat) float64 144B 6.0 6.0 6.0 6.0 ... 6.0 6.0 6.0
+                        true_color  (time, lon, lat) float64 144B 7.0 7.0 7.0 7.0 ... 7.0 7.0 7.0
+            """
+        ).strip()
+        assert result == expected
+
+        result = repr(tree["weather"])
+        expected = dedent(
+            """
+            <xarray.DataTree 'weather'>
+            Group: /weather
+            │   Dimensions:     (time: 2, station: 6)
+            │   Coordinates:
+            │     * station     (station) <U1 24B 'a' 'b' 'c' 'd' 'e' 'f'
+            │   Inherited coordinates:
+            │     * time        (time) <U7 56B '2022-01' '2023-01'
+            │   Data variables:
+            │       wind_speed  (time, station) float64 96B 2.0 2.0 2.0 2.0 ... 2.0 2.0 2.0 2.0
+            │       pressure    (time, station) float64 96B 3.0 3.0 3.0 3.0 ... 3.0 3.0 3.0 3.0
+            └── Group: /weather/temperature
+                    Dimensions:          (time: 2, station: 6)
+                    Data variables:
+                        air_temperature  (time, station) float64 96B 4.0 4.0 4.0 4.0 ... 4.0 4.0 4.0
+                        dewpoint         (time, station) float64 96B 5.0 5.0 5.0 5.0 ... 5.0 5.0 5.0
             """
         ).strip()
         assert result == expected
@@ -1191,6 +1294,22 @@ class TestInheritance:
         xr.testing.assert_equal(dt["/b/x"], xr.DataArray(4, coords=sub_coords))
         xr.testing.assert_equal(dt["/b/y"], xr.DataArray(2, coords=sub_coords))
         xr.testing.assert_equal(dt["/b/z"], xr.DataArray(3, coords=sub_coords))
+
+    def test_inherited_coords_with_index_are_deduplicated(self):
+        dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2]}),
+                "/b": xr.Dataset(coords={"x": [1, 2]}),
+            }
+        )
+        child_dataset = dt.children["b"].to_dataset(inherited=False)
+        expected = xr.Dataset()
+        assert_identical(child_dataset, expected)
+
+        dt["/c"] = xr.Dataset({"foo": ("x", [4, 5])}, coords={"x": [1, 2]})
+        child_dataset = dt.children["c"].to_dataset(inherited=False)
+        expected = xr.Dataset({"foo": ("x", [4, 5])})
+        assert_identical(child_dataset, expected)
 
     def test_inconsistent_dims(self):
         expected_msg = _exact_match(
@@ -1535,6 +1654,18 @@ class TestOps:
         # TODO: Remove ignore when ops.py is migrated?
         result = dt * dt  # type: ignore[operator]
         assert_equal(result, expected)
+
+    def test_arithmetic_inherited_coords(self):
+        tree = DataTree(xr.Dataset(coords={"x": [1, 2, 3]}))
+        tree["/foo"] = DataTree(xr.Dataset({"bar": ("x", [4, 5, 6])}))
+        actual: DataTree = 2 * tree  # type: ignore[assignment,operator]
+
+        actual_dataset = actual.children["foo"].to_dataset(inherited=False)
+        assert "x" not in actual_dataset.coords
+
+        expected = tree.copy()
+        expected["/foo/bar"].data = np.array([8, 10, 12])
+        assert_identical(actual, expected)
 
 
 class TestUFuncs:

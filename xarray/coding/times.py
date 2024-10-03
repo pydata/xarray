@@ -169,7 +169,7 @@ def _ensure_padded_year(ref_date: str) -> str:
         "To remove this message, remove the ambiguity by padding your reference "
         "date strings with zeros."
     )
-    warnings.warn(warning_msg, SerializationWarning)
+    warnings.warn(warning_msg, SerializationWarning, stacklevel=2)
 
     return ref_date_padded
 
@@ -216,7 +216,7 @@ def _decode_cf_datetime_dtype(
 
     try:
         result = decode_cf_datetime(example_value, units, calendar, use_cftime)
-    except Exception:
+    except Exception as err:
         calendar_msg = (
             "the default calendar" if calendar is None else f"calendar {calendar!r}"
         )
@@ -225,7 +225,7 @@ def _decode_cf_datetime_dtype(
             "opening your dataset with decode_times=False or installing cftime "
             "if it is not installed."
         )
-        raise ValueError(msg)
+        raise ValueError(msg) from err
     else:
         dtype = getattr(result, "dtype", np.dtype("object"))
 
@@ -253,16 +253,25 @@ def _decode_datetime_with_pandas(
             "pandas."
         )
 
+    # Work around pandas.to_timedelta issue with dtypes smaller than int64 and
+    # NumPy 2.0 by casting all int and uint data to int64 and uint64,
+    # respectively. See https://github.com/pandas-dev/pandas/issues/56996 for
+    # more details.
+    if flat_num_dates.dtype.kind == "i":
+        flat_num_dates = flat_num_dates.astype(np.int64)
+    elif flat_num_dates.dtype.kind == "u":
+        flat_num_dates = flat_num_dates.astype(np.uint64)
+
     time_units, ref_date_str = _unpack_netcdf_time_units(units)
     time_units = _netcdf_to_numpy_timeunit(time_units)
     try:
         # TODO: the strict enforcement of nanosecond precision Timestamps can be
         # relaxed when addressing GitHub issue #7493.
         ref_date = nanosecond_precision_timestamp(ref_date_str)
-    except ValueError:
+    except ValueError as err:
         # ValueError is raised by pd.Timestamp for non-ISO timestamp
         # strings, in which case we fall back to using cftime
-        raise OutOfBoundsDatetime
+        raise OutOfBoundsDatetime from err
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "invalid value encountered", RuntimeWarning)
@@ -487,7 +496,7 @@ def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
                 raise ValueError(
                     f"Cannot convert date {t} to a date in the "
                     f"standard calendar.  Reason: {e}."
-                )
+                ) from e
             else:
                 dt = "NaT"
         new[i] = np.datetime64(dt)
@@ -520,7 +529,7 @@ def convert_times(times, date_type, raise_on_invalid: bool = True) -> np.ndarray
                 raise ValueError(
                     f"Cannot convert date {t} to a date in the "
                     f"{date_type(2000, 1, 1).calendar} calendar.  Reason: {e}."
-                )
+                ) from e
             else:
                 dt = np.nan
 

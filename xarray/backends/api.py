@@ -99,11 +99,11 @@ def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
             import pydap  # noqa: F401
 
             engine = "pydap"
-        except ImportError:
+        except ImportError as err:
             raise ValueError(
                 "netCDF4 or pydap is required for accessing "
                 "remote datasets via OPeNDAP"
-            )
+            ) from err
     return engine
 
 
@@ -112,8 +112,8 @@ def _get_default_engine_gz() -> Literal["scipy"]:
         import scipy  # noqa: F401
 
         engine: Final = "scipy"
-    except ImportError:  # pragma: no cover
-        raise ValueError("scipy is required for accessing .gz files")
+    except ImportError as err:  # pragma: no cover
+        raise ValueError("scipy is required for accessing .gz files") from err
     return engine
 
 
@@ -128,11 +128,11 @@ def _get_default_engine_netcdf() -> Literal["netcdf4", "scipy"]:
             import scipy.io.netcdf  # noqa: F401
 
             engine = "scipy"
-        except ImportError:
+        except ImportError as err:
             raise ValueError(
                 "cannot read or write netCDF files without "
                 "netCDF4-python or scipy installed"
-            )
+            ) from err
     return engine
 
 
@@ -1213,6 +1213,7 @@ def to_netcdf(
     *,
     multifile: Literal[True],
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> tuple[ArrayWriter, AbstractDataStore]: ...
 
 
@@ -1230,6 +1231,7 @@ def to_netcdf(
     compute: bool = True,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> bytes: ...
 
 
@@ -1248,6 +1250,7 @@ def to_netcdf(
     compute: Literal[False],
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> Delayed: ...
 
 
@@ -1265,6 +1268,7 @@ def to_netcdf(
     compute: Literal[True] = True,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> None: ...
 
 
@@ -1283,6 +1287,7 @@ def to_netcdf(
     compute: bool = False,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> Delayed | None: ...
 
 
@@ -1301,6 +1306,7 @@ def to_netcdf(
     compute: bool = False,
     multifile: bool = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> tuple[ArrayWriter, AbstractDataStore] | Delayed | None: ...
 
 
@@ -1318,6 +1324,7 @@ def to_netcdf(
     compute: bool = False,
     multifile: bool = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None: ...
 
 
@@ -1333,6 +1340,7 @@ def to_netcdf(
     compute: bool = True,
     multifile: bool = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
@@ -1374,8 +1382,8 @@ def to_netcdf(
 
     try:
         store_open = WRITEABLE_STORES[engine]
-    except KeyError:
-        raise ValueError(f"unrecognized engine for to_netcdf: {engine!r}")
+    except KeyError as err:
+        raise ValueError(f"unrecognized engine for to_netcdf: {engine!r}") from err
 
     if format is not None:
         format = format.upper()  # type: ignore[assignment]
@@ -1400,6 +1408,9 @@ def to_netcdf(
             raise ValueError(
                 f"unrecognized option 'invalid_netcdf' for engine {engine}"
             )
+    if auto_complex is not None:
+        kwargs["auto_complex"] = auto_complex
+
     store = store_open(target, mode, format, group, **kwargs)
 
     if unlimited_dims is None:
