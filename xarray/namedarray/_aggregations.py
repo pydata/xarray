@@ -842,12 +842,17 @@ class NamedArrayAggregations:
         dask.array.cumsum
         Dataset.cumsum
         DataArray.cumsum
+        NamedArray.cumulative
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
         Notes
         -----
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
@@ -914,12 +919,17 @@ class NamedArrayAggregations:
         dask.array.cumprod
         Dataset.cumprod
         DataArray.cumprod
+        NamedArray.cumulative
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
         Notes
         -----
         Non-numeric variables will be removed prior to reducing.
+
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
 
         Examples
         --------
