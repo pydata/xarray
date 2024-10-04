@@ -740,7 +740,7 @@ class PandasIndex(Index):
             # scalar indexer: drop index
             return None
 
-        return self._replace(self.index[indxr])  # type: ignore[index]
+        return self._replace(self.index[indxr])
 
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
@@ -926,7 +926,7 @@ def remove_unused_levels_categories(index: T_PDIndex) -> T_PDIndex:
         return cast(T_PDIndex, new_index)
 
     if isinstance(index, pd.CategoricalIndex):
-        return index.remove_unused_categories()  # type: ignore[attr-defined]
+        return index.remove_unused_categories()
 
     return index
 
@@ -1164,7 +1164,7 @@ class PandasMultiIndex(PandasIndex):
                 dtype = None
             else:
                 level = name
-                dtype = self.level_coords_dtype[name]  # type: ignore[index]  # TODO: are Hashables ok?
+                dtype = self.level_coords_dtype[name]  # TODO: are Hashables ok?
 
             var = variables.get(name, None)
             if var is not None:
@@ -1174,7 +1174,9 @@ class PandasMultiIndex(PandasIndex):
                 attrs = {}
                 encoding = {}
 
-            data = PandasMultiIndexingAdapter(self.index, dtype=dtype, level=level)  # type: ignore[arg-type]  # TODO: are Hashables ok?
+            data = PandasMultiIndexingAdapter(
+                self.index, dtype=dtype, level=level
+            )  # TODO: are Hashables ok?
             index_vars[name] = IndexVariable(
                 self.dim,
                 data,
@@ -1671,7 +1673,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
                 convert_new_idx = False
                 xr_idx = idx
 
-            new_idx = xr_idx._copy(deep=deep, memo=memo)  # type: ignore[assignment]
+            new_idx = xr_idx._copy(deep=deep, memo=memo)
             idx_vars = xr_idx.create_variables(coords)
 
             if convert_new_idx:

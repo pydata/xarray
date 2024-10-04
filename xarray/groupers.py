@@ -296,7 +296,7 @@ class BinGrouper(Grouper):
 
         data = np.asarray(group.data)  # Cast _DummyGroup data to array
 
-        binned, self.bins = pd.cut(  # type: ignore [call-overload]
+        binned, self.bins = pd.cut(
             data.ravel(),
             bins=self.bins,
             right=self.right,

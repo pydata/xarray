@@ -6629,7 +6629,7 @@ class Dataset(
             | None
         ) = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> Dataset:
         """Fill in NaNs by interpolating according to different methods.
 
         Parameters
@@ -6760,7 +6760,7 @@ class Dataset(
         )
         return new
 
-    def ffill(self, dim: Hashable, limit: int | None = None) -> Self:
+    def ffill(self, dim: Hashable, limit: int | None = None) -> Dataset:
         """Fill NaN values by propagating values forward
 
         *Requires bottleneck.*
@@ -6824,7 +6824,7 @@ class Dataset(
         new = _apply_over_vars_with_dim(ffill, self, dim=dim, limit=limit)
         return new
 
-    def bfill(self, dim: Hashable, limit: int | None = None) -> Self:
+    def bfill(self, dim: Hashable, limit: int | None = None) -> Dataset:
         """Fill NaN values by propagating values backward
 
         *Requires bottleneck.*
@@ -7523,7 +7523,7 @@ class Dataset(
 
         if isinstance(idx, pd.MultiIndex):
             dims = tuple(
-                name if name is not None else "level_%i" % n  # type: ignore[redundant-expr]
+                name if name is not None else "level_%i" % n
                 for n, name in enumerate(idx.names)
             )
             for dim, lev in zip(dims, idx.levels, strict=True):
@@ -9829,7 +9829,7 @@ class Dataset(
             c        (x) float64 40B 0.0 1.25 2.5 3.75 5.0
         """
 
-        return pd.eval(  # type: ignore[return-value]
+        return pd.eval(
             statement,
             resolvers=[self],
             target=self,
