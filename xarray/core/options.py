@@ -32,6 +32,7 @@ if TYPE_CHECKING:
         "use_numbagg",
         "use_opt_einsum",
         "use_flox",
+        "time_resolution",
     ]
 
     class T_Options(TypedDict):
@@ -59,6 +60,7 @@ if TYPE_CHECKING:
         use_flox: bool
         use_numbagg: bool
         use_opt_einsum: bool
+        time_resolution: Literal["s", "ms", "us", "ns"]
 
 
 OPTIONS: T_Options = {
