@@ -3549,7 +3549,7 @@ class TestDataset:
 
     def test_expand_dims_non_nanosecond_conversion(self) -> None:
         # Regression test for https://github.com/pydata/xarray/issues/7493#issuecomment-1953091000
-        with pytest.warns(UserWarning, match="non-nanosecond precision"):
+        with pytest.warns(UserWarning, match="non-default precision"):
             ds = Dataset().expand_dims({"time": [np.datetime64("2018-01-01", "s")]})
         assert ds.time.dtype == np.dtype("datetime64[ns]")
 
