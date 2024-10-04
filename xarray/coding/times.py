@@ -274,23 +274,36 @@ def _decode_datetime_with_pandas(
         default_unit = _get_datetime_resolution()
         default_delta = np.timedelta64(1, default_unit).astype("timedelta64[ns]")
         # get ref_date and time delta
-        ref_date_delta = np.timedelta64(1, ref_date.unit).astype("timedelta64[ns]")
+        ref_date_unit = (
+            ref_date.unit
+            if hasattr(ref_date, "unit")
+            else np.datetime_data(ref_date.asm8)[0]
+        )
+        ref_date_delta = np.timedelta64(1, ref_date_unit).astype("timedelta64[ns]")
         time_delta = np.timedelta64(1, time_units).astype("timedelta64[ns]")
         # choose the highest resolution
         new_time_units = {
-            ref_date_delta: ref_date.unit,
+            ref_date_delta: ref_date_unit,
             time_delta: time_units,
             default_delta: default_unit,
         }[min(default_delta, ref_date_delta, time_delta)]
         # transform to the highest needed resolution
         # this will raise accordingly
-        ref_date = ref_date.as_unit(new_time_units)
+        ref_date = (
+            ref_date.as_unit(new_time_units)
+            if hasattr(ref_date, "as_unit")
+            else ref_date._as_unit(new_time_units)
+        )
     except ValueError as err:
         # ValueError is raised by pd.Timestamp for non-ISO timestamp
         # strings, in which case we fall back to using cftime
         raise OutOfBoundsDatetime from err
 
-    dunit = ref_date.unit
+    dunit = (
+        ref_date.unit
+        if hasattr(ref_date, "unit")
+        else np.datetime_data(ref_date.asm8)[0]
+    )
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "invalid value encountered", RuntimeWarning)
@@ -302,14 +315,22 @@ def _decode_datetime_with_pandas(
             if not np.isnan(min_delta):
                 # todo: add meaningful error messages
                 # this will raise on overflow
-                (ref_date + min_delta).as_unit(dunit)
+                (
+                    (ref_date + min_delta).as_unit(dunit)
+                    if hasattr(ref_date, "unit")
+                    else (ref_date + min_delta)._as_unit(dunit)
+                )
                 # this will raise on dtype oveflow
                 if not np.int64(min_delta) == fnd_min:
                     raise OutOfBoundsTimedelta
             if not np.isnan(max_delta):
                 # todo: add meaningful error message
                 # this will raise on overflow
-                (ref_date + max_delta).as_unit(dunit)
+                (
+                    (ref_date + max_delta).as_unit(dunit)
+                    if hasattr(ref_date, "unit")
+                    else (ref_date + max_delta)._as_unit(dunit)
+                )
                 # this will raise on dtype oveflow
                 if not np.int64(max_delta) == fnd_max:
                     raise OutOfBoundsTimedelta
