@@ -339,6 +339,7 @@ def reshape(
     x: NamedArray[Any, _DType], /, shape: _ShapeType, *, copy: bool | None = None
 ) -> NamedArray[_ShapeType, _DType]:
     """
+    Reshapes an array without changing its data.
 
     Examples
     --------
@@ -366,8 +367,8 @@ def reshape(
 
     if math.prod(shape) == -1:
         # Flattening operations merges all dimensions to 1:
-        dims_raveled = _flatten_dims(x.dims)
-        dim = dims_raveled[0]
+        dims_flattened = _flatten_dims(x.dims)
+        dim = dims_flattened[0]
         d = []
         for v in shape:
             d.append(dim if v == -1 else _new_unique_dim_name(tuple(d)))
