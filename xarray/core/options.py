@@ -163,7 +163,7 @@ def _get_keep_attrs(default: bool) -> bool:
     return _get_boolean_with_default("keep_attrs", default)
 
 
-def _get_datetime_resolution() -> str:
+def _get_datetime_resolution() -> Literal["s", "ms", "us", "ns"]:
     return OPTIONS["time_resolution"]
 
 
