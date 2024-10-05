@@ -40,8 +40,8 @@ from xarray.core.options import OPTIONS as XR_OPTS
 from xarray.core.treenode import NamedNode, NodePath
 from xarray.core.utils import (
     Default,
+    FilteredMapping,
     Frozen,
-    HybridMappingProxy,
     _default,
     either_dict_or_kwargs,
     maybe_wrap_array,
@@ -438,7 +438,6 @@ class DataTree(
     _cache: dict[str, Any]  # used by _CachedAccessor
     _data_variables: dict[Hashable, Variable]
     _node_coord_variables: dict[Hashable, Variable]
-    _node_indexed_coord_variables: dict[Hashable, Variable]
     _node_dims: dict[Hashable, int]
     _node_indexes: dict[Hashable, Index]
     _attrs: dict[Hashable, Any] | None
@@ -452,7 +451,6 @@ class DataTree(
         "_cache",  # used by _CachedAccessor
         "_data_variables",
         "_node_coord_variables",
-        "_node_indexed_coord_variables",
         "_node_dims",
         "_node_indexes",
         "_attrs",
@@ -500,9 +498,6 @@ class DataTree(
         data_vars, coord_vars = _collect_data_and_coord_variables(dataset)
         self._data_variables = data_vars
         self._node_coord_variables = coord_vars
-        self._node_indexed_coord_variables = {
-            k: coord_vars[k] for k in dataset._indexes
-        }
         self._node_dims = dataset._dims
         self._node_indexes = dataset._indexes
         self._encoding = dataset._encoding
@@ -525,7 +520,10 @@ class DataTree(
     def _coord_variables(self) -> ChainMap[Hashable, Variable]:
         return ChainMap(
             self._node_coord_variables,
-            *(p._node_indexed_coord_variables for p in self.parents),
+            *(
+                FilteredMapping(keys=p._node_indexes, mapping=p._node_coord_variables)
+                for p in self.parents
+            ),
         )
 
     @property
@@ -665,7 +663,7 @@ class DataTree(
         Dataset invariants. It contains all variable objects constituting this
         DataTree node, including both data variables and coordinates.
         """
-        return Frozen(self._data_variables | self._coord_variables)
+        return Frozen(dict(**self._data_variables, **self._coord_variables))
 
     @property
     def attrs(self) -> dict[Hashable, Any]:
@@ -726,10 +724,10 @@ class DataTree(
     def _item_sources(self) -> Iterable[Mapping[Any, Any]]:
         """Places to look-up items for key-completion"""
         yield self.data_vars
-        yield HybridMappingProxy(keys=self._coord_variables, mapping=self.coords)
+        yield FilteredMapping(keys=self._coord_variables, mapping=self.coords)
 
         # virtual coordinates
-        yield HybridMappingProxy(keys=self.dims, mapping=self)
+        yield FilteredMapping(keys=self.dims, mapping=self)
 
         # immediate child nodes
         yield self.children

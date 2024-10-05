@@ -103,9 +103,9 @@ from xarray.core.types import (
 )
 from xarray.core.utils import (
     Default,
+    FilteredMapping,
     Frozen,
     FrozenMappingWarningOnValuesAccess,
-    HybridMappingProxy,
     OrderedSet,
     _default,
     decode_numpy_dict_values,
@@ -1507,10 +1507,10 @@ class Dataset(
     def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for key-completion"""
         yield self.data_vars
-        yield HybridMappingProxy(keys=self._coord_names, mapping=self.coords)
+        yield FilteredMapping(keys=self._coord_names, mapping=self.coords)
 
         # virtual coordinates
-        yield HybridMappingProxy(keys=self.sizes, mapping=self)
+        yield FilteredMapping(keys=self.sizes, mapping=self)
 
     def __contains__(self, key: object) -> bool:
         """The 'in' operator will return true or false depending on whether

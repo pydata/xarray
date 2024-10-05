@@ -465,7 +465,7 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
         return super().values()
 
 
-class HybridMappingProxy(Mapping[K, V]):
+class FilteredMapping(Mapping[K, V]):
     """Implements the Mapping interface. Uses the wrapped mapping for item lookup
     and a separate wrapped keys collection for iteration.
 
@@ -473,25 +473,30 @@ class HybridMappingProxy(Mapping[K, V]):
     eagerly accessing its items or when a mapping object is expected but only
     iteration over keys is actually used.
 
-    Note: HybridMappingProxy does not validate consistency of the provided `keys`
+    Note: FilteredMapping does not validate consistency of the provided `keys`
     and `mapping`. It is the caller's responsibility to ensure that they are
     suitable for the task at hand.
     """
 
-    __slots__ = ("_keys", "mapping")
+    __slots__ = ("keys", "mapping")
 
     def __init__(self, keys: Collection[K], mapping: Mapping[K, V]):
-        self._keys = keys
+        self.keys = keys
         self.mapping = mapping
 
     def __getitem__(self, key: K) -> V:
+        if key not in self.keys:
+            raise KeyError(key)
         return self.mapping[key]
 
     def __iter__(self) -> Iterator[K]:
-        return iter(self._keys)
+        return iter(self.keys)
 
     def __len__(self) -> int:
-        return len(self._keys)
+        return len(self.keys)
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(keys={self.keys!r}, mapping={self.mapping!r})"
 
 
 class OrderedSet(MutableSet[T]):
