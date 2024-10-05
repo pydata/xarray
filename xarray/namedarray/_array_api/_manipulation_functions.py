@@ -385,9 +385,62 @@ def roll(
     /,
     shift: int | tuple[int, ...],
     *,
-    axis: _Axes | None = None,
+    axis: _AxisLike | None = None,
+    # dims: _DimsLike2 | Default = _default,
 ) -> NamedArray[_ShapeType, _DType]:
+    """
+    Rolls array elements along a specified axis. Array elements that roll
+    beyond the last position are re-introduced at the first position.
+    Array elements that roll beyond the first position are re-introduced
+    at the last position.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x",), np.arange(10))
+    >>> roll(x, 2)
+    <xarray.NamedArray (x: 10)> Size: 80B
+    array([8, 9, 0, 1, 2, 3, 4, 5, 6, 7])
+    >>> roll(x, -2)
+    <xarray.NamedArray (x: 10)> Size: 80B
+    array([2, 3, 4, 5, 6, 7, 8, 9, 0, 1])
+
+    >>> x2 = NamedArray(("y", "x"), np.reshape(np.arange(10), (2, 5)))
+    >>> roll(x2, 1)
+    <xarray.NamedArray (y: 2, x: 5)> Size: 80B
+    array([[9, 0, 1, 2, 3],
+           [4, 5, 6, 7, 8]])
+    >>> roll(x2, -1)
+    <xarray.NamedArray (y: 2, x: 5)> Size: 80B
+    array([[1, 2, 3, 4, 5],
+           [6, 7, 8, 9, 0]])
+    >>> roll(x2, 1, axis=0)
+    <xarray.NamedArray (y: 2, x: 5)> Size: 80B
+    array([[5, 6, 7, 8, 9],
+           [0, 1, 2, 3, 4]])
+    >>> roll(x2, -1, axis=0)
+    <xarray.NamedArray (y: 2, x: 5)> Size: 80B
+    array([[5, 6, 7, 8, 9],
+           [0, 1, 2, 3, 4]])
+    >>> roll(x2, 1, axis=1)
+    <xarray.NamedArray (y: 2, x: 5)> Size: 80B
+    array([[4, 0, 1, 2, 3],
+           [9, 5, 6, 7, 8]])
+    >>> roll(x2, -1, axis=1)
+    <xarray.NamedArray (y: 2, x: 5)> Size: 80B
+    array([[1, 2, 3, 4, 0],
+           [6, 7, 8, 9, 5]])
+    >>> roll(x2, (1, 1), axis=(1, 0))
+    <xarray.NamedArray (y: 2, x: 5)> Size: 80B
+    array([[9, 5, 6, 7, 8],
+           [4, 0, 1, 2, 3]])
+    >>> roll(x2, (2, 1), axis=(1, 0))
+    <xarray.NamedArray (y: 2, x: 5)> Size: 80B
+    array([[8, 9, 5, 6, 7],
+           [3, 4, 0, 1, 2]])
+    """
     xp = _get_data_namespace(x)
+    # _axis = _dims_to_axis(x, dims, axis)
     _data = xp.roll(x._data, shift=shift, axis=axis)
     return x._new(data=_data)
 
