@@ -473,9 +473,10 @@ class FilteredMapping(Mapping[K, V]):
     eagerly accessing its items or when a mapping object is expected but only
     iteration over keys is actually used.
 
-    Note: FilteredMapping does not validate consistency of the provided `keys`
-    and `mapping`. It is the caller's responsibility to ensure that they are
-    suitable for the task at hand.
+    Note: keys should be a subset of mapping, but FilteredMapping does not
+    validate consistency of the provided `keys` and `mapping`. It is the
+    caller's responsibility to ensure that they are suitable for the task at
+    hand.
     """
 
     __slots__ = ("keys", "mapping")
