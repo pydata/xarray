@@ -318,7 +318,7 @@ def repeat(
     <xarray.NamedArray (y: 2, x: 6)> Size: 96B
     array([[1, 1, 1, 2, 2, 2],
            [3, 3, 3, 4, 4, 4]])
-    >>> repeat(x, [1, 2], axis=0)
+    >>> repeat(x, NamedArray(("x",), np.asarray([1, 2])), axis=0) # TODD: Correct?
     <xarray.NamedArray (y: 3, x: 2)> Size: 48B
     array([[1, 2],
            [3, 4],
