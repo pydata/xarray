@@ -465,6 +465,22 @@ def _dims_from_tuple_indexing(dims: _Dims, key: _IndexKeys) -> _Dims:
     return tuple(_dims)
 
 
+def _atleast1d_dims(dims: _Dims) -> _Dims:
+    """
+    Set dims atleast 1-dimensional.
+
+    Examples
+    --------
+    >>> _atleast1d_dims(())
+    ('dim_0',)
+    >>> _atleast1d_dims(("x",))
+    ('x',)
+    >>> _atleast1d_dims(("x", "y"))
+    ('x', 'y')
+    """
+    return (_new_unique_dim_name(dims),) if len(dims) < 1 else dims
+
+
 def _flatten_dims(dims: _Dims) -> _Dims:
     """
     Flatten multidimensional dims to 1-dimensional.
@@ -481,20 +497,29 @@ def _flatten_dims(dims: _Dims) -> _Dims:
     return (dims,) if len(dims) > 1 else dims
 
 
-def _atleast1d_dims(dims: _Dims) -> _Dims:
+def _move_dims(dims: _Dims, source: _AxisLike, destination: _AxisLike) -> _Dims:
     """
-    Set dims atleast 1-dimensional.
+    Move dims position in source to the destination position.
 
     Examples
     --------
-    >>> _atleast1d_dims(())
-    ('dim_0',)
-    >>> _atleast1d_dims(("x",))
-    ('x',)
-    >>> _atleast1d_dims(("x", "y"))
-    ('x', 'y')
+    >>> _move_dims(("x", "y", "z"), 0, -1)
+    ('y', 'z', 'x')
+    >>> _move_dims(("x", "y", "z"), -1, 0)
+    ('z', 'x', 'y')
+    >>> _move_dims(("x", "y", "z"), (0, 1), (-1, -2))
+    ('z', 'y', 'x')
+    >>> _move_dims(("x", "y", "z"), (0, 1, 2), (-1, -2, -3))
+    ('z', 'y', 'x')
     """
-    return (_new_unique_dim_name(dims),) if len(dims) < 1 else dims
+    _ndim = len(dims)
+    _source = _normalize_axis_tuple(source, _ndim)
+    _destination = _normalize_axis_tuple(destination, _ndim)
+    order = [n for n in range(_ndim) if n not in _source]
+    for dest, src in sorted(zip(_destination, _source)):
+        order.insert(dest, src)
+
+    return tuple(dims[i] for i in order)
 
 
 def _reduce_dims(dims: _Dims, *, axis: _AxisLike | None, keepdims: bool) -> _Dims:

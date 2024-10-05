@@ -14,6 +14,7 @@ from xarray.namedarray._array_api._utils import (
     _infer_dims,
     _insert_dim,
     _new_unique_dim_name,
+    _move_dims,
     _squeeze_dims,
 )
 from xarray.namedarray._typing import (
@@ -210,9 +211,27 @@ def flip(
 def moveaxis(
     x: NamedArray[Any, _DType], source: _Axes, destination: _Axes, /
 ) -> NamedArray[Any, _DType]:
+    """
+    Moves array axes (dimensions) to new positions, while leaving other axes
+    in their original positions.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("z", "y", "x"), np.zeros((3, 2, 1)))
+    >>> moveaxis(x, 0, -1)
+    <xarray.NamedArray (y: 2, x: 1, z: 3)> Size: 48B
+    array([[[0., 0., 0.]],
+    <BLANKLINE>
+           [[0., 0., 0.]]])
+    >>> moveaxis(x, (0, 1), (-1, -2))
+    <xarray.NamedArray (x: 1, y: 2, z: 3)> Size: 48B
+    array([[[0., 0., 0.],
+            [0., 0., 0.]]])
+    """
     xp = _get_data_namespace(x)
     _data = xp.moveaxis(x._data, source=source, destination=destination)
-    _dims = _infer_dims(_data.shape)  # TODO: Fix dims
+    _dims = _move_dims(x.dims, source, destination)
     return x._new(_dims, _data)
 
 
