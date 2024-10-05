@@ -8,6 +8,7 @@ from xarray.namedarray._array_api._utils import (
     _atleast1d_dims,
     _broadcast_dims,
     _dims_from_tuple_indexing,
+    _dim_to_optional_axis,
     _dims_to_axis,
     _flatten_dims,
     _get_data_namespace,
@@ -194,7 +195,7 @@ def flip(
     >>> flip(A, axis=0)
     <xarray.NamedArray (x: 8)> Size: 64B
     array([7, 6, 5, 4, 3, 2, 1, 0])
-    >>> A = NamedArray(("z", "y", "x"), np.arange(8).reshape((2, 2, 2)))
+    >>> A = NamedArray(("z", "y", "x"), np.reshape(np.arange(8), (2, 2, 2)))
     >>> flip(A, axis=0)
     <xarray.NamedArray (z: 2, y: 2, x: 2)> Size: 64B
     array([[[4, 5],
@@ -229,6 +230,7 @@ def moveaxis(
     array([[[0., 0., 0.],
             [0., 0., 0.]]])
     """
+    # TODO: Add a dims argument?
     xp = _get_data_namespace(x)
     _data = xp.moveaxis(x._data, source=source, destination=destination)
     _dims = _move_dims(x.dims, source, destination)
@@ -295,10 +297,41 @@ def repeat(
     /,
     *,
     axis: _Axis | None = None,
+    dim: _Dim | Default = _default,
 ) -> NamedArray[Any, _DType]:
+    """
+    Repeats each element of an array a specified number of times on a per-element basis.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray((), np.asarray(3))
+    >>> repeat(x, 4)
+    <xarray.NamedArray (dim_0: 4)> Size: 32B
+    array([3, 3, 3, 3])
+
+    >>> x = NamedArray(("y", "x"), np.reshape(np.arange(1, 5), (2, 2)))
+    >>> repeat(x, 2)
+    <xarray.NamedArray (('y', 'x'): 8)> Size: 64B
+    array([1, 1, 2, 2, 3, 3, 4, 4])
+    >>> repeat(x, 3, axis=1)
+    <xarray.NamedArray (y: 2, x: 6)> Size: 96B
+    array([[1, 1, 1, 2, 2, 2],
+           [3, 3, 3, 4, 4, 4]])
+    >>> repeat(x, [1, 2], axis=0)
+    <xarray.NamedArray (y: 3, x: 2)> Size: 48B
+    array([[1, 2],
+           [3, 4],
+           [3, 4]])
+    """
     xp = _get_data_namespace(x)
-    _data = xp.repeat(x._data, repeats, axis=axis)
-    _dims = _infer_dims(_data.shape)  # TODO: Fix dims
+    _axis = _dim_to_optional_axis(x, dim, axis=axis)
+    _repeats = repeats if isinstance(repeats, int) else repeats._data
+    _data = xp.repeat(x._data, _repeats, axis=_axis)
+    if _axis is None:
+        _dims = _flatten_dims(_atleast1d_dims(x.dims))
+    else:
+        _dims = _atleast1d_dims(x.dims)
     return x._new(_dims, _data)
 
 
@@ -365,7 +398,7 @@ def squeeze(x: NamedArray[Any, _DType], /, axis: _AxisLike) -> NamedArray[Any, _
     Examples
     --------
     >>> import numpy as np
-    >>> x = NamedArray(("x", "y", "z"), np.arange(1 * 2 * 3).reshape((1, 2, 3)))
+    >>> x = NamedArray(("x", "y", "z"), np.reshape(np.arange(1 * 2 * 3), (1, 2, 3)))
     >>> squeeze(x, axis=0)
     <xarray.NamedArray (y: 2, z: 3)> Size: 48B
     array([[0, 1, 2],
@@ -409,7 +442,7 @@ def unstack(
     Examples
     --------
     >>> import numpy as np
-    >>> x = NamedArray(("x", "y", "z"), np.arange(1 * 2 * 3).reshape((1, 2, 3)))
+    >>> x = NamedArray(("x", "y", "z"), np.reshape(np.arange(1 * 2 * 3), (1, 2, 3)))
     >>> x_y0, x_y1 = unstack(x, axis=1)
     >>> x_y0
     <xarray.NamedArray (x: 1, z: 3)> Size: 24B
