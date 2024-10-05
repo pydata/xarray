@@ -7,15 +7,15 @@ from xarray.namedarray._array_api._data_type_functions import result_type
 from xarray.namedarray._array_api._utils import (
     _atleast1d_dims,
     _broadcast_dims,
-    _dims_from_tuple_indexing,
     _dim_to_optional_axis,
+    _dims_from_tuple_indexing,
     _dims_to_axis,
     _flatten_dims,
     _get_data_namespace,
     _infer_dims,
     _insert_dim,
-    _new_unique_dim_name,
     _move_dims,
+    _new_unique_dim_name,
     _squeeze_dims,
 )
 from xarray.namedarray._typing import (
@@ -318,7 +318,7 @@ def repeat(
     <xarray.NamedArray (y: 2, x: 6)> Size: 96B
     array([[1, 1, 1, 2, 2, 2],
            [3, 3, 3, 4, 4, 4]])
-    >>> repeat(x, NamedArray(("x",), np.asarray([1, 2])), axis=0) # TODD: Correct?
+    >>> repeat(x, NamedArray(("x",), np.asarray([1, 2])), axis=0)  # TODD: Correct?
     <xarray.NamedArray (y: 3, x: 2)> Size: 48B
     array([[1, 2],
            [3, 4],

@@ -516,7 +516,7 @@ def _move_dims(dims: _Dims, source: _AxisLike, destination: _AxisLike) -> _Dims:
     _source = _normalize_axis_tuple(source, _ndim)
     _destination = _normalize_axis_tuple(destination, _ndim)
     order = [n for n in range(_ndim) if n not in _source]
-    for dest, src in sorted(zip(_destination, _source)):
+    for dest, src in sorted(zip(_destination, _source, strict=False)):
         order.insert(dest, src)
 
     return tuple(dims[i] for i in order)
