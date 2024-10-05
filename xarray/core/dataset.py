@@ -3904,20 +3904,45 @@ class Dataset(
         coords: Mapping[Any, Any] | None = None,
         method: InterpOptions = "linear",
         assume_sorted: bool = False,
+        reduce: bool = True,
         kwargs: Mapping[str, Any] | None = None,
         method_non_numeric: str = "nearest",
         **coords_kwargs: Any,
     ) -> Self:
-        """Interpolate a Dataset onto new coordinates
+        """
+        Interpolate a Dataset onto new coordinates.
 
-        Performs univariate or multivariate interpolation of a Dataset onto
-        new coordinates using scipy's interpolation routines. If interpolating
-        along an existing dimension, either :py:class:`scipy.interpolate.interp1d`
-        or a 1-dimensional scipy interpolator (e.g. :py:class:`scipy.interpolate.KroghInterpolator`)
-        is called.  When interpolating along multiple existing dimensions, an
-        attempt is made to decompose the interpolation into multiple
-        1-dimensional interpolations. If this is possible, the 1-dimensional interpolator
-        is called. Otherwise, :py:func:`scipy.interpolate.interpn` is called.
+        Performs univariate or multivariate interpolation of a Dataset onto new coordinates,
+        utilizing either NumPy or SciPy interpolation routines.
+
+        When interpolating along multiple dimensions, the process attempts to decompose the
+        interpolation into independent interpolations along one dimension at a time, unless
+        `reduce=False` is passed. The specific interpolation method and dimensionality
+        determine which interpolant is used:
+
+        1. **Interpolation along one dimension of 1D data (`method='linear'`)**
+            - Uses :py:class:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
+
+        2. **Interpolation along one dimension of N-dimensional data (N ≥ 1)**
+            - Methods {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"}
+                use :py:class:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:class:`numpy.interp`
+                (as in the case of `method='linear'` for 1D data).
+            - If `method='polynomial'`, the `order` keyword argument must also be provided. In this case,
+                :py:class:`scipy.interpolate.interp1d` is called with `kind=order`.
+
+        3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
+            - Depending on the `method`, the following interpolants from :py:class:`scipy.interpolate` are used:
+                - `"pchip"`: :py:class:`scipy.interpolate.PchipInterpolator`
+                - `"barycentric"`: :py:class:`scipy.interpolate.BarycentricInterpolator`
+                - `"krogh"`: :py:class:`scipy.interpolate.KroghInterpolator`
+                - `"akima"` or `"makima"`: :py:class:`scipy.interpolate.Akima1dInterpolator`
+                    (`makima` is handled by passing `makima` to `method`).
+
+        4. **Interpolation along multiple dimensions of multi-dimensional data**
+            - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
+                "cubic", "quintic", "pchip"}.
+
+        Out-of-range values are filled with NaN, unless specified otherwise via `kwargs` to the numpy/scipy interpolant.
 
         Parameters
         ----------
@@ -3926,34 +3951,27 @@ class Dataset(
             New coordinate can be a scalar, array-like or DataArray.
             If DataArrays are passed as new coordinates, their dimensions are
             used for the broadcasting. Missing values are skipped.
-        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial", \
-            "barycentric", "krogh", "pchip", "spline", "akima"}, default: "linear"
-            String indicating which method to use for interpolation:
-
-            - 'linear': linear interpolation. Additional keyword
-              arguments are passed to :py:func:`numpy.interp`
-            - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'polynomial':
-              are passed to :py:func:`scipy.interpolate.interp1d`. If
-              ``method='polynomial'``, the ``order`` keyword argument must also be
-              provided.
-            - 'barycentric', 'krogh', 'pchip', 'spline', 'akima': use their
-              respective :py:class:`scipy.interpolate` classes.
-
+        method : str
+            Interpolation method to use (see descriptions above).
         assume_sorted : bool, default: False
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
             coordinates are assumed to be an array of monotonically increasing
             values.
+        reduce : bool, default: True
+            If True, the interpolation is decomposed into independent interpolations of minimal dimensionality such that
+            the interpolation coordinates are independent. Setting this to be True alters the behavior of certain
+            multi-dimensional interpolants compared to the default SciPy output.
         kwargs : dict, optional
-            Additional keyword arguments passed to scipy's interpolator. Valid
-            options and their behavior depend whether ``interp1d`` or
-            ``interpn`` is used.
+            Additional keyword arguments passed to the interpolator. Valid
+            options and their behavior depend which interpolant is used.
         method_non_numeric : {"nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method for non-numeric types. Passed on to :py:meth:`Dataset.reindex`.
             ``"nearest"`` is used by default.
         **coords_kwargs : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
+
 
         Returns
         -------
@@ -3962,7 +3980,9 @@ class Dataset(
 
         Notes
         -----
-        scipy is required.
+        - SciPy is required for certain interpolation methods.
+        - Allowing `reduce=True` (the default) may alter the behavior of interpolation along multiple dimensions
+            compared to the default behavior in SciPy.
 
         See Also
         --------
@@ -4125,7 +4145,9 @@ class Dataset(
             if dtype_kind in "uifc":
                 # For normal number types do the interpolation:
                 var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
-                variables[name] = missing.interp(var, var_indexers, method, **kwargs)
+                variables[name] = missing.interp(
+                    var, var_indexers, method, reduce=reduce, **kwargs
+                )
             elif dtype_kind in "ObU" and (use_indexers.keys() & var.dims):
                 # For types that we do not understand do stepwise
                 # interpolation to avoid modifying the elements.
@@ -4186,18 +4208,43 @@ class Dataset(
         other: T_Xarray,
         method: InterpOptions = "linear",
         assume_sorted: bool = False,
+        reduce: bool = True,
         kwargs: Mapping[str, Any] | None = None,
         method_non_numeric: str = "nearest",
     ) -> Self:
-        """Interpolate this object onto the coordinates of another object,
-        filling the out of range values with NaN.
+        """Interpolate this object onto the coordinates of another object.
 
-        If interpolating along a single existing dimension,
-        :py:class:`scipy.interpolate.interp1d` is called. When interpolating
-        along multiple existing dimensions, an attempt is made to decompose the
-        interpolation into multiple 1-dimensional interpolations. If this is
-        possible, :py:class:`scipy.interpolate.interp1d` is called. Otherwise,
-        :py:func:`scipy.interpolate.interpn` is called.
+        Performs univariate or multivariate interpolation of a Dataset onto new coordinates,
+        utilizing either NumPy or SciPy interpolation routines.
+
+        When interpolating along multiple dimensions, the process attempts to decompose the
+        interpolation into independent interpolations along one dimension at a time, unless
+        `reduce=False` is passed. The specific interpolation method and dimensionality
+        determine which interpolant is used:
+
+        1. **Interpolation along one dimension of 1D data (`method='linear'`)**
+            - Uses :py:class:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
+
+        2. **Interpolation along one dimension of N-dimensional data (N ≥ 1)**
+            - Methods {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"}
+                use :py:class:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:class:`numpy.interp`
+                (as in the case of `method='linear'` for 1D data).
+            - If `method='polynomial'`, the `order` keyword argument must also be provided. In this case,
+                :py:class:`scipy.interpolate.interp1d` is called with `kind=order`.
+
+        3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
+            - Depending on the `method`, the following interpolants from :py:class:`scipy.interpolate` are used:
+                - `"pchip"`: :py:class:`scipy.interpolate.PchipInterpolator`
+                - `"barycentric"`: :py:class:`scipy.interpolate.BarycentricInterpolator`
+                - `"krogh"`: :py:class:`scipy.interpolate.KroghInterpolator`
+                - `"akima"` or `"makima"`: :py:class:`scipy.interpolate.Akima1dInterpolator`
+                    (`makima` is handled by passing `makima` to `method`).
+
+        4. **Interpolation along multiple dimensions of multi-dimensional data**
+            - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
+                "cubic", "quintic", "pchip"}.
+
+        Out-of-range values are filled with NaN, unless specified otherwise via `kwargs` to the numpy/scipy interpolant.
 
         Parameters
         ----------
@@ -4205,26 +4252,20 @@ class Dataset(
             Object with an 'indexes' attribute giving a mapping from dimension
             names to an 1d array-like, which provides coordinates upon
             which to index the variables in this dataset. Missing values are skipped.
-        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial", \
-            "barycentric", "krogh", "pchip", "spline", "akima"}, default: "linear"
-            String indicating which method to use for interpolation:
-
-            - 'linear': linear interpolation. Additional keyword
-              arguments are passed to :py:func:`numpy.interp`
-            - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'polynomial':
-              are passed to :py:func:`scipy.interpolate.interp1d`. If
-              ``method='polynomial'``, the ``order`` keyword argument must also be
-              provided.
-            - 'barycentric', 'krogh', 'pchip', 'spline', 'akima': use their
-              respective :py:class:`scipy.interpolate` classes.
-
+        method : str
+            Interpolation method to use (see descriptions above).
         assume_sorted : bool, default: False
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
             coordinates are assumed to be an array of monotonically increasing
             values.
+        reduce : bool, default: True
+            If True, the interpolation is decomposed into independent 1-dimensional interpolations such that
+            the interpolation coordinates are independent. Setting this to be True alters the behavior of certain
+            multi-dimensional interpolants compared to the default SciPy output.
         kwargs : dict, optional
-            Additional keyword passed to scipy's interpolator.
+            Additional keyword arguments passed to the interpolator. Valid
+            options and their behavior depend which interpolant is use
         method_non_numeric : {"nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method for non-numeric types. Passed on to :py:meth:`Dataset.reindex`.
             ``"nearest"`` is used by default.
