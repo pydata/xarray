@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
 import numpy as np
 import pytest
+from packaging.version import Version
 
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.namedarray._typing import (
@@ -53,8 +54,14 @@ class CustomArrayBase(Generic[_ShapeType_co, _DType_co]):
 class CustomArray(
     CustomArrayBase[_ShapeType_co, _DType_co], Generic[_ShapeType_co, _DType_co]
 ):
-    def __array__(self) -> np.ndarray[Any, np.dtype[np.generic]]:
-        return np.array(self.array)
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray[Any, np.dtype[np.generic]]:
+
+        if Version(np.__version__) >= Version("2.0.0"):
+            return np.asarray(self.array, dtype=dtype, copy=copy)
+        else:
+            return np.asarray(self.array, dtype=dtype)
 
 
 class CustomArrayIndexable(
@@ -584,3 +591,15 @@ class TestNamedArray(NamedArraySubclassobjects):
     def test_warn_on_repeated_dimension_names(self) -> None:
         with pytest.warns(UserWarning, match="Duplicate dimension names"):
             NamedArray(("x", "x"), np.arange(4).reshape(2, 2))
+
+
+def test_repr() -> None:
+    x: NamedArray[Any, np.dtype[np.uint64]]
+    x = NamedArray(("x",), np.array([0], dtype=np.uint64))
+
+    # Reprs should not crash:
+    r = x.__repr__()
+    x._repr_html_()
+
+    # Basic comparison:
+    assert r == "<xarray.NamedArray (x: 1)> Size: 8B\narray([0], dtype=uint64)"

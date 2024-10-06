@@ -192,63 +192,60 @@ def _determine_zarr_chunks(
     #   with chunk boundaries, then no synchronization is required."
     # TODO: incorporate synchronizer to allow writes from multiple dask
     # threads
-    if var_chunks and enc_chunks_tuple:
-        # If it is possible to write on partial chunks then it is not necessary to check
-        # the last one contained on the region
-        allow_partial_chunks = mode != "r+"
 
-        base_error = (
-            f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
-            f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r} "
-            f"on the region {region}. "
-            f"Writing this array in parallel with dask could lead to corrupted data."
-            f"Consider either rechunking using `chunk()`, deleting "
-            f"or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
-        )
+    # If it is possible to write on partial chunks then it is not necessary to check
+    # the last one contained on the region
+    allow_partial_chunks = mode != "r+"
 
-        for zchunk, dchunks, interval, size in zip(
-            enc_chunks_tuple, var_chunks, region, shape, strict=True
-        ):
-            if not safe_chunks:
-                continue
+    base_error = (
+        f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
+        f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r} "
+        f"on the region {region}. "
+        f"Writing this array in parallel with dask could lead to corrupted data. "
+        f"Consider either rechunking using `chunk()`, deleting "
+        f"or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
+    )
 
-            for dchunk in dchunks[1:-1]:
-                if dchunk % zchunk:
+    for zchunk, dchunks, interval, size in zip(
+        enc_chunks_tuple, var_chunks, region, shape, strict=True
+    ):
+        if not safe_chunks:
+            continue
+
+        for dchunk in dchunks[1:-1]:
+            if dchunk % zchunk:
+                raise ValueError(base_error)
+
+        region_start = interval.start if interval.start else 0
+
+        if len(dchunks) > 1:
+            # The first border size is the amount of data that needs to be updated on the
+            # first chunk taking into account the region slice.
+            first_border_size = zchunk
+            if allow_partial_chunks:
+                first_border_size = zchunk - region_start % zchunk
+
+            if (dchunks[0] - first_border_size) % zchunk:
+                raise ValueError(base_error)
+
+        if not allow_partial_chunks:
+            region_stop = interval.stop if interval.stop else size
+
+            if region_start % zchunk:
+                # The last chunk which can also be the only one is a partial chunk
+                # if it is not aligned at the beginning
+                raise ValueError(base_error)
+
+            if np.ceil(region_stop / zchunk) == np.ceil(size / zchunk):
+                # If the region is covering the last chunk then check
+                # if the reminder with the default chunk size
+                # is equal to the size of the last chunk
+                if dchunks[-1] % zchunk != size % zchunk:
                     raise ValueError(base_error)
+            elif dchunks[-1] % zchunk:
+                raise ValueError(base_error)
 
-            region_start = interval.start if interval.start else 0
-
-            if len(dchunks) > 1:
-                # The first border size is the amount of data that needs to be updated on the
-                # first chunk taking into account the region slice.
-                first_border_size = zchunk
-                if allow_partial_chunks:
-                    first_border_size = zchunk - region_start % zchunk
-
-                if (dchunks[0] - first_border_size) % zchunk:
-                    raise ValueError(base_error)
-
-            if not allow_partial_chunks:
-                chunk_start = sum(dchunks[:-1]) + region_start
-                if chunk_start % zchunk:
-                    # The last chunk which can also be the only one is a partial chunk
-                    # if it is not aligned at the beginning
-                    raise ValueError(base_error)
-
-                region_stop = interval.stop if interval.stop else size
-
-                if size - region_stop + 1 < zchunk:
-                    # If the region is covering the last chunk then check
-                    # if the reminder with the default chunk size
-                    # is equal to the size of the last chunk
-                    if dchunks[-1] % zchunk != size % zchunk:
-                        raise ValueError(base_error)
-                elif dchunks[-1] % zchunk:
-                    raise ValueError(base_error)
-
-        return enc_chunks_tuple
-
-    raise AssertionError("We should never get here. Function logic must be wrong.")
+    return enc_chunks_tuple
 
 
 def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
@@ -1298,7 +1295,25 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         from xarray.core.datatree import DataTree
 
         filename_or_obj = _normalize_path(filename_or_obj)
-        groups_dict = self.open_groups_as_dict(filename_or_obj, **kwargs)
+        groups_dict = self.open_groups_as_dict(
+            filename_or_obj=filename_or_obj,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+            group=group,
+            mode=mode,
+            synchronizer=synchronizer,
+            consolidated=consolidated,
+            chunk_store=chunk_store,
+            storage_options=storage_options,
+            stacklevel=stacklevel,
+            zarr_version=zarr_version,
+            **kwargs,
+        )
 
         return DataTree.from_dict(groups_dict)
 
