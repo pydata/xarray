@@ -32,11 +32,13 @@ from xarray.core.indexes import Index, Indexes
 from xarray.core.merge import dataset_update_method
 from xarray.core.options import OPTIONS as XR_OPTS
 from xarray.core.treenode import NamedNode, NodePath
+from xarray.core.types import Self
 from xarray.core.utils import (
     Default,
     FilteredMapping,
     Frozen,
     _default,
+    drop_dims_from_indexers,
     either_dict_or_kwargs,
     maybe_wrap_array,
 )
@@ -54,7 +56,12 @@ if TYPE_CHECKING:
 
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
     from xarray.core.merge import CoercibleMapping, CoercibleValue
-    from xarray.core.types import ErrorOptions, NetcdfWriteModes, ZarrWriteModes
+    from xarray.core.types import (
+        ErrorOptions,
+        ErrorOptionsWithWarn,
+        NetcdfWriteModes,
+        ZarrWriteModes,
+    )
 
 # """
 # DEVELOPERS' NOTE
@@ -1607,3 +1614,61 @@ class DataTree(
             compute=compute,
             **kwargs,
         )
+
+    def _selective_indexing(
+        self,
+        func: Callable[[Dataset, Mapping[Any, Any]]],
+        indexers: Mapping[Any, Any],
+        missing_dims: ErrorOptionsWithWarn = "raise",
+    ) -> Self:
+        all_dims = set()
+        for node in self.subtree:
+            all_dims.update(node._node_dims)
+        indexers = drop_dims_from_indexers(indexers, all_dims, missing_dims)
+
+        result = {}
+        for node in self.subtree:
+            node_indexers = {k: v for k, v in indexers.items() if k in node.dims}
+            node_result = func(node.dataset, node_indexers)
+            for k in node_indexers:
+                if k not in node.coords and k in node_result.coords:
+                    del node_result.coords[k]
+            result[node.path] = node_result
+        return type(self).from_dict(result, name=self.name)  # type: ignore
+
+    def isel(
+        self,
+        indexers: Mapping[Any, Any] | None = None,
+        drop: bool = False,
+        missing_dims: ErrorOptionsWithWarn = "raise",
+        **indexers_kwargs: Any,
+    ) -> Self:
+        """Positional indexing."""
+
+        def apply_indexers(dataset, node_indexers):
+            return dataset.isel(node_indexers, drop=drop)
+
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
+        return self._selective_indexing(
+            apply_indexers, indexers, missing_dims=missing_dims
+        )
+
+    def sel(
+        self,
+        indexers: Mapping[Any, Any] | None = None,
+        method: str | None = None,
+        tolerance: int | float | Iterable[int | float] | None = None,
+        drop: bool = False,
+        **indexers_kwargs: Any,
+    ) -> Self:
+        """Label-based indexing."""
+
+        def apply_indexers(dataset, node_indexers):
+            # TODO: reimplement in terms of map_index_queries(), to avoid
+            # redundant index look-ups on child nodes
+            return dataset.sel(
+                node_indexers, method=method, tolerance=tolerance, drop=drop
+            )
+
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "sel")
+        return self._selective_indexing(apply_indexers, indexers)
