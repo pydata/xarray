@@ -216,16 +216,16 @@ class TestStoreDatasets:
 
 
 class TestToDataset:
-    def test_to_dataset(self):
-        base = xr.Dataset(coords={"a": 1})
-        sub = xr.Dataset(coords={"b": 2})
+    def test_to_dataset_inherited(self):
+        base = xr.Dataset(coords={"a": [1], "b": 2})
+        sub = xr.Dataset(coords={"c": [3]})
         tree = DataTree.from_dict({"/": base, "/sub": sub})
         subtree = typing.cast(DataTree, tree["sub"])
 
         assert_identical(tree.to_dataset(inherited=False), base)
         assert_identical(subtree.to_dataset(inherited=False), sub)
 
-        sub_and_base = xr.Dataset(coords={"a": 1, "b": 2})
+        sub_and_base = xr.Dataset(coords={"a": [1], "c": [3]})  # no "b"
         assert_identical(tree.to_dataset(inherited=True), base)
         assert_identical(subtree.to_dataset(inherited=True), sub_and_base)
 
@@ -716,7 +716,8 @@ class TestCoords:
         dt["child"] = DataTree()
         child = dt["child"]
 
-        assert set(child.coords) == {"x", "y", "a", "b"}
+        assert set(dt.coords) == {"x", "y", "a", "b"}
+        assert set(child.coords) == {"x", "y"}
 
         actual = child.copy(deep=True)
         actual.coords["x"] = ("x", ["a", "b"])
@@ -731,7 +732,7 @@ class TestCoords:
 
         with pytest.raises(KeyError):
             # cannot delete inherited coordinate from child node
-            del child["b"]
+            del child["x"]
 
         # TODO requires a fix for #9472
         # actual = child.copy(deep=True)
@@ -1281,22 +1282,23 @@ class TestInheritance:
         assert "x" in dt["/b"].coords
         xr.testing.assert_identical(dt["/x"], dt["/b/x"])
 
-    def test_inherited_coords_override(self):
+    def test_inherit_only_index_coords(self):
         dt = DataTree.from_dict(
             {
-                "/": xr.Dataset(coords={"x": 1, "y": 2}),
-                "/b": xr.Dataset(coords={"x": 4, "z": 3}),
+                "/": xr.Dataset(coords={"x": [1], "y": 2}),
+                "/b": xr.Dataset(coords={"z": 3}),
             }
         )
         assert dt.coords.keys() == {"x", "y"}
-        root_coords = {"x": 1, "y": 2}
-        sub_coords = {"x": 4, "y": 2, "z": 3}
-        xr.testing.assert_equal(dt["/x"], xr.DataArray(1, coords=root_coords))
-        xr.testing.assert_equal(dt["/y"], xr.DataArray(2, coords=root_coords))
-        assert dt["/b"].coords.keys() == {"x", "y", "z"}
-        xr.testing.assert_equal(dt["/b/x"], xr.DataArray(4, coords=sub_coords))
-        xr.testing.assert_equal(dt["/b/y"], xr.DataArray(2, coords=sub_coords))
-        xr.testing.assert_equal(dt["/b/z"], xr.DataArray(3, coords=sub_coords))
+        xr.testing.assert_equal(
+            dt["/x"], xr.DataArray([1], dims=["x"], coords={"x": [1], "y": 2})
+        )
+        xr.testing.assert_equal(dt["/y"], xr.DataArray(2, coords={"y": 2}))
+        assert dt["/b"].coords.keys() == {"x", "z"}
+        xr.testing.assert_equal(
+            dt["/b/x"], xr.DataArray([1], dims=["x"], coords={"x": [1], "z": 3})
+        )
+        xr.testing.assert_equal(dt["/b/z"], xr.DataArray(3, coords={"z": 3}))
 
     def test_inherited_coords_with_index_are_deduplicated(self):
         dt = DataTree.from_dict(

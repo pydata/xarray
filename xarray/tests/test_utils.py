@@ -139,6 +139,16 @@ class TestDictionaries:
             "Frozen({'b': 'B', 'a': 'A'})",
         )
 
+    def test_filtered(self):
+        x = utils.FilteredMapping(keys={"a"}, mapping={"a": 1, "b": 2})
+        assert "a" in x
+        assert "b" not in x
+        assert x["a"] == 1
+        assert list(x) == ["a"]
+        assert len(x) == 1
+        assert repr(x) == "FilteredMapping(keys={'a'}, mapping={'a': 1, 'b': 2})"
+        assert dict(x) == {"a": 1}
+
 
 def test_repr_object():
     obj = utils.ReprObject("foo")
