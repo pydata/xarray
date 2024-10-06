@@ -709,7 +709,7 @@ This alignment check is performed up through the tree, all the way to the root, 
 
 .. code:: python
 
-    xr.align(child.dataset, parent.dataset for parent in child.parents, join="exact")
+    xr.align(child.dataset, *(parent.dataset for parent in child.parents), join="exact")
 
 To represent our unalignable data in a single :py:class:`~xarray.DataTree`, we must instead place all variables which are a function of these different-length dimensions into nodes that are not direct descendents of one another, e.g. organize them as siblings.
 
