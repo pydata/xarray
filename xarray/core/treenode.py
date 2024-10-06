@@ -529,14 +529,14 @@ class TreeNode(Generic[Tree]):
         for part in parts:
             if part == "..":
                 if current_node.parent is None:
-                    raise KeyError(f"Could not find node at {path}")
+                    raise KeyError(path)
                 else:
                     current_node = current_node.parent
             elif part in ("", "."):
                 pass
             else:
                 if current_node.get(part) is None:
-                    raise KeyError(f"Could not find node at {path}")
+                    raise KeyError(path)
                 else:
                     current_node = current_node.get(part)
         return current_node
@@ -584,7 +584,7 @@ class TreeNode(Generic[Tree]):
             path = NodePath(path)
 
         if not path.name:
-            raise ValueError("Can't set an item under a path which has no name")
+            raise ValueError("cannot set an item under a path which has no name")
 
         if path.root:
             # absolute path
@@ -601,7 +601,7 @@ class TreeNode(Generic[Tree]):
                 if part == "..":
                     if current_node.parent is None:
                         # We can't create a parent if `new_nodes_along_path=True` as we wouldn't know what to name it
-                        raise KeyError(f"Could not reach node at path {path}")
+                        raise ValueError(f"could not reach node at path {path}")
                     else:
                         current_node = current_node.parent
                 elif part in ("", "."):
@@ -615,14 +615,14 @@ class TreeNode(Generic[Tree]):
                         current_node._set(part, new_node)
                         current_node = current_node.children[part]
                     else:
-                        raise KeyError(f"Could not reach node at path {path}")
+                        raise ValueError(f"could not reach node at path {path}")
 
         if name in current_node.children:
             # Deal with anything already existing at this location
             if allow_overwrite:
                 current_node._set(name, item)
             else:
-                raise KeyError(f"Already a node object at path {path}")
+                raise ValueError(f"already a node object at path {path}")
         else:
             current_node._set(name, item)
 
@@ -633,7 +633,9 @@ class TreeNode(Generic[Tree]):
             del self._children[key]
             child.orphan()
         else:
-            raise KeyError(key)
+            raise KeyError(key) from ValueError(
+                "cannot delete key not found in child nodes"
+            )
 
     def same_tree(self, other: Tree) -> bool:
         """True if other node is in the same tree as this node."""
