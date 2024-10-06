@@ -517,13 +517,16 @@ class DataTree(
         _deduplicate_inherited_coordinates(self, parent)
 
     @property
+    def _node_coord_variables_with_index(self) -> Mapping[Hashable, Variable]:
+        return FilteredMapping(
+            keys=self._node_indexes, mapping=self._node_coord_variables
+        )
+
+    @property
     def _coord_variables(self) -> ChainMap[Hashable, Variable]:
         return ChainMap(
             self._node_coord_variables,
-            *(
-                FilteredMapping(keys=p._node_indexes, mapping=p._node_coord_variables)
-                for p in self.parents
-            ),
+            *(p._node_coord_variables_with_index for p in self.parents),
         )
 
     @property
