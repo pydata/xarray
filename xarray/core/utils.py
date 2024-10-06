@@ -479,25 +479,25 @@ class FilteredMapping(Mapping[K, V]):
     hand.
     """
 
-    __slots__ = ("keys", "mapping")
+    __slots__ = ("keys_", "mapping")
 
     def __init__(self, keys: Collection[K], mapping: Mapping[K, V]):
-        self.keys = keys
+        self.keys_ = keys  # .keys is already a property on Mapping
         self.mapping = mapping
 
     def __getitem__(self, key: K) -> V:
-        if key not in self.keys:
+        if key not in self.keys_:
             raise KeyError(key)
         return self.mapping[key]
 
     def __iter__(self) -> Iterator[K]:
-        return iter(self.keys)
+        return iter(self.keys_)
 
     def __len__(self) -> int:
-        return len(self.keys)
+        return len(self.keys_)
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(keys={self.keys!r}, mapping={self.mapping!r})"
+        return f"{type(self).__name__}(keys={self.keys_!r}, mapping={self.mapping!r})"
 
 
 class OrderedSet(MutableSet[T]):
