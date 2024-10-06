@@ -666,7 +666,7 @@ class DataTree(
         Dataset invariants. It contains all variable objects constituting this
         DataTree node, including both data variables and coordinates.
         """
-        return Frozen(dict(**self._data_variables, **self._coord_variables))
+        return Frozen(self._data_variables | self._coord_variables)
 
     @property
     def attrs(self) -> dict[Hashable, Any]:
