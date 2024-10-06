@@ -155,6 +155,9 @@ Bug fixes
 - Fix deprecation warning that was raised when calling ``np.array`` on an ``xr.DataArray``
   in NumPy 2.0 (:issue:`9312`, :pull:`9393`)
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fix passing missing arguments to when opening hdf5 and netCDF4 datatrees
+  (:issue:`9427`, :pull: `9428`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Fix support for using ``pandas.DateOffset``, ``pandas.Timedelta``, and
   ``datetime.timedelta`` objects as ``resample`` frequencies
   (:issue:`9408`, :pull:`9413`).

@@ -477,7 +477,25 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         from xarray.core.datatree import DataTree
 
-        groups_dict = self.open_groups_as_dict(filename_or_obj, **kwargs)
+        groups_dict = self.open_groups_as_dict(
+            filename_or_obj,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+            format=format,
+            group=group,
+            lock=lock,
+            invalid_netcdf=invalid_netcdf,
+            phony_dims=phony_dims,
+            decode_vlen_strings=decode_vlen_strings,
+            driver=driver,
+            driver_kwds=driver_kwds,
+            **kwargs,
+        )
 
         return DataTree.from_dict(groups_dict)
 
