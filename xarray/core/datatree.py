@@ -40,8 +40,8 @@ from xarray.core.options import OPTIONS as XR_OPTS
 from xarray.core.treenode import NamedNode, NodePath
 from xarray.core.utils import (
     Default,
+    FilteredMapping,
     Frozen,
-    HybridMappingProxy,
     _default,
     either_dict_or_kwargs,
     maybe_wrap_array,
@@ -517,9 +517,16 @@ class DataTree(
         _deduplicate_inherited_coordinates(self, parent)
 
     @property
+    def _node_coord_variables_with_index(self) -> Mapping[Hashable, Variable]:
+        return FilteredMapping(
+            keys=self._node_indexes, mapping=self._node_coord_variables
+        )
+
+    @property
     def _coord_variables(self) -> ChainMap[Hashable, Variable]:
         return ChainMap(
-            self._node_coord_variables, *(p._node_coord_variables for p in self.parents)
+            self._node_coord_variables,
+            *(p._node_coord_variables_with_index for p in self.parents),
         )
 
     @property
@@ -720,10 +727,10 @@ class DataTree(
     def _item_sources(self) -> Iterable[Mapping[Any, Any]]:
         """Places to look-up items for key-completion"""
         yield self.data_vars
-        yield HybridMappingProxy(keys=self._coord_variables, mapping=self.coords)
+        yield FilteredMapping(keys=self._coord_variables, mapping=self.coords)
 
         # virtual coordinates
-        yield HybridMappingProxy(keys=self.dims, mapping=self)
+        yield FilteredMapping(keys=self.dims, mapping=self)
 
         # immediate child nodes
         yield self.children
