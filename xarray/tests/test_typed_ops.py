@@ -136,8 +136,8 @@ def test_dataset_typed_ops() -> None:
     _test(_int + ds)
     _test(_list + ds)
     _test(_ndarray + ds)
-    _test(_var + ds)
-    _test(_da + ds)
+    _test(_var + ds)  # type: ignore[arg-type]  # TODO: wrong in mypy 312
+    _test(_da + ds)  # type: ignore[arg-type]  # TODO: wrong in mypy 312
 
     # __eq__ as an example of cmp ops
     _test(ds == _int)
@@ -148,8 +148,8 @@ def test_dataset_typed_ops() -> None:
     _test(_int == ds)  # type: ignore[arg-type]  # typeshed problem
     _test(_list == ds)  # type: ignore[arg-type]  # typeshed problem
     _test(_ndarray == ds)
-    _test(_var == ds)
-    _test(_da == ds)
+    _test(_var == ds)  # type: ignore[arg-type]  # TODO: wrong in mypy 312
+    _test(_da == ds)  # type: ignore[arg-type]  # TODO: wrong in mypy 312
 
     # __lt__ as another example of cmp ops
     _test(ds < _int)
@@ -160,8 +160,8 @@ def test_dataset_typed_ops() -> None:
     _test(_int > ds)
     _test(_list > ds)
     _test(_ndarray > ds)  # type: ignore[arg-type]  # numpy problem
-    _test(_var > ds)
-    _test(_da > ds)
+    _test(_var > ds)  # type: ignore[arg-type]  # TODO: wrong in mypy 312
+    _test(_da > ds)  # type: ignore[arg-type]  # TODO: wrong in mypy 312
 
     # __iadd__ as an example of inplace binary ops
     ds += _int
