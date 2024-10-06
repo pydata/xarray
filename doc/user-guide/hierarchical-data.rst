@@ -799,7 +799,7 @@ We can also still perform all the same operations on the whole tree:
 Overriding Inherited Coordinates
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can override inherited coordinates with newly-defined ones, as long as those newly-defined coordinates also align with the parent nodes.
+We can override inherited coordinates with newly-defined ones, as long as those newly-defined coordinates also align with the parent nodes.
 
 EXAMPLE OF THIS? WOULD IT MAKE MORE SENSE TO USE DIFFERENT DATA TO DEMONSTRATE THIS?
 
