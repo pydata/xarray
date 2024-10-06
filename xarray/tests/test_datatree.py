@@ -1582,7 +1582,9 @@ class TestDSMethodInheritance:
         result = dt.isel(x=1)
         assert_equal(result, expected)
 
-    @pytest.mark.xfail(reason="reduce methods not implemented yet")
+
+class TestAggregations:
+
     def test_reduce_method(self):
         ds = xr.Dataset({"a": ("x", [False, True, False])})
         dt = DataTree.from_dict({"/": ds, "/results": ds})
@@ -1592,7 +1594,6 @@ class TestDSMethodInheritance:
         result = dt.any()
         assert_equal(result, expected)
 
-    @pytest.mark.xfail(reason="reduce methods not implemented yet")
     def test_nan_reduce_method(self):
         ds = xr.Dataset({"a": ("x", [1, 2, 3])})
         dt = DataTree.from_dict({"/": ds, "/results": ds})
@@ -1602,7 +1603,6 @@ class TestDSMethodInheritance:
         result = dt.mean()
         assert_equal(result, expected)
 
-    @pytest.mark.xfail(reason="cum methods not implemented yet")
     def test_cum_method(self):
         ds = xr.Dataset({"a": ("x", [1, 2, 3])})
         dt = DataTree.from_dict({"/": ds, "/results": ds})
@@ -1616,6 +1616,41 @@ class TestDSMethodInheritance:
 
         result = dt.cumsum()
         assert_equal(result, expected)
+
+    def test_dim_argument(self):
+        dt = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"A": ("x", [1, 2])}),
+                "/b": xr.Dataset({"B": ("y", [1, 2])}),
+            }
+        )
+
+        expected = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"A": 1.5}),
+                "/b": xr.Dataset({"B": 1.5}),
+            }
+        )
+        actual = dt.mean()
+        assert_equal(expected, actual)
+
+        actual = dt.mean(dim=...)
+        assert_equal(expected, actual)
+
+        expected = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"A": 1.5}),
+                "/b": xr.Dataset({"B": ("y", [1.0, 2.0])}),
+            }
+        )
+        actual = dt.mean("x")
+        assert_equal(expected, actual)
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Dimensions ('invalid',) not found in data dimensions"),
+        ):
+            dt.mean("invalid")
 
 
 class TestOps:

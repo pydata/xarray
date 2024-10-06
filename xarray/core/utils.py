@@ -830,6 +830,26 @@ def drop_dims_from_indexers(
         )
 
 
+def dim_arg_to_dims_set(dim: Dims, all_dims: Collection) -> set:
+    """Convert a `dim` argument from Dataset/DataTree into a set of dimensions."""
+
+    if dim is None or dim is ...:
+        dims = set(all_dims)
+    elif isinstance(dim, str) or not isinstance(dim, Iterable):
+        # TODO: consider dropping `not isinstance(dim, Iterable)`, which is not
+        # allowed per the type signature
+        dims = {dim}
+    else:
+        dims = set(dim)
+
+    missing_dimensions = tuple(d for d in dims if d not in all_dims)
+    if missing_dimensions:
+        raise ValueError(
+            f"Dimensions {missing_dimensions} not found in data dimensions {tuple(all_dims)}"
+        )
+    return dims
+
+
 @overload
 def parse_dims(
     dim: Dims,

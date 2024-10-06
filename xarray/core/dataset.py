@@ -109,6 +109,7 @@ from xarray.core.utils import (
     OrderedSet,
     _default,
     decode_numpy_dict_values,
+    dim_arg_to_dims_set,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
     emit_user_level_warning,
@@ -6986,18 +6987,7 @@ class Dataset(
                 " Please use 'dim' instead."
             )
 
-        if dim is None or dim is ...:
-            dims = set(self.dims)
-        elif isinstance(dim, str) or not isinstance(dim, Iterable):
-            dims = {dim}
-        else:
-            dims = set(dim)
-
-        missing_dimensions = tuple(d for d in dims if d not in self.dims)
-        if missing_dimensions:
-            raise ValueError(
-                f"Dimensions {missing_dimensions} not found in data dimensions {tuple(self.dims)}"
-            )
+        dims = dim_arg_to_dims_set(dim, self.dims)
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
