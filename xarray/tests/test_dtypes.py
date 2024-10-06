@@ -28,6 +28,7 @@ except ImportError:
         ([np.str_, np.int64], np.object_),
         ([np.str_, np.str_], np.str_),
         ([np.bytes_, np.str_], np.object_),
+        ([np.dtype("<U2"), np.str_], np.dtype("U")),
     ],
 )
 def test_result_type(args, expected) -> None:
