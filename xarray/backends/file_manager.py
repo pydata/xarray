@@ -157,11 +157,17 @@ class CachingFileManager(FileManager):
 
     def _make_key(self):
         """Make a key for caching files in the LRU cache."""
+        kwargs = self._kwargs
+        # storage_options is a non-hashable dict, so we implement special logic for hashing
+        if self._kwargs.get("storage_options", None) is not None:
+            kwargs = self._kwargs.copy()
+            kwargs["storage_options"] = tuple(sorted(kwargs["storage_options"].items()))
+
         value = (
             self._opener,
             self._args,
             "a" if self._mode == "w" else self._mode,
-            tuple(sorted(self._kwargs.items())),
+            tuple(sorted(kwargs.items())),
             self._manager_id,
         )
         return _HashedSequence(value)
