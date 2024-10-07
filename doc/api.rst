@@ -705,16 +705,16 @@ Pathlib-like Interface
    DataTree.parents
    DataTree.relative_to
 
-Missing:
+.. Missing:
 
-..
+.. ..
 
-   ``DataTree.glob``
-   ``DataTree.joinpath``
-   ``DataTree.with_name``
-   ``DataTree.walk``
-   ``DataTree.rename``
-   ``DataTree.replace``
+..    ``DataTree.glob``
+..    ``DataTree.joinpath``
+..    ``DataTree.with_name``
+..    ``DataTree.walk``
+..    ``DataTree.rename``
+..    ``DataTree.replace``
 
 DataTree Contents
 -----------------
@@ -962,10 +962,10 @@ DataTree methods
    DataTree.to_netcdf
    DataTree.to_zarr
 
-..
+.. ..
 
-   Missing:
-   ``open_mfdatatree``
+..    Missing:
+..    ``open_mfdatatree``
 
 Coordinates objects
 ===================
@@ -1477,10 +1477,10 @@ Advanced API
    backends.list_engines
    backends.refresh_engines
 
-..
+.. ..
 
-   Missing:
-   ``DataTree.set_close``
+..    Missing:
+..    ``DataTree.set_close``
 
 Default, pandas-backed indexes built-in Xarray:
 
