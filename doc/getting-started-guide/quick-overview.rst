@@ -314,23 +314,29 @@ And you can get a copy of just the node local values of :py:class:`~xarray.Datas
     ds_node_local = dt["simulation/coarse"].to_dataset(inherited=False)
     ds_node_local
 
-Operations map over subtrees, so we can take a mean over the ``x`` dimension of both the ``fine`` and ``coarse`` groups just by:
-
-.. ipython:: python
-
-    avg = dt["simulation"].mean(dim="x")
-    avg
-
-Here the ``"x"`` dimension used is always the one local to that subgroup.
-
-
-You can do almost everything you can do with :py:class:`~xarray.Dataset` objects with :py:class:`~xarray.DataTree` objects
-(including indexing and arithmetic), as operations will be mapped over every subgroup in the tree.
-This allows you to work with multiple groups of non-alignable variables at once.
-
 .. note::
 
-    If all of your variables are mutually alignable (i.e. they live on the same
+    We intend to eventually implement most :py:class:`~xarray.Dataset` methods
+    (indexing, aggregation, arithmetic, etc) on :py:class:`~xarray.DataTree`
+    objects, but many methods have not been implemented yet.
+
+.. Operations map over subtrees, so we can take a mean over the ``x`` dimension of both the ``fine`` and ``coarse`` groups just by:
+
+.. .. ipython:: python
+
+..     avg = dt["simulation"].mean(dim="x")
+..     avg
+
+.. Here the ``"x"`` dimension used is always the one local to that subgroup.
+
+
+.. You can do almost everything you can do with :py:class:`~xarray.Dataset` objects with :py:class:`~xarray.DataTree` objects
+.. (including indexing and arithmetic), as operations will be mapped over every subgroup in the tree.
+.. This allows you to work with multiple groups of non-alignable variables at once.
+
+.. tip::
+
+    If all of your variables are mutually alignable (i.e., they live on the same
     grid, such that every common dimension name maps to the same length), then
     you probably don't need :py:class:`xarray.DataTree`, and should consider
     just sticking with :py:class:`xarray.Dataset`.
