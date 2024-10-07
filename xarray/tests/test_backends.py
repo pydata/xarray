@@ -63,6 +63,7 @@ from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     has_dask,
+    has_h5netcdf_1_4_0_or_above,
     has_netCDF4,
     has_numpy_2,
     has_scipy,
@@ -72,10 +73,12 @@ from xarray.tests import (
     requires_dask,
     requires_fsspec,
     requires_h5netcdf,
+    requires_h5netcdf_1_4_0_or_above,
     requires_h5netcdf_ros3,
     requires_iris,
     requires_netCDF4,
     requires_netCDF4_1_6_2_or_above,
+    requires_netCDF4_1_7_0_or_above,
     requires_pydap,
     requires_scipy,
     requires_scipy_or_netCDF4,
@@ -1867,7 +1870,7 @@ class NetCDF4Base(NetCDFBase):
                     pass
 
     @requires_netCDF4
-    def test_encoding_enum__no_fill_value(self):
+    def test_encoding_enum__no_fill_value(self, recwarn):
         with create_tmp_file() as tmp_file:
             cloud_type_dict = {"clear": 0, "cloudy": 1}
             with nc4.Dataset(tmp_file, mode="w") as nc:
@@ -1882,15 +1885,31 @@ class NetCDF4Base(NetCDFBase):
                 v[:] = 1
             with open_dataset(tmp_file) as original:
                 save_kwargs = {}
+                # We don't expect any errors.
+                # This is effectively a void context manager
+                expected_warnings = 0
                 if self.engine == "h5netcdf":
-                    save_kwargs["invalid_netcdf"] = True
+                    if not has_h5netcdf_1_4_0_or_above:
+                        save_kwargs["invalid_netcdf"] = True
+                        expected_warnings = 1
+                        expected_msg = "You are writing invalid netcdf features to file"
+                    else:
+                        expected_warnings = 1
+                        expected_msg = "Creating variable with default fill_value 0 which IS defined in enum type"
+
                 with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
+                    assert len(recwarn) == expected_warnings
+                    if expected_warnings:
+                        assert issubclass(recwarn[0].category, UserWarning)
+                        assert str(recwarn[0].message).startswith(expected_msg)
                     assert_equal(original, actual)
                     assert (
                         actual.clouds.encoding["dtype"].metadata["enum"]
                         == cloud_type_dict
                     )
-                    if self.engine != "h5netcdf":
+                    if not (
+                        self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above
+                    ):
                         # not implemented in h5netcdf yet
                         assert (
                             actual.clouds.encoding["dtype"].metadata["enum_name"]
@@ -1918,7 +1937,7 @@ class NetCDF4Base(NetCDFBase):
                 )
             with open_dataset(tmp_file) as original:
                 save_kwargs = {}
-                if self.engine == "h5netcdf":
+                if self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above:
                     save_kwargs["invalid_netcdf"] = True
                 with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
                     assert_equal(original, actual)
@@ -1933,7 +1952,9 @@ class NetCDF4Base(NetCDFBase):
                         actual.clouds.encoding["dtype"].metadata["enum"]
                         == cloud_type_dict
                     )
-                    if self.engine != "h5netcdf":
+                    if not (
+                        self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above
+                    ):
                         # not implemented in h5netcdf yet
                         assert (
                             actual.clouds.encoding["dtype"].metadata["enum_name"]
@@ -1974,7 +1995,7 @@ class NetCDF4Base(NetCDFBase):
                     "u1",
                     metadata={"enum": modified_enum, "enum_name": "cloud_type"},
                 )
-                if self.engine != "h5netcdf":
+                if not (self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above):
                     # not implemented yet in h5netcdf
                     with pytest.raises(
                         ValueError,
@@ -2117,6 +2138,16 @@ class TestNetCDF4Data(NetCDF4Base):
     @pytest.mark.skip(reason="https://github.com/Unidata/netcdf4-python/issues/1195")
     def test_refresh_from_disk(self) -> None:
         super().test_refresh_from_disk()
+
+    @requires_netCDF4_1_7_0_or_above
+    def test_roundtrip_complex(self):
+        expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
+        skwargs = dict(auto_complex=True)
+        okwargs = dict(auto_complex=True)
+        with self.roundtrip(
+            expected, save_kwargs=skwargs, open_kwargs=okwargs
+        ) as actual:
+            assert_equal(expected, actual)
 
 
 @requires_netCDF4
@@ -3809,6 +3840,9 @@ class TestH5NetCDFData(NetCDF4Base):
         with create_tmp_file() as tmp_file:
             yield backends.H5NetCDFStore.open(tmp_file, "w")
 
+    @pytest.mark.skipif(
+        has_h5netcdf_1_4_0_or_above, reason="only valid for h5netcdf < 1.4.0"
+    )
     def test_complex(self) -> None:
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
         save_kwargs = {"invalid_netcdf": True}
@@ -3816,6 +3850,9 @@ class TestH5NetCDFData(NetCDF4Base):
             with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
                 assert_equal(expected, actual)
 
+    @pytest.mark.skipif(
+        has_h5netcdf_1_4_0_or_above, reason="only valid for h5netcdf < 1.4.0"
+    )
     @pytest.mark.parametrize("invalid_netcdf", [None, False])
     def test_complex_error(self, invalid_netcdf) -> None:
         import h5netcdf
@@ -3990,6 +4027,12 @@ class TestH5NetCDFData(NetCDF4Base):
     def test_byte_attrs(self, byte_attrs_dataset: dict[str, Any]) -> None:
         with pytest.raises(ValueError, match=byte_attrs_dataset["h5netcdf_error"]):
             super().test_byte_attrs(byte_attrs_dataset)
+
+    @requires_h5netcdf_1_4_0_or_above
+    def test_roundtrip_complex(self):
+        expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
+        with self.roundtrip(expected) as actual:
+            assert_equal(expected, actual)
 
 
 @requires_h5netcdf
