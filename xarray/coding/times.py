@@ -244,6 +244,25 @@ def _decode_datetime_with_cftime(
         return np.array([], dtype=object)
 
 
+def _check_date_for_units_since_refdate(
+    date, unit: str, ref_date: pd.Timestamp
+) -> None:
+    delta = date * np.timedelta64(1, unit)
+    if not np.isnan(delta):
+        # this will raise on dtype overflow for integer dtypes
+        if date.dtype.kind == "iu" and not np.int64(delta) == date:
+            raise OutOfBoundsTimedelta(
+                "DType overflow in Datetime/Timedelta calculation."
+            )
+        # this will raise on overflow
+        ref_date_unit = np.datetime_data(ref_date.asm8)[0]
+        (
+            (ref_date + delta).as_unit(ref_date_unit)
+            if hasattr(ref_date, "as_unit")
+            else (ref_date + delta)._as_unit(ref_date_unit)
+        )
+
+
 def _decode_datetime_with_pandas(
     flat_num_dates: np.ndarray, units: str, calendar: str
 ) -> np.ndarray:
@@ -309,31 +328,12 @@ def _decode_datetime_with_pandas(
         warnings.filterwarnings("ignore", "invalid value encountered", RuntimeWarning)
         if flat_num_dates.size > 0:
             # avoid size 0 datetimes GH1329
-            fnd_min, fnd_max = flat_num_dates.min(), flat_num_dates.max()
-            min_delta = fnd_min * np.timedelta64(1, time_units)
-            max_delta = fnd_max * np.timedelta64(1, time_units)
-            if not np.isnan(min_delta):
-                # todo: add meaningful error messages
-                # this will raise on overflow
-                (
-                    (ref_date + min_delta).as_unit(dunit)
-                    if hasattr(ref_date, "unit")
-                    else (ref_date + min_delta)._as_unit(dunit)
-                )
-                # this will raise on dtype oveflow
-                if not np.int64(min_delta) == fnd_min:
-                    raise OutOfBoundsTimedelta
-            if not np.isnan(max_delta):
-                # todo: add meaningful error message
-                # this will raise on overflow
-                (
-                    (ref_date + max_delta).as_unit(dunit)
-                    if hasattr(ref_date, "unit")
-                    else (ref_date + max_delta)._as_unit(dunit)
-                )
-                # this will raise on dtype oveflow
-                if not np.int64(max_delta) == fnd_max:
-                    raise OutOfBoundsTimedelta
+            _check_date_for_units_since_refdate(
+                flat_num_dates.min(), time_units, ref_date
+            )
+            _check_date_for_units_since_refdate(
+                flat_num_dates.max(), time_units, ref_date
+            )
 
     # To avoid integer overflow when converting to nanosecond units for integer
     # dtypes smaller than np.int64 cast all integer and unsigned integer dtype
