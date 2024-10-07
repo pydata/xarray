@@ -827,30 +827,30 @@ Compare one ``DataTree`` object to another.
 ..    DataTree.polyfit
 ..    DataTree.curvefit
 
-.. Aggregation
-.. -----------
+Aggregation
+-----------
 
-.. Aggregate data in all nodes in the subtree simultaneously.
+Aggregate data in all nodes in the subtree simultaneously.
 
-.. .. autosummary::
-..    :toctree: generated/
+.. autosummary::
+   :toctree: generated/
 
-..    DataTree.all
-..    DataTree.any
-..    DataTree.argmax
-..    DataTree.argmin
-..    DataTree.idxmax
-..    DataTree.idxmin
-..    DataTree.max
-..    DataTree.min
-..    DataTree.mean
-..    DataTree.median
-..    DataTree.prod
-..    DataTree.sum
-..    DataTree.std
-..    DataTree.var
-..    DataTree.cumsum
-..    DataTree.cumprod
+   DataTree.all
+   DataTree.any
+   DataTree.argmax
+   DataTree.argmin
+   DataTree.idxmax
+   DataTree.idxmin
+   DataTree.max
+   DataTree.min
+   DataTree.mean
+   DataTree.median
+   DataTree.prod
+   DataTree.sum
+   DataTree.std
+   DataTree.var
+   DataTree.cumsum
+   DataTree.cumprod
 
 .. ndarray methods
 .. ---------------
