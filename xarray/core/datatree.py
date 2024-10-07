@@ -1095,7 +1095,7 @@ class DataTree(
         d: Mapping[str, Dataset | DataTree | None],
         /,
         name: str | None = None,
-    ) -> DataTree:
+    ) -> Self:
         """
         Create a datatree from a dictionary of data objects, organised by paths into the tree.
 
@@ -1646,4 +1646,4 @@ class DataTree(
                 **kwargs,
             )
             result[node.path] = node_result
-        return type(self).from_dict(result, name=self.name)  # type: ignore
+        return type(self).from_dict(result, name=self.name)
