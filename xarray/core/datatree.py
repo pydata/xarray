@@ -1094,7 +1094,7 @@ class DataTree(
         d: Mapping[str, Dataset | DataTree | None],
         /,
         name: str | None = None,
-    ) -> DataTree:
+    ) -> Self:
         """
         Create a datatree from a dictionary of data objects, organised by paths into the tree.
 
@@ -1617,7 +1617,7 @@ class DataTree(
 
     def _selective_indexing(
         self,
-        func: Callable[[Dataset, Mapping[Any, Any]]],
+        func: Callable[[Dataset, Mapping[Any, Any]], Dataset],
         indexers: Mapping[Any, Any],
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Self:
@@ -1631,10 +1631,10 @@ class DataTree(
             node_indexers = {k: v for k, v in indexers.items() if k in node.dims}
             node_result = func(node.dataset, node_indexers)
             for k in node_indexers:
-                if k not in node.coords and k in node_result.coords:
+                if k not in node._node_coord_variables and k in node_result.coords:
                     del node_result.coords[k]
             result[node.path] = node_result
-        return type(self).from_dict(result, name=self.name)  # type: ignore
+        return type(self).from_dict(result, name=self.name)
 
     def isel(
         self,
