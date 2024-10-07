@@ -837,10 +837,6 @@ Aggregate data in all nodes in the subtree simultaneously.
 
    DataTree.all
    DataTree.any
-   DataTree.argmax
-   DataTree.argmin
-   DataTree.idxmax
-   DataTree.idxmin
    DataTree.max
    DataTree.min
    DataTree.mean
