@@ -1621,6 +1621,10 @@ class DataTree(
         indexers: Mapping[Any, Any],
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Self:
+        """Apply an indexing operation over the subtree, handling missing
+        dimensions and inherited coordinates gracefully by only applying
+        indexing at each node selectively.
+        """
         all_dims = set()
         for node in self.subtree:
             all_dims.update(node._node_dims)
@@ -1630,8 +1634,18 @@ class DataTree(
         for node in self.subtree:
             node_indexers = {k: v for k, v in indexers.items() if k in node.dims}
             node_result = func(node.dataset, node_indexers)
+            # Indexing datasets corresponding to each node results in redundant
+            # coordinates when indexes from a parent node are inherited.
+            # Ideally, we would avoid creating such coordinates in the first
+            # place, but that would require implementing indexing operations at
+            # the Variable instead of the Dataset level.
             for k in node_indexers:
                 if k not in node._node_coord_variables and k in node_result.coords:
+                    # We remove all inherited coordinates. Coordinates
+                    # corresponding to an index would be de-duplicated by
+                    # _deduplicate_inherited_coordinates(), but indexing (e.g.,
+                    # with a scalar) can also create scalar coordinates, which
+                    # need to be explicitly removed.
                     del node_result.coords[k]
             result[node.path] = node_result
         return type(self).from_dict(result, name=self.name)
@@ -1769,7 +1783,8 @@ class DataTree(
 
         def apply_indexers(dataset, node_indexers):
             # TODO: reimplement in terms of map_index_queries(), to avoid
-            # redundant index look-ups on child nodes
+            # redundant look-ups of integer positions from labels (via indexes)
+            # on child nodes.
             return dataset.sel(
                 node_indexers, method=method, tolerance=tolerance, drop=drop
             )
