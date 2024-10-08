@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from textwrap import dedent
 from typing import cast
 
 import pytest
 
 from xarray.core.iterators import LevelOrderIter
-from xarray.core.treenode import InvalidTreeError, NamedNode, NodePath, TreeNode
+from xarray.core.treenode import (
+    Children,
+    InvalidTreeError,
+    NamedNode,
+    NodePath,
+    TreeNode,
+)
 
 
 class TestFamilyTree:
@@ -254,6 +261,74 @@ class TestSetNodes:
         john._set_item("Mary", marys_evil_twin, allow_overwrite=True)
         assert john.children["Mary"] is marys_evil_twin
         assert marys_evil_twin.parent is john
+
+
+class TestChildren:
+    def test_properties(self):
+        sue: TreeNode = TreeNode()
+        mary: TreeNode = TreeNode(children={"Sue": sue})
+        kate: TreeNode = TreeNode()
+        john = TreeNode(children={"Mary": mary, "Kate": kate})
+
+        children = john.children
+        assert isinstance(children, Children)
+
+        # len
+        assert len(children) == 2
+
+        # iter
+        assert list(children) == ["Mary", "Kate"]
+
+        assert john.children["Mary"] is mary
+        assert john.children["Kate"] is kate
+
+        assert "Mary" in john.children
+        assert "Kate" in john.children
+        assert 0 not in john.children
+        assert "foo" not in john.children
+
+        # only immediate children should be accessible
+        assert "sue" not in john.children
+
+        with pytest.raises(KeyError):
+            children["foo"]
+        with pytest.raises(KeyError):
+            children[0]
+
+        # repr
+        expected = dedent(
+            """\
+        Children:
+            Mary
+            Kate"""
+        )
+        actual = repr(children)
+        assert expected == actual
+
+    def test_modify(self):
+        sue: TreeNode = TreeNode()
+        mary: TreeNode = TreeNode(children={"Sue": sue})
+        kate: TreeNode = TreeNode()
+        john = TreeNode(children={"Mary": mary, "Kate": kate})
+
+        children = john.children
+
+        # test assignment
+        ashley: TreeNode = TreeNode()
+        children["Ashley"] = ashley
+        assert john.children["Ashley"] is ashley
+
+        # test deletion
+        del children["Ashley"]
+        assert "Ashley" not in john.children
+
+        # test constructor
+        john2 = TreeNode(children=children)
+        assert john2.children == children
+
+    def test_modify_below_root(self):
+        # TODO test that modifying .children doesn't affect grandparent
+        ...
 
 
 class TestPruning:
