@@ -9059,10 +9059,10 @@ class Dataset(
 
         try:
             x = x.values.astype(np.float64)
-        except TypeError:
+        except TypeError as e:
             raise TypeError(
                 f"Dim {dim!r} must be castable to float64, got {type(x).__name__}."
-            )
+            ) from e
 
         xname = f"{self[dim].name}_"
         order = int(deg) + 1
