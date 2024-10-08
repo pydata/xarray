@@ -88,6 +88,7 @@ extensions = [
     "sphinxext.rediraffe",
     "sphinx_design",
     "sphinx_inline_tabs",
+    "sphinx_remove_toctrees",
 ]
 
 
@@ -160,6 +161,7 @@ napoleon_type_aliases = {
     "DataArray": "~xarray.DataArray",
     "Dataset": "~xarray.Dataset",
     "Variable": "~xarray.Variable",
+    "DataTree": "~xarray.DataTree",
     "DatasetGroupBy": "~xarray.core.groupby.DatasetGroupBy",
     "DataArrayGroupBy": "~xarray.core.groupby.DataArrayGroupBy",
     "Grouper": "~xarray.groupers.Grouper",
@@ -197,6 +199,8 @@ templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
 
 # The master toctree document.
 master_doc = "index"
+
+remove_from_toctrees = ["generated/*"]
 
 # General information about the project.
 project = "xarray"
@@ -244,6 +248,7 @@ html_theme_options = dict(
     repository_url="https://github.com/pydata/xarray",
     repository_branch="main",
     navigation_with_keys=False,  # pydata/pydata-sphinx-theme#1492
+    navigation_depth=4,
     path_to_docs="doc",
     use_edit_page_button=True,
     use_repository_button=True,
@@ -254,7 +259,7 @@ html_theme_options = dict(
     Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
     twitter_url="https://twitter.com/xarray_dev",
     icon_links=[],  # workaround for pydata/pydata-sphinx-theme#1220
-    announcement="<a href='https://forms.gle/KEq7WviCdz9xTaJX6'>Xarray's 2024 User Survey is live now. Please take ~5 minutes to fill it out and help us improve Xarray.</a>",
+    # announcement="<a href='https://forms.gle/KEq7WviCdz9xTaJX6'>Xarray's 2024 User Survey is live now. Please take ~5 minutes to fill it out and help us improve Xarray.</a>",
 )
 
 
@@ -331,7 +336,6 @@ intersphinx_mapping = {
     "cftime": ("https://unidata.github.io/cftime", None),
     "cubed": ("https://cubed-dev.github.io/cubed/", None),
     "dask": ("https://docs.dask.org/en/latest", None),
-    "datatree": ("https://xarray-datatree.readthedocs.io/en/latest/", None),
     "flox": ("https://flox.readthedocs.io/en/latest/", None),
     "hypothesis": ("https://hypothesis.readthedocs.io/en/latest/", None),
     "iris": ("https://scitools-iris.readthedocs.io/en/latest", None),

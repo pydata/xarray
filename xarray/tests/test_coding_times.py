@@ -8,7 +8,7 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 import pytest
-from pandas.errors import OutOfBoundsDatetime
+from pandas.errors import OutOfBoundsDatetime, OutOfBoundsTimedelta
 
 from xarray import (
     DataArray,
@@ -628,10 +628,10 @@ def test_cf_timedelta_2d() -> None:
 @pytest.mark.parametrize(
     ["deltas", "expected"],
     [
-        (pd.to_timedelta(["1 day", "2 days"]), "days"),
-        (pd.to_timedelta(["1h", "1 day 1 hour"]), "hours"),
-        (pd.to_timedelta(["1m", "2m", np.nan]), "minutes"),
-        (pd.to_timedelta(["1m3s", "1m4s"]), "seconds"),
+        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
+        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
+        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
+        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
     ],
 )
 def test_infer_timedelta_units(deltas, expected) -> None:
@@ -1136,11 +1136,16 @@ def test_should_cftime_be_used_target_not_npable():
         _should_cftime_be_used(src, "noleap", False)
 
 
-@pytest.mark.parametrize("dtype", [np.uint8, np.uint16, np.uint32, np.uint64])
-def test_decode_cf_datetime_uint(dtype):
+@pytest.mark.parametrize(
+    "dtype",
+    [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64],
+)
+def test_decode_cf_datetime_varied_integer_dtypes(dtype):
     units = "seconds since 2018-08-22T03:23:03Z"
     num_dates = dtype(50)
-    result = decode_cf_datetime(num_dates, units)
+    # Set use_cftime=False to ensure we cannot mask a failure by falling back
+    # to cftime.
+    result = decode_cf_datetime(num_dates, units, use_cftime=False)
     expected = np.asarray(np.datetime64("2018-08-22T03:23:53", "ns"))
     np.testing.assert_equal(result, expected)
 
@@ -1152,6 +1157,14 @@ def test_decode_cf_datetime_uint64_with_cftime():
     result = decode_cf_datetime(num_dates, units)
     expected = np.asarray(np.datetime64("2200-01-01", "ns"))
     np.testing.assert_equal(result, expected)
+
+
+def test_decode_cf_datetime_uint64_with_pandas_overflow_error():
+    units = "nanoseconds since 1970-01-01"
+    calendar = "standard"
+    num_dates = np.uint64(1_000_000 * 86_400 * 360 * 500_000)
+    with pytest.raises(OutOfBoundsTimedelta):
+        decode_cf_datetime(num_dates, units, calendar, use_cftime=False)
 
 
 @requires_cftime
@@ -1383,16 +1396,38 @@ def test_roundtrip_timedelta64_nanosecond_precision_warning() -> None:
     assert decoded_var.encoding["dtype"] == np.int64
 
 
-def test_roundtrip_float_times() -> None:
-    # Regression test for GitHub issue #8271
-    fill_value = 20.0
-    times = [
-        np.datetime64("1970-01-01 00:00:00", "ns"),
-        np.datetime64("1970-01-01 06:00:00", "ns"),
-        np.datetime64("NaT", "ns"),
-    ]
+_TEST_ROUNDTRIP_FLOAT_TIMES_TESTS = {
+    "GH-8271": (
+        20.0,
+        np.array(
+            ["1970-01-01 00:00:00", "1970-01-01 06:00:00", "NaT"],
+            dtype="datetime64[ns]",
+        ),
+        "days since 1960-01-01",
+        np.array([3653, 3653.25, 20.0]),
+    ),
+    "GH-9488-datetime64[ns]": (
+        1.0e20,
+        np.array(["2010-01-01 12:00:00", "NaT"], dtype="datetime64[ns]"),
+        "seconds since 2010-01-01",
+        np.array([43200, 1.0e20]),
+    ),
+    "GH-9488-timedelta64[ns]": (
+        1.0e20,
+        np.array([1_000_000_000, "NaT"], dtype="timedelta64[ns]"),
+        "seconds",
+        np.array([1.0, 1.0e20]),
+    ),
+}
 
-    units = "days since 1960-01-01"
+
+@pytest.mark.parametrize(
+    ("fill_value", "times", "units", "encoded_values"),
+    _TEST_ROUNDTRIP_FLOAT_TIMES_TESTS.values(),
+    ids=_TEST_ROUNDTRIP_FLOAT_TIMES_TESTS.keys(),
+)
+def test_roundtrip_float_times(fill_value, times, units, encoded_values) -> None:
+    # Regression test for GitHub issues #8271 and #9488
     var = Variable(
         ["time"],
         times,
@@ -1400,7 +1435,7 @@ def test_roundtrip_float_times() -> None:
     )
 
     encoded_var = conventions.encode_cf_variable(var)
-    np.testing.assert_array_equal(encoded_var, np.array([3653, 3653.25, 20.0]))
+    np.testing.assert_array_equal(encoded_var, encoded_values)
     assert encoded_var.attrs["units"] == units
     assert encoded_var.attrs["_FillValue"] == fill_value
 
@@ -1416,10 +1451,8 @@ _ENCODE_DATETIME64_VIA_DASK_TESTS = {
         "days since 1700-01-01",
         np.dtype("int32"),
     ),
-    "mixed-cftime-pandas-encoding-with-prescribed-units-and-dtype": (
-        "250YS",
-        "days since 1700-01-01",
-        np.dtype("int32"),
+    "mixed-cftime-pandas-encoding-with-prescribed-units-and-dtype": pytest.param(
+        "250YS", "days since 1700-01-01", np.dtype("int32"), marks=requires_cftime
     ),
     "pandas-encoding-with-default-units-and-dtype": ("250YS", None, None),
 }

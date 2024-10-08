@@ -439,8 +439,8 @@ class CFTimeIndex(pd.Index):
         parsed, resolution = _parse_iso8601_with_reso(self.date_type, key)
         try:
             loc = self._partial_date_slice(resolution, parsed)
-        except KeyError:
-            raise KeyError(key)
+        except KeyError as err:
+            raise KeyError(key) from err
         return loc
 
     def _get_nearest_indexer(self, target, limit, tolerance):
@@ -593,21 +593,21 @@ class CFTimeIndex(pd.Index):
         if _contains_cftime_datetimes(np.array(other)):
             try:
                 return pd.TimedeltaIndex(np.array(self) - np.array(other))
-            except OUT_OF_BOUNDS_TIMEDELTA_ERRORS:
+            except OUT_OF_BOUNDS_TIMEDELTA_ERRORS as err:
                 raise ValueError(
                     "The time difference exceeds the range of values "
                     "that can be expressed at the nanosecond resolution."
-                )
+                ) from err
         return NotImplemented
 
     def __rsub__(self, other):
         try:
             return pd.TimedeltaIndex(other - np.array(self))
-        except OUT_OF_BOUNDS_TIMEDELTA_ERRORS:
+        except OUT_OF_BOUNDS_TIMEDELTA_ERRORS as err:
             raise ValueError(
                 "The time difference exceeds the range of values "
                 "that can be expressed at the nanosecond resolution."
-            )
+            ) from err
 
     def to_datetimeindex(self, unsafe=False):
         """If possible, convert this index to a pandas.DatetimeIndex.
@@ -800,6 +800,11 @@ class CFTimeIndex(pd.Index):
         CFTimeIndex
         """
         return self._round_via_method(freq, _round_to_nearest_half_even)
+
+    @property
+    def is_leap_year(self):
+        func = np.vectorize(cftime.is_leap_year)
+        return func(self.year, calendar=self.calendar)
 
 
 def _parse_iso8601_without_reso(date_type, datetime_str):
