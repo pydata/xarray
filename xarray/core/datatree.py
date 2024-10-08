@@ -154,12 +154,6 @@ def check_alignment(
 def _deduplicate_inherited_coordinates(child: DataTree, parent: DataTree) -> None:
     # This method removes repeated indexes (and corresponding coordinates)
     # that are repeated between a DataTree and its parents.
-    #
-    # TODO(shoyer): Decide how to handle repeated coordinates *without* an
-    # index. Should these be allowed, in which case we probably want to
-    # exclude them from inheritance, or should they be automatically
-    # dropped?
-    # https://github.com/pydata/xarray/issues/9475#issuecomment-2357004264
     removed_something = False
     for name in parent._indexes:
         if name in child._node_indexes:
