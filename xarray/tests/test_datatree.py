@@ -1619,6 +1619,15 @@ class TestIndexing:
         actual = tree.isel(x=-1, drop=True)
         assert_equal(actual, expected)
 
+        expected = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1]}),
+                "/child": xr.Dataset({"foo": ("x", [3])}),
+            }
+        )
+        actual = tree.isel(x=[0])
+        assert_equal(actual, expected)
+
         actual = tree.isel(x=slice(None))
         assert_equal(actual, tree)
 
