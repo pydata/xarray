@@ -1369,6 +1369,51 @@ class DataTree(
         }
         return DataTree.from_dict(matching_nodes, name=self.root.name)
 
+    def match_names(self, names: Iterable[str]) -> DataTree:
+        """
+        Filter nodes by name.
+
+        Parameters
+        ----------
+        names: Iterable[str]
+            The list of node names to retain.
+
+        Returns
+        -------
+        DataTree
+
+        See Also
+        --------
+        match
+        filter
+        pipe
+        map_over_subtree
+
+        Examples
+        --------
+        >>> dt = DataTree.from_dict(
+        ...     {
+        ...         "/a/A": None,
+        ...         "/a/B": None,
+        ...         "/a/C": None,
+        ...         "/C/D": None,
+        ...         "/E/F": None,
+        ...     }
+        ... )
+        >>> dt.match_names(["A", "C"])
+        <xarray.DataTree>
+        Group: /
+        ├── Group: /C
+        └── Group: /a
+            ├── Group: /a/A
+            └── Group: /a/C
+        """
+        names = set(names)
+        matching_nodes = {
+            node.path: node.ds for node in self.subtree if node.name in names
+        }
+        return DataTree.from_dict(matching_nodes, name=self.root.name)
+
     def map_over_subtree(
         self,
         func: Callable,
