@@ -3630,6 +3630,21 @@ def test_zarr_storage_options() -> None:
     assert_identical(ds, ds_a)
 
 
+@requires_zarr
+def test_zarr_version_deprecated() -> None:
+    ds = create_test_data()
+    store = KVStore({})
+
+    with pytest.warns(FutureWarning, match="zarr_version"):
+        ds.to_zarr(store, zarr_version=2)
+
+    with pytest.warns(FutureWarning, match="zarr_version"):
+        xr.open_zarr(store, zarr_version=2)
+
+    with pytest.raises(ValueError, match="zarr_format"):
+        xr.open_zarr(store, zarr_version=2, zarr_format=3)
+
+
 @requires_scipy
 class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only):
     engine: T_NetcdfEngine = "scipy"

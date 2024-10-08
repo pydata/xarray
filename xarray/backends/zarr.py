@@ -511,6 +511,7 @@ class ZarrStore(AbstractWritableDataStore):
         safe_chunks=True,
         stacklevel=2,
         zarr_version=None,
+        zarr_format=None,
         write_empty: bool | None = None,
     ):
 
@@ -525,6 +526,7 @@ class ZarrStore(AbstractWritableDataStore):
             storage_options=storage_options,
             stacklevel=stacklevel,
             zarr_version=zarr_version,
+            zarr_format=zarr_format,
         )
         group_paths = [node for node in _iter_zarr_groups(zarr_group, parent=group)]
         return {
@@ -557,6 +559,7 @@ class ZarrStore(AbstractWritableDataStore):
         safe_chunks=True,
         stacklevel=2,
         zarr_version=None,
+        zarr_format=None,
         write_empty: bool | None = None,
     ):
 
@@ -571,6 +574,7 @@ class ZarrStore(AbstractWritableDataStore):
             storage_options=storage_options,
             stacklevel=stacklevel,
             zarr_version=zarr_version,
+            zarr_format=zarr_format,
         )
 
         return cls(
@@ -1082,6 +1086,7 @@ def open_zarr(
     decode_timedelta=None,
     use_cftime=None,
     zarr_version=None,
+    zarr_format=None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     **kwargs,
@@ -1171,9 +1176,15 @@ def open_zarr(
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
     zarr_version : int or None, optional
-        The desired zarr spec version to target (currently 2 or 3). The default
+
+        .. deprecated:: 2024.9.1
+           Use ``zarr_format`` instead.
+
+    zarr_format : int or None, optional
+        The desired zarr format to target (currently 2 or 3). The default
         of None will attempt to determine the zarr version from ``store`` when
-        possible, otherwise defaulting to 2.
+        possible, otherwise defaulting to the default version used by
+        the zarr-python library installed.
     chunked_array_type: str, optional
         Which chunked array type to coerce this datasets' arrays to.
         Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
@@ -1226,6 +1237,7 @@ def open_zarr(
         "storage_options": storage_options,
         "stacklevel": 4,
         "zarr_version": zarr_version,
+        "zarr_format": zarr_format,
     }
 
     ds = open_dataset(
@@ -1293,6 +1305,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         stacklevel=3,
         zarr_version=None,
+        zarr_format=None,
         store=None,
         engine=None,
     ) -> Dataset:
@@ -1309,6 +1322,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 storage_options=storage_options,
                 stacklevel=stacklevel + 1,
                 zarr_version=zarr_version,
+                zarr_format=zarr_format,
             )
 
         store_entrypoint = StoreBackendEntrypoint()
@@ -1344,6 +1358,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         stacklevel=3,
         zarr_version=None,
+        # TODO: zarr_format
         **kwargs,
     ) -> DataTree:
         from xarray.core.datatree import DataTree
@@ -1459,6 +1474,7 @@ def _get_open_params(
     storage_options,
     stacklevel,
     zarr_version,
+    zarr_format,
 ):
     import zarr
 
@@ -1474,10 +1490,14 @@ def _get_open_params(
     )
     open_kwargs["storage_options"] = storage_options
 
+    zarr_format = _handle_zarr_version_or_format(
+        zarr_version=zarr_version, zarr_format=zarr_format
+    )
+
     if _zarr_v3():
-        open_kwargs["zarr_format"] = zarr_version
+        open_kwargs["zarr_format"] = zarr_format
     else:
-        open_kwargs["zarr_version"] = zarr_version
+        open_kwargs["zarr_version"] = zarr_format
 
     if chunk_store is not None:
         open_kwargs["chunk_store"] = chunk_store
@@ -1522,6 +1542,26 @@ def _get_open_params(
         zarr_group = zarr.open_group(store, **open_kwargs)
     close_store_on_close = zarr_group.store is not store
     return zarr_group, consolidate_on_close, close_store_on_close
+
+
+def _handle_zarr_version_or_format(
+    *, zarr_version: ZarrFormat | None, zarr_format: ZarrFormat | None
+) -> ZarrFormat | None:
+    """handle the deprecated zarr_version kwarg and return zarr_format"""
+    if (
+        zarr_format is not None
+        and zarr_version is not None
+        and zarr_format != zarr_version
+    ):
+        raise ValueError(
+            f"zarr_format {zarr_format} does not match zarr_version {zarr_version}, please only set one"
+        )
+    if zarr_version is not None:
+        warnings.warn(
+            "zarr_version is deprecated, use zarr_format", FutureWarning, stacklevel=6
+        )
+        return zarr_version
+    return zarr_format
 
 
 BACKEND_ENTRYPOINTS["zarr"] = ("zarr", ZarrBackendEntrypoint)
