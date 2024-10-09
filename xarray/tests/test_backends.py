@@ -3164,38 +3164,6 @@ class ZarrBase(CFEncodedBase):
                 assert original[name].chunks == actual_var.chunks
             assert original.chunks == actual.chunks
 
-    def test_write_store(self) -> None:
-        skip_if_zarr_format_3(reason="unsupported dtypes")
-        return super().test_write_store()
-
-    def test_roundtrip_endian(self) -> None:
-        skip_if_zarr_format_3(reason="unsupported dtypes")
-        return super().test_roundtrip_endian()
-
-    def test_roundtrip_bytes_with_fill_value(self) -> None:
-        skip_if_zarr_format_3(reason="unsupported dtypes")
-        return super().test_roundtrip_bytes_with_fill_value()
-
-    def test_default_fill_value(self) -> None:
-        skip_if_zarr_format_3(reason="fill_value always written")
-        return super().test_default_fill_value()
-
-    def test_explicitly_omit_fill_value(self) -> None:
-        skip_if_zarr_format_3(reason="fill_value always written")
-        return super().test_explicitly_omit_fill_value()
-
-    def test_explicitly_omit_fill_value_via_encoding_kwarg(self) -> None:
-        skip_if_zarr_format_3(reason="fill_value always written")
-        return super().test_explicitly_omit_fill_value_via_encoding_kwarg()
-
-    def test_explicitly_omit_fill_value_in_coord(self) -> None:
-        skip_if_zarr_format_3(reason="fill_value always written")
-        return super().test_explicitly_omit_fill_value_in_coord()
-
-    def test_explicitly_omit_fill_value_in_coord_via_encoding_kwarg(self) -> None:
-        skip_if_zarr_format_3(reason="fill_value always written")
-        return super().test_explicitly_omit_fill_value_in_coord_via_encoding_kwarg()
-
 
 @requires_zarr
 @pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
