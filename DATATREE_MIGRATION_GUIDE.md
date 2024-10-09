@@ -3,7 +3,7 @@
 This guide is for previous users of the prototype `datatree.DataTree` in the `xarray-contrib/datatree repository`. That repository has now been archived, and will not be maintained. This guide is intended to help smooth your transition to using the new, updated `xarray.DataTree`.
 
 .. important
-   
+
    There are breaking changes! You should not expect that code written with `xarray-contrib/datatree` will work without modifications.
    At the absolute minimum you will need to change the top-level import statement, but there are other changes too.
 
