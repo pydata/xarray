@@ -1333,6 +1333,8 @@ class CFEncodedBase(DatasetIOBase):
         with self.roundtrip(ds) as actual:
             assert "_FillValue" not in actual.x.encoding
 
+    # TODO: decide if this test is really necessary
+    # _FillValue is not a valid encoding for Zarr
     def test_explicitly_omit_fill_value_via_encoding_kwarg(self) -> None:
         ds = Dataset({"x": ("y", [np.pi, -np.pi])})
         kwargs = dict(encoding={"x": {"_FillValue": None}})

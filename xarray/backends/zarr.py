@@ -445,6 +445,7 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     # zarr allows unicode, but not variable-length strings, so it's both
     # simpler and more compact to always encode as UTF-8 explicitly.
     # TODO: allow toggling this explicitly via dtype in encoding.
+    # TODO: revisit this now that Zarr _does_ allow variable-length strings
     coder = coding.strings.EncodedStringCoder(allows_unicode=True)
     var = coder.encode(var, name=name)
     var = coding.strings.ensure_fixed_length_bytes(var)
@@ -936,15 +937,22 @@ class ZarrStore(AbstractWritableDataStore):
 
             if self._use_zarr_fill_value_as_mask:
                 fill_value = attrs.pop("_FillValue", None)
-                if v.encoding == {"_FillValue": None} and fill_value is None:
-                    v.encoding = {}
             else:
                 fill_value = None
                 if "_FillValue" in attrs:
                     # replace with encoded fill value
-                    attrs["_FillValue"] = FillValueCoder.encode(
-                        attrs["_FillValue"], dtype
-                    )
+                    fv = attrs.pop("_FillValue")
+                    if fv is not None:
+                        attrs["_FillValue"] = FillValueCoder.encode(fv, dtype)
+
+            # _FillValue is never a valid encoding for Zarr
+            # TODO: refactor this logic so we don't need to check this here
+            if "_FillValue" in v.encoding:
+                efv = v.encoding["_FillValue"]
+                if efv is not None:
+                    raise ValueError("Zarr does not support _FillValue in encoding.")
+                else:
+                    del v.encoding["_FillValue"]
 
             zarr_array = None
             zarr_shape = None
