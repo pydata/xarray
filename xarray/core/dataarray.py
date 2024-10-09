@@ -69,7 +69,7 @@ from xarray.core.types import (
 )
 from xarray.core.utils import (
     Default,
-    HybridMappingProxy,
+    FilteredMapping,
     ReprObject,
     _default,
     either_dict_or_kwargs,
@@ -929,11 +929,10 @@ class DataArray(
     @property
     def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for key-completion"""
-        yield HybridMappingProxy(keys=self._coords, mapping=self.coords)
+        yield FilteredMapping(keys=self._coords, mapping=self.coords)
 
         # virtual coordinates
-        # uses empty dict -- everything here can already be found in self.coords.
-        yield HybridMappingProxy(keys=self.dims, mapping={})
+        yield FilteredMapping(keys=self.dims, mapping=self.coords)
 
     def __contains__(self, key: Any) -> bool:
         return key in self.data
@@ -3994,6 +3993,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> bytes: ...
 
     # compute=False returns dask.Delayed
@@ -4010,6 +4010,7 @@ class DataArray(
         *,
         compute: Literal[False],
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> Delayed: ...
 
     # default return None
@@ -4025,6 +4026,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: Literal[True] = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> None: ...
 
     # if compute cannot be evaluated at type check time
@@ -4041,6 +4043,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> Delayed | None: ...
 
     def to_netcdf(
@@ -4054,6 +4057,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> bytes | Delayed | None:
         """Write DataArray contents to a netCDF file.
 
@@ -4170,6 +4174,7 @@ class DataArray(
             compute=compute,
             multifile=False,
             invalid_netcdf=invalid_netcdf,
+            auto_complex=auto_complex,
         )
 
     # compute=True (default) returns ZarrStore
