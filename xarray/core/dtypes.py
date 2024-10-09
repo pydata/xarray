@@ -61,7 +61,6 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     # N.B. these casting rules should match pandas
     dtype_: np.typing.DTypeLike
     fill_value: Any
-    print("maybe_promote", dtype)
     if np.issubdtype(dtype, np.dtypes.StringDType()):
         # for now, we always promote string dtypes to object for consistency with existing behavior
         # TODO: refactor this once we have a better way to handle numpy vlen-string dtypes
@@ -202,7 +201,6 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
 
     Unlike xp.isdtype(), kind must be a string.
     """
-    print(dtype, kind, xp)
     # TODO(shoyer): remove this wrapper when Xarray requires
     # numpy>=2 and pandas extensions arrays are implemented in
     # Xarray via the array API

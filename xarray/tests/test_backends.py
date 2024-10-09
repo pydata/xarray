@@ -558,6 +558,7 @@ class DatasetIOBase:
                 # This currently includes all netCDF files when encoding is not
                 # explicitly set.
                 # https://github.com/pydata/xarray/issues/1647
+                # Also Zarr
                 expected["bytes_nans"][-1] = b""
                 expected["strings_nans"][-1] = ""
                 assert_identical(expected, actual)
@@ -2265,7 +2266,6 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store_target:
             self.save(data, store_target, **save_kwargs)
             with self.open(store_target, **open_kwargs) as ds:
-                assert False
                 yield ds
 
     @pytest.mark.parametrize("consolidated", [False, True, None])
@@ -2745,12 +2745,12 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store_target:
             import numcodecs
 
-            compressor = numcodecs.Blosc()
-
             if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
+                compressor = zarr.codecs.BloscCodec()
                 encoding_key = "codecs"
-                encoding_value = [compressor]
+                encoding_value = [zarr.codecs.BytesCodec(), compressor]
             else:
+                compressor = numcodecs.Blosc()
                 encoding_key = "compressor"
                 encoding_value = compressor
 

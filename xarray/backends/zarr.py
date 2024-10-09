@@ -414,6 +414,7 @@ def _validate_datatypes_for_zarr_append(vname, existing_var, new_var):
         or np.issubdtype(new_var.dtype, np.datetime64)
         or np.issubdtype(new_var.dtype, np.bool_)
         or new_var.dtype == object
+        or (new_var.dtype.kind in ("S", "U") and existing_var.dtype == object)
     ):
         # We can skip dtype equality checks under two conditions: (1) if the var to append is
         # new to the dataset, because in this case there is no existing var to compare it to;
@@ -495,7 +496,7 @@ class ZarrStore(AbstractWritableDataStore):
         "_safe_chunks",
         "_write_empty",
         "_close_store_on_close",
-        "_use_zarr_fill_value_as_mask"
+        "_use_zarr_fill_value_as_mask",
     )
 
     @classmethod
@@ -518,7 +519,12 @@ class ZarrStore(AbstractWritableDataStore):
         write_empty: bool | None = None,
     ):
 
-        zarr_group, consolidate_on_close, close_store_on_close, use_zarr_fill_value_as_mask = _get_open_params(
+        (
+            zarr_group,
+            consolidate_on_close,
+            close_store_on_close,
+            use_zarr_fill_value_as_mask,
+        ) = _get_open_params(
             store=store,
             mode=mode,
             synchronizer=synchronizer,
@@ -529,7 +535,7 @@ class ZarrStore(AbstractWritableDataStore):
             storage_options=storage_options,
             stacklevel=stacklevel,
             zarr_version=zarr_version,
-            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask
+            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
         )
         group_paths = [node for node in _iter_zarr_groups(zarr_group, parent=group)]
         return {
@@ -542,7 +548,7 @@ class ZarrStore(AbstractWritableDataStore):
                 safe_chunks,
                 write_empty,
                 close_store_on_close,
-                use_zarr_fill_value_as_mask
+                use_zarr_fill_value_as_mask,
             )
             for group in group_paths
         }
@@ -567,7 +573,12 @@ class ZarrStore(AbstractWritableDataStore):
         write_empty: bool | None = None,
     ):
 
-        zarr_group, consolidate_on_close, close_store_on_close, use_zarr_fill_value_as_mask = _get_open_params(
+        (
+            zarr_group,
+            consolidate_on_close,
+            close_store_on_close,
+            use_zarr_fill_value_as_mask,
+        ) = _get_open_params(
             store=store,
             mode=mode,
             synchronizer=synchronizer,
@@ -578,7 +589,7 @@ class ZarrStore(AbstractWritableDataStore):
             storage_options=storage_options,
             stacklevel=stacklevel,
             zarr_version=zarr_version,
-            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask
+            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
         )
 
         return cls(
@@ -590,7 +601,7 @@ class ZarrStore(AbstractWritableDataStore):
             safe_chunks,
             write_empty,
             close_store_on_close,
-            use_zarr_fill_value_as_mask
+            use_zarr_fill_value_as_mask,
         )
 
     def __init__(
@@ -603,7 +614,7 @@ class ZarrStore(AbstractWritableDataStore):
         safe_chunks=True,
         write_empty: bool | None = None,
         close_store_on_close: bool = False,
-        use_zarr_fill_value_as_mask=None
+        use_zarr_fill_value_as_mask=None,
     ):
         self.zarr_group = zarr_group
         self._read_only = self.zarr_group.read_only
@@ -615,7 +626,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._write_region = write_region
         self._safe_chunks = safe_chunks
         self._write_empty = write_empty
-        self._close_store_on_close = close_store_on_close,
+        self._close_store_on_close = (close_store_on_close,)
         self._use_zarr_fill_value_as_mask = use_zarr_fill_value_as_mask
 
     @property
@@ -872,7 +883,7 @@ class ZarrStore(AbstractWritableDataStore):
                 if v.encoding == {"_FillValue": None} and fill_value is None:
                     v.encoding = {}
             else:
-                fill_value=None
+                fill_value = None
 
             zarr_array = None
             zarr_shape = None
@@ -980,7 +991,6 @@ class ZarrStore(AbstractWritableDataStore):
                     pipeline = encoding.pop("codecs")
                     encoding["codecs"] = pipeline
 
-                print(dtype, encoding)
                 zarr_array = self.zarr_group.create(
                     name,
                     shape=shape,
@@ -1318,7 +1328,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         zarr_version=None,
         store=None,
         engine=None,
-        use_zarr_fill_value_as_mask=None
+        use_zarr_fill_value_as_mask=None,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         if not store:
@@ -1333,7 +1343,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 storage_options=storage_options,
                 stacklevel=stacklevel + 1,
                 zarr_version=zarr_version,
-                use_zarr_fill_value_as_mask=None
+                use_zarr_fill_value_as_mask=None,
             )
 
         store_entrypoint = StoreBackendEntrypoint()
@@ -1466,7 +1476,7 @@ def _get_open_params(
     storage_options,
     stacklevel,
     zarr_version,
-    use_zarr_fill_value_as_mask
+    use_zarr_fill_value_as_mask,
 ):
     import zarr
 
@@ -1529,14 +1539,26 @@ def _get_open_params(
     else:
         zarr_group = zarr.open_group(store, **open_kwargs)
     close_store_on_close = zarr_group.store is not store
+
+    # we use this to determine how to handle fill_value
+    is_zarr_v3_format: bool
+    if _zarr_v3():
+        is_zarr_v3_format = zarr_group.metadata.zarr_format == 3
+    else:
+        is_zarr_v3_format = False
     if use_zarr_fill_value_as_mask is None:
-        if zarr_version == 3:
+        if is_zarr_v3_format:
             # for new data, we use a better default
             use_zarr_fill_value_as_mask = False
         else:
             # this was the default for v2 and shold apply to most existing Zarr data
             use_zarr_fill_value_as_mask = True
-    return zarr_group, consolidate_on_close, close_store_on_close, use_zarr_fill_value_as_mask
+    return (
+        zarr_group,
+        consolidate_on_close,
+        close_store_on_close,
+        use_zarr_fill_value_as_mask,
+    )
 
 
 BACKEND_ENTRYPOINTS["zarr"] = ("zarr", ZarrBackendEntrypoint)

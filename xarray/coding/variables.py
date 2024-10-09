@@ -464,7 +464,6 @@ class CFMaskCoder(VariableCoder):
                 dtype, decoded_fill_value = np.int64, np.iinfo(np.int64).min
             else:
                 if "scale_factor" not in attrs and "add_offset" not in attrs:
-                    print(data.dtype)
                     dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
                 else:
                     dtype, decoded_fill_value = (
@@ -704,6 +703,19 @@ class ObjectVLenStringCoder(VariableCoder):
         if variable.dtype.kind == "O" and variable.encoding.get("dtype", False) is str:
             variable = variable.astype(variable.encoding["dtype"])
             return variable
+        else:
+            return variable
+
+
+class Numpy2StringDTypeCoder(VariableCoder):
+    # Convert Numpy 2 StringDType arrays to object arrays for backwards compatibility
+    # TODO: remove this if / when we decide to allow StringDType arrays in Xarray
+    def encode(self):
+        raise NotImplementedError
+
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if variable.dtype.kind == "T":
+            return variable.astype(object)
         else:
             return variable
 
