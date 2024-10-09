@@ -561,6 +561,7 @@ class DatasetIOBase:
                 # This currently includes all netCDF files when encoding is not
                 # explicitly set.
                 # https://github.com/pydata/xarray/issues/1647
+                # Also Zarr
                 expected["bytes_nans"][-1] = b""
                 expected["strings_nans"][-1] = ""
                 assert_identical(expected, actual)
@@ -2273,7 +2274,7 @@ class ZarrBase(CFEncodedBase):
     def save(self, dataset, store_target, **kwargs):  # type: ignore[override]
         if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
             for k, v in dataset.variables.items():
-                if v.dtype.kind in ("U", "O", "M", "b"):
+                if v.dtype.kind in ("M",):
                     pytest.skip(reason=f"Unsupported dtype {v} for variable: {k}")
 
         return dataset.to_zarr(store=store_target, **kwargs, **self.version_kwargs)
@@ -2775,12 +2776,12 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store_target:
             import numcodecs
 
-            compressor = numcodecs.Blosc()
-
             if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
+                compressor = zarr.codecs.BloscCodec()
                 encoding_key = "codecs"
-                encoding_value = [compressor]
+                encoding_value = [zarr.codecs.BytesCodec(), compressor]
             else:
+                compressor = numcodecs.Blosc()
                 encoding_key = "compressor"
                 encoding_value = compressor
 
@@ -3193,38 +3194,6 @@ class ZarrBase(CFEncodedBase):
             for name, actual_var in actual.variables.items():
                 assert original[name].chunks == actual_var.chunks
             assert original.chunks == actual.chunks
-
-    def test_write_store(self) -> None:
-        skip_if_zarr_format_3(reason="unsupported dtypes")
-        return super().test_write_store()
-
-    def test_roundtrip_endian(self) -> None:
-        skip_if_zarr_format_3(reason="unsupported dtypes")
-        return super().test_roundtrip_endian()
-
-    def test_roundtrip_bytes_with_fill_value(self) -> None:
-        skip_if_zarr_format_3(reason="unsupported dtypes")
-        return super().test_roundtrip_bytes_with_fill_value()
-
-    def test_default_fill_value(self) -> None:
-        skip_if_zarr_format_3(reason="fill_value always written")
-        return super().test_default_fill_value()
-
-    def test_explicitly_omit_fill_value(self) -> None:
-        skip_if_zarr_format_3(reason="fill_value always written")
-        return super().test_explicitly_omit_fill_value()
-
-    def test_explicitly_omit_fill_value_via_encoding_kwarg(self) -> None:
-        skip_if_zarr_format_3(reason="fill_value always written")
-        return super().test_explicitly_omit_fill_value_via_encoding_kwarg()
-
-    def test_explicitly_omit_fill_value_in_coord(self) -> None:
-        skip_if_zarr_format_3(reason="fill_value always written")
-        return super().test_explicitly_omit_fill_value_in_coord()
-
-    def test_explicitly_omit_fill_value_in_coord_via_encoding_kwarg(self) -> None:
-        skip_if_zarr_format_3(reason="fill_value always written")
-        return super().test_explicitly_omit_fill_value_in_coord_via_encoding_kwarg()
 
 
 @requires_zarr

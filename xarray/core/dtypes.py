@@ -61,7 +61,12 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     # N.B. these casting rules should match pandas
     dtype_: np.typing.DTypeLike
     fill_value: Any
-    if isdtype(dtype, "real floating"):
+    if np.issubdtype(dtype, np.dtypes.StringDType()):
+        # for now, we always promote string dtypes to object for consistency with existing behavior
+        # TODO: refactor this once we have a better way to handle numpy vlen-string dtypes
+        dtype_ = object
+        fill_value = np.nan
+    elif isdtype(dtype, "real floating"):
         dtype_ = dtype
         fill_value = np.nan
     elif np.issubdtype(dtype, np.timedelta64):
