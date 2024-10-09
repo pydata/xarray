@@ -464,6 +464,7 @@ class CFMaskCoder(VariableCoder):
                 dtype, decoded_fill_value = np.int64, np.iinfo(np.int64).min
             else:
                 if "scale_factor" not in attrs and "add_offset" not in attrs:
+                    print(data.dtype)
                     dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
                 else:
                     dtype, decoded_fill_value = (

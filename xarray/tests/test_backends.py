@@ -2242,7 +2242,7 @@ class ZarrBase(CFEncodedBase):
     def save(self, dataset, store_target, **kwargs):  # type: ignore[override]
         if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
             for k, v in dataset.variables.items():
-                if v.dtype.kind in ("U", "O", "M", "b"):
+                if v.dtype.kind in ("M",):
                     pytest.skip(reason=f"Unsupported dtype {v} for variable: {k}")
 
         return dataset.to_zarr(store=store_target, **kwargs, **self.version_kwargs)
@@ -2265,6 +2265,7 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store_target:
             self.save(data, store_target, **save_kwargs)
             with self.open(store_target, **open_kwargs) as ds:
+                assert False
                 yield ds
 
     @pytest.mark.parametrize("consolidated", [False, True, None])
