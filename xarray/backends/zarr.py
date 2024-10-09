@@ -257,62 +257,60 @@ def _determine_zarr_chunks(
     #   with chunk boundaries, then no synchronization is required."
     # TODO: incorporate synchronizer to allow writes from multiple dask
     # threads
-    if var_chunks and enc_chunks_tuple:
-        # If it is possible to write on partial chunks then it is not necessary to check
-        # the last one contained on the region
-        allow_partial_chunks = mode != "r+"
 
-        base_error = (
-            f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
-            f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r} "
-            f"on the region {region}. "
-            f"Writing this array in parallel with dask could lead to corrupted data."
-            f"Consider either rechunking using `chunk()`, deleting "
-            f"or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
-        )
+    # If it is possible to write on partial chunks then it is not necessary to check
+    # the last one contained on the region
+    allow_partial_chunks = mode != "r+"
 
-        for zchunk, dchunks, interval, size in zip(
-            enc_chunks_tuple, var_chunks, region, shape, strict=True
-        ):
-            if not safe_chunks:
-                continue
+    base_error = (
+        f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
+        f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r} "
+        f"on the region {region}. "
+        f"Writing this array in parallel with dask could lead to corrupted data. "
+        f"Consider either rechunking using `chunk()`, deleting "
+        f"or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
+    )
 
-            for dchunk in dchunks[1:-1]:
-                if dchunk % zchunk:
+    for zchunk, dchunks, interval, size in zip(
+        enc_chunks_tuple, var_chunks, region, shape, strict=True
+    ):
+        if not safe_chunks:
+            continue
+
+        for dchunk in dchunks[1:-1]:
+            if dchunk % zchunk:
+                raise ValueError(base_error)
+
+        region_start = interval.start if interval.start else 0
+
+        if len(dchunks) > 1:
+            # The first border size is the amount of data that needs to be updated on the
+            # first chunk taking into account the region slice.
+            first_border_size = zchunk
+            if allow_partial_chunks:
+                first_border_size = zchunk - region_start % zchunk
+
+            if (dchunks[0] - first_border_size) % zchunk:
+                raise ValueError(base_error)
+
+        if not allow_partial_chunks:
+            region_stop = interval.stop if interval.stop else size
+
+            if region_start % zchunk:
+                # The last chunk which can also be the only one is a partial chunk
+                # if it is not aligned at the beginning
+                raise ValueError(base_error)
+
+            if np.ceil(region_stop / zchunk) == np.ceil(size / zchunk):
+                # If the region is covering the last chunk then check
+                # if the reminder with the default chunk size
+                # is equal to the size of the last chunk
+                if dchunks[-1] % zchunk != size % zchunk:
                     raise ValueError(base_error)
+            elif dchunks[-1] % zchunk:
+                raise ValueError(base_error)
 
-            region_start = interval.start if interval.start else 0
-
-            if len(dchunks) > 1:
-                # The first border size is the amount of data that needs to be updated on the
-                # first chunk taking into account the region slice.
-                first_border_size = zchunk
-                if allow_partial_chunks:
-                    first_border_size = zchunk - region_start % zchunk
-
-                if (dchunks[0] - first_border_size) % zchunk:
-                    raise ValueError(base_error)
-
-            if not allow_partial_chunks:
-                region_stop = interval.stop if interval.stop else size
-
-                if region_start % zchunk:
-                    # The last chunk which can also be the only one is a partial chunk
-                    # if it is not aligned at the beginning
-                    raise ValueError(base_error)
-
-                if np.ceil(region_stop / zchunk) == np.ceil(size / zchunk):
-                    # If the region is covering the last chunk then check
-                    # if the reminder with the default chunk size
-                    # is equal to the size of the last chunk
-                    if dchunks[-1] % zchunk != size % zchunk:
-                        raise ValueError(base_error)
-                elif dchunks[-1] % zchunk:
-                    raise ValueError(base_error)
-
-        return enc_chunks_tuple
-
-    raise AssertionError("We should never get here. Function logic must be wrong.")
+    return enc_chunks_tuple
 
 
 def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
@@ -564,6 +562,7 @@ class ZarrStore(AbstractWritableDataStore):
         safe_chunks=True,
         stacklevel=2,
         zarr_version=None,
+        zarr_format=None,
         use_zarr_fill_value_as_mask=None,
         write_empty: bool | None = None,
     ):
@@ -585,6 +584,7 @@ class ZarrStore(AbstractWritableDataStore):
             stacklevel=stacklevel,
             zarr_version=zarr_version,
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+            zarr_format=zarr_format,
         )
         group_paths = [node for node in _iter_zarr_groups(zarr_group, parent=group)]
         return {
@@ -618,6 +618,7 @@ class ZarrStore(AbstractWritableDataStore):
         safe_chunks=True,
         stacklevel=2,
         zarr_version=None,
+        zarr_format=None,
         use_zarr_fill_value_as_mask=None,
         write_empty: bool | None = None,
     ):
@@ -639,6 +640,7 @@ class ZarrStore(AbstractWritableDataStore):
             stacklevel=stacklevel,
             zarr_version=zarr_version,
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+            zarr_format=zarr_format,
         )
 
         return cls(
@@ -1167,6 +1169,7 @@ def open_zarr(
     decode_timedelta=None,
     use_cftime=None,
     zarr_version=None,
+    zarr_format=None,
     use_zarr_fill_value_as_mask=None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -1257,9 +1260,15 @@ def open_zarr(
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
     zarr_version : int or None, optional
-        The desired zarr spec version to target (currently 2 or 3). The default
+
+        .. deprecated:: 2024.9.1
+           Use ``zarr_format`` instead.
+
+    zarr_format : int or None, optional
+        The desired zarr format to target (currently 2 or 3). The default
         of None will attempt to determine the zarr version from ``store`` when
-        possible, otherwise defaulting to 2.
+        possible, otherwise defaulting to the default version used by
+        the zarr-python library installed.
     use_zarr_fill_value_as_mask : bool, optional
         If True, use the zarr Array `fill_value` to mask the data, the same as done
         for NetCDF data with `_FillValue` or `missing_value` attributes. If False,
@@ -1317,6 +1326,7 @@ def open_zarr(
         "storage_options": storage_options,
         "stacklevel": 4,
         "zarr_version": zarr_version,
+        "zarr_format": zarr_format,
     }
 
     ds = open_dataset(
@@ -1385,6 +1395,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         stacklevel=3,
         zarr_version=None,
+        zarr_format=None,
         store=None,
         engine=None,
         use_zarr_fill_value_as_mask=None,
@@ -1403,6 +1414,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 stacklevel=stacklevel + 1,
                 zarr_version=zarr_version,
                 use_zarr_fill_value_as_mask=None,
+                zarr_format=zarr_format,
             )
 
         store_entrypoint = StoreBackendEntrypoint()
@@ -1438,12 +1450,31 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         stacklevel=3,
         zarr_version=None,
+        # TODO: zarr_format
         **kwargs,
     ) -> DataTree:
         from xarray.core.datatree import DataTree
 
         filename_or_obj = _normalize_path(filename_or_obj)
-        groups_dict = self.open_groups_as_dict(filename_or_obj, **kwargs)
+        groups_dict = self.open_groups_as_dict(
+            filename_or_obj=filename_or_obj,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+            group=group,
+            mode=mode,
+            synchronizer=synchronizer,
+            consolidated=consolidated,
+            chunk_store=chunk_store,
+            storage_options=storage_options,
+            stacklevel=stacklevel,
+            zarr_version=zarr_version,
+            **kwargs,
+        )
 
         return DataTree.from_dict(groups_dict)
 
@@ -1536,6 +1567,7 @@ def _get_open_params(
     stacklevel,
     zarr_version,
     use_zarr_fill_value_as_mask,
+    zarr_format,
 ):
     import zarr
 
@@ -1551,10 +1583,14 @@ def _get_open_params(
     )
     open_kwargs["storage_options"] = storage_options
 
+    zarr_format = _handle_zarr_version_or_format(
+        zarr_version=zarr_version, zarr_format=zarr_format
+    )
+
     if _zarr_v3():
-        open_kwargs["zarr_format"] = zarr_version
+        open_kwargs["zarr_format"] = zarr_format
     else:
-        open_kwargs["zarr_version"] = zarr_version
+        open_kwargs["zarr_version"] = zarr_format
 
     if chunk_store is not None:
         open_kwargs["chunk_store"] = chunk_store
@@ -1618,6 +1654,26 @@ def _get_open_params(
         close_store_on_close,
         use_zarr_fill_value_as_mask,
     )
+
+
+def _handle_zarr_version_or_format(
+    *, zarr_version: ZarrFormat | None, zarr_format: ZarrFormat | None
+) -> ZarrFormat | None:
+    """handle the deprecated zarr_version kwarg and return zarr_format"""
+    if (
+        zarr_format is not None
+        and zarr_version is not None
+        and zarr_format != zarr_version
+    ):
+        raise ValueError(
+            f"zarr_format {zarr_format} does not match zarr_version {zarr_version}, please only set one"
+        )
+    if zarr_version is not None:
+        warnings.warn(
+            "zarr_version is deprecated, use zarr_format", FutureWarning, stacklevel=6
+        )
+        return zarr_version
+    return zarr_format
 
 
 BACKEND_ENTRYPOINTS["zarr"] = ("zarr", ZarrBackendEntrypoint)
