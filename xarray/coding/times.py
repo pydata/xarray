@@ -440,7 +440,13 @@ def decode_cf_datetime(
 
 
 def to_timedelta_unboxed(value, **kwargs):
+    # todo: check, if the procedure here is correct
     result = pd.to_timedelta(value, **kwargs).to_numpy()
+    unique_timedeltas = np.unique(result[pd.notnull(result)])
+    unit =  _netcdf_to_numpy_timeunit(_infer_time_units_from_diff(unique_timedeltas))
+    if unit not in ["s", "ms", "us", "ns"]:
+        unit = "s"
+    result = result.astype(f"timedelta64[{unit}]")
     assert np.issubdtype(result.dtype, "timedelta64")
     return result
 
@@ -452,13 +458,16 @@ def to_datetime_unboxed(value, **kwargs):
 
 
 def decode_cf_timedelta(num_timedeltas, units: str) -> np.ndarray:
-    # todo: check, if this still returns ns
+    # todo: check, if this works as intended
     """Given an array of numeric timedeltas in netCDF format, convert it into a
-    numpy timedelta64[ns] array.
+    numpy timedelta64 ["s", "ms", "us", "ns"] array.
     """
     num_timedeltas = np.asarray(num_timedeltas)
-    units = _netcdf_to_numpy_timeunit(units)
-    result = to_timedelta_unboxed(ravel(num_timedeltas), unit=units)
+    unit = _netcdf_to_numpy_timeunit(units)
+    as_unit = unit
+    if unit not in ["s", "ms", "us", "ns"]:
+        as_unit = "s"
+    result = pd.to_timedelta(ravel(num_timedeltas), unit=unit).as_unit(as_unit).to_numpy()
     return reshape(result, num_timedeltas.shape)
 
 

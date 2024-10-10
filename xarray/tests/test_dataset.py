@@ -105,18 +105,19 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
     lon = [0, 1, 2]
     nt1 = 3
     nt2 = 2
-    time1 = pd.date_range("2000-01-01", periods=nt1)
-    time2 = pd.date_range("2000-02-01", periods=nt2)
+    # todo: check, if all changes below are correct
+    time1 = pd.date_range("2000-01-01", periods=nt1).as_unit("ns")
+    time2 = pd.date_range("2000-02-01", periods=nt2).as_unit("ns")
     string_var = np.array(["a", "bc", "def"], dtype=object)
     string_var_to_append = np.array(["asdf", "asdfg"], dtype=object)
     string_var_fixed_length = np.array(["aa", "bb", "cc"], dtype="|S2")
     string_var_fixed_length_to_append = np.array(["dd", "ee"], dtype="|S2")
     unicode_var = np.array(["áó", "áó", "áó"])
     datetime_var = np.array(
-        ["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[s]"
+        ["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[ns]"
     )
     datetime_var_to_append = np.array(
-        ["2019-01-04", "2019-01-05"], dtype="datetime64[s]"
+        ["2019-01-04", "2019-01-05"], dtype="datetime64[ns]"
     )
     bool_var = np.array([True, False, True], dtype=bool)
     bool_var_to_append = np.array([False, True], dtype=bool)
