@@ -118,7 +118,7 @@ from xarray.core.utils import (
     is_duck_dask_array,
     is_scalar,
     maybe_wrap_array,
-    parse_dims,
+    parse_dims_as_set,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -6987,7 +6987,7 @@ class Dataset(
                 " Please use 'dim' instead."
             )
 
-        dims = set(parse_dims(dim, tuple(self.dims)))
+        dims = parse_dims_as_set(dim, self._dims.keys())
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
