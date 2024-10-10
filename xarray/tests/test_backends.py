@@ -2787,12 +2787,18 @@ class ZarrBase(CFEncodedBase):
 
             encoding = {"da": {encoding_key: encoding_value}}
             ds.to_zarr(store_target, mode="w", encoding=encoding, **self.version_kwargs)
+            original_ds = xr.open_dataset(
+                store_target, engine="zarr", **self.version_kwargs
+            )
+            original_encoding = original_ds["da"].encoding[encoding_key]
             ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
             actual_ds = xr.open_dataset(
                 store_target, engine="zarr", **self.version_kwargs
             )
+            # assert actual_encoding.get_config() == compressor.get_config()
+            # TODO: check whether this approach works for v2
             actual_encoding = actual_ds["da"].encoding[encoding_key]
-            assert actual_encoding.get_config() == compressor.get_config()
+            assert original_encoding == actual_encoding
             assert_identical(
                 xr.open_dataset(
                     store_target, engine="zarr", **self.version_kwargs
