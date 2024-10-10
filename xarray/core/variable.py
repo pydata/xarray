@@ -6,7 +6,6 @@ import math
 import numbers
 import warnings
 from collections.abc import Callable, Hashable, Mapping, Sequence
-from datetime import timedelta
 from functools import partial
 from types import EllipsisType
 from typing import TYPE_CHECKING, Any, NoReturn, cast
@@ -71,13 +70,11 @@ if TYPE_CHECKING:
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
-NON_NANOSECOND_WARNING = (
-    "Converting non-nanosecond precision {case} values to nanosecond precision. "
-    "This behavior can eventually be relaxed in xarray, as it is an artifact from "
-    "pandas which is now beginning to support non-nanosecond precision values. "
-    "This warning is caused by passing non-nanosecond np.datetime64 or "
+NON_DEFAULTPRECISION_WARNING = (
+    "Converting non-default precision {case} values to default precision. "
+    "This warning is caused by passing non-default np.datetime64 or "
     "np.timedelta64 values to the DataArray or Variable constructor; it can be "
-    "silenced by converting the values to nanosecond precision ahead of time."
+    "silenced by converting the values to default precision {res!r} ahead of time."
 )
 
 
@@ -198,45 +195,11 @@ def _maybe_wrap_data(data):
     return data
 
 
-def _as_nanosecond_precision(data):
-    dtype = data.dtype
-    non_ns_datetime64 = (
-        dtype.kind == "M"
-        and isinstance(dtype, np.dtype)
-        and dtype != np.dtype("datetime64[ns]")
-    )
-    non_ns_datetime_tz_dtype = (
-        isinstance(dtype, pd.DatetimeTZDtype) and dtype.unit != "ns"
-    )
-    if non_ns_datetime64 or non_ns_datetime_tz_dtype:
-        utils.emit_user_level_warning(NON_NANOSECOND_WARNING.format(case="datetime"))
-        if isinstance(dtype, pd.DatetimeTZDtype):
-            nanosecond_precision_dtype = pd.DatetimeTZDtype("ns", dtype.tz)
-        else:
-            nanosecond_precision_dtype = "datetime64[ns]"
-        return duck_array_ops.astype(data, nanosecond_precision_dtype)
-    elif dtype.kind == "m" and dtype != np.dtype("timedelta64[ns]"):
-        utils.emit_user_level_warning(NON_NANOSECOND_WARNING.format(case="timedelta"))
-        return duck_array_ops.astype(data, "timedelta64[ns]")
-    else:
-        return data
-
-
 def _possibly_convert_objects(values):
     """Convert arrays of datetime.datetime and datetime.timedelta objects into
-    datetime64 and timedelta64, according to the pandas convention. For the time
-    being, convert any non-nanosecond precision DatetimeIndex or TimedeltaIndex
-    objects to nanosecond precision.  While pandas is relaxing this in version
-    2.0.0, in xarray we will need to make sure we are ready to handle
-    non-nanosecond precision datetimes or timedeltas in our code before allowing
-    such values to pass through unchanged.  Converting to nanosecond precision
-    through pandas.Series objects ensures that datetimes and timedeltas are
-    within the valid date range for ns precision, as pandas will raise an error
-    if they are not.
+    datetime64 and timedelta64, according to the pandas convention.
     """
     as_series = pd.Series(values.ravel(), copy=False)
-    if as_series.dtype.kind in "mM":
-        as_series = _as_nanosecond_precision(as_series)
     result = np.asarray(as_series).reshape(values.shape)
     if not result.flags.writeable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
@@ -247,28 +210,13 @@ def _possibly_convert_objects(values):
     return result
 
 
-def _possibly_convert_datetime_or_timedelta_index(data):
-    """For the time being, convert any non-nanosecond precision DatetimeIndex or
-    TimedeltaIndex objects to nanosecond precision.  While pandas is relaxing
-    this in version 2.0.0, in xarray we will need to make sure we are ready to
-    handle non-nanosecond precision datetimes or timedeltas in our code
-    before allowing such values to pass through unchanged."""
-    if isinstance(data, PandasIndexingAdapter):
-        if isinstance(data.array, pd.DatetimeIndex | pd.TimedeltaIndex):
-            data = PandasIndexingAdapter(_as_nanosecond_precision(data.array))
-    elif isinstance(data, pd.DatetimeIndex | pd.TimedeltaIndex):
-        data = _as_nanosecond_precision(data)
-    return data
-
-
 def as_compatible_data(
     data: T_DuckArray | ArrayLike, fastpath: bool = False
 ) -> T_DuckArray:
     """Prepare and wrap data to put in a Variable.
 
     - If data does not have the necessary attributes, convert it to ndarray.
-    - If data has dtype=datetime64, ensure that it has ns precision. If it's a
-      pandas.Timestamp, convert it to datetime64.
+    - If it's a pandas.Timestamp, convert it to datetime64.
     - If data is already a pandas or xarray object (other than an Index), just
       use the values.
 
@@ -288,7 +236,6 @@ def as_compatible_data(
         return cast("T_DuckArray", data._variable._data)
 
     def convert_non_numpy_type(data):
-        data = _possibly_convert_datetime_or_timedelta_index(data)
         return cast("T_DuckArray", _maybe_wrap_data(data))
 
     if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
@@ -298,11 +245,7 @@ def as_compatible_data(
         data = utils.to_0d_object_array(data)
 
     if isinstance(data, pd.Timestamp):
-        # TODO: convert, handle datetime objects, too
-        data = np.datetime64(data.value, "ns")
-
-    if isinstance(data, timedelta):
-        data = np.timedelta64(getattr(data, "value", data), "ns")
+        data = data.to_numpy()
 
     # we don't want nested self-described arrays
     if isinstance(data, pd.Series | pd.DataFrame):
@@ -351,10 +294,13 @@ def _as_array_or_item(data):
     """
     data = np.asarray(data)
     if data.ndim == 0:
-        if data.dtype.kind == "M":
-            data = np.datetime64(data, "ns")
-        elif data.dtype.kind == "m":
-            data = np.timedelta64(data, "ns")
+        kind = data.dtype.kind
+        if kind in "mM":
+            unit = np.datetime_data(data.dtype)[0]
+            if kind == "M":
+                data = np.datetime64(data, unit)
+            elif kind == "m":
+                data = np.timedelta64(data, unit)
     return data
 
 

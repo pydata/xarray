@@ -38,8 +38,10 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal
 
+import numpy as np
 import pandas as pd
-from packaging.version import Version
+
+from xarray.core.options import _get_datetime_resolution
 
 
 def count_not_none(*args) -> int:
@@ -73,13 +75,17 @@ no_default = (
 NoDefault = Literal[_NoDefault.no_default]  # For typing following pandas
 
 
-def nanosecond_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
-    """Return a nanosecond-precision Timestamp object.
+def default_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
+    """Return a Timestamp object with the default precision.
 
-    Note this function should no longer be needed after addressing GitHub issue
-    #7493.
+    Xarray default is "ns". This can be overridden by setting
+    set_options(time_resolution="us") or any other resolution
+    of {"s", "ms", "us", "ns"}.
     """
-    if Version(pd.__version__) >= Version("2.0.0"):
-        return pd.Timestamp(*args, **kwargs).as_unit("ns")
-    else:
-        return pd.Timestamp(*args, **kwargs)
+    dt = pd.Timestamp(*args, **kwargs)
+    units = ["s", "ms", "us", "ns"]
+    default = _get_datetime_resolution()
+    unit = np.datetime_data(dt.asm8)[0]
+    if units.index(default) > units.index(unit):
+        dt = dt.as_unit(default)
+    return dt
