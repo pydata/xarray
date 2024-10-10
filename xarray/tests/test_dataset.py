@@ -5661,14 +5661,35 @@ class TestDataset:
             data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {"foo": "variable"})
         # var4 is extension array categorical and should be dropped
-        assert (
-            "var4" not in data1.mean()
-            and "var5" not in data1.mean()
-            and "var6" not in data1.mean()
-        )
+
+        assert "var4" not in data1.mean()
+        assert "var5" not in data1.mean()
+        assert "var6" not in data1.mean()
+
         assert_equal(data1.mean(), data2.mean())
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
-        assert "var5" not in data1.mean(dim="dim2") and "var6" in data1.mean(dim="dim2")
+
+        assert "var5" not in data1.mean(dim="dim2")
+        assert "var6" in data1.mean(dim="dim2")
+
+    @pytest.mark.parametrize("op", ("sum", "prod", "mean", "std"))
+    def test_reduce_non_numeric_scalar(self, op) -> None:
+        # enusure non-numeric scalar is passed through
+
+        data_orig = create_test_data(seed=44, dim_sizes=(1, 2, 3))
+
+        # add a scalar
+        data = data_orig.assign(var4="string")
+
+        result = getattr(data, op)()
+        expected = getattr(data_orig, op)().assign(var4="string")
+
+        assert_equal(result, expected)
+
+        result = getattr(data, op)("dim1")
+        expected = getattr(data_orig, op)("dim1").assign(var4="string")
+
+        assert_equal(result, expected)
 
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"
