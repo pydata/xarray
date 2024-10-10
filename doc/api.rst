@@ -761,16 +761,17 @@ Compare one ``DataTree`` object to another.
     DataTree.equals
     DataTree.identical
 
-.. Indexing
-.. --------
+Indexing
+--------
 
-.. Index into all nodes in the subtree simultaneously.
+Index into all nodes in the subtree simultaneously.
 
-.. .. autosummary::
-..    :toctree: generated/
+.. autosummary::
+   :toctree: generated/
 
-..    DataTree.isel
-..    DataTree.sel
+   DataTree.isel
+   DataTree.sel
+
 ..    DataTree.drop_sel
 ..    DataTree.drop_isel
 ..    DataTree.head
