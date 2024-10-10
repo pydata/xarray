@@ -271,8 +271,7 @@ resources such as:
    [NumPy documentation guide](https://numpy.org/devdocs/dev/howto-docs.html#documentation-style)
    for docstring conventions.
 - [`pre-commit`](https://pre-commit.com) hooks for autoformatting.
-- [`black`](https://github.com/psf/black) autoformatting.
-- [`flake8`](https://github.com/PyCQA/flake8) linting.
+- [`ruff`](https://github.com/astral-sh/ruff) autoformatting and linting.
 - [python-xarray](https://stackoverflow.com/questions/tagged/python-xarray) on Stack Overflow.
 - [@xarray_dev](https://twitter.com/xarray_dev) on Twitter.
 - [xarray-dev](https://discord.gg/bsSGdwBn) discord community (normally only used for remote synchronous chat during sprints).

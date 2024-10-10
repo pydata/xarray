@@ -300,7 +300,6 @@ def create_test_tree() -> tuple[NamedNode, NamedNode]:
 
 
 class TestIterators:
-
     def test_levelorderiter(self):
         root, _ = create_test_tree()
         result: list[str | None] = [
@@ -321,7 +320,6 @@ class TestIterators:
 
 
 class TestAncestry:
-
     def test_parents(self):
         _, leaf_f = create_test_tree()
         expected = ["e", "b", "a"]

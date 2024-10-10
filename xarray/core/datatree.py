@@ -793,7 +793,6 @@ class DataTree(
         data: Dataset | Default = _default,
         children: dict[str, DataTree] | Default = _default,
     ) -> None:
-
         ds = self.to_dataset(inherited=False) if data is _default else data
 
         if children is _default:

@@ -118,7 +118,6 @@ class RenderDataTree:
 
         >>> for pre, _, node in RenderDataTree(root):
         ...     print(f"{pre}{node.name}")
-        ...
         root
         ├── sub0
         │   ├── sub0B
@@ -131,7 +130,6 @@ class RenderDataTree:
         ...     print(f"{pre}{node.name}")
         ...     for variable in node.variables:
         ...         print(f"{fill}{variable}")
-        ...
         root
         a
         b

@@ -792,13 +792,10 @@ class DataWithCoords(AttrAccessMixin):
 
         >>> def adder(data, arg):
         ...     return data + arg
-        ...
         >>> def div(data, arg):
         ...     return data / arg
-        ...
         >>> def sub_mult(data, sub_arg, mult_arg):
         ...     return (data * mult_arg) - sub_arg
-        ...
         >>> x.pipe(adder, 2)
         <xarray.Dataset> Size: 96B
         Dimensions:        (lat: 2, lon: 2)

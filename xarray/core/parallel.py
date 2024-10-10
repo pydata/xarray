@@ -296,7 +296,6 @@ def map_blocks(
     ...     gb = da.groupby(groupby_type)
     ...     clim = gb.mean(dim="time")
     ...     return gb - clim
-    ...
     >>> time = xr.cftime_range("1990-01", "1992-01", freq="ME")
     >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
     >>> np.random.seed(123)
@@ -372,7 +371,8 @@ def map_blocks(
 
             # ChainMap wants MutableMapping, but xindexes is Mapping
             merged_indexes = collections.ChainMap(
-                expected["indexes"], merged_coordinates.xindexes  # type: ignore[arg-type]
+                expected["indexes"],
+                merged_coordinates.xindexes,  # type: ignore[arg-type]
             )
             expected_index = merged_indexes.get(name, None)
             if expected_index is not None and not index.equals(expected_index):

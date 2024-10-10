@@ -350,7 +350,6 @@ class TestLazyArray:
             ([0, 3, 5], arr[:2]),
         ]
         for i, j in indexers:
-
             expected_b = v[i][j]
             actual = v_lazy[i][j]
             assert expected_b.shape == actual.shape
@@ -416,7 +415,6 @@ class TestLazyArray:
         check_indexing(v_eager, v_lazy, indexers)
 
     def test_lazily_indexed_array_vindex_setitem(self) -> None:
-
         lazy = indexing.LazilyIndexedArray(np.random.rand(10, 20, 30))
 
         # vectorized indexing

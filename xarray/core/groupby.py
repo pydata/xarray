@@ -235,7 +235,9 @@ class _DummyGroup(Generic[T_Xarray]):
 T_Group = Union["T_DataArray", _DummyGroup]
 
 
-def _ensure_1d(group: T_Group, obj: T_DataWithCoords) -> tuple[
+def _ensure_1d(
+    group: T_Group, obj: T_DataWithCoords
+) -> tuple[
     T_Group,
     T_DataWithCoords,
     Hashable | None,
@@ -462,7 +464,10 @@ class ComposedGrouper:
         )
         # NaNs; as well as values outside the bins are coded by -1
         # Restore these after the raveling
-        mask = functools.reduce(np.logical_or, [(code == -1) for code in broadcasted_codes])  # type: ignore[arg-type]
+        mask = functools.reduce(
+            np.logical_or,  # type: ignore[arg-type]
+            [(code == -1) for code in broadcasted_codes],
+        )
         _flatcodes[mask] = -1
 
         midx = pd.MultiIndex.from_product(
@@ -1288,7 +1293,6 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         return self._obj._replace_maybe_drop_dims(reordered)
 
     def _restore_dim_order(self, stacked: DataArray) -> DataArray:
-
         def lookup_order(dimension):
             for grouper in self.groupers:
                 if dimension == grouper.name and grouper.group.ndim == 1:

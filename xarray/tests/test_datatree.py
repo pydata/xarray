@@ -980,7 +980,6 @@ class TestAccess:
 
 
 class TestRepr:
-
     def test_repr_four_nodes(self):
         dt = DataTree.from_dict(
             {
@@ -1763,7 +1762,6 @@ class TestDocInsertion:
     """Tests map_over_subtree docstring injection."""
 
     def test_standard_doc(self):
-
         dataset_doc = dedent(
             """\
             Manually trigger loading and/or computation of this dataset's data
