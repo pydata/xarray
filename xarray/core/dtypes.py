@@ -218,9 +218,8 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
 def preprocess_types(t):
     if isinstance(t, str | bytes):
         return type(t)
-    elif isinstance(dtype := getattr(t, "dtype", t), np.dtype) and dtype.type in (
-        np.str_,
-        np.bytes_,
+    elif isinstance(dtype := getattr(t, "dtype", t), np.dtype) and (
+        np.issubdtype(dtype, np.str_) or np.issubdtype(dtype, np.bytes_)
     ):
         # drop the length from numpy's fixed-width string dtypes, it is better to recalculate that
         return dtype.type
