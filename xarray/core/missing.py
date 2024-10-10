@@ -20,7 +20,7 @@ from xarray.core.duck_array_ops import (
     timedelta_to_numeric,
 )
 from xarray.core.options import _get_keep_attrs
-from xarray.core.types import Interp1dOptions, InterpOptions
+from xarray.core.types import Interp1dOptions, InterpnOptions, InterpOptions
 from xarray.core.utils import OrderedSet, is_scalar
 from xarray.core.variable import Variable, broadcast_variables
 from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -153,6 +153,9 @@ class ScipyInterpolator(BaseInterpolator):
             if order is None:
                 raise ValueError("order is required when method=polynomial")
             method = order
+
+        if method == "quintic":
+            method = 5
 
         self.method = method
 
@@ -503,6 +506,7 @@ def _get_interpolator(
             interp_class = _import_interpolant("KroghInterpolator", method)
         elif method == "pchip":
             kwargs.update(axis=-1)
+            kwargs.setdefault("extrapolate", False)
             interp_class = _import_interpolant("PchipInterpolator", method)
         elif method == "spline":
             utils.emit_user_level_warning(
@@ -520,9 +524,6 @@ def _get_interpolator(
         elif method == "makima":
             kwargs.update(method="makima", axis=-1)
             interp_class = _import_interpolant("Akima1DInterpolator", method)
-        elif method == "makima":
-            kwargs.update(method="makima", axis=-1)
-            interp_class = _import_interpolant("Akima1DInterpolator", method)
         else:
             raise ValueError(f"{method} is not a valid scipy interpolator")
     else:
@@ -536,8 +537,7 @@ def _get_interpolator_nd(method, **kwargs):
 
     returns interpolator class and keyword arguments for the class
     """
-    valid_methods = ["linear", "nearest"]
-
+    valid_methods = tuple(get_args(InterpnOptions))
     if method in valid_methods:
         kwargs.update(method=method)
         kwargs.setdefault("bounds_error", False)
@@ -601,7 +601,7 @@ def _floatize_x(x, new_x):
     return x, new_x
 
 
-def interp(var, indexes_coords, method: InterpOptions, **kwargs):
+def interp(var, indexes_coords, method: InterpOptions, reduce: bool = True, **kwargs):
     """Make an interpolation of Variable
 
     Parameters
@@ -615,6 +615,10 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
         One of {'linear', 'nearest', 'zero', 'slinear', 'quadratic',
         'cubic'}. For multidimensional interpolation, only
         {'linear', 'nearest'} can be used.
+    reduce:
+        Decompose the interpolation along independent interpolation dimensions when
+        possible. This will likely improve performance over true multi-dimensional
+        interpolation but will alter the result for certain interpolators.
     **kwargs
         keyword arguments to be passed to scipy.interpolate
 
@@ -631,8 +635,15 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
         return var.copy()
 
     result = var
-    # decompose the interpolation into a succession of independent interpolation
-    for indep_indexes_coords in decompose_interp(indexes_coords):
+
+    if reduce:
+        # decompose the interpolation into a succession of independent interpolation. This may
+        # affect the mathematical behavior of certain nd interpolants.
+        indexes_coords = decompose_interp(indexes_coords)
+    else:
+        indexes_coords = [indexes_coords]
+
+    for indep_indexes_coords in indexes_coords:
         var = result
 
         # target dimensions

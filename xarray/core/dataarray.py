@@ -2216,53 +2216,84 @@ class DataArray(
         coords: Mapping[Any, Any] | None = None,
         method: InterpOptions = "linear",
         assume_sorted: bool = False,
+        reduce: bool = True,
         kwargs: Mapping[str, Any] | None = None,
         **coords_kwargs: Any,
     ) -> Self:
-        """Interpolate a DataArray onto new coordinates
+        """
+        Interpolate a DataArray onto new coordinates.
 
-        Performs univariate or multivariate interpolation of a DataArray onto
-        new coordinates using scipy's interpolation routines. If interpolating
-        along an existing dimension,  either :py:class:`scipy.interpolate.interp1d`
-        or a 1-dimensional scipy interpolator (e.g. :py:class:`scipy.interpolate.KroghInterpolator`)
-        is called. When interpolating along multiple existing dimensions, an
-        attempt is made to decompose the interpolation into multiple
-        1-dimensional interpolations. If this is possible, the 1-dimensional interpolator is called.
-        Otherwise, :py:func:`scipy.interpolate.interpn` is called.
+        Performs univariate or multivariate interpolation of a Dataset onto new coordinates,
+        utilizing either NumPy or SciPy interpolation routines.
+
+        When interpolating along multiple dimensions, the process attempts to decompose the
+        interpolation into independent interpolations along one dimension at a time, unless
+        `reduce=False` is passed. The specific interpolation method and dimensionality
+        determine which interpolant is used:
+
+        1. **Interpolation along one dimension of 1D data (`method='linear'`)**
+        - Uses :py:class:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
+
+        2. **Interpolation along one dimension of N-dimensional data (N ≥ 1)**
+        - Methods {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"}
+            use :py:class:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:class:`numpy.interp`
+            (as in the case of `method='linear'` for 1D data).
+            - If `method='polynomial'`, the `order` keyword argument must also be provided.
+
+        3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
+        - Depending on the `method`, the following interpolants from :py:class:`scipy.interpolate` are used:
+            - `"pchip"`: :py:class:`scipy.interpolate.PchipInterpolator`
+            - `"barycentric"`: :py:class:`scipy.interpolate.BarycentricInterpolator`
+            - `"krogh"`: :py:class:`scipy.interpolate.KroghInterpolator`
+            - `"akima"` or `"makima"`: :py:class:`scipy.interpolate.Akima1dInterpolator`
+            (`makima` is handled by passing the `makima` flag).
+
+        4. **Interpolation along multiple dimensions of multi-dimensional data**
+        - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
+            "quadratic", "cubic", "quintic", "pchip"}.
+
+        Out-of-range values are filled with NaN, unless specified otherwise via `kwargs` to the numpy/scipy interpolant.
 
         Parameters
         ----------
         coords : dict, optional
-            Mapping from dimension names to the new coordinates.
-            New coordinate can be a scalar, array-like or DataArray.
-            If DataArrays are passed as new coordinates, their dimensions are
-            used for the broadcasting. Missing values are skipped.
-        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial"}, default: "linear"
-            The method used to interpolate. The method should be supported by
-            the scipy interpolator:
-
-            - ``interp1d``: {"linear", "nearest", "zero", "slinear",
-              "quadratic", "cubic", "polynomial"}
-            - ``interpn``: {"linear", "nearest"}
-
-            If ``"polynomial"`` is passed, the ``order`` keyword argument must
-            also be provided.
+            Mapping from dimension names to new coordinates. The new coordinates can be scalar, array-like, or DataArray.
+            If DataArrays are passed, their dimensions are used for broadcasting. Missing values are skipped.
+        method : str
+            Interpolation method to use (see descriptions above).
         assume_sorted : bool, default: False
-            If False, values of x can be in any order and they are sorted
-            first. If True, x has to be an array of monotonically increasing
-            values.
-        kwargs : dict-like or None, default: None
-            Additional keyword arguments passed to scipy's interpolator. Valid
-            options and their behavior depend whether ``interp1d`` or
-            ``interpn`` is used.
+            If False, the coordinates being interpolated over are sorted first. If True, the coordinates are assumed
+            to be monotonically increasing.
+        reduce : bool, default: True
+            If True, the interpolation is decomposed into independent interpolations along one dimension at a time,
+            where the interpolation coordinates are independent. Setting this to be True alters the behavior of certain
+            multi-dimensional interpolants compared to the default SciPy output.
+        kwargs : dict, optional
+            Additional keyword arguments passed to the numpy/scipy interpolant (e.g., `fill_value`).
+
+        Returns
+        -------
+        interpolated : DataArray
+            A new DataArray interpolated along the specified coordinates.
+
+        Notes
+        -----
+        - SciPy is required for certain interpolation methods.
+        - Allowing `reduce=True` (the default) may alter the behavior of interpolation along multiple dimensions
+        compared to the default behavior in SciPy.
+
+        See Also
+        --------
+        Dataset.interp
+        Dataset.reindex_like
         **coords_kwargs : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
 
         Returns
         -------
-        interpolated : DataArray
-            New dataarray on the new coordinates.
+        interpolated : Dataarray
+            New dataset on the new coordinates.
 
         Notes
         -----
@@ -2274,75 +2305,81 @@ class DataArray(
         scipy.interpolate.interpn
 
         :doc:`xarray-tutorial:fundamentals/02.2_manipulating_dimensions`
-            Tutorial material on manipulating data resolution using :py:func:`~xarray.DataArray.interp`
+            Tutorial material on manipulating data resolution using :py:func:`~xarray.Dataset.interp`
 
         Examples
         --------
-        >>> da = xr.DataArray(
-        ...     data=[[1, 4, 2, 9], [2, 7, 6, np.nan], [6, np.nan, 5, 8]],
-        ...     dims=("x", "y"),
+        >>> ds = xr.Dataset(
+        ...     data_vars={
+        ...         "a": ("x", [5, 7, 4]),
+        ...         "b": (
+        ...             ("x", "y"),
+        ...             [[1, 4, 2, 9], [2, 7, 6, np.nan], [6, np.nan, 5, 8]],
+        ...         ),
+        ...     },
         ...     coords={"x": [0, 1, 2], "y": [10, 12, 14, 16]},
         ... )
-        >>> da
-        <xarray.DataArray (x: 3, y: 4)> Size: 96B
-        array([[ 1.,  4.,  2.,  9.],
-               [ 2.,  7.,  6., nan],
-               [ 6., nan,  5.,  8.]])
+        >>> ds
+        <xarray.Dataset> Size: 176B
+        Dimensions:  (x: 3, y: 4)
         Coordinates:
           * x        (x) int64 24B 0 1 2
           * y        (y) int64 32B 10 12 14 16
+        Data variables:
+            a        (x) int64 24B 5 7 4
+            b        (x, y) float64 96B 1.0 4.0 2.0 9.0 2.0 7.0 6.0 nan 6.0 nan 5.0 8.0
 
-        1D linear interpolation (the default):
+        1D interpolation with the default method (linear):
 
-        >>> da.interp(x=[0, 0.75, 1.25, 1.75])
-        <xarray.DataArray (x: 4, y: 4)> Size: 128B
-        array([[1.  , 4.  , 2.  ,  nan],
-               [1.75, 6.25, 5.  ,  nan],
-               [3.  ,  nan, 5.75,  nan],
-               [5.  ,  nan, 5.25,  nan]])
+        >>> ds.interp(x=[0, 0.75, 1.25, 1.75])
+        <xarray.Dataset> Size: 224B
+        Dimensions:  (x: 4, y: 4)
         Coordinates:
           * y        (y) int64 32B 10 12 14 16
           * x        (x) float64 32B 0.0 0.75 1.25 1.75
+        Data variables:
+            a        (x) float64 32B 5.0 6.5 6.25 4.75
+            b        (x, y) float64 128B 1.0 4.0 2.0 nan 1.75 ... nan 5.0 nan 5.25 nan
 
-        1D nearest interpolation:
+        1D interpolation with a different method:
 
-        >>> da.interp(x=[0, 0.75, 1.25, 1.75], method="nearest")
-        <xarray.DataArray (x: 4, y: 4)> Size: 128B
-        array([[ 1.,  4.,  2.,  9.],
-               [ 2.,  7.,  6., nan],
-               [ 2.,  7.,  6., nan],
-               [ 6., nan,  5.,  8.]])
+        >>> ds.interp(x=[0, 0.75, 1.25, 1.75], method="nearest")
+        <xarray.Dataset> Size: 224B
+        Dimensions:  (x: 4, y: 4)
         Coordinates:
           * y        (y) int64 32B 10 12 14 16
           * x        (x) float64 32B 0.0 0.75 1.25 1.75
+        Data variables:
+            a        (x) float64 32B 5.0 7.0 7.0 4.0
+            b        (x, y) float64 128B 1.0 4.0 2.0 9.0 2.0 7.0 ... nan 6.0 nan 5.0 8.0
 
-        1D linear extrapolation:
+        1D extrapolation:
 
-        >>> da.interp(
+        >>> ds.interp(
         ...     x=[1, 1.5, 2.5, 3.5],
         ...     method="linear",
         ...     kwargs={"fill_value": "extrapolate"},
         ... )
-        <xarray.DataArray (x: 4, y: 4)> Size: 128B
-        array([[ 2. ,  7. ,  6. ,  nan],
-               [ 4. ,  nan,  5.5,  nan],
-               [ 8. ,  nan,  4.5,  nan],
-               [12. ,  nan,  3.5,  nan]])
+        <xarray.Dataset> Size: 224B
+        Dimensions:  (x: 4, y: 4)
         Coordinates:
           * y        (y) int64 32B 10 12 14 16
           * x        (x) float64 32B 1.0 1.5 2.5 3.5
+        Data variables:
+            a        (x) float64 32B 7.0 5.5 2.5 -0.5
+            b        (x, y) float64 128B 2.0 7.0 6.0 nan 4.0 ... nan 12.0 nan 3.5 nan
 
-        2D linear interpolation:
+        2D interpolation:
 
-        >>> da.interp(x=[0, 0.75, 1.25, 1.75], y=[11, 13, 15], method="linear")
-        <xarray.DataArray (x: 4, y: 3)> Size: 96B
-        array([[2.5  , 3.   ,   nan],
-               [4.   , 5.625,   nan],
-               [  nan,   nan,   nan],
-               [  nan,   nan,   nan]])
+        >>> ds.interp(x=[0, 0.75, 1.25, 1.75], y=[11, 13, 15], method="linear")
+        <xarray.Dataset> Size: 184B
+        Dimensions:  (x: 4, y: 3)
         Coordinates:
           * x        (x) float64 32B 0.0 0.75 1.25 1.75
           * y        (y) int64 24B 11 13 15
+        Data variables:
+            a        (x) float64 32B 5.0 6.5 6.25 4.75
+            b        (x, y) float64 96B 2.5 3.0 nan 4.0 5.625 ... nan nan nan nan nan
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
@@ -2353,6 +2390,7 @@ class DataArray(
             method=method,
             kwargs=kwargs,
             assume_sorted=assume_sorted,
+            reduce=reduce,
             **coords_kwargs,
         )
         return self._from_temp_dataset(ds)
@@ -2362,17 +2400,37 @@ class DataArray(
         other: T_Xarray,
         method: InterpOptions = "linear",
         assume_sorted: bool = False,
+        reduce: bool = True,
         kwargs: Mapping[str, Any] | None = None,
     ) -> Self:
         """Interpolate this object onto the coordinates of another object,
         filling out of range values with NaN.
 
-        If interpolating along a single existing dimension,
-        :py:class:`scipy.interpolate.interp1d` is called. When interpolating
-        along multiple existing dimensions, an attempt is made to decompose the
-        interpolation into multiple 1-dimensional interpolations. If this is
-        possible, :py:class:`scipy.interpolate.interp1d` is called. Otherwise,
-        :py:func:`scipy.interpolate.interpn` is called.
+        When interpolating along multiple dimensions, the process attempts to decompose the
+        interpolation into independent interpolations along one dimension at a time, unless
+        `reduce=False` is passed. The specific interpolation method and dimensionality
+        determine which interpolant is used:
+
+        1. **Interpolation along one dimension of 1D data (`method='linear'`)**
+        - Uses :py:class:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
+
+        2. **Interpolation along one dimension of N-dimensional data (N ≥ 1)**
+        - Methods {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"}
+            use :py:class:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:class:`numpy.interp`
+            (as in the case of `method='linear'` for 1D data).
+            - If `method='polynomial'`, the `order` keyword argument must also be provided.
+
+        3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
+        - Depending on the `method`, the following interpolants from :py:class:`scipy.interpolate` are used:
+            - `"pchip"`: :py:class:`scipy.interpolate.PchipInterpolator`
+            - `"barycentric"`: :py:class:`scipy.interpolate.BarycentricInterpolator`
+            - `"krogh"`: :py:class:`scipy.interpolate.KroghInterpolator`
+            - `"akima"` or `"makima"`: :py:class:`scipy.interpolate.Akima1dInterpolator`
+            (`makima` is handled by passing the `makima` flag).
+
+        4. **Interpolation along multiple dimensions of multi-dimensional data**
+        - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
+            "quadratic", "cubic", "quintic", "pchip"}.
 
         Parameters
         ----------
@@ -2380,28 +2438,22 @@ class DataArray(
             Object with an 'indexes' attribute giving a mapping from dimension
             names to an 1d array-like, which provides coordinates upon
             which to index the variables in this dataset. Missing values are skipped.
-        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial"}, default: "linear"
-            The method used to interpolate. The method should be supported by
-            the scipy interpolator:
-
-            - {"linear", "nearest", "zero", "slinear", "quadratic", "cubic",
-              "polynomial"} when ``interp1d`` is called.
-            - {"linear", "nearest"} when ``interpn`` is called.
-
-            If ``"polynomial"`` is passed, the ``order`` keyword argument must
-            also be provided.
+        method : str
+            Interpolation method to use (see descriptions above).
         assume_sorted : bool, default: False
-            If False, values of coordinates that are interpolated over can be
-            in any order and they are sorted first. If True, interpolated
-            coordinates are assumed to be an array of monotonically increasing
-            values.
+            If False, the coordinates being interpolated over are sorted first. If True, the coordinates are assumed
+            to be monotonically increasing.
+        reduce : bool, default: True
+            If True, the interpolation is decomposed into independent interpolations along one dimension at a time,
+            where the interpolation coordinates are independent. Setting this to be True alters the behavior of certain
+            multi-dimensional interpolants compared to the default SciPy output.
         kwargs : dict, optional
-            Additional keyword passed to scipy's interpolator.
+            Additional keyword arguments passed to the numpy/scipy interpolant (e.g., `fill_value`).
 
         Returns
         -------
         interpolated : DataArray
-            Another dataarray by interpolating this dataarray's data along the
+            Another dataArray by interpolating this DataArray's data along the
             coordinates of the other object.
 
         Examples
@@ -2471,12 +2523,17 @@ class DataArray(
         DataArray.interp
         DataArray.reindex_like
         """
+
         if self.dtype.kind not in "uifc":
             raise TypeError(
                 f"interp only works for a numeric type array. Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp_like(
-            other, method=method, kwargs=kwargs, assume_sorted=assume_sorted
+            other,
+            method=method,
+            kwargs=kwargs,
+            assume_sorted=assume_sorted,
+            reduce=reduce,
         )
         return self._from_temp_dataset(ds)
 
