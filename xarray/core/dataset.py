@@ -2375,6 +2375,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore: ...
@@ -2397,6 +2398,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> Delayed: ...
@@ -2417,6 +2419,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore | Delayed:
@@ -2527,9 +2530,15 @@ class Dataset(
             Any additional parameters for the storage backend (ignored for local
             paths).
         zarr_version : int or None, optional
-            The desired zarr spec version to target (currently 2 or 3). The
-            default of None will attempt to determine the zarr version from
-            ``store`` when possible, otherwise defaulting to 2.
+
+            .. deprecated:: 2024.9.1
+            Use ``zarr_format`` instead.
+
+        zarr_format : int or None, optional
+            The desired zarr format to target (currently 2 or 3). The default
+            of None will attempt to determine the zarr version from ``store`` when
+            possible, otherwise defaulting to the default version used by
+            the zarr-python library installed.
         write_empty_chunks : bool or None, optional
             If True, all chunks will be stored regardless of their
             contents. If False, each chunk is compared to the array's fill value
@@ -2590,6 +2599,7 @@ class Dataset(
             region=region,
             safe_chunks=safe_chunks,
             zarr_version=zarr_version,
+            zarr_format=zarr_format,
             write_empty_chunks=write_empty_chunks,
             chunkmanager_store_kwargs=chunkmanager_store_kwargs,
         )

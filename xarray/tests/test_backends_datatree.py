@@ -256,12 +256,12 @@ class TestZarrDatatreeIO:
         assert_equal(original_dt, roundtrip_dt)
 
     def test_zarr_encoding(self, tmpdir, simple_datatree):
-        import zarr
+        from numcodecs.blosc import Blosc
 
         filepath = tmpdir / "test.zarr"
         original_dt = simple_datatree
 
-        comp = {"compressor": zarr.Blosc(cname="zstd", clevel=3, shuffle=2)}
+        comp = {"compressor": Blosc(cname="zstd", clevel=3, shuffle=2)}
         enc = {"/set2": {var: comp for var in original_dt["/set2"].dataset.data_vars}}
         original_dt.to_zarr(filepath, encoding=enc)
         roundtrip_dt = open_datatree(filepath, engine="zarr")

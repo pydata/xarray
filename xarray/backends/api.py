@@ -1681,6 +1681,7 @@ def to_zarr(
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
+    zarr_format: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore | Delayed:
@@ -1743,13 +1744,6 @@ def to_zarr(
     # validate Dataset keys, DataArray names
     _validate_dataset_names(dataset)
 
-    if zarr_version is None:
-        # default to 2 if store doesn't specify its version (e.g. a path)
-        zarr_version = int(getattr(store, "_store_version", 2))
-
-    if consolidated is None and zarr_version > 2:
-        consolidated = False
-
     if mode == "r+":
         already_consolidated = consolidated
         consolidate_on_close = False
@@ -1769,6 +1763,7 @@ def to_zarr(
         safe_chunks=safe_chunks,
         stacklevel=4,  # for Dataset.to_zarr()
         zarr_version=zarr_version,
+        zarr_format=zarr_format,
         write_empty=write_empty_chunks,
     )
 
