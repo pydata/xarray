@@ -7009,17 +7009,17 @@ class Dataset(
                 if not reduce_dims:
                     variables[name] = var
             else:
-                if (
-                    # Some reduction functions (e.g. std, var) need to run on variables
-                    # that don't have the reduce dims: PR5393
-                    not is_extension_array_dtype(var.dtype)
-                    and (
-                        not reduce_dims
-                        or not numeric_only
-                        or np.issubdtype(var.dtype, np.number)
-                        or (var.dtype == np.bool_)
-                    )
-                ):
+
+                is_numeric = (not is_extension_array_dtype(var.dtype)) and (
+                    np.issubdtype(var.dtype, np.number) or var.dtype == np.bool_
+                )
+
+                # pass through non-numeric scalar
+                if numeric_only and not is_numeric and var.ndim == 0:
+                    variables[name] = var
+
+                elif not reduce_dims or not numeric_only or is_numeric:
+
                     # prefer to aggregate over axis=None rather than
                     # axis=(0, 1) if they will be equivalent, because
                     # the former is often more efficient
