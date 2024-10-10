@@ -2963,7 +2963,7 @@ class TestDatetimePlot(PlotTestCase):
         # mpl.dates.AutoDateLocator passes and no other subclasses:
         assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
+    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_datetime_plot2d(self) -> None:
         # Test that matplotlib-native datetime works:
         da = DataArray(

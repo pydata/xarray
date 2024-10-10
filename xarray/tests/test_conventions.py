@@ -213,7 +213,7 @@ class TestEncodeCFVariable:
         vars, attrs = conventions.encode_dataset_coordinates(ds)
         assert attrs["coordinates"] == "bar baz"
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
+    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_emit_coordinates_attribute_in_attrs(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
@@ -231,7 +231,7 @@ class TestEncodeCFVariable:
         assert enc["b"].attrs.get("coordinates") == "t"
         assert "coordinates" not in enc["b"].encoding
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
+    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_emit_coordinates_attribute_in_encoding(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
@@ -364,7 +364,7 @@ class TestDecodeCF:
 
         attrs = {"units": "days since 1900-01-01"}
         ds = decode_cf(Dataset({"time": ("time", [0, 1], attrs)}))
-        assert "(time) datetime64[ns]" in repr(ds)
+        assert "(time) datetime64[s]" in repr(ds)
 
     @requires_cftime
     def test_decode_cf_datetime_transition_to_invalid(self) -> None:
@@ -447,13 +447,13 @@ class TestDecodeCF:
 
         dsc = conventions.decode_cf(ds)
         assert dsc.timedelta.dtype == np.dtype("m8[ns]")
-        assert dsc.time.dtype == np.dtype("M8[ns]")
+        assert dsc.time.dtype == np.dtype("M8[s]")
         dsc = conventions.decode_cf(ds, decode_times=False)
         assert dsc.timedelta.dtype == np.dtype("int64")
         assert dsc.time.dtype == np.dtype("int64")
         dsc = conventions.decode_cf(ds, decode_times=True, decode_timedelta=False)
         assert dsc.timedelta.dtype == np.dtype("int64")
-        assert dsc.time.dtype == np.dtype("M8[ns]")
+        assert dsc.time.dtype == np.dtype("M8[s]")
         dsc = conventions.decode_cf(ds, decode_times=False, decode_timedelta=True)
         assert dsc.timedelta.dtype == np.dtype("m8[ns]")
         assert dsc.time.dtype == np.dtype("int64")

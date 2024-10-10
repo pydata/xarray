@@ -1496,7 +1496,7 @@ def test_date_range_like_same_calendar():
     assert src is out
 
 
-@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
+@pytest.mark.filterwarnings("ignore:Converting non-default")
 def test_date_range_like_errors():
     src = date_range("1899-02-03", periods=20, freq="D", use_cftime=False)
     src = src[np.arange(20) != 10]  # Remove 1 day so the frequency is not inferable.

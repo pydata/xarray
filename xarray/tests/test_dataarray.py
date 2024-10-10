@@ -3657,7 +3657,7 @@ class TestDataArray:
         actual_no_data = da.to_dict(data=False, encoding=encoding)
         assert expected_no_data == actual_no_data
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
+    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_to_and_from_dict_with_time_dim(self) -> None:
         x = np.random.randn(10, 3)
         t = pd.date_range("20130101", periods=10)
@@ -3666,7 +3666,7 @@ class TestDataArray:
         roundtripped = DataArray.from_dict(da.to_dict())
         assert_identical(da, roundtripped)
 
-    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
+    @pytest.mark.filterwarnings("ignore:Converting non-default")
     def test_to_and_from_dict_with_nan_nat(self) -> None:
         y = np.random.randn(10, 3)
         y[2] = np.nan
