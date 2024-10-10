@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import warnings
-from collections.abc import Callable, Hashable, Sequence
+from collections.abc import Callable, Hashable, Mapping, Sequence
 from functools import partial
 from numbers import Number
 from typing import TYPE_CHECKING, Any, get_args
@@ -32,8 +32,8 @@ if TYPE_CHECKING:
 
 
 def _get_nan_block_lengths(
-    obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable
-):
+    obj: Dataset | DataArray, dim: Hashable, index: Variable
+) -> Any:
     """
     Return an object where each NaN element in 'obj' is replaced by the
     length of the gap the element is in.
@@ -66,12 +66,12 @@ class BaseInterpolator:
     cons_kwargs: dict[str, Any]
     call_kwargs: dict[str, Any]
     f: Callable
-    method: str
+    method: str | int
 
-    def __call__(self, x):
+    def __call__(self, x: np.ndarray) -> np.ndarray:
         return self.f(x, **self.call_kwargs)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}: method={self.method}"
 
 
@@ -83,7 +83,14 @@ class NumpyInterpolator(BaseInterpolator):
     numpy.interp
     """
 
-    def __init__(self, xi, yi, method="linear", fill_value=None, period=None):
+    def __init__(
+        self,
+        xi: Variable,
+        yi: np.ndarray,
+        method: str | None = "linear",
+        fill_value=None,
+        period=None,
+    ):
         if method != "linear":
             raise ValueError("only method `linear` is valid for the NumpyInterpolator")
 
@@ -104,8 +111,8 @@ class NumpyInterpolator(BaseInterpolator):
             self._left = fill_value[0]
             self._right = fill_value[1]
         elif is_scalar(fill_value):
-            self._left = fill_value
-            self._right = fill_value
+            self._left = fill_value  # type: ignore[assignment]
+            self._right = fill_value  # type: ignore[assignment]
         else:
             raise ValueError(f"{fill_value} is not a valid fill_value")
 
@@ -130,15 +137,15 @@ class ScipyInterpolator(BaseInterpolator):
 
     def __init__(
         self,
-        xi,
-        yi,
-        method=None,
-        fill_value=None,
-        assume_sorted=True,
-        copy=False,
-        bounds_error=False,
-        order=None,
-        axis=-1,
+        xi: Variable,
+        yi: np.ndarray,
+        method: str | int | None = None,
+        fill_value: float | complex | None = None,
+        assume_sorted: bool = True,
+        copy: bool = False,
+        bounds_error: bool = False,
+        order: int | None = None,
+        axis: int = -1,
         **kwargs,
     ):
         from scipy.interpolate import interp1d
@@ -154,17 +161,10 @@ class ScipyInterpolator(BaseInterpolator):
                 raise ValueError("order is required when method=polynomial")
             method = order
 
-        self.method = method
+        self.method: str | int = method
 
         self.cons_kwargs = kwargs
         self.call_kwargs = {}
-
-        nan = np.nan if yi.dtype.kind != "c" else np.nan + np.nan * 1j
-
-        if fill_value is None and method == "linear":
-            fill_value = nan, nan
-        elif fill_value is None:
-            fill_value = nan
 
         self.f = interp1d(
             xi,
@@ -189,13 +189,13 @@ class SplineInterpolator(BaseInterpolator):
 
     def __init__(
         self,
-        xi,
-        yi,
-        method="spline",
-        fill_value=None,
-        order=3,
-        nu=0,
-        ext=None,
+        xi: Variable,
+        yi: np.ndarray,
+        method: str | int | None = "spline",
+        fill_value: float | complex | None = None,
+        order: int = 3,
+        nu: float | None = 0,
+        ext: int | str | None = None,
         **kwargs,
     ):
         from scipy.interpolate import UnivariateSpline
@@ -213,7 +213,9 @@ class SplineInterpolator(BaseInterpolator):
         self.f = UnivariateSpline(xi, yi, k=order, **self.cons_kwargs)
 
 
-def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
+def _apply_over_vars_with_dim(
+    func: Callable, self: Dataset, dim: Hashable | None = None, **kwargs
+) -> Dataset:
     """Wrapper for datasets"""
     ds = type(self)(coords=self.coords, attrs=self.attrs)
 
@@ -601,7 +603,12 @@ def _floatize_x(x, new_x):
     return x, new_x
 
 
-def interp(var, indexes_coords, method: InterpOptions, **kwargs):
+def interp(
+    var: Variable,
+    indexes_coords: Mapping[Any, tuple[Any, Any]],
+    method: InterpOptions,
+    **kwargs,
+) -> Variable:
     """Make an interpolation of Variable
 
     Parameters
@@ -662,20 +669,23 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
     return result
 
 
-def interp_func(var, x, new_x, method: InterpOptions, kwargs):
+def interp_func(
+    var: DataArray,
+    x: tuple[Variable, ...],
+    new_x: tuple[Variable, ...],
+    method: InterpOptions,
+    kwargs: dict[str, Any],
+) -> np.ndarray:
     """
     multi-dimensional interpolation for array-like. Interpolated axes should be
     located in the last position.
 
     Parameters
     ----------
-    var : np.ndarray or dask.array.Array
-        Array to be interpolated. The final dimension is interpolated.
-    x : a list of 1d array.
-        Original coordinates. Should not contain NaN.
-    new_x : a list of 1d array
-        New coordinates. Should not contain NaN.
-    method : string
+    var : Array to be interpolated. The final dimension is interpolated.
+    x : Original coordinates. Should not contain NaN.
+    new_x : New coordinates. Should not contain NaN.
+    method :
         {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'pchip', 'akima',
             'makima', 'barycentric', 'krogh'} for 1-dimensional interpolation.
         {'linear', 'nearest'} for multidimensional interpolation
@@ -696,7 +706,7 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
     scipy.interpolate.interp1d
     """
     if not x:
-        return var.copy()
+        return var.data.copy()
 
     if len(x) == 1:
         func, kwargs = _get_interpolator(method, vectorizeable_only=True, **kwargs)
@@ -713,11 +723,11 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
 
         # blockwise args format
         x_arginds = [[_x, (nconst + index,)] for index, _x in enumerate(x)]
-        x_arginds = [item for pair in x_arginds for item in pair]
+        x_arginds = [item for pair in x_arginds for item in pair]  # type: ignore[misc]
         new_x_arginds = [
             [_x, [ndim + index for index in range(_x.ndim)]] for _x in new_x
         ]
-        new_x_arginds = [item for pair in new_x_arginds for item in pair]
+        new_x_arginds = [item for pair in new_x_arginds for item in pair]  # type: ignore[misc]
 
         args = (var, range(ndim), *x_arginds, *new_x_arginds)
 
@@ -727,13 +737,13 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
             elem for pair in zip(rechunked, args[1::2], strict=True) for elem in pair
         )
 
-        new_x = rechunked[1 + (len(rechunked) - 1) // 2 :]
+        new_x = rechunked[1 + (len(rechunked) - 1) // 2 :]  # type: ignore[assignment]
 
         new_x0_chunks = new_x[0].chunks
         new_x0_shape = new_x[0].shape
         new_x0_chunks_is_not_none = new_x0_chunks is not None
         new_axes = {
-            ndim + i: new_x0_chunks[i] if new_x0_chunks_is_not_none else new_x0_shape[i]
+            ndim + i: new_x0_chunks[i] if new_x0_chunks_is_not_none else new_x0_shape[i]  # type: ignore[index]
             for i in range(new_x[0].ndim)
         }
 
@@ -743,7 +753,7 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
         # scipy.interpolate.interp1d always forces to float.
         # Use the same check for blockwise as well:
         if not issubclass(var.dtype.type, np.inexact):
-            dtype = float
+            dtype = np.dtype(float)
         else:
             dtype = var.dtype
 
@@ -758,17 +768,22 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
             localize=localize,
             concatenate=True,
             dtype=dtype,
-            new_axes=new_axes,
+            new_axes=new_axes,  # type: ignore[arg-type]
             meta=meta,
             align_arrays=False,
         )
 
-    return _interpnd(var, x, new_x, func, kwargs)
+    return _interpnd(var.data, x, new_x, func, kwargs)
 
 
-def _interp1d(var, x, new_x, func, kwargs):
+def _interp1d(
+    var: np.ndarray,
+    x: Variable,
+    new_x: Variable,
+    func: Callable,
+    kwargs: dict[str, Any],
+) -> np.ndarray:
     # x, new_x are tuples of size 1.
-    x, new_x = x[0], new_x[0]
     rslt = func(x, var, **kwargs)(np.ravel(new_x))
     if new_x.ndim > 1:
         return reshape(rslt, (var.shape[:-1] + new_x.shape))
@@ -777,11 +792,17 @@ def _interp1d(var, x, new_x, func, kwargs):
     return rslt
 
 
-def _interpnd(var, x, new_x, func, kwargs):
+def _interpnd(
+    var: np.ndarray,
+    x: tuple[Variable, ...],
+    new_x: tuple[Variable, ...],
+    func: Callable,
+    kwargs: dict[str, Any],
+) -> np.ndarray:
     x, new_x = _floatize_x(x, new_x)
 
     if len(x) == 1:
-        return _interp1d(var, x, new_x, func, kwargs)
+        return _interp1d(var, x[0], new_x[0], func, kwargs)
 
     # move the interpolation axes to the start position
     var = var.transpose(range(-len(x), var.ndim - len(x)))
