@@ -2272,11 +2272,6 @@ class ZarrBase(CFEncodedBase):
             )
 
     def save(self, dataset, store_target, **kwargs):  # type: ignore[override]
-        if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
-            for k, v in dataset.variables.items():
-                if v.dtype.kind in ("M",):
-                    pytest.skip(reason=f"Unsupported dtype {v} for variable: {k}")
-
         return dataset.to_zarr(store=store_target, **kwargs, **self.version_kwargs)
 
     @contextlib.contextmanager
@@ -5353,13 +5348,13 @@ class TestDataArrayToNetCDF:
 class TestDataArrayToZarr:
 
     def skip_if_zarr_python_3_and_zip_store(self, store) -> None:
-        if isinstance(store, zarr.storage.ZipStore):
+        if isinstance(store, zarr.storage.zip.ZipStore):
             pytest.skip(
                 reason="zarr-python 3.x doesn't support reopening ZipStore with a new mode."
             )
 
     def test_dataarray_to_zarr_no_name(self, tmp_store) -> None:
-        skip_if_zarr_format_3(tmp_store)
+        self.skip_if_zarr_python_3_and_zip_store(tmp_store)
         original_da = DataArray(np.arange(1, 13).reshape((3, 4)))
 
         original_da.to_zarr(tmp_store)
@@ -5368,7 +5363,7 @@ class TestDataArrayToZarr:
             assert_identical(original_da, loaded_da)
 
     def test_dataarray_to_zarr_with_name(self, tmp_store) -> None:
-        skip_if_zarr_format_3(tmp_store)
+        self.skip_if_zarr_python_3_and_zip_store(tmp_store)
         original_da = DataArray(np.arange(12).reshape((3, 4)) + 1, name="test")
 
         original_da.to_zarr(tmp_store)
@@ -5377,7 +5372,7 @@ class TestDataArrayToZarr:
             assert_identical(original_da, loaded_da)
 
     def test_dataarray_to_zarr_coord_name_clash(self, tmp_store) -> None:
-        skip_if_zarr_format_3(tmp_store)
+        self.skip_if_zarr_python_3_and_zip_store(tmp_store)
         original_da = DataArray(
             np.arange(12).reshape((3, 4)) + 1, dims=["x", "y"], name="x"
         )
@@ -5388,7 +5383,7 @@ class TestDataArrayToZarr:
             assert_identical(original_da, loaded_da)
 
     def test_open_dataarray_options(self, tmp_store) -> None:
-        skip_if_zarr_format_3(tmp_store)
+        self.skip_if_zarr_python_3_and_zip_store(tmp_store)
         data = DataArray(np.arange(5) + 1, coords={"y": ("x", range(1, 6))}, dims=["x"])
 
         data.to_zarr(tmp_store)
