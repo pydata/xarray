@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import warnings
-from collections.abc import Callable, Hashable, Sequence
+from collections.abc import Callable, Hashable, Mapping, Sequence
 from functools import partial
 from numbers import Number
 from typing import TYPE_CHECKING, Any, get_args
@@ -605,7 +605,7 @@ def _floatize_x(x, new_x):
 
 def interp(
     var: Variable,
-    indexes_coords: dict[Hashable, tuple[Any, Any]],
+    indexes_coords: Mapping[Any, tuple[Any, Any]],
     method: InterpOptions,
     **kwargs,
 ) -> Variable:
@@ -674,7 +674,7 @@ def interp_func(
     x: tuple[Variable, ...],
     new_x: tuple[Variable, ...],
     method: InterpOptions,
-    kwargs: dict,
+    kwargs: dict[str, Any],
 ) -> np.ndarray:
     """
     multi-dimensional interpolation for array-like. Interpolated axes should be
@@ -781,7 +781,7 @@ def _interp1d(
     x: Variable,
     new_x: Variable,
     func: Callable,
-    kwargs: dict,
+    kwargs: dict[str, Any],
 ) -> np.ndarray:
     # x, new_x are tuples of size 1.
     rslt = func(x, var, **kwargs)(np.ravel(new_x))
@@ -797,7 +797,7 @@ def _interpnd(
     x: tuple[Variable, ...],
     new_x: tuple[Variable, ...],
     func: Callable,
-    kwargs: dict,
+    kwargs: dict[str, Any],
 ) -> np.ndarray:
     x, new_x = _floatize_x(x, new_x)
 
