@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Callable, Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, Optional, get_args
+from typing import TYPE_CHECKING, Any, get_args
 
 import numpy as np
 import pandas as pd
@@ -87,7 +87,7 @@ class NumpyInterpolator(BaseInterpolator):
         self,
         xi: Variable,
         yi: np.ndarray,
-        method: Optional[str] = "linear",
+        method: str | None = "linear",
         fill_value=None,
         period=None,
     ):
@@ -139,12 +139,12 @@ class ScipyInterpolator(BaseInterpolator):
         self,
         xi: Variable,
         yi: np.ndarray,
-        method: Optional[str | int] = None,
-        fill_value: Optional[float | complex] = None,
+        method: str | int | None = None,
+        fill_value: float | complex | None = None,
         assume_sorted: bool = True,
         copy: bool = False,
         bounds_error: bool = False,
-        order: Optional[int] = None,
+        order: int | None = None,
         axis: int = -1,
         **kwargs,
     ):
@@ -191,11 +191,11 @@ class SplineInterpolator(BaseInterpolator):
         self,
         xi: Variable,
         yi: np.ndarray,
-        method: Optional[str | int] = "spline",
-        fill_value: Optional[float | complex] = None,
+        method: str | int | None = "spline",
+        fill_value: float | complex | None = None,
         order: int = 3,
-        nu: Optional[float] = 0,
-        ext: Optional[int | str] = None,
+        nu: float | None = 0,
+        ext: int | str | None = None,
         **kwargs,
     ):
         from scipy.interpolate import UnivariateSpline
@@ -214,7 +214,7 @@ class SplineInterpolator(BaseInterpolator):
 
 
 def _apply_over_vars_with_dim(
-    func: Callable, self: Dataset, dim: Optional[Hashable] = None, **kwargs
+    func: Callable, self: Dataset, dim: Hashable | None = None, **kwargs
 ) -> Dataset:
     """Wrapper for datasets"""
     ds = type(self)(coords=self.coords, attrs=self.attrs)
