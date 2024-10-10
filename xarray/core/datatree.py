@@ -806,6 +806,9 @@ class DataTree(
         if data is not _default:
             self._set_node_data(ds)
 
+        if self.parent is not None:
+            _deduplicate_inherited_coordinates(self, self.parent)
+
         self.children = children
 
     def _copy_node(
