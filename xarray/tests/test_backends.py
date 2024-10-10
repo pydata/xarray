@@ -2272,11 +2272,6 @@ class ZarrBase(CFEncodedBase):
             )
 
     def save(self, dataset, store_target, **kwargs):  # type: ignore[override]
-        if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
-            for k, v in dataset.variables.items():
-                if v.dtype.kind in ("M",):
-                    pytest.skip(reason=f"Unsupported dtype {v} for variable: {k}")
-
         return dataset.to_zarr(store=store_target, **kwargs, **self.version_kwargs)
 
     @contextlib.contextmanager
@@ -2638,21 +2633,38 @@ class ZarrBase(CFEncodedBase):
     def test_compressor_encoding(self) -> None:
         original = create_test_data()
         # specify a custom compressor
-        from numcodecs.blosc import Blosc
-
-        blosc_comp = Blosc(cname="zstd", clevel=3, shuffle=2)
 
         if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
-            encoding = {"codecs": [blosc_comp]}
+            encoding_key = "codecs"
+            # all parameters need to be explicitly specified in order for the comparison to pass below
+            encoding = {
+                encoding_key: (
+                    zarr.codecs.BytesCodec(endian="little"),
+                    zarr.codecs.BloscCodec(
+                        cname="zstd",
+                        clevel=3,
+                        shuffle="shuffle",
+                        typesize=8,
+                        blocksize=0,
+                    ),
+                )
+            }
         else:
-            encoding = {"compressor": blosc_comp}
+            from numcodecs.blosc import Blosc
+
+            encoding_key = "compressor"
+            encoding = {encoding_key: Blosc(cname="zstd", clevel=3, shuffle=2)}
 
         save_kwargs = dict(encoding={"var1": encoding})
 
         with self.roundtrip(original, save_kwargs=save_kwargs) as ds:
-            actual = ds["var1"].encoding["compressor"]
-            # get_config returns a dictionary of compressor attributes
-            assert actual.get_config() == blosc_comp.get_config()
+            enc = ds["var1"].encoding[encoding_key]
+            if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
+                # TODO: figure out a cleaner way to do this comparison
+                codecs = zarr.core.metadata.v3.parse_codecs(enc)
+                assert codecs == encoding[encoding_key]
+            else:
+                assert enc == encoding[encoding_key]
 
     def test_group(self) -> None:
         original = create_test_data()
