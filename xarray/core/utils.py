@@ -132,7 +132,7 @@ def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
     if not is_valid_numpy_dtype(array.dtype):
         return np.dtype("O")
 
-    return array.dtype
+    return array.dtype  # type: ignore[return-value]
 
 
 def maybe_coerce_to_str(index, original_coords):
@@ -180,7 +180,7 @@ def equivalent(first: T, second: T) -> bool:
         return duck_array_ops.array_equiv(first, second)
     if isinstance(first, list) or isinstance(second, list):
         return list_equiv(first, second)  # type: ignore[arg-type]
-    return (first == second) or (pd.isnull(first) and pd.isnull(second))
+    return (first == second) or (pd.isnull(first) and pd.isnull(second))  # type: ignore[call-overload]
 
 
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:

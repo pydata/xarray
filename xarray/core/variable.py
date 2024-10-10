@@ -151,7 +151,7 @@ def as_variable(
             ) from error
     elif utils.is_scalar(obj):
         obj = Variable([], obj)
-    elif isinstance(obj, pd.Index | IndexVariable) and obj.name is not None:  # type: ignore[redundant-expr]
+    elif isinstance(obj, pd.Index | IndexVariable) and obj.name is not None:
         obj = Variable(obj.name, obj)
     elif isinstance(obj, set | dict):
         raise TypeError(f"variable {name!r} has invalid type {type(obj)!r}")
