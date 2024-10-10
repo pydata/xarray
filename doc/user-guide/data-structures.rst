@@ -800,6 +800,7 @@ included by default unless you exclude them with the ``inherited`` flag:
 
     dt2["/weather/temperature"].to_dataset(inherited=False)
 
+For more examples and further discussion see LINK
 
 .. _coordinates:
 
