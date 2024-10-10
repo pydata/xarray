@@ -927,7 +927,8 @@ class CFEncodedBase(DatasetIOBase):
                 if actual["a"].dtype.metadata is not None:
                     assert check_vlen_dtype(actual["a"].dtype) is str
             else:
-                assert actual["a"].dtype == np.dtype("=U1")
+                # zarr v3 sends back "<U1"
+                assert np.issubdtype(actual["a"].dtype, np.dtype("=U1"))
 
     @pytest.mark.parametrize(
         "decoded_fn, encoded_fn",
