@@ -58,8 +58,8 @@ from collections.abc import (
     Mapping,
     MutableMapping,
     MutableSet,
-    Set,
     Sequence,
+    Set,
     ValuesView,
 )
 from enum import Enum
