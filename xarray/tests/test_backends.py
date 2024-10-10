@@ -1224,6 +1224,7 @@ class CFEncodedBase(DatasetIOBase):
                 assert "coordinates" not in ds["lon"].encoding
 
     def test_roundtrip_endian(self) -> None:
+        skip_if_zarr_format_3("zarr v3 has not implemented endian support yet")
         ds = Dataset(
             {
                 "x": np.arange(3, 10, dtype=">i2"),
