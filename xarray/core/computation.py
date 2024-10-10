@@ -31,7 +31,7 @@ from xarray.core.indexes import Index, filter_indexes_from_coords
 from xarray.core.merge import merge_attrs, merge_coordinates_without_align
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import Dims, T_DataArray
-from xarray.core.utils import is_dict_like, is_scalar, parse_dims
+from xarray.core.utils import is_dict_like, is_scalar, parse_dims_as_set
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
@@ -1846,11 +1846,9 @@ def dot(
         dim_counts: Counter = Counter()
         for arr in arrays:
             dim_counts.update(arr.dims)
-        dim = tuple(d for d, c in dim_counts.items() if c > 1)
+        dot_dims = {d for d, c in dim_counts.items() if c > 1}
     else:
-        dim = parse_dims(dim, all_dims=tuple(all_dims))
-
-    dot_dims: set[Hashable] = set(dim)
+        dot_dims = parse_dims_as_set(dim, all_dims=set(all_dims))
 
     # dimensions to be parallelized
     broadcast_dims = common_dims - dot_dims

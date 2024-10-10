@@ -263,7 +263,7 @@ class DataStructure:
     create_example: str
     example_var_name: str
     numeric_only: bool = False
-    see_also_modules: tuple[str] = tuple
+    see_also_modules: tuple[str, ...] = tuple
 
 
 class Method:
@@ -287,13 +287,13 @@ class Method:
         self.additional_notes = additional_notes
         if bool_reduce:
             self.array_method = f"array_{name}"
-            self.np_example_array = """
-        ...     np.array([True, True, True, True, True, False], dtype=bool)"""
+            self.np_example_array = (
+                """np.array([True, True, True, True, True, False], dtype=bool)"""
+            )
 
         else:
             self.array_method = name
-            self.np_example_array = """
-        ...     np.array([1, 2, 3, 0, 2, np.nan])"""
+            self.np_example_array = """np.array([1, 2, 3, 0, 2, np.nan])"""
 
 
 @dataclass
@@ -541,10 +541,27 @@ AGGREGATION_METHODS = (
 )
 
 
+DATATREE_OBJECT = DataStructure(
+    name="DataTree",
+    create_example="""
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(foo=("time", {example_array})),
+        ...         coords=dict(
+        ...             time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )""",
+    example_var_name="dt",
+    numeric_only=True,
+    see_also_modules=("Dataset", "DataArray"),
+)
 DATASET_OBJECT = DataStructure(
     name="Dataset",
     create_example="""
-        >>> da = xr.DataArray({example_array},
+        >>> da = xr.DataArray(
+        ...     {example_array},
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
@@ -559,7 +576,8 @@ DATASET_OBJECT = DataStructure(
 DATAARRAY_OBJECT = DataStructure(
     name="DataArray",
     create_example="""
-        >>> da = xr.DataArray({example_array},
+        >>> da = xr.DataArray(
+        ...     {example_array},
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
@@ -569,6 +587,15 @@ DATAARRAY_OBJECT = DataStructure(
     example_var_name="da",
     numeric_only=False,
     see_also_modules=("Dataset",),
+)
+DATATREE_GENERATOR = GenericAggregationGenerator(
+    cls="",
+    datastructure=DATATREE_OBJECT,
+    methods=AGGREGATION_METHODS,
+    docref="agg",
+    docref_description="reduction or aggregation operations",
+    example_call_preamble="",
+    definition_preamble=AGGREGATIONS_PREAMBLE,
 )
 DATASET_GENERATOR = GenericAggregationGenerator(
     cls="",
@@ -634,7 +661,7 @@ NAMED_ARRAY_OBJECT = DataStructure(
     create_example="""
         >>> from xarray.namedarray.core import NamedArray
         >>> na = NamedArray(
-        ...     "x",{example_array},
+        ...     "x", {example_array}
         ... )""",
     example_var_name="na",
     numeric_only=False,
@@ -670,6 +697,7 @@ if __name__ == "__main__":
     write_methods(
         filepath=p.parent / "xarray" / "xarray" / "core" / "_aggregations.py",
         generators=[
+            DATATREE_GENERATOR,
             DATASET_GENERATOR,
             DATAARRAY_GENERATOR,
             DATASET_GROUPBY_GENERATOR,
