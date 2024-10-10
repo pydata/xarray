@@ -24,12 +24,6 @@ from xarray.core.datatree_mapping import (
     check_isomorphic,
     map_over_subtree,
 )
-from xarray.core.datatree_ops import (
-    DataTreeArithmeticMixin,
-    MappedDatasetMethodsMixin,
-    MappedDataWithCoords,
-)
-from xarray.core.datatree_render import RenderDataTree
 from xarray.core.formatting import datatree_repr, dims_and_coords_repr
 from xarray.core.formatting_html import (
     datatree_repr as datatree_repr_html,
@@ -160,12 +154,6 @@ def check_alignment(
 def _deduplicate_inherited_coordinates(child: DataTree, parent: DataTree) -> None:
     # This method removes repeated indexes (and corresponding coordinates)
     # that are repeated between a DataTree and its parents.
-    #
-    # TODO(shoyer): Decide how to handle repeated coordinates *without* an
-    # index. Should these be allowed, in which case we probably want to
-    # exclude them from inheritance, or should they be automatically
-    # dropped?
-    # https://github.com/pydata/xarray/issues/9475#issuecomment-2357004264
     removed_something = False
     for name in parent._indexes:
         if name in child._node_indexes:
@@ -404,9 +392,6 @@ class DatasetView(Dataset):
 
 class DataTree(
     NamedNode["DataTree"],
-    MappedDatasetMethodsMixin,
-    MappedDataWithCoords,
-    DataTreeArithmeticMixin,
     TreeAttrAccessMixin,
     Mapping[str, "DataArray | DataTree"],
 ):
@@ -1420,34 +1405,6 @@ class DataTree(
         # TODO fix this typing error
         return map_over_subtree(func)(self, *args, **kwargs)
 
-    def map_over_subtree_inplace(
-        self,
-        func: Callable,
-        *args: Iterable[Any],
-        **kwargs: Any,
-    ) -> None:
-        """
-        Apply a function to every dataset in this subtree, updating data in place.
-
-        Parameters
-        ----------
-        func : callable
-            Function to apply to datasets with signature:
-            `func(node.dataset, *args, **kwargs) -> Dataset`.
-
-            Function will not be applied to any nodes without datasets,
-        *args : tuple, optional
-            Positional arguments passed on to `func`.
-        **kwargs : Any
-            Keyword arguments passed on to `func`.
-        """
-
-        # TODO if func fails on some node then the previous nodes will still have been updated...
-
-        for node in self.subtree:
-            if node.has_data:
-                node.dataset = func(node.dataset, *args, **kwargs)
-
     def pipe(
         self, func: Callable | tuple[Callable, str], *args: Any, **kwargs: Any
     ) -> Any:
@@ -1508,29 +1465,11 @@ class DataTree(
             args = (self,) + args
         return func(*args, **kwargs)
 
-    def render(self):
-        """Print tree structure, including any data stored at each node."""
-        for pre, fill, node in RenderDataTree(self):
-            print(f"{pre}DataTree('{self.name}')")
-            for ds_line in repr(node.dataset)[1:]:
-                print(f"{fill}{ds_line}")
-
-    def merge(self, datatree: DataTree) -> DataTree:
-        """Merge all the leaves of a second DataTree into this one."""
-        raise NotImplementedError
-
-    def merge_child_nodes(self, *paths, new_path: T_Path) -> DataTree:
-        """Merge a set of child nodes into a single new node."""
-        raise NotImplementedError
-
     # TODO some kind of .collapse() or .flatten() method to merge a subtree
-
-    def to_dataarray(self) -> DataArray:
-        return self.dataset.to_dataarray()
 
     @property
     def groups(self):
-        """Return all netCDF4 groups in the tree, given as a tuple of path-like strings."""
+        """Return all groups in the tree, given as a tuple of path-like strings."""
         return tuple(node.path for node in self.subtree)
 
     def to_netcdf(
@@ -1662,6 +1601,3 @@ class DataTree(
             compute=compute,
             **kwargs,
         )
-
-    def plot(self):
-        raise NotImplementedError
