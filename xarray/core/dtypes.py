@@ -221,7 +221,10 @@ def preprocess_types(t):
     elif isinstance(dtype := getattr(t, "dtype", t), np.dtype) and (
         np.issubdtype(dtype, np.str_) or np.issubdtype(dtype, np.bytes_)
     ):
-        # drop the length from numpy's fixed-width string dtypes, it is better to recalculate that
+        # drop the length from numpy's fixed-width string dtypes, it is better to
+        # recalculate
+        # TODO(keewis): remove once the minimum version of `numpy.result_type` does this
+        # for us
         return dtype.type
     else:
         return t
