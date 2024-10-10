@@ -148,6 +148,11 @@ def skip_if_zarr_format_3(reason: str):
         pytest.xfail(reason=f"Unsupported with zarr_format=3: {reason}")
 
 
+def skip_if_zarr_format_2(reason: str):
+    if have_zarr_v3 and zarr.config["default_zarr_version"] == 2:
+        pytest.xfail(reason=f"Unsupported with zarr_format=2: {reason}")
+
+
 ON_WINDOWS = sys.platform == "win32"
 default_value = object()
 dask_array_type = array_type("dask")
@@ -1225,6 +1230,7 @@ class CFEncodedBase(DatasetIOBase):
                 assert "coordinates" not in ds["lon"].encoding
 
     def test_roundtrip_endian(self) -> None:
+        skip_if_zarr_format_3("zarr v3 has not implemented endian support yet")
         ds = Dataset(
             {
                 "x": np.arange(3, 10, dtype=">i2"),
@@ -1334,6 +1340,8 @@ class CFEncodedBase(DatasetIOBase):
         with self.roundtrip(ds) as actual:
             assert "_FillValue" not in actual.x.encoding
 
+    # TODO: decide if this test is really necessary
+    # _FillValue is not a valid encoding for Zarr
     def test_explicitly_omit_fill_value_via_encoding_kwarg(self) -> None:
         ds = Dataset({"x": ("y", [np.pi, -np.pi])})
         kwargs = dict(encoding={"x": {"_FillValue": None}})
@@ -2273,11 +2281,6 @@ class ZarrBase(CFEncodedBase):
             )
 
     def save(self, dataset, store_target, **kwargs):  # type: ignore[override]
-        if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
-            for k, v in dataset.variables.items():
-                if v.dtype.kind in ("M",):
-                    pytest.skip(reason=f"Unsupported dtype {v} for variable: {k}")
-
         return dataset.to_zarr(store=store_target, **kwargs, **self.version_kwargs)
 
     @contextlib.contextmanager
@@ -2639,21 +2642,38 @@ class ZarrBase(CFEncodedBase):
     def test_compressor_encoding(self) -> None:
         original = create_test_data()
         # specify a custom compressor
-        from numcodecs.blosc import Blosc
-
-        blosc_comp = Blosc(cname="zstd", clevel=3, shuffle=2)
 
         if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
-            encoding = {"codecs": [blosc_comp]}
+            encoding_key = "codecs"
+            # all parameters need to be explicitly specified in order for the comparison to pass below
+            encoding = {
+                encoding_key: (
+                    zarr.codecs.BytesCodec(endian="little"),
+                    zarr.codecs.BloscCodec(
+                        cname="zstd",
+                        clevel=3,
+                        shuffle="shuffle",
+                        typesize=8,
+                        blocksize=0,
+                    ),
+                )
+            }
         else:
-            encoding = {"compressor": blosc_comp}
+            from numcodecs.blosc import Blosc
+
+            encoding_key = "compressor"
+            encoding = {encoding_key: Blosc(cname="zstd", clevel=3, shuffle=2)}
 
         save_kwargs = dict(encoding={"var1": encoding})
 
         with self.roundtrip(original, save_kwargs=save_kwargs) as ds:
-            actual = ds["var1"].encoding["compressor"]
-            # get_config returns a dictionary of compressor attributes
-            assert actual.get_config() == blosc_comp.get_config()
+            enc = ds["var1"].encoding[encoding_key]
+            if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
+                # TODO: figure out a cleaner way to do this comparison
+                codecs = zarr.core.metadata.v3.parse_codecs(enc)
+                assert codecs == encoding[encoding_key]
+            else:
+                assert enc == encoding[encoding_key]
 
     def test_group(self) -> None:
         original = create_test_data()
@@ -2762,6 +2782,7 @@ class ZarrBase(CFEncodedBase):
 
     @pytest.mark.parametrize("dtype", ["U", "S"])
     def test_append_string_length_mismatch_raises(self, dtype) -> None:
+        skip_if_zarr_format_3("This actually works fine with Zarr format 3")
         ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w", **self.version_kwargs)
@@ -2769,6 +2790,18 @@ class ZarrBase(CFEncodedBase):
                 ds_to_append.to_zarr(
                     store_target, append_dim="time", **self.version_kwargs
                 )
+
+    @pytest.mark.parametrize("dtype", ["U", "S"])
+    def test_append_string_length_mismatch_works(self, dtype) -> None:
+        skip_if_zarr_format_2("This doesn't work with Zarr format 2")
+        # ...but it probably would if we used object dtype
+        ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
+        expected = xr.concat([ds, ds_to_append], dim="time")
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
+            ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
+            actual = xr.open_dataset(store_target, engine="zarr")
+            xr.testing.assert_identical(expected, actual)
 
     def test_check_encoding_is_consistent_after_append(self) -> None:
         ds, ds_to_append, _ = create_append_test_data()
@@ -2788,12 +2821,18 @@ class ZarrBase(CFEncodedBase):
 
             encoding = {"da": {encoding_key: encoding_value}}
             ds.to_zarr(store_target, mode="w", encoding=encoding, **self.version_kwargs)
+            original_ds = xr.open_dataset(
+                store_target, engine="zarr", **self.version_kwargs
+            )
+            original_encoding = original_ds["da"].encoding[encoding_key]
             ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
             actual_ds = xr.open_dataset(
                 store_target, engine="zarr", **self.version_kwargs
             )
+            # assert actual_encoding.get_config() == compressor.get_config()
+            # TODO: check whether this approach works for v2
             actual_encoding = actual_ds["da"].encoding[encoding_key]
-            assert actual_encoding.get_config() == compressor.get_config()
+            assert original_encoding == actual_encoding
             assert_identical(
                 xr.open_dataset(
                     store_target, engine="zarr", **self.version_kwargs
@@ -5354,13 +5393,13 @@ class TestDataArrayToNetCDF:
 class TestDataArrayToZarr:
 
     def skip_if_zarr_python_3_and_zip_store(self, store) -> None:
-        if isinstance(store, zarr.storage.ZipStore):
+        if isinstance(store, zarr.storage.zip.ZipStore):
             pytest.skip(
                 reason="zarr-python 3.x doesn't support reopening ZipStore with a new mode."
             )
 
     def test_dataarray_to_zarr_no_name(self, tmp_store) -> None:
-        skip_if_zarr_format_3(tmp_store)
+        self.skip_if_zarr_python_3_and_zip_store(tmp_store)
         original_da = DataArray(np.arange(1, 13).reshape((3, 4)))
 
         original_da.to_zarr(tmp_store)
@@ -5369,7 +5408,7 @@ class TestDataArrayToZarr:
             assert_identical(original_da, loaded_da)
 
     def test_dataarray_to_zarr_with_name(self, tmp_store) -> None:
-        skip_if_zarr_format_3(tmp_store)
+        self.skip_if_zarr_python_3_and_zip_store(tmp_store)
         original_da = DataArray(np.arange(12).reshape((3, 4)) + 1, name="test")
 
         original_da.to_zarr(tmp_store)
@@ -5378,7 +5417,7 @@ class TestDataArrayToZarr:
             assert_identical(original_da, loaded_da)
 
     def test_dataarray_to_zarr_coord_name_clash(self, tmp_store) -> None:
-        skip_if_zarr_format_3(tmp_store)
+        self.skip_if_zarr_python_3_and_zip_store(tmp_store)
         original_da = DataArray(
             np.arange(12).reshape((3, 4)) + 1, dims=["x", "y"], name="x"
         )
@@ -5389,7 +5428,7 @@ class TestDataArrayToZarr:
             assert_identical(original_da, loaded_da)
 
     def test_open_dataarray_options(self, tmp_store) -> None:
-        skip_if_zarr_format_3(tmp_store)
+        self.skip_if_zarr_python_3_and_zip_store(tmp_store)
         data = DataArray(np.arange(5) + 1, coords={"y": ("x", range(1, 6))}, dims=["x"])
 
         data.to_zarr(tmp_store)
