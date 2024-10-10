@@ -39,9 +39,9 @@ from xarray.core.utils import (
     FilteredMapping,
     Frozen,
     _default,
-    dim_arg_to_dims_set,
     either_dict_or_kwargs,
     maybe_wrap_array,
+    parse_dims,
 )
 from xarray.core.variable import Variable
 
@@ -1634,7 +1634,7 @@ class DataTree(
         **kwargs: Any,
     ) -> Self:
         """Reduce this tree by applying `func` along some dimension(s)."""
-        dims = dim_arg_to_dims_set(dim, self._get_all_dims())
+        dims = set(parse_dims(dim, tuple(self._get_all_dims())))
         result = {}
         for node in self.subtree:
             reduce_dims = [d for d in node._node_dims if d in dims]

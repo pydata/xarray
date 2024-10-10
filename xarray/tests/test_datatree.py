@@ -1648,7 +1648,7 @@ class TestAggregations:
 
         with pytest.raises(
             ValueError,
-            match=re.escape("Dimensions ('invalid',) not found in data dimensions"),
+            match=re.escape("Dimension(s) 'invalid' do not exist."),
         ):
             dt.mean("invalid")
 

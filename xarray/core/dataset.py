@@ -109,7 +109,6 @@ from xarray.core.utils import (
     OrderedSet,
     _default,
     decode_numpy_dict_values,
-    dim_arg_to_dims_set,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
     emit_user_level_warning,
@@ -119,6 +118,7 @@ from xarray.core.utils import (
     is_duck_dask_array,
     is_scalar,
     maybe_wrap_array,
+    parse_dims,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -6987,7 +6987,7 @@ class Dataset(
                 " Please use 'dim' instead."
             )
 
-        dims = dim_arg_to_dims_set(dim, self.dims)
+        dims = set(parse_dims(dim, tuple(self.dims)))
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
