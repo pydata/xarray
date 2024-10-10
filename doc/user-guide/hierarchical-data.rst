@@ -740,7 +740,7 @@ or compute the standard deviation of each timeseries to find out how it varies w
 Coordinate Inheritance
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Notice that in the trees we constructed above (LINK OR DISPLAY AGAIN?) there is some redundancy - the ``lat`` and ``lon`` variables appear in each sibling group, but are identical across the groups.
+Notice that in the trees we constructed above there is some redundancy - the ``lat`` and ``lon`` variables appear in each sibling group, but are identical across the groups.
 
 We can use "Coordinate Inheritance" to define them only once in a parent group and remove this redundancy, whilst still being able to access those coordinate variables from the child groups.
 
@@ -751,15 +751,15 @@ Let's instead place only the time-dependent variables in the child groups, and p
 
 .. ipython:: python
 
-    dt = xr.DataTree.from_dict(
-        {
-            "/": ds.drop_dims("time"),
-            "daily": ds_daily.drop_vars(["lat", "lon"]),
-            "weekly": ds_weekly.drop_vars(["lat", "lon"]),
-            "monthly": ds_monthly.drop_vars(["lat", "lon"]),
-        }
-    )
-    dt
+dt = xr.DataTree.from_dict(
+    {
+        "/": ds.drop_dims("time"),
+        "daily": ds_daily.drop_vars(["lat", "lon"]),
+        "weekly": ds_weekly.drop_vars(["lat", "lon"]),
+        "monthly": ds_monthly.drop_vars(["lat", "lon"]),
+    }
+)
+dt
 
 This is preferred to the previous representation because it now makes it clear that all of these datasets share common spatial grid coordinates.
 Defining the common coordinates just once also ensures that the spatial coordinates for each group cannot become out of sync with one another during operations.
@@ -799,9 +799,51 @@ We can also still perform all the same operations on the whole tree:
 Overriding Inherited Coordinates
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We can override inherited coordinates with newly-defined ones, as long as those newly-defined coordinates also align with the parent nodes.
+We can override inherited coordinates with newly-defined ones on child nodes, as long as those newly-defined coordinates also align with the parent nodes.
 
-EXAMPLE OF THIS? WOULD IT MAKE MORE SENSE TO USE DIFFERENT DATA TO DEMONSTRATE THIS?
+You may want to do this if some child dataset follows the same pattern as its siblings but contains different specific values of a coordinate.
+
+Let's image we had three different datasets, on two different lat-lon grids:
+
+.. ipython:: python
+
+lon1, lat1 = np.meshgrid(np.linspace(-20, 20, 5), np.linspace(0, 30, 4))
+grid1 = xr.Coordinates({'lat': lat1, 'lon': lon1})
+
+# a different grid with the same sizes
+lon2 = lat1 + (lat1 / 10)
+lat2 = lon1 + (lon1 / 10)
+grid1 = xr.Coordinates({'lat': lat2, 'lon': lon2})
+
+    # model_ds1 = xr.Dataset()
+    # model_ds2 = xr.Dataset()
+    # model_ds3 = xr.Dataset()
+
+We could arrange these in a datatree 
+
+.. ipython:: python
+
+    dt = xr.DataTree.from_dict(
+        {
+            "/": Dataset(coords=grid1),
+            "model1": None,
+            "model2": None,
+            "model3": Dataset(coords=grid2),
+        }
+    )
+    dt
+
+However in this you could also have reprented this without overriding, by using an extra layer of nodes in the tree:
+
+
+.. _overriding-inherited-coordinates:
+
+Non-Inherited Coordinates
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Only coordinates which are backed by an index are inherited. This is because index-backed coordinates can be efficiently de-duplicated between parents and children, preventing ambiguity 
+
+
 
 EXAMPLE OF INHERITING FROM A GRANDPARENT?
 
