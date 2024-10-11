@@ -5396,7 +5396,7 @@ class TestDataArrayToNetCDF:
 class TestDataArrayToZarr:
 
     def skip_if_zarr_python_3_and_zip_store(self, store) -> None:
-        if isinstance(store, zarr.storage.zip.ZipStore):
+        if have_zarr_v3 and isinstance(store, zarr.storage.zip.ZipStore):
             pytest.skip(
                 reason="zarr-python 3.x doesn't support reopening ZipStore with a new mode."
             )
