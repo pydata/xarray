@@ -678,7 +678,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._write_region = write_region
         self._safe_chunks = safe_chunks
         self._write_empty = write_empty
-        self._close_store_on_close = (close_store_on_close,)
+        self._close_store_on_close = close_store_on_close
         self._use_zarr_fill_value_as_mask = use_zarr_fill_value_as_mask
 
     @property
