@@ -4239,7 +4239,7 @@ class Dataset(
             coordinates are assumed to be an array of monotonically increasing
             values.
         reduce : bool, default: True
-            If True, the interpolation is decomposed into independent interpolations of minimal dimensionality such that
+            If True, the interpolation is decomposed into independent 1-dimensional interpolations such that
             the interpolation coordinates are independent. Setting this to be True alters the behavior of certain
             multi-dimensional interpolants compared to the default SciPy output.
         kwargs : dict, optional
