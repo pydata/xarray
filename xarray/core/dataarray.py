@@ -2416,7 +2416,7 @@ class DataArray(
 
         4. **Interpolation along multiple dimensions of multi-dimensional data**
         - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
-            "quadratic", "cubic", "quintic", "pchip"}.
+            "cubic", "quintic", "pchip"}.
 
         Parameters
         ----------
