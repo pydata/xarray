@@ -1381,9 +1381,6 @@ class CFEncodedBase(DatasetIOBase):
         # regression for GH1215
         data = create_test_data()
         with create_tmp_file(allow_cleanup_failure=False) as tmp_file:
-            # Whose responsibility is it to create the file?
-            Path(tmp_file).mkdir(parents=True, exist_ok=True)
-
             self.save(data, tmp_file, mode="w")
             data["var2"][:] = -999
             data["var9"] = data["var2"] * 3
