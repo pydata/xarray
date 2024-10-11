@@ -3906,7 +3906,8 @@ class Dataset(
         - Methods {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"}
             use :py:class:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:class:`numpy.interp`
             (as in the case of `method='linear'` for 1D data).
-            - If `method='polynomial'`, the `order` keyword argument must also be provided.
+            - If `method='polynomial'`, the `order` keyword argument must also be provided. In this case,
+            :py:class:`scipy.interpolate.interp1d` is called with `kind=order`.
 
         3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
         - Depending on the `method`, the following interpolants from :py:class:`scipy.interpolate` are used:
@@ -3914,33 +3915,41 @@ class Dataset(
             - `"barycentric"`: :py:class:`scipy.interpolate.BarycentricInterpolator`
             - `"krogh"`: :py:class:`scipy.interpolate.KroghInterpolator`
             - `"akima"` or `"makima"`: :py:class:`scipy.interpolate.Akima1dInterpolator`
-            (`makima` is handled by passing the `makima` flag).
+            (`makima` is handled by passing `makima` to `method`).
 
         4. **Interpolation along multiple dimensions of multi-dimensional data**
         - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
-            "quadratic", "cubic", "quintic", "pchip"}.
+            "cubic", "quintic", "pchip"}.
 
         Out-of-range values are filled with NaN, unless specified otherwise via `kwargs` to the numpy/scipy interpolant.
 
         Parameters
         ----------
         coords : dict, optional
-            Mapping from dimension names to new coordinates. The new coordinates can be scalar, array-like, or DataArray.
-            If DataArrays are passed, their dimensions are used for broadcasting. Missing values are skipped.
+            Mapping from dimension names to the new coordinates.
+            New coordinate can be a scalar, array-like or DataArray.
+            If DataArrays are passed as new coordinates, their dimensions are
+            used for the broadcasting. Missing values are skipped.
         method : str
             Interpolation method to use (see descriptions above).
         assume_sorted : bool, default: False
-            If False, the coordinates being interpolated over are sorted first. If True, the coordinates are assumed
-            to be monotonically increasing.
+            If False, values of x can be in any order and they are sorted
+            first. If True, x has to be an array of monotonically increasing
+            values.
         reduce : bool, default: True
-            If True, the interpolation is decomposed into independent interpolations along one dimension at a time,
-            where the interpolation coordinates are independent. Setting this to be True alters the behavior of certain
+            If True, the interpolation is decomposed into independent interpolations of minimal dimensionality such that
+            the interpolation coordinates are independent. Setting this to be True alters the behavior of certain
             multi-dimensional interpolants compared to the default SciPy output.
-        kwargs : dict, optional
-            Additional keyword arguments passed to the numpy/scipy interpolant (e.g., `fill_value`).
+        kwargs : dict-like or None, default: None
+            Additional keyword arguments passed to scipy's interpolator. Valid
+            options and their behavior depend which inteprolant is used.
         method_non_numeric : {"nearest", "pad", "ffill", "backfill", "bfill"}, optional
-            Method for handling non-numeric data types. Passed to :py:meth:`Dataset.reindex`.
-            Defaults to `"nearest"`.
+            Method for non-numeric types. Passed on to :py:meth:`Dataset.reindex`.
+            ``"nearest"`` is used by default.
+        **coords_kwargs : {dim: coordinate, ...}, optional
+            The keyword arguments form of ``coords``.
+            One of coords or coords_kwargs must be provided.
+
 
         Returns
         -------
