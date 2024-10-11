@@ -2277,7 +2277,7 @@ class ZarrBase(CFEncodedBase):
     def create_store(self):
         with self.create_zarr_target() as store_target:
             yield backends.ZarrStore.open_group(
-                store_target, mode="a", **self.version_kwargs
+                store_target, mode="w", **self.version_kwargs
             )
 
     def save(self, dataset, store_target, **kwargs):  # type: ignore[override]
