@@ -1057,10 +1057,6 @@ class ZarrStore(AbstractWritableDataStore):
                     else:
                         encoding["write_empty_chunks"] = self._write_empty
 
-                if "codecs" in encoding:
-                    pipeline = encoding.pop("codecs")
-                    encoding["codecs"] = pipeline
-
                 zarr_array = self.zarr_group.create(
                     name,
                     shape=shape,
