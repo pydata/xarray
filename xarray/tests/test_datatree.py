@@ -971,7 +971,6 @@ class TestAccess:
         var_keys = list(dt.variables.keys())
         assert all(var_key in key_completions for var_key in var_keys)
 
-    @pytest.mark.xfail(reason="sel not implemented yet")
     def test_operation_with_attrs_but_no_data(self):
         # tests bug from xarray-datatree GH262
         xs = xr.Dataset({"testvar": xr.DataArray(np.ones((2, 3)))})
@@ -1316,6 +1315,19 @@ class TestInheritance:
         expected = xr.Dataset({"foo": ("x", [4, 5])})
         assert_identical(child_dataset, expected)
 
+    def test_deduplicated_after_setitem(self):
+        # regression test for GH #9601
+        dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2]}),
+                "/b": None,
+            }
+        )
+        dt["b/x"] = dt["x"]
+        child_dataset = dt.children["b"].to_dataset(inherited=False)
+        expected = xr.Dataset()
+        assert_identical(child_dataset, expected)
+
     def test_inconsistent_dims(self):
         expected_msg = _exact_match(
             """
@@ -1561,26 +1573,95 @@ class TestSubset:
         assert_identical(elders, expected)
 
 
-class TestDSMethodInheritance:
-    @pytest.mark.xfail(reason="isel not implemented yet")
-    def test_dataset_method(self):
-        ds = xr.Dataset({"a": ("x", [1, 2, 3])})
-        dt = DataTree.from_dict(
+class TestIndexing:
+
+    def test_isel_siblings(self):
+        tree = DataTree.from_dict(
             {
-                "/": ds,
-                "/results": ds,
+                "/first": xr.Dataset({"a": ("x", [1, 2])}),
+                "/second": xr.Dataset({"b": ("x", [1, 2, 3])}),
             }
         )
 
         expected = DataTree.from_dict(
             {
-                "/": ds.isel(x=1),
-                "/results": ds.isel(x=1),
+                "/first": xr.Dataset({"a": 2}),
+                "/second": xr.Dataset({"b": 3}),
+            }
+        )
+        actual = tree.isel(x=-1)
+        assert_equal(actual, expected)
+
+        expected = DataTree.from_dict(
+            {
+                "/first": xr.Dataset({"a": ("x", [1])}),
+                "/second": xr.Dataset({"b": ("x", [1])}),
+            }
+        )
+        actual = tree.isel(x=slice(1))
+        assert_equal(actual, expected)
+
+        actual = tree.isel(x=[0])
+        assert_equal(actual, expected)
+
+        actual = tree.isel(x=slice(None))
+        assert_equal(actual, tree)
+
+    def test_isel_inherited(self):
+        tree = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2]}),
+                "/child": xr.Dataset({"foo": ("x", [3, 4])}),
             }
         )
 
-        result = dt.isel(x=1)
-        assert_equal(result, expected)
+        expected = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": 2}),
+                "/child": xr.Dataset({"foo": 4}),
+            }
+        )
+        actual = tree.isel(x=-1)
+        assert_equal(actual, expected)
+
+        expected = DataTree.from_dict(
+            {
+                "/child": xr.Dataset({"foo": 4}),
+            }
+        )
+        actual = tree.isel(x=-1, drop=True)
+        assert_equal(actual, expected)
+
+        expected = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1]}),
+                "/child": xr.Dataset({"foo": ("x", [3])}),
+            }
+        )
+        actual = tree.isel(x=[0])
+        assert_equal(actual, expected)
+
+        actual = tree.isel(x=slice(None))
+        assert_equal(actual, tree)
+
+    def test_sel(self):
+        tree = DataTree.from_dict(
+            {
+                "/first": xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"x": [1, 2, 3]}),
+                "/second": xr.Dataset({"b": ("x", [4, 5])}, coords={"x": [2, 3]}),
+            }
+        )
+        expected = DataTree.from_dict(
+            {
+                "/first": xr.Dataset({"a": 2}, coords={"x": 2}),
+                "/second": xr.Dataset({"b": 4}, coords={"x": 2}),
+            }
+        )
+        actual = tree.sel(x=2)
+        assert_equal(actual, expected)
+
+
+class TestDSMethodInheritance:
 
     @pytest.mark.xfail(reason="reduce methods not implemented yet")
     def test_reduce_method(self):
