@@ -69,7 +69,8 @@ class FillValueCoder:
     @classmethod
     def encode(cls, value: int | float | str | bytes, dtype: np.dtype[Any]) -> Any:
         if dtype.kind in "S":
-            # byte string
+            # byte string, this implies that 'value' must also be `bytes` dtype.
+            assert isinstance(value, bytes)
             return base64.standard_b64encode(value).decode()
         elif dtype.kind in "b":
             # boolean
@@ -1606,7 +1607,7 @@ def _get_open_params(
             consolidated = False
 
     if _zarr_v3():
-        missing_exc: type[Exception] = ValueError
+        missing_exc = ValueError
     else:
         missing_exc = zarr.errors.GroupNotFoundError
 
