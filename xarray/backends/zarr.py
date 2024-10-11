@@ -96,6 +96,7 @@ class FillValueCoder:
             return base64.standard_b64decode(value)
         np_dtype = np.dtype(dtype)
         if np_dtype.kind in "f":
+            assert isinstance(value, str | bytes)
             return struct.unpack("<d", base64.standard_b64decode(value))[0]
         elif np_dtype.kind in "b":
             return bool(value)
