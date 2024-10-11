@@ -3941,9 +3941,9 @@ class Dataset(
             If True, the interpolation is decomposed into independent interpolations of minimal dimensionality such that
             the interpolation coordinates are independent. Setting this to be True alters the behavior of certain
             multi-dimensional interpolants compared to the default SciPy output.
-        kwargs : dict-like or None, default: None
-            Additional keyword arguments passed to scipy's interpolator. Valid
-            options and their behavior depend which inteprolant is used.
+        kwargs : dict, optional
+            Additional keyword arguments passed to the interpolator. Valid
+            options and their behavior depend which interpolant is used.
         method_non_numeric : {"nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method for non-numeric types. Passed on to :py:meth:`Dataset.reindex`.
             ``"nearest"`` is used by default.
@@ -4243,7 +4243,8 @@ class Dataset(
             where the interpolation coordinates are independent. Setting this to be True alters the behavior of certain
             multi-dimensional interpolants compared to the default SciPy output.
         kwargs : dict, optional
-            Additional keyword passed to scipy's interpolator.
+            Additional keyword arguments passed to the interpolator. Valid
+            options and their behavior depend which interpolant is use
         method_non_numeric : {"nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method for non-numeric types. Passed on to :py:meth:`Dataset.reindex`.
             ``"nearest"`` is used by default.
