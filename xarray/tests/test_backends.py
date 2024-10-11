@@ -149,7 +149,7 @@ def skip_if_zarr_format_3(reason: str):
 
 
 def skip_if_zarr_format_2(reason: str):
-    if have_zarr_v3 and zarr.config["default_zarr_version"] == 2:
+    if not have_zarr_v3 or (zarr.config["default_zarr_version"] == 2):
         pytest.xfail(reason=f"Unsupported with zarr_format=2: {reason}")
 
 
