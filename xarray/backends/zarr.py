@@ -92,6 +92,7 @@ class FillValueCoder:
             return str(value)
         elif dtype == "bytes":
             # zarr V3 bytes type
+            assert isinstance(value, str | bytes)
             return base64.standard_b64decode(value)
         np_dtype = np.dtype(dtype)
         if np_dtype.kind in "f":
@@ -1641,7 +1642,6 @@ def _get_open_params(
     close_store_on_close = zarr_group.store is not store
 
     # we use this to determine how to handle fill_value
-    is_zarr_v3_format: bool
     if _zarr_v3():
         is_zarr_v3_format = zarr_group.metadata.zarr_format == 3
     else:
