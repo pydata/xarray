@@ -161,10 +161,14 @@ def asarray(
         xp = _get_data_namespace(data)
         _dtype = data.dtype if dtype is None else dtype
         new_data = xp.asarray(data._data, dtype=_dtype, device=device, copy=copy)
-        if new_data is data._data:
+        if new_data is data._data and (
+            isinstance(dims, Default) or _normalize_dimensions(dims) == data.dims
+        ):
             return data
         else:
-            return NamedArray(data.dims, new_data, data.attrs)
+            return NamedArray(
+                data.dims if isinstance(dims, Default) else dims, new_data, data.attrs
+            )
 
     xp = _get_namespace(data)
     _data = xp.asarray(data, dtype=dtype, device=device, copy=copy)
