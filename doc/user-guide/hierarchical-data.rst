@@ -743,6 +743,10 @@ Coordinate Inheritance
 
 Notice that in the trees we constructed above there is some redundancy - the ``lat`` and ``lon`` variables appear in each sibling group, but are identical across the groups.
 
+.. ipython:: python
+
+    dt
+
 We can use "Coordinate Inheritance" to define them only once in a parent group and remove this redundancy, whilst still being able to access those coordinate variables from the child groups.
 
 .. note::
