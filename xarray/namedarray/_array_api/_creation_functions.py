@@ -113,19 +113,48 @@ def asarray(
     dims: _DimsLike2 | Default = _default,
 ) -> NamedArray[_ShapeType, _DType] | NamedArray[Any, Any]:
     """
-    Create a Named array from an array-like object.
+    Create a NamedArray from an array-like object.
 
-    Parameters
-    ----------
-    dims : str or iterable of str
-        Name(s) of the dimension(s).
-    data : T_DuckArray or ArrayLike
-        The actual data that populates the array. Should match the
-        shape specified by `dims`.
-    attrs : dict, optional
-        A dictionary containing any additional information or
-        attributes you want to store with the array.
-        Default is None, meaning no attributes will be stored.
+    Examples
+    --------
+    Convert a list into an array:
+
+    >>> x = [1, 2]
+    >>> asarray(x)
+    <xarray.NamedArray (dim_0: 2)> Size: 16B
+    array([1, 2])
+
+    Existing arrays are not copied:
+
+    >>> import numpy as np
+    >>> x = NamedArray(("x",), np.array([1, 2]))
+    >>> asarray(x) is x
+    True
+
+    If dtype is set, array is copied only if dtype does not match:
+
+    >>> x = NamedArray(("x",), np.array([1, 2], dtype=np.float32))
+    >>> asarray(x, dtype=np.float32) is x
+    True
+    >>> asarray(x, dtype=np.float64) is x
+    False
+
+    If dims is set:
+
+    >>> x = [1, 2]
+    >>> asarray(x, dims="x")
+    <xarray.NamedArray (x: 2)> Size: 16B
+    array([1, 2])
+
+    If dims is set, array is copied only if dims does not match:
+
+    >>> x = NamedArray(("x",), np.array([1, 2], dtype=np.float32))
+    >>> asarray(x, dims="x") is x
+    True
+    >>> asarray(x, dims=("x",)) is x
+    True
+    >>> asarray(x, dims=("y",)) is x
+    False
     """
     data = obj
     if isinstance(data, NamedArray):
