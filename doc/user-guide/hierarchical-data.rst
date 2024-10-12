@@ -657,7 +657,8 @@ Alignment and Coordinate Inheritance
 Data Alignment
 ~~~~~~~~~~~~~~
 
-The data in different datatree nodes are not totally independent. In particular dimensions (and indexes) in child nodes must be aligned (LINK HERE) with those in their parent nodes.
+The data in different datatree nodes are not totally independent. In particular dimensions (and indexes) in child nodes must be exactly aligned with those in their parent nodes.
+Exact aligment means that shared dimensions must be the same length, and indexes along those dimensions must be equal.
 
 .. note::
     If you were a previous user of the prototype `xarray-contrib/datatree <https://github.com/xarray-contrib/datatree>`_ package, this is different from what you're used to!
@@ -819,7 +820,7 @@ grid1 = xr.Coordinates({'lat': lat2, 'lon': lon2})
     # model_ds2 = xr.Dataset()
     # model_ds3 = xr.Dataset()
 
-We could arrange these in a datatree 
+We could arrange these in a datatree
 
 .. ipython:: python
 
@@ -841,7 +842,7 @@ However in this you could also have reprented this without overriding, by using 
 Non-Inherited Coordinates
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Only coordinates which are backed by an index are inherited. This is because index-backed coordinates can be efficiently de-duplicated between parents and children, preventing ambiguity 
+Only coordinates which are backed by an index are inherited. This is because index-backed coordinates can be efficiently de-duplicated between parents and children, preventing ambiguity
 
 
 
