@@ -7,6 +7,7 @@ from xarray.namedarray._array_api._utils import (
     _get_namespace,
     _get_namespace_dtype,
     _infer_dims,
+    _normalize_dimensions,
 )
 from xarray.namedarray._typing import (
     Default,
@@ -410,3 +411,9 @@ def zeros_like(
     xp = _get_data_namespace(x)
     _data = xp.zeros_like(x._data, dtype=dtype, device=device)
     return x._new(data=_data)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
