@@ -50,6 +50,17 @@ def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
 
 
 def _get_namespace_dtype(dtype: _dtype[Any] | None = None) -> ModuleType:
+    """
+    Attempt to get the namespace from dtype.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> _get_namespace_dtype(None) is np
+    True
+    >>> _get_namespace_dtype(np.int64) is np
+    True
+    """
     if dtype is None:
         return _maybe_default_namespace()
 
