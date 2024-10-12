@@ -238,10 +238,34 @@ def eye(
     k: int = 0,
     dtype: _DType | None = None,
     device: _Device | None = None,
+    dims: _DimsLike2 | Default = _default,
 ) -> NamedArray[_ShapeType, _DType]:
+    """
+    Returns a two-dimensional array with ones on the kth diagonal and zeros elsewhere.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> eye(2, dtype=np.int64)
+    <xarray.NamedArray (dim_1: 2, dim_0: 2)> Size: 32B
+    array([[1, 0],
+           [0, 1]])
+    >>> eye(3, k=1)
+    <xarray.NamedArray (dim_1: 3, dim_0: 3)> Size: 72B
+    array([[0., 1., 0.],
+           [0., 0., 1.],
+           [0., 0., 0.]])
+
+    If dims is set:
+
+    >>> eye(2, dims=("x", "y"))
+    <xarray.NamedArray (x: 2, y: 2)> Size: 32B
+    array([[1., 0.],
+           [0., 1.]])
+    """
     xp = _get_namespace_dtype(dtype)
     _data = xp.eye(n_rows, n_cols, k=k, dtype=dtype, device=device)
-    _dims = _infer_dims(_data.shape)
+    _dims = _infer_dims(_data.shape, dims)
     return NamedArray(_dims, _data)
 
 
