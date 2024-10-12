@@ -177,11 +177,34 @@ def asarray(
 
 
 def empty(
-    shape: _ShapeType, *, dtype: _DType | None = None, device: _Device | None = None
+    shape: _ShapeType,
+    *,
+    dtype: _DType | None = None,
+    device: _Device | None = None,
+    dims: _DimsLike2 | Default = _default,
 ) -> NamedArray[_ShapeType, _DType]:
+    """
+    Returns an uninitialized array having a specified shape.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = empty((2, 2))
+    >>> x.dims, x.shape, x.dtype
+    (('dim_1', 'dim_0'), (2, 2), dtype('float64'))
+    >>> x = empty([2, 2], dtype=np.int64)
+    >>> x.dims, x.shape, x.dtype
+    (('dim_1', 'dim_0'), (2, 2), dtype('int64'))
+
+    If dims is set:
+
+    >>> x = empty((2, 2), dims=("x", "y"))
+    >>> x.dims, x.shape, x.dtype
+    (('x', 'y'), (2, 2), dtype('float64'))
+    """
     xp = _get_namespace_dtype(dtype)
     _data = xp.empty(shape, dtype=dtype, device=device)
-    _dims = _infer_dims(_data.shape)
+    _dims = _infer_dims(_data.shape, dims)
     return NamedArray(_dims, _data)
 
 
