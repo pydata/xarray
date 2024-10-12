@@ -324,7 +324,7 @@ def full(
     """
     xp = _get_namespace_dtype(dtype)
     _data = xp.full(shape, fill_value, dtype=dtype, device=device)
-    _dims = _infer_dims(_data.shape)
+    _dims = _infer_dims(_data.shape, dims)
     return NamedArray(_dims, _data)
 
 
