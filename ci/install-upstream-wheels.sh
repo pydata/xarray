@@ -45,8 +45,8 @@ python -m pip install \
     --pre \
     --upgrade \
     pyarrow
-# manually install `pint` to pull in new dependencies
-python -m pip install --upgrade pint
+# manually install `pint`, `donfig`, and `crc32c` to pull in new dependencies
+python -m pip install --upgrade pint donfig crc32c
 python -m pip install \
     --no-deps \
     --upgrade \
