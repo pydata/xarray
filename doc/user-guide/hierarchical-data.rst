@@ -776,8 +776,6 @@ We can still access the coordinates defined in the parent groups from any of the
     dt.daily.coords
     dt["daily/lat"]
 
-(TODO: the repr of ``dt.coords`` should display which coordinates are inherited)
-
 As we can still access them, we say that the ``lat`` and ``lon`` coordinates in the child groups have been "inherited" from their common parent group.
 
 If we print just one of the child nodes, it will still display inherited coordinates, but explicitly mark them as such:
