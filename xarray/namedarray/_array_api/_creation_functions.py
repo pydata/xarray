@@ -33,6 +33,30 @@ def arange(
     device: _Device | None = None,
     dims: _DimsLike2 | Default = _default,
 ) -> NamedArray[_Shape1D, _DType]:
+    """
+    Returns evenly spaced values within the half-open interval [start, stop) as a one-dimensional array.
+
+    Examples
+    --------
+    >>> arange(3)
+    <xarray.NamedArray (dim_0: 3)> Size: 24B
+    array([0, 1, 2])
+    >>> arange(3.0)
+    <xarray.NamedArray (dim_0: 3)> Size: 24B
+    array([0., 1., 2.])
+    >>> arange(3,7)
+    <xarray.NamedArray (dim_0: 4)> Size: 32B
+    array([3, 4, 5, 6])
+    >>> arange(3,7,2)
+    <xarray.NamedArray (dim_0: 2)> Size: 16B
+    array([3, 5])
+
+    If dims is set:
+
+    >>> arange(3, dims="x")
+    <xarray.NamedArray (x: 3)> Size: 24B
+    array([0, 1, 2])
+    """
     xp = _get_namespace_dtype(dtype)
     _data = xp.arange(start, stop=stop, step=step, dtype=dtype, device=device)
     _dims = _infer_dims(_data.shape, dims)
