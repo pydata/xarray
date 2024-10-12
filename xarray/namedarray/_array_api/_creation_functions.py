@@ -336,6 +336,26 @@ def full_like(
     dtype: _DType | None = None,
     device: _Device | None = None,
 ) -> NamedArray[_ShapeType, _DType]:
+    """
+    Returns a new array filled with fill_value and having the same shape as an input array x.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = arange(6, dtype=np.int64, dims=("x",))
+    >>> full_like(x, 1)
+    <xarray.NamedArray (x: 6)> Size: 48B
+    array([1, 1, 1, 1, 1, 1])
+    >>> full_like(x, 0.1)
+    <xarray.NamedArray (x: 6)> Size: 48B
+    array([0, 0, 0, 0, 0, 0])
+    >>> full_like(x, 0.1, dtype=np.float32)
+    <xarray.NamedArray (x: 6)> Size: 24B
+    array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1], dtype=float32)
+    >>> full_like(x, np.nan, dtype=np.float32)
+    <xarray.NamedArray (x: 6)> Size: 24B
+    array([nan, nan, nan, nan, nan, nan], dtype=float32)
+    """
     xp = _get_data_namespace(x)
     _data = xp.full_like(x._data, fill_value, dtype=dtype, device=device)
     return x._new(data=_data)
