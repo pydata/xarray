@@ -215,6 +215,16 @@ def empty_like(
     dtype: _DType | None = None,
     device: _Device | None = None,
 ) -> NamedArray[_ShapeType, _DType]:
+    """
+    Returns an uninitialized array with the same shape as an input array x.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = empty_like(NamedArray(("x", "y"), np.array([[1, 2, 3], [4, 5, 6]])))
+    >>> x.dims, x.shape, x.dtype
+    (('x', 'y'), (2, 3), dtype('int64'))
+    """
     xp = _get_data_namespace(x)
     _data = xp.empty_like(x._data, dtype=dtype, device=device)
     return x._new(data=_data)
