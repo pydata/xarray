@@ -277,6 +277,9 @@ def from_dlpack(
     device: _Device | None = None,
     copy: bool | None = None,
 ) -> NamedArray[Any, Any]:
+    """
+    Returns a new array containing the data from another (array) object with a __dlpack__ method.
+    """
     if isinstance(x, NamedArray):
         xp = _get_data_namespace(x)
         _device = x.device if device is None else device
