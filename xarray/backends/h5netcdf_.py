@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import io
 import os
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
