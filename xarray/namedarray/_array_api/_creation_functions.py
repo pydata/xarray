@@ -299,7 +299,29 @@ def full(
     *,
     dtype: _DType | None = None,
     device: _Device | None = None,
+    dims: _DimsLike2 | Default = _default,
 ) -> NamedArray[_ShapeType, _DType]:
+    """
+    Returns a new array having a specified shape and filled with fill_value.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> full((2, 2), np.inf)
+    <xarray.NamedArray (dim_1: 2, dim_0: 2)> Size: 32B
+    array([[inf, inf],
+           [inf, inf]])
+    >>> full((2, 2), 10)
+    <xarray.NamedArray (dim_1: 2, dim_0: 2)> Size: 32B
+    array([[10, 10],
+           [10, 10]])
+
+    If dims is set:
+    >>> full((2, 2), np.inf, dims=("x", "y"))
+    <xarray.NamedArray (x: 2, y: 2)> Size: 32B
+    array([[inf, inf],
+           [inf, inf]])
+    """
     xp = _get_namespace_dtype(dtype)
     _data = xp.full(shape, fill_value, dtype=dtype, device=device)
     _dims = _infer_dims(_data.shape)
