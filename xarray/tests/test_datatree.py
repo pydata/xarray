@@ -1732,6 +1732,17 @@ class TestAggregations:
 
 
 class TestOps:
+    # test unary op
+    def test_unary_op(self):
+        ds1 = xr.Dataset({"a": [5], "b": [3]})
+        ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
+        dt = DataTree.from_dict({"/": ds1, "/subnode": ds2})
+
+        expected = DataTree.from_dict({"/": (-ds1), "/subnode": (-ds2)})
+
+        result = -dt
+        assert_equal(result, expected)
+
     @pytest.mark.xfail(reason="arithmetic not implemented yet")
     def test_binary_op_on_int(self):
         ds1 = xr.Dataset({"a": [5], "b": [3]})
@@ -1792,6 +1803,10 @@ class TestOps:
         expected = tree.copy()
         expected["/foo/bar"].data = np.array([8, 10, 12])
         assert_identical(actual, expected)
+
+    # TODO test dataset * datatree commutativity
+
+    # TODO test single-node datatree doesn't broadcast
 
 
 class TestUFuncs:
