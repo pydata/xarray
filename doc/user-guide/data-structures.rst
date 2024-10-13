@@ -792,13 +792,13 @@ automatically includes coordinates from higher levels (e.g., ``time`` and
     dt2["/weather/temperature"].dataset
 
 Similarly, when you retrieve a Dataset through :py:func:`~xarray.DataTree.to_dataset`  , the inherited coordinates are
-included by default unless you exclude them with the ``inherited`` flag:
+included by default unless you exclude them with the ``inherit`` flag:
 
 .. ipython:: python
 
     dt2["/weather/temperature"].to_dataset()
 
-    dt2["/weather/temperature"].to_dataset(inherited=False)
+    dt2["/weather/temperature"].to_dataset(inherit=False)
 
 For more examples and further discussion see LINK
 
