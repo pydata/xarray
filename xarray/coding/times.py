@@ -24,7 +24,6 @@ from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
 from xarray.core.duck_array_ops import asarray, ravel, reshape
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
-from xarray.core.options import _get_datetime_resolution
 from xarray.core.pdcompat import default_precision_timestamp
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
@@ -274,7 +273,7 @@ def _align_reference_date_and_unit(ref_date_str: str, unit: str) -> pd.Timestamp
     ref_date = pd.Timestamp(ref_date_str)
     # strip tz information
     if ref_date.tz is not None:
-        ref_date = ref_date.tz_convert(None)
+        ref_date = ref_date.tz_convert("UTC").tz_convert(None)
     # get ref_date and unit delta
     ref_date_unit = np.datetime_data(ref_date.asm8)[0]
     ref_date_delta = np.timedelta64(1, ref_date_unit)
@@ -443,7 +442,7 @@ def to_timedelta_unboxed(value, **kwargs):
     # todo: check, if the procedure here is correct
     result = pd.to_timedelta(value, **kwargs).to_numpy()
     unique_timedeltas = np.unique(result[pd.notnull(result)])
-    unit =  _netcdf_to_numpy_timeunit(_infer_time_units_from_diff(unique_timedeltas))
+    unit = _netcdf_to_numpy_timeunit(_infer_time_units_from_diff(unique_timedeltas))
     if unit not in ["s", "ms", "us", "ns"]:
         unit = "s"
     result = result.astype(f"timedelta64[{unit}]")
@@ -467,7 +466,9 @@ def decode_cf_timedelta(num_timedeltas, units: str) -> np.ndarray:
     as_unit = unit
     if unit not in ["s", "ms", "us", "ns"]:
         as_unit = "s"
-    result = pd.to_timedelta(ravel(num_timedeltas), unit=unit).as_unit(as_unit).to_numpy()
+    result = (
+        pd.to_timedelta(ravel(num_timedeltas), unit=unit).as_unit(as_unit).to_numpy()
+    )
     return reshape(result, num_timedeltas.shape)
 
 
@@ -477,16 +478,11 @@ def _unit_timedelta_cftime(units: str) -> timedelta:
 
 def _unit_timedelta_numpy(units: str) -> np.timedelta64:
     numpy_units = _netcdf_to_numpy_timeunit(units)
-    default_unit = _get_datetime_resolution()
-    return np.timedelta64(
-        int(_NS_PER_TIME_DELTA[numpy_units] / _NS_PER_TIME_DELTA[default_unit]),
-        default_unit,
-    )
+    return np.timedelta64(1, numpy_units)
 
 
 def _infer_time_units_from_diff(unique_timedeltas) -> str:
-    # todo: check, if this function works as intended
-    #  especially, if it not just returns "second"
+    # todo: check, if this function works correctly wrt np.timedelta64
     unit_timedelta: Callable[[str], timedelta] | Callable[[str], np.timedelta64]
     zero_timedelta: timedelta | np.timedelta64
     if unique_timedeltas.dtype == np.dtype("O"):
@@ -575,7 +571,7 @@ def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
     for _i, t in np.ndenumerate(times):
         try:
             # todo: decide how to work with this
-            #  as pd.Timestamp is defined from year 0001-01-01 to 9999-12-31
+            #  as initialized by string pd.Timestamp is defined only from year -9999-01-01 to 9999-12-31
             # Use pandas.Timestamp in place of datetime.datetime, because
             # NumPy casts it safely it np.datetime64[ns] for dates outside
             # 1678 to 2262 (this is not currently the case for
