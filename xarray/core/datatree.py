@@ -1509,6 +1509,25 @@ class DataTree(
         )
         return map_over_subtree(ds_binop)(self, other)
 
+    def _inplace_binary_op(self, other, f) -> Self:
+        from xarray.core.groupby import GroupBy
+
+        if isinstance(other, GroupBy):
+            raise TypeError(
+                "in-place operations between a DataTree and "
+                "a grouped object are not permitted"
+            )
+
+        # TODO requires an implementation of map_over_subtree_inplace
+        #
+        # ds_inplace_binop = functools.partial(
+        #     Dataset._inplace_binary_op,
+        #     f=f,
+        # )
+        #
+        # return map_over_subtree_inplace(ds_inplace_binop)(self, other)
+        raise NotImplementedError()
+
     def to_netcdf(
         self,
         filepath,
