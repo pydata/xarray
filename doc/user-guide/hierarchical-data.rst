@@ -663,7 +663,7 @@ Exact aligment means that shared dimensions must be the same length, and indexes
 .. note::
     If you were a previous user of the prototype `xarray-contrib/datatree <https://github.com/xarray-contrib/datatree>`_ package, this is different from what you're used to!
     In that package the data model was that the data stored in each node actually was completely unrelated. The data model is now slightly stricter.
-    This allows us to provide features like :ref:`coordinate-inheritance`. See the migration guide for more details on the differences (LINK).
+    This allows us to provide features like :ref:`coordinate-inheritance`.
 
 To demonstrate, let's first generate some example datasets which are not aligned with one another:
 
