@@ -1858,6 +1858,16 @@ class TestOps:
         result = other_ds * dt
         assert_equal(result, expected)
 
+    def test_inplace_binary_op(self):
+        ds1 = xr.Dataset({"a": [5], "b": [3]})
+        ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
+        dt = DataTree.from_dict({"/": ds1, "/subnode": ds2})
+
+        expected = DataTree.from_dict({"/": ds1 + 1, "/subnode": ds2 + 1})
+
+        dt += 1
+        assert_equal(dt, expected)
+
     # TODO test single-node datatree doesn't broadcast
 
 
