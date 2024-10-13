@@ -1732,7 +1732,6 @@ class TestAggregations:
 
 
 class TestOps:
-    # test unary op
     def test_unary_op(self):
         ds1 = xr.Dataset({"a": [5], "b": [3]})
         ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
@@ -1742,6 +1741,19 @@ class TestOps:
 
         result = -dt
         assert_equal(result, expected)
+
+    def test_unary_op_inherited_coords(self):
+        tree = DataTree(xr.Dataset(coords={"x": [1, 2, 3]}))
+        tree["/foo"] = DataTree(xr.Dataset({"bar": ("x", [4, 5, 6])}))
+        actual = -tree
+
+        actual_dataset = actual.children["foo"].to_dataset(inherit=False)
+        assert "x" not in actual_dataset.coords
+
+        expected = tree.copy()
+        # unary ops are not applied to coordinate variables, only data variables
+        expected["/foo/bar"].data = np.array([-4, -5, -6])
+        assert_identical(actual, expected)
 
     @pytest.mark.xfail(reason="arithmetic not implemented yet")
     def test_binary_op_on_int(self):
