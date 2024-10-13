@@ -131,7 +131,7 @@ class DatatreeIOBase:
         roundtrip_dt = open_datatree(filepath, engine=self.engine)
         assert_equal(original_dt, roundtrip_dt)
         subtree = cast(DataTree, roundtrip_dt["/sub"])
-        assert "x" not in subtree.to_dataset(inherited=False).coords
+        assert "x" not in subtree.to_dataset(inherit=False).coords
 
     def test_netcdf_encoding(self, tmpdir, simple_datatree):
         filepath = tmpdir / "test.nc"
@@ -320,7 +320,7 @@ class TestZarrDatatreeIO:
         roundtrip_dt = open_datatree(filepath, engine="zarr")
         assert_equal(original_dt, roundtrip_dt)
         subtree = cast(DataTree, roundtrip_dt["/sub"])
-        assert "x" not in subtree.to_dataset(inherited=False).coords
+        assert "x" not in subtree.to_dataset(inherit=False).coords
 
     def test_open_groups_round_trip(self, tmpdir, simple_datatree) -> None:
         """Test `open_groups` opens a zarr store with the `simple_datatree` structure."""
