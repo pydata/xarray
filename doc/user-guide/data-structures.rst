@@ -800,7 +800,7 @@ included by default unless you exclude them with the ``inherit`` flag:
 
     dt2["/weather/temperature"].to_dataset(inherit=False)
 
-For more examples and further discussion see LINK
+For more examples and further discussion see :ref:`alignment and coordinate inheritance <hierarchical-data.alignment-and-coordinate-inheritance>`.
 
 .. _coordinates:
 

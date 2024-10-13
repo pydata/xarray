@@ -1,4 +1,4 @@
-.. _hierarchical-data:
+.. _userguide.hierarchical-data:
 
 Hierarchical data
 =================
@@ -647,7 +647,7 @@ We could use this feature to quickly calculate the electrical power in our signa
     power = currents * voltages
     power
 
-.. _alignment-and-coordinate-inheritance:
+.. _hierarchical-data.alignment-and-coordinate-inheritance:
 
 Alignment and Coordinate Inheritance
 ------------------------------------
