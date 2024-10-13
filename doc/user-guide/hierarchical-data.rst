@@ -789,10 +789,7 @@ This helps to differentiate which variables are defined on the datatree node tha
 We can also still perform all the same operations on the whole tree:
 
 .. ipython:: python
-    :okexcept:
 
     dt.sel(lat=[75], lon=[300])
 
     dt.std(dim="time")
-
-(TODO: The second one fails due to https://github.com/pydata/xarray/issues/8949)
