@@ -895,30 +895,30 @@ def parse_dims_as_tuple(
 @overload
 def parse_dims_as_set(
     dim: Dims,
-    all_dims: Set[Hashable],
+    all_dims: set[Hashable],
     *,
     check_exists: bool = True,
     replace_none: Literal[True] = True,
-) -> Set[Hashable]: ...
+) -> set[Hashable]: ...
 
 
 @overload
 def parse_dims_as_set(
     dim: Dims,
-    all_dims: Set[Hashable],
+    all_dims: set[Hashable],
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> Set[Hashable] | None | EllipsisType: ...
+) -> set[Hashable] | None | EllipsisType: ...
 
 
 def parse_dims_as_set(
     dim: Dims,
-    all_dims: Set[Hashable],
+    all_dims: set[Hashable],
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> Set[Hashable] | None | EllipsisType:
+) -> set[Hashable] | None | EllipsisType:
     """Like parse_dims_as_tuple, but returning a set instead of a tuple."""
     # TODO: Consider removing parse_dims_as_tuple?
     if dim is None or dim is ...:

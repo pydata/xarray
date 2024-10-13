@@ -6987,7 +6987,7 @@ class Dataset(
                 " Please use 'dim' instead."
             )
 
-        dims = parse_dims_as_set(dim, self._dims.keys())
+        dims = parse_dims_as_set(dim, set(self._dims.keys()))
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)

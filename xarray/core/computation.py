@@ -1841,6 +1841,7 @@ def dot(
     einsum_axes = "abcdefghijklmnopqrstuvwxyz"
     dim_map = {d: einsum_axes[i] for i, d in enumerate(all_dims)}
 
+    dot_dims: set[Hashable]
     if dim is None:
         # find dimensions that occur more than once
         dim_counts: Counter = Counter()
