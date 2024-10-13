@@ -1834,7 +1834,29 @@ class TestOps:
         expected["/foo/bar"].data = np.array([8, 10, 12])
         assert_identical(actual, expected)
 
-    # TODO test dataset * datatree commutativity
+    def test_binary_op_commutativity_with_dataset(self):
+        # regression test for #9365
+
+        ds1 = xr.Dataset({"a": [5], "b": [3]})
+        ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
+        dt = DataTree.from_dict(
+            {
+                "/": ds1,
+                "/subnode": ds2,
+            }
+        )
+
+        other_ds = xr.Dataset({"z": ("z", [0.1, 0.2])})
+
+        expected = DataTree.from_dict(
+            {
+                "/": ds1 * other_ds,
+                "/subnode": ds2 * other_ds,
+            }
+        )
+
+        result = other_ds * dt
+        assert_equal(result, expected)
 
     # TODO test single-node datatree doesn't broadcast
 
