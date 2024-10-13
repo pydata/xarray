@@ -1755,7 +1755,6 @@ class TestOps:
         expected["/foo/bar"].data = np.array([-4, -5, -6])
         assert_identical(actual, expected)
 
-    @pytest.mark.xfail(reason="arithmetic not implemented yet")
     def test_binary_op_on_int(self):
         ds1 = xr.Dataset({"a": [5], "b": [3]})
         ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
@@ -1767,7 +1766,28 @@ class TestOps:
         result: DataTree = dt * 5  # type: ignore[assignment,operator]
         assert_equal(result, expected)
 
-    @pytest.mark.xfail(reason="arithmetic not implemented yet")
+    def test_binary_op_on_dataarray(self):
+        ds1 = xr.Dataset({"a": [5], "b": [3]})
+        ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
+        dt = DataTree.from_dict(
+            {
+                "/": ds1,
+                "/subnode": ds2,
+            }
+        )
+
+        other_da = xr.DataArray(name="z", data=[0.1, 0.2], dims="z")
+
+        expected = DataTree.from_dict(
+            {
+                "/": ds1 * other_da,
+                "/subnode": ds2 * other_da,
+            }
+        )
+
+        result = dt * other_da
+        assert_equal(result, expected)
+
     def test_binary_op_on_dataset(self):
         ds1 = xr.Dataset({"a": [5], "b": [3]})
         ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
@@ -1790,7 +1810,6 @@ class TestOps:
         result = dt * other_ds
         assert_equal(result, expected)
 
-    @pytest.mark.xfail(reason="arithmetic not implemented yet")
     def test_binary_op_on_datatree(self):
         ds1 = xr.Dataset({"a": [5], "b": [3]})
         ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
@@ -1803,7 +1822,6 @@ class TestOps:
         result = dt * dt  # type: ignore[operator]
         assert_equal(result, expected)
 
-    @pytest.mark.xfail(reason="arithmetic not implemented yet")
     def test_arithmetic_inherited_coords(self):
         tree = DataTree(xr.Dataset(coords={"x": [1, 2, 3]}))
         tree["/foo"] = DataTree(xr.Dataset({"bar": ("x", [4, 5, 6])}))
