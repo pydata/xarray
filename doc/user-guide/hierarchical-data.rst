@@ -699,8 +699,6 @@ If we first try to create a :py:class:`~xarray.DataTree` with these different-le
 
     xr.DataTree.from_dict({"daily": ds_daily, "daily/weekly": ds_weekly})
 
-(TODO: Looks like this error message could be improved by including information about which sizes are not equal.)
-
 This is because DataTree checks that data in child nodes align exactly with their parents.
 
 .. note::
