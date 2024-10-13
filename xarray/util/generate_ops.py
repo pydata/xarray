@@ -218,6 +218,8 @@ def unops() -> list[OpsType]:
 # type-ignores end up in the wrong line :/
 
 ops_info = {}
+# TODO add binops to datatree (and inplace binops?)
+ops_info["DataTreeOpsMixin"] = unops()
 ops_info["DatasetOpsMixin"] = (
     binops(other_type="DsCompatible") + inplace(other_type="DsCompatible") + unops()
 )
@@ -244,7 +246,8 @@ MODULE_PREAMBLE = '''\
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, overload
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, overload
 
 from xarray.core import nputils, ops
 from xarray.core.types import (

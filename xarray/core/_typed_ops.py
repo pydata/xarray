@@ -23,6 +23,46 @@ if TYPE_CHECKING:
     from xarray.core.types import T_DataArray as T_DA
 
 
+class DataTreeOpsMixin:
+    __slots__ = ()
+
+    def _unary_op(self, f: Callable, *args: Any, **kwargs: Any) -> Self:
+        raise NotImplementedError
+
+    def __neg__(self) -> Self:
+        return self._unary_op(operator.neg)
+
+    def __pos__(self) -> Self:
+        return self._unary_op(operator.pos)
+
+    def __abs__(self) -> Self:
+        return self._unary_op(operator.abs)
+
+    def __invert__(self) -> Self:
+        return self._unary_op(operator.invert)
+
+    def round(self, *args: Any, **kwargs: Any) -> Self:
+        return self._unary_op(ops.round_, *args, **kwargs)
+
+    def argsort(self, *args: Any, **kwargs: Any) -> Self:
+        return self._unary_op(ops.argsort, *args, **kwargs)
+
+    def conj(self, *args: Any, **kwargs: Any) -> Self:
+        return self._unary_op(ops.conj, *args, **kwargs)
+
+    def conjugate(self, *args: Any, **kwargs: Any) -> Self:
+        return self._unary_op(ops.conjugate, *args, **kwargs)
+
+    __neg__.__doc__ = operator.neg.__doc__
+    __pos__.__doc__ = operator.pos.__doc__
+    __abs__.__doc__ = operator.abs.__doc__
+    __invert__.__doc__ = operator.invert.__doc__
+    round.__doc__ = ops.round_.__doc__
+    argsort.__doc__ = ops.argsort.__doc__
+    conj.__doc__ = ops.conj.__doc__
+    conjugate.__doc__ = ops.conjugate.__doc__
+
+
 class DatasetOpsMixin:
     __slots__ = ()
 

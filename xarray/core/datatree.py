@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Literal, NoReturn, Union, overload
 
 from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
+from xarray.core._typed_ops import DataTreeOpsMixin
 from xarray.core.alignment import align
 from xarray.core.common import TreeAttrAccessMixin
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
@@ -403,6 +404,7 @@ class DatasetView(Dataset):
 class DataTree(
     NamedNode["DataTree"],
     DataTreeAggregations,
+    DataTreeOpsMixin,
     TreeAttrAccessMixin,
     Mapping[str, "DataArray | DataTree"],
 ):
@@ -1485,6 +1487,10 @@ class DataTree(
     def groups(self):
         """Return all groups in the tree, given as a tuple of path-like strings."""
         return tuple(node.path for node in self.subtree)
+
+    def _unary_op(self, f, *args, **kwargs) -> Self:
+        # TODO do we need to any additional work to avoid duplication etc.? (Similar to aggregations)
+        return self.map_over_subtree(f, *args, **kwargs)
 
     def to_netcdf(
         self,
