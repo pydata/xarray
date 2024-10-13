@@ -1315,6 +1315,19 @@ class TestInheritance:
         expected = xr.Dataset({"foo": ("x", [4, 5])})
         assert_identical(child_dataset, expected)
 
+    def test_deduplicated_after_setitem(self):
+        # regression test for GH #9601
+        dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2]}),
+                "/b": None,
+            }
+        )
+        dt["b/x"] = dt["x"]
+        child_dataset = dt.children["b"].to_dataset(inherited=False)
+        expected = xr.Dataset()
+        assert_identical(child_dataset, expected)
+
     def test_inconsistent_dims(self):
         expected_msg = _exact_match(
             """
