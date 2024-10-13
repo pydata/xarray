@@ -314,7 +314,7 @@ class TestMapOverSubTree:
         assert isinstance(actual, xr.DataTree)
         assert_identical(tree, actual)
 
-        actual_child = actual.children["child"].to_dataset(inherited=False)
+        actual_child = actual.children["child"].to_dataset(inherit=False)
         assert_identical(actual_child, child)
 
 

@@ -849,14 +849,14 @@ class DataTreeCoordinates(Coordinates):
         from xarray.core.datatree import check_alignment
 
         # create updated node (`.to_dataset` makes a copy so this doesn't modify in-place)
-        node_ds = self._data.to_dataset(inherited=False)
+        node_ds = self._data.to_dataset(inherit=False)
         node_ds.coords._update_coords(coords, indexes)
 
         # check consistency *before* modifying anything in-place
         # TODO can we clean up the signature of check_alignment to make this less awkward?
         if self._data.parent is not None:
             parent_ds = self._data.parent._to_dataset_view(
-                inherited=True, rebuild_dims=False
+                inherit=True, rebuild_dims=False
             )
         else:
             parent_ds = None

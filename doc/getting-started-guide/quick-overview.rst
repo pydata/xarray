@@ -307,11 +307,11 @@ We can get a copy of the :py:class:`~xarray.Dataset` including the inherited coo
     ds_inherited = dt["simulation/coarse"].to_dataset()
     ds_inherited
 
-And you can get a copy of just the node local values of :py:class:`~xarray.Dataset` by setting the ``inherited`` keyword to ``False``:
+And you can get a copy of just the node local values of :py:class:`~xarray.Dataset` by setting the ``inherit`` keyword to ``False``:
 
 .. ipython:: python
 
-    ds_node_local = dt["simulation/coarse"].to_dataset(inherited=False)
+    ds_node_local = dt["simulation/coarse"].to_dataset(inherit=False)
     ds_node_local
 
 .. note::
