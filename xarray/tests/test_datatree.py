@@ -1324,7 +1324,7 @@ class TestInheritance:
             }
         )
         dt["b/x"] = dt["x"]
-        child_dataset = dt.children["b"].to_dataset(inherited=False)
+        child_dataset = dt.children["b"].to_dataset(inherit=False)
         expected = xr.Dataset()
         assert_identical(child_dataset, expected)
 
