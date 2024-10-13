@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import itertools
 import textwrap
 from collections import ChainMap
@@ -1491,6 +1492,22 @@ class DataTree(
     def _unary_op(self, f, *args, **kwargs) -> Self:
         # TODO do we need to any additional work to avoid duplication etc.? (Similar to aggregations)
         return self.map_over_subtree(f, *args, **kwargs)
+
+    def _binary_op(self, other, f, reflexive=False, join=None) -> DataTree:
+        from xarray.core.dataset import Dataset
+        from xarray.core.groupby import GroupBy
+
+        if isinstance(other, GroupBy):
+            # TODO should we be trying to make this work?
+            raise NotImplementedError
+
+        ds_binop = functools.partial(
+            Dataset._binary_op,
+            f=f,
+            reflexive=reflexive,
+            join=join,
+        )
+        return map_over_subtree(ds_binop)(self, other)
 
     def to_netcdf(
         self,
