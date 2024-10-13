@@ -14,6 +14,7 @@ from html import escape
 from typing import TYPE_CHECKING, Any, Literal, NoReturn, Union, overload
 
 from xarray.core import utils
+from xarray.core._aggregations import DataTreeAggregations
 from xarray.core.alignment import align
 from xarray.core.common import TreeAttrAccessMixin
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
@@ -41,6 +42,7 @@ from xarray.core.utils import (
     drop_dims_from_indexers,
     either_dict_or_kwargs,
     maybe_wrap_array,
+    parse_dims_as_set,
 )
 from xarray.core.variable import Variable
 
@@ -57,6 +59,7 @@ if TYPE_CHECKING:
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
     from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.types import (
+        Dims,
         ErrorOptions,
         ErrorOptionsWithWarn,
         NetcdfWriteModes,
@@ -399,6 +402,7 @@ class DatasetView(Dataset):
 
 class DataTree(
     NamedNode["DataTree"],
+    DataTreeAggregations,
     TreeAttrAccessMixin,
     Mapping[str, "DataArray | DataTree"],
 ):
@@ -1612,6 +1616,38 @@ class DataTree(
             **kwargs,
         )
 
+    def _get_all_dims(self) -> set:
+        all_dims = set()
+        for node in self.subtree:
+            all_dims.update(node._node_dims)
+        return all_dims
+
+    def reduce(
+        self,
+        func: Callable,
+        dim: Dims = None,
+        *,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        numeric_only: bool = False,
+        **kwargs: Any,
+    ) -> Self:
+        """Reduce this tree by applying `func` along some dimension(s)."""
+        dims = parse_dims_as_set(dim, self._get_all_dims())
+        result = {}
+        for node in self.subtree:
+            reduce_dims = [d for d in node._node_dims if d in dims]
+            node_result = node.dataset.reduce(
+                func,
+                reduce_dims,
+                keep_attrs=keep_attrs,
+                keepdims=keepdims,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
+            result[node.path] = node_result
+        return type(self).from_dict(result, name=self.name)
+
     def _selective_indexing(
         self,
         func: Callable[[Dataset, Mapping[Any, Any]], Dataset],
@@ -1622,9 +1658,7 @@ class DataTree(
         dimensions and inherited coordinates gracefully by only applying
         indexing at each node selectively.
         """
-        all_dims = set()
-        for node in self.subtree:
-            all_dims.update(node._node_dims)
+        all_dims = self._get_all_dims()
         indexers = drop_dims_from_indexers(indexers, all_dims, missing_dims)
 
         result = {}
