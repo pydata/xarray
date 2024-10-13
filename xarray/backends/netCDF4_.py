@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import os
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
@@ -700,7 +700,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        group: str | Iterable[str] | Callable | None = None,
+        group: str | None = None,
         format="NETCDF4",
         clobber=True,
         diskless=False,
@@ -745,7 +745,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        group: str | Iterable[str] | Callable | None = None,
+        group: str | None = None,
         format="NETCDF4",
         clobber=True,
         diskless=False,
