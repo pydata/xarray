@@ -771,7 +771,7 @@ Here there are four different coordinate variables, which apply to variables in 
 ``station`` is used only for ``weather`` variables
 ``lat`` and ``lon`` are only use for ``satellite`` images
 
-Coordinate variables are inherited to descendent nodes, which means that
+Coordinate variables are inherited to descendent nodes, which is only possible because
 variables at different levels of a hierarchical DataTree are always
 aligned. Placing the ``time`` variable at the root node automatically indicates
 that it applies to all descendent nodes. Similarly, ``station`` is in the base
@@ -800,6 +800,7 @@ included by default unless you exclude them with the ``inherit`` flag:
 
     dt2["/weather/temperature"].to_dataset(inherit=False)
 
+For more examples and further discussion see :ref:`alignment and coordinate inheritance <hierarchical-data.alignment-and-coordinate-inheritance>`.
 
 .. _coordinates:
 
