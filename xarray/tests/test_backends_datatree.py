@@ -24,6 +24,8 @@ try:
 except ImportError:
     pass
 
+have_zarr_v3 = xr.backends.zarr._zarr_v3()
+
 
 @pytest.fixture(scope="module")
 def unaligned_datatree_nc(tmp_path_factory):
@@ -243,6 +245,9 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
     engine: T_DataTreeNetcdfEngine | None = "h5netcdf"
 
 
+@pytest.mark.skipif(
+    have_zarr_v3, reason="datatree support for zarr 3 is not implemented yet"
+)
 @requires_zarr
 class TestZarrDatatreeIO:
     engine = "zarr"
