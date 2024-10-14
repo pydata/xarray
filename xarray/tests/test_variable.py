@@ -2668,7 +2668,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
             warnings.simplefilter("ignore")
             actual: T_DuckArray = as_compatible_data(times_s)
         assert actual.array == times_s
-        assert actual.array.dtype == pd.DatetimeTZDtype("s", tz)
+        assert actual.array.dtype == pd.DatetimeTZDtype("s", tz)  # type: ignore[arg-type]
 
         series = pd.Series(times_s)
         with warnings.catch_warnings():

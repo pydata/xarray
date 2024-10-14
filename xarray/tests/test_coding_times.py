@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from datetime import timedelta
 from itertools import product
-from typing import Literal
+from typing import Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -218,21 +218,16 @@ def test_decode_standard_calendar_inside_timestamp_range(calendar) -> None:
     import cftime
 
     units = "days since 0001-01-01"
-    unit = "us"
+    unit = cast(Literal["s", "ms", "us", "ns"], "us")
     times = pd.date_range("2001-04-01-00", end="2001-04-30-23", unit=unit, freq="h")
-    print("A:", times)
     time = cftime.date2num(times.to_pydatetime(), units, calendar=calendar)
     expected = times.values
     if calendar == "proleptic_gregorian":
         unit = "s"
     expected_dtype = np.dtype(f"M8[{unit}]")
-    print("0:", time[0], units, calendar)
-    print("1:", expected.astype("int64")[0], expected.dtype)
     actual = decode_cf_datetime(time, units, calendar=calendar)
-    print("2:", actual[0], actual.astype("int64")[0], actual.dtype)
     assert actual.dtype == expected_dtype
     abs_diff = abs(actual - expected)
-    print("3:", abs_diff[0], abs_diff.dtype)
     # once we no longer support versions of netCDF4 older than 1.1.5,
     # we could do this check with near microsecond accuracy:
     # https://github.com/Unidata/netcdf4-python/issues/355
@@ -434,6 +429,7 @@ def test_decode_multidim_time_outside_timestamp_range(calendar) -> None:
         warnings.filterwarnings("ignore", "Unable to decode time axis")
         actual = decode_cf_datetime(mdim_time, units, calendar=calendar)
 
+    dtype: np.dtype
     if calendar == "proleptic_gregorian":
         dtype = np.dtype("=M8[s]")
         expected1 = expected1.astype(dtype)
@@ -657,13 +653,14 @@ def test_cf_timedelta_2d() -> None:
 @pytest.mark.parametrize(
     ["deltas", "expected"],
     [
-        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
-        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
-        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
-        (pd.to_timedelta(["1 day", "2 days"]), "days"),  # type: ignore[arg-type, unused-ignore]
+        (pd.to_timedelta(["1 day", "2 days"]), "days"),
+        (pd.to_timedelta(["1 day", "2 days"]), "days"),
+        (pd.to_timedelta(["1 day", "2 days"]), "days"),
+        (pd.to_timedelta(["1 day", "2 days"]), "days"),
     ],
 )
 def test_infer_timedelta_units(deltas, expected) -> None:
+    # todo: why testing, the same thing four times?
     assert expected == infer_timedelta_units(deltas)
 
 
