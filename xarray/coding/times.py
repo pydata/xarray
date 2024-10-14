@@ -250,6 +250,11 @@ def _timestamp_as_unit(date: pd.Timestamp, unit: str) -> pd.Timestamp:
 def _check_date_for_units_since_refdate(
     date, unit: str, ref_date: pd.Timestamp
 ) -> pd.Timestamp:
+    # check for out-of-bounds floats and raise
+    if date > np.iinfo("int64").max or date < np.iinfo("int64").min:
+        raise OutOfBoundsTimedelta(
+            f"Value {date} can't be represented as Datetime/Timedelta."
+        )
     delta = date * np.timedelta64(1, unit)
     if not np.isnan(delta):
         # this will raise on dtype overflow for integer dtypes
@@ -262,6 +267,8 @@ def _check_date_for_units_since_refdate(
         ref_date_unit = np.datetime_data(ref_date.asm8)[0]
         return _timestamp_as_unit(ref_date + delta, ref_date_unit)
     else:
+        # if date is exactly NaT (np.iinfo("int64").min) return refdate
+        # to make follow-up checks work
         return ref_date
 
 
