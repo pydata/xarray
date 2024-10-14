@@ -118,6 +118,7 @@ from xarray.core.utils import (
     is_duck_dask_array,
     is_scalar,
     maybe_wrap_array,
+    parse_dims_as_set,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -6996,18 +6997,7 @@ class Dataset(
                 " Please use 'dim' instead."
             )
 
-        if dim is None or dim is ...:
-            dims = set(self.dims)
-        elif isinstance(dim, str) or not isinstance(dim, Iterable):
-            dims = {dim}
-        else:
-            dims = set(dim)
-
-        missing_dimensions = tuple(d for d in dims if d not in self.dims)
-        if missing_dimensions:
-            raise ValueError(
-                f"Dimensions {missing_dimensions} not found in data dimensions {tuple(self.dims)}"
-            )
+        dims = parse_dims_as_set(dim, set(self._dims.keys()))
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
