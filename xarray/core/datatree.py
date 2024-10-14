@@ -62,6 +62,7 @@ if TYPE_CHECKING:
     from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.types import (
         Dims,
+        DtCompatible,
         ErrorOptions,
         ErrorOptionsWithWarn,
         NetcdfWriteModes,
@@ -1527,6 +1528,11 @@ class DataTree(
         #
         # return map_over_subtree_inplace(ds_inplace_binop)(self, other)
         raise NotImplementedError()
+
+    # TODO: dirty workaround for mypy 1.5 error with inherited DatasetOpsMixin vs. Mapping
+    # related to https://github.com/python/mypy/issues/9319?
+    def __eq__(self, other: DtCompatible) -> Self:  # type: ignore[override]
+        return super().__eq__(other)
 
     def to_netcdf(
         self,
