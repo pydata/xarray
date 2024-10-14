@@ -858,10 +858,10 @@ Methods copied from :py:class:`numpy.ndarray` objects, here applying to the data
    :toctree: generated/
 
    DataTree.argsort
-   DataTree.astype
    DataTree.conj
    DataTree.conjugate
    DataTree.round
+..    DataTree.astype
 ..    DataTree.clip
 ..    DataTree.rank
 
