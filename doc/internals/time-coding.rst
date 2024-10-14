@@ -163,7 +163,7 @@ and :py:meth:`pandas.TimedeltaIndex.as_unit` respectively.
     For the functionality in xarray the output resolution is converted from ``'ns'`` to the lowest needed resolution.
 
 .. warning::
-    Care has to be taken, as some configurations of input data will raise. The following shows, that we are safe to use :py:func:`pandas.to_datetime` when providing :py:class:`numpy.datetime64` as scalar or numpy array as input.
+    Care has to be taken, as some configurations of input data will raise. The following shows, that we are safe to use :py:func:`pandas.to_timedelta` when providing :py:class:`numpy.timedelta64` as scalar or numpy array as input.
 
     .. ipython:: python
 
