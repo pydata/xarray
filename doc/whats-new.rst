@@ -35,6 +35,8 @@ New Features
 - Added support for vectorized interpolation using additional interpolators
   from the ``scipy.interpolate`` module (:issue:`9049`, :pull:`9526`).
   By `Holly Mandel <https://github.com/hollymandel>`_.
+- Implement handling of complex numbers (netcdf4/h5netcdf) and enums (h5netcdf) (:issue:`9246`, :issue:`3297`, :pull:`9509`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -62,7 +64,7 @@ Bug fixes
 - Fix a few bugs affecting groupby reductions with `flox`. (:issue:`8090`, :issue:`9398`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix the safe_chunks validation option on the to_zarr method
-  (:issue:`5511`, :pull:`9513`). By `Joseph Nowak
+  (:issue:`5511`, :pull:`9559`). By `Joseph Nowak
   <https://github.com/josephnowak>`_.
 
 Documentation
@@ -147,12 +149,17 @@ Bug fixes
   date "0001-01-01". (:issue:`9108`, :pull:`9116`) By `Spencer Clark
   <https://github.com/spencerkclark>`_ and `Deepak Cherian
   <https://github.com/dcherian>`_.
+- Fix issue where polyfit wouldn't handle non-dimension coordinates. (:issue:`4375`, :pull:`9369`)
+  By `Karl Krauth <https://github.com/Karl-Krauth>`_.
 - Fix issue with passing parameters to ZarrStore.open_store when opening
   datatree in zarr format (:issue:`9376`, :pull:`9377`).
   By `Alfonso Ladino <https://github.com/aladinor>`_
 - Fix deprecation warning that was raised when calling ``np.array`` on an ``xr.DataArray``
   in NumPy 2.0 (:issue:`9312`, :pull:`9393`)
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fix passing missing arguments to when opening hdf5 and netCDF4 datatrees
+  (:issue:`9427`, :pull: `9428`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Fix support for using ``pandas.DateOffset``, ``pandas.Timedelta``, and
   ``datetime.timedelta`` objects as ``resample`` frequencies
   (:issue:`9408`, :pull:`9413`).

@@ -216,18 +216,18 @@ class TestStoreDatasets:
 
 
 class TestToDataset:
-    def test_to_dataset(self):
-        base = xr.Dataset(coords={"a": 1})
-        sub = xr.Dataset(coords={"b": 2})
+    def test_to_dataset_inherited(self):
+        base = xr.Dataset(coords={"a": [1], "b": 2})
+        sub = xr.Dataset(coords={"c": [3]})
         tree = DataTree.from_dict({"/": base, "/sub": sub})
         subtree = typing.cast(DataTree, tree["sub"])
 
-        assert_identical(tree.to_dataset(inherited=False), base)
-        assert_identical(subtree.to_dataset(inherited=False), sub)
+        assert_identical(tree.to_dataset(inherit=False), base)
+        assert_identical(subtree.to_dataset(inherit=False), sub)
 
-        sub_and_base = xr.Dataset(coords={"a": 1, "b": 2})
-        assert_identical(tree.to_dataset(inherited=True), base)
-        assert_identical(subtree.to_dataset(inherited=True), sub_and_base)
+        sub_and_base = xr.Dataset(coords={"a": [1], "c": [3]})  # no "b"
+        assert_identical(tree.to_dataset(inherit=True), base)
+        assert_identical(subtree.to_dataset(inherit=True), sub_and_base)
 
 
 class TestVariablesChildrenNameCollisions:
@@ -368,8 +368,8 @@ class TestUpdate:
         # DataTree.identical() currently does not require that non-inherited
         # coordinates are defined identically, so we need to check this
         # explicitly
-        actual_node = actual.children["b"].to_dataset(inherited=False)
-        expected_node = expected.children["b"].to_dataset(inherited=False)
+        actual_node = actual.children["b"].to_dataset(inherit=False)
+        expected_node = expected.children["b"].to_dataset(inherit=False)
         assert_identical(actual_node, expected_node)
 
 
@@ -414,7 +414,7 @@ class TestCopy:
             {"/": xr.Dataset(coords={"x": [0, 1]}), "/c": DataTree()}
         )
         tree2 = tree.copy()
-        node_ds = tree2.children["c"].to_dataset(inherited=False)
+        node_ds = tree2.children["c"].to_dataset(inherit=False)
         assert_identical(node_ds, xr.Dataset())
 
     def test_deepcopy(self, create_test_datatree):
@@ -668,10 +668,11 @@ class TestCoords:
             actual.coords["x"] = ("x", [-1])
         assert_identical(actual, dt)  # should not be modified
 
-        actual = dt.copy()
-        del actual.coords["b"]
-        expected = dt.reset_coords("b", drop=True)
-        assert_identical(expected, actual)
+        # TODO: re-enable after implementing reset_coords()
+        # actual = dt.copy()
+        # del actual.coords["b"]
+        # expected = dt.reset_coords("b", drop=True)
+        # assert_identical(expected, actual)
 
         with pytest.raises(KeyError):
             del dt.coords["not_found"]
@@ -679,14 +680,15 @@ class TestCoords:
         with pytest.raises(KeyError):
             del dt.coords["foo"]
 
-        actual = dt.copy(deep=True)
-        actual.coords.update({"c": 11})
-        expected = dt.assign_coords({"c": 11})
-        assert_identical(expected, actual)
+        # TODO: re-enable after implementing assign_coords()
+        # actual = dt.copy(deep=True)
+        # actual.coords.update({"c": 11})
+        # expected = dt.assign_coords({"c": 11})
+        # assert_identical(expected, actual)
 
-        # regression test for GH3746
-        del actual.coords["x"]
-        assert "x" not in actual.xindexes
+        # # regression test for GH3746
+        # del actual.coords["x"]
+        # assert "x" not in actual.xindexes
 
         # test that constructors can also handle the `DataTreeCoordinates` object
         ds2 = Dataset(coords=dt.coords)
@@ -714,7 +716,8 @@ class TestCoords:
         dt["child"] = DataTree()
         child = dt["child"]
 
-        assert set(child.coords) == {"x", "y", "a", "b"}
+        assert set(dt.coords) == {"x", "y", "a", "b"}
+        assert set(child.coords) == {"x", "y"}
 
         actual = child.copy(deep=True)
         actual.coords["x"] = ("x", ["a", "b"])
@@ -729,7 +732,7 @@ class TestCoords:
 
         with pytest.raises(KeyError):
             # cannot delete inherited coordinate from child node
-            del child["b"]
+            del child["x"]
 
         # TODO requires a fix for #9472
         # actual = child.copy(deep=True)
@@ -1264,8 +1267,8 @@ class TestInheritance:
         assert dt.c.sizes == {"x": 2, "y": 3}
         # dataset objects created from nodes should not
         assert dt.b.dataset.sizes == {"y": 1}
-        assert dt.b.to_dataset(inherited=True).sizes == {"y": 1}
-        assert dt.b.to_dataset(inherited=False).sizes == {"y": 1}
+        assert dt.b.to_dataset(inherit=True).sizes == {"y": 1}
+        assert dt.b.to_dataset(inherit=False).sizes == {"y": 1}
 
     def test_inherited_coords_index(self):
         dt = DataTree.from_dict(
@@ -1278,22 +1281,23 @@ class TestInheritance:
         assert "x" in dt["/b"].coords
         xr.testing.assert_identical(dt["/x"], dt["/b/x"])
 
-    def test_inherited_coords_override(self):
+    def test_inherit_only_index_coords(self):
         dt = DataTree.from_dict(
             {
-                "/": xr.Dataset(coords={"x": 1, "y": 2}),
-                "/b": xr.Dataset(coords={"x": 4, "z": 3}),
+                "/": xr.Dataset(coords={"x": [1], "y": 2}),
+                "/b": xr.Dataset(coords={"z": 3}),
             }
         )
         assert dt.coords.keys() == {"x", "y"}
-        root_coords = {"x": 1, "y": 2}
-        sub_coords = {"x": 4, "y": 2, "z": 3}
-        xr.testing.assert_equal(dt["/x"], xr.DataArray(1, coords=root_coords))
-        xr.testing.assert_equal(dt["/y"], xr.DataArray(2, coords=root_coords))
-        assert dt["/b"].coords.keys() == {"x", "y", "z"}
-        xr.testing.assert_equal(dt["/b/x"], xr.DataArray(4, coords=sub_coords))
-        xr.testing.assert_equal(dt["/b/y"], xr.DataArray(2, coords=sub_coords))
-        xr.testing.assert_equal(dt["/b/z"], xr.DataArray(3, coords=sub_coords))
+        xr.testing.assert_equal(
+            dt["/x"], xr.DataArray([1], dims=["x"], coords={"x": [1], "y": 2})
+        )
+        xr.testing.assert_equal(dt["/y"], xr.DataArray(2, coords={"y": 2}))
+        assert dt["/b"].coords.keys() == {"x", "z"}
+        xr.testing.assert_equal(
+            dt["/b/x"], xr.DataArray([1], dims=["x"], coords={"x": [1], "z": 3})
+        )
+        xr.testing.assert_equal(dt["/b/z"], xr.DataArray(3, coords={"z": 3}))
 
     def test_inherited_coords_with_index_are_deduplicated(self):
         dt = DataTree.from_dict(
@@ -1302,13 +1306,26 @@ class TestInheritance:
                 "/b": xr.Dataset(coords={"x": [1, 2]}),
             }
         )
-        child_dataset = dt.children["b"].to_dataset(inherited=False)
+        child_dataset = dt.children["b"].to_dataset(inherit=False)
         expected = xr.Dataset()
         assert_identical(child_dataset, expected)
 
         dt["/c"] = xr.Dataset({"foo": ("x", [4, 5])}, coords={"x": [1, 2]})
-        child_dataset = dt.children["c"].to_dataset(inherited=False)
+        child_dataset = dt.children["c"].to_dataset(inherit=False)
         expected = xr.Dataset({"foo": ("x", [4, 5])})
+        assert_identical(child_dataset, expected)
+
+    def test_deduplicated_after_setitem(self):
+        # regression test for GH #9601
+        dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2]}),
+                "/b": None,
+            }
+        )
+        dt["b/x"] = dt["x"]
+        child_dataset = dt.children["b"].to_dataset(inherit=False)
+        expected = xr.Dataset()
         assert_identical(child_dataset, expected)
 
     def test_inconsistent_dims(self):
@@ -1556,25 +1573,95 @@ class TestSubset:
         assert_identical(elders, expected)
 
 
-class TestDSMethodInheritance:
-    def test_dataset_method(self):
-        ds = xr.Dataset({"a": ("x", [1, 2, 3])})
-        dt = DataTree.from_dict(
+class TestIndexing:
+
+    def test_isel_siblings(self):
+        tree = DataTree.from_dict(
             {
-                "/": ds,
-                "/results": ds,
+                "/first": xr.Dataset({"a": ("x", [1, 2])}),
+                "/second": xr.Dataset({"b": ("x", [1, 2, 3])}),
             }
         )
 
         expected = DataTree.from_dict(
             {
-                "/": ds.isel(x=1),
-                "/results": ds.isel(x=1),
+                "/first": xr.Dataset({"a": 2}),
+                "/second": xr.Dataset({"b": 3}),
+            }
+        )
+        actual = tree.isel(x=-1)
+        assert_equal(actual, expected)
+
+        expected = DataTree.from_dict(
+            {
+                "/first": xr.Dataset({"a": ("x", [1])}),
+                "/second": xr.Dataset({"b": ("x", [1])}),
+            }
+        )
+        actual = tree.isel(x=slice(1))
+        assert_equal(actual, expected)
+
+        actual = tree.isel(x=[0])
+        assert_equal(actual, expected)
+
+        actual = tree.isel(x=slice(None))
+        assert_equal(actual, tree)
+
+    def test_isel_inherited(self):
+        tree = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2]}),
+                "/child": xr.Dataset({"foo": ("x", [3, 4])}),
             }
         )
 
-        result = dt.isel(x=1)
-        assert_equal(result, expected)
+        expected = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": 2}),
+                "/child": xr.Dataset({"foo": 4}),
+            }
+        )
+        actual = tree.isel(x=-1)
+        assert_equal(actual, expected)
+
+        expected = DataTree.from_dict(
+            {
+                "/child": xr.Dataset({"foo": 4}),
+            }
+        )
+        actual = tree.isel(x=-1, drop=True)
+        assert_equal(actual, expected)
+
+        expected = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1]}),
+                "/child": xr.Dataset({"foo": ("x", [3])}),
+            }
+        )
+        actual = tree.isel(x=[0])
+        assert_equal(actual, expected)
+
+        actual = tree.isel(x=slice(None))
+        assert_equal(actual, tree)
+
+    def test_sel(self):
+        tree = DataTree.from_dict(
+            {
+                "/first": xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"x": [1, 2, 3]}),
+                "/second": xr.Dataset({"b": ("x", [4, 5])}, coords={"x": [2, 3]}),
+            }
+        )
+        expected = DataTree.from_dict(
+            {
+                "/first": xr.Dataset({"a": 2}, coords={"x": 2}),
+                "/second": xr.Dataset({"b": 4}, coords={"x": 2}),
+            }
+        )
+        actual = tree.sel(x=2)
+        assert_equal(actual, expected)
+
+
+class TestAggregations:
 
     def test_reduce_method(self):
         ds = xr.Dataset({"a": ("x", [False, True, False])})
@@ -1608,8 +1695,44 @@ class TestDSMethodInheritance:
         result = dt.cumsum()
         assert_equal(result, expected)
 
+    def test_dim_argument(self):
+        dt = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"A": ("x", [1, 2])}),
+                "/b": xr.Dataset({"B": ("y", [1, 2])}),
+            }
+        )
+
+        expected = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"A": 1.5}),
+                "/b": xr.Dataset({"B": 1.5}),
+            }
+        )
+        actual = dt.mean()
+        assert_equal(expected, actual)
+
+        actual = dt.mean(dim=...)
+        assert_equal(expected, actual)
+
+        expected = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"A": 1.5}),
+                "/b": xr.Dataset({"B": ("y", [1.0, 2.0])}),
+            }
+        )
+        actual = dt.mean("x")
+        assert_equal(expected, actual)
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Dimension(s) 'invalid' do not exist."),
+        ):
+            dt.mean("invalid")
+
 
 class TestOps:
+    @pytest.mark.xfail(reason="arithmetic not implemented yet")
     def test_binary_op_on_int(self):
         ds1 = xr.Dataset({"a": [5], "b": [3]})
         ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
@@ -1621,6 +1744,7 @@ class TestOps:
         result: DataTree = dt * 5  # type: ignore[assignment,operator]
         assert_equal(result, expected)
 
+    @pytest.mark.xfail(reason="arithmetic not implemented yet")
     def test_binary_op_on_dataset(self):
         ds1 = xr.Dataset({"a": [5], "b": [3]})
         ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
@@ -1643,6 +1767,7 @@ class TestOps:
         result = dt * other_ds
         assert_equal(result, expected)
 
+    @pytest.mark.xfail(reason="arithmetic not implemented yet")
     def test_binary_op_on_datatree(self):
         ds1 = xr.Dataset({"a": [5], "b": [3]})
         ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
@@ -1655,12 +1780,13 @@ class TestOps:
         result = dt * dt  # type: ignore[operator]
         assert_equal(result, expected)
 
+    @pytest.mark.xfail(reason="arithmetic not implemented yet")
     def test_arithmetic_inherited_coords(self):
         tree = DataTree(xr.Dataset(coords={"x": [1, 2, 3]}))
         tree["/foo"] = DataTree(xr.Dataset({"bar": ("x", [4, 5, 6])}))
         actual: DataTree = 2 * tree  # type: ignore[assignment,operator]
 
-        actual_dataset = actual.children["foo"].to_dataset(inherited=False)
+        actual_dataset = actual.children["foo"].to_dataset(inherit=False)
         assert "x" not in actual_dataset.coords
 
         expected = tree.copy()
@@ -1669,6 +1795,8 @@ class TestOps:
 
 
 class TestUFuncs:
+
+    @pytest.mark.xfail(reason="__array_ufunc__ not implemented yet")
     def test_tree(self, create_test_datatree):
         dt = create_test_datatree()
         expected = create_test_datatree(modify=lambda ds: np.sin(ds))

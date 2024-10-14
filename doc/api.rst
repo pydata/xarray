@@ -705,16 +705,16 @@ Pathlib-like Interface
    DataTree.parents
    DataTree.relative_to
 
-Missing:
+.. Missing:
 
-..
+.. ..
 
-   ``DataTree.glob``
-   ``DataTree.joinpath``
-   ``DataTree.with_name``
-   ``DataTree.walk``
-   ``DataTree.rename``
-   ``DataTree.replace``
+..    ``DataTree.glob``
+..    ``DataTree.joinpath``
+..    ``DataTree.with_name``
+..    ``DataTree.walk``
+..    ``DataTree.rename``
+..    ``DataTree.replace``
 
 DataTree Contents
 -----------------
@@ -725,17 +725,18 @@ Manipulate the contents of all nodes in a ``DataTree`` simultaneously.
    :toctree: generated/
 
    DataTree.copy
-   DataTree.assign_coords
-   DataTree.merge
-   DataTree.rename
-   DataTree.rename_vars
-   DataTree.rename_dims
-   DataTree.swap_dims
-   DataTree.expand_dims
-   DataTree.drop_vars
-   DataTree.drop_dims
-   DataTree.set_coords
-   DataTree.reset_coords
+
+   .. DataTree.assign_coords
+   .. DataTree.merge
+   .. DataTree.rename
+   .. DataTree.rename_vars
+   .. DataTree.rename_dims
+   .. DataTree.swap_dims
+   .. DataTree.expand_dims
+   .. DataTree.drop_vars
+   .. DataTree.drop_dims
+   .. DataTree.set_coords
+   .. DataTree.reset_coords
 
 DataTree Node Contents
 ----------------------
@@ -770,61 +771,62 @@ Index into all nodes in the subtree simultaneously.
 
    DataTree.isel
    DataTree.sel
-   DataTree.drop_sel
-   DataTree.drop_isel
-   DataTree.head
-   DataTree.tail
-   DataTree.thin
-   DataTree.squeeze
-   DataTree.interp
-   DataTree.interp_like
-   DataTree.reindex
-   DataTree.reindex_like
-   DataTree.set_index
-   DataTree.reset_index
-   DataTree.reorder_levels
-   DataTree.query
 
-..
+..    DataTree.drop_sel
+..    DataTree.drop_isel
+..    DataTree.head
+..    DataTree.tail
+..    DataTree.thin
+..    DataTree.squeeze
+..    DataTree.interp
+..    DataTree.interp_like
+..    DataTree.reindex
+..    DataTree.reindex_like
+..    DataTree.set_index
+..    DataTree.reset_index
+..    DataTree.reorder_levels
+..    DataTree.query
 
-   Missing:
-   ``DataTree.loc``
+.. ..
+
+..    Missing:
+..    ``DataTree.loc``
 
 
-Missing Value Handling
-----------------------
+.. Missing Value Handling
+.. ----------------------
 
-.. autosummary::
-   :toctree: generated/
+.. .. autosummary::
+..    :toctree: generated/
 
-   DataTree.isnull
-   DataTree.notnull
-   DataTree.combine_first
-   DataTree.dropna
-   DataTree.fillna
-   DataTree.ffill
-   DataTree.bfill
-   DataTree.interpolate_na
-   DataTree.where
-   DataTree.isin
+..    DataTree.isnull
+..    DataTree.notnull
+..    DataTree.combine_first
+..    DataTree.dropna
+..    DataTree.fillna
+..    DataTree.ffill
+..    DataTree.bfill
+..    DataTree.interpolate_na
+..    DataTree.where
+..    DataTree.isin
 
-Computation
------------
+.. Computation
+.. -----------
 
-Apply a computation to the data in all nodes in the subtree simultaneously.
+.. Apply a computation to the data in all nodes in the subtree simultaneously.
 
-.. autosummary::
-   :toctree: generated/
+.. .. autosummary::
+..    :toctree: generated/
 
-   DataTree.map
-   DataTree.reduce
-   DataTree.diff
-   DataTree.quantile
-   DataTree.differentiate
-   DataTree.integrate
-   DataTree.map_blocks
-   DataTree.polyfit
-   DataTree.curvefit
+..    DataTree.map
+..    DataTree.reduce
+..    DataTree.diff
+..    DataTree.quantile
+..    DataTree.differentiate
+..    DataTree.integrate
+..    DataTree.map_blocks
+..    DataTree.polyfit
+..    DataTree.curvefit
 
 Aggregation
 -----------
@@ -836,10 +838,6 @@ Aggregate data in all nodes in the subtree simultaneously.
 
    DataTree.all
    DataTree.any
-   DataTree.argmax
-   DataTree.argmin
-   DataTree.idxmax
-   DataTree.idxmin
    DataTree.max
    DataTree.min
    DataTree.mean
@@ -851,38 +849,38 @@ Aggregate data in all nodes in the subtree simultaneously.
    DataTree.cumsum
    DataTree.cumprod
 
-ndarray methods
----------------
+.. ndarray methods
+.. ---------------
 
-Methods copied from :py:class:`numpy.ndarray` objects, here applying to the data in all nodes in the subtree.
+.. Methods copied from :py:class:`numpy.ndarray` objects, here applying to the data in all nodes in the subtree.
 
-.. autosummary::
-   :toctree: generated/
+.. .. autosummary::
+..    :toctree: generated/
 
-   DataTree.argsort
-   DataTree.astype
-   DataTree.clip
-   DataTree.conj
-   DataTree.conjugate
-   DataTree.round
-   DataTree.rank
+..    DataTree.argsort
+..    DataTree.astype
+..    DataTree.clip
+..    DataTree.conj
+..    DataTree.conjugate
+..    DataTree.round
+..    DataTree.rank
 
-Reshaping and reorganising
---------------------------
+.. Reshaping and reorganising
+.. --------------------------
 
-Reshape or reorganise the data in all nodes in the subtree.
+.. Reshape or reorganise the data in all nodes in the subtree.
 
-.. autosummary::
-   :toctree: generated/
+.. .. autosummary::
+..    :toctree: generated/
 
-   DataTree.transpose
-   DataTree.stack
-   DataTree.unstack
-   DataTree.shift
-   DataTree.roll
-   DataTree.pad
-   DataTree.sortby
-   DataTree.broadcast_like
+..    DataTree.transpose
+..    DataTree.stack
+..    DataTree.unstack
+..    DataTree.shift
+..    DataTree.roll
+..    DataTree.pad
+..    DataTree.sortby
+..    DataTree.broadcast_like
 
 IO / Conversion
 ===============
@@ -961,10 +959,10 @@ DataTree methods
    DataTree.to_netcdf
    DataTree.to_zarr
 
-..
+.. ..
 
-   Missing:
-   ``open_mfdatatree``
+..    Missing:
+..    ``open_mfdatatree``
 
 Coordinates objects
 ===================
@@ -1476,10 +1474,10 @@ Advanced API
    backends.list_engines
    backends.refresh_engines
 
-..
+.. ..
 
-   Missing:
-   ``DataTree.set_close``
+..    Missing:
+..    ``DataTree.set_close``
 
 Default, pandas-backed indexes built-in Xarray:
 

@@ -5615,7 +5615,7 @@ class TestDataset:
         data = create_test_data()
         with pytest.raises(
             ValueError,
-            match=r"Dimensions \('bad_dim',\) not found in data dimensions",
+            match=re.escape("Dimension(s) 'bad_dim' do not exist"),
         ):
             data.mean(dim="bad_dim")
 
@@ -5644,7 +5644,7 @@ class TestDataset:
         data = create_test_data()
         with pytest.raises(
             ValueError,
-            match=r"Dimensions \('bad_dim',\) not found in data dimensions",
+            match=re.escape("Dimension(s) 'bad_dim' do not exist"),
         ):
             getattr(data, func)(dim="bad_dim")
 
@@ -6693,6 +6693,24 @@ class TestDataset:
 
         ds.polyfit("dim2", 2, w=np.arange(ds.sizes["dim2"]))
         xr.testing.assert_identical(ds, ds_copy)
+
+    def test_polyfit_coord(self) -> None:
+        # Make sure polyfit works when given a non-dimension coordinate.
+        ds = create_test_data(seed=1)
+
+        out = ds.polyfit("numbers", 2, full=False)
+        assert "var3_polyfit_coefficients" in out
+        assert "dim1" in out
+        assert "dim2" not in out
+        assert "dim3" not in out
+
+    def test_polyfit_coord_output(self) -> None:
+        da = xr.DataArray(
+            [1, 3, 2], dims=["x"], coords=dict(x=["a", "b", "c"], y=("x", [0, 1, 2]))
+        )
+        out = da.polyfit("y", deg=1)["polyfit_coefficients"]
+        assert out.sel(degree=0).item() == pytest.approx(1.5)
+        assert out.sel(degree=1).item() == pytest.approx(0.5)
 
     def test_polyfit_warnings(self) -> None:
         ds = create_test_data(seed=1)
