@@ -11,6 +11,7 @@ import xarray as xr
 from xarray import DataArray, Dataset
 from xarray.core.coordinates import DataTreeCoordinates
 from xarray.core.datatree import DataTree
+from xarray.core.datatree_mapping import TreeIsomorphismError
 from xarray.core.datatree_ops import _MAPPED_DOCSTRING_ADDENDUM, insert_doc_addendum
 from xarray.core.treenode import NotFoundInTreeError
 from xarray.testing import assert_equal, assert_identical
@@ -1866,7 +1867,15 @@ class TestOps:
         dt += 1
         assert_equal(dt, expected)
 
-    # TODO test single-node datatree doesn't broadcast
+    def test_dont_broadcast_single_node_tree(self):
+        # regression test for https://github.com/pydata/xarray/issues/9365#issuecomment-2291622577
+        ds1 = xr.Dataset({"a": [5], "b": [3]})
+        ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
+        dt = DataTree.from_dict({"/": ds1, "/subnode": ds2})
+        node = dt["/subnode"]
+
+        with pytest.raises(TreeIsomorphismError):
+            dt * node
 
 
 class TestUFuncs:
