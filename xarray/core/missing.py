@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, get_args
 
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike
 
 from xarray.core import utils
 from xarray.core.common import _contains_datetime_like_objects, ones_like
@@ -20,7 +21,13 @@ from xarray.core.duck_array_ops import (
     timedelta_to_numeric,
 )
 from xarray.core.options import _get_keep_attrs
-from xarray.core.types import Interp1dOptions, InterpOptions
+from xarray.core.types import (
+    Interp1dOptions,
+    InterpOptions,
+    ScalarOrArray,
+    T_DuckArray,
+    T_Xarray,
+)
 from xarray.core.utils import OrderedSet, is_scalar
 from xarray.core.variable import Variable, broadcast_variables
 from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -32,7 +39,7 @@ if TYPE_CHECKING:
 
 
 def _get_nan_block_lengths(
-    obj: Dataset | DataArray, dim: Hashable, index: Variable
+    obj: Dataset | DataArray, dim: Hashable, index: T_DuckArray | ArrayLike
 ) -> Any:
     """
     Return an object where each NaN element in 'obj' is replaced by the
@@ -68,7 +75,7 @@ class BaseInterpolator:
     f: Callable
     method: str | int
 
-    def __call__(self, x: np.ndarray) -> np.ndarray:
+    def __call__(self, x: ScalarOrArray) -> np.ndarray:  # dask array will return np
         return self.f(x, **self.call_kwargs)
 
     def __repr__(self) -> str:
@@ -85,11 +92,11 @@ class NumpyInterpolator(BaseInterpolator):
 
     def __init__(
         self,
-        xi: Variable,
-        yi: np.ndarray,
+        xi: T_DuckArray,  # passed to np.asarray
+        yi: T_DuckArray,  # passed to np.asarray + requires dtype attribute
         method: str | None = "linear",
-        fill_value=None,
-        period=None,
+        fill_value: float | complex | None = None,
+        period: float | None = None,
     ):
         if method != "linear":
             raise ValueError("only method `linear` is valid for the NumpyInterpolator")
@@ -137,8 +144,8 @@ class ScipyInterpolator(BaseInterpolator):
 
     def __init__(
         self,
-        xi: Variable,
-        yi: np.ndarray,
+        xi: T_DuckArray,
+        yi: T_DuckArray,
         method: str | int | None = None,
         fill_value: float | complex | None = None,
         assume_sorted: bool = True,
@@ -189,8 +196,8 @@ class SplineInterpolator(BaseInterpolator):
 
     def __init__(
         self,
-        xi: Variable,
-        yi: np.ndarray,
+        xi: T_DuckArray,
+        yi: T_DuckArray,
         method: str | int | None = "spline",
         fill_value: float | complex | None = None,
         order: int = 3,
@@ -229,13 +236,16 @@ def _apply_over_vars_with_dim(
 
 
 def get_clean_interp_index(
-    arr, dim: Hashable, use_coordinate: Hashable | bool = True, strict: bool = True
-):
+    arr: T_Xarray,
+    dim: Hashable,
+    use_coordinate: Hashable | bool = True,
+    strict: bool = True,
+) -> np.ndarray[Any, np.dtype[np.float64]]:
     """Return index to use for x values in interpolation or curve fitting.
 
     Parameters
     ----------
-    arr : DataArray
+    arr : DataArray or Dataset
         Array to interpolate or fit to a curve.
     dim : str
         Name of dimension along which to fit.
@@ -268,13 +278,13 @@ def get_clean_interp_index(
         index = arr.get_index(dim)
 
     else:  # string
-        index = arr.coords[use_coordinate]
+        index = arr.coords[use_coordinate]  # type: ignore[assignment]
         if index.ndim != 1:
             raise ValueError(
                 f"Coordinates used for interpolation must be 1D, "
                 f"{use_coordinate} is {index.ndim}D."
             )
-        index = index.to_index()
+        index = index.to_index()  # type: ignore[attr-defined]
 
     # TODO: index.name is None for multiindexes
     # set name for nice error messages below
@@ -293,15 +303,16 @@ def get_clean_interp_index(
     if isinstance(index, CFTimeIndex | pd.DatetimeIndex):
         offset = type(index[0])(1970, 1, 1)
         if isinstance(index, CFTimeIndex):
-            index = index.values
-        index = Variable(
+            index = index.values  # type: ignore[assignment]
+        index = Variable(  # type: ignore[assignment]
             data=datetime_to_numeric(index, offset=offset, datetime_unit="ns"),
             dims=(dim,),
         )
 
     # raise if index cannot be cast to a float (e.g. MultiIndex)
     try:
-        index = index.values.astype(np.float64)
+        # this step ensures output is ndarray
+        index = index.values.astype(np.float64)  # type: ignore[assignment]
     except (TypeError, ValueError) as err:
         # pandas raises a TypeError
         # xarray/numpy raise a ValueError
@@ -310,11 +321,11 @@ def get_clean_interp_index(
             f"interpolation or curve fitting, got {type(index).__name__}."
         ) from err
 
-    return index
+    return index  # type: ignore[return-value]
 
 
 def interp_na(
-    self,
+    self: T_Xarray,
     dim: Hashable | None = None,
     use_coordinate: bool | str = True,
     method: InterpOptions = "linear",
@@ -324,7 +335,7 @@ def interp_na(
     ) = None,
     keep_attrs: bool | None = None,
     **kwargs,
-):
+) -> T_Xarray:
     """Interpolate values according to different methods."""
     from xarray.coding.cftimeindex import CFTimeIndex
 
@@ -392,14 +403,16 @@ def interp_na(
     return arr
 
 
-def func_interpolate_na(interpolator, y, x, **kwargs):
+def func_interpolate_na(
+    interpolator: Callable, y: T_Xarray, x: np.ndarray, **kwargs
+) -> T_Xarray:
     """helper function to apply interpolation along 1 dimension"""
     # reversed arguments are so that attrs are preserved from da, not index
     # it would be nice if this wasn't necessary, works around:
     # "ValueError: assignment destination is read-only" in assignment below
     out = y.copy()
 
-    nans = pd.isnull(y)
+    nans = pd.isnull(y)  # type: ignore[call-overload]
     nonans = ~nans
 
     # fast track for no-nans, all nan but one, and all-nans cases
@@ -423,7 +436,9 @@ def _bfill(arr, n=None, axis=-1):
     return np.flip(arr, axis=axis)
 
 
-def ffill(arr, dim=None, limit=None):
+def ffill(
+    arr: T_Xarray, dim: Hashable | None = None, limit: int | None = None
+) -> T_Xarray:
     """forward fill missing values"""
 
     axis = arr.get_axis_num(dim)
@@ -441,7 +456,9 @@ def ffill(arr, dim=None, limit=None):
     ).transpose(*arr.dims)
 
 
-def bfill(arr, dim=None, limit=None):
+def bfill(
+    arr: T_Xarray, dim: Hashable | None = None, limit: int | None = None
+) -> T_Xarray:
     """backfill missing values"""
 
     axis = arr.get_axis_num(dim)
