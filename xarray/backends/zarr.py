@@ -1559,7 +1559,7 @@ def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
     for path, group in root.groups():
         gpath = parent_nodepath / path
         yield str(gpath)
-        yield from _iter_zarr_groups(group, parent=gpath)
+        yield from _iter_zarr_groups(group, parent=str(gpath))
 
 
 def _get_open_params(
