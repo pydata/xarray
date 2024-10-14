@@ -24,7 +24,7 @@ from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
 from xarray.core.duck_array_ops import asarray, ravel, reshape
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
-from xarray.core.pdcompat import default_precision_timestamp
+from xarray.core.pdcompat import _timestamp_as_unit, default_precision_timestamp
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import T_ChunkedArray, get_chunked_array_type
@@ -243,10 +243,6 @@ def _decode_datetime_with_cftime(
         return np.array([], dtype=object)
 
 
-def _timestamp_as_unit(date: pd.Timestamp, unit: str) -> pd.Timestamp:
-    return date.as_unit(unit) if hasattr(date, "as_unit") else date._as_unit(unit)
-
-
 def _check_date_for_units_since_refdate(
     date, unit: str, ref_date: pd.Timestamp
 ) -> pd.Timestamp:
@@ -264,7 +260,7 @@ def _check_date_for_units_since_refdate(
             )
         # this will raise on overflow if ref_date + delta
         # can't be represented in the current ref_date resolution
-        ref_date_unit = np.datetime_data(ref_date.asm8)[0]
+        ref_date_unit = ref_date.unit
         return _timestamp_as_unit(ref_date + delta, ref_date_unit)
     else:
         # if date is exactly NaT (np.iinfo("int64").min) return refdate
@@ -272,17 +268,15 @@ def _check_date_for_units_since_refdate(
         return ref_date
 
 
-def _get_timeunit(time: pd.Timestamp | pd.Timedelta) -> str:
-    return np.datetime_data(time.asm8)[0]
-
-
-def _align_reference_date_and_unit(ref_date_str: str, unit: str) -> pd.Timestamp:
+def _align_reference_date_and_unit(
+    ref_date_str: str, unit: Literal["D", "h", "m", "s", "ms", "us", "ns"]
+) -> pd.Timestamp:
     ref_date = pd.Timestamp(ref_date_str)
     # strip tz information
     if ref_date.tz is not None:
         ref_date = ref_date.tz_convert("UTC").tz_convert(None)
     # get ref_date and unit delta
-    ref_date_unit = np.datetime_data(ref_date.asm8)[0]
+    ref_date_unit = ref_date.unit
     ref_date_delta = np.timedelta64(1, ref_date_unit)
     unit_delta = np.timedelta64(1, unit)
     new_unit = ref_date_unit if ref_date_delta < unit_delta else unit
@@ -329,7 +323,7 @@ def _decode_datetime_with_pandas(
             )
         pass
 
-    dunit = _get_timeunit(ref_date)
+    dunit = ref_date.unit
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "invalid value encountered", RuntimeWarning)
@@ -863,7 +857,7 @@ def _eagerly_encode_cf_datetime(
         dates_as_index = pd.DatetimeIndex(ravel(dates))
         time_deltas = dates_as_index - ref_date
         # get resolution of TimedeltaIndex and align time_delta
-        deltas_unit = np.datetime_data(time_deltas.dtype)[0]
+        deltas_unit = time_deltas.unit
         # todo: check, if this works in any case
         time_delta = time_delta.astype(f"=m8[{deltas_unit}]")
 
@@ -993,7 +987,7 @@ def _eagerly_encode_cf_timedelta(
     time_delta = _time_units_to_timedelta64(units)
     time_deltas = pd.TimedeltaIndex(ravel(timedeltas))
     # get resolution of TimedeltaIndex and align time_delta
-    deltas_unit = np.datetime_data(time_deltas.dtype)[0]
+    deltas_unit = time_deltas.unit
     # todo: check, if this works in any case
     time_delta = time_delta.astype(f"=m8[{deltas_unit}]")
 

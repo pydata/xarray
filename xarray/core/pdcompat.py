@@ -36,9 +36,8 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
+from typing import Literal, cast
 
-import numpy as np
 import pandas as pd
 
 from xarray.core.options import _get_datetime_resolution
@@ -75,6 +74,19 @@ no_default = (
 NoDefault = Literal[_NoDefault.no_default]  # For typing following pandas
 
 
+def _timestamp_as_unit(date: pd.Timestamp, unit: str) -> pd.Timestamp:
+    # compatibility function for pandas issue
+    # where "as_unit" is not defined for pandas.Timestamp
+    # in pandas versions < 2.2
+    # can be removed minimum pandas version is >= 2.2
+    unit = cast(Literal["s", "ms", "us", "ns"], unit)
+    if hasattr(date, "as_unit"):
+        date = date.as_unit(unit)
+    elif hasattr(date, "_as_unit"):
+        date = date._as_unit(unit)
+    return date
+
+
 def default_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
     """Return a Timestamp object with the default precision.
 
@@ -85,7 +97,6 @@ def default_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
     dt = pd.Timestamp(*args, **kwargs)
     units = ["s", "ms", "us", "ns"]
     default = _get_datetime_resolution()
-    unit = np.datetime_data(dt.asm8)[0]
-    if units.index(default) > units.index(unit):
-        dt = dt.as_unit(default)
+    if units.index(default) > units.index(dt.unit):
+        dt = _timestamp_as_unit(dt, default)
     return dt
