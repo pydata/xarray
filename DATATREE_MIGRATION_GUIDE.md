@@ -26,11 +26,14 @@ Generally if you don't like this you can get more similar behaviour to the old p
 
 ### Integrated backends
 
-`open_datatree(group=...)`?
+Previously `datatree.open_datatree` used a different codepath from `xarray.open_dataset`, and was hard-coded to only support opening netCDF files and Zarr stores.
+Now xarray's backend entrypoint system has been generalized to include `open_datatree` and the new `open_groups`.
+This means we can now extend other xarray backends to support `open_datatree`! If you are the maintainer of an xarray backend we encourage you to add support for `open_datatree` and `open_groups`!
 
-Performance improvements
-
-Can now extend other xarray backends to support `open_datatree`!
+Additionally:
+- A `group` kwarg has been added to `open_datatree` for choosing which group in the file should become the root group of the created tree.
+- Various performance improvements have been made, which should help when opening netCDF files and Zarr stores with large numbers of groups.
+- We anticipate further performance improvements being possible for datatree IO.
 
 ### API changes
 
