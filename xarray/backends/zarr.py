@@ -1639,6 +1639,10 @@ def _get_open_params(
         # TODO: an option to pass the metadata_key keyword
         zarr_group = zarr.open_consolidated(store, **open_kwargs)
     else:
+        if _zarr_v3():
+            # we have determined that we don't want to use consolidated metadata
+            # so we set that to False to avoid trying to read it
+            open_kwargs["use_consolidated"] = False
         zarr_group = zarr.open_group(store, **open_kwargs)
     close_store_on_close = zarr_group.store is not store
 
