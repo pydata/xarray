@@ -37,6 +37,10 @@ New Features
   By `Holly Mandel <https://github.com/hollymandel>`_.
 - Implement handling of complex numbers (netcdf4/h5netcdf) and enums (h5netcdf) (:issue:`9246`, :issue:`3297`, :pull:`9509`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Support for Zarr-Python 3 (:issue:`95515`, :pull:`9552`).
+  By `Tom Augspurger <https://github.com/TomAugspurger>`_,
+  `Ryan Abernathey <https://github.com/rabernat>`_ and
+  `Joe Hamman <https://github.com/jhamman>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
