@@ -3655,16 +3655,19 @@ def test_zarr_storage_options() -> None:
 @requires_zarr
 def test_zarr_version_deprecated() -> None:
     ds = create_test_data()
-    store = KVStore({})
+    if have_zarr_v3:
+        store = KVStore()
+    else:
+        store = {}
 
     with pytest.warns(FutureWarning, match="zarr_version"):
-        ds.to_zarr(store, zarr_version=2)
+        ds.to_zarr(store=store, zarr_version=2)
 
     with pytest.warns(FutureWarning, match="zarr_version"):
-        xr.open_zarr(store, zarr_version=2)
+        xr.open_zarr(store=store, zarr_version=2)
 
     with pytest.raises(ValueError, match="zarr_format"):
-        xr.open_zarr(store, zarr_version=2, zarr_format=3)
+        xr.open_zarr(store=store, zarr_version=2, zarr_format=3)
 
 
 @requires_scipy
