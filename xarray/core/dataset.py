@@ -3906,7 +3906,7 @@ class Dataset(
         - Methods {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"}
             use :py:class:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:class:`numpy.interp`
             (as in the case of `method='linear'` for 1D data).
-            - If `method='polynomial'`, the `order` keyword argument must also be provided. In this case,
+        - If `method='polynomial'`, the `order` keyword argument must also be provided. In this case,
             :py:class:`scipy.interpolate.interp1d` is called with `kind=order`.
 
         3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
@@ -3915,7 +3915,7 @@ class Dataset(
             - `"barycentric"`: :py:class:`scipy.interpolate.BarycentricInterpolator`
             - `"krogh"`: :py:class:`scipy.interpolate.KroghInterpolator`
             - `"akima"` or `"makima"`: :py:class:`scipy.interpolate.Akima1dInterpolator`
-            (`makima` is handled by passing `makima` to `method`).
+                (`makima` is handled by passing `makima` to `method`).
 
         4. **Interpolation along multiple dimensions of multi-dimensional data**
         - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
@@ -4208,8 +4208,8 @@ class Dataset(
         - Methods {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"}
             use :py:class:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:class:`numpy.interp`
             (as in the case of `method='linear'` for 1D data).
-            - If `method='polynomial'`, the `order` keyword argument must also be provided. In this case,
-            :py:class:`scipy.interpolate.interp1d` is called with `kind=order`.
+        - If `method='polynomial'`, the `order` keyword argument must also be provided. In this case,
+        :py:class:`scipy.interpolate.interp1d` is called with `kind=order`.
 
         3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
         - Depending on the `method`, the following interpolants from :py:class:`scipy.interpolate` are used:
@@ -4217,7 +4217,7 @@ class Dataset(
             - `"barycentric"`: :py:class:`scipy.interpolate.BarycentricInterpolator`
             - `"krogh"`: :py:class:`scipy.interpolate.KroghInterpolator`
             - `"akima"` or `"makima"`: :py:class:`scipy.interpolate.Akima1dInterpolator`
-            (`makima` is handled by passing `makima` to `method`).
+                (`makima` is handled by passing `makima` to `method`).
 
         4. **Interpolation along multiple dimensions of multi-dimensional data**
         - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
