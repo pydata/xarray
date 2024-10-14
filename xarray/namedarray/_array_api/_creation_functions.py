@@ -45,10 +45,10 @@ def arange(
     >>> arange(3.0)
     <xarray.NamedArray (dim_0: 3)> Size: 24B
     array([0., 1., 2.])
-    >>> arange(3,7)
+    >>> arange(3, 7)
     <xarray.NamedArray (dim_0: 4)> Size: 32B
     array([3, 4, 5, 6])
-    >>> arange(3,7,2)
+    >>> arange(3, 7, 2)
     <xarray.NamedArray (dim_0: 2)> Size: 16B
     array([3, 5])
 
