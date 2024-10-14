@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from datetime import timedelta
 from itertools import product
-from typing import Literal, cast
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -217,7 +217,7 @@ def test_decode_standard_calendar_inside_timestamp_range(calendar) -> None:
     import cftime
 
     units = "days since 0001-01-01"
-    unit = cast(Literal["s", "ms", "us", "ns"], _get_datetime_resolution())
+    unit = _get_datetime_resolution()
     times = pd.date_range("2001-04-01-00", end="2001-04-30-23", unit=unit, freq="h")
     # to_pydatetime() will return microsecond
     time = cftime.date2num(times.to_pydatetime(), units, calendar=calendar)

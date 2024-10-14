@@ -41,6 +41,7 @@ from typing import Literal, cast
 import pandas as pd
 
 from xarray.core.options import _get_datetime_resolution
+from xarray.core.types import PDDatetimeUnitOptions
 
 
 def count_not_none(*args) -> int:
@@ -79,7 +80,7 @@ def _timestamp_as_unit(date: pd.Timestamp, unit: str) -> pd.Timestamp:
     # where "as_unit" is not defined for pandas.Timestamp
     # in pandas versions < 2.2
     # can be removed minimum pandas version is >= 2.2
-    unit = cast(Literal["s", "ms", "us", "ns"], unit)
+    unit = cast(PDDatetimeUnitOptions, unit)
     if hasattr(date, "as_unit"):
         date = date.as_unit(unit)
     elif hasattr(date, "_as_unit"):

@@ -5,6 +5,7 @@ import platform
 import string
 import warnings
 from contextlib import contextmanager, nullcontext
+from typing import cast
 from unittest import mock  # noqa: F401
 
 import numpy as np
@@ -19,6 +20,7 @@ from xarray import Dataset
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.options import _get_datetime_resolution, set_options
+from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.variable import IndexVariable
 from xarray.testing import (  # noqa: F401
     assert_chunks_equal,
@@ -325,7 +327,11 @@ def create_test_data(
     obj["dim3"] = ("dim3", list(string.ascii_lowercase[0 : _dims["dim3"]]))
     obj["time"] = (
         "time",
-        pd.date_range("2000-01-01", periods=20, unit=f"{_get_datetime_resolution()}"),
+        pd.date_range(
+            "2000-01-01",
+            periods=20,
+            unit=f"{cast(PDDatetimeUnitOptions, _get_datetime_resolution())}",
+        ),
     )
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
