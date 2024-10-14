@@ -197,7 +197,7 @@ def _unpack_time_units_and_ref_date(units: str) -> tuple[str, pd.Timestamp]:
     # If the ref_date Timestamp is timezone-aware, convert to UTC and
     # make it timezone-naive (GH 2649).
     if ref_date.tz is not None:
-        ref_date = ref_date.tz_convert(None)
+        ref_date = ref_date.tz_convert("UTC").tz_convert(None)
     return time_units, ref_date
 
 
