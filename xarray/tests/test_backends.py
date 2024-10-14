@@ -24,6 +24,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 import pytest
+import zarr.codecs
 from packaging.version import Version
 from pandas.errors import OutOfBoundsDatetime
 
@@ -126,14 +127,16 @@ if have_zarr:
     else:
         ZARR_FORMATS = [2]
         try:
-            from zarr import KVStoreV3 as KVStore
+            from zarr import (
+                KVStoreV3 as KVStore,  # type: ignore[attr-defined,no-redef,unused-ignore]
+            )
         except ImportError:
-            KVStore = None
+            KVStore = None  # type: ignore[misc,unused-ignore]
 else:
     have_zarr_v3 = False
     have_zarr_kvstore = False
     have_zarr_directory_store = False
-    KVStore = None
+    KVStore = None  # type: ignore[misc,unused-ignore]
     ZARR_FORMATS = []
 
 
@@ -2817,6 +2820,7 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store_target:
             import numcodecs
 
+            encoding_value: Any
             if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
                 compressor = zarr.codecs.BloscCodec()
                 encoding_key = "codecs"
@@ -3277,7 +3281,7 @@ class TestInstrumentedZarrStore:
         if have_zarr_v3:
             kwargs = {"mode": "a"}
         else:
-            kwargs = {}
+            kwargs = {}  # type: ignore[arg-type,unused-ignore]
 
         store = KVStore({}, **kwargs)
         yield store
