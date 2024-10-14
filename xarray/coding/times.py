@@ -285,6 +285,19 @@ def _align_reference_date_and_unit(
     return _timestamp_as_unit(ref_date, new_unit)
 
 
+def _check_date_is_after_shift(date: pd.Timestamp, calendar: str) -> None:
+    # if we have gregorian/standard we need to raise
+    # if we are outside the well defined date range
+    # proleptic_gregorian and standard/gregorian are only equivalent
+    # if reference date and date range is >= 1582-10-15
+    if calendar != "proleptic_gregorian":
+        if date < pd.Timestamp("1582-10-15"):
+            raise OutOfBoundsDatetime(
+                f"Dates before 1582-10-15 cannot be decoded "
+                f"with pandas using {calendar!r} calendar."
+            )
+
+
 def _decode_datetime_with_pandas(
     flat_num_dates: np.ndarray, units: str, calendar: str
 ) -> np.ndarray:
@@ -312,17 +325,7 @@ def _decode_datetime_with_pandas(
         # strings, in which case we fall back to using cftime
         raise OutOfBoundsDatetime from err
 
-    if calendar != "proleptic_gregorian":
-        # if we have gregorian/standard we need to raise
-        # if we are outside the well defined date range
-        # proleptic_gregorian and standard/gregorian are only equivalent
-        # if reference date and date range is >= 1582-10-15
-        if ref_date < pd.Timestamp("1582-10-15"):
-            raise OutOfBoundsDatetime(
-                f"Dates cannot be decoded using {calendar!r} calendar."
-            )
-        pass
-
+    _check_date_is_after_shift(ref_date, calendar)
     dunit = ref_date.unit
 
     with warnings.catch_warnings():
@@ -333,21 +336,10 @@ def _decode_datetime_with_pandas(
             dec_min = _check_date_for_units_since_refdate(
                 flat_num_dates.min(), time_units, ref_date
             )
-            dec_max = _check_date_for_units_since_refdate(
+            _check_date_for_units_since_refdate(
                 flat_num_dates.max(), time_units, ref_date
             )
-            # if we have gregorian/standard we need to raise
-            # if we are outside the well defined date range
-            # proleptic_gregorian and standard/gregorian are only equivalent
-            # if reference date and date range is >= 1582-10-15
-            # todo: check if test for minimum date is enough
-            if (
-                calendar != "proleptic_gregorian"
-                and (np.array([dec_min, dec_max]) < pd.Timestamp("1582-10-15")).any()
-            ):
-                raise OutOfBoundsTimedelta(
-                    f"Decoded date is out of range for {calendar} calendar."
-                )
+            _check_date_is_after_shift(dec_min, calendar)
 
     # To avoid integer overflow when converting to nanosecond units for integer
     # dtypes smaller than np.int64 cast all integer and unsigned integer dtype
