@@ -189,15 +189,20 @@ def _unpack_netcdf_time_units(units: str) -> tuple[str, str]:
     return delta_units, ref_date
 
 
+def _maybe_strip_tz_from_timestamp(date: pd.Timestamp) -> pd.Timestamp:
+    # If the ref_date Timestamp is timezone-aware, convert to UTC and
+    # make it timezone-naive (GH 2649).
+    if date.tz is not None:
+        date = date.tz_convert("UTC").tz_convert(None)
+    return date
+
+
 def _unpack_time_units_and_ref_date(units: str) -> tuple[str, pd.Timestamp]:
     # same us _unpack_netcdf_time_units but finalizes ref_date for
     # processing in encode_cf_datetime
     time_units, _ref_date = _unpack_netcdf_time_units(units)
     ref_date = pd.Timestamp(_ref_date)
-    # If the ref_date Timestamp is timezone-aware, convert to UTC and
-    # make it timezone-naive (GH 2649).
-    if ref_date.tz is not None:
-        ref_date = ref_date.tz_convert("UTC").tz_convert(None)
+    ref_date = _maybe_strip_tz_from_timestamp(ref_date)
     return time_units, ref_date
 
 
@@ -272,9 +277,7 @@ def _align_reference_date_and_unit(
     ref_date_str: str, unit: Literal["D", "h", "m", "s", "ms", "us", "ns"]
 ) -> pd.Timestamp:
     ref_date = pd.Timestamp(ref_date_str)
-    # strip tz information
-    if ref_date.tz is not None:
-        ref_date = ref_date.tz_convert("UTC").tz_convert(None)
+    ref_date = _maybe_strip_tz_from_timestamp(ref_date)
     # get ref_date and unit delta
     ref_date_unit = ref_date.unit
     ref_date_delta = np.timedelta64(1, ref_date_unit)
