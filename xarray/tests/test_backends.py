@@ -124,13 +124,16 @@ if have_zarr:
 
         ZARR_FORMATS = [2, 3]
     else:
-        from zarr.storage import KVStore
-
         ZARR_FORMATS = [2]
+        try:
+            from zarr import KVStoreV3 as KVStore
+        except ImportError:
+            KVStore = None
 else:
     have_zarr_v3 = False
     have_zarr_kvstore = False
     have_zarr_directory_store = False
+    KVStore = None
     ZARR_FORMATS = []
 
 
@@ -3241,6 +3244,9 @@ class ZarrBase(CFEncodedBase):
 
 
 @requires_zarr
+@pytest.mark.skipif(
+    KVStore is None, reason="zarr-python 2.x or ZARR_V3_EXPERIMENTAL_API is unset."
+)
 class TestInstrumentedZarrStore:
 
     if have_zarr_v3:
@@ -3318,10 +3324,10 @@ class TestInstrumentedZarrStore:
                 }
             else:
                 expected = {
-                    "iter": 2,
-                    "contains": 9,
-                    "setitem": 9,
-                    "getitem": 6,
+                    "iter": 3,
+                    "contains": 18,
+                    "setitem": 10,
+                    "getitem": 13,
                     "listdir": 2,
                     "list_prefix": 2,
                 }
@@ -3343,10 +3349,10 @@ class TestInstrumentedZarrStore:
                 }
             else:
                 expected = {
-                    "iter": 2,
-                    "contains": 2,
-                    "setitem": 5,
-                    "getitem": 6,
+                    "iter": 3,
+                    "contains": 9,
+                    "setitem": 6,
+                    "getitem": 13,
                     "listdir": 2,
                     "list_prefix": 0,
                 }
@@ -3366,10 +3372,10 @@ class TestInstrumentedZarrStore:
                 }
             else:
                 expected = {
-                    "iter": 2,
-                    "contains": 2,
-                    "setitem": 5,
-                    "getitem": 6,
+                    "iter": 3,
+                    "contains": 9,
+                    "setitem": 6,
+                    "getitem": 13,
                     "listdir": 2,
                     "list_prefix": 0,
                 }
@@ -3396,13 +3402,14 @@ class TestInstrumentedZarrStore:
                 }
             else:
                 expected = {
-                    "iter": 2,
-                    "contains": 7,
-                    "setitem": 8,
-                    "getitem": 6,
+                    "iter": 3,
+                    "contains": 16,
+                    "setitem": 9,
+                    "getitem": 13,
                     "listdir": 2,
                     "list_prefix": 4,
                 }
+
             patches = self.make_patches(store)
             with patch.multiple(KVStore, **patches):
                 ds.to_zarr(store, mode="w", compute=False)
@@ -3420,12 +3427,13 @@ class TestInstrumentedZarrStore:
             else:
                 expected = {
                     "iter": 2,
-                    "contains": 2,
+                    "contains": 4,
                     "setitem": 1,
-                    "getitem": 3,
+                    "getitem": 4,
                     "listdir": 2,
                     "list_prefix": 0,
                 }
+
             patches = self.make_patches(store)
             with patch.multiple(KVStore, **patches):
                 ds.to_zarr(store, region={"x": slice(None)})
@@ -3443,12 +3451,13 @@ class TestInstrumentedZarrStore:
             else:
                 expected = {
                     "iter": 2,
-                    "contains": 2,
+                    "contains": 4,
                     "setitem": 1,
-                    "getitem": 5,
+                    "getitem": 6,
                     "listdir": 2,
                     "list_prefix": 0,
                 }
+
             patches = self.make_patches(store)
             with patch.multiple(KVStore, **patches):
                 ds.to_zarr(store, region="auto")
@@ -3463,13 +3472,14 @@ class TestInstrumentedZarrStore:
                 }
             else:
                 expected = {
-                    "iter": 1,
-                    "contains": 2,
-                    "setitem": 0,
-                    "getitem": 5,
-                    "listdir": 1,
+                    "iter": 2,
+                    "contains": 4,
+                    "setitem": 1,
+                    "getitem": 6,
+                    "listdir": 2,
                     "list_prefix": 0,
                 }
+
             patches = self.make_patches(store)
             with patch.multiple(KVStore, **patches):
                 with open_dataset(store, engine="zarr") as actual:
