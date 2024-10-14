@@ -39,6 +39,7 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
+from xarray.core.options import _get_datetime_resolution
 from xarray.core.types import ArrayLike
 from xarray.core.utils import is_scalar
 from xarray.groupers import TimeResampler
@@ -290,7 +291,7 @@ class TestDataset:
             Coordinates:
               * dim2     (dim2) float64 72B 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
               * dim3     (dim3) {} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
-              * time     (time) datetime64[s] 160B 2000-01-01 2000-01-02 ... 2000-01-20
+              * time     (time) datetime64[{}] 160B 2000-01-01 2000-01-02 ... 2000-01-20
                 numbers  (dim3) int64 80B 0 1 2 0 0 1 1 2 2 3
             Dimensions without coordinates: dim1
             Data variables:
@@ -298,7 +299,10 @@ class TestDataset:
                 var2     (dim1, dim2) float64 576B 1.162 -1.097 -2.123 ... 1.267 0.3328
                 var3     (dim3, dim1) float64 640B 0.5565 -0.2121 0.4563 ... -0.2452 -0.3616
             Attributes:
-                foo:      bar""".format(data["dim3"].dtype)
+                foo:      bar""".format(
+                data["dim3"].dtype,
+                _get_datetime_resolution(),
+            )
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
         print(actual)
@@ -440,8 +444,8 @@ class TestDataset:
         ds.info(buf=buf)
 
         expected = dedent(
-            """\
-        xarray.Dataset {
+            f"""\
+        xarray.Dataset {{
         dimensions:
         \tdim2 = 9 ;
         \ttime = 20 ;
@@ -450,7 +454,7 @@ class TestDataset:
 
         variables:
         \tfloat64 dim2(dim2) ;
-        \tdatetime64[s] time(time) ;
+        \tdatetime64[{_get_datetime_resolution()}] time(time) ;
         \tfloat64 var1(dim1, dim2) ;
         \t\tvar1:foo = variable ;
         \tfloat64 var2(dim1, dim2) ;
@@ -462,7 +466,7 @@ class TestDataset:
         // global attributes:
         \t:unicode_attr = ba® ;
         \t:string_attr = bar ;
-        }"""
+        }}"""
         )
         actual = buf.getvalue()
         assert expected == actual

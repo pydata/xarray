@@ -267,7 +267,7 @@ class set_options:
     warn_for_unclosed_files : bool, default: False
         Whether or not to issue a warning when unclosed files are
         deallocated. This is mostly useful for debugging.
-    time_resolution : {"s", "ms", "us", "ns"}, default: "ns"
+    time_resolution : {"s", "ms", "us", "ns"}, default: "s"
         Time resolution used for CF encoding/decoding.
 
     Examples

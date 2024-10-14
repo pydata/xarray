@@ -19,6 +19,7 @@ from xarray import (
 from xarray.backends.common import WritableCFDataStore
 from xarray.backends.memory import InMemoryDataStore
 from xarray.conventions import decode_cf
+from xarray.core.options import _get_datetime_resolution
 from xarray.testing import assert_identical
 from xarray.tests import (
     assert_array_equal,
@@ -364,7 +365,7 @@ class TestDecodeCF:
 
         attrs = {"units": "days since 1900-01-01"}
         ds = decode_cf(Dataset({"time": ("time", [0, 1], attrs)}))
-        assert "(time) datetime64[s]" in repr(ds)
+        assert f"(time) datetime64[{_get_datetime_resolution()}]" in repr(ds)
 
     @requires_cftime
     def test_decode_cf_datetime_transition_to_invalid(self) -> None:
@@ -447,13 +448,13 @@ class TestDecodeCF:
 
         dsc = conventions.decode_cf(ds)
         assert dsc.timedelta.dtype == np.dtype("m8[ns]")
-        assert dsc.time.dtype == np.dtype("M8[s]")
+        assert dsc.time.dtype == np.dtype(f"M8[{_get_datetime_resolution()}]")
         dsc = conventions.decode_cf(ds, decode_times=False)
         assert dsc.timedelta.dtype == np.dtype("int64")
         assert dsc.time.dtype == np.dtype("int64")
         dsc = conventions.decode_cf(ds, decode_times=True, decode_timedelta=False)
         assert dsc.timedelta.dtype == np.dtype("int64")
-        assert dsc.time.dtype == np.dtype("M8[s]")
+        assert dsc.time.dtype == np.dtype(f"M8[{_get_datetime_resolution()}]")
         dsc = conventions.decode_cf(ds, decode_times=False, decode_timedelta=True)
         assert dsc.timedelta.dtype == np.dtype("m8[ns]")
         assert dsc.time.dtype == np.dtype("int64")

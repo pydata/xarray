@@ -39,6 +39,7 @@ from xarray.coding.times import (
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import _update_bounds_attributes, cf_encoder
 from xarray.core.common import contains_cftime_datetimes
+from xarray.core.options import _get_datetime_resolution
 from xarray.core.utils import is_duck_dask_array
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
@@ -134,7 +135,9 @@ def test_cf_datetime(num_dates, units, calendar) -> None:
     max_y = np.ravel(np.atleast_1d(expected))[np.nanargmax(num_dates)]  # .year
     typ = type(min_y)
     border = typ(1582, 10, 15)
-    if calendar == "proleptic_gregorian" or (min_y >= border and max_y >= border):
+    if (calendar == "proleptic_gregorian" and _get_datetime_resolution() != "ns") or (
+        min_y >= border and max_y >= border
+    ):
         expected = cftime_to_nptime(expected)
 
     with warnings.catch_warnings():
@@ -214,12 +217,15 @@ def test_decode_standard_calendar_inside_timestamp_range(calendar) -> None:
     import cftime
 
     units = "days since 0001-01-01"
-    unit = cast(Literal["s", "ms", "us", "ns"], "us")
+    unit = cast(Literal["s", "ms", "us", "ns"], _get_datetime_resolution())
     times = pd.date_range("2001-04-01-00", end="2001-04-30-23", unit=unit, freq="h")
+    # to_pydatetime() will return microsecond
     time = cftime.date2num(times.to_pydatetime(), units, calendar=calendar)
     expected = times.values
-    if calendar == "proleptic_gregorian":
-        unit = "s"
+    # for cftime we get "us" resolution
+    # ns resolution is handled by cftime, too (OutOfBounds)
+    if calendar != "proleptic_gregorian" or _get_datetime_resolution() == "ns":
+        unit = "us"
     expected_dtype = np.dtype(f"M8[{unit}]")
     actual = decode_cf_datetime(time, units, calendar=calendar)
     assert actual.dtype == expected_dtype
@@ -268,7 +274,7 @@ def test_decode_dates_outside_timestamp_range(calendar) -> None:
         time, units, calendar=calendar, only_use_cftime_datetimes=True
     )
     # special case proleptic_gregorian
-    if calendar == "proleptic_gregorian":
+    if calendar == "proleptic_gregorian" and _get_datetime_resolution() != "ns":
         expected = expected.astype("=M8[us]")
     expected_date_type = type(expected[0])
 
@@ -289,7 +295,11 @@ def test_decode_standard_calendar_single_element_inside_timestamp_range(
     calendar,
 ) -> None:
     units = "days since 0001-01-01"
-    unit = "s" if calendar == "proleptic_gregorian" else "us"
+    unit = (
+        _get_datetime_resolution()
+        if (calendar == "proleptic_gregorian" and _get_datetime_resolution() != "ns")
+        else "us"
+    )
     for num_time in [735368, [735368], [[735368]]]:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "Unable to decode time axis")
@@ -337,7 +347,11 @@ def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
     import cftime
 
     units = "days since 0001-01-01"
-    unit = "s" if calendar == "proleptic_gregorian" else "us"
+    unit = (
+        _get_datetime_resolution()
+        if (calendar == "proleptic_gregorian" and _get_datetime_resolution() != "ns")
+        else "us"
+    )
     times1 = pd.date_range("2001-04-01", end="2001-04-05", freq="D")
     times2 = pd.date_range("2001-05-01", end="2001-05-05", freq="D")
     time1 = cftime.date2num(times1.to_pydatetime(), units, calendar=calendar)
@@ -426,8 +440,8 @@ def test_decode_multidim_time_outside_timestamp_range(calendar) -> None:
         actual = decode_cf_datetime(mdim_time, units, calendar=calendar)
 
     dtype: np.dtype
-    if calendar == "proleptic_gregorian":
-        dtype = np.dtype("=M8[s]")
+    if calendar == "proleptic_gregorian" and _get_datetime_resolution() != "ns":
+        dtype = np.dtype(f"=M8[{_get_datetime_resolution()}]")
         expected1 = expected1.astype(dtype)
         expected2 = expected2.astype(dtype)
     else:
@@ -528,7 +542,7 @@ def test_decoded_cf_datetime_array_2d() -> None:
         ("x", "y"), np.array([[0, 1], [2, 3]]), {"units": "days since 2000-01-01"}
     )
     result = CFDatetimeCoder().decode(variable)
-    assert result.dtype == "datetime64[s]"
+    assert result.dtype == f"datetime64[{_get_datetime_resolution()}]"
     expected = pd.date_range("2000-01-01", periods=4).values.reshape(2, 2)
     assert_array_equal(np.asarray(result), expected)
 
@@ -697,7 +711,7 @@ def test_decode_cf(calendar) -> None:
         if calendar not in _STANDARD_CALENDARS:
             assert ds.test.dtype == np.dtype("O")
         else:
-            assert ds.test.dtype == np.dtype("M8[s]")
+            assert ds.test.dtype == np.dtype(f"M8[{_get_datetime_resolution()}]")
 
 
 def test_decode_cf_time_bounds() -> None:
@@ -722,7 +736,7 @@ def test_decode_cf_time_bounds() -> None:
         "calendar": "standard",
     }
     dsc = decode_cf(ds)
-    assert dsc.time_bnds.dtype == np.dtype("M8[s]")
+    assert dsc.time_bnds.dtype == np.dtype(f"M8[{_get_datetime_resolution()}]")
     dsc = decode_cf(ds, decode_times=False)
     assert dsc.time_bnds.dtype == np.dtype("int64")
 
@@ -1299,7 +1313,11 @@ def test_roundtrip_datetime64_nanosecond_precision(
     assert encoded_var.data.dtype == dtype
 
     decoded_var = conventions.decode_cf_variable("foo", encoded_var)
-    assert decoded_var.dtype == np.dtype(f"=M8[{timeunit}]")
+    if _get_datetime_resolution() == "ns":
+        dtypeunit = "ns"
+    else:
+        dtypeunit = timeunit
+    assert decoded_var.dtype == np.dtype(f"=M8[{dtypeunit}]")
     assert (
         decoded_var.encoding["units"]
         == f"{_numpy_to_netcdf_timeunit(timeunit)} since 1970-01-01 00:00:00"
