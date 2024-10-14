@@ -1489,7 +1489,7 @@ class DataTree(
         """Return all groups in the tree, given as a tuple of path-like strings."""
         return tuple(node.path for node in self.subtree)
 
-    def _unary_op(self, f, *args, **kwargs) -> Self:
+    def _unary_op(self, f, *args, **kwargs) -> DataTree:
         # TODO do we need to any additional work to avoid duplication etc.? (Similar to aggregations)
         return self.map_over_subtree(f, *args, **kwargs)
 
