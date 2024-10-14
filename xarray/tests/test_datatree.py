@@ -1762,8 +1762,7 @@ class TestOps:
 
         expected = DataTree.from_dict({"/": ds1 * 5, "/subnode": ds2 * 5})
 
-        # TODO: Remove ignore when ops.py is migrated?
-        result: DataTree = dt * 5  # type: ignore[assignment,operator]
+        result = dt * 5
         assert_equal(result, expected)
 
     def test_binary_op_on_dataarray(self):
@@ -1818,14 +1817,13 @@ class TestOps:
 
         expected = DataTree.from_dict({"/": ds1 * ds1, "/subnode": ds2 * ds2})
 
-        # TODO: Remove ignore when ops.py is migrated?
-        result = dt * dt  # type: ignore[operator]
+        result = dt * dt
         assert_equal(result, expected)
 
     def test_arithmetic_inherited_coords(self):
         tree = DataTree(xr.Dataset(coords={"x": [1, 2, 3]}))
         tree["/foo"] = DataTree(xr.Dataset({"bar": ("x", [4, 5, 6])}))
-        actual: DataTree = 2 * tree  # type: ignore[assignment,operator]
+        actual = 2 * tree
 
         actual_dataset = actual.children["foo"].to_dataset(inherit=False)
         assert "x" not in actual_dataset.coords
