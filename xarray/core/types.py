@@ -66,7 +66,7 @@ if TYPE_CHECKING:
         CubedArray = np.ndarray
 
     try:
-        from zarr.core import Array as ZarrArray
+        from zarr import Array as ZarrArray
     except ImportError:
         ZarrArray = np.ndarray
 
