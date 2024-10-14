@@ -268,8 +268,7 @@ def _check_date_for_units_since_refdate(
             )
         # this will raise on overflow if ref_date + delta
         # can't be represented in the current ref_date resolution
-        ref_date_unit = ref_date.unit
-        return _timestamp_as_unit(ref_date + delta, ref_date_unit)
+        return _timestamp_as_unit(ref_date + delta, ref_date.unit)
     else:
         # if date is exactly NaT (np.iinfo("int64").min) return refdate
         # to make follow-up checks work
@@ -277,19 +276,17 @@ def _check_date_for_units_since_refdate(
 
 
 def _align_reference_date_and_unit(ref_date: pd.Timestamp, unit: str) -> pd.Timestamp:
-    # get ref_date and unit delta
-    ref_date_unit = ref_date.unit
-    ref_date_delta = np.timedelta64(1, ref_date_unit)
-    unit_delta = np.timedelta64(1, unit)
-    new_unit = ref_date_unit if ref_date_delta < unit_delta else unit
-    # transform to the highest needed resolution
-    # this will raise accordingly
-    return _timestamp_as_unit(ref_date, new_unit)
+    # align to the highest needed resolution of ref_date or unit
+    if np.timedelta64(1, ref_date.unit) > np.timedelta64(1, unit):
+        # this will raise accordingly
+        # if data can't be represented in the higher resolution
+        return _timestamp_as_unit(ref_date, unit)
+    return ref_date
 
 
 def _check_date_is_after_shift(date: pd.Timestamp, calendar: str) -> None:
     # if we have gregorian/standard we need to raise
-    # if we are outside the well defined date range
+    # if we are outside the well-defined date range
     # proleptic_gregorian and standard/gregorian are only equivalent
     # if reference date and date range is >= 1582-10-15
     if calendar != "proleptic_gregorian":
@@ -842,10 +839,6 @@ def _eagerly_encode_cf_datetime(
         # DatetimeIndex will convert to units of ["s", "ms", "us", "ns"]
         dates_as_index = pd.DatetimeIndex(ravel(dates))
         time_deltas = dates_as_index - ref_date
-        # get resolution of TimedeltaIndex and align time_delta
-        deltas_unit = time_deltas.unit
-        # todo: check, if this works in any case
-        time_delta = time_delta.astype(f"=m8[{deltas_unit}]")
 
         # retrieve needed units to faithfully encode to int64
         needed_unit, data_ref_date = _unpack_time_unit_and_ref_date(data_units)
@@ -871,6 +864,7 @@ def _eagerly_encode_cf_datetime(
                     f"Set encoding['dtype'] to floating point dtype to silence this warning."
                 )
             elif np.issubdtype(dtype, np.integer) and allow_units_modification:
+                floor_division = True
                 new_units = f"{needed_units} since {format_timestamp(ref_date)}"
                 emit_user_level_warning(
                     f"Times can't be serialized faithfully to int64 with requested units {units!r}. "
@@ -880,10 +874,12 @@ def _eagerly_encode_cf_datetime(
                 )
                 units = new_units
                 time_delta = needed_time_delta
-                time_delta = time_delta.astype(f"=m8[{deltas_unit}]")
-                floor_division = True
 
-        num = _division(time_deltas, time_delta, floor_division)
+        # get resolution of TimedeltaIndex and align time_delta
+        # todo: check, if this works in any case
+        num = _division(
+            time_deltas, time_delta.astype(f"=m8[{time_deltas.unit}]"), floor_division
+        )
         num = reshape(num.values, dates.shape)
 
     except (OutOfBoundsDatetime, OverflowError, ValueError):

@@ -129,7 +129,6 @@ def test_cf_datetime(num_dates, units, calendar) -> None:
     expected = cftime.num2date(
         num_dates, units, calendar, only_use_cftime_datetimes=True
     )
-    print("0:", expected)
 
     min_y = np.ravel(np.atleast_1d(expected))[np.nanargmin(num_dates)]  # .year
     max_y = np.ravel(np.atleast_1d(expected))[np.nanargmax(num_dates)]  # .year
@@ -137,12 +136,10 @@ def test_cf_datetime(num_dates, units, calendar) -> None:
     border = typ(1582, 10, 15)
     if calendar == "proleptic_gregorian" or (min_y >= border and max_y >= border):
         expected = cftime_to_nptime(expected)
-    print("1:", expected)
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "Unable to decode time axis")
         actual = decode_cf_datetime(num_dates, units, calendar)
-    print("2:", actual, type(actual), actual.dtype)
     abs_diff = np.asarray(abs(actual - expected)).ravel()
     abs_diff = pd.to_timedelta(abs_diff.tolist()).to_numpy()
 
@@ -152,7 +149,6 @@ def test_cf_datetime(num_dates, units, calendar) -> None:
     assert (abs_diff <= np.timedelta64(1, "s")).all()
     encoded1, _, _ = encode_cf_datetime(actual, units, calendar)
 
-    print("1:", encoded1)
     assert_duckarray_allclose(num_dates, encoded1)
 
     if hasattr(num_dates, "ndim") and num_dates.ndim == 1 and "1000" not in units:
