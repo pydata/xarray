@@ -6,10 +6,10 @@ This guide is for previous users of the prototype `datatree.DataTree` class in t
 
 .. important
 
-   There are breaking changes! You should not expect that code written with `xarray-contrib/datatree` will work without modifications.
+   There are breaking changes! You should not expect that code written with `xarray-contrib/datatree` will work without any modifications.
    At the absolute minimum you will need to change the top-level import statement, but there are other changes too.
 
-We have made various changes compared to the prototype version. These can be split into two main types: minor API changes, which mostly consist of renaming methods to be more self-consistent, and some deeper data model changes, which affect the hierarchal structure itself.
+We have made various changes compared to the prototype version. These can be split into three categories: minor API changes, which mostly consist of renaming methods to be more self-consistent; and some deeper data model changes, which affect the hierarchal structure itself; and integration with xarray's IO backends.
 
 ### Data model changes
 
@@ -32,36 +32,32 @@ Performance improvements
 
 Can now extend other xarray backends to support `open_datatree`!
 
-### Other API changes
+### API changes
 
-`from datatree import DataTree, open_datatree` -> `from xarray import DataTree, open_datatree`
-
-`.ds` -> `.dataset`
-
-`DataTree(ds=...)` to `DataTree(dataset=)`
-
-`.to_dataset()` still exists but now has options (`inherited=...`)
-
-`parent` kwarg removed from `DataTree.__init__`
-
-`.parent` property is now read-only
-
-`children` in `DataTree.__init__` are now shallow-copied
-
-`map_over_subtree` -> ?
-
-Arithmetic between `DataTree` and `Dataset`/scalars now raises
-
-`.as_array` -> `.to_dataarray`
-
-Disabled some methods which were not well tested. In general we have tried to only keep things that are known to work, with the plan to increase API surface incrementally after release.
+A number of other API changes have been made, which should only require minor modifications to your code:
+- The top-level import has changed, from `from datatree import DataTree, open_datatree` to `from xarray import DataTree, open_datatree`. Alternatively you can now just use the `import xarray as xr` namespace convention for everything datatree-related.
+- The `DataTree.ds` property has been changed to `DataTree.dataset`, though `DataTree.ds` remains as an alias for `DataTree.dataset`.
+- Similarly the `ds` kwarg in the `DataTree.__init__` constructor has been replaced by `dataset`, i.e. use `DataTree(dataset=)` instead of `DataTree(ds=...)`.
+- The method `DataTree.to_dataset()` still exists but now has different options for controlling which variables are present on the resulting `Dataset`, e.g. `inherited=True/False`.
+- The `DataTree.parent` property is now read-only. To assign a node as the parent you should instead use the `.children` property on the other node, which remains settable.
+- Similarly the `parent` kwarg has been removed from the `DataTree.__init__` constuctor. 
+- DataTree objects passed to the `children` kwarg in `DataTree.__init__` are now shallow-copied.
+- `DataTree.as_array` has been replaced by `DataTree.to_dataarray`.
+- `map_over_subtree` -> ?
+- A number of methods which were not well tested have been (temporarily) disabled. In general we have tried to only keep things that are known to work, with the plan to increase API surface incrementally after release.
 
 ## Thank you!
 
 Thank you for trying out `xarray-contrib/datatree`!
 
-We welcome contributions of any kind, including things that never quite made it into the original datatree repository. Please also let us know if we have forgotten to mention a change that should have been listed in this guide.
+We welcome contributions of any kind, including good ideas that never quite made it into the original datatree repository. Please also let us know if we have forgotten to mention a change that should have been listed in this guide.
 
-Sincerely, the datatree team
+Sincerely, the datatree team:
 
-(Tom Nicholas, Owen Littlejohns, Matt Savoie, Eni Awowale, Alfonso Ladino, Justus Magin, Stephan Hoyer)
+Tom Nicholas, 
+Owen Littlejohns, 
+Matt Savoie, 
+Eni Awowale, 
+Alfonso Ladino, 
+Justus Magin, 
+Stephan Hoyer
