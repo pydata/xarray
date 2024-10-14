@@ -372,6 +372,25 @@ def linspace(
     endpoint: bool = True,
     dims: _DimsLike2 | Default = _default,
 ) -> NamedArray[_Shape1D, _DType]:
+    """
+    Returns evenly spaced numbers over a specified interval.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> linspace(2.0, 3.0, num=5)
+    <xarray.NamedArray (dim_0: 5)> Size: 40B
+    array([2.  , 2.25, 2.5 , 2.75, 3.  ])
+    >>> linspace(2.0, 3.0, num=5, endpoint=False)
+    <xarray.NamedArray (dim_0: 5)> Size: 40B
+    array([2. , 2.2, 2.4, 2.6, 2.8])
+
+    If dims is set:
+
+    >>> linspace(2.0, 3.0, num=5, dims=("x",))
+    <xarray.NamedArray (x: 5)> Size: 40B
+    array([2.  , 2.25, 2.5 , 2.75, 3.  ])
+    """
     xp = _get_namespace_dtype(dtype)
     _data = xp.linspace(
         start,
