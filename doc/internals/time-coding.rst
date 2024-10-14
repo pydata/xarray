@@ -432,3 +432,11 @@ For encoding the process is more or less a reversal of the above, but we have to
         dates, units, calendar, dtype=np.dtype("int64")
     )
     print(values, units)
+
+
+Default Time Unit
+~~~~~~~~~~~~~~~~~
+
+The default time unit of xarray is ``'s'``. It aligns well with the lower resolution of pandas. For normal operation that has no consequences on the output as all decoded datetimes are already at least in second resolution. Setting the default time unit to ``'ns'`` (the former default) the datetimes will be converted to ``'ns'``-resolution, if possible. Same holds true for ``'us'`` and ``'ms'``.
+
+If the datetimes are decoded to ``'us'`` resolution, this resolution will be kept, even if the default resolution is set to ``'s'`` or ``'ms'``.

@@ -88,7 +88,7 @@ OPTIONS: T_Options = {
     "use_flox": True,
     "use_numbagg": True,
     "use_opt_einsum": True,
-    "time_resolution": "ns",
+    "time_resolution": "s",
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
