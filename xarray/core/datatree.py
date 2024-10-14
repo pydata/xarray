@@ -1492,7 +1492,7 @@ class DataTree(
 
     def _unary_op(self, f, *args, **kwargs) -> DataTree:
         # TODO do we need to any additional work to avoid duplication etc.? (Similar to aggregations)
-        return self.map_over_subtree(f, *args, **kwargs)
+        return self.map_over_subtree(f, *args, **kwargs)  # type: ignore[return-value]
 
     def _binary_op(self, other, f, reflexive=False, join=None) -> DataTree:
         from xarray.core.dataset import Dataset
