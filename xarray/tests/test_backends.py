@@ -3647,6 +3647,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
 
 @requires_zarr
 @requires_fsspec
+@pytest.mark.skipif(have_zarr_v3, reason="Difficult to test.")
 def test_zarr_storage_options() -> None:
     pytest.importorskip("aiobotocore")
     ds = create_test_data()

@@ -33,6 +33,7 @@ from xarray.backends.common import (
     _normalize_path,
 )
 from xarray.backends.locks import _get_scheduler
+from xarray.backends.zarr import _zarr_v3
 from xarray.core import indexing
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
@@ -1700,21 +1701,26 @@ def to_zarr(
     store = _normalize_path(store)
     chunk_store = _normalize_path(chunk_store)
 
+    kwargs = {}
     if storage_options is None:
         mapper = store
         chunk_mapper = chunk_store
     else:
-        from fsspec import get_mapper
-
         if not isinstance(store, str):
             raise ValueError(
                 f"store must be a string to use storage_options. Got {type(store)}"
             )
-        mapper = get_mapper(store, **storage_options)
-        if chunk_store is not None:
-            chunk_mapper = get_mapper(chunk_store, **storage_options)
+
+        if _zarr_v3():
+            kwargs["storage_options"] = storage_options
         else:
-            chunk_mapper = chunk_store
+            from fsspec import get_mapper
+
+            mapper = get_mapper(store, **storage_options)
+            if chunk_store is not None:
+                chunk_mapper = get_mapper(chunk_store, **storage_options)
+            else:
+                chunk_mapper = chunk_store
 
     if encoding is None:
         encoding = {}
@@ -1765,6 +1771,7 @@ def to_zarr(
         zarr_version=zarr_version,
         zarr_format=zarr_format,
         write_empty=write_empty_chunks,
+        **kwargs,
     )
 
     if region is not None:
