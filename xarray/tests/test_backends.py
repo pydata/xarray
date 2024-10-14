@@ -24,7 +24,6 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 import pytest
-import zarr.codecs
 from packaging.version import Version
 from pandas.errors import OutOfBoundsDatetime
 
@@ -110,6 +109,7 @@ except ImportError:
 
 try:
     import zarr
+    import zarr.codecs
 except ImportError:
     have_zarr = False
 else:
