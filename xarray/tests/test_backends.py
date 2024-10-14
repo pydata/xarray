@@ -127,11 +127,11 @@ if have_zarr:
     else:
         ZARR_FORMATS = [2]
         try:
-            from zarr import (
-                KVStoreV3 as KVStore,  # type: ignore[attr-defined,no-redef,unused-ignore]
+            from zarr import (  # type: ignore[attr-defined,no-redef,unused-ignore]
+                KVStoreV3 as KVStore,
             )
         except ImportError:
-            KVStore = None  # type: ignore[misc,unused-ignore]
+            KVStore = None  # type: ignore[assignment,misc,unused-ignore]
 else:
     have_zarr_v3 = False
     have_zarr_kvstore = False
@@ -3283,7 +3283,7 @@ class TestInstrumentedZarrStore:
         else:
             kwargs = {}  # type: ignore[arg-type,unused-ignore]
 
-        store = KVStore({}, **kwargs)
+        store = KVStore({}, **kwargs)  # type: ignore[arg-type,unused-ignore]
         yield store
 
     def make_patches(self, store):
@@ -3628,7 +3628,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         else:
             Group = zarr.Group
             patched = patch.object(
-                Group, "__getitem__", side_effect=Group.__getitem__, autospec=True
+                Group, "__getitem__", side_effect=Group.__getitem__, autospec=True  # type: ignore[assignment,unused-ignore]
             )
 
         with self.create_zarr_target() as store, patched as mock:
@@ -3659,6 +3659,7 @@ def test_zarr_storage_options() -> None:
 @requires_zarr
 def test_zarr_version_deprecated() -> None:
     ds = create_test_data()
+    store: Any
     if have_zarr_v3:
         store = KVStore()
     else:
