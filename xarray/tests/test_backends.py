@@ -136,7 +136,7 @@ else:
     have_zarr_v3 = False
     have_zarr_kvstore = False
     have_zarr_directory_store = False
-    KVStore = None  # type: ignore[misc,unused-ignore]
+    KVStore = None  # type: ignore[assignment,misc,unused-ignore]
     ZARR_FORMATS = []
 
 
@@ -3620,6 +3620,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         # Use of side_effect means that calls are passed through to the original method
         # rather than a mocked method.
 
+        Group: Any
         if have_zarr_v3:
             Group = zarr.AsyncGroup
             patched = patch.object(
@@ -3628,7 +3629,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         else:
             Group = zarr.Group
             patched = patch.object(
-                Group, "__getitem__", side_effect=Group.__getitem__, autospec=True  # type: ignore[assignment,unused-ignore]
+                Group, "__getitem__", side_effect=Group.__getitem__, autospec=True
             )
 
         with self.create_zarr_target() as store, patched as mock:
