@@ -1642,7 +1642,17 @@ class TestIndexing:
         assert_equal(actual, expected)
 
         actual = tree.isel(x=slice(None))
-        assert_equal(actual, tree)
+
+        actual = tree.children["child"].isel(x=slice(None))
+        expected = tree.children["child"].copy()
+        assert_identical(actual, expected)
+
+        actual = tree.children["child"].isel(x=0)
+        expected = DataTree(
+            dataset=xr.Dataset({"foo": 3}, coords={"x": 1}),
+            name="child",
+        )
+        assert_identical(actual, expected)
 
     def test_sel(self):
         tree = DataTree.from_dict(
@@ -1658,7 +1668,14 @@ class TestIndexing:
             }
         )
         actual = tree.sel(x=2)
-        assert_equal(actual, expected)
+        assert_identical(actual, expected)
+
+        actual = tree.children["first"].sel(x=2)
+        expected = DataTree(
+            dataset=xr.Dataset({"a": 2}, coords={"x": 2}),
+            name="first",
+        )
+        assert_identical(actual, expected)
 
 
 class TestAggregations:
@@ -1729,6 +1746,16 @@ class TestAggregations:
             match=re.escape("Dimension(s) 'invalid' do not exist."),
         ):
             dt.mean("invalid")
+
+    def test_subtree(self):
+        tree = DataTree.from_dict(
+            {
+                "/child": Dataset({"a": ("x", [1, 2])}),
+            }
+        )
+        expected = DataTree(dataset=Dataset({"a": 1.5}), name="child")
+        actual = tree.children["child"].mean()
+        assert_identical(expected, actual)
 
 
 class TestOps:
