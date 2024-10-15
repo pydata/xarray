@@ -13,14 +13,13 @@ We have made various changes compared to the prototype version. These can be spl
 
 ### Data model changes
 
-Internal alignment
+The most important changes made are to the data model of `DataTree`. Whilst previously data in different nodes was unrelated and therefore unconstrained, now trees have "internal alignment" - meaning that dimensions and indexes in child nodes must exactly align with those in their parents.
+
+These alignment checks happen at tree construction time, meaning technically there are some netCDF4 files and zarr stores that previously could be opened as `datatree.DataTree` objects using `datatree.open_datatree`, but now cannot be opened as `xr.DataTree` objects using `xr.open_datatree`. For these cases we added a new opener function `xr.open_groups`, which returns a `dict[str, Dataset]`. This is intended as a fallback for tricky cases, where the idea is that you can still open the entire contents of the file using `open_groups`, edit the `Dataset` objects, then construct a valid tree from the edited dictionary using `DataTree.from_dict`.
 
 Coordinate inheritance
 
 Reflected in repr
-
-Can no longer represent totally arbitrary datasets in each node - some on-disk structures that `xr.open_datatree` will now refuse to load.
-For these cases we made `open_groups`.
 
 Generally if you don't like this you can get more similar behaviour to the old package by removing indexes from coordinates.
 
