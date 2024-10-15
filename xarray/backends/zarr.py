@@ -119,11 +119,6 @@ def encode_zarr_attr_value(value):
     """
     if isinstance(value, np.ndarray):
         encoded = value.tolist()
-    # elif isinstance(value, bytes):
-    # try to match how Zarr encodes bytes
-    # return [int.from_bytes(value)]
-    # return value.decode("utf-8")
-    # this checks if it's a scalar number
     elif isinstance(value, np.generic):
         encoded = value.item()
     else:
