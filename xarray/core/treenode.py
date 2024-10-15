@@ -791,6 +791,9 @@ def zip_subtrees(*trees: AnyNamedNode) -> Iterator[tuple[AnyNamedNode, ...]]:
     ------
     Tuples of matching subtrees.
     """
+    if not trees:
+        raise TypeError("Must pass at least one tree object")
+
     # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
     queue = collections.deque([trees])
 
