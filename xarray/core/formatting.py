@@ -1074,9 +1074,9 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
 
     # If the trees structures are different there is no point comparing each node
     # TODO we could show any differences in nodes up to the first place that structure differs?
-    if treestructure_diff is not None or compat == "isomorphic":
+    if treestructure_diff is not None:
         summary.append("\n" + treestructure_diff)
-    else:
+    elif compat != "isomorphic":
         nodewise_diff = diff_nodewise_summary(a, b, compat)
         summary.append("\n" + nodewise_diff)
 
