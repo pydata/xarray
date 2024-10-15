@@ -2840,8 +2840,7 @@ class ZarrBase(CFEncodedBase):
             actual_ds = xr.open_dataset(
                 store_target, engine="zarr", **self.version_kwargs
             )
-            # assert actual_encoding.get_config() == compressor.get_config()
-            # TODO: check whether this approach works for v2
+
             actual_encoding = actual_ds["da"].encoding[encoding_key]
             assert original_encoding == actual_encoding
             assert_identical(
