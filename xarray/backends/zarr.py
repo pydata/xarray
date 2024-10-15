@@ -992,7 +992,6 @@ class ZarrStore(AbstractWritableDataStore):
                     # TODO: see if zarr should normalize these strings.
                     zarr_array = zarr.open(
                         **kwargs,
-                        # path=f"{self.zarr_group.name}/{name}",
                         path="/".join([self.zarr_group.name.rstrip("/"), name]).lstrip(
                             "/"
                         ),
@@ -1457,7 +1456,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         stacklevel=3,
         zarr_version=None,
-        # TODO: zarr_format
+        zarr_format=None,
         **kwargs,
     ) -> DataTree:
         from xarray.core.datatree import DataTree
@@ -1480,6 +1479,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             storage_options=storage_options,
             stacklevel=stacklevel,
             zarr_version=zarr_version,
+            zarr_format=zarr_format,
             **kwargs,
         )
 
@@ -1504,6 +1504,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         stacklevel=3,
         zarr_version=None,
+        zarr_format=None,
         **kwargs,
     ) -> dict[str, Dataset]:
 
@@ -1528,6 +1529,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             storage_options=storage_options,
             stacklevel=stacklevel + 1,
             zarr_version=zarr_version,
+            zarr_format=zarr_format,
         )
 
         groups_dict = {}
