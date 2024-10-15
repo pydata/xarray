@@ -253,8 +253,10 @@ class TreeNode(Generic[Tree]):
         Parameters
         ----------
         inherit : bool
-            Whether inherited coordinates defined on parent nodes should also be
-            copied onto the new tree.
+            Whether inherited coordinates defined on parents of this node should
+            also be copied onto the new tree. Only relevant if the `parent` of
+            this node is not yet, and "Inherited coordinates" appear in its
+            repr.
         deep : bool
             Whether each component variable is loaded into memory and copied onto
             the new object. Default is False.
