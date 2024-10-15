@@ -280,7 +280,7 @@ class TreeNode(Generic[Tree]):
             new_tree._set(name, child._copy_subtree(inherit=False, deep=deep))
         return new_tree
 
-    def _copy_node(self: Tree, inherit: bool, deep: bool = False) -> Tree:
+    def _copy_node(self, inherit: bool, deep: bool = False) -> Self:
         """Copy just one node of a tree"""
         new_empty_node = type(self)()
         return new_empty_node
