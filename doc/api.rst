@@ -687,7 +687,7 @@ For manipulating, traversing, navigating, or mapping over the tree structure.
    DataTree.relative_to
    DataTree.iter_lineage
    DataTree.find_common_ancestor
-   DataTree.map_over_subtree
+   DataTree.map_over_datasets
    DataTree.pipe
    DataTree.match
    DataTree.filter
@@ -954,7 +954,7 @@ DataTree methods
 
    open_datatree
    open_groups
-   map_over_subtree
+   map_over_datasets
    DataTree.to_dict
    DataTree.to_netcdf
    DataTree.to_zarr

@@ -25,7 +25,7 @@ from xarray.core.dataset import Dataset, DataVariables
 from xarray.core.datatree_mapping import (
     TreeIsomorphismError,
     check_isomorphic,
-    map_over_subtree,
+    map_over_datasets,
 )
 from xarray.core.formatting import datatree_repr, dims_and_coords_repr
 from xarray.core.formatting_html import (
@@ -257,14 +257,14 @@ class DatasetView(Dataset):
     def __setitem__(self, key, val) -> None:
         raise AttributeError(
             "Mutation of the DatasetView is not allowed, please use `.__setitem__` on the wrapping DataTree node, "
-            "or use `dt.to_dataset()` if you want a mutable dataset. If calling this from within `map_over_subtree`,"
+            "or use `dt.to_dataset()` if you want a mutable dataset. If calling this from within `map_over_datasets`,"
             "use `.copy()` first to get a mutable version of the input dataset."
         )
 
     def update(self, other) -> NoReturn:
         raise AttributeError(
             "Mutation of the DatasetView is not allowed, please use `.update` on the wrapping DataTree node, "
-            "or use `dt.to_dataset()` if you want a mutable dataset. If calling this from within `map_over_subtree`,"
+            "or use `dt.to_dataset()` if you want a mutable dataset. If calling this from within `map_over_datasets`,"
             "use `.copy()` first to get a mutable version of the input dataset."
         )
 
@@ -1334,7 +1334,7 @@ class DataTree(
         --------
         match
         pipe
-        map_over_subtree
+        map_over_datasets
         """
         filtered_nodes = {
             node.path: node.dataset for node in self.subtree if filterfunc(node)
@@ -1360,7 +1360,7 @@ class DataTree(
         --------
         filter
         pipe
-        map_over_subtree
+        map_over_datasets
 
         Examples
         --------
@@ -1387,7 +1387,7 @@ class DataTree(
         }
         return DataTree.from_dict(matching_nodes, name=self.root.name)
 
-    def map_over_subtree(
+    def map_over_datasets(
         self,
         func: Callable,
         *args: Iterable[Any],
@@ -1421,7 +1421,7 @@ class DataTree(
         # TODO this signature means that func has no way to know which node it is being called upon - change?
 
         # TODO fix this typing error
-        return map_over_subtree(func)(self, *args, **kwargs)
+        return map_over_datasets(func)(self, *args, **kwargs)
 
     def pipe(
         self, func: Callable | tuple[Callable, str], *args: Any, **kwargs: Any

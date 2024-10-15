@@ -1889,7 +1889,7 @@ class TestUFuncs:
 
 
 class TestDocInsertion:
-    """Tests map_over_subtree docstring injection."""
+    """Tests map_over_datasets docstring injection."""
 
     def test_standard_doc(self):
 
@@ -1923,7 +1923,7 @@ class TestDocInsertion:
                     .. note::
                         This method was copied from :py:class:`xarray.Dataset`, but has
                         been altered to call the method on the Datasets stored in every
-                        node of the subtree. See the `map_over_subtree` function for more
+                        node of the subtree. See the `map_over_datasets` function for more
                         details.
 
                     Normally, it should not be necessary to call this method in user code,
@@ -1954,7 +1954,7 @@ class TestDocInsertion:
 
             This method was copied from :py:class:`xarray.Dataset`, but has been altered to
                 call the method on the Datasets stored in every node of the subtree. See
-                the `map_over_subtree` function for more details."""
+                the `map_over_datasets` function for more details."""
         )
 
         actual_doc = insert_doc_addendum(mixin_doc, _MAPPED_DOCSTRING_ADDENDUM)
