@@ -274,15 +274,21 @@ class TreeNode(Generic[Tree]):
         """
         return self._copy_subtree(inherit=inherit, deep=deep)
 
-    def _copy_subtree(self, inherit: bool, deep: bool = False) -> Self:
+    def _copy_subtree(
+        self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
+    ) -> Self:
         """Copy entire subtree recursively."""
-        new_tree = self._copy_node(inherit=inherit, deep=deep)
+        new_tree = self._copy_node(inherit=inherit, deep=deep, memo=memo)
         for name, child in self.children.items():
             # TODO use `.children[name] = ...` once #9477 is implemented
-            new_tree._set(name, child._copy_subtree(inherit=False, deep=deep))
+            new_tree._set(
+                name, child._copy_subtree(inherit=False, deep=deep, memo=memo)
+            )
         return new_tree
 
-    def _copy_node(self, inherit: bool, deep: bool = False) -> Self:
+    def _copy_node(
+        self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
+    ) -> Self:
         """Copy just one node of a tree"""
         new_empty_node = type(self)()
         return new_empty_node
@@ -291,8 +297,7 @@ class TreeNode(Generic[Tree]):
         return self._copy_subtree(inherit=True, deep=False)
 
     def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
-        del memo  # nodes cannot be reused in a DataTree
-        return self._copy_subtree(inherit=True, deep=True)
+        return self._copy_subtree(inherit=True, deep=True, memo=memo)
 
     def _iter_parents(self: Tree) -> Iterator[Tree]:
         """Iterate up the tree, starting from the current node's parent."""
@@ -693,9 +698,11 @@ class NamedNode(TreeNode, Generic[Tree]):
         _validate_name(name)  # is this check redundant?
         self._name = name
 
-    def _copy_node(self, inherit: bool, deep: bool = False) -> Self:
+    def _copy_node(
+        self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
+    ) -> Self:
         """Copy just one node of a tree"""
-        new_node = super()._copy_node(inherit=inherit, deep=deep)
+        new_node = super()._copy_node(inherit=inherit, deep=deep, memo=memo)
         new_node._name = self.name
         return new_node
 
