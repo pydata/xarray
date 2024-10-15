@@ -6,6 +6,7 @@ import math
 import numbers
 import warnings
 from collections.abc import Callable, Hashable, Mapping, Sequence
+from datetime import datetime, timedelta
 from functools import partial
 from types import EllipsisType
 from typing import TYPE_CHECKING, Any, NoReturn, cast
@@ -199,6 +200,16 @@ def _possibly_convert_objects(values):
     """Convert arrays of datetime.datetime and datetime.timedelta objects into
     datetime64 and timedelta64, according to the pandas convention.
     """
+    if values.dtype.kind == "O":
+        typ = type(
+            values
+            if values.size == 0
+            else (values[0] if values.ndim else values.item())
+        )
+        if issubclass(typ, datetime):
+            values = values.astype("datetime64")
+        elif issubclass(typ, timedelta):
+            values = values.astype("timedelta64")
     as_series = pd.Series(values.ravel(), copy=False)
     result = np.asarray(as_series).reshape(values.shape)
     if not result.flags.writeable:
@@ -246,6 +257,11 @@ def as_compatible_data(
 
     if isinstance(data, pd.Timestamp):
         data = data.to_numpy()
+
+    if isinstance(data, datetime):
+        data = np.datetime64(data)
+    if isinstance(data, timedelta):
+        data = np.timedelta64(data)
 
     # we don't want nested self-described arrays
     if isinstance(data, pd.Series | pd.DataFrame):
