@@ -43,7 +43,6 @@ A number of other API changes have been made, which should only require minor mo
 - Similarly the `parent` kwarg has been removed from the `DataTree.__init__` constuctor.
 - DataTree objects passed to the `children` kwarg in `DataTree.__init__` are now shallow-copied.
 - `DataTree.as_array` has been replaced by `DataTree.to_dataarray`.
-- `map_over_subtree` -> ?
 - A number of methods which were not well tested have been (temporarily) disabled. In general we have tried to only keep things that are known to work, with the plan to increase API surface incrementally after release.
 
 ## Thank you!
