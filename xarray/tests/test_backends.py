@@ -537,7 +537,7 @@ class DatasetIOBase:
 
     @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
     def test_roundtrip_None_variable(self) -> None:
-        expected = Dataset({None: (("x", "y"), [[1, 1], [2, 3]])})
+        expected = Dataset({None: (("x", "y"), [[0, 1], [2, 3]])})
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
@@ -655,7 +655,7 @@ class DatasetIOBase:
 
     def test_roundtrip_coordinates(self) -> None:
         original = Dataset(
-            {"foo": ("x", [1, 1])}, {"x": [2, 3], "y": ("a", [42]), "z": ("x", [4, 5])}
+            {"foo": ("x", [0, 1])}, {"x": [2, 3], "y": ("a", [42]), "z": ("x", [4, 5])}
         )
 
         with self.roundtrip(original) as actual:
@@ -671,7 +671,7 @@ class DatasetIOBase:
 
     def test_roundtrip_global_coordinates(self) -> None:
         original = Dataset(
-            {"foo": ("x", [1, 1])}, {"x": [2, 3], "y": ("a", [42]), "z": ("x", [4, 5])}
+            {"foo": ("x", [0, 1])}, {"x": [2, 3], "y": ("a", [42]), "z": ("x", [4, 5])}
         )
         with self.roundtrip(original) as actual:
             assert_identical(original, actual)
@@ -687,8 +687,8 @@ class DatasetIOBase:
             assert attrs["coordinates"] == "foo"
 
     def test_roundtrip_coordinates_with_space(self) -> None:
-        original = Dataset(coords={"x": 1, "y z": 1})
-        expected = Dataset({"y z": 1}, {"x": 1})
+        original = Dataset(coords={"x": 0, "y z": 1})
+        expected = Dataset({"y z": 1}, {"x": 0})
         with pytest.warns(SerializationWarning):
             with self.roundtrip(original) as actual:
                 assert_identical(expected, actual)
@@ -880,7 +880,7 @@ class DatasetIOBase:
         a = np.random.randn(4, 3)
         a[1, 1] = np.nan
         in_memory = xr.Dataset(
-            {"a": (("y", "x"), a)}, coords={"y": np.arange(1, 5), "x": np.arange(1, 4)}
+            {"a": (("y", "x"), a)}, coords={"y": np.arange(4), "x": np.arange(3)}
         )
 
         assert_identical(
@@ -1101,11 +1101,11 @@ class CFEncodedBase(DatasetIOBase):
                 ),
             ),
             dict(
-                latitude=("latitude", [-1, 1], {"units": "degrees_north"}),
-                longitude=("longitude", [-1, 1], {"units": "degrees_east"}),
+                latitude=("latitude", [0, 1], {"units": "degrees_north"}),
+                longitude=("longitude", [0, 1], {"units": "degrees_east"}),
                 latlon=((), -1, {"grid_mapping_name": "latitude_longitude"}),
-                latitude_bnds=(("latitude", "bnds2"), [[-1, 1], [1, 2]]),
-                longitude_bnds=(("longitude", "bnds2"), [[-1, 1], [1, 2]]),
+                latitude_bnds=(("latitude", "bnds2"), [[0, 1], [1, 2]]),
+                longitude_bnds=(("longitude", "bnds2"), [[0, 1], [1, 2]]),
                 areas=(
                     ("latitude", "longitude"),
                     [[1, 1], [1, 1]],
@@ -1199,7 +1199,7 @@ class CFEncodedBase(DatasetIOBase):
             return obj == "lat lon" or obj == "lon lat"
 
         original = Dataset(
-            {"temp": ("x", [1, 1]), "precip": ("x", [-1, -1])},
+            {"temp": ("x", [0, 1]), "precip": ("x", [0, -1])},
             {"lat": ("x", [2, 3]), "lon": ("x", [4, 5])},
         )
         with self.roundtrip(original) as actual:
@@ -1330,7 +1330,6 @@ class CFEncodedBase(DatasetIOBase):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", ".*floating point data as an integer")
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-                # XXX: zarr v3 always writes fill_value so this fails.
                 assert "_FillValue" not in actual.x.encoding
         assert ds.x.encoding == {}
 
@@ -3067,7 +3066,7 @@ class ZarrBase(CFEncodedBase):
                 assert_identical(actual, only_new_data)
 
     def test_write_region_errors(self) -> None:
-        data = Dataset({"u": (("x",), np.arange(1, 6))})
+        data = Dataset({"u": (("x",), np.arange(5))})
         data2 = Dataset({"u": (("x",), np.array([10, 11]))})
 
         @contextlib.contextmanager
@@ -3079,7 +3078,7 @@ class ZarrBase(CFEncodedBase):
                     assert_identical(actual, expected)
 
         # verify the base case works
-        expected = Dataset({"u": (("x",), np.array([10, 11, 3, 4, 5]))})
+        expected = Dataset({"u": (("x",), np.array([10, 11, 2, 3, 4]))})
         with setup_and_verify_store(expected) as store:
             data2.to_zarr(store, region={"x": slice(2)}, **self.version_kwargs)
 
@@ -3150,9 +3149,9 @@ class ZarrBase(CFEncodedBase):
         original = xr.Dataset(
             {},
             coords={
-                "x": np.arange(nx) + 1,
-                "y": np.arange(ny) + 1,
-                "t": np.arange(nt) + 1,
+                "x": np.arange(nx),
+                "y": np.arange(ny),
+                "t": np.arange(nt),
             },
         )
         original["v"] = xr.Variable(("x", "y", "t"), np.zeros((nx, ny, nt)))
@@ -3313,7 +3312,7 @@ class TestInstrumentedZarrStore:
             assert summary[k] <= expected[k], (k, summary)
 
     def test_append(self) -> None:
-        original = Dataset({"foo": ("x", [1])}, coords={"x": [-1]})
+        original = Dataset({"foo": ("x", [1])}, coords={"x": [0]})
         modified = Dataset({"foo": ("x", [2])}, coords={"x": [1]})
 
         with self.create_zarr_target() as store:
@@ -5422,7 +5421,7 @@ class TestDataArrayToZarr:
 
     def test_dataarray_to_zarr_no_name(self, tmp_store) -> None:
         self.skip_if_zarr_python_3_and_zip_store(tmp_store)
-        original_da = DataArray(np.arange(1, 13).reshape((3, 4)))
+        original_da = DataArray(np.arange(12).reshape((3, 4)))
 
         original_da.to_zarr(tmp_store)
 
@@ -5431,7 +5430,7 @@ class TestDataArrayToZarr:
 
     def test_dataarray_to_zarr_with_name(self, tmp_store) -> None:
         self.skip_if_zarr_python_3_and_zip_store(tmp_store)
-        original_da = DataArray(np.arange(12).reshape((3, 4)) + 1, name="test")
+        original_da = DataArray(np.arange(12).reshape((3, 4)), name="test")
 
         original_da.to_zarr(tmp_store)
 
@@ -5441,7 +5440,7 @@ class TestDataArrayToZarr:
     def test_dataarray_to_zarr_coord_name_clash(self, tmp_store) -> None:
         self.skip_if_zarr_python_3_and_zip_store(tmp_store)
         original_da = DataArray(
-            np.arange(12).reshape((3, 4)) + 1, dims=["x", "y"], name="x"
+            np.arange(12).reshape((3, 4)), dims=["x", "y"], name="x"
         )
 
         original_da.to_zarr(tmp_store)
@@ -5451,7 +5450,7 @@ class TestDataArrayToZarr:
 
     def test_open_dataarray_options(self, tmp_store) -> None:
         self.skip_if_zarr_python_3_and_zip_store(tmp_store)
-        data = DataArray(np.arange(5) + 1, coords={"y": ("x", range(1, 6))}, dims=["x"])
+        data = DataArray(np.arange(5), coords={"y": ("x", range(1, 6))}, dims=["x"])
 
         data.to_zarr(tmp_store)
 
@@ -5464,7 +5463,7 @@ class TestDataArrayToZarr:
         from dask.delayed import Delayed
 
         skip_if_zarr_format_3(tmp_store)
-        original_da = DataArray(np.arange(12).reshape((3, 4)) + 1)
+        original_da = DataArray(np.arange(12).reshape((3, 4)))
 
         output = original_da.to_zarr(tmp_store, compute=False)
         assert isinstance(output, Delayed)
@@ -6033,7 +6032,7 @@ def test_pickle_open_mfdataset_dataset():
 @pytest.mark.usefixtures("default_zarr_version")
 def test_zarr_closing_internal_zip_store():
     store_name = "tmp.zarr.zip"
-    original_da = DataArray(np.arange(1, 13).reshape((3, 4)))
+    original_da = DataArray(np.arange(12).reshape((3, 4)))
     original_da.to_zarr(store_name, mode="w")
 
     with open_dataarray(store_name, engine="zarr") as loaded_da:
@@ -6044,8 +6043,8 @@ def test_zarr_closing_internal_zip_store():
 @pytest.mark.usefixtures("default_zarr_version")
 class TestZarrRegionAuto:
     def test_zarr_region_auto_all(self, tmp_path):
-        x = np.arange(0, 50, 10) + 1
-        y = np.arange(0, 20, 2) + 1
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
         data = np.ones((5, 10))
         ds = xr.Dataset(
             {
@@ -6068,8 +6067,8 @@ class TestZarrRegionAuto:
         assert_identical(ds_updated, expected)
 
     def test_zarr_region_auto_mixed(self, tmp_path):
-        x = np.arange(0, 50, 10) + 1
-        y = np.arange(0, 20, 2) + 1
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
         data = np.ones((5, 10))
         ds = xr.Dataset(
             {
@@ -6094,8 +6093,8 @@ class TestZarrRegionAuto:
         assert_identical(ds_updated, expected)
 
     def test_zarr_region_auto_noncontiguous(self, tmp_path):
-        x = np.arange(0, 50, 10) + 1
-        y = np.arange(0, 20, 2) + 1
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
         data = np.ones((5, 10))
         ds = xr.Dataset(
             {
@@ -6312,9 +6311,7 @@ def test_zarr_region_chunk_partial_offset(tmp_path):
     # https://github.com/pydata/xarray/pull/8459#issuecomment-1819417545
     store = tmp_path / "foo.zarr"
     data = np.ones((30,))
-    da = xr.DataArray(data, dims=["x"], coords={"x": range(1, 31)}, name="foo").chunk(
-        x=10
-    )
+    da = xr.DataArray(data, dims=["x"], coords={"x": range(30)}, name="foo").chunk(x=10)
     da.to_zarr(store, compute=False)
 
     da.isel(x=slice(10)).chunk(x=(10,)).to_zarr(store, region="auto")
@@ -6333,9 +6330,7 @@ def test_zarr_region_chunk_partial_offset(tmp_path):
 def test_zarr_safe_chunk_append_dim(tmp_path):
     store = tmp_path / "foo.zarr"
     data = np.ones((20,))
-    da = xr.DataArray(data, dims=["x"], coords={"x": range(1, 21)}, name="foo").chunk(
-        x=5
-    )
+    da = xr.DataArray(data, dims=["x"], coords={"x": range(20)}, name="foo").chunk(x=5)
 
     da.isel(x=slice(0, 7)).to_zarr(store, safe_chunks=True, mode="w")
     with pytest.raises(ValueError):
@@ -6387,7 +6382,7 @@ def test_zarr_safe_chunk_region(tmp_path):
     store = tmp_path / "foo.zarr"
 
     arr = xr.DataArray(
-        list(range(1, 12)), dims=["a"], coords={"a": list(range(1, 12))}, name="foo"
+        list(range(11)), dims=["a"], coords={"a": list(range(11))}, name="foo"
     ).chunk(a=3)
     arr.to_zarr(store, mode="w")
 
