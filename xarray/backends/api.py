@@ -1713,6 +1713,8 @@ def to_zarr(
 
         if _zarr_v3():
             kwargs["storage_options"] = storage_options
+            mapper = store
+            chunk_mapper = chunk_store
         else:
             from fsspec import get_mapper
 
