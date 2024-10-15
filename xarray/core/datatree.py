@@ -1518,14 +1518,7 @@ class DataTree(
                 "a grouped object are not permitted"
             )
 
-        # TODO requires an implementation of map_over_subtree_inplace
-        #
-        # ds_inplace_binop = functools.partial(
-        #     Dataset._inplace_binary_op,
-        #     f=f,
-        # )
-        #
-        # return map_over_subtree_inplace(ds_inplace_binop)(self, other)
+        # TODO see GH issue #9629 for required implementation
         raise NotImplementedError()
 
     # TODO: dirty workaround for mypy 1.5 error with inherited DatasetOpsMixin vs. Mapping
