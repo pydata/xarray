@@ -30,6 +30,8 @@ New Features
   `Matt Savoie <https://github.com/flamingbear>`_,
   `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Tom Nicholas <https://github.com/TomNicholas>`_.
+- A migration guide for users of the prototype `xarray-contrib/datatree repository <https://github.com/xarray-contrib/datatree>`_ has been added, and can be found in the `DATATREE_MIGRATION_GUIDE.md` file in the repository root.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
   By `Eni Awowale <https://github.com/eni-awowale>`_.
 - Added support for vectorized interpolation using additional interpolators

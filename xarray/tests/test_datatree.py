@@ -11,6 +11,7 @@ import xarray as xr
 from xarray import DataArray, Dataset
 from xarray.core.coordinates import DataTreeCoordinates
 from xarray.core.datatree import DataTree
+from xarray.core.datatree_mapping import TreeIsomorphismError
 from xarray.core.datatree_ops import _MAPPED_DOCSTRING_ADDENDUM, insert_doc_addendum
 from xarray.core.treenode import NotFoundInTreeError
 from xarray.testing import assert_equal, assert_identical
@@ -1760,7 +1761,29 @@ class TestAggregations:
 
 
 class TestOps:
-    @pytest.mark.xfail(reason="arithmetic not implemented yet")
+    def test_unary_op(self):
+        ds1 = xr.Dataset({"a": [5], "b": [3]})
+        ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
+        dt = DataTree.from_dict({"/": ds1, "/subnode": ds2})
+
+        expected = DataTree.from_dict({"/": (-ds1), "/subnode": (-ds2)})
+
+        result = -dt
+        assert_equal(result, expected)
+
+    def test_unary_op_inherited_coords(self):
+        tree = DataTree(xr.Dataset(coords={"x": [1, 2, 3]}))
+        tree["/foo"] = DataTree(xr.Dataset({"bar": ("x", [4, 5, 6])}))
+        actual = -tree
+
+        actual_dataset = actual.children["foo"].to_dataset(inherit=False)
+        assert "x" not in actual_dataset.coords
+
+        expected = tree.copy()
+        # unary ops are not applied to coordinate variables, only data variables
+        expected["/foo/bar"].data = np.array([-4, -5, -6])
+        assert_identical(actual, expected)
+
     def test_binary_op_on_int(self):
         ds1 = xr.Dataset({"a": [5], "b": [3]})
         ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
@@ -1768,11 +1791,31 @@ class TestOps:
 
         expected = DataTree.from_dict({"/": ds1 * 5, "/subnode": ds2 * 5})
 
-        # TODO: Remove ignore when ops.py is migrated?
-        result: DataTree = dt * 5  # type: ignore[assignment,operator]
+        result = dt * 5
         assert_equal(result, expected)
 
-    @pytest.mark.xfail(reason="arithmetic not implemented yet")
+    def test_binary_op_on_dataarray(self):
+        ds1 = xr.Dataset({"a": [5], "b": [3]})
+        ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
+        dt = DataTree.from_dict(
+            {
+                "/": ds1,
+                "/subnode": ds2,
+            }
+        )
+
+        other_da = xr.DataArray(name="z", data=[0.1, 0.2], dims="z")
+
+        expected = DataTree.from_dict(
+            {
+                "/": ds1 * other_da,
+                "/subnode": ds2 * other_da,
+            }
+        )
+
+        result = dt * other_da
+        assert_equal(result, expected)
+
     def test_binary_op_on_dataset(self):
         ds1 = xr.Dataset({"a": [5], "b": [3]})
         ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
@@ -1795,7 +1838,6 @@ class TestOps:
         result = dt * other_ds
         assert_equal(result, expected)
 
-    @pytest.mark.xfail(reason="arithmetic not implemented yet")
     def test_binary_op_on_datatree(self):
         ds1 = xr.Dataset({"a": [5], "b": [3]})
         ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
@@ -1804,15 +1846,13 @@ class TestOps:
 
         expected = DataTree.from_dict({"/": ds1 * ds1, "/subnode": ds2 * ds2})
 
-        # TODO: Remove ignore when ops.py is migrated?
-        result = dt * dt  # type: ignore[operator]
+        result = dt * dt
         assert_equal(result, expected)
 
-    @pytest.mark.xfail(reason="arithmetic not implemented yet")
     def test_arithmetic_inherited_coords(self):
         tree = DataTree(xr.Dataset(coords={"x": [1, 2, 3]}))
         tree["/foo"] = DataTree(xr.Dataset({"bar": ("x", [4, 5, 6])}))
-        actual: DataTree = 2 * tree  # type: ignore[assignment,operator]
+        actual = 2 * tree
 
         actual_dataset = actual.children["foo"].to_dataset(inherit=False)
         assert "x" not in actual_dataset.coords
@@ -1820,6 +1860,50 @@ class TestOps:
         expected = tree.copy()
         expected["/foo/bar"].data = np.array([8, 10, 12])
         assert_identical(actual, expected)
+
+    def test_binary_op_commutativity_with_dataset(self):
+        # regression test for #9365
+
+        ds1 = xr.Dataset({"a": [5], "b": [3]})
+        ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
+        dt = DataTree.from_dict(
+            {
+                "/": ds1,
+                "/subnode": ds2,
+            }
+        )
+
+        other_ds = xr.Dataset({"z": ("z", [0.1, 0.2])})
+
+        expected = DataTree.from_dict(
+            {
+                "/": ds1 * other_ds,
+                "/subnode": ds2 * other_ds,
+            }
+        )
+
+        result = other_ds * dt
+        assert_equal(result, expected)
+
+    def test_inplace_binary_op(self):
+        ds1 = xr.Dataset({"a": [5], "b": [3]})
+        ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
+        dt = DataTree.from_dict({"/": ds1, "/subnode": ds2})
+
+        expected = DataTree.from_dict({"/": ds1 + 1, "/subnode": ds2 + 1})
+
+        dt += 1
+        assert_equal(dt, expected)
+
+    def test_dont_broadcast_single_node_tree(self):
+        # regression test for https://github.com/pydata/xarray/issues/9365#issuecomment-2291622577
+        ds1 = xr.Dataset({"a": [5], "b": [3]})
+        ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
+        dt = DataTree.from_dict({"/": ds1, "/subnode": ds2})
+        node = dt["/subnode"]
+
+        with pytest.raises(TreeIsomorphismError):
+            dt * node
 
 
 class TestUFuncs:
