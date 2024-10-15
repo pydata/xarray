@@ -34,7 +34,7 @@ from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
-from xarray.core.datatree_mapping import TreeIsomorphismError, map_over_subtree
+from xarray.core.datatree_mapping import TreeIsomorphismError, map_over_datasets
 from xarray.core.extensions import (
     register_dataarray_accessor,
     register_dataset_accessor,
@@ -86,7 +86,7 @@ __all__ = (
     "load_dataarray",
     "load_dataset",
     "map_blocks",
-    "map_over_subtree",
+    "map_over_datasets",
     "merge",
     "ones_like",
     "open_dataarray",

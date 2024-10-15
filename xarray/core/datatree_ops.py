@@ -4,7 +4,7 @@ import re
 import textwrap
 
 from xarray.core.dataset import Dataset
-from xarray.core.datatree_mapping import map_over_subtree
+from xarray.core.datatree_mapping import map_over_datasets
 
 """
 Module which specifies the subset of xarray.Dataset's API which we wish to copy onto DataTree.
@@ -17,7 +17,7 @@ xarray's internals directly, only the public-facing xarray.Dataset class.
 _MAPPED_DOCSTRING_ADDENDUM = (
     "This method was copied from :py:class:`xarray.Dataset`, but has been altered to "
     "call the method on the Datasets stored in every node of the subtree. "
-    "See the `map_over_subtree` function for more details."
+    "See the `map_over_datasets` function for more details."
 )
 
 # TODO equals, broadcast_equals etc.
@@ -174,7 +174,7 @@ def _wrap_then_attach_to_cls(
     target_cls_dict, source_cls, methods_to_set, wrap_func=None
 ):
     """
-    Attach given methods on a class, and optionally wrap each method first. (i.e. with map_over_subtree).
+    Attach given methods on a class, and optionally wrap each method first. (i.e. with map_over_datasets).
 
     Result is like having written this in the classes' definition:
     ```
@@ -206,7 +206,7 @@ def _wrap_then_attach_to_cls(
         )
         target_cls_dict[method_name] = wrapped_method
 
-        if wrap_func is map_over_subtree:
+        if wrap_func is map_over_datasets:
             # Add a paragraph to the method's docstring explaining how it's been mapped
             orig_method_docstring = orig_method.__doc__
 
@@ -277,7 +277,7 @@ class MappedDatasetMethodsMixin:
         target_cls_dict=vars(),
         source_cls=Dataset,
         methods_to_set=_ALL_DATASET_METHODS_TO_MAP,
-        wrap_func=map_over_subtree,
+        wrap_func=map_over_datasets,
     )
 
 
@@ -291,7 +291,7 @@ class MappedDataWithCoords:
         target_cls_dict=vars(),
         source_cls=Dataset,
         methods_to_set=_DATA_WITH_COORDS_METHODS_TO_MAP,
-        wrap_func=map_over_subtree,
+        wrap_func=map_over_datasets,
     )
 
 
@@ -305,5 +305,5 @@ class DataTreeArithmeticMixin:
         target_cls_dict=vars(),
         source_cls=Dataset,
         methods_to_set=_ARITHMETIC_METHODS_TO_MAP,
-        wrap_func=map_over_subtree,
+        wrap_func=map_over_datasets,
     )
