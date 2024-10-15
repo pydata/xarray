@@ -4,10 +4,8 @@ _15th October 2024_
 
 This guide is for previous users of the prototype `datatree.DataTree` class in the `xarray-contrib/datatree repository`. That repository has now been archived, and will not be maintained. This guide is intended to help smooth your transition to using the new, updated `xarray.DataTree` class.
 
-.. important
-
-   There are breaking changes! You should not expect that code written with `xarray-contrib/datatree` will work without any modifications.
-   At the absolute minimum you will need to change the top-level import statement, but there are other changes too.
+> [!IMPORTANT]
+> There are breaking changes! You should not expect that code written with `xarray-contrib/datatree` will work without any modifications.  At the absolute minimum you will need to change the top-level import statement, but there are other changes too.
 
 We have made various changes compared to the prototype version. These can be split into three categories: minor API changes, which mostly consist of renaming methods to be more self-consistent; and some deeper data model changes, which affect the hierarchal structure itself; and integration with xarray's IO backends.
 
