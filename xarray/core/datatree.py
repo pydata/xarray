@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import itertools
 import textwrap
 from collections import ChainMap
@@ -15,6 +16,7 @@ from typing import TYPE_CHECKING, Any, Literal, NoReturn, Union, overload
 
 from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
+from xarray.core._typed_ops import DataTreeOpsMixin
 from xarray.core.alignment import align
 from xarray.core.common import TreeAttrAccessMixin
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
@@ -60,6 +62,7 @@ if TYPE_CHECKING:
     from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.types import (
         Dims,
+        DtCompatible,
         ErrorOptions,
         ErrorOptionsWithWarn,
         NetcdfWriteModes,
@@ -403,6 +406,7 @@ class DatasetView(Dataset):
 class DataTree(
     NamedNode["DataTree"],
     DataTreeAggregations,
+    DataTreeOpsMixin,
     TreeAttrAccessMixin,
     Mapping[str, "DataArray | DataTree"],
 ):
@@ -1479,6 +1483,42 @@ class DataTree(
     def groups(self):
         """Return all groups in the tree, given as a tuple of path-like strings."""
         return tuple(node.path for node in self.subtree)
+
+    def _unary_op(self, f, *args, **kwargs) -> DataTree:
+        # TODO do we need to any additional work to avoid duplication etc.? (Similar to aggregations)
+        return self.map_over_datasets(f, *args, **kwargs)  # type: ignore[return-value]
+
+    def _binary_op(self, other, f, reflexive=False, join=None) -> DataTree:
+        from xarray.core.dataset import Dataset
+        from xarray.core.groupby import GroupBy
+
+        if isinstance(other, GroupBy):
+            return NotImplemented
+
+        ds_binop = functools.partial(
+            Dataset._binary_op,
+            f=f,
+            reflexive=reflexive,
+            join=join,
+        )
+        return map_over_datasets(ds_binop)(self, other)
+
+    def _inplace_binary_op(self, other, f) -> Self:
+        from xarray.core.groupby import GroupBy
+
+        if isinstance(other, GroupBy):
+            raise TypeError(
+                "in-place operations between a DataTree and "
+                "a grouped object are not permitted"
+            )
+
+        # TODO see GH issue #9629 for required implementation
+        raise NotImplementedError()
+
+    # TODO: dirty workaround for mypy 1.5 error with inherited DatasetOpsMixin vs. Mapping
+    # related to https://github.com/python/mypy/issues/9319?
+    def __eq__(self, other: DtCompatible) -> Self:  # type: ignore[override]
+        return super().__eq__(other)
 
     def to_netcdf(
         self,
