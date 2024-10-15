@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import warnings
-from collections.abc import Callable, Hashable, Mapping, Sequence
+from collections.abc import Callable, Generator, Hashable, Mapping, Sequence
 from functools import partial
 from numbers import Number
 from typing import TYPE_CHECKING, Any, get_args
@@ -34,8 +34,13 @@ from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
+    from typing import TypeVar
+
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+
+    # T_DuckArray can't be a function parameter because covariant
+    XarrayLike = TypeVar("XarrayLike", Variable, DataArray, Dataset)
 
 
 def _get_nan_block_lengths(
@@ -593,7 +598,7 @@ def _localize(
     indexes_coords: dict[
         Any, tuple[Variable, Variable]
     ],  # indexes_coords altered so can't use mapping type
-) -> tuple[Variable, dict[Any, tuple[Variable, Variable]]]:
+) -> tuple[Variable | T_Xarray, dict[Any, tuple[Variable, Variable]]]:
     """Speed up for linear and nearest neighbor method.
     Only consider a subspace that is needed for the interpolation
     """
@@ -809,8 +814,8 @@ def interp_func(
 
 
 def _interp1d(
-    var: type[T_DuckArray],
-    x: type[T_DuckArray],
+    var: XarrayLike,
+    x: Variable,
     new_x: Variable,
     func: Callable,
     kwargs: dict[str, Any],
@@ -825,8 +830,8 @@ def _interp1d(
 
 
 def _interpnd(
-    var: type[T_DuckArray],
-    x: tuple[T_DuckArray, ...],
+    var: XarrayLike,
+    x: tuple[Variable, ...],
     new_x: tuple[Variable, ...],
     func: Callable,
     kwargs: dict[str, Any],
@@ -846,7 +851,13 @@ def _interpnd(
     return reshape(rslt, rslt.shape[:-1] + new_x[0].shape)
 
 
-def _chunked_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=True):
+def _chunked_aware_interpnd(
+    var: Variable,
+    *coords,
+    interp_func: Callable,
+    interp_kwargs: dict[str, Any],
+    localize: bool = True,
+) -> ArrayLike:
     """Wrapper for `_interpnd` through `blockwise` for chunked arrays.
 
     The first half arrays in `coords` are original coordinates,
@@ -856,11 +867,13 @@ def _chunked_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=T
     nconst = len(var.shape) - n_x
 
     # _interpnd expect coords to be Variables
-    x = [Variable([f"dim_{nconst + dim}"], _x) for dim, _x in enumerate(coords[:n_x])]
-    new_x = [
+    x = tuple(
+        Variable([f"dim_{nconst + dim}"], _x) for dim, _x in enumerate(coords[:n_x])
+    )
+    new_x = tuple(
         Variable([f"dim_{len(var.shape) + dim}" for dim in range(len(_x.shape))], _x)
         for _x in coords[n_x:]
-    ]
+    )
 
     if localize:
         # _localize expect var to be a Variable
@@ -871,7 +884,7 @@ def _chunked_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=T
         }
 
         # simple speed up for the local interpolation
-        var, indexes_coords = _localize(var, indexes_coords)
+        var, indexes_coords = _localize(var, indexes_coords)  # type: ignore[assignment]
         x, new_x = zip(*[indexes_coords[d] for d in indexes_coords], strict=True)
 
         # put var back as a ndarray
@@ -880,7 +893,9 @@ def _chunked_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=T
     return _interpnd(var, x, new_x, interp_func, interp_kwargs)
 
 
-def decompose_interp(indexes_coords):
+def decompose_interp(
+    indexes_coords: Mapping[Any, tuple[Any, Any]]
+) -> Generator[Mapping[Any, tuple[Any, Any]]]:
     """Decompose the interpolation into a succession of independent interpolation keeping the order"""
 
     dest_dims = [
@@ -888,7 +903,7 @@ def decompose_interp(indexes_coords):
         for dim, dest in indexes_coords.items()
     ]
     partial_dest_dims = []
-    partial_indexes_coords = {}
+    partial_indexes_coords: dict[Any, tuple[Any, Any]] = {}
     for i, index_coords in enumerate(indexes_coords.items()):
         partial_indexes_coords.update([index_coords])
 
