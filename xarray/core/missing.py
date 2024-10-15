@@ -810,7 +810,7 @@ def interp_func(
             align_arrays=False,
         )
 
-    return _interpnd(var.data, x, new_x, func, kwargs)
+    return _interpnd(var, x, new_x, func, kwargs)
 
 
 def _interp1d(
