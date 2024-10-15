@@ -17,11 +17,9 @@ The most important changes made are to the data model of `DataTree`. Whilst prev
 
 These alignment checks happen at tree construction time, meaning technically there are some netCDF4 files and zarr stores that previously could be opened as `datatree.DataTree` objects using `datatree.open_datatree`, but now cannot be opened as `xr.DataTree` objects using `xr.open_datatree`. For these cases we added a new opener function `xr.open_groups`, which returns a `dict[str, Dataset]`. This is intended as a fallback for tricky cases, where the idea is that you can still open the entire contents of the file using `open_groups`, edit the `Dataset` objects, then construct a valid tree from the edited dictionary using `DataTree.from_dict`.
 
-Coordinate inheritance
+The alignment checks allowed us to add "Coordinate Inheritance", a much-requested feature where indexed coordinate variables are now "inherited" down to child nodes. This allows you to define common coordinates in a parent group that are then automatically available on every child node. The distinction between a locally-defined coordinate variables and an inherited coordinate that was defined on a parent node is reflected in the `DataTree.__repr__`. Generally if you prefer not to have these variables be inherited you can get more similar behaviour to the old `datatree` package by removing indexes from coordinates, as this prevents inheritance.
 
-Reflected in repr
-
-Generally if you don't like this you can get more similar behaviour to the old package by removing indexes from coordinates.
+For further documentation see the page in the user guide on Hierarchical Data.
 
 ### Integrated backends
 
