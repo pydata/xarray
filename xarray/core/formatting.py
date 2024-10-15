@@ -21,7 +21,6 @@ from pandas.errors import OutOfBoundsDatetime
 from xarray.core.datatree_render import RenderDataTree
 from xarray.core.duck_array_ops import array_equiv, astype
 from xarray.core.indexing import MemoryCachedArray
-from xarray.core.iterators import LevelOrderIter
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.utils import is_duck_array
 from xarray.namedarray.pycompat import array_type, to_duck_array, to_numpy
@@ -981,16 +980,28 @@ def diff_array_repr(a, b, compat):
     return "\n".join(summary)
 
 
-def diff_treestructure(a: DataTree, b: DataTree, require_names_equal: bool) -> str:
+def diff_treestructure(
+    a: DataTree, b: DataTree, require_names_equal: bool
+) -> str | None:
     """
     Return a summary of why two trees are not isomorphic.
-    If they are isomorphic return an empty string.
+    If they are isomorphic return None.
     """
+    # .subtrees walks nodes in breadth-first-order, in order to produce as
+    # shallow of a diff as possible
 
-    # Walking nodes in "level-order" fashion means walking down from the root breadth-first.
-    # Checking for isomorphism by walking in this way implicitly assumes that the tree is an ordered tree
-    # (which it is so long as children are stored in a tuple or list rather than in a set).
-    for node_a, node_b in zip(LevelOrderIter(a), LevelOrderIter(b), strict=True):
+    # TODO: switch zip(a.subtree, b.subtree) to zip_subtrees(a, b), and only
+    # check that child node names match, e.g.,
+    #     for node_a, node_b in zip_subtrees(a, b):
+    #         if node_a.children.keys() != node_b.children.keys():
+    #             diff = dedent(
+    #                 f"""\
+    #                 Node {node_a.path!r} in the left object has children {list(node_a.children.keys())}
+    #                 Node {node_b.path!r} in the right object has children {list(node_b.children.keys())}"""
+    #             )
+    #             return diff
+
+    for node_a, node_b in zip(a.subtree, b.subtree, strict=True):
         path_a, path_b = node_a.path, node_b.path
 
         if require_names_equal and node_a.name != node_b.name:
@@ -1009,7 +1020,7 @@ def diff_treestructure(a: DataTree, b: DataTree, require_names_equal: bool) -> s
             )
             return diff
 
-    return ""
+    return None
 
 
 def diff_dataset_repr(a, b, compat):
@@ -1063,7 +1074,7 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
 
     # If the trees structures are different there is no point comparing each node
     # TODO we could show any differences in nodes up to the first place that structure differs?
-    if treestructure_diff or compat == "isomorphic":
+    if treestructure_diff is not None or compat == "isomorphic":
         summary.append("\n" + treestructure_diff)
     else:
         nodewise_diff = diff_nodewise_summary(a, b, compat)

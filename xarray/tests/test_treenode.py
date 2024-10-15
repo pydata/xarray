@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
-from typing import cast
+import re
 
 import pytest
 
-from xarray.core.iterators import LevelOrderIter
-from xarray.core.treenode import InvalidTreeError, NamedNode, NodePath, TreeNode
+from xarray.core.treenode import (
+    InvalidTreeError,
+    NamedNode,
+    NodePath,
+    TreeNode,
+    zip_subtrees,
+)
 
 
 class TestFamilyTree:
@@ -299,15 +303,12 @@ def create_test_tree() -> tuple[NamedNode, NamedNode]:
     return a, f
 
 
-class TestIterators:
+class TestZipSubtrees:
 
-    def test_levelorderiter(self):
+    def test_one_tree(self):
         root, _ = create_test_tree()
-        result: list[str | None] = [
-            node.name for node in cast(Iterator[NamedNode], LevelOrderIter(root))
-        ]
         expected = [
-            "a",  # root Node is unnamed
+            "a",
             "b",
             "c",
             "d",
@@ -317,7 +318,36 @@ class TestIterators:
             "g",
             "i",
         ]
+        result = [node[0].name for node in zip_subtrees(root)]
         assert result == expected
+
+    def test_different_order(self):
+        first: NamedNode = NamedNode(
+            name="a", children={"b": NamedNode(), "c": NamedNode()}
+        )
+        second: NamedNode = NamedNode(
+            name="a", children={"c": NamedNode(), "b": NamedNode()}
+        )
+        assert [node.name for node in first.subtree] == ["a", "b", "c"]
+        assert [node.name for node in second.subtree] == ["a", "c", "b"]
+        assert [(x.name, y.name) for x, y in zip_subtrees(first, second)] == [
+            ("a", "a"),
+            ("b", "b"),
+            ("c", "c"),
+        ]
+
+    def test_different_structure(self):
+        first: NamedNode = NamedNode(name="a", children={"b": NamedNode()})
+        second: NamedNode = NamedNode(name="a", children={"c": NamedNode()})
+        it = zip_subtrees(first, second)
+
+        x, y = next(it)
+        assert x.name == y.name == "a"
+
+        with pytest.raises(
+            ValueError, match=re.escape(r"children at '/' do not match: ['b'] vs ['c']")
+        ):
+            next(it)
 
 
 class TestAncestry:
@@ -343,7 +373,6 @@ class TestAncestry:
 
     def test_subtree(self):
         root, _ = create_test_tree()
-        subtree = root.subtree
         expected = [
             "a",
             "b",
@@ -355,8 +384,8 @@ class TestAncestry:
             "g",
             "i",
         ]
-        for node, expected_name in zip(subtree, expected, strict=True):
-            assert node.name == expected_name
+        actual = [node.name for node in root.subtree]
+        assert expected == actual
 
     def test_descendants(self):
         root, _ = create_test_tree()

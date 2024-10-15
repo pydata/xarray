@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections
 import sys
 from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
@@ -400,15 +401,18 @@ class TreeNode(Generic[Tree]):
         """
         An iterator over all nodes in this tree, including both self and all descendants.
 
-        Iterates depth-first.
+        Iterates bredth-first.
 
         See Also
         --------
         DataTree.descendants
         """
-        from xarray.core.iterators import LevelOrderIter
-
-        return LevelOrderIter(self)
+        # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
+        queue = collections.deque([self])
+        while queue:
+            node = queue.popleft()
+            yield node
+            queue.extend(node.children.values())
 
     @property
     def descendants(self: Tree) -> tuple[Tree, ...]:
@@ -773,3 +777,41 @@ class NamedNode(TreeNode, Generic[Tree]):
         generation_gap = list(parents_paths).index(ancestor.path)
         path_upwards = "../" * generation_gap if generation_gap > 0 else "."
         return NodePath(path_upwards)
+
+
+def zip_subtrees(*trees: AnyNamedNode) -> Iterator[tuple[AnyNamedNode, ...]]:
+    """Iterate over aligned subtrees in breadth-first order.
+
+    Parameters:
+    -----------
+    *trees : Tree
+        Trees to iterate over.
+
+    Yields
+    ------
+    Tuples of matching subtrees.
+    """
+    # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
+    queue = collections.deque([trees])
+
+    while queue:
+        active_nodes = queue.popleft()
+
+        # yield before raising an error, in case the caller chooses to exit
+        # iteration early
+        yield active_nodes
+
+        first_node = active_nodes[0]
+        if any(
+            sibling.children.keys() != first_node.children.keys()
+            for sibling in active_nodes[1:]
+        ):
+            child_summary = " vs ".join(
+                str(list(node.children)) for node in active_nodes
+            )
+            raise ValueError(
+                f"children at {first_node.path!r} do not match: {child_summary}"
+            )
+
+        for name in first_node.children:
+            queue.append(tuple(node.children[name] for node in active_nodes))
