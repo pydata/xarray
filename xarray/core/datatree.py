@@ -1681,7 +1681,8 @@ class DataTree(
                 numeric_only=numeric_only,
                 **kwargs,
             )
-            result[node.path] = node_result
+            path = "/" if node is self else node.relative_to(self)
+            result[path] = node_result
         return type(self).from_dict(result, name=self.name)
 
     def _selective_indexing(
@@ -1706,15 +1707,17 @@ class DataTree(
             # Ideally, we would avoid creating such coordinates in the first
             # place, but that would require implementing indexing operations at
             # the Variable instead of the Dataset level.
-            for k in node_indexers:
-                if k not in node._node_coord_variables and k in node_result.coords:
-                    # We remove all inherited coordinates. Coordinates
-                    # corresponding to an index would be de-duplicated by
-                    # _deduplicate_inherited_coordinates(), but indexing (e.g.,
-                    # with a scalar) can also create scalar coordinates, which
-                    # need to be explicitly removed.
-                    del node_result.coords[k]
-            result[node.path] = node_result
+            if node is not self:
+                for k in node_indexers:
+                    if k not in node._node_coord_variables and k in node_result.coords:
+                        # We remove all inherited coordinates. Coordinates
+                        # corresponding to an index would be de-duplicated by
+                        # _deduplicate_inherited_coordinates(), but indexing (e.g.,
+                        # with a scalar) can also create scalar coordinates, which
+                        # need to be explicitly removed.
+                        del node_result.coords[k]
+            path = "/" if node is self else node.relative_to(self)
+            result[path] = node_result
         return type(self).from_dict(result, name=self.name)
 
     def isel(
