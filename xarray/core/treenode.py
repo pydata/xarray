@@ -396,7 +396,7 @@ class TreeNode(Generic[Tree]):
         """
         An iterator over all nodes in this tree, including both self and all descendants.
 
-        Iterates bredth-first.
+        Iterates breadth-first.
 
         See Also
         --------
@@ -783,6 +783,9 @@ def zip_subtrees(*trees: AnyNamedNode) -> Iterator[tuple[AnyNamedNode, ...]]:
     ------
     Tuples of matching subtrees.
     """
+    if not trees:
+        raise TypeError("must pass at least one tree object")
+
     # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
     queue = collections.deque([trees])
 
