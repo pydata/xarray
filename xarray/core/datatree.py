@@ -826,12 +826,14 @@ class DataTree(
 
         self.children = children
 
-    def _copy_node(self, inherit: bool, deep: bool = False) -> Self:
+    def _copy_node(
+        self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
+    ) -> Self:
         """Copy just one node of a tree."""
-        new_node = super()._copy_node(inherit=inherit, deep=deep)
+        new_node = super()._copy_node(inherit=inherit, deep=deep, memo=memo)
         data = self._to_dataset_view(rebuild_dims=False, inherit=inherit)
         if deep:
-            data = data.copy(deep=True)
+            data = data._copy(deep=True, memo=memo)
         new_node._set_node_data(data)
         return new_node
 
