@@ -10,6 +10,7 @@ from typing import (
     TypeVar,
 )
 
+from xarray.core.types import Self
 from xarray.core.utils import Frozen, is_dict_like
 
 if TYPE_CHECKING:
@@ -238,10 +239,7 @@ class TreeNode(Generic[Tree]):
         """Method call after attaching `children`."""
         pass
 
-    def copy(
-        self: Tree,
-        deep: bool = False,
-    ) -> Tree:
+    def copy(self, *, inherit: bool = True, deep: bool = False) -> Self:
         """
         Returns a copy of this subtree.
 
@@ -254,7 +252,10 @@ class TreeNode(Generic[Tree]):
 
         Parameters
         ----------
-        deep : bool, default: False
+        inherit : bool
+            Whether inherited coordinates defined on parent nodes should also be
+            copied onto the new tree.
+        deep : bool
             Whether each component variable is loaded into memory and copied onto
             the new object. Default is False.
 
@@ -269,35 +270,27 @@ class TreeNode(Generic[Tree]):
         xarray.Dataset.copy
         pandas.DataFrame.copy
         """
-        return self._copy_subtree(deep=deep)
+        return self._copy_subtree(inherit=inherit, deep=deep)
 
-    def _copy_subtree(
-        self: Tree,
-        deep: bool = False,
-        memo: dict[int, Any] | None = None,
-    ) -> Tree:
+    def _copy_subtree(self, inherit: bool, deep: bool = False) -> Self:
         """Copy entire subtree recursively."""
-
-        new_tree = self._copy_node(deep=deep)
+        new_tree = self._copy_node(inherit=inherit, deep=deep)
         for name, child in self.children.items():
             # TODO use `.children[name] = ...` once #9477 is implemented
-            new_tree._set(name, child._copy_subtree(deep=deep))
-
+            new_tree._set(name, child._copy_subtree(inherit=False, deep=deep))
         return new_tree
 
-    def _copy_node(
-        self: Tree,
-        deep: bool = False,
-    ) -> Tree:
+    def _copy_node(self: Tree, inherit: bool, deep: bool = False) -> Tree:
         """Copy just one node of a tree"""
         new_empty_node = type(self)()
         return new_empty_node
 
-    def __copy__(self: Tree) -> Tree:
-        return self._copy_subtree(deep=False)
+    def __copy__(self) -> Self:
+        return self._copy_subtree(inherit=True, deep=False)
 
-    def __deepcopy__(self: Tree, memo: dict[int, Any] | None = None) -> Tree:
-        return self._copy_subtree(deep=True, memo=memo)
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
+        del memo  # nodes cannot be reused in a DataTree
+        return self._copy_subtree(inherit=True, deep=True)
 
     def _iter_parents(self: Tree) -> Iterator[Tree]:
         """Iterate up the tree, starting from the current node's parent."""
@@ -693,17 +686,14 @@ class NamedNode(TreeNode, Generic[Tree]):
         name_repr = repr(self.name) if self.name is not None else ""
         return f"NamedNode({name_repr})"
 
-    def _post_attach(self: AnyNamedNode, parent: AnyNamedNode, name: str) -> None:
+    def _post_attach(self, parent: Self, name: str) -> None:
         """Ensures child has name attribute corresponding to key under which it has been stored."""
         _validate_name(name)  # is this check redundant?
         self._name = name
 
-    def _copy_node(
-        self: AnyNamedNode,
-        deep: bool = False,
-    ) -> AnyNamedNode:
+    def _copy_node(self, inherit: bool, deep: bool = False) -> Self:
         """Copy just one node of a tree"""
-        new_node = super()._copy_node()
+        new_node = super()._copy_node(inherit=inherit, deep=deep)
         new_node._name = self.name
         return new_node
 

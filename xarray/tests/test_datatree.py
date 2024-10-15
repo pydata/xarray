@@ -413,9 +413,17 @@ class TestCopy:
         tree = DataTree.from_dict(
             {"/": xr.Dataset(coords={"x": [0, 1]}), "/c": DataTree()}
         )
-        tree2 = tree.copy()
-        node_ds = tree2.children["c"].to_dataset(inherit=False)
+        actual = tree.copy()
+        node_ds = actual.children["c"].to_dataset(inherit=False)
         assert_identical(node_ds, xr.Dataset())
+
+        actual = tree.children["c"].copy()
+        expected = DataTree(Dataset(coords={"x": [0, 1]}), name="c")
+        assert_identical(expected, actual)
+
+        actual = tree.children["c"].copy(inherit=False)
+        expected = DataTree(name="c")
+        assert_identical(expected, actual)
 
     def test_deepcopy(self, create_test_datatree):
         dt = create_test_datatree()
