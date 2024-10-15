@@ -7784,9 +7784,10 @@ class Dataset(
 
     def _binary_op(self, other, f, reflexive=False, join=None) -> Dataset:
         from xarray.core.dataarray import DataArray
+        from xarray.core.datatree import DataTree
         from xarray.core.groupby import GroupBy
 
-        if isinstance(other, GroupBy):
+        if isinstance(other, DataTree | GroupBy):
             return NotImplemented
         align_type = OPTIONS["arithmetic_join"] if join is None else join
         if isinstance(other, DataArray | Dataset):

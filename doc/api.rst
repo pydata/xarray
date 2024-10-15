@@ -849,20 +849,20 @@ Aggregate data in all nodes in the subtree simultaneously.
    DataTree.cumsum
    DataTree.cumprod
 
-.. ndarray methods
-.. ---------------
+ndarray methods
+---------------
 
-.. Methods copied from :py:class:`numpy.ndarray` objects, here applying to the data in all nodes in the subtree.
+Methods copied from :py:class:`numpy.ndarray` objects, here applying to the data in all nodes in the subtree.
 
-.. .. autosummary::
-..    :toctree: generated/
+.. autosummary::
+   :toctree: generated/
 
-..    DataTree.argsort
+   DataTree.argsort
+   DataTree.conj
+   DataTree.conjugate
+   DataTree.round
 ..    DataTree.astype
 ..    DataTree.clip
-..    DataTree.conj
-..    DataTree.conjugate
-..    DataTree.round
 ..    DataTree.rank
 
 .. Reshaping and reorganising
