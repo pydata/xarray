@@ -368,6 +368,7 @@ def interp_na(
 
     # method
     index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate)
+    interp_class: type[BaseInterpolator]
     interp_class, kwargs = _get_interpolator(method, **kwargs)
     interpolator = partial(func_interpolate_na, interp_class, **kwargs)
 
@@ -476,7 +477,7 @@ def bfill(
     ).transpose(*arr.dims)
 
 
-def _import_interpolant(interpolant, method):
+def _import_interpolant(interpolant: str, method: InterpOptions):
     """Import interpolant from scipy.interpolate."""
     try:
         from scipy import interpolate
@@ -488,17 +489,15 @@ def _import_interpolant(interpolant, method):
 
 def _get_interpolator(
     method: InterpOptions, vectorizeable_only: bool = False, **kwargs
-):
+) -> tuple[type[BaseInterpolator], dict[str, Any]]:
     """helper function to select the appropriate interpolator class
 
     returns interpolator class and keyword arguments for the class
     """
-    interp_class: (
-        type[NumpyInterpolator] | type[ScipyInterpolator] | type[SplineInterpolator]
-    )
-
     interp1d_methods = get_args(Interp1dOptions)
     valid_methods = tuple(vv for v in get_args(InterpOptions) for vv in get_args(v))
+
+    interp_class: type[BaseInterpolator]
 
     # prefer numpy.interp for 1d linear interpolation. This function cannot
     # take higher dimensional data but scipy.interp1d can.
@@ -550,7 +549,9 @@ def _get_interpolator(
     return interp_class, kwargs
 
 
-def _get_interpolator_nd(method, **kwargs):
+def _get_interpolator_nd(
+    method: InterpOptions, **kwargs
+) -> tuple[type[BaseInterpolator], dict[str, Any]]:
     """helper function to select the appropriate interpolator class
 
     returns interpolator class and keyword arguments for the class
@@ -570,7 +571,7 @@ def _get_interpolator_nd(method, **kwargs):
     return interp_class, kwargs
 
 
-def _get_valid_fill_mask(arr, dim, limit):
+def _get_valid_fill_mask(arr: T_Xarray, dim: Hashable, limit: int) -> T_Xarray:
     """helper function to determine values that can be filled when limit is not
     None"""
     kw = {dim: limit + 1}
@@ -578,13 +579,21 @@ def _get_valid_fill_mask(arr, dim, limit):
     new_dim = utils.get_temp_dimname(arr.dims, "_window")
     return (
         arr.isnull()
-        .rolling(min_periods=1, **kw)
+        .rolling(
+            kw,
+            min_periods=1,
+        )
         .construct(new_dim, fill_value=False)
-        .sum(new_dim, skipna=False)
+        .sum(dim=new_dim, skipna=False)  # type: ignore[arg-type]
     ) <= limit
 
 
-def _localize(var, indexes_coords):
+def _localize(
+    var: Variable,
+    indexes_coords: dict[
+        Any, tuple[Variable, Variable]
+    ],  # indexes_coords altered so can't use mapping type
+) -> tuple[Variable, dict[Any, tuple[Variable, Variable]]]:
     """Speed up for linear and nearest neighbor method.
     Only consider a subspace that is needed for the interpolation
     """
@@ -596,8 +605,11 @@ def _localize(var, indexes_coords):
         index = x.to_index()
         imin, imax = index.get_indexer([minval, maxval], method="nearest")
         indexes[dim] = slice(max(imin - 2, 0), imax + 2)
-        indexes_coords[dim] = (x[indexes[dim]], new_x)
-    return var.isel(**indexes), indexes_coords
+        indexes_coords[dim] = (
+            x[indexes[dim]],
+            new_x,
+        )  # probably the in-place modification is unintentional here?
+    return var.isel(indexers=indexes), indexes_coords
 
 
 def _floatize_x(x, new_x):

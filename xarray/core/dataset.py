@@ -4077,7 +4077,7 @@ class Dataset(
         # optimization: subset to coordinate range of the target index
         if method in ["linear", "nearest"]:
             for k, v in validated_indexers.items():
-                obj, newidx = missing._localize(obj, {k: v})
+                obj, newidx = missing._localize(obj, {k: v})  # type: ignore[assignment, arg-type]
                 validated_indexers[k] = newidx[k]
 
         # optimization: create dask coordinate arrays once per Dataset
