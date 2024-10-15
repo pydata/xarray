@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import os
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
@@ -700,7 +700,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        group: str | Iterable[str] | Callable | None = None,
+        group: str | None = None,
         format="NETCDF4",
         clobber=True,
         diskless=False,
@@ -713,7 +713,24 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         from xarray.core.datatree import DataTree
 
-        groups_dict = self.open_groups_as_dict(filename_or_obj, **kwargs)
+        groups_dict = self.open_groups_as_dict(
+            filename_or_obj,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+            group=group,
+            format=format,
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            lock=lock,
+            autoclose=autoclose,
+            **kwargs,
+        )
 
         return DataTree.from_dict(groups_dict)
 
@@ -728,7 +745,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        group: str | Iterable[str] | Callable | None = None,
+        group: str | None = None,
         format="NETCDF4",
         clobber=True,
         diskless=False,

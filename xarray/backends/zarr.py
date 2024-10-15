@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import warnings
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -1282,7 +1282,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        group: str | Iterable[str] | Callable | None = None,
+        group: str | None = None,
         mode="r",
         synchronizer=None,
         consolidated=None,
@@ -1295,7 +1295,25 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         from xarray.core.datatree import DataTree
 
         filename_or_obj = _normalize_path(filename_or_obj)
-        groups_dict = self.open_groups_as_dict(filename_or_obj, **kwargs)
+        groups_dict = self.open_groups_as_dict(
+            filename_or_obj=filename_or_obj,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+            group=group,
+            mode=mode,
+            synchronizer=synchronizer,
+            consolidated=consolidated,
+            chunk_store=chunk_store,
+            storage_options=storage_options,
+            stacklevel=stacklevel,
+            zarr_version=zarr_version,
+            **kwargs,
+        )
 
         return DataTree.from_dict(groups_dict)
 
@@ -1310,7 +1328,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        group: str | Iterable[str] | Callable | None = None,
+        group: str | None = None,
         mode="r",
         synchronizer=None,
         consolidated=None,

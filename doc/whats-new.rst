@@ -23,7 +23,7 @@ New Features
 ~~~~~~~~~~~~
 - ``DataTree`` related functionality is now exposed in the main ``xarray`` public
   API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``, ``xarray.open_groups``,
-  ``xarray.map_over_subtree``, ``xarray.register_datatree_accessor`` and
+  ``xarray.map_over_datasets``, ``xarray.register_datatree_accessor`` and
   ``xarray.testing.assert_isomorphic``.
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_,
   `Eni Awowale <https://github.com/eni-awowale>`_,
@@ -149,12 +149,17 @@ Bug fixes
   date "0001-01-01". (:issue:`9108`, :pull:`9116`) By `Spencer Clark
   <https://github.com/spencerkclark>`_ and `Deepak Cherian
   <https://github.com/dcherian>`_.
+- Fix issue where polyfit wouldn't handle non-dimension coordinates. (:issue:`4375`, :pull:`9369`)
+  By `Karl Krauth <https://github.com/Karl-Krauth>`_.
 - Fix issue with passing parameters to ZarrStore.open_store when opening
   datatree in zarr format (:issue:`9376`, :pull:`9377`).
   By `Alfonso Ladino <https://github.com/aladinor>`_
 - Fix deprecation warning that was raised when calling ``np.array`` on an ``xr.DataArray``
   in NumPy 2.0 (:issue:`9312`, :pull:`9393`)
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fix passing missing arguments to when opening hdf5 and netCDF4 datatrees
+  (:issue:`9427`, :pull: `9428`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Fix support for using ``pandas.DateOffset``, ``pandas.Timedelta``, and
   ``datetime.timedelta`` objects as ``resample`` frequencies
   (:issue:`9408`, :pull:`9413`).
