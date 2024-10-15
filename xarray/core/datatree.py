@@ -1499,8 +1499,7 @@ class DataTree(
         from xarray.core.groupby import GroupBy
 
         if isinstance(other, GroupBy):
-            # TODO should we be trying to make this work?
-            raise NotImplementedError
+            return NotImplemented
 
         ds_binop = functools.partial(
             Dataset._binary_op,
