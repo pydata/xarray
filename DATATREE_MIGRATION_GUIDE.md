@@ -7,7 +7,7 @@ This guide is for previous users of the prototype `datatree.DataTree` class in t
 > [!IMPORTANT]
 > There are breaking changes! You should not expect that code written with `xarray-contrib/datatree` will work without any modifications.  At the absolute minimum you will need to change the top-level import statement, but there are other changes too.
 
-We have made various changes compared to the prototype version. These can be split into three categories: minor API changes, which mostly consist of renaming methods to be more self-consistent; and some deeper data model changes, which affect the hierarchal structure itself; and integration with xarray's IO backends.
+We have made various changes compared to the prototype version. These can be split into three categories: data model changes, which affect the hierarchal structure itself, integration with xarray's IO backends; and minor API changes, which mostly consist of renaming methods to be more self-consistent.
 
 ### Data model changes
 
