@@ -687,7 +687,7 @@ For manipulating, traversing, navigating, or mapping over the tree structure.
    DataTree.relative_to
    DataTree.iter_lineage
    DataTree.find_common_ancestor
-   DataTree.map_over_subtree
+   DataTree.map_over_datasets
    DataTree.pipe
    DataTree.match
    DataTree.filter
@@ -828,30 +828,26 @@ Index into all nodes in the subtree simultaneously.
 ..    DataTree.polyfit
 ..    DataTree.curvefit
 
-.. Aggregation
-.. -----------
+Aggregation
+-----------
 
-.. Aggregate data in all nodes in the subtree simultaneously.
+Aggregate data in all nodes in the subtree simultaneously.
 
-.. .. autosummary::
-..    :toctree: generated/
+.. autosummary::
+   :toctree: generated/
 
-..    DataTree.all
-..    DataTree.any
-..    DataTree.argmax
-..    DataTree.argmin
-..    DataTree.idxmax
-..    DataTree.idxmin
-..    DataTree.max
-..    DataTree.min
-..    DataTree.mean
-..    DataTree.median
-..    DataTree.prod
-..    DataTree.sum
-..    DataTree.std
-..    DataTree.var
-..    DataTree.cumsum
-..    DataTree.cumprod
+   DataTree.all
+   DataTree.any
+   DataTree.max
+   DataTree.min
+   DataTree.mean
+   DataTree.median
+   DataTree.prod
+   DataTree.sum
+   DataTree.std
+   DataTree.var
+   DataTree.cumsum
+   DataTree.cumprod
 
 .. ndarray methods
 .. ---------------
@@ -958,7 +954,7 @@ DataTree methods
 
    open_datatree
    open_groups
-   map_over_subtree
+   map_over_datasets
    DataTree.to_dict
    DataTree.to_netcdf
    DataTree.to_zarr

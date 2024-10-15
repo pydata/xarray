@@ -14,6 +14,7 @@ from html import escape
 from typing import TYPE_CHECKING, Any, Literal, NoReturn, Union, overload
 
 from xarray.core import utils
+from xarray.core._aggregations import DataTreeAggregations
 from xarray.core.alignment import align
 from xarray.core.common import TreeAttrAccessMixin
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
@@ -22,7 +23,7 @@ from xarray.core.dataset import Dataset, DataVariables
 from xarray.core.datatree_mapping import (
     TreeIsomorphismError,
     check_isomorphic,
-    map_over_subtree,
+    map_over_datasets,
 )
 from xarray.core.formatting import datatree_repr, dims_and_coords_repr
 from xarray.core.formatting_html import (
@@ -41,6 +42,7 @@ from xarray.core.utils import (
     drop_dims_from_indexers,
     either_dict_or_kwargs,
     maybe_wrap_array,
+    parse_dims_as_set,
 )
 from xarray.core.variable import Variable
 
@@ -57,6 +59,7 @@ if TYPE_CHECKING:
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
     from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.types import (
+        Dims,
         ErrorOptions,
         ErrorOptionsWithWarn,
         NetcdfWriteModes,
@@ -154,7 +157,7 @@ def check_alignment(
 
         for child_name, child in children.items():
             child_path = str(NodePath(path) / child_name)
-            child_ds = child.to_dataset(inherited=False)
+            child_ds = child.to_dataset(inherit=False)
             check_alignment(child_path, child_ds, base_ds, child.children)
 
 
@@ -251,14 +254,14 @@ class DatasetView(Dataset):
     def __setitem__(self, key, val) -> None:
         raise AttributeError(
             "Mutation of the DatasetView is not allowed, please use `.__setitem__` on the wrapping DataTree node, "
-            "or use `dt.to_dataset()` if you want a mutable dataset. If calling this from within `map_over_subtree`,"
+            "or use `dt.to_dataset()` if you want a mutable dataset. If calling this from within `map_over_datasets`,"
             "use `.copy()` first to get a mutable version of the input dataset."
         )
 
     def update(self, other) -> NoReturn:
         raise AttributeError(
             "Mutation of the DatasetView is not allowed, please use `.update` on the wrapping DataTree node, "
-            "or use `dt.to_dataset()` if you want a mutable dataset. If calling this from within `map_over_subtree`,"
+            "or use `dt.to_dataset()` if you want a mutable dataset. If calling this from within `map_over_datasets`,"
             "use `.copy()` first to get a mutable version of the input dataset."
         )
 
@@ -399,6 +402,7 @@ class DatasetView(Dataset):
 
 class DataTree(
     NamedNode["DataTree"],
+    DataTreeAggregations,
     TreeAttrAccessMixin,
     Mapping[str, "DataArray | DataTree"],
 ):
@@ -503,8 +507,8 @@ class DataTree(
                 f"parent {parent.name} already contains a variable named {name}"
             )
         path = str(NodePath(parent.path) / name)
-        node_ds = self.to_dataset(inherited=False)
-        parent_ds = parent._to_dataset_view(rebuild_dims=False, inherited=True)
+        node_ds = self.to_dataset(inherit=False)
+        parent_ds = parent._to_dataset_view(rebuild_dims=False, inherit=True)
         check_alignment(path, node_ds, parent_ds, self.children)
         _deduplicate_inherited_coordinates(self, parent)
 
@@ -529,14 +533,14 @@ class DataTree(
     def _indexes(self) -> ChainMap[Hashable, Index]:
         return ChainMap(self._node_indexes, *(p._node_indexes for p in self.parents))
 
-    def _to_dataset_view(self, rebuild_dims: bool, inherited: bool) -> DatasetView:
-        coord_vars = self._coord_variables if inherited else self._node_coord_variables
+    def _to_dataset_view(self, rebuild_dims: bool, inherit: bool) -> DatasetView:
+        coord_vars = self._coord_variables if inherit else self._node_coord_variables
         variables = dict(self._data_variables)
         variables |= coord_vars
         if rebuild_dims:
             dims = calculate_dimensions(variables)
-        elif inherited:
-            # Note: rebuild_dims=False with inherited=True can create
+        elif inherit:
+            # Note: rebuild_dims=False with inherit=True can create
             # technically invalid Dataset objects because it still includes
             # dimensions that are only defined on parent data variables
             # (i.e. not present on any parent coordinate variables).
@@ -548,7 +552,7 @@ class DataTree(
             #     ...         "/b": xr.Dataset(),
             #     ...     }
             #     ... )
-            #     >>> ds = tree["b"]._to_dataset_view(rebuild_dims=False, inherited=True)
+            #     >>> ds = tree["b"]._to_dataset_view(rebuild_dims=False, inherit=True)
             #     >>> ds
             #     <xarray.DatasetView> Size: 0B
             #     Dimensions:  (x: 2)
@@ -572,7 +576,7 @@ class DataTree(
             coord_names=set(self._coord_variables),
             dims=dims,
             attrs=self._attrs,
-            indexes=dict(self._indexes if inherited else self._node_indexes),
+            indexes=dict(self._indexes if inherit else self._node_indexes),
             encoding=self._encoding,
             close=None,
         )
@@ -591,7 +595,7 @@ class DataTree(
         --------
         DataTree.to_dataset
         """
-        return self._to_dataset_view(rebuild_dims=True, inherited=True)
+        return self._to_dataset_view(rebuild_dims=True, inherit=True)
 
     @dataset.setter
     def dataset(self, data: Dataset | None = None) -> None:
@@ -602,13 +606,13 @@ class DataTree(
     # xarray-contrib/datatree
     ds = dataset
 
-    def to_dataset(self, inherited: bool = True) -> Dataset:
+    def to_dataset(self, inherit: bool = True) -> Dataset:
         """
         Return the data in this node as a new xarray.Dataset object.
 
         Parameters
         ----------
-        inherited : bool, optional
+        inherit : bool, optional
             If False, only include coordinates and indexes defined at the level
             of this DataTree node, excluding any inherited coordinates and indexes.
 
@@ -616,16 +620,16 @@ class DataTree(
         --------
         DataTree.dataset
         """
-        coord_vars = self._coord_variables if inherited else self._node_coord_variables
+        coord_vars = self._coord_variables if inherit else self._node_coord_variables
         variables = dict(self._data_variables)
         variables |= coord_vars
-        dims = calculate_dimensions(variables) if inherited else dict(self._node_dims)
+        dims = calculate_dimensions(variables) if inherit else dict(self._node_dims)
         return Dataset._construct_direct(
             variables,
             set(coord_vars),
             dims,
             None if self._attrs is None else dict(self._attrs),
-            dict(self._indexes if inherited else self._node_indexes),
+            dict(self._indexes if inherit else self._node_indexes),
             None if self._encoding is None else dict(self._encoding),
             self._close,
         )
@@ -794,7 +798,7 @@ class DataTree(
         children: dict[str, DataTree] | Default = _default,
     ) -> None:
 
-        ds = self.to_dataset(inherited=False) if data is _default else data
+        ds = self.to_dataset(inherit=False) if data is _default else data
 
         if children is _default:
             children = self._children
@@ -804,7 +808,7 @@ class DataTree(
                 raise ValueError(f"node already contains a variable named {child_name}")
 
         parent_ds = (
-            self.parent._to_dataset_view(rebuild_dims=False, inherited=True)
+            self.parent._to_dataset_view(rebuild_dims=False, inherit=True)
             if self.parent is not None
             else None
         )
@@ -812,6 +816,9 @@ class DataTree(
 
         if data is not _default:
             self._set_node_data(ds)
+
+        if self.parent is not None:
+            _deduplicate_inherited_coordinates(self, self.parent)
 
         self.children = children
 
@@ -823,7 +830,7 @@ class DataTree(
 
         new_node = super()._copy_node()
 
-        data = self._to_dataset_view(rebuild_dims=False, inherited=False)
+        data = self._to_dataset_view(rebuild_dims=False, inherit=False)
         if deep:
             data = data.copy(deep=True)
         new_node._set_node_data(data)
@@ -993,7 +1000,7 @@ class DataTree(
                     raise TypeError(f"Type {type(v)} cannot be assigned to a DataTree")
 
         vars_merge_result = dataset_update_method(
-            self.to_dataset(inherited=False), new_variables
+            self.to_dataset(inherit=False), new_variables
         )
         data = Dataset._construct_direct(**vars_merge_result._asdict())
 
@@ -1323,7 +1330,7 @@ class DataTree(
         --------
         match
         pipe
-        map_over_subtree
+        map_over_datasets
         """
         filtered_nodes = {
             node.path: node.dataset for node in self.subtree if filterfunc(node)
@@ -1349,7 +1356,7 @@ class DataTree(
         --------
         filter
         pipe
-        map_over_subtree
+        map_over_datasets
 
         Examples
         --------
@@ -1376,7 +1383,7 @@ class DataTree(
         }
         return DataTree.from_dict(matching_nodes, name=self.root.name)
 
-    def map_over_subtree(
+    def map_over_datasets(
         self,
         func: Callable,
         *args: Iterable[Any],
@@ -1410,7 +1417,7 @@ class DataTree(
         # TODO this signature means that func has no way to know which node it is being called upon - change?
 
         # TODO fix this typing error
-        return map_over_subtree(func)(self, *args, **kwargs)
+        return map_over_datasets(func)(self, *args, **kwargs)
 
     def pipe(
         self, func: Callable | tuple[Callable, str], *args: Any, **kwargs: Any
@@ -1609,6 +1616,38 @@ class DataTree(
             **kwargs,
         )
 
+    def _get_all_dims(self) -> set:
+        all_dims = set()
+        for node in self.subtree:
+            all_dims.update(node._node_dims)
+        return all_dims
+
+    def reduce(
+        self,
+        func: Callable,
+        dim: Dims = None,
+        *,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        numeric_only: bool = False,
+        **kwargs: Any,
+    ) -> Self:
+        """Reduce this tree by applying `func` along some dimension(s)."""
+        dims = parse_dims_as_set(dim, self._get_all_dims())
+        result = {}
+        for node in self.subtree:
+            reduce_dims = [d for d in node._node_dims if d in dims]
+            node_result = node.dataset.reduce(
+                func,
+                reduce_dims,
+                keep_attrs=keep_attrs,
+                keepdims=keepdims,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
+            result[node.path] = node_result
+        return type(self).from_dict(result, name=self.name)
+
     def _selective_indexing(
         self,
         func: Callable[[Dataset, Mapping[Any, Any]], Dataset],
@@ -1619,9 +1658,7 @@ class DataTree(
         dimensions and inherited coordinates gracefully by only applying
         indexing at each node selectively.
         """
-        all_dims = set()
-        for node in self.subtree:
-            all_dims.update(node._node_dims)
+        all_dims = self._get_all_dims()
         indexers = drop_dims_from_indexers(indexers, all_dims, missing_dims)
 
         result = {}

@@ -1113,7 +1113,7 @@ def _datatree_node_repr(node: DataTree, show_inherited: bool) -> str:
         summary.append(f"{dims_start}({dims_values})")
 
     if node._node_coord_variables:
-        node_coords = node.to_dataset(inherited=False).coords
+        node_coords = node.to_dataset(inherit=False).coords
         summary.append(coords_repr(node_coords, col_width=col_width, max_rows=max_rows))
 
     if show_inherited and inherited_coords:

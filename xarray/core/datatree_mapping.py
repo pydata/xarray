@@ -75,7 +75,7 @@ def check_isomorphic(
         raise TreeIsomorphismError("DataTree objects are not isomorphic:\n" + diff)
 
 
-def map_over_subtree(func: Callable) -> Callable:
+def map_over_datasets(func: Callable) -> Callable:
     """
     Decorator which turns a function which acts on (and returns) Datasets into one which acts on and returns DataTrees.
 
@@ -115,8 +115,8 @@ def map_over_subtree(func: Callable) -> Callable:
 
     See also
     --------
-    DataTree.map_over_subtree
-    DataTree.map_over_subtree_inplace
+    DataTree.map_over_datasets
+    DataTree.map_over_datasets_inplace
     DataTree.subtree
     """
 
@@ -125,7 +125,7 @@ def map_over_subtree(func: Callable) -> Callable:
     # TODO inspect function to work out immediately if the wrong number of arguments were passed for it?
 
     @functools.wraps(func)
-    def _map_over_subtree(*args, **kwargs) -> DataTree | tuple[DataTree, ...]:
+    def _map_over_datasets(*args, **kwargs) -> DataTree | tuple[DataTree, ...]:
         """Internal function which maps func over every node in tree, returning a tree of the results."""
         from xarray.core.datatree import DataTree
 
@@ -230,7 +230,7 @@ def map_over_subtree(func: Callable) -> Callable:
         else:
             return tuple(result_trees)
 
-    return _map_over_subtree
+    return _map_over_datasets
 
 
 def _handle_errors_with_path_context(path: str):

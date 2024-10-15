@@ -222,12 +222,12 @@ class TestToDataset:
         tree = DataTree.from_dict({"/": base, "/sub": sub})
         subtree = typing.cast(DataTree, tree["sub"])
 
-        assert_identical(tree.to_dataset(inherited=False), base)
-        assert_identical(subtree.to_dataset(inherited=False), sub)
+        assert_identical(tree.to_dataset(inherit=False), base)
+        assert_identical(subtree.to_dataset(inherit=False), sub)
 
         sub_and_base = xr.Dataset(coords={"a": [1], "c": [3]})  # no "b"
-        assert_identical(tree.to_dataset(inherited=True), base)
-        assert_identical(subtree.to_dataset(inherited=True), sub_and_base)
+        assert_identical(tree.to_dataset(inherit=True), base)
+        assert_identical(subtree.to_dataset(inherit=True), sub_and_base)
 
 
 class TestVariablesChildrenNameCollisions:
@@ -368,8 +368,8 @@ class TestUpdate:
         # DataTree.identical() currently does not require that non-inherited
         # coordinates are defined identically, so we need to check this
         # explicitly
-        actual_node = actual.children["b"].to_dataset(inherited=False)
-        expected_node = expected.children["b"].to_dataset(inherited=False)
+        actual_node = actual.children["b"].to_dataset(inherit=False)
+        expected_node = expected.children["b"].to_dataset(inherit=False)
         assert_identical(actual_node, expected_node)
 
 
@@ -414,7 +414,7 @@ class TestCopy:
             {"/": xr.Dataset(coords={"x": [0, 1]}), "/c": DataTree()}
         )
         tree2 = tree.copy()
-        node_ds = tree2.children["c"].to_dataset(inherited=False)
+        node_ds = tree2.children["c"].to_dataset(inherit=False)
         assert_identical(node_ds, xr.Dataset())
 
     def test_deepcopy(self, create_test_datatree):
@@ -1267,8 +1267,8 @@ class TestInheritance:
         assert dt.c.sizes == {"x": 2, "y": 3}
         # dataset objects created from nodes should not
         assert dt.b.dataset.sizes == {"y": 1}
-        assert dt.b.to_dataset(inherited=True).sizes == {"y": 1}
-        assert dt.b.to_dataset(inherited=False).sizes == {"y": 1}
+        assert dt.b.to_dataset(inherit=True).sizes == {"y": 1}
+        assert dt.b.to_dataset(inherit=False).sizes == {"y": 1}
 
     def test_inherited_coords_index(self):
         dt = DataTree.from_dict(
@@ -1306,13 +1306,26 @@ class TestInheritance:
                 "/b": xr.Dataset(coords={"x": [1, 2]}),
             }
         )
-        child_dataset = dt.children["b"].to_dataset(inherited=False)
+        child_dataset = dt.children["b"].to_dataset(inherit=False)
         expected = xr.Dataset()
         assert_identical(child_dataset, expected)
 
         dt["/c"] = xr.Dataset({"foo": ("x", [4, 5])}, coords={"x": [1, 2]})
-        child_dataset = dt.children["c"].to_dataset(inherited=False)
+        child_dataset = dt.children["c"].to_dataset(inherit=False)
         expected = xr.Dataset({"foo": ("x", [4, 5])})
+        assert_identical(child_dataset, expected)
+
+    def test_deduplicated_after_setitem(self):
+        # regression test for GH #9601
+        dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2]}),
+                "/b": None,
+            }
+        )
+        dt["b/x"] = dt["x"]
+        child_dataset = dt.children["b"].to_dataset(inherit=False)
+        expected = xr.Dataset()
         assert_identical(child_dataset, expected)
 
     def test_inconsistent_dims(self):
@@ -1648,9 +1661,8 @@ class TestIndexing:
         assert_equal(actual, expected)
 
 
-class TestDSMethodInheritance:
+class TestAggregations:
 
-    @pytest.mark.xfail(reason="reduce methods not implemented yet")
     def test_reduce_method(self):
         ds = xr.Dataset({"a": ("x", [False, True, False])})
         dt = DataTree.from_dict({"/": ds, "/results": ds})
@@ -1660,7 +1672,6 @@ class TestDSMethodInheritance:
         result = dt.any()
         assert_equal(result, expected)
 
-    @pytest.mark.xfail(reason="reduce methods not implemented yet")
     def test_nan_reduce_method(self):
         ds = xr.Dataset({"a": ("x", [1, 2, 3])})
         dt = DataTree.from_dict({"/": ds, "/results": ds})
@@ -1670,7 +1681,6 @@ class TestDSMethodInheritance:
         result = dt.mean()
         assert_equal(result, expected)
 
-    @pytest.mark.xfail(reason="cum methods not implemented yet")
     def test_cum_method(self):
         ds = xr.Dataset({"a": ("x", [1, 2, 3])})
         dt = DataTree.from_dict({"/": ds, "/results": ds})
@@ -1684,6 +1694,41 @@ class TestDSMethodInheritance:
 
         result = dt.cumsum()
         assert_equal(result, expected)
+
+    def test_dim_argument(self):
+        dt = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"A": ("x", [1, 2])}),
+                "/b": xr.Dataset({"B": ("y", [1, 2])}),
+            }
+        )
+
+        expected = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"A": 1.5}),
+                "/b": xr.Dataset({"B": 1.5}),
+            }
+        )
+        actual = dt.mean()
+        assert_equal(expected, actual)
+
+        actual = dt.mean(dim=...)
+        assert_equal(expected, actual)
+
+        expected = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"A": 1.5}),
+                "/b": xr.Dataset({"B": ("y", [1.0, 2.0])}),
+            }
+        )
+        actual = dt.mean("x")
+        assert_equal(expected, actual)
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Dimension(s) 'invalid' do not exist."),
+        ):
+            dt.mean("invalid")
 
 
 class TestOps:
@@ -1741,7 +1786,7 @@ class TestOps:
         tree["/foo"] = DataTree(xr.Dataset({"bar": ("x", [4, 5, 6])}))
         actual: DataTree = 2 * tree  # type: ignore[assignment,operator]
 
-        actual_dataset = actual.children["foo"].to_dataset(inherited=False)
+        actual_dataset = actual.children["foo"].to_dataset(inherit=False)
         assert "x" not in actual_dataset.coords
 
         expected = tree.copy()
@@ -1760,7 +1805,7 @@ class TestUFuncs:
 
 
 class TestDocInsertion:
-    """Tests map_over_subtree docstring injection."""
+    """Tests map_over_datasets docstring injection."""
 
     def test_standard_doc(self):
 
@@ -1794,7 +1839,7 @@ class TestDocInsertion:
                     .. note::
                         This method was copied from :py:class:`xarray.Dataset`, but has
                         been altered to call the method on the Datasets stored in every
-                        node of the subtree. See the `map_over_subtree` function for more
+                        node of the subtree. See the `map_over_datasets` function for more
                         details.
 
                     Normally, it should not be necessary to call this method in user code,
@@ -1825,7 +1870,7 @@ class TestDocInsertion:
 
             This method was copied from :py:class:`xarray.Dataset`, but has been altered to
                 call the method on the Datasets stored in every node of the subtree. See
-                the `map_over_subtree` function for more details."""
+                the `map_over_datasets` function for more details."""
         )
 
         actual_doc = insert_doc_addendum(mixin_doc, _MAPPED_DOCSTRING_ADDENDUM)

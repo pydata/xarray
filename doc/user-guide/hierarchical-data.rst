@@ -1,7 +1,7 @@
-.. _hierarchical-data:
+.. _userguide.hierarchical-data:
 
 Hierarchical data
-==============================
+=================
 
 .. ipython:: python
     :suppress:
@@ -14,6 +14,8 @@ Hierarchical data
     np.set_printoptions(threshold=10)
 
     %xmode minimal
+
+.. _why:
 
 Why Hierarchical Data?
 ----------------------
@@ -547,13 +549,13 @@ See that the same change (fast-forwarding by adding 10 years to the age of each 
 Mapping Custom Functions Over Trees
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can map custom computation over each node in a tree using :py:meth:`xarray.DataTree.map_over_subtree`.
+You can map custom computation over each node in a tree using :py:meth:`xarray.DataTree.map_over_datasets`.
 You can map any function, so long as it takes :py:class:`xarray.Dataset` objects as one (or more) of the input arguments,
 and returns one (or more) xarray datasets.
 
 .. note::
 
-    Functions passed to :py:func:`~xarray.DataTree.map_over_subtree` cannot alter nodes in-place.
+    Functions passed to :py:func:`~xarray.DataTree.map_over_datasets` cannot alter nodes in-place.
     Instead they must return new :py:class:`xarray.Dataset` objects.
 
 For example, we can define a function to calculate the Root Mean Square of a timeseries
@@ -567,11 +569,11 @@ Then calculate the RMS value of these signals:
 
 .. ipython:: python
 
-    voltages.map_over_subtree(rms)
+    voltages.map_over_datasets(rms)
 
 .. _multiple trees:
 
-We can also use the :py:meth:`~xarray.map_over_subtree` decorator to promote a function which accepts datasets into one which
+We can also use the :py:meth:`~xarray.map_over_datasets` decorator to promote a function which accepts datasets into one which
 accepts datatrees.
 
 Operating on Multiple Trees
@@ -644,3 +646,148 @@ We could use this feature to quickly calculate the electrical power in our signa
 
     power = currents * voltages
     power
+
+.. _hierarchical-data.alignment-and-coordinate-inheritance:
+
+Alignment and Coordinate Inheritance
+------------------------------------
+
+.. _data-alignment:
+
+Data Alignment
+~~~~~~~~~~~~~~
+
+The data in different datatree nodes are not totally independent. In particular dimensions (and indexes) in child nodes must be exactly aligned with those in their parent nodes.
+Exact aligment means that shared dimensions must be the same length, and indexes along those dimensions must be equal.
+
+.. note::
+    If you were a previous user of the prototype `xarray-contrib/datatree <https://github.com/xarray-contrib/datatree>`_ package, this is different from what you're used to!
+    In that package the data model was that the data stored in each node actually was completely unrelated. The data model is now slightly stricter.
+    This allows us to provide features like :ref:`coordinate-inheritance`.
+
+To demonstrate, let's first generate some example datasets which are not aligned with one another:
+
+.. ipython:: python
+
+    # (drop the attributes just to make the printed representation shorter)
+    ds = xr.tutorial.open_dataset("air_temperature").drop_attrs()
+
+    ds_daily = ds.resample(time="D").mean("time")
+    ds_weekly = ds.resample(time="W").mean("time")
+    ds_monthly = ds.resample(time="ME").mean("time")
+
+These datasets have different lengths along the ``time`` dimension, and are therefore not aligned along that dimension.
+
+.. ipython:: python
+
+    ds_daily.sizes
+    ds_weekly.sizes
+    ds_monthly.sizes
+
+We cannot store these non-alignable variables on a single :py:class:`~xarray.Dataset` object, because they do not exactly align:
+
+.. ipython:: python
+    :okexcept:
+
+    xr.align(ds_daily, ds_weekly, ds_monthly, join="exact")
+
+But we :ref:`previously said <why>` that multi-resolution data is a good use case for :py:class:`~xarray.DataTree`, so surely we should be able to store these in a single :py:class:`~xarray.DataTree`?
+If we first try to create a :py:class:`~xarray.DataTree` with these different-length time dimensions present in both parents and children, we will still get an alignment error:
+
+.. ipython:: python
+    :okexcept:
+
+    xr.DataTree.from_dict({"daily": ds_daily, "daily/weekly": ds_weekly})
+
+This is because DataTree checks that data in child nodes align exactly with their parents.
+
+.. note::
+    This requirement of aligned dimensions is similar to netCDF's concept of `inherited dimensions <https://www.unidata.ucar.edu/software/netcdf/workshops/2007/groups-types/Introduction.html>`_, as in netCDF-4 files dimensions are `visible to all child groups <https://docs.unidata.ucar.edu/netcdf-c/current/groups.html>`_.
+
+This alignment check is performed up through the tree, all the way to the root, and so is therefore equivalent to requiring that this :py:func:`~xarray.align` command succeeds:
+
+.. code:: python
+
+    xr.align(child.dataset, *(parent.dataset for parent in child.parents), join="exact")
+
+To represent our unalignable data in a single :py:class:`~xarray.DataTree`, we must instead place all variables which are a function of these different-length dimensions into nodes that are not direct descendents of one another, e.g. organize them as siblings.
+
+.. ipython:: python
+
+    dt = xr.DataTree.from_dict(
+        {"daily": ds_daily, "weekly": ds_weekly, "monthly": ds_monthly}
+    )
+    dt
+
+Now we have a valid :py:class:`~xarray.DataTree` structure which contains all the data at each different time frequency, stored in a separate group.
+
+This is a useful way to organise our data because we can still operate on all the groups at once.
+For example we can extract all three timeseries at a specific lat-lon location:
+
+.. ipython:: python
+
+    dt.sel(lat=75, lon=300)
+
+or compute the standard deviation of each timeseries to find out how it varies with sampling frequency:
+
+.. ipython:: python
+
+    dt.std(dim="time")
+
+.. _coordinate-inheritance:
+
+Coordinate Inheritance
+~~~~~~~~~~~~~~~~~~~~~~
+
+Notice that in the trees we constructed above there is some redundancy - the ``lat`` and ``lon`` variables appear in each sibling group, but are identical across the groups.
+
+.. ipython:: python
+
+    dt
+
+We can use "Coordinate Inheritance" to define them only once in a parent group and remove this redundancy, whilst still being able to access those coordinate variables from the child groups.
+
+.. note::
+    This is also a new feature relative to the prototype `xarray-contrib/datatree <https://github.com/xarray-contrib/datatree>`_ package.
+
+Let's instead place only the time-dependent variables in the child groups, and put the non-time-dependent ``lat`` and ``lon`` variables in the parent (root) group:
+
+.. ipython:: python
+
+    dt = xr.DataTree.from_dict(
+        {
+            "/": ds.drop_dims("time"),
+            "daily": ds_daily.drop_vars(["lat", "lon"]),
+            "weekly": ds_weekly.drop_vars(["lat", "lon"]),
+            "monthly": ds_monthly.drop_vars(["lat", "lon"]),
+        }
+    )
+    dt
+
+This is preferred to the previous representation because it now makes it clear that all of these datasets share common spatial grid coordinates.
+Defining the common coordinates just once also ensures that the spatial coordinates for each group cannot become out of sync with one another during operations.
+
+We can still access the coordinates defined in the parent groups from any of the child groups as if they were actually present on the child groups:
+
+.. ipython:: python
+
+    dt.daily.coords
+    dt["daily/lat"]
+
+As we can still access them, we say that the ``lat`` and ``lon`` coordinates in the child groups have been "inherited" from their common parent group.
+
+If we print just one of the child nodes, it will still display inherited coordinates, but explicitly mark them as such:
+
+.. ipython:: python
+
+    print(dt["/daily"])
+
+This helps to differentiate which variables are defined on the datatree node that you are currently looking at, and which were defined somewhere above it.
+
+We can also still perform all the same operations on the whole tree:
+
+.. ipython:: python
+
+    dt.sel(lat=[75], lon=[300])
+
+    dt.std(dim="time")

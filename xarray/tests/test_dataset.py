@@ -5615,7 +5615,7 @@ class TestDataset:
         data = create_test_data()
         with pytest.raises(
             ValueError,
-            match=r"Dimensions \('bad_dim',\) not found in data dimensions",
+            match=re.escape("Dimension(s) 'bad_dim' do not exist"),
         ):
             data.mean(dim="bad_dim")
 
@@ -5644,7 +5644,7 @@ class TestDataset:
         data = create_test_data()
         with pytest.raises(
             ValueError,
-            match=r"Dimensions \('bad_dim',\) not found in data dimensions",
+            match=re.escape("Dimension(s) 'bad_dim' do not exist"),
         ):
             getattr(data, func)(dim="bad_dim")
 
