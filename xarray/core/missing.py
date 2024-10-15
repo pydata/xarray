@@ -75,7 +75,7 @@ class BaseInterpolator:
     f: Callable
     method: str | int
 
-    def __call__(self, x: ScalarOrArray) -> np.ndarray:  # dask array will return np
+    def __call__(self, x: ScalarOrArray) -> ArrayLike:  # dask array will return np
         return self.f(x, **self.call_kwargs)
 
     def __repr__(self) -> str:
@@ -612,13 +612,13 @@ def _localize(
     return var.isel(indexers=indexes), indexes_coords
 
 
-def _floatize_x(x, new_x):
+def _floatize_x(x: tuple[Variable, ...], new_x: tuple[Variable, ...]):
     """Make x and new_x float.
     This is particularly useful for datetime dtype.
     x, new_x: tuple of np.ndarray
     """
-    x = list(x)
-    new_x = list(new_x)
+    x = list(x)  # type: ignore[assignment]
+    new_x = list(new_x)  # type: ignore[assignment]
     for i in range(len(x)):
         if _contains_datetime_like_objects(x[i]):
             # Scipy casts coordinates to np.float64, which is not accurate
@@ -627,8 +627,8 @@ def _floatize_x(x, new_x):
             # offset (min(x)) and the variation (x - min(x)) can be
             # represented by float.
             xmin = x[i].values.min()
-            x[i] = x[i]._to_numeric(offset=xmin, dtype=np.float64)
-            new_x[i] = new_x[i]._to_numeric(offset=xmin, dtype=np.float64)
+            x[i] = x[i]._to_numeric(offset=xmin, dtype=np.float64)  # type: ignore[index]
+            new_x[i] = new_x[i]._to_numeric(offset=xmin, dtype=np.float64)  # type: ignore[index]
     return x, new_x
 
 
@@ -699,12 +699,12 @@ def interp(
 
 
 def interp_func(
-    var: DataArray,
+    var: type[T_DuckArray],
     x: tuple[Variable, ...],
     new_x: tuple[Variable, ...],
     method: InterpOptions,
     kwargs: dict[str, Any],
-) -> np.ndarray:
+) -> ArrayLike:
     """
     multi-dimensional interpolation for array-like. Interpolated axes should be
     located in the last position.
@@ -742,8 +742,9 @@ def interp_func(
     else:
         func, kwargs = _get_interpolator_nd(method, **kwargs)
 
-    if is_chunked_array(var):
-        chunkmanager = get_chunked_array_type(var)
+    # is_chunked_array typed using named_array, unsure of relationship to duck arrays
+    if is_chunked_array(var):  # type: ignore[arg-type]
+        chunkmanager = get_chunked_array_type(var)  # duck compatible
 
         ndim = var.ndim
         nconst = ndim - len(x)
@@ -786,6 +787,8 @@ def interp_func(
         else:
             dtype = var.dtype
 
+        # mypy may flag this in the future since _meta is not a property
+        # of duck arrays--only inside this conditional if a dask array
         meta = var._meta
 
         return chunkmanager.blockwise(
@@ -806,12 +809,12 @@ def interp_func(
 
 
 def _interp1d(
-    var: np.ndarray,
-    x: Variable,
+    var: type[T_DuckArray],
+    x: type[T_DuckArray],
     new_x: Variable,
     func: Callable,
     kwargs: dict[str, Any],
-) -> np.ndarray:
+) -> ArrayLike:
     # x, new_x are tuples of size 1.
     rslt = func(x, var, **kwargs)(np.ravel(new_x))
     if new_x.ndim > 1:
@@ -822,12 +825,12 @@ def _interp1d(
 
 
 def _interpnd(
-    var: np.ndarray,
-    x: tuple[Variable, ...],
+    var: type[T_DuckArray],
+    x: tuple[T_DuckArray, ...],
     new_x: tuple[Variable, ...],
     func: Callable,
     kwargs: dict[str, Any],
-) -> np.ndarray:
+) -> ArrayLike:
     x, new_x = _floatize_x(x, new_x)
 
     if len(x) == 1:
