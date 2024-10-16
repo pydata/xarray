@@ -1254,10 +1254,9 @@ class DataTree(
 
     def equals(self, other: DataTree) -> bool:
         """
-        Two DataTrees are equal if they have isomorphic node structures, with matching node names,
-        and if they have matching variables and coordinates, all of which are equal.
-
-        By default this method will check the whole tree above the given node.
+        Two DataTrees are equal if they have isomorphic node structures, with
+        matching node names, and if they have matching variables and
+        coordinates, all of which are equal.
 
         Parameters
         ----------
@@ -1278,10 +1277,14 @@ class DataTree(
             for node, other_node in zip(self.subtree, other.subtree, strict=True)
         )
 
+    def _inherited_coords_set(self) -> set[str]:
+        return set(self.parent.coords if self.parent else [])
+
     def identical(self, other: DataTree) -> bool:
         """
-        Like equals, but will also check all dataset attributes and the attributes on
-        all variables and coordinates.
+        Like equals, but also checks attributes on all datasets, variables and
+        coordinates, and requires that any inherited coordinates at the tree
+        root are also inherited on the other tree.
 
         Parameters
         ----------
@@ -1300,13 +1303,7 @@ class DataTree(
         if self.name != other.name:
             return False
 
-        # Check the root node's dataset twice, one with (below) and once without
-        # (here) inheritence. This ensures that even inheritance matches for
-        # identical DataTree objects, although inherited variables need not be
-        # defined at the same level.
-        self_ds = self._to_dataset_view(rebuild_dims=False, inherit=False)
-        other_ds = other._to_dataset_view(rebuild_dims=False, inherit=False)
-        if not self_ds.identical(other_ds):
+        if self._inherited_coords_set() != other._inherited_coords_set():
             return False
 
         # TODO: switch to zip_subtrees, when available
