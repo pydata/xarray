@@ -264,7 +264,7 @@ class TestMapOverSubTree:
 
         expected = create_test_datatree(modify=lambda ds: 10.0 * ds)["set1"]
         result_tree = times_ten(subtree)
-        assert_equal(result_tree, expected, from_root=False)
+        assert_equal(result_tree, expected)
 
     def test_skip_empty_nodes_with_attrs(self, create_test_datatree):
         # inspired by xarray-datatree GH262
