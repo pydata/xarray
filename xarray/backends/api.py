@@ -810,11 +810,15 @@ def open_dataarray(
     )
 
     if len(dataset.data_vars) != 1:
-        raise ValueError(
-            "Given file dataset contains more than one data "
-            "variable. Please read with xarray.open_dataset and "
-            "then select the variable you want."
-        )
+        if len(dataset.data_vars) == 0:
+            msg = "Given file dataset contains no data variables."
+        else:
+            msg = (
+                "Given file dataset contains more than one data "
+                "variable. Please read with xarray.open_dataset and "
+                "then select the variable you want."
+            )
+        raise ValueError(msg)
     else:
         (data_array,) = dataset.data_vars.values()
 
