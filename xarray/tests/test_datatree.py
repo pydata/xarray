@@ -472,7 +472,7 @@ class TestCopy:
 
 
 class TestSetItem:
-    def test_setitem_new_child_node(self):
+    def test_setitem_new_child_node(self) -> None:
         john = DataTree(name="john")
         mary = DataTree(name="mary")
         john["mary"] = mary
@@ -481,12 +481,12 @@ class TestSetItem:
         assert grafted_mary.parent is john
         assert grafted_mary.name == "mary"
 
-    def test_setitem_unnamed_child_node_becomes_named(self):
+    def test_setitem_unnamed_child_node_becomes_named(self) -> None:
         john2 = DataTree(name="john2")
         john2["sonny"] = DataTree()
         assert john2["sonny"].name == "sonny"
 
-    def test_setitem_new_grandchild_node(self):
+    def test_setitem_new_grandchild_node(self) -> None:
         john = DataTree.from_dict({"/Mary/Rose": DataTree()})
         new_rose = DataTree(dataset=xr.Dataset({"x": 0}))
         john["Mary/Rose"] = new_rose
@@ -495,20 +495,20 @@ class TestSetItem:
         assert grafted_rose.parent is john["/Mary"]
         assert grafted_rose.name == "Rose"
 
-    def test_grafted_subtree_retains_name(self):
+    def test_grafted_subtree_retains_name(self) -> None:
         subtree = DataTree(name="original_subtree_name")
         root = DataTree(name="root")
         root["new_subtree_name"] = subtree  # noqa
         assert subtree.name == "original_subtree_name"
 
-    def test_setitem_new_empty_node(self):
+    def test_setitem_new_empty_node(self) -> None:
         john = DataTree(name="john")
         john["mary"] = DataTree()
         mary = john["mary"]
         assert isinstance(mary, DataTree)
         assert_identical(mary.to_dataset(), xr.Dataset())
 
-    def test_setitem_overwrite_data_in_node_with_none(self):
+    def test_setitem_overwrite_data_in_node_with_none(self) -> None:
         john = DataTree.from_dict({"/mary": xr.Dataset()}, name="john")
 
         john["mary"] = DataTree()
@@ -519,49 +519,49 @@ class TestSetItem:
             john["."] = DataTree()
 
     @pytest.mark.xfail(reason="assigning Datasets doesn't yet create new nodes")
-    def test_setitem_dataset_on_this_node(self):
+    def test_setitem_dataset_on_this_node(self) -> None:
         data = xr.Dataset({"temp": [0, 50]})
         results = DataTree(name="results")
         results["."] = data
         assert_identical(results.to_dataset(), data)
 
-    def test_setitem_dataset_as_new_node(self):
+    def test_setitem_dataset_as_new_node(self) -> None:
         data = xr.Dataset({"temp": [0, 50]})
         folder1 = DataTree(name="folder1")
         folder1["results"] = data
         assert_identical(folder1["results"].to_dataset(), data)
 
-    def test_setitem_dataset_as_new_node_requiring_intermediate_nodes(self):
+    def test_setitem_dataset_as_new_node_requiring_intermediate_nodes(self) -> None:
         data = xr.Dataset({"temp": [0, 50]})
         folder1 = DataTree(name="folder1")
         folder1["results/highres"] = data
         assert_identical(folder1["results/highres"].to_dataset(), data)
 
-    def test_setitem_named_dataarray(self):
+    def test_setitem_named_dataarray(self) -> None:
         da = xr.DataArray(name="temp", data=[0, 50])
         folder1 = DataTree(name="folder1")
         folder1["results"] = da
         expected = da.rename("results")
         assert_equal(folder1["results"], expected)
 
-    def test_setitem_unnamed_dataarray(self):
+    def test_setitem_unnamed_dataarray(self) -> None:
         data = xr.DataArray([0, 50])
         folder1 = DataTree(name="folder1")
         folder1["results"] = data
         assert_equal(folder1["results"], data)
 
-    def test_setitem_variable(self):
+    def test_setitem_variable(self) -> None:
         var = xr.Variable(data=[0, 50], dims="x")
         folder1 = DataTree(name="folder1")
         folder1["results"] = var
         assert_equal(folder1["results"], xr.DataArray(var))
 
-    def test_setitem_coerce_to_dataarray(self):
+    def test_setitem_coerce_to_dataarray(self) -> None:
         folder1 = DataTree(name="folder1")
         folder1["results"] = 0
         assert_equal(folder1["results"], xr.DataArray(0))
 
-    def test_setitem_add_new_variable_to_empty_node(self):
+    def test_setitem_add_new_variable_to_empty_node(self) -> None:
         results = DataTree(name="results")
         results["pressure"] = xr.DataArray(data=[2, 3])
         assert "pressure" in results.dataset
@@ -575,7 +575,7 @@ class TestSetItem:
         results_with_path["highres/temp"] = xr.Variable(data=[10, 11], dims=["x"])
         assert "temp" in results_with_path["highres"].dataset
 
-    def test_setitem_dataarray_replace_existing_node(self):
+    def test_setitem_dataarray_replace_existing_node(self) -> None:
         t = xr.Dataset({"temp": [0, 50]})
         results = DataTree(name="results", dataset=t)
         p = xr.DataArray(data=[2, 3])
@@ -585,7 +585,7 @@ class TestSetItem:
 
 
 class TestCoords:
-    def test_properties(self):
+    def test_properties(self) -> None:
         # use int64 for repr consistency on windows
         ds = Dataset(
             data_vars={
@@ -649,7 +649,7 @@ class TestCoords:
             "b": np.dtype("int64"),
         }
 
-    def test_modify(self):
+    def test_modify(self) -> None:
         ds = Dataset(
             data_vars={
                 "foo": (["x", "y"], np.random.randn(2, 3)),
@@ -709,7 +709,7 @@ class TestCoords:
         dt2 = DataTree(dataset=dt.coords)
         assert_identical(dt2.coords, dt.coords)
 
-    def test_inherited(self):
+    def test_inherited(self) -> None:
         ds = Dataset(
             data_vars={
                 "foo": (["x", "y"], np.random.randn(2, 3)),
@@ -750,7 +750,7 @@ class TestCoords:
         # assert_identical(expected, actual)
 
 
-def test_delitem():
+def test_delitem() -> None:
     ds = Dataset({"a": 0}, coords={"x": ("x", [1, 2]), "z": "a"})
     dt = DataTree(ds, children={"c": DataTree()})
 
@@ -786,7 +786,7 @@ def test_delitem():
 
 
 class TestTreeFromDict:
-    def test_data_in_root(self):
+    def test_data_in_root(self) -> None:
         dat = xr.Dataset()
         dt = DataTree.from_dict({"/": dat})
         assert dt.name is None
@@ -794,7 +794,7 @@ class TestTreeFromDict:
         assert dt.children == {}
         assert_identical(dt.to_dataset(), dat)
 
-    def test_one_layer(self):
+    def test_one_layer(self) -> None:
         dat1, dat2 = xr.Dataset({"a": 1}), xr.Dataset({"b": 2})
         dt = DataTree.from_dict({"run1": dat1, "run2": dat2})
         assert_identical(dt.to_dataset(), xr.Dataset())
@@ -804,7 +804,7 @@ class TestTreeFromDict:
         assert_identical(dt["run2"].to_dataset(), dat2)
         assert dt["run2"].children == {}
 
-    def test_two_layers(self):
+    def test_two_layers(self) -> None:
         dat1, dat2 = xr.Dataset({"a": 1}), xr.Dataset({"a": [1, 2]})
         dt = DataTree.from_dict({"highres/run": dat1, "lowres/run": dat2})
         assert "highres" in dt.children
@@ -812,13 +812,13 @@ class TestTreeFromDict:
         highres_run = dt["highres/run"]
         assert_identical(highres_run.to_dataset(), dat1)
 
-    def test_nones(self):
+    def test_nones(self) -> None:
         dt = DataTree.from_dict({"d": None, "d/e": None})
         assert [node.name for node in dt.subtree] == [None, "d", "e"]
         assert [node.path for node in dt.subtree] == ["/", "/d", "/d/e"]
         assert_identical(dt["d/e"].to_dataset(), xr.Dataset())
 
-    def test_full(self, simple_datatree):
+    def test_full(self, simple_datatree) -> None:
         dt = simple_datatree
         paths = list(node.path for node in dt.subtree)
         assert paths == [
@@ -831,7 +831,7 @@ class TestTreeFromDict:
             "/set2/set1",
         ]
 
-    def test_datatree_values(self):
+    def test_datatree_values(self) -> None:
         dat1 = DataTree(dataset=xr.Dataset({"a": 1}))
         expected = DataTree()
         expected["a"] = dat1
@@ -840,13 +840,13 @@ class TestTreeFromDict:
 
         assert_identical(actual, expected)
 
-    def test_roundtrip(self, simple_datatree):
+    def test_roundtrip(self, simple_datatree) -> None:
         dt = simple_datatree
         roundtrip = DataTree.from_dict(dt.to_dict())
         assert roundtrip.equals(dt)
 
     @pytest.mark.xfail
-    def test_roundtrip_unnamed_root(self, simple_datatree):
+    def test_roundtrip_unnamed_root(self, simple_datatree) -> None:
         # See GH81
 
         dt = simple_datatree
@@ -854,7 +854,7 @@ class TestTreeFromDict:
         roundtrip = DataTree.from_dict(dt.to_dict())
         assert roundtrip.equals(dt)
 
-    def test_insertion_order(self):
+    def test_insertion_order(self) -> None:
         # regression test for GH issue #9276
         reversed = DataTree.from_dict(
             {
@@ -878,14 +878,14 @@ class TestTreeFromDict:
         # despite 'Bart' coming before 'Lisa' when sorted alphabetically
         assert list(reversed["Homer"].children.keys()) == ["Lisa", "Bart"]
 
-    def test_array_values(self):
+    def test_array_values(self) -> None:
         data = {"foo": xr.DataArray(1, name="bar")}
         with pytest.raises(TypeError):
             DataTree.from_dict(data)  # type: ignore[arg-type]
 
 
 class TestDatasetView:
-    def test_view_contents(self):
+    def test_view_contents(self) -> None:
         ds = create_test_data()
         dt = DataTree(dataset=ds)
         assert ds.identical(
@@ -893,7 +893,7 @@ class TestDatasetView:
         )  # this only works because Dataset.identical doesn't check types
         assert isinstance(dt.dataset, xr.Dataset)
 
-    def test_immutability(self):
+    def test_immutability(self) -> None:
         # See issue https://github.com/xarray-contrib/datatree/issues/38
         dt = DataTree.from_dict(
             {
@@ -916,13 +916,13 @@ class TestDatasetView:
         # TODO are there any other ways you can normally modify state (in-place)?
         # (not attribute-like assignment because that doesn't work on Dataset anyway)
 
-    def test_methods(self):
+    def test_methods(self) -> None:
         ds = create_test_data()
         dt = DataTree(dataset=ds)
         assert ds.mean().identical(dt.dataset.mean())
         assert isinstance(dt.dataset.mean(), xr.Dataset)
 
-    def test_arithmetic(self, create_test_datatree):
+    def test_arithmetic(self, create_test_datatree) -> None:
         dt = create_test_datatree()
         expected = create_test_datatree(modify=lambda ds: 10.0 * ds)[
             "set1"
@@ -930,7 +930,7 @@ class TestDatasetView:
         result = 10.0 * dt["set1"].dataset
         assert result.identical(expected)
 
-    def test_init_via_type(self):
+    def test_init_via_type(self) -> None:
         # from datatree GH issue https://github.com/xarray-contrib/datatree/issues/188
         # xarray's .weighted is unusual because it uses type() to create a Dataset/DataArray
 
@@ -948,7 +948,7 @@ class TestDatasetView:
 
 
 class TestAccess:
-    def test_attribute_access(self, create_test_datatree):
+    def test_attribute_access(self, create_test_datatree) -> None:
         dt = create_test_datatree()
 
         # vars / coords
@@ -970,7 +970,7 @@ class TestAccess:
         assert dt.attrs["meta"] == "NASA"
         assert "meta" in dir(dt)
 
-    def test_ipython_key_completions(self, create_test_datatree):
+    def test_ipython_key_completions(self, create_test_datatree) -> None:
         dt = create_test_datatree()
         key_completions = dt._ipython_key_completions_()
 
@@ -980,7 +980,7 @@ class TestAccess:
         var_keys = list(dt.variables.keys())
         assert all(var_key in key_completions for var_key in var_keys)
 
-    def test_operation_with_attrs_but_no_data(self):
+    def test_operation_with_attrs_but_no_data(self) -> None:
         # tests bug from xarray-datatree GH262
         xs = xr.Dataset({"testvar": xr.DataArray(np.ones((2, 3)))})
         dt = DataTree.from_dict({"node1": xs, "node2": xs})
@@ -990,7 +990,7 @@ class TestAccess:
 
 class TestRepr:
 
-    def test_repr_four_nodes(self):
+    def test_repr_four_nodes(self) -> None:
         dt = DataTree.from_dict(
             {
                 "/": xr.Dataset(
@@ -1062,7 +1062,7 @@ class TestRepr:
         ).strip()
         assert result == expected
 
-    def test_repr_two_children(self):
+    def test_repr_two_children(self) -> None:
         tree = DataTree.from_dict(
             {
                 "/": Dataset(coords={"x": [1.0]}),
@@ -1118,7 +1118,7 @@ class TestRepr:
         ).strip()
         assert result == expected
 
-    def test_repr_inherited_dims(self):
+    def test_repr_inherited_dims(self) -> None:
         tree = DataTree.from_dict(
             {
                 "/": Dataset({"foo": ("x", [1.0])}),
@@ -1160,7 +1160,7 @@ class TestRepr:
     @pytest.mark.skipif(
         ON_WINDOWS, reason="windows (pre NumPy2) uses int32 instead of int64"
     )
-    def test_doc_example(self):
+    def test_doc_example(self) -> None:
         # regression test for https://github.com/pydata/xarray/issues/9499
         time = xr.DataArray(data=["2022-01", "2023-01"], dims="time")
         stations = xr.DataArray(data=list("abcdef"), dims="station")
@@ -1262,7 +1262,7 @@ def _exact_match(message: str) -> str:
 
 
 class TestInheritance:
-    def test_inherited_dims(self):
+    def test_inherited_dims(self) -> None:
         dt = DataTree.from_dict(
             {
                 "/": xr.Dataset({"d": (("x",), [1, 2])}),
@@ -1279,7 +1279,7 @@ class TestInheritance:
         assert dt.b.to_dataset(inherit=True).sizes == {"y": 1}
         assert dt.b.to_dataset(inherit=False).sizes == {"y": 1}
 
-    def test_inherited_coords_index(self):
+    def test_inherited_coords_index(self) -> None:
         dt = DataTree.from_dict(
             {
                 "/": xr.Dataset({"d": (("x",), [1, 2])}, coords={"x": [2, 3]}),
@@ -1290,7 +1290,7 @@ class TestInheritance:
         assert "x" in dt["/b"].coords
         xr.testing.assert_identical(dt["/x"], dt["/b/x"])
 
-    def test_inherit_only_index_coords(self):
+    def test_inherit_only_index_coords(self) -> None:
         dt = DataTree.from_dict(
             {
                 "/": xr.Dataset(coords={"x": [1], "y": 2}),
@@ -1308,7 +1308,7 @@ class TestInheritance:
         )
         xr.testing.assert_equal(dt["/b/z"], xr.DataArray(3, coords={"z": 3}))
 
-    def test_inherited_coords_with_index_are_deduplicated(self):
+    def test_inherited_coords_with_index_are_deduplicated(self) -> None:
         dt = DataTree.from_dict(
             {
                 "/": xr.Dataset(coords={"x": [1, 2]}),
@@ -1324,7 +1324,7 @@ class TestInheritance:
         expected = xr.Dataset({"foo": ("x", [4, 5])})
         assert_identical(child_dataset, expected)
 
-    def test_deduplicated_after_setitem(self):
+    def test_deduplicated_after_setitem(self) -> None:
         # regression test for GH #9601
         dt = DataTree.from_dict(
             {
@@ -1337,7 +1337,7 @@ class TestInheritance:
         expected = xr.Dataset()
         assert_identical(child_dataset, expected)
 
-    def test_inconsistent_dims(self):
+    def test_inconsistent_dims(self) -> None:
         expected_msg = _exact_match(
             """
             group '/b' is not aligned with its parents:
@@ -1372,7 +1372,7 @@ class TestInheritance:
                 children={"b": b},
             )
 
-    def test_inconsistent_child_indexes(self):
+    def test_inconsistent_child_indexes(self) -> None:
         expected_msg = _exact_match(
             """
             group '/b' is not aligned with its parents:
@@ -1407,7 +1407,7 @@ class TestInheritance:
         with pytest.raises(ValueError, match=expected_msg):
             DataTree(dataset=xr.Dataset(coords={"x": [1.0]}), children={"b": b})
 
-    def test_inconsistent_grandchild_indexes(self):
+    def test_inconsistent_grandchild_indexes(self) -> None:
         expected_msg = _exact_match(
             """
             group '/b/c' is not aligned with its parents:
@@ -1443,7 +1443,7 @@ class TestInheritance:
         with pytest.raises(ValueError, match=expected_msg):
             DataTree(dataset=xr.Dataset(coords={"x": [1.0]}), children={"b": b})
 
-    def test_inconsistent_grandchild_dims(self):
+    def test_inconsistent_grandchild_dims(self) -> None:
         expected_msg = _exact_match(
             """
             group '/b/c' is not aligned with its parents:
@@ -1473,7 +1473,7 @@ class TestInheritance:
 
 
 class TestRestructuring:
-    def test_drop_nodes(self):
+    def test_drop_nodes(self) -> None:
         sue = DataTree.from_dict({"Mary": None, "Kate": None, "Ashley": None})
 
         # test drop just one node
@@ -1493,7 +1493,7 @@ class TestRestructuring:
         childless = dropped.drop_nodes(names=["Mary", "Ashley"], errors="ignore")
         assert childless.children == {}
 
-    def test_assign(self):
+    def test_assign(self) -> None:
         dt = DataTree()
         expected = DataTree.from_dict({"/": xr.Dataset({"foo": 0}), "/a": None})
 
@@ -1507,13 +1507,13 @@ class TestRestructuring:
 
 
 class TestPipe:
-    def test_noop(self, create_test_datatree):
+    def test_noop(self, create_test_datatree) -> None:
         dt = create_test_datatree()
 
         actual = dt.pipe(lambda tree: tree)
         assert actual.identical(dt)
 
-    def test_params(self, create_test_datatree):
+    def test_params(self, create_test_datatree) -> None:
         dt = create_test_datatree()
 
         def f(tree, **attrs):
@@ -1524,7 +1524,7 @@ class TestPipe:
         actual = dt.pipe(f, **attrs)
         assert actual["arr_with_attrs"].attrs == attrs
 
-    def test_named_self(self, create_test_datatree):
+    def test_named_self(self, create_test_datatree) -> None:
         dt = create_test_datatree()
 
         def f(x, tree, y):
@@ -1539,7 +1539,7 @@ class TestPipe:
 
 
 class TestSubset:
-    def test_match(self):
+    def test_match(self) -> None:
         # TODO is this example going to cause problems with case sensitivity?
         dt = DataTree.from_dict(
             {
@@ -1558,7 +1558,7 @@ class TestSubset:
         )
         assert_identical(result, expected)
 
-    def test_filter(self):
+    def test_filter(self) -> None:
         simpsons = DataTree.from_dict(
             {
                 "/": xr.Dataset({"age": 83}),
