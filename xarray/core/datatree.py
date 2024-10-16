@@ -1104,10 +1104,12 @@ class DataTree(
         d : dict-like
             A mapping from path names to xarray.Dataset or DataTree objects.
 
-            Path names are to be given as unix-like path. If path names containing more than one
-            part are given, new tree nodes will be constructed as necessary.
+            Path names are to be given as unix-like path. If path names
+            containing more than one part are given, new tree nodes will be
+            constructed as necessary.
 
-            To assign data to the root node of the tree use "/" as the path.
+            To assign data to the root node of the tree use "", ".", "/" or "./"
+            as the path.
         name : Hashable | None, optional
             Name for the root node of the tree. Default is None.
 
@@ -1119,17 +1121,26 @@ class DataTree(
         -----
         If your dictionary is nested you will need to flatten it before using this method.
         """
-
-        # First create the root node
+        # Find any values corresponding to the root
         d_cast = dict(d)
-        root_data = d_cast.pop("/", None)
+        root_data = None
+        for key in ("", ".", "/", "./"):
+            if key in d_cast:
+                if root_data is not None:
+                    raise ValueError(
+                        "multiple entries found corresponding to the root node"
+                    )
+                root_data = d_cast.pop(key)
+
+        # Create the root node
         if isinstance(root_data, DataTree):
             obj = root_data.copy()
         elif root_data is None or isinstance(root_data, Dataset):
             obj = cls(name=name, dataset=root_data, children=None)
         else:
             raise TypeError(
-                f'root node data (at "/") must be a Dataset or DataTree, got {type(root_data)}'
+                f'root node data (at "", ".", "/" or "./") must be a Dataset '
+                f"or DataTree, got {type(root_data)}"
             )
 
         def depth(item) -> int:
@@ -1141,11 +1152,10 @@ class DataTree(
             # Sort keys by depth so as to insert nodes from root first (see GH issue #9276)
             for path, data in sorted(d_cast.items(), key=depth):
                 # Create and set new node
-                node_name = NodePath(path).name
                 if isinstance(data, DataTree):
                     new_node = data.copy()
                 elif isinstance(data, Dataset) or data is None:
-                    new_node = cls(name=node_name, dataset=data)
+                    new_node = cls(dataset=data)
                 else:
                     raise TypeError(f"invalid values: {data}")
                 obj._set_item(
@@ -1683,7 +1693,7 @@ class DataTree(
                 numeric_only=numeric_only,
                 **kwargs,
             )
-            path = "/" if node is self else node.relative_to(self)
+            path = node.relative_to(self)
             result[path] = node_result
         return type(self).from_dict(result, name=self.name)
 
@@ -1718,7 +1728,7 @@ class DataTree(
                         # with a scalar) can also create scalar coordinates, which
                         # need to be explicitly removed.
                         del node_result.coords[k]
-            path = "/" if node is self else node.relative_to(self)
+            path = node.relative_to(self)
             result[path] = node_result
         return type(self).from_dict(result, name=self.name)
 
