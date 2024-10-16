@@ -1690,7 +1690,7 @@ class TestIndexing:
 
 class TestAggregations:
 
-    def test_reduce_method(self):
+    def test_reduce_method(self) -> None:
         ds = xr.Dataset({"a": ("x", [False, True, False])})
         dt = DataTree.from_dict({"/": ds, "/results": ds})
 
@@ -1699,7 +1699,7 @@ class TestAggregations:
         result = dt.any()
         assert_equal(result, expected)
 
-    def test_nan_reduce_method(self):
+    def test_nan_reduce_method(self) -> None:
         ds = xr.Dataset({"a": ("x", [1, 2, 3])})
         dt = DataTree.from_dict({"/": ds, "/results": ds})
 
@@ -1708,7 +1708,7 @@ class TestAggregations:
         result = dt.mean()
         assert_equal(result, expected)
 
-    def test_cum_method(self):
+    def test_cum_method(self) -> None:
         ds = xr.Dataset({"a": ("x", [1, 2, 3])})
         dt = DataTree.from_dict({"/": ds, "/results": ds})
 
@@ -1722,7 +1722,7 @@ class TestAggregations:
         result = dt.cumsum()
         assert_equal(result, expected)
 
-    def test_dim_argument(self):
+    def test_dim_argument(self) -> None:
         dt = DataTree.from_dict(
             {
                 "/a": xr.Dataset({"A": ("x", [1, 2])}),
@@ -1757,7 +1757,7 @@ class TestAggregations:
         ):
             dt.mean("invalid")
 
-    def test_subtree(self):
+    def test_subtree(self) -> None:
         tree = DataTree.from_dict(
             {
                 "/child": Dataset({"a": ("x", [1, 2])}),
