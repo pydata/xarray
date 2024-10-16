@@ -890,6 +890,7 @@ class TestTreeFromDict:
             "/",
             "/foo",
             "/bar",
+            "/x",
             "/x/y",
         ]
 
@@ -913,6 +914,16 @@ class TestTreeFromDict:
             ValueError, match="multiple entries found corresponding to the root node"
         ):
             DataTree.from_dict({"": ds, "/": ds})
+
+    def test_name(self):
+        tree = DataTree.from_dict({"/": None}, name="foo")
+        assert tree.name == "foo"
+
+        tree = DataTree.from_dict({"/": DataTree()}, name="foo")
+        assert tree.name == "foo"
+
+        tree = DataTree.from_dict({"/": DataTree(name="bar")}, name="foo")
+        assert tree.name == "foo"
 
 
 class TestDatasetView:

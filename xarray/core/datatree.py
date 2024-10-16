@@ -1135,6 +1135,7 @@ class DataTree(
         # Create the root node
         if isinstance(root_data, DataTree):
             obj = root_data.copy()
+            obj.name = name
         elif root_data is None or isinstance(root_data, Dataset):
             obj = cls(name=name, dataset=root_data, children=None)
         else:
