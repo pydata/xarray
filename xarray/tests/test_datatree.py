@@ -1584,7 +1584,7 @@ class TestSubset:
 
 class TestIndexing:
 
-    def test_isel_siblings(self):
+    def test_isel_siblings(self) -> None:
         tree = DataTree.from_dict(
             {
                 "/first": xr.Dataset({"a": ("x", [1, 2])}),
@@ -1616,7 +1616,7 @@ class TestIndexing:
         actual = tree.isel(x=slice(None))
         assert_equal(actual, tree)
 
-    def test_isel_inherited(self):
+    def test_isel_inherited(self) -> None:
         tree = DataTree.from_dict(
             {
                 "/": xr.Dataset(coords={"x": [1, 2]}),
@@ -1664,7 +1664,7 @@ class TestIndexing:
         )
         assert_identical(actual, expected)
 
-    def test_sel(self):
+    def test_sel(self) -> None:
         tree = DataTree.from_dict(
             {
                 "/first": xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"x": [1, 2, 3]}),
