@@ -488,5 +488,5 @@ def _wrap_datatree_repr(r: str, end: bool = False) -> str:
 
 
 def datatree_repr(dt: DataTree) -> str:
-    obj_type = f"datatree.{type(dt).__name__}"
+    obj_type = f"xarray.{type(dt).__name__}"
     return datatree_node_repr(obj_type, dt)
