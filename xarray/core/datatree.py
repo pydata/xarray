@@ -1388,7 +1388,7 @@ class DataTree(
     def map_over_datasets(
         self,
         func: Callable,
-        *args: Iterable[Any],
+        *args: Any,
     ) -> DataTree | tuple[DataTree, ...]:
         """
         Apply a function to every dataset in this subtree, returning a new tree which stores the results.
