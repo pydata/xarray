@@ -14,12 +14,12 @@ from xarray.core.treenode import (
 
 
 class TestFamilyTree:
-    def test_lonely(self):
+    def test_lonely(self) -> None:
         root: TreeNode = TreeNode()
         assert root.parent is None
         assert root.children == {}
 
-    def test_parenting(self):
+    def test_parenting(self) -> None:
         john: TreeNode = TreeNode()
         mary: TreeNode = TreeNode()
         mary._set_parent(john, "Mary")
@@ -27,7 +27,7 @@ class TestFamilyTree:
         assert mary.parent == john
         assert john.children["Mary"] is mary
 
-    def test_no_time_traveller_loops(self):
+    def test_no_time_traveller_loops(self) -> None:
         john: TreeNode = TreeNode()
 
         with pytest.raises(InvalidTreeError, match="cannot be a parent of itself"):
@@ -47,7 +47,7 @@ class TestFamilyTree:
         with pytest.raises(InvalidTreeError, match="is already a descendant"):
             rose.children = {"John": john}
 
-    def test_parent_swap(self):
+    def test_parent_swap(self) -> None:
         john: TreeNode = TreeNode()
         mary: TreeNode = TreeNode()
         mary._set_parent(john, "Mary")
@@ -59,7 +59,7 @@ class TestFamilyTree:
         assert steve.children["Mary"] is mary
         assert "Mary" not in john.children
 
-    def test_forbid_setting_parent_directly(self):
+    def test_forbid_setting_parent_directly(self) -> None:
         john: TreeNode = TreeNode()
         mary: TreeNode = TreeNode()
 
@@ -68,13 +68,13 @@ class TestFamilyTree:
         ):
             mary.parent = john
 
-    def test_dont_modify_children_inplace(self):
+    def test_dont_modify_children_inplace(self) -> None:
         # GH issue 9196
         child: TreeNode = TreeNode()
         TreeNode(children={"child": child})
         assert child.parent is None
 
-    def test_multi_child_family(self):
+    def test_multi_child_family(self) -> None:
         john: TreeNode = TreeNode(children={"Mary": TreeNode(), "Kate": TreeNode()})
 
         assert "Mary" in john.children
@@ -87,14 +87,14 @@ class TestFamilyTree:
         assert isinstance(kate, TreeNode)
         assert kate.parent is john
 
-    def test_disown_child(self):
+    def test_disown_child(self) -> None:
         john: TreeNode = TreeNode(children={"Mary": TreeNode()})
         mary = john.children["Mary"]
         mary.orphan()
         assert mary.parent is None
         assert "Mary" not in john.children
 
-    def test_doppelganger_child(self):
+    def test_doppelganger_child(self) -> None:
         kate: TreeNode = TreeNode()
         john: TreeNode = TreeNode()
 
@@ -109,7 +109,7 @@ class TestFamilyTree:
         evil_kate._set_parent(john, "Kate")
         assert john.children["Kate"] is evil_kate
 
-    def test_sibling_relationships(self):
+    def test_sibling_relationships(self) -> None:
         john: TreeNode = TreeNode(
             children={"Mary": TreeNode(), "Kate": TreeNode(), "Ashley": TreeNode()}
         )
@@ -117,7 +117,7 @@ class TestFamilyTree:
         assert list(kate.siblings) == ["Mary", "Ashley"]
         assert "Kate" not in kate.siblings
 
-    def test_copy_subtree(self):
+    def test_copy_subtree(self) -> None:
         tony: TreeNode = TreeNode()
         michael: TreeNode = TreeNode(children={"Tony": tony})
         vito = TreeNode(children={"Michael": michael})
@@ -126,7 +126,7 @@ class TestFamilyTree:
         copied_tony = vito.children["Michael"].children["Tony"]
         assert copied_tony is not tony
 
-    def test_parents(self):
+    def test_parents(self) -> None:
         vito: TreeNode = TreeNode(
             children={"Michael": TreeNode(children={"Tony": TreeNode()})},
         )
@@ -138,7 +138,7 @@ class TestFamilyTree:
 
 
 class TestGetNodes:
-    def test_get_child(self):
+    def test_get_child(self) -> None:
         john: TreeNode = TreeNode(
             children={
                 "Mary": TreeNode(
@@ -167,7 +167,7 @@ class TestGetNodes:
         # get from middle of tree
         assert mary._get_item("Sue/Steven") is steven
 
-    def test_get_upwards(self):
+    def test_get_upwards(self) -> None:
         john: TreeNode = TreeNode(
             children={
                 "Mary": TreeNode(children={"Sue": TreeNode(), "Kate": TreeNode()})
@@ -183,7 +183,7 @@ class TestGetNodes:
         # relative path
         assert sue._get_item("../Kate") is kate
 
-    def test_get_from_root(self):
+    def test_get_from_root(self) -> None:
         john: TreeNode = TreeNode(
             children={"Mary": TreeNode(children={"Sue": TreeNode()})}
         )
@@ -194,7 +194,7 @@ class TestGetNodes:
 
 
 class TestSetNodes:
-    def test_set_child_node(self):
+    def test_set_child_node(self) -> None:
         john: TreeNode = TreeNode()
         mary: TreeNode = TreeNode()
         john._set_item("Mary", mary)
@@ -204,14 +204,14 @@ class TestSetNodes:
         assert mary.children == {}
         assert mary.parent is john
 
-    def test_child_already_exists(self):
+    def test_child_already_exists(self) -> None:
         mary: TreeNode = TreeNode()
         john: TreeNode = TreeNode(children={"Mary": mary})
         mary_2: TreeNode = TreeNode()
         with pytest.raises(KeyError):
             john._set_item("Mary", mary_2, allow_overwrite=False)
 
-    def test_set_grandchild(self):
+    def test_set_grandchild(self) -> None:
         rose: TreeNode = TreeNode()
         mary: TreeNode = TreeNode()
         john: TreeNode = TreeNode()
@@ -224,7 +224,7 @@ class TestSetNodes:
         assert "Rose" in mary.children
         assert rose.parent is mary
 
-    def test_create_intermediate_child(self):
+    def test_create_intermediate_child(self) -> None:
         john: TreeNode = TreeNode()
         rose: TreeNode = TreeNode()
 
@@ -241,7 +241,7 @@ class TestSetNodes:
         assert rose.parent == mary
         assert rose.parent == mary
 
-    def test_overwrite_child(self):
+    def test_overwrite_child(self) -> None:
         john: TreeNode = TreeNode()
         mary: TreeNode = TreeNode()
         john._set_item("Mary", mary)
@@ -261,7 +261,7 @@ class TestSetNodes:
 
 
 class TestPruning:
-    def test_del_child(self):
+    def test_del_child(self) -> None:
         john: TreeNode = TreeNode()
         mary: TreeNode = TreeNode()
         john._set_item("Mary", mary)
@@ -305,7 +305,7 @@ def create_test_tree() -> tuple[NamedNode, NamedNode]:
 
 class TestZipSubtrees:
 
-    def test_one_tree(self):
+    def test_one_tree(self) -> None:
         root, _ = create_test_tree()
         expected = [
             "a",
@@ -321,7 +321,7 @@ class TestZipSubtrees:
         result = [node[0].name for node in zip_subtrees(root)]
         assert result == expected
 
-    def test_different_order(self):
+    def test_different_order(self) -> None:
         first: NamedNode = NamedNode(
             name="a", children={"b": NamedNode(), "c": NamedNode()}
         )
@@ -336,7 +336,7 @@ class TestZipSubtrees:
             ("c", "c"),
         ]
 
-    def test_different_structure(self):
+    def test_different_structure(self) -> None:
         first: NamedNode = NamedNode(name="a", children={"b": NamedNode()})
         second: NamedNode = NamedNode(name="a", children={"c": NamedNode()})
         it = zip_subtrees(first, second)
@@ -352,18 +352,18 @@ class TestZipSubtrees:
 
 class TestAncestry:
 
-    def test_parents(self):
+    def test_parents(self) -> None:
         _, leaf_f = create_test_tree()
         expected = ["e", "b", "a"]
         assert [node.name for node in leaf_f.parents] == expected
 
-    def test_lineage(self):
+    def test_lineage(self) -> None:
         _, leaf_f = create_test_tree()
         expected = ["f", "e", "b", "a"]
         with pytest.warns(DeprecationWarning):
             assert [node.name for node in leaf_f.lineage] == expected
 
-    def test_ancestors(self):
+    def test_ancestors(self) -> None:
         _, leaf_f = create_test_tree()
         with pytest.warns(DeprecationWarning):
             ancestors = leaf_f.ancestors
@@ -371,7 +371,7 @@ class TestAncestry:
         for node, expected_name in zip(ancestors, expected, strict=True):
             assert node.name == expected_name
 
-    def test_subtree(self):
+    def test_subtree(self) -> None:
         root, _ = create_test_tree()
         expected = [
             "a",
@@ -387,7 +387,7 @@ class TestAncestry:
         actual = [node.name for node in root.subtree]
         assert expected == actual
 
-    def test_descendants(self):
+    def test_descendants(self) -> None:
         root, _ = create_test_tree()
         descendants = root.descendants
         expected = [
@@ -403,7 +403,7 @@ class TestAncestry:
         for node, expected_name in zip(descendants, expected, strict=True):
             assert node.name == expected_name
 
-    def test_leaves(self):
+    def test_leaves(self) -> None:
         tree, _ = create_test_tree()
         leaves = tree.leaves
         expected = [
@@ -415,7 +415,7 @@ class TestAncestry:
         for node, expected_name in zip(leaves, expected, strict=True):
             assert node.name == expected_name
 
-    def test_levels(self):
+    def test_levels(self) -> None:
         a, f = create_test_tree()
 
         assert a.level == 0
@@ -429,7 +429,7 @@ class TestAncestry:
 
 
 class TestRenderTree:
-    def test_render_nodetree(self):
+    def test_render_nodetree(self) -> None:
         john: NamedNode = NamedNode(
             children={
                 "Mary": NamedNode(children={"Sam": NamedNode(), "Ben": NamedNode()}),

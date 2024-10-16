@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import itertools
 import textwrap
 from collections import ChainMap
@@ -15,6 +16,7 @@ from typing import TYPE_CHECKING, Any, Literal, NoReturn, Union, overload
 
 from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
+from xarray.core._typed_ops import DataTreeOpsMixin
 from xarray.core.alignment import align
 from xarray.core.common import TreeAttrAccessMixin
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
@@ -60,6 +62,7 @@ if TYPE_CHECKING:
     from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.types import (
         Dims,
+        DtCompatible,
         ErrorOptions,
         ErrorOptionsWithWarn,
         NetcdfWriteModes,
@@ -403,6 +406,7 @@ class DatasetView(Dataset):
 class DataTree(
     NamedNode["DataTree"],
     DataTreeAggregations,
+    DataTreeOpsMixin,
     TreeAttrAccessMixin,
     Mapping[str, "DataArray | DataTree"],
 ):
@@ -823,18 +827,14 @@ class DataTree(
         self.children = children
 
     def _copy_node(
-        self: DataTree,
-        deep: bool = False,
-    ) -> DataTree:
-        """Copy just one node of a tree"""
-
-        new_node = super()._copy_node()
-
-        data = self._to_dataset_view(rebuild_dims=False, inherit=False)
+        self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
+    ) -> Self:
+        """Copy just one node of a tree."""
+        new_node = super()._copy_node(inherit=inherit, deep=deep, memo=memo)
+        data = self._to_dataset_view(rebuild_dims=False, inherit=inherit)
         if deep:
-            data = data.copy(deep=True)
+            data = data._copy(deep=True, memo=memo)
         new_node._set_node_data(data)
-
         return new_node
 
     def get(  # type: ignore[override]
@@ -1155,7 +1155,9 @@ class DataTree(
                     new_nodes_along_path=True,
                 )
 
-        return obj
+        # TODO: figure out why mypy is raising an error here, likely something
+        # to do with the return type of Dataset.copy()
+        return obj  # type: ignore[return-value]
 
     def to_dict(self) -> dict[str, Dataset]:
         """
@@ -1483,6 +1485,42 @@ class DataTree(
         """Return all groups in the tree, given as a tuple of path-like strings."""
         return tuple(node.path for node in self.subtree)
 
+    def _unary_op(self, f, *args, **kwargs) -> DataTree:
+        # TODO do we need to any additional work to avoid duplication etc.? (Similar to aggregations)
+        return self.map_over_datasets(f, *args, **kwargs)  # type: ignore[return-value]
+
+    def _binary_op(self, other, f, reflexive=False, join=None) -> DataTree:
+        from xarray.core.dataset import Dataset
+        from xarray.core.groupby import GroupBy
+
+        if isinstance(other, GroupBy):
+            return NotImplemented
+
+        ds_binop = functools.partial(
+            Dataset._binary_op,
+            f=f,
+            reflexive=reflexive,
+            join=join,
+        )
+        return map_over_datasets(ds_binop)(self, other)
+
+    def _inplace_binary_op(self, other, f) -> Self:
+        from xarray.core.groupby import GroupBy
+
+        if isinstance(other, GroupBy):
+            raise TypeError(
+                "in-place operations between a DataTree and "
+                "a grouped object are not permitted"
+            )
+
+        # TODO see GH issue #9629 for required implementation
+        raise NotImplementedError()
+
+    # TODO: dirty workaround for mypy 1.5 error with inherited DatasetOpsMixin vs. Mapping
+    # related to https://github.com/python/mypy/issues/9319?
+    def __eq__(self, other: DtCompatible) -> Self:  # type: ignore[override]
+        return super().__eq__(other)
+
     def to_netcdf(
         self,
         filepath,
@@ -1642,7 +1680,8 @@ class DataTree(
                 numeric_only=numeric_only,
                 **kwargs,
             )
-            result[node.path] = node_result
+            path = "/" if node is self else node.relative_to(self)
+            result[path] = node_result
         return type(self).from_dict(result, name=self.name)
 
     def _selective_indexing(
@@ -1667,15 +1706,17 @@ class DataTree(
             # Ideally, we would avoid creating such coordinates in the first
             # place, but that would require implementing indexing operations at
             # the Variable instead of the Dataset level.
-            for k in node_indexers:
-                if k not in node._node_coord_variables and k in node_result.coords:
-                    # We remove all inherited coordinates. Coordinates
-                    # corresponding to an index would be de-duplicated by
-                    # _deduplicate_inherited_coordinates(), but indexing (e.g.,
-                    # with a scalar) can also create scalar coordinates, which
-                    # need to be explicitly removed.
-                    del node_result.coords[k]
-            result[node.path] = node_result
+            if node is not self:
+                for k in node_indexers:
+                    if k not in node._node_coord_variables and k in node_result.coords:
+                        # We remove all inherited coordinates. Coordinates
+                        # corresponding to an index would be de-duplicated by
+                        # _deduplicate_inherited_coordinates(), but indexing (e.g.,
+                        # with a scalar) can also create scalar coordinates, which
+                        # need to be explicitly removed.
+                        del node_result.coords[k]
+            path = "/" if node is self else node.relative_to(self)
+            result[path] = node_result
         return type(self).from_dict(result, name=self.name)
 
     def isel(
