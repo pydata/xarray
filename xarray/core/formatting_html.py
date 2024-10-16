@@ -391,7 +391,7 @@ inherited_coord_section = partial(
 )
 
 
-def datatree_node_repr(group_title: str, node: DataTree) -> str:
+def datatree_node_repr(group_title: str, node: DataTree, show_inherited=False) -> str:
     from xarray.core.coordinates import Coordinates
 
     header_components = [f"<div class='xr-obj-type'>{escape(group_title)}</div>"]
@@ -409,7 +409,13 @@ def datatree_node_repr(group_title: str, node: DataTree) -> str:
         children_section(node.children),
         dim_section(ds),
         coord_section(node_coords),
-        inherited_coord_section(inherited_coords),
+    ]
+
+    # only show inherited coordinates on the root
+    if show_inherited:
+        sections.append(inherited_coord_section(inherited_coords))
+
+    sections += [
         datavar_section(ds.data_vars),
         attr_section(ds.attrs),
     ]
@@ -489,4 +495,4 @@ def _wrap_datatree_repr(r: str, end: bool = False) -> str:
 
 def datatree_repr(dt: DataTree) -> str:
     obj_type = f"xarray.{type(dt).__name__}"
-    return datatree_node_repr(obj_type, dt)
+    return datatree_node_repr(obj_type, dt, show_inherited=True)
