@@ -545,11 +545,21 @@ def tril(
 def triu(
     x: NamedArray[_ShapeType, _DType], /, *, k: int = 0
 ) -> NamedArray[_ShapeType, _DType]:
+    """
+    Returns the upper triangular part of a matrix (or a stack of matrices) x.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x", "y"), np.array([[1, 2, 3], [4, 5, 6]]))
+    >>> triu(x)
+    <xarray.NamedArray (x: 2, y: 3)> Size: 48B
+    array([[1, 2, 3],
+           [0, 5, 6]])
+    """
     xp = _get_data_namespace(x)
     _data = xp.triu(x._data, k=k)
-    # TODO: Can probably determine dim names from x, for now just default names:
-    _dims = _infer_dims(_data.shape)
-    return x._new(_dims, _data)
+    return NamedArray(x.dims, _data)
 
 
 def zeros(
