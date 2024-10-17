@@ -1538,6 +1538,110 @@ class TestPipe:
         assert actual is dt and actual.attrs == attrs
 
 
+class TestEqualsAndIdentical:
+
+    def test_minimal_variations(self):
+        tree = DataTree.from_dict(
+            {
+                "/": Dataset({"x": 1}),
+                "/child": Dataset({"x": 2}),
+            }
+        )
+        assert tree.equals(tree)
+        assert tree.identical(tree)
+
+        child = tree.children["child"]
+        assert child.equals(child)
+        assert child.identical(child)
+
+        new_child = DataTree(dataset=Dataset({"x": 2}), name="child")
+        assert child.equals(new_child)
+        assert child.identical(new_child)
+
+        anonymous_child = DataTree(dataset=Dataset({"x": 2}))
+        # TODO: re-enable this after fixing .equals() not to require matching
+        # names on the root node (i.e., after switching to use zip_subtrees)
+        # assert child.equals(anonymous_child)
+        assert not child.identical(anonymous_child)
+
+        different_variables = DataTree.from_dict(
+            {
+                "/": Dataset(),
+                "/other": Dataset({"x": 2}),
+            }
+        )
+        assert not tree.equals(different_variables)
+        assert not tree.identical(different_variables)
+
+        different_root_data = DataTree.from_dict(
+            {
+                "/": Dataset({"x": 4}),
+                "/child": Dataset({"x": 2}),
+            }
+        )
+        assert not tree.equals(different_root_data)
+        assert not tree.identical(different_root_data)
+
+        different_child_data = DataTree.from_dict(
+            {
+                "/": Dataset({"x": 1}),
+                "/child": Dataset({"x": 3}),
+            }
+        )
+        assert not tree.equals(different_child_data)
+        assert not tree.identical(different_child_data)
+
+        different_child_node_attrs = DataTree.from_dict(
+            {
+                "/": Dataset({"x": 1}),
+                "/child": Dataset({"x": 2}, attrs={"foo": "bar"}),
+            }
+        )
+        assert tree.equals(different_child_node_attrs)
+        assert not tree.identical(different_child_node_attrs)
+
+        different_child_variable_attrs = DataTree.from_dict(
+            {
+                "/": Dataset({"x": 1}),
+                "/child": Dataset({"x": ((), 2, {"foo": "bar"})}),
+            }
+        )
+        assert tree.equals(different_child_variable_attrs)
+        assert not tree.identical(different_child_variable_attrs)
+
+        different_name = DataTree.from_dict(
+            {
+                "/": Dataset({"x": 1}),
+                "/child": Dataset({"x": 2}),
+            },
+            name="different",
+        )
+        # TODO: re-enable this after fixing .equals() not to require matching
+        # names on the root node (i.e., after switching to use zip_subtrees)
+        # assert tree.equals(different_name)
+        assert not tree.identical(different_name)
+
+    def test_differently_inherited_coordinates(self):
+        root = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [1, 2]}),
+                "/child": Dataset(),
+            }
+        )
+        child = root.children["child"]
+        assert child.equals(child)
+        assert child.identical(child)
+
+        new_child = DataTree(dataset=Dataset(coords={"x": [1, 2]}), name="child")
+        assert child.equals(new_child)
+        assert not child.identical(new_child)
+
+        deeper_root = DataTree(children={"root": root})
+        grandchild = deeper_root["/root/child"]
+        assert child.equals(grandchild)
+        assert child.identical(grandchild)
+
+
 class TestSubset:
     def test_match(self) -> None:
         # TODO is this example going to cause problems with case sensitivity?
@@ -1599,7 +1703,7 @@ class TestIndexing:
             }
         )
         actual = tree.isel(x=-1)
-        assert_equal(actual, expected)
+        assert_identical(actual, expected)
 
         expected = DataTree.from_dict(
             {
@@ -1608,13 +1712,13 @@ class TestIndexing:
             }
         )
         actual = tree.isel(x=slice(1))
-        assert_equal(actual, expected)
+        assert_identical(actual, expected)
 
         actual = tree.isel(x=[0])
-        assert_equal(actual, expected)
+        assert_identical(actual, expected)
 
         actual = tree.isel(x=slice(None))
-        assert_equal(actual, tree)
+        assert_identical(actual, tree)
 
     def test_isel_inherited(self) -> None:
         tree = DataTree.from_dict(
@@ -1631,7 +1735,7 @@ class TestIndexing:
             }
         )
         actual = tree.isel(x=-1)
-        assert_equal(actual, expected)
+        assert_identical(actual, expected)
 
         expected = DataTree.from_dict(
             {
@@ -1639,7 +1743,7 @@ class TestIndexing:
             }
         )
         actual = tree.isel(x=-1, drop=True)
-        assert_equal(actual, expected)
+        assert_identical(actual, expected)
 
         expected = DataTree.from_dict(
             {
@@ -1648,7 +1752,7 @@ class TestIndexing:
             }
         )
         actual = tree.isel(x=[0])
-        assert_equal(actual, expected)
+        assert_identical(actual, expected)
 
         actual = tree.isel(x=slice(None))
 

@@ -56,6 +56,9 @@ def check_isomorphic(
         Also optionally raised if their structure is isomorphic, but the names of any two
         respective nodes are not equal.
     """
+    # TODO: remove require_names_equal and check_from_root. Instead, check that
+    # all child nodes match, in any order, which will suffice once
+    # map_over_datasets switches to use zip_subtrees.
 
     if not isinstance(a, TreeNode):
         raise TypeError(f"Argument `a` is not a tree, it is of type {type(a)}")
@@ -68,7 +71,7 @@ def check_isomorphic(
 
     diff = diff_treestructure(a, b, require_names_equal=require_names_equal)
 
-    if diff:
+    if diff is not None:
         raise TreeIsomorphismError("DataTree objects are not isomorphic:\n" + diff)
 
 
