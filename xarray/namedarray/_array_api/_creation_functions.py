@@ -3,10 +3,12 @@ from __future__ import annotations
 from typing import Any, overload
 
 from xarray.namedarray._array_api._utils import (
+    _broadcast_dims,
     _get_data_namespace,
     _get_namespace,
     _get_namespace_dtype,
     _infer_dims,
+    _move_dims,
     _normalize_dimensions,
 )
 from xarray.namedarray._typing import (
@@ -407,11 +409,64 @@ def linspace(
 def meshgrid(
     *arrays: NamedArray[Any, Any], indexing: str = "xy"
 ) -> list[NamedArray[Any, Any]]:
+    """
+    Returns coordinate matrices from coordinate vectors.
+
+    Parameters
+    ----------
+    *arrays : NamedArray[Any, Any]
+        An arbitrary number of one-dimensional arrays representing grid coordinates.
+        Each array should have the same numeric data type.
+    indexing : str, optional
+        Cartesian 'xy' or matrix 'ij' indexing of output. If provided zero or one
+        one-dimensional vector(s) (i.e., the zero- and one-dimensional cases, respectively),
+        the indexing keyword has no effect and should be ignored. Default: 'xy'.
+
+
+    Examples
+    --------
+    >>> nx, ny = (3, 2)
+    >>> x = linspace(0, 1, nx, dims="x")
+    >>> meshgrid(x, indexing="xy")[0]
+    <xarray.NamedArray (x: 3)> Size: 24B
+    array([0. , 0.5, 1. ])
+    >>> y = linspace(0, 1, ny, dims="y")
+    >>> xv, yv = meshgrid(x, y, indexing="xy")
+    >>> xv
+    <xarray.NamedArray (y: 2, x: 3)> Size: 48B
+    array([[0. , 0.5, 1. ],
+           [0. , 0.5, 1. ]])
+    >>> yv
+    <xarray.NamedArray (y: 2, x: 3)> Size: 48B
+    array([[0., 0., 0.],
+           [1., 1., 1.]])
+
+    With matrix indexing
+
+    >>> nx, ny = (3, 2)
+    >>> x = linspace(0, 1, nx, dims="x")
+    >>> meshgrid(x, indexing="ij")[0]
+    <xarray.NamedArray (x: 3)> Size: 24B
+    array([0. , 0.5, 1. ])
+    >>> y = linspace(0, 1, ny, dims="y")
+    >>> xv, yv = meshgrid(x, y, indexing="ij")
+    >>> xv
+    <xarray.NamedArray (x: 3, y: 2)> Size: 48B
+    array([[0. , 0. ],
+           [0.5, 0.5],
+           [1. , 1. ]])
+    >>> yv
+    <xarray.NamedArray (x: 3, y: 2)> Size: 48B
+    array([[0., 1.],
+           [0., 1.],
+           [0., 1.]])
+    """
     arr = arrays[0]
     xp = _get_data_namespace(arr)
     _datas = xp.meshgrid(*[a._data for a in arrays], indexing=indexing)
-    # TODO: Can probably determine dim names from arrays, for now just default names:
-    _dims = _infer_dims(_datas[0].shape)
+    _dims, _ = _broadcast_dims(*arrays)
+    if indexing == "xy" and len(arrays) > 1:
+        _dims = _move_dims(_dims, 0, 1)
     return [arr._new(_dims, _data) for _data in _datas]
 
 

@@ -522,6 +522,8 @@ def _move_dims(dims: _Dims, source: _AxisLike, destination: _AxisLike) -> _Dims:
     ('z', 'y', 'x')
     >>> _move_dims(("x", "y", "z"), (0, 1, 2), (-1, -2, -3))
     ('z', 'y', 'x')
+    >>> _move_dims(("x", "y", "z"), 0, 1)
+    ('y', 'x', 'z')
     """
     _ndim = len(dims)
     _source = _normalize_axis_tuple(source, _ndim)
