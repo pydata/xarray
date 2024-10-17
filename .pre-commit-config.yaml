@@ -15,20 +15,15 @@ repos:
     # Ruff version.
     rev: 'v0.6.9'
     hooks:
+      - id: ruff-format
       - id: ruff
         args: ["--fix", "--show-fixes"]
-  # https://github.com/python/black#version-control-integration
-  - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.8.0
-    hooks:
-      - id: black-jupyter
   - repo: https://github.com/keewis/blackdoc
     rev: v0.3.9
     hooks:
       - id: blackdoc
         exclude: "generate_aggregations.py"
         additional_dependencies: ["black==24.8.0"]
-      - id: blackdoc-autoupdate-black
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.11.2
     hooks:

@@ -80,7 +80,7 @@ def backends_dict_from_pkg(
 
 
 def set_missing_parameters(
-    backend_entrypoints: dict[str, type[BackendEntrypoint]]
+    backend_entrypoints: dict[str, type[BackendEntrypoint]],
 ) -> None:
     for _, backend in backend_entrypoints.items():
         if backend.open_dataset_parameters is None:
@@ -89,7 +89,7 @@ def set_missing_parameters(
 
 
 def sort_backends(
-    backend_entrypoints: dict[str, type[BackendEntrypoint]]
+    backend_entrypoints: dict[str, type[BackendEntrypoint]],
 ) -> dict[str, type[BackendEntrypoint]]:
     ordered_backends_entrypoints = {}
     for be_name in STANDARD_BACKENDS_ORDER:

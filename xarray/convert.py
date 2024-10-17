@@ -1,5 +1,4 @@
-"""Functions for converting to and from xarray objects
-"""
+"""Functions for converting to and from xarray objects"""
 
 from collections import Counter
 

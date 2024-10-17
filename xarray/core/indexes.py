@@ -1768,7 +1768,7 @@ def indexes_equal(
 
 
 def indexes_all_equal(
-    elements: Sequence[tuple[Index, dict[Hashable, Variable]]]
+    elements: Sequence[tuple[Index, dict[Hashable, Variable]]],
 ) -> bool:
     """Check if indexes are all equal.
 

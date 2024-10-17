@@ -233,7 +233,7 @@ extend-exclude = [
 
 [tool.ruff.lint]
 # E402: module level import not at top of file
-# E501: line too long - let black worry about that
+# E501: line too long - let the formatter worry about that
 # E731: do not assign a lambda expression, use a def
 extend-safe-fixes = [
   "TID252", # absolute imports

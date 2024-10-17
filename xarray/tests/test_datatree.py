@@ -1031,7 +1031,6 @@ class TestAccess:
 
 
 class TestRepr:
-
     def test_repr_four_nodes(self) -> None:
         dt = DataTree.from_dict(
             {
@@ -1581,7 +1580,6 @@ class TestPipe:
 
 
 class TestEqualsAndIdentical:
-
     def test_minimal_variations(self):
         tree = DataTree.from_dict(
             {
@@ -1729,7 +1727,6 @@ class TestSubset:
 
 
 class TestIndexing:
-
     def test_isel_siblings(self) -> None:
         tree = DataTree.from_dict(
             {
@@ -1835,7 +1832,6 @@ class TestIndexing:
 
 
 class TestAggregations:
-
     def test_reduce_method(self) -> None:
         ds = xr.Dataset({"a": ("x", [False, True, False])})
         dt = DataTree.from_dict({"/": ds, "/results": ds})
@@ -2061,7 +2057,6 @@ class TestOps:
 
 
 class TestUFuncs:
-
     @pytest.mark.xfail(reason="__array_ufunc__ not implemented yet")
     def test_tree(self, create_test_datatree):
         dt = create_test_datatree()
@@ -2074,7 +2069,6 @@ class TestDocInsertion:
     """Tests map_over_datasets docstring injection."""
 
     def test_standard_doc(self):
-
         dataset_doc = dedent(
             """\
             Manually trigger loading and/or computation of this dataset's data

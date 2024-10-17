@@ -3,6 +3,7 @@
 publication date. Compare it against requirements/min-all-deps.yml to verify the
 policy on obsolete dependencies is being followed. Print a pretty report :)
 """
+
 from __future__ import annotations
 
 import itertools
@@ -16,7 +17,6 @@ from dateutil.relativedelta import relativedelta
 
 CHANNELS = ["conda-forge", "defaults"]
 IGNORE_DEPS = {
-    "black",
     "coveralls",
     "flake8",
     "hypothesis",
