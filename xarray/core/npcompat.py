@@ -35,6 +35,8 @@ from typing import Any
 try:
     # requires numpy>=2.0
     from numpy import isdtype  # type: ignore[attr-defined,unused-ignore]
+
+    HAS_STRING_DTYPE = True
 except ImportError:
     import numpy as np
     from numpy.typing import DTypeLike
@@ -71,3 +73,5 @@ except ImportError:
             return isinstance(dtype, translated_kinds)
         else:
             return any(np.issubdtype(dtype, k) for k in translated_kinds)
+
+    HAS_STRING_DTYPE = False

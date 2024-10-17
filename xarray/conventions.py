@@ -276,6 +276,9 @@ def decode_cf_variable(
         var = variables.ObjectVLenStringCoder().decode(var)
         original_dtype = var.dtype
 
+    if original_dtype.kind == "T":
+        var = variables.Numpy2StringDTypeCoder().decode(var)
+
     if mask_and_scale:
         for coder in [
             variables.CFMaskCoder(),

@@ -708,6 +708,19 @@ class ObjectVLenStringCoder(VariableCoder):
             return variable
 
 
+class Numpy2StringDTypeCoder(VariableCoder):
+    # Convert Numpy 2 StringDType arrays to object arrays for backwards compatibility
+    # TODO: remove this if / when we decide to allow StringDType arrays in Xarray
+    def encode(self):
+        raise NotImplementedError
+
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if variable.dtype.kind == "T":
+            return variable.astype(object)
+        else:
+            return variable
+
+
 class NativeEnumCoder(VariableCoder):
     """Encode Enum into variable dtype metadata."""
 
