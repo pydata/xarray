@@ -226,7 +226,14 @@ CombineAttrsOptions = Union[
 JoinOptions = Literal["outer", "inner", "left", "right", "exact", "override"]
 
 Interp1dOptions = Literal[
-    "linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"
+    "linear",
+    "nearest",
+    "zero",
+    "slinear",
+    "quadratic",
+    "cubic",
+    "quintic",
+    "polynomial",
 ]
 InterpolantOptions = Literal[
     "barycentric", "krogh", "pchip", "spline", "akima", "makima"
