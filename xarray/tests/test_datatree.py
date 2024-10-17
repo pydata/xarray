@@ -883,6 +883,48 @@ class TestTreeFromDict:
         with pytest.raises(TypeError):
             DataTree.from_dict(data)  # type: ignore[arg-type]
 
+    def test_relative_paths(self) -> None:
+        tree = DataTree.from_dict({".": None, "foo": None, "./bar": None, "x/y": None})
+        paths = [node.path for node in tree.subtree]
+        assert paths == [
+            "/",
+            "/foo",
+            "/bar",
+            "/x",
+            "/x/y",
+        ]
+
+    def test_root_keys(self):
+        ds = Dataset({"x": 1})
+        expected = DataTree(dataset=ds)
+
+        actual = DataTree.from_dict({"": ds})
+        assert_identical(actual, expected)
+
+        actual = DataTree.from_dict({".": ds})
+        assert_identical(actual, expected)
+
+        actual = DataTree.from_dict({"/": ds})
+        assert_identical(actual, expected)
+
+        actual = DataTree.from_dict({"./": ds})
+        assert_identical(actual, expected)
+
+        with pytest.raises(
+            ValueError, match="multiple entries found corresponding to the root node"
+        ):
+            DataTree.from_dict({"": ds, "/": ds})
+
+    def test_name(self):
+        tree = DataTree.from_dict({"/": None}, name="foo")
+        assert tree.name == "foo"
+
+        tree = DataTree.from_dict({"/": DataTree()}, name="foo")
+        assert tree.name == "foo"
+
+        tree = DataTree.from_dict({"/": DataTree(name="bar")}, name="foo")
+        assert tree.name == "foo"
+
 
 class TestDatasetView:
     def test_view_contents(self) -> None:
