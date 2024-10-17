@@ -23,13 +23,15 @@ New Features
 ~~~~~~~~~~~~
 - ``DataTree`` related functionality is now exposed in the main ``xarray`` public
   API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``, ``xarray.open_groups``,
-  ``xarray.map_over_subtree``, ``xarray.register_datatree_accessor`` and
+  ``xarray.map_over_datasets``, ``xarray.register_datatree_accessor`` and
   ``xarray.testing.assert_isomorphic``.
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_,
   `Eni Awowale <https://github.com/eni-awowale>`_,
   `Matt Savoie <https://github.com/flamingbear>`_,
   `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Tom Nicholas <https://github.com/TomNicholas>`_.
+- A migration guide for users of the prototype `xarray-contrib/datatree repository <https://github.com/xarray-contrib/datatree>`_ has been added, and can be found in the `DATATREE_MIGRATION_GUIDE.md` file in the repository root.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
   By `Eni Awowale <https://github.com/eni-awowale>`_.
 - Added support for vectorized interpolation using additional interpolators

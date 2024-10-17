@@ -687,7 +687,7 @@ For manipulating, traversing, navigating, or mapping over the tree structure.
    DataTree.relative_to
    DataTree.iter_lineage
    DataTree.find_common_ancestor
-   DataTree.map_over_subtree
+   DataTree.map_over_datasets
    DataTree.pipe
    DataTree.match
    DataTree.filter
@@ -849,20 +849,20 @@ Aggregate data in all nodes in the subtree simultaneously.
    DataTree.cumsum
    DataTree.cumprod
 
-.. ndarray methods
-.. ---------------
+ndarray methods
+---------------
 
-.. Methods copied from :py:class:`numpy.ndarray` objects, here applying to the data in all nodes in the subtree.
+Methods copied from :py:class:`numpy.ndarray` objects, here applying to the data in all nodes in the subtree.
 
-.. .. autosummary::
-..    :toctree: generated/
+.. autosummary::
+   :toctree: generated/
 
-..    DataTree.argsort
+   DataTree.argsort
+   DataTree.conj
+   DataTree.conjugate
+   DataTree.round
 ..    DataTree.astype
 ..    DataTree.clip
-..    DataTree.conj
-..    DataTree.conjugate
-..    DataTree.round
 ..    DataTree.rank
 
 .. Reshaping and reorganising
@@ -954,7 +954,7 @@ DataTree methods
 
    open_datatree
    open_groups
-   map_over_subtree
+   map_over_datasets
    DataTree.to_dict
    DataTree.to_netcdf
    DataTree.to_zarr
