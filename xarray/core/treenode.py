@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections
+import os.path
 import sys
 from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
@@ -415,6 +416,17 @@ class TreeNode(Generic[Tree]):
             queue.extend(node.children.values())
 
     @property
+    def subtree_with_paths(self: Tree) -> Iterator[tuple[str, Tree]]:
+        queue = collections.deque([("/", self)])
+        while queue:
+            path, node = queue.popleft()
+            yield path, node
+            queue.extend(
+                (os.path.join(path, name), child)
+                for name, child in node.children.items()
+            )
+
+    @property
     def descendants(self: Tree) -> tuple[Tree, ...]:
         """
         Child nodes and all their child nodes.
@@ -778,8 +790,17 @@ class NamedNode(TreeNode, Generic[Tree]):
         return NodePath(path_upwards)
 
 
-def zip_subtrees(*trees: AnyNamedNode) -> Iterator[tuple[AnyNamedNode, ...]]:
+def group_subtrees(
+    *trees: AnyNamedNode,
+) -> Iterator[tuple[str, tuple[AnyNamedNode, ...]]]:
     """Iterate over aligned subtrees in breadth-first order.
+
+    Example usage:
+
+        outputs = {}
+        for path, (node_a, node_b) in group_subtrees(tree_a, tree_b):
+            outputs[path] = f(node_a, node_b)
+        tree_out = DataTree.from_dict(outputs)
 
     Parameters:
     -----------
@@ -788,20 +809,26 @@ def zip_subtrees(*trees: AnyNamedNode) -> Iterator[tuple[AnyNamedNode, ...]]:
 
     Yields
     ------
-    Tuples of matching subtrees.
+    A tuple of the relative path and corresponding nodes for each subtree in the
+    inputs.
+
+    Raises
+    ------
+    ValueError
+        If trees are not isomorphic, i.e., they have different structures.
     """
     if not trees:
         raise TypeError("must pass at least one tree object")
 
     # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
-    queue = collections.deque([trees])
+    queue = collections.deque([("/", trees)])
 
     while queue:
-        active_nodes = queue.popleft()
+        path, active_nodes = queue.popleft()
 
         # yield before raising an error, in case the caller chooses to exit
         # iteration early
-        yield active_nodes
+        yield path, active_nodes
 
         first_node = active_nodes[0]
         if any(
@@ -811,9 +838,16 @@ def zip_subtrees(*trees: AnyNamedNode) -> Iterator[tuple[AnyNamedNode, ...]]:
             child_summary = " vs ".join(
                 str(list(node.children)) for node in active_nodes
             )
-            raise ValueError(
-                f"children at {first_node.path!r} do not match: {child_summary}"
-            )
+            raise ValueError(f"children at {path!r} do not match: {child_summary}")
 
         for name in first_node.children:
-            queue.append(tuple(node.children[name] for node in active_nodes))
+            child_path = os.path.join(path, name)
+            child_nodes = tuple(node.children[name] for node in active_nodes)
+            queue.append((child_path, child_nodes))
+
+
+def zip_subtrees(
+    *trees: AnyNamedNode,
+) -> Iterator[tuple[AnyNamedNode, ...]]:
+    for _, nodes in group_subtrees(*trees):
+        yield nodes
