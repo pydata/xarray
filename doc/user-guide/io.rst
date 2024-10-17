@@ -19,18 +19,9 @@ format (recommended).
 
     np.random.seed(123456)
 
-    ds = xr.Dataset(
-        {"foo": (("x", "y"), np.random.rand(4, 5))},
-    )
+You can read different types of files in `xr.open_dataset` by specifying the engine to be used:
 
-    ds.to_netcdf("example.nc")
-
-You can `read different types of files <https://docs.xarray.dev/en/stable/user-guide/io.html>`_
-in `xr.open_dataset` by specifying the engine to be used:
-
-.. ipython:: python
-
-    import xarray as xr
+.. code:: python
 
     xr.open_dataset("example.nc", engine="netcdf4")
 
