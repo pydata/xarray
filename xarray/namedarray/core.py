@@ -678,7 +678,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         value: int | float | bool | NamedArray,
         /,
     ) -> None:
-
         if isinstance(key, NamedArray):
             key = key._data
         self._data.__setitem__(key, self._maybe_asarray(value)._data)
@@ -708,7 +707,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return add(self._maybe_asarray(other), self)
 
     def __iand__(self, other: int | bool | NamedArray, /):
-
         self._data &= self._maybe_asarray(other)._data
         return self
 
@@ -791,7 +789,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return bitwise_right_shift(self._maybe_asarray(other), self)
 
     def __isub__(self, other: int | float | NamedArray, /):
-
         self._data -= self._maybe_asarray(other)._data
         return self
 
@@ -810,7 +807,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return divide(self._maybe_asarray(other), self)
 
     def __ixor__(self, other: int | bool | NamedArray, /):
-
         self._data ^= self._maybe_asarray(other)._data
         return self
 

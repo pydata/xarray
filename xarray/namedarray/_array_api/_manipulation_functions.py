@@ -626,7 +626,7 @@ def _broadcast_arrays(*arrays: NamedArray[Any, Any]) -> NamedArray[Any, Any]:
 
 
 def _broadcast_arrays_with_minimal_size(
-    *arrays: NamedArray[Any, Any]
+    *arrays: NamedArray[Any, Any],
 ) -> NamedArray[Any, Any]:
     """
     Given any number of variables, return variables with matching dimensions.
