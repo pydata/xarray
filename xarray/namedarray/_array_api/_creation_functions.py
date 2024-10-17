@@ -598,6 +598,17 @@ def zeros_like(
     dtype: _DType | None = None,
     device: _Device | None = None,
 ) -> NamedArray[_ShapeType, _DType]:
+    """
+    Returns a new array filled with zeros and having the same shape as an input array x.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> zeros_like(NamedArray(("x", "y"), np.array([[1, 2, 3], [4, 5, 6]])))
+    <xarray.NamedArray (x: 2, y: 3)> Size: 48B
+    array([[0, 0, 0],
+           [0, 0, 0]])
+    """
     xp = _get_data_namespace(x)
     _data = xp.zeros_like(x._data, dtype=dtype, device=device)
     return x._new(data=_data)
