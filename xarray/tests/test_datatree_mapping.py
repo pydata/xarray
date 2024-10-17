@@ -2,13 +2,12 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.core.datatree import DataTree
 from xarray.core.datatree_mapping import (
     TreeIsomorphismError,
     check_isomorphic,
-    map_over_subtree,
+    map_over_datasets,
 )
-from xarray.testing import assert_equal
+from xarray.testing import assert_equal, assert_identical
 
 empty = xr.Dataset()
 
@@ -19,8 +18,8 @@ class TestCheckTreesIsomorphic:
             check_isomorphic("s", 1)  # type: ignore[arg-type]
 
     def test_different_widths(self):
-        dt1 = DataTree.from_dict(d={"a": empty})
-        dt2 = DataTree.from_dict(d={"b": empty, "c": empty})
+        dt1 = xr.DataTree.from_dict({"a": empty})
+        dt2 = xr.DataTree.from_dict({"b": empty, "c": empty})
         expected_err_str = (
             "Number of children on node '/' of the left object: 1\n"
             "Number of children on node '/' of the right object: 2"
@@ -29,8 +28,8 @@ class TestCheckTreesIsomorphic:
             check_isomorphic(dt1, dt2)
 
     def test_different_heights(self):
-        dt1 = DataTree.from_dict({"a": empty})
-        dt2 = DataTree.from_dict({"b": empty, "b/c": empty})
+        dt1 = xr.DataTree.from_dict({"a": empty})
+        dt2 = xr.DataTree.from_dict({"b": empty, "b/c": empty})
         expected_err_str = (
             "Number of children on node '/a' of the left object: 0\n"
             "Number of children on node '/b' of the right object: 1"
@@ -39,8 +38,8 @@ class TestCheckTreesIsomorphic:
             check_isomorphic(dt1, dt2)
 
     def test_names_different(self):
-        dt1 = DataTree.from_dict({"a": xr.Dataset()})
-        dt2 = DataTree.from_dict({"b": empty})
+        dt1 = xr.DataTree.from_dict({"a": xr.Dataset()})
+        dt2 = xr.DataTree.from_dict({"b": empty})
         expected_err_str = (
             "Node '/a' in the left object has name 'a'\n"
             "Node '/b' in the right object has name 'b'"
@@ -49,40 +48,51 @@ class TestCheckTreesIsomorphic:
             check_isomorphic(dt1, dt2, require_names_equal=True)
 
     def test_isomorphic_names_equal(self):
-        dt1 = DataTree.from_dict({"a": empty, "b": empty, "b/c": empty, "b/d": empty})
-        dt2 = DataTree.from_dict({"a": empty, "b": empty, "b/c": empty, "b/d": empty})
+        dt1 = xr.DataTree.from_dict(
+            {"a": empty, "b": empty, "b/c": empty, "b/d": empty}
+        )
+        dt2 = xr.DataTree.from_dict(
+            {"a": empty, "b": empty, "b/c": empty, "b/d": empty}
+        )
         check_isomorphic(dt1, dt2, require_names_equal=True)
 
     def test_isomorphic_ordering(self):
-        dt1 = DataTree.from_dict({"a": empty, "b": empty, "b/d": empty, "b/c": empty})
-        dt2 = DataTree.from_dict({"a": empty, "b": empty, "b/c": empty, "b/d": empty})
+        dt1 = xr.DataTree.from_dict(
+            {"a": empty, "b": empty, "b/d": empty, "b/c": empty}
+        )
+        dt2 = xr.DataTree.from_dict(
+            {"a": empty, "b": empty, "b/c": empty, "b/d": empty}
+        )
         check_isomorphic(dt1, dt2, require_names_equal=False)
 
     def test_isomorphic_names_not_equal(self):
-        dt1 = DataTree.from_dict({"a": empty, "b": empty, "b/c": empty, "b/d": empty})
-        dt2 = DataTree.from_dict({"A": empty, "B": empty, "B/C": empty, "B/D": empty})
+        dt1 = xr.DataTree.from_dict(
+            {"a": empty, "b": empty, "b/c": empty, "b/d": empty}
+        )
+        dt2 = xr.DataTree.from_dict(
+            {"A": empty, "B": empty, "B/C": empty, "B/D": empty}
+        )
         check_isomorphic(dt1, dt2)
 
     def test_not_isomorphic_complex_tree(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
-        dt2["set1/set2/extra"] = DataTree(name="extra")
+        dt2["set1/set2/extra"] = xr.DataTree(name="extra")
         with pytest.raises(TreeIsomorphismError, match="/set1/set2"):
             check_isomorphic(dt1, dt2)
 
     def test_checking_from_root(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
-        real_root: DataTree = DataTree(name="real root")
-        dt2.name = "not_real_root"
-        dt2.parent = real_root
+        real_root: xr.DataTree = xr.DataTree(name="real root")
+        real_root["not_real_root"] = dt2
         with pytest.raises(TreeIsomorphismError):
-            check_isomorphic(dt1, dt2, check_from_root=True)
+            check_isomorphic(dt1, real_root, check_from_root=True)
 
 
 class TestMapOverSubTree:
     def test_no_trees_passed(self):
-        @map_over_subtree
+        @map_over_datasets
         def times_ten(ds):
             return 10.0 * ds
 
@@ -92,9 +102,9 @@ class TestMapOverSubTree:
     def test_not_isomorphic(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
-        dt2["set1/set2/extra"] = DataTree(name="extra")
+        dt2["set1/set2/extra"] = xr.DataTree(name="extra")
 
-        @map_over_subtree
+        @map_over_datasets
         def times_ten(ds1, ds2):
             return ds1 * ds2
 
@@ -105,7 +115,7 @@ class TestMapOverSubTree:
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
 
-        @map_over_subtree
+        @map_over_datasets
         def bad_func(ds1, ds2):
             return None
 
@@ -115,7 +125,7 @@ class TestMapOverSubTree:
     def test_single_dt_arg(self, create_test_datatree):
         dt = create_test_datatree()
 
-        @map_over_subtree
+        @map_over_datasets
         def times_ten(ds):
             return 10.0 * ds
 
@@ -126,7 +136,7 @@ class TestMapOverSubTree:
     def test_single_dt_arg_plus_args_and_kwargs(self, create_test_datatree):
         dt = create_test_datatree()
 
-        @map_over_subtree
+        @map_over_datasets
         def multiply_then_add(ds, times, add=0.0):
             return (times * ds) + add
 
@@ -138,7 +148,7 @@ class TestMapOverSubTree:
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
 
-        @map_over_subtree
+        @map_over_datasets
         def add(ds1, ds2):
             return ds1 + ds2
 
@@ -150,7 +160,7 @@ class TestMapOverSubTree:
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
 
-        @map_over_subtree
+        @map_over_datasets
         def add(ds1, value=0.0):
             return ds1 + value
 
@@ -161,7 +171,7 @@ class TestMapOverSubTree:
     def test_return_multiple_dts(self, create_test_datatree):
         dt = create_test_datatree()
 
-        @map_over_subtree
+        @map_over_datasets
         def minmax(ds):
             return ds.min(), ds.max()
 
@@ -174,7 +184,7 @@ class TestMapOverSubTree:
     def test_return_wrong_type(self, simple_datatree):
         dt1 = simple_datatree
 
-        @map_over_subtree
+        @map_over_datasets
         def bad_func(ds1):
             return "string"
 
@@ -184,7 +194,7 @@ class TestMapOverSubTree:
     def test_return_tuple_of_wrong_types(self, simple_datatree):
         dt1 = simple_datatree
 
-        @map_over_subtree
+        @map_over_datasets
         def bad_func(ds1):
             return xr.Dataset(), "string"
 
@@ -195,7 +205,7 @@ class TestMapOverSubTree:
     def test_return_inconsistent_number_of_results(self, simple_datatree):
         dt1 = simple_datatree
 
-        @map_over_subtree
+        @map_over_datasets
         def bad_func(ds):
             # Datasets in simple_datatree have different numbers of dims
             # TODO need to instead return different numbers of Dataset objects for this test to catch the intended error
@@ -207,7 +217,7 @@ class TestMapOverSubTree:
     def test_wrong_number_of_arguments_for_func(self, simple_datatree):
         dt = simple_datatree
 
-        @map_over_subtree
+        @map_over_datasets
         def times_ten(ds):
             return 10.0 * ds
 
@@ -219,7 +229,7 @@ class TestMapOverSubTree:
     def test_map_single_dataset_against_whole_tree(self, create_test_datatree):
         dt = create_test_datatree()
 
-        @map_over_subtree
+        @map_over_datasets
         def nodewise_merge(node_ds, fixed_ds):
             return xr.merge([node_ds, fixed_ds])
 
@@ -240,7 +250,7 @@ class TestMapOverSubTree:
             return times * ds + add
 
         expected = create_test_datatree(modify=lambda ds: (10.0 * ds) + 2.0)
-        result_tree = dt.map_over_subtree(multiply_then_add, 10.0, add=2.0)
+        result_tree = dt.map_over_datasets(multiply_then_add, 10.0, add=2.0)
         assert_equal(result_tree, expected)
 
     def test_discard_ancestry(self, create_test_datatree):
@@ -248,13 +258,13 @@ class TestMapOverSubTree:
         dt = create_test_datatree()
         subtree = dt["set1"]
 
-        @map_over_subtree
+        @map_over_datasets
         def times_ten(ds):
             return 10.0 * ds
 
         expected = create_test_datatree(modify=lambda ds: 10.0 * ds)["set1"]
         result_tree = times_ten(subtree)
-        assert_equal(result_tree, expected, from_root=False)
+        assert_equal(result_tree, expected)
 
     def test_skip_empty_nodes_with_attrs(self, create_test_datatree):
         # inspired by xarray-datatree GH262
@@ -266,7 +276,7 @@ class TestMapOverSubTree:
             assert len(ds.variables) != 0
             return ds
 
-        dt.map_over_subtree(check_for_data)
+        dt.map_over_datasets(check_for_data)
 
     def test_keep_attrs_on_empty_nodes(self, create_test_datatree):
         # GH278
@@ -276,7 +286,7 @@ class TestMapOverSubTree:
         def empty_func(ds):
             return ds
 
-        result = dt.map_over_subtree(empty_func)
+        result = dt.map_over_datasets(empty_func)
         assert result["set1/set2"].attrs == dt["set1/set2"].attrs
 
     @pytest.mark.xfail(
@@ -294,7 +304,18 @@ class TestMapOverSubTree:
         with pytest.raises(
             ValueError, match="Raised whilst mapping function over node /set1"
         ):
-            dt.map_over_subtree(fail_on_specific_node)
+            dt.map_over_datasets(fail_on_specific_node)
+
+    def test_inherited_coordinates_with_index(self):
+        root = xr.Dataset(coords={"x": [1, 2]})
+        child = xr.Dataset({"foo": ("x", [0, 1])})  # no coordinates
+        tree = xr.DataTree.from_dict({"/": root, "/child": child})
+        actual = tree.map_over_datasets(lambda ds: ds)  # identity
+        assert isinstance(actual, xr.DataTree)
+        assert_identical(tree, actual)
+
+        actual_child = actual.children["child"].to_dataset(inherit=False)
+        assert_identical(actual_child, child)
 
 
 class TestMutableOperations:
@@ -312,16 +333,16 @@ class TestMutableOperations:
             dims=["x", "y", "time"],
             coords={"area": (["x", "y"], np.random.rand(2, 6))},
         ).to_dataset(name="data")
-        dt = DataTree.from_dict({"a": a, "b": b})
+        dt = xr.DataTree.from_dict({"a": a, "b": b})
 
         def weighted_mean(ds):
             return ds.weighted(ds.area).mean(["x", "y"])
 
-        dt.map_over_subtree(weighted_mean)
+        dt.map_over_datasets(weighted_mean)
 
     def test_alter_inplace_forbidden(self):
-        simpsons = DataTree.from_dict(
-            d={
+        simpsons = xr.DataTree.from_dict(
+            {
                 "/": xr.Dataset({"age": 83}),
                 "/Herbert": xr.Dataset({"age": 40}),
                 "/Homer": xr.Dataset({"age": 39}),
@@ -338,10 +359,10 @@ class TestMutableOperations:
             return ds
 
         with pytest.raises(AttributeError):
-            simpsons.map_over_subtree(fast_forward, years=10)
+            simpsons.map_over_datasets(fast_forward, years=10)
 
 
 @pytest.mark.xfail
 class TestMapOverSubTreeInplace:
-    def test_map_over_subtree_inplace(self):
+    def test_map_over_datasets_inplace(self):
         raise NotImplementedError

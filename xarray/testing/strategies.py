@@ -1,5 +1,5 @@
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Protocol, Union, overload
+from typing import TYPE_CHECKING, Any, Protocol, overload
 
 try:
     import hypothesis.strategies as st
@@ -108,7 +108,7 @@ def names() -> st.SearchStrategy[str]:
 
 def dimension_names(
     *,
-    name_strategy=names(),
+    name_strategy=None,
     min_dims: int = 0,
     max_dims: int = 3,
 ) -> st.SearchStrategy[list[Hashable]]:
@@ -126,6 +126,8 @@ def dimension_names(
     max_dims
         Maximum number of dimensions in generated list.
     """
+    if name_strategy is None:
+        name_strategy = names()
 
     return st.lists(
         elements=name_strategy,
@@ -137,11 +139,11 @@ def dimension_names(
 
 def dimension_sizes(
     *,
-    dim_names: st.SearchStrategy[Hashable] = names(),
+    dim_names: st.SearchStrategy[Hashable] = names(),  # noqa: B008
     min_dims: int = 0,
     max_dims: int = 3,
     min_side: int = 1,
-    max_side: Union[int, None] = None,
+    max_side: int | None = None,
 ) -> st.SearchStrategy[Mapping[Hashable, int]]:
     """
     Generates an arbitrary mapping from dimension names to lengths.
@@ -220,17 +222,17 @@ def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
     )
 
 
+ATTRS = attrs()
+
+
 @st.composite
 def variables(
     draw: st.DrawFn,
     *,
-    array_strategy_fn: Union[ArrayStrategyFn, None] = None,
-    dims: Union[
-        st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]],
-        None,
-    ] = None,
-    dtype: st.SearchStrategy[np.dtype] = supported_dtypes(),
-    attrs: st.SearchStrategy[Mapping] = attrs(),
+    array_strategy_fn: ArrayStrategyFn | None = None,
+    dims: st.SearchStrategy[Sequence[Hashable] | Mapping[Hashable, int]] | None = None,
+    dtype: st.SearchStrategy[np.dtype] | None = None,
+    attrs: st.SearchStrategy[Mapping] = ATTRS,
 ) -> xr.Variable:
     """
     Generates arbitrary xarray.Variable objects.
@@ -313,6 +315,8 @@ def variables(
     --------
     :ref:`testing.hypothesis`_
     """
+    if dtype is None:
+        dtype = supported_dtypes()
 
     if not isinstance(dims, st.SearchStrategy) and dims is not None:
         raise InvalidArgument(
@@ -354,7 +358,7 @@ def variables(
             valid_shapes = npst.array_shapes(min_dims=len(_dims), max_dims=len(_dims))
             _shape = draw(valid_shapes)
             array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
-        elif isinstance(_dims, (Mapping, dict)):
+        elif isinstance(_dims, Mapping | dict):
             # should be a mapping of form {dim_names: lengths}
             dim_names, _shape = list(_dims.keys()), tuple(_dims.values())
             array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
@@ -394,7 +398,7 @@ def unique_subset_of(
     objs: Sequence[Hashable],
     *,
     min_size: int = 0,
-    max_size: Union[int, None] = None,
+    max_size: int | None = None,
 ) -> st.SearchStrategy[Sequence[Hashable]]: ...
 
 
@@ -403,18 +407,18 @@ def unique_subset_of(
     objs: Mapping[Hashable, Any],
     *,
     min_size: int = 0,
-    max_size: Union[int, None] = None,
+    max_size: int | None = None,
 ) -> st.SearchStrategy[Mapping[Hashable, Any]]: ...
 
 
 @st.composite
 def unique_subset_of(
     draw: st.DrawFn,
-    objs: Union[Sequence[Hashable], Mapping[Hashable, Any]],
+    objs: Sequence[Hashable] | Mapping[Hashable, Any],
     *,
     min_size: int = 0,
-    max_size: Union[int, None] = None,
-) -> Union[Sequence[Hashable], Mapping[Hashable, Any]]:
+    max_size: int | None = None,
+) -> Sequence[Hashable] | Mapping[Hashable, Any]:
     """
     Return a strategy which generates a unique subset of the given objects.
 

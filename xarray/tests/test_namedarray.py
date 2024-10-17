@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import copy
+import sys
 from abc import abstractmethod
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
 import numpy as np
 import pytest
+from packaging.version import Version
 
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.namedarray._typing import (
@@ -52,8 +54,13 @@ class CustomArrayBase(Generic[_ShapeType_co, _DType_co]):
 class CustomArray(
     CustomArrayBase[_ShapeType_co, _DType_co], Generic[_ShapeType_co, _DType_co]
 ):
-    def __array__(self) -> np.ndarray[Any, np.dtype[np.generic]]:
-        return np.array(self.array)
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray[Any, np.dtype[np.generic]]:
+        if Version(np.__version__) >= Version("2.0.0"):
+            return np.asarray(self.array, dtype=dtype, copy=copy)
+        else:
+            return np.asarray(self.array, dtype=dtype)
 
 
 class CustomArrayIndexable(
@@ -86,7 +93,29 @@ def check_duck_array_typevar(a: duckarray[Any, _DType]) -> duckarray[Any, _DType
     if isinstance(b, _arrayfunction_or_api):
         return b
     else:
-        raise TypeError(f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi")
+        missing_attrs = ""
+        actual_attrs = set(dir(b))
+        for t in _arrayfunction_or_api:
+            if sys.version_info >= (3, 13):
+                # https://github.com/python/cpython/issues/104873
+                from typing import get_protocol_members
+
+                expected_attrs = get_protocol_members(t)
+            elif sys.version_info >= (3, 12):
+                expected_attrs = t.__protocol_attrs__
+            else:
+                from typing import _get_protocol_attrs  # type: ignore[attr-defined]
+
+                expected_attrs = _get_protocol_attrs(t)
+
+            missing_attrs_ = expected_attrs - actual_attrs
+            if missing_attrs_:
+                missing_attrs += f"{t.__name__} - {missing_attrs_}\n"
+        raise TypeError(
+            f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi. "
+            "Missing following attrs:\n"
+            f"{missing_attrs}"
+        )
 
 
 class NamedArraySubclassobjects:
@@ -561,3 +590,15 @@ class TestNamedArray(NamedArraySubclassobjects):
     def test_warn_on_repeated_dimension_names(self) -> None:
         with pytest.warns(UserWarning, match="Duplicate dimension names"):
             NamedArray(("x", "x"), np.arange(4).reshape(2, 2))
+
+
+def test_repr() -> None:
+    x: NamedArray[Any, np.dtype[np.uint64]]
+    x = NamedArray(("x",), np.array([0], dtype=np.uint64))
+
+    # Reprs should not crash:
+    r = x.__repr__()
+    x._repr_html_()
+
+    # Basic comparison:
+    assert r == "<xarray.NamedArray (x: 1)> Size: 8B\narray([0], dtype=uint64)"

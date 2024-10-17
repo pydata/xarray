@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import functools
 import sys
+from collections.abc import Callable
 from itertools import repeat
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
@@ -55,6 +56,9 @@ def check_isomorphic(
         Also optionally raised if their structure is isomorphic, but the names of any two
         respective nodes are not equal.
     """
+    # TODO: remove require_names_equal and check_from_root. Instead, check that
+    # all child nodes match, in any order, which will suffice once
+    # map_over_datasets switches to use zip_subtrees.
 
     if not isinstance(a, TreeNode):
         raise TypeError(f"Argument `a` is not a tree, it is of type {type(a)}")
@@ -67,11 +71,11 @@ def check_isomorphic(
 
     diff = diff_treestructure(a, b, require_names_equal=require_names_equal)
 
-    if diff:
+    if diff is not None:
         raise TreeIsomorphismError("DataTree objects are not isomorphic:\n" + diff)
 
 
-def map_over_subtree(func: Callable) -> Callable:
+def map_over_datasets(func: Callable) -> Callable:
     """
     Decorator which turns a function which acts on (and returns) Datasets into one which acts on and returns DataTrees.
 
@@ -98,10 +102,10 @@ def map_over_subtree(func: Callable) -> Callable:
         Function will not be applied to any nodes without datasets.
     *args : tuple, optional
         Positional arguments passed on to `func`. If DataTrees any data-containing nodes will be converted to Datasets
-        via `.ds`.
+        via `.dataset`.
     **kwargs : Any
         Keyword arguments passed on to `func`. If DataTrees any data-containing nodes will be converted to Datasets
-        via `.ds`.
+        via `.dataset`.
 
     Returns
     -------
@@ -111,8 +115,8 @@ def map_over_subtree(func: Callable) -> Callable:
 
     See also
     --------
-    DataTree.map_over_subtree
-    DataTree.map_over_subtree_inplace
+    DataTree.map_over_datasets
+    DataTree.map_over_datasets_inplace
     DataTree.subtree
     """
 
@@ -121,7 +125,7 @@ def map_over_subtree(func: Callable) -> Callable:
     # TODO inspect function to work out immediately if the wrong number of arguments were passed for it?
 
     @functools.wraps(func)
-    def _map_over_subtree(*args, **kwargs) -> DataTree | tuple[DataTree, ...]:
+    def _map_over_datasets(*args, **kwargs) -> DataTree | tuple[DataTree, ...]:
         """Internal function which maps func over every node in tree, returning a tree of the results."""
         from xarray.core.datatree import DataTree
 
@@ -156,17 +160,20 @@ def map_over_subtree(func: Callable) -> Callable:
             first_tree.subtree,
             *args_as_tree_length_iterables,
             *list(kwargs_as_tree_length_iterables.values()),
+            strict=False,
         ):
             node_args_as_datasetviews = [
-                a.ds if isinstance(a, DataTree) else a for a in all_node_args[:n_args]
+                a.dataset if isinstance(a, DataTree) else a
+                for a in all_node_args[:n_args]
             ]
             node_kwargs_as_datasetviews = dict(
                 zip(
                     [k for k in kwargs_as_tree_length_iterables.keys()],
                     [
-                        v.ds if isinstance(v, DataTree) else v
+                        v.dataset if isinstance(v, DataTree) else v
                         for v in all_node_args[n_args:]
                     ],
+                    strict=True,
                 )
             )
             func_with_error_context = _handle_errors_with_path_context(
@@ -180,7 +187,7 @@ def map_over_subtree(func: Callable) -> Callable:
                 )
             elif node_of_first_tree.has_attrs:
                 # propagate attrs
-                results = node_of_first_tree.ds
+                results = node_of_first_tree.dataset
             else:
                 # nothing to propagate so use fastpath to create empty node in new tree
                 results = None
@@ -223,7 +230,7 @@ def map_over_subtree(func: Callable) -> Callable:
         else:
             return tuple(result_trees)
 
-    return _map_over_subtree
+    return _map_over_datasets
 
 
 def _handle_errors_with_path_context(path: str):
@@ -257,11 +264,11 @@ def _check_single_set_return_values(
     path_to_node: str, obj: Dataset | DataArray | tuple[Dataset | DataArray]
 ):
     """Check types returned from single evaluation of func, and return number of return values received from func."""
-    if isinstance(obj, (Dataset, DataArray)):
+    if isinstance(obj, Dataset | DataArray):
         return 1
     elif isinstance(obj, tuple):
         for r in obj:
-            if not isinstance(r, (Dataset, DataArray)):
+            if not isinstance(r, Dataset | DataArray):
                 raise TypeError(
                     f"One of the results of calling func on datasets on the nodes at position {path_to_node} is "
                     f"of type {type(r)}, not Dataset or DataArray."

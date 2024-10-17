@@ -2,18 +2,24 @@ from __future__ import annotations
 
 import datetime
 import warnings
-from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import (
+    Callable,
+    Hashable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from functools import partial
 from os import PathLike
+from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     Literal,
     NoReturn,
     TypeVar,
-    Union,
     overload,
 )
 
@@ -41,6 +47,7 @@ from xarray.core.coordinates import (
     create_coords_with_default_indexes,
 )
 from xarray.core.dataset import Dataset
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.formatting import format_item
 from xarray.core.indexes import (
     Index,
@@ -62,7 +69,7 @@ from xarray.core.types import (
 )
 from xarray.core.utils import (
     Default,
-    HybridMappingProxy,
+    FilteredMapping,
     ReprObject,
     _default,
     either_dict_or_kwargs,
@@ -88,7 +95,6 @@ if TYPE_CHECKING:
     from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.groupby import DataArrayGroupBy
-    from xarray.core.groupers import Grouper, Resampler
     from xarray.core.resample import DataArrayResample
     from xarray.core.rolling import DataArrayCoarsen, DataArrayRolling
     from xarray.core.types import (
@@ -98,6 +104,7 @@ if TYPE_CHECKING:
         Dims,
         ErrorOptions,
         ErrorOptionsWithWarn,
+        GroupInput,
         InterpOptions,
         PadModeOptions,
         PadReflectOptions,
@@ -105,19 +112,22 @@ if TYPE_CHECKING:
         QueryEngineOptions,
         QueryParserOptions,
         ReindexMethodOptions,
+        ResampleCompatible,
         Self,
         SideOptions,
-        T_Chunks,
+        T_ChunkDimFreq,
+        T_ChunksFreq,
         T_Xarray,
     )
     from xarray.core.weighted import DataArrayWeighted
+    from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
-    T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
+    T_XarrayOther = TypeVar("T_XarrayOther", bound="DataArray" | Dataset)
 
 
 def _check_coords_dims(shape, coords, dim):
-    sizes = dict(zip(dim, shape))
+    sizes = dict(zip(dim, shape, strict=True))
     for k, v in coords.items():
         if any(d not in dim for d in v.dims):
             raise ValueError(
@@ -166,9 +176,9 @@ def _infer_coords_and_dims(
             if utils.is_dict_like(coords):
                 dims = list(coords.keys())
             else:
-                for n, (dim, coord) in enumerate(zip(dims, coords)):
+                for n, (dim, coord) in enumerate(zip(dims, coords, strict=True)):
                     coord = as_variable(
-                        coord, name=dims[n], auto_convert=False
+                        coord, name=dim, auto_convert=False
                     ).to_index_variable()
                     dims[n] = coord.name
     dims_tuple = tuple(dims)
@@ -193,7 +203,7 @@ def _infer_coords_and_dims(
                 if new_coords[k].dims == (k,):
                     new_coords[k] = new_coords[k].to_index_variable()
         elif coords is not None:
-            for dim, coord in zip(dims_tuple, coords):
+            for dim, coord in zip(dims_tuple, coords, strict=True):
                 var = as_variable(coord, name=dim, auto_convert=False)
                 var.dims = (dim,)
                 new_coords[dim] = var.to_index_variable()
@@ -245,14 +255,14 @@ class _LocIndexer(Generic[T_DataArray]):
         if not utils.is_dict_like(key):
             # expand the indexer so we can handle Ellipsis
             labels = indexing.expanded_indexer(key, self.data_array.ndim)
-            key = dict(zip(self.data_array.dims, labels))
+            key = dict(zip(self.data_array.dims, labels, strict=True))
         return self.data_array.sel(key)
 
     def __setitem__(self, key, value) -> None:
         if not utils.is_dict_like(key):
             # expand the indexer so we can handle Ellipsis
             labels = indexing.expanded_indexer(key, self.data_array.ndim)
-            key = dict(zip(self.data_array.dims, labels))
+            key = dict(zip(self.data_array.dims, labels, strict=True))
 
         dim_indexers = map_index_queries(self.data_array, key).dim_indexers
         self.data_array[dim_indexers] = value
@@ -432,7 +442,7 @@ class DataArray(
         name: Hashable | None = None,
         attrs: Mapping | None = None,
         # internal parameters
-        indexes: Mapping[Any, Index] | None = None,
+        indexes: Mapping[Hashable, Index] | None = None,
         fastpath: bool = False,
     ) -> None:
         if fastpath:
@@ -455,7 +465,7 @@ class DataArray(
                     coords = [data.index]
                 elif isinstance(data, pd.DataFrame):
                     coords = [data.index, data.columns]
-                elif isinstance(data, (pd.Index, IndexVariable)):
+                elif isinstance(data, pd.Index | IndexVariable):
                     coords = [data]
 
             if dims is None:
@@ -480,7 +490,7 @@ class DataArray(
         assert isinstance(coords, dict)
         self._coords = coords
         self._name = name
-        self._indexes = indexes  # type: ignore[assignment]
+        self._indexes = dict(indexes)
 
         self._close = None
 
@@ -525,12 +535,12 @@ class DataArray(
         variable: Variable,
         name: Hashable | None | Default = _default,
     ) -> Self:
-        if variable.dims == self.dims and variable.shape == self.shape:
+        if self.sizes == variable.sizes:
             coords = self._coords.copy()
             indexes = self._indexes
-        elif variable.dims == self.dims:
+        elif set(self.dims) == set(variable.dims):
             # Shape has changed (e.g. from reduce(..., keepdims=True)
-            new_sizes = dict(zip(self.dims, variable.shape))
+            new_sizes = dict(zip(self.dims, variable.shape, strict=True))
             coords = {
                 k: v
                 for k, v in self._coords.items()
@@ -869,7 +879,7 @@ class DataArray(
         if utils.is_dict_like(key):
             return key
         key = indexing.expanded_indexer(key, self.ndim)
-        return dict(zip(self.dims, key))
+        return dict(zip(self.dims, key, strict=True))
 
     def _getitem_coord(self, key: Any) -> Self:
         from xarray.core.dataset import _get_virtual_variable
@@ -877,7 +887,7 @@ class DataArray(
         try:
             var = self._coords[key]
         except KeyError:
-            dim_sizes = dict(zip(self.dims, self.shape))
+            dim_sizes = dict(zip(self.dims, self.shape, strict=True))
             _, key, var = _get_virtual_variable(self._coords, key, dim_sizes)
 
         return self._replace_maybe_drop_dims(var, name=key)
@@ -919,11 +929,10 @@ class DataArray(
     @property
     def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for key-completion"""
-        yield HybridMappingProxy(keys=self._coords, mapping=self.coords)
+        yield FilteredMapping(keys=self._coords, mapping=self.coords)
 
         # virtual coordinates
-        # uses empty dict -- everything here can already be found in self.coords.
-        yield HybridMappingProxy(keys=self.dims, mapping={})
+        yield FilteredMapping(keys=self.dims, mapping=self.coords)
 
     def __contains__(self, key: Any) -> bool:
         return key in self.data
@@ -954,7 +963,8 @@ class DataArray(
 
     def reset_encoding(self) -> Self:
         warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead"
+            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
+            stacklevel=2,
         )
         return self.drop_encoding()
 
@@ -1351,7 +1361,7 @@ class DataArray(
     @_deprecate_positional_args("v2023.10.0")
     def chunk(
         self,
-        chunks: T_Chunks = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        chunks: T_ChunksFreq = {},  # noqa: B006  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         *,
         name_prefix: str = "xarray-",
         token: str | None = None,
@@ -1359,7 +1369,7 @@ class DataArray(
         inline_array: bool = False,
         chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs=None,
-        **chunks_kwargs: Any,
+        **chunks_kwargs: T_ChunkDimFreq,
     ) -> Self:
         """Coerce this array's data into a dask arrays with the given chunks.
 
@@ -1371,11 +1381,13 @@ class DataArray(
         sizes along that dimension will not be updated; non-dask arrays will be
         converted into dask arrays with a single block.
 
+        Along datetime-like dimensions, a pandas frequency string is also accepted.
+
         Parameters
         ----------
-        chunks : int, "auto", tuple of int or mapping of Hashable to int, optional
+        chunks : int, "auto", tuple of int or mapping of hashable to int or a pandas frequency string, optional
             Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, ``(5, 5)`` or
-            ``{"x": 5, "y": 5}``.
+            ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": "YE"}``.
         name_prefix : str, optional
             Prefix for the name of the new dask array.
         token : str, optional
@@ -1410,29 +1422,31 @@ class DataArray(
         xarray.unify_chunks
         dask.array.from_array
         """
+        chunk_mapping: T_ChunksFreq
         if chunks is None:
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
                 category=FutureWarning,
+                stacklevel=2,
             )
-            chunks = {}
+            chunk_mapping = {}
 
-        if isinstance(chunks, (float, str, int)):
+        if isinstance(chunks, float | str | int):
             # ignoring type; unclear why it won't accept a Literal into the value.
-            chunks = dict.fromkeys(self.dims, chunks)
-        elif isinstance(chunks, (tuple, list)):
+            chunk_mapping = dict.fromkeys(self.dims, chunks)
+        elif isinstance(chunks, tuple | list):
             utils.emit_user_level_warning(
                 "Supplying chunks as dimension-order tuples is deprecated. "
                 "It will raise an error in the future. Instead use a dict with dimension names as keys.",
                 category=DeprecationWarning,
             )
-            chunks = dict(zip(self.dims, chunks))
+            chunk_mapping = dict(zip(self.dims, chunks, strict=True))
         else:
-            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+            chunk_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         ds = self._to_temp_dataset().chunk(
-            chunks,
+            chunk_mapping,
             name_prefix=name_prefix,
             token=token,
             lock=lock,
@@ -1568,7 +1582,7 @@ class DataArray(
           Do not try to assign values when using any of the indexing methods
           ``isel`` or ``sel``::
 
-            da = xr.DataArray([0, 1, 2, 3], dims=['x'])
+            da = xr.DataArray([0, 1, 2, 3], dims=["x"])
             # DO NOT do this
             da.isel(x=[0, 1, 2])[1] = -1
 
@@ -2209,12 +2223,12 @@ class DataArray(
 
         Performs univariate or multivariate interpolation of a DataArray onto
         new coordinates using scipy's interpolation routines. If interpolating
-        along an existing dimension, :py:class:`scipy.interpolate.interp1d` is
-        called. When interpolating along multiple existing dimensions, an
+        along an existing dimension,  either :py:class:`scipy.interpolate.interp1d`
+        or a 1-dimensional scipy interpolator (e.g. :py:class:`scipy.interpolate.KroghInterpolator`)
+        is called. When interpolating along multiple existing dimensions, an
         attempt is made to decompose the interpolation into multiple
-        1-dimensional interpolations. If this is possible,
-        :py:class:`scipy.interpolate.interp1d` is called. Otherwise,
-        :py:func:`scipy.interpolate.interpn` is called.
+        1-dimensional interpolations. If this is possible, the 1-dimensional interpolator is called.
+        Otherwise, :py:func:`scipy.interpolate.interpn` is called.
 
         Parameters
         ----------
@@ -2832,7 +2846,7 @@ class DataArray(
         dim: Mapping[Any, Sequence[Hashable]] | None = None,
         create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
-        **dim_kwargs: Sequence[Hashable],
+        **dim_kwargs: Sequence[Hashable | EllipsisType],
     ) -> Self:
         """
         Stack any number of existing dimensions into a single new dimension.
@@ -3843,16 +3857,27 @@ class DataArray(
         """
         # TODO: consolidate the info about pandas constructors and the
         # attributes that correspond to their indexes into a separate module?
-        constructors = {0: lambda x: x, 1: pd.Series, 2: pd.DataFrame}
+        constructors: dict[int, Callable] = {
+            0: lambda x: x,
+            1: pd.Series,
+            2: pd.DataFrame,
+        }
         try:
             constructor = constructors[self.ndim]
-        except KeyError:
+        except KeyError as err:
             raise ValueError(
                 f"Cannot convert arrays with {self.ndim} dimensions into "
                 "pandas objects. Requires 2 or fewer dimensions."
-            )
+            ) from err
         indexes = [self.get_index(dim) for dim in self.dims]
-        return constructor(self.values, *indexes)  # type: ignore[operator]
+        if isinstance(self._variable._data, PandasExtensionArray):
+            values = self._variable._data.array
+        else:
+            values = self.values
+        pandas_object = constructor(values, *indexes)
+        if isinstance(pandas_object, pd.Series):
+            pandas_object.name = self.name
+        return pandas_object
 
     def to_dataframe(
         self, name: Hashable | None = None, dim_order: Sequence[Hashable] | None = None
@@ -3910,7 +3935,7 @@ class DataArray(
         ds = self._to_dataset_whole(name=unique_name)
 
         if dim_order is None:
-            ordered_dims = dict(zip(self.dims, self.shape))
+            ordered_dims = dict(zip(self.dims, self.shape, strict=True))
         else:
             ordered_dims = ds._normalize_dim_order(dim_order=dim_order)
 
@@ -3968,6 +3993,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> bytes: ...
 
     # compute=False returns dask.Delayed
@@ -3984,6 +4010,7 @@ class DataArray(
         *,
         compute: Literal[False],
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> Delayed: ...
 
     # default return None
@@ -3999,6 +4026,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: Literal[True] = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> None: ...
 
     # if compute cannot be evaluated at type check time
@@ -4015,6 +4043,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> Delayed | None: ...
 
     def to_netcdf(
@@ -4028,6 +4057,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> bytes | Delayed | None:
         """Write DataArray contents to a netCDF file.
 
@@ -4132,7 +4162,7 @@ class DataArray(
             # No problems with the name - so we're fine!
             dataset = self.to_dataset()
 
-        return to_netcdf(  # type: ignore  # mypy cannot resolve the overloads:(
+        return to_netcdf(  # type: ignore[return-value]  # mypy cannot resolve the overloads:(
             dataset,
             path,
             mode=mode,
@@ -4144,6 +4174,7 @@ class DataArray(
             compute=compute,
             multifile=False,
             invalid_netcdf=invalid_netcdf,
+            auto_complex=auto_complex,
         )
 
     # compute=True (default) returns ZarrStore
@@ -4290,6 +4321,14 @@ class DataArray(
             if Zarr arrays are written in parallel. This option may be useful in combination
             with ``compute=False`` to initialize a Zarr store from an existing
             DataArray with arbitrary chunk structure.
+            In addition to the many-to-one relationship validation, it also detects partial
+            chunks writes when using the region parameter,
+            these partial chunks are considered unsafe in the mode "r+" but safe in
+            the mode "a".
+            Note: Even with these validations it can still be unsafe to write
+            two or more chunked arrays in the same location in parallel if they are
+            not writing in independent regions, for those cases it is better to use
+            a synchronizer.
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
@@ -4454,11 +4493,11 @@ class DataArray(
                 raise ValueError(
                     "cannot convert dict when coords are missing the key "
                     f"'{str(e.args[0])}'"
-                )
+                ) from e
         try:
             data = d["data"]
-        except KeyError:
-            raise ValueError("cannot convert dict without the key 'data''")
+        except KeyError as err:
+            raise ValueError("cannot convert dict without the key 'data''") from err
         else:
             obj = cls(data, coords, d.get("dims"), d.get("name"), d.get("attrs"))
 
@@ -4726,9 +4765,10 @@ class DataArray(
     def _binary_op(
         self, other: DaCompatible, f: Callable, reflexive: bool = False
     ) -> Self:
+        from xarray.core.datatree import DataTree
         from xarray.core.groupby import GroupBy
 
-        if isinstance(other, (Dataset, GroupBy)):
+        if isinstance(other, DataTree | Dataset | GroupBy):
             return NotImplemented
         if isinstance(other, DataArray):
             align_type = OPTIONS["arithmetic_join"]
@@ -6697,11 +6737,9 @@ class DataArray(
     @_deprecate_positional_args("v2024.07.0")
     def groupby(
         self,
-        group: (
-            Hashable | DataArray | IndexVariable | Mapping[Any, Grouper] | None
-        ) = None,
+        group: GroupInput = None,
         *,
-        squeeze: bool | None = None,
+        squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         **groupers: Grouper,
     ) -> DataArrayGroupBy:
@@ -6709,14 +6747,12 @@ class DataArray(
 
         Parameters
         ----------
-        group : Hashable or DataArray or IndexVariable or mapping of Hashable to Grouper
+        group : str or DataArray or IndexVariable or sequence of hashable or mapping of hashable to Grouper
             Array whose unique values should be used to group this array. If a
             Hashable, must be the name of a coordinate contained in this dataarray. If a dictionary,
             must map an existing variable name to a :py:class:`Grouper` instance.
-        squeeze : bool, default: True
-            If "group" is a dimension of any arrays in this dataset, `squeeze`
-            controls whether the subarrays have a dimension of length 1 along
-            that dimension or if the dimension is squeezed out.
+        squeeze : False
+            This argument is deprecated.
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -6762,6 +6798,52 @@ class DataArray(
         Coordinates:
           * dayofyear  (dayofyear) int64 3kB 1 2 3 4 5 6 7 ... 361 362 363 364 365 366
 
+        >>> da = xr.DataArray(
+        ...     data=np.arange(12).reshape((4, 3)),
+        ...     dims=("x", "y"),
+        ...     coords={"x": [10, 20, 30, 40], "letters": ("x", list("abba"))},
+        ... )
+
+        Grouping by a single variable is easy
+
+        >>> da.groupby("letters")
+        <DataArrayGroupBy, grouped over 1 grouper(s), 2 groups in total:
+            'letters': 2 groups with labels 'a', 'b'>
+
+        Execute a reduction
+
+        >>> da.groupby("letters").sum()
+        <xarray.DataArray (letters: 2, y: 3)> Size: 48B
+        array([[ 9, 11, 13],
+               [ 9, 11, 13]])
+        Coordinates:
+          * letters  (letters) object 16B 'a' 'b'
+        Dimensions without coordinates: y
+
+        Grouping by multiple variables
+
+        >>> da.groupby(["letters", "x"])
+        <DataArrayGroupBy, grouped over 2 grouper(s), 8 groups in total:
+            'letters': 2 groups with labels 'a', 'b'
+            'x': 4 groups with labels 10, 20, 30, 40>
+
+        Use Grouper objects to express more complicated GroupBy operations
+
+        >>> from xarray.groupers import BinGrouper, UniqueGrouper
+        >>>
+        >>> da.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper()).sum()
+        <xarray.DataArray (x_bins: 2, letters: 2, y: 3)> Size: 96B
+        array([[[ 0.,  1.,  2.],
+                [nan, nan, nan]],
+        <BLANKLINE>
+               [[nan, nan, nan],
+                [ 3.,  4.,  5.]]])
+        Coordinates:
+          * x_bins   (x_bins) object 16B (5, 15] (15, 25]
+          * letters  (letters) object 16B 'a' 'b'
+        Dimensions without coordinates: y
+
+
         See Also
         --------
         :ref:`groupby`
@@ -6783,39 +6865,13 @@ class DataArray(
         """
         from xarray.core.groupby import (
             DataArrayGroupBy,
-            ResolvedGrouper,
+            _parse_group_and_groupers,
             _validate_groupby_squeeze,
         )
-        from xarray.core.groupers import UniqueGrouper
 
         _validate_groupby_squeeze(squeeze)
-
-        if isinstance(group, Mapping):
-            groupers = either_dict_or_kwargs(group, groupers, "groupby")  # type: ignore
-            group = None
-
-        grouper: Grouper
-        if group is not None:
-            if groupers:
-                raise ValueError(
-                    "Providing a combination of `group` and **groupers is not supported."
-                )
-            grouper = UniqueGrouper()
-        else:
-            if len(groupers) > 1:
-                raise ValueError("grouping by multiple variables is not supported yet.")
-            if not groupers:
-                raise ValueError("Either `group` or `**groupers` must be provided.")
-            group, grouper = next(iter(groupers.items()))
-
-        rgrouper = ResolvedGrouper(grouper, group, self)
-
-        return DataArrayGroupBy(
-            self,
-            (rgrouper,),
-            squeeze=squeeze,
-            restore_coord_dims=restore_coord_dims,
-        )
+        rgroupers = _parse_group_and_groupers(self, group, groupers)
+        return DataArrayGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
     @_deprecate_positional_args("v2024.07.0")
     def groupby_bins(
@@ -6826,7 +6882,7 @@ class DataArray(
         labels: ArrayLike | Literal[False] | None = None,
         precision: int = 3,
         include_lowest: bool = False,
-        squeeze: bool | None = None,
+        squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         duplicates: Literal["raise", "drop"] = "raise",
     ) -> DataArrayGroupBy:
@@ -6858,10 +6914,8 @@ class DataArray(
             The precision at which to store and display the bins labels.
         include_lowest : bool, default: False
             Whether the first interval should be left-inclusive or not.
-        squeeze : bool, default: True
-            If "group" is a dimension of any arrays in this dataset, `squeeze`
-            controls whether the subarrays have a dimension of length 1 along
-            that dimension or if the dimension is squeezed out.
+        squeeze : False
+            This argument is deprecated.
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -6894,7 +6948,7 @@ class DataArray(
             ResolvedGrouper,
             _validate_groupby_squeeze,
         )
-        from xarray.core.groupers import BinGrouper
+        from xarray.groupers import BinGrouper
 
         _validate_groupby_squeeze(squeeze)
         grouper = BinGrouper(
@@ -6909,7 +6963,6 @@ class DataArray(
         return DataArrayGroupBy(
             self,
             (rgrouper,),
-            squeeze=squeeze,
             restore_coord_dims=restore_coord_dims,
         )
 
@@ -7225,7 +7278,7 @@ class DataArray(
             User guide describing :py:func:`~xarray.DataArray.coarsen`
 
         :ref:`compute.coarsen`
-            User guide on block arrgragation :py:func:`~xarray.DataArray.coarsen`
+            User guide on block aggregation :py:func:`~xarray.DataArray.coarsen`
 
         :doc:`xarray-tutorial:fundamentals/03.3_windowed`
             Tutorial on windowed computation using :py:func:`~xarray.DataArray.coarsen`
@@ -7245,7 +7298,7 @@ class DataArray(
     @_deprecate_positional_args("v2024.07.0")
     def resample(
         self,
-        indexer: Mapping[Hashable, str | Resampler] | None = None,
+        indexer: Mapping[Hashable, ResampleCompatible | Resampler] | None = None,
         *,
         skipna: bool | None = None,
         closed: SideOptions | None = None,
@@ -7253,7 +7306,7 @@ class DataArray(
         offset: pd.Timedelta | datetime.timedelta | str | None = None,
         origin: str | DatetimeLike = "start_day",
         restore_coord_dims: bool | None = None,
-        **indexer_kwargs: str | Resampler,
+        **indexer_kwargs: ResampleCompatible | Resampler,
     ) -> DataArrayResample:
         """Returns a Resample object for performing resampling operations.
 
@@ -7264,7 +7317,7 @@ class DataArray(
 
         Parameters
         ----------
-        indexer : Mapping of Hashable to str, optional
+        indexer : Mapping of Hashable to str, datetime.timedelta, pd.Timedelta, pd.DateOffset, or Resampler, optional
             Mapping from the dimension name to resample frequency [1]_. The
             dimension must be datetime-like.
         skipna : bool, optional
@@ -7288,7 +7341,7 @@ class DataArray(
         restore_coord_dims : bool, optional
             If True, also restore the dimension order of multi-dimensional
             coordinates.
-        **indexer_kwargs : str
+        **indexer_kwargs : str, datetime.timedelta, pd.Timedelta, pd.DateOffset, or Resampler
             The keyword arguments form of ``indexer``.
             One of indexer or indexer_kwargs must be provided.
 

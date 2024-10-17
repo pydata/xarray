@@ -1,14 +1,20 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import (
+    Callable,
+    Hashable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from functools import partial
 from io import BytesIO
 from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Literal,
     Union,
@@ -45,7 +51,7 @@ if TYPE_CHECKING:
     try:
         from dask.delayed import Delayed
     except ImportError:
-        Delayed = None  # type: ignore
+        Delayed = None  # type: ignore[assignment, misc]
     from io import BufferedIOBase
 
     from xarray.backends.common import BackendEntrypoint
@@ -93,11 +99,11 @@ def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
             import pydap  # noqa: F401
 
             engine = "pydap"
-        except ImportError:
+        except ImportError as err:
             raise ValueError(
                 "netCDF4 or pydap is required for accessing "
                 "remote datasets via OPeNDAP"
-            )
+            ) from err
     return engine
 
 
@@ -106,8 +112,8 @@ def _get_default_engine_gz() -> Literal["scipy"]:
         import scipy  # noqa: F401
 
         engine: Final = "scipy"
-    except ImportError:  # pragma: no cover
-        raise ValueError("scipy is required for accessing .gz files")
+    except ImportError as err:  # pragma: no cover
+        raise ValueError("scipy is required for accessing .gz files") from err
     return engine
 
 
@@ -122,11 +128,11 @@ def _get_default_engine_netcdf() -> Literal["netcdf4", "scipy"]:
             import scipy.io.netcdf  # noqa: F401
 
             engine = "scipy"
-        except ImportError:
+        except ImportError as err:
             raise ValueError(
                 "cannot read or write netCDF files without "
                 "netCDF4-python or scipy installed"
-            )
+            ) from err
     return engine
 
 
@@ -161,7 +167,7 @@ def _validate_dataset_names(dataset: Dataset) -> None:
         check_name(k)
 
 
-def _validate_attrs(dataset, invalid_netcdf=False):
+def _validate_attrs(dataset, engine, invalid_netcdf=False):
     """`attrs` must have a string key and a value which is either: a number,
     a string, an ndarray, a list/tuple of numbers/strings, or a numpy.bool_.
 
@@ -171,8 +177,8 @@ def _validate_attrs(dataset, invalid_netcdf=False):
     `invalid_netcdf=True`.
     """
 
-    valid_types = (str, Number, np.ndarray, np.number, list, tuple)
-    if invalid_netcdf:
+    valid_types = (str, Number, np.ndarray, np.number, list, tuple, bytes)
+    if invalid_netcdf and engine == "h5netcdf":
         valid_types += (np.bool_,)
 
     def check_attr(name, value, valid_types):
@@ -195,6 +201,23 @@ def _validate_attrs(dataset, invalid_netcdf=False):
                 "netCDF files, its value must be of one of the following types: "
                 f"{', '.join([vtype.__name__ for vtype in valid_types])}"
             )
+
+        if isinstance(value, bytes) and engine == "h5netcdf":
+            try:
+                value.decode("utf-8")
+            except UnicodeDecodeError as e:
+                raise ValueError(
+                    f"Invalid value provided for attribute '{name!r}': {value!r}. "
+                    "Only binary data derived from UTF-8 encoded strings is allowed "
+                    f"for the '{engine}' engine. Consider using the 'netcdf4' engine."
+                ) from e
+
+            if b"\x00" in value:
+                raise ValueError(
+                    f"Invalid value provided for attribute '{name!r}': {value!r}. "
+                    f"Null characters are not permitted for the '{engine}' engine. "
+                    "Consider using the 'netcdf4' engine."
+                )
 
     # Check attrs on the dataset itself
     for k, v in dataset.attrs.items():
@@ -358,7 +381,7 @@ def _dataset_from_backend_dataset(
     from_array_kwargs,
     **extra_tokens,
 ):
-    if not isinstance(chunks, (int, dict)) and chunks not in {None, "auto"}:
+    if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
         raise ValueError(
             f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
         )
@@ -385,7 +408,7 @@ def _dataset_from_backend_dataset(
     if "source" not in ds.encoding:
         path = getattr(filename_or_obj, "path", filename_or_obj)
 
-        if isinstance(path, (str, os.PathLike)):
+        if isinstance(path, str | os.PathLike):
             ds.encoding["source"] = _normalize_path(path)
 
     return ds
@@ -787,11 +810,15 @@ def open_dataarray(
     )
 
     if len(dataset.data_vars) != 1:
-        raise ValueError(
-            "Given file dataset contains more than one data "
-            "variable. Please read with xarray.open_dataset and "
-            "then select the variable you want."
-        )
+        if len(dataset.data_vars) == 0:
+            msg = "Given file dataset contains no data variables."
+        else:
+            msg = (
+                "Given file dataset contains more than one data "
+                "variable. Please read with xarray.open_dataset and "
+                "then select the variable you want."
+            )
+        raise ValueError(msg)
     else:
         (data_array,) = dataset.data_vars.values()
 
@@ -835,6 +862,43 @@ def open_datatree(
     backend = plugins.get_backend(engine)
 
     return backend.open_datatree(filename_or_obj, **kwargs)
+
+
+def open_groups(
+    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    engine: T_Engine = None,
+    **kwargs,
+) -> dict[str, Dataset]:
+    """
+    Open and decode a file or file-like object, creating a dictionary containing one xarray Dataset for each group in the file.
+    Useful for an HDF file ("netcdf4" or "h5netcdf") containing many groups that are not alignable with their parents
+    and cannot be opened directly with ``open_datatree``. It is encouraged to use this function to inspect your data,
+    then make the necessary changes to make the structure coercible to a `DataTree` object before calling `DataTree.from_dict()` and proceeding with your analysis.
+
+    Parameters
+    ----------
+    filename_or_obj : str, Path, file-like, or DataStore
+        Strings and Path objects are interpreted as a path to a netCDF file.
+    engine : str, optional
+        Xarray backend engine to use. Valid options include `{"netcdf4", "h5netcdf"}`.
+    **kwargs : dict
+        Additional keyword arguments passed to :py:func:`~xarray.open_dataset` for each group.
+
+    Returns
+    -------
+    dict[str, xarray.Dataset]
+
+    See Also
+    --------
+    open_datatree()
+    DataTree.from_dict()
+    """
+    if engine is None:
+        engine = plugins.guess_engine(filename_or_obj)
+
+    backend = plugins.get_backend(engine)
+
+    return backend.open_groups_as_dict(filename_or_obj, **kwargs)
 
 
 def open_mfdataset(
@@ -1042,7 +1106,7 @@ def open_mfdataset(
         raise OSError("no files to open")
 
     if combine == "nested":
-        if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
+        if isinstance(concat_dim, str | DataArray) or concat_dim is None:
             concat_dim = [concat_dim]  # type: ignore[assignment]
 
         # This creates a flat list which is easier to iterate over, whilst
@@ -1053,7 +1117,7 @@ def open_mfdataset(
             list(combined_ids_paths.keys()),
             list(combined_ids_paths.values()),
         )
-    elif combine == "by_coords" and concat_dim is not None:
+    elif concat_dim is not None:
         raise ValueError(
             "When combine='by_coords', passing a value for `concat_dim` has no "
             "effect. To manually combine along a specific dimension you should "
@@ -1153,6 +1217,7 @@ def to_netcdf(
     *,
     multifile: Literal[True],
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> tuple[ArrayWriter, AbstractDataStore]: ...
 
 
@@ -1170,6 +1235,7 @@ def to_netcdf(
     compute: bool = True,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> bytes: ...
 
 
@@ -1188,6 +1254,7 @@ def to_netcdf(
     compute: Literal[False],
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> Delayed: ...
 
 
@@ -1205,6 +1272,7 @@ def to_netcdf(
     compute: Literal[True] = True,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> None: ...
 
 
@@ -1223,6 +1291,7 @@ def to_netcdf(
     compute: bool = False,
     multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> Delayed | None: ...
 
 
@@ -1241,6 +1310,7 @@ def to_netcdf(
     compute: bool = False,
     multifile: bool = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> tuple[ArrayWriter, AbstractDataStore] | Delayed | None: ...
 
 
@@ -1258,6 +1328,7 @@ def to_netcdf(
     compute: bool = False,
     multifile: bool = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None: ...
 
 
@@ -1273,6 +1344,7 @@ def to_netcdf(
     compute: bool = True,
     multifile: bool = False,
     invalid_netcdf: bool = False,
+    auto_complex: bool | None = None,
 ) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
@@ -1310,12 +1382,12 @@ def to_netcdf(
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
-    _validate_attrs(dataset, invalid_netcdf=invalid_netcdf and engine == "h5netcdf")
+    _validate_attrs(dataset, engine, invalid_netcdf)
 
     try:
         store_open = WRITEABLE_STORES[engine]
-    except KeyError:
-        raise ValueError(f"unrecognized engine for to_netcdf: {engine!r}")
+    except KeyError as err:
+        raise ValueError(f"unrecognized engine for to_netcdf: {engine!r}") from err
 
     if format is not None:
         format = format.upper()  # type: ignore[assignment]
@@ -1340,6 +1412,9 @@ def to_netcdf(
             raise ValueError(
                 f"unrecognized option 'invalid_netcdf' for engine {engine}"
             )
+    if auto_complex is not None:
+        kwargs["auto_complex"] = auto_complex
+
     store = store_open(target, mode, format, group, **kwargs)
 
     if unlimited_dims is None:
@@ -1372,7 +1447,7 @@ def to_netcdf(
             store.sync()
             return target.getvalue()
     finally:
-        if not multifile and compute:
+        if not multifile and compute:  # type: ignore[redundant-expr]
             store.close()
 
     if not compute:
@@ -1525,8 +1600,9 @@ def save_mfdataset(
                 multifile=True,
                 **kwargs,
             )
-            for ds, path, group in zip(datasets, paths, groups)
-        ]
+            for ds, path, group in zip(datasets, paths, groups, strict=True)
+        ],
+        strict=True,
     )
 
     try:
@@ -1540,7 +1616,10 @@ def save_mfdataset(
         import dask
 
         return dask.delayed(
-            [dask.delayed(_finalize_store)(w, s) for w, s in zip(writes, stores)]
+            [
+                dask.delayed(_finalize_store)(w, s)
+                for w, s in zip(writes, stores, strict=True)
+            ]
         )
 
 
@@ -1669,7 +1748,7 @@ def to_zarr(
     _validate_dataset_names(dataset)
 
     if zarr_version is None:
-        # default to 2 if store doesn't specify it's version (e.g. a path)
+        # default to 2 if store doesn't specify its version (e.g. a path)
         zarr_version = int(getattr(store, "_store_version", 2))
 
     if consolidated is None and zarr_version > 2:

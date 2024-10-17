@@ -4,8 +4,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Any, Callable
+from collections.abc import Callable, Sequence
+from typing import Any
 
 from xarray.core import duck_array_ops
 from xarray.core.types import Dims, Self
@@ -61,10 +61,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x",
-        ...     np.array([1, 2, 3, 0, 2, np.nan]),
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -116,8 +113,7 @@ class NamedArrayAggregations:
         --------
         >>> from xarray.namedarray.core import NamedArray
         >>> na = NamedArray(
-        ...     "x",
-        ...     np.array([True, True, True, True, True, False], dtype=bool),
+        ...     "x", np.array([True, True, True, True, True, False], dtype=bool)
         ... )
         >>> na
         <xarray.NamedArray (x: 6)> Size: 6B
@@ -170,8 +166,7 @@ class NamedArrayAggregations:
         --------
         >>> from xarray.namedarray.core import NamedArray
         >>> na = NamedArray(
-        ...     "x",
-        ...     np.array([True, True, True, True, True, False], dtype=bool),
+        ...     "x", np.array([True, True, True, True, True, False], dtype=bool)
         ... )
         >>> na
         <xarray.NamedArray (x: 6)> Size: 6B
@@ -230,10 +225,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x",
-        ...     np.array([1, 2, 3, 0, 2, np.nan]),
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -298,10 +290,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x",
-        ...     np.array([1, 2, 3, 0, 2, np.nan]),
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -370,10 +359,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x",
-        ...     np.array([1, 2, 3, 0, 2, np.nan]),
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -449,10 +435,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x",
-        ...     np.array([1, 2, 3, 0, 2, np.nan]),
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -535,10 +518,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x",
-        ...     np.array([1, 2, 3, 0, 2, np.nan]),
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -618,10 +598,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x",
-        ...     np.array([1, 2, 3, 0, 2, np.nan]),
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -701,10 +678,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x",
-        ...     np.array([1, 2, 3, 0, 2, np.nan]),
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -780,10 +754,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x",
-        ...     np.array([1, 2, 3, 0, 2, np.nan]),
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -842,6 +813,7 @@ class NamedArrayAggregations:
         dask.array.cumsum
         Dataset.cumsum
         DataArray.cumsum
+        NamedArray.cumulative
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
@@ -849,13 +821,14 @@ class NamedArrayAggregations:
         -----
         Non-numeric variables will be removed prior to reducing.
 
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
+
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x",
-        ...     np.array([1, 2, 3, 0, 2, np.nan]),
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -914,6 +887,7 @@ class NamedArrayAggregations:
         dask.array.cumprod
         Dataset.cumprod
         DataArray.cumprod
+        NamedArray.cumulative
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
@@ -921,13 +895,14 @@ class NamedArrayAggregations:
         -----
         Non-numeric variables will be removed prior to reducing.
 
+        Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+        and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+        in the future.
+
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x",
-        ...     np.array([1, 2, 3, 0, 2, np.nan]),
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])

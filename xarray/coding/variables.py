@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Hashable, MutableMapping
+from collections.abc import Callable, Hashable, MutableMapping
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Union
+from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
 import pandas as pd
@@ -261,7 +261,7 @@ def _is_time_like(units):
 
 
 def _check_fill_values(attrs, name, dtype):
-    """ "Check _FillValue and missing_value if available.
+    """Check _FillValue and missing_value if available.
 
     Return dictionary with raw fill values and set with encoded fill values.
 
@@ -298,6 +298,72 @@ def _check_fill_values(attrs, name, dtype):
     return raw_fill_dict, encoded_fill_values
 
 
+def _convert_unsigned_fill_value(
+    name: T_Name,
+    data: Any,
+    unsigned: str,
+    raw_fill_value: Any,
+    encoded_fill_values: set,
+) -> Any:
+    if data.dtype.kind == "i":
+        if unsigned == "true":
+            unsigned_dtype = np.dtype(f"u{data.dtype.itemsize}")
+            transform = partial(np.asarray, dtype=unsigned_dtype)
+            if raw_fill_value is not None:
+                new_fill = np.array(raw_fill_value, dtype=data.dtype)
+                encoded_fill_values.remove(raw_fill_value)
+                # use view here to prevent OverflowError
+                encoded_fill_values.add(new_fill.view(unsigned_dtype).item())
+            data = lazy_elemwise_func(data, transform, unsigned_dtype)
+    elif data.dtype.kind == "u":
+        if unsigned == "false":
+            signed_dtype = np.dtype(f"i{data.dtype.itemsize}")
+            transform = partial(np.asarray, dtype=signed_dtype)
+            data = lazy_elemwise_func(data, transform, signed_dtype)
+            if raw_fill_value is not None:
+                new_fill = signed_dtype.type(raw_fill_value)
+                encoded_fill_values.remove(raw_fill_value)
+                encoded_fill_values.add(new_fill)
+    else:
+        warnings.warn(
+            f"variable {name!r} has _Unsigned attribute but is not "
+            "of integer type. Ignoring attribute.",
+            SerializationWarning,
+            stacklevel=3,
+        )
+    return data
+
+
+def _encode_unsigned_fill_value(
+    name: T_Name,
+    fill_value: Any,
+    encoded_dtype: np.dtype,
+) -> Any:
+    try:
+        if hasattr(fill_value, "item"):
+            # if numpy type, convert to python native integer to determine overflow
+            # otherwise numpy unsigned ints will silently cast to the signed counterpart
+            fill_value = fill_value.item()
+        # passes if provided fill value fits in encoded on-disk type
+        new_fill = encoded_dtype.type(fill_value)
+    except OverflowError:
+        encoded_kind_str = "signed" if encoded_dtype.kind == "i" else "unsigned"
+        warnings.warn(
+            f"variable {name!r} will be stored as {encoded_kind_str} integers "
+            f"but _FillValue attribute can't be represented as a "
+            f"{encoded_kind_str} integer.",
+            SerializationWarning,
+            stacklevel=3,
+        )
+        # user probably provided the fill as the in-memory dtype,
+        # convert to on-disk type to match CF standard
+        orig_kind = "u" if encoded_dtype.kind == "i" else "i"
+        orig_dtype = np.dtype(f"{orig_kind}{encoded_dtype.itemsize}")
+        # use view here to prevent OverflowError
+        new_fill = np.array(fill_value, dtype=orig_dtype).view(encoded_dtype).item()
+    return new_fill
+
+
 class CFMaskCoder(VariableCoder):
     """Mask or unmask fill values according to CF conventions."""
 
@@ -305,11 +371,14 @@ class CFMaskCoder(VariableCoder):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
         dtype = np.dtype(encoding.get("dtype", data.dtype))
+        # from netCDF best practices
+        # https://docs.unidata.ucar.edu/nug/current/best_practices.html#bp_Unsigned-Data
+        #     "_Unsigned = "true" to indicate that
+        #      integer data should be treated as unsigned"
+        has_unsigned = encoding.get("_Unsigned") is not None
         fv = encoding.get("_FillValue")
         mv = encoding.get("missing_value")
-        # to properly handle _FillValue/missing_value below [a], [b]
-        # we need to check if unsigned data is written as signed data
-        unsigned = encoding.get("_Unsigned") is not None
+        fill_value = None
 
         fv_exists = fv is not None
         mv_exists = mv is not None
@@ -324,23 +393,28 @@ class CFMaskCoder(VariableCoder):
 
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
-            # [a] need to skip this if _Unsigned is available
-            if not unsigned:
-                encoding["_FillValue"] = dtype.type(fv)
+            encoding["_FillValue"] = (
+                _encode_unsigned_fill_value(name, fv, dtype)
+                if has_unsigned
+                else dtype.type(fv)
+            )
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
 
         if mv_exists:
             # try to use _FillValue, if it exists to align both values
             # or use missing_value and ensure it's cast to same dtype as data's
-            # [b] need to provide mv verbatim if _Unsigned is available
             encoding["missing_value"] = attrs.get(
                 "_FillValue",
-                (dtype.type(mv) if not unsigned else mv),
+                (
+                    _encode_unsigned_fill_value(name, mv, dtype)
+                    if has_unsigned
+                    else dtype.type(mv)
+                ),
             )
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
 
         # apply fillna
-        if not pd.isnull(fill_value):
+        if fill_value is not None and not pd.isnull(fill_value):
             # special case DateTime to properly handle NaT
             if _is_time_like(attrs.get("units")) and data.dtype.kind in "iu":
                 data = duck_array_ops.where(
@@ -349,46 +423,63 @@ class CFMaskCoder(VariableCoder):
             else:
                 data = duck_array_ops.fillna(data, fill_value)
 
+        if fill_value is not None and has_unsigned:
+            pop_to(encoding, attrs, "_Unsigned")
+            # XXX: Is this actually needed? Doesn't the backend handle this?
+            data = duck_array_ops.astype(duck_array_ops.around(data), dtype)
+            attrs["_FillValue"] = fill_value
+
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
     def decode(self, variable: Variable, name: T_Name = None):
         raw_fill_dict, encoded_fill_values = _check_fill_values(
             variable.attrs, name, variable.dtype
         )
-
-        if raw_fill_dict:
-            dims, data, attrs, encoding = unpack_for_decoding(variable)
-            [
-                safe_setitem(encoding, attr, value, name=name)
-                for attr, value in raw_fill_dict.items()
-            ]
-
-            if encoded_fill_values:
-                # special case DateTime to properly handle NaT
-                dtype: np.typing.DTypeLike
-                decoded_fill_value: Any
-                if _is_time_like(attrs.get("units")) and data.dtype.kind in "iu":
-                    dtype, decoded_fill_value = np.int64, np.iinfo(np.int64).min
-                else:
-                    if "scale_factor" not in attrs and "add_offset" not in attrs:
-                        dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
-                    else:
-                        dtype, decoded_fill_value = (
-                            _choose_float_dtype(data.dtype, attrs),
-                            np.nan,
-                        )
-
-                transform = partial(
-                    _apply_mask,
-                    encoded_fill_values=encoded_fill_values,
-                    decoded_fill_value=decoded_fill_value,
-                    dtype=dtype,
-                )
-                data = lazy_elemwise_func(data, transform, dtype)
-
-            return Variable(dims, data, attrs, encoding, fastpath=True)
-        else:
+        if "_Unsigned" not in variable.attrs and not raw_fill_dict:
             return variable
+
+        dims, data, attrs, encoding = unpack_for_decoding(variable)
+
+        # Even if _Unsigned is use, retain on-disk _FillValue
+        [
+            safe_setitem(encoding, attr, value, name=name)
+            for attr, value in raw_fill_dict.items()
+        ]
+
+        if "_Unsigned" in attrs:
+            unsigned = pop_to(attrs, encoding, "_Unsigned")
+            data = _convert_unsigned_fill_value(
+                name,
+                data,
+                unsigned,
+                raw_fill_dict.get("_FillValue"),
+                encoded_fill_values,
+            )
+
+        if encoded_fill_values:
+            # special case DateTime to properly handle NaT
+            dtype: np.typing.DTypeLike
+            decoded_fill_value: Any
+            if _is_time_like(attrs.get("units")) and data.dtype.kind in "iu":
+                dtype, decoded_fill_value = np.int64, np.iinfo(np.int64).min
+            else:
+                if "scale_factor" not in attrs and "add_offset" not in attrs:
+                    dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
+                else:
+                    dtype, decoded_fill_value = (
+                        _choose_float_dtype(data.dtype, attrs),
+                        np.nan,
+                    )
+
+            transform = partial(
+                _apply_mask,
+                encoded_fill_values=encoded_fill_values,
+                decoded_fill_value=decoded_fill_value,
+                dtype=dtype,
+            )
+            data = lazy_elemwise_func(data, transform, dtype)
+
+        return Variable(dims, data, attrs, encoding, fastpath=True)
 
 
 def _scale_offset_decoding(data, scale_factor, add_offset, dtype: np.typing.DTypeLike):
@@ -446,6 +537,7 @@ def _choose_float_dtype(
     if dtype.itemsize <= 2 and np.issubdtype(dtype, np.integer):
         return np.float32
     # For all other types and circumstances, we just use float64.
+    # Todo: with nc-complex from netcdf4-python >= 1.7.0 this is available
     # (safe because eg. complex numbers are not supported in NetCDF)
     return np.float64
 
@@ -500,74 +592,6 @@ class CFScaleOffsetCoder(VariableCoder):
                 dtype=dtype,
             )
             data = lazy_elemwise_func(data, transform, dtype)
-
-            return Variable(dims, data, attrs, encoding, fastpath=True)
-        else:
-            return variable
-
-
-class UnsignedIntegerCoder(VariableCoder):
-    def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        # from netCDF best practices
-        # https://docs.unidata.ucar.edu/nug/current/best_practices.html#bp_Unsigned-Data
-        #     "_Unsigned = "true" to indicate that
-        #      integer data should be treated as unsigned"
-        if variable.encoding.get("_Unsigned", "false") == "true":
-            dims, data, attrs, encoding = unpack_for_encoding(variable)
-
-            pop_to(encoding, attrs, "_Unsigned")
-            # we need the on-disk type here
-            # trying to get it from encoding, resort to an int with the same precision as data.dtype if not available
-            signed_dtype = np.dtype(encoding.get("dtype", f"i{data.dtype.itemsize}"))
-            if "_FillValue" in attrs:
-                try:
-                    # user provided the on-disk signed fill
-                    new_fill = signed_dtype.type(attrs["_FillValue"])
-                except OverflowError:
-                    # user provided the in-memory unsigned fill, convert to signed type
-                    unsigned_dtype = np.dtype(f"u{signed_dtype.itemsize}")
-                    # use view here to prevent OverflowError
-                    new_fill = (
-                        np.array(attrs["_FillValue"], dtype=unsigned_dtype)
-                        .view(signed_dtype)
-                        .item()
-                    )
-                attrs["_FillValue"] = new_fill
-            data = duck_array_ops.astype(duck_array_ops.around(data), signed_dtype)
-
-            return Variable(dims, data, attrs, encoding, fastpath=True)
-        else:
-            return variable
-
-    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if "_Unsigned" in variable.attrs:
-            dims, data, attrs, encoding = unpack_for_decoding(variable)
-            unsigned = pop_to(attrs, encoding, "_Unsigned")
-
-            if data.dtype.kind == "i":
-                if unsigned == "true":
-                    unsigned_dtype = np.dtype(f"u{data.dtype.itemsize}")
-                    transform = partial(np.asarray, dtype=unsigned_dtype)
-                    if "_FillValue" in attrs:
-                        new_fill = np.array(attrs["_FillValue"], dtype=data.dtype)
-                        # use view here to prevent OverflowError
-                        attrs["_FillValue"] = new_fill.view(unsigned_dtype).item()
-                    data = lazy_elemwise_func(data, transform, unsigned_dtype)
-            elif data.dtype.kind == "u":
-                if unsigned == "false":
-                    signed_dtype = np.dtype(f"i{data.dtype.itemsize}")
-                    transform = partial(np.asarray, dtype=signed_dtype)
-                    data = lazy_elemwise_func(data, transform, signed_dtype)
-                    if "_FillValue" in attrs:
-                        new_fill = signed_dtype.type(attrs["_FillValue"])
-                        attrs["_FillValue"] = new_fill
-            else:
-                warnings.warn(
-                    f"variable {name!r} has _Unsigned attribute but is not "
-                    "of integer type. Ignoring attribute.",
-                    SerializationWarning,
-                    stacklevel=3,
-                )
 
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
@@ -662,8 +686,8 @@ class NonStringCoder(VariableCoder):
                             SerializationWarning,
                             stacklevel=10,
                         )
-                    data = np.around(data)
-                data = data.astype(dtype=dtype)
+                    data = duck_array_ops.round(data)
+                data = duck_array_ops.astype(data, dtype=dtype)
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
             return variable
