@@ -2239,7 +2239,7 @@ class DataArray(
                 use :py:class:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:class:`numpy.interp`
                 (as in the case of `method='linear'` for 1D data).
             - If `method='polynomial'`, the `order` keyword argument must also be provided. In this case,
-            :py:class:`scipy.interpolate.interp1d` is called with `kind=order`.
+                :py:class:`scipy.interpolate.interp1d` is called with `kind=order`.
 
         3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
             - Depending on the `method`, the following interpolants from :py:class:`scipy.interpolate` are used:
@@ -2289,7 +2289,7 @@ class DataArray(
         -----
         - SciPy is required for certain interpolation methods.
         - Allowing `reduce=True` (the default) may alter the behavior of interpolation along multiple dimensions
-        compared to the default behavior in SciPy.
+            compared to the default behavior in SciPy.
 
         See Also
         --------

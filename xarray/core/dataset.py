@@ -3961,7 +3961,7 @@ class Dataset(
         -----
         - SciPy is required for certain interpolation methods.
         - Allowing `reduce=True` (the default) may alter the behavior of interpolation along multiple dimensions
-        compared to the default behavior in SciPy.
+            compared to the default behavior in SciPy.
 
         See Also
         --------
