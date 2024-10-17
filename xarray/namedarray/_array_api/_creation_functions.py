@@ -471,11 +471,31 @@ def meshgrid(
 
 
 def ones(
-    shape: _Shape, *, dtype: _DType | None = None, device: _Device | None = None
+    shape: _Shape,
+    *,
+    dtype: _DType | None = None,
+    device: _Device | None = None,
+    dims: _DimsLike2 | Default = _default,
 ) -> NamedArray[_ShapeType, _DType]:
+    """
+    Returns a new array having a specified shape and filled with ones.
+
+    Examples
+    >>> import numpy as np
+    >>> ones((2, 2))
+    <xarray.NamedArray (dim_1: 2, dim_0: 2)> Size: 32B
+    array([[1., 1.],
+           [1., 1.]])
+
+    If dims is set:
+    >>> ones((2, 2), dims=("x", "y"))
+    <xarray.NamedArray (x: 2, y: 2)> Size: 32B
+    array([[1., 1.],
+           [1., 1.]])
+    """
     xp = _get_namespace_dtype(dtype)
     _data = xp.ones(shape, dtype=dtype, device=device)
-    _dims = _infer_dims(_data.shape)
+    _dims = _infer_dims(_data.shape, dims)
     return NamedArray(_dims, _data)
 
 
