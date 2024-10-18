@@ -337,7 +337,6 @@ def _decode_datetime_with_pandas(
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "invalid value encountered", RuntimeWarning)
         if flat_num_dates.size > 0:
-
             # avoid size 0 datetimes GH1329
             dec_min = _check_date_for_units_since_refdate(
                 flat_num_dates.min(), time_unit, ref_date
