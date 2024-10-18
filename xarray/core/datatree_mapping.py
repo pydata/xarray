@@ -3,74 +3,14 @@ from __future__ import annotations
 import functools
 import sys
 from collections.abc import Callable, Mapping
-from typing import TYPE_CHECKING, Any, cast, result_name
+from typing import TYPE_CHECKING, Any, cast
 
 from xarray.core.dataset import Dataset
-from xarray.core.formatting import diff_treestructure
-from xarray.core.treenode import TreeNode, group_subtrees
+from xarray.core.treenode import group_subtrees
+from xarray.core.utils import result_name
 
 if TYPE_CHECKING:
     from xarray.core.datatree import DataTree
-
-
-class TreeIsomorphismError(ValueError):
-    """Error raised if two tree objects do not share the same node structure."""
-
-    pass
-
-
-def check_isomorphic(
-    a: DataTree,
-    b: DataTree,
-    require_names_equal: bool = False,
-    check_from_root: bool = True,
-):
-    """
-    Check that two trees have the same structure, raising an error if not.
-
-    Does not compare the actual data in the nodes.
-
-    By default this function only checks that subtrees are isomorphic, not the entire tree above (if it exists).
-    Can instead optionally check the entire trees starting from the root, which will ensure all
-
-    Can optionally check if corresponding nodes should have the same name.
-
-    Parameters
-    ----------
-    a : DataTree
-    b : DataTree
-    require_names_equal : Bool
-        Whether or not to also check that each node has the same name as its counterpart.
-    check_from_root : Bool
-        Whether or not to first traverse to the root of the trees before checking for isomorphism.
-        If a & b have no parents then this has no effect.
-
-    Raises
-    ------
-    TypeError
-        If either a or b are not tree objects.
-    TreeIsomorphismError
-        If a and b are tree objects, but are not isomorphic to one another.
-        Also optionally raised if their structure is isomorphic, but the names of any two
-        respective nodes are not equal.
-    """
-    # TODO: remove require_names_equal and check_from_root. Instead, check that
-    # all child nodes match, in any order, which will suffice once
-    # map_over_datasets switches to use group_subtrees.
-
-    if not isinstance(a, TreeNode):
-        raise TypeError(f"Argument `a` is not a tree, it is of type {type(a)}")
-    if not isinstance(b, TreeNode):
-        raise TypeError(f"Argument `b` is not a tree, it is of type {type(b)}")
-
-    if check_from_root:
-        a = a.root
-        b = b.root
-
-    diff = diff_treestructure(a, b, require_names_equal=require_names_equal)
-
-    if diff is not None:
-        raise TreeIsomorphismError("DataTree objects are not isomorphic:\n" + diff)
 
 
 def map_over_datasets(func: Callable) -> Callable:
@@ -136,7 +76,6 @@ def map_over_datasets(func: Callable) -> Callable:
         name = result_name(tree_args)
 
         for path, node_tree_args in group_subtrees(*tree_args):
-
             node_dataset_args = [arg.dataset for arg in node_tree_args]
             for i, arg in enumerate(args):
                 if not isinstance(arg, DataTree):
@@ -144,8 +83,7 @@ def map_over_datasets(func: Callable) -> Callable:
 
             func_with_error_context = _handle_errors_with_path_context(path)(func)
             results = func_with_error_context(*node_dataset_args)
-
-            out_data_objects["/" if path == "." else path] = results
+            out_data_objects[path] = results
 
         num_return_values = _check_all_return_values(out_data_objects)
 

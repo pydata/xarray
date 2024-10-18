@@ -4774,7 +4774,7 @@ class DataArray(
             else f(other_variable_or_arraylike, self.variable)
         )
         coords, indexes = self.coords._merge_raw(other_coords, reflexive)
-        name = result_name(self, other)
+        name = result_name([self, other])
 
         return self._replace(variable, coords, name, indexes=indexes)
 

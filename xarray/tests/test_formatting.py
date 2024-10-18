@@ -666,32 +666,30 @@ class TestFormatting:
         dt: xr.DataTree = xr.DataTree(name="root", dataset=dat)
         assert "Coordinates" in repr(dt)
 
-    def test_diff_datatree_repr_structure(self):
-        dt_1: xr.DataTree = xr.DataTree.from_dict({"a": None, "a/b": None, "a/c": None})
-        dt_2: xr.DataTree = xr.DataTree.from_dict({"d": None, "d/e": None})
-
-        expected = dedent(
-            """\
-        Left and right DataTree objects are not isomorphic
-
-        Number of children on node '/a' of the left object: 2
-        Number of children on node '/d' of the right object: 1"""
-        )
-        actual = formatting.diff_datatree_repr(dt_1, dt_2, "isomorphic")
-        assert actual == expected
-
-    def test_diff_datatree_repr_node_names(self):
+    def test_diff_datatree_repr_different_groups(self):
         dt_1: xr.DataTree = xr.DataTree.from_dict({"a": None})
         dt_2: xr.DataTree = xr.DataTree.from_dict({"b": None})
 
         expected = dedent(
             """\
-        Left and right DataTree objects are not identical
+            Left and right DataTree objects are not identical
 
-        Node '/a' in the left object has name 'a'
-        Node '/b' in the right object has name 'b'"""
+            Children at root node do not match: ['a'] vs ['b']"""
         )
         actual = formatting.diff_datatree_repr(dt_1, dt_2, "identical")
+        assert actual == expected
+
+    def test_diff_datatree_repr_different_subgroups(self):
+        dt_1: xr.DataTree = xr.DataTree.from_dict({"a": None, "a/b": None, "a/c": None})
+        dt_2: xr.DataTree = xr.DataTree.from_dict({"a": None, "a/b": None})
+
+        expected = dedent(
+            """\
+            Left and right DataTree objects are not isomorphic
+
+            Children at node 'a' do not match: ['b', 'c'] vs ['b']"""
+        )
+        actual = formatting.diff_datatree_repr(dt_1, dt_2, "isomorphic")
         assert actual == expected
 
     def test_diff_datatree_repr_node_data(self):
@@ -708,12 +706,12 @@ class TestFormatting:
         Left and right DataTree objects are not equal
 
 
-        Data in nodes at position '/a' do not match:
+        Data at node 'a' does not match:
 
         Data variables only on the left object:
             v        int64 8B 1
 
-        Data in nodes at position '/a/b' do not match:
+        Data at node 'a/b' does not match:
 
         Differing data variables:
         L   w        int64 8B 5

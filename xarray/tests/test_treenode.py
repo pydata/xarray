@@ -9,6 +9,7 @@ from xarray.core.treenode import (
     NamedNode,
     NodePath,
     TreeNode,
+    group_subtrees,
     zip_subtrees,
 )
 
@@ -303,10 +304,10 @@ def create_test_tree() -> tuple[NamedNode, NamedNode]:
     return a, f
 
 
-class TestZipSubtrees:
+class TestGroupSubtrees:
     def test_one_tree(self) -> None:
         root, _ = create_test_tree()
-        expected = [
+        expected_names = [
             "a",
             "b",
             "c",
@@ -317,8 +318,25 @@ class TestZipSubtrees:
             "g",
             "i",
         ]
-        result = [node[0].name for node in zip_subtrees(root)]
-        assert result == expected
+        expected_paths = [
+            "",
+            "b",
+            "c",
+            "b/d",
+            "b/e",
+            "c/h",
+            "b/e/f",
+            "b/e/g",
+            "c/h/i",
+        ]
+        result_paths, result_names = zip(
+            *[(path, node.name) for path, (node,) in group_subtrees(root)], strict=False
+        )
+        assert list(result_names) == expected_names
+        assert list(result_paths) == expected_paths
+
+        result_names_ = [node.name for (node,) in zip_subtrees(root)]
+        assert result_names_ == expected_names
 
     def test_different_order(self) -> None:
         first: NamedNode = NamedNode(
@@ -334,17 +352,20 @@ class TestZipSubtrees:
             ("b", "b"),
             ("c", "c"),
         ]
+        assert [path for path, _ in group_subtrees(first, second)] == ["", "b", "c"]
 
     def test_different_structure(self) -> None:
         first: NamedNode = NamedNode(name="a", children={"b": NamedNode()})
         second: NamedNode = NamedNode(name="a", children={"c": NamedNode()})
-        it = zip_subtrees(first, second)
+        it = group_subtrees(first, second)
 
-        x, y = next(it)
-        assert x.name == y.name == "a"
+        path, (node1, node2) = next(it)
+        assert path == ""
+        assert node1.name == node2.name == "a"
 
         with pytest.raises(
-            ValueError, match=re.escape(r"children at '/' do not match: ['b'] vs ['c']")
+            ValueError,
+            match=re.escape(r"children at root node do not match: ['b'] vs ['c']"),
         ):
             next(it)
 
@@ -384,6 +405,36 @@ class TestAncestry:
         ]
         actual = [node.name for node in root.subtree]
         assert expected == actual
+
+    def test_subtree_with_paths(self) -> None:
+        root, _ = create_test_tree()
+        expected_names = [
+            "a",
+            "b",
+            "c",
+            "d",
+            "e",
+            "h",
+            "f",
+            "g",
+            "i",
+        ]
+        expected_paths = [
+            "",
+            "b",
+            "c",
+            "b/d",
+            "b/e",
+            "c/h",
+            "b/e/f",
+            "b/e/g",
+            "c/h/i",
+        ]
+        result_paths, result_names = zip(
+            *[(path, node.name) for path, node in root.subtree_with_paths], strict=False
+        )
+        assert list(result_names) == expected_names
+        assert list(result_paths) == expected_paths
 
     def test_descendants(self) -> None:
         root, _ = create_test_tree()
