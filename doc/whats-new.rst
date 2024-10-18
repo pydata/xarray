@@ -7979,7 +7979,7 @@ Bug fixes
   multi-dimensional variables (:issue:`315`).
 - Slicing with negative step sizes (:issue:`312`).
 - Invalid conversion of string arrays to numeric dtype (:issue:`305`).
-- Fixed``repr()`` on dataset objects with non-standard dates (:issue:`347`).
+- Fixed ``repr()`` on dataset objects with non-standard dates (:issue:`347`).
 
 Deprecations
 ~~~~~~~~~~~~
