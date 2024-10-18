@@ -69,7 +69,7 @@ Here’s a typical workflow for triaging a newly opened issue or discussion:
    The issue tracker is many people’s first interaction with the xarray project itself, beyond just using the library.
    It may also be their first open-source contribution of any kind. As such, we want it to be a welcoming, pleasant experience.
 
-2. **Is the necessary information provided?**
+1. **Is the necessary information provided?**
 
    Ideally reporters would fill out the issue template, but many don’t. If crucial information (like the version of xarray they used),
    is missing feel free to ask for that and label the issue with “needs info”.
@@ -79,14 +79,14 @@ Here’s a typical workflow for triaging a newly opened issue or discussion:
    Make sure that the title accurately reflects the issue. Edit it yourself if it’s not clear.
    Remember also that issues can be converted to discussions and vice versa if appropriate.
 
-3. **Is this a duplicate issue?**
+1. **Is this a duplicate issue?**
 
    We have many open issues. If a new issue is clearly a duplicate, label the new issue as “duplicate”, and close the issue with a link to the original issue.
    Make sure to still thank the reporter, and encourage them to chime in on the original issue, and perhaps try to fix it.
 
    If the new issue provides relevant information, such as a better or slightly different example, add it to the original issue as a comment or an edit to the original post.
 
-4. **Is the issue minimal and reproducible?**
+1. **Is the issue minimal and reproducible?**
 
    For bug reports, we ask that the reporter provide a minimal reproducible example.
    See [minimal-bug-reports](https://matthewrocklin.com/blog/work/2018/02/28/minimal-bug-reports) for a good explanation.
@@ -98,21 +98,20 @@ Here’s a typical workflow for triaging a newly opened issue or discussion:
 
    If a reproducible example is provided, but you see a simplification, edit the original post with your simpler reproducible example.
 
-5. **Is this a clearly defined feature request?**
+1. **Is this a clearly defined feature request?**
 
    Generally, xarray prefers to discuss and design new features in issues, before a pull request is made.
    Encourage the submitter to include a proposed API for the new feature. Having them write a full docstring is a good way to pin down specifics.
 
    We may need a discussion from several xarray maintainers before deciding whether the proposal is in scope for xarray.
 
-6. **Is this a usage question?**
+1. **Is this a usage question?**
 
-   We prefer that usage questions are asked on StackOverflow with the [`python-xarray` tag](https://stackoverflow.com/questions/tagged/python-xarray
-) or as a [GitHub discussion topic](https://github.com/pydata/xarray/discussions).
+   We prefer that usage questions are asked on StackOverflow with the [`python-xarray` tag](https://stackoverflow.com/questions/tagged/python-xarray) or as a [GitHub discussion topic](https://github.com/pydata/xarray/discussions).
 
    If it’s easy to answer, feel free to link to the relevant documentation section, let them know that in the future this kind of question should be on StackOverflow, and close the issue.
 
-7. **What labels and milestones should I add?**
+1. **What labels and milestones should I add?**
 
    Apply the relevant labels. This is a bit of an art, and comes with experience. Look at similar issues to get a feel for how things are labeled.
    Labels used for labelling issues that relate to particular features or parts of the codebase normally have the form `topic-<SOMETHING>`.
@@ -120,7 +119,7 @@ Here’s a typical workflow for triaging a newly opened issue or discussion:
    If the issue is clearly defined and the fix seems relatively straightforward, label the issue as `contrib-good-first-issue`.
    You can also remove the `needs triage` label that is automatically applied to all newly-opened issues.
 
-8. **Where should the poster look to fix the issue?**
+1. **Where should the poster look to fix the issue?**
 
    If you can, it is very helpful to point to the approximate location in the codebase where a contributor might begin to fix the issue.
    This helps ease the way in for new contributors to the repository.
@@ -173,7 +172,7 @@ constructive criticism on ideas and implementations, and remind
 yourself of how it felt when your own work was being evaluated as a
 novice.
 
-``xarray`` strongly values mentorship in code review.  New users
+`xarray` strongly values mentorship in code review.  New users
 often need more handholding, having little to no git
 experience. Repeat yourself liberally, and, if you don’t recognize a
 contributor, point them to our development guide, or other GitHub
@@ -186,42 +185,42 @@ an abandoned pull request.
 When reviewing, focus on the following:
 
 1. **Usability and generality:** `xarray` is a user-facing package that strives to be accessible
-to both novice and advanced users, and new features should ultimately be
-accessible to everyone using the package. `xarray` targets the scientific user
-community broadly, and core features should be domain-agnostic and general purpose.
-Custom functionality is meant to be provided through our various types of interoperability.
+   to both novice and advanced users, and new features should ultimately be
+   accessible to everyone using the package. `xarray` targets the scientific user
+   community broadly, and core features should be domain-agnostic and general purpose.
+   Custom functionality is meant to be provided through our various types of interoperability.
 
-2. **Performance and benchmarks:** As `xarray` targets scientific applications that often involve
-large multidimensional datasets, high performance is a key value of `xarray`. While
-every new feature won't scale equally to all sizes of data, keeping in mind performance
-and our [benchmarks](https://github.com/pydata/xarray/tree/main/asv_bench) during a review may be important, and you may
-need to ask for benchmarks to be run and reported or new benchmarks to be added.
-You can run the CI benchmarking suite on any PR by tagging it with the ``run-benchmark`` label.
+1. **Performance and benchmarks:** As `xarray` targets scientific applications that often involve
+   large multidimensional datasets, high performance is a key value of `xarray`. While
+   every new feature won't scale equally to all sizes of data, keeping in mind performance
+   and our [benchmarks](https://github.com/pydata/xarray/tree/main/asv_bench) during a review may be important, and you may
+   need to ask for benchmarks to be run and reported or new benchmarks to be added.
+   You can run the CI benchmarking suite on any PR by tagging it with the `run-benchmark` label.
 
-3. **APIs and stability:** Coding users and developers will make
-extensive use of our APIs. The foundation of a healthy ecosystem will be
-a fully capable and stable set of APIs, so as `xarray` matures it will
-very important to ensure our APIs are stable. Spending the extra time to consider names of public facing
-variables and methods, alongside function signatures, could save us considerable
-trouble in the future. We do our best to provide [deprecation cycles](https://docs.xarray.dev/en/stable/contributing.html#backwards-compatibility)
-when making backwards-incompatible changes.
+1. **APIs and stability:** Coding users and developers will make
+   extensive use of our APIs. The foundation of a healthy ecosystem will be
+   a fully capable and stable set of APIs, so as `xarray` matures it will
+   very important to ensure our APIs are stable. Spending the extra time to consider names of public facing
+   variables and methods, alongside function signatures, could save us considerable
+   trouble in the future. We do our best to provide [deprecation cycles](https://docs.xarray.dev/en/stable/contributing.html#backwards-compatibility)
+   when making backwards-incompatible changes.
 
-4. **Documentation and tutorials:** All new methods should have appropriate doc
-strings following [PEP257](https://peps.python.org/pep-0257/) and the
-[NumPy documentation guide](https://numpy.org/devdocs/dev/howto-docs.html#documentation-style).
-For any major new features, accompanying changes should be made to our
-[tutorials](https://tutorial.xarray.dev). These should not only
-illustrates the new feature, but explains it.
+1. **Documentation and tutorials:** All new methods should have appropriate doc
+   strings following [PEP257](https://peps.python.org/pep-0257/) and the
+   [NumPy documentation guide](https://numpy.org/devdocs/dev/howto-docs.html#documentation-style).
+   For any major new features, accompanying changes should be made to our
+   [tutorials](https://tutorial.xarray.dev). These should not only
+   illustrates the new feature, but explains it.
 
-5. **Implementations and algorithms:** You should understand the code being modified
-or added before approving it.  (See [Merge Only Changes You Understand](#merge-only-changes-you-understand)
-below.) Implementations should do what they claim and be simple, readable, and efficient
-in that order.
+1. **Implementations and algorithms:** You should understand the code being modified
+   or added before approving it.  (See [Merge Only Changes You Understand](#merge-only-changes-you-understand)
+   below.) Implementations should do what they claim and be simple, readable, and efficient
+   in that order.
 
-6. **Tests:** All contributions *must* be tested, and each added line of code
-should be covered by at least one test. Good tests not only execute the code,
-but explore corner cases.  It can be tempting not to review tests, but please
-do so.
+1. **Tests:** All contributions *must* be tested, and each added line of code
+   should be covered by at least one test. Good tests not only execute the code,
+   but explore corner cases.  It can be tempting not to review tests, but please
+   do so.
 
 Other changes may be *nitpicky*: spelling mistakes, formatting,
 etc. Do not insist contributors make these changes, but instead you should offer
@@ -268,8 +267,8 @@ resources such as:
 - Our [philosophy and development roadmap](https://docs.xarray.dev/en/stable/roadmap.html).
 - [PEP8](https://peps.python.org/pep-0008/) for Python style.
 - [PEP257](https://peps.python.org/pep-0257/) and the
-   [NumPy documentation guide](https://numpy.org/devdocs/dev/howto-docs.html#documentation-style)
-   for docstring conventions.
+  [NumPy documentation guide](https://numpy.org/devdocs/dev/howto-docs.html#documentation-style)
+  for docstring conventions.
 - [`pre-commit`](https://pre-commit.com) hooks for autoformatting.
 - [`ruff`](https://github.com/astral-sh/ruff) autoformatting and linting.
 - [python-xarray](https://stackoverflow.com/questions/tagged/python-xarray) on Stack Overflow.

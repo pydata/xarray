@@ -17,7 +17,7 @@ to our :ref:`indexing <indexing>`.
 
 .. note::
 
-  ``interp`` requires `scipy` installed.
+  ``interp`` requires ``scipy`` installed.
 
 
 Scalar and 1-dimensional interpolation

@@ -16,10 +16,10 @@ from importlib import import_module
 
 import numpy as np
 import pandas as pd
-from numpy import all as array_all  # noqa
-from numpy import any as array_any  # noqa
+from numpy import all as array_all  # noqa: F401
+from numpy import any as array_any  # noqa: F401
 from numpy import concatenate as _concatenate
-from numpy import (  # noqa
+from numpy import (  # noqa: F401
     full_like,
     gradient,
     isclose,
@@ -30,7 +30,7 @@ from numpy import (  # noqa
     transpose,
     unravel_index,
 )
-from numpy.lib.stride_tricks import sliding_window_view  # noqa
+from numpy.lib.stride_tricks import sliding_window_view  # noqa: F401
 from packaging.version import Version
 from pandas.api.types import is_extension_array_dtype
 

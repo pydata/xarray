@@ -11,6 +11,22 @@ repos:
       - id: check-yaml
       - id: debug-statements
       - id: mixed-line-ending
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+      - id: python-check-blanket-noqa
+      - id: python-check-blanket-type-ignore
+      - id: python-check-mock-methods
+      - id: python-no-log-warn
+      # - id: python-use-type-annotations  # too many false positives
+      - id: rst-backticks
+      - id: rst-directive-colons
+      - id: rst-inline-touching-normal
+      - id: text-unicode-replacement-char
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.18
+    hooks:
+    - id: mdformat
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
     rev: 'v0.6.9'
