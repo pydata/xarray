@@ -1,5 +1,4 @@
-"""String formatting routines for __repr__.
-"""
+"""String formatting routines for __repr__."""
 
 from __future__ import annotations
 

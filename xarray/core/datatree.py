@@ -801,7 +801,6 @@ class DataTree(
         data: Dataset | Default = _default,
         children: dict[str, DataTree] | Default = _default,
     ) -> None:
-
         ds = self.to_dataset(inherit=False) if data is _default else data
 
         if children is _default:
@@ -1104,10 +1103,12 @@ class DataTree(
         d : dict-like
             A mapping from path names to xarray.Dataset or DataTree objects.
 
-            Path names are to be given as unix-like path. If path names containing more than one
-            part are given, new tree nodes will be constructed as necessary.
+            Path names are to be given as unix-like path. If path names
+            containing more than one part are given, new tree nodes will be
+            constructed as necessary.
 
-            To assign data to the root node of the tree use "/" as the path.
+            To assign data to the root node of the tree use "", ".", "/" or "./"
+            as the path.
         name : Hashable | None, optional
             Name for the root node of the tree. Default is None.
 
@@ -1119,17 +1120,27 @@ class DataTree(
         -----
         If your dictionary is nested you will need to flatten it before using this method.
         """
-
-        # First create the root node
+        # Find any values corresponding to the root
         d_cast = dict(d)
-        root_data = d_cast.pop("/", None)
+        root_data = None
+        for key in ("", ".", "/", "./"):
+            if key in d_cast:
+                if root_data is not None:
+                    raise ValueError(
+                        "multiple entries found corresponding to the root node"
+                    )
+                root_data = d_cast.pop(key)
+
+        # Create the root node
         if isinstance(root_data, DataTree):
             obj = root_data.copy()
+            obj.name = name
         elif root_data is None or isinstance(root_data, Dataset):
             obj = cls(name=name, dataset=root_data, children=None)
         else:
             raise TypeError(
-                f'root node data (at "/") must be a Dataset or DataTree, got {type(root_data)}'
+                f'root node data (at "", ".", "/" or "./") must be a Dataset '
+                f"or DataTree, got {type(root_data)}"
             )
 
         def depth(item) -> int:
@@ -1141,11 +1152,10 @@ class DataTree(
             # Sort keys by depth so as to insert nodes from root first (see GH issue #9276)
             for path, data in sorted(d_cast.items(), key=depth):
                 # Create and set new node
-                node_name = NodePath(path).name
                 if isinstance(data, DataTree):
                     new_node = data.copy()
                 elif isinstance(data, Dataset) or data is None:
-                    new_node = cls(name=node_name, dataset=data)
+                    new_node = cls(dataset=data)
                 else:
                     raise TypeError(f"invalid values: {data}")
                 obj._set_item(
@@ -1252,20 +1262,16 @@ class DataTree(
         except (TypeError, TreeIsomorphismError):
             return False
 
-    def equals(self, other: DataTree, from_root: bool = True) -> bool:
+    def equals(self, other: DataTree) -> bool:
         """
-        Two DataTrees are equal if they have isomorphic node structures, with matching node names,
-        and if they have matching variables and coordinates, all of which are equal.
-
-        By default this method will check the whole tree above the given node.
+        Two DataTrees are equal if they have isomorphic node structures, with
+        matching node names, and if they have matching variables and
+        coordinates, all of which are equal.
 
         Parameters
         ----------
         other : DataTree
             The other tree object to compare to.
-        from_root : bool, optional, default is True
-            Whether or not to first traverse to the root of the two trees before checking for isomorphism.
-            If neither tree has a parent then this has no effect.
 
         See Also
         --------
@@ -1273,30 +1279,27 @@ class DataTree(
         DataTree.isomorphic
         DataTree.identical
         """
-        if not self.isomorphic(other, from_root=from_root, strict_names=True):
+        if not self.isomorphic(other, strict_names=True):
             return False
 
         return all(
-            [
-                node.dataset.equals(other_node.dataset)
-                for node, other_node in zip(self.subtree, other.subtree, strict=True)
-            ]
+            node.dataset.equals(other_node.dataset)
+            for node, other_node in zip(self.subtree, other.subtree, strict=True)
         )
 
-    def identical(self, other: DataTree, from_root=True) -> bool:
-        """
-        Like equals, but will also check all dataset attributes and the attributes on
-        all variables and coordinates.
+    def _inherited_coords_set(self) -> set[str]:
+        return set(self.parent.coords if self.parent else [])
 
-        By default this method will check the whole tree above the given node.
+    def identical(self, other: DataTree) -> bool:
+        """
+        Like equals, but also checks attributes on all datasets, variables and
+        coordinates, and requires that any inherited coordinates at the tree
+        root are also inherited on the other tree.
 
         Parameters
         ----------
         other : DataTree
             The other tree object to compare to.
-        from_root : bool, optional, default is True
-            Whether or not to first traverse to the root of the two trees before checking for isomorphism.
-            If neither tree has a parent then this has no effect.
 
         See Also
         --------
@@ -1304,9 +1307,16 @@ class DataTree(
         DataTree.isomorphic
         DataTree.equals
         """
-        if not self.isomorphic(other, from_root=from_root, strict_names=True):
+        if not self.isomorphic(other, strict_names=True):
             return False
 
+        if self.name != other.name:
+            return False
+
+        if self._inherited_coords_set() != other._inherited_coords_set():
+            return False
+
+        # TODO: switch to zip_subtrees, when available
         return all(
             node.dataset.identical(other_node.dataset)
             for node, other_node in zip(self.subtree, other.subtree, strict=True)
@@ -1680,7 +1690,7 @@ class DataTree(
                 numeric_only=numeric_only,
                 **kwargs,
             )
-            path = "/" if node is self else node.relative_to(self)
+            path = node.relative_to(self)
             result[path] = node_result
         return type(self).from_dict(result, name=self.name)
 
@@ -1715,7 +1725,7 @@ class DataTree(
                         # with a scalar) can also create scalar coordinates, which
                         # need to be explicitly removed.
                         del node_result.coords[k]
-            path = "/" if node is self else node.relative_to(self)
+            path = node.relative_to(self)
             result[path] = node_result
         return type(self).from_dict(result, name=self.name)
 

@@ -372,7 +372,8 @@ def map_blocks(
 
             # ChainMap wants MutableMapping, but xindexes is Mapping
             merged_indexes = collections.ChainMap(
-                expected["indexes"], merged_coordinates.xindexes  # type: ignore[arg-type]
+                expected["indexes"],
+                merged_coordinates.xindexes,  # type: ignore[arg-type]
             )
             expected_index = merged_indexes.get(name, None)
             if expected_index is not None and not index.equals(expected_index):

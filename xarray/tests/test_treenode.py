@@ -304,7 +304,6 @@ def create_test_tree() -> tuple[NamedNode, NamedNode]:
 
 
 class TestZipSubtrees:
-
     def test_one_tree(self) -> None:
         root, _ = create_test_tree()
         expected = [
@@ -351,7 +350,6 @@ class TestZipSubtrees:
 
 
 class TestAncestry:
-
     def test_parents(self) -> None:
         _, leaf_f = create_test_tree()
         expected = ["e", "b", "a"]
