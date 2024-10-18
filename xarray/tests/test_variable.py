@@ -274,35 +274,43 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         expected = np.datetime64("2000-01-01", "ns")
         assert x[0].values == expected
 
-    @pytest.mark.filterwarnings("ignore:Converting non-default")
-    def test_datetime64_conversion(self):
-        # todo: check, if this test is OK
-        times = pd.date_range("2000-01-01", periods=3)
-        for values, unit in [
-            (times, "ns"),
-            (times.values, "ns"),
-            (times.values.astype("datetime64[s]"), "s"),
-            (times.to_pydatetime(), "ns"),
-        ]:
-            v = self.cls(["t"], values)
-            assert v.dtype == np.dtype(f"datetime64[{unit}]")
-            assert_array_equal(v.values, times.values)
-            assert v.values.dtype == np.dtype(f"datetime64[{unit}]")
+    dt64_data = pd.date_range("2000-01-01", periods=3)
 
     @pytest.mark.filterwarnings("ignore:Converting non-default")
-    def test_timedelta64_conversion(self):
+    @pytest.mark.parametrize(
+        "values, unit",
+        [
+            (dt64_data, "ns"),
+            (dt64_data.values, "ns"),
+            (dt64_data.values.astype("datetime64[s]"), "s"),
+            (dt64_data.to_pydatetime(), "us"),
+        ],
+    )
+    def test_datetime64_conversion(self, values, unit):
         # todo: check, if this test is OK
-        times = pd.timedelta_range(start=0, periods=3)
-        for values, unit in [
-            (times, "ns"),
-            (times.values, "ns"),
-            (times.values.astype("timedelta64[s]"), "s"),
-            (times.to_pytimedelta(), "ns"),
-        ]:
-            v = self.cls(["t"], values)
-            assert v.dtype == np.dtype(f"timedelta64[{unit}]")
-            assert_array_equal(v.values, times.values)
-            assert v.values.dtype == np.dtype(f"timedelta64[{unit}]")
+        v = self.cls(["t"], values)
+        assert v.dtype == np.dtype(f"datetime64[{unit}]")
+        assert_array_equal(v.values, self.dt64_data.values)
+        assert v.values.dtype == np.dtype(f"datetime64[{unit}]")
+
+    td64_data = pd.timedelta_range(start=0, periods=3)
+
+    @pytest.mark.filterwarnings("ignore:Converting non-default")
+    @pytest.mark.parametrize(
+        "values, unit",
+        [
+            (td64_data, "ns"),
+            (td64_data.values, "ns"),
+            (td64_data.values.astype("timedelta64[s]"), "s"),
+            (td64_data.to_pytimedelta(), "us"),
+        ],
+    )
+    def test_timedelta64_conversion(self, values, unit):
+        # todo: check, if this test is OK
+        v = self.cls(["t"], values)
+        assert v.dtype == np.dtype(f"timedelta64[{unit}]")
+        assert_array_equal(v.values, self.td64_data.values)
+        assert v.values.dtype == np.dtype(f"timedelta64[{unit}]")
 
     def test_object_conversion(self):
         data = np.arange(5).astype(str).astype(object)
@@ -1078,7 +1086,7 @@ class TestVariable(VariableSubclassobjects):
         [
             (np.datetime64("2000-01-01"), "s"),
             (pd.Timestamp("2000-01-01T00"), "s"),
-            (datetime(2000, 1, 1), "ns"),
+            (datetime(2000, 1, 1), "us"),
         ],
     )
     def test_datetime64_conversion_scalar(self, values, unit):
@@ -1093,8 +1101,8 @@ class TestVariable(VariableSubclassobjects):
         "values, unit",
         [
             (np.timedelta64(1, "D"), "s"),
-            (pd.Timedelta("1 day"), "ns"),
-            (timedelta(days=1), "ns"),
+            (pd.Timedelta("1 day"), "us"),
+            (timedelta(days=1), "us"),
         ],
     )
     def test_timedelta64_conversion_scalar(self, values, unit):
@@ -1122,7 +1130,7 @@ class TestVariable(VariableSubclassobjects):
 
     @pytest.mark.filterwarnings("ignore:Converting non-default")
     @pytest.mark.parametrize(
-        "values, unit", [(pd.to_timedelta("1s"), "ns"), (np.timedelta64(1, "s"), "s")]
+        "values, unit", [(pd.to_timedelta("1s"), "us"), (np.timedelta64(1, "s"), "s")]
     )
     def test_0d_timedelta(self, values, unit):
         # todo: check, if this test is OK
@@ -2652,11 +2660,11 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         assert np.dtype("datetime64[ns]") == actual.dtype
         assert expected is source_ndarray(np.asarray(actual))
 
-        expected = np.datetime64("2000-01-01", "ns")
+        expected = np.datetime64("2000-01-01", "us")
         actual = as_compatible_data(datetime(2000, 1, 1))
         assert np.asarray(expected) == actual
         assert np.ndarray is type(actual)
-        assert np.dtype("datetime64[ns]") == actual.dtype
+        assert np.dtype("datetime64[us]") == actual.dtype
 
     def test_tz_datetime(self) -> None:
         # todo: check, if this test is OK
@@ -2959,8 +2967,8 @@ class TestNumpyCoercion:
         (np.array([np.datetime64("2000-01-01", "ns")]), "ns"),
         (np.array([np.datetime64("2000-01-01", "s")]), "s"),
         (pd.date_range("2000", periods=1), "ns"),
-        (datetime(2000, 1, 1), "ns"),
-        (np.array([datetime(2000, 1, 1)]), "ns"),
+        (datetime(2000, 1, 1), "us"),
+        (np.array([datetime(2000, 1, 1)]), "us"),
         (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), "ns"),
         (
             pd.Series(
@@ -3036,8 +3044,8 @@ def test_pandas_two_only_datetime_conversion_warnings(
         (np.array([np.timedelta64(10, "ns")]), "ns"),
         (np.array([np.timedelta64(10, "s")]), "s"),
         (pd.timedelta_range("1", periods=1), "ns"),
-        (timedelta(days=1), "ns"),
-        (np.array([timedelta(days=1)]), "ns"),
+        (timedelta(days=1), "us"),
+        (np.array([timedelta(days=1)]), "us"),
     ],
     ids=lambda x: f"{x}",
 )
