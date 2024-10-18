@@ -236,6 +236,6 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
     da.resample(time="81min", closed="right", label="right", offset="3min").mean()
 
-.. _nanosecond-precision range: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamp-limitations
+.. _precision range: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamp-limitations
 .. _ISO 8601 standard: https://en.wikipedia.org/wiki/ISO_8601
 .. _partial datetime string indexing: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#partial-string-indexing
