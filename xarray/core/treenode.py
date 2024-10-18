@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import collections
-import os.path
 import sys
 from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
@@ -400,12 +399,13 @@ class TreeNode(Generic[Tree]):
     @property
     def subtree(self: Tree) -> Iterator[Tree]:
         """
-        An iterator over all nodes in this tree, including both self and all descendants.
+        Iterate over all nodes in this tree, including both self and all descendants.
 
         Iterates breadth-first.
 
         See Also
         --------
+        DataTree.subtree_with_paths
         DataTree.descendants
         """
         # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
@@ -417,13 +417,22 @@ class TreeNode(Generic[Tree]):
 
     @property
     def subtree_with_paths(self: Tree) -> Iterator[tuple[str, Tree]]:
-        queue = collections.deque([("/", self)])
+        """
+        Iterate over relative paths and node pairs for all nodes in this tree.
+
+        Iterates breadth-first.
+
+        See Also
+        --------
+        DataTree.subtree
+        DataTree.descendants
+        """
+        queue = collections.deque([(".", self)])
         while queue:
             path, node = queue.popleft()
             yield path, node
             queue.extend(
-                (os.path.join(path, name), child)
-                for name, child in node.children.items()
+                (path + "/" + name, child) for name, child in node.children.items()
             )
 
     @property
@@ -795,6 +804,9 @@ def group_subtrees(
 ) -> Iterator[tuple[str, tuple[AnyNamedNode, ...]]]:
     """Iterate over aligned subtrees in breadth-first order.
 
+    `group_subtrees` allows for applying operations over all nodes of a
+    collection of DataTree objects with nodes matched by their full paths.
+
     Example usage:
 
         outputs = {}
@@ -821,7 +833,7 @@ def group_subtrees(
         raise TypeError("must pass at least one tree object")
 
     # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
-    queue = collections.deque([("/", trees)])
+    queue = collections.deque([(".", trees)])
 
     while queue:
         path, active_nodes = queue.popleft()
@@ -841,9 +853,8 @@ def group_subtrees(
             raise ValueError(f"children at {path!r} do not match: {child_summary}")
 
         for name in first_node.children:
-            child_path = os.path.join(path, name)
             child_nodes = tuple(node.children[name] for node in active_nodes)
-            queue.append((child_path, child_nodes))
+            queue.append((path + "/" + name, child_nodes))
 
 
 def zip_subtrees(

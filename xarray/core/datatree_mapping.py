@@ -3,11 +3,11 @@ from __future__ import annotations
 import functools
 import sys
 from collections.abc import Callable, Mapping
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, cast, result_name
 
 from xarray.core.dataset import Dataset
 from xarray.core.formatting import diff_treestructure
-from xarray.core.treenode import TreeNode, zip_subtrees
+from xarray.core.treenode import TreeNode, group_subtrees
 
 if TYPE_CHECKING:
     from xarray.core.datatree import DataTree
@@ -56,7 +56,7 @@ def check_isomorphic(
     """
     # TODO: remove require_names_equal and check_from_root. Instead, check that
     # all child nodes match, in any order, which will suffice once
-    # map_over_datasets switches to use zip_subtrees.
+    # map_over_datasets switches to use group_subtrees.
 
     if not isinstance(a, TreeNode):
         raise TypeError(f"Argument `a` is not a tree, it is of type {type(a)}")
@@ -133,30 +133,25 @@ def map_over_datasets(func: Callable) -> Callable:
         out_data_objects: dict[str, Dataset | None | tuple[Dataset | None, ...]] = {}
 
         tree_args = [arg for arg in args if isinstance(arg, DataTree)]
-        subtrees = zip_subtrees(*tree_args)
+        name = result_name(tree_args)
 
-        for node_tree_args in subtrees:
+        for path, node_tree_args in group_subtrees(*tree_args):
 
             node_dataset_args = [arg.dataset for arg in node_tree_args]
             for i, arg in enumerate(args):
                 if not isinstance(arg, DataTree):
                     node_dataset_args.insert(i, arg)
 
-            path = (
-                "/"
-                if node_tree_args[0] is tree_args[0]
-                else node_tree_args[0].relative_to(tree_args[0])
-            )
             func_with_error_context = _handle_errors_with_path_context(path)(func)
             results = func_with_error_context(*node_dataset_args)
 
-            out_data_objects[path] = results
+            out_data_objects["/" if path == "." else path] = results
 
         num_return_values = _check_all_return_values(out_data_objects)
 
         if num_return_values is None:
             out_data = cast(Mapping[str, Dataset | None], out_data_objects)
-            return DataTree.from_dict(out_data, name=tree_args[0].name)
+            return DataTree.from_dict(out_data, name=name)
 
         out_data_tuples = cast(
             Mapping[str, tuple[Dataset | None, ...]], out_data_objects
@@ -169,8 +164,7 @@ def map_over_datasets(func: Callable) -> Callable:
                 output_dict[path] = output
 
         return tuple(
-            DataTree.from_dict(output_dict, name=tree_args[0].name)
-            for output_dict in output_dicts
+            DataTree.from_dict(output_dict, name=name) for output_dict in output_dicts
         )
 
     return _map_over_datasets
