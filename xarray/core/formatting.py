@@ -10,7 +10,6 @@ from collections.abc import Collection, Hashable, Mapping, Sequence
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
 from reprlib import recursive_repr
-from textwrap import dedent
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -21,6 +20,7 @@ from xarray.core.datatree_render import RenderDataTree
 from xarray.core.duck_array_ops import array_equiv, astype
 from xarray.core.indexing import MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
+from xarray.core.treenode import group_subtrees
 from xarray.core.utils import is_duck_array
 from xarray.namedarray.pycompat import array_type, to_duck_array, to_numpy
 
@@ -979,44 +979,18 @@ def diff_array_repr(a, b, compat):
     return "\n".join(summary)
 
 
-def diff_treestructure(
-    a: DataTree, b: DataTree, require_names_equal: bool
-) -> str | None:
+def diff_treestructure(a: DataTree, b: DataTree) -> str | None:
     """
     Return a summary of why two trees are not isomorphic.
     If they are isomorphic return None.
     """
-    # .subtrees walks nodes in breadth-first-order, in order to produce as
+    # .group_subtrees walks nodes in breadth-first-order, in order to produce as
     # shallow of a diff as possible
-
-    # TODO: switch zip(a.subtree, b.subtree) to zip_subtrees(a, b), and only
-    # check that child node names match, e.g.,
-    #     for node_a, node_b in zip_subtrees(a, b):
-    #         if node_a.children.keys() != node_b.children.keys():
-    #             diff = dedent(
-    #                 f"""\
-    #                 Node {node_a.path!r} in the left object has children {list(node_a.children.keys())}
-    #                 Node {node_b.path!r} in the right object has children {list(node_b.children.keys())}"""
-    #             )
-    #             return diff
-
-    for node_a, node_b in zip(a.subtree, b.subtree, strict=True):
-        path_a, path_b = node_a.path, node_b.path
-
-        if require_names_equal and node_a.name != node_b.name:
-            diff = dedent(
-                f"""\
-                Node '{path_a}' in the left object has name '{node_a.name}'
-                Node '{path_b}' in the right object has name '{node_b.name}'"""
-            )
-            return diff
-
-        if len(node_a.children) != len(node_b.children):
-            diff = dedent(
-                f"""\
-                Number of children on node '{path_a}' of the left object: {len(node_a.children)}
-                Number of children on node '{path_b}' of the right object: {len(node_b.children)}"""
-            )
+    for path, (node_a, node_b) in group_subtrees(a, b):
+        if node_a.children.keys() != node_b.children.keys():
+            path_str = "root node" if path == "" else f"node {path!r}"
+            child_summary = f"{list(node_a.children)} vs {list(node_b.children)}"
+            diff = f"Children at {path_str} do not match: {child_summary}"
             return diff
 
     return None
@@ -1047,17 +1021,14 @@ def diff_nodewise_summary(a: DataTree, b: DataTree, compat):
     compat_str = _compat_to_str(compat)
 
     summary = []
-    for node_a, node_b in zip(a.subtree, b.subtree, strict=True):
+    for path, (node_a, node_b) in group_subtrees(a, b):
         a_ds, b_ds = node_a.dataset, node_b.dataset
 
         if not a_ds._all_compat(b_ds, compat):
+            path_str = "root node" if path == "" else f"node {path!r}"
             dataset_diff = diff_dataset_repr(a_ds, b_ds, compat_str)
             data_diff = "\n".join(dataset_diff.split("\n", 1)[1:])
-
-            nodediff = (
-                f"\nData in nodes at position '{node_a.path}' do not match:"
-                f"{data_diff}"
-            )
+            nodediff = f"\nData at {path_str} does not match:{data_diff}"
             summary.append(nodediff)
 
     return "\n".join(summary)
@@ -1067,11 +1038,10 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
     summary = [
         f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
+    treestructure_diff = diff_treestructure(a, b)
 
-    strict_names = True if compat in ["equals", "identical"] else False
-    treestructure_diff = diff_treestructure(a, b, strict_names)
-
-    # If the trees structures are different there is no point comparing each node
+    # If the trees structures are different there is no point comparing each node,
+    # and doing so would raise an error.
     # TODO we could show any differences in nodes up to the first place that structure differs?
     if treestructure_diff is not None:
         summary.append("\n" + treestructure_diff)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections
+import os
 import sys
 from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
@@ -399,12 +400,13 @@ class TreeNode(Generic[Tree]):
     @property
     def subtree(self: Tree) -> Iterator[Tree]:
         """
-        An iterator over all nodes in this tree, including both self and all descendants.
+        Iterate over all nodes in this tree, including both self and all descendants.
 
         Iterates breadth-first.
 
         See Also
         --------
+        DataTree.subtree_with_paths
         DataTree.descendants
         """
         # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
@@ -413,6 +415,27 @@ class TreeNode(Generic[Tree]):
             node = queue.popleft()
             yield node
             queue.extend(node.children.values())
+
+    @property
+    def subtree_with_paths(self: Tree) -> Iterator[tuple[str, Tree]]:
+        """
+        Iterate over relative paths and node pairs for all nodes in this tree.
+
+        Iterates breadth-first.
+
+        See Also
+        --------
+        DataTree.subtree
+        DataTree.descendants
+        """
+        queue = collections.deque([("", self)])
+        while queue:
+            path, node = queue.popleft()
+            yield path, node
+            queue.extend(
+                (os.path.join(path, name), child)
+                for name, child in node.children.items()
+            )
 
     @property
     def descendants(self: Tree) -> tuple[Tree, ...]:
@@ -778,8 +801,24 @@ class NamedNode(TreeNode, Generic[Tree]):
         return NodePath(path_upwards)
 
 
-def zip_subtrees(*trees: AnyNamedNode) -> Iterator[tuple[AnyNamedNode, ...]]:
+class TreeIsomorphismError(ValueError):
+    """Error raised if two tree objects do not share the same node structure."""
+
+
+def group_subtrees(
+    *trees: AnyNamedNode,
+) -> Iterator[tuple[str, tuple[AnyNamedNode, ...]]]:
     """Iterate over aligned subtrees in breadth-first order.
+
+    `group_subtrees` allows for applying operations over all nodes of a
+    collection of DataTree objects with nodes matched by their full paths.
+
+    Example usage:
+
+        outputs = {}
+        for path, (node_a, node_b) in group_subtrees(tree_a, tree_b):
+            outputs[path] = f(node_a, node_b)
+        tree_out = DataTree.from_dict(outputs)
 
     Parameters:
     -----------
@@ -788,32 +827,47 @@ def zip_subtrees(*trees: AnyNamedNode) -> Iterator[tuple[AnyNamedNode, ...]]:
 
     Yields
     ------
-    Tuples of matching subtrees.
+    A tuple of the relative path and corresponding nodes for each subtree in the
+    inputs.
+
+    Raises
+    ------
+    TreeIsomorphismError
+        If trees are not isomorphic, i.e., they have different structures.
     """
     if not trees:
         raise TypeError("must pass at least one tree object")
 
     # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
-    queue = collections.deque([trees])
+    queue = collections.deque([("", trees)])
 
     while queue:
-        active_nodes = queue.popleft()
+        path, active_nodes = queue.popleft()
 
         # yield before raising an error, in case the caller chooses to exit
         # iteration early
-        yield active_nodes
+        yield path, active_nodes
 
         first_node = active_nodes[0]
         if any(
             sibling.children.keys() != first_node.children.keys()
             for sibling in active_nodes[1:]
         ):
+            path_str = "root node" if path == "" else f"node {path!r}"
             child_summary = " vs ".join(
                 str(list(node.children)) for node in active_nodes
             )
-            raise ValueError(
-                f"children at {first_node.path!r} do not match: {child_summary}"
+            raise TreeIsomorphismError(
+                f"children at {path_str} do not match: {child_summary}"
             )
 
         for name in first_node.children:
-            queue.append(tuple(node.children[name] for node in active_nodes))
+            child_nodes = tuple(node.children[name] for node in active_nodes)
+            queue.append((os.path.join(path, name), child_nodes))
+
+
+def zip_subtrees(
+    *trees: AnyNamedNode,
+) -> Iterator[tuple[AnyNamedNode, ...]]:
+    for _, nodes in group_subtrees(*trees):
+        yield nodes
