@@ -283,7 +283,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             (dt64_data, "ns"),
             (dt64_data.values, "ns"),
             (dt64_data.values.astype("datetime64[s]"), "s"),
-            (dt64_data.to_pydatetime(), "us"),
+            (dt64_data.to_pydatetime(), "ns"),
         ],
     )
     def test_datetime64_conversion(self, values, unit):
@@ -302,7 +302,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             (td64_data, "ns"),
             (td64_data.values, "ns"),
             (td64_data.values.astype("timedelta64[s]"), "s"),
-            (td64_data.to_pytimedelta(), "us"),
+            (td64_data.to_pytimedelta(), "ns"),
         ],
     )
     def test_timedelta64_conversion(self, values, unit):
@@ -2968,7 +2968,7 @@ class TestNumpyCoercion:
         (np.array([np.datetime64("2000-01-01", "s")]), "s"),
         (pd.date_range("2000", periods=1), "ns"),
         (datetime(2000, 1, 1), "us"),
-        (np.array([datetime(2000, 1, 1)]), "us"),
+        (np.array([datetime(2000, 1, 1)]), "ns"),
         (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), "ns"),
         (
             pd.Series(
@@ -3045,7 +3045,7 @@ def test_pandas_two_only_datetime_conversion_warnings(
         (np.array([np.timedelta64(10, "s")]), "s"),
         (pd.timedelta_range("1", periods=1), "ns"),
         (timedelta(days=1), "us"),
-        (np.array([timedelta(days=1)]), "us"),
+        (np.array([timedelta(days=1)]), "ns"),
     ],
     ids=lambda x: f"{x}",
 )
