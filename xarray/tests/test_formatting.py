@@ -699,11 +699,14 @@ class TestFormatting:
         dt_1: xr.DataTree = xr.DataTree.from_dict({"a": ds1, "a/b": ds3})
         ds2 = xr.Dataset({"u": np.int64(0)})
         ds4 = xr.Dataset({"w": np.int64(6)})
-        dt_2: xr.DataTree = xr.DataTree.from_dict({"a": ds2, "a/b": ds4})
+        dt_2: xr.DataTree = xr.DataTree.from_dict({"a": ds2, "a/b": ds4}, name="foo")
 
         expected = dedent(
             """\
-            Left and right DataTree objects are not equal
+            Left and right DataTree objects are not identical
+
+            Differing names:
+                None != 'foo'
 
             Data at node 'a' does not match:
                 Data variables only on the left object:
@@ -714,7 +717,7 @@ class TestFormatting:
                 L   w        int64 8B 5
                 R   w        int64 8B 6"""
         )
-        actual = formatting.diff_datatree_repr(dt_1, dt_2, "equals")
+        actual = formatting.diff_datatree_repr(dt_1, dt_2, "identical")
         assert actual == expected
 
 

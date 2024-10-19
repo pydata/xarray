@@ -1067,12 +1067,12 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
     # and doing so would raise an error.
     # TODO we could show any differences in nodes up to the first place that structure differs?
     if treestructure_diff is not None:
-        summary.append("\n" + treestructure_diff)
+        summary.append(treestructure_diff)
     elif compat != "isomorphic":
         nodewise_diff = diff_nodewise_summary(a, b, compat)
-        summary.append("\n" + nodewise_diff)
+        summary.append(nodewise_diff)
 
-    return "\n".join(summary)
+    return "\n\n".join(summary)
 
 
 def _inherited_vars(mapping: ChainMap) -> dict:
