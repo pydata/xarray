@@ -812,7 +812,7 @@ class TreeIsomorphismError(ValueError):
 def group_subtrees(
     *trees: AnyNamedNode,
 ) -> Iterator[tuple[str, tuple[AnyNamedNode, ...]]]:
-    """Iterate over aligned subtrees in breadth-first order.
+    """Iterate over subtrees grouped by relative paths in breadth-first order.
 
     `group_subtrees` allows for applying operations over all nodes of a
     collection of DataTree objects with nodes matched by their relative paths.
@@ -878,5 +878,6 @@ def group_subtrees(
 def zip_subtrees(
     *trees: AnyNamedNode,
 ) -> Iterator[tuple[AnyNamedNode, ...]]:
+    """Zip together subtrees aligned by relative path."""
     for _, nodes in group_subtrees(*trees):
         yield nodes
