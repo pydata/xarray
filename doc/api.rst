@@ -749,6 +749,17 @@ Manipulate the contents of a single ``DataTree`` node.
    DataTree.assign
    DataTree.drop_nodes
 
+DataTree Operations
+-------------------
+
+Apply operations over multiple ``DataTree`` objects.
+
+.. autosummary::
+   :toctree: generated/
+
+   map_over_datasets
+   group_subtrees
+
 Comparisons
 -----------
 
@@ -954,7 +965,6 @@ DataTree methods
 
    open_datatree
    open_groups
-   map_over_datasets
    DataTree.to_dict
    DataTree.to_netcdf
    DataTree.to_zarr
