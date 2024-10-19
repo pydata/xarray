@@ -11,7 +11,6 @@ import xarray as xr
 from xarray import DataArray, Dataset
 from xarray.core.coordinates import DataTreeCoordinates
 from xarray.core.datatree import DataTree
-from xarray.core.datatree_ops import _MAPPED_DOCSTRING_ADDENDUM, insert_doc_addendum
 from xarray.core.treenode import NotFoundInTreeError
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import assert_array_equal, create_test_data, source_ndarray
@@ -839,10 +838,25 @@ class TestTreeFromDict:
 
         assert_identical(actual, expected)
 
-    def test_roundtrip(self, simple_datatree) -> None:
-        dt = simple_datatree
-        roundtrip = DataTree.from_dict(dt.to_dict())
-        assert roundtrip.equals(dt)
+    def test_roundtrip_to_dict(self, simple_datatree) -> None:
+        tree = simple_datatree
+        roundtrip = DataTree.from_dict(tree.to_dict())
+        assert_identical(tree, roundtrip)
+
+    def test_to_dict(self):
+        tree = DataTree.from_dict({"/a/b/c": None})
+        roundtrip = DataTree.from_dict(tree.to_dict())
+        assert_identical(tree, roundtrip)
+
+        roundtrip = DataTree.from_dict(tree.to_dict(relative=True))
+        assert_identical(tree, roundtrip)
+
+        roundtrip = DataTree.from_dict(tree.children["a"].to_dict(relative=False))
+        assert_identical(tree, roundtrip)
+
+        expected = DataTree.from_dict({"b/c": None})
+        actual = DataTree.from_dict(tree.children["a"].to_dict(relative=True))
+        assert_identical(expected, actual)
 
     @pytest.mark.xfail
     def test_roundtrip_unnamed_root(self, simple_datatree) -> None:
@@ -2109,79 +2123,3 @@ class TestUFuncs:
         expected = create_test_datatree(modify=lambda ds: np.sin(ds))
         result_tree = np.sin(dt)
         assert_equal(result_tree, expected)
-
-
-class TestDocInsertion:
-    """Tests map_over_datasets docstring injection."""
-
-    def test_standard_doc(self):
-        dataset_doc = dedent(
-            """\
-            Manually trigger loading and/or computation of this dataset's data
-                    from disk or a remote source into memory and return this dataset.
-                    Unlike compute, the original dataset is modified and returned.
-
-                    Normally, it should not be necessary to call this method in user code,
-                    because all xarray functions should either work on deferred data or
-                    load data automatically. However, this method can be necessary when
-                    working with many file objects on disk.
-
-                    Parameters
-                    ----------
-                    **kwargs : dict
-                        Additional keyword arguments passed on to ``dask.compute``.
-
-                    See Also
-                    --------
-                    dask.compute"""
-        )
-
-        expected_doc = dedent(
-            """\
-            Manually trigger loading and/or computation of this dataset's data
-                    from disk or a remote source into memory and return this dataset.
-                    Unlike compute, the original dataset is modified and returned.
-
-                    .. note::
-                        This method was copied from :py:class:`xarray.Dataset`, but has
-                        been altered to call the method on the Datasets stored in every
-                        node of the subtree. See the `map_over_datasets` function for more
-                        details.
-
-                    Normally, it should not be necessary to call this method in user code,
-                    because all xarray functions should either work on deferred data or
-                    load data automatically. However, this method can be necessary when
-                    working with many file objects on disk.
-
-                    Parameters
-                    ----------
-                    **kwargs : dict
-                        Additional keyword arguments passed on to ``dask.compute``.
-
-                    See Also
-                    --------
-                    dask.compute"""
-        )
-
-        wrapped_doc = insert_doc_addendum(dataset_doc, _MAPPED_DOCSTRING_ADDENDUM)
-
-        assert expected_doc == wrapped_doc
-
-    def test_one_liner(self):
-        mixin_doc = "Same as abs(a)."
-
-        expected_doc = dedent(
-            """\
-            Same as abs(a).
-
-            This method was copied from :py:class:`xarray.Dataset`, but has been altered to
-                call the method on the Datasets stored in every node of the subtree. See
-                the `map_over_datasets` function for more details."""
-        )
-
-        actual_doc = insert_doc_addendum(mixin_doc, _MAPPED_DOCSTRING_ADDENDUM)
-        assert expected_doc == actual_doc
-
-    def test_none(self):
-        actual_doc = insert_doc_addendum(None, _MAPPED_DOCSTRING_ADDENDUM)
-        assert actual_doc is None

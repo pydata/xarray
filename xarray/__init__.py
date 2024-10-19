@@ -49,6 +49,7 @@ from xarray.core.treenode import (
     InvalidTreeError,
     NotFoundInTreeError,
     TreeIsomorphismError,
+    group_subtrees,
 )
 from xarray.core.variable import IndexVariable, Variable, as_variable
 from xarray.namedarray.core import NamedArray
@@ -86,6 +87,7 @@ __all__ = (
     "cross",
     "full_like",
     "get_options",
+    "group_subtrees",
     "infer_freq",
     "load_dataarray",
     "load_dataset",

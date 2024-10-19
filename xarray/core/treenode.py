@@ -406,8 +406,9 @@ class TreeNode(Generic[Tree]):
 
         See Also
         --------
-        DataTree.subtree_with_paths
+        DataTree.subtree_with_keys
         DataTree.descendants
+        group_subtrees
         """
         # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
         queue = collections.deque([self])
@@ -417,7 +418,7 @@ class TreeNode(Generic[Tree]):
             queue.extend(node.children.values())
 
     @property
-    def subtree_with_paths(self: Tree) -> Iterator[tuple[str, Tree]]:
+    def subtree_with_keys(self: Tree) -> Iterator[tuple[str, Tree]]:
         """
         Iterate over relative paths and node pairs for all nodes in this tree.
 
@@ -427,6 +428,7 @@ class TreeNode(Generic[Tree]):
         --------
         DataTree.subtree
         DataTree.descendants
+        group_subtrees
         """
         queue = collections.deque([("", self)])
         while queue:
@@ -811,17 +813,17 @@ def group_subtrees(
     """Iterate over aligned subtrees in breadth-first order.
 
     `group_subtrees` allows for applying operations over all nodes of a
-    collection of DataTree objects with nodes matched by their full paths.
+    collection of DataTree objects with nodes matched by their relative paths.
 
-    Example usage:
+    Example usage::
 
         outputs = {}
         for path, (node_a, node_b) in group_subtrees(tree_a, tree_b):
             outputs[path] = f(node_a, node_b)
         tree_out = DataTree.from_dict(outputs)
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     *trees : Tree
         Trees to iterate over.
 
@@ -834,6 +836,11 @@ def group_subtrees(
     ------
     TreeIsomorphismError
         If trees are not isomorphic, i.e., they have different structures.
+
+    See also
+    --------
+    DataTree.subtree
+    DataTree.subtree_with_keys
     """
     if not trees:
         raise TypeError("must pass at least one tree object")

@@ -13,21 +13,13 @@ empty = xr.Dataset()
 
 class TestMapOverSubTree:
     def test_no_trees_passed(self):
-        @map_over_datasets
-        def times_ten(ds):
-            return 10.0 * ds
-
         with pytest.raises(TypeError, match="must pass at least one tree object"):
-            times_ten("dt")
+            map_over_datasets(lambda x: x, "dt")
 
     def test_not_isomorphic(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
         dt2["set1/set2/extra"] = xr.DataTree(name="extra")
-
-        @map_over_datasets
-        def times_ten(ds1, ds2):
-            return ds1 * ds2
 
         with pytest.raises(
             TreeIsomorphismError,
@@ -35,65 +27,40 @@ class TestMapOverSubTree:
                 r"children at node 'set1/set2' do not match: [] vs ['extra']"
             ),
         ):
-            times_ten(dt1, dt2)
+            map_over_datasets(lambda x, y: None, dt1, dt2)
 
     def test_no_trees_returned(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
-
-        @map_over_datasets
-        def bad_func(ds1, ds2):
-            return None
-
         expected = xr.DataTree.from_dict({k: None for k in dt1.to_dict()})
-        actual = bad_func(dt1, dt2)
+        actual = map_over_datasets(lambda x, y: None, dt1, dt2)
         assert_equal(expected, actual)
 
     def test_single_tree_arg(self, create_test_datatree):
         dt = create_test_datatree()
-
-        @map_over_datasets
-        def times_ten(ds):
-            return 10.0 * ds
-
-        expected = create_test_datatree(modify=lambda ds: 10.0 * ds)
-        result_tree = times_ten(dt)
+        expected = create_test_datatree(modify=lambda x: 10.0 * x)
+        result_tree = map_over_datasets(lambda x: 10 * x, dt)
         assert_equal(result_tree, expected)
 
     def test_single_tree_arg_plus_arg(self, create_test_datatree):
         dt = create_test_datatree()
-
-        @map_over_datasets
-        def multiply(ds, times):
-            return times * ds
-
         expected = create_test_datatree(modify=lambda ds: (10.0 * ds))
-        result_tree = multiply(dt, 10.0)
+        result_tree = map_over_datasets(lambda x, y: x * y, dt, 10.0)
         assert_equal(result_tree, expected)
 
-        result_tree = multiply(10.0, dt)
+        result_tree = map_over_datasets(lambda x, y: x * y, 10.0, dt)
         assert_equal(result_tree, expected)
 
     def test_multiple_tree_args(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
-
-        @map_over_datasets
-        def add(ds1, ds2):
-            return ds1 + ds2
-
         expected = create_test_datatree(modify=lambda ds: 2.0 * ds)
-        result = add(dt1, dt2)
+        result = map_over_datasets(lambda x, y: x + y, dt1, dt2)
         assert_equal(result, expected)
 
     def test_return_multiple_trees(self, create_test_datatree):
         dt = create_test_datatree()
-
-        @map_over_datasets
-        def minmax(ds):
-            return ds.min(), ds.max()
-
-        dt_min, dt_max = minmax(dt)
+        dt_min, dt_max = map_over_datasets(lambda x: (x.min(), x.max()), dt)
         expected_min = create_test_datatree(modify=lambda ds: ds.min())
         assert_equal(dt_min, expected_min)
         expected_max = create_test_datatree(modify=lambda ds: ds.max())
@@ -102,10 +69,6 @@ class TestMapOverSubTree:
     def test_return_wrong_type(self, simple_datatree):
         dt1 = simple_datatree
 
-        @map_over_datasets
-        def bad_func(ds1):
-            return "string"
-
         with pytest.raises(
             TypeError,
             match=re.escape(
@@ -113,15 +76,11 @@ class TestMapOverSubTree:
                 "Dataset or None or a tuple of such types"
             ),
         ):
-            bad_func(dt1)
+            map_over_datasets(lambda x: "string", dt1)
 
     def test_return_tuple_of_wrong_types(self, simple_datatree):
         dt1 = simple_datatree
 
-        @map_over_datasets
-        def bad_func(ds1):
-            return xr.Dataset(), "string"
-
         with pytest.raises(
             TypeError,
             match=re.escape(
@@ -129,43 +88,36 @@ class TestMapOverSubTree:
                 "Dataset or None or a tuple of such types"
             ),
         ):
-            bad_func(dt1)
+            map_over_datasets(lambda x: (x, "string"), dt1)
 
     @pytest.mark.xfail
     def test_return_inconsistent_number_of_results(self, simple_datatree):
         dt1 = simple_datatree
 
-        @map_over_datasets
-        def bad_func(ds):
-            # Datasets in simple_datatree have different numbers of dims
-            # TODO need to instead return different numbers of Dataset objects for this test to catch the intended error
-            return tuple(ds.dims)
+        # Datasets in simple_datatree have different numbers of dims
+        # TODO need to instead return different numbers of Dataset objects fo
+        # this test to catch the intended error
 
         with pytest.raises(TypeError, match="instead returns"):
-            bad_func(dt1)
+            map_over_datasets(lambda ds: tuple(ds.dims), dt1)
 
     def test_wrong_number_of_arguments_for_func(self, simple_datatree):
         dt = simple_datatree
 
-        @map_over_datasets
-        def times_ten(ds):
-            return 10.0 * ds
-
         with pytest.raises(
             TypeError, match="takes 1 positional argument but 2 were given"
         ):
-            times_ten(dt, dt)
+            map_over_datasets(lambda x: 10 * x, dt, dt)
 
     def test_map_single_dataset_against_whole_tree(self, create_test_datatree):
         dt = create_test_datatree()
 
-        @map_over_datasets
         def nodewise_merge(node_ds, fixed_ds):
             return xr.merge([node_ds, fixed_ds])
 
         other_ds = xr.Dataset({"z": ("z", [0])})
         expected = create_test_datatree(modify=lambda ds: xr.merge([ds, other_ds]))
-        result_tree = nodewise_merge(dt, other_ds)
+        result_tree = map_over_datasets(nodewise_merge, dt, other_ds)
         assert_equal(result_tree, expected)
 
     @pytest.mark.xfail
@@ -187,13 +139,8 @@ class TestMapOverSubTree:
         # Check for datatree GH issue https://github.com/xarray-contrib/datatree/issues/48
         dt = create_test_datatree()
         subtree = dt["set1"]
-
-        @map_over_datasets
-        def times_ten(ds):
-            return 10.0 * ds
-
         expected = create_test_datatree(modify=lambda ds: 10.0 * ds)["set1"]
-        result_tree = times_ten(subtree)
+        result_tree = map_over_datasets(lambda x: 10.0 * x, subtree)
         assert_equal(result_tree, expected)
 
     def test_keep_attrs_on_empty_nodes(self, create_test_datatree):

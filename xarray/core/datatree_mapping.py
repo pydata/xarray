@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 import sys
 from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Any, cast
@@ -13,99 +12,102 @@ if TYPE_CHECKING:
     from xarray.core.datatree import DataTree
 
 
-def map_over_datasets(func: Callable) -> Callable:
+def map_over_datasets(
+    func: Callable[..., Dataset | tuple[Dataset, ...] | None], *args: Any
+) -> DataTree | tuple[DataTree, ...]:
     """
-    Decorator which turns a function which acts on (and returns) Datasets into one which acts on and returns DataTrees.
+    Decorator which turns a function which acts on (and returns) Datasets into one
+    which acts on and returns DataTrees.
 
-    Applies a function to every dataset in one or more subtrees, returning new trees which store the results.
+    Applies a function to every dataset in one or more DataTree objects with
+    the same structure (ie.., that are isomorphic), returning new trees which
+    store the results.
 
-    The function will be applied to any data-containing dataset stored in any of the nodes in the trees. The returned
-    trees will have the same structure as the supplied trees.
+    The function will be applied to any data-containing dataset stored in any of
+    the nodes in the trees. The returned trees will have the same structure as
+    the supplied trees.
 
-    `func` needs to return one Datasets, DataArrays, or None in order to be able to rebuild the subtrees after
-    mapping, as each result will be assigned to its respective node of a new tree via `DataTree.__setitem__`. Any
-    returned value that is one of these types will be stacked into a separate tree before returning all of them.
+    ``func`` needs to return a Dataset, tuple of Dataset objects or None in order
+    to be able to rebuild the subtrees after mapping, as each result will be
+    assigned to its respective node of a new tree via `DataTree.from_dict`. Any
+    returned value that is one of these types will be stacked into a separate
+    tree before returning all of them.
 
-    The trees passed to the resulting function must all be isomorphic to one another. Their nodes need not be named
-    similarly, but all the output trees will have nodes named in the same way as the first tree passed.
+    ``map_over_datasets`` is essentially syntactic sugar for the combination of
+    ``group_subtrees`` and ``DataTree.from_dict``. For example, in the case of
+    a two argument function that return one result, it is equivalent to::
+
+        results = {}
+        for path, (left, right) in group_subtrees(left_tree, right_tree):
+            results[path] = func(left.dataset, right.dataset)
+        return DataTree.from_dict(results)
 
     Parameters
     ----------
     func : callable
         Function to apply to datasets with signature:
 
-        `func(*args, **kwargs) -> Union[DataTree, Iterable[DataTree]]`.
+        `func(*args: Dataset) -> Union[Dataset, tuple[Dataset, ...]]`.
 
         (i.e. func must accept at least one Dataset and return at least one Dataset.)
         Function will not be applied to any nodes without datasets.
     *args : tuple, optional
-        Positional arguments passed on to `func`. If DataTrees any data-containing nodes will be converted to Datasets
-        via `.dataset`.
-    **kwargs : Any
-        Keyword arguments passed on to `func`. If DataTrees any data-containing nodes will be converted to Datasets
-        via `.dataset`.
+        Positional arguments passed on to `func`. Any DataTree arguments will be
+        converted to Dataset objects via `.dataset`.
 
     Returns
     -------
-    mapped : callable
-        Wrapped function which returns one or more tree(s) created from results of applying ``func`` to the dataset at
-        each node.
+    Result of applying `func` to each node in the provided trees, packed back
+    into DataTree objects via `DataTree.from_dict`.
 
     See also
     --------
     DataTree.map_over_datasets
-    DataTree.map_over_datasets_inplace
-    DataTree.subtree
+    group_subtrees
+    DataTree.from_dict
     """
-
     # TODO examples in the docstring
-
     # TODO inspect function to work out immediately if the wrong number of arguments were passed for it?
 
-    @functools.wraps(func)
-    def _map_over_datasets(*args) -> DataTree | tuple[DataTree, ...]:
-        """Internal function which maps func over every node in tree, returning a tree of the results."""
-        from xarray.core.datatree import DataTree
+    from xarray.core.datatree import DataTree
 
-        # Walk all trees simultaneously, applying func to all nodes that lie in same position in different trees
-        # We don't know which arguments are DataTrees so we zip all arguments together as iterables
-        # Store tuples of results in a dict because we don't yet know how many trees we need to rebuild to return
-        out_data_objects: dict[str, Dataset | None | tuple[Dataset | None, ...]] = {}
+    # Walk all trees simultaneously, applying func to all nodes that lie in same position in different trees
+    # We don't know which arguments are DataTrees so we zip all arguments together as iterables
+    # Store tuples of results in a dict because we don't yet know how many trees we need to rebuild to return
+    out_data_objects: dict[str, Dataset | None | tuple[Dataset | None, ...]] = {}
 
-        tree_args = [arg for arg in args if isinstance(arg, DataTree)]
-        name = result_name(tree_args)
+    tree_args = [arg for arg in args if isinstance(arg, DataTree)]
+    name = result_name(tree_args)
 
-        for path, node_tree_args in group_subtrees(*tree_args):
-            node_dataset_args = [arg.dataset for arg in node_tree_args]
-            for i, arg in enumerate(args):
-                if not isinstance(arg, DataTree):
-                    node_dataset_args.insert(i, arg)
+    for path, node_tree_args in group_subtrees(*tree_args):
+        node_dataset_args = [arg.dataset for arg in node_tree_args]
+        for i, arg in enumerate(args):
+            if not isinstance(arg, DataTree):
+                node_dataset_args.insert(i, arg)
 
-            func_with_error_context = _handle_errors_with_path_context(path)(func)
-            results = func_with_error_context(*node_dataset_args)
-            out_data_objects[path] = results
+        func_with_error_context = _handle_errors_with_path_context(path)(func)
+        results = func_with_error_context(*node_dataset_args)
+        out_data_objects[path] = results
 
-        num_return_values = _check_all_return_values(out_data_objects)
+    num_return_values = _check_all_return_values(out_data_objects)
 
-        if num_return_values is None:
-            out_data = cast(Mapping[str, Dataset | None], out_data_objects)
-            return DataTree.from_dict(out_data, name=name)
+    if num_return_values is None:
+        # one return value
+        out_data = cast(Mapping[str, Dataset | None], out_data_objects)
+        return DataTree.from_dict(out_data, name=name)
 
-        out_data_tuples = cast(
-            Mapping[str, tuple[Dataset | None, ...]], out_data_objects
-        )
-        output_dicts: list[dict[str, Dataset | None]] = [
-            {} for _ in range(num_return_values)
-        ]
-        for path, outputs in out_data_tuples.items():
-            for output_dict, output in zip(output_dicts, outputs, strict=False):
-                output_dict[path] = output
+    # multiple return values
+    out_data_tuples = cast(Mapping[str, tuple[Dataset | None, ...]], out_data_objects)
+    output_dicts: list[dict[str, Dataset | None]] = [
+        {} for _ in range(num_return_values)
+    ]
+    for path, outputs in out_data_tuples.items():
+        for output_dict, output in zip(output_dicts, outputs, strict=False):
+            output_dict[path] = output
 
-        return tuple(
-            DataTree.from_dict(output_dict, name=name) for output_dict in output_dicts
-        )
-
-    return _map_over_datasets
+    return tuple(
+        DataTree.from_dict(output_dict, name=name) for output_dict in output_dicts
+    )
 
 
 def _handle_errors_with_path_context(path: str):

@@ -406,7 +406,7 @@ class TestAncestry:
         actual = [node.name for node in root.subtree]
         assert expected == actual
 
-    def test_subtree_with_paths(self) -> None:
+    def test_subtree_with_keys(self) -> None:
         root, _ = create_test_tree()
         expected_names = [
             "a",
@@ -431,7 +431,7 @@ class TestAncestry:
             "c/h/i",
         ]
         result_paths, result_names = zip(
-            *[(path, node.name) for path, node in root.subtree_with_paths], strict=False
+            *[(path, node.name) for path, node in root.subtree_with_keys], strict=False
         )
         assert list(result_names) == expected_names
         assert list(result_paths) == expected_paths

@@ -749,7 +749,7 @@ class DataTree(
 
         items_on_this_node = self._item_sources
         paths_to_all_nodes_in_subtree = {
-            path: node for path, node in self.subtree_with_paths if path
+            path: node for path, node in self.subtree_with_keys if path
         }
 
         all_item_sources = itertools.chain(
@@ -1171,15 +1171,27 @@ class DataTree(
         # to do with the return type of Dataset.copy()
         return obj  # type: ignore[return-value]
 
-    def to_dict(self) -> dict[str, Dataset]:
+    def to_dict(self, relative: bool = False) -> dict[str, Dataset]:
         """
-        Create a dictionary mapping of absolute node paths to the data contained in those nodes.
+        Create a dictionary mapping of paths to the data contained in those nodes.
+
+        Parameters
+        ----------
+        relative : bool
+            If True, return relative instead of absolute paths.
 
         Returns
         -------
         dict[str, Dataset]
+
+        See also
+        --------
+        DataTree.subtree_with_keys
         """
-        return {node.path: node.to_dataset() for node in self.subtree}
+        return {
+            node.relative_to(self) if relative else node.path: node.to_dataset()
+            for node in self.subtree
+        }
 
     @property
     def nbytes(self) -> int:
@@ -1325,7 +1337,7 @@ class DataTree(
         """
         filtered_nodes = {
             path: node.dataset
-            for path, node in self.subtree_with_paths
+            for path, node in self.subtree_with_keys
             if filterfunc(node)
         }
         return DataTree.from_dict(filtered_nodes, name=self.name)
@@ -1371,7 +1383,7 @@ class DataTree(
         """
         matching_nodes = {
             path: node.dataset
-            for path, node in self.subtree_with_paths
+            for path, node in self.subtree_with_keys
             if NodePath(node.path).match(pattern)
         }
         return DataTree.from_dict(matching_nodes, name=self.name)
@@ -1405,9 +1417,8 @@ class DataTree(
             One or more subtrees containing results from applying ``func`` to the data at each node.
         """
         # TODO this signature means that func has no way to know which node it is being called upon - change?
-
         # TODO fix this typing error
-        return map_over_datasets(func)(self, *args)
+        return map_over_datasets(func, self, *args)
 
     def pipe(
         self, func: Callable | tuple[Callable, str], *args: Any, **kwargs: Any
@@ -1478,7 +1489,7 @@ class DataTree(
 
     def _unary_op(self, f, *args, **kwargs) -> DataTree:
         # TODO do we need to any additional work to avoid duplication etc.? (Similar to aggregations)
-        return self.map_over_datasets(f, *args, **kwargs)  # type: ignore[return-value]
+        return self.map_over_datasets(functools.partial(f, **kwargs), *args)  # type: ignore[return-value]
 
     def _binary_op(self, other, f, reflexive=False, join=None) -> DataTree:
         from xarray.core.dataset import Dataset
@@ -1493,7 +1504,7 @@ class DataTree(
             reflexive=reflexive,
             join=join,
         )
-        return map_over_datasets(ds_binop)(self, other)
+        return map_over_datasets(ds_binop, self, other)
 
     def _inplace_binary_op(self, other, f) -> Self:
         from xarray.core.groupby import GroupBy
@@ -1661,7 +1672,7 @@ class DataTree(
         """Reduce this tree by applying `func` along some dimension(s)."""
         dims = parse_dims_as_set(dim, self._get_all_dims())
         result = {}
-        for path, node in self.subtree_with_paths:
+        for path, node in self.subtree_with_keys:
             reduce_dims = [d for d in node._node_dims if d in dims]
             node_result = node.dataset.reduce(
                 func,
@@ -1688,7 +1699,7 @@ class DataTree(
         indexers = drop_dims_from_indexers(indexers, all_dims, missing_dims)
 
         result = {}
-        for path, node in self.subtree_with_paths:
+        for path, node in self.subtree_with_keys:
             node_indexers = {k: v for k, v in indexers.items() if k in node.dims}
             node_result = func(node.dataset, node_indexers)
             # Indexing datasets corresponding to each node results in redundant

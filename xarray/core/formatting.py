@@ -789,7 +789,14 @@ def dims_and_coords_repr(ds) -> str:
     return "\n".join(summary)
 
 
-def diff_dim_summary(a, b):
+def diff_name_summary(a, b) -> str:
+    if a.name != b.name:
+        return f"Differing names:\n    {a.name!r} != {b.name!r}"
+    else:
+        return ""
+
+
+def diff_dim_summary(a, b) -> str:
     if a.sizes != b.sizes:
         return f"Differing dimensions:\n    ({dim_summary(a)}) != ({dim_summary(b)})"
     else:
@@ -953,7 +960,9 @@ def diff_array_repr(a, b, compat):
         f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
-    summary.append(diff_dim_summary(a, b))
+    if dims_diff := diff_dim_summary(a, b):
+        summary.append(dims_diff)
+
     if callable(compat):
         equiv = compat
     else:
@@ -969,12 +978,14 @@ def diff_array_repr(a, b, compat):
 
     if hasattr(a, "coords"):
         col_width = _calculate_col_width(set(a.coords) | set(b.coords))
-        summary.append(
-            diff_coords_repr(a.coords, b.coords, compat, col_width=col_width)
-        )
+        if coords_diff := diff_coords_repr(
+            a.coords, b.coords, compat, col_width=col_width
+        ):
+            summary.append(coords_diff)
 
     if compat == "identical":
-        summary.append(diff_attrs_repr(a.attrs, b.attrs, compat))
+        if attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat):
+            summary.append(attrs_diff)
 
     return "\n".join(summary)
 
@@ -1003,14 +1014,18 @@ def diff_dataset_repr(a, b, compat):
 
     col_width = _calculate_col_width(set(list(a.variables) + list(b.variables)))
 
-    summary.append(diff_dim_summary(a, b))
-    summary.append(diff_coords_repr(a.coords, b.coords, compat, col_width=col_width))
-    summary.append(
-        diff_data_vars_repr(a.data_vars, b.data_vars, compat, col_width=col_width)
-    )
+    if dims_diff := diff_dim_summary(a, b):
+        summary.append(dims_diff)
+    if coords_diff := diff_coords_repr(a.coords, b.coords, compat, col_width=col_width):
+        summary.append(coords_diff)
+    if data_diff := diff_data_vars_repr(
+        a.data_vars, b.data_vars, compat, col_width=col_width
+    ):
+        summary.append(data_diff)
 
     if compat == "identical":
-        summary.append(diff_attrs_repr(a.attrs, b.attrs, compat))
+        if attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat):
+            summary.append(attrs_diff)
 
     return "\n".join(summary)
 
@@ -1038,6 +1053,11 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
     summary = [
         f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
+
+    if compat == "identical":
+        if diff_name := diff_name_summary(a, b):
+            summary.append(diff_name)
+
     treestructure_diff = diff_treestructure(a, b)
 
     # If the trees structures are different there is no point comparing each node,
