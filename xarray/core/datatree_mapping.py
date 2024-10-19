@@ -22,6 +22,8 @@ def map_over_datasets(
 ) -> tuple[DataTree, DataTree]: ...
 
 
+# add an expect overload for the most common case of two return values
+# (python typing does not have a way to match tuple lengths in general)
 @overload
 def map_over_datasets(
     func: Callable[..., tuple[Dataset | None, ...]], *args: Any
@@ -32,16 +34,13 @@ def map_over_datasets(
     func: Callable[..., Dataset | None | tuple[Dataset | None, ...]], *args: Any
 ) -> DataTree | tuple[DataTree, ...]:
     """
-    Decorator which turns a function which acts on (and returns) Datasets into one
-    which acts on and returns DataTrees.
-
     Applies a function to every dataset in one or more DataTree objects with
     the same structure (ie.., that are isomorphic), returning new trees which
     store the results.
 
-    The function will be applied to any data-containing dataset stored in any of
-    the nodes in the trees. The returned trees will have the same structure as
-    the supplied trees.
+    The function will be applied to any dataset stored in any of the nodes in
+    the trees. The returned trees will have the same structure as the supplied
+    trees.
 
     ``func`` needs to return a Dataset, tuple of Dataset objects or None in order
     to be able to rebuild the subtrees after mapping, as each result will be
@@ -66,7 +65,6 @@ def map_over_datasets(
         `func(*args: Dataset) -> Union[Dataset, tuple[Dataset, ...]]`.
 
         (i.e. func must accept at least one Dataset and return at least one Dataset.)
-        Function will not be applied to any nodes without datasets.
     *args : tuple, optional
         Positional arguments passed on to `func`. Any DataTree arguments will be
         converted to Dataset objects via `.dataset`.

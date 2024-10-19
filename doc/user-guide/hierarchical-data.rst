@@ -578,8 +578,8 @@ Then calculate the RMS value of these signals:
 
 .. _multiple trees:
 
-We can also use :py:func:`~xarray.map_over_datasets` apply a function over
-trees appearing in any positional argument.
+We can also use :py:func:`~xarray.map_over_datasets` to apply a function over
+the data in multiple trees, by passing the trees as positional arguments.
 
 Operating on Multiple Trees
 ---------------------------
@@ -592,7 +592,8 @@ Iterating Over Multiple Trees
 
 To iterate over the corresponding nodes in multiple trees, use
 :py:func:`~xarray.group_subtrees` instead of
-:py:class:`~xarray.DataTree.subtree_with_keys`:
+:py:class:`~xarray.DataTree.subtree_with_keys`. This combines well with
+:py:meth:`xarray.DataTree.from_dict()` to build a new tree:
 
 .. ipython:: python
 
@@ -600,21 +601,13 @@ To iterate over the corresponding nodes in multiple trees, use
     dt2 = xr.DataTree.from_dict(
         {"a": xr.Dataset({"x": 10}), "b": xr.Dataset({"x": 20})}
     )
-    for path, (node1, node2) in xr.group_subtrees(dt1, dt2):
-        print(path, int(node1["x"]), int(node2["x"]))
-
-To rebuild a tree after applying operations at each node, use
-:py:meth:`xarray.DataTree.from_dict()`:
-
-.. ipython:: python
-
     result = {}
     for path, (node1, node2) in xr.group_subtrees(dt1, dt2):
         result[path] = node1.dataset + node2.dataset
     xr.DataTree.from_dict(result)
 
-Or apply a function directly to paired datasets at every node using
-:py:func:`xarray.map_over_datasets`:
+Alternatively, you apply a function directly to paired datasets at every node
+using :py:func:`xarray.map_over_datasets`:
 
 .. ipython:: python
 
@@ -627,7 +620,7 @@ For it to make sense to map a single non-unary function over the nodes of multip
 each tree needs to have the same structure. Specifically two trees can only be considered similar,
 or "isomorphic", if the full paths to all of their descendent nodes are the same.
 
-Applying :py:func:`~xarray.group_subtrees` to trees with different structure
+Applying :py:func:`~xarray.group_subtrees` to trees with different structures
 raises :py:class:`~xarray.TreeIsomorphismError`:
 
 .. ipython:: python

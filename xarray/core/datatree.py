@@ -745,7 +745,10 @@ class DataTree(
 
         items_on_this_node = self._item_sources
         paths_to_all_nodes_in_subtree = {
-            path: node for path, node in self.subtree_with_keys if path
+            # exclude the root node
+            path: node
+            for path, node in self.subtree_with_keys
+            if path != ""
         }
 
         all_item_sources = itertools.chain(
@@ -1270,6 +1273,8 @@ class DataTree(
         if not self.isomorphic(other):
             return False
 
+        # Note: by using .dataset, this intentionally does not check that
+        # coordinates are defined at the same levels.
         return all(
             node.dataset.equals(other_node.dataset)
             for node, other_node in zip_subtrees(self, other)
@@ -1411,6 +1416,10 @@ class DataTree(
         -------
         subtrees : DataTree, tuple of DataTrees
             One or more subtrees containing results from applying ``func`` to the data at each node.
+
+        See also
+        --------
+        map_over_datasets
         """
         # TODO this signature means that func has no way to know which node it is being called upon - change?
         # TODO fix this typing error
