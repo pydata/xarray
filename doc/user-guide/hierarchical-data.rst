@@ -635,7 +635,7 @@ raises :py:class:`~xarray.TreeIsomorphismError`:
 
     tree = xr.DataTree.from_dict({"a": None, "a/b": None, "a/c": None})
     simple_tree = xr.DataTree.from_dict({"a": None})
-    for _ in group_subtrees(tree, simple_tree):
+    for _ in xr.group_subtrees(tree, simple_tree):
         ...
 
 We can explicitly also check if any two trees are isomorphic using the :py:meth:`~xarray.DataTree.isomorphic` method:
@@ -645,6 +645,8 @@ We can explicitly also check if any two trees are isomorphic using the :py:meth:
     tree.isomorphic(simple_tree)
 
 Corresponding tree nodes do not need to have the same data in order to be considered isomorphic:
+
+.. ipython:: python
 
     tree_with_data = xr.DataTree.from_dict({"a": xr.Dataset({"foo": 1})})
     simple_tree.isomorphic(tree_with_data)
