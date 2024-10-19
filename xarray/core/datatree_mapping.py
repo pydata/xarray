@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Callable, Mapping
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, cast, overload
 
 from xarray.core.dataset import Dataset
 from xarray.core.treenode import group_subtrees
@@ -12,8 +12,18 @@ if TYPE_CHECKING:
     from xarray.core.datatree import DataTree
 
 
+@overload
+def map_over_datasets(func: Callable[..., Dataset | None], *args: Any) -> DataTree: ...
+
+
+@overload
 def map_over_datasets(
-    func: Callable[..., Dataset | tuple[Dataset, ...] | None], *args: Any
+    func: Callable[..., tuple[Dataset | None, ...]], *args: Any
+) -> tuple[DataTree, ...]: ...
+
+
+def map_over_datasets(
+    func: Callable[..., Dataset | None | tuple[Dataset | None, ...]], *args: Any
 ) -> DataTree | tuple[DataTree, ...]:
     """
     Decorator which turns a function which acts on (and returns) Datasets into one

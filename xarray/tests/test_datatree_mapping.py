@@ -76,7 +76,7 @@ class TestMapOverSubTree:
                 "Dataset or None or a tuple of such types"
             ),
         ):
-            map_over_datasets(lambda x: "string", dt1)
+            map_over_datasets(lambda x: "string", dt1)  # type: ignore[arg-type]
 
     def test_return_tuple_of_wrong_types(self, simple_datatree):
         dt1 = simple_datatree
@@ -88,7 +88,7 @@ class TestMapOverSubTree:
                 "Dataset or None or a tuple of such types"
             ),
         ):
-            map_over_datasets(lambda x: (x, "string"), dt1)
+            map_over_datasets(lambda x: (x, "string"), dt1)  # type: ignore[arg-type]
 
     @pytest.mark.xfail
     def test_return_inconsistent_number_of_results(self, simple_datatree):
