@@ -601,7 +601,7 @@ To iterate over the corresponding nodes in multiple trees, use
         {"a": xr.Dataset({"x": 10}), "b": xr.Dataset({"x": 20})}
     )
     for path, (node1, node2) in xr.group_subtrees(dt1, dt2):
-        print(path, int(node1.x), int(node2.x))
+        print(path, int(node1["x"]), int(node2["x"]))
 
 To rebuild a tree after applying operations at each node, use
 :py:meth:`xarray.DataTree.from_dict()`:
