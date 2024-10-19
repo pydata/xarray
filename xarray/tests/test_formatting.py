@@ -703,19 +703,16 @@ class TestFormatting:
 
         expected = dedent(
             """\
-        Left and right DataTree objects are not equal
+            Left and right DataTree objects are not equal
 
+            Data at node 'a' does not match:
+                Data variables only on the left object:
+                    v        int64 8B 1
 
-        Data at node 'a' does not match:
-
-        Data variables only on the left object:
-            v        int64 8B 1
-
-        Data at node 'a/b' does not match:
-
-        Differing data variables:
-        L   w        int64 8B 5
-        R   w        int64 8B 6"""
+            Data at node 'a/b' does not match:
+                Differing data variables:
+                L   w        int64 8B 5
+                R   w        int64 8B 6"""
         )
         actual = formatting.diff_datatree_repr(dt_1, dt_2, "equals")
         assert actual == expected

@@ -10,6 +10,7 @@ from collections.abc import Collection, Hashable, Mapping, Sequence
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
 from reprlib import recursive_repr
+from textwrap import indent
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -1042,11 +1043,13 @@ def diff_nodewise_summary(a: DataTree, b: DataTree, compat):
         if not a_ds._all_compat(b_ds, compat):
             path_str = "root node" if path == "" else f"node {path!r}"
             dataset_diff = diff_dataset_repr(a_ds, b_ds, compat_str)
-            data_diff = "\n".join(dataset_diff.split("\n", 1)[1:])
-            nodediff = f"\nData at {path_str} does not match:{data_diff}"
+            data_diff = indent(
+                "\n".join(dataset_diff.split("\n", 1)[1:]), prefix="    "
+            )
+            nodediff = f"Data at {path_str} does not match:\n{data_diff}"
             summary.append(nodediff)
 
-    return "\n".join(summary)
+    return "\n\n".join(summary)
 
 
 def diff_datatree_repr(a: DataTree, b: DataTree, compat):
