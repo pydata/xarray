@@ -113,10 +113,6 @@ def _to_new_dataset(data: Dataset | Coordinates | None) -> Dataset:
     return ds
 
 
-def _join_path(root: str, name: str) -> str:
-    return str(NodePath(root) / name)
-
-
 def _inherited_dataset(ds: Dataset, parent: Dataset) -> Dataset:
     return Dataset._construct_direct(
         variables=parent._variables | ds._variables,

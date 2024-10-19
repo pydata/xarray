@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import collections
-import os
 import sys
 from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
@@ -43,6 +42,10 @@ class NodePath(PurePosixPath):
                 'Root of NodePath can only be either "/" or "", with "" meaning the path is relative.'
             )
         # TODO should we also forbid suffixes to avoid node names with dots in them?
+
+
+def join_path(base: str, name: str, /) -> str:
+    return str(NodePath(base) / name)
 
 
 Tree = TypeVar("Tree", bound="TreeNode")
@@ -435,8 +438,7 @@ class TreeNode(Generic[Tree]):
             path, node = queue.popleft()
             yield path, node
             queue.extend(
-                (os.path.join(path, name), child)
-                for name, child in node.children.items()
+                (join_path(path, name), child) for name, child in node.children.items()
             )
 
     @property
@@ -870,7 +872,7 @@ def group_subtrees(
 
         for name in first_node.children:
             child_nodes = tuple(node.children[name] for node in active_nodes)
-            queue.append((os.path.join(path, name), child_nodes))
+            queue.append((join_path(path, name), child_nodes))
 
 
 def zip_subtrees(
