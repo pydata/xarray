@@ -18,6 +18,12 @@ def map_over_datasets(func: Callable[..., Dataset | None], *args: Any) -> DataTr
 
 @overload
 def map_over_datasets(
+    func: Callable[..., tuple[Dataset | None, Dataset | None]], *args: Any
+) -> tuple[DataTree, DataTree]: ...
+
+
+@overload
+def map_over_datasets(
     func: Callable[..., tuple[Dataset | None, ...]], *args: Any
 ) -> tuple[DataTree, ...]: ...
 
