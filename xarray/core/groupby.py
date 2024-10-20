@@ -454,6 +454,7 @@ class ComposedGrouper:
         # At this point all arrays have been factorized.
         codes = tuple(grouper.codes for grouper in groupers)
         shape = tuple(grouper.size for grouper in groupers)
+        masks = tuple((code == -1) for code in codes)
         # We broadcast the codes against each other
         broadcasted_codes = broadcast(*codes)
         # This fully broadcasted DataArray is used as a template later
@@ -464,10 +465,8 @@ class ComposedGrouper:
         )
         # NaNs; as well as values outside the bins are coded by -1
         # Restore these after the raveling
-        mask = functools.reduce(
-            np.logical_or,  # type: ignore[arg-type]
-            [(code == -1) for code in broadcasted_codes],
-        )
+        broadcasted_masks = broadcast(*masks)
+        mask = functools.reduce(np.logical_or, broadcasted_masks)  # type: ignore[arg-type]
         _flatcodes[mask] = -1
 
         full_index = pd.MultiIndex.from_product(
