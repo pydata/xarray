@@ -585,7 +585,7 @@ def test_groupby_repr(obj, dim) -> None:
     N = len(np.unique(obj[dim]))
     expected = f"<{obj.__class__.__name__}GroupBy"
     expected += f", grouped over 1 grouper(s), {N} groups in total:"
-    expected += f"\n    {dim!r}: {N} groups with labels "
+    expected += f"\n    {dim!r}: {N}/{N} groups present with labels "
     if dim == "x":
         expected += "1, 2, 3, 4, 5>"
     elif dim == "y":
@@ -602,7 +602,7 @@ def test_groupby_repr_datetime(obj) -> None:
     actual = repr(obj.groupby("t.month"))
     expected = f"<{obj.__class__.__name__}GroupBy"
     expected += ", grouped over 1 grouper(s), 12 groups in total:\n"
-    expected += "    'month': 12 groups with labels "
+    expected += "    'month': 12/12 groups present with labels "
     expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12>"
     assert actual == expected
 
