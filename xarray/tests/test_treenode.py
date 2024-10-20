@@ -319,7 +319,7 @@ class TestGroupSubtrees:
             "i",
         ]
         expected_paths = [
-            "",
+            ".",
             "b",
             "c",
             "b/d",
@@ -352,7 +352,7 @@ class TestGroupSubtrees:
             ("b", "b"),
             ("c", "c"),
         ]
-        assert [path for path, _ in group_subtrees(first, second)] == ["", "b", "c"]
+        assert [path for path, _ in group_subtrees(first, second)] == [".", "b", "c"]
 
     def test_different_structure(self) -> None:
         first: NamedNode = NamedNode(name="a", children={"b": NamedNode()})
@@ -360,7 +360,7 @@ class TestGroupSubtrees:
         it = group_subtrees(first, second)
 
         path, (node1, node2) = next(it)
-        assert path == ""
+        assert path == "."
         assert node1.name == node2.name == "a"
 
         with pytest.raises(
@@ -420,7 +420,7 @@ class TestAncestry:
             "i",
         ]
         expected_paths = [
-            "",
+            ".",
             "b",
             "c",
             "b/d",

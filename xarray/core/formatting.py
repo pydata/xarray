@@ -1000,7 +1000,7 @@ def diff_treestructure(a: DataTree, b: DataTree) -> str | None:
     # shallow of a diff as possible
     for path, (node_a, node_b) in group_subtrees(a, b):
         if node_a.children.keys() != node_b.children.keys():
-            path_str = "root node" if path == "" else f"node {path!r}"
+            path_str = "root node" if path == "." else f"node {path!r}"
             child_summary = f"{list(node_a.children)} vs {list(node_b.children)}"
             diff = f"Children at {path_str} do not match: {child_summary}"
             return diff
@@ -1041,7 +1041,7 @@ def diff_nodewise_summary(a: DataTree, b: DataTree, compat):
         a_ds, b_ds = node_a.dataset, node_b.dataset
 
         if not a_ds._all_compat(b_ds, compat):
-            path_str = "root node" if path == "" else f"node {path!r}"
+            path_str = "root node" if path == "." else f"node {path!r}"
             dataset_diff = diff_dataset_repr(a_ds, b_ds, compat_str)
             data_diff = indent(
                 "\n".join(dataset_diff.split("\n", 1)[1:]), prefix="    "

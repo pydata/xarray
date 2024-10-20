@@ -745,10 +745,9 @@ class DataTree(
 
         items_on_this_node = self._item_sources
         paths_to_all_nodes_in_subtree = {
-            # exclude the root node
             path: node
             for path, node in self.subtree_with_keys
-            if path != ""
+            if path != "."  # exclude the root node
         }
 
         all_item_sources = itertools.chain(

@@ -44,10 +44,6 @@ class NodePath(PurePosixPath):
         # TODO should we also forbid suffixes to avoid node names with dots in them?
 
 
-def join_path(base: str, name: str, /) -> str:
-    return str(NodePath(base) / name)
-
-
 Tree = TypeVar("Tree", bound="TreeNode")
 
 
@@ -433,13 +429,11 @@ class TreeNode(Generic[Tree]):
         DataTree.descendants
         group_subtrees
         """
-        queue = collections.deque([("", self)])
+        queue = collections.deque([(NodePath(), self)])
         while queue:
             path, node = queue.popleft()
-            yield path, node
-            queue.extend(
-                (join_path(path, name), child) for name, child in node.children.items()
-            )
+            yield str(path), node
+            queue.extend((path / name, child) for name, child in node.children.items())
 
     @property
     def descendants(self: Tree) -> tuple[Tree, ...]:
@@ -848,21 +842,21 @@ def group_subtrees(
         raise TypeError("must pass at least one tree object")
 
     # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
-    queue = collections.deque([("", trees)])
+    queue = collections.deque([(NodePath(), trees)])
 
     while queue:
         path, active_nodes = queue.popleft()
 
         # yield before raising an error, in case the caller chooses to exit
         # iteration early
-        yield path, active_nodes
+        yield str(path), active_nodes
 
         first_node = active_nodes[0]
         if any(
             sibling.children.keys() != first_node.children.keys()
             for sibling in active_nodes[1:]
         ):
-            path_str = "root node" if path == "" else f"node {path!r}"
+            path_str = "root node" if not path.parts else f"node {str(path)!r}"
             child_summary = " vs ".join(
                 str(list(node.children)) for node in active_nodes
             )
@@ -872,7 +866,7 @@ def group_subtrees(
 
         for name in first_node.children:
             child_nodes = tuple(node.children[name] for node in active_nodes)
-            queue.append((join_path(path, name), child_nodes))
+            queue.append((path / name, child_nodes))
 
 
 def zip_subtrees(
