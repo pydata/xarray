@@ -582,7 +582,7 @@ class DataTree(
             attrs=self._attrs,
             indexes=dict(self._indexes if inherit else self._node_indexes),
             encoding=self._encoding,
-            close=None,
+            close=self._close,
         )
 
     @property
@@ -795,6 +795,20 @@ class DataTree(
         if XR_OPTS["display_style"] == "text":
             return f"<pre>{escape(repr(self))}</pre>"
         return datatree_repr_html(self)
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.close()
+
+    def close(self):
+        for node in self.subtree:
+            node.dataset.close()
+
+    def set_close(self, closers: Mapping[str, Callable[[], None] | None], /) -> None:
+        for path, close in closers.items():
+            self[path]._close = close
 
     def _replace_node(
         self: DataTree,

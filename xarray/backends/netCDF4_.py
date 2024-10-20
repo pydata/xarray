@@ -16,6 +16,7 @@ from xarray.backends.common import (
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
+    datatree_from_io_dict,
     find_root_and_group,
     robust_getitem,
 )
@@ -710,8 +711,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         autoclose=False,
         **kwargs,
     ) -> DataTree:
-        from xarray.core.datatree import DataTree
-
         groups_dict = self.open_groups_as_dict(
             filename_or_obj,
             mask_and_scale=mask_and_scale,
@@ -730,8 +729,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             autoclose=autoclose,
             **kwargs,
         )
-
-        return DataTree.from_dict(groups_dict)
+        return datatree_from_io_dict(groups_dict)
 
     def open_groups_as_dict(
         self,
