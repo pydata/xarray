@@ -134,7 +134,7 @@ def _handle_errors_with_path_context(path: str):
             except Exception as e:
                 # Add the context information to the error message
                 add_note(
-                    e, f"Raised whilst mapping function over node with path {path}"
+                    e, f"Raised whilst mapping function over node with path {path!r}"
                 )
                 raise
 

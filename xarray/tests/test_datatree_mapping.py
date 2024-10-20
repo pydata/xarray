@@ -90,16 +90,19 @@ class TestMapOverSubTree:
         ):
             map_over_datasets(lambda x: (x, "string"), dt1)  # type: ignore[arg-type,return-value]
 
-    @pytest.mark.xfail
     def test_return_inconsistent_number_of_results(self, simple_datatree):
         dt1 = simple_datatree
 
-        # Datasets in simple_datatree have different numbers of dims
-        # TODO need to instead return different numbers of Dataset objects fo
-        # this test to catch the intended error
-
-        with pytest.raises(TypeError, match="instead returns"):
-            map_over_datasets(lambda ds: tuple(ds.dims), dt1)
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                r"Calling func on the nodes at position set1 returns a tuple "
+                "of 0 datasets, whereas calling func on the nodes at position "
+                ". instead returns a tuple of 2 datasets."
+            ),
+        ):
+            # Datasets in simple_datatree have different numbers of dims
+            map_over_datasets(lambda ds: tuple((None,) * len(ds.dims)), dt1)
 
     def test_wrong_number_of_arguments_for_func(self, simple_datatree):
         dt = simple_datatree
@@ -154,9 +157,6 @@ class TestMapOverSubTree:
         result = dt.map_over_datasets(empty_func)
         assert result["set1/set2"].attrs == dt["set1/set2"].attrs
 
-    @pytest.mark.xfail(
-        reason="probably some bug in pytests handling of exception notes"
-    )
     def test_error_contains_path_of_offending_node(self, create_test_datatree):
         dt = create_test_datatree()
         dt["set1"]["bad_var"] = 0
@@ -167,7 +167,10 @@ class TestMapOverSubTree:
                 raise ValueError("Failed because 'bar_var' present in dataset")
 
         with pytest.raises(
-            ValueError, match="Raised whilst mapping function over node /set1"
+            ValueError,
+            match=re.escape(
+                r"Raised whilst mapping function over node with path 'set1'"
+            ),
         ):
             dt.map_over_datasets(fail_on_specific_node)
 
@@ -227,9 +230,3 @@ class TestMutableOperations:
 
         with pytest.raises(AttributeError):
             simpsons.map_over_datasets(fast_forward, 10)
-
-
-@pytest.mark.xfail
-class TestMapOverSubTreeInplace:
-    def test_map_over_datasets_inplace(self):
-        raise NotImplementedError
