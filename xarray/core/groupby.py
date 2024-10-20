@@ -470,18 +470,14 @@ class ComposedGrouper:
         )
         _flatcodes[mask] = -1
 
-        midx = pd.MultiIndex.from_product(
-            (grouper.unique_coord.data for grouper in groupers),
-            names=tuple(grouper.name for grouper in groupers),
-        )
-        # Constructing an index from the product is wrong when there are missing groups
-        # (e.g. binning, resampling). Account for that now.
-        midx = midx[np.sort(pd.unique(_flatcodes[~mask]))]
-
         full_index = pd.MultiIndex.from_product(
             (grouper.full_index.values for grouper in groupers),
             names=tuple(grouper.name for grouper in groupers),
         )
+        # Constructing an index from the product is wrong when there are missing groups
+        # (e.g. binning, resampling). Account for that now.
+        midx = full_index[np.sort(pd.unique(_flatcodes[~mask]))]
+
         dim_name = "stacked_" + "_".join(str(grouper.name) for grouper in groupers)
 
         coords = Coordinates.from_pandas_multiindex(midx, dim=dim_name)

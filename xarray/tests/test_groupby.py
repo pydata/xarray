@@ -2932,3 +2932,35 @@ def test_groupby_transpose():
     second = data.groupby("x").sum()
 
     assert_identical(first, second.transpose(*first.dims))
+
+
+def test_groupby_multiple_bin_grouper_missing_groups():
+    from numpy import nan
+
+    ds = xr.Dataset(
+        {"foo": (("z"), np.arange(12))},
+        coords={"x": ("z", np.arange(12)), "y": ("z", np.arange(12))},
+    )
+
+    actual = ds.groupby(
+        x=BinGrouper(np.arange(0, 13, 4)), y=BinGrouper(bins=np.arange(0, 16, 2))
+    ).count()
+    expected = Dataset(
+        {
+            "foo": (
+                ("x_bins", "y_bins"),
+                np.array(
+                    [
+                        [2.0, 2.0, nan, nan, nan, nan, nan],
+                        [nan, nan, 2.0, 2.0, nan, nan, nan],
+                        [nan, nan, nan, nan, 2.0, 1.0, nan],
+                    ]
+                ),
+            )
+        },
+        coords={
+            "x_bins": ("x_bins", pd.IntervalIndex.from_breaks(np.arange(0, 13, 4))),
+            "y_bins": ("y_bins", pd.IntervalIndex.from_breaks(np.arange(0, 16, 2))),
+        },
+    )
+    assert_identical(actual, expected)
