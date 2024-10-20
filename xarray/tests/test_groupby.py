@@ -145,6 +145,25 @@ def test_multi_index_groupby_sum() -> None:
     assert_equal(expected, actual)
 
 
+def test_multi_index_propagation():
+    # regression test for GH9648
+    times = pd.date_range("2023-01-01", periods=4)
+    locations = ["A", "B"]
+    data = [[0.5, 0.7], [0.6, 0.5], [0.4, 0.6], [0.4, 0.9]]
+
+    da = xr.DataArray(
+        data, dims=["time", "location"], coords={"time": times, "location": locations}
+    )
+    da = da.stack(multiindex=["time", "location"])
+    grouped = da.groupby("multiindex")
+
+    with xr.set_options(use_flox=True):
+        actual = grouped.sum()
+    with xr.set_options(use_flox=False):
+        expected = grouped.first()
+    assert_identical(actual, expected)
+
+
 def test_groupby_da_datetime() -> None:
     # test groupby with a DataArray of dtype datetime for GH1132
     # create test data
