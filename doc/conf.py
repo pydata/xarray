@@ -347,7 +347,7 @@ intersphinx_mapping = {
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
     "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
-    "zarr": ("https://zarr.readthedocs.io/en/latest/", None),
+    "zarr": ("https://zarr.readthedocs.io/en/stable/", None),
 }
 
 
