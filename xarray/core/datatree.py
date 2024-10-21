@@ -266,6 +266,15 @@ class DatasetView(Dataset):
             "use `.copy()` first to get a mutable version of the input dataset."
         )
 
+    def set_close(self, close: Callable[[], None] | None) -> None:
+        raise AttributeError("cannot modify a DatasetView()")
+
+    def close(self) -> None:
+        raise AttributeError(
+            "cannot close a DatasetView(). Close the associated DataTree node "
+            "instead"
+        )
+
     # FIXME https://github.com/python/mypy/issues/7328
     @overload  # type: ignore[override]
     def __getitem__(self, key: Mapping) -> Dataset:  # type: ignore[overload-overlap]
@@ -580,7 +589,7 @@ class DataTree(
             attrs=self._attrs,
             indexes=dict(self._indexes if inherit else self._node_indexes),
             encoding=self._encoding,
-            close=self._close,
+            close=None,
         )
 
     @property
@@ -633,7 +642,7 @@ class DataTree(
             None if self._attrs is None else dict(self._attrs),
             dict(self._indexes if inherit else self._node_indexes),
             None if self._encoding is None else dict(self._encoding),
-            self._close,
+            None,
         )
 
     @property
@@ -802,13 +811,22 @@ class DataTree(
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.close()
 
-    def close(self):
-        for node in self.subtree:
-            node.dataset.close()
+    # DatasetView does not support close() or set_close(), so we reimplement
+    # these methods on DataTree.
 
-    def set_close(self, closers: Mapping[str, Callable[[], None] | None], /) -> None:
-        for path, close in closers.items():
-            self[path]._close = close
+    def _close_node(self) -> None:
+        if self._close is not None:
+            self._close()
+        self._close = None
+
+    def close(self) -> None:
+        """Close any files associated with this tree."""
+        for node in self.subtree:
+            node._close_node()
+
+    def set_close(self, close: Callable[[], None] | None) -> None:
+        """Set the closer for this node."""
+        self._close = close
 
     def _replace_node(
         self: DataTree,

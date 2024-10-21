@@ -149,7 +149,7 @@ def find_root_and_group(ds):
     return ds, group
 
 
-def datatree_from_io_dict(groups_dict: Mapping[str, Dataset]) -> DataTree:
+def datatree_from_dict_with_io_cleanup(groups_dict: Mapping[str, Dataset]) -> DataTree:
     """DataTree.from_dict with file clean-up."""
     try:
         tree = DataTree.from_dict(groups_dict)
@@ -157,7 +157,8 @@ def datatree_from_io_dict(groups_dict: Mapping[str, Dataset]) -> DataTree:
         for ds in groups_dict.values():
             ds.close()
         raise
-    tree.set_close({path: ds._close for path, ds in groups_dict.items()})
+    for path, ds in groups_dict.items():
+        tree[path].set_close(ds._close)
     return tree
 
 
