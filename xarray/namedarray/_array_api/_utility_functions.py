@@ -54,7 +54,7 @@ def all(
     _axis = _dims_to_axis(x, dims, axis)
     _data = xp.all(x._data, axis=_axis, keepdims=keepdims)
     _dims = _reduce_dims(x.dims, axis=_axis, keepdims=keepdims)
-    return x._new(dims=_dims, data=_data)
+    return NamedArray(_dims, _data)
 
 
 def any(
@@ -65,6 +65,30 @@ def any(
     keepdims: bool = False,
     axis: _AxisLike | None = None,
 ) -> NamedArray[Any, Any]:
+    """
+    Tests whether any input array element evaluates to True along a specified axis.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x", "y"), np.array([[True, False],[True, True]]))
+    >>> any(x)
+    <xarray.NamedArray ()> Size: 1B
+    np.True_
+
+    >>> x = NamedArray(("x", "y"), np.array([[True, False],[False, False]]))
+    >>> any(x, axis=0)
+    <xarray.NamedArray (y: 2)> Size: 2B
+    array([ True, False])
+    >>> any(x, dims="x")
+    <xarray.NamedArray (y: 2)> Size: 2B
+    array([ True, False])
+
+    >>> x = NamedArray(("x",), np.array([-1, 4, 5]))
+    >>> any(x)
+    <xarray.NamedArray ()> Size: 1B
+    np.True_
+    """
     xp = _get_data_namespace(x)
     _axis = _dims_to_axis(x, dims, axis)
     _data = xp.any(x._data, axis=_axis, keepdims=keepdims)
