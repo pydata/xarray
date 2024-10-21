@@ -35,6 +35,7 @@ from xarray.tests import (
     requires_dask,
     requires_flox,
     requires_flox_0_9_12,
+    requires_pandas_ge_2_2,
     requires_scipy,
 )
 
@@ -145,6 +146,7 @@ def test_multi_index_groupby_sum() -> None:
     assert_equal(expected, actual)
 
 
+@requires_pandas_ge_2_2
 def test_multi_index_propagation():
     # regression test for GH9648
     times = pd.date_range("2023-01-01", periods=4)
