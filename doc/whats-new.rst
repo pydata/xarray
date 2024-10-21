@@ -23,8 +23,8 @@ New Features
 ~~~~~~~~~~~~
 - ``DataTree`` related functionality is now exposed in the main ``xarray`` public
   API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``, ``xarray.open_groups``,
-  ``xarray.map_over_datasets``, ``xarray.register_datatree_accessor`` and
-  ``xarray.testing.assert_isomorphic``.
+  ``xarray.map_over_datasets``, ``xarray.group_subtrees``,
+  ``xarray.register_datatree_accessor`` and ``xarray.testing.assert_isomorphic``.
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_,
   `Eni Awowale <https://github.com/eni-awowale>`_,
   `Matt Savoie <https://github.com/flamingbear>`_,
