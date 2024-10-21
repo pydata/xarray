@@ -21,13 +21,13 @@ from xarray.core.alignment import align, broadcast
 from xarray.core.arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
 from xarray.core.concat import concat
-from xarray.core.coordinates import Coordinates
+from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.formatting import format_array_flat
 from xarray.core.indexes import (
-    PandasIndex,
     PandasMultiIndex,
     filter_indexes_from_coords,
 )
+from xarray.core.merge import merge_coords
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Dims,
@@ -851,7 +851,6 @@ class GroupBy(Generic[T_Xarray]):
         from flox.xarray import xarray_reduce
 
         from xarray.core.dataset import Dataset
-        from xarray.groupers import BinGrouper
 
         obj = self._original_obj
         variables = (
@@ -900,13 +899,6 @@ class GroupBy(Generic[T_Xarray]):
             elif kwargs["min_count"] is None:
                 # set explicitly to avoid unnecessarily accumulating count
                 kwargs["min_count"] = 0
-
-        unindexed_dims: tuple[Hashable, ...] = tuple(
-            grouper.name
-            for grouper in self.groupers
-            if isinstance(grouper.group, _DummyGroup)
-            and not isinstance(grouper.grouper, BinGrouper)
-        )
 
         parsed_dim: tuple[Hashable, ...]
         if isinstance(dim, str):
@@ -963,26 +955,29 @@ class GroupBy(Generic[T_Xarray]):
         # we did end up reducing over dimension(s) that are
         # in the grouped variable
         group_dims = set(grouper.group.dims)
-        new_coords = {}
+        new_coords = []
+        to_drop = []
         if group_dims.issubset(set(parsed_dim)):
-            new_indexes = {}
             for grouper in self.groupers:
                 output_index = grouper.full_index
                 if isinstance(output_index, pd.RangeIndex):
+                    # flox always assigns an index so we must drop it here if we don't need it.
+                    to_drop.append(grouper.name)
                     continue
-                name = grouper.name
-                new_coords[name] = IndexVariable(
-                    dims=name, data=np.array(output_index), attrs=grouper.codes.attrs
+                new_coords.append(
+                    # Using IndexVariable here ensures we reconstruct PandasMultiIndex with
+                    # all associated levels properly.
+                    _coordinates_from_variable(
+                        IndexVariable(
+                            dims=grouper.name,
+                            data=output_index,
+                            attrs=grouper.codes.attrs,
+                        )
+                    )
                 )
-                index_cls = (
-                    PandasIndex
-                    if not isinstance(output_index, pd.MultiIndex)
-                    else PandasMultiIndex
-                )
-                new_indexes[name] = index_cls(output_index, dim=name)
             result = result.assign_coords(
-                Coordinates(new_coords, new_indexes)
-            ).drop_vars(unindexed_dims)
+                Coordinates._construct_direct(*merge_coords(new_coords))
+            ).drop_vars(to_drop)
 
         # broadcast any non-dim coord variables that don't
         # share all dimensions with the grouper
