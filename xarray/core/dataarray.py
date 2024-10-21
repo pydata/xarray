@@ -47,6 +47,7 @@ from xarray.core.coordinates import (
     create_coords_with_default_indexes,
 )
 from xarray.core.dataset import Dataset
+from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.formatting import format_item
 from xarray.core.indexes import (
     Index,
@@ -68,12 +69,13 @@ from xarray.core.types import (
 )
 from xarray.core.utils import (
     Default,
-    HybridMappingProxy,
+    FilteredMapping,
     ReprObject,
     _default,
     either_dict_or_kwargs,
     hashable,
     infix_dims,
+    result_name,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -928,11 +930,10 @@ class DataArray(
     @property
     def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for key-completion"""
-        yield HybridMappingProxy(keys=self._coords, mapping=self.coords)
+        yield FilteredMapping(keys=self._coords, mapping=self.coords)
 
         # virtual coordinates
-        # uses empty dict -- everything here can already be found in self.coords.
-        yield HybridMappingProxy(keys=self.dims, mapping={})
+        yield FilteredMapping(keys=self.dims, mapping=self.coords)
 
     def __contains__(self, key: Any) -> bool:
         return key in self.data
@@ -1582,7 +1583,7 @@ class DataArray(
           Do not try to assign values when using any of the indexing methods
           ``isel`` or ``sel``::
 
-            da = xr.DataArray([0, 1, 2, 3], dims=['x'])
+            da = xr.DataArray([0, 1, 2, 3], dims=["x"])
             # DO NOT do this
             da.isel(x=[0, 1, 2])[1] = -1
 
@@ -2223,12 +2224,12 @@ class DataArray(
 
         Performs univariate or multivariate interpolation of a DataArray onto
         new coordinates using scipy's interpolation routines. If interpolating
-        along an existing dimension, :py:class:`scipy.interpolate.interp1d` is
-        called. When interpolating along multiple existing dimensions, an
+        along an existing dimension,  either :py:class:`scipy.interpolate.interp1d`
+        or a 1-dimensional scipy interpolator (e.g. :py:class:`scipy.interpolate.KroghInterpolator`)
+        is called. When interpolating along multiple existing dimensions, an
         attempt is made to decompose the interpolation into multiple
-        1-dimensional interpolations. If this is possible,
-        :py:class:`scipy.interpolate.interp1d` is called. Otherwise,
-        :py:func:`scipy.interpolate.interpn` is called.
+        1-dimensional interpolations. If this is possible, the 1-dimensional interpolator is called.
+        Otherwise, :py:func:`scipy.interpolate.interpn` is called.
 
         Parameters
         ----------
@@ -3857,7 +3858,11 @@ class DataArray(
         """
         # TODO: consolidate the info about pandas constructors and the
         # attributes that correspond to their indexes into a separate module?
-        constructors = {0: lambda x: x, 1: pd.Series, 2: pd.DataFrame}
+        constructors: dict[int, Callable] = {
+            0: lambda x: x,
+            1: pd.Series,
+            2: pd.DataFrame,
+        }
         try:
             constructor = constructors[self.ndim]
         except KeyError as err:
@@ -3866,7 +3871,14 @@ class DataArray(
                 "pandas objects. Requires 2 or fewer dimensions."
             ) from err
         indexes = [self.get_index(dim) for dim in self.dims]
-        return constructor(self.values, *indexes)  # type: ignore[operator]
+        if isinstance(self._variable._data, PandasExtensionArray):
+            values = self._variable._data.array
+        else:
+            values = self.values
+        pandas_object = constructor(values, *indexes)
+        if isinstance(pandas_object, pd.Series):
+            pandas_object.name = self.name
+        return pandas_object
 
     def to_dataframe(
         self, name: Hashable | None = None, dim_order: Sequence[Hashable] | None = None
@@ -3982,6 +3994,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> bytes: ...
 
     # compute=False returns dask.Delayed
@@ -3998,6 +4011,7 @@ class DataArray(
         *,
         compute: Literal[False],
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> Delayed: ...
 
     # default return None
@@ -4013,6 +4027,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: Literal[True] = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> None: ...
 
     # if compute cannot be evaluated at type check time
@@ -4029,6 +4044,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> Delayed | None: ...
 
     def to_netcdf(
@@ -4042,6 +4058,7 @@ class DataArray(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> bytes | Delayed | None:
         """Write DataArray contents to a netCDF file.
 
@@ -4158,6 +4175,7 @@ class DataArray(
             compute=compute,
             multifile=False,
             invalid_netcdf=invalid_netcdf,
+            auto_complex=auto_complex,
         )
 
     # compute=True (default) returns ZarrStore
@@ -4304,6 +4322,14 @@ class DataArray(
             if Zarr arrays are written in parallel. This option may be useful in combination
             with ``compute=False`` to initialize a Zarr store from an existing
             DataArray with arbitrary chunk structure.
+            In addition to the many-to-one relationship validation, it also detects partial
+            chunks writes when using the region parameter,
+            these partial chunks are considered unsafe in the mode "r+" but safe in
+            the mode "a".
+            Note: Even with these validations it can still be unsafe to write
+            two or more chunked arrays in the same location in parallel if they are
+            not writing in independent regions, for those cases it is better to use
+            a synchronizer.
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
@@ -4701,15 +4727,6 @@ class DataArray(
         except (TypeError, AttributeError):
             return False
 
-    def _result_name(self, other: Any = None) -> Hashable | None:
-        # use the same naming heuristics as pandas:
-        # https://github.com/ContinuumIO/blaze/issues/458#issuecomment-51936356
-        other_name = getattr(other, "name", _default)
-        if other_name is _default or other_name == self.name:
-            return self.name
-        else:
-            return None
-
     def __array_wrap__(self, obj, context=None) -> Self:
         new_var = self.variable.__array_wrap__(obj, context)
         return self._replace(new_var)
@@ -4740,9 +4757,10 @@ class DataArray(
     def _binary_op(
         self, other: DaCompatible, f: Callable, reflexive: bool = False
     ) -> Self:
+        from xarray.core.datatree import DataTree
         from xarray.core.groupby import GroupBy
 
-        if isinstance(other, Dataset | GroupBy):
+        if isinstance(other, DataTree | Dataset | GroupBy):
             return NotImplemented
         if isinstance(other, DataArray):
             align_type = OPTIONS["arithmetic_join"]
@@ -4756,7 +4774,7 @@ class DataArray(
             else f(other_variable_or_arraylike, self.variable)
         )
         coords, indexes = self.coords._merge_raw(other_coords, reflexive)
-        name = self._result_name(other)
+        name = result_name([self, other])
 
         return self._replace(variable, coords, name, indexes=indexes)
 
@@ -6782,7 +6800,7 @@ class DataArray(
 
         >>> da.groupby("letters")
         <DataArrayGroupBy, grouped over 1 grouper(s), 2 groups in total:
-            'letters': 2 groups with labels 'a', 'b'>
+            'letters': 2/2 groups present with labels 'a', 'b'>
 
         Execute a reduction
 
@@ -6798,8 +6816,8 @@ class DataArray(
 
         >>> da.groupby(["letters", "x"])
         <DataArrayGroupBy, grouped over 2 grouper(s), 8 groups in total:
-            'letters': 2 groups with labels 'a', 'b'
-            'x': 4 groups with labels 10, 20, 30, 40>
+            'letters': 2/2 groups present with labels 'a', 'b'
+            'x': 4/4 groups present with labels 10, 20, 30, 40>
 
         Use Grouper objects to express more complicated GroupBy operations
 

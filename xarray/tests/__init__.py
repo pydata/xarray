@@ -87,6 +87,7 @@ def _importorskip(
 
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
 has_scipy, requires_scipy = _importorskip("scipy")
+has_scipy_ge_1_13, requires_scipy_ge_1_13 = _importorskip("scipy", "1.13")
 with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
@@ -134,7 +135,7 @@ has_cartopy, requires_cartopy = _importorskip("cartopy")
 has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
-has_pandas_ge_2_2, __ = _importorskip("pandas", "2.2")
+has_pandas_ge_2_2, requires_pandas_ge_2_2 = _importorskip("pandas", "2.2")
 has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0.dev0")
 
 
@@ -183,6 +184,14 @@ def _importorskip_h5netcdf_ros3():
 has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip_h5netcdf_ros3()
 has_netCDF4_1_6_2_or_above, requires_netCDF4_1_6_2_or_above = _importorskip(
     "netCDF4", "1.6.2"
+)
+
+has_h5netcdf_1_4_0_or_above, requires_h5netcdf_1_4_0_or_above = _importorskip(
+    "h5netcdf", "1.4.0.dev"
+)
+
+has_netCDF4_1_7_0_or_above, requires_netCDF4_1_7_0_or_above = _importorskip(
+    "netCDF4", "1.7.0"
 )
 
 # change some global options for tests

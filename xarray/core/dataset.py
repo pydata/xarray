@@ -87,7 +87,7 @@ from xarray.core.merge import (
     merge_coordinates_without_align,
     merge_core,
 )
-from xarray.core.missing import get_clean_interp_index
+from xarray.core.missing import _floatize_x
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Bins,
@@ -103,9 +103,9 @@ from xarray.core.types import (
 )
 from xarray.core.utils import (
     Default,
+    FilteredMapping,
     Frozen,
     FrozenMappingWarningOnValuesAccess,
-    HybridMappingProxy,
     OrderedSet,
     _default,
     decode_numpy_dict_values,
@@ -118,6 +118,7 @@ from xarray.core.utils import (
     is_duck_dask_array,
     is_scalar,
     maybe_wrap_array,
+    parse_dims_as_set,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -1507,10 +1508,10 @@ class Dataset(
     def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for key-completion"""
         yield self.data_vars
-        yield HybridMappingProxy(keys=self._coord_names, mapping=self.coords)
+        yield FilteredMapping(keys=self._coord_names, mapping=self.coords)
 
         # virtual coordinates
-        yield HybridMappingProxy(keys=self.sizes, mapping=self)
+        yield FilteredMapping(keys=self.sizes, mapping=self)
 
     def __contains__(self, key: object) -> bool:
         """The 'in' operator will return true or false depending on whether
@@ -2193,6 +2194,7 @@ class Dataset(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> bytes: ...
 
     # compute=False returns dask.Delayed
@@ -2209,6 +2211,7 @@ class Dataset(
         *,
         compute: Literal[False],
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> Delayed: ...
 
     # default return None
@@ -2224,6 +2227,7 @@ class Dataset(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: Literal[True] = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> None: ...
 
     # if compute cannot be evaluated at type check time
@@ -2240,6 +2244,7 @@ class Dataset(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> Delayed | None: ...
 
     def to_netcdf(
@@ -2253,6 +2258,7 @@ class Dataset(
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
+        auto_complex: bool | None = None,
     ) -> bytes | Delayed | None:
         """Write dataset contents to a netCDF file.
 
@@ -2349,6 +2355,7 @@ class Dataset(
             compute=compute,
             multifile=False,
             invalid_netcdf=invalid_netcdf,
+            auto_complex=auto_complex,
         )
 
     # compute=True (default) returns ZarrStore
@@ -2509,6 +2516,14 @@ class Dataset(
             if Zarr arrays are written in parallel. This option may be useful in combination
             with ``compute=False`` to initialize a Zarr from an existing
             Dataset with arbitrary chunk structure.
+            In addition to the many-to-one relationship validation, it also detects partial
+            chunks writes when using the region parameter,
+            these partial chunks are considered unsafe in the mode "r+" but safe in
+            the mode "a".
+            Note: Even with these validations it can still be unsafe to write
+            two or more chunked arrays in the same location in parallel if they are
+            not writing in independent regions, for those cases it is better to use
+            a synchronizer.
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
@@ -3877,12 +3892,12 @@ class Dataset(
 
         Performs univariate or multivariate interpolation of a Dataset onto
         new coordinates using scipy's interpolation routines. If interpolating
-        along an existing dimension, :py:class:`scipy.interpolate.interp1d` is
-        called.  When interpolating along multiple existing dimensions, an
+        along an existing dimension, either :py:class:`scipy.interpolate.interp1d`
+        or a 1-dimensional scipy interpolator (e.g. :py:class:`scipy.interpolate.KroghInterpolator`)
+        is called.  When interpolating along multiple existing dimensions, an
         attempt is made to decompose the interpolation into multiple
-        1-dimensional interpolations. If this is possible,
-        :py:class:`scipy.interpolate.interp1d` is called. Otherwise,
-        :py:func:`scipy.interpolate.interpn` is called.
+        1-dimensional interpolations. If this is possible, the 1-dimensional interpolator
+        is called. Otherwise, :py:func:`scipy.interpolate.interpn` is called.
 
         Parameters
         ----------
@@ -6972,18 +6987,7 @@ class Dataset(
                 " Please use 'dim' instead."
             )
 
-        if dim is None or dim is ...:
-            dims = set(self.dims)
-        elif isinstance(dim, str) or not isinstance(dim, Iterable):
-            dims = {dim}
-        else:
-            dims = set(dim)
-
-        missing_dimensions = tuple(d for d in dims if d not in self.dims)
-        if missing_dimensions:
-            raise ValueError(
-                f"Dimensions {missing_dimensions} not found in data dimensions {tuple(self.dims)}"
-            )
+        dims = parse_dims_as_set(dim, set(self._dims.keys()))
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -7780,9 +7784,10 @@ class Dataset(
 
     def _binary_op(self, other, f, reflexive=False, join=None) -> Dataset:
         from xarray.core.dataarray import DataArray
+        from xarray.core.datatree import DataTree
         from xarray.core.groupby import GroupBy
 
-        if isinstance(other, GroupBy):
+        if isinstance(other, DataTree | GroupBy):
             return NotImplemented
         align_type = OPTIONS["arithmetic_join"] if join is None else join
         if isinstance(other, DataArray | Dataset):
@@ -9040,7 +9045,16 @@ class Dataset(
         variables = {}
         skipna_da = skipna
 
-        x = get_clean_interp_index(self, dim, strict=False)
+        x: Any = self.coords[dim].variable
+        x = _floatize_x((x,), (x,))[0][0]
+
+        try:
+            x = x.values.astype(np.float64)
+        except TypeError as e:
+            raise TypeError(
+                f"Dim {dim!r} must be castable to float64, got {type(x).__name__}."
+            ) from e
+
         xname = f"{self[dim].name}_"
         order = int(deg) + 1
         lhs = np.vander(x, order)
@@ -9079,8 +9093,11 @@ class Dataset(
             )
             variables[sing.name] = sing
 
+        # If we have a coordinate get its underlying dimension.
+        true_dim = self.coords[dim].dims[0]
+
         for name, da in self.data_vars.items():
-            if dim not in da.dims:
+            if true_dim not in da.dims:
                 continue
 
             if is_duck_dask_array(da.data) and (
@@ -9092,11 +9109,11 @@ class Dataset(
             elif skipna is None:
                 skipna_da = bool(np.any(da.isnull()))
 
-            dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
+            dims_to_stack = [dimname for dimname in da.dims if dimname != true_dim]
             stacked_coords: dict[Hashable, DataArray] = {}
             if dims_to_stack:
                 stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
-                rhs = da.transpose(dim, *dims_to_stack).stack(
+                rhs = da.transpose(true_dim, *dims_to_stack).stack(
                     {stacked_dim: dims_to_stack}
                 )
                 stacked_coords = {stacked_dim: rhs[stacked_dim]}
@@ -10359,10 +10376,8 @@ class Dataset(
             Array whose unique values should be used to group this array. If a
             Hashable, must be the name of a coordinate contained in this dataarray. If a dictionary,
             must map an existing variable name to a :py:class:`Grouper` instance.
-        squeeze : bool, default: True
-            If "group" is a dimension of any arrays in this dataset, `squeeze`
-            controls whether the subarrays have a dimension of length 1 along
-            that dimension or if the dimension is squeezed out.
+        squeeze : False
+            This argument is deprecated.
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -10388,7 +10403,7 @@ class Dataset(
 
         >>> ds.groupby("letters")
         <DatasetGroupBy, grouped over 1 grouper(s), 2 groups in total:
-            'letters': 2 groups with labels 'a', 'b'>
+            'letters': 2/2 groups present with labels 'a', 'b'>
 
         Execute a reduction
 
@@ -10405,8 +10420,8 @@ class Dataset(
 
         >>> ds.groupby(["letters", "x"])
         <DatasetGroupBy, grouped over 2 grouper(s), 8 groups in total:
-            'letters': 2 groups with labels 'a', 'b'
-            'x': 4 groups with labels 10, 20, 30, 40>
+            'letters': 2/2 groups present with labels 'a', 'b'
+            'x': 4/4 groups present with labels 10, 20, 30, 40>
 
         Use Grouper objects to express more complicated GroupBy operations
 
@@ -10613,7 +10628,7 @@ class Dataset(
         --------
         Dataset.cumulative
         DataArray.rolling
-        core.rolling.DatasetRolling
+        DataArray.rolling_exp
         """
         from xarray.core.rolling import DatasetRolling
 
@@ -10643,9 +10658,9 @@ class Dataset(
 
         See Also
         --------
-        Dataset.rolling
         DataArray.cumulative
-        core.rolling.DatasetRolling
+        Dataset.rolling
+        Dataset.rolling_exp
         """
         from xarray.core.rolling import DatasetRolling
 

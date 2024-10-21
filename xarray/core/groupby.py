@@ -21,14 +21,14 @@ from xarray.core.alignment import align, broadcast
 from xarray.core.arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
 from xarray.core.concat import concat
-from xarray.core.coordinates import Coordinates
+from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.duck_array_ops import where
 from xarray.core.formatting import format_array_flat
 from xarray.core.indexes import (
-    PandasIndex,
     PandasMultiIndex,
     filter_indexes_from_coords,
 )
+from xarray.core.merge import merge_coords
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Dims,
@@ -195,7 +195,11 @@ class _DummyGroup(Generic[T_Xarray]):
     def data(self) -> np.ndarray:
         return np.arange(self.size, dtype=int)
 
-    def __array__(self) -> np.ndarray:
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray:
+        if copy is False:
+            raise NotImplementedError(f"An array copy is necessary, got {copy = }.")
         return np.arange(self.size)
 
     @property
@@ -233,7 +237,9 @@ class _DummyGroup(Generic[T_Xarray]):
 T_Group = Union["T_DataArray", _DummyGroup]
 
 
-def _ensure_1d(group: T_Group, obj: T_DataWithCoords) -> tuple[
+def _ensure_1d(
+    group: T_Group, obj: T_DataWithCoords
+) -> tuple[
     T_Group,
     T_DataWithCoords,
     Hashable | None,
@@ -452,6 +458,7 @@ class ComposedGrouper:
         # At this point all arrays have been factorized.
         codes = tuple(grouper.codes for grouper in groupers)
         shape = tuple(grouper.size for grouper in groupers)
+        masks = tuple((code == -1) for code in codes)
         # We broadcast the codes against each other
         broadcasted_codes = broadcast(*codes)
         # This fully broadcasted DataArray is used as a template later
@@ -462,7 +469,8 @@ class ComposedGrouper:
         )
         # NaNs; as well as values outside the bins are coded by -1
         # Restore these after the raveling
-        mask = functools.reduce(np.logical_or, [(code == -1) for code in broadcasted_codes])  # type: ignore[arg-type]
+        broadcasted_masks = broadcast(*masks)
+        mask = functools.reduce(np.logical_or, broadcasted_masks)  # type: ignore[arg-type]
         _flatcodes = where(mask, -1, _flatcodes)
 
         full_index = pd.MultiIndex.from_product(
@@ -471,13 +479,9 @@ class ComposedGrouper:
         )
         # This will be unused when grouping by dask arrays, so skip..
         if not is_chunked_array(_flatcodes):
-            midx = pd.MultiIndex.from_product(
-                (grouper.unique_coord.data for grouper in groupers),
-                names=tuple(grouper.name for grouper in groupers),
-            )
             # Constructing an index from the product is wrong when there are missing groups
             # (e.g. binning, resampling). Account for that now.
-            midx = midx[np.sort(pd.unique(_flatcodes[~mask]))]
+            midx = full_index[np.sort(pd.unique(_flatcodes[~mask]))]
             group_indices = _codes_to_group_indices(_flatcodes.ravel(), len(full_index))
         else:
             midx = full_index
@@ -697,7 +701,7 @@ class GroupBy(Generic[T_Xarray]):
         for grouper in self.groupers:
             coord = grouper.unique_coord
             labels = ", ".join(format_array_flat(coord, 30).split())
-            text += f"\n    {grouper.name!r}: {coord.size} groups with labels {labels}"
+            text += f"\n    {grouper.name!r}: {coord.size}/{grouper.full_index.size} groups present with labels {labels}"
         return text + ">"
 
     def _iter_grouped(self) -> Iterator[T_Xarray]:
@@ -865,7 +869,6 @@ class GroupBy(Generic[T_Xarray]):
         from flox.xarray import xarray_reduce
 
         from xarray.core.dataset import Dataset
-        from xarray.groupers import BinGrouper
 
         obj = self._original_obj
         variables = (
@@ -914,13 +917,6 @@ class GroupBy(Generic[T_Xarray]):
             elif kwargs["min_count"] is None:
                 # set explicitly to avoid unnecessarily accumulating count
                 kwargs["min_count"] = 0
-
-        unindexed_dims: tuple[Hashable, ...] = tuple(
-            grouper.name
-            for grouper in self.groupers
-            if isinstance(grouper.group, _DummyGroup)
-            and not isinstance(grouper.grouper, BinGrouper)
-        )
 
         parsed_dim: tuple[Hashable, ...]
         if isinstance(dim, str):
@@ -977,26 +973,29 @@ class GroupBy(Generic[T_Xarray]):
         # we did end up reducing over dimension(s) that are
         # in the grouped variable
         group_dims = set(grouper.group.dims)
-        new_coords = {}
+        new_coords = []
+        to_drop = []
         if group_dims.issubset(set(parsed_dim)):
-            new_indexes = {}
             for grouper in self.groupers:
                 output_index = grouper.full_index
                 if isinstance(output_index, pd.RangeIndex):
+                    # flox always assigns an index so we must drop it here if we don't need it.
+                    to_drop.append(grouper.name)
                     continue
-                name = grouper.name
-                new_coords[name] = IndexVariable(
-                    dims=name, data=np.array(output_index), attrs=grouper.codes.attrs
+                new_coords.append(
+                    # Using IndexVariable here ensures we reconstruct PandasMultiIndex with
+                    # all associated levels properly.
+                    _coordinates_from_variable(
+                        IndexVariable(
+                            dims=grouper.name,
+                            data=output_index,
+                            attrs=grouper.codes.attrs,
+                        )
+                    )
                 )
-                index_cls = (
-                    PandasIndex
-                    if not isinstance(output_index, pd.MultiIndex)
-                    else PandasMultiIndex
-                )
-                new_indexes[name] = index_cls(output_index, dim=name)
             result = result.assign_coords(
-                Coordinates(new_coords, new_indexes)
-            ).drop_vars(unindexed_dims)
+                Coordinates._construct_direct(*merge_coords(new_coords))
+            ).drop_vars(to_drop)
 
         # broadcast any non-dim coord variables that don't
         # share all dimensions with the grouper
@@ -1308,7 +1307,6 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         return self._obj._replace_maybe_drop_dims(reordered)
 
     def _restore_dim_order(self, stacked: DataArray) -> DataArray:
-
         def lookup_order(dimension):
             for grouper in self.groupers:
                 if dimension == grouper.name and grouper.group.ndim == 1:

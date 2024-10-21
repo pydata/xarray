@@ -19,16 +19,11 @@ format (recommended).
 
     np.random.seed(123456)
 
-You can `read different types of files <https://docs.xarray.dev/en/stable/user-guide/io.html>`_
-in `xr.open_dataset` by specifying the engine to be used:
+You can read different types of files in `xr.open_dataset` by specifying the engine to be used:
 
-.. ipython:: python
-    :okexcept:
-    :suppress:
+.. code:: python
 
-    import xarray as xr
-
-    xr.open_dataset("my_file.grib", engine="cfgrib")
+    xr.open_dataset("example.nc", engine="netcdf4")
 
 The "engine" provides a set of instructions that tells xarray how
 to read the data and pack them into a `dataset` (or `dataarray`).
@@ -566,29 +561,12 @@ This is not CF-compliant but again facilitates roundtripping of xarray datasets.
 Invalid netCDF files
 ~~~~~~~~~~~~~~~~~~~~
 
-The library ``h5netcdf`` allows writing some dtypes (booleans, complex, ...) that aren't
+The library ``h5netcdf`` allows writing some dtypes that aren't
 allowed in netCDF4 (see
-`h5netcdf documentation <https://github.com/shoyer/h5netcdf#invalid-netcdf-files>`_).
+`h5netcdf documentation <https://github.com/h5netcdf/h5netcdf#invalid-netcdf-files>`_).
 This feature is available through :py:meth:`DataArray.to_netcdf` and
 :py:meth:`Dataset.to_netcdf` when used with ``engine="h5netcdf"``
-and currently raises a warning unless ``invalid_netcdf=True`` is set:
-
-.. ipython:: python
-    :okwarning:
-
-    # Writing complex valued data
-    da = xr.DataArray([1.0 + 1.0j, 2.0 + 2.0j, 3.0 + 3.0j])
-    da.to_netcdf("complex.nc", engine="h5netcdf", invalid_netcdf=True)
-
-    # Reading it back
-    reopened = xr.open_dataarray("complex.nc", engine="h5netcdf")
-    reopened
-
-.. ipython:: python
-    :suppress:
-
-    reopened.close()
-    os.remove("complex.nc")
+and currently raises a warning unless ``invalid_netcdf=True`` is set.
 
 .. warning::
 
