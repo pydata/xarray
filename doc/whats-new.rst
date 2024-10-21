@@ -68,6 +68,8 @@ Bug fixes
 - Fix the safe_chunks validation option on the to_zarr method
   (:issue:`5511`, :pull:`9559`). By `Joseph Nowak
   <https://github.com/josephnowak>`_.
+- Fix binning by multiple variables where some bins have no observations. (:issue:`9630`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~

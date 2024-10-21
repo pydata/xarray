@@ -606,7 +606,7 @@ def test_groupby_repr(obj, dim) -> None:
     N = len(np.unique(obj[dim]))
     expected = f"<{obj.__class__.__name__}GroupBy"
     expected += f", grouped over 1 grouper(s), {N} groups in total:"
-    expected += f"\n    {dim!r}: {N} groups with labels "
+    expected += f"\n    {dim!r}: {N}/{N} groups present with labels "
     if dim == "x":
         expected += "1, 2, 3, 4, 5>"
     elif dim == "y":
@@ -623,7 +623,7 @@ def test_groupby_repr_datetime(obj) -> None:
     actual = repr(obj.groupby("t.month"))
     expected = f"<{obj.__class__.__name__}GroupBy"
     expected += ", grouped over 1 grouper(s), 12 groups in total:\n"
-    expected += "    'month': 12 groups with labels "
+    expected += "    'month': 12/12 groups present with labels "
     expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12>"
     assert actual == expected
 
@@ -2953,3 +2953,35 @@ def test_groupby_transpose():
     second = data.groupby("x").sum()
 
     assert_identical(first, second.transpose(*first.dims))
+
+
+def test_groupby_multiple_bin_grouper_missing_groups():
+    from numpy import nan
+
+    ds = xr.Dataset(
+        {"foo": (("z"), np.arange(12))},
+        coords={"x": ("z", np.arange(12)), "y": ("z", np.arange(12))},
+    )
+
+    actual = ds.groupby(
+        x=BinGrouper(np.arange(0, 13, 4)), y=BinGrouper(bins=np.arange(0, 16, 2))
+    ).count()
+    expected = Dataset(
+        {
+            "foo": (
+                ("x_bins", "y_bins"),
+                np.array(
+                    [
+                        [2.0, 2.0, nan, nan, nan, nan, nan],
+                        [nan, nan, 2.0, 2.0, nan, nan, nan],
+                        [nan, nan, nan, nan, 2.0, 1.0, nan],
+                    ]
+                ),
+            )
+        },
+        coords={
+            "x_bins": ("x_bins", pd.IntervalIndex.from_breaks(np.arange(0, 13, 4))),
+            "y_bins": ("y_bins", pd.IntervalIndex.from_breaks(np.arange(0, 16, 2))),
+        },
+    )
+    assert_identical(actual, expected)
