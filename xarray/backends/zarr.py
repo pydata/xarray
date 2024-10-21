@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import base64
-import functools
 import json
 import os
 import struct
@@ -10,7 +9,6 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
-import packaging.version
 import pandas as pd
 
 from xarray import coding, conventions
@@ -30,10 +28,12 @@ from xarray.core.utils import (
     FrozenDict,
     HiddenKeyDict,
     close_on_error,
+    emit_user_level_warning,
 )
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import guess_chunkmanager
 from xarray.namedarray.pycompat import integer_types
+from xarray.namedarray.utils import module_available
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
@@ -45,14 +45,9 @@ if TYPE_CHECKING:
     from xarray.core.datatree import DataTree
 
 
-@functools.lru_cache
 def _zarr_v3() -> bool:
-    try:
-        import zarr
-    except ImportError:
-        return False
-    else:
-        return packaging.version.parse(zarr.__version__).major >= 3
+    # TODO: switch to "3" once Zarr V3 is released
+    return module_available("zarr", minversion="2.99")
 
 
 # need some special secret attributes to tell us the dimensions
@@ -946,8 +941,7 @@ class ZarrStore(AbstractWritableDataStore):
             # _FillValue is never a valid encoding for Zarr
             # TODO: refactor this logic so we don't need to check this here
             if "_FillValue" in v.encoding:
-                efv = v.encoding["_FillValue"]
-                if efv is not None:
+                if v.encoding.get("_FillValue") is not None:
                     raise ValueError("Zarr does not support _FillValue in encoding.")
                 else:
                     del v.encoding["_FillValue"]
@@ -978,15 +972,13 @@ class ZarrStore(AbstractWritableDataStore):
                     #     - Existing variables already have their attrs included in the consolidated metadata file.
                     #     - The size of dimensions can not be expanded, that would require a call using `append_dim`
                     #        which is mutually exclusive with `region`
-                    kwargs = {}
-                    if _zarr_v3():
-                        kwargs["store"] = self.zarr_group.store
-                    else:
-                        kwargs["store"] = self.zarr_group.chunk_store
-
-                    # TODO: see if zarr should normalize these strings.
                     zarr_array = zarr.open(
-                        **kwargs,
+                        store=(
+                            self.zarr_group.store
+                            if _zarr_v3()
+                            else self.zarr_group.chunk_store
+                        ),
+                        # TODO: see if zarr should normalize these strings.
                         path="/".join([self.zarr_group.name.rstrip("/"), name]).lstrip(
                             "/"
                         ),
@@ -1271,18 +1263,18 @@ def open_zarr(
         possible, otherwise defaulting to the default version used by
         the zarr-python library installed.
     use_zarr_fill_value_as_mask : bool, optional
-        If True, use the zarr Array `fill_value` to mask the data, the same as done
-        for NetCDF data with `_FillValue` or `missing_value` attributes. If False,
-        the `fill_value` is ignored and the data are not masked. If None, this defaults
-        to True for `zarr_version=2` and False for `zarr_version=3`.
+        If True, use the zarr Array ``fill_value`` to mask the data, the same as done
+        for NetCDF data with ``_FillValue`` or ``missing_value`` attributes. If False,
+        the ``fill_value`` is ignored and the data are not masked. If None, this defaults
+        to True for ``zarr_version=2`` and False for ``zarr_version=3``.
     chunked_array_type: str, optional
         Which chunked array type to coerce this datasets' arrays to.
         Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict, optional
-        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
-        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
-        Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
+        Additional keyword arguments passed on to the ``ChunkManagerEntrypoint.from_array`` method used to create
+        chunked arrays, via whichever chunk manager is specified through the ``chunked_array_type`` kwarg.
+        Defaults to ``{'manager': 'dask'}``, meaning additional kwargs will be passed eventually to
         :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
 
     Returns
@@ -1644,10 +1636,7 @@ def _get_open_params(
     close_store_on_close = zarr_group.store is not store
 
     # we use this to determine how to handle fill_value
-    if _zarr_v3():
-        is_zarr_v3_format = zarr_group.metadata.zarr_format == 3
-    else:
-        is_zarr_v3_format = False
+    is_zarr_v3_format = _zarr_v3() and zarr_group.metadata.zarr_format == 3
     if use_zarr_fill_value_as_mask is None:
         if is_zarr_v3_format:
             # for new data, we use a better default
@@ -1676,8 +1665,8 @@ def _handle_zarr_version_or_format(
             f"zarr_format {zarr_format} does not match zarr_version {zarr_version}, please only set one"
         )
     if zarr_version is not None:
-        warnings.warn(
-            "zarr_version is deprecated, use zarr_format", FutureWarning, stacklevel=6
+        emit_user_level_warning(
+            "zarr_version is deprecated, use zarr_format", FutureWarning
         )
         return zarr_version
     return zarr_format

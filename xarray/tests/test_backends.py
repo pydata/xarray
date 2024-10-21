@@ -67,6 +67,8 @@ from xarray.tests import (
     has_netCDF4,
     has_numpy_2,
     has_scipy,
+    has_zarr,
+    has_zarr_v3,
     mock,
     network,
     requires_cftime,
@@ -107,20 +109,11 @@ except ImportError:
     pass
 
 
-try:
+if has_zarr:
     import zarr
     import zarr.codecs
-except ImportError:
-    have_zarr = False
-else:
-    have_zarr = True
 
-
-if have_zarr:
-    have_zarr_v3 = backends.zarr._zarr_v3()
-    have_zarr_kvstore = True
-
-    if have_zarr_v3:
+    if has_zarr_v3:
         from zarr.storage import MemoryStore as KVStore
 
         ZARR_FORMATS = [2, 3]
@@ -133,16 +126,13 @@ if have_zarr:
         except ImportError:
             KVStore = None  # type: ignore[assignment,misc,unused-ignore]
 else:
-    have_zarr_v3 = False
-    have_zarr_kvstore = False
-    have_zarr_directory_store = False
     KVStore = None  # type: ignore[assignment,misc,unused-ignore]
     ZARR_FORMATS = []
 
 
 @pytest.fixture(scope="module", params=ZARR_FORMATS)
 def default_zarr_version(request) -> Generator[None, None]:
-    if have_zarr_v3:
+    if has_zarr_v3:
         with zarr.config.set(default_zarr_version=request.param):
             yield
     else:
@@ -150,13 +140,13 @@ def default_zarr_version(request) -> Generator[None, None]:
 
 
 def skip_if_zarr_format_3(reason: str):
-    if have_zarr_v3 and zarr.config["default_zarr_version"] == 3:
-        pytest.xfail(reason=f"Unsupported with zarr_format=3: {reason}")
+    if has_zarr_v3 and zarr.config["default_zarr_version"] == 3:
+        pytest.skip(reason=f"Unsupported with zarr_format=3: {reason}")
 
 
 def skip_if_zarr_format_2(reason: str):
-    if not have_zarr_v3 or (zarr.config["default_zarr_version"] == 2):
-        pytest.xfail(reason=f"Unsupported with zarr_format=2: {reason}")
+    if not has_zarr_v3 or (zarr.config["default_zarr_version"] == 2):
+        pytest.skip(reason=f"Unsupported with zarr_format=2: {reason}")
 
 
 ON_WINDOWS = sys.platform == "win32"
@@ -1345,11 +1335,10 @@ class CFEncodedBase(DatasetIOBase):
         with self.roundtrip(ds) as actual:
             assert "_FillValue" not in actual.x.encoding
 
-    # TODO: decide if this test is really necessary
-    # _FillValue is not a valid encoding for Zarr
     def test_explicitly_omit_fill_value_via_encoding_kwarg(self) -> None:
         ds = Dataset({"x": ("y", [np.pi, -np.pi])})
         kwargs = dict(encoding={"x": {"_FillValue": None}})
+        # _FillValue is not a valid encoding for Zarr
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             assert "_FillValue" not in actual.x.encoding
         assert ds.y.encoding == {}
@@ -2336,7 +2325,7 @@ class ZarrBase(CFEncodedBase):
         with pytest.raises(FileNotFoundError, match="No such file or directory"):
             xr.open_zarr(f"{uuid.uuid4()}")
 
-    @pytest.mark.skipif(have_zarr_v3, reason="chunk_store not implemented in zarr v3")
+    @pytest.mark.skipif(has_zarr_v3, reason="chunk_store not implemented in zarr v3")
     def test_with_chunkstore(self) -> None:
         expected = create_test_data()
         with (
@@ -2587,7 +2576,7 @@ class ZarrBase(CFEncodedBase):
                 for var in expected.variables.keys():
                     assert self.DIMENSION_KEY not in expected[var].attrs
 
-            if have_zarr_v3:
+            if has_zarr_v3:
                 # temporary workaround for https://github.com/zarr-developers/zarr-python/issues/2338
                 zarr_group.store._is_open = True
 
@@ -2652,7 +2641,7 @@ class ZarrBase(CFEncodedBase):
         original = create_test_data()
         # specify a custom compressor
 
-        if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
+        if has_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
             encoding_key = "codecs"
             # all parameters need to be explicitly specified in order for the comparison to pass below
             encoding = {
@@ -2677,7 +2666,7 @@ class ZarrBase(CFEncodedBase):
 
         with self.roundtrip(original, save_kwargs=save_kwargs) as ds:
             enc = ds["var1"].encoding[encoding_key]
-            if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
+            if has_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
                 # TODO: figure out a cleaner way to do this comparison
                 codecs = zarr.core.metadata.v3.parse_codecs(enc)
                 assert codecs == encoding[encoding_key]
@@ -2820,7 +2809,7 @@ class ZarrBase(CFEncodedBase):
             import numcodecs
 
             encoding_value: Any
-            if have_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
+            if has_zarr_v3 and zarr.config.config["default_zarr_version"] == 3:
                 compressor = zarr.codecs.BloscCodec()
                 encoding_key = "codecs"
                 encoding_value = [zarr.codecs.BytesCodec(), compressor]
@@ -3250,8 +3239,7 @@ class ZarrBase(CFEncodedBase):
     KVStore is None, reason="zarr-python 2.x or ZARR_V3_EXPERIMENTAL_API is unset."
 )
 class TestInstrumentedZarrStore:
-
-    if have_zarr_v3:
+    if has_zarr_v3:
         methods = [
             "get",
             "set",
@@ -3270,13 +3258,10 @@ class TestInstrumentedZarrStore:
 
     @contextlib.contextmanager
     def create_zarr_target(self):
-        if not have_zarr:
-            pytest.skip("Instrumented tests only work on latest Zarr.")
-
         if Version(zarr.__version__) < Version("2.18.0"):
             pytest.skip("Instrumented tests only work on latest Zarr.")
 
-        if have_zarr_v3:
+        if has_zarr_v3:
             kwargs = {"mode": "a"}
         else:
             kwargs = {}  # type: ignore[arg-type,unused-ignore]
@@ -3316,7 +3301,7 @@ class TestInstrumentedZarrStore:
         modified = Dataset({"foo": ("x", [2])}, coords={"x": [1]})
 
         with self.create_zarr_target() as store:
-            if have_zarr_v3:
+            if has_zarr_v3:
                 # TOOD: verify these
                 expected = {
                     "set": 17,
@@ -3342,7 +3327,7 @@ class TestInstrumentedZarrStore:
             patches = self.make_patches(store)
             # v2024.03.0: {'iter': 6, 'contains': 2, 'setitem': 5, 'getitem': 10, 'listdir': 6, 'list_prefix': 0}
             # 6057128b: {'iter': 5, 'contains': 2, 'setitem': 5, 'getitem': 10, "listdir": 5, "list_prefix": 0}
-            if have_zarr_v3:
+            if has_zarr_v3:
                 expected = {
                     "set": 10,
                     "get": 16,  # TODO: fixme upstream (should be 8)
@@ -3365,7 +3350,7 @@ class TestInstrumentedZarrStore:
 
             patches = self.make_patches(store)
 
-            if have_zarr_v3:
+            if has_zarr_v3:
                 expected = {
                     "set": 10,
                     "get": 16,  # TODO: fixme upstream (should be 8)
@@ -3395,7 +3380,7 @@ class TestInstrumentedZarrStore:
     def test_region_write(self) -> None:
         ds = Dataset({"foo": ("x", [1, 2, 3])}, coords={"x": [1, 2, 3]}).chunk()
         with self.create_zarr_target() as store:
-            if have_zarr_v3:
+            if has_zarr_v3:
                 expected = {
                     "set": 5,
                     "get": 10,
@@ -3419,7 +3404,7 @@ class TestInstrumentedZarrStore:
 
             # v2024.03.0: {'iter': 5, 'contains': 2, 'setitem': 1, 'getitem': 6, 'listdir': 5, 'list_prefix': 0}
             # 6057128b: {'iter': 4, 'contains': 2, 'setitem': 1, 'getitem': 5, 'listdir': 4, 'list_prefix': 0}
-            if have_zarr_v3:
+            if has_zarr_v3:
                 expected = {
                     "set": 1,
                     "get": 3,
@@ -3443,7 +3428,7 @@ class TestInstrumentedZarrStore:
 
             # v2024.03.0: {'iter': 6, 'contains': 4, 'setitem': 1, 'getitem': 11, 'listdir': 6, 'list_prefix': 0}
             # 6057128b: {'iter': 4, 'contains': 2, 'setitem': 1, 'getitem': 7, 'listdir': 4, 'list_prefix': 0}
-            if have_zarr_v3:
+            if has_zarr_v3:
                 expected = {
                     "set": 1,
                     "get": 5,
@@ -3465,7 +3450,7 @@ class TestInstrumentedZarrStore:
                 ds.to_zarr(store, region="auto")
             self.check_requests(expected, patches)
 
-            if have_zarr_v3:
+            if has_zarr_v3:
                 expected = {
                     "set": 0,
                     "get": 5,
@@ -3493,7 +3478,7 @@ class TestInstrumentedZarrStore:
 class TestZarrDictStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
-        if have_zarr_v3:
+        if has_zarr_v3:
             yield zarr.storage.MemoryStore({}, mode="a")
         else:
             yield {}
@@ -3548,7 +3533,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
     @pytest.mark.parametrize("consolidated", [True, False, None])
     @pytest.mark.parametrize("write_empty", [True, False, None])
     @pytest.mark.skipif(
-        have_zarr_v3, reason="zarr-python 3.x removed write_empty_chunks"
+        has_zarr_v3, reason="zarr-python 3.x removed write_empty_chunks"
     )
     def test_write_empty(
         self, consolidated: bool | None, write_empty: bool | None
@@ -3619,7 +3604,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         # rather than a mocked method.
 
         Group: Any
-        if have_zarr_v3:
+        if has_zarr_v3:
             Group = zarr.AsyncGroup
             patched = patch.object(
                 Group, "getitem", side_effect=Group.getitem, autospec=True
@@ -3646,7 +3631,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
 
 @requires_zarr
 @requires_fsspec
-@pytest.mark.skipif(have_zarr_v3, reason="Difficult to test.")
+@pytest.mark.skipif(has_zarr_v3, reason="Difficult to test.")
 def test_zarr_storage_options() -> None:
     pytest.importorskip("aiobotocore")
     ds = create_test_data()
@@ -3660,7 +3645,7 @@ def test_zarr_storage_options() -> None:
 def test_zarr_version_deprecated() -> None:
     ds = create_test_data()
     store: Any
-    if have_zarr_v3:
+    if has_zarr_v3:
         store = KVStore()
     else:
         store = {}
@@ -5412,9 +5397,8 @@ class TestDataArrayToNetCDF:
 
 @requires_zarr
 class TestDataArrayToZarr:
-
     def skip_if_zarr_python_3_and_zip_store(self, store) -> None:
-        if have_zarr_v3 and isinstance(store, zarr.storage.zip.ZipStore):
+        if has_zarr_v3 and isinstance(store, zarr.storage.zip.ZipStore):
             pytest.skip(
                 reason="zarr-python 3.x doesn't support reopening ZipStore with a new mode."
             )
