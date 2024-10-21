@@ -4078,7 +4078,7 @@ class Dataset(
         # optimization: subset to coordinate range of the target index
         if method in ["linear", "nearest"]:
             for k, v in validated_indexers.items():
-                obj, newidx = missing._localize(obj, {k: v})
+                obj, newidx = missing._localize(obj, {k: v})  # type: ignore[assignment, arg-type]
                 validated_indexers[k] = newidx[k]
 
         # optimization: create dask coordinate arrays once per Dataset
@@ -6759,7 +6759,7 @@ class Dataset(
             max_gap=max_gap,
             **kwargs,
         )
-        return new
+        return new  # type: ignore[return-value]
 
     def ffill(self, dim: Hashable, limit: int | None = None) -> Self:
         """Fill NaN values by propagating values forward
@@ -6823,7 +6823,7 @@ class Dataset(
         from xarray.core.missing import _apply_over_vars_with_dim, ffill
 
         new = _apply_over_vars_with_dim(ffill, self, dim=dim, limit=limit)
-        return new
+        return new  # type: ignore[return-value]
 
     def bfill(self, dim: Hashable, limit: int | None = None) -> Self:
         """Fill NaN values by propagating values backward
@@ -6888,7 +6888,7 @@ class Dataset(
         from xarray.core.missing import _apply_over_vars_with_dim, bfill
 
         new = _apply_over_vars_with_dim(bfill, self, dim=dim, limit=limit)
-        return new
+        return new  # type: ignore[return-value]
 
     def combine_first(self, other: Self) -> Self:
         """Combine two Datasets, default to data_vars of self.
