@@ -722,7 +722,7 @@ class ZarrStore(AbstractWritableDataStore):
 
         if self._use_zarr_fill_value_as_mask:
             # Setting this attribute triggers CF decoding for missing values
-            # TODO: it feels a bit hacky to hijack CF decoding for this purpose
+            # by interpreting Zarr's fill_value to mean the same as netCDF's _FillValue
             if zarr_array.fill_value is not None:
                 attributes["_FillValue"] = zarr_array.fill_value
         elif "_FillValue" in attributes:
