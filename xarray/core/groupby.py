@@ -454,6 +454,7 @@ class ComposedGrouper:
         # At this point all arrays have been factorized.
         codes = tuple(grouper.codes for grouper in groupers)
         shape = tuple(grouper.size for grouper in groupers)
+        masks = tuple((code == -1) for code in codes)
         # We broadcast the codes against each other
         broadcasted_codes = broadcast(*codes)
         # This fully broadcasted DataArray is used as a template later
@@ -464,24 +465,18 @@ class ComposedGrouper:
         )
         # NaNs; as well as values outside the bins are coded by -1
         # Restore these after the raveling
-        mask = functools.reduce(
-            np.logical_or,  # type: ignore[arg-type]
-            [(code == -1) for code in broadcasted_codes],
-        )
+        broadcasted_masks = broadcast(*masks)
+        mask = functools.reduce(np.logical_or, broadcasted_masks)  # type: ignore[arg-type]
         _flatcodes[mask] = -1
-
-        midx = pd.MultiIndex.from_product(
-            (grouper.unique_coord.data for grouper in groupers),
-            names=tuple(grouper.name for grouper in groupers),
-        )
-        # Constructing an index from the product is wrong when there are missing groups
-        # (e.g. binning, resampling). Account for that now.
-        midx = midx[np.sort(pd.unique(_flatcodes[~mask]))]
 
         full_index = pd.MultiIndex.from_product(
             (grouper.full_index.values for grouper in groupers),
             names=tuple(grouper.name for grouper in groupers),
         )
+        # Constructing an index from the product is wrong when there are missing groups
+        # (e.g. binning, resampling). Account for that now.
+        midx = full_index[np.sort(pd.unique(_flatcodes[~mask]))]
+
         dim_name = "stacked_" + "_".join(str(grouper.name) for grouper in groupers)
 
         coords = Coordinates.from_pandas_multiindex(midx, dim=dim_name)
@@ -684,7 +679,7 @@ class GroupBy(Generic[T_Xarray]):
         for grouper in self.groupers:
             coord = grouper.unique_coord
             labels = ", ".join(format_array_flat(coord, 30).split())
-            text += f"\n    {grouper.name!r}: {coord.size} groups with labels {labels}"
+            text += f"\n    {grouper.name!r}: {coord.size}/{grouper.full_index.size} groups present with labels {labels}"
         return text + ">"
 
     def _iter_grouped(self) -> Iterator[T_Xarray]:
