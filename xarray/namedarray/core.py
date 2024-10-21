@@ -1037,6 +1037,19 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return real(self)
         return self._new(data=self._data.real)
 
+    @overload
+    def __array__(
+        self, dtype: None = ..., /, *, copy: bool | None = ...
+    ) -> np.ndarray[Any, _DType_co]: ...
+    @overload
+    def __array__(
+        self, dtype: _DType, /, *, copy: bool | None = ...
+    ) -> np.ndarray[Any, _DType]: ...
+    def __array__(
+        self, dtype: _DType | None = ..., /, *, copy: bool | None = ...
+    ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]:
+        return np.asarray(self._data)
+
     def __dask_tokenize__(self) -> object:
         # Use v.data, instead of v._data, in order to cope with the wrappers
         # around NetCDF and the like
