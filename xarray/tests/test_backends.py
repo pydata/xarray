@@ -53,7 +53,7 @@ from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
-from xarray.core.options import set_options
+from xarray.core.options import _get_datetime_resolution, set_options
 from xarray.core.utils import module_available
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
@@ -584,6 +584,12 @@ class DatasetIOBase:
                     warnings.filterwarnings("ignore", "Unable to decode time axis")
 
                 with self.roundtrip(expected, save_kwargs=kwargs) as actual:
+                    # proleptic gregorian will be decoded into numpy datetime64
+                    # fixing to expectations
+                    if actual.t.dtype.kind == "M":
+                        dtype = f"datetime64[{np.datetime_data(actual.t)[0]}]"
+                        expected_decoded_t = expected_decoded_t.astype(dtype)
+                        expected_decoded_t0 = expected_decoded_t0.astype(dtype)
                     abs_diff = abs(actual.t.values - expected_decoded_t)
                     assert (abs_diff <= np.timedelta64(1, "s")).all()
                     assert (
@@ -598,7 +604,8 @@ class DatasetIOBase:
                     assert actual.t.encoding["calendar"] == expected_calendar
 
     def test_roundtrip_timedelta_data(self) -> None:
-        time_deltas = pd.to_timedelta(["1h", "2h", "NaT"])  # type: ignore[arg-type, unused-ignore]
+        # todo: check, if default unit "s" is enough
+        time_deltas = pd.to_timedelta(["1h", "2h", "NaT"]).as_unit("s")  # type: ignore[arg-type, unused-ignore]
         expected = Dataset({"td": ("td", time_deltas), "td0": time_deltas[0]})
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
@@ -1582,8 +1589,9 @@ class NetCDF4Base(NetCDFBase):
                 ds.variables["time"][:] = np.arange(10) + 4
 
             expected = Dataset()
-
-            time = pd.date_range("1999-01-05", periods=10)
+            time = pd.date_range(
+                "1999-01-05", periods=10, unit=_get_datetime_resolution()
+            )
             encoding = {"units": units, "dtype": np.dtype("int32")}
             expected["time"] = ("time", time, {}, encoding)
 
@@ -5379,11 +5387,12 @@ def test_use_cftime_standard_calendar_default_in_range(calendar) -> None:
 
 @requires_cftime
 @requires_scipy_or_netCDF4
-@pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
-@pytest.mark.parametrize("units_year", [1500, 2500])
+@pytest.mark.parametrize("calendar", ["standard", "gregorian"])
+@pytest.mark.parametrize("units_year", [1500, 1582])
 def test_use_cftime_standard_calendar_default_out_of_range(
     calendar, units_year
 ) -> None:
+    # todo: check, if we still need to test for two dates
     import cftime
 
     x = [0, 1]
@@ -5472,9 +5481,10 @@ def test_use_cftime_false_standard_calendar_in_range(calendar) -> None:
 
 
 @requires_scipy_or_netCDF4
-@pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
-@pytest.mark.parametrize("units_year", [1500, 2500])
+@pytest.mark.parametrize("calendar", ["standard", "gregorian"])
+@pytest.mark.parametrize("units_year", [1500, 1582])
 def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year) -> None:
+    # todo: check, if we still need to check for two dates
     x = [0, 1]
     time = [0, 720]
     units = f"days since {units_year}-01-01"
@@ -5578,7 +5588,9 @@ def test_open_fsspec() -> None:
     mm = m.get_mapper("out1.zarr")
     ds.to_zarr(mm)  # old interface
     ds0 = ds.copy()
-    ds0["time"] = ds.time + pd.to_timedelta("1 day")
+    # pd.to_timedelta returns ns-precision, but the example data is in second precision
+    # so we need to fix this
+    ds0["time"] = ds.time + pd.to_timedelta("1 day").as_unit("s")
     mm = m.get_mapper("out2.zarr")
     ds0.to_zarr(mm)  # old interface
 
