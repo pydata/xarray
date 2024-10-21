@@ -33,7 +33,7 @@ def all(
     Examples
     --------
     >>> import numpy as np
-    >>> x = NamedArray(("x", "y"), np.array([[True, False],[True, True]]))
+    >>> x = NamedArray(("x", "y"), np.array([[True, False], [True, True]]))
     >>> all(x)
     <xarray.NamedArray ()> Size: 1B
     np.False_
@@ -71,12 +71,12 @@ def any(
     Examples
     --------
     >>> import numpy as np
-    >>> x = NamedArray(("x", "y"), np.array([[True, False],[True, True]]))
+    >>> x = NamedArray(("x", "y"), np.array([[True, False], [True, True]]))
     >>> any(x)
     <xarray.NamedArray ()> Size: 1B
     np.True_
 
-    >>> x = NamedArray(("x", "y"), np.array([[True, False],[False, False]]))
+    >>> x = NamedArray(("x", "y"), np.array([[True, False], [False, False]]))
     >>> any(x, axis=0)
     <xarray.NamedArray (y: 2)> Size: 2B
     array([ True, False])
