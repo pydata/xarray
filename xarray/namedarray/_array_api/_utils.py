@@ -339,7 +339,47 @@ def _dim_to_optional_axis(
     return a[0]
 
 
-def _dim_to_axis(x: NamedArray[Any, Any], dim: _Dim | Default, axis: int) -> int:
+def _dim_to_axis(
+    x: NamedArray[Any, Any],
+    dim: _Dim | Default,
+    axis: int,
+    *,
+    axis_default: int | None = None,
+) -> int:
+    """
+    Convert dim to axis.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x", "y", "z"), np.zeros((1, 2, 3)))
+    >>> _dim_to_axis(x, _default, 0)
+    0
+    >>> _dim_to_axis(x, _default, -1)
+    2
+    >>> _dim_to_axis(x, "x", -1)
+    0
+    >>> _dim_to_axis(x, "z", 0)
+    2
+
+    Add a default value
+
+    >>> _dim_to_axis(x, _default, 0, axis_default=-1)
+    0
+    >>> _dim_to_axis(x, "z", -1, axis_default=-1)
+    2
+
+    Defining both dims and axis value different to the default raises an error
+
+    >>> _dim_to_axis(x, "x", 0, axis_default=-1)
+    Traceback (most recent call last):
+     ...
+    ValueError: cannot supply both 'axis' and 'dim(s)' arguments
+    """
+    if axis_default is not None:
+        a = None if axis is axis_default else axis
+        _assert_either_dim_or_axis(dim, a)
+
     _dim: _Dim = x.dims[axis] if isinstance(dim, Default) else dim
     _axis = _dim_to_optional_axis(x, _dim, None)
     assert _axis is not None  # Not supposed to happen.
