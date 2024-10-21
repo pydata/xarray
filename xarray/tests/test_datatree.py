@@ -11,8 +11,6 @@ import xarray as xr
 from xarray import DataArray, Dataset
 from xarray.core.coordinates import DataTreeCoordinates
 from xarray.core.datatree import DataTree
-from xarray.core.datatree_mapping import TreeIsomorphismError
-from xarray.core.datatree_ops import _MAPPED_DOCSTRING_ADDENDUM, insert_doc_addendum
 from xarray.core.treenode import NotFoundInTreeError
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import assert_array_equal, create_test_data, source_ndarray
@@ -840,10 +838,25 @@ class TestTreeFromDict:
 
         assert_identical(actual, expected)
 
-    def test_roundtrip(self, simple_datatree) -> None:
-        dt = simple_datatree
-        roundtrip = DataTree.from_dict(dt.to_dict())
-        assert roundtrip.equals(dt)
+    def test_roundtrip_to_dict(self, simple_datatree) -> None:
+        tree = simple_datatree
+        roundtrip = DataTree.from_dict(tree.to_dict())
+        assert_identical(tree, roundtrip)
+
+    def test_to_dict(self):
+        tree = DataTree.from_dict({"/a/b/c": None})
+        roundtrip = DataTree.from_dict(tree.to_dict())
+        assert_identical(tree, roundtrip)
+
+        roundtrip = DataTree.from_dict(tree.to_dict(relative=True))
+        assert_identical(tree, roundtrip)
+
+        roundtrip = DataTree.from_dict(tree.children["a"].to_dict(relative=False))
+        assert_identical(tree, roundtrip)
+
+        expected = DataTree.from_dict({"b/c": None})
+        actual = DataTree.from_dict(tree.children["a"].to_dict(relative=True))
+        assert_identical(expected, actual)
 
     @pytest.mark.xfail
     def test_roundtrip_unnamed_root(self, simple_datatree) -> None:
@@ -1012,15 +1025,21 @@ class TestAccess:
         assert dt.attrs["meta"] == "NASA"
         assert "meta" in dir(dt)
 
-    def test_ipython_key_completions(self, create_test_datatree) -> None:
+    def test_ipython_key_completions_complex(self, create_test_datatree) -> None:
         dt = create_test_datatree()
         key_completions = dt._ipython_key_completions_()
 
-        node_keys = [node.path[1:] for node in dt.subtree]
+        node_keys = [node.path[1:] for node in dt.descendants]
         assert all(node_key in key_completions for node_key in node_keys)
 
         var_keys = list(dt.variables.keys())
         assert all(var_key in key_completions for var_key in var_keys)
+
+    def test_ipython_key_completitions_subnode(self) -> None:
+        tree = xr.DataTree.from_dict({"/": None, "/a": None, "/a/b/": None})
+        expected = ["b"]
+        actual = tree["a"]._ipython_key_completions_()
+        assert expected == actual
 
     def test_operation_with_attrs_but_no_data(self) -> None:
         # tests bug from xarray-datatree GH262
@@ -1579,7 +1598,26 @@ class TestPipe:
         assert actual is dt and actual.attrs == attrs
 
 
-class TestEqualsAndIdentical:
+class TestIsomorphicEqualsAndIdentical:
+    def test_isomorphic(self):
+        tree = DataTree.from_dict({"/a": None, "/a/b": None, "/c": None})
+
+        diff_data = DataTree.from_dict(
+            {"/a": None, "/a/b": None, "/c": xr.Dataset({"foo": 1})}
+        )
+        assert tree.isomorphic(diff_data)
+
+        diff_order = DataTree.from_dict({"/c": None, "/a": None, "/a/b": None})
+        assert tree.isomorphic(diff_order)
+
+        diff_nodes = DataTree.from_dict({"/a": None, "/a/b": None, "/d": None})
+        assert not tree.isomorphic(diff_nodes)
+
+        more_nodes = DataTree.from_dict(
+            {"/a": None, "/a/b": None, "/c": None, "/d": None}
+        )
+        assert not tree.isomorphic(more_nodes)
+
     def test_minimal_variations(self):
         tree = DataTree.from_dict(
             {
@@ -1702,6 +1740,10 @@ class TestSubset:
         )
         assert_identical(result, expected)
 
+        result = dt.children["a"].match("B")
+        expected = DataTree.from_dict({"/B": None}, name="a")
+        assert_identical(result, expected)
+
     def test_filter(self) -> None:
         simpsons = DataTree.from_dict(
             {
@@ -1724,6 +1766,12 @@ class TestSubset:
         )
         elders = simpsons.filter(lambda node: node["age"].item() > 18)
         assert_identical(elders, expected)
+
+        expected = DataTree.from_dict({"/Bart": xr.Dataset({"age": 10})}, name="Homer")
+        actual = simpsons.children["Homer"].filter(
+            lambda node: node["age"].item() == 10
+        )
+        assert_identical(actual, expected)
 
 
 class TestIndexing:
@@ -1999,6 +2047,15 @@ class TestOps:
         result = dt * dt
         assert_equal(result, expected)
 
+    def test_binary_op_order_invariant(self) -> None:
+        tree_ab = DataTree.from_dict({"/a": Dataset({"a": 1}), "/b": Dataset({"b": 2})})
+        tree_ba = DataTree.from_dict({"/b": Dataset({"b": 2}), "/a": Dataset({"a": 1})})
+        expected = DataTree.from_dict(
+            {"/a": Dataset({"a": 2}), "/b": Dataset({"b": 4})}
+        )
+        actual = tree_ab + tree_ba
+        assert_identical(expected, actual)
+
     def test_arithmetic_inherited_coords(self) -> None:
         tree = DataTree(xr.Dataset(coords={"x": [1, 2, 3]}))
         tree["/foo"] = DataTree(xr.Dataset({"bar": ("x", [4, 5, 6])}))
@@ -2052,7 +2109,10 @@ class TestOps:
         dt = DataTree.from_dict({"/": ds1, "/subnode": ds2})
         node = dt["/subnode"]
 
-        with pytest.raises(TreeIsomorphismError):
+        with pytest.raises(
+            xr.TreeIsomorphismError,
+            match=re.escape(r"children at root node do not match: ['subnode'] vs []"),
+        ):
             dt * node
 
 
@@ -2063,79 +2123,3 @@ class TestUFuncs:
         expected = create_test_datatree(modify=lambda ds: np.sin(ds))
         result_tree = np.sin(dt)
         assert_equal(result_tree, expected)
-
-
-class TestDocInsertion:
-    """Tests map_over_datasets docstring injection."""
-
-    def test_standard_doc(self):
-        dataset_doc = dedent(
-            """\
-            Manually trigger loading and/or computation of this dataset's data
-                    from disk or a remote source into memory and return this dataset.
-                    Unlike compute, the original dataset is modified and returned.
-
-                    Normally, it should not be necessary to call this method in user code,
-                    because all xarray functions should either work on deferred data or
-                    load data automatically. However, this method can be necessary when
-                    working with many file objects on disk.
-
-                    Parameters
-                    ----------
-                    **kwargs : dict
-                        Additional keyword arguments passed on to ``dask.compute``.
-
-                    See Also
-                    --------
-                    dask.compute"""
-        )
-
-        expected_doc = dedent(
-            """\
-            Manually trigger loading and/or computation of this dataset's data
-                    from disk or a remote source into memory and return this dataset.
-                    Unlike compute, the original dataset is modified and returned.
-
-                    .. note::
-                        This method was copied from :py:class:`xarray.Dataset`, but has
-                        been altered to call the method on the Datasets stored in every
-                        node of the subtree. See the `map_over_datasets` function for more
-                        details.
-
-                    Normally, it should not be necessary to call this method in user code,
-                    because all xarray functions should either work on deferred data or
-                    load data automatically. However, this method can be necessary when
-                    working with many file objects on disk.
-
-                    Parameters
-                    ----------
-                    **kwargs : dict
-                        Additional keyword arguments passed on to ``dask.compute``.
-
-                    See Also
-                    --------
-                    dask.compute"""
-        )
-
-        wrapped_doc = insert_doc_addendum(dataset_doc, _MAPPED_DOCSTRING_ADDENDUM)
-
-        assert expected_doc == wrapped_doc
-
-    def test_one_liner(self):
-        mixin_doc = "Same as abs(a)."
-
-        expected_doc = dedent(
-            """\
-            Same as abs(a).
-
-            This method was copied from :py:class:`xarray.Dataset`, but has been altered to
-                call the method on the Datasets stored in every node of the subtree. See
-                the `map_over_datasets` function for more details."""
-        )
-
-        actual_doc = insert_doc_addendum(mixin_doc, _MAPPED_DOCSTRING_ADDENDUM)
-        assert expected_doc == actual_doc
-
-    def test_none(self):
-        actual_doc = insert_doc_addendum(None, _MAPPED_DOCSTRING_ADDENDUM)
-        assert actual_doc is None

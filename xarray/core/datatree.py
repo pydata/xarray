@@ -23,18 +23,20 @@ from xarray.core.coordinates import Coordinates, DataTreeCoordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, DataVariables
 from xarray.core.datatree_mapping import (
-    TreeIsomorphismError,
-    check_isomorphic,
     map_over_datasets,
 )
-from xarray.core.formatting import datatree_repr, dims_and_coords_repr
+from xarray.core.formatting import (
+    datatree_repr,
+    diff_treestructure,
+    dims_and_coords_repr,
+)
 from xarray.core.formatting_html import (
     datatree_repr as datatree_repr_html,
 )
 from xarray.core.indexes import Index, Indexes
 from xarray.core.merge import dataset_update_method
 from xarray.core.options import OPTIONS as XR_OPTS
-from xarray.core.treenode import NamedNode, NodePath
+from xarray.core.treenode import NamedNode, NodePath, zip_subtrees
 from xarray.core.types import Self
 from xarray.core.utils import (
     Default,
@@ -109,10 +111,6 @@ def _to_new_dataset(data: Dataset | Coordinates | None) -> Dataset:
     else:
         raise TypeError(f"data object is not an xarray.Dataset, dict, or None: {data}")
     return ds
-
-
-def _join_path(root: str, name: str) -> str:
-    return str(NodePath(root) / name)
 
 
 def _inherited_dataset(ds: Dataset, parent: Dataset) -> Dataset:
@@ -746,12 +744,14 @@ class DataTree(
         # Instead for now we only list direct paths to all node in subtree explicitly
 
         items_on_this_node = self._item_sources
-        full_file_like_paths_to_all_nodes_in_subtree = {
-            node.path[1:]: node for node in self.subtree
+        paths_to_all_nodes_in_subtree = {
+            path: node
+            for path, node in self.subtree_with_keys
+            if path != "."  # exclude the root node
         }
 
         all_item_sources = itertools.chain(
-            items_on_this_node, [full_file_like_paths_to_all_nodes_in_subtree]
+            items_on_this_node, [paths_to_all_nodes_in_subtree]
         )
 
         items = {
@@ -1169,15 +1169,27 @@ class DataTree(
         # to do with the return type of Dataset.copy()
         return obj  # type: ignore[return-value]
 
-    def to_dict(self) -> dict[str, Dataset]:
+    def to_dict(self, relative: bool = False) -> dict[str, Dataset]:
         """
-        Create a dictionary mapping of absolute node paths to the data contained in those nodes.
+        Create a dictionary mapping of paths to the data contained in those nodes.
+
+        Parameters
+        ----------
+        relative : bool
+            If True, return relative instead of absolute paths.
 
         Returns
         -------
         dict[str, Dataset]
+
+        See also
+        --------
+        DataTree.subtree_with_keys
         """
-        return {node.path: node.to_dataset() for node in self.subtree}
+        return {
+            node.relative_to(self) if relative else node.path: node.to_dataset()
+            for node in self.subtree
+        }
 
     @property
     def nbytes(self) -> int:
@@ -1218,49 +1230,27 @@ class DataTree(
         """Dictionary of DataArray objects corresponding to data variables"""
         return DataVariables(self.to_dataset())
 
-    def isomorphic(
-        self,
-        other: DataTree,
-        from_root: bool = False,
-        strict_names: bool = False,
-    ) -> bool:
+    def isomorphic(self, other: DataTree) -> bool:
         """
-        Two DataTrees are considered isomorphic if every node has the same number of children.
+        Two DataTrees are considered isomorphic if the set of paths to their
+        descendent nodes are the same.
 
         Nothing about the data in each node is checked.
 
         Isomorphism is a necessary condition for two trees to be used in a nodewise binary operation,
         such as ``tree1 + tree2``.
 
-        By default this method does not check any part of the tree above the given node.
-        Therefore this method can be used as default to check that two subtrees are isomorphic.
-
         Parameters
         ----------
         other : DataTree
             The other tree object to compare to.
-        from_root : bool, optional, default is False
-            Whether or not to first traverse to the root of the two trees before checking for isomorphism.
-            If neither tree has a parent then this has no effect.
-        strict_names : bool, optional, default is False
-            Whether or not to also check that every node in the tree has the same name as its counterpart in the other
-            tree.
 
         See Also
         --------
         DataTree.equals
         DataTree.identical
         """
-        try:
-            check_isomorphic(
-                self,
-                other,
-                require_names_equal=strict_names,
-                check_from_root=from_root,
-            )
-            return True
-        except (TypeError, TreeIsomorphismError):
-            return False
+        return diff_treestructure(self, other) is None
 
     def equals(self, other: DataTree) -> bool:
         """
@@ -1279,12 +1269,14 @@ class DataTree(
         DataTree.isomorphic
         DataTree.identical
         """
-        if not self.isomorphic(other, strict_names=True):
+        if not self.isomorphic(other):
             return False
 
+        # Note: by using .dataset, this intentionally does not check that
+        # coordinates are defined at the same levels.
         return all(
             node.dataset.equals(other_node.dataset)
-            for node, other_node in zip(self.subtree, other.subtree, strict=True)
+            for node, other_node in zip_subtrees(self, other)
         )
 
     def _inherited_coords_set(self) -> set[str]:
@@ -1307,7 +1299,7 @@ class DataTree(
         DataTree.isomorphic
         DataTree.equals
         """
-        if not self.isomorphic(other, strict_names=True):
+        if not self.isomorphic(other):
             return False
 
         if self.name != other.name:
@@ -1316,10 +1308,9 @@ class DataTree(
         if self._inherited_coords_set() != other._inherited_coords_set():
             return False
 
-        # TODO: switch to zip_subtrees, when available
         return all(
             node.dataset.identical(other_node.dataset)
-            for node, other_node in zip(self.subtree, other.subtree, strict=True)
+            for node, other_node in zip_subtrees(self, other)
         )
 
     def filter(self: DataTree, filterfunc: Callable[[DataTree], bool]) -> DataTree:
@@ -1345,9 +1336,11 @@ class DataTree(
         map_over_datasets
         """
         filtered_nodes = {
-            node.path: node.dataset for node in self.subtree if filterfunc(node)
+            path: node.dataset
+            for path, node in self.subtree_with_keys
+            if filterfunc(node)
         }
-        return DataTree.from_dict(filtered_nodes, name=self.root.name)
+        return DataTree.from_dict(filtered_nodes, name=self.name)
 
     def match(self, pattern: str) -> DataTree:
         """
@@ -1389,17 +1382,16 @@ class DataTree(
             └── Group: /b/B
         """
         matching_nodes = {
-            node.path: node.dataset
-            for node in self.subtree
+            path: node.dataset
+            for path, node in self.subtree_with_keys
             if NodePath(node.path).match(pattern)
         }
-        return DataTree.from_dict(matching_nodes, name=self.root.name)
+        return DataTree.from_dict(matching_nodes, name=self.name)
 
     def map_over_datasets(
         self,
         func: Callable,
-        *args: Iterable[Any],
-        **kwargs: Any,
+        *args: Any,
     ) -> DataTree | tuple[DataTree, ...]:
         """
         Apply a function to every dataset in this subtree, returning a new tree which stores the results.
@@ -1418,18 +1410,19 @@ class DataTree(
             Function will not be applied to any nodes without datasets.
         *args : tuple, optional
             Positional arguments passed on to `func`.
-        **kwargs : Any
-            Keyword arguments passed on to `func`.
 
         Returns
         -------
         subtrees : DataTree, tuple of DataTrees
             One or more subtrees containing results from applying ``func`` to the data at each node.
+
+        See also
+        --------
+        map_over_datasets
         """
         # TODO this signature means that func has no way to know which node it is being called upon - change?
-
         # TODO fix this typing error
-        return map_over_datasets(func)(self, *args, **kwargs)
+        return map_over_datasets(func, self, *args)
 
     def pipe(
         self, func: Callable | tuple[Callable, str], *args: Any, **kwargs: Any
@@ -1500,7 +1493,7 @@ class DataTree(
 
     def _unary_op(self, f, *args, **kwargs) -> DataTree:
         # TODO do we need to any additional work to avoid duplication etc.? (Similar to aggregations)
-        return self.map_over_datasets(f, *args, **kwargs)  # type: ignore[return-value]
+        return self.map_over_datasets(functools.partial(f, **kwargs), *args)  # type: ignore[return-value]
 
     def _binary_op(self, other, f, reflexive=False, join=None) -> DataTree:
         from xarray.core.dataset import Dataset
@@ -1515,7 +1508,7 @@ class DataTree(
             reflexive=reflexive,
             join=join,
         )
-        return map_over_datasets(ds_binop)(self, other)
+        return map_over_datasets(ds_binop, self, other)
 
     def _inplace_binary_op(self, other, f) -> Self:
         from xarray.core.groupby import GroupBy
@@ -1683,7 +1676,7 @@ class DataTree(
         """Reduce this tree by applying `func` along some dimension(s)."""
         dims = parse_dims_as_set(dim, self._get_all_dims())
         result = {}
-        for node in self.subtree:
+        for path, node in self.subtree_with_keys:
             reduce_dims = [d for d in node._node_dims if d in dims]
             node_result = node.dataset.reduce(
                 func,
@@ -1693,7 +1686,6 @@ class DataTree(
                 numeric_only=numeric_only,
                 **kwargs,
             )
-            path = node.relative_to(self)
             result[path] = node_result
         return type(self).from_dict(result, name=self.name)
 
@@ -1711,7 +1703,7 @@ class DataTree(
         indexers = drop_dims_from_indexers(indexers, all_dims, missing_dims)
 
         result = {}
-        for node in self.subtree:
+        for path, node in self.subtree_with_keys:
             node_indexers = {k: v for k, v in indexers.items() if k in node.dims}
             node_result = func(node.dataset, node_indexers)
             # Indexing datasets corresponding to each node results in redundant
@@ -1728,7 +1720,6 @@ class DataTree(
                         # with a scalar) can also create scalar coordinates, which
                         # need to be explicitly removed.
                         del node_result.coords[k]
-            path = node.relative_to(self)
             result[path] = node_result
         return type(self).from_dict(result, name=self.name)
 
