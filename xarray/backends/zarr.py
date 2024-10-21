@@ -560,7 +560,6 @@ class ZarrStore(AbstractWritableDataStore):
         use_zarr_fill_value_as_mask=None,
         write_empty: bool | None = None,
     ):
-
         (
             zarr_group,
             consolidate_on_close,
@@ -616,7 +615,6 @@ class ZarrStore(AbstractWritableDataStore):
         use_zarr_fill_value_as_mask=None,
         write_empty: bool | None = None,
     ):
-
         (
             zarr_group,
             consolidate_on_close,
@@ -1494,7 +1492,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         zarr_format=None,
         **kwargs,
     ) -> dict[str, Dataset]:
-
         from xarray.core.treenode import NodePath
 
         filename_or_obj = _normalize_path(filename_or_obj)
@@ -1542,7 +1539,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
 
 def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
-
     parent_nodepath = NodePath(parent)
     yield str(parent_nodepath)
     for path, group in root.groups():

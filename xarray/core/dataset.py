@@ -7802,9 +7802,10 @@ class Dataset(
 
     def _binary_op(self, other, f, reflexive=False, join=None) -> Dataset:
         from xarray.core.dataarray import DataArray
+        from xarray.core.datatree import DataTree
         from xarray.core.groupby import GroupBy
 
-        if isinstance(other, GroupBy):
+        if isinstance(other, DataTree | GroupBy):
             return NotImplemented
         align_type = OPTIONS["arithmetic_join"] if join is None else join
         if isinstance(other, DataArray | Dataset):
@@ -10393,10 +10394,8 @@ class Dataset(
             Array whose unique values should be used to group this array. If a
             Hashable, must be the name of a coordinate contained in this dataarray. If a dictionary,
             must map an existing variable name to a :py:class:`Grouper` instance.
-        squeeze : bool, default: True
-            If "group" is a dimension of any arrays in this dataset, `squeeze`
-            controls whether the subarrays have a dimension of length 1 along
-            that dimension or if the dimension is squeezed out.
+        squeeze : False
+            This argument is deprecated.
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -10422,7 +10421,7 @@ class Dataset(
 
         >>> ds.groupby("letters")
         <DatasetGroupBy, grouped over 1 grouper(s), 2 groups in total:
-            'letters': 2 groups with labels 'a', 'b'>
+            'letters': 2/2 groups present with labels 'a', 'b'>
 
         Execute a reduction
 
@@ -10439,8 +10438,8 @@ class Dataset(
 
         >>> ds.groupby(["letters", "x"])
         <DatasetGroupBy, grouped over 2 grouper(s), 8 groups in total:
-            'letters': 2 groups with labels 'a', 'b'
-            'x': 4 groups with labels 10, 20, 30, 40>
+            'letters': 2/2 groups present with labels 'a', 'b'
+            'x': 4/4 groups present with labels 10, 20, 30, 40>
 
         Use Grouper objects to express more complicated GroupBy operations
 

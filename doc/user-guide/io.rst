@@ -19,16 +19,11 @@ format (recommended).
 
     np.random.seed(123456)
 
-You can `read different types of files <https://docs.xarray.dev/en/stable/user-guide/io.html>`_
-in `xr.open_dataset` by specifying the engine to be used:
+You can read different types of files in `xr.open_dataset` by specifying the engine to be used:
 
-.. ipython:: python
-    :okexcept:
-    :suppress:
+.. code:: python
 
-    import xarray as xr
-
-    xr.open_dataset("my_file.grib", engine="cfgrib")
+    xr.open_dataset("example.nc", engine="netcdf4")
 
 The "engine" provides a set of instructions that tells xarray how
 to read the data and pack them into a `dataset` (or `dataarray`).

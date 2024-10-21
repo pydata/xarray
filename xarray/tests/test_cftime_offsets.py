@@ -1673,7 +1673,6 @@ def test_new_to_legacy_freq_anchored(year_alias, n):
     ),
 )
 def test_legacy_to_new_freq_pd_freq_passthrough(freq, expected):
-
     result = _legacy_to_new_freq(freq)
     assert result == expected
 
@@ -1699,7 +1698,6 @@ def test_legacy_to_new_freq_pd_freq_passthrough(freq, expected):
     ),
 )
 def test_new_to_legacy_freq_pd_freq_passthrough(freq, expected):
-
     result = _new_to_legacy_freq(freq)
     assert result == expected
 
@@ -1786,7 +1784,6 @@ def test_date_range_no_freq(start, end, periods):
 )
 @pytest.mark.parametrize("has_year_zero", [False, True])
 def test_offset_addition_preserves_has_year_zero(offset, has_year_zero):
-
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message="this date/calendar/year zero")
         datetime = cftime.DatetimeGregorian(-1, 12, 31, has_year_zero=has_year_zero)

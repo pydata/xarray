@@ -75,6 +75,7 @@ from xarray.core.utils import (
     either_dict_or_kwargs,
     hashable,
     infix_dims,
+    result_name,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -1582,7 +1583,7 @@ class DataArray(
           Do not try to assign values when using any of the indexing methods
           ``isel`` or ``sel``::
 
-            da = xr.DataArray([0, 1, 2, 3], dims=['x'])
+            da = xr.DataArray([0, 1, 2, 3], dims=["x"])
             # DO NOT do this
             da.isel(x=[0, 1, 2])[1] = -1
 
@@ -4734,15 +4735,6 @@ class DataArray(
         except (TypeError, AttributeError):
             return False
 
-    def _result_name(self, other: Any = None) -> Hashable | None:
-        # use the same naming heuristics as pandas:
-        # https://github.com/ContinuumIO/blaze/issues/458#issuecomment-51936356
-        other_name = getattr(other, "name", _default)
-        if other_name is _default or other_name == self.name:
-            return self.name
-        else:
-            return None
-
     def __array_wrap__(self, obj, context=None) -> Self:
         new_var = self.variable.__array_wrap__(obj, context)
         return self._replace(new_var)
@@ -4773,9 +4765,10 @@ class DataArray(
     def _binary_op(
         self, other: DaCompatible, f: Callable, reflexive: bool = False
     ) -> Self:
+        from xarray.core.datatree import DataTree
         from xarray.core.groupby import GroupBy
 
-        if isinstance(other, Dataset | GroupBy):
+        if isinstance(other, DataTree | Dataset | GroupBy):
             return NotImplemented
         if isinstance(other, DataArray):
             align_type = OPTIONS["arithmetic_join"]
@@ -4789,7 +4782,7 @@ class DataArray(
             else f(other_variable_or_arraylike, self.variable)
         )
         coords, indexes = self.coords._merge_raw(other_coords, reflexive)
-        name = self._result_name(other)
+        name = result_name([self, other])
 
         return self._replace(variable, coords, name, indexes=indexes)
 
@@ -6815,7 +6808,7 @@ class DataArray(
 
         >>> da.groupby("letters")
         <DataArrayGroupBy, grouped over 1 grouper(s), 2 groups in total:
-            'letters': 2 groups with labels 'a', 'b'>
+            'letters': 2/2 groups present with labels 'a', 'b'>
 
         Execute a reduction
 
@@ -6831,8 +6824,8 @@ class DataArray(
 
         >>> da.groupby(["letters", "x"])
         <DataArrayGroupBy, grouped over 2 grouper(s), 8 groups in total:
-            'letters': 2 groups with labels 'a', 'b'
-            'x': 4 groups with labels 10, 20, 30, 40>
+            'letters': 2/2 groups present with labels 'a', 'b'
+            'x': 4/4 groups present with labels 10, 20, 30, 40>
 
         Use Grouper objects to express more complicated GroupBy operations
 
