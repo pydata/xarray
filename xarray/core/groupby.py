@@ -956,12 +956,13 @@ class GroupBy(Generic[T_Xarray]):
         # in the grouped variable
         group_dims = set(grouper.group.dims)
         new_coords = []
+        to_drop = []
         if group_dims.issubset(set(parsed_dim)):
             for grouper in self.groupers:
                 output_index = grouper.full_index
                 if isinstance(output_index, pd.RangeIndex):
                     # flox always assigns an index so we must drop it here if we don't need it.
-                    result = result.drop_vars(grouper.name)
+                    to_drop.append(grouper.name)
                     continue
                 new_coords.append(
                     # Using IndexVariable here ensures we reconstruct PandasMultiIndex with
@@ -976,7 +977,7 @@ class GroupBy(Generic[T_Xarray]):
                 )
             result = result.assign_coords(
                 Coordinates._construct_direct(*merge_coords(new_coords))
-            )
+            ).drop_vars(to_drop)
 
         # broadcast any non-dim coord variables that don't
         # share all dimensions with the grouper
