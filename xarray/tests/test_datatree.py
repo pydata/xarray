@@ -2123,3 +2123,75 @@ class TestUFuncs:
         expected = create_test_datatree(modify=lambda ds: np.sin(ds))
         result_tree = np.sin(dt)
         assert_equal(result_tree, expected)
+
+
+class Closer:
+    def __init__(self):
+        self.closed = False
+
+    def close(self):
+        if self.closed:
+            raise RuntimeError("already closed")
+        self.closed = True
+
+
+@pytest.fixture()
+def tree_and_closers():
+    tree = DataTree.from_dict({"/child/grandchild": None})
+    closers = {
+        "/": Closer(),
+        "/child": Closer(),
+        "/child/grandchild": Closer(),
+    }
+    for path, closer in closers.items():
+        tree[path].set_close(closer.close)
+    return tree, closers
+
+
+class TestClose:
+    def test_close(self, tree_and_closers):
+        tree, closers = tree_and_closers
+        assert not any(closer.closed for closer in closers.values())
+        tree.close()
+        assert all(closer.closed for closer in closers.values())
+        tree.close()  # should not error
+
+    def test_context_manager(self, tree_and_closers):
+        tree, closers = tree_and_closers
+        assert not any(closer.closed for closer in closers.values())
+        with tree:
+            pass
+        assert all(closer.closed for closer in closers.values())
+
+    def test_close_child(self, tree_and_closers):
+        tree, closers = tree_and_closers
+        assert not any(closer.closed for closer in closers.values())
+        tree["child"].close()  # should only close descendants
+        assert not closers["/"].closed
+        assert closers["/child"].closed
+        assert closers["/child/grandchild"].closed
+
+    def test_close_datasetview(self, tree_and_closers):
+        tree, _ = tree_and_closers
+
+        with pytest.raises(
+            AttributeError,
+            match=re.escape(
+                r"cannot close a DatasetView(). Close the associated DataTree node instead"
+            ),
+        ):
+            tree.dataset.close()
+
+        with pytest.raises(
+            AttributeError, match=re.escape(r"cannot modify a DatasetView()")
+        ):
+            tree.dataset.set_close(None)
+
+    def test_close_dataset(self, tree_and_closers):
+        tree, closers = tree_and_closers
+        ds = tree.to_dataset()  # should discard closers
+        ds.close()
+        assert not closers["/"].closed
+
+    # with tree:
+    #     pass
