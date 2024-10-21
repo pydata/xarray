@@ -16,7 +16,7 @@ import pandas as pd
 
 from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
 from xarray.core import duck_array_ops
-from xarray.core.coordinates import Coordinates
+from xarray.core.coordinates import Coordinates, _coordinates_from_variable
 from xarray.core.dataarray import DataArray
 from xarray.core.groupby import T_Group, _DummyGroup
 from xarray.core.indexes import safe_cast_to_index
@@ -40,17 +40,6 @@ __all__ = [
 ]
 
 RESAMPLE_DIM = "__resample_dim__"
-
-
-def _coordinates_from_variable(variable: Variable) -> Coordinates:
-    from xarray.core.indexes import create_default_index_implicit
-
-    (name,) = variable.dims
-    new_index, index_vars = create_default_index_implicit(variable)
-    indexes = {k: new_index for k in index_vars}
-    new_vars = new_index.create_variables()
-    new_vars[name].attrs = variable.attrs
-    return Coordinates(new_vars, indexes)
 
 
 @dataclass(init=False)

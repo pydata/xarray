@@ -1116,3 +1116,14 @@ def create_coords_with_default_indexes(
         new_coords = Coordinates._construct_direct(coords=variables, indexes=indexes)
 
     return new_coords
+
+
+def _coordinates_from_variable(variable: Variable) -> Coordinates:
+    from xarray.core.indexes import create_default_index_implicit
+
+    (name,) = variable.dims
+    new_index, index_vars = create_default_index_implicit(variable)
+    indexes = {k: new_index for k in index_vars}
+    new_vars = new_index.create_variables()
+    new_vars[name].attrs = variable.attrs
+    return Coordinates(new_vars, indexes)

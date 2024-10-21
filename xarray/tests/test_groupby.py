@@ -35,6 +35,7 @@ from xarray.tests import (
     requires_dask,
     requires_flox,
     requires_flox_0_9_12,
+    requires_pandas_ge_2_2,
     requires_scipy,
 )
 
@@ -143,6 +144,26 @@ def test_multi_index_groupby_sum() -> None:
 
     actual = ds.stack(space=["x", "y"]).groupby("space").sum(...).unstack("space")
     assert_equal(expected, actual)
+
+
+@requires_pandas_ge_2_2
+def test_multi_index_propagation():
+    # regression test for GH9648
+    times = pd.date_range("2023-01-01", periods=4)
+    locations = ["A", "B"]
+    data = [[0.5, 0.7], [0.6, 0.5], [0.4, 0.6], [0.4, 0.9]]
+
+    da = xr.DataArray(
+        data, dims=["time", "location"], coords={"time": times, "location": locations}
+    )
+    da = da.stack(multiindex=["time", "location"])
+    grouped = da.groupby("multiindex")
+
+    with xr.set_options(use_flox=True):
+        actual = grouped.sum()
+    with xr.set_options(use_flox=False):
+        expected = grouped.first()
+    assert_identical(actual, expected)
 
 
 def test_groupby_da_datetime() -> None:
