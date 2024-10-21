@@ -139,6 +139,7 @@ if TYPE_CHECKING:
 
     from xarray.backends import AbstractDataStore, ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from xarray.backends.common import ArrayWriter
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
     from xarray.core.merge import CoercibleMapping, CoercibleValue, _MergeResult
@@ -2378,6 +2379,7 @@ class Dataset(
         zarr_version: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
+        writer: ArrayWriter | None = None,
     ) -> ZarrStore: ...
 
     # compute=False returns dask.Delayed
@@ -2400,6 +2402,7 @@ class Dataset(
         zarr_version: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
+        writer: ArrayWriter | None = None,
     ) -> Delayed: ...
 
     def to_zarr(
@@ -2420,6 +2423,7 @@ class Dataset(
         zarr_version: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
+        writer: ArrayWriter | None = None,
     ) -> ZarrStore | Delayed:
         """Write dataset contents to a zarr group.
 
@@ -2546,6 +2550,8 @@ class Dataset(
             Additional keyword arguments passed on to the `ChunkManager.store` method used to store
             chunked arrays. For example for a dask array additional kwargs will be passed eventually to
             :py:func:`dask.array.store()`. Experimental API that should not be relied upon.
+        writer : ArrayWriter, optional
+            Override the ArrayWriter used to write variables to the Zarr Store.
 
         Returns
         -------
@@ -2593,6 +2599,7 @@ class Dataset(
             zarr_version=zarr_version,
             write_empty_chunks=write_empty_chunks,
             chunkmanager_store_kwargs=chunkmanager_store_kwargs,
+            writer=writer,
         )
 
     def __repr__(self) -> str:
