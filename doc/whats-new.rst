@@ -23,8 +23,8 @@ New Features
 ~~~~~~~~~~~~
 - ``DataTree`` related functionality is now exposed in the main ``xarray`` public
   API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``, ``xarray.open_groups``,
-  ``xarray.map_over_datasets``, ``xarray.register_datatree_accessor`` and
-  ``xarray.testing.assert_isomorphic``.
+  ``xarray.map_over_datasets``, ``xarray.group_subtrees``,
+  ``xarray.register_datatree_accessor`` and ``xarray.testing.assert_isomorphic``.
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_,
   `Eni Awowale <https://github.com/eni-awowale>`_,
   `Matt Savoie <https://github.com/flamingbear>`_,
@@ -63,11 +63,13 @@ Bug fixes
   the non-missing times could in theory be encoded with integers
   (:issue:`9488`, :pull:`9497`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
-- Fix a few bugs affecting groupby reductions with `flox`. (:issue:`8090`, :issue:`9398`).
+- Fix a few bugs affecting groupby reductions with `flox`. (:issue:`8090`, :issue:`9398`, :issue:`9648`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix the safe_chunks validation option on the to_zarr method
   (:issue:`5511`, :pull:`9559`). By `Joseph Nowak
   <https://github.com/josephnowak>`_.
+- Fix binning by multiple variables where some bins have no observations. (:issue:`9630`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
