@@ -93,4 +93,52 @@ def any(
     _axis = _dims_to_axis(x, dims, axis)
     _data = xp.any(x._data, axis=_axis, keepdims=keepdims)
     _dims = _reduce_dims(x.dims, axis=_axis, keepdims=keepdims)
-    return x._new(dims=_dims, data=_data)
+    return NamedArray(_dims, _data)
+
+
+def diff(
+    x: NamedArray[Any, Any],
+    /,
+    *,
+    axis: _Axis = -1,
+    n: int = 1,
+    prepend: NamedArray[Any, Any] | None = None,
+    append: NamedArray[Any, Any] | None = None,
+    dims: _Dim | Default = _default,
+) -> NamedArray[Any, Any]:
+    """
+    Calculates the n-th discrete forward difference along a specified axis.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = NamedArray(("x",), np.array([1, 2, 4, 7, 0]))
+    >>> diff(x)
+    <xarray.NamedArray (x: 4)> Size: 32B
+    array([ 1,  2,  3, -7])
+    >>> diff(x, n=2)
+    <xarray.NamedArray (x: 3)> Size: 24B
+    array([  1,   1, -10])
+
+    >>> x = NamedArray(("x", "y"), np.array([[1, 3, 6, 10], [0, 5, 6, 8]]))
+    >>> diff(x)
+    <xarray.NamedArray (x: 2, y: 3)> Size: 48B
+    array([[2, 3, 4],
+           [5, 1, 2]])
+    >>> diff(x, axis=0)
+    <xarray.NamedArray (x: 1, y: 4)> Size: 32B
+    array([[-1,  2,  0, -2]])
+    >>> diff(x, dims="x")
+    <xarray.NamedArray (x: 1, y: 4)> Size: 32B
+    array([[-1,  2,  0, -2]])
+    """
+    xp = _get_data_namespace(x)
+    _axis = _dim_to_axis(x, dims, axis, axis_default=-1)
+    _data = xp.diff(x._data, axis=_axis, n=n)  # TODO: , prepend=prepend, append=append
+    return NamedArray(x.dims, _data)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
