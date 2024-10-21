@@ -1134,6 +1134,8 @@ Grouper Objects
    groupers.BinGrouper
    groupers.UniqueGrouper
    groupers.TimeResampler
+   groupers.SeasonGrouper
+   groupers.SeasonResampler
 
 
 Rolling objects

@@ -11,7 +11,7 @@ import pytest
 from packaging.version import Version
 
 import xarray as xr
-from xarray import DataArray, Dataset, Variable
+from xarray import DataArray, Dataset, Variable, cftime_range
 from xarray.core.alignment import broadcast
 from xarray.core.groupby import _consolidate_slices
 from xarray.core.types import InterpOptions, ResampleCompatible
@@ -19,8 +19,10 @@ from xarray.groupers import (
     BinGrouper,
     EncodedGroups,
     Grouper,
+    SeasonResampler,
     TimeResampler,
     UniqueGrouper,
+    season_to_month_tuple,
 )
 from xarray.tests import (
     InaccessibleArray,
@@ -585,7 +587,7 @@ def test_groupby_repr(obj, dim) -> None:
     N = len(np.unique(obj[dim]))
     expected = f"<{obj.__class__.__name__}GroupBy"
     expected += f", grouped over 1 grouper(s), {N} groups in total:"
-    expected += f"\n    {dim!r}: {N} groups with labels "
+    expected += f"\n    {dim!r}: UniqueGrouper({dim!r}), {N} groups with labels "
     if dim == "x":
         expected += "1, 2, 3, 4, 5>"
     elif dim == "y":
@@ -602,7 +604,7 @@ def test_groupby_repr_datetime(obj) -> None:
     actual = repr(obj.groupby("t.month"))
     expected = f"<{obj.__class__.__name__}GroupBy"
     expected += ", grouped over 1 grouper(s), 12 groups in total:\n"
-    expected += "    'month': 12 groups with labels "
+    expected += "    'month': UniqueGrouper('month'), 12 groups with labels "
     expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12>"
     assert actual == expected
 
@@ -2915,12 +2917,6 @@ def test_gappy_resample_reductions(reduction):
     assert_identical(expected, actual)
 
 
-# Possible property tests
-# 1. lambda x: x
-# 2. grouped-reduce on unique coords is identical to array
-# 3. group_over == groupby-reduce along other dimensions
-
-
 def test_groupby_transpose():
     # GH5361
     data = xr.DataArray(
@@ -2932,3 +2928,45 @@ def test_groupby_transpose():
     second = data.groupby("x").sum()
 
     assert_identical(first, second.transpose(*first.dims))
+
+
+def test_season_to_month_tuple():
+    assert season_to_month_tuple(["JF", "MAM", "JJAS", "OND"]) == (
+        (1, 2),
+        (3, 4, 5),
+        (6, 7, 8, 9),
+        (10, 11, 12),
+    )
+    assert season_to_month_tuple(["DJFM", "AM", "JJAS", "ON"]) == (
+        (12, 1, 2, 3),
+        (4, 5),
+        (6, 7, 8, 9),
+        (10, 11),
+    )
+
+
+def test_season_resampler():
+    time = cftime_range("2001-01-01", "2002-12-30", freq="D", calendar="360_day")
+    da = DataArray(np.ones(time.size), dims="time", coords={"time": time})
+
+    # through resample
+    da.resample(time=SeasonResampler(["DJF", "MAM", "JJA", "SON"])).sum()
+
+    # through groupby
+    da.groupby(time=SeasonResampler(["DJF", "MAM", "JJA", "SON"])).sum()
+
+    # skip september
+    da.groupby(time=SeasonResampler(["DJF", "MAM", "JJA", "ON"])).sum()
+
+    # "subsampling"
+    da.groupby(time=SeasonResampler(["JJAS"])).sum()
+
+    # overlapping
+    with pytest.raises(ValueError):
+        da.groupby(time=SeasonResampler(["DJFM", "MAMJ", "JJAS", "SOND"])).sum()
+
+
+# Possible property tests
+# 1. lambda x: x
+# 2. grouped-reduce on unique coords is identical to array
+# 3. group_over == groupby-reduce along other dimensions
