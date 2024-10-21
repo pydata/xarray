@@ -447,7 +447,7 @@ def coords_repr(coords: AbstractCoordinates, col_width=None, max_rows=None):
 
 
 def inherited_coords_repr(node: DataTree, col_width=None, max_rows=None):
-    coords = _inherited_vars(node._coord_variables)
+    coords = inherited_vars(node._coord_variables)
     if col_width is None:
         col_width = _calculate_col_width(coords)
     return _mapping_repr(
@@ -1075,7 +1075,7 @@ def diff_datatree_repr(a: DataTree, b: DataTree, compat):
     return "\n\n".join(summary)
 
 
-def _inherited_vars(mapping: ChainMap) -> dict:
+def inherited_vars(mapping: ChainMap) -> dict:
     return {k: v for k, v in mapping.parents.items() if k not in mapping.maps[0]}
 
 
@@ -1085,7 +1085,7 @@ def _datatree_node_repr(node: DataTree, show_inherited: bool) -> str:
     col_width = _calculate_col_width(node.variables)
     max_rows = OPTIONS["display_max_rows"]
 
-    inherited_coords = _inherited_vars(node._coord_variables)
+    inherited_coords = inherited_vars(node._coord_variables)
 
     # Only show dimensions if also showing a variable or coordinates section.
     show_dims = (
