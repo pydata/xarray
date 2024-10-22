@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import re
 import warnings
-from collections.abc import Hashable
+from collections.abc import Callable, Hashable
 from datetime import datetime, timedelta
 from functools import partial
-from typing import Callable, Literal, Union, cast
+from typing import Literal, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -169,7 +169,7 @@ def _ensure_padded_year(ref_date: str) -> str:
         "To remove this message, remove the ambiguity by padding your reference "
         "date strings with zeros."
     )
-    warnings.warn(warning_msg, SerializationWarning)
+    warnings.warn(warning_msg, SerializationWarning, stacklevel=2)
 
     return ref_date_padded
 
@@ -204,7 +204,7 @@ def _unpack_time_units_and_ref_date(units: str) -> tuple[str, pd.Timestamp]:
 
 
 def _decode_cf_datetime_dtype(
-    data, units: str, calendar: str, use_cftime: bool | None
+    data, units: str, calendar: str | None, use_cftime: bool | None
 ) -> np.dtype:
     # Verify that at least the first and last date can be decoded
     # successfully. Otherwise, tracebacks end up swallowed by
@@ -216,7 +216,7 @@ def _decode_cf_datetime_dtype(
 
     try:
         result = decode_cf_datetime(example_value, units, calendar, use_cftime)
-    except Exception:
+    except Exception as err:
         calendar_msg = (
             "the default calendar" if calendar is None else f"calendar {calendar!r}"
         )
@@ -225,7 +225,7 @@ def _decode_cf_datetime_dtype(
             "opening your dataset with decode_times=False or installing cftime "
             "if it is not installed."
         )
-        raise ValueError(msg)
+        raise ValueError(msg) from err
     else:
         dtype = getattr(result, "dtype", np.dtype("object"))
 
@@ -254,16 +254,25 @@ def _decode_datetime_with_pandas(
             "pandas."
         )
 
+    # Work around pandas.to_timedelta issue with dtypes smaller than int64 and
+    # NumPy 2.0 by casting all int and uint data to int64 and uint64,
+    # respectively. See https://github.com/pandas-dev/pandas/issues/56996 for
+    # more details.
+    if flat_num_dates.dtype.kind == "i":
+        flat_num_dates = flat_num_dates.astype(np.int64)
+    elif flat_num_dates.dtype.kind == "u":
+        flat_num_dates = flat_num_dates.astype(np.uint64)
+
     time_units, ref_date_str = _unpack_netcdf_time_units(units)
     time_units = _netcdf_to_numpy_timeunit(time_units)
     try:
         # TODO: the strict enforcement of nanosecond precision Timestamps can be
         # relaxed when addressing GitHub issue #7493.
         ref_date = nanosecond_precision_timestamp(ref_date_str)
-    except ValueError:
+    except ValueError as err:
         # ValueError is raised by pd.Timestamp for non-ISO timestamp
         # strings, in which case we fall back to using cftime
-        raise OutOfBoundsDatetime
+        raise OutOfBoundsDatetime from err
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "invalid value encountered", RuntimeWarning)
@@ -488,7 +497,7 @@ def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
                 raise ValueError(
                     f"Cannot convert date {t} to a date in the "
                     f"standard calendar.  Reason: {e}."
-                )
+                ) from e
             else:
                 dt = "NaT"
         new[i] = np.datetime64(dt)
@@ -521,7 +530,7 @@ def convert_times(times, date_type, raise_on_invalid: bool = True) -> np.ndarray
                 raise ValueError(
                     f"Cannot convert date {t} to a date in the "
                     f"{date_type(2000, 1, 1).calendar} calendar.  Reason: {e}."
-                )
+                ) from e
             else:
                 dt = np.nan
 
@@ -717,7 +726,7 @@ def _cast_to_dtype_if_safe(num: np.ndarray, dtype: np.dtype) -> np.ndarray:
 
 
 def encode_cf_datetime(
-    dates: T_DuckArray,  # type: ignore
+    dates: T_DuckArray,  # type: ignore[misc]
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
@@ -739,7 +748,7 @@ def encode_cf_datetime(
 
 
 def _eagerly_encode_cf_datetime(
-    dates: T_DuckArray,  # type: ignore
+    dates: T_DuckArray,  # type: ignore[misc]
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
@@ -784,7 +793,7 @@ def _eagerly_encode_cf_datetime(
         # needed time delta to encode faithfully to int64
         needed_time_delta = _time_units_to_timedelta64(needed_units)
 
-        floor_division = True
+        floor_division = np.issubdtype(dtype, np.integer) or dtype is None
         if time_delta > needed_time_delta:
             floor_division = False
             if dtype is None:
@@ -822,7 +831,7 @@ def _eagerly_encode_cf_datetime(
 
 
 def _encode_cf_datetime_within_map_blocks(
-    dates: T_DuckArray,  # type: ignore
+    dates: T_DuckArray,  # type: ignore[misc]
     units: str,
     calendar: str,
     dtype: np.dtype,
@@ -872,7 +881,7 @@ def _lazily_encode_cf_datetime(
 
 
 def encode_cf_timedelta(
-    timedeltas: T_DuckArray,  # type: ignore
+    timedeltas: T_DuckArray,  # type: ignore[misc]
     units: str | None = None,
     dtype: np.dtype | None = None,
 ) -> tuple[T_DuckArray, str]:
@@ -884,7 +893,7 @@ def encode_cf_timedelta(
 
 
 def _eagerly_encode_cf_timedelta(
-    timedeltas: T_DuckArray,  # type: ignore
+    timedeltas: T_DuckArray,  # type: ignore[misc]
     units: str | None = None,
     dtype: np.dtype | None = None,
     allow_units_modification: bool = True,
@@ -905,7 +914,7 @@ def _eagerly_encode_cf_timedelta(
     # needed time delta to encode faithfully to int64
     needed_time_delta = _time_units_to_timedelta64(needed_units)
 
-    floor_division = True
+    floor_division = np.issubdtype(dtype, np.integer) or dtype is None
     if time_delta > needed_time_delta:
         floor_division = False
         if dtype is None:
@@ -936,7 +945,7 @@ def _eagerly_encode_cf_timedelta(
 
 
 def _encode_cf_timedelta_within_map_blocks(
-    timedeltas: T_DuckArray,  # type:ignore
+    timedeltas: T_DuckArray,  # type: ignore[misc]
     units: str,
     dtype: np.dtype,
 ) -> T_DuckArray:

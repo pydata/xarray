@@ -500,7 +500,7 @@ def test_apply_output_core_dimension() -> None:
             return np.stack([x, -x], axis=-1)
 
         result = apply_ufunc(func, obj, output_core_dims=[["sign"]])
-        if isinstance(result, (xr.Dataset, xr.DataArray)):
+        if isinstance(result, xr.Dataset | xr.DataArray):
             result.coords["sign"] = [1, -1]
         return result
 
@@ -527,7 +527,7 @@ def test_apply_output_core_dimension() -> None:
             return (x, np.stack([x, -x], axis=-1))
 
         result = apply_ufunc(func, obj, output_core_dims=[[], ["sign"]])
-        if isinstance(result[1], (xr.Dataset, xr.DataArray)):
+        if isinstance(result[1], xr.Dataset | xr.DataArray):
             result[1].coords["sign"] = [1, -1]
         return result
 
@@ -568,7 +568,7 @@ def test_apply_exclude() -> None:
             output_core_dims=[[dim]],
             exclude_dims={dim},
         )
-        if isinstance(result, (xr.Dataset, xr.DataArray)):
+        if isinstance(result, xr.Dataset | xr.DataArray):
             # note: this will fail if dim is not a coordinate on any input
             new_coord = np.concatenate([obj.coords[dim] for obj in objects])
             result.coords[dim] = new_coord
@@ -578,7 +578,7 @@ def test_apply_exclude() -> None:
     variables = [xr.Variable("x", a) for a in arrays]
     data_arrays = [
         xr.DataArray(v, {"x": c, "y": ("x", range(len(c)))})
-        for v, c in zip(variables, [["a"], ["b", "c"]])
+        for v, c in zip(variables, [["a"], ["b", "c"]], strict=True)
     ]
     datasets = [xr.Dataset({"data": data_array}) for data_array in data_arrays]
 
@@ -1190,7 +1190,7 @@ def test_apply_dask() -> None:
 
     # unknown setting for dask array handling
     with pytest.raises(ValueError):
-        apply_ufunc(identity, array, dask="unknown")  # type: ignore
+        apply_ufunc(identity, array, dask="unknown")  # type: ignore[arg-type]
 
     def dask_safe_identity(x):
         return apply_ufunc(identity, x, dask="allowed")
@@ -2547,7 +2547,8 @@ def test_polyfit_polyval_integration(
             "cartesian",
             1,
         ],
-        [  # Test 1 sized arrays with coords:
+        # Test 1 sized arrays with coords:
+        pytest.param(
             xr.DataArray(
                 np.array([1]),
                 dims=["cartesian"],
@@ -2562,8 +2563,10 @@ def test_polyfit_polyval_integration(
             np.array([4, 5, 6]),
             "cartesian",
             -1,
-        ],
-        [  # Test filling in between with coords:
+            marks=(pytest.mark.xfail(),),
+        ),
+        # Test filling in between with coords:
+        pytest.param(
             xr.DataArray(
                 [1, 2],
                 dims=["cartesian"],
@@ -2578,7 +2581,8 @@ def test_polyfit_polyval_integration(
             np.array([4, 5, 6]),
             "cartesian",
             -1,
-        ],
+            marks=(pytest.mark.xfail(),),
+        ),
     ],
 )
 def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:

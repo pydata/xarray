@@ -4,8 +4,8 @@ For internal xarray development use only.
 
 Usage:
     python xarray/util/generate_aggregations.py
-    pytest --doctest-modules xarray/core/_aggregations.py --accept || true
-    pytest --doctest-modules xarray/core/_aggregations.py
+    pytest --doctest-modules xarray/{core,namedarray}/_aggregations.py --accept || true
+    pytest --doctest-modules xarray/{core,namedarray}/_aggregations.py
 
 This requires [pytest-accept](https://github.com/max-sixty/pytest-accept).
 The second run of pytest is deliberate, since the first will return an error
@@ -24,8 +24,8 @@ MODULE_PREAMBLE = '''\
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, Any
 
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
@@ -45,8 +45,8 @@ NAMED_ARRAY_MODULE_PREAMBLE = '''\
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Any, Callable
+from collections.abc import Callable, Sequence
+from typing import Any
 
 from xarray.core import duck_array_ops
 from xarray.core.types import Dims, Self
@@ -223,6 +223,9 @@ Pass flox-specific keyword arguments in ``**kwargs``.
 See the `flox documentation <https://flox.readthedocs.io>`_ for more."""
 _FLOX_GROUPBY_NOTES = _FLOX_NOTES_TEMPLATE.format(kind="groupby")
 _FLOX_RESAMPLE_NOTES = _FLOX_NOTES_TEMPLATE.format(kind="resampling")
+_CUM_NOTES = """Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
+and better supported. ``cumsum`` and ``cumprod`` may be deprecated
+in the future."""
 
 ExtraKwarg = collections.namedtuple("ExtraKwarg", "docs kwarg call example")
 skipna = ExtraKwarg(
@@ -260,7 +263,7 @@ class DataStructure:
     create_example: str
     example_var_name: str
     numeric_only: bool = False
-    see_also_modules: tuple[str] = tuple
+    see_also_modules: tuple[str, ...] = tuple
 
 
 class Method:
@@ -271,22 +274,26 @@ class Method:
         extra_kwargs=tuple(),
         numeric_only=False,
         see_also_modules=("numpy", "dask.array"),
+        see_also_methods=(),
         min_flox_version=None,
+        additional_notes="",
     ):
         self.name = name
         self.extra_kwargs = extra_kwargs
         self.numeric_only = numeric_only
         self.see_also_modules = see_also_modules
+        self.see_also_methods = see_also_methods
         self.min_flox_version = min_flox_version
+        self.additional_notes = additional_notes
         if bool_reduce:
             self.array_method = f"array_{name}"
-            self.np_example_array = """
-        ...     np.array([True, True, True, True, True, False], dtype=bool)"""
+            self.np_example_array = (
+                """np.array([True, True, True, True, True, False], dtype=bool)"""
+            )
 
         else:
             self.array_method = name
-            self.np_example_array = """
-        ...     np.array([1, 2, 3, 0, 2, np.nan])"""
+            self.np_example_array = """np.array([1, 2, 3, 0, 2, np.nan])"""
 
 
 @dataclass
@@ -315,7 +322,7 @@ class AggregationGenerator:
         for method in self.methods:
             yield self.generate_method(method)
 
-    def generate_method(self, method):
+    def generate_method(self, method: Method):
         has_kw_only = method.extra_kwargs or self.has_keep_attrs
 
         template_kwargs = dict(
@@ -360,9 +367,16 @@ class AggregationGenerator:
             if self.cls == ""
             else (self.datastructure.name,)
         )
-        see_also_methods = "\n".join(
+        see_also_methods_from_modules = (
             " " * 8 + f"{mod}.{method.name}"
             for mod in (method.see_also_modules + others)
+        )
+        see_also_methods_from_methods = (
+            " " * 8 + f"{self.datastructure.name}.{method}"
+            for method in method.see_also_methods
+        )
+        see_also_methods = "\n".join(
+            [*see_also_methods_from_modules, *see_also_methods_from_methods]
         )
         # Fixes broken links mentioned in #8055
         yield TEMPLATE_SEE_ALSO.format(
@@ -377,6 +391,11 @@ class AggregationGenerator:
             if notes != "":
                 notes += "\n\n"
             notes += _NUMERIC_ONLY_NOTES
+
+        if method.additional_notes:
+            if notes != "":
+                notes += "\n\n"
+            notes += method.additional_notes
 
         if notes != "":
             yield TEMPLATE_NOTES.format(notes=textwrap.indent(notes, 8 * " "))
@@ -505,15 +524,44 @@ AGGREGATION_METHODS = (
         "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.2"
     ),
     # Cumulatives:
-    Method("cumsum", extra_kwargs=(skipna,), numeric_only=True),
-    Method("cumprod", extra_kwargs=(skipna,), numeric_only=True),
+    Method(
+        "cumsum",
+        extra_kwargs=(skipna,),
+        numeric_only=True,
+        see_also_methods=("cumulative",),
+        additional_notes=_CUM_NOTES,
+    ),
+    Method(
+        "cumprod",
+        extra_kwargs=(skipna,),
+        numeric_only=True,
+        see_also_methods=("cumulative",),
+        additional_notes=_CUM_NOTES,
+    ),
 )
 
 
+DATATREE_OBJECT = DataStructure(
+    name="DataTree",
+    create_example="""
+        >>> dt = xr.DataTree(
+        ...     xr.Dataset(
+        ...         data_vars=dict(foo=("time", {example_array})),
+        ...         coords=dict(
+        ...             time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...         ),
+        ...     ),
+        ... )""",
+    example_var_name="dt",
+    numeric_only=True,
+    see_also_modules=("Dataset", "DataArray"),
+)
 DATASET_OBJECT = DataStructure(
     name="Dataset",
     create_example="""
-        >>> da = xr.DataArray({example_array},
+        >>> da = xr.DataArray(
+        ...     {example_array},
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
@@ -528,7 +576,8 @@ DATASET_OBJECT = DataStructure(
 DATAARRAY_OBJECT = DataStructure(
     name="DataArray",
     create_example="""
-        >>> da = xr.DataArray({example_array},
+        >>> da = xr.DataArray(
+        ...     {example_array},
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
@@ -538,6 +587,15 @@ DATAARRAY_OBJECT = DataStructure(
     example_var_name="da",
     numeric_only=False,
     see_also_modules=("Dataset",),
+)
+DATATREE_GENERATOR = GenericAggregationGenerator(
+    cls="",
+    datastructure=DATATREE_OBJECT,
+    methods=AGGREGATION_METHODS,
+    docref="agg",
+    docref_description="reduction or aggregation operations",
+    example_call_preamble="",
+    definition_preamble=AGGREGATIONS_PREAMBLE,
 )
 DATASET_GENERATOR = GenericAggregationGenerator(
     cls="",
@@ -603,7 +661,7 @@ NAMED_ARRAY_OBJECT = DataStructure(
     create_example="""
         >>> from xarray.namedarray.core import NamedArray
         >>> na = NamedArray(
-        ...     "x",{example_array},
+        ...     "x", {example_array}
         ... )""",
     example_var_name="na",
     numeric_only=False,
@@ -639,6 +697,7 @@ if __name__ == "__main__":
     write_methods(
         filepath=p.parent / "xarray" / "xarray" / "core" / "_aggregations.py",
         generators=[
+            DATATREE_GENERATOR,
             DATASET_GENERATOR,
             DATAARRAY_GENERATOR,
             DATASET_GROUPBY_GENERATOR,

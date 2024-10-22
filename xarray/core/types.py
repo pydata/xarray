@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import datetime
 import sys
-from collections.abc import Collection, Hashable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Hashable, Iterator, Mapping, Sequence
+from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Literal,
     Protocol,
     SupportsIndex,
@@ -21,7 +21,9 @@ try:
     if sys.version_info >= (3, 11):
         from typing import Self, TypeAlias
     else:
-        from typing_extensions import Self, TypeAlias
+        from typing import TypeAlias
+
+        from typing_extensions import Self
 except ImportError:
     if TYPE_CHECKING:
         raise
@@ -39,15 +41,25 @@ if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
     from xarray.core.indexes import Index, Indexes
     from xarray.core.utils import Frozen
-    from xarray.core.variable import Variable
-    from xarray.groupers import TimeResampler
+    from xarray.core.variable import IndexVariable, Variable
+    from xarray.groupers import Grouper, TimeResampler
+
+    GroupInput: TypeAlias = (
+        str
+        | DataArray
+        | IndexVariable
+        | Sequence[Hashable]
+        | Mapping[Any, Grouper]
+        | None
+    )
 
     try:
         from dask.array import Array as DaskArray
     except ImportError:
-        DaskArray = np.ndarray
+        DaskArray = np.ndarray  # type: ignore[misc, assignment, unused-ignore]
 
     try:
         from cubed import Array as CubedArray
@@ -96,9 +108,9 @@ try:
 except ImportError:
     CFTimeDatetime = np.datetime64
 
-DatetimeLike: TypeAlias = Union[
-    pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime
-]
+DatetimeLike: TypeAlias = (
+    pd.Timestamp | datetime.datetime | np.datetime64 | CFTimeDatetime
+)
 
 
 class Alignable(Protocol):
@@ -183,19 +195,20 @@ ScalarOrArray = Union["ArrayLike", np.generic]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 DaCompatible = Union["DataArray", "VarCompatible"]
 DsCompatible = Union["Dataset", "DaCompatible"]
+DtCompatible = Union["DataTree", "DsCompatible"]
 GroupByCompatible = Union["Dataset", "DataArray"]
 
 # Don't change to Hashable | Collection[Hashable]
 # Read: https://github.com/pydata/xarray/issues/6142
-Dims = Union[str, Collection[Hashable], "ellipsis", None]
+Dims = Union[str, Collection[Hashable], EllipsisType, None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
-T_ChunkDim: TypeAlias = Union[str, int, Literal["auto"], None, tuple[int, ...]]
+T_ChunkDim: TypeAlias = str | int | Literal["auto"] | None | tuple[int, ...]
 T_ChunkDimFreq: TypeAlias = Union["TimeResampler", T_ChunkDim]
-T_ChunksFreq: TypeAlias = Union[T_ChunkDim, Mapping[Any, T_ChunkDimFreq]]
+T_ChunksFreq: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
-T_Chunks: TypeAlias = Union[T_ChunkDim, Mapping[Any, T_ChunkDim]]
+T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim]
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 DataVars = Mapping[Any, Any]
@@ -217,7 +230,9 @@ JoinOptions = Literal["outer", "inner", "left", "right", "exact", "override"]
 Interp1dOptions = Literal[
     "linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial"
 ]
-InterpolantOptions = Literal["barycentric", "krogh", "pchip", "spline", "akima"]
+InterpolantOptions = Literal[
+    "barycentric", "krogh", "pchip", "spline", "akima", "makima"
+]
 InterpOptions = Union[Interp1dOptions, InterpolantOptions]
 
 DatetimeUnitOptions = Literal[
@@ -242,6 +257,11 @@ PadModeOptions = Literal[
     "symmetric",
     "wrap",
 ]
+T_PadConstantValues = float | tuple[float, float]
+T_VarPadConstantValues = T_PadConstantValues | Mapping[Any, T_PadConstantValues]
+T_DatasetPadConstantValues = (
+    T_VarPadConstantValues | Mapping[Any, T_VarPadConstantValues]
+)
 PadReflectOptions = Literal["even", "odd", None]
 
 CFCalendar = Literal[
@@ -302,3 +322,5 @@ GroupIndices = tuple[GroupIndex, ...]
 Bins = Union[
     int, Sequence[int], Sequence[float], Sequence[pd.Timestamp], np.ndarray, pd.Index
 ]
+
+ResampleCompatible: TypeAlias = str | datetime.timedelta | pd.Timedelta | pd.DateOffset

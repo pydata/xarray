@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable, Hashable, Iterable, Sequence
+from typing import TYPE_CHECKING, Any
 
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
@@ -188,7 +188,9 @@ class Resample(GroupBy[T_Xarray]):
 
 
 # https://github.com/python/mypy/issues/9031
-class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations):  # type: ignore[misc]
+class DataArrayResample(  # type: ignore[misc]
+    Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations
+):
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -329,7 +331,9 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
 
 
 # https://github.com/python/mypy/issues/9031
-class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations):  # type: ignore[misc]
+class DatasetResample(  # type: ignore[misc]
+    Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations
+):
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def map(

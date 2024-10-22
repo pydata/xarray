@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.repository == 'pydata/xarray'
-      && (github.event_name == 'push' || github.event_name == 'pull_request')
+      && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'schedule')
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
@@ -61,7 +61,7 @@ jobs:
           echo "TODAY=$(date  +'%Y-%m-%d')" >> $GITHUB_ENV
 
       - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests

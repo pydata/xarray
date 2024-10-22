@@ -1,4 +1,3 @@
-# TODO: Add assert_isomorphic when making DataTree API public
 from xarray.testing.assertions import (  # noqa: F401
     _assert_dataarray_invariants,
     _assert_dataset_invariants,
@@ -12,6 +11,7 @@ from xarray.testing.assertions import (  # noqa: F401
     assert_duckarray_equal,
     assert_equal,
     assert_identical,
+    assert_isomorphic,
 )
 
 __all__ = [
@@ -21,4 +21,5 @@ __all__ = [
     "assert_duckarray_allclose",
     "assert_equal",
     "assert_identical",
+    "assert_isomorphic",
 ]

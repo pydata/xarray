@@ -69,7 +69,7 @@ def test_multiindex() -> None:
 class PassThroughBackendEntrypoint(xr.backends.BackendEntrypoint):
     """Access an object passed to the `open_dataset` method."""
 
-    def open_dataset(self, dataset, *, drop_variables=None):
+    def open_dataset(self, dataset, *, drop_variables=None):  # type: ignore[override]
         """Return the first argument."""
         return dataset
 
@@ -86,7 +86,7 @@ def explicit_chunks(chunks, shape):
             if isinstance(chunk, Number)
             else chunk
         )
-        for chunk, size in zip(chunks, shape)
+        for chunk, size in zip(chunks, shape, strict=True)
     )
 
 
@@ -104,7 +104,9 @@ class TestPreferredChunks:
                 self.var_name: xr.Variable(
                     dims,
                     np.empty(shape, dtype=np.dtype("V1")),
-                    encoding={"preferred_chunks": dict(zip(dims, pref_chunks))},
+                    encoding={
+                        "preferred_chunks": dict(zip(dims, pref_chunks, strict=True))
+                    },
                 )
             }
         )
@@ -164,7 +166,7 @@ class TestPreferredChunks:
             final = xr.open_dataset(
                 initial,
                 engine=PassThroughBackendEntrypoint,
-                chunks=dict(zip(initial[self.var_name].dims, req_chunks)),
+                chunks=dict(zip(initial[self.var_name].dims, req_chunks, strict=True)),
             )
         self.check_dataset(initial, final, explicit_chunks(req_chunks, shape))
 
@@ -196,6 +198,6 @@ class TestPreferredChunks:
             final = xr.open_dataset(
                 initial,
                 engine=PassThroughBackendEntrypoint,
-                chunks=dict(zip(initial[self.var_name].dims, req_chunks)),
+                chunks=dict(zip(initial[self.var_name].dims, req_chunks, strict=True)),
             )
         self.check_dataset(initial, final, explicit_chunks(req_chunks, shape))
