@@ -552,6 +552,7 @@ def map_blocks(
             for isxr, arg in zip(is_xarray, npargs, strict=True)
         ]
 
+        # only include new or modified indexes to minimize duplication of data
         indexes = {
             dim: coordinates.xindexes[dim][
                 _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
