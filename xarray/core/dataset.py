@@ -3912,30 +3912,7 @@ class Dataset(
         Interpolate a Dataset onto new coordinates.
 
         Performs univariate or multivariate interpolation of a Dataset onto new coordinates,
-        utilizing either NumPy or SciPy interpolation routines. The specific interpolation
-        method and dimensionality determine which interpolant is used:
-
-        1. **Interpolation along one dimension of 1D data (`method='linear'`)**
-            - Uses :py:func:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
-
-        2. **Interpolation along one dimension of N-dimensional data (N ≥ 1)**
-            - Methods {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"}
-                use :py:func:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:func:`numpy.interp`
-                (as in the case of `method='linear'` for 1D data).
-            - If `method='polynomial'`, the `order` keyword argument must also be provided. In this case,
-                :py:func:`scipy.interpolate.interp1d` is called with `kind=order`.
-
-        3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
-            - Depending on the `method`, the following interpolants from :py:class:`scipy.interpolate` are used:
-                - `"pchip"`: :py:class:`scipy.interpolate.PchipInterpolator`
-                - `"barycentric"`: :py:class:`scipy.interpolate.BarycentricInterpolator`
-                - `"krogh"`: :py:class:`scipy.interpolate.KroghInterpolator`
-                - `"akima"` or `"makima"`: :py:class:`scipy.interpolate.Akima1dInterpolator`
-                    (`makima` is handled by passing `makima` to `method`).
-
-        4. **Interpolation along multiple dimensions of multi-dimensional data**
-            - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
-                "cubic", "quintic", "pchip"}.
+        utilizing either NumPy or SciPy interpolation routines.
 
         Out-of-range values are filled with NaN, unless specified otherwise via `kwargs` to the numpy/scipy interpolant.
 
@@ -3976,6 +3953,30 @@ class Dataset(
         - When interpolating along multiple dimensions with methods `linear` and `nearest`,
             the process attempts to decompose the interpolation into independent interpolations
             along one dimension at a time.
+        - The specific interpolation method and dimensionality determine which
+            interpolant is used:
+
+            1. **Interpolation along one dimension of 1D data (`method='linear'`)**
+                - Uses :py:func:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
+
+            2. **Interpolation along one dimension of N-dimensional data (N ≥ 1)**
+                - Methods {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"}
+                    use :py:func:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:func:`numpy.interp`
+                    (as in the case of `method='linear'` for 1D data).
+                - If `method='polynomial'`, the `order` keyword argument must also be provided.
+
+            3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
+                - Depending on the `method`, the following interpolants from :py:class:`scipy.interpolate` are used:
+                    - `"pchip"`: :py:class:`scipy.interpolate.PchipInterpolator`
+                    - `"barycentric"`: :py:class:`scipy.interpolate.BarycentricInterpolator`
+                    - `"krogh"`: :py:class:`scipy.interpolate.KroghInterpolator`
+                    - `"akima"` or `"makima"`: :py:class:`scipy.interpolate.Akima1dInterpolator`
+                        (`makima` is handled by passing the `makima` flag).
+
+            4. **Interpolation along multiple dimensions of multi-dimensional data**
+                - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
+                    "cubic", "quintic", "pchip"}.
+
         --------
         scipy.interpolate.interp1d
         scipy.interpolate.interpn
@@ -4203,30 +4204,7 @@ class Dataset(
         """Interpolate this object onto the coordinates of another object.
 
         Performs univariate or multivariate interpolation of a Dataset onto new coordinates,
-        utilizing either NumPy or SciPy interpolation routines. The specific interpolation
-        method and dimensionality determine which interpolant is used:
-
-        1. **Interpolation along one dimension of 1D data (`method='linear'`)**
-            - Uses :py:func:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
-
-        2. **Interpolation along one dimension of N-dimensional data (N ≥ 1)**
-            - Methods {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"}
-                use :py:func:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:func:`numpy.interp`
-                (as in the case of `method='linear'` for 1D data).
-            - If `method='polynomial'`, the `order` keyword argument must also be provided. In this case,
-                :py:func:`scipy.interpolate.interp1d` is called with `kind=order`.
-
-        3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
-            - Depending on the `method`, the following interpolants from :py:class:`scipy.interpolate` are used:
-                - `"pchip"`: :py:class:`scipy.interpolate.PchipInterpolator`
-                - `"barycentric"`: :py:class:`scipy.interpolate.BarycentricInterpolator`
-                - `"krogh"`: :py:class:`scipy.interpolate.KroghInterpolator`
-                - `"akima"` or `"makima"`: :py:class:`scipy.interpolate.Akima1dInterpolator`
-                    (`makima` is handled by passing `makima` to `method`).
-
-        4. **Interpolation along multiple dimensions of multi-dimensional data**
-            - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
-                "cubic", "quintic", "pchip"}.
+        utilizing either NumPy or SciPy interpolation routines.
 
         Out-of-range values are filled with NaN, unless specified otherwise via `kwargs` to the numpy/scipy interpolant.
 
@@ -4265,6 +4243,29 @@ class Dataset(
         - When interpolating along multiple dimensions with methods `linear` and `nearest`,
             the process attempts to decompose the interpolation into independent interpolations
             along one dimension at a time.
+        - The specific interpolation method and dimensionality determine which
+            interpolant is used:
+
+            1. **Interpolation along one dimension of 1D data (`method='linear'`)**
+                - Uses :py:func:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
+
+            2. **Interpolation along one dimension of N-dimensional data (N ≥ 1)**
+                - Methods {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"}
+                    use :py:func:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:func:`numpy.interp`
+                    (as in the case of `method='linear'` for 1D data).
+                - If `method='polynomial'`, the `order` keyword argument must also be provided.
+
+            3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
+                - Depending on the `method`, the following interpolants from :py:class:`scipy.interpolate` are used:
+                    - `"pchip"`: :py:class:`scipy.interpolate.PchipInterpolator`
+                    - `"barycentric"`: :py:class:`scipy.interpolate.BarycentricInterpolator`
+                    - `"krogh"`: :py:class:`scipy.interpolate.KroghInterpolator`
+                    - `"akima"` or `"makima"`: :py:class:`scipy.interpolate.Akima1dInterpolator`
+                        (`makima` is handled by passing the `makima` flag).
+
+            4. **Interpolation along multiple dimensions of multi-dimensional data**
+                - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
+                    "cubic", "quintic", "pchip"}.
 
         See Also
         --------
