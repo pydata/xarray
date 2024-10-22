@@ -9,7 +9,6 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
-from distributed import LocalCluster
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
@@ -1380,7 +1379,9 @@ def test_map_blocks_da_ds_with_template(obj):
     # Check that indexes are written into the graph directly
     dsk = dict(actual.__dask_graph__())
     assert len({k for k in dsk if "x-coordinate" in k})
-    assert all(isinstance(v, PandasIndex) for k, v in dsk.items()  if "x-coordinate" in k)
+    assert all(
+        isinstance(v, PandasIndex) for k, v in dsk.items() if "x-coordinate" in k
+    )
 
     with raise_if_dask_computes():
         actual = obj.map_blocks(func, template=template)

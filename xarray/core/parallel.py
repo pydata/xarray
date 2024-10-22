@@ -412,8 +412,8 @@ def map_blocks(
     try:
         import dask
         import dask.array
-        from dask.highlevelgraph import HighLevelGraph
         from dask.base import tokenize
+        from dask.highlevelgraph import HighLevelGraph
 
     except ImportError:
         pass
@@ -579,7 +579,15 @@ def map_blocks(
         }
 
         from_wrapper = (gname,) + chunk_tuple
-        graph[from_wrapper] = (_wrapper, func, blocked_args, kwargs, is_array, expected, (dict, [[k, v] for k, v in tokenized_indexes.items()]))
+        graph[from_wrapper] = (
+            _wrapper,
+            func,
+            blocked_args,
+            kwargs,
+            is_array,
+            expected,
+            (dict, [[k, v] for k, v in tokenized_indexes.items()]),
+        )
 
         # mapping from variable name to dask graph key
         var_key_map: dict[Hashable, str] = {}
