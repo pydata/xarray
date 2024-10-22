@@ -866,7 +866,22 @@ def open_datatree(
 
 def open_groups(
     filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    *,
     engine: T_Engine = None,
+    chunks: T_Chunks = None,
+    cache: bool | None = None,
+    decode_cf: bool | None = None,
+    mask_and_scale: bool | Mapping[str, bool] | None = None,
+    decode_times: bool | Mapping[str, bool] | None = None,
+    decode_timedelta: bool | Mapping[str, bool] | None = None,
+    use_cftime: bool | Mapping[str, bool] | None = None,
+    concat_characters: bool | Mapping[str, bool] | None = None,
+    decode_coords: Literal["coordinates", "all"] | bool | None = None,
+    drop_variables: str | Iterable[str] | None = None,
+    inline_array: bool = False,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+    backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> dict[str, Dataset]:
     """
@@ -893,12 +908,58 @@ def open_groups(
     open_datatree()
     DataTree.from_dict()
     """
+    if cache is None:
+        cache = chunks is None
+
+    if backend_kwargs is not None:
+        kwargs.update(backend_kwargs)
+
     if engine is None:
         engine = plugins.guess_engine(filename_or_obj)
 
+    if from_array_kwargs is None:
+        from_array_kwargs = {}
+
     backend = plugins.get_backend(engine)
 
-    return backend.open_groups_as_dict(filename_or_obj, **kwargs)
+    decoders = _resolve_decoders_kwargs(
+        decode_cf,
+        open_backend_dataset_parameters=(),
+        mask_and_scale=mask_and_scale,
+        decode_times=decode_times,
+        decode_timedelta=decode_timedelta,
+        concat_characters=concat_characters,
+        use_cftime=use_cftime,
+        decode_coords=decode_coords,
+    )
+    overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
+
+    backend_groups = backend.open_groups_as_dict(
+        filename_or_obj,
+        drop_variables=drop_variables,
+        **decoders,
+        **kwargs,
+    )
+
+    groups = {
+        name: _dataset_from_backend_dataset(
+            backend_ds,
+            filename_or_obj,
+            engine,
+            chunks,
+            cache,
+            overwrite_encoded_chunks,
+            inline_array,
+            chunked_array_type,
+            from_array_kwargs,
+            drop_variables=drop_variables,
+            **decoders,
+            **kwargs,
+        )
+        for name, backend_ds in backend_groups.items()
+    }
+
+    return groups
 
 
 def open_mfdataset(
