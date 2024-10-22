@@ -2224,7 +2224,6 @@ class DataArray(
         coords: Mapping[Any, Any] | None = None,
         method: InterpOptions = "linear",
         assume_sorted: bool = False,
-        reduce: bool = True,
         kwargs: Mapping[str, Any] | None = None,
         **coords_kwargs: Any,
     ) -> Self:
@@ -2232,12 +2231,8 @@ class DataArray(
         Interpolate a DataArray onto new coordinates.
 
         Performs univariate or multivariate interpolation of a Dataset onto new coordinates,
-        utilizing either NumPy or SciPy interpolation routines.
-
-        When interpolating along multiple dimensions, the process attempts to decompose the
-        interpolation into independent interpolations along one dimension at a time, unless
-        `reduce=False` is passed. The specific interpolation method and dimensionality
-        determine which interpolant is used:
+        utilizing either NumPy or SciPy interpolation routines. The specific interpolation
+        method and dimensionality determine which interpolant is used:
 
         1. **Interpolation along one dimension of 1D data (`method='linear'`)**
             - Uses :py:class:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
@@ -2276,10 +2271,6 @@ class DataArray(
             If False, values of x can be in any order and they are sorted
             first. If True, x has to be an array of monotonically increasing
             values.
-        reduce : bool, default: True
-            If True, the interpolation is decomposed into independent interpolations along one dimension at a time,
-            where the interpolation coordinates are independent. Setting this to be True alters the behavior of certain
-            multi-dimensional interpolants compared to the default SciPy output.
         kwargs : dict-like or None, default: None
             Additional keyword arguments passed to scipy's interpolator. Valid
             options and their behavior depend whether ``interp1d`` or
@@ -2296,8 +2287,9 @@ class DataArray(
         Notes
         -----
         - SciPy is required for certain interpolation methods.
-        - Allowing `reduce=True` (the default) may alter the behavior of interpolation along multiple dimensions
-            compared to the default behavior in SciPy.
+        - When interpolating along multiple dimensions with methods `linear` and `nearest`,
+            the process attempts to decompose the interpolation into independent interpolations
+            along one dimension at a time.
 
         See Also
         --------
@@ -2384,7 +2376,6 @@ class DataArray(
             method=method,
             kwargs=kwargs,
             assume_sorted=assume_sorted,
-            reduce=reduce,
             **coords_kwargs,
         )
         return self._from_temp_dataset(ds)
@@ -2394,16 +2385,13 @@ class DataArray(
         other: T_Xarray,
         method: InterpOptions = "linear",
         assume_sorted: bool = False,
-        reduce: bool = True,
         kwargs: Mapping[str, Any] | None = None,
     ) -> Self:
         """Interpolate this object onto the coordinates of another object,
         filling out of range values with NaN.
 
-        When interpolating along multiple dimensions, the process attempts to decompose the
-        interpolation into independent interpolations along one dimension at a time, unless
-        `reduce=False` is passed. The specific interpolation method and dimensionality
-        determine which interpolant is used:
+        The specific interpolation method and dimensionality determine which
+        interpolant is used:
 
         1. **Interpolation along one dimension of 1D data (`method='linear'`)**
             - Uses :py:class:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
@@ -2439,10 +2427,6 @@ class DataArray(
             in any order and they are sorted first. If True, interpolated
             coordinates are assumed to be an array of monotonically increasing
             values.
-        reduce : bool, default: True
-            If True, the interpolation is decomposed into independent interpolations along one dimension at a time,
-            where the interpolation coordinates are independent. Setting this to be True alters the behavior of certain
-            multi-dimensional interpolants compared to the default SciPy output.
         kwargs : dict, optional
             Additional keyword arguments passed to the interpolant.
 
@@ -2454,9 +2438,12 @@ class DataArray(
 
         Notes
         -----
-        scipy is required.
-        If the dataarray has object-type coordinates, reindex is used for these
-        coordinates instead of the interpolation.
+        - scipy is required.
+        - If the dataarray has object-type coordinates, reindex is used for these
+            coordinates instead of the interpolation.
+        - When interpolating along multiple dimensions with methods `linear` and `nearest`,
+            the process attempts to decompose the interpolation into independent interpolations
+            along one dimension at a time.
 
         See Also
         --------
@@ -2525,11 +2512,7 @@ class DataArray(
                 f"interp only works for a numeric type array. Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp_like(
-            other,
-            method=method,
-            kwargs=kwargs,
-            assume_sorted=assume_sorted,
-            reduce=reduce,
+            other, method=method, kwargs=kwargs, assume_sorted=assume_sorted
         )
         return self._from_temp_dataset(ds)
 

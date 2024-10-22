@@ -506,6 +506,7 @@ def _get_interpolator(
             interp_class = _import_interpolant("KroghInterpolator", method)
         elif method == "pchip":
             kwargs.update(axis=-1)
+            # pchip default behavior is to extrapolate
             kwargs.setdefault("extrapolate", False)
             interp_class = _import_interpolant("PchipInterpolator", method)
         elif method == "spline":
@@ -601,7 +602,7 @@ def _floatize_x(x, new_x):
     return x, new_x
 
 
-def interp(var, indexes_coords, method: InterpOptions, reduce: bool = True, **kwargs):
+def interp(var, indexes_coords, method: InterpOptions, **kwargs):
     """Make an interpolation of Variable
 
     Parameters
@@ -615,10 +616,6 @@ def interp(var, indexes_coords, method: InterpOptions, reduce: bool = True, **kw
         One of {'linear', 'nearest', 'zero', 'slinear', 'quadratic',
         'cubic'}. For multidimensional interpolation, only
         {'linear', 'nearest'} can be used.
-    reduce:
-        Decompose the interpolation along independent interpolation dimensions when
-        possible. This will likely improve performance over true multi-dimensional
-        interpolation but will alter the result for certain interpolators.
     **kwargs
         keyword arguments to be passed to scipy.interpolate
 
@@ -636,9 +633,8 @@ def interp(var, indexes_coords, method: InterpOptions, reduce: bool = True, **kw
 
     result = var
 
-    if reduce:
-        # decompose the interpolation into a succession of independent interpolation. This may
-        # affect the mathematical behavior of certain nd interpolants.
+    if method in ["linear", "nearest"]:
+        # decompose the interpolation into a succession of independent interpolation.
         indexes_coords = decompose_interp(indexes_coords)
     else:
         indexes_coords = [indexes_coords]

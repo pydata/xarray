@@ -3904,7 +3904,6 @@ class Dataset(
         coords: Mapping[Any, Any] | None = None,
         method: InterpOptions = "linear",
         assume_sorted: bool = False,
-        reduce: bool = True,
         kwargs: Mapping[str, Any] | None = None,
         method_non_numeric: str = "nearest",
         **coords_kwargs: Any,
@@ -3913,12 +3912,8 @@ class Dataset(
         Interpolate a Dataset onto new coordinates.
 
         Performs univariate or multivariate interpolation of a Dataset onto new coordinates,
-        utilizing either NumPy or SciPy interpolation routines.
-
-        When interpolating along multiple dimensions, the process attempts to decompose the
-        interpolation into independent interpolations along one dimension at a time, unless
-        `reduce=False` is passed. The specific interpolation method and dimensionality
-        determine which interpolant is used:
+        utilizing either NumPy or SciPy interpolation routines. The specific interpolation
+        method and dimensionality determine which interpolant is used:
 
         1. **Interpolation along one dimension of 1D data (`method='linear'`)**
             - Uses :py:class:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
@@ -3958,10 +3953,6 @@ class Dataset(
             in any order and they are sorted first. If True, interpolated
             coordinates are assumed to be an array of monotonically increasing
             values.
-        reduce : bool, default: True
-            If True, the interpolation is decomposed into independent interpolations of minimal dimensionality such that
-            the interpolation coordinates are independent. Setting this to be True alters the behavior of certain
-            multi-dimensional interpolants compared to the default SciPy output.
         kwargs : dict, optional
             Additional keyword arguments passed to the interpolator. Valid
             options and their behavior depend which interpolant is used.
@@ -3981,10 +3972,9 @@ class Dataset(
         Notes
         -----
         - SciPy is required for certain interpolation methods.
-        - Allowing `reduce=True` (the default) may alter the behavior of interpolation along multiple dimensions
-            compared to the default behavior in SciPy.
-
-        See Also
+        - When interpolating along multiple dimensions with methods `linear` and `nearest`,
+            the process attempts to decompose the interpolation into independent interpolations
+            along one dimension at a time.
         --------
         scipy.interpolate.interp1d
         scipy.interpolate.interpn
@@ -4145,9 +4135,7 @@ class Dataset(
             if dtype_kind in "uifc":
                 # For normal number types do the interpolation:
                 var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
-                variables[name] = missing.interp(
-                    var, var_indexers, method, reduce=reduce, **kwargs
-                )
+                variables[name] = missing.interp(var, var_indexers, method, **kwargs)
             elif dtype_kind in "ObU" and (use_indexers.keys() & var.dims):
                 # For types that we do not understand do stepwise
                 # interpolation to avoid modifying the elements.
@@ -4208,19 +4196,14 @@ class Dataset(
         other: T_Xarray,
         method: InterpOptions = "linear",
         assume_sorted: bool = False,
-        reduce: bool = True,
         kwargs: Mapping[str, Any] | None = None,
         method_non_numeric: str = "nearest",
     ) -> Self:
         """Interpolate this object onto the coordinates of another object.
 
         Performs univariate or multivariate interpolation of a Dataset onto new coordinates,
-        utilizing either NumPy or SciPy interpolation routines.
-
-        When interpolating along multiple dimensions, the process attempts to decompose the
-        interpolation into independent interpolations along one dimension at a time, unless
-        `reduce=False` is passed. The specific interpolation method and dimensionality
-        determine which interpolant is used:
+        utilizing either NumPy or SciPy interpolation routines. The specific interpolation
+        method and dimensionality determine which interpolant is used:
 
         1. **Interpolation along one dimension of 1D data (`method='linear'`)**
             - Uses :py:class:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
@@ -4259,10 +4242,6 @@ class Dataset(
             in any order and they are sorted first. If True, interpolated
             coordinates are assumed to be an array of monotonically increasing
             values.
-        reduce : bool, default: True
-            If True, the interpolation is decomposed into independent 1-dimensional interpolations such that
-            the interpolation coordinates are independent. Setting this to be True alters the behavior of certain
-            multi-dimensional interpolants compared to the default SciPy output.
         kwargs : dict, optional
             Additional keyword arguments passed to the interpolator. Valid
             options and their behavior depend which interpolant is use
@@ -4278,9 +4257,12 @@ class Dataset(
 
         Notes
         -----
-        scipy is required.
-        If the dataset has object-type coordinates, reindex is used for these
-        coordinates instead of the interpolation.
+        - scipy is required.
+        - If the dataset has object-type coordinates, reindex is used for these
+            coordinates instead of the interpolation.
+        - When interpolating along multiple dimensions with methods `linear` and `nearest`,
+            the process attempts to decompose the interpolation into independent interpolations
+            along one dimension at a time.
 
         See Also
         --------
