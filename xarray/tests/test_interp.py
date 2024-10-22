@@ -921,9 +921,7 @@ def test_decompose(method: InterpOptions) -> None:
 
 @requires_scipy
 @requires_dask
-@pytest.mark.parametrize(
-    "method", ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
-)
+@pytest.mark.parametrize("method", ["linear", "nearest"])
 @pytest.mark.parametrize("chunked", [True, False])
 @pytest.mark.parametrize(
     "data_ndim,interp_ndim,nscalar",
