@@ -41,6 +41,7 @@ from xarray.core.combine import (
 )
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
+from xarray.core.datatree_mapping import map_over_datasets
 from xarray.core.indexes import Index
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 from xarray.core.utils import is_remote_uri
@@ -412,6 +413,54 @@ def _dataset_from_backend_dataset(
             ds.encoding["source"] = _normalize_path(path)
 
     return ds
+
+
+def _datatree_from_backend_datatree(
+    backend_tree,
+    filename_or_obj,
+    engine,
+    chunks,
+    cache,
+    overwrite_encoded_chunks,
+    inline_array,
+    chunked_array_type,
+    from_array_kwargs,
+    **extra_tokens,
+):
+    if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
+        raise ValueError(
+            f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
+        )
+
+    # _protect_datatree_variables_inplace(backend_tree, cache)
+    if chunks is None:
+        tree = backend_tree
+    else:
+        tree = map_over_datasets(
+            lambda ds: _chunk_ds(
+                ds,
+                filename_or_obj,
+                engine,
+                chunks,
+                overwrite_encoded_chunks,
+                inline_array,
+                chunked_array_type,
+                from_array_kwargs,
+                **extra_tokens,
+            ),
+            backend_tree,
+        )
+
+    # ds.set_close(backend_ds._close)
+
+    # Ensure source filename always stored in dataset object
+    if "source" not in tree.encoding:
+        path = getattr(filename_or_obj, "path", filename_or_obj)
+
+        if isinstance(path, str | os.PathLike):
+            tree.encoding["source"] = _normalize_path(path)
+
+    return tree
 
 
 def open_dataset(
@@ -838,7 +887,22 @@ def open_dataarray(
 
 def open_datatree(
     filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    *,
     engine: T_Engine = None,
+    chunks: T_Chunks = None,
+    cache: bool | None = None,
+    decode_cf: bool | None = None,
+    mask_and_scale: bool | Mapping[str, bool] | None = None,
+    decode_times: bool | Mapping[str, bool] | None = None,
+    decode_timedelta: bool | Mapping[str, bool] | None = None,
+    use_cftime: bool | Mapping[str, bool] | None = None,
+    concat_characters: bool | Mapping[str, bool] | None = None,
+    decode_coords: Literal["coordinates", "all"] | bool | None = None,
+    drop_variables: str | Iterable[str] | None = None,
+    inline_array: bool = False,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+    backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> DataTree:
     """
@@ -856,12 +920,55 @@ def open_datatree(
     -------
     xarray.DataTree
     """
+    if cache is None:
+        cache = chunks is None
+
+    if backend_kwargs is not None:
+        kwargs.update(backend_kwargs)
+
     if engine is None:
         engine = plugins.guess_engine(filename_or_obj)
 
+    if from_array_kwargs is None:
+        from_array_kwargs = {}
+
     backend = plugins.get_backend(engine)
 
-    return backend.open_datatree(filename_or_obj, **kwargs)
+    decoders = _resolve_decoders_kwargs(
+        decode_cf,
+        open_backend_dataset_parameters=(),
+        mask_and_scale=mask_and_scale,
+        decode_times=decode_times,
+        decode_timedelta=decode_timedelta,
+        concat_characters=concat_characters,
+        use_cftime=use_cftime,
+        decode_coords=decode_coords,
+    )
+    overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
+
+    backend_tree = backend.open_datatree(
+        filename_or_obj,
+        drop_variables=drop_variables,
+        **decoders,
+        **kwargs,
+    )
+
+    tree = _datatree_from_backend_datatree(
+        backend_tree,
+        filename_or_obj,
+        engine,
+        chunks,
+        cache,
+        overwrite_encoded_chunks,
+        inline_array,
+        chunked_array_type,
+        from_array_kwargs,
+        drop_variables=drop_variables,
+        **decoders,
+        **kwargs,
+    )
+
+    return tree
 
 
 def open_groups(
