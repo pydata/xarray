@@ -11,6 +11,7 @@ from xarray.backends.api import open_datatree, open_groups
 from xarray.core.datatree import DataTree
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
+    requires_dask,
     requires_h5netcdf,
     requires_netCDF4,
     requires_zarr,
@@ -23,6 +24,43 @@ try:
     import netCDF4 as nc4
 except ImportError:
     pass
+
+
+def diff_chunks(comparison, tree1, tree2):
+    mismatching_variables = [loc for loc, equals in comparison.items() if not equals]
+
+    variable_messages = [
+        "\n".join(
+            [
+                f"L  {path}:{name}: {tree1[path].variables[name].chunksizes}",
+                f"R  {path}:{name}: {tree2[path].variables[name].chunksizes}",
+            ]
+        )
+        for path, name in mismatching_variables
+    ]
+    return "\n".join(["Differing chunk sizes:"] + variable_messages)
+
+
+def assert_chunks_equal(actual, expected, enforce_dask=False):
+    __tracebackhide__ = True
+
+    from xarray.namedarray.pycompat import array_type
+
+    dask_array_type = array_type("dask")
+
+    comparison = {
+        (path, name): (
+            (
+                not enforce_dask
+                or isinstance(node1.variables[name].data, dask_array_type)
+            )
+            and node1.variables[name].chunksizes == node2.variables[name].chunksizes
+        )
+        for path, (node1, node2) in xr.group_subtrees(actual, expected)
+        for name in node1.variables.keys()
+    }
+
+    assert all(comparison.values()), diff_chunks(comparison, actual, expected)
 
 
 @pytest.fixture(scope="module")
@@ -169,6 +207,26 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
             ),
         ):
             open_datatree(unaligned_datatree_nc)
+
+    @requires_dask
+    def test_open_datatree_chunks(self, tmpdir, simple_datatree) -> None:
+        filepath = tmpdir / "test.nc"
+
+        root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
+        set1_data = xr.Dataset({"a": ("y", [-1, 0, 1]), "b": ("x", [-10, 6])})
+        set2_data = xr.Dataset({"a": ("y", [1, 2, 3]), "b": ("x", [0.1, 0.2])})
+        original_tree = DataTree.from_dict(
+            {
+                "/": root_data.chunk({"x": 2, "y": 1}),
+                "/group1": set1_data.chunk({"x": 1, "y": 2}),
+                "/group2": set2_data.chunk({"x": 2, "y": 3}),
+            }
+        )
+        original_tree.to_netcdf(filepath, engine="netcdf4")
+
+        with open_datatree(filepath, engine="netcdf4", chunks={}) as tree:
+            xr.testing.assert_identical(tree, original_tree)
+            assert_chunks_equal(tree, original_tree, enforce_dask=True)
 
     def test_open_groups(self, unaligned_datatree_nc) -> None:
         """Test `open_groups` with a netCDF4 file with an unaligned group hierarchy."""
@@ -347,6 +405,26 @@ class TestZarrDatatreeIO:
             ),
         ):
             open_datatree(unaligned_datatree_zarr, engine="zarr")
+
+    @requires_dask
+    def test_open_datatree_chunks(self, tmpdir, simple_datatree) -> None:
+        filepath = tmpdir / "test.zarr"
+
+        root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
+        set1_data = xr.Dataset({"a": ("y", [-1, 0, 1]), "b": ("x", [-10, 6])})
+        set2_data = xr.Dataset({"a": ("y", [1, 2, 3]), "b": ("x", [0.1, 0.2])})
+        original_tree = DataTree.from_dict(
+            {
+                "/": root_data.chunk({"x": 2, "y": 1}),
+                "/group1": set1_data.chunk({"x": 1, "y": 2}),
+                "/group2": set2_data.chunk({"x": 2, "y": 3}),
+            }
+        )
+        original_tree.to_zarr(filepath)
+
+        with open_datatree(filepath, engine="zarr", chunks={}) as tree:
+            xr.testing.assert_identical(original_tree, tree)
+            assert_chunks_equal(tree, original_tree, enforce_dask=True)
 
     def test_open_groups(self, unaligned_datatree_zarr) -> None:
         """Test `open_groups` with a zarr store of an unaligned group hierarchy."""
