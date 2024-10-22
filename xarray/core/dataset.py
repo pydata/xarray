@@ -3923,8 +3923,8 @@ class Dataset(
             New coordinate can be a scalar, array-like or DataArray.
             If DataArrays are passed as new coordinates, their dimensions are
             used for the broadcasting. Missing values are skipped.
-        method : { "linear", "nearest", "zero", "slinear", "quadratic", "cubic",
-            "quintic", "polynomial", "pchip", "barycentric", "krogh", "akima", "makima" }
+        method : "linear", "nearest", "zero", "slinear", "quadratic", "cubic",
+            "quintic", "polynomial", "pchip", "barycentric", "krogh", "akima", "makima"
             Interpolation method to use (see descriptions above).
         assume_sorted : bool, default: False
             If False, values of coordinates that are interpolated over can be
@@ -4215,8 +4215,8 @@ class Dataset(
             Object with an 'indexes' attribute giving a mapping from dimension
             names to an 1d array-like, which provides coordinates upon
             which to index the variables in this dataset. Missing values are skipped.
-        method : { "linear", "nearest", "zero", "slinear", "quadratic", "cubic",
-            "quintic", "polynomial", "pchip", "barycentric", "krogh", "akima", "makima" }
+        method : "linear", "nearest", "zero", "slinear", "quadratic", "cubic",
+            "quintic", "polynomial", "pchip", "barycentric", "krogh", "akima", "makima"
             Interpolation method to use (see descriptions above).
         assume_sorted : bool, default: False
             If False, values of coordinates that are interpolated over can be
