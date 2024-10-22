@@ -355,7 +355,7 @@ def test_interpolate_nd_inseparable(
     grid_grid_points = nd_interp_coords["grid_grid_points"]
     # the presence/absence of z cordinate may affect nd interpolants, even when the
     # coordinate is unchanged
-    actual = da.interp(x=xdestnp, y=ydestnp, z=zdestnp, method=method, reduce=False)
+    actual = da.interp(x=xdestnp, y=ydestnp, z=zdestnp, method=method)
     expected_data = scipy.interpolate.interpn(
         points=(da.x, da.y, da.z),
         values=da.data,
@@ -380,7 +380,7 @@ def test_interpolate_nd_inseparable(
     ydest = nd_interp_coords["ydest"]
     zdest = nd_interp_coords["zdest"]
     grid_oned_points = nd_interp_coords["grid_oned_points"]
-    actual = da.interp(x=xdest, y=ydest, z=zdest, method=method, reduce=False)
+    actual = da.interp(x=xdest, y=ydest, z=zdest, method=method)
     expected_data = scipy.interpolate.interpn(
         points=(da.x, da.y, da.z),
         values=da.data,
@@ -402,7 +402,7 @@ def test_interpolate_nd_inseparable(
     assert_allclose(actual.transpose("y", "z"), expected)
 
     # reversed order
-    actual = da.interp(y=ydest, x=xdest, z=zdest, method=method, reduce=False)
+    actual = da.interp(y=ydest, x=xdest, z=zdest, method=method)
     assert_allclose(actual.transpose("y", "z"), expected)
 
 
