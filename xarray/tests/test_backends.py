@@ -5185,7 +5185,7 @@ class TestPydap:
 class TestPydapOnline(TestPydap):
     @contextlib.contextmanager
     def create_datasets(self, **kwargs):
-        url = "http://test.opendap.org/opendap/hyrax/data/nc/bears.nc"
+        url = "http://test.opendap.org/opendap/data/nc/bears.nc"
         actual = open_dataset(url, engine="pydap", **kwargs)
         with open_example_dataset("bears.nc") as expected:
             # workaround to restore string which is converted to byte

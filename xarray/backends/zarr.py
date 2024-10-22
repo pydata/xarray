@@ -19,6 +19,7 @@ from xarray.backends.common import (
     BackendEntrypoint,
     _encode_variable_name,
     _normalize_path,
+    datatree_from_dict_with_io_cleanup,
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
@@ -1444,8 +1445,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         zarr_format=None,
         **kwargs,
     ) -> DataTree:
-        from xarray.core.datatree import DataTree
-
         filename_or_obj = _normalize_path(filename_or_obj)
         groups_dict = self.open_groups_as_dict(
             filename_or_obj=filename_or_obj,
@@ -1467,8 +1466,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             zarr_format=zarr_format,
             **kwargs,
         )
-
-        return DataTree.from_dict(groups_dict)
+        return datatree_from_dict_with_io_cleanup(groups_dict)
 
     def open_groups_as_dict(
         self,
