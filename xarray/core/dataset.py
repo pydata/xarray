@@ -3916,14 +3916,14 @@ class Dataset(
         method and dimensionality determine which interpolant is used:
 
         1. **Interpolation along one dimension of 1D data (`method='linear'`)**
-            - Uses :py:class:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
+            - Uses :py:func:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
 
         2. **Interpolation along one dimension of N-dimensional data (N ≥ 1)**
             - Methods {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"}
-                use :py:class:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:class:`numpy.interp`
+                use :py:func:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:func:`numpy.interp`
                 (as in the case of `method='linear'` for 1D data).
             - If `method='polynomial'`, the `order` keyword argument must also be provided. In this case,
-                :py:class:`scipy.interpolate.interp1d` is called with `kind=order`.
+                :py:func:`scipy.interpolate.interp1d` is called with `kind=order`.
 
         3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
             - Depending on the `method`, the following interpolants from :py:class:`scipy.interpolate` are used:
@@ -4206,14 +4206,14 @@ class Dataset(
         method and dimensionality determine which interpolant is used:
 
         1. **Interpolation along one dimension of 1D data (`method='linear'`)**
-            - Uses :py:class:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
+            - Uses :py:func:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
 
         2. **Interpolation along one dimension of N-dimensional data (N ≥ 1)**
             - Methods {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"}
-                use :py:class:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:class:`numpy.interp`
+                use :py:func:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:func:`numpy.interp`
                 (as in the case of `method='linear'` for 1D data).
             - If `method='polynomial'`, the `order` keyword argument must also be provided. In this case,
-                :py:class:`scipy.interpolate.interp1d` is called with `kind=order`.
+                :py:func:`scipy.interpolate.interp1d` is called with `kind=order`.
 
         3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
             - Depending on the `method`, the following interpolants from :py:class:`scipy.interpolate` are used:
