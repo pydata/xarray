@@ -41,6 +41,7 @@ from xarray.core.utils import (
     FrozenMappingWarningOnValuesAccess,
     contains_only_chunked_or_numpy,
     either_dict_or_kwargs,
+    emit_user_level_warning,
     hashable,
     is_scalar,
     maybe_wrap_array,
@@ -284,6 +285,7 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
     grouper: Grouper
     group: T_Group
     obj: T_DataWithCoords
+    eagerly_compute_group: bool = field(repr=False)
 
     # returned by factorize:
     encoded: EncodedGroups = field(init=False, repr=False)
@@ -310,6 +312,18 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
 
         self.group = _resolve_group(self.obj, self.group)
 
+        if (
+            self.eagerly_compute_group
+            and not isinstance(self.group, _DummyGroup)
+            and is_chunked_array(self.group.variable._data)
+        ):
+            emit_user_level_warning(
+                f"Eagerly computing the DataArray you're grouping by ({self.group.name!r}) "
+                "is deprecated and will be removed in v2025.05.0. "
+                "Please load this array's data manually using `.compute` or `.load`.",
+                DeprecationWarning,
+            )
+
         self.encoded = self.grouper.factorize(self.group)
 
     @property
@@ -330,7 +344,11 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
 
 
 def _parse_group_and_groupers(
-    obj: T_Xarray, group: GroupInput, groupers: dict[str, Grouper]
+    obj: T_Xarray,
+    group: GroupInput,
+    groupers: dict[str, Grouper],
+    *,
+    eagerly_compute_group: bool,
 ) -> tuple[ResolvedGrouper, ...]:
     from xarray.core.dataarray import DataArray
     from xarray.core.variable import Variable
@@ -355,7 +373,11 @@ def _parse_group_and_groupers(
 
     rgroupers: tuple[ResolvedGrouper, ...]
     if isinstance(group, DataArray | Variable):
-        rgroupers = (ResolvedGrouper(UniqueGrouper(), group, obj),)
+        rgroupers = (
+            ResolvedGrouper(
+                UniqueGrouper(), group, obj, eagerly_compute_group=eagerly_compute_group
+            ),
+        )
     else:
         if group is not None:
             if TYPE_CHECKING:
@@ -368,7 +390,9 @@ def _parse_group_and_groupers(
             grouper_mapping = cast("Mapping[Hashable, Grouper]", groupers)
 
         rgroupers = tuple(
-            ResolvedGrouper(grouper, group, obj)
+            ResolvedGrouper(
+                grouper, group, obj, eagerly_compute_group=eagerly_compute_group
+            )
             for group, grouper in grouper_mapping.items()
         )
     return rgroupers

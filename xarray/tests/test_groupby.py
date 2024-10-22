@@ -2843,7 +2843,10 @@ def test_multiple_groupers(use_flox) -> None:
     if has_dask:
         b["xy"] = b["xy"].chunk()
         with raise_if_dask_computes():
-            gb = b.groupby(x=UniqueGrouper(), xy=UniqueGrouper(labels=["a", "b", "c"]))
+            with pytest.warns(DeprecationWarning):
+                gb = b.groupby(
+                    x=UniqueGrouper(), xy=UniqueGrouper(labels=["a", "b", "c"])
+                )
 
         expected = xr.DataArray(
             [[[1, 1, 1], [0, 1, 2]]] * 4,
@@ -2994,7 +2997,11 @@ def test_lazy_grouping(grouper, expect_index):
     pd.testing.assert_index_equal(encoded.full_index, expect_index)
     np.testing.assert_array_equal(encoded.unique_coord.values, np.array(expect_index))
 
-    lazy = xr.Dataset({"foo": data}, coords={"zoo": data}).groupby(zoo=grouper).count()
+    lazy = (
+        xr.Dataset({"foo": data}, coords={"zoo": data})
+        .groupby(zoo=grouper, eagerly_compute_group=False)
+        .count()
+    )
     eager = (
         xr.Dataset({"foo": data}, coords={"zoo": data.compute()})
         .groupby(zoo=grouper)
@@ -3019,7 +3026,9 @@ def test_lazy_grouping_errors():
         coords={"y": ("x", dask.array.arange(20, chunks=3))},
     )
 
-    gb = data.groupby(y=UniqueGrouper(labels=np.arange(5, 10)))
+    gb = data.groupby(
+        y=UniqueGrouper(labels=np.arange(5, 10)), eagerly_compute_group=False
+    )
     message = "not supported when lazily grouping by"
     with pytest.raises(ValueError, match=message):
         gb.map(lambda x: x)

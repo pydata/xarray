@@ -10366,6 +10366,7 @@ class Dataset(
         *,
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
+        eagerly_compute_group: bool = True,
         **groupers: Grouper,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
@@ -10463,7 +10464,9 @@ class Dataset(
         )
 
         _validate_groupby_squeeze(squeeze)
-        rgroupers = _parse_group_and_groupers(self, group, groupers)
+        rgroupers = _parse_group_and_groupers(
+            self, group, groupers, eagerly_compute_group=eagerly_compute_group
+        )
 
         return DatasetGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
@@ -10479,6 +10482,7 @@ class Dataset(
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         duplicates: Literal["raise", "drop"] = "raise",
+        eagerly_compute_group: bool = True,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
 
@@ -10552,7 +10556,9 @@ class Dataset(
             precision=precision,
             include_lowest=include_lowest,
         )
-        rgrouper = ResolvedGrouper(grouper, group, self)
+        rgrouper = ResolvedGrouper(
+            grouper, group, self, eagerly_compute_group=eagerly_compute_group
+        )
 
         return DatasetGroupBy(
             self,
