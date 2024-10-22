@@ -41,8 +41,9 @@ from xarray.core.combine import (
 )
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
-from xarray.core.datatree_mapping import map_over_datasets
+from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
+from xarray.core.treenode import group_subtrees
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 from xarray.core.utils import is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
@@ -75,7 +76,6 @@ if TYPE_CHECKING:
     T_NetcdfTypes = Literal[
         "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
     ]
-    from xarray.core.datatree import DataTree
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
@@ -436,19 +436,21 @@ def _datatree_from_backend_datatree(
     if chunks is None:
         tree = backend_tree
     else:
-        tree = map_over_datasets(
-            lambda ds: _chunk_ds(
-                ds,
-                filename_or_obj,
-                engine,
-                chunks,
-                overwrite_encoded_chunks,
-                inline_array,
-                chunked_array_type,
-                from_array_kwargs,
-                **extra_tokens,
-            ),
-            backend_tree,
+        tree = DataTree.from_dict(
+            {
+                path: _chunk_ds(
+                    node.dataset,
+                    filename_or_obj,
+                    engine,
+                    chunks,
+                    overwrite_encoded_chunks,
+                    inline_array,
+                    chunked_array_type,
+                    from_array_kwargs,
+                    **extra_tokens,
+                )
+                for path, [node] in group_subtrees(backend_tree)
+            }
         )
 
     # ds.set_close(backend_ds._close)
