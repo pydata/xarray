@@ -6749,6 +6749,11 @@ class DataArray(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
+        eagerly_compute_group: bool
+            Whether to eagerly compute ``group`` when it is a chunked array.
+            This option is to maintain backwards compatibility. Set to False
+            to opt-in to future behaviour, where ``group`` is not automatically loaded
+            into memory.
         **groupers : Mapping of str to Grouper or Resampler
             Mapping of variable name to group by to :py:class:`Grouper` or :py:class:`Resampler` object.
             One of ``group`` or ``groupers`` must be provided.
@@ -6917,6 +6922,11 @@ class DataArray(
             coordinates.
         duplicates : {"raise", "drop"}, default: "raise"
             If bin edges are not unique, raise ValueError or drop non-uniques.
+        eagerly_compute_group: bool
+            Whether to eagerly compute ``group`` when it is a chunked array.
+            This option is to maintain backwards compatibility. Set to False
+            to opt-in to future behaviour, where ``group`` is not automatically loaded
+            into memory.
 
         Returns
         -------

@@ -308,21 +308,45 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
         # of pd.cut
         # We do not want to modify the original object, since the same grouper
         # might be used multiple times.
+        from xarray.groupers import BinGrouper, UniqueGrouper
+
         self.grouper = copy.deepcopy(self.grouper)
 
         self.group = _resolve_group(self.obj, self.group)
 
-        if (
-            self.eagerly_compute_group
-            and not isinstance(self.group, _DummyGroup)
-            and is_chunked_array(self.group.variable._data)
+        if not isinstance(self.group, _DummyGroup) and is_chunked_array(
+            self.group.variable._data
         ):
-            emit_user_level_warning(
-                f"Eagerly computing the DataArray you're grouping by ({self.group.name!r}) "
-                "is deprecated and will be removed in v2025.05.0. "
-                "Please load this array's data manually using `.compute` or `.load`.",
-                DeprecationWarning,
-            )
+            if self.eagerly_compute_group is False:
+                # This requires a pass to discover the groups present
+                if (
+                    isinstance(self.grouper, UniqueGrouper)
+                    and self.grouper.labels is None
+                ):
+                    raise ValueError(
+                        "Please pass `labels` to UniqueGrouper when grouping by a chunked array."
+                    )
+                # this requires a pass to compute the bin edges
+                if isinstance(self.grouper, BinGrouper) and isinstance(
+                    self.grouper.bins, int
+                ):
+                    raise ValueError(
+                        "Please pass explicit bin edges to BinGrouper using the ``bins`` kwarg"
+                        "when grouping by a chunked array."
+                    )
+
+            if self.eagerly_compute_group:
+                emit_user_level_warning(
+                    f""""Eagerly computing the DataArray you're grouping by ({self.group.name!r}) "
+                    is deprecated and will raise an error in v2025.05.0.
+                    Please load this array's data manually using `.compute` or `.load`.
+                    To intentionally avoid eager loading, either (1) specify
+                    `.groupby({self.group.name}=UniqueGrouper(labels=...), eagerly_load_group=False)`
+                    or (2) pass explicit bin edges using or `.groupby({self.group.name}=BinGrouper(bins=...),
+                    eagerly_load_group=False)`; as appropriate.""",
+                    DeprecationWarning,
+                )
+                self.group = self.group.compute()
 
         self.encoded = self.grouper.factorize(self.group)
 
@@ -678,8 +702,9 @@ class GroupBy(Generic[T_Xarray]):
         if self._by_chunked:
             raise ValueError(
                 "This method is not supported when lazily grouping by a chunked array. "
-                "Either load the array in to memory prior to grouping, or explore another "
-                "way of applying your function, potentially using the `flox` package."
+                "Either load the array in to memory prior to grouping using .load or .compute, "
+                " or explore another way of applying your function, "
+                "potentially using the `flox` package."
             )
 
     def _raise_if_not_single_group(self):

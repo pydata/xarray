@@ -3091,6 +3091,41 @@ def test_groupby_multiple_bin_grouper_missing_groups():
     assert_identical(actual, expected)
 
 
+@requires_dask
+def test_groupby_dask_eager_load_warnings():
+    ds = xr.Dataset(
+        {"foo": (("z"), np.arange(12))},
+        coords={"x": ("z", np.arange(12)), "y": ("z", np.arange(12))},
+    ).chunk(z=6)
+
+    with pytest.warns(DeprecationWarning):
+        ds.groupby(x=UniqueGrouper())
+
+    with pytest.warns(DeprecationWarning):
+        ds.groupby("x")
+
+    with pytest.warns(DeprecationWarning):
+        ds.groupby(ds.x)
+
+    with pytest.raises(ValueError, match="Please pass"):
+        ds.groupby("x", eagerly_compute_group=False)
+
+    # This is technically fine but anyone iterating over the groupby object
+    # will see an error, so let's warn and have them opt-in.
+    with pytest.warns(DeprecationWarning):
+        ds.groupby(x=UniqueGrouper(labels=[1, 2, 3]))
+
+    ds.groupby(x=UniqueGrouper(labels=[1, 2, 3]), eagerly_compute_group=False)
+
+    with pytest.warns(DeprecationWarning):
+        ds.groupby_bins("x", bins=3)
+    with pytest.raises(ValueError, match="Please pass"):
+        ds.groupby_bins("x", bins=3, eagerly_compute_group=False)
+    with pytest.warns(DeprecationWarning):
+        ds.groupby_bins("x", bins=[1, 2, 3])
+    ds.groupby_bins("x", bins=[1, 2, 3], eagerly_compute_group=False)
+
+
 # Possible property tests
 # 1. lambda x: x
 # 2. grouped-reduce on unique coords is identical to array
