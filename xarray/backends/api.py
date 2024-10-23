@@ -464,7 +464,8 @@ def _datatree_from_backend_datatree(
             }
         )
 
-    # ds.set_close(backend_ds._close)
+        for path, [node] in group_subtrees(backend_tree):
+            tree[path].set_close(node._close)
 
     # Ensure source filename always stored in dataset object
     if "source" not in tree.encoding:
