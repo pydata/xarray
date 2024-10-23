@@ -4360,6 +4360,13 @@ class DataArray(
             The encoding attribute (if exists) of the DataArray(s) will be
             used. Override any existing encodings by providing the ``encoding`` kwarg.
 
+        ``fill_value`` handling:
+            There exists a subtlety in interpreting zarr's ``fill_value`` property. For zarr v2 format
+            arrays, ``fill_value`` is *always* interpreted as an invalid value similar to the ``_FillValue`` attribute
+            in CF/netCDF. For Zarr v3 format arrays, only an explicit ``_FillValue`` attribute will be used
+            to mask the data if requested using ``mask_and_scale=True``. See this `Github issue <https://github.com/pydata/xarray/issues/5475>`_
+            for more.
+
         See Also
         --------
         Dataset.to_zarr
