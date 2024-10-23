@@ -265,6 +265,17 @@ def _protect_dataset_variables_inplace(dataset, cache):
             variable.data = data
 
 
+def _protect_datatree_variables_inplace(tree, cache):
+    for node in tree.subtree:
+        for name, variable in node.variables.items():
+            if name not in node._indexes:
+                # no need to protect IndexVariable objects
+                data = indexing.CopyOnWriteArray(variable._data)
+                if cache:
+                    data = indexing.MemoryCachedArray(data)
+                variable.data = data
+
+
 def _finalize_store(write, store):
     """Finalize this store by explicitly syncing and closing"""
     del write  # ensure writing is done first
@@ -432,7 +443,7 @@ def _datatree_from_backend_datatree(
             f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
         )
 
-    # _protect_datatree_variables_inplace(backend_tree, cache)
+    _protect_datatree_variables_inplace(backend_tree, cache)
     if chunks is None:
         tree = backend_tree
     else:
