@@ -25,6 +25,8 @@ try:
 except ImportError:
     pass
 
+have_zarr_v3 = xr.backends.zarr._zarr_v3()
+
 
 def diff_chunks(comparison, tree1, tree2):
     mismatching_variables = [loc for loc, equals in comparison.items() if not equals]
@@ -336,6 +338,9 @@ class TestH5NetCDFDatatreeIO(DatatreeIOBase):
     engine: T_DataTreeNetcdfEngine | None = "h5netcdf"
 
 
+@pytest.mark.skipif(
+    have_zarr_v3, reason="datatree support for zarr 3 is not implemented yet"
+)
 @requires_zarr
 class TestZarrDatatreeIO:
     engine = "zarr"
@@ -349,12 +354,12 @@ class TestZarrDatatreeIO:
             assert_equal(original_dt, roundtrip_dt)
 
     def test_zarr_encoding(self, tmpdir, simple_datatree):
-        import zarr
+        from numcodecs.blosc import Blosc
 
         filepath = tmpdir / "test.zarr"
         original_dt = simple_datatree
 
-        comp = {"compressor": zarr.Blosc(cname="zstd", clevel=3, shuffle=2)}
+        comp = {"compressor": Blosc(cname="zstd", clevel=3, shuffle=2)}
         enc = {"/set2": {var: comp for var in original_dt["/set2"].dataset.data_vars}}
         original_dt.to_zarr(filepath, encoding=enc)
 
