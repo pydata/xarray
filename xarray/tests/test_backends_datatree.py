@@ -212,20 +212,23 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
     def test_open_datatree_chunks(self, tmpdir, simple_datatree) -> None:
         filepath = tmpdir / "test.nc"
 
+        chunks = {"x": 2, "y": 1}
+
         root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
         set1_data = xr.Dataset({"a": ("y", [-1, 0, 1]), "b": ("x", [-10, 6])})
         set2_data = xr.Dataset({"a": ("y", [1, 2, 3]), "b": ("x", [0.1, 0.2])})
         original_tree = DataTree.from_dict(
             {
-                "/": root_data.chunk({"x": 2, "y": 1}),
-                "/group1": set1_data.chunk({"x": 1, "y": 2}),
-                "/group2": set2_data.chunk({"x": 2, "y": 3}),
+                "/": root_data.chunk(chunks),
+                "/group1": set1_data.chunk(chunks),
+                "/group2": set2_data.chunk(chunks),
             }
         )
         original_tree.to_netcdf(filepath, engine="netcdf4")
 
-        with open_datatree(filepath, engine="netcdf4", chunks={}) as tree:
+        with open_datatree(filepath, engine="netcdf4", chunks=chunks) as tree:
             xr.testing.assert_identical(tree, original_tree)
+
             assert_chunks_equal(tree, original_tree, enforce_dask=True)
 
     def test_open_groups(self, unaligned_datatree_nc) -> None:
@@ -410,19 +413,21 @@ class TestZarrDatatreeIO:
     def test_open_datatree_chunks(self, tmpdir, simple_datatree) -> None:
         filepath = tmpdir / "test.zarr"
 
+        chunks = {"x": 2, "y": 1}
+
         root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
         set1_data = xr.Dataset({"a": ("y", [-1, 0, 1]), "b": ("x", [-10, 6])})
         set2_data = xr.Dataset({"a": ("y", [1, 2, 3]), "b": ("x", [0.1, 0.2])})
         original_tree = DataTree.from_dict(
             {
-                "/": root_data.chunk({"x": 2, "y": 1}),
-                "/group1": set1_data.chunk({"x": 1, "y": 2}),
-                "/group2": set2_data.chunk({"x": 2, "y": 3}),
+                "/": root_data.chunk(chunks),
+                "/group1": set1_data.chunk(chunks),
+                "/group2": set2_data.chunk(chunks),
             }
         )
         original_tree.to_zarr(filepath)
 
-        with open_datatree(filepath, engine="zarr", chunks={}) as tree:
+        with open_datatree(filepath, engine="zarr", chunks=chunks) as tree:
             xr.testing.assert_identical(original_tree, tree)
             assert_chunks_equal(tree, original_tree, enforce_dask=True)
 
