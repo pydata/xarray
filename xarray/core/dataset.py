@@ -7371,7 +7371,7 @@ class Dataset(
             dataframe.
 
             If provided, must include all dimensions of this dataset. By
-            default, dimensions are sorted alphabetically.
+            default, dimensions are in the same order as in `Dataset.sizes`.
 
         Returns
         -------
