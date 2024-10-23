@@ -580,7 +580,7 @@ class ZarrStore(AbstractWritableDataStore):
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
         )
-        group_paths = list(set([node for node in _iter_zarr_groups(zarr_group, parent=group)]))
+        group_paths = sorted(list(set([node for node in _iter_zarr_groups(zarr_group, parent=group)])))
         return {
             group: cls(
                 zarr_group.get(group),
@@ -1530,13 +1530,12 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-            group_name = str(NodePath(path_group))
-            # groups_dict[group_name] = group_ds
             if group:
-                group_name = str(NodePath(NodePath(group).stem) / NodePath(group_name).stem)
-                groups_dict[group_name] = group_ds
+                relative = str(NodePath("/") / NodePath(group).parent)
+                group_name = str(NodePath(path_group).relative_to(relative))
             else:
-                groups_dict[group_name] = group_ds
+                group_name = str(NodePath(path_group))
+            groups_dict[group_name] = group_ds
         return groups_dict
 
 
