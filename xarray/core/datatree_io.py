@@ -129,7 +129,7 @@ def _datatree_to_zarr(
     See `DataTree.to_zarr` for full API docs.
     """
 
-    from zarr.convenience import consolidate_metadata
+    from zarr import consolidate_metadata
 
     if group is not None:
         raise NotImplementedError(
