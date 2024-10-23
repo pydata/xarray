@@ -96,6 +96,24 @@ def _h5netcdf_create_group(dataset, name):
     return dataset.create_group(name)
 
 
+def _h5netcdf_opener(filename, mode, storage_options=None, **kwargs):
+    import h5netcdf
+
+    if (
+        isinstance(filename, str)
+        and is_remote_uri(filename)
+        and kwargs["driver"] is None
+    ):
+        import fsspec
+
+        mode_ = "rb" if mode == "r" else mode
+        fs, _, _ = fsspec.get_fs_token_paths(
+            filename, mode=mode_, storage_options=storage_options
+        )
+        filename = fs.open(filename, mode=mode_)
+    return h5netcdf.File(filename, mode=mode, **kwargs)
+
+
 class H5NetCDFStore(WritableCFDataStore):
     """Store for reading and writing data via h5netcdf"""
 
@@ -150,6 +168,7 @@ class H5NetCDFStore(WritableCFDataStore):
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
+        storage_options=None,
     ):
         import h5netcdf
 
@@ -167,6 +186,17 @@ class H5NetCDFStore(WritableCFDataStore):
 
         if format not in [None, "NETCDF4"]:
             raise ValueError("invalid format for h5netcdf backend")
+
+        # get open fsspec-handle first
+        from xarray.backends.common import _find_absolute_paths
+
+        if storage_options is not None:
+            filename = _find_absolute_paths(
+                filename,
+                engine="h5netcdf",
+                mode=mode,
+                backend_kwargs=dict(storage_options=storage_options),
+            )
 
         kwargs = {
             "invalid_netcdf": invalid_netcdf,
@@ -426,6 +456,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
+        storage_options=None,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
@@ -438,6 +469,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             decode_vlen_strings=decode_vlen_strings,
             driver=driver,
             driver_kwds=driver_kwds,
+            storage_options=storage_options,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
