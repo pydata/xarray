@@ -1536,7 +1536,8 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 relative = str(NodePath("/") / NodePath(group).parent)
                 group_name = str(NodePath(path_group).relative_to(relative))
             else:
-                groups_dict[group_name] = group_ds
+                group_name = str(NodePath(path_group))
+            groups_dict[group_name] = group_ds
         return groups_dict
 
 
