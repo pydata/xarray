@@ -598,7 +598,10 @@ class PandasIndex(Index):
         self.index = index
         self.dim = dim
 
-        if coord_dtype is None:
+        if pd.api.types.is_extension_array_dtype(index.dtype):
+            cast(pd.api.extensions.ExtensionDtype, index.dtype)
+            coord_dtype = index.dtype
+        else:
             coord_dtype = get_valid_numpy_dtype(index)
         self.coord_dtype = coord_dtype
 

@@ -4913,6 +4913,16 @@ class TestDataset:
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
+    def test_from_dataframe_categorical_dtype_index(self) -> None:
+        cat = pd.Categorical(list("abcd"))
+        df = pd.DataFrame({"f": cat}, index=cat)
+        ds = df.to_xarray()
+        restored = ds.to_dataframe()
+        df.index.name = (
+            "index"  # restored gets the name because it has the coord with the name
+        )
+        pd.testing.assert_frame_equal(df, restored)
+
     def test_from_dataframe_categorical_index(self) -> None:
         cat = pd.CategoricalDtype(
             categories=["foo", "bar", "baz", "qux", "quux", "corge"]
