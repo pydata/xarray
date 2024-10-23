@@ -252,6 +252,7 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         for ds in unaligned_dict_of_datasets.values():
             ds.close()
 
+    @requires_dask
     def test_open_groups_chunks(self, tmpdir) -> None:
         """Test `open_groups` with chunks on a netcdf4 file."""
 
