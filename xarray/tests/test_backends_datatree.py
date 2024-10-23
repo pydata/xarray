@@ -252,6 +252,36 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         for ds in unaligned_dict_of_datasets.values():
             ds.close()
 
+    def test_open_groups_chunks(self, tmpdir) -> None:
+        """Test `open_groups` with chunks on a netcdf4 file."""
+
+        chunks = {"x": 2, "y": 1}
+        filepath = tmpdir / "test.nc"
+
+        chunks = {"x": 2, "y": 1}
+
+        root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
+        set1_data = xr.Dataset({"a": ("y", [-1, 0, 1]), "b": ("x", [-10, 6])})
+        set2_data = xr.Dataset({"a": ("y", [1, 2, 3]), "b": ("x", [0.1, 0.2])})
+        original_tree = DataTree.from_dict(
+            {
+                "/": root_data.chunk(chunks),
+                "/group1": set1_data.chunk(chunks),
+                "/group2": set2_data.chunk(chunks),
+            }
+        )
+        original_tree.to_netcdf(filepath, mode="w")
+
+        dict_of_datasets = open_groups(filepath, engine="netcdf4", chunks=chunks)
+
+        for path, ds in dict_of_datasets.items():
+            assert {
+                k: max(vs) for k, vs in ds.chunksizes.items()
+            } == chunks, f"unexpected chunking for {path}"
+
+        for ds in dict_of_datasets.values():
+            ds.close()
+
     def test_open_groups_to_dict(self, tmpdir) -> None:
         """Create an aligned netCDF4 with the following structure to test `open_groups`
         and `DataTree.from_dict`.
@@ -459,4 +489,34 @@ class TestZarrDatatreeIO:
             assert_identical(unaligned_dict_of_datasets["/Group2"], expected)
 
         for ds in unaligned_dict_of_datasets.values():
+            ds.close()
+
+    def test_open_groups_chunks(self, tmpdir) -> None:
+        """Test `open_groups` with chunks on a zarr store."""
+
+        chunks = {"x": 2, "y": 1}
+        filepath = tmpdir / "test.zarr"
+
+        chunks = {"x": 2, "y": 1}
+
+        root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
+        set1_data = xr.Dataset({"a": ("y", [-1, 0, 1]), "b": ("x", [-10, 6])})
+        set2_data = xr.Dataset({"a": ("y", [1, 2, 3]), "b": ("x", [0.1, 0.2])})
+        original_tree = DataTree.from_dict(
+            {
+                "/": root_data.chunk(chunks),
+                "/group1": set1_data.chunk(chunks),
+                "/group2": set2_data.chunk(chunks),
+            }
+        )
+        original_tree.to_zarr(filepath, mode="w")
+
+        dict_of_datasets = open_groups(filepath, engine="zarr", chunks=chunks)
+
+        for path, ds in dict_of_datasets.items():
+            assert {
+                k: max(vs) for k, vs in ds.chunksizes.items()
+            } == chunks, f"unexpected chunking for {path}"
+
+        for ds in dict_of_datasets.values():
             ds.close()
