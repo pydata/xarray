@@ -44,6 +44,13 @@ New Features
   `Ryan Abernathey <https://github.com/rabernat>`_ and
   `Joe Hamman <https://github.com/jhamman>`_.
 
+Performance
+~~~~~~~~~~~
+
+- Small optimizations to help reduce indexing speed of datasets (:pull:`9003`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
+
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
