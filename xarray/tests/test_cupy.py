@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.tests import requires_dask, requires_nested_duck_arrays
 
 cp = pytest.importorskip("cupy")
 
@@ -58,5 +59,24 @@ def test_where() -> None:
     data = cp.zeros(10)
 
     output = where(data < 1, 1, data).all()
+    assert output
+    assert isinstance(output, cp.ndarray)
+
+
+@requires_nested_duck_arrays
+@requires_dask
+def test_where_dask() -> None:
+    import dask.array as da
+    import nested_duck_arrays.dask  # noqa: F401
+
+    from xarray.core.duck_array_ops import where
+
+    data = cp.zeros(10)
+    chunked = da.from_array(data, chunks=(2,))
+
+    chunked_output = where(chunked < 1, 1, chunked).all()
+    assert isinstance(chunked_output, da.Array)
+
+    output = chunked_output.compute()
     assert output
     assert isinstance(output, cp.ndarray)
