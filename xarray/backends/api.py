@@ -268,13 +268,7 @@ def _protect_dataset_variables_inplace(dataset, cache):
 
 def _protect_datatree_variables_inplace(tree, cache):
     for node in tree.subtree:
-        for name, variable in node.variables.items():
-            if name not in node._indexes:
-                # no need to protect IndexVariable objects
-                data = indexing.CopyOnWriteArray(variable._data)
-                if cache:
-                    data = indexing.MemoryCachedArray(data)
-                variable.data = data
+        _protect_dataset_variables_inplace(node, cache)
 
 
 def _finalize_store(write, store):
