@@ -255,7 +255,10 @@ def as_compatible_data(
 
     # we don't want nested self-described arrays
     if isinstance(data, pd.Series | pd.DataFrame):
-        pandas_data = data.array
+        if isinstance(data, pd.Series):
+            pandas_data = data.array
+        else:
+            pandas_data = data.values
         if isinstance(pandas_data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
             return convert_non_numpy_type(pandas_data)
         else:
