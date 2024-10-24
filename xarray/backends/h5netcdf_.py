@@ -494,12 +494,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             driver_kwds=driver_kwds,
             **kwargs,
         )
-        if group:
-            dt = datatree_from_dict_with_io_cleanup(groups_dict)
-            dt.encoding["source_group"] = group
-            return dt
-        else:
-            return datatree_from_dict_with_io_cleanup(groups_dict)
+
+        return datatree_from_dict_with_io_cleanup(groups_dict)
 
     def open_groups_as_dict(
         self,
