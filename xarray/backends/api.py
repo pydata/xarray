@@ -256,7 +256,7 @@ def _get_mtime(filename_or_obj):
     return mtime
 
 
-def _protect_dataset_variables_inplace(dataset, cache):
+def _protect_dataset_variables_inplace(dataset: Dataset, cache: bool) -> None:
     for name, variable in dataset.variables.items():
         if name not in dataset._indexes:
             # no need to protect IndexVariable objects
