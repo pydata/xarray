@@ -1987,8 +1987,9 @@ class DataTree(
     @property
     def chunksizes(self) -> Mapping[str, Mapping[Hashable, tuple[int, ...]]]:
         """
-        Mapping from group paths to a mapping of dimension names to block lengths for this datatree's data, or None if
-        the underlying data is not a dask array.
+        Mapping from group paths to a mapping of chunksizes.
+
+        If there's no chunked data in a group, the corresponding mapping of chunksizes will be empty.
 
         Cannot be modified directly, but can be modified by calling .chunk().
 
