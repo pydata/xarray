@@ -363,6 +363,7 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
                 == original_dt[group].dataset["b"].values
             )
 
+
 @requires_h5netcdf
 class TestH5NetCDFDatatreeIO(DatatreeIOBase):
     engine: T_DataTreeNetcdfEngine | None = "h5netcdf"
