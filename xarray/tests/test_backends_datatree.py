@@ -343,12 +343,11 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         group = "/set1"
         original_dt = simple_datatree
         original_dt.to_netcdf(filepath)
-
+        expected_subtree = original_dt[group].copy()
+        expected_subtree.orphan()
         with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
-            assert subgroup_tree is not None
             assert subgroup_tree.root.parent is None
-            assert list(subgroup_tree.children) == list(original_dt[group].children)
-            assert_equal(subgroup_tree.dataset, original_dt[group].dataset)
+            assert_equal(subgroup_tree, expected_subtree)
 
 
 @requires_h5netcdf
@@ -521,12 +520,11 @@ class TestZarrDatatreeIO:
         group = "/set2"
         original_dt = simple_datatree
         original_dt.to_zarr(filepath)
-
+        expected_subtree = original_dt[group].copy()
+        expected_subtree.orphan()
         with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
-            assert subgroup_tree is not None
             assert subgroup_tree.root.parent is None
-            assert list(subgroup_tree.children) == list(original_dt[group].children)
-            assert_equal(subgroup_tree.dataset, original_dt[group].dataset)
+            assert_equal(subgroup_tree, expected_subtree)
 
     @requires_dask
     def test_open_groups_chunks(self, tmpdir) -> None:
