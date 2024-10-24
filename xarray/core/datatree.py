@@ -1998,9 +1998,12 @@ class DataTree(
         DataTree.chunk
         Dataset.chunksizes
         """
-        return {
-            node.path: get_chunksizes(node.variables.values()) for node in self.subtree
-        }
+        return Frozen(
+            {
+                node.path: get_chunksizes(node.variables.values())
+                for node in self.subtree
+            }
+        )
 
     def chunk(
         self,
