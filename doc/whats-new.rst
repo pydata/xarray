@@ -32,7 +32,6 @@ New Features
   `Tom Nicholas <https://github.com/TomNicholas>`_,
   `Justus Magin <https://github.com/keewis>`_, and
   `Alfonso Ladino <https://github.com/aladinor>`_.
-
 - A migration guide for users of the prototype `xarray-contrib/datatree repository <https://github.com/xarray-contrib/datatree>`_ has been added, and can be found in the `DATATREE_MIGRATION_GUIDE.md` file in the repository root.
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
