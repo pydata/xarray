@@ -266,7 +266,7 @@ def _protect_dataset_variables_inplace(dataset, cache):
             variable.data = data
 
 
-def _protect_datatree_variables_inplace(tree, cache):
+def _protect_datatree_variables_inplace(tree: DataTree, cache: bool) -> None:
     for node in tree.subtree:
         _protect_dataset_variables_inplace(node, cache)
 
