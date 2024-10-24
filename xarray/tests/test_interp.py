@@ -180,7 +180,6 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
                 da[dim], obj.data, axis=obj.get_axis_num(dim), **scipy_kwargs
             )(new_x).reshape(shape)
         else:
-
             return scipy.interpolate.interp1d(
                 da[dim],
                 obj.data,

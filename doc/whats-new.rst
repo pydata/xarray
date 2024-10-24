@@ -23,13 +23,17 @@ New Features
 ~~~~~~~~~~~~
 - ``DataTree`` related functionality is now exposed in the main ``xarray`` public
   API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``, ``xarray.open_groups``,
-  ``xarray.map_over_datasets``, ``xarray.register_datatree_accessor`` and
-  ``xarray.testing.assert_isomorphic``.
+  ``xarray.map_over_datasets``, ``xarray.group_subtrees``,
+  ``xarray.register_datatree_accessor`` and ``xarray.testing.assert_isomorphic``.
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_,
   `Eni Awowale <https://github.com/eni-awowale>`_,
   `Matt Savoie <https://github.com/flamingbear>`_,
-  `Stephan Hoyer <https://github.com/shoyer>`_ and
-  `Tom Nicholas <https://github.com/TomNicholas>`_.
+  `Stephan Hoyer <https://github.com/shoyer>`_,
+  `Tom Nicholas <https://github.com/TomNicholas>`_,
+  `Justus Magin <https://github.com/keewis>`_, and
+  `Alfonso Ladino <https://github.com/aladinor>`_.
+- A migration guide for users of the prototype `xarray-contrib/datatree repository <https://github.com/xarray-contrib/datatree>`_ has been added, and can be found in the `DATATREE_MIGRATION_GUIDE.md` file in the repository root.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
   By `Eni Awowale <https://github.com/eni-awowale>`_.
 - Added support for vectorized interpolation using additional interpolators
@@ -37,6 +41,10 @@ New Features
   By `Holly Mandel <https://github.com/hollymandel>`_.
 - Implement handling of complex numbers (netcdf4/h5netcdf) and enums (h5netcdf) (:issue:`9246`, :issue:`3297`, :pull:`9509`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Support for Zarr-Python 3 (:issue:`95515`, :pull:`9552`).
+  By `Tom Augspurger <https://github.com/TomAugspurger>`_,
+  `Ryan Abernathey <https://github.com/rabernat>`_ and
+  `Joe Hamman <https://github.com/jhamman>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -61,11 +69,13 @@ Bug fixes
   the non-missing times could in theory be encoded with integers
   (:issue:`9488`, :pull:`9497`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
-- Fix a few bugs affecting groupby reductions with `flox`. (:issue:`8090`, :issue:`9398`).
+- Fix a few bugs affecting groupby reductions with `flox`. (:issue:`8090`, :issue:`9398`, :issue:`9648`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix the safe_chunks validation option on the to_zarr method
   (:issue:`5511`, :pull:`9559`). By `Joseph Nowak
   <https://github.com/josephnowak>`_.
+- Fix binning by multiple variables where some bins have no observations. (:issue:`9630`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~

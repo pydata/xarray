@@ -16,6 +16,7 @@ from xarray.backends.common import (
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
+    datatree_from_dict_with_io_cleanup,
     find_root_and_group,
     robust_getitem,
 )
@@ -710,9 +711,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         autoclose=False,
         **kwargs,
     ) -> DataTree:
-
-        from xarray.core.datatree import DataTree
-
         groups_dict = self.open_groups_as_dict(
             filename_or_obj,
             mask_and_scale=mask_and_scale,
@@ -732,7 +730,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             **kwargs,
         )
 
-        return DataTree.from_dict(groups_dict)
+        return datatree_from_dict_with_io_cleanup(groups_dict)
 
     def open_groups_as_dict(
         self,
@@ -792,7 +790,10 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-            group_name = str(NodePath(path_group))
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
 
         return groups_dict

@@ -725,8 +725,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self,
     ) -> Mapping[_Dim, _Shape]:
         """
-        Mapping from dimension names to block lengths for this namedArray's data, or None if
-        the underlying data is not a dask array.
+        Mapping from dimension names to block lengths for this NamedArray's data.
+
+        If this NamedArray does not contain chunked arrays, the mapping will be empty.
+
         Cannot be modified directly, but can be modified by calling .chunk().
 
         Differs from NamedArray.chunks because it returns a mapping of dimensions to chunk shapes

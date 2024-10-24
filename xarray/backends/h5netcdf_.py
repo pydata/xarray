@@ -13,6 +13,7 @@ from xarray.backends.common import (
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
+    datatree_from_dict_with_io_cleanup,
     find_root_and_group,
 )
 from xarray.backends.file_manager import CachingFileManager, DummyFileManager
@@ -474,9 +475,6 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         driver_kwds=None,
         **kwargs,
     ) -> DataTree:
-
-        from xarray.core.datatree import DataTree
-
         groups_dict = self.open_groups_as_dict(
             filename_or_obj,
             mask_and_scale=mask_and_scale,
@@ -497,7 +495,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             **kwargs,
         )
 
-        return DataTree.from_dict(groups_dict)
+        return datatree_from_dict_with_io_cleanup(groups_dict)
 
     def open_groups_as_dict(
         self,
@@ -520,7 +518,6 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         driver_kwds=None,
         **kwargs,
     ) -> dict[str, Dataset]:
-
         from xarray.backends.common import _iter_nc_groups
         from xarray.core.treenode import NodePath
         from xarray.core.utils import close_on_error
@@ -560,7 +557,10 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
                     decode_timedelta=decode_timedelta,
                 )
 
-            group_name = str(NodePath(path_group))
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
 
         return groups_dict

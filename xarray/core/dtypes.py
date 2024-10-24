@@ -7,6 +7,7 @@ import numpy as np
 from pandas.api.types import is_extension_array_dtype
 
 from xarray.core import array_api_compat, npcompat, utils
+from xarray.core.npcompat import HAS_STRING_DTYPE
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject("<NA>")
@@ -61,7 +62,12 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     # N.B. these casting rules should match pandas
     dtype_: np.typing.DTypeLike
     fill_value: Any
-    if isdtype(dtype, "real floating"):
+    if HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):  # type: ignore[attr-defined]
+        # for now, we always promote string dtypes to object for consistency with existing behavior
+        # TODO: refactor this once we have a better way to handle numpy vlen-string dtypes
+        dtype_ = object
+        fill_value = np.nan
+    elif isdtype(dtype, "real floating"):
         dtype_ = dtype
         fill_value = np.nan
     elif np.issubdtype(dtype, np.timedelta64):
