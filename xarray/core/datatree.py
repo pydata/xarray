@@ -1936,7 +1936,7 @@ class DataTree(
             for path, node in lazy_data.items()
             for var_name, array in node.items()
         }
-        if lazy_data:
+        if flat_lazy_data:
             chunkmanager = get_chunked_array_type(*flat_lazy_data.values())
 
             # evaluate all the chunked arrays simultaneously

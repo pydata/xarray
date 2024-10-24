@@ -2229,9 +2229,9 @@ class TestDask:
         ds3 = xr.Dataset({"c": ("z", np.arange(4))})
         ds4 = xr.Dataset({"d": ("x", np.arange(-5, 5))})
 
-        expected = xr.DataTree.from_dict(
-            {"/": ds1, "/group1": ds2, "/group2": ds3, "/group1/subgroup1": ds4}
-        )
+        groups = {"/": ds1, "/group1": ds2, "/group2": ds3, "/group1/subgroup1": ds4}
+
+        expected = xr.DataTree.from_dict(groups)
         tree = xr.DataTree.from_dict(
             {
                 "/": ds1.chunk({"x": 5}),
@@ -2246,6 +2246,12 @@ class TestDask:
 
         assert_identical(actual, expected)
         assert tree.chunksizes == expected_chunksizes
+        assert actual.chunksizes == expected_chunksizes
+
+        tree = xr.DataTree.from_dict(groups)
+        actual = tree.load()
+        assert_identical(actual, expected)
+        assert actual.chunksizes == expected_chunksizes
 
     def test_compute(self):
         ds1 = xr.Dataset({"a": ("x", np.arange(10))})
