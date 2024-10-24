@@ -17,7 +17,7 @@ from xarray.namedarray.parallelcompat import (
     list_chunkmanagers,
     load_chunkmanagers,
 )
-from xarray.tests import has_dask, requires_dask
+from xarray.tests import requires_dask
 
 
 class DummyChunkedArray(np.ndarray):
@@ -158,7 +158,9 @@ class TestGetChunkManager:
             chunkmanager = guess_chunkmanager(None)
             assert isinstance(chunkmanager, DummyChunkManager)
 
-    def test_fail_on_nonexistent_chunkmanager(self) -> None:
+    def test_fail_on_nonexistent_chunkmanager(
+        self, register_dummy_chunkmanager
+    ) -> None:
         with pytest.raises(ValueError, match="unrecognized chunk manager foo"):
             guess_chunkmanager("foo")
 
@@ -167,9 +169,11 @@ class TestGetChunkManager:
         chunkmanager = guess_chunkmanager(None)
         assert isinstance(chunkmanager, DaskManager)
 
-    @pytest.mark.skipif(has_dask, reason="requires dask not to be installed")
-    def test_dont_get_dask_if_not_installed(self) -> None:
-        with pytest.raises(ValueError, match="unrecognized chunk manager dask"):
+    def test_no_chunk_manager_available(self, monkeypatch) -> None:
+        monkeypatch.setattr(
+            "xarray.namedarray.parallelcompat.list_chunkmanagers", lambda: {}
+        )
+        with pytest.raises(ValueError, match="no chunk managers available"):
             guess_chunkmanager("dask")
 
     @requires_dask
