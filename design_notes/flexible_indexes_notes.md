@@ -71,7 +71,7 @@ An `XarrayIndex` subclass must/should/may implement the following properties/met
 - a `data` property to access index's data and map it to coordinate data (see [Section 4](#4-indexvariable))
 - a `__getitem__()` implementation to propagate the index through DataArray/Dataset indexing operations
 - `equals()`, `union()` and `intersection()` methods for data alignment (see [Section 2.6](#26-using-indexes-for-data-alignment))
-- Xarray coordinate getters (see [Section 2.2.4](#224-implicit-coodinates))
+- Xarray coordinate getters (see [Section 2.2.4](#224-implicit-coordinates))
 - a method that may return a new index and that will be called when one of the corresponding coordinates is dropped from the Dataset/DataArray (multi-coordinate indexes)
 - `encode()`/`decode()` methods that would allow storage-agnostic serialization and fast-path reconstruction of the underlying index object(s) (see [Section 2.8](#28-index-encoding))
 - one or more "non-standard" methods or properties that could be leveraged in Xarray 3rd-party extensions like Dataset/DataArray accessors (see [Section 2.7](#27-using-indexes-for-other-purposes))

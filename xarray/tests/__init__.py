@@ -87,6 +87,7 @@ def _importorskip(
 
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
 has_scipy, requires_scipy = _importorskip("scipy")
+has_scipy_ge_1_13, requires_scipy_ge_1_13 = _importorskip("scipy", "1.13")
 with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
@@ -116,6 +117,8 @@ with warnings.catch_warnings():
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
+# TODO: switch to "3" once Zarr V3 is released
+has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "2.99")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg", "0.4.0")
@@ -134,7 +137,7 @@ has_cartopy, requires_cartopy = _importorskip("cartopy")
 has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
-has_pandas_ge_2_2, __ = _importorskip("pandas", "2.2")
+has_pandas_ge_2_2, requires_pandas_ge_2_2 = _importorskip("pandas", "2.2")
 has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0.dev0")
 
 
@@ -148,6 +151,7 @@ requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_numbagg_or_bottleneck, reason="requires numbagg or bottleneck"
 )
 has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
+_, requires_flox_0_9_12 = _importorskip("flox", "0.9.12")
 
 has_array_api_strict, requires_array_api_strict = _importorskip("array_api_strict")
 
@@ -182,6 +186,14 @@ def _importorskip_h5netcdf_ros3():
 has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip_h5netcdf_ros3()
 has_netCDF4_1_6_2_or_above, requires_netCDF4_1_6_2_or_above = _importorskip(
     "netCDF4", "1.6.2"
+)
+
+has_h5netcdf_1_4_0_or_above, requires_h5netcdf_1_4_0_or_above = _importorskip(
+    "h5netcdf", "1.4.0.dev"
+)
+
+has_netCDF4_1_7_0_or_above, requires_netCDF4_1_7_0_or_above = _importorskip(
+    "netCDF4", "1.7.0"
 )
 
 # change some global options for tests
@@ -323,8 +335,8 @@ def create_test_data(
         obj["var4"] = (
             "dim1",
             pd.Categorical(
-                np.random.choice(
-                    list(string.ascii_lowercase[: np.random.randint(5)]),
+                rs.choice(
+                    list(string.ascii_lowercase[: rs.randint(1, 5)]),
                     size=dim_sizes[0],
                 )
             ),
@@ -332,7 +344,7 @@ def create_test_data(
     if dim_sizes == _DEFAULT_TEST_DIM_SIZES:
         numbers_values = np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64")
     else:
-        numbers_values = np.random.randint(0, 3, _dims["dim3"], dtype="int64")
+        numbers_values = rs.randint(0, 3, _dims["dim3"], dtype="int64")
     obj.coords["numbers"] = ("dim3", numbers_values)
     obj.encoding = {"foo": "bar"}
     assert_writeable(obj)

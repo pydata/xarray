@@ -10,6 +10,7 @@ import contextlib
 import datetime
 import inspect
 import warnings
+from collections.abc import Callable
 from functools import partial
 from importlib import import_module
 
@@ -17,8 +18,8 @@ import numpy as np
 import pandas as pd
 from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
+from numpy import concatenate as _concatenate
 from numpy import (  # noqa
-    around,  # noqa
     full_like,
     gradient,
     isclose,
@@ -29,7 +30,6 @@ from numpy import (  # noqa
     transpose,
     unravel_index,
 )
-from numpy import concatenate as _concatenate
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 from packaging.version import Version
 from pandas.api.types import is_extension_array_dtype
@@ -122,37 +122,13 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
 # Requires special-casing because pandas won't automatically dispatch to dask.isnull via NEP-18
 pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd, dask_module="dask.array")
 
-# np.around has failing doctests, overwrite it so they pass:
-# https://github.com/numpy/numpy/issues/19759
-around.__doc__ = str.replace(
-    around.__doc__ or "",
-    "array([0.,  2.])",
-    "array([0., 2.])",
-)
-around.__doc__ = str.replace(
-    around.__doc__ or "",
-    "array([0.,  2.])",
-    "array([0., 2.])",
-)
-around.__doc__ = str.replace(
-    around.__doc__ or "",
-    "array([0.4,  1.6])",
-    "array([0.4, 1.6])",
-)
-around.__doc__ = str.replace(
-    around.__doc__ or "",
-    "array([0.,  2.,  2.,  4.,  4.])",
-    "array([0., 2., 2., 4., 4.])",
-)
-around.__doc__ = str.replace(
-    around.__doc__ or "",
-    (
-        '    .. [2] "How Futile are Mindless Assessments of\n'
-        '           Roundoff in Floating-Point Computation?", William Kahan,\n'
-        "           https://people.eecs.berkeley.edu/~wkahan/Mindless.pdf\n"
-    ),
-    "",
-)
+
+def round(array):
+    xp = get_array_namespace(array)
+    return xp.round(array)
+
+
+around: Callable = round
 
 
 def isnull(data):
@@ -475,10 +451,10 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
             try:  # dask/dask#3133 dask sometimes needs dtype argument
                 # if func does not accept dtype, then raises TypeError
                 return func(values, axis=axis, dtype=values.dtype, **kwargs)
-            except (AttributeError, TypeError):
+            except (AttributeError, TypeError) as err:
                 raise NotImplementedError(
                     f"{name} is not yet implemented on dask arrays"
-                )
+                ) from err
 
     f.__name__ = name
     return f
@@ -616,10 +592,10 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
     elif isinstance(value, str):
         try:
             a = pd.to_timedelta(value)
-        except ValueError:
+        except ValueError as err:
             raise ValueError(
                 f"Could not convert {value!r} to timedelta64 using pandas.to_timedelta"
-            )
+            ) from err
         return py_timedelta_to_float(a, datetime_unit)
     else:
         raise TypeError(
@@ -779,7 +755,8 @@ def _push(array, n: int | None = None, axis: int = -1):
 
         if pycompat.mod_version("numbagg") < Version("0.6.2"):
             warnings.warn(
-                f"numbagg >= 0.6.2 is required for bfill & ffill; {pycompat.mod_version('numbagg')} is installed. We'll attempt with bottleneck instead."
+                f"numbagg >= 0.6.2 is required for bfill & ffill; {pycompat.mod_version('numbagg')} is installed. We'll attempt with bottleneck instead.",
+                stacklevel=2,
             )
         else:
             return numbagg.ffill(array, limit=n, axis=axis)

@@ -137,7 +137,11 @@ def test_scipy_methods_function(method) -> None:
     # Note: Pandas does some wacky things with these methods and the full
     # integration tests won't work.
     da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
-    actual = da.interpolate_na(method=method, dim="time")
+    if method == "spline":
+        with pytest.warns(PendingDeprecationWarning):
+            actual = da.interpolate_na(method=method, dim="time")
+    else:
+        actual = da.interpolate_na(method=method, dim="time")
     assert (da.count("time") <= actual.count("time")).all()
 
 
@@ -600,9 +604,8 @@ def test_get_clean_interp_index_cf_calendar(cf_da, calendar):
 
 
 @requires_cftime
-@pytest.mark.parametrize(
-    ("calendar", "freq"), zip(["gregorian", "proleptic_gregorian"], ["1D", "1ME", "1Y"])
-)
+@pytest.mark.parametrize("calendar", ["gregorian", "proleptic_gregorian"])
+@pytest.mark.parametrize("freq", ["1D", "1ME", "1YE"])
 def test_get_clean_interp_index_dt(cf_da, calendar, freq):
     """In the gregorian case, the index should be proportional to normal datetimes."""
     g = cf_da(calendar, freq=freq)

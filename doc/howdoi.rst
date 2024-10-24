@@ -58,7 +58,7 @@ How do I ...
    * - apply a function on all data variables in a Dataset
      - :py:meth:`Dataset.map`
    * - write xarray objects with complex values to a netCDF file
-     - :py:func:`Dataset.to_netcdf`, :py:func:`DataArray.to_netcdf` specifying ``engine="h5netcdf", invalid_netcdf=True``
+     - :py:func:`Dataset.to_netcdf`, :py:func:`DataArray.to_netcdf` specifying ``engine="h5netcdf"`` or :py:func:`Dataset.to_netcdf`, :py:func:`DataArray.to_netcdf` specifying ``engine="netCDF4", auto_complex=True``
    * - make xarray objects look like other xarray objects
      - :py:func:`~xarray.ones_like`, :py:func:`~xarray.zeros_like`, :py:func:`~xarray.full_like`, :py:meth:`Dataset.reindex_like`, :py:meth:`Dataset.interp_like`, :py:meth:`Dataset.broadcast_like`, :py:meth:`DataArray.reindex_like`, :py:meth:`DataArray.interp_like`, :py:meth:`DataArray.broadcast_like`
    * - Make sure my datasets have values at the same coordinate locations

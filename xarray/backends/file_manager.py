@@ -65,7 +65,7 @@ class CachingFileManager(FileManager):
 
     Example usage::
 
-        manager = FileManager(open, 'example.txt', mode='w')
+        manager = FileManager(open, "example.txt", mode="w")
         f = manager.acquire()
         f.write(...)
         manager.close()  # ensures file is closed
@@ -276,7 +276,7 @@ class CachingFileManager(FileManager):
     def __setstate__(self, state) -> None:
         """Restore from a pickle."""
         opener, args, mode, kwargs, lock, manager_id = state
-        self.__init__(  # type: ignore
+        self.__init__(  # type: ignore[misc]
             opener, *args, mode=mode, kwargs=kwargs, lock=lock, manager_id=manager_id
         )
 

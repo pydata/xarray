@@ -3,9 +3,9 @@ from __future__ import annotations
 import functools
 import operator
 from collections import defaultdict
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Callable, Final, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -405,6 +405,7 @@ class Aligner(Generic[T_Alignable]):
                     zip(
                         [joined_index] + matching_indexes,
                         [joined_index_vars] + matching_index_vars,
+                        strict=True,
                     )
                 )
                 need_reindex = self._need_reindex(dims, cmp_indexes)
@@ -412,7 +413,7 @@ class Aligner(Generic[T_Alignable]):
                 if len(matching_indexes) > 1:
                     need_reindex = self._need_reindex(
                         dims,
-                        list(zip(matching_indexes, matching_index_vars)),
+                        list(zip(matching_indexes, matching_index_vars, strict=True)),
                     )
                 else:
                     need_reindex = False
@@ -557,7 +558,7 @@ class Aligner(Generic[T_Alignable]):
         self.results = tuple(
             self._reindex_one(obj, matching_indexes)
             for obj, matching_indexes in zip(
-                self.objects, self.objects_matching_indexes
+                self.objects, self.objects_matching_indexes, strict=True
             )
         )
 
@@ -904,7 +905,7 @@ def deep_align(
         indexes = {}
 
     def is_alignable(obj):
-        return isinstance(obj, (Coordinates, DataArray, Dataset))
+        return isinstance(obj, Coordinates | DataArray | Dataset)
 
     positions: list[int] = []
     keys: list[type[object] | Hashable] = []
@@ -952,7 +953,7 @@ def deep_align(
         fill_value=fill_value,
     )
 
-    for position, key, aligned_obj in zip(positions, keys, aligned):
+    for position, key, aligned_obj in zip(positions, keys, aligned, strict=True):
         if key is no_key:
             out[position] = aligned_obj
         else:

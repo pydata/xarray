@@ -7,14 +7,14 @@ but for now it is just a private experiment.
 from __future__ import annotations
 
 import functools
-import sys
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from importlib.metadata import EntryPoint, entry_points
-from typing import TYPE_CHECKING, Any, Callable, Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 
 import numpy as np
 
+from xarray.core.options import OPTIONS
 from xarray.core.utils import emit_user_level_warning
 from xarray.namedarray.pycompat import is_chunked_array
 
@@ -56,15 +56,8 @@ def list_chunkmanagers() -> dict[str, ChunkManagerEntrypoint[Any]]:
     chunkmanagers : dict
         Dictionary whose values are registered ChunkManagerEntrypoint subclass instances, and whose values
         are the strings under which they are registered.
-
-    Notes
-    -----
-    # New selection mechanism introduced with Python 3.10. See GH6514.
     """
-    if sys.version_info >= (3, 10):
-        entrypoints = entry_points(group="xarray.chunkmanagers")
-    else:
-        entrypoints = entry_points().get("xarray.chunkmanagers", ())
+    entrypoints = entry_points(group="xarray.chunkmanagers")
 
     return load_chunkmanagers(entrypoints)
 
@@ -113,8 +106,8 @@ def guess_chunkmanager(
             # use the only option available
             manager = next(iter(chunkmanagers.keys()))
         else:
-            # default to trying to use dask
-            manager = "dask"
+            # use the one in options (default dask)
+            manager = OPTIONS["chunk_manager"]
 
     if isinstance(manager, str):
         if manager not in chunkmanagers:

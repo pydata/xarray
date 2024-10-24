@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import datetime as dt
 import warnings
-from collections.abc import Hashable, Sequence
+from collections.abc import Callable, Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, Callable, get_args
+from typing import TYPE_CHECKING, Any, get_args
 
 import numpy as np
 import pandas as pd
@@ -138,6 +138,7 @@ class ScipyInterpolator(BaseInterpolator):
         copy=False,
         bounds_error=False,
         order=None,
+        axis=-1,
         **kwargs,
     ):
         from scipy.interpolate import interp1d
@@ -173,6 +174,7 @@ class ScipyInterpolator(BaseInterpolator):
             bounds_error=bounds_error,
             assume_sorted=assume_sorted,
             copy=copy,
+            axis=axis,
             **self.cons_kwargs,
         )
 
@@ -225,7 +227,7 @@ def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
 
 
 def get_clean_interp_index(
-    arr, dim: Hashable, use_coordinate: str | bool = True, strict: bool = True
+    arr, dim: Hashable, use_coordinate: Hashable | bool = True, strict: bool = True
 ):
     """Return index to use for x values in interpolation or curve fitting.
 
@@ -286,7 +288,7 @@ def get_clean_interp_index(
 
     # Special case for non-standard calendar indexes
     # Numerical datetime values are defined with respect to 1970-01-01T00:00:00 in units of nanoseconds
-    if isinstance(index, (CFTimeIndex, pd.DatetimeIndex)):
+    if isinstance(index, CFTimeIndex | pd.DatetimeIndex):
         offset = type(index[0])(1970, 1, 1)
         if isinstance(index, CFTimeIndex):
             index = index.values
@@ -298,13 +300,13 @@ def get_clean_interp_index(
     # raise if index cannot be cast to a float (e.g. MultiIndex)
     try:
         index = index.values.astype(np.float64)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as err:
         # pandas raises a TypeError
         # xarray/numpy raise a ValueError
         raise TypeError(
             f"Index {index.name!r} must be castable to float64 to support "
             f"interpolation or curve fitting, got {type(index).__name__}."
-        )
+        ) from err
 
     return index
 
@@ -338,7 +340,7 @@ def interp_na(
         if (
             dim in self._indexes
             and isinstance(
-                self._indexes[dim].to_pandas_index(), (pd.DatetimeIndex, CFTimeIndex)
+                self._indexes[dim].to_pandas_index(), pd.DatetimeIndex | CFTimeIndex
             )
             and use_coordinate
         ):
@@ -346,7 +348,7 @@ def interp_na(
             max_gap = timedelta_to_numeric(max_gap)
 
         if not use_coordinate:
-            if not isinstance(max_gap, (Number, np.number)):
+            if not isinstance(max_gap, Number | np.number):
                 raise TypeError(
                     f"Expected integer or floating point max_gap since use_coordinate=False. Received {max_type}."
                 )
@@ -479,7 +481,8 @@ def _get_interpolator(
     interp1d_methods = get_args(Interp1dOptions)
     valid_methods = tuple(vv for v in get_args(InterpOptions) for vv in get_args(v))
 
-    # prioritize scipy.interpolate
+    # prefer numpy.interp for 1d linear interpolation. This function cannot
+    # take higher dimensional data but scipy.interp1d can.
     if (
         method == "linear"
         and not kwargs.get("fill_value", None) == "extrapolate"
@@ -492,21 +495,33 @@ def _get_interpolator(
         if method in interp1d_methods:
             kwargs.update(method=method)
             interp_class = ScipyInterpolator
-        elif vectorizeable_only:
-            raise ValueError(
-                f"{method} is not a vectorizeable interpolator. "
-                f"Available methods are {interp1d_methods}"
-            )
         elif method == "barycentric":
+            kwargs.update(axis=-1)
             interp_class = _import_interpolant("BarycentricInterpolator", method)
         elif method in ["krogh", "krog"]:
+            kwargs.update(axis=-1)
             interp_class = _import_interpolant("KroghInterpolator", method)
         elif method == "pchip":
+            kwargs.update(axis=-1)
             interp_class = _import_interpolant("PchipInterpolator", method)
         elif method == "spline":
+            utils.emit_user_level_warning(
+                "The 1d SplineInterpolator class is performing an incorrect calculation and "
+                "is being deprecated. Please use `method=polynomial` for 1D Spline Interpolation.",
+                PendingDeprecationWarning,
+            )
+            if vectorizeable_only:
+                raise ValueError(f"{method} is not a vectorizeable interpolator. ")
             kwargs.update(method=method)
             interp_class = SplineInterpolator
         elif method == "akima":
+            kwargs.update(axis=-1)
+            interp_class = _import_interpolant("Akima1DInterpolator", method)
+        elif method == "makima":
+            kwargs.update(method="makima", axis=-1)
+            interp_class = _import_interpolant("Akima1DInterpolator", method)
+        elif method == "makima":
+            kwargs.update(method="makima", axis=-1)
             interp_class = _import_interpolant("Akima1DInterpolator", method)
         else:
             raise ValueError(f"{method} is not a valid scipy interpolator")
@@ -525,6 +540,7 @@ def _get_interpolator_nd(method, **kwargs):
 
     if method in valid_methods:
         kwargs.update(method=method)
+        kwargs.setdefault("bounds_error", False)
         interp_class = _import_interpolant("interpn", method)
     else:
         raise ValueError(
@@ -614,17 +630,14 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
     if not indexes_coords:
         return var.copy()
 
-    # default behavior
-    kwargs["bounds_error"] = kwargs.get("bounds_error", False)
-
     result = var
     # decompose the interpolation into a succession of independent interpolation
-    for indexes_coords in decompose_interp(indexes_coords):
+    for indep_indexes_coords in decompose_interp(indexes_coords):
         var = result
 
         # target dimensions
-        dims = list(indexes_coords)
-        x, new_x = zip(*[indexes_coords[d] for d in dims])
+        dims = list(indep_indexes_coords)
+        x, new_x = zip(*[indep_indexes_coords[d] for d in dims], strict=True)
         destination = broadcast_variables(*new_x)
 
         # transpose to make the interpolated axis to the last position
@@ -641,7 +654,7 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
         out_dims: OrderedSet = OrderedSet()
         for d in var.dims:
             if d in dims:
-                out_dims.update(indexes_coords[d][1].dims)
+                out_dims.update(indep_indexes_coords[d][1].dims)
             else:
                 out_dims.add(d)
         if len(out_dims) > 1:
@@ -663,8 +676,8 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
     new_x : a list of 1d array
         New coordinates. Should not contain NaN.
     method : string
-        {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'} for
-        1-dimensional interpolation.
+        {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'pchip', 'akima',
+            'makima', 'barycentric', 'krogh'} for 1-dimensional interpolation.
         {'linear', 'nearest'} for multidimensional interpolation
     **kwargs
         Optional keyword arguments to be passed to scipy.interpolator
@@ -710,7 +723,9 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
 
         _, rechunked = chunkmanager.unify_chunks(*args)
 
-        args = tuple(elem for pair in zip(rechunked, args[1::2]) for elem in pair)
+        args = tuple(
+            elem for pair in zip(rechunked, args[1::2], strict=True) for elem in pair
+        )
 
         new_x = rechunked[1 + (len(rechunked) - 1) // 2 :]
 
@@ -754,7 +769,7 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
 def _interp1d(var, x, new_x, func, kwargs):
     # x, new_x are tuples of size 1.
     x, new_x = x[0], new_x[0]
-    rslt = func(x, var, assume_sorted=True, **kwargs)(np.ravel(new_x))
+    rslt = func(x, var, **kwargs)(np.ravel(new_x))
     if new_x.ndim > 1:
         return reshape(rslt, (var.shape[:-1] + new_x.shape))
     if new_x.ndim == 0:
@@ -798,11 +813,13 @@ def _chunked_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=T
         # _localize expect var to be a Variable
         var = Variable([f"dim_{dim}" for dim in range(len(var.shape))], var)
 
-        indexes_coords = {_x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x)}
+        indexes_coords = {
+            _x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x, strict=True)
+        }
 
         # simple speed up for the local interpolation
         var, indexes_coords = _localize(var, indexes_coords)
-        x, new_x = zip(*[indexes_coords[d] for d in indexes_coords])
+        x, new_x = zip(*[indexes_coords[d] for d in indexes_coords], strict=True)
 
         # put var back as a ndarray
         var = var.data

@@ -9,7 +9,6 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -20,17 +19,22 @@ dynamic = ["version"]
 license = {text = "Apache-2.0"}
 name = "xarray"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 dependencies = [
-  "numpy>=1.23",
+  "numpy>=1.24",
   "packaging>=23.1",
-  "pandas>=2.0",
+  "pandas>=2.1",
 ]
 
+# We don't encode minimum requirements here (though if we can write a script to
+# generate the text from `min_deps_check.py`, that's welcome...). We do add
+# `numba>=0.54` here because of https://github.com/astral-sh/uv/issues/7881;
+# note that it's not a direct dependency of xarray.
+
 [project.optional-dependencies]
-accel = ["scipy", "bottleneck", "numbagg", "flox", "opt_einsum"]
-complete = ["xarray[accel,io,parallel,viz,dev]"]
+accel = ["scipy", "bottleneck", "numbagg", "numba>=0.54", "flox", "opt_einsum"]
+complete = ["xarray[accel,etc,io,parallel,viz]"]
 dev = [
   "hypothesis",
   "mypy",
@@ -41,11 +45,14 @@ dev = [
   "pytest-xdist",
   "pytest-timeout",
   "ruff",
+  "sphinx",
+  "sphinx_autosummary_accessors",
   "xarray[complete]",
 ]
 io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
+etc = ["sparse"]
 parallel = ["dask[complete]"]
-viz = ["matplotlib", "seaborn", "nc-time-axis"]
+viz = ["cartopy", "matplotlib", "nc-time-axis", "seaborn"]
 
 [project.urls]
 Documentation = "https://docs.xarray.dev"
@@ -85,14 +92,12 @@ source = ["xarray"]
 exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 
 [tool.mypy]
-enable_error_code = "redundant-self"
+enable_error_code = ["ignore-without-code", "redundant-self", "redundant-expr"]
 exclude = [
   'build',
   'xarray/util/generate_.*\.py',
-  'xarray/datatree_/doc/.*\.py',
 ]
 files = "xarray"
-show_error_codes = true
 show_error_context = true
 warn_redundant_casts = true
 warn_unused_configs = true
@@ -119,6 +124,7 @@ module = [
   "nc_time_axis.*",
   "netCDF4.*",
   "netcdftime.*",
+  "numcodecs.*",
   "opt_einsum.*",
   "pint.*",
   "pooch.*",
@@ -209,44 +215,26 @@ warn_return_any = true
 
 module = ["xarray.namedarray.*", "xarray.tests.test_namedarray"]
 
-[tool.pyright]
-# include = ["src"]
-# exclude = ["**/node_modules",
-# "**/__pycache__",
-# "src/experimental",
-# "src/typestubs"
-# ]
-# ignore = ["src/oldstuff"]
-defineConstant = {DEBUG = true}
-# stubPath = "src/stubs"
-# venv = "env367"
+# We disable pyright here for now, since including it means that all errors show
+# up in devs' VS Code, which then makes it more difficult to work with actual
+# errors. It overrides local VS Code settings so isn't escapable.
 
-# Enabling this means that developers who have disabled the warning locally —
-# because not all dependencies are installable — are overridden
-# reportMissingImports = true
-reportMissingTypeStubs = false
-
-# pythonVersion = "3.6"
-# pythonPlatform = "Linux"
-
-# executionEnvironments = [
-# { root = "src/web", pythonVersion = "3.5", pythonPlatform = "Windows", extraPaths = [ "src/service_libs" ] },
-# { root = "src/sdk", pythonVersion = "3.0", extraPaths = [ "src/backend" ] },
-# { root = "src/tests", extraPaths = ["src/tests/e2e", "src/sdk" ]},
-# { root = "src" }
-# ]
+# [tool.pyright]
+# defineConstant = {DEBUG = true}
+# # Enabling this means that developers who have disabled the warning locally —
+# # because not all dependencies are installable — are overridden
+# # reportMissingImports = true
+# reportMissingTypeStubs = false
 
 [tool.ruff]
-builtins = ["ellipsis"]
 extend-exclude = [
   "doc",
   "_typed_ops.pyi",
 ]
-target-version = "py39"
 
 [tool.ruff.lint]
 # E402: module level import not at top of file
-# E501: line too long - let black worry about that
+# E501: line too long - let the formatter worry about that
 # E731: do not assign a lambda expression, use a def
 extend-safe-fixes = [
   "TID252", # absolute imports
@@ -255,8 +243,10 @@ ignore = [
   "E402",
   "E501",
   "E731",
+  "UP007",
 ]
-select = [
+extend-select = [
+  "B", # flake8-bugbear
   "F", # Pyflakes
   "E", # Pycodestyle
   "W",
@@ -326,7 +316,6 @@ filterwarnings = [
   "default:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
   "default:Duplicate dimension names present:UserWarning:xarray.namedarray.core",
   "default:::xarray.tests.test_strategies", # TODO: remove once we know how to deal with a changed signature in protocols
-  "ignore:__array__ implementation doesn't accept a copy keyword, so passing copy=False failed.",
 ]
 
 log_cli_level = "INFO"
