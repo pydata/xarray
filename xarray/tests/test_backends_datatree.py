@@ -242,22 +242,16 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
 
     def test_open_datatree_specific_group(self, tmpdir, simple_datatree) -> None:
         """Test opening a specific group within a NetCDF file using `open_datatree`."""
-        # Open the specific group '/Group1/subgroup1' and check if it loads correctly
         filepath = tmpdir / "test.nc"
         group = "/set1"
         original_dt = simple_datatree
         original_dt.to_netcdf(filepath)
 
         with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
-            # Check that the subtree is not None
             assert subgroup_tree is not None
-            # Check the expected number of children within node
             assert list(subgroup_tree.children) == list(original_dt[group].children)
-            # Check the dimensions of the group '/set1'
             assert len(subgroup_tree.dataset.dims) == len(original_dt[group].dataset.dims)
-            # Check if the variables in this "set1" group are correctly read
             assert list(subgroup_tree.dataset.data_vars) == list(original_dt[group].dataset.data_vars)
-            # Check the values of the variables 'a' and 'b'
             assert subgroup_tree.dataset["a"].values == original_dt[group].dataset["a"].values
             assert subgroup_tree.dataset["b"].values == original_dt[group].dataset["b"].values
 
@@ -423,14 +417,9 @@ class TestZarrDatatreeIO:
         original_dt.to_zarr(filepath)
 
         with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
-            # Check that the subtree is not None
             assert subgroup_tree is not None
-            # Check the expected number of children within node
             assert list(subgroup_tree.children) == list(original_dt[group].children)
-            # Check the dimensions of the group '/set2'
             assert len(subgroup_tree.dataset.dims) == len(original_dt[group].dataset.dims)
-            # Check if the variables in this "set2" group are correctly read
             assert list(subgroup_tree.dataset.data_vars) == list(original_dt[group].dataset.data_vars)
-            # Check the values of the variables 'a' and 'b'
             assert_equal(subgroup_tree.dataset["a"], original_dt[group].dataset["a"])
             assert_equal(subgroup_tree.dataset["b"], original_dt[group].dataset["b"])
