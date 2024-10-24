@@ -196,6 +196,24 @@ class DatatreeIOBase:
             with pytest.raises(ValueError, match="unexpected encoding group.*"):
                 original_dt.to_netcdf(filepath, encoding=enc, engine=self.engine)
 
+    def test_write_subgroup(self, tmpdir):
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2, 3]}),
+                "/child": xr.Dataset({"foo": ("x", [4, 5, 6])}),
+            }
+        ).children["child"]
+
+        expected_dt = original_dt.copy()
+        expected_dt.name = None
+
+        filepath = tmpdir / "test.zarr"
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        with open_datatree(filepath, engine=self.engine) as roundtrip_dt:
+            assert_equal(original_dt, roundtrip_dt)
+            assert_identical(expected_dt, roundtrip_dt)
+
 
 @requires_netCDF4
 class TestNetCDF4DatatreeIO(DatatreeIOBase):
@@ -532,3 +550,21 @@ class TestZarrDatatreeIO:
 
         for ds in dict_of_datasets.values():
             ds.close()
+
+    def test_write_subgroup(self, tmpdir):
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2, 3]}),
+                "/child": xr.Dataset({"foo": ("x", [4, 5, 6])}),
+            }
+        ).children["child"]
+
+        expected_dt = original_dt.copy()
+        expected_dt.name = None
+
+        filepath = tmpdir / "test.zarr"
+        original_dt.to_zarr(filepath)
+
+        with open_datatree(filepath, engine="zarr") as roundtrip_dt:
+            assert_equal(original_dt, roundtrip_dt)
+            assert_identical(expected_dt, roundtrip_dt)
