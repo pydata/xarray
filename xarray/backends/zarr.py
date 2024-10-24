@@ -1010,10 +1010,7 @@ class ZarrStore(AbstractWritableDataStore):
 
                     new_shape = list(zarr_array.shape)
                     new_shape[append_axis] += v.shape[append_axis]
-                    if _zarr_v3():
-                        zarr_array = zarr_array.resize(new_shape)
-                    else:
-                        zarr_array.resize(new_shape)
+                    zarr_array.resize(new_shape)
 
                 zarr_shape = zarr_array.shape
 
