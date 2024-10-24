@@ -158,7 +158,9 @@ class TestGetChunkManager:
             chunkmanager = guess_chunkmanager(None)
             assert isinstance(chunkmanager, DummyChunkManager)
 
-    def test_fail_on_nonexistent_chunkmanager(self) -> None:
+    def test_fail_on_nonexistent_chunkmanager(
+        self, register_dummy_chunkmanager
+    ) -> None:
         with pytest.raises(ValueError, match="unrecognized chunk manager foo"):
             guess_chunkmanager("foo")
 
