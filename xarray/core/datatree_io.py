@@ -20,6 +20,7 @@ def _datatree_to_netcdf(
     format: T_DataTreeNetcdfTypes | None = None,
     engine: T_DataTreeNetcdfEngine | None = None,
     group: str | None = None,
+    write_inherited_coords: bool = True,
     compute: bool = True,
     **kwargs,
 ):
@@ -59,7 +60,7 @@ def _datatree_to_netcdf(
 
     for node in dt.subtree:
         at_root = node is dt
-        ds = node.to_dataset(inherit=at_root)
+        ds = node.to_dataset(inherit=write_inherited_coords or at_root)
         group_path = None if at_root else "/" + node.relative_to(dt)
         ds.to_netcdf(
             filepath,
@@ -82,6 +83,7 @@ def _datatree_to_zarr(
     encoding: Mapping[str, Any] | None = None,
     consolidated: bool = True,
     group: str | None = None,
+    write_inherited_coords: bool = True,
     compute: Literal[True] = True,
     **kwargs,
 ):
@@ -114,7 +116,7 @@ def _datatree_to_zarr(
 
     for node in dt.subtree:
         at_root = node is dt
-        ds = node.to_dataset(inherit=at_root)
+        ds = node.to_dataset(inherit=write_inherited_coords or at_root)
         group_path = None if at_root else "/" + node.relative_to(dt)
         ds.to_zarr(
             store,
