@@ -545,8 +545,7 @@ class TestZarrDatatreeIO:
             assert list(subgroup_tree.dataset.data_vars) == list(
                 original_dt[group].dataset.data_vars
             )
-            assert_equal(subgroup_tree.dataset["a"], original_dt[group].dataset["a"])
-            assert_equal(subgroup_tree.dataset["b"], original_dt[group].dataset["b"])
+            assert_equal(subgroup_tree.dataset, original_dt[group].dataset)
 
     @requires_dask
     def test_open_groups_chunks(self, tmpdir) -> None:
