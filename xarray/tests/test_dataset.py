@@ -4947,7 +4947,7 @@ class TestDataset:
         )
         ser = pd.Series(1, index=cat)
         ds = ser.to_xarray()
-        assert ds.coords.dtypes["index"] == np.dtype("O")
+        assert ds.coords.dtypes["index"] == ser.index.dtype
 
     @requires_sparse
     def test_from_dataframe_sparse(self) -> None:
