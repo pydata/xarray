@@ -864,9 +864,9 @@ class DataTree(
     ) -> Self:
         """Copy just one node of a tree."""
         new_node = super()._copy_node(inherit=inherit, deep=deep, memo=memo)
-        data = self._to_dataset_view(rebuild_dims=False, inherit=inherit)
-        if deep:
-            data = data._copy(deep=True, memo=memo)
+        data = self._to_dataset_view(rebuild_dims=False, inherit=inherit)._copy(
+            deep=deep, memo=memo
+        )
         new_node._set_node_data(data)
         return new_node
 
