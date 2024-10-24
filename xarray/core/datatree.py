@@ -1985,7 +1985,7 @@ class DataTree(
         return new.load(**kwargs)
 
     @property
-    def chunksizes(self) -> Mapping[Hashable, tuple[int, ...]]:
+    def chunksizes(self) -> Mapping[str, Mapping[Hashable, tuple[int, ...]]]:
         """
         Mapping from group paths to a mapping of dimension names to block lengths for this dataset's data, or None if
         the underlying data is not a dask array.
