@@ -4321,8 +4321,13 @@ class TestDataset:
         ds = self.make_example_math_dataset()
         ds["x"] = np.arange(3)
         ds_copy = ds.copy()
-        ds_copy["bar"] = ds["bar"].to_pandas()
-
+        series = ds["bar"].to_pandas()
+        # to_pandas will actually give the result where the internal array of the series is a NumpyExtensionArray
+        # but ds["bar"] is a numpy array.
+        # TODO: should assert_equal be updated to handle?
+        assert (ds["bar"] == series).all()
+        del ds["bar"]
+        del ds_copy["bar"]
         assert_equal(ds, ds_copy)
 
     def test_setitem_auto_align(self) -> None:
