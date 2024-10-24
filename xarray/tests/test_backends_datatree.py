@@ -28,7 +28,7 @@ except ImportError:
 have_zarr_v3 = xr.backends.zarr._zarr_v3()
 
 
-def diff_chunks(comparison, tree1, tree2):
+def diff_chunks(comparison: dict[tuple[str, str], bool]], tree1: DataTree, tree2: DataTree) -> str:
     mismatching_variables = [loc for loc, equals in comparison.items() if not equals]
 
     variable_messages = [
@@ -43,7 +43,7 @@ def diff_chunks(comparison, tree1, tree2):
     return "\n".join(["Differing chunk sizes:"] + variable_messages)
 
 
-def assert_chunks_equal(actual, expected, enforce_dask=False):
+def assert_chunks_equal(actual: DataTree, expected: DataTree, enforce_dask: bool = False) -> None:
     __tracebackhide__ = True
 
     from xarray.namedarray.pycompat import array_type
