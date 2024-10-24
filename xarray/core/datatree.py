@@ -18,7 +18,7 @@ from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
 from xarray.core._typed_ops import DataTreeOpsMixin
 from xarray.core.alignment import align
-from xarray.core.common import TreeAttrAccessMixin
+from xarray.core.common import TreeAttrAccessMixin, get_chunksizes
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, DataVariables
@@ -1979,3 +1979,21 @@ class DataTree(
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
+
+    @property
+    def chunksizes(self) -> Mapping[Hashable, tuple[int, ...]]:
+        """
+        Mapping from group paths to a mapping of dimension names to block lengths for this dataset's data, or None if
+        the underlying data is not a dask array.
+
+        Cannot be modified directly, but can be modified by calling .chunk().
+
+        See Also
+        --------
+        DataTree.chunk
+        Dataset.chunksizes
+        """
+        return {
+            f"/{path}" if path != "." else "/": get_chunksizes(node.variables.values())
+            for path, node in self.subtree_with_keys
+        }
