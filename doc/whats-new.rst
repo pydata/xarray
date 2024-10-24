@@ -74,8 +74,6 @@ Bug fixes
   <https://github.com/josephnowak>`_.
 - Fix binning by multiple variables where some bins have no observations. (:issue:`9630`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Fix bug with `open_datatree(group='some_subgroup')` returning empty parent nodes. (:issue:`9665`, :pull:`9666`)
-  by `Alfonso Ladino <https://github.com/aladinor>`_.
 
 Documentation
 ~~~~~~~~~~~~~
