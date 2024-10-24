@@ -2204,6 +2204,25 @@ class TestClose:
 
 @requires_dask
 class TestDask:
+    def test_chunksizes(self):
+        ds1 = xr.Dataset({"a": ("x", np.arange(10))})
+        ds2 = xr.Dataset({"b": ("y", np.arange(5))})
+        ds3 = xr.Dataset({"c": ("z", np.arange(4))})
+        ds4 = xr.Dataset({"d": ("x", np.arange(-5, 5))})
+
+        groups = {
+            "/": ds1.chunk({"x": 5}),
+            "/group1": ds2.chunk({"y": 3}),
+            "/group2": ds3.chunk({"z": 2}),
+            "/group1/subgroup1": ds4.chunk({"x": 5}),
+        }
+
+        tree = xr.DataTree.from_dict(groups)
+
+        expected_chunksizes = {path: node.chunksizes for path, node in groups.items()}
+
+        assert tree.chunksizes == expected_chunksizes
+
     def test_load(self):
         ds1 = xr.Dataset({"a": ("x", np.arange(10))})
         ds2 = xr.Dataset({"b": ("y", np.arange(5))})
