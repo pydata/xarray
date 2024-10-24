@@ -347,10 +347,20 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
             assert subgroup_tree is not None
             assert list(subgroup_tree.children) == list(original_dt[group].children)
-            assert len(subgroup_tree.dataset.dims) == len(original_dt[group].dataset.dims)
-            assert list(subgroup_tree.dataset.data_vars) == list(original_dt[group].dataset.data_vars)
-            assert subgroup_tree.dataset["a"].values == original_dt[group].dataset["a"].values
-            assert subgroup_tree.dataset["b"].values == original_dt[group].dataset["b"].values
+            assert len(subgroup_tree.dataset.dims) == len(
+                original_dt[group].dataset.dims
+            )
+            assert list(subgroup_tree.dataset.data_vars) == list(
+                original_dt[group].dataset.data_vars
+            )
+            assert (
+                subgroup_tree.dataset["a"].values
+                == original_dt[group].dataset["a"].values
+            )
+            assert (
+                subgroup_tree.dataset["b"].values
+                == original_dt[group].dataset["b"].values
+            )
 
     def test_open_datatree_nonexistent_group(self, tmpdir, simple_datatree) -> None:
         """Test `open_datatree` behavior when attempting to open a non-existent group."""
@@ -361,7 +371,6 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         # Attempt to open a non-existent group, which should raise a ValueError
         with pytest.raises(OSError, match="Group '/nonexistent_group' not found"):
             open_datatree(filepath, group="/nonexistent_group", engine=self.engine)
-
 
 
 @requires_h5netcdf
@@ -538,8 +547,12 @@ class TestZarrDatatreeIO:
         with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
             assert subgroup_tree is not None
             assert list(subgroup_tree.children) == list(original_dt[group].children)
-            assert len(subgroup_tree.dataset.dims) == len(original_dt[group].dataset.dims)
-            assert list(subgroup_tree.dataset.data_vars) == list(original_dt[group].dataset.data_vars)
+            assert len(subgroup_tree.dataset.dims) == len(
+                original_dt[group].dataset.dims
+            )
+            assert list(subgroup_tree.dataset.data_vars) == list(
+                original_dt[group].dataset.data_vars
+            )
             assert_equal(subgroup_tree.dataset["a"], original_dt[group].dataset["a"])
             assert_equal(subgroup_tree.dataset["b"], original_dt[group].dataset["b"])
 
