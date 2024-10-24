@@ -49,6 +49,8 @@ from xarray.core.utils import (
     parse_dims_as_set,
 )
 from xarray.core.variable import Variable
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import is_chunked_array
 
 try:
     from xarray.core.variable import calculate_dimensions
@@ -1896,3 +1898,84 @@ class DataTree(
 
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "sel")
         return self._selective_indexing(apply_indexers, indexers)
+
+    def load(self, **kwargs) -> Self:
+        """Manually trigger loading and/or computation of this datatree's data
+        from disk or a remote source into memory and return this datatree.
+        Unlike compute, the original datatree is modified and returned.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.compute``.
+
+        See Also
+        --------
+        dask.compute
+        """
+        # access .data to coerce everything to numpy or dask arrays
+        lazy_data = {
+            path: {
+                k: v._data
+                for k, v in node.variables.items()
+                if is_chunked_array(v._data)
+            }
+            for path, node in self.subtree_with_keys
+        }
+        flat_lazy_data = {
+            (path, var_name): array
+            for path, node in lazy_data.items()
+            for var_name, array in node.items()
+        }
+        if lazy_data:
+            chunkmanager = get_chunked_array_type(*flat_lazy_data.values())
+
+            # evaluate all the chunked arrays simultaneously
+            evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
+                *flat_lazy_data.values(), **kwargs
+            )
+
+            for (path, var_name), data in zip(
+                flat_lazy_data, evaluated_data, strict=False
+            ):
+                self[path].variables[var_name].data = data
+
+        # load everything else sequentially
+        for node in self.subtree:
+            for k, v in node.variables.items():
+                if k not in lazy_data:
+                    v.load()
+
+        return self
+
+    def compute(self, **kwargs) -> Self:
+        """Manually trigger loading and/or computation of this datatree's data
+        from disk or a remote source into memory and return a new dataset.
+        Unlike load, the original dataset is left unaltered.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.compute``.
+
+        Returns
+        -------
+        object : DataTree
+            New object with lazy data variables and coordinates as in-memory arrays.
+
+        See Also
+        --------
+        dask.compute
+        """
+        new = self.copy(deep=False)
+        return new.load(**kwargs)
