@@ -456,7 +456,8 @@ def _datatree_from_backend_datatree(
                     **extra_tokens,
                 )
                 for path, [node] in group_subtrees(backend_tree)
-            }
+            },
+            name=backend_tree.name,
         )
 
         for path, [node] in group_subtrees(backend_tree):
