@@ -580,9 +580,7 @@ class ZarrStore(AbstractWritableDataStore):
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
         )
-        group_paths = list(
-            set([node for node in _iter_zarr_groups(zarr_group, parent=group)])
-        )
+        group_paths = [node for node in _iter_zarr_groups(zarr_group, parent=group)]
         return {
             group: cls(
                 zarr_group.get(group),
@@ -1468,7 +1466,12 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             zarr_format=zarr_format,
             **kwargs,
         )
-        return datatree_from_dict_with_io_cleanup(groups_dict)
+        if group:
+            dt = datatree_from_dict_with_io_cleanup(groups_dict)
+            dt.encoding["source_group"] = group
+            return dt
+        else:
+            return datatree_from_dict_with_io_cleanup(groups_dict)
 
     def open_groups_as_dict(
         self,
@@ -1533,8 +1536,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                     decode_timedelta=decode_timedelta,
                 )
             if group:
-                relative = str(NodePath("/") / NodePath(group).parent)
-                group_name = str(NodePath(path_group).relative_to(relative))
+                group_name = str(NodePath(path_group).relative_to(parent))
             else:
                 group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
@@ -1546,7 +1548,6 @@ def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
     yield str(parent_nodepath)
     for path, group in root.groups():
         gpath = parent_nodepath / path
-        yield str(gpath)
         yield from _iter_zarr_groups(group, parent=str(gpath))
 
 
