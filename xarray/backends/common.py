@@ -135,7 +135,6 @@ def _iter_nc_groups(root, parent="/"):
     yield str(parent)
     for path, group in root.groups.items():
         gpath = parent / path
-        yield str(gpath)
         yield from _iter_nc_groups(group, parent=gpath)
 
 

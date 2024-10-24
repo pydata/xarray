@@ -337,6 +337,18 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         for ds in aligned_dict_of_datasets.values():
             ds.close()
 
+    def test_open_datatree_specific_group(self, tmpdir, simple_datatree) -> None:
+        """Test opening a specific group within a NetCDF file using `open_datatree`."""
+        filepath = tmpdir / "test.nc"
+        group = "/set1"
+        original_dt = simple_datatree
+        original_dt.to_netcdf(filepath)
+        expected_subtree = original_dt[group].copy()
+        expected_subtree.orphan()
+        with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
+            assert subgroup_tree.root.parent is None
+            assert_equal(subgroup_tree, expected_subtree)
+
 
 @requires_h5netcdf
 class TestH5NetCDFDatatreeIO(DatatreeIOBase):
@@ -501,6 +513,18 @@ class TestZarrDatatreeIO:
 
         for ds in unaligned_dict_of_datasets.values():
             ds.close()
+
+    def test_open_datatree_specific_group(self, tmpdir, simple_datatree) -> None:
+        """Test opening a specific group within a Zarr store using `open_datatree`."""
+        filepath = tmpdir / "test.zarr"
+        group = "/set2"
+        original_dt = simple_datatree
+        original_dt.to_zarr(filepath)
+        expected_subtree = original_dt[group].copy()
+        expected_subtree.orphan()
+        with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
+            assert subgroup_tree.root.parent is None
+            assert_equal(subgroup_tree, expected_subtree)
 
     @requires_dask
     def test_open_groups_chunks(self, tmpdir) -> None:
