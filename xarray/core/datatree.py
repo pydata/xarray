@@ -70,8 +70,11 @@ if TYPE_CHECKING:
         ErrorOptions,
         ErrorOptionsWithWarn,
         NetcdfWriteModes,
+        T_ChunkDimFreq,
+        T_ChunksFreq,
         ZarrWriteModes,
     )
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 # """
 # DEVELOPERS' NOTE
@@ -1997,3 +2000,82 @@ class DataTree(
             f"/{path}" if path != "." else "/": get_chunksizes(node.variables.values())
             for path, node in self.subtree_with_keys
         }
+
+    def chunk(
+        self,
+        chunks: T_ChunksFreq = {},  # noqa: B006  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        name_prefix: str = "xarray-",
+        token: str | None = None,
+        lock: bool = False,
+        inline_array: bool = False,
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
+        from_array_kwargs=None,
+        **chunks_kwargs: T_ChunkDimFreq,
+    ) -> Self:
+        """Coerce all arrays in all groups in this tree into dask arrays with the given
+        chunks.
+
+        Non-dask arrays in this tree will be converted to dask arrays. Dask
+        arrays will be rechunked to the given chunk sizes.
+
+        If neither chunks is not provided for one or more dimensions, chunk
+        sizes along that dimension will not be updated; non-dask arrays will be
+        converted into dask arrays with a single block.
+
+        Along datetime-like dimensions, a :py:class:`groupers.TimeResampler` object is also accepted.
+
+        Parameters
+        ----------
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
+            Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
+            ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": TimeResampler(freq="YE")}``.
+        name_prefix : str, default: "xarray-"
+            Prefix for the name of any new dask arrays.
+        token : str, optional
+            Token uniquely identifying this dataset.
+        lock : bool, default: False
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
+        inline_array: bool, default: False
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
+        chunked_array_type: str, optional
+            Which chunked array type to coerce this datasets' arrays to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
+            Experimental API that should not be relied upon.
+        from_array_kwargs: dict, optional
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+            For example, with dask as the default chunked array type, this method would pass additional kwargs
+            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+        **chunks_kwargs : {dim: chunks, ...}, optional
+            The keyword arguments form of ``chunks``.
+            One of chunks or chunks_kwargs must be provided
+
+        Returns
+        -------
+        chunked : xarray.DataTree
+
+        See Also
+        --------
+        Dataset.chunk
+        Dataset.chunksizes
+        xarray.unify_chunks
+        dask.array.from_array
+        """
+        return DataTree.from_dict(
+            {
+                path: node.dataset.chunk(
+                    chunks,
+                    name_prefix=name_prefix,
+                    token=token,
+                    lock=lock,
+                    inline_array=inline_array,
+                    chunked_array_type=chunked_array_type,
+                    from_array_kwargs=from_array_kwargs,
+                    **chunks_kwargs,
+                )
+                for path, node in self.subtree_with_keys
+            },
+            name=self.name,
+        )

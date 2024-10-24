@@ -2274,3 +2274,26 @@ class TestDask:
 
         assert actual.chunksizes == expected_chunksizes, "mismatching chunksizes"
         assert tree.chunksizes == original_chunksizes, "original tree was modified"
+
+    def test_chunk(self):
+        ds1 = xr.Dataset({"a": ("x", np.arange(10))})
+        ds2 = xr.Dataset({"b": ("y", np.arange(5))})
+        ds3 = xr.Dataset({"c": ("z", np.arange(4))})
+        ds4 = xr.Dataset({"d": ("x", np.arange(-5, 5))})
+
+        expected = xr.DataTree.from_dict(
+            {
+                "/": ds1.chunk({"x": 5}),
+                "/group1": ds2.chunk({"y": 3}),
+                "/group2": ds3.chunk({"z": 2}),
+                "/group1/subgroup1": ds4.chunk({"x": 5}),
+            }
+        )
+
+        tree = xr.DataTree.from_dict(
+            {"/": ds1, "/group1": ds2, "/group2": ds3, "/group1/subgroup1": ds4}
+        )
+        actual = tree.chunk({"x": 5, "y": 3, "z": 2})
+
+        assert_identical(actual, expected)
+        assert actual.chunksizes == expected.chunksizes
