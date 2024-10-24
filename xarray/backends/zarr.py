@@ -1479,6 +1479,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             zarr_format=zarr_format,
             **kwargs,
         )
+
         return datatree_from_dict_with_io_cleanup(groups_dict)
 
     def open_groups_as_dict(
@@ -1543,9 +1544,11 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-            group_name = str(NodePath(path_group))
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
-
         return groups_dict
 
 
@@ -1554,7 +1557,6 @@ def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
     yield str(parent_nodepath)
     for path, group in root.groups():
         gpath = parent_nodepath / path
-        yield str(gpath)
         yield from _iter_zarr_groups(group, parent=str(gpath))
 
 

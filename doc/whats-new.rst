@@ -14,10 +14,45 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2024.09.1:
+.. _whats-new.2024.10.1:
 
-v2024.09.1 (unreleased)
------------------------
+v.2024.10.1 (unreleased)
+------------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+.. _whats-new.2024.10.0:
+
+v2024.10.0 (Oct 24th, 2024)
+---------------------------
+
+This release brings official support for `xarray.DataTree`, and compatibility with zarr-python v3!
+
+Aside from these two huge features, it also improves support for vectorised interpolation and fixes various bugs.
+
+Thanks to the 31 contributors to this release:
+Alfonso Ladino, DWesl, Deepak Cherian, Eni, Etienne Schalk, Holly Mandel, Ilan Gold, Illviljan, Joe Hamman, Justus Magin, Kai Mühlbauer, Karl Krauth, Mark Harfouche, Martey Dodoo, Matt Savoie, Maximilian Roos, Patrick Hoefler, Peter Hill, Renat Sibgatulin, Ryan Abernathey, Spencer Clark, Stephan Hoyer, Tom Augspurger, Tom Nicholas, Vecko, Virgile Andreani, Yvonne Fröhlich, carschandler, joseph nowak, mgunyho and owenlittlejohns
 
 New Features
 ~~~~~~~~~~~~
@@ -28,10 +63,16 @@ New Features
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_,
   `Eni Awowale <https://github.com/eni-awowale>`_,
   `Matt Savoie <https://github.com/flamingbear>`_,
-  `Stephan Hoyer <https://github.com/shoyer>`_ and
-  `Tom Nicholas <https://github.com/TomNicholas>`_.
+  `Stephan Hoyer <https://github.com/shoyer>`_,
+  `Tom Nicholas <https://github.com/TomNicholas>`_,
+  `Justus Magin <https://github.com/keewis>`_, and
+  `Alfonso Ladino <https://github.com/aladinor>`_.
 - A migration guide for users of the prototype `xarray-contrib/datatree repository <https://github.com/xarray-contrib/datatree>`_ has been added, and can be found in the `DATATREE_MIGRATION_GUIDE.md` file in the repository root.
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Support for Zarr-Python 3 (:issue:`95515`, :pull:`9552`).
+  By `Tom Augspurger <https://github.com/TomAugspurger>`_,
+  `Ryan Abernathey <https://github.com/rabernat>`_ and
+  `Joe Hamman <https://github.com/jhamman>`_.
 - Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
   By `Eni Awowale <https://github.com/eni-awowale>`_.
 - Added support for vectorized interpolation using additional interpolators
@@ -39,10 +80,9 @@ New Features
   By `Holly Mandel <https://github.com/hollymandel>`_.
 - Implement handling of complex numbers (netcdf4/h5netcdf) and enums (h5netcdf) (:issue:`9246`, :issue:`3297`, :pull:`9509`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- Support for Zarr-Python 3 (:issue:`95515`, :pull:`9552`).
-  By `Tom Augspurger <https://github.com/TomAugspurger>`_,
-  `Ryan Abernathey <https://github.com/rabernat>`_ and
-  `Joe Hamman <https://github.com/jhamman>`_.
+- Fix passing missing arguments to when opening hdf5 and netCDF4 datatrees
+  (:issue:`9427`, :pull: `9428`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -74,6 +114,8 @@ Bug fixes
   <https://github.com/josephnowak>`_.
 - Fix binning by multiple variables where some bins have no observations. (:issue:`9630`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix issue where polyfit wouldn't handle non-dimension coordinates. (:issue:`4375`, :pull:`9369`)
+  By `Karl Krauth <https://github.com/Karl-Krauth>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -84,11 +126,8 @@ Documentation
   By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie <https://github.com/flamingbear>`_, and
   `Tom Nicholas <https://github.com/TomNicholas>`_.
 
-
-
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
 
 .. _whats-new.2024.09.0:
 
@@ -157,17 +196,12 @@ Bug fixes
   date "0001-01-01". (:issue:`9108`, :pull:`9116`) By `Spencer Clark
   <https://github.com/spencerkclark>`_ and `Deepak Cherian
   <https://github.com/dcherian>`_.
-- Fix issue where polyfit wouldn't handle non-dimension coordinates. (:issue:`4375`, :pull:`9369`)
-  By `Karl Krauth <https://github.com/Karl-Krauth>`_.
 - Fix issue with passing parameters to ZarrStore.open_store when opening
   datatree in zarr format (:issue:`9376`, :pull:`9377`).
   By `Alfonso Ladino <https://github.com/aladinor>`_
 - Fix deprecation warning that was raised when calling ``np.array`` on an ``xr.DataArray``
   in NumPy 2.0 (:issue:`9312`, :pull:`9393`)
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
-- Fix passing missing arguments to when opening hdf5 and netCDF4 datatrees
-  (:issue:`9427`, :pull: `9428`).
-  By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Fix support for using ``pandas.DateOffset``, ``pandas.Timedelta``, and
   ``datetime.timedelta`` objects as ``resample`` frequencies
   (:issue:`9408`, :pull:`9413`).
