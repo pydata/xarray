@@ -260,6 +260,7 @@ def _protect_dataset_variables_inplace(dataset: Dataset, cache: bool) -> None:
     for name, variable in dataset.variables.items():
         if name not in dataset._indexes:
             # no need to protect IndexVariable objects
+            data: indexing.ExplicitlyIndexedNDarrayMixin
             data = indexing.CopyOnWriteArray(variable._data)
             if cache:
                 data = indexing.MemoryCachedArray(data)
