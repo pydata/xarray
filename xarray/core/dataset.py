@@ -2658,8 +2658,10 @@ class Dataset(
     @property
     def chunks(self) -> Mapping[Hashable, tuple[int, ...]]:
         """
-        Mapping from dimension names to block lengths for this dataset's data, or None if
-        the underlying data is not a dask array.
+        Mapping from dimension names to block lengths for this dataset's data.
+
+        If this dataset does not contain chunked arrays, the mapping will be empty.
+
         Cannot be modified directly, but can be modified by calling .chunk().
 
         Same as Dataset.chunksizes, but maintained for backwards compatibility.
@@ -2675,8 +2677,10 @@ class Dataset(
     @property
     def chunksizes(self) -> Mapping[Hashable, tuple[int, ...]]:
         """
-        Mapping from dimension names to block lengths for this dataset's data, or None if
-        the underlying data is not a dask array.
+        Mapping from dimension names to block lengths for this dataset's data.
+
+        If this dataset does not contain chunked arrays, the mapping will be empty.
+
         Cannot be modified directly, but can be modified by calling .chunk().
 
         Same as Dataset.chunks.
