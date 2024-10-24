@@ -17,6 +17,7 @@ from typing import (
 )
 
 import numpy as np
+import pandas as pd
 
 # TODO: get rid of this after migrating this class to array API
 from xarray.core import dtypes, formatting, formatting_html
@@ -829,7 +830,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if chunkmanager.is_chunked_array(data_old):
             data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
         else:
-            if not isinstance(data_old, ExplicitlyIndexed):
+            if pd.api.types.is_extension_array_dtype(data_old.dtype):
+                # One of PandasExtensionArray or PandasIndexingAdapter?
+                ndata = data_old.array.to_numpy()
+            elif not isinstance(data_old, ExplicitlyIndexed):
                 ndata = data_old
             else:
                 # Unambiguously handle array storage backends (like NetCDF4 and h5py)
