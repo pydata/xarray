@@ -3595,7 +3595,7 @@ class DataArray(
         """
         from xarray.core.missing import interp_na
 
-        return interp_na(
+        return interp_na(  # type: ignore[return-value]
             self,
             dim=dim,
             method=method,
@@ -3688,7 +3688,7 @@ class DataArray(
         """
         from xarray.core.missing import ffill
 
-        return ffill(self, dim, limit=limit)
+        return ffill(self, dim, limit=limit)  # type: ignore[return-value]
 
     def bfill(self, dim: Hashable, limit: int | None = None) -> Self:
         """Fill NaN values by propagating values backward
@@ -3772,7 +3772,7 @@ class DataArray(
         """
         from xarray.core.missing import bfill
 
-        return bfill(self, dim, limit=limit)
+        return bfill(self, dim, limit=limit)  # type: ignore[return-value]
 
     def combine_first(self, other: Self) -> Self:
         """Combine two DataArray objects, with union of coordinates.
