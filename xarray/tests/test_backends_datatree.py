@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Hashable
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -29,7 +30,7 @@ have_zarr_v3 = xr.backends.zarr._zarr_v3()
 
 
 def diff_chunks(
-    comparison: dict[tuple[str, str], bool], tree1: DataTree, tree2: DataTree
+    comparison: dict[tuple[str, Hashable], bool], tree1: DataTree, tree2: DataTree
 ) -> str:
     mismatching_variables = [loc for loc, equals in comparison.items() if not equals]
 
