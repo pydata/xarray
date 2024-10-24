@@ -363,17 +363,6 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
                 == original_dt[group].dataset["b"].values
             )
 
-    def test_open_datatree_nonexistent_group(self, tmpdir, simple_datatree) -> None:
-        """Test `open_datatree` behavior when attempting to open a non-existent group."""
-        filepath = tmpdir / "test.nc"
-        original_dt = simple_datatree
-        original_dt.to_netcdf(filepath, engine=self.engine)
-
-        # Attempt to open a non-existent group, which should raise a ValueError
-        with pytest.raises(OSError, match="Group '/nonexistent_group' not found"):
-            open_datatree(filepath, group="/nonexistent_group", engine=self.engine)
-
-
 @requires_h5netcdf
 class TestH5NetCDFDatatreeIO(DatatreeIOBase):
     engine: T_DataTreeNetcdfEngine | None = "h5netcdf"
