@@ -76,6 +76,8 @@ Bug fixes
   <https://github.com/josephnowak>`_.
 - Fix binning by multiple variables where some bins have no observations. (:issue:`9630`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Improve the error message raised when using chunked-array methods if no chunk manager is available (:pull:`9676`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
