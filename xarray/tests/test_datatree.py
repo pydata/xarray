@@ -2296,3 +2296,12 @@ class TestDask:
 
         assert_identical(actual, expected)
         assert actual.chunksizes == expected.chunksizes
+
+        with pytest.raises(TypeError, match="invalid type"):
+            tree.chunk(None)
+
+        with pytest.raises(TypeError, match="invalid type"):
+            tree.chunk((1, 2))
+
+        with pytest.raises(ValueError, match="not found in data dimensions"):
+            tree.chunk({"u": 2})
