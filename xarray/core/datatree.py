@@ -2070,6 +2070,14 @@ class DataTree(
             )
         combined_chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
+        all_dims = self._get_all_dims()
+
+        bad_dims = combined_chunks.keys() - all_dims
+        if bad_dims:
+            raise ValueError(
+                f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(all_dims)}"
+            )
+
         rechunked_groups = {
             path: node.dataset.chunk(
                 {
