@@ -468,7 +468,7 @@ class TestZarrDatatreeIO:
         original_tree.to_zarr(filepath)
 
         with open_datatree(filepath, engine="zarr", chunks=chunks) as tree:
-            xr.testing.assert_identical(original_tree, tree)
+            xr.testing.assert_identical(tree, original_tree)
             assert_chunks_equal(tree, original_tree, enforce_dask=True)
 
     def test_open_groups(self, unaligned_datatree_zarr) -> None:
