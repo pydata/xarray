@@ -1959,8 +1959,8 @@ class DataTree(
 
     def compute(self, **kwargs) -> Self:
         """Manually trigger loading and/or computation of this datatree's data
-        from disk or a remote source into memory and return a new dataset.
-        Unlike load, the original dataset is left unaltered.
+        from disk or a remote source into memory and return a new datatree.
+        Unlike load, the original datatree is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -1987,7 +1987,7 @@ class DataTree(
     @property
     def chunksizes(self) -> Mapping[str, Mapping[Hashable, tuple[int, ...]]]:
         """
-        Mapping from group paths to a mapping of dimension names to block lengths for this dataset's data, or None if
+        Mapping from group paths to a mapping of dimension names to block lengths for this datatree's data, or None if
         the underlying data is not a dask array.
 
         Cannot be modified directly, but can be modified by calling .chunk().
@@ -2032,7 +2032,7 @@ class DataTree(
         name_prefix : str, default: "xarray-"
             Prefix for the name of any new dask arrays.
         token : str, optional
-            Token uniquely identifying this dataset.
+            Token uniquely identifying this datatree.
         lock : bool, default: False
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
@@ -2040,7 +2040,7 @@ class DataTree(
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
         chunked_array_type: str, optional
-            Which chunked array type to coerce this datasets' arrays to.
+            Which chunked array type to coerce this datatree's arrays to.
             Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
             Experimental API that should not be relied upon.
         from_array_kwargs: dict, optional
