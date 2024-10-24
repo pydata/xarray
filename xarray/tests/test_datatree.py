@@ -1,6 +1,7 @@
 import re
 import sys
 import typing
+from collections.abc import Mapping
 from copy import copy, deepcopy
 from textwrap import dedent
 
@@ -2239,6 +2240,7 @@ class TestDask:
                 "/group1/subgroup1": ds4.chunk({"x": 5}),
             }
         )
+        expected_chunksizes: Mapping[str, Mapping]
         expected_chunksizes = {node.path: {} for node in tree.subtree}
         actual = tree.load()
 
@@ -2263,6 +2265,7 @@ class TestDask:
             }
         )
         original_chunksizes = tree.chunksizes
+        expected_chunksizes: Mapping[str, Mapping]
         expected_chunksizes = {node.path: {} for node in tree.subtree}
         actual = tree.compute()
 
