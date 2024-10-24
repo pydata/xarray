@@ -2063,19 +2063,28 @@ class DataTree(
         xarray.unify_chunks
         dask.array.from_array
         """
-        return DataTree.from_dict(
-            {
-                path: node.dataset.chunk(
-                    chunks,
-                    name_prefix=name_prefix,
-                    token=token,
-                    lock=lock,
-                    inline_array=inline_array,
-                    chunked_array_type=chunked_array_type,
-                    from_array_kwargs=from_array_kwargs,
-                    **chunks_kwargs,
-                )
-                for path, node in self.subtree_with_keys
-            },
-            name=self.name,
-        )
+        # don't support deprecated ways of passing chunks
+        if not isinstance(chunks, Mapping):
+            raise TypeError(
+                f"invalid type for chunks: {type(chunks)}. Only mappings are supported."
+            )
+        combined_chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+
+        rechunked_groups = {
+            path: node.dataset.chunk(
+                {
+                    dim: size
+                    for dim, size in combined_chunks.items()
+                    if dim in node.dataset.dims
+                },
+                name_prefix=name_prefix,
+                token=token,
+                lock=lock,
+                inline_array=inline_array,
+                chunked_array_type=chunked_array_type,
+                from_array_kwargs=from_array_kwargs,
+            )
+            for path, node in self.subtree_with_keys
+        }
+
+        return DataTree.from_dict(rechunked_groups, name=self.name)
