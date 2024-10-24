@@ -2240,7 +2240,10 @@ class TestDask:
                 "/group1/subgroup1": ds4.chunk({"x": 5}),
             }
         )
+        expected_chunksizes = {
+            f"/{path}" if path != "." else "/": {} for path, _ in tree.subtree_with_keys
+        }
         actual = tree.load()
 
         assert_identical(actual, expected)
-        # assert_chunks_equal(actual, expected, enforce_dask=False)
+        assert tree.chunksizes == expected_chunksizes
