@@ -311,13 +311,15 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
     # Zarr V3 explicitly stores the dimension names in the metadata
     try:
         # if this exists, we are looking at a Zarr V3 array
-        # convert None to empty tuple
-        dimensions = zarr_obj.metadata.dimension_names or ()
-        attributes = dict(zarr_obj.attrs)
-        return dimensions, attributes
+        metadata = zarr_obj.metadata
     except AttributeError:
         # continue to old code path
         pass
+    else:
+        # convert None to empty tuple
+        dimensions = metadata.dimension_names or ()
+        attributes = dict(zarr_obj.attrs)
+        return dimensions, attributes
 
     # Zarr arrays do not have dimensions. To get around this problem, we add
     # an attribute that specifies the dimension. We have to hide this attribute
