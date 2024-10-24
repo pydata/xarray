@@ -2087,4 +2087,4 @@ class DataTree(
             for path, node in self.subtree_with_keys
         }
 
-        return DataTree.from_dict(rechunked_groups, name=self.name)
+        return self.from_dict(rechunked_groups, name=self.name)
