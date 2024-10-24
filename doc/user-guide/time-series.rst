@@ -21,9 +21,10 @@ core functionality.
 Creating datetime64 data
 ------------------------
 
-Xarray uses the numpy dtypes ``datetime64[ns]`` and ``timedelta64[ns]`` to
-represent datetime data, which offer vectorized (if sometimes buggy) operations
-with numpy and smooth integration with pandas.
+Xarray uses the numpy dtypes ``datetime64[unit]`` and ``timedelta64[unit]``
+(where unit is anything of "s", "ms", "us" and "ns") to represent datetime
+data, which offer vectorized (if sometimes buggy) operations with numpy and
+smooth integration with pandas.
 
 To convert to or create regular arrays of ``datetime64`` data, we recommend
 using :py:func:`pandas.to_datetime` and :py:func:`pandas.date_range`:
@@ -31,10 +32,21 @@ using :py:func:`pandas.to_datetime` and :py:func:`pandas.date_range`:
 .. ipython:: python
 
     pd.to_datetime(["2000-01-01", "2000-02-02"])
+    pd.DatetimeIndex(
+        ["2000-01-01 00:00:00", "2000-02-02 00:00:00"], dtype="datetime64[s]"
+    )
     pd.date_range("2000-01-01", periods=365)
+    pd.date_range("2000-01-01", periods=365, unit="s")
+
+.. note::
+    Care has to be taken to create the output with the wanted resolution.
+    For :py:func:`pandas.date_range` the ``unit``-kwarg has to be specified
+    and for :py:func:`pandas.to_datetime` the selection of the resolution
+    isn't possible at all. For that :py:class:`pd.DatetimeIndex` can be used
+    directly.
 
 Alternatively, you can supply arrays of Python ``datetime`` objects. These get
-converted automatically when used as arguments in xarray objects:
+converted automatically when used as arguments in xarray objects (with us-resolution):
 
 .. ipython:: python
 
@@ -51,7 +63,7 @@ attribute like ``'days since 2000-01-01'``).
 .. note::
 
    When decoding/encoding datetimes for non-standard calendars or for dates
-   before year 1678 or after year 2262, xarray uses the `cftime`_ library.
+   before 1582-10-15, xarray uses the `cftime`_ library.
    It was previously packaged with the ``netcdf4-python`` package under the
    name ``netcdftime`` but is now distributed separately. ``cftime`` is an
    :ref:`optional dependency<installing>` of xarray.
@@ -68,15 +80,9 @@ You can manual decode arrays in this form by passing a dataset to
     ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
     xr.decode_cf(ds)
 
-One unfortunate limitation of using ``datetime64[ns]`` is that it limits the
-native representation of dates to those that fall between the years 1678 and
-2262. When a netCDF file contains dates outside of these bounds, dates will be
-returned as arrays of :py:class:`cftime.datetime` objects and a :py:class:`~xarray.CFTimeIndex`
-will be used for indexing.  :py:class:`~xarray.CFTimeIndex` enables a subset of
-the indexing functionality of a :py:class:`pandas.DatetimeIndex` and is only
-fully compatible with the standalone version of ``cftime`` (not the version
-packaged with earlier versions ``netCDF4``).  See :ref:`CFTimeIndex` for more
-information.
+From xarray 2024.11 the resolution of the dates can be tuned between "s", "ms", "us" and "ns". One limitation of using ``datetime64[ns]`` is that it limits the native representation of dates to those that fall between the years 1678 and 2262, which gets increased significantly with lower resolutions. When a netCDF file contains dates outside of these bounds (or dates < 1582-10-15), dates will be returned as arrays of :py:class:`cftime.datetime` objects and a :py:class:`~xarray.CFTimeIndex` will be used for indexing.
+:py:class:`~xarray.CFTimeIndex` enables a subset of the indexing functionality of a :py:class:`pandas.DatetimeIndex` and is only fully compatible with the standalone version of ``cftime`` (not the version packaged with earlier versions ``netCDF4``).
+See :ref:`CFTimeIndex` for more information.
 
 Datetime indexing
 -----------------
