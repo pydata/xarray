@@ -6742,6 +6742,7 @@ class DataArray(
         *,
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
+        eagerly_compute_group: bool = True,
         **groupers: Grouper,
     ) -> DataArrayGroupBy:
         """Returns a DataArrayGroupBy object for performing grouped operations.
@@ -6871,7 +6872,9 @@ class DataArray(
         )
 
         _validate_groupby_squeeze(squeeze)
-        rgroupers = _parse_group_and_groupers(self, group, groupers)
+        rgroupers = _parse_group_and_groupers(
+            self, group, groupers, eagerly_compute_group=eagerly_compute_group
+        )
         return DataArrayGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
     @_deprecate_positional_args("v2024.07.0")
@@ -6886,6 +6889,7 @@ class DataArray(
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         duplicates: Literal["raise", "drop"] = "raise",
+        eagerly_compute_group: bool = True,
     ) -> DataArrayGroupBy:
         """Returns a DataArrayGroupBy object for performing grouped operations.
 
@@ -6959,7 +6963,9 @@ class DataArray(
             precision=precision,
             include_lowest=include_lowest,
         )
-        rgrouper = ResolvedGrouper(grouper, group, self)
+        rgrouper = ResolvedGrouper(
+            grouper, group, self, eagerly_compute_group=eagerly_compute_group
+        )
 
         return DataArrayGroupBy(
             self,

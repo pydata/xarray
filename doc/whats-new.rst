@@ -75,6 +75,9 @@ New Features
   `Joe Hamman <https://github.com/jhamman>`_.
 - Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
   By `Eni Awowale <https://github.com/eni-awowale>`_.
+- Support lazy grouping by dask arrays, and allow specifying ordered groups with ``UniqueGrouper(labels=["a", "b", "c"])``
+  (:issue:`2852`, :issue:`757`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added support for vectorized interpolation using additional interpolators
   from the ``scipy.interpolate`` module (:issue:`9049`, :pull:`9526`).
   By `Holly Mandel <https://github.com/hollymandel>`_.
@@ -90,6 +93,11 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Grouping by a chunked array (e.g. dask or cubed) currently eagerly loads that variable in to
+  memory. This behaviour is deprecated. If eager loading was intended, please load such arrays
+  manually using ``.load()`` or ``.compute()``. Else pass ``eagerly_compute_group=False``, and
+  provide expected group labels using the ``labels`` kwarg to a grouper object such as
+  :py:class:`grouper.UniqueGrouper` or :py:class:`grouper.BinGrouper`.
 
 
 Bug fixes
