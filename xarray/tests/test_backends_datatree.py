@@ -346,6 +346,7 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
 
         with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
             assert subgroup_tree is not None
+            assert subgroup_tree.root.parent is None
             assert list(subgroup_tree.children) == list(original_dt[group].children)
             assert len(subgroup_tree.dataset.dims) == len(original_dt[group].dataset.dims)
             assert list(subgroup_tree.dataset.data_vars) == list(original_dt[group].dataset.data_vars)
@@ -537,6 +538,7 @@ class TestZarrDatatreeIO:
 
         with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
             assert subgroup_tree is not None
+            assert subgroup_tree.root.parent is None
             assert list(subgroup_tree.children) == list(original_dt[group].children)
             assert len(subgroup_tree.dataset.dims) == len(original_dt[group].dataset.dims)
             assert list(subgroup_tree.dataset.data_vars) == list(original_dt[group].dataset.data_vars)
