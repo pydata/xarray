@@ -2559,6 +2559,8 @@ class ZarrBase(CFEncodedBase):
                 ds.to_zarr(store, encoding=encodings)
 
     def test_hidden_zarr_keys(self) -> None:
+        skip_if_zarr_format_3("This test is unnecessary; no hidden Zarr keys")
+
         expected = create_test_data()
         with self.create_store() as store:
             expected.dump_to_store(store)
@@ -2585,6 +2587,16 @@ class ZarrBase(CFEncodedBase):
             with pytest.raises(KeyError):
                 with xr.decode_cf(store):
                     pass
+
+    def test_dimension_names(self) -> None:
+        skip_if_zarr_format_2("No dimension names in V2")
+
+        expected = create_test_data()
+        with self.create_store() as store:
+            expected.dump_to_store(store)
+            zarr_group = store.ds
+            for var in zarr_group:
+                assert expected[var].dims == zarr_group[var].metadata.dimension_names
 
     @pytest.mark.parametrize("group", [None, "group1"])
     def test_write_persistence_modes(self, group) -> None:
