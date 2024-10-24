@@ -729,7 +729,12 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             autoclose=autoclose,
             **kwargs,
         )
-        return datatree_from_dict_with_io_cleanup(groups_dict)
+        if group:
+            dt = datatree_from_dict_with_io_cleanup(groups_dict)
+            dt.encoding["source_group"] = group
+            return dt
+        else:
+            return datatree_from_dict_with_io_cleanup(groups_dict)
 
     def open_groups_as_dict(
         self,
@@ -789,7 +794,10 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-            group_name = str(NodePath(path_group))
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
 
         return groups_dict

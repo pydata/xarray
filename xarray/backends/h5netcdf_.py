@@ -494,7 +494,12 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             driver_kwds=driver_kwds,
             **kwargs,
         )
-        return datatree_from_dict_with_io_cleanup(groups_dict)
+        if group:
+            dt = datatree_from_dict_with_io_cleanup(groups_dict)
+            dt.encoding["source_group"] = group
+            return dt
+        else:
+            return datatree_from_dict_with_io_cleanup(groups_dict)
 
     def open_groups_as_dict(
         self,
@@ -556,7 +561,10 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
                     decode_timedelta=decode_timedelta,
                 )
 
-            group_name = str(NodePath(path_group))
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
 
         return groups_dict
