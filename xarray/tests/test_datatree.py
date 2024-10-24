@@ -13,7 +13,12 @@ from xarray.core.coordinates import DataTreeCoordinates
 from xarray.core.datatree import DataTree
 from xarray.core.treenode import NotFoundInTreeError
 from xarray.testing import assert_equal, assert_identical
-from xarray.tests import assert_array_equal, create_test_data, source_ndarray
+from xarray.tests import (
+    assert_array_equal,
+    create_test_data,
+    requires_dask,
+    source_ndarray,
+)
 
 ON_WINDOWS = sys.platform == "win32"
 
@@ -2195,3 +2200,28 @@ class TestClose:
 
     # with tree:
     #     pass
+
+
+@requires_dask
+class TestDask:
+    def test_load(self):
+        ds1 = xr.Dataset({"a": ("x", np.arange(10))})
+        ds2 = xr.Dataset({"b": ("y", np.arange(5))})
+        ds3 = xr.Dataset({"c": ("z", np.arange(4))})
+        ds4 = xr.Dataset({"d": ("x", np.arange(-5, 5))})
+
+        expected = xr.DataTree.from_dict(
+            {"/": ds1, "/group1": ds2, "/group2": ds3, "/group1/subgroup1": ds4}
+        )
+        tree = xr.DataTree.from_dict(
+            {
+                "/": ds1.chunk({"x": 5}),
+                "/group1": ds2.chunk({"y": 3}),
+                "/group2": ds3.chunk({"z": 2}),
+                "/group1/subgroup1": ds4.chunk({"x": 5}),
+            }
+        )
+        actual = tree.load()
+
+        assert_identical(actual, expected)
+        # assert_chunks_equal(actual, expected, enforce_dask=False)
