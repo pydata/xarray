@@ -863,7 +863,6 @@ class TestTreeFromDict:
         actual = DataTree.from_dict(tree.children["a"].to_dict(relative=True))
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail
     def test_roundtrip_unnamed_root(self, simple_datatree) -> None:
         # See GH81
 
