@@ -2239,9 +2239,7 @@ class TestDask:
                 "/group1/subgroup1": ds4.chunk({"x": 5}),
             }
         )
-        expected_chunksizes = {
-            f"/{path}" if path != "." else "/": {} for path, _ in tree.subtree_with_keys
-        }
+        expected_chunksizes = {node.path: {} for node in tree.subtree}
         actual = tree.load()
 
         assert_identical(actual, expected)
@@ -2265,9 +2263,7 @@ class TestDask:
             }
         )
         original_chunksizes = tree.chunksizes
-        expected_chunksizes = {
-            f"/{path}" if path != "." else "/": {} for path, _ in tree.subtree_with_keys
-        }
+        expected_chunksizes = {node.path: {} for node in tree.subtree}
         actual = tree.compute()
 
         assert_identical(actual, expected)

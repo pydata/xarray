@@ -1998,8 +1998,7 @@ class DataTree(
         Dataset.chunksizes
         """
         return {
-            f"/{path}" if path != "." else "/": get_chunksizes(node.variables.values())
-            for path, node in self.subtree_with_keys
+            node.path: get_chunksizes(node.variables.values()) for node in self.subtree
         }
 
     def chunk(
