@@ -2075,7 +2075,7 @@ class DataTree(
                 {
                     dim: size
                     for dim, size in combined_chunks.items()
-                    if dim in node.dataset.dims
+                    if dim in node._node_dims
                 },
                 name_prefix=name_prefix,
                 token=token,
