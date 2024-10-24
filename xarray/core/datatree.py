@@ -1919,6 +1919,7 @@ class DataTree(
 
         See Also
         --------
+        Dataset.load
         dask.compute
         """
         # access .data to coerce everything to numpy or dask arrays
