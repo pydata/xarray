@@ -407,22 +407,27 @@ def test_interpolate_nd_inseparable(
 
 
 @requires_scipy
-@pytest.mark.parametrize("method", ("linear", "nearest", "quintic"))
+@pytest.mark.parametrize("method", ("linear", "nearest"))
 def test_interpolate_nd_nd(method: InterpnOptions) -> None:
     """Interpolate nd array with an nd indexer sharing coordinates."""
     # Create original array
     a = [0, 2]
     x = [0, 1, 2]
-    da = xr.DataArray(
-        np.arange(6).reshape(2, 3), dims=("a", "x"), coords={"a": a, "x": x}
-    )
+    values = np.arange(6).reshape(2, 3)
+    da = xr.DataArray(values, dims=("a", "x"), coords={"a": a, "x": x})
 
     # Create indexer into `a` with dimensions (y, x)
     y = [10]
+    a_targets = [1, 2, 2]
     c = {"x": x, "y": y}
-    ia = xr.DataArray([[1, 2, 2]], dims=("y", "x"), coords=c)
-    out = da.interp(a=ia)
-    expected = xr.DataArray([[1.5, 4, 5]], dims=("y", "x"), coords=c)
+    ia = xr.DataArray([a_targets], dims=("y", "x"), coords=c)
+    out = da.interp(a=ia, method=method)
+
+    expected_xi = list(zip(a_targets, x, strict=False))
+    expected_vec = scipy.interpolate.interpn(
+        points=(a, x), values=values, xi=expected_xi, method=method
+    )
+    expected = xr.DataArray([expected_vec], dims=("y", "x"), coords=c)
     xr.testing.assert_allclose(out.drop_vars("a"), expected)
 
     # If the *shared* indexing coordinates do not match, interp should fail.
