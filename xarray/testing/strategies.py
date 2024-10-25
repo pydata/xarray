@@ -7,13 +7,16 @@ from hypothesis.errors import InvalidArgument
 
 import xarray as xr
 from xarray.core.types import T_DuckArray
-from xarray.core.utils import soft_import
+from xarray.core.utils import attempt_import
 
 if TYPE_CHECKING:
     from xarray.core.types import _DTypeLikeNested, _ShapeLike
 
 
-st = soft_import("hypothesis.strategies", purpose="using `xarray.testing.strategies`")
+if TYPE_CHECKING:
+    import hypothesis.strategies as st
+else:
+    st = attempt_import("hypothesis.strategies")
 
 __all__ = [
     "supported_dtypes",

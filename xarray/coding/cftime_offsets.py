@@ -67,9 +67,7 @@ from xarray.core.pdcompat import (
     nanosecond_precision_timestamp,
     no_default,
 )
-from xarray.core.utils import check_cftime_installed, emit_user_level_warning
-
-cftime = check_cftime_installed(strict=False)
+from xarray.core.utils import attempt_import, emit_user_level_warning
 
 if TYPE_CHECKING:
     from xarray.core.types import InclusiveOptions, Self, SideOptions, TypeAlias
@@ -89,7 +87,10 @@ def _nanosecond_precision_timestamp(*args, **kwargs):
 
 def get_date_type(calendar, use_cftime=True):
     """Return the cftime date type for a given calendar name."""
-    cftime = check_cftime_installed()
+    if TYPE_CHECKING:
+        import cftime
+    else:
+        cftime = attempt_import("cftime")
 
     if _is_standard_calendar(calendar) and not use_cftime:
         return _nanosecond_precision_timestamp
@@ -136,7 +137,10 @@ class BaseCFTimeOffset:
         return self.__apply__(other)
 
     def __sub__(self, other):
-        cftime = check_cftime_installed()
+        if TYPE_CHECKING:
+            import cftime
+        else:
+            cftime = attempt_import("cftime")
 
         if isinstance(other, cftime.datetime):
             raise TypeError("Cannot subtract a cftime.datetime from a time offset.")
@@ -287,7 +291,7 @@ def _adjust_n_years(other, n, month, reference_day):
 
 def _shift_month(date, months, day_option: DayOption = "start"):
     """Shift the date to a month start or end a given number of months away."""
-    _ = check_cftime_installed()
+    _ = attempt_import("cftime")
 
     has_year_zero = date.has_year_zero
     delta_year = (date.month + months) // 12
@@ -451,7 +455,10 @@ class QuarterOffset(BaseCFTimeOffset):
         return mod_month == 0 and date.day == self._get_offset_day(date)
 
     def __sub__(self, other: Self) -> Self:
-        cftime = check_cftime_installed()
+        if TYPE_CHECKING:
+            import cftime
+        else:
+            cftime = attempt_import("cftime")
 
         if isinstance(other, cftime.datetime):
             raise TypeError("Cannot subtract cftime.datetime from offset.")
@@ -536,7 +543,10 @@ class YearOffset(BaseCFTimeOffset):
         return _shift_month(other, months, self._day_option)
 
     def __sub__(self, other):
-        cftime = check_cftime_installed()
+        if TYPE_CHECKING:
+            import cftime
+        else:
+            cftime = attempt_import("cftime")
 
         if isinstance(other, cftime.datetime):
             raise TypeError("Cannot subtract cftime.datetime from offset.")
@@ -819,7 +829,10 @@ def delta_to_tick(delta: timedelta | pd.Timedelta) -> Tick:
 
 
 def to_cftime_datetime(date_str_or_date, calendar=None):
-    cftime = check_cftime_installed()
+    if TYPE_CHECKING:
+        import cftime
+    else:
+        cftime = attempt_import("cftime")
 
     if isinstance(date_str_or_date, str):
         if calendar is None:
@@ -857,7 +870,10 @@ def _maybe_normalize_date(date, normalize):
 def _generate_linear_range(start, end, periods):
     """Generate an equally-spaced sequence of cftime.datetime objects between
     and including two dates (whose length equals the number of periods)."""
-    cftime = check_cftime_installed()
+    if TYPE_CHECKING:
+        import cftime
+    else:
+        cftime = attempt_import("cftime")
 
     total_seconds = (end - start).total_seconds()
     values = np.linspace(0.0, total_seconds, periods, endpoint=True)

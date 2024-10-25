@@ -25,7 +25,7 @@ from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
     HiddenKeyDict,
-    check_zarr_installed,
+    attempt_import,
     close_on_error,
 )
 from xarray.core.variable import Variable
@@ -697,7 +697,10 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
-        zarr = check_zarr_installed()
+        if TYPE_CHECKING:
+            import zarr
+        else:
+            zarr = attempt_import("zarr")
 
         existing_keys = tuple(self.zarr_group.array_keys())
 
@@ -1391,7 +1394,10 @@ def _get_open_params(
     stacklevel,
     zarr_version,
 ):
-    zarr = check_zarr_installed()
+    if TYPE_CHECKING:
+        import zarr
+    else:
+        zarr = attempt_import("zarr")
 
     # zarr doesn't support pathlib.Path objects yet. zarr-python#601
     if isinstance(store, os.PathLike):

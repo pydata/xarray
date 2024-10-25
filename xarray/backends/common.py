@@ -15,7 +15,7 @@ from xarray.core import indexing
 from xarray.core.utils import (
     FrozenDict,
     NdimSizeLenMixin,
-    check_fsspec_installed,
+    attempt_import,
     is_remote_uri,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -88,7 +88,10 @@ def _find_absolute_paths(
     """
     if isinstance(paths, str):
         if is_remote_uri(paths) and kwargs.get("engine", None) == "zarr":
-            fsspec = check_fsspec_installed()
+            if TYPE_CHECKING:
+                import fsspec
+            else:
+                fsspec = attempt_import("fsspec")
 
             fs, _, _ = fsspec.core.get_fs_token_paths(
                 paths,

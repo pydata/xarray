@@ -1150,60 +1150,44 @@ def _resolve_doubly_passed_kwarg(
     return kwargs_dict
 
 
-def soft_import(
-    name: str,
-    *,
-    purpose: str,
-    strict: bool = True,
-) -> ModuleType | None:
-    """Import optional dependencies, providing informative errors on failure.
+def attempt_import(module: str) -> ModuleType:
+    """Import an optional dependency, and raise an informative error on failure.
 
     Parameters
     ----------
-    name : str
-        The name of the module to import. For example, ``'matplotlib'``.
-    purpose : str
-        A very brief statement explaining why the package is needed.
-        For example, ``'plotting'``.
-    strict : bool
-        If ``True``, raise an ImportError if the package is not found. If ``False``,
-        return ``None`` if the package is not found. Default is ``True``.
+    module : str
+        Module to import. For example, ``'zarr'`` or ``'matplotlib.pyplot'``.
 
     Returns
     -------
-    module | None
-        The imported module, or ``None`` if the package is not found and strict=False.
+    module : ModuleType
+        The Imported module.
+
+    Raises
+    ------
+    ImportError
+        If the module could not be imported.
+
+    Notes
+    -----
+    Static type checkers will not be able to infer the type of the returned module,
+    so it is recommended to precede this function with a direct import of the module,
+    guarded by an ``if TYPE_CHECKING`` block, to preserve type checker functionality.
     """
-    install_mapping = {
-        "matplotlib.pyplot": "matplotlib",
-        "hypothesis.strategies": "hypothesis",
-        "nc_time_axis": "nc-time-axis",
-    }
-    package_name = install_mapping.get(name, name)
+    install_mapping = dict(nc_time_axis="nc-time-axis")
+    package_purpose = dict(
+        zarr="for working with Zarr stores",
+        cftime="for working with non-standard calendars",
+        matplotlib="for plotting",
+        hypothesis="for the `xarray.testing.strategies` submodule",
+    )
+    package_name = module.split(".")[0]  # if submod, get the top-level package name
 
-    if module_available(name):
-        return importlib.import_module(name)
-    if strict:
-        raise ImportError(
-            f"For {purpose}, {package_name} is required. "
-            f"Please install it via pip or conda."
-        )
-    return
-
-
-def check_fsspec_installed(strict=True):
-    """Import fsspec if available, otherwise raise an ImportError."""
-    purpose = "opening Zarr stores with remote URLs"
-    return soft_import("fsspec", purpose=purpose, strict=strict)
-
-
-def check_cftime_installed(strict=True):
-    """Import cftime if available, otherwise raise an ImportError."""
-    purpose = "working with dates with non-standard calendars"
-    return soft_import("cftime", purpose=purpose, strict=strict)
-
-
-def check_zarr_installed(strict=True):
-    """Import zarr if available, otherwise raise an ImportError."""
-    purpose = "working with Zarr stores"
-    return soft_import("zarr", purpose=purpose, strict=strict)
+    if module_available(package_name):
+        return importlib.import_module(module)
+    install_name = install_mapping.get(package_name, package_name)
+    reason = package_purpose.get(package_name, "")
+    raise ImportError(
+        f"The {install_name} package is required {reason} but could not be imported."
+        " Please install it with your package manager (e.g. conda or pip)."
+    )
