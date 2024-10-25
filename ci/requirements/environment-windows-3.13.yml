@@ -7,9 +7,9 @@ dependencies:
   - bottleneck
   - cartopy
   - cftime
-  - dask-core
-  - dask-expr
-  - distributed
+  # - dask-core
+  # - dask-expr
+  # - distributed
   - flox
   - fsspec
   - h5netcdf
@@ -29,7 +29,7 @@ dependencies:
   # - pint>=0.22
   - pip
   - pre-commit
-  - pydap
+  # - pydap
   - pytest
   - pytest-cov
   - pytest-env
