@@ -3979,7 +3979,7 @@ class Dataset(
 
         See Also
         --------
-        scipy.interpolate
+        :mod:`scipy.interpolate`
 
         :doc:`xarray-tutorial:fundamentals/02.2_manipulating_dimensions`
             Tutorial material on manipulating data resolution using :py:func:`~xarray.Dataset.interp`
@@ -4269,9 +4269,9 @@ class Dataset(
 
         See Also
         --------
-        Dataset.interp
-        Dataset.reindex_like
-        scipy.interpolate
+        :func:`Dataset.interp`
+        :func:`Dataset.reindex_like`
+        :mod:`scipy.interpolate`
         """
         if kwargs is None:
             kwargs = {}

@@ -2294,9 +2294,7 @@ class DataArray(
 
         See Also
         --------
-        Dataset.interp
-        Dataset.reindex_like
-        scipy.interpolate
+        :mod:`scipy.interpolate`
 
         :doc:`xarray-tutorial:fundamentals/02.2_manipulating_dimensions`
             Tutorial material on manipulating data resolution using :py:func:`~xarray.DataArray.interp`
@@ -2449,9 +2447,9 @@ class DataArray(
 
         See Also
         --------
-        DataArray.interp
-        DataArray.reindex_like
-        scipy.interpolate
+        :func:`DataArray.interp`
+        :func:`DataArray.reindex_like`
+        :mod:`scipy.interpolate`
 
         Examples
         --------
