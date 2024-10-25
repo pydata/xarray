@@ -1052,10 +1052,10 @@ class Dataset(
             k: v._data for k, v in self.variables.items() if is_duck_dask_array(v._data)
         }
         if lazy_data:
-            import dask
+            chunkmanager = get_chunked_array_type(*lazy_data.values())
 
             # evaluate all the dask arrays simultaneously
-            evaluated_data = dask.persist(*lazy_data.values(), **kwargs)
+            evaluated_data = chunkmanager.persist(*lazy_data.values(), **kwargs)
 
             for k, data in zip(lazy_data, evaluated_data, strict=False):
                 self.variables[k].data = data

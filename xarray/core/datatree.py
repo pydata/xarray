@@ -2002,10 +2002,10 @@ class DataTree(
             for var_name, array in node.items()
         }
         if flat_lazy_data:
-            import dask
+            chunkmanager = get_chunked_array_type(*flat_lazy_data.values())
 
             # evaluate all the dask arrays simultaneously
-            evaluated_data = dask.persist(*flat_lazy_data.values(), **kwargs)
+            evaluated_data = chunkmanager.persist(*flat_lazy_data.values(), **kwargs)
 
             for (path, var_name), data in zip(
                 flat_lazy_data, evaluated_data, strict=False
