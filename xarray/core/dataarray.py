@@ -75,6 +75,7 @@ from xarray.core.utils import (
     either_dict_or_kwargs,
     hashable,
     infix_dims,
+    result_name,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -1342,8 +1343,10 @@ class DataArray(
     @property
     def chunksizes(self) -> Mapping[Any, tuple[int, ...]]:
         """
-        Mapping from dimension names to block lengths for this dataarray's data, or None if
-        the underlying data is not a dask array.
+        Mapping from dimension names to block lengths for this dataarray's data.
+
+        If this dataarray does not contain chunked arrays, the mapping will be empty.
+
         Cannot be modified directly, but can be modified by calling .chunk().
 
         Differs from DataArray.chunks because it returns a mapping of dimensions to chunk shapes
@@ -4359,6 +4362,13 @@ class DataArray(
             The encoding attribute (if exists) of the DataArray(s) will be
             used. Override any existing encodings by providing the ``encoding`` kwarg.
 
+        ``fill_value`` handling:
+            There exists a subtlety in interpreting zarr's ``fill_value`` property. For zarr v2 format
+            arrays, ``fill_value`` is *always* interpreted as an invalid value similar to the ``_FillValue`` attribute
+            in CF/netCDF. For Zarr v3 format arrays, only an explicit ``_FillValue`` attribute will be used
+            to mask the data if requested using ``mask_and_scale=True``. See this `Github issue <https://github.com/pydata/xarray/issues/5475>`_
+            for more.
+
         See Also
         --------
         Dataset.to_zarr
@@ -4726,15 +4736,6 @@ class DataArray(
         except (TypeError, AttributeError):
             return False
 
-    def _result_name(self, other: Any = None) -> Hashable | None:
-        # use the same naming heuristics as pandas:
-        # https://github.com/ContinuumIO/blaze/issues/458#issuecomment-51936356
-        other_name = getattr(other, "name", _default)
-        if other_name is _default or other_name == self.name:
-            return self.name
-        else:
-            return None
-
     def __array_wrap__(self, obj, context=None) -> Self:
         new_var = self.variable.__array_wrap__(obj, context)
         return self._replace(new_var)
@@ -4782,7 +4783,7 @@ class DataArray(
             else f(other_variable_or_arraylike, self.variable)
         )
         coords, indexes = self.coords._merge_raw(other_coords, reflexive)
-        name = self._result_name(other)
+        name = result_name([self, other])
 
         return self._replace(variable, coords, name, indexes=indexes)
 
@@ -6808,7 +6809,7 @@ class DataArray(
 
         >>> da.groupby("letters")
         <DataArrayGroupBy, grouped over 1 grouper(s), 2 groups in total:
-            'letters': 2 groups with labels 'a', 'b'>
+            'letters': 2/2 groups present with labels 'a', 'b'>
 
         Execute a reduction
 
@@ -6824,8 +6825,8 @@ class DataArray(
 
         >>> da.groupby(["letters", "x"])
         <DataArrayGroupBy, grouped over 2 grouper(s), 8 groups in total:
-            'letters': 2 groups with labels 'a', 'b'
-            'x': 4 groups with labels 10, 20, 30, 40>
+            'letters': 2/2 groups present with labels 'a', 'b'
+            'x': 4/4 groups present with labels 10, 20, 30, 40>
 
         Use Grouper objects to express more complicated GroupBy operations
 

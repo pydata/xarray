@@ -31,7 +31,7 @@ from xarray.core.indexes import Index, filter_indexes_from_coords
 from xarray.core.merge import merge_attrs, merge_coordinates_without_align
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import Dims, T_DataArray
-from xarray.core.utils import is_dict_like, is_scalar, parse_dims_as_set
+from xarray.core.utils import is_dict_like, is_scalar, parse_dims_as_set, result_name
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
@@ -46,7 +46,6 @@ if TYPE_CHECKING:
     MissingCoreDimOptions = Literal["raise", "copy", "drop"]
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
-_DEFAULT_NAME = utils.ReprObject("<default-name>")
 _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
 
 
@@ -184,18 +183,6 @@ class _UFuncSignature:
 
         alt_signature = type(self)(input_core_dims, output_core_dims)
         return str(alt_signature)
-
-
-def result_name(objects: Iterable[Any]) -> Any:
-    # use the same naming heuristics as pandas:
-    # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
-    names = {getattr(obj, "name", _DEFAULT_NAME) for obj in objects}
-    names.discard(_DEFAULT_NAME)
-    if len(names) == 1:
-        (name,) = names
-    else:
-        name = None
-    return name
 
 
 def _get_coords_list(args: Iterable[Any]) -> list[Coordinates]:
