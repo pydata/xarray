@@ -21,7 +21,8 @@ v.2024.10.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Added :py:meth:`DataTree.persist` method (:issue:`9675`, :pull:`9682`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
