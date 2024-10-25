@@ -87,7 +87,7 @@ from xarray.core.merge import (
     merge_coordinates_without_align,
     merge_core,
 )
-from xarray.core.missing import get_clean_interp_index
+from xarray.core.missing import _floatize_x
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Bins,
@@ -103,9 +103,9 @@ from xarray.core.types import (
 )
 from xarray.core.utils import (
     Default,
+    FilteredMapping,
     Frozen,
     FrozenMappingWarningOnValuesAccess,
-    HybridMappingProxy,
     OrderedSet,
     _default,
     decode_numpy_dict_values,
@@ -118,6 +118,7 @@ from xarray.core.utils import (
     is_duck_dask_array,
     is_scalar,
     maybe_wrap_array,
+    parse_dims_as_set,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -1507,10 +1508,10 @@ class Dataset(
     def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for key-completion"""
         yield self.data_vars
-        yield HybridMappingProxy(keys=self._coord_names, mapping=self.coords)
+        yield FilteredMapping(keys=self._coord_names, mapping=self.coords)
 
         # virtual coordinates
-        yield HybridMappingProxy(keys=self.sizes, mapping=self)
+        yield FilteredMapping(keys=self.sizes, mapping=self)
 
     def __contains__(self, key: object) -> bool:
         """The 'in' operator will return true or false depending on whether
@@ -2375,6 +2376,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore: ...
@@ -2397,6 +2399,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> Delayed: ...
@@ -2417,6 +2420,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore | Delayed:
@@ -2527,9 +2531,15 @@ class Dataset(
             Any additional parameters for the storage backend (ignored for local
             paths).
         zarr_version : int or None, optional
-            The desired zarr spec version to target (currently 2 or 3). The
-            default of None will attempt to determine the zarr version from
-            ``store`` when possible, otherwise defaulting to 2.
+
+            .. deprecated:: 2024.9.1
+            Use ``zarr_format`` instead.
+
+        zarr_format : int or None, optional
+            The desired zarr format to target (currently 2 or 3). The default
+            of None will attempt to determine the zarr version from ``store`` when
+            possible, otherwise defaulting to the default version used by
+            the zarr-python library installed.
         write_empty_chunks : bool or None, optional
             If True, all chunks will be stored regardless of their
             contents. If False, each chunk is compared to the array's fill value
@@ -2568,6 +2578,13 @@ class Dataset(
             The encoding attribute (if exists) of the DataArray(s) will be
             used. Override any existing encodings by providing the ``encoding`` kwarg.
 
+        ``fill_value`` handling:
+            There exists a subtlety in interpreting zarr's ``fill_value`` property. For zarr v2 format
+            arrays, ``fill_value`` is *always* interpreted as an invalid value similar to the ``_FillValue`` attribute
+            in CF/netCDF. For Zarr v3 format arrays, only an explicit ``_FillValue`` attribute will be used
+            to mask the data if requested using ``mask_and_scale=True``. See this `Github issue <https://github.com/pydata/xarray/issues/5475>`_
+            for more.
+
         See Also
         --------
         :ref:`io.zarr`
@@ -2590,6 +2607,7 @@ class Dataset(
             region=region,
             safe_chunks=safe_chunks,
             zarr_version=zarr_version,
+            zarr_format=zarr_format,
             write_empty_chunks=write_empty_chunks,
             chunkmanager_store_kwargs=chunkmanager_store_kwargs,
         )
@@ -2640,8 +2658,10 @@ class Dataset(
     @property
     def chunks(self) -> Mapping[Hashable, tuple[int, ...]]:
         """
-        Mapping from dimension names to block lengths for this dataset's data, or None if
-        the underlying data is not a dask array.
+        Mapping from dimension names to block lengths for this dataset's data.
+
+        If this dataset does not contain chunked arrays, the mapping will be empty.
+
         Cannot be modified directly, but can be modified by calling .chunk().
 
         Same as Dataset.chunksizes, but maintained for backwards compatibility.
@@ -2657,8 +2677,10 @@ class Dataset(
     @property
     def chunksizes(self) -> Mapping[Hashable, tuple[int, ...]]:
         """
-        Mapping from dimension names to block lengths for this dataset's data, or None if
-        the underlying data is not a dask array.
+        Mapping from dimension names to block lengths for this dataset's data.
+
+        If this dataset does not contain chunked arrays, the mapping will be empty.
+
         Cannot be modified directly, but can be modified by calling .chunk().
 
         Same as Dataset.chunks.
@@ -6986,18 +7008,7 @@ class Dataset(
                 " Please use 'dim' instead."
             )
 
-        if dim is None or dim is ...:
-            dims = set(self.dims)
-        elif isinstance(dim, str) or not isinstance(dim, Iterable):
-            dims = {dim}
-        else:
-            dims = set(dim)
-
-        missing_dimensions = tuple(d for d in dims if d not in self.dims)
-        if missing_dimensions:
-            raise ValueError(
-                f"Dimensions {missing_dimensions} not found in data dimensions {tuple(self.dims)}"
-            )
+        dims = parse_dims_as_set(dim, set(self._dims.keys()))
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -7381,7 +7392,7 @@ class Dataset(
             dataframe.
 
             If provided, must include all dimensions of this dataset. By
-            default, dimensions are sorted alphabetically.
+            default, dimensions are in the same order as in `Dataset.sizes`.
 
         Returns
         -------
@@ -7794,9 +7805,10 @@ class Dataset(
 
     def _binary_op(self, other, f, reflexive=False, join=None) -> Dataset:
         from xarray.core.dataarray import DataArray
+        from xarray.core.datatree import DataTree
         from xarray.core.groupby import GroupBy
 
-        if isinstance(other, GroupBy):
+        if isinstance(other, DataTree | GroupBy):
             return NotImplemented
         align_type = OPTIONS["arithmetic_join"] if join is None else join
         if isinstance(other, DataArray | Dataset):
@@ -9054,7 +9066,16 @@ class Dataset(
         variables = {}
         skipna_da = skipna
 
-        x = get_clean_interp_index(self, dim, strict=False)
+        x: Any = self.coords[dim].variable
+        x = _floatize_x((x,), (x,))[0][0]
+
+        try:
+            x = x.values.astype(np.float64)
+        except TypeError as e:
+            raise TypeError(
+                f"Dim {dim!r} must be castable to float64, got {type(x).__name__}."
+            ) from e
+
         xname = f"{self[dim].name}_"
         order = int(deg) + 1
         lhs = np.vander(x, order)
@@ -9093,8 +9114,11 @@ class Dataset(
             )
             variables[sing.name] = sing
 
+        # If we have a coordinate get its underlying dimension.
+        true_dim = self.coords[dim].dims[0]
+
         for name, da in self.data_vars.items():
-            if dim not in da.dims:
+            if true_dim not in da.dims:
                 continue
 
             if is_duck_dask_array(da.data) and (
@@ -9106,11 +9130,11 @@ class Dataset(
             elif skipna is None:
                 skipna_da = bool(np.any(da.isnull()))
 
-            dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
+            dims_to_stack = [dimname for dimname in da.dims if dimname != true_dim]
             stacked_coords: dict[Hashable, DataArray] = {}
             if dims_to_stack:
                 stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
-                rhs = da.transpose(dim, *dims_to_stack).stack(
+                rhs = da.transpose(true_dim, *dims_to_stack).stack(
                     {stacked_dim: dims_to_stack}
                 )
                 stacked_coords = {stacked_dim: rhs[stacked_dim]}
@@ -10373,10 +10397,8 @@ class Dataset(
             Array whose unique values should be used to group this array. If a
             Hashable, must be the name of a coordinate contained in this dataarray. If a dictionary,
             must map an existing variable name to a :py:class:`Grouper` instance.
-        squeeze : bool, default: True
-            If "group" is a dimension of any arrays in this dataset, `squeeze`
-            controls whether the subarrays have a dimension of length 1 along
-            that dimension or if the dimension is squeezed out.
+        squeeze : False
+            This argument is deprecated.
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -10402,7 +10424,7 @@ class Dataset(
 
         >>> ds.groupby("letters")
         <DatasetGroupBy, grouped over 1 grouper(s), 2 groups in total:
-            'letters': 2 groups with labels 'a', 'b'>
+            'letters': 2/2 groups present with labels 'a', 'b'>
 
         Execute a reduction
 
@@ -10419,8 +10441,8 @@ class Dataset(
 
         >>> ds.groupby(["letters", "x"])
         <DatasetGroupBy, grouped over 2 grouper(s), 8 groups in total:
-            'letters': 2 groups with labels 'a', 'b'
-            'x': 4 groups with labels 10, 20, 30, 40>
+            'letters': 2/2 groups present with labels 'a', 'b'
+            'x': 4/4 groups present with labels 10, 20, 30, 40>
 
         Use Grouper objects to express more complicated GroupBy operations
 

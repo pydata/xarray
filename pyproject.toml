@@ -49,7 +49,7 @@ dev = [
   "sphinx_autosummary_accessors",
   "xarray[complete]",
 ]
-io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr<3", "fsspec", "cftime", "pooch"]
+io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
 etc = ["sparse"]
 parallel = ["dask[complete]"]
 viz = ["cartopy", "matplotlib", "nc-time-axis", "seaborn"]
@@ -124,6 +124,7 @@ module = [
   "nc_time_axis.*",
   "netCDF4.*",
   "netcdftime.*",
+  "numcodecs.*",
   "opt_einsum.*",
   "pint.*",
   "pooch.*",
@@ -214,13 +215,16 @@ warn_return_any = true
 
 module = ["xarray.namedarray.*", "xarray.tests.test_namedarray"]
 
-[tool.pyright]
-defineConstant = {DEBUG = true}
+# We disable pyright here for now, since including it means that all errors show
+# up in devs' VS Code, which then makes it more difficult to work with actual
+# errors. It overrides local VS Code settings so isn't escapable.
 
-# Enabling this means that developers who have disabled the warning locally —
-# because not all dependencies are installable — are overridden
-# reportMissingImports = true
-reportMissingTypeStubs = false
+# [tool.pyright]
+# defineConstant = {DEBUG = true}
+# # Enabling this means that developers who have disabled the warning locally —
+# # because not all dependencies are installable — are overridden
+# # reportMissingImports = true
+# reportMissingTypeStubs = false
 
 [tool.ruff]
 extend-exclude = [
@@ -230,7 +234,7 @@ extend-exclude = [
 
 [tool.ruff.lint]
 # E402: module level import not at top of file
-# E501: line too long - let black worry about that
+# E501: line too long - let the formatter worry about that
 # E731: do not assign a lambda expression, use a def
 extend-safe-fixes = [
   "TID252", # absolute imports

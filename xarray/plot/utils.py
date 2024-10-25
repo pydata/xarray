@@ -996,7 +996,7 @@ def legend_elements(
     This is useful for obtaining a legend for a `~.Axes.scatter` plot;
     e.g.::
 
-        scatter = plt.scatter([1, 2, 3],  [4, 5, 6],  c=[7, 2, 3])
+        scatter = plt.scatter([1, 2, 3], [4, 5, 6], c=[7, 2, 3])
         plt.legend(*scatter.legend_elements())
 
     creates three legend elements, one for each color with the numerical

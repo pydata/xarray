@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import io
 import os
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -13,6 +13,7 @@ from xarray.backends.common import (
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
+    datatree_from_dict_with_io_cleanup,
     find_root_and_group,
 )
 from xarray.backends.file_manager import CachingFileManager, DummyFileManager
@@ -465,7 +466,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         use_cftime=None,
         decode_timedelta=None,
         format=None,
-        group: str | Iterable[str] | Callable | None = None,
+        group: str | None = None,
         lock=None,
         invalid_netcdf=None,
         phony_dims=None,
@@ -474,12 +475,27 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         driver_kwds=None,
         **kwargs,
     ) -> DataTree:
+        groups_dict = self.open_groups_as_dict(
+            filename_or_obj,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+            format=format,
+            group=group,
+            lock=lock,
+            invalid_netcdf=invalid_netcdf,
+            phony_dims=phony_dims,
+            decode_vlen_strings=decode_vlen_strings,
+            driver=driver,
+            driver_kwds=driver_kwds,
+            **kwargs,
+        )
 
-        from xarray.core.datatree import DataTree
-
-        groups_dict = self.open_groups_as_dict(filename_or_obj, **kwargs)
-
-        return DataTree.from_dict(groups_dict)
+        return datatree_from_dict_with_io_cleanup(groups_dict)
 
     def open_groups_as_dict(
         self,
@@ -493,7 +509,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         use_cftime=None,
         decode_timedelta=None,
         format=None,
-        group: str | Iterable[str] | Callable | None = None,
+        group: str | None = None,
         lock=None,
         invalid_netcdf=None,
         phony_dims=None,
@@ -502,7 +518,6 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         driver_kwds=None,
         **kwargs,
     ) -> dict[str, Dataset]:
-
         from xarray.backends.common import _iter_nc_groups
         from xarray.core.treenode import NodePath
         from xarray.core.utils import close_on_error
@@ -542,7 +557,10 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
                     decode_timedelta=decode_timedelta,
                 )
 
-            group_name = str(NodePath(path_group))
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
 
         return groups_dict

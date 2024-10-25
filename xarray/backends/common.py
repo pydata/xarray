@@ -4,7 +4,7 @@ import logging
 import os
 import time
 import traceback
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from glob import glob
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -12,6 +12,7 @@ import numpy as np
 
 from xarray.conventions import cf_encoder
 from xarray.core import indexing
+from xarray.core.datatree import DataTree
 from xarray.core.utils import (
     FrozenDict,
     NdimSizeLenMixin,
@@ -25,7 +26,6 @@ if TYPE_CHECKING:
     from io import BufferedIOBase
 
     from xarray.core.dataset import Dataset
-    from xarray.core.datatree import DataTree
     from xarray.core.types import NestedSequence
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
@@ -138,7 +138,6 @@ def _iter_nc_groups(root, parent="/"):
     yield str(parent)
     for path, group in root.groups.items():
         gpath = parent / path
-        yield str(gpath)
         yield from _iter_nc_groups(group, parent=gpath)
 
 
@@ -150,6 +149,19 @@ def find_root_and_group(ds):
         ds = ds.parent
     group = "/" + "/".join(hierarchy)
     return ds, group
+
+
+def datatree_from_dict_with_io_cleanup(groups_dict: Mapping[str, Dataset]) -> DataTree:
+    """DataTree.from_dict with file clean-up."""
+    try:
+        tree = DataTree.from_dict(groups_dict)
+    except Exception:
+        for ds in groups_dict.values():
+            ds.close()
+        raise
+    for path, ds in groups_dict.items():
+        tree[path].set_close(ds._close)
+    return tree
 
 
 def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500):
@@ -209,13 +221,10 @@ class AbstractDataStore:
         For example::
 
             class SuffixAppendingDataStore(AbstractDataStore):
-
                 def load(self):
                     variables, attributes = AbstractDataStore.load(self)
-                    variables = {'%s_suffix' % k: v
-                                 for k, v in variables.items()}
-                    attributes = {'%s_suffix' % k: v
-                                  for k, v in attributes.items()}
+                    variables = {"%s_suffix" % k: v for k, v in variables.items()}
+                    attributes = {"%s_suffix" % k: v for k, v in attributes.items()}
                     return variables, attributes
 
         This function will be called anytime variables or attributes

@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import os
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
@@ -16,6 +16,7 @@ from xarray.backends.common import (
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
+    datatree_from_dict_with_io_cleanup,
     find_root_and_group,
     robust_getitem,
 )
@@ -700,7 +701,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        group: str | Iterable[str] | Callable | None = None,
+        group: str | None = None,
         format="NETCDF4",
         clobber=True,
         diskless=False,
@@ -710,12 +711,26 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         autoclose=False,
         **kwargs,
     ) -> DataTree:
+        groups_dict = self.open_groups_as_dict(
+            filename_or_obj,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+            group=group,
+            format=format,
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            lock=lock,
+            autoclose=autoclose,
+            **kwargs,
+        )
 
-        from xarray.core.datatree import DataTree
-
-        groups_dict = self.open_groups_as_dict(filename_or_obj, **kwargs)
-
-        return DataTree.from_dict(groups_dict)
+        return datatree_from_dict_with_io_cleanup(groups_dict)
 
     def open_groups_as_dict(
         self,
@@ -728,7 +743,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        group: str | Iterable[str] | Callable | None = None,
+        group: str | None = None,
         format="NETCDF4",
         clobber=True,
         diskless=False,
@@ -775,7 +790,10 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-            group_name = str(NodePath(path_group))
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
 
         return groups_dict

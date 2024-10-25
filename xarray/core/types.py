@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
     from xarray.core.indexes import Index, Indexes
     from xarray.core.utils import Frozen
     from xarray.core.variable import IndexVariable, Variable
@@ -66,7 +67,7 @@ if TYPE_CHECKING:
         CubedArray = np.ndarray
 
     try:
-        from zarr.core import Array as ZarrArray
+        from zarr import Array as ZarrArray
     except ImportError:
         ZarrArray = np.ndarray
 
@@ -194,6 +195,7 @@ ScalarOrArray = Union["ArrayLike", np.generic]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 DaCompatible = Union["DataArray", "VarCompatible"]
 DsCompatible = Union["Dataset", "DaCompatible"]
+DtCompatible = Union["DataTree", "DsCompatible"]
 GroupByCompatible = Union["Dataset", "DataArray"]
 
 # Don't change to Hashable | Collection[Hashable]
