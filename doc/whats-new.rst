@@ -21,7 +21,8 @@ v.2024.10.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- support python 3.13 (no free-threading) (:issue:`9664`, :pull:`9681`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
