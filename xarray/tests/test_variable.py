@@ -2979,7 +2979,7 @@ def test_datetime_conversion_warning(values) -> None:
     if var.dtype.kind == "M":
         if not hasattr(values, "dtype"):
             assert var.dtype == np.dtype("datetime64[us]")
-        elif values.dtype == np.dtype("O"):
+        elif values.dtype == np.dtype("O") or isinstance(values, pd.Series):
             # We assign a nicer dtype here
             assert var.dtype == np.dtype("datetime64[ns]")
         else:
@@ -3024,7 +3024,11 @@ def test_pandas_two_only_datetime_conversion_warnings(
     # todo: check, if this test is OK
     var = Variable(["time"], data.astype(dtype))  # type: ignore[arg-type]
 
-    if var.dtype.kind == "M":
+    # we internally convert series to numpy representations to avoid too much nastiness with extension arrays
+    # when calling data.array e.g., with NumpyExtensionArrays
+    if isinstance(data, pd.Series):
+        assert var.dtype == np.dtype("datetime64[s]")
+    elif var.dtype.kind == "M":
         assert var.dtype == dtype
     else:
         # The only case where a non-datetime64 dtype can occur currently is in
