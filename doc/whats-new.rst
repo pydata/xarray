@@ -34,6 +34,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix inadvertent deep-copying of child data in DataTree.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Documentation
 ~~~~~~~~~~~~~

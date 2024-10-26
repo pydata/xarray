@@ -146,7 +146,7 @@ def check_alignment(
 ) -> None:
     if parent_ds is not None:
         try:
-            align(node_ds, parent_ds, join="exact")
+            align(node_ds, parent_ds, join="exact", copy=False)
         except ValueError as e:
             node_repr = _indented(_without_header(repr(node_ds)))
             parent_repr = _indented(dims_and_coords_repr(parent_ds))
