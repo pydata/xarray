@@ -99,7 +99,7 @@ def _find_absolute_paths(
                 expand=False,
             )
             tmp_paths = fs.glob(fs._strip_protocol(paths))  # finds directories
-            paths = [fs.get_mapper(path) for path in tmp_paths]
+            return [fs.get_mapper(path) for path in tmp_paths]
         elif is_remote_uri(paths):
             raise ValueError(
                 "cannot do wild-card matching for paths that are remote URLs "
@@ -107,13 +107,11 @@ def _find_absolute_paths(
                 "Instead, supply paths as an explicit list of strings."
             )
         else:
-            paths = sorted(glob(_normalize_path(paths)))
+            return sorted(glob(_normalize_path(paths)))
     elif isinstance(paths, os.PathLike):
-        paths = [os.fspath(paths)]
+        return [os.fspath(paths)]
     else:
-        paths = [os.fspath(p) if isinstance(p, os.PathLike) else p for p in paths]
-
-    return paths
+        return [os.fspath(p) if isinstance(p, os.PathLike) else str(p) for p in paths]
 
 
 def _encode_variable_name(name):
