@@ -4,7 +4,6 @@ import base64
 import json
 import os
 import struct
-import warnings
 from collections.abc import Hashable, Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -615,7 +614,6 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
         safe_chunks=True,
-        stacklevel=2,
         zarr_version=None,
         zarr_format=None,
         use_zarr_fill_value_as_mask=None,
@@ -635,7 +633,6 @@ class ZarrStore(AbstractWritableDataStore):
             consolidate_on_close=consolidate_on_close,
             chunk_store=chunk_store,
             storage_options=storage_options,
-            stacklevel=stacklevel,
             zarr_version=zarr_version,
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
@@ -670,7 +667,6 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
         safe_chunks=True,
-        stacklevel=2,
         zarr_version=None,
         zarr_format=None,
         use_zarr_fill_value_as_mask=None,
@@ -690,7 +686,6 @@ class ZarrStore(AbstractWritableDataStore):
             consolidate_on_close=consolidate_on_close,
             chunk_store=chunk_store,
             storage_options=storage_options,
-            stacklevel=stacklevel,
             zarr_version=zarr_version,
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
@@ -1376,7 +1371,6 @@ def open_zarr(
         "overwrite_encoded_chunks": overwrite_encoded_chunks,
         "chunk_store": chunk_store,
         "storage_options": storage_options,
-        "stacklevel": 4,
         "zarr_version": zarr_version,
         "zarr_format": zarr_format,
     }
@@ -1445,7 +1439,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidated=None,
         chunk_store=None,
         storage_options=None,
-        stacklevel=3,
         zarr_version=None,
         zarr_format=None,
         store=None,
@@ -1463,7 +1456,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 consolidate_on_close=False,
                 chunk_store=chunk_store,
                 storage_options=storage_options,
-                stacklevel=stacklevel + 1,
                 zarr_version=zarr_version,
                 use_zarr_fill_value_as_mask=None,
                 zarr_format=zarr_format,
@@ -1500,7 +1492,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidated=None,
         chunk_store=None,
         storage_options=None,
-        stacklevel=3,
         zarr_version=None,
         zarr_format=None,
         **kwargs,
@@ -1521,7 +1512,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             consolidated=consolidated,
             chunk_store=chunk_store,
             storage_options=storage_options,
-            stacklevel=stacklevel,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
             **kwargs,
@@ -1545,7 +1535,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidated=None,
         chunk_store=None,
         storage_options=None,
-        stacklevel=3,
         zarr_version=None,
         zarr_format=None,
         **kwargs,
@@ -1569,7 +1558,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             consolidate_on_close=False,
             chunk_store=chunk_store,
             storage_options=storage_options,
-            stacklevel=stacklevel + 1,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
         )
@@ -1614,7 +1602,6 @@ def _get_open_params(
     consolidate_on_close,
     chunk_store,
     storage_options,
-    stacklevel,
     zarr_version,
     use_zarr_fill_value_as_mask,
     zarr_format,
@@ -1659,7 +1646,7 @@ def _get_open_params(
             # ValueError in zarr-python 3.x, KeyError in 2.x.
             try:
                 zarr_group = zarr.open_group(store, **open_kwargs)
-                warnings.warn(
+                emit_user_level_warning(
                     "Failed to open Zarr store with consolidated metadata, "
                     "but successfully read with non-consolidated metadata. "
                     "This is typically much slower for opening a dataset. "
@@ -1672,7 +1659,6 @@ def _get_open_params(
                     "error in this case instead of falling back to try "
                     "reading non-consolidated metadata.",
                     RuntimeWarning,
-                    stacklevel=stacklevel,
                 )
             except missing_exc as err:
                 raise FileNotFoundError(

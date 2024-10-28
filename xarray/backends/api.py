@@ -2166,7 +2166,6 @@ def to_zarr(
         append_dim=append_dim,
         write_region=region,
         safe_chunks=safe_chunks,
-        stacklevel=4,  # for Dataset.to_zarr()
         zarr_version=zarr_version,
         zarr_format=zarr_format,
         write_empty=write_empty_chunks,
