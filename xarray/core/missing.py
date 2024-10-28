@@ -633,7 +633,7 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
 
     result = var
 
-    if method in ["linear", "nearest"]:
+    if method in ["linear", "nearest", "slinear"]:
         # decompose the interpolation into a succession of independent interpolation.
         indexes_coords = decompose_interp(indexes_coords)
     else:

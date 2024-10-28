@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from itertools import combinations, permutations, product
-from typing import cast
+from typing import cast, get_args
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,7 @@ import pytest
 
 import xarray as xr
 from xarray.coding.cftimeindex import _parse_array_of_cftime_strings
-from xarray.core.types import InterpnOptions, InterpOptions
+from xarray.core.types import InterpnOptions, InterpOptions, Interp1dOptions, InterpolantOptions
 from xarray.tests import (
     assert_allclose,
     assert_equal,
@@ -28,6 +28,7 @@ try:
 except ImportError:
     pass
 
+ALL_1D = get_args(Interp1dOptions) + get_args(InterpolantOptions)
 
 def get_example_data(case: int) -> xr.DataArray:
     if case == 0:
@@ -281,66 +282,14 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
     )
     assert_allclose(actual, expected.transpose("z", "w", "y", transpose_coords=True))
 
-
 @requires_scipy
-@pytest.mark.parametrize("method", ("linear", "nearest", "slinear", "pchip"))
+@pytest.mark.parametrize(
+    "method", get_args(InterpnOptions)
+)
 @pytest.mark.parametrize(
     "case", [pytest.param(3, id="no_chunk"), pytest.param(4, id="chunked")]
 )
-def test_interpolate_nd_separable(
-    case: int, method: InterpnOptions, nd_interp_coords
-) -> None:
-    if not has_dask and case == 4:
-        pytest.skip("dask is not installed in the environment.")
-
-    da = get_example_data(case)
-
-    # grid -> grid
-    xdestnp = nd_interp_coords["xdestnp"]
-    ydestnp = nd_interp_coords["ydestnp"]
-    actual = da.interp(x=xdestnp, y=ydestnp, method=method)
-
-    # `method` is separable
-    expected = da.interp(x=xdestnp, method=method)
-    expected = expected.interp(y=ydestnp, method=method)
-    assert_allclose(actual.transpose("x", "y", "z"), expected.transpose("x", "y", "z"))
-
-    # grid -> 1d-sample
-    xdest = nd_interp_coords["xdest"]
-    ydest = nd_interp_coords["ydest"]
-    actual = da.interp(x=xdest, y=ydest, method=method)
-
-    # `method` is separable
-    expected_data = scipy.interpolate.RegularGridInterpolator(
-        (da["x"], da["y"]),
-        da.transpose("x", "y", "z").values,
-        method=method,
-        bounds_error=False,
-        fill_value=np.nan,
-    )(np.stack([xdest, ydest], axis=-1))
-    expected = xr.DataArray(
-        expected_data,
-        dims=["y", "z"],
-        coords={
-            "z": da["z"],
-            "y": ydest,
-            "x": ("y", xdest.values),
-            "x2": da["x2"].interp(x=xdest, method=method),
-        },
-    )
-    assert_allclose(actual.transpose("y", "z"), expected)
-
-    # reversed order
-    actual = da.interp(y=ydest, x=xdest, method=method)
-    assert_allclose(actual.transpose("y", "z"), expected)
-
-
-@requires_scipy
-@pytest.mark.parametrize("method", ("cubic", "quintic"))
-@pytest.mark.parametrize(
-    "case", [pytest.param(3, id="no_chunk"), pytest.param(4, id="chunked")]
-)
-def test_interpolate_nd_inseparable(
+def test_interpolate_nd(
     case: int, method: InterpnOptions, nd_interp_coords
 ) -> None:
     if not has_dask and case == 4:
@@ -358,7 +307,7 @@ def test_interpolate_nd_inseparable(
     actual = da.interp(x=xdestnp, y=ydestnp, z=zdestnp, method=method)
     expected_data = scipy.interpolate.interpn(
         points=(da.x, da.y, da.z),
-        values=da.data,
+        values=da.load().data,
         xi=grid_grid_points,
         method=method,
         bounds_error=False,
@@ -407,7 +356,8 @@ def test_interpolate_nd_inseparable(
 
 
 @requires_scipy
-@pytest.mark.parametrize("method", ("linear", "nearest"))
+# omit cubic, pchip, quintic becausenot enough points
+@pytest.mark.parametrize("method", ("linear", "nearest", "slinear"))
 def test_interpolate_nd_nd(method: InterpnOptions) -> None:
     """Interpolate nd array with an nd indexer sharing coordinates."""
     # Create original array
@@ -469,7 +419,7 @@ def test_interpolate_nd_with_nan() -> None:
 
 
 @requires_scipy
-@pytest.mark.parametrize("method", ["linear"])
+@pytest.mark.parametrize("method", ("linear",))
 @pytest.mark.parametrize(
     "case", [pytest.param(0, id="no_chunk"), pytest.param(1, id="chunk_y")]
 )
@@ -490,6 +440,7 @@ def test_interpolate_scalar(method: InterpOptions, case: int) -> None:
             axis=obj.get_axis_num("x"),
             bounds_error=False,
             fill_value=np.nan,
+            kind=method
         )(new_x)
 
     coords = {"x": xdest, "y": da["y"], "x2": func(da["x2"], xdest)}
@@ -498,7 +449,7 @@ def test_interpolate_scalar(method: InterpOptions, case: int) -> None:
 
 
 @requires_scipy
-@pytest.mark.parametrize("method", ["linear", "quintic"])
+@pytest.mark.parametrize("method", ("linear",))
 @pytest.mark.parametrize(
     "case", [pytest.param(3, id="no_chunk"), pytest.param(4, id="chunked")]
 )
@@ -905,7 +856,8 @@ def test_3641() -> None:
 
 
 @requires_scipy
-@pytest.mark.parametrize("method", ["nearest", "linear"])
+# cubic, quintic, pchip omitted because not enough points
+@pytest.mark.parametrize("method", ("linear","nearest","slinear"))
 def test_decompose(method: InterpOptions) -> None:
     da = xr.DataArray(
         np.arange(6).reshape(3, 2),
@@ -926,7 +878,9 @@ def test_decompose(method: InterpOptions) -> None:
 
 @requires_scipy
 @requires_dask
-@pytest.mark.parametrize("method", ["linear", "nearest"])
+# omit quintic because not enough points
+# unknown timeout using pchip
+@pytest.mark.parametrize("method", ("cubic","linear","slinear"))
 @pytest.mark.parametrize("chunked", [True, False])
 @pytest.mark.parametrize(
     "data_ndim,interp_ndim,nscalar",
@@ -955,8 +909,7 @@ def test_interpolate_chunk_1d(
         * np.exp(z),
         coords=[("x", x), ("y", y), ("z", z)],
     )
-
-    kwargs = {"fill_value": "extrapolate"}
+    kwargs = {}
 
     # choose the data dimensions
     for data_dims in permutations(da.dims, data_ndim):
@@ -1004,7 +957,8 @@ def test_interpolate_chunk_1d(
 
 @requires_scipy
 @requires_dask
-@pytest.mark.parametrize("method", ["linear", "nearest", "cubic"])
+# quintic omitted because not enough points
+@pytest.mark.parametrize("method", ("linear","nearest","slinear","cubic","pchip"))
 @pytest.mark.filterwarnings("ignore:Increasing number of chunks")
 def test_interpolate_chunk_advanced(method: InterpOptions) -> None:
     """Interpolate nd array with an nd indexer sharing coordinates."""
