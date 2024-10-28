@@ -69,6 +69,19 @@ class TestTreeCreation:
         with pytest.raises(TypeError):
             DataTree(dataset=xr.DataArray(42, name="foo"))  # type: ignore[arg-type]
 
+    def test_child_data_not_copied(self) -> None:
+        # regression test for https://github.com/pydata/xarray/issues/9683
+        class NoDeepCopy:
+            def __deepcopy__(self, memo):
+                raise TypeError("class can't be deepcopied")
+
+        da = xr.DataArray(NoDeepCopy())
+        ds = xr.Dataset({"var": da})
+        dt1 = xr.DataTree(ds)
+        dt2 = xr.DataTree(ds, children={"child": dt1})
+        dt3 = xr.DataTree.from_dict({"/": ds, "child": ds})
+        assert_identical(dt2, dt3)
+
 
 class TestFamilyTree:
     def test_dont_modify_children_inplace(self) -> None:
