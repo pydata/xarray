@@ -5,7 +5,7 @@ import json
 import os
 import struct
 import warnings
-from collections.abc import Iterable
+from collections.abc import Hashable, Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
@@ -44,6 +44,66 @@ if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
+
+
+def _get_mappers(*, storage_options, store, chunk_store):
+    # expand str and path-like arguments
+    store = _normalize_path(store)
+    chunk_store = _normalize_path(chunk_store)
+
+    kwargs = {}
+    if storage_options is None:
+        mapper = store
+        chunk_mapper = chunk_store
+    else:
+        if not isinstance(store, str):
+            raise ValueError(
+                f"store must be a string to use storage_options. Got {type(store)}"
+            )
+
+        if _zarr_v3():
+            kwargs["storage_options"] = storage_options
+            mapper = store
+            chunk_mapper = chunk_store
+        else:
+            from fsspec import get_mapper
+
+            mapper = get_mapper(store, **storage_options)
+            if chunk_store is not None:
+                chunk_mapper = get_mapper(chunk_store, **storage_options)
+            else:
+                chunk_mapper = chunk_store
+    return kwargs, mapper, chunk_mapper
+
+
+def _choose_default_mode(
+    *,
+    mode: ZarrWriteModes | None,
+    append_dim: Hashable | None,
+    region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None,
+) -> ZarrWriteModes:
+    if mode is None:
+        if append_dim is not None:
+            mode = "a"
+        elif region is not None:
+            mode = "r+"
+        else:
+            mode = "w-"
+
+    if mode not in ["a", "a-"] and append_dim is not None:
+        raise ValueError("cannot set append_dim unless mode='a' or mode=None")
+
+    if mode not in ["a", "a-", "r+"] and region is not None:
+        raise ValueError(
+            "cannot set region unless mode='a', mode='a-', mode='r+' or mode=None"
+        )
+
+    if mode not in ["w", "w-", "a", "a-", "r+"]:
+        raise ValueError(
+            "The only supported options for mode are 'w', "
+            f"'w-', 'a', 'a-', and 'r+', but mode={mode!r}"
+        )
+    return mode
 
 
 def _zarr_v3() -> bool:

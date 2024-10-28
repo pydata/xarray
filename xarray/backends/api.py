@@ -33,7 +33,6 @@ from xarray.backends.common import (
     _normalize_path,
 )
 from xarray.backends.locks import _get_scheduler
-from xarray.backends.zarr import _zarr_v3
 from xarray.core import indexing
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
@@ -2131,63 +2130,20 @@ def to_zarr(
 
     See `Dataset.to_zarr` for full API docs.
     """
+    from xarray.backends.zarr import _choose_default_mode, _get_mappers
 
     # Load empty arrays to avoid bug saving zero length dimensions (Issue #5741)
     for v in dataset.variables.values():
         if v.size == 0:
             v.load()
 
-    # expand str and path-like arguments
-    store = _normalize_path(store)
-    chunk_store = _normalize_path(chunk_store)
-
-    kwargs = {}
-    if storage_options is None:
-        mapper = store
-        chunk_mapper = chunk_store
-    else:
-        if not isinstance(store, str):
-            raise ValueError(
-                f"store must be a string to use storage_options. Got {type(store)}"
-            )
-
-        if _zarr_v3():
-            kwargs["storage_options"] = storage_options
-            mapper = store
-            chunk_mapper = chunk_store
-        else:
-            from fsspec import get_mapper
-
-            mapper = get_mapper(store, **storage_options)
-            if chunk_store is not None:
-                chunk_mapper = get_mapper(chunk_store, **storage_options)
-            else:
-                chunk_mapper = chunk_store
-
     if encoding is None:
         encoding = {}
 
-    if mode is None:
-        if append_dim is not None:
-            mode = "a"
-        elif region is not None:
-            mode = "r+"
-        else:
-            mode = "w-"
-
-    if mode not in ["a", "a-"] and append_dim is not None:
-        raise ValueError("cannot set append_dim unless mode='a' or mode=None")
-
-    if mode not in ["a", "a-", "r+"] and region is not None:
-        raise ValueError(
-            "cannot set region unless mode='a', mode='a-', mode='r+' or mode=None"
-        )
-
-    if mode not in ["w", "w-", "a", "a-", "r+"]:
-        raise ValueError(
-            "The only supported options for mode are 'w', "
-            f"'w-', 'a', 'a-', and 'r+', but mode={mode!r}"
-        )
+    kwargs, mapper, chunk_mapper = _get_mappers(
+        storage_options=storage_options, store=store, chunk_store=chunk_store
+    )
+    mode = _choose_default_mode(mode=mode, append_dim=append_dim, region=region)
 
     # validate Dataset keys, DataArray names
     _validate_dataset_names(dataset)
@@ -2198,6 +2154,7 @@ def to_zarr(
     else:
         already_consolidated = False
         consolidate_on_close = consolidated or consolidated is None
+
     zstore = backends.ZarrStore.open_group(
         store=mapper,
         mode=mode,
