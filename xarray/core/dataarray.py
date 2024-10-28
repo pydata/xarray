@@ -1444,6 +1444,11 @@ class DataArray(
                 "It will raise an error in the future. Instead use a dict with dimension names as keys.",
                 category=DeprecationWarning,
             )
+            if len(chunks) != len(self.dims):
+                raise ValueError(
+                    f"chunks must have the same number of elements as dimensions. "
+                    f"Expected {len(self.dims)} elements, got {len(chunks)}."
+                )
             chunk_mapping = dict(zip(self.dims, chunks, strict=True))
         else:
             chunk_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
