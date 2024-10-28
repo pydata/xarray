@@ -23,6 +23,9 @@ New Features
 ~~~~~~~~~~~~
 - Added :py:meth:`DataTree.persist` method (:issue:`9675`, :pull:`9682`).
   By `Sam Levang <https://github.com/slevang>`_.
+- Added ``write_inherited_coords`` option to :py:meth:`DataTree.to_netcdf`
+  and :py:meth:`DataTree.to_zarr` (:pull:`9677`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -35,7 +38,11 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
-- Fix inadvertent deep-copying of child data in DataTree.
+- Fix inadvertent deep-copying of child data in DataTree (:issue:`9683`,
+  :pull:`9684`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Avoid including parent groups when writing DataTree subgroups to Zarr or
+  netCDF (:pull:`9682`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Documentation
