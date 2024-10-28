@@ -45,7 +45,6 @@ from xarray.core.utils import (
     _default,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
-    is_duck_dask_array,
     maybe_wrap_array,
     parse_dims_as_set,
 )
@@ -1986,13 +1985,13 @@ class DataTree(
         return new.load(**kwargs)
 
     def _persist_inplace(self, **kwargs) -> Self:
-        """Persist all Dask arrays in memory"""
+        """Persist all chunked arrays in memory"""
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
             path: {
                 k: v._data
                 for k, v in node.variables.items()
-                if is_duck_dask_array(v._data)
+                if is_chunked_array(v._data)
             }
             for path, node in self.subtree_with_keys
         }
@@ -2015,7 +2014,7 @@ class DataTree(
         return self
 
     def persist(self, **kwargs) -> Self:
-        """Trigger computation, keeping data as dask arrays.
+        """Trigger computation, keeping data as chunked arrays.
 
         This operation can be used to trigger computation on underlying dask
         arrays, similar to ``.compute()`` or ``.load()``.  However this

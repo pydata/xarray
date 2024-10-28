@@ -1046,10 +1046,10 @@ class Dataset(
         return new.load(**kwargs)
 
     def _persist_inplace(self, **kwargs) -> Self:
-        """Persist all Dask arrays in memory"""
+        """Persist all chunked arrays in memory."""
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
-            k: v._data for k, v in self.variables.items() if is_duck_dask_array(v._data)
+            k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
         }
         if lazy_data:
             chunkmanager = get_chunked_array_type(*lazy_data.values())
@@ -1063,7 +1063,7 @@ class Dataset(
         return self
 
     def persist(self, **kwargs) -> Self:
-        """Trigger computation, keeping data as dask arrays
+        """Trigger computation, keeping data as chunked arrays.
 
         This operation can be used to trigger computation on underlying dask
         arrays, similar to ``.compute()`` or ``.load()``.  However this
