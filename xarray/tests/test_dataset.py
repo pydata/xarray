@@ -6720,6 +6720,32 @@ class TestDataset:
             ds.var1.polyfit("dim2", 10, full=True)
             assert len(ws) == 1
 
+    def test_polyfit_polyval(self) -> None:
+        da = xr.DataArray([1.0, 2.0, 3.0], dims=["x"], coords=dict(x=[0, 1, 2]))
+
+        out = da.polyfit("x", 3, full=False)
+        da_fitval = xr.polyval(da.x, out.polyfit_coefficients)
+        # polyval introduces very small errors (1e-16 here)
+        np.testing.assert_allclose(da_fitval, da)
+
+        da = da.assign_coords(x=xr.date_range("2001-01-01", periods=3, freq="YS"))
+        out = da.polyfit("x", 3, full=False)
+        da_fitval = xr.polyval(da.x, out.polyfit_coefficients)
+        np.testing.assert_allclose(da_fitval, da)
+
+    @pytest.mark.skipif(not has_cftime, reason="Test requires cftime.")
+    def test_polyfit_polyval_cftime(self) -> None:
+        da = xr.DataArray(
+            [1.0, 2.0, 3.0],
+            dims=["x"],
+            coords=dict(
+                x=xr.date_range("2001-01-01", periods=3, freq="YS", calendar="noleap")
+            ),
+        )
+        out = da.polyfit("x", 3, full=False)
+        da_fitval = xr.polyval(da.x, out.polyfit_coefficients)
+        np.testing.assert_allclose(da_fitval, da)
+
     @staticmethod
     def _test_data_var_interior(
         original_data_var, padded_data_var, padded_dim_name, expected_pad_values
