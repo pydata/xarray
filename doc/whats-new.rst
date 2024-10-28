@@ -42,6 +42,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- ``persist`` methods now route through the :py:class:`xr.core.parallelcompat.ChunkManagerEntrypoint` (:pull:`9682`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 .. _whats-new.2024.10.0:
 
