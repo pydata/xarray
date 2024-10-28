@@ -21,7 +21,8 @@ v.2024.10.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Added :py:meth:`DataTree.persist` method (:issue:`9675`, :pull:`9682`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -43,6 +44,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- ``persist`` methods now route through the :py:class:`xr.core.parallelcompat.ChunkManagerEntrypoint` (:pull:`9682`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 .. _whats-new.2024.10.0:
 
