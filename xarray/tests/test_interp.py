@@ -72,7 +72,7 @@ def nd_interp_coords():
     # grid -> grid
     coords["xdestnp"] = np.linspace(0.1, 1.0, 11)
     coords["ydestnp"] = np.linspace(0.0, 0.2, 10)
-    coords["zdestnp"] = da.get_index("z")  # type: ignore[assignment]
+    coords["zdestnp"] = da.z.data
     # list of the points defined by the above mesh in C order
     mesh_x, mesh_y, mesh_z = np.meshgrid(
         coords["xdestnp"], coords["ydestnp"], coords["zdestnp"], indexing="ij"
