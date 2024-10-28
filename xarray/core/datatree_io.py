@@ -20,7 +20,7 @@ def _datatree_to_netcdf(
     format: T_DataTreeNetcdfTypes | None = None,
     engine: T_DataTreeNetcdfEngine | None = None,
     group: str | None = None,
-    write_inherited_coords: bool = True,
+    write_inherited_coords: bool = False,
     compute: bool = True,
     **kwargs,
 ):
@@ -83,7 +83,7 @@ def _datatree_to_zarr(
     encoding: Mapping[str, Any] | None = None,
     consolidated: bool = True,
     group: str | None = None,
-    write_inherited_coords: bool = True,
+    write_inherited_coords: bool = False,
     compute: Literal[True] = True,
     **kwargs,
 ):

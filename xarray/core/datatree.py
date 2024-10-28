@@ -1573,7 +1573,7 @@ class DataTree(
         format: T_DataTreeNetcdfTypes | None = None,
         engine: T_DataTreeNetcdfEngine | None = None,
         group: str | None = None,
-        write_inherited_coords: bool = True,
+        write_inherited_coords: bool = False,
         compute: bool = True,
         **kwargs,
     ):
@@ -1610,7 +1610,7 @@ class DataTree(
         group : str, optional
             Path to the netCDF4 group in the given file to open as the root group
             of the ``DataTree``. Currently, specifying a group is not supported.
-        write_inherited_coords : bool, default: True
+        write_inherited_coords : bool, default: False
             If true, replicate inherited coordinates on all descendant nodes.
             Otherwise, only write coordinates at the level at which they are
             originally defined. This saves disk space, but requires opening the
@@ -1650,7 +1650,7 @@ class DataTree(
         encoding=None,
         consolidated: bool = True,
         group: str | None = None,
-        write_inherited_coords: bool = True,
+        write_inherited_coords: bool = False,
         compute: Literal[True] = True,
         **kwargs,
     ):
@@ -1676,7 +1676,7 @@ class DataTree(
             after writing metadata for all groups.
         group : str, optional
             Group path. (a.k.a. `path` in zarr terminology.)
-        write_inherited_coords : bool, default: True
+        write_inherited_coords : bool, default: False
             If true, replicate inherited coordinates on all descendant nodes.
             Otherwise, only write coordinates at the level at which they are
             originally defined. This saves disk space, but requires opening the
