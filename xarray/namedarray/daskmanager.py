@@ -85,6 +85,11 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
         return compute(*data, **kwargs)  # type: ignore[no-untyped-call, no-any-return]
 
+    def persist(self, *data: Any, **kwargs: Any) -> tuple[DaskArray | Any, ...]:
+        from dask import persist
+
+        return persist(*data, **kwargs)  # type: ignore[no-untyped-call, no-any-return]
+
     @property
     def array_api(self) -> Any:
         from dask import array as da
