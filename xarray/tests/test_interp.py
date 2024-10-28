@@ -9,7 +9,12 @@ import pytest
 
 import xarray as xr
 from xarray.coding.cftimeindex import _parse_array_of_cftime_strings
-from xarray.core.types import InterpnOptions, InterpOptions, Interp1dOptions, InterpolantOptions
+from xarray.core.types import (
+    Interp1dOptions,
+    InterpnOptions,
+    InterpolantOptions,
+    InterpOptions,
+)
 from xarray.tests import (
     assert_allclose,
     assert_equal,
@@ -29,6 +34,7 @@ except ImportError:
     pass
 
 ALL_1D = get_args(Interp1dOptions) + get_args(InterpolantOptions)
+
 
 def get_example_data(case: int) -> xr.DataArray:
     if case == 0:
@@ -282,16 +288,13 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
     )
     assert_allclose(actual, expected.transpose("z", "w", "y", transpose_coords=True))
 
+
 @requires_scipy
-@pytest.mark.parametrize(
-    "method", get_args(InterpnOptions)
-)
+@pytest.mark.parametrize("method", get_args(InterpnOptions))
 @pytest.mark.parametrize(
     "case", [pytest.param(3, id="no_chunk"), pytest.param(4, id="chunked")]
 )
-def test_interpolate_nd(
-    case: int, method: InterpnOptions, nd_interp_coords
-) -> None:
+def test_interpolate_nd(case: int, method: InterpnOptions, nd_interp_coords) -> None:
     if not has_dask and case == 4:
         pytest.skip("dask is not installed in the environment.")
 
@@ -440,7 +443,7 @@ def test_interpolate_scalar(method: InterpOptions, case: int) -> None:
             axis=obj.get_axis_num("x"),
             bounds_error=False,
             fill_value=np.nan,
-            kind=method
+            kind=method,
         )(new_x)
 
     coords = {"x": xdest, "y": da["y"], "x2": func(da["x2"], xdest)}
@@ -857,7 +860,7 @@ def test_3641() -> None:
 
 @requires_scipy
 # cubic, quintic, pchip omitted because not enough points
-@pytest.mark.parametrize("method", ("linear","nearest","slinear"))
+@pytest.mark.parametrize("method", ("linear", "nearest", "slinear"))
 def test_decompose(method: InterpOptions) -> None:
     da = xr.DataArray(
         np.arange(6).reshape(3, 2),
@@ -880,7 +883,7 @@ def test_decompose(method: InterpOptions) -> None:
 @requires_dask
 # omit quintic because not enough points
 # unknown timeout using pchip
-@pytest.mark.parametrize("method", ("cubic","linear","slinear"))
+@pytest.mark.parametrize("method", ("cubic", "linear", "slinear"))
 @pytest.mark.parametrize("chunked", [True, False])
 @pytest.mark.parametrize(
     "data_ndim,interp_ndim,nscalar",
@@ -958,7 +961,7 @@ def test_interpolate_chunk_1d(
 @requires_scipy
 @requires_dask
 # quintic omitted because not enough points
-@pytest.mark.parametrize("method", ("linear","nearest","slinear","cubic","pchip"))
+@pytest.mark.parametrize("method", ("linear", "nearest", "slinear", "cubic", "pchip"))
 @pytest.mark.filterwarnings("ignore:Increasing number of chunks")
 def test_interpolate_chunk_advanced(method: InterpOptions) -> None:
     """Interpolate nd array with an nd indexer sharing coordinates."""
