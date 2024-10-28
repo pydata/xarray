@@ -897,6 +897,9 @@ class TestDataArray:
             assert blocked.chunks == ((3,), (3, 1))
             assert blocked.data.name != first_dask_name
 
+            with pytest.raises(ValueError):
+                blocked.chunk(chunks=(3, 3, 3))
+
         # name doesn't change when rechunking by same amount
         # this fails if ReprObject doesn't have __dask_tokenize__ defined
         assert unblocked.chunk(2).data.name == unblocked.chunk(2).data.name
