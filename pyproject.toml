@@ -37,6 +37,7 @@ accel = ["scipy", "bottleneck", "numbagg", "numba>=0.54", "flox", "opt_einsum"]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 dev = [
   "hypothesis",
+  "jinja2",
   "mypy",
   "pre-commit",
   "pytest",
