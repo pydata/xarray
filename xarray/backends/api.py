@@ -2136,6 +2136,8 @@ def to_zarr(
     _validate_dataset_names(dataset)
 
     # Load empty arrays to avoid bug saving zero length dimensions (Issue #5741)
+    # TODO: delete when min dask>=2023.12.1
+    # https://github.com/dask/dask/pull/10506
     for v in dataset.variables.values():
         if v.size == 0:
             v.load()
