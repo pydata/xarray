@@ -912,7 +912,6 @@ def test_interpolate_chunk_1d(
         * np.exp(z),
         coords=[("x", x), ("y", y), ("z", z)],
     )
-    kwargs = {}
 
     # choose the data dimensions
     for data_dims in permutations(da.dims, data_ndim):
@@ -947,8 +946,8 @@ def test_interpolate_chunk_1d(
                         if chunked:
                             dest[dim] = xr.DataArray(data=dest[dim], dims=[dim])
                             dest[dim] = dest[dim].chunk(2)
-                actual = da.interp(method=method, **dest, kwargs=kwargs)
-                expected = da.compute().interp(method=method, **dest, kwargs=kwargs)
+                actual = da.interp(method=method, **dest)
+                expected = da.compute().interp(method=method, **dest)
 
                 assert_identical(actual, expected)
 
