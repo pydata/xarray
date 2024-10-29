@@ -9065,7 +9065,7 @@ class Dataset(
         variables = {}
         skipna_da = skipna
 
-        x: Any = _ensure_numeric(self.coords[dim]).astype(np.float64)
+        x = np.asarray(_ensure_numeric(self.coords[dim]).astype(np.float64))
 
         xname = f"{self[dim].name}_"
         order = int(deg) + 1

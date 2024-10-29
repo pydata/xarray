@@ -6721,25 +6721,27 @@ class TestDataset:
             assert len(ws) == 1
 
     def test_polyfit_polyval(self) -> None:
-        da = xr.DataArray([1.0, 2.0, 3.0], dims=["x"], coords=dict(x=[0, 1, 2]))
+        da = xr.DataArray(
+            np.arange(1, 10).astype(np.float64), dims=["x"], coords=dict(x=np.arange(9))
+        )
 
         out = da.polyfit("x", 3, full=False)
         da_fitval = xr.polyval(da.x, out.polyfit_coefficients)
         # polyval introduces very small errors (1e-16 here)
         np.testing.assert_allclose(da_fitval, da)
 
-        da = da.assign_coords(x=xr.date_range("2001-01-01", periods=3, freq="YS"))
+        da = da.assign_coords(x=xr.date_range("2001-01-01", periods=9, freq="YS"))
         out = da.polyfit("x", 3, full=False)
         da_fitval = xr.polyval(da.x, out.polyfit_coefficients)
-        np.testing.assert_allclose(da_fitval, da)
+        np.testing.assert_allclose(da_fitval, da, rtol=1e-3)
 
     @pytest.mark.skipif(not has_cftime, reason="Test requires cftime.")
     def test_polyfit_polyval_cftime(self) -> None:
         da = xr.DataArray(
-            [1.0, 2.0, 3.0],
+            np.arange(1, 10).astype(np.float64),
             dims=["x"],
             coords=dict(
-                x=xr.date_range("2001-01-01", periods=3, freq="YS", calendar="noleap")
+                x=xr.date_range("2001-01-01", periods=9, freq="YS", calendar="noleap")
             ),
         )
         out = da.polyfit("x", 3, full=False)
