@@ -2172,23 +2172,8 @@ def to_zarr(
         **kwargs,
     )
 
-    if region is not None:
-        zstore._validate_and_autodetect_region(dataset)
-        # can't modify indexes with region writes
-        dataset = dataset.drop_vars(dataset.indexes)
-        if append_dim is not None and append_dim in region:
-            raise ValueError(
-                f"cannot list the same dimension in both ``append_dim`` and "
-                f"``region`` with to_zarr(), got {append_dim} in both"
-            )
-
-    if encoding and mode in ["a", "a-", "r+"]:
-        existing_var_names = set(zstore.zarr_group.array_keys())
-        for var_name in existing_var_names:
-            if var_name in encoding:
-                raise ValueError(
-                    f"variable {var_name!r} already exists, but encoding was provided"
-                )
+    dataset = zstore._validate_and_autodetect_region(dataset)
+    zstore._validate_encoding(encoding)
 
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims

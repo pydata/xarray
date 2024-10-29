@@ -1147,7 +1147,10 @@ class ZarrStore(AbstractWritableDataStore):
             region[dim] = slice(idxs[0], idxs[-1] + 1)
         return region
 
-    def _validate_and_autodetect_region(self, ds) -> None:
+    def _validate_and_autodetect_region(self, ds: Dataset) -> Dataset:
+        if self._write_region is None:
+            return ds
+
         region = self._write_region
 
         if region == "auto":
@@ -1195,7 +1198,25 @@ class ZarrStore(AbstractWritableDataStore):
                 f".drop_vars({non_matching_vars!r})"
             )
 
+        if self._append_dim is not None and self._append_dim in region:
+            raise ValueError(
+                f"cannot list the same dimension in both ``append_dim`` and "
+                f"``region`` with to_zarr(), got {self._append_dim} in both"
+            )
+
         self._write_region = region
+
+        # can't modify indexes with region writes
+        return ds.drop_vars(ds.indexes)
+
+    def _validate_encoding(self, encoding) -> None:
+        if encoding and self._mode in ["a", "a-", "r+"]:
+            existing_var_names = set(self.zarr_group.array_keys())
+            for var_name in existing_var_names:
+                if var_name in encoding:
+                    raise ValueError(
+                        f"variable {var_name!r} already exists, but encoding was provided"
+                    )
 
 
 def open_zarr(
