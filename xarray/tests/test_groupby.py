@@ -2842,7 +2842,7 @@ def test_multiple_groupers(use_flox) -> None:
 
     if has_dask:
         b["xy"] = b["xy"].chunk()
-        with raise_if_dask_computes():
+        with raise_if_dask_computes(max_computes=1):
             with pytest.warns(DeprecationWarning):
                 gb = b.groupby(
                     x=UniqueGrouper(), xy=UniqueGrouper(labels=["a", "b", "c"])
