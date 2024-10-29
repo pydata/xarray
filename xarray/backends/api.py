@@ -2132,6 +2132,9 @@ def to_zarr(
     """
     from xarray.backends.zarr import _choose_default_mode, _get_mappers
 
+    # validate Dataset keys, DataArray names
+    _validate_dataset_names(dataset)
+
     # Load empty arrays to avoid bug saving zero length dimensions (Issue #5741)
     for v in dataset.variables.values():
         if v.size == 0:
@@ -2144,9 +2147,6 @@ def to_zarr(
         storage_options=storage_options, store=store, chunk_store=chunk_store
     )
     mode = _choose_default_mode(mode=mode, append_dim=append_dim, region=region)
-
-    # validate Dataset keys, DataArray names
-    _validate_dataset_names(dataset)
 
     if mode == "r+":
         already_consolidated = consolidated
