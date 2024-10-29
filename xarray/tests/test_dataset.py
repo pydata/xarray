@@ -6728,12 +6728,12 @@ class TestDataset:
         out = da.polyfit("x", 3, full=False)
         da_fitval = xr.polyval(da.x, out.polyfit_coefficients)
         # polyval introduces very small errors (1e-16 here)
-        np.testing.assert_allclose(da_fitval, da)
+        xr.testing.assert_allclose(da_fitval, da)
 
         da = da.assign_coords(x=xr.date_range("2001-01-01", periods=9, freq="YS"))
         out = da.polyfit("x", 3, full=False)
         da_fitval = xr.polyval(da.x, out.polyfit_coefficients)
-        np.testing.assert_allclose(da_fitval, da, rtol=1e-3)
+        xr.testing.assert_allclose(da_fitval, da, rtol=1e-3)
 
     @requires_cftime
     def test_polyfit_polyval_cftime(self) -> None:
