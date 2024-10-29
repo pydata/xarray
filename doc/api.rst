@@ -656,6 +656,7 @@ This interface echoes that of ``xarray.Dataset``.
    DataTree.has_attrs
    DataTree.is_empty
    DataTree.is_hollow
+   DataTree.chunksizes
 
 Dictionary Interface
 --------------------
@@ -968,6 +969,10 @@ DataTree methods
    DataTree.to_dict
    DataTree.to_netcdf
    DataTree.to_zarr
+   DataTree.chunk
+   DataTree.load
+   DataTree.compute
+   DataTree.persist
 
 .. ..
 

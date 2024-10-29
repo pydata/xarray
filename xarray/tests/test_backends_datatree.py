@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Hashable
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -11,6 +12,7 @@ from xarray.backends.api import open_datatree, open_groups
 from xarray.core.datatree import DataTree
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
+    requires_dask,
     requires_h5netcdf,
     requires_netCDF4,
     requires_zarr,
@@ -23,6 +25,49 @@ try:
     import netCDF4 as nc4
 except ImportError:
     pass
+
+have_zarr_v3 = xr.backends.zarr._zarr_v3()
+
+
+def diff_chunks(
+    comparison: dict[tuple[str, Hashable], bool], tree1: DataTree, tree2: DataTree
+) -> str:
+    mismatching_variables = [loc for loc, equals in comparison.items() if not equals]
+
+    variable_messages = [
+        "\n".join(
+            [
+                f"L  {path}:{name}: {tree1[path].variables[name].chunksizes}",
+                f"R  {path}:{name}: {tree2[path].variables[name].chunksizes}",
+            ]
+        )
+        for path, name in mismatching_variables
+    ]
+    return "\n".join(["Differing chunk sizes:"] + variable_messages)
+
+
+def assert_chunks_equal(
+    actual: DataTree, expected: DataTree, enforce_dask: bool = False
+) -> None:
+    __tracebackhide__ = True
+
+    from xarray.namedarray.pycompat import array_type
+
+    dask_array_type = array_type("dask")
+
+    comparison = {
+        (path, name): (
+            (
+                not enforce_dask
+                or isinstance(node1.variables[name].data, dask_array_type)
+            )
+            and node1.variables[name].chunksizes == node2.variables[name].chunksizes
+        )
+        for path, (node1, node2) in xr.group_subtrees(actual, expected)
+        for name in node1.variables.keys()
+    }
+
+    assert all(comparison.values()), diff_chunks(comparison, actual, expected)
 
 
 @pytest.fixture(scope="module")
@@ -170,6 +215,29 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         ):
             open_datatree(unaligned_datatree_nc)
 
+    @requires_dask
+    def test_open_datatree_chunks(self, tmpdir, simple_datatree) -> None:
+        filepath = tmpdir / "test.nc"
+
+        chunks = {"x": 2, "y": 1}
+
+        root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
+        set1_data = xr.Dataset({"a": ("y", [-1, 0, 1]), "b": ("x", [-10, 6])})
+        set2_data = xr.Dataset({"a": ("y", [1, 2, 3]), "b": ("x", [0.1, 0.2])})
+        original_tree = DataTree.from_dict(
+            {
+                "/": root_data.chunk(chunks),
+                "/group1": set1_data.chunk(chunks),
+                "/group2": set2_data.chunk(chunks),
+            }
+        )
+        original_tree.to_netcdf(filepath, engine="netcdf4")
+
+        with open_datatree(filepath, engine="netcdf4", chunks=chunks) as tree:
+            xr.testing.assert_identical(tree, original_tree)
+
+            assert_chunks_equal(tree, original_tree, enforce_dask=True)
+
     def test_open_groups(self, unaligned_datatree_nc) -> None:
         """Test `open_groups` with a netCDF4 file with an unaligned group hierarchy."""
         unaligned_dict_of_datasets = open_groups(unaligned_datatree_nc)
@@ -189,6 +257,37 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
             assert_identical(unaligned_dict_of_datasets["/Group1/subgroup1"], expected)
 
         for ds in unaligned_dict_of_datasets.values():
+            ds.close()
+
+    @requires_dask
+    def test_open_groups_chunks(self, tmpdir) -> None:
+        """Test `open_groups` with chunks on a netcdf4 file."""
+
+        chunks = {"x": 2, "y": 1}
+        filepath = tmpdir / "test.nc"
+
+        chunks = {"x": 2, "y": 1}
+
+        root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
+        set1_data = xr.Dataset({"a": ("y", [-1, 0, 1]), "b": ("x", [-10, 6])})
+        set2_data = xr.Dataset({"a": ("y", [1, 2, 3]), "b": ("x", [0.1, 0.2])})
+        original_tree = DataTree.from_dict(
+            {
+                "/": root_data.chunk(chunks),
+                "/group1": set1_data.chunk(chunks),
+                "/group2": set2_data.chunk(chunks),
+            }
+        )
+        original_tree.to_netcdf(filepath, mode="w")
+
+        dict_of_datasets = open_groups(filepath, engine="netcdf4", chunks=chunks)
+
+        for path, ds in dict_of_datasets.items():
+            assert {
+                k: max(vs) for k, vs in ds.chunksizes.items()
+            } == chunks, f"unexpected chunking for {path}"
+
+        for ds in dict_of_datasets.values():
             ds.close()
 
     def test_open_groups_to_dict(self, tmpdir) -> None:
@@ -238,12 +337,27 @@ class TestNetCDF4DatatreeIO(DatatreeIOBase):
         for ds in aligned_dict_of_datasets.values():
             ds.close()
 
+    def test_open_datatree_specific_group(self, tmpdir, simple_datatree) -> None:
+        """Test opening a specific group within a NetCDF file using `open_datatree`."""
+        filepath = tmpdir / "test.nc"
+        group = "/set1"
+        original_dt = simple_datatree
+        original_dt.to_netcdf(filepath)
+        expected_subtree = original_dt[group].copy()
+        expected_subtree.orphan()
+        with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
+            assert subgroup_tree.root.parent is None
+            assert_equal(subgroup_tree, expected_subtree)
+
 
 @requires_h5netcdf
 class TestH5NetCDFDatatreeIO(DatatreeIOBase):
     engine: T_DataTreeNetcdfEngine | None = "h5netcdf"
 
 
+@pytest.mark.skipif(
+    have_zarr_v3, reason="datatree support for zarr 3 is not implemented yet"
+)
 @requires_zarr
 class TestZarrDatatreeIO:
     engine = "zarr"
@@ -257,12 +371,12 @@ class TestZarrDatatreeIO:
             assert_equal(original_dt, roundtrip_dt)
 
     def test_zarr_encoding(self, tmpdir, simple_datatree):
-        import zarr
+        from numcodecs.blosc import Blosc
 
         filepath = tmpdir / "test.zarr"
         original_dt = simple_datatree
 
-        comp = {"compressor": zarr.Blosc(cname="zstd", clevel=3, shuffle=2)}
+        comp = {"compressor": Blosc(cname="zstd", clevel=3, shuffle=2)}
         enc = {"/set2": {var: comp for var in original_dt["/set2"].dataset.data_vars}}
         original_dt.to_zarr(filepath, encoding=enc)
 
@@ -348,6 +462,28 @@ class TestZarrDatatreeIO:
         ):
             open_datatree(unaligned_datatree_zarr, engine="zarr")
 
+    @requires_dask
+    def test_open_datatree_chunks(self, tmpdir, simple_datatree) -> None:
+        filepath = tmpdir / "test.zarr"
+
+        chunks = {"x": 2, "y": 1}
+
+        root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
+        set1_data = xr.Dataset({"a": ("y", [-1, 0, 1]), "b": ("x", [-10, 6])})
+        set2_data = xr.Dataset({"a": ("y", [1, 2, 3]), "b": ("x", [0.1, 0.2])})
+        original_tree = DataTree.from_dict(
+            {
+                "/": root_data.chunk(chunks),
+                "/group1": set1_data.chunk(chunks),
+                "/group2": set2_data.chunk(chunks),
+            }
+        )
+        original_tree.to_zarr(filepath)
+
+        with open_datatree(filepath, engine="zarr", chunks=chunks) as tree:
+            xr.testing.assert_identical(tree, original_tree)
+            assert_chunks_equal(tree, original_tree, enforce_dask=True)
+
     def test_open_groups(self, unaligned_datatree_zarr) -> None:
         """Test `open_groups` with a zarr store of an unaligned group hierarchy."""
 
@@ -376,4 +512,47 @@ class TestZarrDatatreeIO:
             assert_identical(unaligned_dict_of_datasets["/Group2"], expected)
 
         for ds in unaligned_dict_of_datasets.values():
+            ds.close()
+
+    def test_open_datatree_specific_group(self, tmpdir, simple_datatree) -> None:
+        """Test opening a specific group within a Zarr store using `open_datatree`."""
+        filepath = tmpdir / "test.zarr"
+        group = "/set2"
+        original_dt = simple_datatree
+        original_dt.to_zarr(filepath)
+        expected_subtree = original_dt[group].copy()
+        expected_subtree.orphan()
+        with open_datatree(filepath, group=group, engine=self.engine) as subgroup_tree:
+            assert subgroup_tree.root.parent is None
+            assert_equal(subgroup_tree, expected_subtree)
+
+    @requires_dask
+    def test_open_groups_chunks(self, tmpdir) -> None:
+        """Test `open_groups` with chunks on a zarr store."""
+
+        chunks = {"x": 2, "y": 1}
+        filepath = tmpdir / "test.zarr"
+
+        chunks = {"x": 2, "y": 1}
+
+        root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
+        set1_data = xr.Dataset({"a": ("y", [-1, 0, 1]), "b": ("x", [-10, 6])})
+        set2_data = xr.Dataset({"a": ("y", [1, 2, 3]), "b": ("x", [0.1, 0.2])})
+        original_tree = DataTree.from_dict(
+            {
+                "/": root_data.chunk(chunks),
+                "/group1": set1_data.chunk(chunks),
+                "/group2": set2_data.chunk(chunks),
+            }
+        )
+        original_tree.to_zarr(filepath, mode="w")
+
+        dict_of_datasets = open_groups(filepath, engine="zarr", chunks=chunks)
+
+        for path, ds in dict_of_datasets.items():
+            assert {
+                k: max(vs) for k, vs in ds.chunksizes.items()
+            } == chunks, f"unexpected chunking for {path}"
+
+        for ds in dict_of_datasets.values():
             ds.close()

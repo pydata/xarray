@@ -18,7 +18,7 @@ from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
 from xarray.core._typed_ops import DataTreeOpsMixin
 from xarray.core.alignment import align
-from xarray.core.common import TreeAttrAccessMixin
+from xarray.core.common import TreeAttrAccessMixin, get_chunksizes
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, DataVariables
@@ -49,6 +49,8 @@ from xarray.core.utils import (
     parse_dims_as_set,
 )
 from xarray.core.variable import Variable
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import is_chunked_array
 
 try:
     from xarray.core.variable import calculate_dimensions
@@ -68,8 +70,11 @@ if TYPE_CHECKING:
         ErrorOptions,
         ErrorOptionsWithWarn,
         NetcdfWriteModes,
+        T_ChunkDimFreq,
+        T_ChunksFreq,
         ZarrWriteModes,
     )
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 # """
 # DEVELOPERS' NOTE
@@ -141,7 +146,7 @@ def check_alignment(
 ) -> None:
     if parent_ds is not None:
         try:
-            align(node_ds, parent_ds, join="exact")
+            align(node_ds, parent_ds, join="exact", copy=False)
         except ValueError as e:
             node_repr = _indented(_without_header(repr(node_ds)))
             parent_repr = _indented(dims_and_coords_repr(parent_ds))
@@ -862,9 +867,9 @@ class DataTree(
     ) -> Self:
         """Copy just one node of a tree."""
         new_node = super()._copy_node(inherit=inherit, deep=deep, memo=memo)
-        data = self._to_dataset_view(rebuild_dims=False, inherit=inherit)
-        if deep:
-            data = data._copy(deep=True, memo=memo)
+        data = self._to_dataset_view(rebuild_dims=False, inherit=inherit)._copy(
+            deep=deep, memo=memo
+        )
         new_node._set_node_data(data)
         return new_node
 
@@ -1896,3 +1901,259 @@ class DataTree(
 
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "sel")
         return self._selective_indexing(apply_indexers, indexers)
+
+    def load(self, **kwargs) -> Self:
+        """Manually trigger loading and/or computation of this datatree's data
+        from disk or a remote source into memory and return this datatree.
+        Unlike compute, the original datatree is modified and returned.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.compute``.
+
+        See Also
+        --------
+        Dataset.load
+        dask.compute
+        """
+        # access .data to coerce everything to numpy or dask arrays
+        lazy_data = {
+            path: {
+                k: v._data
+                for k, v in node.variables.items()
+                if is_chunked_array(v._data)
+            }
+            for path, node in self.subtree_with_keys
+        }
+        flat_lazy_data = {
+            (path, var_name): array
+            for path, node in lazy_data.items()
+            for var_name, array in node.items()
+        }
+        if flat_lazy_data:
+            chunkmanager = get_chunked_array_type(*flat_lazy_data.values())
+
+            # evaluate all the chunked arrays simultaneously
+            evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
+                *flat_lazy_data.values(), **kwargs
+            )
+
+            for (path, var_name), data in zip(
+                flat_lazy_data, evaluated_data, strict=False
+            ):
+                self[path].variables[var_name].data = data
+
+        # load everything else sequentially
+        for node in self.subtree:
+            for k, v in node.variables.items():
+                if k not in lazy_data:
+                    v.load()
+
+        return self
+
+    def compute(self, **kwargs) -> Self:
+        """Manually trigger loading and/or computation of this datatree's data
+        from disk or a remote source into memory and return a new datatree.
+        Unlike load, the original datatree is left unaltered.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.compute``.
+
+        Returns
+        -------
+        object : DataTree
+            New object with lazy data variables and coordinates as in-memory arrays.
+
+        See Also
+        --------
+        dask.compute
+        """
+        new = self.copy(deep=False)
+        return new.load(**kwargs)
+
+    def _persist_inplace(self, **kwargs) -> Self:
+        """Persist all chunked arrays in memory"""
+        # access .data to coerce everything to numpy or dask arrays
+        lazy_data = {
+            path: {
+                k: v._data
+                for k, v in node.variables.items()
+                if is_chunked_array(v._data)
+            }
+            for path, node in self.subtree_with_keys
+        }
+        flat_lazy_data = {
+            (path, var_name): array
+            for path, node in lazy_data.items()
+            for var_name, array in node.items()
+        }
+        if flat_lazy_data:
+            chunkmanager = get_chunked_array_type(*flat_lazy_data.values())
+
+            # evaluate all the dask arrays simultaneously
+            evaluated_data = chunkmanager.persist(*flat_lazy_data.values(), **kwargs)
+
+            for (path, var_name), data in zip(
+                flat_lazy_data, evaluated_data, strict=False
+            ):
+                self[path].variables[var_name].data = data
+
+        return self
+
+    def persist(self, **kwargs) -> Self:
+        """Trigger computation, keeping data as chunked arrays.
+
+        This operation can be used to trigger computation on underlying dask
+        arrays, similar to ``.compute()`` or ``.load()``.  However this
+        operation keeps the data as dask arrays. This is particularly useful
+        when using the dask.distributed scheduler and you want to load a large
+        amount of data into distributed memory.
+        Like compute (but unlike load), the original dataset is left unaltered.
+
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.persist``.
+
+        Returns
+        -------
+        object : DataTree
+            New object with all dask-backed coordinates and data variables as persisted dask arrays.
+
+        See Also
+        --------
+        dask.persist
+        """
+        new = self.copy(deep=False)
+        return new._persist_inplace(**kwargs)
+
+    @property
+    def chunksizes(self) -> Mapping[str, Mapping[Hashable, tuple[int, ...]]]:
+        """
+        Mapping from group paths to a mapping of chunksizes.
+
+        If there's no chunked data in a group, the corresponding mapping of chunksizes will be empty.
+
+        Cannot be modified directly, but can be modified by calling .chunk().
+
+        See Also
+        --------
+        DataTree.chunk
+        Dataset.chunksizes
+        """
+        return Frozen(
+            {
+                node.path: get_chunksizes(node.variables.values())
+                for node in self.subtree
+            }
+        )
+
+    def chunk(
+        self,
+        chunks: T_ChunksFreq = {},  # noqa: B006  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        name_prefix: str = "xarray-",
+        token: str | None = None,
+        lock: bool = False,
+        inline_array: bool = False,
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
+        from_array_kwargs=None,
+        **chunks_kwargs: T_ChunkDimFreq,
+    ) -> Self:
+        """Coerce all arrays in all groups in this tree into dask arrays with the given
+        chunks.
+
+        Non-dask arrays in this tree will be converted to dask arrays. Dask
+        arrays will be rechunked to the given chunk sizes.
+
+        If neither chunks is not provided for one or more dimensions, chunk
+        sizes along that dimension will not be updated; non-dask arrays will be
+        converted into dask arrays with a single block.
+
+        Along datetime-like dimensions, a :py:class:`groupers.TimeResampler` object is also accepted.
+
+        Parameters
+        ----------
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
+            Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
+            ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": TimeResampler(freq="YE")}``.
+        name_prefix : str, default: "xarray-"
+            Prefix for the name of any new dask arrays.
+        token : str, optional
+            Token uniquely identifying this datatree.
+        lock : bool, default: False
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
+        inline_array: bool, default: False
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
+        chunked_array_type: str, optional
+            Which chunked array type to coerce this datatree's arrays to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
+            Experimental API that should not be relied upon.
+        from_array_kwargs: dict, optional
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+            For example, with dask as the default chunked array type, this method would pass additional kwargs
+            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+        **chunks_kwargs : {dim: chunks, ...}, optional
+            The keyword arguments form of ``chunks``.
+            One of chunks or chunks_kwargs must be provided
+
+        Returns
+        -------
+        chunked : xarray.DataTree
+
+        See Also
+        --------
+        Dataset.chunk
+        Dataset.chunksizes
+        xarray.unify_chunks
+        dask.array.from_array
+        """
+        # don't support deprecated ways of passing chunks
+        if not isinstance(chunks, Mapping):
+            raise TypeError(
+                f"invalid type for chunks: {type(chunks)}. Only mappings are supported."
+            )
+        combined_chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+
+        all_dims = self._get_all_dims()
+
+        bad_dims = combined_chunks.keys() - all_dims
+        if bad_dims:
+            raise ValueError(
+                f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(all_dims)}"
+            )
+
+        rechunked_groups = {
+            path: node.dataset.chunk(
+                {
+                    dim: size
+                    for dim, size in combined_chunks.items()
+                    if dim in node._node_dims
+                },
+                name_prefix=name_prefix,
+                token=token,
+                lock=lock,
+                inline_array=inline_array,
+                chunked_array_type=chunked_array_type,
+                from_array_kwargs=from_array_kwargs,
+            )
+            for path, node in self.subtree_with_keys
+        }
+
+        return self.from_dict(rechunked_groups, name=self.name)

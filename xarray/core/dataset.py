@@ -1046,16 +1046,16 @@ class Dataset(
         return new.load(**kwargs)
 
     def _persist_inplace(self, **kwargs) -> Self:
-        """Persist all Dask arrays in memory"""
+        """Persist all chunked arrays in memory."""
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
-            k: v._data for k, v in self.variables.items() if is_duck_dask_array(v._data)
+            k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
         }
         if lazy_data:
-            import dask
+            chunkmanager = get_chunked_array_type(*lazy_data.values())
 
             # evaluate all the dask arrays simultaneously
-            evaluated_data = dask.persist(*lazy_data.values(), **kwargs)
+            evaluated_data = chunkmanager.persist(*lazy_data.values(), **kwargs)
 
             for k, data in zip(lazy_data, evaluated_data, strict=False):
                 self.variables[k].data = data
@@ -1063,7 +1063,7 @@ class Dataset(
         return self
 
     def persist(self, **kwargs) -> Self:
-        """Trigger computation, keeping data as dask arrays
+        """Trigger computation, keeping data as chunked arrays.
 
         This operation can be used to trigger computation on underlying dask
         arrays, similar to ``.compute()`` or ``.load()``.  However this
@@ -2376,6 +2376,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore: ...
@@ -2398,6 +2399,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> Delayed: ...
@@ -2418,6 +2420,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore | Delayed:
@@ -2528,9 +2531,15 @@ class Dataset(
             Any additional parameters for the storage backend (ignored for local
             paths).
         zarr_version : int or None, optional
-            The desired zarr spec version to target (currently 2 or 3). The
-            default of None will attempt to determine the zarr version from
-            ``store`` when possible, otherwise defaulting to 2.
+
+            .. deprecated:: 2024.9.1
+            Use ``zarr_format`` instead.
+
+        zarr_format : int or None, optional
+            The desired zarr format to target (currently 2 or 3). The default
+            of None will attempt to determine the zarr version from ``store`` when
+            possible, otherwise defaulting to the default version used by
+            the zarr-python library installed.
         write_empty_chunks : bool or None, optional
             If True, all chunks will be stored regardless of their
             contents. If False, each chunk is compared to the array's fill value
@@ -2569,6 +2578,13 @@ class Dataset(
             The encoding attribute (if exists) of the DataArray(s) will be
             used. Override any existing encodings by providing the ``encoding`` kwarg.
 
+        ``fill_value`` handling:
+            There exists a subtlety in interpreting zarr's ``fill_value`` property. For zarr v2 format
+            arrays, ``fill_value`` is *always* interpreted as an invalid value similar to the ``_FillValue`` attribute
+            in CF/netCDF. For Zarr v3 format arrays, only an explicit ``_FillValue`` attribute will be used
+            to mask the data if requested using ``mask_and_scale=True``. See this `Github issue <https://github.com/pydata/xarray/issues/5475>`_
+            for more.
+
         See Also
         --------
         :ref:`io.zarr`
@@ -2591,6 +2607,7 @@ class Dataset(
             region=region,
             safe_chunks=safe_chunks,
             zarr_version=zarr_version,
+            zarr_format=zarr_format,
             write_empty_chunks=write_empty_chunks,
             chunkmanager_store_kwargs=chunkmanager_store_kwargs,
         )
@@ -2641,8 +2658,10 @@ class Dataset(
     @property
     def chunks(self) -> Mapping[Hashable, tuple[int, ...]]:
         """
-        Mapping from dimension names to block lengths for this dataset's data, or None if
-        the underlying data is not a dask array.
+        Mapping from dimension names to block lengths for this dataset's data.
+
+        If this dataset does not contain chunked arrays, the mapping will be empty.
+
         Cannot be modified directly, but can be modified by calling .chunk().
 
         Same as Dataset.chunksizes, but maintained for backwards compatibility.
@@ -2658,8 +2677,10 @@ class Dataset(
     @property
     def chunksizes(self) -> Mapping[Hashable, tuple[int, ...]]:
         """
-        Mapping from dimension names to block lengths for this dataset's data, or None if
-        the underlying data is not a dask array.
+        Mapping from dimension names to block lengths for this dataset's data.
+
+        If this dataset does not contain chunked arrays, the mapping will be empty.
+
         Cannot be modified directly, but can be modified by calling .chunk().
 
         Same as Dataset.chunks.
@@ -7371,7 +7392,7 @@ class Dataset(
             dataframe.
 
             If provided, must include all dimensions of this dataset. By
-            default, dimensions are sorted alphabetically.
+            default, dimensions are in the same order as in `Dataset.sizes`.
 
         Returns
         -------

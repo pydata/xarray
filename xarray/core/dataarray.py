@@ -1343,8 +1343,10 @@ class DataArray(
     @property
     def chunksizes(self) -> Mapping[Any, tuple[int, ...]]:
         """
-        Mapping from dimension names to block lengths for this dataarray's data, or None if
-        the underlying data is not a dask array.
+        Mapping from dimension names to block lengths for this dataarray's data.
+
+        If this dataarray does not contain chunked arrays, the mapping will be empty.
+
         Cannot be modified directly, but can be modified by calling .chunk().
 
         Differs from DataArray.chunks because it returns a mapping of dimensions to chunk shapes
@@ -1442,6 +1444,11 @@ class DataArray(
                 "It will raise an error in the future. Instead use a dict with dimension names as keys.",
                 category=DeprecationWarning,
             )
+            if len(chunks) != len(self.dims):
+                raise ValueError(
+                    f"chunks must have the same number of elements as dimensions. "
+                    f"Expected {len(self.dims)} elements, got {len(chunks)}."
+                )
             chunk_mapping = dict(zip(self.dims, chunks, strict=True))
         else:
             chunk_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
@@ -4359,6 +4366,13 @@ class DataArray(
         encoding:
             The encoding attribute (if exists) of the DataArray(s) will be
             used. Override any existing encodings by providing the ``encoding`` kwarg.
+
+        ``fill_value`` handling:
+            There exists a subtlety in interpreting zarr's ``fill_value`` property. For zarr v2 format
+            arrays, ``fill_value`` is *always* interpreted as an invalid value similar to the ``_FillValue`` attribute
+            in CF/netCDF. For Zarr v3 format arrays, only an explicit ``_FillValue`` attribute will be used
+            to mask the data if requested using ``mask_and_scale=True``. See this `Github issue <https://github.com/pydata/xarray/issues/5475>`_
+            for more.
 
         See Also
         --------
