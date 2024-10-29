@@ -6735,7 +6735,7 @@ class TestDataset:
         da_fitval = xr.polyval(da.x, out.polyfit_coefficients)
         np.testing.assert_allclose(da_fitval, da, rtol=1e-3)
 
-    @pytest.mark.skipif(not has_cftime, reason="Test requires cftime.")
+    @requires_cftime
     def test_polyfit_polyval_cftime(self) -> None:
         da = xr.DataArray(
             np.arange(1, 10).astype(np.float64),
@@ -7258,7 +7258,7 @@ def test_differentiate_datetime(dask) -> None:
     assert np.allclose(actual, 1.0)
 
 
-@pytest.mark.skipif(not has_cftime, reason="Test requires cftime.")
+@requires_cftime
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_cftime(dask) -> None:
     rs = np.random.RandomState(42)
