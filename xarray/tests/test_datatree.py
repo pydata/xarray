@@ -2293,6 +2293,57 @@ class TestDask:
         assert actual.chunksizes == expected_chunksizes, "mismatching chunksizes"
         assert tree.chunksizes == original_chunksizes, "original tree was modified"
 
+    def test_persist(self):
+        ds1 = xr.Dataset({"a": ("x", np.arange(10))})
+        ds2 = xr.Dataset({"b": ("y", np.arange(5))})
+        ds3 = xr.Dataset({"c": ("z", np.arange(4))})
+        ds4 = xr.Dataset({"d": ("x", np.arange(-5, 5))})
+
+        def fn(x):
+            return 2 * x
+
+        expected = xr.DataTree.from_dict(
+            {
+                "/": fn(ds1).chunk({"x": 5}),
+                "/group1": fn(ds2).chunk({"y": 3}),
+                "/group2": fn(ds3).chunk({"z": 2}),
+                "/group1/subgroup1": fn(ds4).chunk({"x": 5}),
+            }
+        )
+        # Add trivial second layer to the task graph, persist should reduce to one
+        tree = xr.DataTree.from_dict(
+            {
+                "/": fn(ds1.chunk({"x": 5})),
+                "/group1": fn(ds2.chunk({"y": 3})),
+                "/group2": fn(ds3.chunk({"z": 2})),
+                "/group1/subgroup1": fn(ds4.chunk({"x": 5})),
+            }
+        )
+        original_chunksizes = tree.chunksizes
+        original_hlg_depths = {
+            node.path: len(node.dataset.__dask_graph__().layers)
+            for node in tree.subtree
+        }
+
+        actual = tree.persist()
+        actual_hlg_depths = {
+            node.path: len(node.dataset.__dask_graph__().layers)
+            for node in actual.subtree
+        }
+
+        assert_identical(actual, expected)
+
+        assert actual.chunksizes == original_chunksizes, "chunksizes were modified"
+        assert (
+            tree.chunksizes == original_chunksizes
+        ), "original chunksizes were modified"
+        assert all(
+            d == 1 for d in actual_hlg_depths.values()
+        ), "unexpected dask graph depth"
+        assert all(
+            d == 2 for d in original_hlg_depths.values()
+        ), "original dask graph was modified"
+
     def test_chunk(self):
         ds1 = xr.Dataset({"a": ("x", np.arange(10))})
         ds2 = xr.Dataset({"b": ("y", np.arange(5))})
