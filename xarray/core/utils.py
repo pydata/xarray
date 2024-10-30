@@ -47,6 +47,7 @@ import re
 import sys
 import warnings
 from collections.abc import (
+    Callable,
     Collection,
     Container,
     Hashable,
@@ -58,11 +59,13 @@ from collections.abc import (
     MutableMapping,
     MutableSet,
     Sequence,
+    Set,
     ValuesView,
 )
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, overload
+from types import EllipsisType
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeGuard, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -184,7 +187,7 @@ def equivalent(first: T, second: T) -> bool:
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    for f, s in zip(first, second):
+    for f, s in zip(first, second, strict=True):
         if not equivalent(f, s):
             return False
     return True
@@ -255,7 +258,7 @@ def is_full_slice(value: Any) -> bool:
 
 
 def is_list_like(value: Any) -> TypeGuard[list | tuple]:
-    return isinstance(value, (list, tuple))
+    return isinstance(value, list | tuple)
 
 
 def _is_scalar(value, include_0d):
@@ -265,7 +268,7 @@ def _is_scalar(value, include_0d):
         include_0d = getattr(value, "ndim", None) == 0
     return (
         include_0d
-        or isinstance(value, (str, bytes))
+        or isinstance(value, str | bytes)
         or not (
             isinstance(value, (Iterable,) + NON_NUMPY_SUPPORTED_ARRAY_TYPES)
             or hasattr(value, "__array_function__")
@@ -274,34 +277,12 @@ def _is_scalar(value, include_0d):
     )
 
 
-# See GH5624, this is a convoluted way to allow type-checking to use `TypeGuard` without
-# requiring typing_extensions as a required dependency to _run_ the code (it is required
-# to type-check).
-try:
-    if sys.version_info >= (3, 10):
-        from typing import TypeGuard
-    else:
-        from typing_extensions import TypeGuard
-except ImportError:
-    if TYPE_CHECKING:
-        raise
-    else:
+def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
+    """Whether to treat a value as a scalar.
 
-        def is_scalar(value: Any, include_0d: bool = True) -> bool:
-            """Whether to treat a value as a scalar.
-
-            Any non-iterable, string, or 0-D array
-            """
-            return _is_scalar(value, include_0d)
-
-else:
-
-    def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
-        """Whether to treat a value as a scalar.
-
-        Any non-iterable, string, or 0-D array
-        """
-        return _is_scalar(value, include_0d)
+    Any non-iterable, string, or 0-D array
+    """
+    return _is_scalar(value, include_0d)
 
 
 def is_valid_numpy_dtype(dtype: Any) -> bool:
@@ -485,7 +466,7 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
         return super().values()
 
 
-class HybridMappingProxy(Mapping[K, V]):
+class FilteredMapping(Mapping[K, V]):
     """Implements the Mapping interface. Uses the wrapped mapping for item lookup
     and a separate wrapped keys collection for iteration.
 
@@ -493,25 +474,31 @@ class HybridMappingProxy(Mapping[K, V]):
     eagerly accessing its items or when a mapping object is expected but only
     iteration over keys is actually used.
 
-    Note: HybridMappingProxy does not validate consistency of the provided `keys`
-    and `mapping`. It is the caller's responsibility to ensure that they are
-    suitable for the task at hand.
+    Note: keys should be a subset of mapping, but FilteredMapping does not
+    validate consistency of the provided `keys` and `mapping`. It is the
+    caller's responsibility to ensure that they are suitable for the task at
+    hand.
     """
 
-    __slots__ = ("_keys", "mapping")
+    __slots__ = ("keys_", "mapping")
 
     def __init__(self, keys: Collection[K], mapping: Mapping[K, V]):
-        self._keys = keys
+        self.keys_ = keys  # .keys is already a property on Mapping
         self.mapping = mapping
 
     def __getitem__(self, key: K) -> V:
+        if key not in self.keys_:
+            raise KeyError(key)
         return self.mapping[key]
 
     def __iter__(self) -> Iterator[K]:
-        return iter(self._keys)
+        return iter(self.keys_)
 
     def __len__(self) -> int:
-        return len(self._keys)
+        return len(self.keys_)
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(keys={self.keys_!r}, mapping={self.mapping!r})"
 
 
 class OrderedSet(MutableSet[T]):
@@ -590,8 +577,8 @@ class NdimSizeLenMixin:
     def __len__(self: Any) -> int:
         try:
             return self.shape[0]
-        except IndexError:
-            raise TypeError("len() of unsized object")
+        except IndexError as err:
+            raise TypeError("len() of unsized object") from err
 
 
 class NDArrayMixin(NdimSizeLenMixin):
@@ -827,7 +814,8 @@ def drop_dims_from_indexers(
         invalid = indexers.keys() - set(dims)
         if invalid:
             warnings.warn(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}",
+                stacklevel=2,
             )
         for key in invalid:
             indexers.pop(key)
@@ -844,7 +832,7 @@ def drop_dims_from_indexers(
 
 
 @overload
-def parse_dims(
+def parse_dims_as_tuple(
     dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
@@ -854,22 +842,22 @@ def parse_dims(
 
 
 @overload
-def parse_dims(
+def parse_dims_as_tuple(
     dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | ellipsis: ...
+) -> tuple[Hashable, ...] | None | EllipsisType: ...
 
 
-def parse_dims(
+def parse_dims_as_tuple(
     dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | ellipsis:
+) -> tuple[Hashable, ...] | None | EllipsisType:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -905,6 +893,47 @@ def parse_dims(
 
 
 @overload
+def parse_dims_as_set(
+    dim: Dims,
+    all_dims: set[Hashable],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[True] = True,
+) -> set[Hashable]: ...
+
+
+@overload
+def parse_dims_as_set(
+    dim: Dims,
+    all_dims: set[Hashable],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[False],
+) -> set[Hashable] | None | EllipsisType: ...
+
+
+def parse_dims_as_set(
+    dim: Dims,
+    all_dims: set[Hashable],
+    *,
+    check_exists: bool = True,
+    replace_none: bool = True,
+) -> set[Hashable] | None | EllipsisType:
+    """Like parse_dims_as_tuple, but returning a set instead of a tuple."""
+    # TODO: Consider removing parse_dims_as_tuple?
+    if dim is None or dim is ...:
+        if replace_none:
+            return all_dims
+        return dim
+    if isinstance(dim, str):
+        dim = {dim}
+    dim = set(dim)
+    if check_exists:
+        _check_dims(dim, all_dims)
+    return dim
+
+
+@overload
 def parse_ordered_dims(
     dim: Dims,
     all_dims: tuple[Hashable, ...],
@@ -921,7 +950,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | ellipsis: ...
+) -> tuple[Hashable, ...] | None | EllipsisType: ...
 
 
 def parse_ordered_dims(
@@ -930,7 +959,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | ellipsis:
+) -> tuple[Hashable, ...] | None | EllipsisType:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -957,7 +986,7 @@ def parse_ordered_dims(
         Input dimensions as a tuple.
     """
     if dim is not None and dim is not ... and not isinstance(dim, str) and ... in dim:
-        dims_set: set[Hashable | ellipsis] = set(dim)
+        dims_set: set[Hashable | EllipsisType] = set(dim)
         all_dims_set = set(all_dims)
         if check_exists:
             _check_dims(dims_set, all_dims_set)
@@ -971,7 +1000,7 @@ def parse_ordered_dims(
         return dims[:idx] + other_dims + dims[idx + 1 :]
     else:
         # mypy cannot resolve that the sequence cannot contain "..."
-        return parse_dims(  # type: ignore[call-overload]
+        return parse_dims_as_tuple(  # type: ignore[call-overload]
             dim=dim,
             all_dims=all_dims,
             check_exists=check_exists,
@@ -979,7 +1008,7 @@ def parse_ordered_dims(
         )
 
 
-def _check_dims(dim: set[Hashable], all_dims: set[Hashable]) -> None:
+def _check_dims(dim: Set[Hashable], all_dims: Set[Hashable]) -> None:
     wrong_dims = (dim - all_dims) - {...}
     if wrong_dims:
         wrong_dims_str = ", ".join(f"'{d!s}'" for d in wrong_dims)
@@ -1012,7 +1041,7 @@ class UncachedAccessor(Generic[_Accessor]):
         if obj is None:
             return self._accessor
 
-        return self._accessor(obj)  # type: ignore  # assume it is a valid accessor!
+        return self._accessor(obj)  # type: ignore[call-arg]  # assume it is a valid accessor!
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
@@ -1166,3 +1195,18 @@ def _resolve_doubly_passed_kwarg(
         )
 
     return kwargs_dict
+
+
+_DEFAULT_NAME = ReprObject("<default-name>")
+
+
+def result_name(objects: Iterable[Any]) -> Any:
+    # use the same naming heuristics as pandas:
+    # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
+    names = {getattr(obj, "name", _DEFAULT_NAME) for obj in objects}
+    names.discard(_DEFAULT_NAME)
+    if len(names) == 1:
+        (name,) = names
+    else:
+        name = None
+    return name

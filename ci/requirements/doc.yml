@@ -4,10 +4,11 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.10
+  - python=3.12
   - bottleneck
   - cartopy
   - cfgrib
+  - kerchunk
   - dask-core>=2022.1
   - dask-expr
   - hypothesis>=6.75.8
@@ -27,6 +28,7 @@ dependencies:
   - pooch
   - pip
   - pre-commit
+  - pyarrow
   - pyproj
   - scipy!=1.10.0
   - seaborn
@@ -37,7 +39,9 @@ dependencies:
   - sphinx-copybutton
   - sphinx-design
   - sphinx-inline-tabs
-  - sphinx>=5.0
+  - sphinx>=5.0,<7.0 # https://github.com/executablebooks/sphinx-book-theme/issues/749
+  - sphinxcontrib-srclinks
+  - sphinx-remove-toctrees
   - sphinxext-opengraph
   - sphinxext-rediraffe
   - zarr>=2.10

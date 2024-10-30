@@ -7,6 +7,7 @@ import numpy as np
 from pandas.api.types import is_extension_array_dtype
 
 from xarray.core import array_api_compat, npcompat, utils
+from xarray.core.npcompat import HAS_STRING_DTYPE
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject("<NA>")
@@ -61,10 +62,15 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     # N.B. these casting rules should match pandas
     dtype_: np.typing.DTypeLike
     fill_value: Any
-    if isdtype(dtype, "real floating"):
+    if HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):  # type: ignore[attr-defined]
+        # for now, we always promote string dtypes to object for consistency with existing behavior
+        # TODO: refactor this once we have a better way to handle numpy vlen-string dtypes
+        dtype_ = object
+        fill_value = np.nan
+    elif isdtype(dtype, "real floating"):
         dtype_ = dtype
         fill_value = np.nan
-    elif isinstance(dtype, np.dtype) and np.issubdtype(dtype, np.timedelta64):
+    elif np.issubdtype(dtype, np.timedelta64):
         # See https://github.com/numpy/numpy/issues/10685
         # np.timedelta64 is a subclass of np.integer
         # Check np.timedelta64 before np.integer
@@ -76,7 +82,7 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     elif isdtype(dtype, "complex floating"):
         dtype_ = dtype
         fill_value = np.nan + np.nan * 1j
-    elif isinstance(dtype, np.dtype) and np.issubdtype(dtype, np.datetime64):
+    elif np.issubdtype(dtype, np.datetime64):
         dtype_ = dtype
         fill_value = np.datetime64("NaT")
     else:
@@ -200,7 +206,7 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
     # numpy>=2 and pandas extensions arrays are implemented in
     # Xarray via the array API
     if not isinstance(kind, str) and not (
-        isinstance(kind, tuple) and all(isinstance(k, str) for k in kind)
+        isinstance(kind, tuple) and all(isinstance(k, str) for k in kind)  # type: ignore[redundant-expr]
     ):
         raise TypeError(f"kind must be a string or a tuple of strings: {repr(kind)}")
 
@@ -215,9 +221,17 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
         return xp.isdtype(dtype, kind)
 
 
-def preprocess_scalar_types(t):
-    if isinstance(t, (str, bytes)):
+def preprocess_types(t):
+    if isinstance(t, str | bytes):
         return type(t)
+    elif isinstance(dtype := getattr(t, "dtype", t), np.dtype) and (
+        np.issubdtype(dtype, np.str_) or np.issubdtype(dtype, np.bytes_)
+    ):
+        # drop the length from numpy's fixed-width string dtypes, it is better to
+        # recalculate
+        # TODO(keewis): remove once the minimum version of `numpy.result_type` does this
+        # for us
+        return dtype.type
     else:
         return t
 
@@ -249,7 +263,7 @@ def result_type(
         xp = get_array_namespace(arrays_and_dtypes)
 
     types = {
-        array_api_compat.result_type(preprocess_scalar_types(t), xp=xp)
+        array_api_compat.result_type(preprocess_types(t), xp=xp)
         for t in arrays_and_dtypes
     }
     if any(isinstance(t, np.dtype) for t in types):
@@ -262,5 +276,5 @@ def result_type(
                 return np.dtype(object)
 
     return array_api_compat.result_type(
-        *map(preprocess_scalar_types, arrays_and_dtypes), xp=xp
+        *map(preprocess_types, arrays_and_dtypes), xp=xp
     )

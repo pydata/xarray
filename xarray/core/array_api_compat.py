@@ -2,7 +2,7 @@ import numpy as np
 
 
 def is_weak_scalar_type(t):
-    return isinstance(t, (bool, int, float, complex, str, bytes))
+    return isinstance(t, bool | int | float | complex | str | bytes)
 
 
 def _future_array_api_result_type(*arrays_and_dtypes, xp):
