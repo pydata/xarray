@@ -158,7 +158,6 @@ class ZarrArrayWrapper(BackendArray):
         )
 
     def _vindex_get(self, key: indexing.VectorizedIndexer):
-
         def raw_indexing_method(key):
             return self._array.vindex[key]
 

@@ -10,7 +10,7 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
-from typing import TYPE_CHECKING, Any, Callable, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from xarray.core.indexes import Index
     from xarray.core.types import Self
     from xarray.core.variable import Variable
-    from xarray.namedarray._typing import _Chunks, _IndexerKey, _Shape, duckarray
+    from xarray.namedarray._typing import _IndexerKey, _Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
@@ -771,7 +771,6 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return type(self)(self.array, self._updated_key(VectorizedIndexer(indexer)))
 
     def __getitem__(self, indexer: _IndexerKey):
-
         # If the indexed array becomes a scalar, return LazilyIndexedArray
         if all(isinstance(ind, integer_types) for ind in indexer):
             key = BasicIndexer(tuple(k[indexer] for k in self.key.tuple))
@@ -1566,7 +1565,6 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return array[indexer]
 
     def __getitem__(self, indexer: _IndexerKey | ExplicitIndexer):
-
         array = self.array
         # We want 0d slices rather than scalars. This is achieved by
         # appending an ellipsis (see
