@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from xarray.core.indexes import Index
     from xarray.core.types import Self
     from xarray.core.variable import Variable
-    from xarray.namedarray._typing import _IndexerKey, _Shape, duckarray
+    from xarray.namedarray._typing import _Chunks, _IndexerKey, _Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
@@ -640,9 +640,14 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
                 shape += (k.size,)
         self._shape = shape
 
-    def _updated_key(self, new_key: ExplicitIndexer) -> BasicIndexer | OuterIndexer:
-        iter_new_key = iter(expanded_indexer(new_key.tuple, self.ndim))
-        full_key = []
+    def _updated_key(
+        self, new_key: ExplicitIndexer | _IndexerKey
+    ) -> BasicIndexer | OuterIndexer:
+        _new_key_tuple = (
+            new_key.tuple if isinstance(new_key, ExplicitIndexer) else new_key
+        )
+        iter_new_key = iter(expanded_indexer(_new_key_tuple, self.ndim))
+        full_key: tuple[int | np.integer, ...] = ()
         for size, k in zip(self.array.shape, self.key.tuple, strict=True):
             if isinstance(k, integer_types):
                 full_key += (k,)
@@ -855,6 +860,9 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
     def _ensure_cached(self):
         self.array = as_indexable(self.array.get_duck_array())
 
+    def __array__(self, dtype: np.typing.DTypeLike = None) -> np.ndarray:
+        return np.asarray(self.get_duck_array(), dtype=dtype)
+
     def get_duck_array(self):
         self._ensure_cached()
         return self.array.get_duck_array()
@@ -895,10 +903,10 @@ def as_indexable(array):
         return PandasIndexingAdapter(array)
     if is_duck_dask_array(array):
         return DaskIndexingAdapter(array)
-    if hasattr(array, "__array_namespace__"):
-        return ArrayApiIndexingAdapter(array)
     if hasattr(array, "__array_function__"):
         return NdArrayLikeIndexingAdapter(array)
+    if hasattr(array, "__array_namespace__"):
+        return ArrayApiIndexingAdapter(array)
 
     raise TypeError(f"Invalid array type: {type(array)}")
 
@@ -926,7 +934,7 @@ def _outer_to_vectorized_indexer(
 
     n_dim = len([k for k in key if not isinstance(k, integer_types)])
     i_dim = 0
-    new_key = []
+    new_key: tuple[slice | np.ndarray[Any, np.dtype[np.generic]], ...] = ()
     for k, size in zip(key, shape, strict=True):
         if isinstance(k, integer_types):
             new_key += (np.array(k).reshape((1,) * n_dim),)
@@ -1277,7 +1285,7 @@ def _decompose_outer_indexer(
         return type(indexer)(backend_indexer), BasicIndexer(np_indexer)
 
     # make indexer positive
-    pos_indexer: list[np.ndarray | int | np.number] = []
+    pos_indexer: tuple[np.ndarray | int | np.number, ...] = ()
     for k, s in zip(indexer.tuple, shape, strict=False):
         if isinstance(k, np.ndarray):
             pos_indexer += (np.where(k < 0, k + s, k),)
@@ -1370,7 +1378,7 @@ def _arrayize_vectorized_indexer(
     arrays = [v for v in indexer.tuple if isinstance(v, np.ndarray)]
     n_dim = arrays[0].ndim if len(arrays) > 0 else 0
     i_dim = 0
-    new_key = []
+    new_key: tuple[slice | np.ndarray[Any, np.dtype[np.generic]], ...] = ()
     for v, size in zip(indexer.tuple, shape, strict=True):
         if isinstance(v, np.ndarray):
             new_key += (np.reshape(v, v.shape + (1,) * len(slices)),)
@@ -1388,9 +1396,12 @@ def _chunked_array_with_chunks_hint(
 
     if len(chunks) < array.ndim:
         raise ValueError("not enough chunks in hint")
-    new_chunks = []
-    for chunk, size in zip(chunks, array.shape, strict=False):
-        new_chunks.append(chunk if size > 1 else (1,))
+
+    new_chunks: _Chunks = tuple(
+        chunk if size > 1 else 1
+        for chunk, size in zip(chunks, array.shape, strict=False)
+    )
+
     return chunkmanager.from_array(array, new_chunks)  # type: ignore[arg-type]
 
 
@@ -1773,8 +1784,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         # a NumPy array.
         return to_0d_array(item)
 
-    def _prepare_key(self, key: Any | tuple[Any, ...]) -> tuple[Any, ...]:
-        if isinstance(key, tuple) and len(key) == 1:
+    def _prepare_key(self, key: ExplicitIndexer | _IndexerKey) -> _IndexerKey:
+        _key = key.tuple if isinstance(key, ExplicitIndexer) else key
+        if isinstance(_key, tuple) and len(_key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
             # objects don't like tuples)
             (_key,) = _key
