@@ -40,6 +40,9 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Mention attribute peculiarities in docs/docstrings (:issue:`4798`, :pull:`9700`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
