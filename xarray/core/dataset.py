@@ -60,7 +60,7 @@ from xarray.core.common import (
     _contains_datetime_like_objects,
     get_chunksizes,
 )
-from xarray.core.computation import unify_chunks
+from xarray.core.computation import _ensure_numeric, unify_chunks
 from xarray.core.coordinates import (
     Coordinates,
     DatasetCoordinates,
@@ -87,7 +87,6 @@ from xarray.core.merge import (
     merge_coordinates_without_align,
     merge_core,
 )
-from xarray.core.missing import _floatize_x
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Bins,
@@ -1047,16 +1046,16 @@ class Dataset(
         return new.load(**kwargs)
 
     def _persist_inplace(self, **kwargs) -> Self:
-        """Persist all Dask arrays in memory"""
+        """Persist all chunked arrays in memory."""
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
-            k: v._data for k, v in self.variables.items() if is_duck_dask_array(v._data)
+            k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
         }
         if lazy_data:
-            import dask
+            chunkmanager = get_chunked_array_type(*lazy_data.values())
 
             # evaluate all the dask arrays simultaneously
-            evaluated_data = dask.persist(*lazy_data.values(), **kwargs)
+            evaluated_data = chunkmanager.persist(*lazy_data.values(), **kwargs)
 
             for k, data in zip(lazy_data, evaluated_data, strict=False):
                 self.variables[k].data = data
@@ -1064,7 +1063,7 @@ class Dataset(
         return self
 
     def persist(self, **kwargs) -> Self:
-        """Trigger computation, keeping data as dask arrays
+        """Trigger computation, keeping data as chunked arrays.
 
         This operation can be used to trigger computation on underlying dask
         arrays, similar to ``.compute()`` or ``.load()``.  However this
@@ -9067,22 +9066,14 @@ class Dataset(
         variables = {}
         skipna_da = skipna
 
-        x: Any = self.coords[dim].variable
-        x = _floatize_x((x,), (x,))[0][0]
-
-        try:
-            x = x.values.astype(np.float64)
-        except TypeError as e:
-            raise TypeError(
-                f"Dim {dim!r} must be castable to float64, got {type(x).__name__}."
-            ) from e
+        x = np.asarray(_ensure_numeric(self.coords[dim]).astype(np.float64))
 
         xname = f"{self[dim].name}_"
         order = int(deg) + 1
         lhs = np.vander(x, order)
 
         if rcond is None:
-            rcond = x.shape[0] * np.finfo(x.dtype).eps
+            rcond = x.shape[0] * np.finfo(x.dtype).eps  # type: ignore[assignment]
 
         # Weights:
         if w is not None:
