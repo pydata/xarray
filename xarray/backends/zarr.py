@@ -4,8 +4,7 @@ import base64
 import json
 import os
 import struct
-import warnings
-from collections.abc import Iterable
+from collections.abc import Hashable, Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
@@ -44,6 +43,66 @@ if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
+
+
+def _get_mappers(*, storage_options, store, chunk_store):
+    # expand str and path-like arguments
+    store = _normalize_path(store)
+    chunk_store = _normalize_path(chunk_store)
+
+    kwargs = {}
+    if storage_options is None:
+        mapper = store
+        chunk_mapper = chunk_store
+    else:
+        if not isinstance(store, str):
+            raise ValueError(
+                f"store must be a string to use storage_options. Got {type(store)}"
+            )
+
+        if _zarr_v3():
+            kwargs["storage_options"] = storage_options
+            mapper = store
+            chunk_mapper = chunk_store
+        else:
+            from fsspec import get_mapper
+
+            mapper = get_mapper(store, **storage_options)
+            if chunk_store is not None:
+                chunk_mapper = get_mapper(chunk_store, **storage_options)
+            else:
+                chunk_mapper = chunk_store
+    return kwargs, mapper, chunk_mapper
+
+
+def _choose_default_mode(
+    *,
+    mode: ZarrWriteModes | None,
+    append_dim: Hashable | None,
+    region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None,
+) -> ZarrWriteModes:
+    if mode is None:
+        if append_dim is not None:
+            mode = "a"
+        elif region is not None:
+            mode = "r+"
+        else:
+            mode = "w-"
+
+    if mode not in ["a", "a-"] and append_dim is not None:
+        raise ValueError("cannot set append_dim unless mode='a' or mode=None")
+
+    if mode not in ["a", "a-", "r+"] and region is not None:
+        raise ValueError(
+            "cannot set region unless mode='a', mode='a-', mode='r+' or mode=None"
+        )
+
+    if mode not in ["w", "w-", "a", "a-", "r+"]:
+        raise ValueError(
+            "The only supported options for mode are 'w', "
+            f"'w-', 'a', 'a-', and 'r+', but mode={mode!r}"
+        )
+    return mode
 
 
 def _zarr_v3() -> bool:
@@ -567,7 +626,6 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
         safe_chunks=True,
-        stacklevel=2,
         zarr_version=None,
         zarr_format=None,
         use_zarr_fill_value_as_mask=None,
@@ -587,7 +645,6 @@ class ZarrStore(AbstractWritableDataStore):
             consolidate_on_close=consolidate_on_close,
             chunk_store=chunk_store,
             storage_options=storage_options,
-            stacklevel=stacklevel,
             zarr_version=zarr_version,
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
@@ -622,7 +679,6 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
         safe_chunks=True,
-        stacklevel=2,
         zarr_version=None,
         zarr_format=None,
         use_zarr_fill_value_as_mask=None,
@@ -642,7 +698,6 @@ class ZarrStore(AbstractWritableDataStore):
             consolidate_on_close=consolidate_on_close,
             chunk_store=chunk_store,
             storage_options=storage_options,
-            stacklevel=stacklevel,
             zarr_version=zarr_version,
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
@@ -1105,7 +1160,10 @@ class ZarrStore(AbstractWritableDataStore):
             region[dim] = slice(idxs[0], idxs[-1] + 1)
         return region
 
-    def _validate_and_autodetect_region(self, ds) -> None:
+    def _validate_and_autodetect_region(self, ds: Dataset) -> Dataset:
+        if self._write_region is None:
+            return ds
+
         region = self._write_region
 
         if region == "auto":
@@ -1153,7 +1211,25 @@ class ZarrStore(AbstractWritableDataStore):
                 f".drop_vars({non_matching_vars!r})"
             )
 
+        if self._append_dim is not None and self._append_dim in region:
+            raise ValueError(
+                f"cannot list the same dimension in both ``append_dim`` and "
+                f"``region`` with to_zarr(), got {self._append_dim} in both"
+            )
+
         self._write_region = region
+
+        # can't modify indexes with region writes
+        return ds.drop_vars(ds.indexes)
+
+    def _validate_encoding(self, encoding) -> None:
+        if encoding and self._mode in ["a", "a-", "r+"]:
+            existing_var_names = set(self.zarr_group.array_keys())
+            for var_name in existing_var_names:
+                if var_name in encoding:
+                    raise ValueError(
+                        f"variable {var_name!r} already exists, but encoding was provided"
+                    )
 
 
 def open_zarr(
@@ -1329,7 +1405,6 @@ def open_zarr(
         "overwrite_encoded_chunks": overwrite_encoded_chunks,
         "chunk_store": chunk_store,
         "storage_options": storage_options,
-        "stacklevel": 4,
         "zarr_version": zarr_version,
         "zarr_format": zarr_format,
     }
@@ -1398,7 +1473,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidated=None,
         chunk_store=None,
         storage_options=None,
-        stacklevel=3,
         zarr_version=None,
         zarr_format=None,
         store=None,
@@ -1416,7 +1490,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 consolidate_on_close=False,
                 chunk_store=chunk_store,
                 storage_options=storage_options,
-                stacklevel=stacklevel + 1,
                 zarr_version=zarr_version,
                 use_zarr_fill_value_as_mask=None,
                 zarr_format=zarr_format,
@@ -1453,7 +1526,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidated=None,
         chunk_store=None,
         storage_options=None,
-        stacklevel=3,
         zarr_version=None,
         zarr_format=None,
         **kwargs,
@@ -1474,7 +1546,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             consolidated=consolidated,
             chunk_store=chunk_store,
             storage_options=storage_options,
-            stacklevel=stacklevel,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
             **kwargs,
@@ -1499,7 +1570,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidated=None,
         chunk_store=None,
         storage_options=None,
-        stacklevel=3,
         zarr_version=None,
         zarr_format=None,
         **kwargs,
@@ -1523,7 +1593,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             consolidate_on_close=False,
             chunk_store=chunk_store,
             storage_options=storage_options,
-            stacklevel=stacklevel + 1,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
         )
@@ -1569,7 +1638,6 @@ def _get_open_params(
     consolidate_on_close,
     chunk_store,
     storage_options,
-    stacklevel,
     zarr_version,
     use_zarr_fill_value_as_mask,
     zarr_format,
@@ -1614,7 +1682,7 @@ def _get_open_params(
             # ValueError in zarr-python 3.x, KeyError in 2.x.
             try:
                 zarr_group = zarr.open_group(store, **open_kwargs)
-                warnings.warn(
+                emit_user_level_warning(
                     "Failed to open Zarr store with consolidated metadata, "
                     "but successfully read with non-consolidated metadata. "
                     "This is typically much slower for opening a dataset. "
@@ -1627,7 +1695,6 @@ def _get_open_params(
                     "error in this case instead of falling back to try "
                     "reading non-consolidated metadata.",
                     RuntimeWarning,
-                    stacklevel=stacklevel,
                 )
             except missing_exc as err:
                 raise FileNotFoundError(
