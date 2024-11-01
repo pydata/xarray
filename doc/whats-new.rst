@@ -21,7 +21,8 @@ v.2024.10.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Added :py:meth:`DataTree.persist` method (:issue:`9675`, :pull:`9682`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -36,6 +37,8 @@ Bug fixes
 
 - Fix inadvertent deep-copying of child data in DataTree.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix regression in the interoperability of :py:meth:`DataArray.polyfit` and :py:meth:`xr.polyval` for date-time coordinates. (:pull:`9691`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -43,6 +46,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- ``persist`` methods now route through the :py:class:`xr.core.parallelcompat.ChunkManagerEntrypoint` (:pull:`9682`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 .. _whats-new.2024.10.0:
 

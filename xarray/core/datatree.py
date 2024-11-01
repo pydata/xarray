@@ -1984,6 +1984,63 @@ class DataTree(
         new = self.copy(deep=False)
         return new.load(**kwargs)
 
+    def _persist_inplace(self, **kwargs) -> Self:
+        """Persist all chunked arrays in memory"""
+        # access .data to coerce everything to numpy or dask arrays
+        lazy_data = {
+            path: {
+                k: v._data
+                for k, v in node.variables.items()
+                if is_chunked_array(v._data)
+            }
+            for path, node in self.subtree_with_keys
+        }
+        flat_lazy_data = {
+            (path, var_name): array
+            for path, node in lazy_data.items()
+            for var_name, array in node.items()
+        }
+        if flat_lazy_data:
+            chunkmanager = get_chunked_array_type(*flat_lazy_data.values())
+
+            # evaluate all the dask arrays simultaneously
+            evaluated_data = chunkmanager.persist(*flat_lazy_data.values(), **kwargs)
+
+            for (path, var_name), data in zip(
+                flat_lazy_data, evaluated_data, strict=False
+            ):
+                self[path].variables[var_name].data = data
+
+        return self
+
+    def persist(self, **kwargs) -> Self:
+        """Trigger computation, keeping data as chunked arrays.
+
+        This operation can be used to trigger computation on underlying dask
+        arrays, similar to ``.compute()`` or ``.load()``.  However this
+        operation keeps the data as dask arrays. This is particularly useful
+        when using the dask.distributed scheduler and you want to load a large
+        amount of data into distributed memory.
+        Like compute (but unlike load), the original dataset is left unaltered.
+
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.persist``.
+
+        Returns
+        -------
+        object : DataTree
+            New object with all dask-backed coordinates and data variables as persisted dask arrays.
+
+        See Also
+        --------
+        dask.persist
+        """
+        new = self.copy(deep=False)
+        return new._persist_inplace(**kwargs)
+
     @property
     def chunksizes(self) -> Mapping[str, Mapping[Hashable, tuple[int, ...]]]:
         """
