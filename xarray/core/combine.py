@@ -56,7 +56,7 @@ def _infer_tile_ids_from_nested_list(
     combined_tile_ids : dict[tuple(int, ...), obj]
     """
 
-    if isinstance(entry, Sequence):
+    if not isinstance(entry, str) and isinstance(entry, Sequence):
         for i, item in enumerate(entry):
             yield from _infer_tile_ids_from_nested_list(item, current_pos + (i,))
     else:
