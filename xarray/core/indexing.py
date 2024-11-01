@@ -1653,7 +1653,7 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
         value = self.array
         subkey: Any
-        for axis, subkey in reversed(list(enumerate(indexer))):
+        for axis, subkey in reversed(list(enumerate(indexer.tuple))):
             value = value[(slice(None),) * axis + (subkey, Ellipsis)]
         return value
 
@@ -1695,7 +1695,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             # manual orthogonal indexing
             value = self.array
             subkey: Any
-            for axis, subkey in reversed(list(enumerate(indexer))):
+            for axis, subkey in reversed(list(enumerate(indexer.tuple))):
                 value = value[(slice(None),) * axis + (subkey,)]
             return value
 
