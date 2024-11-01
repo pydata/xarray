@@ -1022,6 +1022,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def _shuffle(
         self, indices: list[list[int]], dim: Hashable, chunks: T_Chunks
     ) -> Self:
+        # TODO (dcherian): consider making this public API
         array = self._data
         if is_chunked_array(array):
             chunkmanager = get_chunked_array_type(array)
