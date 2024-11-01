@@ -4,9 +4,9 @@ import logging
 import os
 import time
 import traceback
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from glob import glob
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, cast, overload
 
 import numpy as np
 
@@ -29,8 +29,18 @@ logger = logging.getLogger(__name__)
 
 NONE_VAR_NAME = "__values__"
 
+T = TypeVar("T")
 
-def _normalize_path(path: str | os.PathLike) -> str:
+
+@overload
+def _normalize_path(path: str | os.PathLike) -> str: ...
+
+
+@overload
+def _normalize_path(path: T) -> T: ...
+
+
+def _normalize_path(path: str | os.PathLike | T) -> str | T:
     """
     Normalize pathlikes to string.
 
@@ -56,6 +66,18 @@ def _normalize_path(path: str | os.PathLike) -> str:
         path = os.path.abspath(os.path.expanduser(path))
 
     return cast(str, path)
+
+
+@overload
+def _find_absolute_paths(
+    paths: str | os.PathLike | Sequence[str | os.PathLike], **kwargs
+) -> list[str]: ...
+
+
+@overload
+def _find_absolute_paths(
+    paths: NestedSequence[str | os.PathLike], **kwargs
+) -> NestedSequence[str]: ...
 
 
 def _find_absolute_paths(
