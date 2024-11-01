@@ -44,6 +44,8 @@ Bug fixes
 
 - Fix inadvertent deep-copying of child data in DataTree.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix regression in the interoperability of :py:meth:`DataArray.polyfit` and :py:meth:`xr.polyval` for date-time coordinates. (:pull:`9691`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 Documentation
 ~~~~~~~~~~~~~
