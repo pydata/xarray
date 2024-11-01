@@ -577,7 +577,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
         self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if Version(np.__version__) >= Version("2.0.0"):
-            return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
+            return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)  # type: ignore[call-overload]
         else:
             return np.asarray(self.get_duck_array(), dtype=dtype)
 
@@ -688,7 +688,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def transpose(self, order):
         return LazilyVectorizedIndexedArray(self.array, self.key).transpose(order)
 
-    def _oindex_get(self, indexer: _IndexerKey):
+    def _oindex_get(self, indexer: OuterIndexer):
         return type(self)(self.array, self._updated_key(indexer))
 
     def _vindex_get(self, indexer: _IndexerKey):
@@ -769,7 +769,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def _updated_key(self, new_key: ExplicitIndexer):
         return _combine_indexers(self.key, self.shape, new_key)
 
-    def _oindex_get(self, indexer: _IndexerKey):
+    def _oindex_get(self, indexer: OuterIndexer):
         return type(self)(self.array, self._updated_key(OuterIndexer(indexer)))
 
     def _vindex_get(self, indexer: _IndexerKey):
@@ -819,7 +819,7 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         return self.array.get_duck_array()
 
-    def _oindex_get(self, indexer: _IndexerKey):
+    def _oindex_get(self, indexer: OuterIndexer):
         return type(self)(_wrap_numpy_scalars(self.array.oindex[indexer]))
 
     def _vindex_get(self, indexer: _IndexerKey):
@@ -860,14 +860,16 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
     def _ensure_cached(self):
         self.array = as_indexable(self.array.get_duck_array())
 
-    def __array__(self, dtype: np.typing.DTypeLike = None) -> np.ndarray:
-        return np.asarray(self.get_duck_array(), dtype=dtype)
+    def __array__(
+        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+    ) -> np.ndarray:
+        return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
 
     def get_duck_array(self):
         self._ensure_cached()
         return self.array.get_duck_array()
 
-    def _oindex_get(self, indexer: _IndexerKey):
+    def _oindex_get(self, indexer: OuterIndexer):
         return type(self)(_wrap_numpy_scalars(self.array.oindex[indexer]))
 
     def _vindex_get(self, indexer: _IndexerKey):
@@ -1402,7 +1404,7 @@ def _chunked_array_with_chunks_hint(
         for chunk, size in zip(chunks, array.shape, strict=False)
     )
 
-    return chunkmanager.from_array(array, new_chunks)  # type: ignore[arg-type]
+    return chunkmanager.from_array(array, new_chunks)
 
 
 def _logical_any(args):
@@ -1567,7 +1569,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def transpose(self, order):
         return self.array.transpose(order)
 
-    def _oindex_get(self, indexer: _IndexerKey):
+    def _oindex_get(self, indexer: OuterIndexer):
         key = _outer_to_numpy_indexer(OuterIndexer(indexer), self.array.shape)
         return self.array[key]
 
@@ -1646,7 +1648,7 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             )
         self.array = array
 
-    def _oindex_get(self, indexer: _IndexerKey):
+    def _oindex_get(self, indexer: OuterIndexer):
         # manual orthogonal indexing (implemented like DaskIndexingAdapter)
 
         value = self.array
@@ -1685,7 +1687,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         """
         self.array = array
 
-    def _oindex_get(self, indexer: _IndexerKey):
+    def _oindex_get(self, indexer: OuterIndexer):
         try:
             return self.array[indexer]
         except NotImplementedError:
@@ -1786,7 +1788,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     def _prepare_key(self, key: ExplicitIndexer | _IndexerKey) -> _IndexerKey:
         _key = key.tuple if isinstance(key, ExplicitIndexer) else key
-        if isinstance(_key, tuple) and len(_key) == 1:
+        if len(_key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
             # objects don't like tuples)
             (_key,) = _key
@@ -1808,7 +1810,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             return self._convert_scalar(result)
 
     def _oindex_get(
-        self, indexer: _IndexerKey
+        self, indexer: OuterIndexer
     ) -> (
         PandasIndexingAdapter
         | NumpyIndexingAdapter
@@ -1924,7 +1926,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         return super()._convert_scalar(item)
 
     def _oindex_get(
-        self, indexer: _IndexerKey
+        self, indexer: OuterIndexer
     ) -> (
         PandasIndexingAdapter
         | NumpyIndexingAdapter

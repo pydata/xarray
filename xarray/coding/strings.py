@@ -252,7 +252,7 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def _vindex_get(self, key: _IndexerKey):
         return _numpy_char_to_bytes(self.array.vindex[key])
 
-    def _oindex_get(self, key: _IndexerKey):
+    def _oindex_get(self, key: indexing.OuterIndexer):
         return _numpy_char_to_bytes(self.array.oindex[key])
 
     def __getitem__(self, key: _IndexerKey):
