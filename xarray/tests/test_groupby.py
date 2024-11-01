@@ -3046,3 +3046,15 @@ def test_groupby_multiple_bin_grouper_missing_groups():
         },
     )
     assert_identical(actual, expected)
+
+
+@requires_dask
+def test_shuffle_by_simple() -> None:
+    da = xr.DataArray(
+        dims="x",
+        data=[1, 2, 3, 4, 5, 6],
+        coords={"label": ("x", "a b c a b c".split(" "))},
+    )
+    actual = da.chunk(x=2).shuffle_by(label=UniqueGrouper())
+    expected = da.shuffle_by(label=UniqueGrouper())
+    assert_identical(actual, expected)

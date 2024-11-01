@@ -704,7 +704,11 @@ class GroupBy(Generic[T_Xarray]):
             [name for name in as_dataset._variables if name not in is_chunked]
         ]
 
-        shuffled = subset.isel({dim: np.concatenate(no_slices)})
+        shuffled = (
+            subset
+            if dim not in subset.dims
+            else subset.isel({dim: np.concatenate(no_slices)})
+        )
         for name, var in is_chunked.items():
             shuffled[name] = var._shuffle(
                 indices=list(idx for idx in self.encoded.group_indices if idx),
