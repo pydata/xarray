@@ -2851,9 +2851,9 @@ def test_multiple_groupers(use_flox) -> None:
             with raise_if_dask_computes(max_computes=1):
                 if eagerly_compute_group:
                     with pytest.warns(DeprecationWarning):
-                        gb = b.groupby(**kwargs)
+                        gb = b.groupby(**kwargs)  # type: ignore[arg-type]
                 else:
-                    gb = b.groupby(**kwargs)
+                    gb = b.groupby(**kwargs)  # type: ignore[arg-type]
                     assert is_chunked_array(gb.encoded.codes.data)
                     assert not gb.encoded.group_indices
             expected = xr.DataArray(
