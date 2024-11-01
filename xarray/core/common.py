@@ -163,7 +163,7 @@ class AbstractArray:
         return complex(self.values)
 
     def __array__(
-        self: Any, dtype: DTypeLike | None = None, copy: bool | None = None
+        self: Any, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if not copy:
             if np.lib.NumpyVersion(np.__version__) >= "2.0.0":
@@ -241,8 +241,10 @@ class AbstractArray:
         _raise_if_any_duplicate_dimensions(self.dims)
         try:
             return self.dims.index(dim)
-        except ValueError:
-            raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
+        except ValueError as err:
+            raise ValueError(
+                f"{dim!r} not found in array dimensions {self.dims!r}"
+            ) from err
 
     @property
     def sizes(self: Any) -> Mapping[Hashable, int]:
@@ -881,7 +883,8 @@ class DataWithCoords(AttrAccessMixin):
             warnings.warn(
                 "Passing ``keep_attrs`` to ``rolling_exp`` has no effect. Pass"
                 " ``keep_attrs`` directly to the applied function, e.g."
-                " ``rolling_exp(...).mean(keep_attrs=False)``."
+                " ``rolling_exp(...).mean(keep_attrs=False)``.",
+                stacklevel=2,
             )
 
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
@@ -1576,7 +1579,7 @@ def full_like(
     fill_value: Any,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = {},
+    chunks: T_Chunks = {},  # noqa: B006
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray: ...

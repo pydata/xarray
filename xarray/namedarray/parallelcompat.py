@@ -363,6 +363,29 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     ) -> T_ChunkedArray:
         raise NotImplementedError()
 
+    def persist(
+        self, *data: T_ChunkedArray | Any, **kwargs: Any
+    ) -> tuple[T_ChunkedArray | Any, ...]:
+        """
+        Persist one or more chunked arrays in memory.
+
+        Parameters
+        ----------
+        *data : object
+            Any number of objects. If an object is an instance of the chunked array type, it is persisted
+            as a chunked array in memory. All other types should be passed through unchanged.
+
+        Returns
+        -------
+        objs
+            The input, but with all chunked arrays now persisted in memory.
+
+        See Also
+        --------
+        dask.persist
+        """
+        raise NotImplementedError()
+
     @property
     def array_api(self) -> Any:
         """

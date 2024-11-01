@@ -297,9 +297,7 @@ class TestDataset:
                 var2     (dim1, dim2) float64 576B 1.162 -1.097 -2.123 ... 1.267 0.3328
                 var3     (dim3, dim1) float64 640B 0.5565 -0.2121 0.4563 ... -0.2452 -0.3616
             Attributes:
-                foo:      bar""".format(
-                data["dim3"].dtype
-            )
+                foo:      bar""".format(data["dim3"].dtype)
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
         print(actual)
@@ -763,7 +761,7 @@ class TestDataset:
         with assert_no_warnings():
             len(ds.dims)
             ds.dims.__iter__()
-            "dim1" in ds.dims
+            _ = "dim1" in ds.dims
 
     def test_asarray(self) -> None:
         ds = Dataset({"x": 0})
@@ -1264,10 +1262,10 @@ class TestDataset:
         with pytest.raises(UnexpectedDataAccess):
             ds.load()
         with pytest.raises(UnexpectedDataAccess):
-            ds["var1"].values
+            _ = ds["var1"].values
 
         # these should not raise UnexpectedDataAccess:
-        ds.var1.data
+        _ = ds.var1.data
         ds.isel(time=10)
         ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
         ds.transpose()
@@ -3038,12 +3036,12 @@ class TestDataset:
         vencoding = {"scale_factor": 10}
         orig.encoding = {"foo": "bar"}
 
-        for k, v in orig.variables.items():
+        for k, _v in orig.variables.items():
             orig[k].encoding = vencoding
 
         actual = orig.drop_encoding()
         assert actual.encoding == {}
-        for k, v in actual.variables.items():
+        for _k, v in actual.variables.items():
             assert v.encoding == {}
 
         assert_equal(actual, orig)
@@ -3087,7 +3085,7 @@ class TestDataset:
         data["var1"] = (var1.dims, InaccessibleArray(var1.values))
         renamed = data.rename(newnames)
         with pytest.raises(UnexpectedDataAccess):
-            renamed["renamed_var1"].values
+            _ = renamed["renamed_var1"].values
 
         # https://github.com/python/mypy/issues/10008
         renamed_kwargs = data.rename(**newnames)  # type: ignore[arg-type]
@@ -4748,11 +4746,11 @@ class TestDataset:
         test_args: list[list] = [[], [["x"]], [["x", "z"]]]
         for args in test_args:
 
-            def get_args(v):
+            def get_args(args, v):
                 return [set(args[0]) & set(v.dims)] if args else []
 
             expected = Dataset(
-                {k: v.squeeze(*get_args(v)) for k, v in data.variables.items()}
+                {k: v.squeeze(*get_args(args, v)) for k, v in data.variables.items()}
             )
             expected = expected.set_coords(data.coords)
             assert_identical(expected, data.squeeze(*args))
@@ -5210,7 +5208,7 @@ class TestDataset:
             with pytest.raises(UnexpectedDataAccess):
                 ds.load()
             with pytest.raises(UnexpectedDataAccess):
-                ds["var1"].values
+                _ = ds["var1"].values
 
             # these should not raise UnexpectedDataAccess:
             ds.isel(time=10)
@@ -5223,10 +5221,10 @@ class TestDataset:
         for decode_cf in [True, False]:
             ds = open_dataset(store, decode_cf=decode_cf)
             with pytest.raises(UnexpectedDataAccess):
-                ds["var1"].values
+                _ = ds["var1"].values
 
             # these should not raise UnexpectedDataAccess:
-            ds.var1.data
+            _ = ds.var1.data
             ds.isel(time=10)
             ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
             repr(ds)
@@ -5615,7 +5613,7 @@ class TestDataset:
         data = create_test_data()
         with pytest.raises(
             ValueError,
-            match=r"Dimensions \('bad_dim',\) not found in data dimensions",
+            match=re.escape("Dimension(s) 'bad_dim' do not exist"),
         ):
             data.mean(dim="bad_dim")
 
@@ -5644,7 +5642,7 @@ class TestDataset:
         data = create_test_data()
         with pytest.raises(
             ValueError,
-            match=r"Dimensions \('bad_dim',\) not found in data dimensions",
+            match=re.escape("Dimension(s) 'bad_dim' do not exist"),
         ):
             getattr(data, func)(dim="bad_dim")
 
@@ -5989,9 +5987,9 @@ class TestDataset:
 
         # don't actually patch these methods in
         with pytest.raises(AttributeError):
-            ds.item
+            _ = ds.item
         with pytest.raises(AttributeError):
-            ds.searchsorted
+            _ = ds.searchsorted
 
     def test_dataset_array_math(self) -> None:
         ds = self.make_example_math_dataset()
@@ -6694,6 +6692,24 @@ class TestDataset:
         ds.polyfit("dim2", 2, w=np.arange(ds.sizes["dim2"]))
         xr.testing.assert_identical(ds, ds_copy)
 
+    def test_polyfit_coord(self) -> None:
+        # Make sure polyfit works when given a non-dimension coordinate.
+        ds = create_test_data(seed=1)
+
+        out = ds.polyfit("numbers", 2, full=False)
+        assert "var3_polyfit_coefficients" in out
+        assert "dim1" in out
+        assert "dim2" not in out
+        assert "dim3" not in out
+
+    def test_polyfit_coord_output(self) -> None:
+        da = xr.DataArray(
+            [1, 3, 2], dims=["x"], coords=dict(x=["a", "b", "c"], y=("x", [0, 1, 2]))
+        )
+        out = da.polyfit("y", deg=1)["polyfit_coefficients"]
+        assert out.sel(degree=0).item() == pytest.approx(1.5)
+        assert out.sel(degree=1).item() == pytest.approx(0.5)
+
     def test_polyfit_warnings(self) -> None:
         ds = create_test_data(seed=1)
 
@@ -6703,6 +6719,34 @@ class TestDataset:
             assert ws[0].category == RankWarning
             ds.var1.polyfit("dim2", 10, full=True)
             assert len(ws) == 1
+
+    def test_polyfit_polyval(self) -> None:
+        da = xr.DataArray(
+            np.arange(1, 10).astype(np.float64), dims=["x"], coords=dict(x=np.arange(9))
+        )
+
+        out = da.polyfit("x", 3, full=False)
+        da_fitval = xr.polyval(da.x, out.polyfit_coefficients)
+        # polyval introduces very small errors (1e-16 here)
+        xr.testing.assert_allclose(da_fitval, da)
+
+        da = da.assign_coords(x=xr.date_range("2001-01-01", periods=9, freq="YS"))
+        out = da.polyfit("x", 3, full=False)
+        da_fitval = xr.polyval(da.x, out.polyfit_coefficients)
+        xr.testing.assert_allclose(da_fitval, da, rtol=1e-3)
+
+    @requires_cftime
+    def test_polyfit_polyval_cftime(self) -> None:
+        da = xr.DataArray(
+            np.arange(1, 10).astype(np.float64),
+            dims=["x"],
+            coords=dict(
+                x=xr.date_range("2001-01-01", periods=9, freq="YS", calendar="noleap")
+            ),
+        )
+        out = da.polyfit("x", 3, full=False)
+        da_fitval = xr.polyval(da.x, out.polyfit_coefficients)
+        np.testing.assert_allclose(da_fitval, da)
 
     @staticmethod
     def _test_data_var_interior(
@@ -7106,7 +7150,7 @@ def test_dir_unicode(ds) -> None:
 
 def test_raise_no_warning_for_nan_in_binary_ops() -> None:
     with assert_no_warnings():
-        Dataset(data_vars={"x": ("y", [1, 2, np.nan])}) > 0
+        _ = Dataset(data_vars={"x": ("y", [1, 2, np.nan])}) > 0
 
 
 @pytest.mark.filterwarnings("error")
@@ -7214,7 +7258,7 @@ def test_differentiate_datetime(dask) -> None:
     assert np.allclose(actual, 1.0)
 
 
-@pytest.mark.skipif(not has_cftime, reason="Test requires cftime.")
+@requires_cftime
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_cftime(dask) -> None:
     rs = np.random.RandomState(42)
@@ -7416,7 +7460,7 @@ def test_trapezoid_datetime(dask, which_datetime) -> None:
 def test_no_dict() -> None:
     d = Dataset()
     with pytest.raises(AttributeError):
-        d.__dict__
+        _ = d.__dict__
 
 
 def test_subclass_slots() -> None:

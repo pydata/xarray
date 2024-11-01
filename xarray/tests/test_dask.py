@@ -14,6 +14,7 @@ import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core import duck_array_ops
 from xarray.core.duck_array_ops import lazy_array_equiv
+from xarray.core.indexes import PandasIndex
 from xarray.testing import assert_chunks_equal
 from xarray.tests import (
     assert_allclose,
@@ -63,7 +64,7 @@ class DaskTestCase:
         elif isinstance(actual, Variable):
             assert isinstance(actual.data, da.Array)
         else:
-            assert False
+            raise AssertionError()
 
 
 class TestVariable(DaskTestCase):
@@ -740,7 +741,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         nonindex_coord = build_dask_array("coord")
         a = DataArray(data, dims=["x"], coords={"y": ("x", nonindex_coord)})
         with suppress(AttributeError):
-            a.NOTEXIST
+            _ = a.NOTEXIST
         assert kernel_call_count == 0
 
     def test_dataset_getattr(self):
@@ -750,7 +751,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         nonindex_coord = build_dask_array("coord")
         ds = Dataset(data_vars={"a": ("x", data)}, coords={"y": ("x", nonindex_coord)})
         with suppress(AttributeError):
-            ds.NOTEXIST
+            _ = ds.NOTEXIST
         assert kernel_call_count == 0
 
     def test_values(self):
@@ -1104,7 +1105,7 @@ def test_unify_chunks(map_ds):
     ds_copy["cxy"] = ds_copy.cxy.chunk({"y": 10})
 
     with pytest.raises(ValueError, match=r"inconsistent chunks"):
-        ds_copy.chunks
+        _ = ds_copy.chunks
 
     expected_chunks = {"x": (4, 4, 2), "y": (5, 5, 5, 5)}
     with raise_if_dask_computes():
@@ -1374,6 +1375,13 @@ def test_map_blocks_da_ds_with_template(obj):
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, obj, template=template)
     assert_identical(actual, template)
+
+    # Check that indexes are written into the graph directly
+    dsk = dict(actual.__dask_graph__())
+    assert len({k for k in dsk if "x-coordinate" in k})
+    assert all(
+        isinstance(v, PandasIndex) for k, v in dsk.items() if "x-coordinate" in k
+    )
 
     with raise_if_dask_computes():
         actual = obj.map_blocks(func, template=template)

@@ -40,6 +40,7 @@ def remove_duplicates(entrypoints: EntryPoints) -> list[EntryPoint]:
                 f"\n {all_module_names}.\n "
                 f"The entrypoint {selected_module_name} will be used.",
                 RuntimeWarning,
+                stacklevel=2,
             )
     return unique_entrypoints
 
@@ -72,12 +73,14 @@ def backends_dict_from_pkg(
             backend = entrypoint.load()
             backend_entrypoints[name] = backend
         except Exception as ex:
-            warnings.warn(f"Engine {name!r} loading failed:\n{ex}", RuntimeWarning)
+            warnings.warn(
+                f"Engine {name!r} loading failed:\n{ex}", RuntimeWarning, stacklevel=2
+            )
     return backend_entrypoints
 
 
 def set_missing_parameters(
-    backend_entrypoints: dict[str, type[BackendEntrypoint]]
+    backend_entrypoints: dict[str, type[BackendEntrypoint]],
 ) -> None:
     for _, backend in backend_entrypoints.items():
         if backend.open_dataset_parameters is None:
@@ -86,7 +89,7 @@ def set_missing_parameters(
 
 
 def sort_backends(
-    backend_entrypoints: dict[str, type[BackendEntrypoint]]
+    backend_entrypoints: dict[str, type[BackendEntrypoint]],
 ) -> dict[str, type[BackendEntrypoint]]:
     ordered_backends_entrypoints = {}
     for be_name in STANDARD_BACKENDS_ORDER:
@@ -146,7 +149,9 @@ def guess_engine(
         except PermissionError:
             raise
         except Exception:
-            warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
+            warnings.warn(
+                f"{engine!r} fails while guessing", RuntimeWarning, stacklevel=2
+            )
 
     compatible_engines = []
     for engine, (_, backend_cls) in BACKEND_ENTRYPOINTS.items():
@@ -155,7 +160,9 @@ def guess_engine(
             if backend.guess_can_open(store_spec):
                 compatible_engines.append(engine)
         except Exception:
-            warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
+            warnings.warn(
+                f"{engine!r} fails while guessing", RuntimeWarning, stacklevel=2
+            )
 
     installed_engines = [k for k in engines if k != "store"]
     if not compatible_engines:

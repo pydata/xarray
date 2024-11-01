@@ -396,7 +396,7 @@ def concat_var_names() -> Callable:
     def get_varnames(var_cnt: int = 10, list_cnt: int = 10) -> list[list[str]]:
         orig = [f"d{i:02d}" for i in range(var_cnt)]
         var_names = []
-        for i in range(0, list_cnt):
+        for _i in range(0, list_cnt):
             l1 = orig.copy()
             var_names.append(l1)
         return var_names
@@ -662,6 +662,9 @@ class TestConcatDataset:
 
         with pytest.raises(ValueError, match=r"compat.* invalid"):
             concat(split_data, "dim1", compat="foobar")
+
+        with pytest.raises(ValueError, match=r"compat.* invalid"):
+            concat(split_data, "dim1", compat="minimal")
 
         with pytest.raises(ValueError, match=r"unexpected value for"):
             concat([data, data], "new_dim", coords="foobar")

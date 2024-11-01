@@ -3,6 +3,7 @@
 publication date. Compare it against requirements/min-all-deps.yml to verify the
 policy on obsolete dependencies is being followed. Print a pretty report :)
 """
+
 from __future__ import annotations
 
 import itertools
@@ -16,7 +17,6 @@ from dateutil.relativedelta import relativedelta
 
 CHANNELS = ["conda-forge", "defaults"]
 IGNORE_DEPS = {
-    "black",
     "coveralls",
     "flake8",
     "hypothesis",
@@ -68,8 +68,8 @@ def parse_requirements(fname) -> Iterator[tuple[str, int, int, int | None]]:
 
         try:
             version_tup = tuple(int(x) for x in version.split("."))
-        except ValueError:
-            raise ValueError("non-numerical version: " + row)
+        except ValueError as err:
+            raise ValueError("non-numerical version: " + row) from err
 
         if len(version_tup) == 2:
             yield (pkg, *version_tup, None)  # type: ignore[misc]
