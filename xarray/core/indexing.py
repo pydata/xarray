@@ -577,7 +577,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
         self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if Version(np.__version__) >= Version("2.0.0"):
-            return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)  # type: ignore[call-overload]
+            return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
         else:
             return np.asarray(self.get_duck_array(), dtype=dtype)
 
@@ -1652,7 +1652,8 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         # manual orthogonal indexing (implemented like DaskIndexingAdapter)
 
         value = self.array
-        for axis, subkey in reversed(list(enumerate(indexer))):
+        subkey: Any
+        for axis, subkey in reversed(list(enumerate(indexer))):  # type: ignore
             value = value[(slice(None),) * axis + (subkey, Ellipsis)]
         return value
 
@@ -1693,7 +1694,8 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         except NotImplementedError:
             # manual orthogonal indexing
             value = self.array
-            for axis, subkey in reversed(list(enumerate(indexer))):
+            subkey: Any
+            for axis, subkey in reversed(list(enumerate(indexer))):  # type: ignore
                 value = value[(slice(None),) * axis + (subkey,)]
             return value
 
