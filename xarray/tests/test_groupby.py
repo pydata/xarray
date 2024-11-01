@@ -3132,7 +3132,7 @@ def test_groupby_dask_eager_load_warnings():
     ds.groupby_bins("x", bins=[1, 2, 3], eagerly_compute_group=False)
 
 
-# Possible property tests
+# TODO: Possible property tests to add to this module
 # 1. lambda x: x
 # 2. grouped-reduce on unique coords is identical to array
 # 3. group_over == groupby-reduce along other dimensions
