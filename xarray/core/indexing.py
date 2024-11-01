@@ -863,7 +863,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
     def __array__(
         self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
-        return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
+        return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def get_duck_array(self):
         self._ensure_cached()
