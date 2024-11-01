@@ -2842,20 +2842,26 @@ def test_multiple_groupers(use_flox) -> None:
 
     if has_dask:
         b["xy"] = b["xy"].chunk()
-        with raise_if_dask_computes(max_computes=1):
-            with pytest.warns(DeprecationWarning):
-                gb = b.groupby(
-                    x=UniqueGrouper(), xy=UniqueGrouper(labels=["a", "b", "c"])
-                )
-
-        expected = xr.DataArray(
-            [[[1, 1, 1], [0, 1, 2]]] * 4,
-            dims=("z", "x", "xy"),
-            coords={"xy": ("xy", ["a", "b", "c"], {"foo": "bar"})},
-        )
-        assert_identical(gb.count(), expected)
-        assert is_chunked_array(gb.encoded.codes.data)
-        assert not gb.encoded.group_indices
+        for eagerly_compute_group in [True, False]:
+            kwargs = dict(
+                x=UniqueGrouper(),
+                xy=UniqueGrouper(labels=["a", "b", "c"]),
+                eagerly_compute_group=eagerly_compute_group,
+            )
+            with raise_if_dask_computes(max_computes=1):
+                if eagerly_compute_group:
+                    with pytest.warns(DeprecationWarning):
+                        gb = b.groupby(**kwargs)
+                else:
+                    gb = b.groupby(**kwargs)
+                    assert is_chunked_array(gb.encoded.codes.data)
+                    assert not gb.encoded.group_indices
+            expected = xr.DataArray(
+                [[[1, 1, 1], [np.nan, 1, 2]]] * 4,
+                dims=("z", "x", "xy"),
+                coords={"xy": ("xy", ["a", "b", "c"], {"foo": "bar"})},
+            )
+            assert_identical(gb.count(), expected)
 
 
 @pytest.mark.parametrize("use_flox", [True, False])

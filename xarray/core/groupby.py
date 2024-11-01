@@ -995,11 +995,15 @@ class GroupBy(Generic[T_Xarray]):
         has_missing_groups = (
             self.encoded.unique_coord.size != self.encoded.full_index.size
         )
-        if has_missing_groups or kwargs.get("min_count", 0) > 0:
+        if self._by_chunked or has_missing_groups or kwargs.get("min_count", 0) > 0:
             # Xarray *always* returns np.nan when there are no observations in a group,
             # We can fake that here by forcing min_count=1 when it is not set.
             # This handles boolean reductions, and count
             # See GH8090, GH9398
+            # Note that `has_missing_groups=False` when `self._by_chunked is True`.
+            # We *choose* to always do the masking, so that behaviour is predictable
+            # in some way. The real solution is to expose fill_value as a kwarg,
+            # and set appopriate defaults :/.
             kwargs.setdefault("fill_value", np.nan)
             kwargs.setdefault("min_count", 1)
 
