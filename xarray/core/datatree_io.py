@@ -2,28 +2,40 @@ from __future__ import annotations
 
 from collections.abc import Mapping, MutableMapping
 from os import PathLike
-from typing import Any, Literal, get_args
+from typing import TYPE_CHECKING, Any, Literal, get_args
 
 from xarray.core.datatree import DataTree
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
+
+if TYPE_CHECKING:
+    from h5netcdf.legacyapi import Dataset as h5Dataset
+    from netCDF4 import Dataset as ncDataset
 
 T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf"]
 T_DataTreeNetcdfTypes = Literal["NETCDF4"]
 
 
-def _get_nc_dataset_class(engine: T_DataTreeNetcdfEngine | None):
+def _get_nc_dataset_class(
+    engine: T_DataTreeNetcdfEngine | None,
+) -> type[ncDataset] | type[h5Dataset]:
     if engine == "netcdf4":
-        from netCDF4 import Dataset
-    elif engine == "h5netcdf":
-        from h5netcdf.legacyapi import Dataset
-    elif engine is None:
+        from netCDF4 import Dataset as ncDataset
+
+        return ncDataset
+    if engine == "h5netcdf":
+        from h5netcdf.legacyapi import Dataset as h5Dataset
+
+        return h5Dataset
+    if engine is None:
         try:
-            from netCDF4 import Dataset
+            from netCDF4 import Dataset as ncDataset
+
+            return ncDataset
         except ImportError:
-            from h5netcdf.legacyapi import Dataset
-    else:
-        raise ValueError(f"unsupported engine: {engine}")
-    return Dataset
+            from h5netcdf.legacyapi import Dataset as h5Dataset
+
+            return h5Dataset
+    raise ValueError(f"unsupported engine: {engine}")
 
 
 def _create_empty_netcdf_group(
@@ -31,7 +43,7 @@ def _create_empty_netcdf_group(
     group: str,
     mode: NetcdfWriteModes,
     engine: T_DataTreeNetcdfEngine | None,
-):
+) -> None:
     ncDataset = _get_nc_dataset_class(engine)
 
     with ncDataset(filename, mode=mode) as rootgrp:
@@ -49,7 +61,7 @@ def _datatree_to_netcdf(
     group: str | None = None,
     compute: bool = True,
     **kwargs,
-):
+) -> None:
     """This function creates an appropriate datastore for writing a datatree to
     disk as a netCDF file.
 

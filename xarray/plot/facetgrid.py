@@ -119,6 +119,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
     col_labels: list[Annotation | None]
     _x_var: None
     _y_var: None
+    _hue_var: DataArray | None
     _cmap_extend: Any | None
     _mappables: list[ScalarMappable]
     _finalized: bool
@@ -271,6 +272,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         self.col_labels = [None] * ncol
         self._x_var = None
         self._y_var = None
+        self._hue_var = None
         self._cmap_extend = None
         self._mappables = []
         self._finalized = False
@@ -720,6 +722,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         if use_legend_elements:
             self.figlegend = _add_legend(**kwargs)
         else:
+            assert self._hue_var is not None
             self.figlegend = self.fig.legend(
                 handles=self._mappables[-1],
                 labels=list(self._hue_var.to_numpy()),
