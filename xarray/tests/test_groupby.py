@@ -219,6 +219,14 @@ def test_groupby_indexvariable(use_flox: bool) -> None:
     assert_identical(expected, actual)
 
 
+@pytest.mark.parametrize("shuffle", [True, False])
+@pytest.mark.parametrize(
+    "chunk",
+    [
+        pytest.param(True, marks=pytest.mark.skipif(not has_dask, reason="no dask")),
+        False,
+    ],
+)
 @pytest.mark.parametrize(
     "obj",
     [
@@ -226,12 +234,22 @@ def test_groupby_indexvariable(use_flox: bool) -> None:
         xr.Dataset({"foo": ("x", [1, 2, 3, 4, 5, 6])}, {"x": [1, 1, 1, 2, 2, 2]}),
     ],
 )
-def test_groupby_map_shrink_groups(obj) -> None:
+def test_groupby_map_shrink_groups(obj, chunk: bool, shuffle: bool) -> None:
     expected = obj.isel(x=[0, 1, 3, 4])
-    actual = obj.groupby("x").map(lambda f: f.isel(x=[0, 1]))
+    if chunk:
+        obj = obj.chunk(x=2)
+    actual = obj.groupby("x").map(lambda f: f.isel(x=[0, 1]), shuffle=shuffle)
     assert_identical(expected, actual)
 
 
+@pytest.mark.parametrize("shuffle", [True, False])
+@pytest.mark.parametrize(
+    "chunk",
+    [
+        pytest.param(True, marks=pytest.mark.skipif(not has_dask, reason="no dask")),
+        False,
+    ],
+)
 @pytest.mark.parametrize(
     "obj",
     [
@@ -239,7 +257,7 @@ def test_groupby_map_shrink_groups(obj) -> None:
         xr.Dataset({"foo": ("x", [1, 2, 3])}, {"x": [1, 2, 2]}),
     ],
 )
-def test_groupby_map_change_group_size(obj) -> None:
+def test_groupby_map_change_group_size(obj, chunk: bool, shuffle: bool) -> None:
     def func(group):
         if group.sizes["x"] == 1:
             result = group.isel(x=[0, 0])
@@ -248,7 +266,9 @@ def test_groupby_map_change_group_size(obj) -> None:
         return result
 
     expected = obj.isel(x=[0, 0, 1])
-    actual = obj.groupby("x").map(func)
+    if chunk:
+        obj = obj.chunk(x=2)
+    actual = obj.groupby("x").map(func, shuffle=shuffle)
     assert_identical(expected, actual)
 
 
