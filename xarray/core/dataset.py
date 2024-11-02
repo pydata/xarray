@@ -166,6 +166,7 @@ if TYPE_CHECKING:
         ResampleCompatible,
         SideOptions,
         T_ChunkDimFreq,
+        T_Chunks,
         T_DatasetPadConstantValues,
         T_Xarray,
     )
@@ -3235,6 +3236,30 @@ class Dataset(
 
         result = self.isel(indexers=query_results.dim_indexers, drop=drop)
         return result._overwrite_indexes(*query_results.as_tuple()[1:])
+
+    def _shuffle(self, dim, *, indices: list[list[int]], chunks: T_Chunks) -> Self:
+        # Shuffling is only different from `isel` for chunked arrays.
+        # Extract them out, and treat them specially. The rest, we route through isel.
+        # This makes it easy to ensure correct handling of indexes.
+        is_chunked = {
+            name: var
+            for name, var in self._variables.items()
+            if is_chunked_array(var._data)
+        }
+        subset = self[[name for name in self._variables if name not in is_chunked]]
+
+        shuffled = (
+            subset
+            if dim not in subset.dims
+            else subset.isel({dim: np.concatenate(indices)})
+        )
+        for name, var in is_chunked.items():
+            shuffled[name] = var._shuffle(
+                indices=indices,
+                dim=dim,
+                chunks=chunks,
+            )
+        return shuffled
 
     def head(
         self,

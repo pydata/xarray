@@ -47,7 +47,6 @@ from xarray.core.utils import (
     peek_at,
 )
 from xarray.core.variable import IndexVariable, Variable
-from xarray.namedarray.pycompat import is_chunked_array
 from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 if TYPE_CHECKING:
@@ -678,10 +677,10 @@ class GroupBy(Generic[T_Xarray]):
     def _shuffle_obj(self, chunks: T_Chunks) -> T_Xarray:
         from xarray.core.dataarray import DataArray
 
-        dim = self._group_dim
-        size = self._obj.sizes[dim]
         was_array = isinstance(self._obj, DataArray)
         as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
+
+        size = self._obj.sizes[self._group_dim]
         no_slices: list[list[int]] = [
             list(range(*idx.indices(size))) if isinstance(idx, slice) else idx
             for idx in self.encoded.group_indices
@@ -692,29 +691,9 @@ class GroupBy(Generic[T_Xarray]):
             if grouper.name not in as_dataset._variables:
                 as_dataset.coords[grouper.name] = grouper.group
 
-        # Shuffling is only different from `isel` for chunked arrays.
-        # Extract them out, and treat them specially. The rest, we route through isel.
-        # This makes it easy to ensure correct handling of indexes.
-        is_chunked = {
-            name: var
-            for name, var in as_dataset._variables.items()
-            if is_chunked_array(var._data)
-        }
-        subset = as_dataset[
-            [name for name in as_dataset._variables if name not in is_chunked]
-        ]
-
-        shuffled = (
-            subset
-            if dim not in subset.dims
-            else subset.isel({dim: np.concatenate(no_slices)})
+        shuffled = as_dataset._shuffle(
+            dim=self._group_dim, indices=no_slices, chunks=chunks
         )
-        for name, var in is_chunked.items():
-            shuffled[name] = var._shuffle(
-                indices=list(idx for idx in self.encoded.group_indices if idx),
-                dim=dim,
-                chunks=chunks,
-            )
         shuffled = self._maybe_unstack(shuffled)
         new_obj = self._obj._from_temp_dataset(shuffled) if was_array else shuffled
         return new_obj
