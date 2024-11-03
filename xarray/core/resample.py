@@ -103,6 +103,22 @@ class Resample(GroupBy[T_Xarray]):
         (grouper,) = self.groupers
         return self._shuffle_obj(chunks).drop_vars(RESAMPLE_DIM)
 
+    def _first_or_last(
+        self, op: str, skipna: bool | None, keep_attrs: bool | None
+    ) -> T_Xarray:
+        from xarray.core.dataset import Dataset
+
+        result = super()._first_or_last(op=op, skipna=skipna, keep_attrs=keep_attrs)
+        result = result.rename({RESAMPLE_DIM: self._group_dim})
+        if isinstance(result, Dataset):
+            # Can't do this in the base class because group_dim is RESAMPLE_DIM
+            # which is not present in the original object
+            for var in result.data_vars:
+                result._variables[var] = result._variables[var].transpose(
+                    *self._obj._variables[var].dims
+                )
+        return result
+
     def _drop_coords(self) -> T_Xarray:
         """Drop non-dimension coordinates along the resampled dimension."""
         obj = self._obj
