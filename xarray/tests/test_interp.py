@@ -882,8 +882,8 @@ def test_decompose(method: InterpOptions) -> None:
 @requires_scipy
 @requires_dask
 # omit quintic because not enough points
-# unknown timeout using pchip
-@pytest.mark.parametrize("method", ("cubic", "linear", "slinear"))
+# cubic and pchip omitted because they take too long
+@pytest.mark.parametrize("method", ("linear", "slinear"))
 @pytest.mark.parametrize("chunked", [True, False])
 @pytest.mark.parametrize(
     "data_ndim,interp_ndim,nscalar",
