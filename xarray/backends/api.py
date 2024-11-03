@@ -33,7 +33,6 @@ from xarray.backends.common import (
     _normalize_path,
 )
 from xarray.backends.locks import _get_scheduler
-from xarray.backends.zarr import _zarr_v3
 from xarray.core import indexing
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
@@ -1339,7 +1338,7 @@ def open_groups(
 
 
 def open_mfdataset(
-    paths: str | NestedSequence[str | os.PathLike],
+    paths: str | os.PathLike | NestedSequence[str | os.PathLike],
     chunks: T_Chunks | None = None,
     concat_dim: (
         str
@@ -1542,6 +1541,7 @@ def open_mfdataset(
     if not paths:
         raise OSError("no files to open")
 
+    paths1d: list[str]
     if combine == "nested":
         if isinstance(concat_dim, str | DataArray) or concat_dim is None:
             concat_dim = [concat_dim]  # type: ignore[assignment]
@@ -1550,7 +1550,7 @@ def open_mfdataset(
         # encoding the originally-supplied structure as "ids".
         # The "ids" are not used at all if combine='by_coords`.
         combined_ids_paths = _infer_concat_order_from_positions(paths)
-        ids, paths = (
+        ids, paths1d = (
             list(combined_ids_paths.keys()),
             list(combined_ids_paths.values()),
         )
@@ -1560,6 +1560,8 @@ def open_mfdataset(
             "effect. To manually combine along a specific dimension you should "
             "instead specify combine='nested' along with a value for `concat_dim`.",
         )
+    else:
+        paths1d = paths  # type: ignore[assignment]
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)
 
@@ -1575,7 +1577,7 @@ def open_mfdataset(
         open_ = open_dataset
         getattr_ = getattr
 
-    datasets = [open_(p, **open_kwargs) for p in paths]
+    datasets = [open_(p, **open_kwargs) for p in paths1d]
     closers = [getattr_(ds, "_close") for ds in datasets]
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
@@ -1627,7 +1629,7 @@ def open_mfdataset(
     if attrs_file is not None:
         if isinstance(attrs_file, os.PathLike):
             attrs_file = cast(str, os.fspath(attrs_file))
-        combined.attrs = datasets[paths.index(attrs_file)].attrs
+        combined.attrs = datasets[paths1d.index(attrs_file)].attrs
 
     return combined
 
@@ -2131,66 +2133,25 @@ def to_zarr(
 
     See `Dataset.to_zarr` for full API docs.
     """
+    from xarray.backends.zarr import _choose_default_mode, _get_mappers
+
+    # validate Dataset keys, DataArray names
+    _validate_dataset_names(dataset)
 
     # Load empty arrays to avoid bug saving zero length dimensions (Issue #5741)
+    # TODO: delete when min dask>=2023.12.1
+    # https://github.com/dask/dask/pull/10506
     for v in dataset.variables.values():
         if v.size == 0:
             v.load()
 
-    # expand str and path-like arguments
-    store = _normalize_path(store)
-    chunk_store = _normalize_path(chunk_store)
-
-    kwargs = {}
-    if storage_options is None:
-        mapper = store
-        chunk_mapper = chunk_store
-    else:
-        if not isinstance(store, str):
-            raise ValueError(
-                f"store must be a string to use storage_options. Got {type(store)}"
-            )
-
-        if _zarr_v3():
-            kwargs["storage_options"] = storage_options
-            mapper = store
-            chunk_mapper = chunk_store
-        else:
-            from fsspec import get_mapper
-
-            mapper = get_mapper(store, **storage_options)
-            if chunk_store is not None:
-                chunk_mapper = get_mapper(chunk_store, **storage_options)
-            else:
-                chunk_mapper = chunk_store
-
     if encoding is None:
         encoding = {}
 
-    if mode is None:
-        if append_dim is not None:
-            mode = "a"
-        elif region is not None:
-            mode = "r+"
-        else:
-            mode = "w-"
-
-    if mode not in ["a", "a-"] and append_dim is not None:
-        raise ValueError("cannot set append_dim unless mode='a' or mode=None")
-
-    if mode not in ["a", "a-", "r+"] and region is not None:
-        raise ValueError(
-            "cannot set region unless mode='a', mode='a-', mode='r+' or mode=None"
-        )
-
-    if mode not in ["w", "w-", "a", "a-", "r+"]:
-        raise ValueError(
-            "The only supported options for mode are 'w', "
-            f"'w-', 'a', 'a-', and 'r+', but mode={mode!r}"
-        )
-
-    # validate Dataset keys, DataArray names
-    _validate_dataset_names(dataset)
+    kwargs, mapper, chunk_mapper = _get_mappers(
+        storage_options=storage_options, store=store, chunk_store=chunk_store
+    )
+    mode = _choose_default_mode(mode=mode, append_dim=append_dim, region=region)
 
     if mode == "r+":
         already_consolidated = consolidated
@@ -2198,6 +2159,7 @@ def to_zarr(
     else:
         already_consolidated = False
         consolidate_on_close = consolidated or consolidated is None
+
     zstore = backends.ZarrStore.open_group(
         store=mapper,
         mode=mode,
@@ -2209,30 +2171,14 @@ def to_zarr(
         append_dim=append_dim,
         write_region=region,
         safe_chunks=safe_chunks,
-        stacklevel=4,  # for Dataset.to_zarr()
         zarr_version=zarr_version,
         zarr_format=zarr_format,
         write_empty=write_empty_chunks,
         **kwargs,
     )
 
-    if region is not None:
-        zstore._validate_and_autodetect_region(dataset)
-        # can't modify indexes with region writes
-        dataset = dataset.drop_vars(dataset.indexes)
-        if append_dim is not None and append_dim in region:
-            raise ValueError(
-                f"cannot list the same dimension in both ``append_dim`` and "
-                f"``region`` with to_zarr(), got {append_dim} in both"
-            )
-
-    if encoding and mode in ["a", "a-", "r+"]:
-        existing_var_names = set(zstore.zarr_group.array_keys())
-        for var_name in existing_var_names:
-            if var_name in encoding:
-                raise ValueError(
-                    f"variable {var_name!r} already exists, but encoding was provided"
-                )
+    dataset = zstore._validate_and_autodetect_region(dataset)
+    zstore._validate_encoding(encoding)
 
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
