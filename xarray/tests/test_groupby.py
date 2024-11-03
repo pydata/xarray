@@ -37,6 +37,7 @@ from xarray.tests import (
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
+    requires_dask_ge_2024_08_1,
     requires_flox,
     requires_flox_0_9_12,
     requires_pandas_ge_2_2,
@@ -3048,7 +3049,7 @@ def test_groupby_multiple_bin_grouper_missing_groups():
     assert_identical(actual, expected)
 
 
-@requires_dask
+@requires_dask_ge_2024_08_1
 def test_shuffle_by_simple() -> None:
     da = xr.DataArray(
         dims="x",

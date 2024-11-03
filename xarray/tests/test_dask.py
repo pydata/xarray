@@ -24,6 +24,7 @@ from xarray.tests import (
     assert_identical,
     mock,
     raise_if_dask_computes,
+    requires_dask_ge_2024_08_1,
     requires_pint,
     requires_scipy_or_netCDF4,
 )
@@ -1813,6 +1814,7 @@ def test_minimize_graph_size():
         assert actual == numchunks[var], (actual, numchunks[var])
 
 
+@requires_dask_ge_2024_08_1
 @pytest.mark.parametrize(
     "chunks, expected_chunks",
     [
