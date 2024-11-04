@@ -401,6 +401,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         attrs : dict_like or None, optional
             Attributes to assign to the new variable. If None (default), an
             empty attribute dictionary is initialized.
+            (see FAQ, :ref:`approach to metadata`)
         encoding : dict_like or None, optional
             Dictionary specifying how to encode this array's data into a
             serialized format like netCDF4. Currently used keys (for netCDF)

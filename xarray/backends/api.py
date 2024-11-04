@@ -1338,7 +1338,7 @@ def open_groups(
 
 
 def open_mfdataset(
-    paths: str | NestedSequence[str | os.PathLike],
+    paths: str | os.PathLike | NestedSequence[str | os.PathLike],
     chunks: T_Chunks | None = None,
     concat_dim: (
         str
@@ -1541,6 +1541,7 @@ def open_mfdataset(
     if not paths:
         raise OSError("no files to open")
 
+    paths1d: list[str]
     if combine == "nested":
         if isinstance(concat_dim, str | DataArray) or concat_dim is None:
             concat_dim = [concat_dim]  # type: ignore[assignment]
@@ -1549,7 +1550,7 @@ def open_mfdataset(
         # encoding the originally-supplied structure as "ids".
         # The "ids" are not used at all if combine='by_coords`.
         combined_ids_paths = _infer_concat_order_from_positions(paths)
-        ids, paths = (
+        ids, paths1d = (
             list(combined_ids_paths.keys()),
             list(combined_ids_paths.values()),
         )
@@ -1559,6 +1560,8 @@ def open_mfdataset(
             "effect. To manually combine along a specific dimension you should "
             "instead specify combine='nested' along with a value for `concat_dim`.",
         )
+    else:
+        paths1d = paths  # type: ignore[assignment]
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)
 
@@ -1574,7 +1577,7 @@ def open_mfdataset(
         open_ = open_dataset
         getattr_ = getattr
 
-    datasets = [open_(p, **open_kwargs) for p in paths]
+    datasets = [open_(p, **open_kwargs) for p in paths1d]
     closers = [getattr_(ds, "_close") for ds in datasets]
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
@@ -1626,7 +1629,7 @@ def open_mfdataset(
     if attrs_file is not None:
         if isinstance(attrs_file, os.PathLike):
             attrs_file = cast(str, os.fspath(attrs_file))
-        combined.attrs = datasets[paths.index(attrs_file)].attrs
+        combined.attrs = datasets[paths1d.index(attrs_file)].attrs
 
     return combined
 
