@@ -60,7 +60,7 @@ from xarray.core.common import (
     _contains_datetime_like_objects,
     get_chunksizes,
 )
-from xarray.core.computation import unify_chunks
+from xarray.core.computation import _ensure_numeric, unify_chunks
 from xarray.core.coordinates import (
     Coordinates,
     DatasetCoordinates,
@@ -87,7 +87,6 @@ from xarray.core.merge import (
     merge_coordinates_without_align,
     merge_core,
 )
-from xarray.core.missing import _floatize_x
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Bins,
@@ -597,6 +596,7 @@ class Dataset(
 
     attrs : dict-like, optional
         Global attributes to save on this dataset.
+        (see FAQ, :ref:`approach to metadata`)
 
     Examples
     --------
@@ -9066,22 +9066,14 @@ class Dataset(
         variables = {}
         skipna_da = skipna
 
-        x: Any = self.coords[dim].variable
-        x = _floatize_x((x,), (x,))[0][0]
-
-        try:
-            x = x.values.astype(np.float64)
-        except TypeError as e:
-            raise TypeError(
-                f"Dim {dim!r} must be castable to float64, got {type(x).__name__}."
-            ) from e
+        x = np.asarray(_ensure_numeric(self.coords[dim]).astype(np.float64))
 
         xname = f"{self[dim].name}_"
         order = int(deg) + 1
         lhs = np.vander(x, order)
 
         if rcond is None:
-            rcond = x.shape[0] * np.finfo(x.dtype).eps
+            rcond = x.shape[0] * np.finfo(x.dtype).eps  # type: ignore[assignment]
 
         # Weights:
         if w is not None:
@@ -10387,6 +10379,7 @@ class Dataset(
         *,
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
+        eagerly_compute_group: bool = True,
         **groupers: Grouper,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
@@ -10402,6 +10395,11 @@ class Dataset(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
+        eagerly_compute_group: bool
+            Whether to eagerly compute ``group`` when it is a chunked array.
+            This option is to maintain backwards compatibility. Set to False
+            to opt-in to future behaviour, where ``group`` is not automatically loaded
+            into memory.
         **groupers : Mapping of str to Grouper or Resampler
             Mapping of variable name to group by to :py:class:`Grouper` or :py:class:`Resampler` object.
             One of ``group`` or ``groupers`` must be provided.
@@ -10484,7 +10482,9 @@ class Dataset(
         )
 
         _validate_groupby_squeeze(squeeze)
-        rgroupers = _parse_group_and_groupers(self, group, groupers)
+        rgroupers = _parse_group_and_groupers(
+            self, group, groupers, eagerly_compute_group=eagerly_compute_group
+        )
 
         return DatasetGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
@@ -10500,6 +10500,7 @@ class Dataset(
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         duplicates: Literal["raise", "drop"] = "raise",
+        eagerly_compute_group: bool = True,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
 
@@ -10536,6 +10537,11 @@ class Dataset(
             coordinates.
         duplicates : {"raise", "drop"}, default: "raise"
             If bin edges are not unique, raise ValueError or drop non-uniques.
+        eagerly_compute_group: bool
+            Whether to eagerly compute ``group`` when it is a chunked array.
+            This option is to maintain backwards compatibility. Set to False
+            to opt-in to future behaviour, where ``group`` is not automatically loaded
+            into memory.
 
         Returns
         -------
@@ -10573,7 +10579,9 @@ class Dataset(
             precision=precision,
             include_lowest=include_lowest,
         )
-        rgrouper = ResolvedGrouper(grouper, group, self)
+        rgrouper = ResolvedGrouper(
+            grouper, group, self, eagerly_compute_group=eagerly_compute_group
+        )
 
         return DatasetGroupBy(
             self,

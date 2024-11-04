@@ -26,6 +26,9 @@ New Features
 - Added ``write_inherited_coords`` option to :py:meth:`DataTree.to_netcdf`
   and :py:meth:`DataTree.to_zarr` (:pull:`9677`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Support lazy grouping by dask arrays, and allow specifying ordered groups with ``UniqueGrouper(labels=["a", "b", "c"])``
+  (:issue:`2852`, :issue:`757`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -33,7 +36,11 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+- Grouping by a chunked array (e.g. dask or cubed) currently eagerly loads that variable in to
+  memory. This behaviour is deprecated. If eager loading was intended, please load such arrays
+  manually using ``.load()`` or ``.compute()``. Else pass ``eagerly_compute_group=False``, and
+  provide expected group labels using the ``labels`` kwarg to a grouper object such as
+  :py:class:`grouper.UniqueGrouper` or :py:class:`grouper.BinGrouper`.
 
 Bug fixes
 ~~~~~~~~~
@@ -44,9 +51,14 @@ Bug fixes
 - Avoid including parent groups when writing DataTree subgroups to Zarr or
   netCDF (:pull:`9682`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix regression in the interoperability of :py:meth:`DataArray.polyfit` and :py:meth:`xr.polyval` for date-time coordinates. (:pull:`9691`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 Documentation
 ~~~~~~~~~~~~~
+
+- Mention attribute peculiarities in docs/docstrings (:issue:`4798`, :pull:`9700`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Internal Changes
@@ -95,14 +107,6 @@ New Features
 - Fix passing missing arguments to when opening hdf5 and netCDF4 datatrees
   (:issue:`9427`, :pull: `9428`).
   By `Alfonso Ladino <https://github.com/aladinor>`_.
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
-
 
 Bug fixes
 ~~~~~~~~~
