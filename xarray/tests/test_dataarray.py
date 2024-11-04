@@ -20,6 +20,7 @@ except ImportError:
     from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
 
 import xarray as xr
+import xarray.core.missing
 from xarray import (
     DataArray,
     Dataset,
