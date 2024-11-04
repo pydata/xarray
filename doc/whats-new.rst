@@ -23,6 +23,9 @@ New Features
 ~~~~~~~~~~~~
 - Added :py:meth:`DataTree.persist` method (:issue:`9675`, :pull:`9682`).
   By `Sam Levang <https://github.com/slevang>`_.
+- Support lazy grouping by dask arrays, and allow specifying ordered groups with ``UniqueGrouper(labels=["a", "b", "c"])``
+  (:issue:`2852`, :issue:`757`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -30,7 +33,11 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+- Grouping by a chunked array (e.g. dask or cubed) currently eagerly loads that variable in to
+  memory. This behaviour is deprecated. If eager loading was intended, please load such arrays
+  manually using ``.load()`` or ``.compute()``. Else pass ``eagerly_compute_group=False``, and
+  provide expected group labels using the ``labels`` kwarg to a grouper object such as
+  :py:class:`grouper.UniqueGrouper` or :py:class:`grouper.BinGrouper`.
 
 Bug fixes
 ~~~~~~~~~
@@ -93,14 +100,6 @@ New Features
 - Fix passing missing arguments to when opening hdf5 and netCDF4 datatrees
   (:issue:`9427`, :pull: `9428`).
   By `Alfonso Ladino <https://github.com/aladinor>`_.
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
-
 
 Bug fixes
 ~~~~~~~~~

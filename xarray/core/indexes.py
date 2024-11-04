@@ -1031,13 +1031,21 @@ class PandasMultiIndex(PandasIndex):
                     f"from variable {name!r} that wraps a multi-index"
                 )
 
-        split_labels, levels = zip(
-            *[lev.factorize() for lev in level_indexes], strict=True
-        )
-        labels_mesh = np.meshgrid(*split_labels, indexing="ij")
-        labels = [x.ravel() for x in labels_mesh]
+        # from_product sorts by default, so we can't use that always
+        # https://github.com/pydata/xarray/issues/980
+        # https://github.com/pandas-dev/pandas/issues/14672
+        if all(index.is_monotonic_increasing for index in level_indexes):
+            index = pd.MultiIndex.from_product(
+                level_indexes, sortorder=0, names=variables.keys()
+            )
+        else:
+            split_labels, levels = zip(
+                *[lev.factorize() for lev in level_indexes], strict=True
+            )
+            labels_mesh = np.meshgrid(*split_labels, indexing="ij")
+            labels = [x.ravel() for x in labels_mesh]
 
-        index = pd.MultiIndex(levels, labels, sortorder=0, names=variables.keys())
+            index = pd.MultiIndex(levels, labels, sortorder=0, names=variables.keys())
         level_coords_dtype = {k: var.dtype for k, var in variables.items()}
 
         return cls(index, dim, level_coords_dtype=level_coords_dtype)
