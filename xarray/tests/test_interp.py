@@ -359,7 +359,7 @@ def test_interpolate_nd(case: int, method: InterpnOptions, nd_interp_coords) -> 
 
 
 @requires_scipy
-# omit cubic, pchip, quintic becausenot enough points
+# omit cubic, pchip, quintic because not enough points
 @pytest.mark.parametrize("method", ("linear", "nearest", "slinear"))
 def test_interpolate_nd_nd(method: InterpnOptions) -> None:
     """Interpolate nd array with an nd indexer sharing coordinates."""
@@ -881,7 +881,7 @@ def test_decompose(method: InterpOptions) -> None:
 
 @requires_scipy
 @requires_dask
-# omit quintic because not enough points
+# quintic omitted because not enough points
 # cubic and pchip omitted because they take too long
 @pytest.mark.parametrize("method", ("linear", "slinear"))
 @pytest.mark.parametrize("chunked", [True, False])
