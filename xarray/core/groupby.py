@@ -6,6 +6,7 @@ import itertools
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import partial
 from typing import TYPE_CHECKING, Any, Generic, Literal, Union, cast
 
 import numpy as np
@@ -29,6 +30,7 @@ from xarray.core.indexes import (
 )
 from xarray.core.merge import merge_coords
 from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.parallel import map_blocks
 from xarray.core.types import (
     Dims,
     QuantileMethods,
@@ -54,7 +56,13 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.types import GroupIndex, GroupIndices, GroupInput, GroupKey
+    from xarray.core.types import (
+        GroupIndex,
+        GroupIndices,
+        GroupInput,
+        GroupKey,
+        T_Chunks,
+    )
     from xarray.core.utils import Frozen
     from xarray.groupers import EncodedGroups, Grouper
 
@@ -78,6 +86,24 @@ def _codes_to_group_indices(codes: np.ndarray, N: int) -> GroupIndices:
         if g >= 0:
             groups[g].append(n)
     return groups
+
+
+def _infer_map_blocks_template(shuffled: GroupBy, func: Callable, *args, **kwargs):
+    template = shuffled.map(func, *args, **kwargs)
+    name = shuffled.group1d.name
+    chunksizes = shuffled._obj.chunksizes[shuffled._group_dim]
+    output_group = template[name]
+    out_group_lens = output_group.groupby(name).count().data
+    block_ids = np.repeat(np.arange(len(chunksizes)), chunksizes)
+    frame = pd.DataFrame(
+        {"block_id": pd.Index(block_ids), "codes": shuffled.encoded.codes}
+    )
+    groups_in_chunk = frame["codes"].groupby(block_ids).unique()
+    out_chunks = tuple(
+        itertools.chain(*[out_group_lens[group].tolist() for group in groups_in_chunk])
+    )
+    template = template.chunk({name: out_chunks})
+    return template, name
 
 
 def _dummy_copy(xarray_obj):
@@ -614,6 +640,142 @@ class GroupBy(Generic[T_Xarray]):
             self._sizes = self._obj.isel({self._group_dim: index}).sizes
         return self._sizes
 
+    def shuffle(self, chunks: T_Chunks = None):
+        """
+        Sort or "shuffle" the underlying object.
+
+        "Shuffle" means the object is sorted so that all group members occur sequentially,
+        in the same chunk. Multiple groups may occur in the same chunk.
+        This method is particularly useful for chunked arrays (e.g. dask, cubed).
+        particularly when you need to map a function that requires all members of a group
+        to be present in a single chunk. For chunked array types, the order of appearance
+        is not guaranteed, but will depend on the input chunking.
+
+        Parameters
+        ----------
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or tuple of int, optional
+            How to adjust chunks along dimensions not present in the array being grouped by.
+
+        Returns
+        -------
+        DataArrayGroupBy or DatasetGroupBy
+
+        Examples
+        --------
+        >>> import dask
+        >>> da = xr.DataArray(
+        ...     dims="x",
+        ...     data=dask.array.arange(10, chunks=3),
+        ...     coords={"x": [1, 2, 3, 1, 2, 3, 1, 2, 3, 0]},
+        ...     name="a",
+        ... )
+        >>> shuffled = da.groupby("x").shuffle()
+        >>> shuffled.quantile(q=0.5).compute()
+        <xarray.DataArray 'a' (x: 4)> Size: 32B
+        array([9., 3., 4., 5.])
+        Coordinates:
+            quantile  float64 8B 0.5
+          * x         (x) int64 32B 0 1 2 3
+
+        See Also
+        --------
+        dask.dataframe.DataFrame.shuffle
+        dask.array.shuffle
+        """
+        new_groupers = {
+            # Using group.name handles the BinGrouper case
+            # It does *not* handle the TimeResampler case,
+            # so we just override this method in Resample
+            grouper.group.name: grouper.grouper.reset()
+            for grouper in self.groupers
+        }
+        return self._shuffle_obj(chunks).groupby(
+            new_groupers,
+            restore_coord_dims=self._restore_coord_dims,
+        )
+
+    def _shuffle_obj(self, chunks: T_Chunks) -> T_Xarray:
+        from xarray.core.dataarray import DataArray
+
+        was_array = isinstance(self._obj, DataArray)
+        as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
+
+        size = self._obj.sizes[self._group_dim]
+        no_slices: list[list[int]] = [
+            list(range(*idx.indices(size))) if isinstance(idx, slice) else idx
+            for idx in self.encoded.group_indices
+        ]
+        no_slices = [idx for idx in no_slices if idx]
+
+        for grouper in self.groupers:
+            if grouper.name not in as_dataset._variables:
+                as_dataset.coords[grouper.name] = grouper.group
+
+        shuffled = as_dataset._shuffle(
+            dim=self._group_dim, indices=no_slices, chunks=chunks
+        )
+        shuffled = self._maybe_unstack(shuffled)
+        new_obj = self._obj._from_temp_dataset(shuffled) if was_array else shuffled
+        return new_obj
+
+    def _map_shuffled(self, func, args, kwargs) -> None:
+        def wrapper(x, func, groupers, renamer, *args, **kwargs):
+            return x.groupby(groupers).map(func, *args, **kwargs).rename(renamer)
+
+        shuffled = self.shuffle()
+        obj = shuffled._obj.copy(deep=False)
+        try:
+            template, concat_dim = _infer_map_blocks_template(
+                shuffled, func, *args, **kwargs
+            )
+        except Exception as e:
+            raise ValueError("Could not infer template automatically.") from e
+        group_dim = shuffled._group_dim
+
+        groupers = {}
+        for grouper in shuffled.groupers:
+            name = grouper.group.name
+            if name not in obj:
+                obj.coords[name] = grouper.group
+            groupers[name] = grouper.grouper.reset()
+
+        # map_blocks does not support adding new dimensions that are multiply-chunked
+        # For example, even renaming an existing dimension to a new name will not work.
+        # This would be needed for grouped reductions where at least one dimension is destroyed.
+        # So we engage in a renaming game.
+        result = map_blocks(
+            # 1. This renamer renames dimensions named after the grouping variable to the
+            #    dimension we are grouping over.
+            #    For example .groupby("label") where label.dims == ("x",); we rename the
+            #    output "label" dimension back to "x"
+            partial(
+                wrapper, func=func, groupers=groupers, renamer={concat_dim: group_dim}
+            ),
+            obj,
+            args=args,
+            kwargs=kwargs,
+            # 2. Again do the same renaming transform on the template
+            template=template.rename({concat_dim: group_dim}),
+        )
+
+        if (
+            group_dim == concat_dim
+            and self._obj.sizes[group_dim] == template.sizes[group_dim]
+        ):
+            # invert the shuffling
+            inverse = _inverse_permutation_indices(self.encoded.group_indices)
+            # output chunk sizes are the same as the input's
+            indices = [
+                arr.tolist()
+                for arr in np.split(
+                    inverse, np.cumsum(self._obj.chunksizes[self._group_dim])[:-1]
+                )
+            ]
+            result = result._shuffle(dim=group_dim, indices=indices, chunks="auto")
+
+        # 3. Now invert the renaming
+        return result.rename({group_dim: concat_dim})
+
     def map(
         self,
         func: Callable,
@@ -824,7 +986,9 @@ class GroupBy(Generic[T_Xarray]):
             #       and `inserted_dims`
             # if multiple groupers all share the same single dimension, then
             # we don't stack/unstack. Do that manually now.
-            obj = obj.unstack(*self.encoded.unique_coord.dims)
+            dims_to_unstack = self.encoded.unique_coord.dims
+            if all(dim in obj.dims for dim in dims_to_unstack):
+                obj = obj.unstack(*dims_to_unstack)
             to_drop = [
                 grouper.name
                 for grouper in self.groupers
@@ -1304,6 +1468,8 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         func: Callable[..., DataArray],
         args: tuple[Any, ...] = (),
         shortcut: bool | None = None,
+        *,
+        shuffle: bool = False,
         **kwargs: Any,
     ) -> DataArray:
         """Apply a function to each array in the group and concatenate them
@@ -1347,9 +1513,16 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         applied : DataArray
             The result of splitting, applying and combining this array.
         """
-        grouped = self._iter_grouped_shortcut() if shortcut else self._iter_grouped()
-        applied = (maybe_wrap_array(arr, func(arr, *args, **kwargs)) for arr in grouped)
-        return self._combine(applied, shortcut=shortcut)
+        if shuffle and self._obj.chunksizes:
+            return self._map_shuffled(func, args=args, kwargs=kwargs)
+        else:
+            grouped = (
+                self._iter_grouped_shortcut() if shortcut else self._iter_grouped()
+            )
+            applied = (
+                maybe_wrap_array(arr, func(arr, *args, **kwargs)) for arr in grouped
+            )
+            return self._combine(applied, shortcut=shortcut)
 
     def apply(self, func, shortcut=False, args=(), **kwargs):
         """
@@ -1473,6 +1646,8 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         func: Callable[..., Dataset],
         args: tuple[Any, ...] = (),
         shortcut: bool | None = None,
+        *,
+        shuffle: bool = False,
         **kwargs: Any,
     ) -> Dataset:
         """Apply a function to each Dataset in the group and concatenate them
@@ -1504,9 +1679,12 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         applied : Dataset
             The result of splitting, applying and combining this dataset.
         """
-        # ignore shortcut if set (for now)
-        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
-        return self._combine(applied)
+        if shuffle and self._obj.chunksizes:
+            return self._map_shuffled(func, args=args, kwargs=kwargs)
+        else:
+            # ignore shortcut if set (for now)
+            applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
+            return self._combine(applied)
 
     def apply(self, func, args=(), shortcut=None, **kwargs):
         """

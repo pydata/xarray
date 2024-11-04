@@ -107,6 +107,7 @@ with warnings.catch_warnings():
     has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
+has_dask_ge_2024_08_1, _ = _importorskip("dask", minversion="2024.08.1")
 with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
@@ -151,7 +152,7 @@ requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_numbagg_or_bottleneck, reason="requires numbagg or bottleneck"
 )
 has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
-_, requires_flox_0_9_12 = _importorskip("flox", "0.9.12")
+has_flox_0_9_12, requires_flox_0_9_12 = _importorskip("flox", "0.9.12")
 
 has_array_api_strict, requires_array_api_strict = _importorskip("array_api_strict")
 

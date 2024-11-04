@@ -117,6 +117,7 @@ if TYPE_CHECKING:
         Self,
         SideOptions,
         T_ChunkDimFreq,
+        T_Chunks,
         T_ChunksFreq,
         T_Xarray,
     )
@@ -661,6 +662,12 @@ class DataArray(
 
         coord_names = set(self._coords)
         return Dataset._construct_direct(variables, coord_names, indexes=indexes)
+
+    def _shuffle(self, dim, *, indices: list[list[int]], chunks: T_Chunks) -> None:
+        shuffled = self._to_temp_dataset()._shuffle(
+            dim=dim, indices=indices, chunks=chunks
+        )
+        return self._from_temp_dataset(shuffled)
 
     def to_dataset(
         self,

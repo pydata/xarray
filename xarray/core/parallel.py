@@ -488,7 +488,7 @@ def map_blocks(
                 " Please construct a template with appropriately chunked dask arrays."
             )
 
-    new_indexes = set(template.xindexes) - set(merged_coordinates)
+    new_indexes = set(template.xindexes) - set(merged_coordinates.xindexes)
     modified_indexes = set(
         name
         for name, xindex in coordinates.xindexes.items()

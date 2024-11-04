@@ -45,7 +45,13 @@ from xarray.core.utils import (
     maybe_coerce_to_str,
 )
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
-from xarray.namedarray.pycompat import integer_types, is_0d_dask_array, to_duck_array
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import (
+    integer_types,
+    is_0d_dask_array,
+    is_chunked_array,
+    to_duck_array,
+)
 from xarray.util.deprecation_helpers import deprecate_dims
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
@@ -1013,6 +1019,24 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
+
+    def _shuffle(
+        self, indices: list[list[int]], dim: Hashable, chunks: T_Chunks
+    ) -> Self:
+        # TODO (dcherian): consider making this public API
+        array = self._data
+        if is_chunked_array(array):
+            chunkmanager = get_chunked_array_type(array)
+            return self._replace(
+                data=chunkmanager.shuffle(
+                    array,
+                    indexer=indices,
+                    axis=self.get_axis_num(dim),
+                    chunks=chunks,
+                )
+            )
+        else:
+            return self.isel({dim: np.concatenate(indices)})
 
     def isel(
         self,

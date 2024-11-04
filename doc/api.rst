@@ -250,6 +250,7 @@ Reshaping and reorganizing
    Dataset.roll
    Dataset.pad
    Dataset.sortby
+   Dataset.shuffle_by
    Dataset.broadcast_like
 
 DataArray
@@ -590,6 +591,7 @@ Reshaping and reorganizing
    DataArray.roll
    DataArray.pad
    DataArray.sortby
+   DataArray.shuffle_by
    DataArray.broadcast_like
 
 DataTree
@@ -1096,6 +1098,7 @@ Dataset
    DatasetGroupBy.var
    DatasetGroupBy.dims
    DatasetGroupBy.groups
+   DatasetGroupBy.shuffle
 
 DataArray
 ---------
@@ -1127,6 +1130,7 @@ DataArray
    DataArrayGroupBy.var
    DataArrayGroupBy.dims
    DataArrayGroupBy.groups
+   DataArrayGroupBy.shuffle
 
 Grouper Objects
 ---------------
