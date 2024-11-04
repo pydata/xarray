@@ -23,6 +23,9 @@ New Features
 ~~~~~~~~~~~~
 - Added :py:meth:`DataTree.persist` method (:issue:`9675`, :pull:`9682`).
   By `Sam Levang <https://github.com/slevang>`_.
+- Added ``write_inherited_coords`` option to :py:meth:`DataTree.to_netcdf`
+  and :py:meth:`DataTree.to_zarr` (:pull:`9677`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Support lazy grouping by dask arrays, and allow specifying ordered groups with ``UniqueGrouper(labels=["a", "b", "c"])``
   (:issue:`2852`, :issue:`757`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
@@ -42,7 +45,11 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
-- Fix inadvertent deep-copying of child data in DataTree.
+- Fix inadvertent deep-copying of child data in DataTree (:issue:`9683`,
+  :pull:`9684`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Avoid including parent groups when writing DataTree subgroups to Zarr or
+  netCDF (:pull:`9682`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix regression in the interoperability of :py:meth:`DataArray.polyfit` and :py:meth:`xr.polyval` for date-time coordinates. (:pull:`9691`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
