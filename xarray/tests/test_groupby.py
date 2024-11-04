@@ -2768,6 +2768,7 @@ def test_multiple_groupers_string(as_dataset) -> None:
         obj.groupby("labels1", foo=UniqueGrouper())
 
 
+@requires_flox
 @pytest.mark.parametrize("use_flox", [True, False])
 def test_multiple_groupers(use_flox) -> None:
     da = DataArray(
@@ -2978,6 +2979,7 @@ def test_groupby_transpose():
 
 
 @requires_dask
+@requires_flox
 @pytest.mark.parametrize(
     "grouper, expect_index",
     [
