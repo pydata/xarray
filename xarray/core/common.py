@@ -1094,7 +1094,7 @@ class DataWithCoords(AttrAccessMixin):
                 f"Received {type(freq)} instead."
             )
 
-        rgrouper = ResolvedGrouper(grouper, group, self)
+        rgrouper = ResolvedGrouper(grouper, group, self, eagerly_compute_group=False)
 
         return resample_cls(
             self,
