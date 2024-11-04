@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import functools
 import warnings
-from collections.abc import Hashable, Iterable, MutableMapping
-from typing import TYPE_CHECKING, Any, Callable, Literal, Union, cast, overload
+from collections.abc import Callable, Hashable, Iterable, MutableMapping
+from typing import TYPE_CHECKING, Any, Literal, Union, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -210,7 +210,7 @@ def _prepare_plot1d_data(
     plts.update(
         {k: darray.coords[v] for k, v in coords_to_plot.items() if v is not None}
     )
-    plts = dict(zip(plts.keys(), broadcast(*(plts.values()))))
+    plts = dict(zip(plts.keys(), broadcast(*(plts.values())), strict=True))
 
     return plts
 
@@ -1089,7 +1089,9 @@ def _add_labels(
     """Set x, y, z labels."""
     add_labels = [add_labels] * 3 if isinstance(add_labels, bool) else add_labels
     axes: tuple[Literal["x", "y", "z"], ...] = ("x", "y", "z")
-    for axis, add_label, darray, suffix in zip(axes, add_labels, darrays, suffixes):
+    for axis, add_label, darray, suffix in zip(
+        axes, add_labels, darrays, suffixes, strict=True
+    ):
         if darray is None:
             continue
 
@@ -1848,9 +1850,10 @@ def imshow(
         # missing data transparent.  We therefore add an alpha channel if
         # there isn't one, and set it to transparent where data is masked.
         if z.shape[-1] == 3:
-            alpha = np.ma.ones(z.shape[:2] + (1,), dtype=z.dtype)
+            safe_dtype = np.promote_types(z.dtype, np.uint8)
+            alpha = np.ma.ones(z.shape[:2] + (1,), dtype=safe_dtype)
             if np.issubdtype(z.dtype, np.integer):
-                alpha *= 255
+                alpha[:] = 255
             z = np.ma.concatenate((z, alpha), axis=2)
         else:
             z = z.copy()

@@ -146,6 +146,9 @@ for conflicts between ``attrs`` when combining arrays and datasets, unless
 explicitly requested with the option ``compat='identical'``. The guiding
 principle is that metadata should not be allowed to get in the way.
 
+In general xarray uses the capabilities of the backends for reading and writing
+attributes. That has some implications on roundtripping. One example for such inconsistency is that size-1 lists will roundtrip as single element (for netcdf4 backends).
+
 What other netCDF related Python libraries should I know about?
 ---------------------------------------------------------------
 
@@ -352,9 +355,9 @@ Some packages may have additional functionality beyond what is shown here. You c
 How does xarray handle missing values?
 --------------------------------------
 
-**xarray can handle missing values using ``np.NaN``**
+**xarray can handle missing values using ``np.nan``**
 
-- ``np.NaN`` is  used to represent missing values in labeled arrays and datasets. It is a commonly used standard for representing missing or undefined numerical data in scientific computing. ``np.NaN`` is a constant value in NumPy that represents "Not a Number" or missing values.
+- ``np.nan`` is  used to represent missing values in labeled arrays and datasets. It is a commonly used standard for representing missing or undefined numerical data in scientific computing. ``np.nan`` is a constant value in NumPy that represents "Not a Number" or missing values.
 
 - Most of xarray's computation methods are designed to automatically handle missing values appropriately.
 

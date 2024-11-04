@@ -1,10 +1,10 @@
 # https://pre-commit.com/
 ci:
     autoupdate_schedule: monthly
-exclude: 'xarray/datatree_.*'
+    autoupdate_commit_msg: 'Update pre-commit hooks'
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -13,24 +13,19 @@ repos:
       - id: mixed-line-ending
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: 'v0.2.0'
+    rev: 'v0.7.2'
     hooks:
+      - id: ruff-format
       - id: ruff
         args: ["--fix", "--show-fixes"]
-  # https://github.com/python/black#version-control-integration
-  - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.1.1
-    hooks:
-      - id: black-jupyter
   - repo: https://github.com/keewis/blackdoc
     rev: v0.3.9
     hooks:
       - id: blackdoc
         exclude: "generate_aggregations.py"
-        additional_dependencies: ["black==24.1.1"]
-      - id: blackdoc-autoupdate-black
+        additional_dependencies: ["black==24.8.0"]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+    rev: v1.13.0
     hooks:
       - id: mypy
         # Copied from setup.cfg
@@ -41,7 +36,7 @@ repos:
         additional_dependencies: [
             # Type stubs
             types-python-dateutil,
-            types-pkg_resources,
+            types-setuptools,
             types-PyYAML,
             types-pytz,
             typing-extensions>=4.1.0,

@@ -206,9 +206,9 @@ class TestDataArrayRolling:
             index=window, center=center, min_periods=min_periods
         ).reduce(np.nanmean)
 
-        np.testing.assert_allclose(s_rolling.values, da_rolling.values)
+        np.testing.assert_allclose(np.asarray(s_rolling.values), da_rolling.values)
         np.testing.assert_allclose(s_rolling.index, da_rolling["index"])
-        np.testing.assert_allclose(s_rolling.values, da_rolling_np.values)
+        np.testing.assert_allclose(np.asarray(s_rolling.values), da_rolling_np.values)
         np.testing.assert_allclose(s_rolling.index, da_rolling_np["index"])
 
     @pytest.mark.parametrize("center", (True, False))
@@ -221,12 +221,14 @@ class TestDataArrayRolling:
         da_rolling = da.rolling(index=window, center=center, min_periods=1)
 
         da_rolling_mean = da_rolling.construct("window").mean("window")
-        np.testing.assert_allclose(s_rolling.values, da_rolling_mean.values)
+        np.testing.assert_allclose(np.asarray(s_rolling.values), da_rolling_mean.values)
         np.testing.assert_allclose(s_rolling.index, da_rolling_mean["index"])
 
         # with stride
         da_rolling_mean = da_rolling.construct("window", stride=2).mean("window")
-        np.testing.assert_allclose(s_rolling.values[::2], da_rolling_mean.values)
+        np.testing.assert_allclose(
+            np.asarray(s_rolling.values[::2]), da_rolling_mean.values
+        )
         np.testing.assert_allclose(s_rolling.index[::2], da_rolling_mean["index"])
 
         # with fill_value
@@ -254,7 +256,7 @@ class TestDataArrayRolling:
         rolling_obj = da.rolling(time=window, center=center, min_periods=min_periods)
 
         # add nan prefix to numpy methods to get similar # behavior as bottleneck
-        actual = rolling_obj.reduce(getattr(np, "nan%s" % name))
+        actual = rolling_obj.reduce(getattr(np, f"nan{name}"))
         expected = getattr(rolling_obj, name)()
         assert_allclose(actual, expected)
         assert actual.sizes == expected.sizes
@@ -276,7 +278,7 @@ class TestDataArrayRolling:
         rolling_obj = da.rolling(time=window, center=center, min_periods=min_periods)
 
         # add nan prefix to numpy methods to get similar behavior as bottleneck
-        actual = rolling_obj.reduce(getattr(np, "nan%s" % name))
+        actual = rolling_obj.reduce(getattr(np, f"nan{name}"))
         expected = getattr(rolling_obj, name)()
         assert_allclose(actual, expected)
         assert actual.sizes == expected.sizes
@@ -310,7 +312,7 @@ class TestDataArrayRolling:
             DataArray([np.nan, np.nan, 2, 3, 3, 4, 5, 5, 5, 5, 5], dims="time"),
         ]
 
-        for kwarg, expected in zip(kwargs, expecteds):
+        for kwarg, expected in zip(kwargs, expecteds, strict=True):
             result = da.rolling(**kwarg).count()
             assert_equal(result, expected)
 
@@ -649,7 +651,9 @@ class TestDatasetRolling:
             index=window, center=center, min_periods=min_periods
         ).mean()
 
-        np.testing.assert_allclose(df_rolling["x"].values, ds_rolling["x"].values)
+        np.testing.assert_allclose(
+            np.asarray(df_rolling["x"].values), ds_rolling["x"].values
+        )
         np.testing.assert_allclose(df_rolling.index, ds_rolling["index"])
 
     @pytest.mark.parametrize("center", (True, False))
@@ -668,7 +672,9 @@ class TestDatasetRolling:
         ds_rolling = ds.rolling(index=window, center=center)
 
         ds_rolling_mean = ds_rolling.construct("window").mean("window")
-        np.testing.assert_allclose(df_rolling["x"].values, ds_rolling_mean["x"].values)
+        np.testing.assert_allclose(
+            np.asarray(df_rolling["x"].values), ds_rolling_mean["x"].values
+        )
         np.testing.assert_allclose(df_rolling.index, ds_rolling_mean["index"])
 
         # with fill_value
@@ -695,7 +701,7 @@ class TestDatasetRolling:
         ds_rolling = ds.rolling(index=window, center=center)
         ds_rolling_mean = ds_rolling.construct("w", stride=2).mean("w")
         np.testing.assert_allclose(
-            df_rolling_mean["x"][::2].values, ds_rolling_mean["x"].values
+            np.asarray(df_rolling_mean["x"][::2].values), ds_rolling_mean["x"].values
         )
         np.testing.assert_allclose(df_rolling_mean.index[::2], ds_rolling_mean["index"])
 
@@ -704,7 +710,7 @@ class TestDatasetRolling:
         ds2_rolling = ds2.rolling(index=window, center=center)
         ds2_rolling_mean = ds2_rolling.construct("w", stride=2).mean("w")
         np.testing.assert_allclose(
-            df_rolling_mean["x"][::2].values, ds2_rolling_mean["x"].values
+            np.asarray(df_rolling_mean["x"][::2].values), ds2_rolling_mean["x"].values
         )
 
         # Mixed coordinates, indexes and 2D coordinates
@@ -741,7 +747,7 @@ class TestDatasetRolling:
         rolling_obj = ds.rolling(time=window, center=center, min_periods=min_periods)
 
         # add nan prefix to numpy methods to get similar behavior as bottleneck
-        actual = rolling_obj.reduce(getattr(np, "nan%s" % name))
+        actual = rolling_obj.reduce(getattr(np, f"nan{name}"))
         expected = getattr(rolling_obj, name)()
         assert_allclose(actual, expected)
         assert ds.sizes == actual.sizes

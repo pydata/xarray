@@ -17,6 +17,7 @@ Geosciences
 - `climpred <https://climpred.readthedocs.io>`_: Analysis of ensemble forecast models for climate prediction.
 - `geocube <https://corteva.github.io/geocube>`_: Tool to convert geopandas vector data into rasterized xarray data.
 - `GeoWombat <https://github.com/jgrss/geowombat>`_: Utilities for analysis of remotely sensed and gridded raster data at scale (easily tame Landsat, Sentinel, Quickbird, and PlanetScope).
+- `grib2io <https://github.com/NOAA-MDL/grib2io>`_: Utility to work with GRIB2 files including an xarray backend, DASK support for parallel reading in open_mfdataset, lazy loading of data, editing of GRIB2 attributes and GRIB2IO DataArray attrs, and spatial interpolation and reprojection of GRIB2 messages and GRIB2IO Datasets/DataArrays for both grid to grid and grid to stations.
 - `gsw-xarray <https://github.com/DocOtak/gsw-xarray>`_: a wrapper around `gsw <https://teos-10.github.io/GSW-Python>`_ that adds CF compliant attributes when possible, units, name.
 - `infinite-diff <https://github.com/spencerahill/infinite-diff>`_: xarray-based finite-differencing, focused on gridded climate/meteorology data
 - `marc_analysis <https://github.com/darothen/marc_analysis>`_: Analysis package for CESM/MARC experiments and output.
@@ -25,7 +26,7 @@ Geosciences
 - `OGGM <https://oggm.org/>`_: Open Global Glacier Model
 - `Oocgcm <https://oocgcm.readthedocs.io/>`_: Analysis of large gridded geophysical datasets
 - `Open Data Cube <https://www.opendatacube.org/>`_: Analysis toolkit of continental scale Earth Observation data from satellites.
-- `Pangaea: <https://pangaea.readthedocs.io/en/latest/>`_: xarray extension for gridded land surface & weather model output).
+- `Pangaea <https://pangaea.readthedocs.io/en/latest/>`_: xarray extension for gridded land surface & weather model output).
 - `Pangeo <https://pangeo.io>`_: A community effort for big data geoscience in the cloud.
 - `PyGDX <https://pygdx.readthedocs.io/en/latest/>`_: Python 3 package for
   accessing data stored in GAMS Data eXchange (GDX) files. Also uses a custom
@@ -74,6 +75,7 @@ Extend xarray capabilities
 - `Collocate <https://github.com/cistools/collocate>`_: Collocate xarray trajectories in arbitrary physical dimensions
 - `eofs <https://ajdawson.github.io/eofs/>`_: EOF analysis in Python.
 - `hypothesis-gufunc <https://hypothesis-gufunc.readthedocs.io/en/latest/>`_: Extension to hypothesis. Makes it easy to write unit tests with xarray objects as input.
+- `ntv-pandas <https://github.com/loco-philippe/ntv-pandas>`_ : A tabular analyzer and a semantic, compact and reversible converter for multidimensional and tabular data
 - `nxarray <https://github.com/nxarray/nxarray>`_: NeXus input/output capability for xarray.
 - `xarray-compare <https://github.com/astropenguin/xarray-compare>`_: xarray extension for data comparison.
 - `xarray-dataclasses <https://github.com/astropenguin/xarray-dataclasses>`_: xarray extension for typed DataArray and Dataset creation.

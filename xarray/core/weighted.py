@@ -84,7 +84,7 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     method supported by this weighted version corresponds to the default "linear"
     option of ``numpy.quantile``. This is "Type 7" option, described in Hyndman
     and Fan (1996) [2]_. The implementation is largely inspired by a blog post
-    from A. Akinshin's [3]_.
+    from A. Akinshin's (2023) [3]_.
 
     Parameters
     ----------
@@ -122,7 +122,8 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     .. [1] https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/
     .. [2] Hyndman, R. J. & Fan, Y. (1996). Sample Quantiles in Statistical Packages.
            The American Statistician, 50(4), 361–365. https://doi.org/10.2307/2684934
-    .. [3] https://aakinshin.net/posts/weighted-quantiles
+    .. [3] Akinshin, A. (2023) "Weighted quantile estimators" arXiv:2304.07265 [stat.ME]
+           https://arxiv.org/abs/2304.07265
     """
 
 
@@ -181,7 +182,7 @@ class Weighted(Generic[T_Xarray]):
         if is_duck_dask_array(weights.data):
             # assign to copy - else the check is not triggered
             weights = weights.copy(
-                data=weights.data.map_blocks(_weight_check, dtype=weights.dtype),
+                data=weights.data.map_blocks(_weight_check, dtype=weights.dtype),  # type: ignore[call-arg, arg-type]
                 deep=False,
             )
 
@@ -263,7 +264,9 @@ class Weighted(Generic[T_Xarray]):
 
         demeaned = da - da.weighted(self.weights).mean(dim=dim)
 
-        return self._reduce((demeaned**2), self.weights, dim=dim, skipna=skipna)
+        # TODO: unsure why mypy complains about these being DataArray return types
+        # rather than T_DataArray?
+        return self._reduce((demeaned**2), self.weights, dim=dim, skipna=skipna)  # type: ignore[return-value]
 
     def _weighted_sum(
         self,
@@ -273,7 +276,7 @@ class Weighted(Generic[T_Xarray]):
     ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``sum`` along some dimension(s)."""
 
-        return self._reduce(da, self.weights, dim=dim, skipna=skipna)
+        return self._reduce(da, self.weights, dim=dim, skipna=skipna)  # type: ignore[return-value]
 
     def _weighted_mean(
         self,

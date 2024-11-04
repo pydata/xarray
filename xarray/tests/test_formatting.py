@@ -6,13 +6,21 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.core import defchararray
 
 import xarray as xr
 from xarray.core import formatting
+from xarray.core.indexes import Index
 from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
 
-ON_WINDOWS = sys.platform == "win32"
+
+class CustomIndex(Index):
+    names: tuple[str, ...]
+
+    def __init__(self, names: tuple[str, ...]):
+        self.names = names
+
+    def __repr__(self):
+        return f"CustomIndex(coords={self.names})"
 
 
 class TestFormatting:
@@ -109,9 +117,9 @@ class TestFormatting:
                 np.arange(4) * np.timedelta64(500, "ms"),
                 "00:00:00 00:00:00.500000 00:00:01 00:00:01.500000",
             ),
-            (pd.to_timedelta(["NaT", "0s", "1s", "NaT"]), "NaT 00:00:00 00:00:01 NaT"),
+            (pd.to_timedelta(["NaT", "0s", "1s", "NaT"]), "NaT 00:00:00 00:00:01 NaT"),  # type: ignore[arg-type, unused-ignore]
             (
-                pd.to_timedelta(["1 day 1 hour", "1 day", "0 hours"]),
+                pd.to_timedelta(["1 day 1 hour", "1 day", "0 hours"]),  # type: ignore[arg-type, unused-ignore]
                 "1 days 01:00:00 1 days 00:00:00 0 days 00:00:00",
             ),
             ([1, 2, 3], "1 2 3"),
@@ -221,17 +229,6 @@ class TestFormatting:
         assert "\t" not in tabs
 
     def test_index_repr(self) -> None:
-        from xarray.core.indexes import Index
-
-        class CustomIndex(Index):
-            names: tuple[str, ...]
-
-            def __init__(self, names: tuple[str, ...]):
-                self.names = names
-
-            def __repr__(self):
-                return f"CustomIndex(coords={self.names})"
-
         coord_names = ("x", "y")
         index = CustomIndex(coord_names)
         names = ("x",)
@@ -260,15 +257,6 @@ class TestFormatting:
         ),
     )
     def test_index_repr_grouping(self, names) -> None:
-        from xarray.core.indexes import Index
-
-        class CustomIndex(Index):
-            def __init__(self, names):
-                self.names = names
-
-            def __repr__(self):
-                return f"CustomIndex(coords={self.names})"
-
         index = CustomIndex(names)
 
         normal = formatting.summarize_index(names, index, col_width=20)
@@ -339,6 +327,51 @@ class TestFormatting:
             # depending on platform, dtype may not be shown in numpy array repr
             assert actual == expected.replace(", dtype=int64", "")
 
+        da_a = xr.DataArray(
+            np.array([[1, 2, 3], [4, 5, 6]], dtype="int8"),
+            dims=("x", "y"),
+            coords=xr.Coordinates(
+                {
+                    "x": np.array([True, False], dtype="bool"),
+                    "y": np.array([1, 2, 3], dtype="int16"),
+                },
+                indexes={"y": CustomIndex(("y",))},
+            ),
+        )
+
+        da_b = xr.DataArray(
+            np.array([1, 2], dtype="int8"),
+            dims="x",
+            coords=xr.Coordinates(
+                {
+                    "x": np.array([True, False], dtype="bool"),
+                    "label": ("x", np.array([1, 2], dtype="int16")),
+                },
+                indexes={"label": CustomIndex(("label",))},
+            ),
+        )
+
+        expected = dedent(
+            """\
+            Left and right DataArray objects are not equal
+            Differing dimensions:
+                (x: 2, y: 3) != (x: 2)
+            Differing values:
+            L
+                array([[1, 2, 3],
+                       [4, 5, 6]], dtype=int8)
+            R
+                array([1, 2], dtype=int8)
+            Coordinates only on the left object:
+              * y        (y) int16 6B 1 2 3
+            Coordinates only on the right object:
+              * label    (x) int16 4B 1 2
+            """.rstrip()
+        )
+
+        actual = formatting.diff_array_repr(da_a, da_b, "equals")
+        assert actual == expected
+
         va = xr.Variable(
             "x", np.array([1, 2, 3], dtype="int64"), {"title": "test Variable"}
         )
@@ -400,6 +433,36 @@ class TestFormatting:
         ).strip()
         actual = formatting.diff_attrs_repr(attrs_a, attrs_c, "equals")
         assert expected == actual
+
+    def test__diff_mapping_repr_array_attrs_on_variables(self) -> None:
+        a = {
+            "a": xr.DataArray(
+                dims="x",
+                data=np.array([1], dtype="int16"),
+                attrs={"b": np.array([1, 2], dtype="int8")},
+            )
+        }
+        b = {
+            "a": xr.DataArray(
+                dims="x",
+                data=np.array([1], dtype="int16"),
+                attrs={"b": np.array([2, 3], dtype="int8")},
+            )
+        }
+        actual = formatting.diff_data_vars_repr(a, b, compat="identical", col_width=8)
+        expected = dedent(
+            """\
+            Differing data variables:
+            L   a   (x) int16 2B 1
+                Differing variable attributes:
+                    b: [1 2]
+            R   a   (x) int16 2B 1
+                Differing variable attributes:
+                    b: [2 3]
+            """.rstrip()
+        )
+
+        assert actual == expected
 
     def test_diff_dataset_repr(self) -> None:
         ds_a = xr.Dataset(
@@ -551,9 +614,111 @@ class TestFormatting:
 
         # Test numpy arrays raises:
         var = xr.DataArray([0.1, 0.2])
-        with pytest.raises(NotImplementedError) as excinfo:  # type: ignore
+        with pytest.raises(NotImplementedError) as excinfo:  # type: ignore[assignment]
             format(var, ".2f")
         assert "Using format_spec is only supported" in str(excinfo.value)
+
+    def test_datatree_print_empty_node(self):
+        dt: xr.DataTree = xr.DataTree(name="root")
+        printout = str(dt)
+        assert printout == "<xarray.DataTree 'root'>\nGroup: /"
+
+    def test_datatree_print_empty_node_with_attrs(self):
+        dat = xr.Dataset(attrs={"note": "has attrs"})
+        dt: xr.DataTree = xr.DataTree(name="root", dataset=dat)
+        printout = str(dt)
+        assert printout == dedent(
+            """\
+            <xarray.DataTree 'root'>
+            Group: /
+                Attributes:
+                    note:     has attrs"""
+        )
+
+    def test_datatree_print_node_with_data(self):
+        dat = xr.Dataset({"a": [0, 2]})
+        dt: xr.DataTree = xr.DataTree(name="root", dataset=dat)
+        printout = str(dt)
+        expected = [
+            "<xarray.DataTree 'root'>",
+            "Group: /",
+            "Dimensions",
+            "Coordinates",
+            "a",
+        ]
+        for expected_line, printed_line in zip(
+            expected, printout.splitlines(), strict=True
+        ):
+            assert expected_line in printed_line
+
+    def test_datatree_printout_nested_node(self):
+        dat = xr.Dataset({"a": [0, 2]})
+        root = xr.DataTree.from_dict(
+            {
+                "/results": dat,
+            }
+        )
+        printout = str(root)
+        assert printout.splitlines()[3].startswith("    ")
+
+    def test_datatree_repr_of_node_with_data(self):
+        dat = xr.Dataset({"a": [0, 2]})
+        dt: xr.DataTree = xr.DataTree(name="root", dataset=dat)
+        assert "Coordinates" in repr(dt)
+
+    def test_diff_datatree_repr_different_groups(self):
+        dt_1: xr.DataTree = xr.DataTree.from_dict({"a": None})
+        dt_2: xr.DataTree = xr.DataTree.from_dict({"b": None})
+
+        expected = dedent(
+            """\
+            Left and right DataTree objects are not identical
+
+            Children at root node do not match: ['a'] vs ['b']"""
+        )
+        actual = formatting.diff_datatree_repr(dt_1, dt_2, "identical")
+        assert actual == expected
+
+    def test_diff_datatree_repr_different_subgroups(self):
+        dt_1: xr.DataTree = xr.DataTree.from_dict({"a": None, "a/b": None, "a/c": None})
+        dt_2: xr.DataTree = xr.DataTree.from_dict({"a": None, "a/b": None})
+
+        expected = dedent(
+            """\
+            Left and right DataTree objects are not isomorphic
+
+            Children at node 'a' do not match: ['b', 'c'] vs ['b']"""
+        )
+        actual = formatting.diff_datatree_repr(dt_1, dt_2, "isomorphic")
+        assert actual == expected
+
+    def test_diff_datatree_repr_node_data(self):
+        # casting to int64 explicitly ensures that int64s are created on all architectures
+        ds1 = xr.Dataset({"u": np.int64(0), "v": np.int64(1)})
+        ds3 = xr.Dataset({"w": np.int64(5)})
+        dt_1: xr.DataTree = xr.DataTree.from_dict({"a": ds1, "a/b": ds3})
+        ds2 = xr.Dataset({"u": np.int64(0)})
+        ds4 = xr.Dataset({"w": np.int64(6)})
+        dt_2: xr.DataTree = xr.DataTree.from_dict({"a": ds2, "a/b": ds4}, name="foo")
+
+        expected = dedent(
+            """\
+            Left and right DataTree objects are not identical
+
+            Differing names:
+                None != 'foo'
+
+            Data at node 'a' does not match:
+                Data variables only on the left object:
+                    v        int64 8B 1
+
+            Data at node 'a/b' does not match:
+                Differing data variables:
+                L   w        int64 8B 5
+                R   w        int64 8B 6"""
+        )
+        actual = formatting.diff_datatree_repr(dt_1, dt_2, "identical")
+        assert actual == expected
 
 
 def test_inline_variable_array_repr_custom_repr() -> None:
@@ -667,13 +832,13 @@ def test_repr_file_collapsed(tmp_path) -> None:
 )
 def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     long_name = "long_name"
-    a = defchararray.add(long_name, np.arange(0, n_vars).astype(str))
-    b = defchararray.add("attr_", np.arange(0, n_attr).astype(str))
-    c = defchararray.add("coord", np.arange(0, n_vars).astype(str))
+    a = np.char.add(long_name, np.arange(0, n_vars).astype(str))
+    b = np.char.add("attr_", np.arange(0, n_attr).astype(str))
+    c = np.char.add("coord", np.arange(0, n_vars).astype(str))
     attrs = {k: 2 for k in b}
     coords = {_c: np.array([0, 1], dtype=np.uint64) for _c in c}
     data_vars = dict()
-    for v, _c in zip(a, coords.items()):
+    for v, _c in zip(a, coords.items(), strict=True):
         data_vars[v] = xr.DataArray(
             name=v,
             data=np.array([3, 4], dtype=np.uint64),
@@ -715,7 +880,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
         col_width = formatting._calculate_col_width(ds.variables)
         dims_start = formatting.pretty_print("Dimensions:", col_width)
         dims_values = formatting.dim_summary_limited(
-            ds, col_width=col_width + 1, max_rows=display_max_rows
+            ds.sizes, col_width=col_width + 1, max_rows=display_max_rows
         )
         expected_size = "1kB"
         expected = f"""\
@@ -775,7 +940,9 @@ def test_lazy_array_wont_compute() -> None:
     from xarray.core.indexing import LazilyIndexedArray
 
     class LazilyIndexedArrayNotComputable(LazilyIndexedArray):
-        def __array__(self, dtype=None):
+        def __array__(
+            self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        ) -> np.ndarray:
             raise NotImplementedError("Computing this array is not possible.")
 
     arr = LazilyIndexedArrayNotComputable(np.array([1, 2]))
@@ -865,7 +1032,6 @@ Coordinates:
 
 
 def test_array_repr_dtypes():
-
     # These dtypes are expected to be represented similarly
     # on Ubuntu, macOS and Windows environments of the CI.
     # Unsigned integer could be used as easy replacements
@@ -969,74 +1135,34 @@ Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
-
-@pytest.mark.skipif(
-    ON_WINDOWS,
-    reason="Default numpy's dtypes vary according to OS",
-)
-def test_array_repr_dtypes_unix() -> None:
-
     # Signed integer dtypes
 
-    ds = xr.DataArray(np.array([0]), dims="x")
+    array = np.array([0])
+    ds = xr.DataArray(array, dims="x")
     actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 8B
-array([0])
+    expected = f"""
+<xarray.DataArray (x: 1)> Size: {array.dtype.itemsize}B
+{repr(array)}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
-    ds = xr.DataArray(np.array([0], dtype="int32"), dims="x")
+    array = np.array([0], dtype="int32")
+    ds = xr.DataArray(array, dims="x")
     actual = repr(ds)
-    expected = """
+    expected = f"""
 <xarray.DataArray (x: 1)> Size: 4B
-array([0], dtype=int32)
+{repr(array)}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
 
-    ds = xr.DataArray(np.array([0], dtype="int64"), dims="x")
+    array = np.array([0], dtype="int64")
+    ds = xr.DataArray(array, dims="x")
     actual = repr(ds)
-    expected = """
+    expected = f"""
 <xarray.DataArray (x: 1)> Size: 8B
-array([0])
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
-
-@pytest.mark.skipif(
-    not ON_WINDOWS,
-    reason="Default numpy's dtypes vary according to OS",
-)
-def test_array_repr_dtypes_on_windows() -> None:
-
-    # Integer dtypes
-
-    ds = xr.DataArray(np.array([0]), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 4B
-array([0])
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
-    ds = xr.DataArray(np.array([0], dtype="int32"), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 4B
-array([0])
-Dimensions without coordinates: x
-        """.strip()
-    assert actual == expected
-
-    ds = xr.DataArray(np.array([0], dtype="int64"), dims="x")
-    actual = repr(ds)
-    expected = """
-<xarray.DataArray (x: 1)> Size: 8B
-array([0], dtype=int64)
+{repr(array)}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected

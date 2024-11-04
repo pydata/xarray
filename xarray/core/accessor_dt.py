@@ -6,15 +6,17 @@ from typing import TYPE_CHECKING, Generic
 import numpy as np
 import pandas as pd
 
+from xarray.coding.calendar_ops import _decimal_year
 from xarray.coding.times import infer_calendar_name
 from xarray.core import duck_array_ops
 from xarray.core.common import (
     _contains_datetime_like_objects,
+    full_like,
     is_np_datetime_like,
     is_np_timedelta_like,
 )
 from xarray.core.types import T_DataArray
-from xarray.core.variable import IndexVariable
+from xarray.core.variable import IndexVariable, Variable
 from xarray.namedarray.utils import is_duck_dask_array
 
 if TYPE_CHECKING:
@@ -244,12 +246,22 @@ class TimeAccessor(Generic[T_DataArray]):
         if dtype is None:
             dtype = self._obj.dtype
         result = _get_date_field(_index_or_data(self._obj), name, dtype)
-        newvar = self._obj.variable.copy(data=result, deep=False)
+        newvar = Variable(
+            dims=self._obj.dims,
+            attrs=self._obj.attrs,
+            encoding=self._obj.encoding,
+            data=result,
+        )
         return self._obj._replace(newvar, name=name)
 
     def _tslib_round_accessor(self, name: str, freq: str) -> T_DataArray:
         result = _round_field(_index_or_data(self._obj), name, freq)
-        newvar = self._obj.variable.copy(data=result, deep=False)
+        newvar = Variable(
+            dims=self._obj.dims,
+            attrs=self._obj.attrs,
+            encoding=self._obj.encoding,
+            data=result,
+        )
         return self._obj._replace(newvar, name=name)
 
     def floor(self, freq: str) -> T_DataArray:
@@ -442,6 +454,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
             "dt.weekofyear and dt.week have been deprecated. Please use "
             "dt.isocalendar().week instead.",
             FutureWarning,
+            stacklevel=2,
         )
 
         weekofyear = self.isocalendar().week
@@ -532,6 +545,33 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         returns "proleptic_gregorian" for arrays of :py:class:`numpy.datetime64` values.
         """
         return infer_calendar_name(self._obj.data)
+
+    @property
+    def days_in_year(self) -> T_DataArray:
+        """Each datetime as the year plus the fraction of the year elapsed."""
+        if self.calendar == "360_day":
+            result = full_like(self.year, 360)
+        else:
+            result = self.is_leap_year.astype(int) + 365
+        newvar = Variable(
+            dims=self._obj.dims,
+            attrs=self._obj.attrs,
+            encoding=self._obj.encoding,
+            data=result,
+        )
+        return self._obj._replace(newvar, name="days_in_year")
+
+    @property
+    def decimal_year(self) -> T_DataArray:
+        """Convert the dates as a fractional year."""
+        result = _decimal_year(self._obj)
+        newvar = Variable(
+            dims=self._obj.dims,
+            attrs=self._obj.attrs,
+            encoding=self._obj.encoding,
+            data=result,
+        )
+        return self._obj._replace(newvar, name="decimal_year")
 
 
 class TimedeltaAccessor(TimeAccessor[T_DataArray]):

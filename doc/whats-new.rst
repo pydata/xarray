@@ -14,20 +14,18 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2024.10.1:
 
-.. _whats-new.2024.03.0:
-
-v2024.03.0 (unreleased)
------------------------
+v.2024.10.1 (unreleased)
+------------------------
 
 New Features
 ~~~~~~~~~~~~
-
-- Add the ``.oindex`` property to Explicitly Indexed Arrays for orthogonal indexing functionality. (:issue:`8238`, :pull:`8750`)
-  By `Anderson Banihirwe <https://github.com/andersy005>`_.
-
-- Add the ``.vindex`` property to Explicitly Indexed Arrays for vectorized indexing functionality. (:issue:`8238`, :pull:`8780`)
-  By `Anderson Banihirwe <https://github.com/andersy005>`_.
+- Added :py:meth:`DataTree.persist` method (:issue:`9675`, :pull:`9682`).
+  By `Sam Levang <https://github.com/slevang>`_.
+- Support lazy grouping by dask arrays, and allow specifying ordered groups with ``UniqueGrouper(labels=["a", "b", "c"])``
+  (:issue:`2852`, :issue:`757`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -35,6 +33,459 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Grouping by a chunked array (e.g. dask or cubed) currently eagerly loads that variable in to
+  memory. This behaviour is deprecated. If eager loading was intended, please load such arrays
+  manually using ``.load()`` or ``.compute()``. Else pass ``eagerly_compute_group=False``, and
+  provide expected group labels using the ``labels`` kwarg to a grouper object such as
+  :py:class:`grouper.UniqueGrouper` or :py:class:`grouper.BinGrouper`.
+
+Bug fixes
+~~~~~~~~~
+
+- Fix inadvertent deep-copying of child data in DataTree.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix regression in the interoperability of :py:meth:`DataArray.polyfit` and :py:meth:`xr.polyval` for date-time coordinates. (:pull:`9691`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Mention attribute peculiarities in docs/docstrings (:issue:`4798`, :pull:`9700`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- ``persist`` methods now route through the :py:class:`xr.core.parallelcompat.ChunkManagerEntrypoint` (:pull:`9682`).
+  By `Sam Levang <https://github.com/slevang>`_.
+
+.. _whats-new.2024.10.0:
+
+v2024.10.0 (Oct 24th, 2024)
+---------------------------
+
+This release brings official support for `xarray.DataTree`, and compatibility with zarr-python v3!
+
+Aside from these two huge features, it also improves support for vectorised interpolation and fixes various bugs.
+
+Thanks to the 31 contributors to this release:
+Alfonso Ladino, DWesl, Deepak Cherian, Eni, Etienne Schalk, Holly Mandel, Ilan Gold, Illviljan, Joe Hamman, Justus Magin, Kai Mühlbauer, Karl Krauth, Mark Harfouche, Martey Dodoo, Matt Savoie, Maximilian Roos, Patrick Hoefler, Peter Hill, Renat Sibgatulin, Ryan Abernathey, Spencer Clark, Stephan Hoyer, Tom Augspurger, Tom Nicholas, Vecko, Virgile Andreani, Yvonne Fröhlich, carschandler, joseph nowak, mgunyho and owenlittlejohns
+
+New Features
+~~~~~~~~~~~~
+- ``DataTree`` related functionality is now exposed in the main ``xarray`` public
+  API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``, ``xarray.open_groups``,
+  ``xarray.map_over_datasets``, ``xarray.group_subtrees``,
+  ``xarray.register_datatree_accessor`` and ``xarray.testing.assert_isomorphic``.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_,
+  `Eni Awowale <https://github.com/eni-awowale>`_,
+  `Matt Savoie <https://github.com/flamingbear>`_,
+  `Stephan Hoyer <https://github.com/shoyer>`_,
+  `Tom Nicholas <https://github.com/TomNicholas>`_,
+  `Justus Magin <https://github.com/keewis>`_, and
+  `Alfonso Ladino <https://github.com/aladinor>`_.
+- A migration guide for users of the prototype `xarray-contrib/datatree repository <https://github.com/xarray-contrib/datatree>`_ has been added, and can be found in the `DATATREE_MIGRATION_GUIDE.md` file in the repository root.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Support for Zarr-Python 3 (:issue:`95515`, :pull:`9552`).
+  By `Tom Augspurger <https://github.com/TomAugspurger>`_,
+  `Ryan Abernathey <https://github.com/rabernat>`_ and
+  `Joe Hamman <https://github.com/jhamman>`_.
+- Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
+  By `Eni Awowale <https://github.com/eni-awowale>`_.
+- Added support for vectorized interpolation using additional interpolators
+  from the ``scipy.interpolate`` module (:issue:`9049`, :pull:`9526`).
+  By `Holly Mandel <https://github.com/hollymandel>`_.
+- Implement handling of complex numbers (netcdf4/h5netcdf) and enums (h5netcdf) (:issue:`9246`, :issue:`3297`, :pull:`9509`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix passing missing arguments to when opening hdf5 and netCDF4 datatrees
+  (:issue:`9427`, :pull: `9428`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Make illegal path-like variable names when constructing a DataTree from a Dataset
+  (:issue:`9339`, :pull:`9378`)
+  By `Etienne Schalk <https://github.com/etienneschalk>`_.
+- Work around `upstream pandas issue
+  <https://github.com/pandas-dev/pandas/issues/56996>`_ to ensure that we can
+  decode times encoded with small integer dtype values (e.g. ``np.int32``) in
+  environments with NumPy 2.0 or greater without needing to fall back to cftime
+  (:pull:`9518`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix bug when encoding times with missing values as floats in the case when
+  the non-missing times could in theory be encoded with integers
+  (:issue:`9488`, :pull:`9497`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Fix a few bugs affecting groupby reductions with `flox`. (:issue:`8090`, :issue:`9398`, :issue:`9648`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix the safe_chunks validation option on the to_zarr method
+  (:issue:`5511`, :pull:`9559`). By `Joseph Nowak
+  <https://github.com/josephnowak>`_.
+- Fix binning by multiple variables where some bins have no observations. (:issue:`9630`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix issue where polyfit wouldn't handle non-dimension coordinates. (:issue:`4375`, :pull:`9369`)
+  By `Karl Krauth <https://github.com/Karl-Krauth>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Migrate documentation for ``datatree`` into main ``xarray`` documentation (:pull:`9033`).
+  For information on previous ``datatree`` releases, please see:
+  `datatree's historical release notes <https://xarray-datatree.readthedocs.io/en/latest/>`_.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie <https://github.com/flamingbear>`_, and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+.. _whats-new.2024.09.0:
+
+v2024.09.0 (Sept 11, 2024)
+--------------------------
+This release drops support for Python 3.9, and adds support for grouping by :ref:`multiple arrays <groupby.multiple>`, while providing numerous performance improvements and bug fixes.
+
+Thanks to the 33 contributors to this release:
+Alfonso Ladino, Andrew Scherer, Anurag Nayak, David Hoese, Deepak Cherian, Diogo Teles Sant'Anna, Dom, Elliott Sales de Andrade, Eni, Holly Mandel, Illviljan, Jack Kelly, Julius Busecke, Justus Magin, Kai Mühlbauer, Manish Kumar Gupta, Matt Savoie, Maximilian Roos, Michele Claus, Miguel Jimenez, Niclas Rieger, Pascal Bourgault, Philip Chmielowiec, Spencer Clark, Stephan Hoyer, Tao Xin, Tiago Sanona, TimothyCera-NOAA, Tom Nicholas, Tom White, Virgile Andreani, oliverhiggs and tiago
+
+New Features
+~~~~~~~~~~~~
+
+- Add :py:attr:`~core.accessor_dt.DatetimeAccessor.days_in_year` and
+  :py:attr:`~core.accessor_dt.DatetimeAccessor.decimal_year` to the
+  ``DatetimeAccessor`` on ``xr.DataArray``. (:pull:`9105`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
+
+Performance
+~~~~~~~~~~~
+
+- Make chunk manager an option in ``set_options`` (:pull:`9362`).
+  By `Tom White <https://github.com/tomwhite>`_.
+- Support for :ref:`grouping by multiple variables <groupby.multiple>`.
+  This is quite new, so please check your results and report bugs.
+  Binary operations after grouping by multiple arrays are not supported yet.
+  (:issue:`1056`, :issue:`9332`, :issue:`324`, :pull:`9372`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Allow data variable specific ``constant_values`` in the dataset ``pad`` function (:pull:`9353``).
+  By `Tiago Sanona <https://github.com/tsanona>`_.
+- Speed up grouping by avoiding deep-copy of non-dimension coordinates (:issue:`9426`, :pull:`9393`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+- Support for ``python 3.9`` has been dropped (:pull:`8937`)
+- The minimum versions of some dependencies were changed
+
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+    boto3                   1.26      1.28
+    cartopy                 0.21      0.22
+    dask-core             2023.4    2023.9
+    distributed           2023.4    2023.9
+    h5netcdf                1.1        1.2
+    iris                    3.4        3.7
+    numba                   0.56      0.57
+    numpy                   1.23      1.24
+    pandas                  2.0        2.1
+    scipy                   1.10      1.11
+    typing_extensions       4.5        4.7
+    zarr                    2.14      2.16
+  ===================== =========  =======
+
+Bug fixes
+~~~~~~~~~
+
+- Fix bug with rechunking to a frequency when some periods contain no data (:issue:`9360`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix bug causing `DataTree.from_dict` to be sensitive to insertion order (:issue:`9276`, :pull:`9292`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fix resampling error with monthly, quarterly, or yearly frequencies with
+  cftime when the time bins straddle the date "0001-01-01". For example, this
+  can happen in certain circumstances when the time coordinate contains the
+  date "0001-01-01". (:issue:`9108`, :pull:`9116`) By `Spencer Clark
+  <https://github.com/spencerkclark>`_ and `Deepak Cherian
+  <https://github.com/dcherian>`_.
+- Fix issue with passing parameters to ZarrStore.open_store when opening
+  datatree in zarr format (:issue:`9376`, :pull:`9377`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_
+- Fix deprecation warning that was raised when calling ``np.array`` on an ``xr.DataArray``
+  in NumPy 2.0 (:issue:`9312`, :pull:`9393`)
+  By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fix support for using ``pandas.DateOffset``, ``pandas.Timedelta``, and
+  ``datetime.timedelta`` objects as ``resample`` frequencies
+  (:issue:`9408`, :pull:`9413`).
+  By `Oliver Higgs <https://github.com/oliverhiggs>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Re-enable testing ``pydap`` backend with ``numpy>=2`` (:pull:`9391`).
+  By `Miguel Jimenez <https://github.com/Mikejmnez>`_ .
+
+.. _whats-new.2024.07.0:
+
+v2024.07.0 (Jul 30, 2024)
+-------------------------
+This release extends the API for groupby operations with various `grouper objects <groupby.groupers_>`, and includes improvements to the documentation and numerous bugfixes.
+
+Thanks to the 22 contributors to this release:
+Alfonso Ladino, ChrisCleaner, David Hoese, Deepak Cherian, Dieter Werthmüller, Illviljan, Jessica Scheick, Joel Jaeschke, Justus Magin, K. Arthur Endsley, Kai Mühlbauer, Mark Harfouche, Martin Raspaud, Mathijs Verhaegh, Maximilian Roos, Michael Niklas, Michał Górny, Moritz Schreiber, Pontus Lurcock, Spencer Clark, Stephan Hoyer and Tom Nicholas
+
+New Features
+~~~~~~~~~~~~
+- Use fastpath when grouping both montonically increasing and decreasing variable
+  in :py:class:`GroupBy` (:issue:`6220`, :pull:`7427`).
+  By `Joel Jaeschke <https://github.com/joeljaeschke>`_.
+- Introduce new :py:class:`groupers.UniqueGrouper`, :py:class:`groupers.BinGrouper`, and
+  :py:class:`groupers.TimeResampler` objects as a step towards supporting grouping by
+  multiple variables. See the `docs <groupby.groupers_>` and the `grouper design doc
+  <https://github.com/pydata/xarray/blob/main/design_notes/grouper_objects.md>`_ for more.
+  (:issue:`6610`, :pull:`8840`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Allow rechunking to a frequency using ``Dataset.chunk(time=TimeResampler("YE"))`` syntax. (:issue:`7559`, :pull:`9109`)
+  Such rechunking allows many time domain analyses to be executed in an embarrassingly parallel fashion.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Allow per-variable specification of ```mask_and_scale``, ``decode_times``, ``decode_timedelta``
+  ``use_cftime`` and ``concat_characters`` params in :py:func:`~xarray.open_dataset`  (:pull:`9218`).
+  By `Mathijs Verhaegh <https://github.com/Ostheer>`_.
+- Allow chunking for arrays with duplicated dimension names (:issue:`8759`, :pull:`9099`).
+  By `Martin Raspaud <https://github.com/mraspaud>`_.
+- Extract the source url from fsspec objects (:issue:`9142`, :pull:`8923`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Add :py:meth:`DataArray.drop_attrs` & :py:meth:`Dataset.drop_attrs` methods,
+  to return an object without ``attrs``. A ``deep`` parameter controls whether
+  variables' ``attrs`` are also dropped.
+  By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
+- Added :py:func:`open_groups` for h5netcdf and netCDF4 backends (:issue:`9137`, :pull:`9243`).
+  By `Eni Awowale <https://github.com/eni-awowale>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+- The ``base`` and ``loffset`` parameters to :py:meth:`Dataset.resample` and
+  :py:meth:`DataArray.resample` are now removed. These parameters have been deprecated since
+  v2023.03.0. Using the ``origin`` or ``offset`` parameters is recommended as a replacement for
+  using the ``base`` parameter and using time offset arithmetic is recommended as a replacement for
+  using the ``loffset`` parameter. (:pull:`9233`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- The ``squeeze`` kwarg to ``groupby`` is now ignored. This has been the source of some
+  quite confusing behaviour and has been deprecated since v2024.01.0. `groupby`` behavior is now
+  always consistent with the existing ``.groupby(..., squeeze=False)`` behavior. No errors will
+  be raised if `squeeze=False`. (:pull:`9280`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+
+Bug fixes
+~~~~~~~~~
+- Fix scatter plot broadcasting unnecessarily. (:issue:`9129`, :pull:`9206`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Don't convert custom indexes to ``pandas`` indexes when computing a diff (:pull:`9157`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Make :py:func:`testing.assert_allclose` work with numpy 2.0 (:issue:`9165`, :pull:`9166`).
+  By `Pontus Lurcock <https://github.com/pont-us>`_.
+- Allow diffing objects with array attributes on variables (:issue:`9153`, :pull:`9169`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- ``numpy>=2`` compatibility in the ``netcdf4`` backend (:pull:`9136`).
+  By `Justus Magin <https://github.com/keewis>`_ and `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Promote floating-point numeric datetimes before decoding (:issue:`9179`, :pull:`9182`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Address regression introduced in :pull:`9002` that prevented objects returned
+  by py:meth:`DataArray.convert_calendar` to be indexed by a time index in
+  certain circumstances (:issue:`9138`, :pull:`9192`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix static typing of tolerance arguments by allowing `str` type (:issue:`8892`, :pull:`9194`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Dark themes are now properly detected for ``html[data-theme=dark]``-tags (:pull:`9200`).
+  By `Dieter Werthmüller <https://github.com/prisae>`_.
+- Reductions no longer fail for ``np.complex_`` dtype arrays when numbagg is
+  installed. (:pull:`9210`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Adds intro to backend section of docs, including a flow-chart to navigate types of backends (:pull:`9175`).
+  By `Jessica Scheick <https://github.com/jessicas11>`_.
+- Adds a flow-chart diagram to help users navigate help resources (:discussion:`8990`, :pull:`9147`).
+  By `Jessica Scheick <https://github.com/jessicas11>`_.
+- Improvements to Zarr & chunking docs (:pull:`9139`, :pull:`9140`, :pull:`9132`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Fix copybutton for multi line examples and double digit ipython cell numbers (:pull:`9264`).
+  By `Moritz Schreiber <https://github.com/mosc9575>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Enable typing checks of pandas (:pull:`9213`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
+.. _whats-new.2024.06.0:
+
+v2024.06.0 (Jun 13, 2024)
+-------------------------
+This release brings various performance optimizations and compatibility with the upcoming numpy 2.0 release.
+
+Thanks to the 22 contributors to this release:
+Alfonso Ladino, David Hoese, Deepak Cherian, Eni Awowale, Ilan Gold, Jessica Scheick, Joe Hamman, Justus Magin, Kai Mühlbauer, Mark Harfouche, Mathias Hauser, Matt Savoie, Maximilian Roos, Mike Thramann, Nicolas Karasiak, Owen Littlejohns, Paul Ockenfuß, Philippe THOMY, Scott Henderson, Spencer Clark, Stephan Hoyer and Tom Nicholas
+
+Performance
+~~~~~~~~~~~
+
+- Small optimization to the netCDF4 and h5netcdf backends (:issue:`9058`, :pull:`9067`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Small optimizations to help reduce indexing speed of datasets (:pull:`9002`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
+- Performance improvement in `open_datatree` method for Zarr, netCDF4 and h5netcdf backends (:issue:`8994`, :pull:`9014`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
+
+
+Bug fixes
+~~~~~~~~~
+- Preserve conversion of timezone-aware pandas Datetime arrays to numpy object arrays
+  (:issue:`9026`, :pull:`9042`).
+  By `Ilan Gold <https://github.com/ilan-gold>`_.
+- :py:meth:`DataArrayResample.interpolate` and :py:meth:`DatasetResample.interpolate` method now
+  support arbitrary kwargs such as ``order`` for polynomial interpolation (:issue:`8762`).
+  By `Nicolas Karasiak <https://github.com/nkarasiak>`_.
+
+Documentation
+~~~~~~~~~~~~~
+- Add link to CF Conventions on packed data and sentence on type determination in the I/O user guide (:issue:`9041`, :pull:`9045`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Migrates remainder of ``io.py`` to ``xarray/core/datatree_io.py`` and
+  ``TreeAttrAccessMixin`` into ``xarray/core/common.py`` (:pull:`9011`).
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Compatibility with numpy 2 (:issue:`8844`, :pull:`8854`, :pull:`8946`).
+  By `Justus Magin <https://github.com/keewis>`_ and `Stephan Hoyer <https://github.com/shoyer>`_.
+
+
+.. _whats-new.2024.05.0:
+
+v2024.05.0 (May 12, 2024)
+-------------------------
+
+This release brings support for pandas ExtensionArray objects, optimizations when reading Zarr, the ability to concatenate datasets without pandas indexes,
+more compatibility fixes for the upcoming numpy 2.0, and the migration of most of the xarray-datatree project code into xarray ``main``!
+
+Thanks to the 18 contributors to this release:
+Aimilios Tsouvelekakis, Andrey Akinshin, Deepak Cherian, Eni Awowale, Ilan Gold, Illviljan, Justus Magin, Mark Harfouche, Matt Savoie, Maximilian Roos, Noah C. Benson, Pascal Bourgault, Ray Bell, Spencer Clark, Tom Nicholas, ignamv, owenlittlejohns, and saschahofmann.
+
+New Features
+~~~~~~~~~~~~
+- New "random" method for converting to and from 360_day calendars (:pull:`8603`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
+- Xarray now makes a best attempt not to coerce :py:class:`pandas.api.extensions.ExtensionArray` to a numpy array
+  by supporting 1D ``ExtensionArray`` objects internally where possible.  Thus, :py:class:`Dataset` objects initialized with a ``pd.Categorical``,
+  for example, will retain the object.  However, one cannot do operations that are not possible on the ``ExtensionArray``
+  then, such as broadcasting. (:issue:`5287`, :issue:`8463`, :pull:`8723`)
+  By `Ilan Gold <https://github.com/ilan-gold>`_.
+- :py:func:`testing.assert_allclose`/:py:func:`testing.assert_equal` now accept a new argument `check_dims="transpose"`, controlling whether a transposed array is considered equal. (:issue:`5733`, :pull:`8991`)
+  By `Ignacio Martinez Vazquez <https://github.com/ignamv>`_.
+- Added the option to avoid automatically creating 1D pandas indexes in :py:meth:`Dataset.expand_dims()`, by passing the new kwarg
+  `create_index_for_new_dim=False`. (:pull:`8960`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Avoid automatically re-creating 1D pandas indexes in :py:func:`concat()`. Also added option to avoid creating 1D indexes for
+  new dimension coordinates by passing the new kwarg `create_index_for_new_dim=False`. (:issue:`8871`, :pull:`8872`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+- The PyNIO backend has been deleted (:issue:`4491`, :pull:`7301`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- The minimum versions of some dependencies were changed, in particular our minimum supported pandas version is now Pandas 2.
+
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+   dask-core              2022.12   2023.4
+   distributed            2022.12   2023.4
+   h5py                       3.7      3.8
+   matplotlib-base            3.6      3.7
+   packaging                 22.0     23.1
+   pandas                     1.5      2.0
+   pydap                      3.3      3.4
+   sparse                    0.13     0.14
+   typing_extensions          4.4      4.5
+   zarr                      2.13     2.14
+  ===================== =========  =======
+
+Bug fixes
+~~~~~~~~~
+- Following `an upstream bug fix
+  <https://github.com/pandas-dev/pandas/issues/56147>`_ to
+  :py:func:`pandas.date_range`, date ranges produced by
+  :py:func:`xarray.cftime_range` with negative frequencies will now fall fully
+  within the bounds of the provided start and end dates (:pull:`8999`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Enforces failures on CI when tests raise warnings from within xarray (:pull:`8974`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- Migrates ``formatting_html`` functionality for ``DataTree`` into ``xarray/core`` (:pull: `8930`)
+  By `Eni Awowale <https://github.com/eni-awowale>`_, `Julia Signell <https://github.com/jsignell>`_
+  and `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Migrates ``datatree_mapping`` functionality into ``xarray/core`` (:pull:`8948`)
+  By `Matt Savoie <https://github.com/flamingbear>`_ `Owen Littlejohns
+  <https://github.com/owenlittlejohns>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Migrates ``extensions``, ``formatting`` and ``datatree_render`` functionality for
+  ``DataTree`` into ``xarray/core``. Also migrates ``testing`` functionality into
+  ``xarray/testing/assertions`` for ``DataTree``. (:pull:`8967`)
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Migrates ``ops.py`` functionality into ``xarray/core/datatree_ops.py`` (:pull:`8976`)
+  By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Migrates ``iterator`` functionality into ``xarray/core`` (:pull: `8879`)
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
+  <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
+- ``transpose``, ``set_dims``, ``stack`` & ``unstack`` now use a ``dim`` kwarg
+  rather than ``dims`` or ``dimensions``. This is the final change to make xarray methods
+  consistent with their use of ``dim``. Using the existing kwarg will raise a
+  warning.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+
+.. _whats-new.2024.03.0:
+
+v2024.03.0 (Mar 29, 2024)
+-------------------------
+
+This release brings performance improvements for grouped and resampled quantile calculations, CF decoding improvements,
+minor optimizations to distributed Zarr writes, and compatibility fixes for Numpy 2.0 and Pandas 3.0.
+
+Thanks to the 18 contributors to this release:
+Anderson Banihirwe, Christoph Hasse, Deepak Cherian, Etienne Schalk, Justus Magin, Kai Mühlbauer, Kevin Schwarzwald, Mark Harfouche, Martin, Matt Savoie, Maximilian Roos, Ray Bell, Roberto Chang, Spencer Clark, Tom Nicholas, crusaderky, owenlittlejohns, saschahofmann
+
+New Features
+~~~~~~~~~~~~
+- Partial writes to existing chunks with ``region`` or ``append_dim`` will now raise an error
+  (unless ``safe_chunks=False``); previously an error would only be raised on
+  new variables. (:pull:`8459`, :issue:`8371`, :issue:`8882`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Grouped and resampling quantile calculations now use the vectorized algorithm in ``flox>=0.9.4`` if present.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Do not broadcast in arithmetic operations when global option ``arithmetic_broadcast=False``
+  (:issue:`6806`, :pull:`8784`).
+  By `Etienne Schalk <https://github.com/etienneschalk>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
+- Add the ``.oindex`` property to Explicitly Indexed Arrays for orthogonal indexing functionality. (:issue:`8238`, :pull:`8750`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
+- Add the ``.vindex`` property to Explicitly Indexed Arrays for vectorized indexing functionality. (:issue:`8238`, :pull:`8780`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
+- Expand use of ``.oindex`` and ``.vindex`` properties. (:pull: `8790`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
+- Allow creating :py:class:`xr.Coordinates` objects with no indexes (:pull:`8711`)
+  By `Benoit Bovy <https://github.com/benbovy>`_ and `Tom Nicholas
+  <https://github.com/TomNicholas>`_.
+- Enable plotting of ``datetime.dates``. (:issue:`8866`, :pull:`8873`)
+  By `Sascha Hofmann <https://github.com/saschahofmann>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+- Don't allow overwriting index variables with ``to_zarr`` region writes. (:issue:`8589`, :pull:`8876`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Bug fixes
@@ -47,16 +498,33 @@ Bug fixes
   when used in :py:meth:`DataArray.expand_dims` and
   ::py:meth:`Dataset.expand_dims` (:pull:`8781`).  By `Spencer
   Clark <https://github.com/spencerkclark>`_.
-
-Documentation
-~~~~~~~~~~~~~
-
+- CF conform handling of `_FillValue`/`missing_value` and `dtype` in
+  `CFMaskCoder`/`CFScaleOffsetCoder` (:issue:`2304`, :issue:`5597`,
+  :issue:`7691`, :pull:`8713`, see also discussion in :pull:`7654`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Do not cast `_FillValue`/`missing_value` in `CFMaskCoder` if `_Unsigned` is provided
+  (:issue:`8844`, :pull:`8852`).
+- Adapt handling of copy keyword argument for numpy >= 2.0dev
+  (:issue:`8844`, :pull:`8851`, :pull:`8865`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Import trapz/trapezoid depending on numpy version
+  (:issue:`8844`, :pull:`8865`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Warn and return bytes undecoded in case of UnicodeDecodeError in h5netcdf-backend
+  (:issue:`5563`, :pull:`8874`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix bug incorrectly disallowing creation of a dataset with a multidimensional coordinate variable with the same name as one of its dims.
+  (:issue:`8884`, :pull:`8886`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Migrates ``treenode`` functionality into ``xarray/core`` (:pull:`8757`)
   By `Matt Savoie <https://github.com/flamingbear>`_ and `Tom Nicholas
   <https://github.com/TomNicholas>`_.
+- Migrates ``datatree`` functionality into ``xarray/core``. (:pull: `8789`)
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie
+  <https://github.com/flamingbear>`_ and `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 .. _whats-new.2024.02.0:
@@ -271,7 +739,7 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 - The implementation of :py:func:`map_blocks` has changed to minimize graph size and duplication of data.
-  This should be a strict improvement even though the graphs are not always embarassingly parallel any more.
+  This should be a strict improvement even though the graphs are not always embarrassingly parallel any more.
   Please open an issue if you spot a regression. (:pull:`8412`, :issue:`8409`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Remove null values before plotting. (:pull:`8535`).
@@ -2742,7 +3210,7 @@ Bug fixes
   process (:issue:`4045`, :pull:`4684`). It also enables encoding and decoding standard
   calendar dates with time units of nanoseconds (:pull:`4400`).
   By `Spencer Clark <https://github.com/spencerkclark>`_ and `Mark Harfouche
-  <http://github.com/hmaarrfk>`_.
+  <https://github.com/hmaarrfk>`_.
 - :py:meth:`DataArray.astype`, :py:meth:`Dataset.astype` and :py:meth:`Variable.astype` support
   the ``order`` and ``subok`` parameters again. This fixes a regression introduced in version 0.16.1
   (:issue:`4644`, :pull:`4683`).
@@ -6735,8 +7203,7 @@ Enhancements
       datasets with a MultiIndex to a netCDF file. User contributions in this
       area would be greatly appreciated.
 
-- Support for reading GRIB, HDF4 and other file formats via PyNIO_. See
-  :ref:`io.pynio` for more details.
+- Support for reading GRIB, HDF4 and other file formats via PyNIO_.
 - Better error message when a variable is supplied with the same name as
   one of its dimensions.
 - Plotting: more control on colormap parameters (:issue:`642`). ``vmin`` and

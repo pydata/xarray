@@ -28,3 +28,50 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from __future__ import annotations
+
+from typing import Any
+
+try:
+    # requires numpy>=2.0
+    from numpy import isdtype  # type: ignore[attr-defined,unused-ignore]
+
+    HAS_STRING_DTYPE = True
+except ImportError:
+    import numpy as np
+    from numpy.typing import DTypeLike
+
+    kind_mapping = {
+        "bool": np.bool_,
+        "signed integer": np.signedinteger,
+        "unsigned integer": np.unsignedinteger,
+        "integral": np.integer,
+        "real floating": np.floating,
+        "complex floating": np.complexfloating,
+        "numeric": np.number,
+    }
+
+    def isdtype(
+        dtype: np.dtype[Any] | type[Any], kind: DTypeLike | tuple[DTypeLike, ...]
+    ) -> bool:
+        kinds = kind if isinstance(kind, tuple) else (kind,)
+        str_kinds = {k for k in kinds if isinstance(k, str)}
+        type_kinds = {k.type for k in kinds if isinstance(k, np.dtype)}
+
+        if unknown_kind_types := set(kinds) - str_kinds - type_kinds:
+            raise TypeError(
+                f"kind must be str, np.dtype or a tuple of these, got {unknown_kind_types}"
+            )
+        if unknown_kinds := {k for k in str_kinds if k not in kind_mapping}:
+            raise ValueError(
+                f"unknown kind: {unknown_kinds}, must be a np.dtype or one of {list(kind_mapping)}"
+            )
+
+        # verified the dtypes already, no need to check again
+        translated_kinds = {kind_mapping[k] for k in str_kinds} | type_kinds
+        if isinstance(dtype, np.generic):
+            return isinstance(dtype, translated_kinds)
+        else:
+            return any(np.issubdtype(dtype, k) for k in translated_kinds)
+
+    HAS_STRING_DTYPE = False

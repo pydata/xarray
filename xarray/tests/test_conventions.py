@@ -63,7 +63,13 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
         np.arange(10),
         {"units": "foobar", "missing_value": np.nan, "_FillValue": np.nan},
     )
-    actual = conventions.decode_cf_variable("t", var)
+
+    # the following code issues two warnings, so we need to check for both
+    with pytest.warns(SerializationWarning) as winfo:
+        actual = conventions.decode_cf_variable("t", var)
+    for aw in winfo:
+        assert "non-conforming" in str(aw.message)
+
     assert_identical(actual, expected)
 
     var = Variable(
@@ -75,7 +81,12 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
             "_FillValue": np.float32(np.nan),
         },
     )
-    actual = conventions.decode_cf_variable("t", var)
+
+    # the following code issues two warnings, so we need to check for both
+    with pytest.warns(SerializationWarning) as winfo:
+        actual = conventions.decode_cf_variable("t", var)
+    for aw in winfo:
+        assert "non-conforming" in str(aw.message)
     assert_identical(actual, expected)
 
 
@@ -108,7 +119,7 @@ class TestEncodeCFVariable:
             Variable(
                 ["t"], pd.date_range("2000-01-01", periods=3), {"units": "foobar"}
             ),
-            Variable(["t"], pd.to_timedelta(["1 day"]), {"units": "foobar"}),
+            Variable(["t"], pd.to_timedelta(["1 day"]), {"units": "foobar"}),  # type: ignore[arg-type, unused-ignore]
             Variable(["t"], [0, 1, 2], {"add_offset": 0}, {"add_offset": 2}),
             Variable(["t"], [0, 1, 2], {"_FillValue": 0}, {"_FillValue": 2}),
         ]
@@ -553,10 +564,10 @@ def test_encode_cf_variable_with_vlen_dtype() -> None:
     )
     encoded_v = conventions.encode_cf_variable(v)
     assert encoded_v.data.dtype.kind == "O"
-    assert coding.strings.check_vlen_dtype(encoded_v.data.dtype) == str
+    assert coding.strings.check_vlen_dtype(encoded_v.data.dtype) is str
 
     # empty array
     v = Variable(["x"], np.array([], dtype=coding.strings.create_vlen_dtype(str)))
     encoded_v = conventions.encode_cf_variable(v)
     assert encoded_v.data.dtype.kind == "O"
-    assert coding.strings.check_vlen_dtype(encoded_v.data.dtype) == str
+    assert coding.strings.check_vlen_dtype(encoded_v.data.dtype) is str

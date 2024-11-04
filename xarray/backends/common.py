@@ -4,14 +4,15 @@ import logging
 import os
 import time
 import traceback
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping, Sequence
 from glob import glob
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, cast, overload
 
 import numpy as np
 
 from xarray.conventions import cf_encoder
 from xarray.core import indexing
+from xarray.core.datatree import DataTree
 from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
@@ -19,12 +20,8 @@ from xarray.namedarray.pycompat import is_chunked_array
 if TYPE_CHECKING:
     from io import BufferedIOBase
 
-    from h5netcdf.legacyapi import Dataset as ncDatasetLegacyH5
-    from netCDF4 import Dataset as ncDataset
-
     from xarray.core.dataset import Dataset
     from xarray.core.types import NestedSequence
-    from xarray.datatree_.datatree import DataTree
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -32,8 +29,18 @@ logger = logging.getLogger(__name__)
 
 NONE_VAR_NAME = "__values__"
 
+T = TypeVar("T")
 
-def _normalize_path(path):
+
+@overload
+def _normalize_path(path: str | os.PathLike) -> str: ...
+
+
+@overload
+def _normalize_path(path: T) -> T: ...
+
+
+def _normalize_path(path: str | os.PathLike | T) -> str | T:
     """
     Normalize pathlikes to string.
 
@@ -58,12 +65,24 @@ def _normalize_path(path):
     if isinstance(path, str) and not is_remote_uri(path):
         path = os.path.abspath(os.path.expanduser(path))
 
-    return path
+    return cast(str, path)
+
+
+@overload
+def _find_absolute_paths(
+    paths: str | os.PathLike | Sequence[str | os.PathLike], **kwargs
+) -> list[str]: ...
+
+
+@overload
+def _find_absolute_paths(
+    paths: NestedSequence[str | os.PathLike], **kwargs
+) -> NestedSequence[str]: ...
 
 
 def _find_absolute_paths(
     paths: str | os.PathLike | NestedSequence[str | os.PathLike], **kwargs
-) -> list[str]:
+) -> NestedSequence[str]:
     """
     Find absolute paths from the pattern.
 
@@ -102,7 +121,7 @@ def _find_absolute_paths(
                 expand=False,
             )
             tmp_paths = fs.glob(fs._strip_protocol(paths))  # finds directories
-            paths = [fs.get_mapper(path) for path in tmp_paths]
+            return [fs.get_mapper(path) for path in tmp_paths]
         elif is_remote_uri(paths):
             raise ValueError(
                 "cannot do wild-card matching for paths that are remote URLs "
@@ -110,13 +129,23 @@ def _find_absolute_paths(
                 "Instead, supply paths as an explicit list of strings."
             )
         else:
-            paths = sorted(glob(_normalize_path(paths)))
+            return sorted(glob(_normalize_path(paths)))
     elif isinstance(paths, os.PathLike):
-        paths = [os.fspath(paths)]
-    else:
-        paths = [os.fspath(p) if isinstance(p, os.PathLike) else p for p in paths]
+        return [_normalize_path(paths)]
 
-    return paths
+    def _normalize_path_list(
+        lpaths: NestedSequence[str | os.PathLike],
+    ) -> NestedSequence[str]:
+        return [
+            (
+                _normalize_path(p)
+                if isinstance(p, str | os.PathLike)
+                else _normalize_path_list(p)
+            )
+            for p in lpaths
+        ]
+
+    return _normalize_path_list(paths)
 
 
 def _encode_variable_name(name):
@@ -131,40 +160,13 @@ def _decode_variable_name(name):
     return name
 
 
-def _open_datatree_netcdf(
-    ncDataset: ncDataset | ncDatasetLegacyH5,
-    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-    **kwargs,
-) -> DataTree:
-    from xarray.backends.api import open_dataset
-    from xarray.core.treenode import NodePath
-    from xarray.datatree_.datatree import DataTree
-
-    ds = open_dataset(filename_or_obj, **kwargs)
-    tree_root = DataTree.from_dict({"/": ds})
-    with ncDataset(filename_or_obj, mode="r") as ncds:
-        for path in _iter_nc_groups(ncds):
-            subgroup_ds = open_dataset(filename_or_obj, group=path, **kwargs)
-
-            # TODO refactor to use __setitem__ once creation of new nodes by assigning Dataset works again
-            node_name = NodePath(path).name
-            new_node: DataTree = DataTree(name=node_name, data=subgroup_ds)
-            tree_root._set_item(
-                path,
-                new_node,
-                allow_overwrite=False,
-                new_nodes_along_path=True,
-            )
-    return tree_root
-
-
 def _iter_nc_groups(root, parent="/"):
     from xarray.core.treenode import NodePath
 
     parent = NodePath(parent)
+    yield str(parent)
     for path, group in root.groups.items():
         gpath = parent / path
-        yield str(gpath)
         yield from _iter_nc_groups(group, parent=gpath)
 
 
@@ -176,6 +178,19 @@ def find_root_and_group(ds):
         ds = ds.parent
     group = "/" + "/".join(hierarchy)
     return ds, group
+
+
+def datatree_from_dict_with_io_cleanup(groups_dict: Mapping[str, Dataset]) -> DataTree:
+    """DataTree.from_dict with file clean-up."""
+    try:
+        tree = DataTree.from_dict(groups_dict)
+    except Exception:
+        for ds in groups_dict.values():
+            ds.close()
+        raise
+    for path, ds in groups_dict.items():
+        tree[path].set_close(ds._close)
+    return tree
 
 
 def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500):
@@ -235,13 +250,10 @@ class AbstractDataStore:
         For example::
 
             class SuffixAppendingDataStore(AbstractDataStore):
-
                 def load(self):
                     variables, attributes = AbstractDataStore.load(self)
-                    variables = {'%s_suffix' % k: v
-                                 for k, v in variables.items()}
-                    attributes = {'%s_suffix' % k: v
-                                  for k, v in attributes.items()}
+                    variables = {"%s_suffix" % k: v for k, v in variables.items()}
+                    attributes = {"%s_suffix" % k: v for k, v in attributes.items()}
                     return variables, attributes
 
         This function will be called anytime variables or attributes
@@ -460,7 +472,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         for v in unlimited_dims:  # put unlimited_dims first
             dims[v] = None
         for v in variables.values():
-            dims.update(dict(zip(v.dims, v.shape)))
+            dims.update(dict(zip(v.dims, v.shape, strict=True)))
 
         for dim, length in dims.items():
             if dim in existing_dims and length != existing_dims[dim]:
@@ -561,6 +573,22 @@ class BackendEntrypoint:
     ) -> DataTree:
         """
         Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
+        """
+
+        raise NotImplementedError()
+
+    def open_groups_as_dict(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        **kwargs: Any,
+    ) -> dict[str, Dataset]:
+        """
+        Opens a dictionary mapping from group names to Datasets.
+
+        Called by :py:func:`~xarray.open_groups`.
+        This function exists to provide a universal way to open all groups in a file,
+        before applying any additional consistency checks or requirements necessary
+        to create a `DataTree` object (typically done using :py:meth:`~xarray.DataTree.from_dict`).
         """
 
         raise NotImplementedError()

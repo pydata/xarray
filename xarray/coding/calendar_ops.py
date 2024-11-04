@@ -5,8 +5,16 @@ import pandas as pd
 
 from xarray.coding.cftime_offsets import date_range_like, get_date_type
 from xarray.coding.cftimeindex import CFTimeIndex
-from xarray.coding.times import _should_cftime_be_used, convert_times
-from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_like
+from xarray.coding.times import (
+    _should_cftime_be_used,
+    convert_times,
+)
+from xarray.core.common import (
+    _contains_datetime_like_objects,
+    full_like,
+    is_np_datetime_like,
+)
+from xarray.core.computation import apply_ufunc
 
 try:
     import cftime
@@ -20,16 +28,6 @@ _CALENDARS_WITHOUT_YEAR_ZERO = [
     "julian",
     "standard",
 ]
-
-
-def _days_in_year(year, calendar, use_cftime=True):
-    """Return the number of days in the input year according to the input calendar."""
-    date_type = get_date_type(calendar, use_cftime=use_cftime)
-    if year == -1 and calendar in _CALENDARS_WITHOUT_YEAR_ZERO:
-        difference = date_type(year + 2, 1, 1) - date_type(year, 1, 1)
-    else:
-        difference = date_type(year + 1, 1, 1) - date_type(year, 1, 1)
-    return difference.days
 
 
 def convert_calendar(
@@ -64,7 +62,7 @@ def convert_calendar(
       The target calendar name.
     dim : str
       Name of the time coordinate in the input DataArray or Dataset.
-    align_on : {None, 'date', 'year'}
+    align_on : {None, 'date', 'year', 'random'}
       Must be specified when either the source or target is a `"360_day"`
       calendar; ignored otherwise. See Notes.
     missing : any, optional
@@ -143,6 +141,16 @@ def convert_calendar(
       will be dropped as there are no equivalent dates in a standard calendar.
 
       This option is best used with data on a frequency coarser than daily.
+
+    "random"
+      Similar to "year", each day of year of the source is mapped to another day of year
+      of the target. However, instead of having always the same missing days according
+      the source and target years, here 5 days are chosen randomly, one for each fifth
+      of the year. However, February 29th is always missing when converting to a leap year,
+      or its value is dropped when converting from a leap year. This is similar to the method
+      used in the LOCA dataset (see Pierce, Cayan, and Thrasher (2014). doi:10.1175/JHM-D-14-0082.1).
+
+      This option is best used on daily data.
     """
     from xarray.core.dataarray import DataArray
 
@@ -174,21 +182,23 @@ def convert_calendar(
 
     out = obj.copy()
 
-    if align_on == "year":
+    if align_on in ["year", "random"]:
         # Special case for conversion involving 360_day calendar
-        # Instead of translating dates directly, this tries to keep the position within a year similar.
-
-        new_doy = time.groupby(f"{dim}.year").map(
-            _interpolate_day_of_year, target_calendar=calendar, use_cftime=use_cftime
-        )
-
+        if align_on == "year":
+            # Instead of translating dates directly, this tries to keep the position within a year similar.
+            new_doy = _interpolate_day_of_year(time, target_calendar=calendar)
+        elif align_on == "random":
+            # The 5 days to remove are randomly chosen, one for each of the five 72-days periods of the year.
+            new_doy = time.groupby(f"{dim}.year").map(
+                _random_day_of_year, target_calendar=calendar, use_cftime=use_cftime
+            )
         # Convert the source datetimes, but override the day of year with our new day of years.
         out[dim] = DataArray(
             [
                 _convert_to_new_calendar_with_new_day_of_year(
                     date, newdoy, calendar, use_cftime
                 )
-                for date, newdoy in zip(time.variable._data.array, new_doy)
+                for date, newdoy in zip(time.variable._data.array, new_doy, strict=True)
             ],
             dims=(dim,),
             name=dim,
@@ -206,6 +216,13 @@ def convert_calendar(
         # Remove NaN that where put on invalid dates in target calendar
         out = out.where(out[dim].notnull(), drop=True)
 
+        if use_cftime:
+            # Reassign times to ensure time index of output is a CFTimeIndex
+            # (previously it was an Index due to the presence of NaN values).
+            # Note this is not needed in the case that the output time index is
+            # a DatetimeIndex, since DatetimeIndexes can handle NaN values.
+            out[dim] = CFTimeIndex(out[dim].data)
+
     if missing is not None:
         time_target = date_range_like(time, calendar=calendar, use_cftime=use_cftime)
         out = out.reindex({dim: time_target}, fill_value=missing)
@@ -216,17 +233,47 @@ def convert_calendar(
     return out
 
 
-def _interpolate_day_of_year(time, target_calendar, use_cftime):
-    """Returns the nearest day in the target calendar of the corresponding
-    "decimal year" in the source calendar.
-    """
-    year = int(time.dt.year[0])
-    source_calendar = time.dt.calendar
+def _is_leap_year(years, calendar):
+    func = np.vectorize(cftime.is_leap_year)
+    return func(years, calendar=calendar)
+
+
+def _days_in_year(years, calendar):
+    """The number of days in the year according to given calendar."""
+    if calendar == "360_day":
+        return full_like(years, 360)
+    return _is_leap_year(years, calendar).astype(int) + 365
+
+
+def _interpolate_day_of_year(times, target_calendar):
+    """Returns the nearest day in the target calendar of the corresponding "decimal year" in the source calendar."""
+    source_calendar = times.dt.calendar
     return np.round(
-        _days_in_year(year, target_calendar, use_cftime)
-        * time.dt.dayofyear
-        / _days_in_year(year, source_calendar, use_cftime)
+        _days_in_year(times.dt.year, target_calendar)
+        * times.dt.dayofyear
+        / _days_in_year(times.dt.year, source_calendar)
     ).astype(int)
+
+
+def _random_day_of_year(time, target_calendar, use_cftime):
+    """Return a day of year in the new calendar.
+
+    Removes Feb 29th and five other days chosen randomly within five sections of 72 days.
+    """
+    year = time.dt.year[0]
+    source_calendar = time.dt.calendar
+    new_doy = np.arange(360) + 1
+    rm_idx = np.random.default_rng().integers(0, 72, 5) + 72 * np.arange(5)
+    if source_calendar == "360_day":
+        for idx in rm_idx:
+            new_doy[idx + 1 :] = new_doy[idx + 1 :] + 1
+        if _days_in_year(year, target_calendar) == 366:
+            new_doy[new_doy >= 60] = new_doy[new_doy >= 60] + 1
+    elif target_calendar == "360_day":
+        new_doy = np.insert(new_doy, rm_idx - np.arange(5), -1)
+        if _days_in_year(year, source_calendar) == 366:
+            new_doy = np.insert(new_doy, 60, -1)
+    return new_doy[time.dt.dayofyear - 1]
 
 
 def _convert_to_new_calendar_with_new_day_of_year(
@@ -257,32 +304,45 @@ def _convert_to_new_calendar_with_new_day_of_year(
         return np.nan
 
 
-def _datetime_to_decimal_year(times, dim="time", calendar=None):
-    """Convert a datetime DataArray to decimal years according to its calendar or the given one.
+def _decimal_year_cftime(time, year, days_in_year, *, date_class):
+    year_start = date_class(year, 1, 1)
+    delta = np.timedelta64(time - year_start, "ns")
+    days_in_year = np.timedelta64(days_in_year, "D")
+    return year + delta / days_in_year
+
+
+def _decimal_year_numpy(time, year, days_in_year, *, dtype):
+    time = np.asarray(time).astype(dtype)
+    year_start = np.datetime64(int(year) - 1970, "Y").astype(dtype)
+    delta = time - year_start
+    days_in_year = np.timedelta64(days_in_year, "D")
+    return year + delta / days_in_year
+
+
+def _decimal_year(times):
+    """Convert a datetime DataArray to decimal years according to its calendar.
 
     The decimal year of a timestamp is its year plus its sub-year component
     converted to the fraction of its year.
     Ex: '2000-03-01 12:00' is 2000.1653 in a standard calendar,
       2000.16301 in a "noleap" or 2000.16806 in a "360_day".
     """
-    from xarray.core.dataarray import DataArray
-
-    calendar = calendar or times.dt.calendar
-
-    if is_np_datetime_like(times.dtype):
-        times = times.copy(data=convert_times(times.values, get_date_type("standard")))
-
-    def _make_index(time):
-        year = int(time.dt.year[0])
-        doys = cftime.date2num(time, f"days since {year:04d}-01-01", calendar=calendar)
-        return DataArray(
-            year + doys / _days_in_year(year, calendar),
-            dims=(dim,),
-            coords=time.coords,
-            name=dim,
-        )
-
-    return times.groupby(f"{dim}.year").map(_make_index)
+    if times.dtype == "O":
+        function = _decimal_year_cftime
+        kwargs = {"date_class": get_date_type(times.dt.calendar, True)}
+    else:
+        function = _decimal_year_numpy
+        kwargs = {"dtype": times.dtype}
+    return apply_ufunc(
+        function,
+        times,
+        times.dt.year,
+        times.dt.days_in_year,
+        kwargs=kwargs,
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[np.float64],
+    )
 
 
 def interp_calendar(source, target, dim="time"):
@@ -315,7 +375,7 @@ def interp_calendar(source, target, dim="time"):
     """
     from xarray.core.dataarray import DataArray
 
-    if isinstance(target, (pd.DatetimeIndex, CFTimeIndex)):
+    if isinstance(target, pd.DatetimeIndex | CFTimeIndex):
         target = DataArray(target, dims=(dim,), name=dim)
 
     if not _contains_datetime_like_objects(
@@ -325,9 +385,7 @@ def interp_calendar(source, target, dim="time"):
             f"Both 'source.{dim}' and 'target' must contain datetime objects."
         )
 
-    source_calendar = source[dim].dt.calendar
     target_calendar = target.dt.calendar
-
     if (
         source[dim].time.dt.year == 0
     ).any() and target_calendar in _CALENDARS_WITHOUT_YEAR_ZERO:
@@ -336,8 +394,8 @@ def interp_calendar(source, target, dim="time"):
         )
 
     out = source.copy()
-    out[dim] = _datetime_to_decimal_year(source[dim], dim=dim, calendar=source_calendar)
-    target_idx = _datetime_to_decimal_year(target, dim=dim, calendar=target_calendar)
+    out[dim] = _decimal_year(source[dim])
+    target_idx = _decimal_year(target)
     out = out.interp(**{dim: target_idx})
     out[dim] = target
     return out

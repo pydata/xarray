@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from importlib.metadata import EntryPoint
 from typing import Any
 
 import numpy as np
 import pytest
 
+from xarray import set_options
 from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
 from xarray.namedarray._typing import _Chunks
 from xarray.namedarray.daskmanager import DaskManager
@@ -13,6 +15,7 @@ from xarray.namedarray.parallelcompat import (
     get_chunked_array_type,
     guess_chunkmanager,
     list_chunkmanagers,
+    load_chunkmanagers,
 )
 from xarray.tests import has_dask, requires_dask
 
@@ -150,6 +153,11 @@ class TestGetChunkManager:
         chunkmanager = guess_chunkmanager("dummy")
         assert isinstance(chunkmanager, DummyChunkManager)
 
+    def test_get_chunkmanger_via_set_options(self, register_dummy_chunkmanager) -> None:
+        with set_options(chunk_manager="dummy"):
+            chunkmanager = guess_chunkmanager(None)
+            assert isinstance(chunkmanager, DummyChunkManager)
+
     def test_fail_on_nonexistent_chunkmanager(self) -> None:
         with pytest.raises(ValueError, match="unrecognized chunk manager foo"):
             guess_chunkmanager("foo")
@@ -218,3 +226,13 @@ class TestGetChunkedArrayType:
 
         with pytest.raises(TypeError, match="received multiple types"):
             get_chunked_array_type(*[dask_arr, dummy_arr])
+
+
+def test_bogus_entrypoint() -> None:
+    # Create a bogus entry-point as if the user broke their setup.cfg
+    # or is actively developing their new chunk manager
+    entry_point = EntryPoint(
+        "bogus", "xarray.bogus.doesnotwork", "xarray.chunkmanagers"
+    )
+    with pytest.warns(UserWarning, match="Failed to load chunk manager"):
+        assert len(load_chunkmanagers([entry_point])) == 0
