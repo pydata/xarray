@@ -668,7 +668,7 @@ def test_groupby_drops_nans(shuffle: bool, chunk: Literal[False] | dict) -> None
     ds["id"].values[-1, -1] = np.nan
 
     if chunk:
-        ds = ds.chunk(chunk)
+        ds["variable"] = ds["variable"].chunk(chunk)
     grouped = ds.groupby(ds.id)
     if shuffle:
         grouped = grouped.shuffle()
@@ -3159,14 +3159,19 @@ def test_groupby_multiple_bin_grouper_missing_groups():
 
 @requires_dask_ge_2024_08_1
 def test_shuffle_by_simple() -> None:
+    import dask
+
     da = xr.DataArray(
         dims="x",
-        data=[1, 2, 3, 4, 5, 6],
+        data=dask.array.from_array([1, 2, 3, 4, 5, 6], chunks=2),
         coords={"label": ("x", "a b c a b c".split(" "))},
     )
-    actual = da.chunk(x=2).shuffle_by(label=UniqueGrouper())
-    expected = da.shuffle_by(label=UniqueGrouper())
+    actual = da.shuffle_by(label=UniqueGrouper())
+    expected = da.isel(x=[0, 3, 1, 4, 2, 5])
     assert_identical(actual, expected)
+
+    with pytest.raises(ValueError):
+        da.chunk(x=2, eagerly_load_group=False).shuffle_by("label")
 
 
 @requires_dask

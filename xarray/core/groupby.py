@@ -724,6 +724,7 @@ class GroupBy(Generic[T_Xarray]):
         dask.dataframe.DataFrame.shuffle
         dask.array.shuffle
         """
+        self._raise_if_by_is_chunked()
         new_groupers = {
             # Using group.name handles the BinGrouper case
             # It does *not* handle the TimeResampler case,
