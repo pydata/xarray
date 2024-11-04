@@ -40,7 +40,8 @@ alignment, building on the functionality of the ``index`` found on a pandas
 DataArray objects also can have a ``name`` and can hold arbitrary metadata in
 the form of their ``attrs`` property. Names and attributes are strictly for
 users and user-written code: xarray makes no attempt to interpret them, and
-propagates them only in unambiguous cases
+propagates them only in unambiguous cases. For reading and writing attributes
+xarray relies on the capabilities of the supported backends.
 (see FAQ, :ref:`approach to metadata`).
 
 .. _creating a dataarray:

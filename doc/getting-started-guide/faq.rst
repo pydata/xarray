@@ -146,6 +146,9 @@ for conflicts between ``attrs`` when combining arrays and datasets, unless
 explicitly requested with the option ``compat='identical'``. The guiding
 principle is that metadata should not be allowed to get in the way.
 
+In general xarray uses the capabilities of the backends for reading and writing
+attributes. That has some implications on roundtripping. One example for such inconsistency is that size-1 lists will roundtrip as single element (for netcdf4 backends).
+
 What other netCDF related Python libraries should I know about?
 ---------------------------------------------------------------
 
