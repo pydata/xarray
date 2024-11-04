@@ -596,6 +596,7 @@ class Dataset(
 
     attrs : dict-like, optional
         Global attributes to save on this dataset.
+        (see FAQ, :ref:`approach to metadata`)
 
     Examples
     --------
