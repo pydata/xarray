@@ -499,6 +499,24 @@ def test_ffill_bfill_dask(method):
 
 
 @requires_bottleneck
+@requires_dask
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_ffill_bfill_nans_on_chunk_edge(method):
+    arr = np.array(
+        [[1, 2], [np.nan, 4], [5, 6], [7, 8], [np.nan, 10], [11, 12]], dtype=np.float64
+    )
+    da = xr.DataArray(arr, dims=("time", "x")).chunk({"time": 2, "x": -1})
+
+    dask_method = getattr(da, method)
+    numpy_method = getattr(da.compute(), method)
+
+    with raise_if_dask_computes():
+        actual = dask_method("x", limit=41)
+    expected = numpy_method("x", limit=41)
+    assert_equal(actual, expected)
+
+
+@requires_bottleneck
 def test_ffill_bfill_nonans():
     vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
     expected = xr.DataArray(vals, dims="x")
