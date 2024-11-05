@@ -38,7 +38,14 @@ if TYPE_CHECKING:
     from xarray.core.indexes import Index
     from xarray.core.types import Self
     from xarray.core.variable import Variable
-    from xarray.namedarray._typing import _Chunks, _IndexerKey, _Shape, duckarray
+    from xarray.namedarray._typing import (
+        _Chunks,
+        _IndexerKey,
+        _IndexKey,
+        _IndexKeys,
+        _Shape,
+        duckarray,
+    )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
@@ -209,7 +216,7 @@ def map_index_queries(
     return merged
 
 
-def expanded_indexer(key: Any, ndim: int) -> tuple[Any, ...]:
+def expanded_indexer(key: _IndexerKey | _IndexKeys, ndim: int) -> _IndexKeys:
     """Given a key for indexing an ndarray, return an equivalent key which is a
     tuple with length equal to the number of dimensions.
 
@@ -220,22 +227,22 @@ def expanded_indexer(key: Any, ndim: int) -> tuple[Any, ...]:
     if not isinstance(key, tuple):
         # numpy treats non-tuple keys equivalent to tuples of length 1
         key = (key,)
-    new_key = ()
+    new_key: list[_IndexKey] = []
     # handling Ellipsis right is a little tricky, see:
     # https://numpy.org/doc/stable/reference/arrays.indexing.html#advanced-indexing
     found_ellipsis = False
     for k in key:
         if k is Ellipsis:
             if not found_ellipsis:
-                new_key += (slice(None),) * (ndim + 1 - len(key))
+                new_key.extend([slice(None)] * (ndim + 1 - len(key)))
                 found_ellipsis = True
             else:
-                new_key += (slice(None),)
+                new_key.append(slice(None))
         else:
-            new_key += (k,)
+            new_key.append(k)
     if len(new_key) > ndim:
         raise IndexError("too many indices")
-    new_key += (slice(None),) * (ndim - len(new_key))
+    new_key.extend([slice(None)] * (ndim - len(new_key)))
     return tuple(new_key)
 
 
