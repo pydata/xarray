@@ -1872,7 +1872,7 @@ class TestVariable(VariableSubclassobjects):
     def test_quantile_chunked_dim_error(self):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
 
-        if module_available("dask", "2024.10.0"):
+        if module_available("dask", "2024.11.0"):
             # Dask rechunks
             np.testing.assert_allclose(
                 v.compute().quantile(0.5, dim="x"), v.quantile(0.5, dim="x")
