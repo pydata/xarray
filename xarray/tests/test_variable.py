@@ -30,13 +30,13 @@ from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.namedarray.pycompat import array_type
-from xarray.namedarray.utils import module_available
 from xarray.tests import (
     assert_allclose,
     assert_array_equal,
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    has_dask_ge_2024_11_0,
     has_pandas_3,
     raise_if_dask_computes,
     requires_bottleneck,
@@ -1872,7 +1872,7 @@ class TestVariable(VariableSubclassobjects):
     def test_quantile_chunked_dim_error(self):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
 
-        if module_available("dask", "2024.11.0"):
+        if has_dask_ge_2024_11_0:
             # Dask rechunks
             np.testing.assert_allclose(
                 v.compute().quantile(0.5, dim="x"), v.quantile(0.5, dim="x")
