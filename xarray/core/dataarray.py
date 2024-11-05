@@ -347,6 +347,7 @@ class DataArray(
     attrs : dict_like or None, optional
         Attributes to assign to the new instance. By default, an empty
         attribute dictionary is initialized.
+        (see FAQ, :ref:`approach to metadata`)
     indexes : py:class:`~xarray.Indexes` or dict-like, optional
         For internal use only. For passing indexes objects to the
         new DataArray, use the ``coords`` argument instead with a
@@ -6747,6 +6748,7 @@ class DataArray(
         *,
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
+        eagerly_compute_group: bool = True,
         **groupers: Grouper,
     ) -> DataArrayGroupBy:
         """Returns a DataArrayGroupBy object for performing grouped operations.
@@ -6762,6 +6764,11 @@ class DataArray(
         restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
+        eagerly_compute_group: bool
+            Whether to eagerly compute ``group`` when it is a chunked array.
+            This option is to maintain backwards compatibility. Set to False
+            to opt-in to future behaviour, where ``group`` is not automatically loaded
+            into memory.
         **groupers : Mapping of str to Grouper or Resampler
             Mapping of variable name to group by to :py:class:`Grouper` or :py:class:`Resampler` object.
             One of ``group`` or ``groupers`` must be provided.
@@ -6876,7 +6883,9 @@ class DataArray(
         )
 
         _validate_groupby_squeeze(squeeze)
-        rgroupers = _parse_group_and_groupers(self, group, groupers)
+        rgroupers = _parse_group_and_groupers(
+            self, group, groupers, eagerly_compute_group=eagerly_compute_group
+        )
         return DataArrayGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
     @_deprecate_positional_args("v2024.07.0")
@@ -6891,6 +6900,7 @@ class DataArray(
         squeeze: Literal[False] = False,
         restore_coord_dims: bool = False,
         duplicates: Literal["raise", "drop"] = "raise",
+        eagerly_compute_group: bool = True,
     ) -> DataArrayGroupBy:
         """Returns a DataArrayGroupBy object for performing grouped operations.
 
@@ -6927,6 +6937,11 @@ class DataArray(
             coordinates.
         duplicates : {"raise", "drop"}, default: "raise"
             If bin edges are not unique, raise ValueError or drop non-uniques.
+        eagerly_compute_group: bool
+            Whether to eagerly compute ``group`` when it is a chunked array.
+            This option is to maintain backwards compatibility. Set to False
+            to opt-in to future behaviour, where ``group`` is not automatically loaded
+            into memory.
 
         Returns
         -------
@@ -6964,7 +6979,9 @@ class DataArray(
             precision=precision,
             include_lowest=include_lowest,
         )
-        rgrouper = ResolvedGrouper(grouper, group, self)
+        rgrouper = ResolvedGrouper(
+            grouper, group, self, eagerly_compute_group=eagerly_compute_group
+        )
 
         return DataArrayGroupBy(
             self,
