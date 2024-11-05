@@ -30,6 +30,7 @@ from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.namedarray.pycompat import array_type
+from xarray.namedarray.utils import module_available
 from xarray.tests import (
     assert_allclose,
     assert_array_equal,
@@ -1871,9 +1872,16 @@ class TestVariable(VariableSubclassobjects):
     def test_quantile_chunked_dim_error(self):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
 
-        # this checks for ValueError in dask.array.apply_gufunc
-        with pytest.raises(ValueError, match=r"consists of multiple chunks"):
-            v.quantile(0.5, dim="x")
+        if module_available("dask", "2024.10.0"):
+            # Dask rechunks
+            np.testing.assert_allclose(
+                v.compute().quantile(0.5, dim="x"), v.quantile(0.5, dim="x")
+            )
+
+        else:
+            # this checks for ValueError in dask.array.apply_gufunc
+            with pytest.raises(ValueError, match=r"consists of multiple chunks"):
+                v.quantile(0.5, dim="x")
 
     @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
