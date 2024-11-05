@@ -2853,20 +2853,22 @@ def test_multiple_groupers(use_flox) -> None:
                 dims=("z", "x", "xy"),
                 coords={"xy": ("xy", ["a", "b", "c"], {"foo": "bar"})},
             )
-            with raise_if_dask_computes(max_computes=1):
-                if eagerly_compute_group:
+            if eagerly_compute_group:
+                with raise_if_dask_computes(max_computes=1):
                     with pytest.warns(DeprecationWarning):
                         gb = b.groupby(**kwargs)  # type: ignore[arg-type]
                     assert_identical(gb.count(), expected)
-                else:
+            else:
+                with raise_if_dask_computes(max_computes=0):
                     gb = b.groupby(**kwargs)  # type: ignore[arg-type]
-                    assert is_chunked_array(gb.encoded.codes.data)
-                    assert not gb.encoded.group_indices
-                    if has_flox:
+                assert is_chunked_array(gb.encoded.codes.data)
+                assert not gb.encoded.group_indices
+                if has_flox:
+                    with raise_if_dask_computes(max_computes=1):
                         assert_identical(gb.count(), expected)
-                    else:
-                        with pytest.raises(ValueError, match="when lazily grouping"):
-                            gb.count()
+                else:
+                    with pytest.raises(ValueError, match="when lazily grouping"):
+                        gb.count()
 
 
 @pytest.mark.parametrize("use_flox", [True, False])
