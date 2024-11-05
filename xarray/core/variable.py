@@ -46,7 +46,7 @@ from xarray.core.utils import (
 )
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.pycompat import integer_types, is_0d_dask_array, to_duck_array
-from xarray.util.deprecation_helpers import deprecate_dims
+from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -2010,8 +2010,16 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             ranked /= count
         return ranked
 
+    @_deprecate_positional_args("v2024.11.0")
     def rolling_window(
-        self, dim, window, window_dim, center=False, fill_value=dtypes.NA
+        self,
+        dim,
+        window,
+        window_dim,
+        *,
+        center=False,
+        fill_value=dtypes.NA,
+        automatic_rechunk: bool = True,
     ):
         """
         Make a rolling_window along dim and add a new_dim to the last place.
@@ -2032,6 +2040,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             of the axis.
         fill_value
             value to be filled.
+        automatic_rechunk: bool, default True
+            Whether dask should automatically rechunk the output to avoid
+            exploding chunk sizes. Importantly, each chunk will be a view of the data
+            so large chunk sizes are only safe if *no* copies are made later.
 
         Returns
         -------
@@ -2120,7 +2132,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return Variable(
             new_dims,
             duck_array_ops.sliding_window_view(
-                padded.data, window_shape=window, axis=axis
+                padded.data,
+                window_shape=window,
+                axis=axis,
+                automatic_rechunk=automatic_rechunk,
             ),
         )
 

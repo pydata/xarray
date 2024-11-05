@@ -20,6 +20,7 @@ from xarray.core.utils import (
     module_available,
 )
 from xarray.namedarray import pycompat
+from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 try:
     import bottleneck
@@ -147,7 +148,10 @@ class Rolling(Generic[T_Xarray]):
         return len(self.dim)
 
     def _reduce_method(  # type: ignore[misc]
-        name: str, fillna: Any, rolling_agg_func: Callable | None = None
+        name: str,
+        fillna: Any,
+        rolling_agg_func: Callable | None = None,
+        automatic_rechunk: bool = False,
     ) -> Callable[..., T_Xarray]:
         """Constructs reduction methods built on a numpy reduction function (e.g. sum),
         a numbagg reduction function (e.g. move_sum), a bottleneck reduction function
@@ -157,6 +161,8 @@ class Rolling(Generic[T_Xarray]):
         _array_reduce. Arguably we could refactor this. But one constraint is that we
         need context of xarray options, of the functions each library offers, of
         the array (e.g. dtype).
+
+        Set automatic_rechunk=True when the reduction method makes a memory copy.
         """
         if rolling_agg_func:
             array_agg_func = None
@@ -181,6 +187,7 @@ class Rolling(Generic[T_Xarray]):
                 rolling_agg_func=rolling_agg_func,
                 keep_attrs=keep_attrs,
                 fillna=fillna,
+                automatic_rechunk=automatic_rechunk,
                 **kwargs,
             )
 
@@ -198,16 +205,19 @@ class Rolling(Generic[T_Xarray]):
 
     _mean.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name="mean")
 
-    argmax = _reduce_method("argmax", dtypes.NINF)
-    argmin = _reduce_method("argmin", dtypes.INF)
+    # automatic_rechunk is set to True for reductions that make a copy.
+    # std, var could be optimized after which we can set it to False
+    # See #4325
+    argmax = _reduce_method("argmax", dtypes.NINF, automatic_rechunk=True)
+    argmin = _reduce_method("argmin", dtypes.INF, automatic_rechunk=True)
     max = _reduce_method("max", dtypes.NINF)
     min = _reduce_method("min", dtypes.INF)
     prod = _reduce_method("prod", 1)
     sum = _reduce_method("sum", 0)
     mean = _reduce_method("mean", None, _mean)
-    std = _reduce_method("std", None)
-    var = _reduce_method("var", None)
-    median = _reduce_method("median", None)
+    std = _reduce_method("std", None, automatic_rechunk=True)
+    var = _reduce_method("var", None, automatic_rechunk=True)
+    median = _reduce_method("median", None, automatic_rechunk=True)
 
     def _counts(self, keep_attrs: bool | None) -> T_Xarray:
         raise NotImplementedError()
@@ -311,12 +321,15 @@ class DataArrayRolling(Rolling["DataArray"]):
 
             yield (label, window)
 
+    @_deprecate_positional_args("v2024.11.0")
     def construct(
         self,
         window_dim: Hashable | Mapping[Any, Hashable] | None = None,
+        *,
         stride: int | Mapping[Any, int] = 1,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
+        automatic_rechunk: bool = True,
         **window_dim_kwargs: Hashable,
     ) -> DataArray:
         """
@@ -335,6 +348,10 @@ class DataArrayRolling(Rolling["DataArray"]):
             If True, the attributes (``attrs``) will be copied from the original
             object to the new one. If False, the new object will be returned
             without attributes. If None uses the global default.
+        automatic_rechunk: bool, default True
+            Whether dask should automatically rechunk the output to avoid
+            exploding chunk sizes. Importantly, each chunk will be a view of the data
+            so large chunk sizes are only safe if *no* copies are made later.
         **window_dim_kwargs : Hashable, optional
             The keyword arguments form of ``window_dim`` {dim: new_name, ...}.
 
@@ -342,6 +359,11 @@ class DataArrayRolling(Rolling["DataArray"]):
         -------
         DataArray that is a view of the original array. The returned array is
         not writeable.
+
+        See Also
+        --------
+        numpy.lib.stride_tricks.sliding_window_view
+        dask.array.lib.stride_tricks.sliding_window_view
 
         Examples
         --------
@@ -383,16 +405,19 @@ class DataArrayRolling(Rolling["DataArray"]):
             stride=stride,
             fill_value=fill_value,
             keep_attrs=keep_attrs,
+            automatic_rechunk=automatic_rechunk,
             **window_dim_kwargs,
         )
 
     def _construct(
         self,
         obj: DataArray,
+        *,
         window_dim: Hashable | Mapping[Any, Hashable] | None = None,
         stride: int | Mapping[Any, int] = 1,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
+        automatic_rechunk: bool = True,
         **window_dim_kwargs: Hashable,
     ) -> DataArray:
         from xarray.core.dataarray import DataArray
@@ -412,7 +437,12 @@ class DataArrayRolling(Rolling["DataArray"]):
         strides = self._mapping_to_list(stride, default=1)
 
         window = obj.variable.rolling_window(
-            self.dim, self.window, window_dims, self.center, fill_value=fill_value
+            self.dim,
+            self.window,
+            window_dims,
+            center=self.center,
+            fill_value=fill_value,
+            automatic_rechunk=automatic_rechunk,
         )
 
         attrs = obj.attrs if keep_attrs else {}
@@ -429,10 +459,16 @@ class DataArrayRolling(Rolling["DataArray"]):
         )
 
     def reduce(
-        self, func: Callable, keep_attrs: bool | None = None, **kwargs: Any
+        self,
+        func: Callable,
+        keep_attrs: bool | None = None,
+        *,
+        automatic_rechunk: bool = True,
+        **kwargs: Any,
     ) -> DataArray:
-        """Reduce the items in this group by applying `func` along some
-        dimension(s).
+        """Reduce each window by applying `func`.
+
+        Equivalent to ``.construct(...).reduce(func, ...)``.
 
         Parameters
         ----------
@@ -444,6 +480,10 @@ class DataArrayRolling(Rolling["DataArray"]):
             If True, the attributes (``attrs``) will be copied from the original
             object to the new one. If False, the new object will be returned
             without attributes. If None uses the global default.
+        automatic_rechunk: bool, default True
+            Whether dask should automatically rechunk the output of ``construct`` to avoid
+            exploding chunk sizes. Importantly, each chunk will be a view of the data
+            so large chunk sizes are only safe if *no* copies are made in ``func``.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -497,7 +537,11 @@ class DataArrayRolling(Rolling["DataArray"]):
         else:
             obj = self.obj
         windows = self._construct(
-            obj, rolling_dim, keep_attrs=keep_attrs, fill_value=fillna
+            obj,
+            window_dim=rolling_dim,
+            keep_attrs=keep_attrs,
+            fill_value=fillna,
+            automatic_rechunk=automatic_rechunk,
         )
 
         dim = list(rolling_dim.values())
@@ -821,12 +865,15 @@ class DatasetRolling(Rolling["Dataset"]):
             **kwargs,
         )
 
+    @_deprecate_positional_args("v2024.11.0")
     def construct(
         self,
         window_dim: Hashable | Mapping[Any, Hashable] | None = None,
+        *,
         stride: int | Mapping[Any, int] = 1,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
+        automatic_rechunk: bool = True,
         **window_dim_kwargs: Hashable,
     ) -> Dataset:
         """
@@ -842,12 +889,21 @@ class DatasetRolling(Rolling["Dataset"]):
             size of stride for the rolling window.
         fill_value : Any, default: dtypes.NA
             Filling value to match the dimension size.
+        automatic_rechunk: bool, default True
+            Whether dask should automatically rechunk the output to avoid
+            exploding chunk sizes. Importantly, each chunk will be a view of the data
+            so large chunk sizes are only safe if *no* copies are made later.
         **window_dim_kwargs : {dim: new_name, ...}, optional
             The keyword arguments form of ``window_dim``.
 
         Returns
         -------
         Dataset with variables converted from rolling object.
+
+        See Also
+        --------
+        numpy.lib.stride_tricks.sliding_window_view
+        dask.array.lib.stride_tricks.sliding_window_view
         """
 
         from xarray.core.dataset import Dataset

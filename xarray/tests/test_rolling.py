@@ -14,6 +14,7 @@ from xarray.tests import (
     assert_identical,
     has_dask,
     requires_dask,
+    requires_dask_ge_2024_11_0,
     requires_numbagg,
 )
 
@@ -597,6 +598,25 @@ class TestDatasetRolling:
             match=r"\('foo',\) not found in Dataset dimensions",
         ):
             ds.rolling(foo=2)
+
+    @requires_dask_ge_2024_11_0
+    def test_rolling_construct_automatic_rechunk(self):
+        import dask
+
+        # Construct dataset with chunk size of (400, 400, 1) or 1.22 MiB
+        da = DataArray(
+            dims=["latitute", "longitude", "time"],
+            data=dask.array.random.random((400, 400, 400), chunks=(-1, -1, 1)),
+        )
+
+        # Dataset now has chunks of size (400, 400, 100 100) or 11.92 GiB
+        rechunked = da.rolling(time=100, center=True).construct(
+            "window", automatic_rechunk=True
+        )
+        not_rechunked = da.rolling(time=100, center=True).construct(
+            "window", automatic_rechunk=False
+        )
+        assert rechunked.chunks != not_rechunked.chunks
 
     @pytest.mark.parametrize(
         "name", ("sum", "mean", "std", "var", "min", "max", "median")

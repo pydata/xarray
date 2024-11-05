@@ -29,6 +29,9 @@ New Features
 - Support lazy grouping by dask arrays, and allow specifying ordered groups with ``UniqueGrouper(labels=["a", "b", "c"])``
   (:issue:`2852`, :issue:`757`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Add new ``automatic_rechunk`` kwarg to :py:meth:`DataArrayRolling.construct` and
+  :py:meth:`DatasetRolling.construct`. This is only useful on ``dask>=2024.11.0``
+  (:issue:`9550`). By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
