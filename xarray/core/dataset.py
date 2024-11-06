@@ -9364,10 +9364,11 @@ class Dataset(
         # keep indexes that won't be affected by pad and drop all other indexes
         xindexes = self.xindexes
         pad_dims = set(pad_width)
-        indexes = {}
-        for k, idx in xindexes.items():
-            if not pad_dims.intersection(xindexes.get_all_dims(k)):
-                indexes[k] = idx
+        indexes = {
+            k: idx
+            for k, idx in xindexes.items()
+            if not pad_dims.intersection(xindexes.get_all_dims(k))
+        }
 
         for name, var in self.variables.items():
             var_pad_width = {k: v for k, v in pad_width.items() if k in var.dims}
