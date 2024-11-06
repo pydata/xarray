@@ -17,6 +17,7 @@ concurrency:
 
 env:
   FORCE_COLOR: 3
+  MICROMAMBA_VERSION: "2.0.2-2"
 
 jobs:
   detect-ci-trigger:
@@ -63,12 +64,12 @@ jobs:
       - name: Set up conda environment
         uses: mamba-org/setup-micromamba@v2
         with:
+          micromamba-version: ${{env.MICROMAMBA_VERSION}}
           environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests
           create-args: >-
             python=${{ matrix.python-version }}
             pytest-reportlog
-            conda
       - name: Install upstream versions
         run: |
           bash ci/install-upstream-wheels.sh
@@ -77,8 +78,6 @@ jobs:
           python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
       - name: Import xarray
         run: |
@@ -122,12 +121,12 @@ jobs:
       - name: Set up conda environment
         uses: mamba-org/setup-micromamba@v2
         with:
+          micromamba-version: ${{env.MICROMAMBA_VERSION}}
           environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests
           create-args: >-
             python=${{ matrix.python-version }}
             pytest-reportlog
-            conda
       - name: Install upstream versions
         run: |
           bash ci/install-upstream-wheels.sh
@@ -136,8 +135,6 @@ jobs:
           python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
       - name: Install mypy
         run: |
