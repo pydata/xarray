@@ -5,12 +5,13 @@
 from __future__ import annotations
 
 import operator
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, overload
 
 from xarray.core import nputils, ops
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree

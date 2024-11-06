@@ -42,7 +42,6 @@ from __future__ import annotations
 import codecs
 import re
 import textwrap
-from collections.abc import Callable, Hashable, Mapping
 from functools import reduce
 from operator import or_ as set_union
 from re import Pattern
@@ -56,6 +55,8 @@ from xarray.core.computation import apply_ufunc
 from xarray.core.types import T_DataArray
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Hashable, Mapping
+
     from numpy.typing import DTypeLike
 
     from xarray.core.dataarray import DataArray

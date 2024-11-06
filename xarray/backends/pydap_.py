@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -26,6 +25,7 @@ from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
     import os
+    from collections.abc import Iterable
     from io import BufferedIOBase
 
     from xarray.core.dataset import Dataset

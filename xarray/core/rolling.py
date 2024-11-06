@@ -4,7 +4,6 @@ import functools
 import itertools
 import math
 import warnings
-from collections.abc import Callable, Hashable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import numpy as np
@@ -28,6 +27,8 @@ except ImportError:
     bottleneck = None
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Hashable, Iterator, Mapping
+
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 

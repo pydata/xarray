@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Hashable
-from types import EllipsisType
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -14,6 +14,9 @@ from xarray.core.utils import (
     iterate_nested,
 )
 from xarray.tests import assert_array_equal, requires_dask
+
+if TYPE_CHECKING:
+    from types import EllipsisType
 
 
 class TestAlias:

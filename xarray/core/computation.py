@@ -9,15 +9,6 @@ import itertools
 import operator
 import warnings
 from collections import Counter
-from collections.abc import (
-    Callable,
-    Hashable,
-    Iterable,
-    Iterator,
-    Mapping,
-    Sequence,
-    Set,
-)
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, cast, overload
 
 import numpy as np
@@ -38,6 +29,16 @@ from xarray.namedarray.pycompat import is_chunked_array
 from xarray.util.deprecation_helpers import deprecate_dims
 
 if TYPE_CHECKING:
+    from collections.abc import (
+        Callable,
+        Hashable,
+        Iterable,
+        Iterator,
+        Mapping,
+        Sequence,
+        Set,
+    )
+
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset

@@ -64,7 +64,6 @@ from collections.abc import (
 )
 from enum import Enum
 from pathlib import Path
-from types import EllipsisType
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeGuard, TypeVar, overload
 
 import numpy as np
@@ -84,6 +83,8 @@ from xarray.namedarray.utils import (  # noqa: F401
 )
 
 if TYPE_CHECKING:
+    from types import EllipsisType
+
     from xarray.core.types import Dims, ErrorOptionsWithWarn
 
 K = TypeVar("K")

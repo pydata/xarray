@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pytest
@@ -15,6 +14,9 @@ from xarray.tests import (
     requires_cftime,
     requires_dask,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))

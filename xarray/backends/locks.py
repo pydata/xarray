@@ -4,9 +4,11 @@ import multiprocessing
 import threading
 import uuid
 import weakref
-from collections.abc import Hashable, MutableMapping
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 from weakref import WeakValueDictionary
+
+if TYPE_CHECKING:
+    from collections.abc import Hashable, MutableMapping
 
 
 # SerializableLock is adapted from Dask:

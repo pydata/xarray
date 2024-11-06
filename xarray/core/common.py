@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
@@ -34,6 +33,8 @@ ALL_DIMS = ...
 
 
 if TYPE_CHECKING:
+    import datetime
+
     from numpy.typing import DTypeLike
 
     from xarray.core.dataarray import DataArray

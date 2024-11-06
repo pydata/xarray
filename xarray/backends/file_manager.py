@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import atexit
 import contextlib
-import io
 import threading
 import uuid
 import warnings
-from collections.abc import Hashable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from xarray.backends.locks import acquire
 from xarray.backends.lru_cache import LRUCache
 from xarray.core import utils
 from xarray.core.options import OPTIONS
+
+if TYPE_CHECKING:
+    import io
+    from collections.abc import Hashable
 
 # Global cache for storing open files.
 FILE_CACHE: LRUCache[Any, io.IOBase] = LRUCache(

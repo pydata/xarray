@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Hashable, Iterable
 from typing import TYPE_CHECKING, Any, Union, overload
 
 import numpy as np
@@ -21,6 +20,8 @@ from xarray.core.variable import Variable
 from xarray.core.variable import concat as concat_vars
 
 if TYPE_CHECKING:
+    from collections.abc import Hashable, Iterable
+
     from xarray.core.types import (
         CombineAttrsOptions,
         CompatOptions,

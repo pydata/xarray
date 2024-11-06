@@ -4,7 +4,6 @@ import pickle
 import re
 import sys
 import warnings
-from collections.abc import Hashable
 from copy import deepcopy
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
@@ -61,6 +60,8 @@ from xarray.tests import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Hashable
+
     from xarray.core.types import QueryEngineOptions, QueryParserOptions
 
 try:

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import uuid
 from collections import OrderedDict
-from collections.abc import Mapping
 from functools import lru_cache, partial
 from html import escape
 from importlib.resources import files
@@ -22,6 +21,8 @@ STATIC_FILES = (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from xarray.core.datatree import DataTree
 
 

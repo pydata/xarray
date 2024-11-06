@@ -8,7 +8,6 @@ import warnings
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
-from types import EllipsisType
 from typing import TYPE_CHECKING, Any, NoReturn, cast
 
 import numpy as np
@@ -56,6 +55,8 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
+    from types import EllipsisType
+
     from numpy.typing import ArrayLike
 
     from xarray.core.types import (

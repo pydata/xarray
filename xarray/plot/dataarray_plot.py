@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import warnings
-from collections.abc import Callable, Hashable, Iterable, MutableMapping
 from typing import TYPE_CHECKING, Any, Literal, Union, cast, overload
 
 import numpy as np
@@ -34,6 +33,8 @@ from xarray.plot.utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Hashable, Iterable, MutableMapping
+
     from matplotlib.axes import Axes
     from matplotlib.collections import PathCollection, QuadMesh
     from matplotlib.colors import Colormap, Normalize

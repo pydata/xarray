@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-import datetime
 import inspect
 import itertools
 import math
@@ -22,8 +21,6 @@ from functools import partial
 from html import escape
 from numbers import Number
 from operator import methodcaller
-from os import PathLike
-from types import EllipsisType
 from typing import IO, TYPE_CHECKING, Any, Generic, Literal, cast, overload
 
 import numpy as np
@@ -132,6 +129,10 @@ from xarray.plot.accessor import DatasetPlotAccessor
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
+    import datetime
+    from os import PathLike
+    from types import EllipsisType
+
     from dask.dataframe import DataFrame as DaskDataFrame
     from dask.delayed import Delayed
     from numpy.typing import ArrayLike

@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import sys
 from abc import abstractmethod
-from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
 import numpy as np
@@ -20,6 +19,7 @@ from xarray.namedarray._typing import (
 from xarray.namedarray.core import NamedArray, from_array
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from types import ModuleType
 
     from numpy.typing import ArrayLike, DTypeLike, NDArray

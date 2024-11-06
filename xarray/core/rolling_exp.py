@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, Generic
+from typing import TYPE_CHECKING, Any, Generic
 
 import numpy as np
 from packaging.version import Version
@@ -12,6 +11,9 @@ from xarray.core.pdcompat import count_not_none
 from xarray.core.types import T_DataWithCoords
 from xarray.core.utils import module_available
 from xarray.namedarray import pycompat
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 
 def _get_alpha(

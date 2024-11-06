@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Callable
 from itertools import product
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
@@ -45,6 +44,9 @@ from xarray.tests import (
     requires_cftime,
     requires_pandas_3,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 cftime = pytest.importorskip("cftime")
 

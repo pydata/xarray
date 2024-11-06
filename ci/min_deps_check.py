@@ -8,12 +8,15 @@ from __future__ import annotations
 
 import itertools
 import sys
-from collections.abc import Iterator
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import libmambapy  # type: ignore[import]
 import yaml
 from dateutil.relativedelta import relativedelta
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 CHANNELS = ["conda-forge", "defaults"]
 IGNORE_DEPS = {

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -26,7 +25,12 @@ try:
 except ImportError:
     from numpy import RankWarning  # type: ignore[attr-defined,no-redef,unused-ignore]
 
+from typing import TYPE_CHECKING
+
 from xarray.core.options import OPTIONS
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 try:
     import bottleneck as bn

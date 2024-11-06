@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import collections
 import sys
-from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
 from typing import (
     TYPE_CHECKING,
@@ -14,6 +13,8 @@ from typing import (
 from xarray.core.utils import Frozen, is_dict_like
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping
+
     from xarray.core.types import Self, T_DataArray
 
 

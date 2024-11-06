@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -24,6 +23,8 @@ from xarray.tests import (
 from xarray.tests.test_dataset import create_test_data
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from xarray.core.types import CombineAttrsOptions, JoinOptions
 
 

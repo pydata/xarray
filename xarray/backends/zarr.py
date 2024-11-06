@@ -4,7 +4,6 @@ import base64
 import json
 import os
 import struct
-from collections.abc import Hashable, Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
@@ -35,6 +34,7 @@ from xarray.namedarray.pycompat import integer_types
 from xarray.namedarray.utils import module_available
 
 if TYPE_CHECKING:
+    from collections.abc import Hashable, Iterable, Mapping
     from io import BufferedIOBase
 
     from zarr import Group as ZarrGroup

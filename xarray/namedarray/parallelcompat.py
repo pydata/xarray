@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import functools
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable, Sequence
 from importlib.metadata import EntryPoint, entry_points
 from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 
@@ -19,6 +18,8 @@ from xarray.core.utils import emit_user_level_warning
 from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Sequence
+
     from xarray.namedarray._typing import (
         _Chunks,
         _DType,

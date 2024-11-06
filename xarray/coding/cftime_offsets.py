@@ -44,7 +44,6 @@ from __future__ import annotations
 
 import re
 import warnings
-from collections.abc import Mapping
 from datetime import datetime, timedelta
 from functools import partial
 from typing import TYPE_CHECKING, ClassVar, Literal, TypeVar
@@ -76,6 +75,8 @@ except ImportError:
 
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from xarray.core.types import InclusiveOptions, Self, SideOptions, TypeAlias
 
 

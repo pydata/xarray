@@ -10,9 +10,9 @@ import contextlib
 import datetime
 import inspect
 import warnings
-from collections.abc import Callable
 from functools import partial
 from importlib import import_module
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -40,6 +40,9 @@ from xarray.core.utils import is_duck_array, is_duck_dask_array, module_availabl
 from xarray.namedarray import pycompat
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import array_type, is_chunked_array
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # remove once numpy 2.0 is the oldest supported version
 if module_available("numpy", minversion="2.0.0.dev0"):

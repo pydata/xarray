@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, MutableMapping
-from os import PathLike
 from typing import TYPE_CHECKING, Any, Literal, get_args
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, MutableMapping
+    from os import PathLike
+
     from xarray.core.datatree import DataTree
     from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 

@@ -1,7 +1,6 @@
 import re
 import sys
 import typing
-from collections.abc import Mapping
 from copy import copy, deepcopy
 from textwrap import dedent
 
@@ -20,6 +19,9 @@ from xarray.tests import (
     requires_dask,
     source_ndarray,
 )
+
+if typing.TYPE_CHECKING:
+    from collections.abc import Mapping
 
 ON_WINDOWS = sys.platform == "win32"
 

@@ -6,7 +6,6 @@ to integer codes (one per group).
 
 from __future__ import annotations
 
-import datetime
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -26,6 +25,8 @@ from xarray.core.variable import Variable
 from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
+    import datetime
+
     from numpy.typing import ArrayLike
 
     from xarray.core.resample_cftime import CFTimeGrouper

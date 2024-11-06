@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Hashable
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -19,6 +18,8 @@ from xarray.tests import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Hashable
+
     from xarray.core.datatree_io import T_DataTreeNetcdfEngine
 
 try:

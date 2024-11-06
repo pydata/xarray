@@ -4,7 +4,6 @@ import enum
 import functools
 import operator
 from collections import Counter, defaultdict
-from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -31,6 +30,8 @@ from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import array_type, integer_types, is_chunked_array
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Hashable, Iterable, Mapping
+
     from numpy.typing import DTypeLike
 
     from xarray.core.indexes import Index

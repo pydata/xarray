@@ -4,7 +4,6 @@ import pickle
 import re
 import sys
 import warnings
-from collections.abc import Hashable
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
@@ -69,6 +68,8 @@ from xarray.tests import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Hashable
+
     from xarray.core.types import ArrayLike
 
 try:

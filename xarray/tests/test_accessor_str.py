@@ -39,13 +39,16 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 
 import xarray as xr
 from xarray.tests import assert_equal, assert_identical, requires_dask
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @pytest.fixture(

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Callable, Hashable, MutableMapping
 from functools import partial
 from typing import TYPE_CHECKING, Any, Union
 
@@ -16,6 +15,8 @@ from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Hashable, MutableMapping
+
     T_VarTuple = tuple[tuple[Hashable, ...], Any, dict, dict]
     T_Name = Union[Hashable, None]
 

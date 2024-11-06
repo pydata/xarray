@@ -4,7 +4,6 @@ import logging
 import os
 import time
 import traceback
-from collections.abc import Iterable, Mapping, Sequence
 from glob import glob
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, cast, overload
 
@@ -18,6 +17,7 @@ from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping, Sequence
     from io import BufferedIOBase
 
     from xarray.core.dataset import Dataset

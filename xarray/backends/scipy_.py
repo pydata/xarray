@@ -3,7 +3,6 @@ from __future__ import annotations
 import gzip
 import io
 import os
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -34,6 +33,7 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from io import BufferedIOBase
 
     from xarray.backends.common import AbstractDataStore

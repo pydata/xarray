@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime
 import warnings
 from collections.abc import (
     Callable,
@@ -11,8 +10,6 @@ from collections.abc import (
     Sequence,
 )
 from functools import partial
-from os import PathLike
-from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -87,6 +84,10 @@ from xarray.plot.utils import _get_units_from_attrs
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
+    import datetime
+    from os import PathLike
+    from types import EllipsisType
+
     from dask.dataframe import DataFrame as DaskDataFrame
     from dask.delayed import Delayed
     from iris.cube import Cube as iris_Cube

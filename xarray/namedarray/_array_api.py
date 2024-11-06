@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from types import ModuleType
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -20,6 +19,8 @@ from xarray.namedarray._typing import (
 )
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from xarray.namedarray.core import NamedArray
 
 

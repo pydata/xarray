@@ -4,7 +4,6 @@ import functools
 import inspect
 import itertools
 import warnings
-from collections.abc import Callable
 from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any
 
@@ -13,6 +12,7 @@ from xarray.core.utils import module_available
 
 if TYPE_CHECKING:
     import os
+    from collections.abc import Callable
     from importlib.metadata import EntryPoint, EntryPoints
     from io import BufferedIOBase
 

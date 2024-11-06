@@ -6,7 +6,6 @@ import contextlib
 import functools
 import math
 from collections import ChainMap, defaultdict
-from collections.abc import Collection, Hashable, Mapping, Sequence
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
 from reprlib import recursive_repr
@@ -26,6 +25,8 @@ from xarray.core.utils import is_duck_array
 from xarray.namedarray.pycompat import array_type, to_duck_array, to_numpy
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Hashable, Mapping, Sequence
+
     from xarray.core.coordinates import AbstractCoordinates
     from xarray.core.datatree import DataTree
     from xarray.core.variable import Variable

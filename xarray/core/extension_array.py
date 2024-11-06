@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
-from typing import Generic, cast
+from typing import TYPE_CHECKING, Generic, cast
 
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_extension_array_dtype
 
 from xarray.core.types import DTypeLikeSave, T_ExtensionArray
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
 
 HANDLED_EXTENSION_ARRAY_FUNCTIONS: dict[Callable, Callable] = {}
 

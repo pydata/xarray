@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Callable, Hashable, Iterable, Sequence
 from typing import TYPE_CHECKING, Any
 
 from xarray.core._aggregations import (
@@ -12,6 +11,8 @@ from xarray.core.groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupB
 from xarray.core.types import Dims, InterpOptions, T_Xarray
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Hashable, Iterable, Sequence
+
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 

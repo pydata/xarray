@@ -13,7 +13,6 @@ import sys
 import tempfile
 import uuid
 import warnings
-from collections.abc import Generator, Iterator, Mapping
 from contextlib import ExitStack
 from io import BytesIO
 from os import listdir
@@ -96,6 +95,9 @@ from xarray.tests.test_dataset import (
     create_append_test_data,
     create_test_data,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Generator, Iterator, Mapping
 
 try:
     import netCDF4 as nc4

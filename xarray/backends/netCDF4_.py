@@ -3,7 +3,6 @@ from __future__ import annotations
 import functools
 import operator
 import os
-from collections.abc import Iterable
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
@@ -41,6 +40,7 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from io import BufferedIOBase
 
     from h5netcdf.core import EnumType as h5EnumType

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Sequence
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -11,6 +10,8 @@ from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedAr
 from xarray.namedarray.utils import is_duck_dask_array, module_available
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Sequence
+
     from xarray.namedarray._typing import (
         T_Chunks,
         _DType_co,

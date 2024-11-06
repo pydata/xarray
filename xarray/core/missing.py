@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime as dt
 import warnings
 from collections.abc import Callable, Hashable, Sequence
 from functools import partial
@@ -27,6 +26,8 @@ from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
+    import datetime as dt
+
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
