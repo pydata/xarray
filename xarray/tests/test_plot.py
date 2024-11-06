@@ -102,10 +102,7 @@ def substring_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
     Return True if a substring is found anywhere in an axes
     """
     alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}  # type: ignore[attr-defined] # mpl error?
-    for txt in alltxt:
-        if substring in txt:
-            return True
-    return False
+    return any(substring in txt for txt in alltxt)
 
 
 def substring_not_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:

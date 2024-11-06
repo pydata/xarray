@@ -1727,7 +1727,7 @@ class Dataset(
             new_value[name] = duck_array_ops.astype(val, dtype=var_k.dtype, copy=False)
 
         # check consistency of dimension sizes and dimension coordinates
-        if isinstance(value, DataArray) or isinstance(value, Dataset):
+        if isinstance(value, DataArray | Dataset):
             align(self[key], value, join="exact", copy=False)
 
         return new_value
@@ -7000,7 +7000,7 @@ class Dataset(
             math_scores     (student) float64 24B 91.0 82.5 96.5
             english_scores  (student) float64 24B 91.0 80.5 94.5
         """
-        if kwargs.get("axis", None) is not None:
+        if kwargs.get("axis") is not None:
             raise ValueError(
                 "passing 'axis' to Dataset reduce methods is ambiguous."
                 " Please use 'dim' instead."
@@ -10034,11 +10034,7 @@ class Dataset(
         else:
             reduce_dims_ = list(reduce_dims)
 
-        if (
-            isinstance(coords, str)
-            or isinstance(coords, DataArray)
-            or not isinstance(coords, Iterable)
-        ):
+        if isinstance(coords, str | DataArray) or not isinstance(coords, Iterable):
             coords = [coords]
         coords_: Sequence[DataArray] = [
             self[coord] if isinstance(coord, str) else coord for coord in coords
