@@ -4,7 +4,6 @@ from collections.abc import Hashable, Iterable, Sequence
 from typing import TYPE_CHECKING, Generic, Literal, cast
 
 import numpy as np
-from numpy.typing import ArrayLike
 
 from xarray.core import duck_array_ops, utils
 from xarray.core.alignment import align, broadcast
@@ -128,6 +127,8 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
 
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 

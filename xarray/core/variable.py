@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any, NoReturn, cast
 
 import numpy as np
 import pandas as pd
-from numpy.typing import ArrayLike
 from pandas.api.types import is_extension_array_dtype
 
 import xarray as xr  # only for Dataset and DataArray
@@ -57,6 +56,8 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+
     from xarray.core.types import (
         Dims,
         ErrorOptionsWithWarn,

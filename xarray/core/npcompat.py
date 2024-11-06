@@ -30,7 +30,10 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from numpy.typing import DTypeLike
 
 try:
     # requires numpy>=2.0
@@ -39,7 +42,6 @@ try:
     HAS_STRING_DTYPE = True
 except ImportError:
     import numpy as np
-    from numpy.typing import DTypeLike
 
     kind_mapping = {
         "bool": np.bool_,

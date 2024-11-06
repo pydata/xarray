@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
-from numpy.typing import ArrayLike
 
 from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
 from xarray.core import duck_array_ops
@@ -27,6 +26,8 @@ from xarray.core.variable import Variable
 from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+
     from xarray.core.resample_cftime import CFTimeGrouper
     from xarray.core.types import (
         Bins,

@@ -4,12 +4,11 @@ import functools
 from collections.abc import Hashable, Iterable
 from typing import TYPE_CHECKING, Any, Literal, NoReturn, overload
 
-import numpy as np
-
 # Accessor methods have the same name as plotting methods, so we need a different namespace
 from xarray.plot import dataarray_plot, dataset_plot
 
 if TYPE_CHECKING:
+    import numpy as np
     from matplotlib.axes import Axes
     from matplotlib.collections import LineCollection, PathCollection, QuadMesh
     from matplotlib.colors import Normalize
