@@ -720,13 +720,13 @@ class TestDataset:
         assert set(ds.xindexes) == {"dim2", "dim3", "time"}
         assert len(ds.xindexes) == 3
         assert "dim2" in repr(ds.xindexes)
-        assert all([isinstance(idx, Index) for idx in ds.xindexes.values()])
+        assert all(isinstance(idx, Index) for idx in ds.xindexes.values())
 
         # indexes
         assert set(ds.indexes) == {"dim2", "dim3", "time"}
         assert len(ds.indexes) == 3
         assert "dim2" in repr(ds.indexes)
-        assert all([isinstance(idx, pd.Index) for idx in ds.indexes.values()])
+        assert all(isinstance(idx, pd.Index) for idx in ds.indexes.values())
 
         # coords
         assert list(ds.coords) == ["dim2", "dim3", "time", "numbers"]

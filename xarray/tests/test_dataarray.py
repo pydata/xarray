@@ -180,8 +180,8 @@ class TestDataArray:
         }
         assert array.xindexes.keys() == expected_xindexes.keys()
         assert array.indexes.keys() == expected_indexes.keys()
-        assert all([isinstance(idx, pd.Index) for idx in array.indexes.values()])
-        assert all([isinstance(idx, Index) for idx in array.xindexes.values()])
+        assert all(isinstance(idx, pd.Index) for idx in array.indexes.values())
+        assert all(isinstance(idx, Index) for idx in array.xindexes.values())
         for k in expected_indexes:
             assert array.xindexes[k].equals(expected_xindexes[k])
             assert array.indexes[k].equals(expected_indexes[k])

@@ -370,7 +370,7 @@ def _get_func_args(func, param_names):
     else:
         params = list(func_args)[1:]
         if any(
-            [(p.kind in [p.VAR_POSITIONAL, p.VAR_KEYWORD]) for p in func_args.values()]
+            (p.kind in [p.VAR_POSITIONAL, p.VAR_KEYWORD]) for p in func_args.values()
         ):
             raise ValueError(
                 "`param_names` must be provided because `func` takes variable length arguments."
@@ -1686,7 +1686,7 @@ class Dataset(
                     f"Variables {missing_vars} in new values"
                     f" not available in original dataset:\n{self}"
                 )
-        elif not any([isinstance(value, t) for t in [DataArray, Number, str]]):
+        elif not any(isinstance(value, t) for t in [DataArray, Number, str]):
             raise TypeError(
                 "Dataset assignment only accepts DataArrays, Datasets, and scalars."
             )

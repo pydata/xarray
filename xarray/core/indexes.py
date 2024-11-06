@@ -880,7 +880,7 @@ def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"
     either share the same (single) dimension or each have a different dimension.
 
     """
-    if any([var.ndim != 1 for var in variables.values()]):
+    if any(var.ndim != 1 for var in variables.values()):
         raise ValueError("PandasMultiIndex only accepts 1-dimensional variables")
 
     dims = {var.dims for var in variables.values()}
@@ -1208,7 +1208,7 @@ class PandasMultiIndex(PandasIndex):
         indexer: int | slice | np.ndarray | Variable | DataArray
 
         # label(s) given for multi-index level(s)
-        if all([lbl in self.index.names for lbl in labels]):
+        if all(lbl in self.index.names for lbl in labels):
             label_values = {}
             for k, v in labels.items():
                 label_array = normalize_label(v, dtype=self.level_coords_dtype[k])
@@ -1221,7 +1221,7 @@ class PandasMultiIndex(PandasIndex):
                         f"available along coordinate {k!r} (multi-index level)"
                     ) from err
 
-            has_slice = any([isinstance(v, slice) for v in label_values.values()])
+            has_slice = any(isinstance(v, slice) for v in label_values.values())
 
             if len(label_values) == self.index.nlevels and not has_slice:
                 indexer = self.index.get_loc(
