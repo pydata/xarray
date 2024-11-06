@@ -599,7 +599,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
 class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and outer indexing lazy."""
 
-    __slots__ = ("array", "key", "_shape")
+    __slots__ = ("_shape", "array", "key")
 
     def __init__(self, array: Any, key: ExplicitIndexer | None = None):
         """
@@ -779,7 +779,7 @@ def _wrap_numpy_scalars(array):
 
 
 class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
-    __slots__ = ("array", "_copied")
+    __slots__ = ("_copied", "array")
 
     def __init__(self, array: duckarray[Any, Any]):
         self.array = as_indexable(array)
@@ -1658,7 +1658,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
 
-    __slots__ = ("array", "_dtype")
+    __slots__ = ("_dtype", "array")
 
     array: pd.Index
     _dtype: np.dtype
@@ -1825,7 +1825,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
     the same multi-index).
     """
 
-    __slots__ = ("array", "_dtype", "level", "adapter")
+    __slots__ = ("_dtype", "adapter", "array", "level")
 
     array: pd.MultiIndex
     _dtype: np.dtype

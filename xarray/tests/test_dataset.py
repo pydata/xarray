@@ -684,7 +684,7 @@ class TestDataset:
         assert isinstance(ds.dims, utils.Frozen)
         # TODO change after deprecation cycle in GH #8500 is complete
         assert isinstance(ds.dims.mapping, dict)
-        assert type(ds.dims.mapping) is dict  # noqa: E721
+        assert type(ds.dims.mapping) is dict
         with pytest.warns(
             FutureWarning,
             match=" To access a mapping from dimension names to lengths, please use `Dataset.sizes`",
@@ -3069,7 +3069,7 @@ class TestDataset:
                 renamed[k].variable.to_base_variable(),
             )
             assert v.encoding == renamed[k].encoding
-            assert type(v) is type(renamed.variables[k])  # noqa: E721
+            assert type(v) is type(renamed.variables[k])
 
         assert "var1" not in renamed
         assert "dim2" not in renamed
