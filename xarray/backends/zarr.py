@@ -1718,7 +1718,7 @@ def _get_open_params(
             # for new data, we use a better default
             use_zarr_fill_value_as_mask = False
         else:
-            # this was the default for v2 and shold apply to most existing Zarr data
+            # this was the default for v2 and should apply to most existing Zarr data
             use_zarr_fill_value_as_mask = True
     return (
         zarr_group,

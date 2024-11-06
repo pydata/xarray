@@ -274,7 +274,7 @@ contain another two subgroups, named ``fine`` and ``coarse``.
 The (sub)subgroups ``fine`` and ``coarse`` contain two very similar datasets.  They both have an ``"x"``
 dimension, but the dimension is of different lengths in each group, which makes the data in each group
 unalignable.  In the root group we placed some completely unrelated information, in order to show how a tree can
-store heterogenous data.
+store heterogeneous data.
 
 Remember to keep unalignable dimensions in sibling groups because a DataTree inherits coordinates down through its
 child nodes.  You can see this inheritance in the above representation of the DataTree.  The coordinates
