@@ -1073,8 +1073,7 @@ def contains_only_chunked_or_numpy(obj) -> bool:
 
     return all(
         [
-            isinstance(var._data, ExplicitlyIndexed)
-            or isinstance(var._data, np.ndarray)
+            isinstance(var._data, ExplicitlyIndexed | np.ndarray)
             or is_chunked_array(var._data)
             for var in obj._variables.values()
         ]
