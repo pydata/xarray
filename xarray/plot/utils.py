@@ -917,7 +917,7 @@ def _process_cmap_cbar_kwargs(
         # Leave user to specify cmap settings for surface plots
         kwargs["cmap"] = cmap
         return {
-            k: kwargs.get(k, None)
+            k: kwargs.get(k)
             for k in ["vmin", "vmax", "cmap", "extend", "levels", "norm"]
         }, {}
 
@@ -1828,7 +1828,7 @@ def _guess_coords_to_plot(
         default_guess, available_coords, ignore_guess_kwargs, strict=False
     ):
         if coords_to_plot.get(k, None) is None and all(
-            kwargs.get(ign_kw, None) is None for ign_kw in ign_kws
+            kwargs.get(ign_kw) is None for ign_kw in ign_kws
         ):
             coords_to_plot[k] = dim
 
