@@ -5606,7 +5606,7 @@ class Dataset(
         new_indexes, clean_index = index.unstack()
         indexes.update(new_indexes)
 
-        for _name, idx in new_indexes.items():
+        for idx in new_indexes.values():
             variables.update(idx.create_variables(index_vars))
 
         for name, var in self.variables.items():
@@ -5647,7 +5647,7 @@ class Dataset(
         indexes.update(new_indexes)
 
         new_index_variables = {}
-        for _name, idx in new_indexes.items():
+        for idx in new_indexes.values():
             new_index_variables.update(idx.create_variables(index_vars))
 
         new_dim_sizes = {k: v.size for k, v in new_index_variables.items()}
