@@ -5,10 +5,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from xarray.core import duck_array_ops
-from xarray.core.types import Dims, Self
+
+if TYPE_CHECKING:
+    from xarray.core.types import Dims, Self
 
 
 class NamedArrayAggregations:

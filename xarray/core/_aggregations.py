@@ -9,12 +9,12 @@ from typing import TYPE_CHECKING, Any
 
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
-from xarray.core.types import Dims, Self
 from xarray.core.utils import contains_only_chunked_or_numpy, module_available
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.types import Dims, Self
 
 flox_available = module_available("flox")
 

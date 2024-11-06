@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from types import ModuleType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -18,7 +18,9 @@ from xarray.namedarray._typing import (
     _SupportsImag,
     _SupportsReal,
 )
-from xarray.namedarray.core import NamedArray
+
+if TYPE_CHECKING:
+    from xarray.namedarray.core import NamedArray
 
 
 def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:

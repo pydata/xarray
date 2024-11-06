@@ -23,7 +23,6 @@ from xarray.backends.common import (
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
 from xarray.core.treenode import NodePath
-from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
     HiddenKeyDict,
@@ -43,6 +42,7 @@ if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
+    from xarray.core.types import ZarrWriteModes
 
 
 def _get_mappers(*, storage_options, store, chunk_store):

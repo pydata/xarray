@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import formatting
-from xarray.core.alignment import Aligner
 from xarray.core.indexes import (
     Index,
     Indexes,
@@ -33,6 +32,7 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
 
 if TYPE_CHECKING:
+    from xarray.core.alignment import Aligner
     from xarray.core.common import DataWithCoords
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset

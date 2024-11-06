@@ -18,7 +18,6 @@ from packaging.version import Version
 from xarray.core import duck_array_ops
 from xarray.core.nputils import NumpyVIndexAdapter
 from xarray.core.options import OPTIONS
-from xarray.core.types import T_Xarray
 from xarray.core.utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
@@ -35,7 +34,7 @@ if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
     from xarray.core.indexes import Index
-    from xarray.core.types import Self
+    from xarray.core.types import Self, T_Xarray
     from xarray.core.variable import Variable
     from xarray.namedarray._typing import _Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint

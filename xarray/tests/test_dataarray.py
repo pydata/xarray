@@ -7,7 +7,7 @@ import warnings
 from collections.abc import Hashable
 from copy import deepcopy
 from textwrap import dedent
-from typing import Any, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -35,7 +35,6 @@ from xarray.core import dtypes
 from xarray.core.common import full_like
 from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
-from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
@@ -60,6 +59,9 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
+
+if TYPE_CHECKING:
+    from xarray.core.types import QueryEngineOptions, QueryParserOptions
 
 try:
     from pandas.errors import UndefinedVariableError

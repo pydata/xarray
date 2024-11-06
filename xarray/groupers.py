@@ -23,16 +23,18 @@ from xarray.core.dataarray import DataArray
 from xarray.core.duck_array_ops import isnull
 from xarray.core.groupby import T_Group, _DummyGroup
 from xarray.core.indexes import safe_cast_to_index
-from xarray.core.resample_cftime import CFTimeGrouper
-from xarray.core.types import (
-    Bins,
-    DatetimeLike,
-    GroupIndices,
-    ResampleCompatible,
-    SideOptions,
-)
 from xarray.core.variable import Variable
 from xarray.namedarray.pycompat import is_chunked_array
+
+if TYPE_CHECKING:
+    from xarray.core.resample_cftime import CFTimeGrouper
+    from xarray.core.types import (
+        Bins,
+        DatetimeLike,
+        GroupIndices,
+        ResampleCompatible,
+        SideOptions,
+    )
 
 __all__ = [
     "EncodedGroups",

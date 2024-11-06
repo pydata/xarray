@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from itertools import combinations, permutations, product
-from typing import cast, get_args
+from typing import TYPE_CHECKING, cast, get_args
 
 import numpy as np
 import pandas as pd
@@ -27,6 +27,9 @@ from xarray.tests import (
     requires_scipy,
 )
 from xarray.tests.test_dataset import create_test_data
+
+if TYPE_CHECKING:
+    from xarray.core.types import InterpOptions
 
 try:
     import scipy

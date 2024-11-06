@@ -27,7 +27,6 @@ import numpy as np
 import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
-from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import alignment, computation, dtypes, indexing, ops, utils
 from xarray.core._aggregations import DataArrayAggregations
 from xarray.core.accessor_dt import CombinedDatetimelikeAccessor
@@ -95,6 +94,7 @@ if TYPE_CHECKING:
 
     from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from xarray.coding.cftimeindex import CFTimeIndex
     from xarray.core.groupby import DataArrayGroupBy
     from xarray.core.resample import DataArrayResample
     from xarray.core.rolling import DataArrayCoarsen, DataArrayRolling

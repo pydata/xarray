@@ -42,14 +42,15 @@ from xarray.core.combine import (
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.datatree import DataTree
-from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
-from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 from xarray.core.utils import is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
 
 if TYPE_CHECKING:
+    from xarray.core.indexes import Index
+    from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
+
     try:
         from dask.delayed import Delayed
     except ImportError:

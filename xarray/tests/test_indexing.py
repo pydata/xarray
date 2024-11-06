@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -10,7 +10,6 @@ import pytest
 from xarray import DataArray, Dataset, Variable
 from xarray.core import indexing, nputils
 from xarray.core.indexes import PandasIndex, PandasMultiIndex
-from xarray.core.types import T_Xarray
 from xarray.tests import (
     IndexerMaker,
     ReturnItem,
@@ -19,6 +18,9 @@ from xarray.tests import (
     raise_if_dask_computes,
     requires_dask,
 )
+
+if TYPE_CHECKING:
+    from xarray.core.types import T_Xarray
 
 B = IndexerMaker(indexing.BasicIndexer)
 

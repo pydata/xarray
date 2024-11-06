@@ -9,12 +9,12 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 import numpy as np
 from packaging.version import Version
 
-from xarray.namedarray._typing import ErrorOptionsWithWarn, _DimsLike
-
 if TYPE_CHECKING:
     from typing import TypeGuard
 
     from numpy.typing import NDArray
+
+    from xarray.namedarray._typing import ErrorOptionsWithWarn, _DimsLike
 
     try:
         from dask.array.core import Array as DaskArray

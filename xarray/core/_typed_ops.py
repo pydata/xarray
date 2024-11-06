@@ -9,19 +9,19 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, overload
 
 from xarray.core import nputils, ops
-from xarray.core.types import (
-    DaCompatible,
-    DsCompatible,
-    DtCompatible,
-    Self,
-    T_Xarray,
-    VarCompatible,
-)
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
+    from xarray.core.types import (
+        DaCompatible,
+        DsCompatible,
+        DtCompatible,
+        Self,
+        T_Xarray,
+        VarCompatible,
+    )
     from xarray.core.types import T_DataArray as T_DA
 
 

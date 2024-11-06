@@ -17,7 +17,6 @@ from xarray.core.merge import (
     merge_attrs,
     merge_collected,
 )
-from xarray.core.types import T_DataArray, T_Dataset, T_Variable
 from xarray.core.variable import Variable
 from xarray.core.variable import concat as concat_vars
 
@@ -27,6 +26,9 @@ if TYPE_CHECKING:
         CompatOptions,
         ConcatOptions,
         JoinOptions,
+        T_DataArray,
+        T_Dataset,
+        T_Variable,
     )
 
     T_DataVars = Union[ConcatOptions, Iterable[Hashable]]

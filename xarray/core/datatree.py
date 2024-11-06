@@ -37,7 +37,6 @@ from xarray.core.indexes import Index, Indexes
 from xarray.core.merge import dataset_update_method
 from xarray.core.options import OPTIONS as XR_OPTS
 from xarray.core.treenode import NamedNode, NodePath, zip_subtrees
-from xarray.core.types import Self
 from xarray.core.utils import (
     Default,
     FilteredMapping,
@@ -70,6 +69,7 @@ if TYPE_CHECKING:
         ErrorOptions,
         ErrorOptionsWithWarn,
         NetcdfWriteModes,
+        Self,
         T_ChunkDimFreq,
         T_ChunksFreq,
         ZarrWriteModes,

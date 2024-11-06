@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import operator
 import warnings
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import numpy as np
@@ -14,7 +15,6 @@ import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core.alignment import broadcast
 from xarray.core.groupby import _consolidate_slices
-from xarray.core.types import InterpOptions, ResampleCompatible
 from xarray.groupers import (
     BinGrouper,
     EncodedGroups,
@@ -41,6 +41,9 @@ from xarray.tests import (
     requires_pandas_ge_2_2,
     requires_scipy,
 )
+
+if TYPE_CHECKING:
+    from xarray.core.types import InterpOptions, ResampleCompatible
 
 
 @pytest.fixture

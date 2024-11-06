@@ -11,11 +11,10 @@ from typing import (
     TypeVar,
 )
 
-from xarray.core.types import Self
 from xarray.core.utils import Frozen, is_dict_like
 
 if TYPE_CHECKING:
-    from xarray.core.types import T_DataArray
+    from xarray.core.types import Self, T_DataArray
 
 
 class InvalidTreeError(Exception):

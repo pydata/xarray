@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 from importlib.metadata import EntryPoint
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pytest
 
 from xarray import set_options
-from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
-from xarray.namedarray._typing import _Chunks
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import (
     ChunkManagerEntrypoint,
@@ -18,6 +16,10 @@ from xarray.namedarray.parallelcompat import (
     load_chunkmanagers,
 )
 from xarray.tests import has_dask, requires_dask
+
+if TYPE_CHECKING:
+    from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
+    from xarray.namedarray._typing import _Chunks
 
 
 class DummyChunkedArray(np.ndarray):

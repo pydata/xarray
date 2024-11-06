@@ -55,10 +55,9 @@ from xarray.coding.cftime_offsets import (
     to_offset,
 )
 from xarray.coding.cftimeindex import CFTimeIndex
-from xarray.core.types import SideOptions
 
 if typing.TYPE_CHECKING:
-    from xarray.core.types import CFTimeDatetime, ResampleCompatible
+    from xarray.core.types import CFTimeDatetime, ResampleCompatible, SideOptions
 
 
 class CFTimeGrouper:

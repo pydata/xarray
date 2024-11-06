@@ -8,7 +8,7 @@ from collections.abc import Hashable
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -39,7 +39,6 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.types import ArrayLike
 from xarray.core.utils import is_scalar
 from xarray.groupers import TimeResampler
 from xarray.namedarray.pycompat import array_type, integer_types
@@ -68,6 +67,9 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
+
+if TYPE_CHECKING:
+    from xarray.core.types import ArrayLike
 
 try:
     from pandas.errors import UndefinedVariableError
