@@ -305,7 +305,7 @@ def test_interpolate_nd(case: int, method: InterpnOptions, nd_interp_coords) -> 
     ydestnp = nd_interp_coords["ydestnp"]
     zdestnp = nd_interp_coords["zdestnp"]
     grid_grid_points = nd_interp_coords["grid_grid_points"]
-    # the presence/absence of z cordinate may affect nd interpolants, even when the
+    # the presence/absence of z coordinate may affect nd interpolants, even when the
     # coordinate is unchanged
     actual = da.interp(x=xdestnp, y=ydestnp, z=zdestnp, method=method)
     expected_data = scipy.interpolate.interpn(

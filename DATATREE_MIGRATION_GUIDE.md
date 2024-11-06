@@ -41,7 +41,7 @@ A number of other API changes have been made, which should only require minor mo
 - The method `DataTree.to_dataset()` still exists but now has different options for controlling which variables are present on the resulting `Dataset`, e.g. `inherit=True/False`.
 - `DataTree.copy()` also has a new `inherit` keyword argument for controlling whether or not coordinates defined on parents are copied (only relevant when copying a non-root node).
 - The `DataTree.parent` property is now read-only. To assign a ancestral relationships directly you must instead use the `.children` property on the parent node, which remains settable.
-- Similarly the `parent` kwarg has been removed from the `DataTree.__init__` constuctor.
+- Similarly the `parent` kwarg has been removed from the `DataTree.__init__` constructor.
 - DataTree objects passed to the `children` kwarg in `DataTree.__init__` are now shallow-copied.
 - `DataTree.as_array` has been replaced by `DataTree.to_dataarray`.
 - A number of methods which were not well tested have been (temporarily) disabled. In general we have tried to only keep things that are known to work, with the plan to increase API surface incrementally after release.

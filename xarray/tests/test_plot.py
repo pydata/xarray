@@ -3279,7 +3279,7 @@ def test_maybe_gca() -> None:
         existing_axes = plt.axes()
         ax = _maybe_gca(aspect=1)
 
-        # re-uses the existing axes
+        # reuses the existing axes
         assert existing_axes == ax
         # kwargs are ignored when reusing axes
         assert ax.get_aspect() == "auto"

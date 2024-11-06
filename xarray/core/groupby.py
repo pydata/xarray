@@ -1003,7 +1003,7 @@ class GroupBy(Generic[T_Xarray]):
             # Note that `has_missing_groups=False` when `self._by_chunked is True`.
             # We *choose* to always do the masking, so that behaviour is predictable
             # in some way. The real solution is to expose fill_value as a kwarg,
-            # and set appopriate defaults :/.
+            # and set appropriate defaults :/.
             kwargs.setdefault("fill_value", np.nan)
             kwargs.setdefault("min_count", 1)
 
