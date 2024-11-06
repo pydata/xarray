@@ -900,7 +900,7 @@ def test_interpolate_chunk_1d(
     It should do a series of 1d interpolation
     """
 
-    if method in ["cubic", "pchip"] and interp_ndim == 3:
+    if method in ["cubic", "pchip", "quintic"] and interp_ndim == 3:
         pytest.skip("Too slow.")
 
     # 3d non chunked data
