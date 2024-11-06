@@ -253,6 +253,7 @@ extend-select = [
   "W",
   "TID", # flake8-tidy-imports (absolute imports)
   "I", # isort
+  "PGH", # pygrep-hooks
   "UP", # Pyupgrade
 ]
 
