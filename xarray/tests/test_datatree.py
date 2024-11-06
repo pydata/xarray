@@ -119,7 +119,7 @@ class TestFamilyTree:
 class TestNames:
     def test_child_gets_named_on_attach(self) -> None:
         sue = DataTree()
-        mary = DataTree(children={"Sue": sue})  # noqa
+        mary = DataTree(children={"Sue": sue})
         assert mary.children["Sue"].name == "Sue"
 
     def test_dataset_containing_slashes(self) -> None:
@@ -515,7 +515,7 @@ class TestSetItem:
     def test_grafted_subtree_retains_name(self) -> None:
         subtree = DataTree(name="original_subtree_name")
         root = DataTree(name="root")
-        root["new_subtree_name"] = subtree  # noqa
+        root["new_subtree_name"] = subtree
         assert subtree.name == "original_subtree_name"
 
     def test_setitem_new_empty_node(self) -> None:

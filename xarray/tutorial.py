@@ -56,10 +56,10 @@ def _check_netcdf_engine_installed(name):
     version = file_formats.get(name)
     if version == 3:
         try:
-            import scipy  # noqa
+            import scipy  # noqa: F401
         except ImportError:
             try:
-                import netCDF4  # noqa
+                import netCDF4  # noqa: F401
             except ImportError as err:
                 raise ImportError(
                     f"opening tutorial dataset {name} requires either scipy or "
@@ -67,10 +67,10 @@ def _check_netcdf_engine_installed(name):
                 ) from err
     if version == 4:
         try:
-            import h5netcdf  # noqa
+            import h5netcdf  # noqa: F401
         except ImportError:
             try:
-                import netCDF4  # noqa
+                import netCDF4  # noqa: F401
             except ImportError as err:
                 raise ImportError(
                     f"opening tutorial dataset {name} requires either h5netcdf "
@@ -149,7 +149,7 @@ def open_dataset(
             if engine is None:
                 engine = "cfgrib"
                 try:
-                    import cfgrib  # noqa
+                    import cfgrib  # noqa: F401
                 except ImportError as e:
                     raise ImportError(
                         "Reading this tutorial dataset requires the cfgrib package."
