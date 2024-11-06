@@ -1108,7 +1108,7 @@ def create_coords_with_default_indexes(
 
     # extract and merge coordinates and indexes from input DataArrays
     if dataarray_coords:
-        prioritized = {k: (v, indexes.get(k, None)) for k, v in variables.items()}
+        prioritized = {k: (v, indexes.get(k)) for k, v in variables.items()}
         variables, indexes = merge_coordinates_without_align(
             dataarray_coords + [new_coords],
             prioritized=prioritized,

@@ -176,7 +176,7 @@ class NumpyVIndexAdapter:
 
 def _create_method(name, npmodule=np) -> Callable:
     def f(values, axis=None, **kwargs):
-        dtype = kwargs.get("dtype", None)
+        dtype = kwargs.get("dtype")
         bn_func = getattr(bn, name, None)
 
         if (
