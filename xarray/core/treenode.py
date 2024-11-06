@@ -317,7 +317,7 @@ class TreeNode(Generic[Tree]):
             DeprecationWarning,
             stacklevel=2,
         )
-        return tuple((self, *self.parents))
+        return (self, *self.parents)
 
     @property
     def lineage(self: Tree) -> tuple[Tree, ...]:
@@ -349,7 +349,7 @@ class TreeNode(Generic[Tree]):
             DeprecationWarning,
             stacklevel=2,
         )
-        return tuple((*reversed(self.parents), self))
+        return (*reversed(self.parents), self)
 
     @property
     def root(self: Tree) -> Tree:
@@ -380,7 +380,7 @@ class TreeNode(Generic[Tree]):
 
         Leaf nodes are defined as nodes which have no children.
         """
-        return tuple([node for node in self.subtree if node.is_leaf])
+        return tuple(node for node in self.subtree if node.is_leaf)
 
     @property
     def siblings(self: Tree) -> dict[str, Tree]:
