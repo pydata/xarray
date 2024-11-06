@@ -733,23 +733,25 @@ def test_encode_time_bounds() -> None:
 
     encoded, _ = cf_encoder(ds.variables, ds.attrs)
     assert_equal(encoded["time_bounds"], expected["time_bounds"])
-    assert "calendar" not in encoded["time_bounds"].attrs
-    assert "units" not in encoded["time_bounds"].attrs
 
     # if time_bounds attrs are same as time attrs, it doesn't matter
     ds.time_bounds.encoding = {"calendar": "noleap", "units": "days since 2000-01-01"}
     encoded, _ = cf_encoder({k: v for k, v in ds.variables.items()}, ds.attrs)
     assert_equal(encoded["time_bounds"], expected["time_bounds"])
-    assert "calendar" not in encoded["time_bounds"].attrs
-    assert "units" not in encoded["time_bounds"].attrs
 
     # for CF-noncompliant case of time_bounds attrs being different from
     # time attrs; preserve them for faithful roundtrip
-    ds.time_bounds.encoding = {"calendar": "noleap", "units": "days since 1849-01-01"}
+    ds.time_bounds.encoding = {
+        "calendar": "gregorian",
+        "units": "days since 1849-01-01",
+    }
     encoded, _ = cf_encoder({k: v for k, v in ds.variables.items()}, ds.attrs)
     with pytest.raises(AssertionError):
         assert_equal(encoded["time_bounds"], expected["time_bounds"])
-    assert "calendar" not in encoded["time_bounds"].attrs
+    assert encoded["time"].attrs["calendar"] == ds.time.encoding["calendar"]
+    assert (
+        encoded["time_bounds"].attrs["calendar"] == ds.time_bounds.encoding["calendar"]
+    )
     assert encoded["time_bounds"].attrs["units"] == ds.time_bounds.encoding["units"]
 
     ds.time.encoding = {}
