@@ -64,7 +64,7 @@ jobs:
       - name: Set up conda environment
         uses: mamba-org/setup-micromamba@v2
         with:
-          MICROMAMBA_VERSION: ${{env.MICROMAMBA_VERSION}}
+          micromamba-version: ${{env.MICROMAMBA_VERSION}}
           environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests
           create-args: >-
@@ -121,7 +121,7 @@ jobs:
       - name: Set up conda environment
         uses: mamba-org/setup-micromamba@v2
         with:
-          MICROMAMBA_VERSION: ${{env.MICROMAMBA_VERSION}}
+          micromamba-version: ${{env.MICROMAMBA_VERSION}}
           environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests
           create-args: >-
