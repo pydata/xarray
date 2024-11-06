@@ -63,6 +63,7 @@ jobs:
       - name: Setup micromamba
         uses: mamba-org/setup-micromamba@v2
         with:
+          MICROMAMBA_VERSION: "2.0.2-2"
           environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests
           create-args: >-

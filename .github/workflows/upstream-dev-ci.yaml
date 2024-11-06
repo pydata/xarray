@@ -17,6 +17,7 @@ concurrency:
 
 env:
   FORCE_COLOR: 3
+  MICROMAMBA_VERSION: "2.0.2-2"
 
 jobs:
   detect-ci-trigger:
@@ -63,6 +64,7 @@ jobs:
       - name: Set up conda environment
         uses: mamba-org/setup-micromamba@v2
         with:
+          MICROMAMBA_VERSION: ${{env.MICROMAMBA_VERSION}}
           environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests
           create-args: >-
@@ -119,6 +121,7 @@ jobs:
       - name: Set up conda environment
         uses: mamba-org/setup-micromamba@v2
         with:
+          MICROMAMBA_VERSION: ${{env.MICROMAMBA_VERSION}}
           environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests
           create-args: >-
