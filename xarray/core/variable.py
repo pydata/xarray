@@ -695,7 +695,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                     if self.shape[self.get_axis_num(dim)] != len(k):
                         raise IndexError(
                             f"Boolean array size {len(k):d} is used to index array "
-                            f"with shape {str(self.shape):s}."
+                            f"with shape {self.shape}."
                         )
                     if k.ndim > 1:
                         raise IndexError(
@@ -713,7 +713,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                         raise IndexError(
                             "Boolean indexer should be unlabeled or on the "
                             "same dimension to the indexed array. Indexer is "
-                            f"on {str(k.dims):s} but the target dimension is {dim:s}."
+                            f"on {k.dims} but the target dimension is {dim}."
                         )
 
     def _broadcast_indexes_outer(self, key):

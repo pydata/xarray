@@ -6430,7 +6430,7 @@ class Dataset(
         """
         # Raise error if list is passed as dim
         if (len(dim) > 0) and (isinstance(dim[0], list)):
-            list_fix = [f"{repr(x)}" if isinstance(x, str) else f"{x}" for x in dim[0]]
+            list_fix = [f"{x!r}" if isinstance(x, str) else f"{x}" for x in dim[0]]
             raise TypeError(
                 f'transpose requires dim to be passed as multiple arguments. Expected `{", ".join(list_fix)}`. Received `{dim[0]}` instead'
             )
@@ -7800,7 +7800,7 @@ class Dataset(
             }
         except KeyError as e:
             raise ValueError(
-                f"cannot convert dict without the key '{str(e.args[0])}'"
+                f"cannot convert dict without the key '{e.args[0]}'"
             ) from e
         obj = cls(variable_dict)
 
@@ -10155,7 +10155,7 @@ class Dataset(
             if name is _THIS_ARRAY:
                 name = ""
             else:
-                name = f"{str(name)}_"
+                name = f"{name}_"
 
             input_core_dims = [reduce_dims_ for _ in range(n_coords + 1)]
             input_core_dims.extend(

@@ -4537,7 +4537,7 @@ class DataArray(
             except KeyError as e:
                 raise ValueError(
                     "cannot convert dict when coords are missing the key "
-                    f"'{str(e.args[0])}'"
+                    f"'{e.args[0]}'"
                 ) from e
         try:
             data = d["data"]
