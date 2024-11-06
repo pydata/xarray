@@ -870,7 +870,7 @@ def _infer_interval_breaks(coord, axis=0, scale=None, check_monotonic=False):
         if (coord <= 0).any():
             raise ValueError(
                 "Found negative or zero value in coordinates. "
-                + "Coordinates must be positive on logscale plots."
+                "Coordinates must be positive on logscale plots."
             )
         coord = np.log10(coord)
 

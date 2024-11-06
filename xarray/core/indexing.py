@@ -1640,7 +1640,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         num_non_slices = sum(0 if isinstance(k, slice) else 1 for k in indexer.tuple)
         if num_non_slices > 1:
             raise NotImplementedError(
-                "xarray can't set arrays with multiple " "array indices to dask yet."
+                "xarray can't set arrays with multiple array indices to dask yet."
             )
         self.array[indexer.tuple] = value
 

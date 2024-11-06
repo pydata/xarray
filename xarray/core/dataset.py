@@ -4772,9 +4772,7 @@ class Dataset(
             if d in self.dims:
                 raise ValueError(f"Dimension {d} already exists.")
             if d in self._variables and not utils.is_scalar(self._variables[d]):
-                raise ValueError(
-                    f"{d} already exists as coordinate or" " variable name."
-                )
+                raise ValueError(f"{d} already exists as coordinate or variable name.")
 
         variables: dict[Hashable, Variable] = {}
         indexes: dict[Hashable, Index] = dict(self._indexes)
@@ -4801,7 +4799,7 @@ class Dataset(
                 pass  # Do nothing if the dimensions value is just an int
             else:
                 raise TypeError(
-                    f"The value of new dimension {k} must be " "an iterable or an int"
+                    f"The value of new dimension {k} must be an iterable or an int"
                 )
 
         for k, v in self._variables.items():
