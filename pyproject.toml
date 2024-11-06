@@ -251,6 +251,7 @@ extend-select = [
   "F", # Pyflakes
   "E", # Pycodestyle
   "W",
+  "TCH", # flake8-type-checking
   "TID", # flake8-tidy-imports (absolute imports)
   "I", # isort
   "PGH", # pygrep-hooks
