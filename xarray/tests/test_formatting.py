@@ -1142,7 +1142,7 @@ Dimensions without coordinates: x
     actual = repr(ds)
     expected = f"""
 <xarray.DataArray (x: 1)> Size: {array.dtype.itemsize}B
-{repr(array)}
+{array!r}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
@@ -1152,7 +1152,7 @@ Dimensions without coordinates: x
     actual = repr(ds)
     expected = f"""
 <xarray.DataArray (x: 1)> Size: 4B
-{repr(array)}
+{array!r}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
@@ -1162,7 +1162,7 @@ Dimensions without coordinates: x
     actual = repr(ds)
     expected = f"""
 <xarray.DataArray (x: 1)> Size: 8B
-{repr(array)}
+{array!r}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected

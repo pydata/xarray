@@ -245,6 +245,12 @@ ignore = [
   "E501",
   "E731",
   "UP007",
+  "RUF001",
+  "RUF002",
+  "RUF003",
+  "RUF005",
+  "RUF007",
+  "RUF012",
 ]
 extend-select = [
   "B", # flake8-bugbear
@@ -254,6 +260,7 @@ extend-select = [
   "TID", # flake8-tidy-imports (absolute imports)
   "I", # isort
   "PGH", # pygrep-hooks
+  "RUF",
   "UP", # Pyupgrade
 ]
 

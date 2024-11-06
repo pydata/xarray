@@ -173,7 +173,7 @@ class _DummyGroup(Generic[T_Xarray]):
     Should not be user visible.
     """
 
-    __slots__ = ("name", "coords", "size", "dataarray")
+    __slots__ = ("coords", "dataarray", "name", "size")
 
     def __init__(self, obj: T_Xarray, name: Hashable, coords) -> None:
         self.name = name
@@ -567,24 +567,24 @@ class GroupBy(Generic[T_Xarray]):
     """
 
     __slots__ = (
+        "_by_chunked",
+        "_codes",
+        "_dims",
         "_group_dim",
-        "groupers",
-        "_obj",
-        "_restore_coord_dims",
         # cached properties
         "_groups",
-        "_dims",
-        "_sizes",
+        "_inserted_dims",
         "_len",
-        "_by_chunked",
+        "_obj",
         # Save unstacked object for flox
         "_original_obj",
-        "_codes",
+        "_restore_coord_dims",
+        "_sizes",
+        "_stacked_dim",
+        "encoded",
         # stack nD vars
         "group1d",
-        "_stacked_dim",
-        "_inserted_dims",
-        "encoded",
+        "groupers",
     )
     _obj: T_Xarray
     groupers: tuple[ResolvedGrouper, ...]

@@ -205,8 +205,8 @@ class RenderDataTree:
         classname = self.__class__.__name__
         args = [
             repr(self.node),
-            f"style={repr(self.style)}",
-            f"childiter={repr(self.childiter)}",
+            f"style={self.style!r}",
+            f"childiter={self.childiter!r}",
         ]
         return f"{classname}({', '.join(args)})"
 

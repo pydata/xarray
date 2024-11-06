@@ -182,7 +182,7 @@ def encode_zarr_attr_value(value):
 
 
 class ZarrArrayWrapper(BackendArray):
-    __slots__ = ("dtype", "shape", "_array")
+    __slots__ = ("_array", "dtype", "shape")
 
     def __init__(self, zarr_array):
         # some callers attempt to evaluate an array if an `array` property exists on the object.
@@ -598,18 +598,18 @@ class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr"""
 
     __slots__ = (
-        "zarr_group",
         "_append_dim",
+        "_close_store_on_close",
         "_consolidate_on_close",
         "_group",
         "_mode",
         "_read_only",
-        "_synchronizer",
-        "_write_region",
         "_safe_chunks",
-        "_write_empty",
-        "_close_store_on_close",
+        "_synchronizer",
         "_use_zarr_fill_value_as_mask",
+        "_write_empty",
+        "_write_region",
+        "zarr_group",
     )
 
     @classmethod

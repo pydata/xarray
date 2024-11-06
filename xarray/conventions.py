@@ -368,13 +368,13 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
             and attrs["bounds"] in variables
         ):
             emit_user_level_warning(
-                f"Variable {name:s} has datetime type and a "
-                f"bounds variable but {name:s}.encoding does not have "
-                f"units specified. The units encodings for {name:s} "
+                f"Variable {name} has datetime type and a "
+                f"bounds variable but {name}.encoding does not have "
+                f"units specified. The units encodings for {name} "
                 f"and {attrs['bounds']} will be determined independently "
                 "and may not be equal, counter to CF-conventions. "
                 "If this is a concern, specify a units encoding for "
-                f"{name:s} before writing to a file.",
+                f"{name} before writing to a file.",
             )
 
         if has_date_units and "bounds" in attrs:
@@ -486,9 +486,7 @@ def decode_cf_variables(
                             for role_or_name in part.split()
                         ]
                         if len(roles_and_names) % 2 == 1:
-                            emit_user_level_warning(
-                                f"Attribute {attr_name:s} malformed"
-                            )
+                            emit_user_level_warning(f"Attribute {attr_name} malformed")
                         var_names = roles_and_names[1::2]
                     if all(var_name in variables for var_name in var_names):
                         new_vars[k].encoding[attr_name] = attr_val
@@ -500,7 +498,7 @@ def decode_cf_variables(
                             if proj_name not in variables
                         ]
                         emit_user_level_warning(
-                            f"Variable(s) referenced in {attr_name:s} not in variables: {referenced_vars_not_in_variables!s}",
+                            f"Variable(s) referenced in {attr_name} not in variables: {referenced_vars_not_in_variables}",
                         )
                     del var_attrs[attr_name]
 

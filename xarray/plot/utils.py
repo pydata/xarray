@@ -1383,10 +1383,10 @@ class _Normalize(Sequence):
 
     __slots__ = (
         "_data",
+        "_data_is_numeric",
         "_data_unique",
         "_data_unique_index",
         "_data_unique_inverse",
-        "_data_is_numeric",
         "_width",
     )
 

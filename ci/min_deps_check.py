@@ -186,7 +186,7 @@ def process_pkg(
     )
 
 
-def fmt_version(major: int, minor: int, patch: int = None) -> str:
+def fmt_version(major: int, minor: int, patch: int | None = None) -> str:
     if patch is None:
         return f"{major}.{minor}"
     else:

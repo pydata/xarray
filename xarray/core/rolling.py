@@ -64,7 +64,7 @@ class Rolling(Generic[T_Xarray]):
     xarray.DataArray.rolling
     """
 
-    __slots__ = ("obj", "window", "min_periods", "center", "dim")
+    __slots__ = ("center", "dim", "min_periods", "obj", "window")
     _attributes = ("window", "min_periods", "center", "dim")
     dim: list[Hashable]
     window: list[int]
@@ -907,12 +907,12 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
     """
 
     __slots__ = (
-        "obj",
         "boundary",
         "coord_func",
-        "windows",
+        "obj",
         "side",
         "trim_excess",
+        "windows",
     )
     _attributes = ("windows", "side", "trim_excess")
     obj: T_Xarray
