@@ -35,12 +35,12 @@ from xarray.core.variable import Variable
 from xarray.namedarray.pycompat import is_chunked_array
 
 __all__ = [
+    "BinGrouper",
     "EncodedGroups",
     "Grouper",
     "Resampler",
-    "UniqueGrouper",
-    "BinGrouper",
     "TimeResampler",
+    "UniqueGrouper",
 ]
 
 RESAMPLE_DIM = "__resample_dim__"
