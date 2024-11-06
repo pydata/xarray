@@ -14,6 +14,7 @@ concurrency:
 
 env:
   FORCE_COLOR: 3
+  micromamba_version: 2
 
 jobs:
   detect-ci-trigger:
@@ -110,13 +111,13 @@ jobs:
       - name: Setup micromamba
         uses: mamba-org/setup-micromamba@v2
         with:
+          micromamba-version: '2.0.2-2'
           environment-file: ${{ env.CONDA_ENV_FILE }}
           environment-name: xarray-tests
           cache-environment: true
           cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
           create-args: >-
             python=${{matrix.python-version}}
-            conda
 
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
@@ -131,8 +132,6 @@ jobs:
 
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
 
       - name: Import xarray
