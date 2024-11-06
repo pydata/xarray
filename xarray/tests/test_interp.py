@@ -881,9 +881,7 @@ def test_decompose(method: InterpOptions) -> None:
 
 @requires_scipy
 @requires_dask
-# quintic omitted because not enough points
-# cubic and pchip omitted because they take too long
-@pytest.mark.parametrize("method", ("linear", "slinear"))
+@pytest.mark.parametrize("method", ("linear", "nearest", "cubic", "pchip", "quintic"))
 @pytest.mark.parametrize("chunked", [True, False])
 @pytest.mark.parametrize(
     "data_ndim,interp_ndim,nscalar",
@@ -902,10 +900,13 @@ def test_interpolate_chunk_1d(
     It should do a series of 1d interpolation
     """
 
+    if method in ["cubic", "pchip"] and interp_ndim == 3:
+        pytest.skip("Too slow.")
+
     # 3d non chunked data
-    x = np.linspace(0, 1, 5)
+    x = np.linspace(0, 1, 6)
     y = np.linspace(2, 4, 7)
-    z = np.linspace(-0.5, 0.5, 11)
+    z = np.linspace(-0.5, 0.5, 8)
     da = xr.DataArray(
         data=np.sin(x[:, np.newaxis, np.newaxis])
         * np.cos(y[:, np.newaxis])
