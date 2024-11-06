@@ -77,11 +77,11 @@ class _UFuncSignature:
     """
 
     __slots__ = (
-        "input_core_dims",
-        "output_core_dims",
+        "_all_core_dims",
         "_all_input_core_dims",
         "_all_output_core_dims",
-        "_all_core_dims",
+        "input_core_dims",
+        "output_core_dims",
     )
 
     def __init__(self, input_core_dims, output_core_dims=((),)):

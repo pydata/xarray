@@ -276,7 +276,7 @@ class AbstractDataStore:
 
 
 class ArrayWriter:
-    __slots__ = ("sources", "targets", "regions", "lock")
+    __slots__ = ("lock", "regions", "sources", "targets")
 
     def __init__(self, lock=None):
         self.sources = []

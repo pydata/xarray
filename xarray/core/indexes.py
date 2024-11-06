@@ -573,7 +573,7 @@ class PandasIndex(Index):
     dim: Hashable
     coord_dtype: Any
 
-    __slots__ = ("index", "dim", "coord_dtype")
+    __slots__ = ("coord_dtype", "dim", "index")
 
     def __init__(
         self,
@@ -939,7 +939,7 @@ class PandasMultiIndex(PandasIndex):
     coord_dtype: Any
     level_coords_dtype: dict[str, Any]
 
-    __slots__ = ("index", "dim", "coord_dtype", "level_coords_dtype")
+    __slots__ = ("coord_dtype", "dim", "index", "level_coords_dtype")
 
     def __init__(self, array: Any, dim: Hashable, level_coords_dtype: Any = None):
         super().__init__(array, dim)
@@ -1451,13 +1451,13 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
     _variables: dict[Any, Variable]
 
     __slots__ = (
+        "__coord_name_id",
+        "__id_coord_names",
+        "__id_index",
+        "_dims",
         "_index_type",
         "_indexes",
         "_variables",
-        "_dims",
-        "__coord_name_id",
-        "__id_index",
-        "__id_coord_names",
     )
 
     def __init__(

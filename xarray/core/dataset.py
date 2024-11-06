@@ -684,15 +684,15 @@ class Dataset(
     _variables: dict[Hashable, Variable]
 
     __slots__ = (
+        "__weakref__",
         "_attrs",
         "_cache",
+        "_close",
         "_coord_names",
         "_dims",
         "_encoding",
-        "_close",
         "_indexes",
         "_variables",
-        "__weakref__",
     )
 
     def __init__(

@@ -379,7 +379,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     they can use more complete metadata in context of coordinate labels.
     """
 
-    __slots__ = ("_dims", "_data", "_attrs", "_encoding")
+    __slots__ = ("_attrs", "_data", "_dims", "_encoding")
 
     def __init__(
         self,

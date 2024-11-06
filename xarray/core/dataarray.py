@@ -421,13 +421,13 @@ class DataArray(
     _variable: Variable
 
     __slots__ = (
+        "__weakref__",
         "_cache",
-        "_coords",
         "_close",
+        "_coords",
         "_indexes",
         "_name",
         "_variable",
-        "__weakref__",
     )
 
     dt = utils.UncachedAccessor(CombinedDatetimelikeAccessor["DataArray"])
