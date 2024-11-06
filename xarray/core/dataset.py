@@ -1586,7 +1586,7 @@ class Dataset(
                 message = f"No variable named {key!r}. Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
                 # If someone attempts `ds['foo' , 'bar']` instead of `ds[['foo', 'bar']]`
                 if isinstance(key, tuple):
-                    message += f"\nHint: use a list to select multiple variables, for example `ds[{[d for d in key]}]`"
+                    message += f"\nHint: use a list to select multiple variables, for example `ds[{list(key)}]`"
                 raise KeyError(message) from e
 
         if utils.iterable_of_hashable(key):
@@ -4078,7 +4078,7 @@ class Dataset(
             )
             indexers.update({d: self.variables[d] for d in sdims})
 
-        obj = self if assume_sorted else self.sortby([k for k in coords])
+        obj = self if assume_sorted else self.sortby(list(coords))
 
         def maybe_variable(obj, k):
             # workaround to get variable for dimension without coordinate.

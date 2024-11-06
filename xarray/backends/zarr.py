@@ -649,7 +649,7 @@ class ZarrStore(AbstractWritableDataStore):
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
         )
-        group_paths = [node for node in _iter_zarr_groups(zarr_group, parent=group)]
+        group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
         return {
             group: cls(
                 zarr_group.get(group),

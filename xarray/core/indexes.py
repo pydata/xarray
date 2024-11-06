@@ -1268,9 +1268,7 @@ class PandasMultiIndex(PandasIndex):
                 else:
                     levels = [self.index.names[i] for i in range(len(label))]
                     indexer, new_index = self.index.get_loc_level(label, level=levels)
-                    scalar_coord_values.update(
-                        {k: v for k, v in zip(levels, label, strict=True)}
-                    )
+                    scalar_coord_values.update(dict(zip(levels, label, strict=True)))
 
             else:
                 label_array = normalize_label(label)
@@ -1371,10 +1369,9 @@ class PandasMultiIndex(PandasIndex):
         index = self.index.rename(new_names)
 
         new_dim = dims_dict.get(self.dim, self.dim)
-        new_level_coords_dtype = {
-            k: v
-            for k, v in zip(new_names, self.level_coords_dtype.values(), strict=True)
-        }
+        new_level_coords_dtype = dict(
+            zip(new_names, self.level_coords_dtype.values(), strict=True)
+        )
         return self._replace(
             index, dim=new_dim, level_coords_dtype=new_level_coords_dtype
         )
@@ -1820,7 +1817,7 @@ def _apply_indexes_fast(indexes: Indexes[Index], args: Mapping[Any, Any], func: 
     # multi-index arrays
     indexes_fast, coords = indexes._indexes, indexes._variables
 
-    new_indexes: dict[Hashable, Index] = {k: v for k, v in indexes_fast.items()}
+    new_indexes: dict[Hashable, Index] = dict(indexes_fast.items())
     new_index_variables: dict[Hashable, Variable] = {}
     for name, index in indexes_fast.items():
         coord = coords[name]
@@ -1848,7 +1845,7 @@ def _apply_indexes(
     args: Mapping[Any, Any],
     func: str,
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-    new_indexes: dict[Hashable, Index] = {k: v for k, v in indexes.items()}
+    new_indexes: dict[Hashable, Index] = dict(indexes.items())
     new_index_variables: dict[Hashable, Variable] = {}
 
     for index, index_vars in indexes.group_by_index():
