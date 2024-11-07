@@ -9,6 +9,7 @@ from __future__ import annotations
 import datetime
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from itertools import pairwise
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
@@ -496,8 +497,7 @@ class TimeResampler(Resampler):
         full_index, first_items, codes_ = self._get_index_and_items()
         sbins = first_items.values.astype(np.int64)
         group_indices: GroupIndices = tuple(
-            [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:], strict=True)]
-            + [slice(sbins[-1], None)]
+            [slice(i, j) for i, j in pairwise(sbins)] + [slice(sbins[-1], None)]
         )
 
         unique_coord = Variable(

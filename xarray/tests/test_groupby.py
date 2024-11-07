@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import operator
 import warnings
+from itertools import pairwise
 from unittest import mock
 
 import numpy as np
@@ -1732,7 +1733,7 @@ class TestDataArrayGroupBy:
         bincoord = np.array(
             [
                 pd.Interval(left, right, closed="right")
-                for left, right in zip(bins[:-1], bins[1:], strict=True)
+                for left, right in pairwise(bins)
             ],
             dtype=object,
         )
