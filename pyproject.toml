@@ -241,18 +241,31 @@ extend-safe-fixes = [
   "TID252", # absolute imports
 ]
 ignore = [
+  "C40",
   "E402",
   "E501",
   "E731",
   "UP007",
+  "PERF20",
+  "PIE790",  # unnecessary pass statement
+  "RUF001",
+  "RUF002",
+  "RUF003",
+  "RUF005",
+  "RUF012",
 ]
 extend-select = [
   "B", # flake8-bugbear
+  "C4", # flake8-comprehensions
   "F", # Pyflakes
   "E", # Pycodestyle
   "W",
   "TID", # flake8-tidy-imports (absolute imports)
   "I", # isort
+  "PERF", # Perflint
+  "PIE", # flake8-pie
+  "PGH", # pygrep-hooks
+  "RUF",
   "UP", # Pyupgrade
 ]
 

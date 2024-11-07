@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import operator
 import warnings
+from itertools import pairwise
 from typing import Literal
 from unittest import mock
 
@@ -1294,7 +1295,7 @@ class TestDataArrayGroupBy:
 
     def test_groupby_properties(self) -> None:
         grouped = self.da.groupby("abc")
-        expected_groups = {"a": range(0, 9), "c": [9], "b": range(10, 20)}
+        expected_groups = {"a": range(9), "c": [9], "b": range(10, 20)}
         assert expected_groups.keys() == grouped.groups.keys()
         for key in expected_groups:
             expected_group = expected_groups[key]
@@ -1771,7 +1772,7 @@ class TestDataArrayGroupBy:
         bincoord = np.array(
             [
                 pd.Interval(left, right, closed="right")
-                for left, right in zip(bins[:-1], bins[1:], strict=True)
+                for left, right in pairwise(bins)
             ],
             dtype=object,
         )
@@ -1829,7 +1830,7 @@ class TestDataArrayGroupBy:
         rev = array_rev.groupby("idx", squeeze=False)
 
         for gb in [fwd, rev]:
-            assert all([isinstance(elem, slice) for elem in gb.encoded.group_indices])
+            assert all(isinstance(elem, slice) for elem in gb.encoded.group_indices)
 
         with xr.set_options(use_flox=use_flox):
             assert_identical(fwd.sum(), array)
@@ -1980,7 +1981,7 @@ class TestDataArrayResample:
         times = pd.date_range("2000-01-01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("__resample_dim__", times)])
         with pytest.raises(ValueError, match=r"Proxy resampling dimension"):
-            array.resample(**{"__resample_dim__": "1D"}).first()  # type: ignore[arg-type]
+            array.resample(__resample_dim__="1D").first()
 
     @requires_scipy
     def test_resample_drop_nondim_coords(self) -> None:
@@ -2905,20 +2906,27 @@ def test_multiple_groupers(use_flox: bool, shuffle: bool) -> None:
                 xy=UniqueGrouper(labels=["a", "b", "c"]),
                 eagerly_compute_group=eagerly_compute_group,
             )
-            with raise_if_dask_computes(max_computes=1):
-                if eagerly_compute_group:
-                    with pytest.warns(DeprecationWarning):
-                        gb = b.groupby(**kwargs)  # type: ignore[arg-type]
-                else:
-                    gb = b.groupby(**kwargs)  # type: ignore[arg-type]
-                    assert is_chunked_array(gb.encoded.codes.data)
-                    assert not gb.encoded.group_indices
             expected = xr.DataArray(
                 [[[1, 1, 1], [np.nan, 1, 2]]] * 4,
                 dims=("z", "x", "xy"),
                 coords={"xy": ("xy", ["a", "b", "c"], {"foo": "bar"})},
             )
-            assert_identical(gb.count(), expected)
+            if eagerly_compute_group:
+                with raise_if_dask_computes(max_computes=1):
+                    with pytest.warns(DeprecationWarning):
+                        gb = b.groupby(**kwargs)  # type: ignore[arg-type]
+                    assert_identical(gb.count(), expected)
+            else:
+                with raise_if_dask_computes(max_computes=0):
+                    gb = b.groupby(**kwargs)  # type: ignore[arg-type]
+                assert is_chunked_array(gb.encoded.codes.data)
+                assert not gb.encoded.group_indices
+                if has_flox:
+                    with raise_if_dask_computes(max_computes=1):
+                        assert_identical(gb.count(), expected)
+                else:
+                    with pytest.raises(ValueError, match="when lazily grouping"):
+                        gb.count()
 
 
 @pytest.mark.parametrize("use_flox", [True, False])
@@ -3063,11 +3071,6 @@ def test_lazy_grouping(grouper, expect_index):
     pd.testing.assert_index_equal(encoded.full_index, expect_index)
     np.testing.assert_array_equal(encoded.unique_coord.values, np.array(expect_index))
 
-    lazy = (
-        xr.Dataset({"foo": data}, coords={"zoo": data})
-        .groupby(zoo=grouper, eagerly_compute_group=False)
-        .count()
-    )
     eager = (
         xr.Dataset({"foo": data}, coords={"zoo": data.compute()})
         .groupby(zoo=grouper)
@@ -3077,8 +3080,15 @@ def test_lazy_grouping(grouper, expect_index):
         {"foo": (encoded.codes.name, np.ones(encoded.full_index.size))},
         coords={encoded.codes.name: expect_index},
     )
-    assert_identical(eager, lazy)
     assert_identical(eager, expected)
+
+    if has_flox:
+        lazy = (
+            xr.Dataset({"foo": data}, coords={"zoo": data})
+            .groupby(zoo=grouper, eagerly_compute_group=False)
+            .count()
+        )
+        assert_identical(eager, lazy)
 
 
 @requires_dask

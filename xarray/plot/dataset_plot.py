@@ -652,7 +652,7 @@ F = TypeVar("F", bound=Callable)
 
 def _update_doc_to_dataset(dataarray_plotfunc: Callable) -> Callable[[F], F]:
     """
-    Add a common docstring by re-using the DataArray one.
+    Add a common docstring by reusing the DataArray one.
 
     TODO: Reduce code duplication.
 

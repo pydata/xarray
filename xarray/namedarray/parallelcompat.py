@@ -76,7 +76,6 @@ def load_chunkmanagers(
             emit_user_level_warning(
                 f"Failed to load chunk manager entrypoint {entrypoint.name} due to {e}. Skipping.",
             )
-            pass
 
     available_chunkmanagers = {
         name: chunkmanager()

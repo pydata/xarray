@@ -187,10 +187,7 @@ def equivalent(first: T, second: T) -> bool:
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    for f, s in zip(first, second, strict=True):
-        if not equivalent(f, s):
-            return False
-    return True
+    return all(equivalent(f, s) for f, s in zip(first, second, strict=True))
 
 
 def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
@@ -1072,12 +1069,9 @@ def contains_only_chunked_or_numpy(obj) -> bool:
         obj = obj._to_temp_dataset()
 
     return all(
-        [
-            isinstance(var._data, ExplicitlyIndexed)
-            or isinstance(var._data, np.ndarray)
-            or is_chunked_array(var._data)
-            for var in obj._variables.values()
-        ]
+        isinstance(var._data, ExplicitlyIndexed | np.ndarray)
+        or is_chunked_array(var._data)
+        for var in obj._variables.values()
     )
 
 

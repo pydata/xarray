@@ -371,7 +371,7 @@ def _get_func_args(func, param_names):
     else:
         params = list(func_args)[1:]
         if any(
-            [(p.kind in [p.VAR_POSITIONAL, p.VAR_KEYWORD]) for p in func_args.values()]
+            (p.kind in [p.VAR_POSITIONAL, p.VAR_KEYWORD]) for p in func_args.values()
         ):
             raise ValueError(
                 "`param_names` must be provided because `func` takes variable length arguments."
@@ -685,15 +685,15 @@ class Dataset(
     _variables: dict[Hashable, Variable]
 
     __slots__ = (
+        "__weakref__",
         "_attrs",
         "_cache",
+        "_close",
         "_coord_names",
         "_dims",
         "_encoding",
-        "_close",
         "_indexes",
         "_variables",
-        "__weakref__",
     )
 
     def __init__(
@@ -1587,7 +1587,7 @@ class Dataset(
                 message = f"No variable named {key!r}. Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
                 # If someone attempts `ds['foo' , 'bar']` instead of `ds[['foo', 'bar']]`
                 if isinstance(key, tuple):
-                    message += f"\nHint: use a list to select multiple variables, for example `ds[{[d for d in key]}]`"
+                    message += f"\nHint: use a list to select multiple variables, for example `ds[{list(key)}]`"
                 raise KeyError(message) from e
 
         if utils.iterable_of_hashable(key):
@@ -1687,7 +1687,7 @@ class Dataset(
                     f"Variables {missing_vars} in new values"
                     f" not available in original dataset:\n{self}"
                 )
-        elif not any([isinstance(value, t) for t in [DataArray, Number, str]]):
+        elif not any(isinstance(value, t) for t in [DataArray, Number, str]):
             raise TypeError(
                 "Dataset assignment only accepts DataArrays, Datasets, and scalars."
             )
@@ -1728,7 +1728,7 @@ class Dataset(
             new_value[name] = duck_array_ops.astype(val, dtype=var_k.dtype, copy=False)
 
         # check consistency of dimension sizes and dimension coordinates
-        if isinstance(value, DataArray) or isinstance(value, Dataset):
+        if isinstance(value, DataArray | Dataset):
             align(self[key], value, join="exact", copy=False)
 
         return new_value
@@ -3934,16 +3934,13 @@ class Dataset(
         method_non_numeric: str = "nearest",
         **coords_kwargs: Any,
     ) -> Self:
-        """Interpolate a Dataset onto new coordinates
+        """
+        Interpolate a Dataset onto new coordinates.
 
-        Performs univariate or multivariate interpolation of a Dataset onto
-        new coordinates using scipy's interpolation routines. If interpolating
-        along an existing dimension, either :py:class:`scipy.interpolate.interp1d`
-        or a 1-dimensional scipy interpolator (e.g. :py:class:`scipy.interpolate.KroghInterpolator`)
-        is called.  When interpolating along multiple existing dimensions, an
-        attempt is made to decompose the interpolation into multiple
-        1-dimensional interpolations. If this is possible, the 1-dimensional interpolator
-        is called. Otherwise, :py:func:`scipy.interpolate.interpn` is called.
+        Performs univariate or multivariate interpolation of a Dataset onto new coordinates,
+        utilizing either NumPy or SciPy interpolation routines.
+
+        Out-of-range values are filled with NaN, unless specified otherwise via `kwargs` to the numpy/scipy interpolant.
 
         Parameters
         ----------
@@ -3952,34 +3949,24 @@ class Dataset(
             New coordinate can be a scalar, array-like or DataArray.
             If DataArrays are passed as new coordinates, their dimensions are
             used for the broadcasting. Missing values are skipped.
-        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial", \
-            "barycentric", "krogh", "pchip", "spline", "akima"}, default: "linear"
-            String indicating which method to use for interpolation:
-
-            - 'linear': linear interpolation. Additional keyword
-              arguments are passed to :py:func:`numpy.interp`
-            - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'polynomial':
-              are passed to :py:func:`scipy.interpolate.interp1d`. If
-              ``method='polynomial'``, the ``order`` keyword argument must also be
-              provided.
-            - 'barycentric', 'krogh', 'pchip', 'spline', 'akima': use their
-              respective :py:class:`scipy.interpolate` classes.
-
+        method : { "linear", "nearest", "zero", "slinear", "quadratic", "cubic", \
+            "quintic", "polynomial", "pchip", "barycentric", "krogh", "akima", "makima" }
+            Interpolation method to use (see descriptions above).
         assume_sorted : bool, default: False
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
             coordinates are assumed to be an array of monotonically increasing
             values.
         kwargs : dict, optional
-            Additional keyword arguments passed to scipy's interpolator. Valid
-            options and their behavior depend whether ``interp1d`` or
-            ``interpn`` is used.
+            Additional keyword arguments passed to the interpolator. Valid
+            options and their behavior depend which interpolant is used.
         method_non_numeric : {"nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method for non-numeric types. Passed on to :py:meth:`Dataset.reindex`.
             ``"nearest"`` is used by default.
         **coords_kwargs : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
+
 
         Returns
         -------
@@ -3988,12 +3975,37 @@ class Dataset(
 
         Notes
         -----
-        scipy is required.
+        - SciPy is required for certain interpolation methods.
+        - When interpolating along multiple dimensions with methods `linear` and `nearest`,
+            the process attempts to decompose the interpolation into independent interpolations
+            along one dimension at a time.
+        - The specific interpolation method and dimensionality determine which
+            interpolant is used:
+
+            1. **Interpolation along one dimension of 1D data (`method='linear'`)**
+                - Uses :py:func:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
+
+            2. **Interpolation along one dimension of N-dimensional data (N ≥ 1)**
+                - Methods {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"}
+                    use :py:func:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:func:`numpy.interp`
+                    (as in the case of `method='linear'` for 1D data).
+                - If `method='polynomial'`, the `order` keyword argument must also be provided.
+
+            3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
+                - Depending on the `method`, the following interpolants from :py:class:`scipy.interpolate` are used:
+                    - `"pchip"`: :py:class:`scipy.interpolate.PchipInterpolator`
+                    - `"barycentric"`: :py:class:`scipy.interpolate.BarycentricInterpolator`
+                    - `"krogh"`: :py:class:`scipy.interpolate.KroghInterpolator`
+                    - `"akima"` or `"makima"`: :py:class:`scipy.interpolate.Akima1dInterpolator`
+                        (`makima` is handled by passing the `makima` flag).
+
+            4. **Interpolation along multiple dimensions of multi-dimensional data**
+                - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
+                    "cubic", "quintic", "pchip"}.
 
         See Also
         --------
-        scipy.interpolate.interp1d
-        scipy.interpolate.interpn
+        :mod:`scipy.interpolate`
 
         :doc:`xarray-tutorial:fundamentals/02.2_manipulating_dimensions`
             Tutorial material on manipulating data resolution using :py:func:`~xarray.Dataset.interp`
@@ -4091,7 +4103,7 @@ class Dataset(
             )
             indexers.update({d: self.variables[d] for d in sdims})
 
-        obj = self if assume_sorted else self.sortby([k for k in coords])
+        obj = self if assume_sorted else self.sortby(list(coords))
 
         def maybe_variable(obj, k):
             # workaround to get variable for dimension without coordinate.
@@ -4215,15 +4227,12 @@ class Dataset(
         kwargs: Mapping[str, Any] | None = None,
         method_non_numeric: str = "nearest",
     ) -> Self:
-        """Interpolate this object onto the coordinates of another object,
-        filling the out of range values with NaN.
+        """Interpolate this object onto the coordinates of another object.
 
-        If interpolating along a single existing dimension,
-        :py:class:`scipy.interpolate.interp1d` is called. When interpolating
-        along multiple existing dimensions, an attempt is made to decompose the
-        interpolation into multiple 1-dimensional interpolations. If this is
-        possible, :py:class:`scipy.interpolate.interp1d` is called. Otherwise,
-        :py:func:`scipy.interpolate.interpn` is called.
+        Performs univariate or multivariate interpolation of a Dataset onto new coordinates,
+        utilizing either NumPy or SciPy interpolation routines.
+
+        Out-of-range values are filled with NaN, unless specified otherwise via `kwargs` to the numpy/scipy interpolant.
 
         Parameters
         ----------
@@ -4231,26 +4240,17 @@ class Dataset(
             Object with an 'indexes' attribute giving a mapping from dimension
             names to an 1d array-like, which provides coordinates upon
             which to index the variables in this dataset. Missing values are skipped.
-        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial", \
-            "barycentric", "krogh", "pchip", "spline", "akima"}, default: "linear"
-            String indicating which method to use for interpolation:
-
-            - 'linear': linear interpolation. Additional keyword
-              arguments are passed to :py:func:`numpy.interp`
-            - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'polynomial':
-              are passed to :py:func:`scipy.interpolate.interp1d`. If
-              ``method='polynomial'``, the ``order`` keyword argument must also be
-              provided.
-            - 'barycentric', 'krogh', 'pchip', 'spline', 'akima': use their
-              respective :py:class:`scipy.interpolate` classes.
-
+        method : { "linear", "nearest", "zero", "slinear", "quadratic", "cubic", \
+            "quintic", "polynomial", "pchip", "barycentric", "krogh", "akima", "makima" }
+            Interpolation method to use (see descriptions above).
         assume_sorted : bool, default: False
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
             coordinates are assumed to be an array of monotonically increasing
             values.
         kwargs : dict, optional
-            Additional keyword passed to scipy's interpolator.
+            Additional keyword arguments passed to the interpolator. Valid
+            options and their behavior depend which interpolant is use
         method_non_numeric : {"nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method for non-numeric types. Passed on to :py:meth:`Dataset.reindex`.
             ``"nearest"`` is used by default.
@@ -4263,14 +4263,41 @@ class Dataset(
 
         Notes
         -----
-        scipy is required.
-        If the dataset has object-type coordinates, reindex is used for these
-        coordinates instead of the interpolation.
+        - scipy is required.
+        - If the dataset has object-type coordinates, reindex is used for these
+            coordinates instead of the interpolation.
+        - When interpolating along multiple dimensions with methods `linear` and `nearest`,
+            the process attempts to decompose the interpolation into independent interpolations
+            along one dimension at a time.
+        - The specific interpolation method and dimensionality determine which
+            interpolant is used:
+
+            1. **Interpolation along one dimension of 1D data (`method='linear'`)**
+                - Uses :py:func:`numpy.interp`, unless `fill_value='extrapolate'` is provided via `kwargs`.
+
+            2. **Interpolation along one dimension of N-dimensional data (N ≥ 1)**
+                - Methods {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "quintic", "polynomial"}
+                    use :py:func:`scipy.interpolate.interp1d`, unless conditions permit the use of :py:func:`numpy.interp`
+                    (as in the case of `method='linear'` for 1D data).
+                - If `method='polynomial'`, the `order` keyword argument must also be provided.
+
+            3. **Special interpolants for interpolation along one dimension of N-dimensional data (N ≥ 1)**
+                - Depending on the `method`, the following interpolants from :py:class:`scipy.interpolate` are used:
+                    - `"pchip"`: :py:class:`scipy.interpolate.PchipInterpolator`
+                    - `"barycentric"`: :py:class:`scipy.interpolate.BarycentricInterpolator`
+                    - `"krogh"`: :py:class:`scipy.interpolate.KroghInterpolator`
+                    - `"akima"` or `"makima"`: :py:class:`scipy.interpolate.Akima1dInterpolator`
+                        (`makima` is handled by passing the `makima` flag).
+
+            4. **Interpolation along multiple dimensions of multi-dimensional data**
+                - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
+                    "cubic", "quintic", "pchip"}.
 
         See Also
         --------
-        Dataset.interp
-        Dataset.reindex_like
+        :func:`Dataset.interp`
+        :func:`Dataset.reindex_like`
+        :mod:`scipy.interpolate`
         """
         if kwargs is None:
             kwargs = {}
@@ -4797,9 +4824,7 @@ class Dataset(
             if d in self.dims:
                 raise ValueError(f"Dimension {d} already exists.")
             if d in self._variables and not utils.is_scalar(self._variables[d]):
-                raise ValueError(
-                    f"{d} already exists as coordinate or" " variable name."
-                )
+                raise ValueError(f"{d} already exists as coordinate or variable name.")
 
         variables: dict[Hashable, Variable] = {}
         indexes: dict[Hashable, Index] = dict(self._indexes)
@@ -4826,7 +4851,7 @@ class Dataset(
                 pass  # Do nothing if the dimensions value is just an int
             else:
                 raise TypeError(
-                    f"The value of new dimension {k} must be " "an iterable or an int"
+                    f"The value of new dimension {k} must be an iterable or an int"
                 )
 
         for k, v in self._variables.items():
@@ -5606,7 +5631,7 @@ class Dataset(
         new_indexes, clean_index = index.unstack()
         indexes.update(new_indexes)
 
-        for _name, idx in new_indexes.items():
+        for idx in new_indexes.values():
             variables.update(idx.create_variables(index_vars))
 
         for name, var in self.variables.items():
@@ -5647,7 +5672,7 @@ class Dataset(
         indexes.update(new_indexes)
 
         new_index_variables = {}
-        for _name, idx in new_indexes.items():
+        for idx in new_indexes.values():
             new_index_variables.update(idx.create_variables(index_vars))
 
         new_dim_sizes = {k: v.size for k, v in new_index_variables.items()}
@@ -6430,7 +6455,7 @@ class Dataset(
         """
         # Raise error if list is passed as dim
         if (len(dim) > 0) and (isinstance(dim[0], list)):
-            list_fix = [f"{repr(x)}" if isinstance(x, str) else f"{x}" for x in dim[0]]
+            list_fix = [f"{x!r}" if isinstance(x, str) else f"{x}" for x in dim[0]]
             raise TypeError(
                 f'transpose requires dim to be passed as multiple arguments. Expected `{", ".join(list_fix)}`. Received `{dim[0]}` instead'
             )
@@ -7027,7 +7052,7 @@ class Dataset(
             math_scores     (student) float64 24B 91.0 82.5 96.5
             english_scores  (student) float64 24B 91.0 80.5 94.5
         """
-        if kwargs.get("axis", None) is not None:
+        if kwargs.get("axis") is not None:
             raise ValueError(
                 "passing 'axis' to Dataset reduce methods is ambiguous."
                 " Please use 'dim' instead."
@@ -7800,7 +7825,7 @@ class Dataset(
             }
         except KeyError as e:
             raise ValueError(
-                f"cannot convert dict without the key '{str(e.args[0])}'"
+                f"cannot convert dict without the key '{e.args[0]}'"
             ) from e
         obj = cls(variable_dict)
 
@@ -9364,10 +9389,11 @@ class Dataset(
         # keep indexes that won't be affected by pad and drop all other indexes
         xindexes = self.xindexes
         pad_dims = set(pad_width)
-        indexes = {}
-        for k, idx in xindexes.items():
-            if not pad_dims.intersection(xindexes.get_all_dims(k)):
-                indexes[k] = idx
+        indexes = {
+            k: idx
+            for k, idx in xindexes.items()
+            if not pad_dims.intersection(xindexes.get_all_dims(k))
+        }
 
         for name, var in self.variables.items():
             var_pad_width = {k: v for k, v in pad_width.items() if k in var.dims}
@@ -10061,11 +10087,7 @@ class Dataset(
         else:
             reduce_dims_ = list(reduce_dims)
 
-        if (
-            isinstance(coords, str)
-            or isinstance(coords, DataArray)
-            or not isinstance(coords, Iterable)
-        ):
+        if isinstance(coords, str | DataArray) or not isinstance(coords, Iterable):
             coords = [coords]
         coords_: Sequence[DataArray] = [
             self[coord] if isinstance(coord, str) else coord for coord in coords
@@ -10159,7 +10181,7 @@ class Dataset(
             if name is _THIS_ARRAY:
                 name = ""
             else:
-                name = f"{str(name)}_"
+                name = f"{name}_"
 
             input_core_dims = [reduce_dims_ for _ in range(n_coords + 1)]
             input_core_dims.extend(

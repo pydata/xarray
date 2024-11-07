@@ -217,10 +217,10 @@ class DatasetView(Dataset):
     __slots__ = (
         "_attrs",
         "_cache",  # used by _CachedAccessor
+        "_close",
         "_coord_names",
         "_dims",
         "_encoding",
-        "_close",
         "_indexes",
         "_variables",
     )
@@ -457,17 +457,17 @@ class DataTree(
     _close: Callable[[], None] | None
 
     __slots__ = (
-        "_name",
-        "_parent",
-        "_children",
+        "_attrs",
         "_cache",  # used by _CachedAccessor
+        "_children",
+        "_close",
         "_data_variables",
+        "_encoding",
+        "_name",
         "_node_coord_variables",
         "_node_dims",
         "_node_indexes",
-        "_attrs",
-        "_encoding",
-        "_close",
+        "_parent",
     )
 
     def __init__(
@@ -1573,6 +1573,7 @@ class DataTree(
         format: T_DataTreeNetcdfTypes | None = None,
         engine: T_DataTreeNetcdfEngine | None = None,
         group: str | None = None,
+        write_inherited_coords: bool = False,
         compute: bool = True,
         **kwargs,
     ):
@@ -1609,6 +1610,11 @@ class DataTree(
         group : str, optional
             Path to the netCDF4 group in the given file to open as the root group
             of the ``DataTree``. Currently, specifying a group is not supported.
+        write_inherited_coords : bool, default: False
+            If true, replicate inherited coordinates on all descendant nodes.
+            Otherwise, only write coordinates at the level at which they are
+            originally defined. This saves disk space, but requires opening the
+            full tree to load inherited coordinates.
         compute : bool, default: True
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later.
@@ -1632,6 +1638,7 @@ class DataTree(
             format=format,
             engine=engine,
             group=group,
+            write_inherited_coords=write_inherited_coords,
             compute=compute,
             **kwargs,
         )
@@ -1643,6 +1650,7 @@ class DataTree(
         encoding=None,
         consolidated: bool = True,
         group: str | None = None,
+        write_inherited_coords: bool = False,
         compute: Literal[True] = True,
         **kwargs,
     ):
@@ -1668,6 +1676,11 @@ class DataTree(
             after writing metadata for all groups.
         group : str, optional
             Group path. (a.k.a. `path` in zarr terminology.)
+        write_inherited_coords : bool, default: False
+            If true, replicate inherited coordinates on all descendant nodes.
+            Otherwise, only write coordinates at the level at which they are
+            originally defined. This saves disk space, but requires opening the
+            full tree to load inherited coordinates.
         compute : bool, default: True
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later. Metadata
@@ -1690,6 +1703,7 @@ class DataTree(
             encoding=encoding,
             consolidated=consolidated,
             group=group,
+            write_inherited_coords=write_inherited_coords,
             compute=compute,
             **kwargs,
         )
