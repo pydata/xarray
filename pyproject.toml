@@ -247,6 +247,7 @@ ignore = [
   "E731",
   "UP007",
   "PERF20",
+  "PIE790",  # unnecessary pass statement
   "RUF001",
   "RUF002",
   "RUF003",
@@ -262,6 +263,7 @@ extend-select = [
   "TID", # flake8-tidy-imports (absolute imports)
   "I", # isort
   "PERF", # Perflint
+  "PIE", # flake8-pie
   "PGH", # pygrep-hooks
   "RUF",
   "UP", # Pyupgrade
