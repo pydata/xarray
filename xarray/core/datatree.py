@@ -146,7 +146,7 @@ def check_alignment(
 ) -> None:
     if parent_ds is not None:
         try:
-            align(node_ds, parent_ds, join="exact")
+            align(node_ds, parent_ds, join="exact", copy=False)
         except ValueError as e:
             node_repr = _indented(_without_header(repr(node_ds)))
             parent_repr = _indented(dims_and_coords_repr(parent_ds))
@@ -217,10 +217,10 @@ class DatasetView(Dataset):
     __slots__ = (
         "_attrs",
         "_cache",  # used by _CachedAccessor
+        "_close",
         "_coord_names",
         "_dims",
         "_encoding",
-        "_close",
         "_indexes",
         "_variables",
     )
@@ -457,17 +457,17 @@ class DataTree(
     _close: Callable[[], None] | None
 
     __slots__ = (
-        "_name",
-        "_parent",
-        "_children",
+        "_attrs",
         "_cache",  # used by _CachedAccessor
+        "_children",
+        "_close",
         "_data_variables",
+        "_encoding",
+        "_name",
         "_node_coord_variables",
         "_node_dims",
         "_node_indexes",
-        "_attrs",
-        "_encoding",
-        "_close",
+        "_parent",
     )
 
     def __init__(
@@ -1573,6 +1573,7 @@ class DataTree(
         format: T_DataTreeNetcdfTypes | None = None,
         engine: T_DataTreeNetcdfEngine | None = None,
         group: str | None = None,
+        write_inherited_coords: bool = False,
         compute: bool = True,
         **kwargs,
     ):
@@ -1609,6 +1610,11 @@ class DataTree(
         group : str, optional
             Path to the netCDF4 group in the given file to open as the root group
             of the ``DataTree``. Currently, specifying a group is not supported.
+        write_inherited_coords : bool, default: False
+            If true, replicate inherited coordinates on all descendant nodes.
+            Otherwise, only write coordinates at the level at which they are
+            originally defined. This saves disk space, but requires opening the
+            full tree to load inherited coordinates.
         compute : bool, default: True
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later.
@@ -1632,6 +1638,7 @@ class DataTree(
             format=format,
             engine=engine,
             group=group,
+            write_inherited_coords=write_inherited_coords,
             compute=compute,
             **kwargs,
         )
@@ -1643,6 +1650,7 @@ class DataTree(
         encoding=None,
         consolidated: bool = True,
         group: str | None = None,
+        write_inherited_coords: bool = False,
         compute: Literal[True] = True,
         **kwargs,
     ):
@@ -1668,6 +1676,11 @@ class DataTree(
             after writing metadata for all groups.
         group : str, optional
             Group path. (a.k.a. `path` in zarr terminology.)
+        write_inherited_coords : bool, default: False
+            If true, replicate inherited coordinates on all descendant nodes.
+            Otherwise, only write coordinates at the level at which they are
+            originally defined. This saves disk space, but requires opening the
+            full tree to load inherited coordinates.
         compute : bool, default: True
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later. Metadata
@@ -1690,6 +1703,7 @@ class DataTree(
             encoding=encoding,
             consolidated=consolidated,
             group=group,
+            write_inherited_coords=write_inherited_coords,
             compute=compute,
             **kwargs,
         )
@@ -1983,6 +1997,63 @@ class DataTree(
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
+
+    def _persist_inplace(self, **kwargs) -> Self:
+        """Persist all chunked arrays in memory"""
+        # access .data to coerce everything to numpy or dask arrays
+        lazy_data = {
+            path: {
+                k: v._data
+                for k, v in node.variables.items()
+                if is_chunked_array(v._data)
+            }
+            for path, node in self.subtree_with_keys
+        }
+        flat_lazy_data = {
+            (path, var_name): array
+            for path, node in lazy_data.items()
+            for var_name, array in node.items()
+        }
+        if flat_lazy_data:
+            chunkmanager = get_chunked_array_type(*flat_lazy_data.values())
+
+            # evaluate all the dask arrays simultaneously
+            evaluated_data = chunkmanager.persist(*flat_lazy_data.values(), **kwargs)
+
+            for (path, var_name), data in zip(
+                flat_lazy_data, evaluated_data, strict=False
+            ):
+                self[path].variables[var_name].data = data
+
+        return self
+
+    def persist(self, **kwargs) -> Self:
+        """Trigger computation, keeping data as chunked arrays.
+
+        This operation can be used to trigger computation on underlying dask
+        arrays, similar to ``.compute()`` or ``.load()``.  However this
+        operation keeps the data as dask arrays. This is particularly useful
+        when using the dask.distributed scheduler and you want to load a large
+        amount of data into distributed memory.
+        Like compute (but unlike load), the original dataset is left unaltered.
+
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.persist``.
+
+        Returns
+        -------
+        object : DataTree
+            New object with all dask-backed coordinates and data variables as persisted dask arrays.
+
+        See Also
+        --------
+        dask.persist
+        """
+        new = self.copy(deep=False)
+        return new._persist_inplace(**kwargs)
 
     @property
     def chunksizes(self) -> Mapping[str, Mapping[Hashable, tuple[int, ...]]]:

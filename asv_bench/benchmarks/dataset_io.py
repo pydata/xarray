@@ -712,7 +712,7 @@ class IOReadCustomEngine:
                         dims=("time",),
                         fastpath=True,
                     )
-                    for v in range(0, n_variables)
+                    for v in range(n_variables)
                 }
                 attributes = {}
 
@@ -722,7 +722,7 @@ class IOReadCustomEngine:
             def open_dataset(
                 self,
                 filename_or_obj: str | os.PathLike | None,
-                drop_variables: tuple[str, ...] = None,
+                drop_variables: tuple[str, ...] | None = None,
                 *,
                 mask_and_scale=True,
                 decode_times=True,

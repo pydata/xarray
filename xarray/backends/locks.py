@@ -149,7 +149,7 @@ def _get_scheduler(get=None, collection=None) -> str | None:
         # Fix for bug caused by dask installation that doesn't involve the toolz library
         # Issue: 4164
         import dask
-        from dask.base import get_scheduler  # noqa: F401
+        from dask.base import get_scheduler
 
         actual_get = get_scheduler(get, collection)
     except ImportError:
