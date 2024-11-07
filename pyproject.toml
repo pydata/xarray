@@ -241,6 +241,7 @@ extend-safe-fixes = [
   "TID252", # absolute imports
 ]
 ignore = [
+  "C40",
   "E402",
   "E501",
   "E731",
@@ -254,6 +255,7 @@ ignore = [
 ]
 extend-select = [
   "B", # flake8-bugbear
+  "C4", # flake8-comprehensions
   "F", # Pyflakes
   "E", # Pycodestyle
   "W",
