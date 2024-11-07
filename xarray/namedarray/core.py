@@ -248,7 +248,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     >>> narr = NamedArray(("x",), data, {"units": "m"})  # TODO: Better name than narr?
     """
 
-    __slots__ = ("_data", "_dims", "_attrs")
+    __slots__ = ("_attrs", "_data", "_dims")
 
     _data: duckarray[Any, _DType_co]
     _dims: _Dims

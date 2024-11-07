@@ -684,7 +684,7 @@ class TestDataset:
         assert isinstance(ds.dims, utils.Frozen)
         # TODO change after deprecation cycle in GH #8500 is complete
         assert isinstance(ds.dims.mapping, dict)
-        assert type(ds.dims.mapping) is dict  # noqa: E721
+        assert type(ds.dims.mapping) is dict
         with pytest.warns(
             FutureWarning,
             match=" To access a mapping from dimension names to lengths, please use `Dataset.sizes`",
@@ -720,13 +720,13 @@ class TestDataset:
         assert set(ds.xindexes) == {"dim2", "dim3", "time"}
         assert len(ds.xindexes) == 3
         assert "dim2" in repr(ds.xindexes)
-        assert all([isinstance(idx, Index) for idx in ds.xindexes.values()])
+        assert all(isinstance(idx, Index) for idx in ds.xindexes.values())
 
         # indexes
         assert set(ds.indexes) == {"dim2", "dim3", "time"}
         assert len(ds.indexes) == 3
         assert "dim2" in repr(ds.indexes)
-        assert all([isinstance(idx, pd.Index) for idx in ds.indexes.values()])
+        assert all(isinstance(idx, pd.Index) for idx in ds.indexes.values())
 
         # coords
         assert list(ds.coords) == ["dim2", "dim3", "time", "numbers"]
@@ -3036,12 +3036,12 @@ class TestDataset:
         vencoding = {"scale_factor": 10}
         orig.encoding = {"foo": "bar"}
 
-        for k, _v in orig.variables.items():
+        for k in orig.variables.keys():
             orig[k].encoding = vencoding
 
         actual = orig.drop_encoding()
         assert actual.encoding == {}
-        for _k, v in actual.variables.items():
+        for v in actual.variables.values():
             assert v.encoding == {}
 
         assert_equal(actual, orig)
@@ -3069,7 +3069,7 @@ class TestDataset:
                 renamed[k].variable.to_base_variable(),
             )
             assert v.encoding == renamed[k].encoding
-            assert type(v) is type(renamed.variables[k])  # noqa: E721
+            assert type(v) is type(renamed.variables[k])
 
         assert "var1" not in renamed
         assert "dim2" not in renamed

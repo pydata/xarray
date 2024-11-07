@@ -104,7 +104,7 @@ def _find_absolute_paths(
     ['common.py']
     """
     if isinstance(paths, str):
-        if is_remote_uri(paths) and kwargs.get("engine", None) == "zarr":
+        if is_remote_uri(paths) and kwargs.get("engine") == "zarr":
             try:
                 from fsspec.core import get_fs_token_paths
             except ImportError as e:
@@ -294,7 +294,7 @@ class AbstractDataStore:
 
 
 class ArrayWriter:
-    __slots__ = ("sources", "targets", "regions", "lock")
+    __slots__ = ("lock", "regions", "sources", "targets")
 
     def __init__(self, lock=None):
         self.sources = []
