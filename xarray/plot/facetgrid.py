@@ -495,14 +495,14 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         if self._single_group:
             full = tuple(
                 {self._single_group: x}
-                for x in range(0, self.data[self._single_group].size)
+                for x in range(self.data[self._single_group].size)
             )
             empty = tuple(None for x in range(self._nrow * self._ncol - len(full)))
             name_d = full + empty
         else:
             rowcols = itertools.product(
-                range(0, self.data[self._row_var].size),
-                range(0, self.data[self._col_var].size),
+                range(self.data[self._row_var].size),
+                range(self.data[self._col_var].size),
             )
             name_d = tuple({self._row_var: r, self._col_var: c} for r, c in rowcols)
         name_dicts = np.array(name_d).reshape(self._nrow, self._ncol)

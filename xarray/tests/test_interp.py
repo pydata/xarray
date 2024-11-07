@@ -889,7 +889,7 @@ def test_decompose(method: InterpOptions) -> None:
         (data_ndim, interp_ndim, nscalar)
         for data_ndim in range(1, 4)
         for interp_ndim in range(1, data_ndim + 1)
-        for nscalar in range(0, interp_ndim + 1)
+        for nscalar in range(interp_ndim + 1)
     ],
 )
 def test_interpolate_chunk_1d(

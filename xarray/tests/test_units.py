@@ -3934,7 +3934,7 @@ class TestDataArray:
         data_array = xr.DataArray(
             data=array, coords={"x": x, "y": y, "u": ("x", u)}, dims=("x", "y")
         )
-        units = {**extract_units(data_array), **{"z": unit_registry.s, "q": None}}
+        units = {**extract_units(data_array), "z": unit_registry.s, "q": None}
 
         stripped_kwargs = {
             key: (

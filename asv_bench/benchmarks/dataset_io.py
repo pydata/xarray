@@ -712,7 +712,7 @@ class IOReadCustomEngine:
                         dims=("time",),
                         fastpath=True,
                     )
-                    for v in range(0, n_variables)
+                    for v in range(n_variables)
                 }
                 attributes = {}
 
