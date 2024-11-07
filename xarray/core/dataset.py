@@ -155,6 +155,7 @@ if TYPE_CHECKING:
         DsCompatible,
         ErrorOptions,
         ErrorOptionsWithWarn,
+        GroupIndices,
         GroupInput,
         InterpOptions,
         JoinOptions,
@@ -3238,7 +3239,7 @@ class Dataset(
         result = self.isel(indexers=query_results.dim_indexers, drop=drop)
         return result._overwrite_indexes(*query_results.as_tuple()[1:])
 
-    def _shuffle(self, dim, *, indices: list[list[int]], chunks: T_Chunks) -> Self:
+    def _shuffle(self, dim, *, indices: GroupIndices, chunks: T_Chunks) -> Self:
         # Shuffling is only different from `isel` for chunked arrays.
         # Extract them out, and treat them specially. The rest, we route through isel.
         # This makes it easy to ensure correct handling of indexes.
@@ -3249,14 +3250,22 @@ class Dataset(
         }
         subset = self[[name for name in self._variables if name not in is_chunked]]
 
+        no_slices: list[list[int]] = [
+            list(range(*idx.indices(self.sizes[dim])))
+            if isinstance(idx, slice)
+            else idx
+            for idx in indices
+        ]
+        no_slices = [idx for idx in no_slices if idx]
+
         shuffled = (
             subset
             if dim not in subset.dims
-            else subset.isel({dim: np.concatenate(indices)})
+            else subset.isel({dim: np.concatenate(no_slices)})
         )
         for name, var in is_chunked.items():
             shuffled[name] = var._shuffle(
-                indices=indices,
+                indices=no_slices,
                 dim=dim,
                 chunks=chunks,
             )

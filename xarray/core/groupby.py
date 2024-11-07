@@ -743,19 +743,12 @@ class GroupBy(Generic[T_Xarray]):
         was_array = isinstance(self._obj, DataArray)
         as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
 
-        size = self._obj.sizes[self._group_dim]
-        no_slices: list[list[int]] = [
-            list(range(*idx.indices(size))) if isinstance(idx, slice) else idx
-            for idx in self.encoded.group_indices
-        ]
-        no_slices = [idx for idx in no_slices if idx]
-
         for grouper in self.groupers:
             if grouper.name not in as_dataset._variables:
                 as_dataset.coords[grouper.name] = grouper.group
 
         shuffled = as_dataset._shuffle(
-            dim=self._group_dim, indices=no_slices, chunks=chunks
+            dim=self._group_dim, indices=self.encoded.group_indices, chunks=chunks
         )
         shuffled = self._maybe_unstack(shuffled)
         new_obj = self._obj._from_temp_dataset(shuffled) if was_array else shuffled
