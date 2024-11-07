@@ -170,9 +170,7 @@ class TestGetChunkManager:
         assert isinstance(chunkmanager, DaskManager)
 
     def test_no_chunk_manager_available(self, monkeypatch) -> None:
-        monkeypatch.setattr(
-            "xarray.namedarray.parallelcompat.list_chunkmanagers", dict
-        )
+        monkeypatch.setattr("xarray.namedarray.parallelcompat.list_chunkmanagers", dict)
         with pytest.raises(ValueError, match="no chunk managers available"):
             guess_chunkmanager("dask")
 
