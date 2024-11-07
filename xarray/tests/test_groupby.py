@@ -1936,7 +1936,7 @@ class TestDataArrayResample:
         times = pd.date_range("2000-01-01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("__resample_dim__", times)])
         with pytest.raises(ValueError, match=r"Proxy resampling dimension"):
-            array.resample(**{"__resample_dim__": "1D"}).first()  # type: ignore[arg-type]
+            array.resample(__resample_dim__="1D").first()
 
     @requires_scipy
     def test_resample_drop_nondim_coords(self) -> None:
