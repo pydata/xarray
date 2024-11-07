@@ -1791,7 +1791,7 @@ class TestDataArrayGroupBy:
         rev = array_rev.groupby("idx", squeeze=False)
 
         for gb in [fwd, rev]:
-            assert all([isinstance(elem, slice) for elem in gb.encoded.group_indices])
+            assert all(isinstance(elem, slice) for elem in gb.encoded.group_indices)
 
         with xr.set_options(use_flox=use_flox):
             assert_identical(fwd.sum(), array)

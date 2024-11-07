@@ -170,9 +170,7 @@ def _check_single_set_return_values(path_to_node: str, obj: Any) -> int | None:
 def _check_all_return_values(returned_objects) -> int | None:
     """Walk through all values returned by mapping func over subtrees, raising on any invalid or inconsistent types."""
 
-    result_data_objects = [
-        (path_to_node, r) for path_to_node, r in returned_objects.items()
-    ]
+    result_data_objects = list(returned_objects.items())
 
     first_path, result = result_data_objects[0]
     return_values = _check_single_set_return_values(first_path, result)

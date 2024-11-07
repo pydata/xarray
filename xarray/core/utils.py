@@ -1069,11 +1069,9 @@ def contains_only_chunked_or_numpy(obj) -> bool:
         obj = obj._to_temp_dataset()
 
     return all(
-        [
-            isinstance(var._data, ExplicitlyIndexed | np.ndarray)
-            or is_chunked_array(var._data)
-            for var in obj._variables.values()
-        ]
+        isinstance(var._data, ExplicitlyIndexed | np.ndarray)
+        or is_chunked_array(var._data)
+        for var in obj._variables.values()
     )
 
 

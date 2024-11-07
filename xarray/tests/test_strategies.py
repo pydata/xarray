@@ -138,9 +138,7 @@ class TestVariablesStrategy:
             return st.just(arr)
 
         dim_names = data.draw(dimension_names(min_dims=arr.ndim, max_dims=arr.ndim))
-        dim_sizes = {
-            name: size for name, size in zip(dim_names, arr.shape, strict=True)
-        }
+        dim_sizes = dict(zip(dim_names, arr.shape, strict=True))
 
         var = data.draw(
             variables(

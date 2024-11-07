@@ -667,7 +667,7 @@ class TestIndexes:
     def test_to_pandas_indexes(self, indexes) -> None:
         pd_indexes = indexes.to_pandas_indexes()
         assert isinstance(pd_indexes, Indexes)
-        assert all([isinstance(idx, pd.Index) for idx in pd_indexes.values()])
+        assert all(isinstance(idx, pd.Index) for idx in pd_indexes.values())
         assert indexes.variables == pd_indexes.variables
 
     def test_copy_indexes(self, indexes) -> None:

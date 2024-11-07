@@ -522,7 +522,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         counts = (
             self.obj.notnull(keep_attrs=keep_attrs)
             .rolling(
-                {d: w for d, w in zip(self.dim, self.window, strict=True)},
+                dict(zip(self.dim, self.window, strict=True)),
                 center={d: self.center[i] for i, d in enumerate(self.dim)},
             )
             .construct(rolling_dim, fill_value=False, keep_attrs=keep_attrs)

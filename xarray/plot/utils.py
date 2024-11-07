@@ -438,7 +438,7 @@ def _assert_valid_xy(
     valid_xy = (set(darray.dims) | set(darray.coords)) - multiindex_dims
 
     if (xy is not None) and (xy not in valid_xy):
-        valid_xy_str = "', '".join(sorted(tuple(str(v) for v in valid_xy)))
+        valid_xy_str = "', '".join(sorted(str(v) for v in valid_xy))
         raise ValueError(
             f"{name} must be one of None, '{valid_xy_str}'. Received '{xy}' instead."
         )
@@ -1219,7 +1219,7 @@ def _adjust_legend_subtitles(legend):
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     dvars = set(ds.variables.keys())
-    error_msg = f" must be one of ({', '.join(sorted(tuple(str(v) for v in dvars)))})"
+    error_msg = f" must be one of ({', '.join(sorted(str(v) for v in dvars))})"
 
     if x not in dvars:
         raise ValueError(f"Expected 'x' {error_msg}. Received {x} instead.")
