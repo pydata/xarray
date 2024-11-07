@@ -26,7 +26,7 @@ with these data structures.
 Xarray was inspired by and borrows heavily from
 [pandas](https://pandas.pydata.org), the popular data analysis package
 focused on labelled tabular data. It is particularly tailored to working
-were the source of xarray's data model, and integrates tightly with
+with [netCDF](https://www.unidata.ucar.edu/software/netcdf) files, which
 were the source of xarray\'s data model, and integrates tightly with
 [dask](https://dask.org) for parallel computing.
 
@@ -41,7 +41,7 @@ structure and API for working with raw ND arrays. However, real-world
 datasets are usually more than just raw numbers; they have labels which
 encode information about how the array values map to locations in space,
 time, etc.
-Xarray doesn't just keep track of labels on arrays -- it uses them to
+
 Xarray doesn\'t just keep track of labels on arrays \-- it uses them to
 provide a powerful and concise interface. For example:
 
