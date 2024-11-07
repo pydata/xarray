@@ -27,11 +27,7 @@ class InMemoryDataStore(AbstractWritableDataStore):
         return self._variables
 
     def get_dimensions(self):
-        dims = {}
-        for v in self._variables.values():
-            for d, s in v.dims.items():
-                dims[d] = s
-        return dims
+        return {d: s for v in self._variables.values() for d, s in v.dims.items()}
 
     def prepare_variable(self, k, v, *args, **kwargs):
         new_var = Variable(v.dims, np.empty_like(v), v.attrs)

@@ -390,12 +390,13 @@ def series_reduce(da, func, dim, **kwargs):
         se = da.to_series()
         return from_series_or_scalar(getattr(se, func)(**kwargs))
     else:
-        da1 = []
         dims = list(da.dims)
         dims.remove(dim)
         d = dims[0]
-        for i in range(len(da[d])):
-            da1.append(series_reduce(da.isel(**{d: i}), func, dim, **kwargs))
+        da1 = [
+            series_reduce(da.isel(**{d: i}), func, dim, **kwargs)
+            for i in range(len(da[d]))
+        ]
 
         if d in da.coords:
             return concat(da1, dim=da[d])

@@ -122,11 +122,11 @@ def property_in_axes_text(
     has the property assigned to property_str
     """
     alltxt: list[mpl.text.Text] = ax.findobj(mpl.text.Text)  # type: ignore[assignment]
-    check = []
-    for t in alltxt:
-        if t.get_text() == target_txt:
-            check.append(plt.getp(t, property) == property_str)
-    return all(check)
+    return all(
+        plt.getp(t, property) == property_str
+        for t in alltxt
+        if t.get_text() == target_txt
+    )
 
 
 def easy_array(shape: tuple[int, ...], start: float = 0, stop: float = 1) -> np.ndarray:
