@@ -36,7 +36,7 @@ jobs:
           create-args: >-
             asv
             python-build
-            mamba <=1.5.10
+            mamba<=1.5.10
 
 
       - name: Run benchmarks
