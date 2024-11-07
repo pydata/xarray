@@ -240,7 +240,7 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
     @property
     def dtype(self):
-        return np.dtype(f"S{str(self.array.shape[-1])}")
+        return np.dtype(f"S{self.array.shape[-1]!s}")
 
     @property
     def shape(self) -> tuple[int, ...]:
