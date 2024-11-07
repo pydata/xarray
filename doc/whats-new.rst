@@ -135,7 +135,6 @@ Bug fixes
 - Fix issue where polyfit wouldn't handle non-dimension coordinates. (:issue:`4375`, :pull:`9369`)
   By `Karl Krauth <https://github.com/Karl-Krauth>`_.
 
-
 Documentation
 ~~~~~~~~~~~~~
 
