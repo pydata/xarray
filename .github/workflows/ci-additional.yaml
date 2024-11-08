@@ -319,12 +319,14 @@ jobs:
             python=3.12
             pyyaml
             python-dateutil
-            conda
+            cytoolz
+            rich
+            py-rattler
 
       - name: All-deps minimum versions policy
         run: |
-          python ci/min_deps_check.py ci/requirements/min-all-deps.yml
+          python ci/minimum_versions.py ci/requirements/min-all-deps.yml
 
       - name: Bare minimum versions policy
         run: |
-          python ci/min_deps_check.py ci/requirements/bare-minimum.yml
+          python ci/minimum_versions.py ci/requirements/bare-minimum.yml
