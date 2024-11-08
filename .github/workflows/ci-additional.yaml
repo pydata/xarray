@@ -318,6 +318,7 @@ jobs:
             python-dateutil
             cytoolz
             rich
+            rich-click
             py-rattler
 
       - name: All-deps minimum versions policy
