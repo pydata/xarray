@@ -1099,10 +1099,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         if fill_with_shape:
             return [
-                (n, n) if d not in pad_option else pad_option[d]
+                pad_option.get(d, (n, n))
                 for d, n in zip(self.dims, self.data.shape, strict=True)
             ]
-        return [(0, 0) if d not in pad_option else pad_option[d] for d in self.dims]
+        return [pad_option.get(d, (0, 0)) for d in self.dims]
 
     def pad(
         self,
