@@ -20,14 +20,14 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "supported_dtypes",
-    "pandas_index_dtypes",
-    "names",
+    "attrs",
     "dimension_names",
     "dimension_sizes",
-    "attrs",
-    "variables",
+    "names",
+    "pandas_index_dtypes",
+    "supported_dtypes",
     "unique_subset_of",
+    "variables",
 ]
 
 

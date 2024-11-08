@@ -62,7 +62,7 @@ def parse_requirements(fname) -> Iterator[tuple[str, int, int, int | None]]:
         pkg, eq, version = row.partition("=")
         if pkg.rstrip("<>") in IGNORE_DEPS:
             continue
-        if pkg.endswith("<") or pkg.endswith(">") or eq != "=":
+        if pkg.endswith(("<", ">")) or eq != "=":
             error("package should be pinned with exact version: " + row)
             continue
 
@@ -186,7 +186,7 @@ def process_pkg(
     )
 
 
-def fmt_version(major: int, minor: int, patch: int = None) -> str:
+def fmt_version(major: int, minor: int, patch: int | None = None) -> str:
     if patch is None:
         return f"{major}.{minor}"
     else:

@@ -3934,7 +3934,7 @@ class TestDataArray:
         data_array = xr.DataArray(
             data=array, coords={"x": x, "y": y, "u": ("x", u)}, dims=("x", "y")
         )
-        units = {**extract_units(data_array), **{"z": unit_registry.s, "q": None}}
+        units = {**extract_units(data_array), "z": unit_registry.s, "q": None}
 
         stripped_kwargs = {
             key: (
@@ -5638,7 +5638,7 @@ class TestPintWrappingDask:
 
         assert_units_equal(expected, actual)
         # Don't use isinstance b/c we don't want to allow subclasses through
-        assert type(expected.data) == type(actual.data)  # noqa
+        assert type(expected.data) == type(actual.data)  # noqa: E721
 
 
 @requires_matplotlib

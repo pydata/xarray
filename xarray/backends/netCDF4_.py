@@ -361,14 +361,14 @@ class NetCDF4DataStore(WritableCFDataStore):
     """
 
     __slots__ = (
-        "autoclose",
-        "format",
-        "is_remote",
-        "lock",
         "_filename",
         "_group",
         "_manager",
         "_mode",
+        "autoclose",
+        "format",
+        "is_remote",
+        "lock",
     )
 
     def __init__(
@@ -550,6 +550,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         _ensure_no_forward_slash_in_name(name)
         attrs = variable.attrs.copy()
         fill_value = attrs.pop("_FillValue", None)
+        datatype: np.dtype | ncEnumType | h5EnumType
         datatype = _get_datatype(
             variable, self.format, raise_on_invalid_encoding=check_encoding
         )
