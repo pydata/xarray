@@ -12,6 +12,7 @@ from typing import (
     SupportsIndex,
     TypeVar,
     Union,
+    overload,
 )
 
 import numpy as np
@@ -67,7 +68,7 @@ if TYPE_CHECKING:
         CubedArray = np.ndarray
 
     try:
-        from zarr.core import Array as ZarrArray
+        from zarr import Array as ZarrArray
     except ImportError:
         ZarrArray = np.ndarray
 
@@ -228,12 +229,20 @@ CombineAttrsOptions = Union[
 JoinOptions = Literal["outer", "inner", "left", "right", "exact", "override"]
 
 Interp1dOptions = Literal[
-    "linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial"
+    "linear",
+    "nearest",
+    "zero",
+    "slinear",
+    "quadratic",
+    "cubic",
+    "quintic",
+    "polynomial",
 ]
 InterpolantOptions = Literal[
     "barycentric", "krogh", "pchip", "spline", "akima", "makima"
 ]
-InterpOptions = Union[Interp1dOptions, InterpolantOptions]
+InterpnOptions = Literal["linear", "nearest", "slinear", "cubic", "quintic", "pchip"]
+InterpOptions = Union[Interp1dOptions, InterpolantOptions, InterpnOptions]
 
 DatetimeUnitOptions = Literal[
     "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
@@ -286,15 +295,18 @@ HueStyleOptions = Literal["continuous", "discrete", None]
 AspectOptions = Union[Literal["auto", "equal"], float, None]
 ExtendOptions = Literal["neither", "both", "min", "max", None]
 
-# TODO: Wait until mypy supports recursive objects in combination with typevars
-_T = TypeVar("_T")
-NestedSequence = Union[
-    _T,
-    Sequence[_T],
-    Sequence[Sequence[_T]],
-    Sequence[Sequence[Sequence[_T]]],
-    Sequence[Sequence[Sequence[Sequence[_T]]]],
-]
+
+_T_co = TypeVar("_T_co", covariant=True)
+
+
+class NestedSequence(Protocol[_T_co]):
+    def __len__(self, /) -> int: ...
+    @overload
+    def __getitem__(self, index: int, /) -> _T_co | NestedSequence[_T_co]: ...
+    @overload
+    def __getitem__(self, index: slice, /) -> NestedSequence[_T_co]: ...
+    def __iter__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
+    def __reversed__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
 
 
 QuantileMethods = Literal[

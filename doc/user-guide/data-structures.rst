@@ -40,7 +40,8 @@ alignment, building on the functionality of the ``index`` found on a pandas
 DataArray objects also can have a ``name`` and can hold arbitrary metadata in
 the form of their ``attrs`` property. Names and attributes are strictly for
 users and user-written code: xarray makes no attempt to interpret them, and
-propagates them only in unambiguous cases
+propagates them only in unambiguous cases. For reading and writing attributes
+xarray relies on the capabilities of the supported backends.
 (see FAQ, :ref:`approach to metadata`).
 
 .. _creating a dataarray:
@@ -608,7 +609,7 @@ We have created a tree with three nodes in it:
 
 
 Consistency checks are enforced. For instance, if we try to create a `cycle`,
-where the root node is also a child of a decendent, the constructor will raise
+where the root node is also a child of a descendant, the constructor will raise
 an (:py:class:`~xarray.InvalidTreeError`):
 
 .. ipython:: python
@@ -710,8 +711,8 @@ inherited dimensions, but DataTree's inheritance is slightly stricter yet
 easier to reason about.
 
 The constraint that this puts on a DataTree is that dimensions and indices that
-are inherited must be aligned with any direct decendent node's existing
-dimension or index.  This allows decendents to use dimensions defined in
+are inherited must be aligned with any direct descendant node's existing
+dimension or index.  This allows descendants to use dimensions defined in
 ancestor nodes, without duplicating that information. But as a consequence, if
 a dimension-name is defined in on a node and that same dimension-name
 exists in one of its ancestors, they must align (have the same index and

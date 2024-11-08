@@ -187,10 +187,7 @@ def equivalent(first: T, second: T) -> bool:
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    for f, s in zip(first, second, strict=True):
-        if not equivalent(f, s):
-            return False
-    return True
+    return all(equivalent(f, s) for f, s in zip(first, second, strict=True))
 
 
 def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
@@ -1065,16 +1062,16 @@ def contains_only_chunked_or_numpy(obj) -> bool:
 
     Expects obj to be Dataset or DataArray"""
     from xarray.core.dataarray import DataArray
+    from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.pycompat import is_chunked_array
 
     if isinstance(obj, DataArray):
         obj = obj._to_temp_dataset()
 
     return all(
-        [
-            isinstance(var.data, np.ndarray) or is_chunked_array(var.data)
-            for var in obj.variables.values()
-        ]
+        isinstance(var._data, ExplicitlyIndexed | np.ndarray)
+        or is_chunked_array(var._data)
+        for var in obj._variables.values()
     )
 
 
@@ -1195,3 +1192,18 @@ def _resolve_doubly_passed_kwarg(
         )
 
     return kwargs_dict
+
+
+_DEFAULT_NAME = ReprObject("<default-name>")
+
+
+def result_name(objects: Iterable[Any]) -> Any:
+    # use the same naming heuristics as pandas:
+    # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
+    names = {getattr(obj, "name", _DEFAULT_NAME) for obj in objects}
+    names.discard(_DEFAULT_NAME)
+    if len(names) == 1:
+        (name,) = names
+    else:
+        name = None
+    return name

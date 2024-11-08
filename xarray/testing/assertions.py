@@ -51,17 +51,15 @@ def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08, decode_bytes=Tru
 
 
 @ensure_warnings
-def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
+def assert_isomorphic(a: DataTree, b: DataTree):
     """
-    Two DataTrees are considered isomorphic if every node has the same number of children.
+    Two DataTrees are considered isomorphic if the set of paths to their
+    descendent nodes are the same.
 
     Nothing about the data or attrs in each node is checked.
 
     Isomorphism is a necessary condition for two trees to be used in a nodewise binary operation,
     such as tree1 + tree2.
-
-    By default this function does not check any part of the tree above the given node.
-    Therefore this function can be used as default to check that two subtrees are isomorphic.
 
     Parameters
     ----------
@@ -69,9 +67,6 @@ def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
         The first object to compare.
     b : DataTree
         The second object to compare.
-    from_root : bool, optional, default is False
-        Whether or not to first traverse to the root of the trees before checking for isomorphism.
-        If a & b have no parents then this has no effect.
 
     See Also
     --------
@@ -83,13 +78,7 @@ def assert_isomorphic(a: DataTree, b: DataTree, from_root: bool = False):
     assert isinstance(a, type(b))
 
     if isinstance(a, DataTree):
-        if from_root:
-            a = a.root
-            b = b.root
-
-        assert a.isomorphic(b, from_root=from_root), diff_datatree_repr(
-            a, b, "isomorphic"
-        )
+        assert a.isomorphic(b), diff_datatree_repr(a, b, "isomorphic")
     else:
         raise TypeError(f"{type(a)} not of type DataTree")
 
@@ -434,7 +423,7 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
         set(ds._variables),
     )
 
-    assert type(ds._dims) is dict, ds._dims  # noqa: E721
+    assert type(ds._dims) is dict, ds._dims
     assert all(isinstance(v, int) for v in ds._dims.values()), ds._dims
     var_dims: set[Hashable] = set()
     for v in ds._variables.values():

@@ -317,7 +317,7 @@ class TreeNode(Generic[Tree]):
             DeprecationWarning,
             stacklevel=2,
         )
-        return tuple((self, *self.parents))
+        return (self, *self.parents)
 
     @property
     def lineage(self: Tree) -> tuple[Tree, ...]:
@@ -349,7 +349,7 @@ class TreeNode(Generic[Tree]):
             DeprecationWarning,
             stacklevel=2,
         )
-        return tuple((*reversed(self.parents), self))
+        return (*reversed(self.parents), self)
 
     @property
     def root(self: Tree) -> Tree:
@@ -380,7 +380,7 @@ class TreeNode(Generic[Tree]):
 
         Leaf nodes are defined as nodes which have no children.
         """
-        return tuple([node for node in self.subtree if node.is_leaf])
+        return tuple(node for node in self.subtree if node.is_leaf)
 
     @property
     def siblings(self: Tree) -> dict[str, Tree]:
@@ -399,13 +399,15 @@ class TreeNode(Generic[Tree]):
     @property
     def subtree(self: Tree) -> Iterator[Tree]:
         """
-        An iterator over all nodes in this tree, including both self and all descendants.
+        Iterate over all nodes in this tree, including both self and all descendants.
 
         Iterates breadth-first.
 
         See Also
         --------
+        DataTree.subtree_with_keys
         DataTree.descendants
+        group_subtrees
         """
         # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
         queue = collections.deque([self])
@@ -413,6 +415,25 @@ class TreeNode(Generic[Tree]):
             node = queue.popleft()
             yield node
             queue.extend(node.children.values())
+
+    @property
+    def subtree_with_keys(self: Tree) -> Iterator[tuple[str, Tree]]:
+        """
+        Iterate over relative paths and node pairs for all nodes in this tree.
+
+        Iterates breadth-first.
+
+        See Also
+        --------
+        DataTree.subtree
+        DataTree.descendants
+        group_subtrees
+        """
+        queue = collections.deque([(NodePath(), self)])
+        while queue:
+            path, node = queue.popleft()
+            yield str(path), node
+            queue.extend((path / name, child) for name, child in node.children.items())
 
     @property
     def descendants(self: Tree) -> tuple[Tree, ...]:
@@ -778,42 +799,79 @@ class NamedNode(TreeNode, Generic[Tree]):
         return NodePath(path_upwards)
 
 
-def zip_subtrees(*trees: AnyNamedNode) -> Iterator[tuple[AnyNamedNode, ...]]:
-    """Iterate over aligned subtrees in breadth-first order.
+class TreeIsomorphismError(ValueError):
+    """Error raised if two tree objects do not share the same node structure."""
 
-    Parameters:
-    -----------
+
+def group_subtrees(
+    *trees: AnyNamedNode,
+) -> Iterator[tuple[str, tuple[AnyNamedNode, ...]]]:
+    """Iterate over subtrees grouped by relative paths in breadth-first order.
+
+    `group_subtrees` allows for applying operations over all nodes of a
+    collection of DataTree objects with nodes matched by their relative paths.
+
+    Example usage::
+
+        outputs = {}
+        for path, (node_a, node_b) in group_subtrees(tree_a, tree_b):
+            outputs[path] = f(node_a, node_b)
+        tree_out = DataTree.from_dict(outputs)
+
+    Parameters
+    ----------
     *trees : Tree
         Trees to iterate over.
 
     Yields
     ------
-    Tuples of matching subtrees.
+    A tuple of the relative path and corresponding nodes for each subtree in the
+    inputs.
+
+    Raises
+    ------
+    TreeIsomorphismError
+        If trees are not isomorphic, i.e., they have different structures.
+
+    See also
+    --------
+    DataTree.subtree
+    DataTree.subtree_with_keys
     """
     if not trees:
         raise TypeError("must pass at least one tree object")
 
     # https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
-    queue = collections.deque([trees])
+    queue = collections.deque([(NodePath(), trees)])
 
     while queue:
-        active_nodes = queue.popleft()
+        path, active_nodes = queue.popleft()
 
         # yield before raising an error, in case the caller chooses to exit
         # iteration early
-        yield active_nodes
+        yield str(path), active_nodes
 
         first_node = active_nodes[0]
         if any(
             sibling.children.keys() != first_node.children.keys()
             for sibling in active_nodes[1:]
         ):
+            path_str = "root node" if not path.parts else f"node {str(path)!r}"
             child_summary = " vs ".join(
                 str(list(node.children)) for node in active_nodes
             )
-            raise ValueError(
-                f"children at {first_node.path!r} do not match: {child_summary}"
+            raise TreeIsomorphismError(
+                f"children at {path_str} do not match: {child_summary}"
             )
 
         for name in first_node.children:
-            queue.append(tuple(node.children[name] for node in active_nodes))
+            child_nodes = tuple(node.children[name] for node in active_nodes)
+            queue.append((path / name, child_nodes))
+
+
+def zip_subtrees(
+    *trees: AnyNamedNode,
+) -> Iterator[tuple[AnyNamedNode, ...]]:
+    """Zip together subtrees aligned by relative path."""
+    for _, nodes in group_subtrees(*trees):
+        yield nodes

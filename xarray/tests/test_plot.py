@@ -102,10 +102,7 @@ def substring_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
     Return True if a substring is found anywhere in an axes
     """
     alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}  # type: ignore[attr-defined] # mpl error?
-    for txt in alltxt:
-        if substring in txt:
-            return True
-    return False
+    return any(substring in txt for txt in alltxt)
 
 
 def substring_not_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
@@ -125,11 +122,11 @@ def property_in_axes_text(
     has the property assigned to property_str
     """
     alltxt: list[mpl.text.Text] = ax.findobj(mpl.text.Text)  # type: ignore[assignment]
-    check = []
-    for t in alltxt:
-        if t.get_text() == target_txt:
-            check.append(plt.getp(t, property) == property_str)
-    return all(check)
+    return all(
+        plt.getp(t, property) == property_str
+        for t in alltxt
+        if t.get_text() == target_txt
+    )
 
 
 def easy_array(shape: tuple[int, ...], start: float = 0, stop: float = 1) -> np.ndarray:
@@ -3282,7 +3279,7 @@ def test_maybe_gca() -> None:
         existing_axes = plt.axes()
         ax = _maybe_gca(aspect=1)
 
-        # re-uses the existing axes
+        # reuses the existing axes
         assert existing_axes == ax
         # kwargs are ignored when reusing axes
         assert ax.get_aspect() == "auto"

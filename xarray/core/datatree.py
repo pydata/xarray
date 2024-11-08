@@ -18,23 +18,25 @@ from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
 from xarray.core._typed_ops import DataTreeOpsMixin
 from xarray.core.alignment import align
-from xarray.core.common import TreeAttrAccessMixin
+from xarray.core.common import TreeAttrAccessMixin, get_chunksizes
 from xarray.core.coordinates import Coordinates, DataTreeCoordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, DataVariables
 from xarray.core.datatree_mapping import (
-    TreeIsomorphismError,
-    check_isomorphic,
     map_over_datasets,
 )
-from xarray.core.formatting import datatree_repr, dims_and_coords_repr
+from xarray.core.formatting import (
+    datatree_repr,
+    diff_treestructure,
+    dims_and_coords_repr,
+)
 from xarray.core.formatting_html import (
     datatree_repr as datatree_repr_html,
 )
 from xarray.core.indexes import Index, Indexes
 from xarray.core.merge import dataset_update_method
 from xarray.core.options import OPTIONS as XR_OPTS
-from xarray.core.treenode import NamedNode, NodePath
+from xarray.core.treenode import NamedNode, NodePath, zip_subtrees
 from xarray.core.types import Self
 from xarray.core.utils import (
     Default,
@@ -47,6 +49,8 @@ from xarray.core.utils import (
     parse_dims_as_set,
 )
 from xarray.core.variable import Variable
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import is_chunked_array
 
 try:
     from xarray.core.variable import calculate_dimensions
@@ -66,8 +70,11 @@ if TYPE_CHECKING:
         ErrorOptions,
         ErrorOptionsWithWarn,
         NetcdfWriteModes,
+        T_ChunkDimFreq,
+        T_ChunksFreq,
         ZarrWriteModes,
     )
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 # """
 # DEVELOPERS' NOTE
@@ -111,10 +118,6 @@ def _to_new_dataset(data: Dataset | Coordinates | None) -> Dataset:
     return ds
 
 
-def _join_path(root: str, name: str) -> str:
-    return str(NodePath(root) / name)
-
-
 def _inherited_dataset(ds: Dataset, parent: Dataset) -> Dataset:
     return Dataset._construct_direct(
         variables=parent._variables | ds._variables,
@@ -143,7 +146,7 @@ def check_alignment(
 ) -> None:
     if parent_ds is not None:
         try:
-            align(node_ds, parent_ds, join="exact")
+            align(node_ds, parent_ds, join="exact", copy=False)
         except ValueError as e:
             node_repr = _indented(_without_header(repr(node_ds)))
             parent_repr = _indented(dims_and_coords_repr(parent_ds))
@@ -214,10 +217,10 @@ class DatasetView(Dataset):
     __slots__ = (
         "_attrs",
         "_cache",  # used by _CachedAccessor
+        "_close",
         "_coord_names",
         "_dims",
         "_encoding",
-        "_close",
         "_indexes",
         "_variables",
     )
@@ -266,6 +269,15 @@ class DatasetView(Dataset):
             "Mutation of the DatasetView is not allowed, please use `.update` on the wrapping DataTree node, "
             "or use `dt.to_dataset()` if you want a mutable dataset. If calling this from within `map_over_datasets`,"
             "use `.copy()` first to get a mutable version of the input dataset."
+        )
+
+    def set_close(self, close: Callable[[], None] | None) -> None:
+        raise AttributeError("cannot modify a DatasetView()")
+
+    def close(self) -> None:
+        raise AttributeError(
+            "cannot close a DatasetView(). Close the associated DataTree node "
+            "instead"
         )
 
     # FIXME https://github.com/python/mypy/issues/7328
@@ -445,17 +457,17 @@ class DataTree(
     _close: Callable[[], None] | None
 
     __slots__ = (
-        "_name",
-        "_parent",
-        "_children",
+        "_attrs",
         "_cache",  # used by _CachedAccessor
+        "_children",
+        "_close",
         "_data_variables",
+        "_encoding",
+        "_name",
         "_node_coord_variables",
         "_node_dims",
         "_node_indexes",
-        "_attrs",
-        "_encoding",
-        "_close",
+        "_parent",
     )
 
     def __init__(
@@ -635,7 +647,7 @@ class DataTree(
             None if self._attrs is None else dict(self._attrs),
             dict(self._indexes if inherit else self._node_indexes),
             None if self._encoding is None else dict(self._encoding),
-            self._close,
+            None,
         )
 
     @property
@@ -746,12 +758,14 @@ class DataTree(
         # Instead for now we only list direct paths to all node in subtree explicitly
 
         items_on_this_node = self._item_sources
-        full_file_like_paths_to_all_nodes_in_subtree = {
-            node.path[1:]: node for node in self.subtree
+        paths_to_all_nodes_in_subtree = {
+            path: node
+            for path, node in self.subtree_with_keys
+            if path != "."  # exclude the root node
         }
 
         all_item_sources = itertools.chain(
-            items_on_this_node, [full_file_like_paths_to_all_nodes_in_subtree]
+            items_on_this_node, [paths_to_all_nodes_in_subtree]
         )
 
         items = {
@@ -796,6 +810,29 @@ class DataTree(
             return f"<pre>{escape(repr(self))}</pre>"
         return datatree_repr_html(self)
 
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.close()
+
+    # DatasetView does not support close() or set_close(), so we reimplement
+    # these methods on DataTree.
+
+    def _close_node(self) -> None:
+        if self._close is not None:
+            self._close()
+        self._close = None
+
+    def close(self) -> None:
+        """Close any files associated with this tree."""
+        for node in self.subtree:
+            node._close_node()
+
+    def set_close(self, close: Callable[[], None] | None) -> None:
+        """Set the closer for this node."""
+        self._close = close
+
     def _replace_node(
         self: DataTree,
         data: Dataset | Default = _default,
@@ -830,9 +867,9 @@ class DataTree(
     ) -> Self:
         """Copy just one node of a tree."""
         new_node = super()._copy_node(inherit=inherit, deep=deep, memo=memo)
-        data = self._to_dataset_view(rebuild_dims=False, inherit=inherit)
-        if deep:
-            data = data._copy(deep=True, memo=memo)
+        data = self._to_dataset_view(rebuild_dims=False, inherit=inherit)._copy(
+            deep=deep, memo=memo
+        )
         new_node._set_node_data(data)
         return new_node
 
@@ -1169,15 +1206,27 @@ class DataTree(
         # to do with the return type of Dataset.copy()
         return obj  # type: ignore[return-value]
 
-    def to_dict(self) -> dict[str, Dataset]:
+    def to_dict(self, relative: bool = False) -> dict[str, Dataset]:
         """
-        Create a dictionary mapping of absolute node paths to the data contained in those nodes.
+        Create a dictionary mapping of paths to the data contained in those nodes.
+
+        Parameters
+        ----------
+        relative : bool
+            If True, return relative instead of absolute paths.
 
         Returns
         -------
         dict[str, Dataset]
+
+        See also
+        --------
+        DataTree.subtree_with_keys
         """
-        return {node.path: node.to_dataset() for node in self.subtree}
+        return {
+            node.relative_to(self) if relative else node.path: node.to_dataset()
+            for node in self.subtree
+        }
 
     @property
     def nbytes(self) -> int:
@@ -1218,49 +1267,27 @@ class DataTree(
         """Dictionary of DataArray objects corresponding to data variables"""
         return DataVariables(self.to_dataset())
 
-    def isomorphic(
-        self,
-        other: DataTree,
-        from_root: bool = False,
-        strict_names: bool = False,
-    ) -> bool:
+    def isomorphic(self, other: DataTree) -> bool:
         """
-        Two DataTrees are considered isomorphic if every node has the same number of children.
+        Two DataTrees are considered isomorphic if the set of paths to their
+        descendent nodes are the same.
 
         Nothing about the data in each node is checked.
 
         Isomorphism is a necessary condition for two trees to be used in a nodewise binary operation,
         such as ``tree1 + tree2``.
 
-        By default this method does not check any part of the tree above the given node.
-        Therefore this method can be used as default to check that two subtrees are isomorphic.
-
         Parameters
         ----------
         other : DataTree
             The other tree object to compare to.
-        from_root : bool, optional, default is False
-            Whether or not to first traverse to the root of the two trees before checking for isomorphism.
-            If neither tree has a parent then this has no effect.
-        strict_names : bool, optional, default is False
-            Whether or not to also check that every node in the tree has the same name as its counterpart in the other
-            tree.
 
         See Also
         --------
         DataTree.equals
         DataTree.identical
         """
-        try:
-            check_isomorphic(
-                self,
-                other,
-                require_names_equal=strict_names,
-                check_from_root=from_root,
-            )
-            return True
-        except (TypeError, TreeIsomorphismError):
-            return False
+        return diff_treestructure(self, other) is None
 
     def equals(self, other: DataTree) -> bool:
         """
@@ -1279,12 +1306,14 @@ class DataTree(
         DataTree.isomorphic
         DataTree.identical
         """
-        if not self.isomorphic(other, strict_names=True):
+        if not self.isomorphic(other):
             return False
 
+        # Note: by using .dataset, this intentionally does not check that
+        # coordinates are defined at the same levels.
         return all(
             node.dataset.equals(other_node.dataset)
-            for node, other_node in zip(self.subtree, other.subtree, strict=True)
+            for node, other_node in zip_subtrees(self, other)
         )
 
     def _inherited_coords_set(self) -> set[str]:
@@ -1307,7 +1336,7 @@ class DataTree(
         DataTree.isomorphic
         DataTree.equals
         """
-        if not self.isomorphic(other, strict_names=True):
+        if not self.isomorphic(other):
             return False
 
         if self.name != other.name:
@@ -1316,10 +1345,9 @@ class DataTree(
         if self._inherited_coords_set() != other._inherited_coords_set():
             return False
 
-        # TODO: switch to zip_subtrees, when available
         return all(
             node.dataset.identical(other_node.dataset)
-            for node, other_node in zip(self.subtree, other.subtree, strict=True)
+            for node, other_node in zip_subtrees(self, other)
         )
 
     def filter(self: DataTree, filterfunc: Callable[[DataTree], bool]) -> DataTree:
@@ -1345,9 +1373,11 @@ class DataTree(
         map_over_datasets
         """
         filtered_nodes = {
-            node.path: node.dataset for node in self.subtree if filterfunc(node)
+            path: node.dataset
+            for path, node in self.subtree_with_keys
+            if filterfunc(node)
         }
-        return DataTree.from_dict(filtered_nodes, name=self.root.name)
+        return DataTree.from_dict(filtered_nodes, name=self.name)
 
     def match(self, pattern: str) -> DataTree:
         """
@@ -1389,17 +1419,16 @@ class DataTree(
             └── Group: /b/B
         """
         matching_nodes = {
-            node.path: node.dataset
-            for node in self.subtree
+            path: node.dataset
+            for path, node in self.subtree_with_keys
             if NodePath(node.path).match(pattern)
         }
-        return DataTree.from_dict(matching_nodes, name=self.root.name)
+        return DataTree.from_dict(matching_nodes, name=self.name)
 
     def map_over_datasets(
         self,
         func: Callable,
-        *args: Iterable[Any],
-        **kwargs: Any,
+        *args: Any,
     ) -> DataTree | tuple[DataTree, ...]:
         """
         Apply a function to every dataset in this subtree, returning a new tree which stores the results.
@@ -1418,18 +1447,19 @@ class DataTree(
             Function will not be applied to any nodes without datasets.
         *args : tuple, optional
             Positional arguments passed on to `func`.
-        **kwargs : Any
-            Keyword arguments passed on to `func`.
 
         Returns
         -------
         subtrees : DataTree, tuple of DataTrees
             One or more subtrees containing results from applying ``func`` to the data at each node.
+
+        See also
+        --------
+        map_over_datasets
         """
         # TODO this signature means that func has no way to know which node it is being called upon - change?
-
         # TODO fix this typing error
-        return map_over_datasets(func)(self, *args, **kwargs)
+        return map_over_datasets(func, self, *args)
 
     def pipe(
         self, func: Callable | tuple[Callable, str], *args: Any, **kwargs: Any
@@ -1500,7 +1530,7 @@ class DataTree(
 
     def _unary_op(self, f, *args, **kwargs) -> DataTree:
         # TODO do we need to any additional work to avoid duplication etc.? (Similar to aggregations)
-        return self.map_over_datasets(f, *args, **kwargs)  # type: ignore[return-value]
+        return self.map_over_datasets(functools.partial(f, **kwargs), *args)  # type: ignore[return-value]
 
     def _binary_op(self, other, f, reflexive=False, join=None) -> DataTree:
         from xarray.core.dataset import Dataset
@@ -1515,7 +1545,7 @@ class DataTree(
             reflexive=reflexive,
             join=join,
         )
-        return map_over_datasets(ds_binop)(self, other)
+        return map_over_datasets(ds_binop, self, other)
 
     def _inplace_binary_op(self, other, f) -> Self:
         from xarray.core.groupby import GroupBy
@@ -1543,6 +1573,7 @@ class DataTree(
         format: T_DataTreeNetcdfTypes | None = None,
         engine: T_DataTreeNetcdfEngine | None = None,
         group: str | None = None,
+        write_inherited_coords: bool = False,
         compute: bool = True,
         **kwargs,
     ):
@@ -1579,6 +1610,11 @@ class DataTree(
         group : str, optional
             Path to the netCDF4 group in the given file to open as the root group
             of the ``DataTree``. Currently, specifying a group is not supported.
+        write_inherited_coords : bool, default: False
+            If true, replicate inherited coordinates on all descendant nodes.
+            Otherwise, only write coordinates at the level at which they are
+            originally defined. This saves disk space, but requires opening the
+            full tree to load inherited coordinates.
         compute : bool, default: True
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later.
@@ -1602,6 +1638,7 @@ class DataTree(
             format=format,
             engine=engine,
             group=group,
+            write_inherited_coords=write_inherited_coords,
             compute=compute,
             **kwargs,
         )
@@ -1613,6 +1650,7 @@ class DataTree(
         encoding=None,
         consolidated: bool = True,
         group: str | None = None,
+        write_inherited_coords: bool = False,
         compute: Literal[True] = True,
         **kwargs,
     ):
@@ -1638,6 +1676,11 @@ class DataTree(
             after writing metadata for all groups.
         group : str, optional
             Group path. (a.k.a. `path` in zarr terminology.)
+        write_inherited_coords : bool, default: False
+            If true, replicate inherited coordinates on all descendant nodes.
+            Otherwise, only write coordinates at the level at which they are
+            originally defined. This saves disk space, but requires opening the
+            full tree to load inherited coordinates.
         compute : bool, default: True
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later. Metadata
@@ -1660,6 +1703,7 @@ class DataTree(
             encoding=encoding,
             consolidated=consolidated,
             group=group,
+            write_inherited_coords=write_inherited_coords,
             compute=compute,
             **kwargs,
         )
@@ -1683,7 +1727,7 @@ class DataTree(
         """Reduce this tree by applying `func` along some dimension(s)."""
         dims = parse_dims_as_set(dim, self._get_all_dims())
         result = {}
-        for node in self.subtree:
+        for path, node in self.subtree_with_keys:
             reduce_dims = [d for d in node._node_dims if d in dims]
             node_result = node.dataset.reduce(
                 func,
@@ -1693,7 +1737,6 @@ class DataTree(
                 numeric_only=numeric_only,
                 **kwargs,
             )
-            path = node.relative_to(self)
             result[path] = node_result
         return type(self).from_dict(result, name=self.name)
 
@@ -1711,7 +1754,7 @@ class DataTree(
         indexers = drop_dims_from_indexers(indexers, all_dims, missing_dims)
 
         result = {}
-        for node in self.subtree:
+        for path, node in self.subtree_with_keys:
             node_indexers = {k: v for k, v in indexers.items() if k in node.dims}
             node_result = func(node.dataset, node_indexers)
             # Indexing datasets corresponding to each node results in redundant
@@ -1728,7 +1771,6 @@ class DataTree(
                         # with a scalar) can also create scalar coordinates, which
                         # need to be explicitly removed.
                         del node_result.coords[k]
-            path = node.relative_to(self)
             result[path] = node_result
         return type(self).from_dict(result, name=self.name)
 
@@ -1873,3 +1915,259 @@ class DataTree(
 
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "sel")
         return self._selective_indexing(apply_indexers, indexers)
+
+    def load(self, **kwargs) -> Self:
+        """Manually trigger loading and/or computation of this datatree's data
+        from disk or a remote source into memory and return this datatree.
+        Unlike compute, the original datatree is modified and returned.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.compute``.
+
+        See Also
+        --------
+        Dataset.load
+        dask.compute
+        """
+        # access .data to coerce everything to numpy or dask arrays
+        lazy_data = {
+            path: {
+                k: v._data
+                for k, v in node.variables.items()
+                if is_chunked_array(v._data)
+            }
+            for path, node in self.subtree_with_keys
+        }
+        flat_lazy_data = {
+            (path, var_name): array
+            for path, node in lazy_data.items()
+            for var_name, array in node.items()
+        }
+        if flat_lazy_data:
+            chunkmanager = get_chunked_array_type(*flat_lazy_data.values())
+
+            # evaluate all the chunked arrays simultaneously
+            evaluated_data: tuple[np.ndarray[Any, Any], ...] = chunkmanager.compute(
+                *flat_lazy_data.values(), **kwargs
+            )
+
+            for (path, var_name), data in zip(
+                flat_lazy_data, evaluated_data, strict=False
+            ):
+                self[path].variables[var_name].data = data
+
+        # load everything else sequentially
+        for node in self.subtree:
+            for k, v in node.variables.items():
+                if k not in lazy_data:
+                    v.load()
+
+        return self
+
+    def compute(self, **kwargs) -> Self:
+        """Manually trigger loading and/or computation of this datatree's data
+        from disk or a remote source into memory and return a new datatree.
+        Unlike load, the original datatree is left unaltered.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.compute``.
+
+        Returns
+        -------
+        object : DataTree
+            New object with lazy data variables and coordinates as in-memory arrays.
+
+        See Also
+        --------
+        dask.compute
+        """
+        new = self.copy(deep=False)
+        return new.load(**kwargs)
+
+    def _persist_inplace(self, **kwargs) -> Self:
+        """Persist all chunked arrays in memory"""
+        # access .data to coerce everything to numpy or dask arrays
+        lazy_data = {
+            path: {
+                k: v._data
+                for k, v in node.variables.items()
+                if is_chunked_array(v._data)
+            }
+            for path, node in self.subtree_with_keys
+        }
+        flat_lazy_data = {
+            (path, var_name): array
+            for path, node in lazy_data.items()
+            for var_name, array in node.items()
+        }
+        if flat_lazy_data:
+            chunkmanager = get_chunked_array_type(*flat_lazy_data.values())
+
+            # evaluate all the dask arrays simultaneously
+            evaluated_data = chunkmanager.persist(*flat_lazy_data.values(), **kwargs)
+
+            for (path, var_name), data in zip(
+                flat_lazy_data, evaluated_data, strict=False
+            ):
+                self[path].variables[var_name].data = data
+
+        return self
+
+    def persist(self, **kwargs) -> Self:
+        """Trigger computation, keeping data as chunked arrays.
+
+        This operation can be used to trigger computation on underlying dask
+        arrays, similar to ``.compute()`` or ``.load()``.  However this
+        operation keeps the data as dask arrays. This is particularly useful
+        when using the dask.distributed scheduler and you want to load a large
+        amount of data into distributed memory.
+        Like compute (but unlike load), the original dataset is left unaltered.
+
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.persist``.
+
+        Returns
+        -------
+        object : DataTree
+            New object with all dask-backed coordinates and data variables as persisted dask arrays.
+
+        See Also
+        --------
+        dask.persist
+        """
+        new = self.copy(deep=False)
+        return new._persist_inplace(**kwargs)
+
+    @property
+    def chunksizes(self) -> Mapping[str, Mapping[Hashable, tuple[int, ...]]]:
+        """
+        Mapping from group paths to a mapping of chunksizes.
+
+        If there's no chunked data in a group, the corresponding mapping of chunksizes will be empty.
+
+        Cannot be modified directly, but can be modified by calling .chunk().
+
+        See Also
+        --------
+        DataTree.chunk
+        Dataset.chunksizes
+        """
+        return Frozen(
+            {
+                node.path: get_chunksizes(node.variables.values())
+                for node in self.subtree
+            }
+        )
+
+    def chunk(
+        self,
+        chunks: T_ChunksFreq = {},  # noqa: B006  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        name_prefix: str = "xarray-",
+        token: str | None = None,
+        lock: bool = False,
+        inline_array: bool = False,
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
+        from_array_kwargs=None,
+        **chunks_kwargs: T_ChunkDimFreq,
+    ) -> Self:
+        """Coerce all arrays in all groups in this tree into dask arrays with the given
+        chunks.
+
+        Non-dask arrays in this tree will be converted to dask arrays. Dask
+        arrays will be rechunked to the given chunk sizes.
+
+        If neither chunks is not provided for one or more dimensions, chunk
+        sizes along that dimension will not be updated; non-dask arrays will be
+        converted into dask arrays with a single block.
+
+        Along datetime-like dimensions, a :py:class:`groupers.TimeResampler` object is also accepted.
+
+        Parameters
+        ----------
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
+            Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
+            ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": TimeResampler(freq="YE")}``.
+        name_prefix : str, default: "xarray-"
+            Prefix for the name of any new dask arrays.
+        token : str, optional
+            Token uniquely identifying this datatree.
+        lock : bool, default: False
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
+        inline_array: bool, default: False
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
+        chunked_array_type: str, optional
+            Which chunked array type to coerce this datatree's arrays to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
+            Experimental API that should not be relied upon.
+        from_array_kwargs: dict, optional
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+            For example, with dask as the default chunked array type, this method would pass additional kwargs
+            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+        **chunks_kwargs : {dim: chunks, ...}, optional
+            The keyword arguments form of ``chunks``.
+            One of chunks or chunks_kwargs must be provided
+
+        Returns
+        -------
+        chunked : xarray.DataTree
+
+        See Also
+        --------
+        Dataset.chunk
+        Dataset.chunksizes
+        xarray.unify_chunks
+        dask.array.from_array
+        """
+        # don't support deprecated ways of passing chunks
+        if not isinstance(chunks, Mapping):
+            raise TypeError(
+                f"invalid type for chunks: {type(chunks)}. Only mappings are supported."
+            )
+        combined_chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+
+        all_dims = self._get_all_dims()
+
+        bad_dims = combined_chunks.keys() - all_dims
+        if bad_dims:
+            raise ValueError(
+                f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(all_dims)}"
+            )
+
+        rechunked_groups = {
+            path: node.dataset.chunk(
+                {
+                    dim: size
+                    for dim, size in combined_chunks.items()
+                    if dim in node._node_dims
+                },
+                name_prefix=name_prefix,
+                token=token,
+                lock=lock,
+                inline_array=inline_array,
+                chunked_array_type=chunked_array_type,
+                from_array_kwargs=from_array_kwargs,
+            )
+            for path, node in self.subtree_with_keys
+        }
+
+        return self.from_dict(rechunked_groups, name=self.name)
