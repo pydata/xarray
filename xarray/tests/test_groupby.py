@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import operator
 import warnings
+from itertools import pairwise
 from unittest import mock
 
 import numpy as np
@@ -1272,7 +1273,7 @@ class TestDataArrayGroupBy:
 
     def test_groupby_properties(self) -> None:
         grouped = self.da.groupby("abc")
-        expected_groups = {"a": range(0, 9), "c": [9], "b": range(10, 20)}
+        expected_groups = {"a": range(9), "c": [9], "b": range(10, 20)}
         assert expected_groups.keys() == grouped.groups.keys()
         for key in expected_groups:
             expected_group = expected_groups[key]
@@ -1732,7 +1733,7 @@ class TestDataArrayGroupBy:
         bincoord = np.array(
             [
                 pd.Interval(left, right, closed="right")
-                for left, right in zip(bins[:-1], bins[1:], strict=True)
+                for left, right in pairwise(bins)
             ],
             dtype=object,
         )
@@ -1790,7 +1791,7 @@ class TestDataArrayGroupBy:
         rev = array_rev.groupby("idx", squeeze=False)
 
         for gb in [fwd, rev]:
-            assert all([isinstance(elem, slice) for elem in gb.encoded.group_indices])
+            assert all(isinstance(elem, slice) for elem in gb.encoded.group_indices)
 
         with xr.set_options(use_flox=use_flox):
             assert_identical(fwd.sum(), array)
@@ -1935,7 +1936,7 @@ class TestDataArrayResample:
         times = pd.date_range("2000-01-01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("__resample_dim__", times)])
         with pytest.raises(ValueError, match=r"Proxy resampling dimension"):
-            array.resample(**{"__resample_dim__": "1D"}).first()  # type: ignore[arg-type]
+            array.resample(__resample_dim__="1D").first()
 
     @requires_scipy
     def test_resample_drop_nondim_coords(self) -> None:

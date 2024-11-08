@@ -194,7 +194,7 @@ class ZarrArrayWrapper(BackendArray):
         if (
             not _zarr_v3()
             and self._array.filters is not None
-            and any([filt.codec_id == "vlen-utf8" for filt in self._array.filters])
+            and any(filt.codec_id == "vlen-utf8" for filt in self._array.filters)
         ):
             dtype = coding.strings.create_vlen_dtype(str)
         else:
@@ -649,7 +649,7 @@ class ZarrStore(AbstractWritableDataStore):
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
         )
-        group_paths = [node for node in _iter_zarr_groups(zarr_group, parent=group)]
+        group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
         return {
             group: cls(
                 zarr_group.get(group),
