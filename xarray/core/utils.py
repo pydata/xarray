@@ -1008,7 +1008,7 @@ def parse_ordered_dims(
 def _check_dims(dim: Set[Hashable], all_dims: Set[Hashable]) -> None:
     wrong_dims = (dim - all_dims) - {...}
     if wrong_dims:
-        wrong_dims_str = ", ".join(f"'{d!s}'" for d in wrong_dims)
+        wrong_dims_str = ", ".join(f"'{d}'" for d in wrong_dims)
         raise ValueError(
             f"Dimension(s) {wrong_dims_str} do not exist. Expected one or more of {all_dims}"
         )
