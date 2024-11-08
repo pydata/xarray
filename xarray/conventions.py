@@ -805,7 +805,7 @@ def cf_encoder(variables: T_Variables, attributes: T_Attrs):
 
     # Remove attrs from bounds variables (issue #2921)
     for var in new_vars.values():
-        bounds = var.attrs["bounds"] if "bounds" in var.attrs else None
+        bounds = var.attrs.get("bounds")
         if bounds and bounds in new_vars:
             # see http://cfconventions.org/cf-conventions/cf-conventions.html#cell-boundaries
             for attr in [
