@@ -208,7 +208,7 @@ def format_bump_table(specs, policy_versions, releases, warnings):
         styles = {
             ">": "bold red1",
             "=": "bold dim green3",
-            "<": "dark_orange",
+            "<": "bold orange3",
         }
         if warnings[spec.name] and status != ">":
             style = warning_style
@@ -226,7 +226,7 @@ def format_bump_table(specs, policy_versions, releases, warnings):
         )
 
     grid = Table.grid(expand=True, padding=(0, 2))
-    grid.add_column(style="bold red", vertical="middle")
+    grid.add_column(style="bold red1", vertical="middle")
     grid.add_column()
     grid.add_row("Version summary", table)
 
