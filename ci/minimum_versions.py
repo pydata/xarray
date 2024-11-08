@@ -205,12 +205,12 @@ def format_bump_table(specs, policy_versions, releases, warnings):
 
         status = version_comparison_symbol(required_version, policy_version)
         styles = {
-            ">": "bold red on grey15",
+            ">": "bold red",
             "=": "green",
-            "<": "bold yellow on grey15",
+            "<": "bold yellow",
         }
         if warnings[spec.name]:
-            style = "bold red on grey3"
+            style = "bold bright_red"
         else:
             style = styles[status]
 
