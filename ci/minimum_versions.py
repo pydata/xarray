@@ -205,12 +205,12 @@ def format_bump_table(specs, policy_versions, releases, warnings):
 
         status = version_comparison_symbol(required_version, policy_version)
         styles = {
-            ">": "bold red",
-            "=": "green",
-            "<": "bold yellow",
+            ">": "bold red1",
+            "=": "dim green3",
+            "<": "orange3",
         }
-        if warnings[spec.name]:
-            style = "bold bright_red"
+        if warnings[spec.name] and status != ">":
+            style = "bold yellow"
         else:
             style = styles[status]
 
@@ -231,14 +231,14 @@ def format_bump_table(specs, policy_versions, releases, warnings):
 
     if any(warnings.values()):
         warning_table = Table(width=table.width, expand=True)
-        warning_table.add_column("Package", "Warning", style="bold yellow on grey3")
+        warning_table.add_column("Package", "Warning", style="bold yellow")
 
         for package, messages in warnings.items():
             if not messages:
                 continue
-            warning_table.add_row(package, messages[0], style="bold yellow on grey3")
+            warning_table.add_row(package, messages[0], style="bold yellow")
             for message in messages[1:]:
-                warning_table.add_row("", message, style="bold yellow on grey3")
+                warning_table.add_row("", message, style="bold yellow")
 
         grid.add_row("Warnings", warning_table)
 
