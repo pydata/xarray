@@ -27,7 +27,7 @@ jobs:
       - name: Set up conda environment
         uses: mamba-org/setup-micromamba@v2
         with:
-          micromamba-version: '2.0.2-2'
+          micromamba-version: '1.5.10-0'
           environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
           cache-environment: true
@@ -36,7 +36,7 @@ jobs:
           create-args: >-
             asv
             python-build
-            mamba
+            mamba<=1.5.10
 
 
       - name: Run benchmarks
