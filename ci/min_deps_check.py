@@ -11,7 +11,7 @@ import sys
 from collections.abc import Iterator
 from datetime import datetime
 
-import libmambapy  # type: ignore[import]
+import conda.api  # type: ignore[import]
 import yaml
 from dateutil.relativedelta import relativedelta
 
@@ -93,7 +93,7 @@ def query_conda(pkg: str) -> dict[tuple[int, int], datetime]:
 
         return (major, minor), time
 
-    raw_data = libmambapy.SubdirData.query_all(pkg, channels=CHANNELS)
+    raw_data = conda.api.SubdirData.query_all(pkg, channels=CHANNELS)
     data = sorted(metadata(entry) for entry in raw_data if entry.timestamp != 0)
 
     release_dates = {
