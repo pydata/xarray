@@ -210,7 +210,7 @@ def _numpy_char_to_bytes(arr):
     # see https://github.com/numpy/numpy/issues/25916
     # and https://github.com/numpy/numpy/pull/25922
     copy = None if HAS_NUMPY_2_0 else False
-    # based on: http://stackoverflow.com/a/10984878/809705
+    # based on: https://stackoverflow.com/a/10984878/809705
     arr = np.array(arr, copy=copy, order="C")
     dtype = "S" + str(arr.shape[-1])
     return arr.view(dtype).reshape(arr.shape[:-1])

@@ -106,10 +106,10 @@ under active development.
 See our technical :ref:`roadmap` for more details, and feel free to reach out
 with questions about whether xarray is the right tool for your needs.
 
-.. _datarray: https://github.com/fperez/datarray
-.. _Dask: http://dask.org
-.. _matplotlib: http://matplotlib.org
-.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
-.. _NumPy: http://www.numpy.org
-.. _pandas: http://pandas.pydata.org
-.. _SciPy: http://www.scipy.org
+.. _datarray: https://github.com/BIDS/datarray
+.. _Dask: https://www.dask.org
+.. _matplotlib: https://matplotlib.org
+.. _netCDF: https://www.unidata.ucar.edu/software/netcdf
+.. _NumPy: https://numpy.org
+.. _pandas: https://pandas.pydata.org
+.. _SciPy: https://www.scipy.org

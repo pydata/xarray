@@ -148,7 +148,7 @@ implementations, e.g.:
 -  Other ndarray objects, e.g., sparse, xnd, xtensor.
 
 Our strategy has been to pursue upstream improvements in NumPy (see
-`NEP-22 <http://www.numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html>`__)
+`NEP-22 <https://numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html>`__)
 for supporting a complete duck-typing interface using with NumPy's
 higher level array API. Improvements in NumPy's support for custom data
 types would also be highly useful for xarray users.

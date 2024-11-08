@@ -250,9 +250,9 @@ def _determine_zarr_chunks(
     # if there are no chunks in encoding but there are dask chunks, we try to
     # use the same chunks in zarr
     # However, zarr chunks needs to be uniform for each array
-    # http://zarr.readthedocs.io/en/latest/spec/v1.html#chunks
+    # https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html#chunks
     # while dask chunks can be variable sized
-    # http://dask.pydata.org/en/latest/array-design.html#chunks
+    # https://dask.pydata.org/en/latest/array-design.html#chunks
     if var_chunks and not enc_chunks:
         if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
             raise ValueError(
@@ -1377,7 +1377,7 @@ def open_zarr(
 
     References
     ----------
-    http://zarr.readthedocs.io/
+    https://zarr.readthedocs.io/
     """
     from xarray.backends.api import open_dataset
 
