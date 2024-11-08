@@ -302,7 +302,7 @@ def _as_array_or_item(data):
     if data.ndim == 0:
         kind = data.dtype.kind
         if kind in "mM":
-            unit = np.datetime_data(data.dtype)[0]
+            unit, _ = np.datetime_data(data.dtype)
             if kind == "M":
                 data = np.datetime64(data, unit)
             elif kind == "m":

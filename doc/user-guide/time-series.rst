@@ -81,7 +81,7 @@ You can manual decode arrays in this form by passing a dataset to
     xr.decode_cf(ds)
 
 From xarray 2024.11 the resolution of the dates can be tuned between "s", "ms", "us" and "ns". One limitation of using ``datetime64[ns]`` is that it limits the native representation of dates to those that fall between the years 1678 and 2262, which gets increased significantly with lower resolutions. When a netCDF file contains dates outside of these bounds (or dates < 1582-10-15), dates will be returned as arrays of :py:class:`cftime.datetime` objects and a :py:class:`~xarray.CFTimeIndex` will be used for indexing.
-:py:class:`~xarray.CFTimeIndex` enables a subset of the indexing functionality of a :py:class:`pandas.DatetimeIndex` and is only fully compatible with the standalone version of ``cftime`` (not the version packaged with earlier versions ``netCDF4``).
+:py:class:`~xarray.CFTimeIndex` enables a subset of the indexing functionality of a :py:class:`pandas.DatetimeIndex`.
 See :ref:`CFTimeIndex` for more information.
 
 Datetime indexing
