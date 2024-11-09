@@ -11,6 +11,7 @@ from dateutil.relativedelta import relativedelta
 from rattler import Gateway, Version
 from rich.console import Console
 from rich.panel import Panel
+from rich.style import Style
 from rich.table import Column, Table
 from tlz.functoolz import curry, pipe
 from tlz.itertoolz import concat, groupby
@@ -194,12 +195,12 @@ def format_bump_table(specs, policy_versions, releases, warnings):
         "Status",
     )
 
-    heading_style = "bold red1"
-    warning_style = "bold yellow1"
+    heading_style = Style(color="#ff0000", bold=True)
+    warning_style = Style(color="#ffff00", bold=True)
     styles = {
-        ">": "bold red1",
-        "=": "bold dim green3",
-        "<": "bold orange3",
+        ">": Style(color="#ff0000", bold=True),
+        "=": Style(color="#008700", bold=True),
+        "<": Style(color="#d78700", bold=True),
     }
 
     for spec in specs:
