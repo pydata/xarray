@@ -7,7 +7,6 @@ import pytest
 import xarray as xr
 from xarray.core import formatting_html as fh
 from xarray.core.coordinates import Coordinates
-from xarray.core.datatree import DataTree
 
 
 @pytest.fixture
@@ -219,7 +218,7 @@ class Test_summarize_datatree_children:
         from random import randint
 
         def _childfree_tree_factory():
-            return DataTree(
+            return xr.DataTree(
                 dataset=xr.Dataset({"z": ("y", [randint(1, 100) for _ in range(3)])})
             )
 
@@ -264,7 +263,7 @@ class Test_summarize_datatree_children:
         """
         Test with an empty mapping of children.
         """
-        children: dict[str, DataTree] = {}
+        children: dict[str, xr.DataTree] = {}
         assert self.func(children) == (
             "<div style='display: inline-grid; grid-template-columns: 100%; grid-column: 1 / -1'>"
             "</div>"
@@ -319,6 +318,25 @@ class Test_summarize_datatree_children:
             f"{second_line}"
             "</div>"
         )
+
+
+class TestDataTreeInheritance:
+    def test_inherited_section_present(self) -> None:
+        dt = xr.DataTree.from_dict(
+            {
+                "/": None,
+                "a": None,
+            }
+        )
+        with xr.set_options(display_style="html"):
+            html = dt._repr_html_().strip()
+        # checks that the section appears somewhere
+        assert "Inherited coordinates" in html
+
+        # TODO how can we assert that the Inherited coordinates section does not appear in the child group?
+        # with xr.set_options(display_style="html"):
+        #     child_html = dt["a"]._repr_html_().strip()
+        # assert "Inherited coordinates" not in child_html
 
 
 class Test__wrap_datatree_repr:

@@ -9,7 +9,6 @@ import pytest
 
 import xarray as xr
 from xarray.core import formatting
-from xarray.core.datatree import DataTree  # TODO: Remove when can do xr.DataTree
 from xarray.core.indexes import Index
 from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
 
@@ -620,13 +619,13 @@ class TestFormatting:
         assert "Using format_spec is only supported" in str(excinfo.value)
 
     def test_datatree_print_empty_node(self):
-        dt: DataTree = DataTree(name="root")
+        dt: xr.DataTree = xr.DataTree(name="root")
         printout = str(dt)
         assert printout == "<xarray.DataTree 'root'>\nGroup: /"
 
     def test_datatree_print_empty_node_with_attrs(self):
         dat = xr.Dataset(attrs={"note": "has attrs"})
-        dt: DataTree = DataTree(name="root", dataset=dat)
+        dt: xr.DataTree = xr.DataTree(name="root", dataset=dat)
         printout = str(dt)
         assert printout == dedent(
             """\
@@ -638,7 +637,7 @@ class TestFormatting:
 
     def test_datatree_print_node_with_data(self):
         dat = xr.Dataset({"a": [0, 2]})
-        dt: DataTree = DataTree(name="root", dataset=dat)
+        dt: xr.DataTree = xr.DataTree(name="root", dataset=dat)
         printout = str(dt)
         expected = [
             "<xarray.DataTree 'root'>",
@@ -654,7 +653,7 @@ class TestFormatting:
 
     def test_datatree_printout_nested_node(self):
         dat = xr.Dataset({"a": [0, 2]})
-        root = DataTree.from_dict(
+        root = xr.DataTree.from_dict(
             {
                 "/results": dat,
             }
@@ -664,63 +663,61 @@ class TestFormatting:
 
     def test_datatree_repr_of_node_with_data(self):
         dat = xr.Dataset({"a": [0, 2]})
-        dt: DataTree = DataTree(name="root", dataset=dat)
+        dt: xr.DataTree = xr.DataTree(name="root", dataset=dat)
         assert "Coordinates" in repr(dt)
 
-    def test_diff_datatree_repr_structure(self):
-        dt_1: DataTree = DataTree.from_dict({"a": None, "a/b": None, "a/c": None})
-        dt_2: DataTree = DataTree.from_dict({"d": None, "d/e": None})
+    def test_diff_datatree_repr_different_groups(self):
+        dt_1: xr.DataTree = xr.DataTree.from_dict({"a": None})
+        dt_2: xr.DataTree = xr.DataTree.from_dict({"b": None})
 
         expected = dedent(
             """\
-        Left and right DataTree objects are not isomorphic
+            Left and right DataTree objects are not identical
 
-        Number of children on node '/a' of the left object: 2
-        Number of children on node '/d' of the right object: 1"""
-        )
-        actual = formatting.diff_datatree_repr(dt_1, dt_2, "isomorphic")
-        assert actual == expected
-
-    def test_diff_datatree_repr_node_names(self):
-        dt_1: DataTree = DataTree.from_dict({"a": None})
-        dt_2: DataTree = DataTree.from_dict({"b": None})
-
-        expected = dedent(
-            """\
-        Left and right DataTree objects are not identical
-
-        Node '/a' in the left object has name 'a'
-        Node '/b' in the right object has name 'b'"""
+            Children at root node do not match: ['a'] vs ['b']"""
         )
         actual = formatting.diff_datatree_repr(dt_1, dt_2, "identical")
+        assert actual == expected
+
+    def test_diff_datatree_repr_different_subgroups(self):
+        dt_1: xr.DataTree = xr.DataTree.from_dict({"a": None, "a/b": None, "a/c": None})
+        dt_2: xr.DataTree = xr.DataTree.from_dict({"a": None, "a/b": None})
+
+        expected = dedent(
+            """\
+            Left and right DataTree objects are not isomorphic
+
+            Children at node 'a' do not match: ['b', 'c'] vs ['b']"""
+        )
+        actual = formatting.diff_datatree_repr(dt_1, dt_2, "isomorphic")
         assert actual == expected
 
     def test_diff_datatree_repr_node_data(self):
         # casting to int64 explicitly ensures that int64s are created on all architectures
         ds1 = xr.Dataset({"u": np.int64(0), "v": np.int64(1)})
         ds3 = xr.Dataset({"w": np.int64(5)})
-        dt_1: DataTree = DataTree.from_dict({"a": ds1, "a/b": ds3})
+        dt_1: xr.DataTree = xr.DataTree.from_dict({"a": ds1, "a/b": ds3})
         ds2 = xr.Dataset({"u": np.int64(0)})
         ds4 = xr.Dataset({"w": np.int64(6)})
-        dt_2: DataTree = DataTree.from_dict({"a": ds2, "a/b": ds4})
+        dt_2: xr.DataTree = xr.DataTree.from_dict({"a": ds2, "a/b": ds4}, name="foo")
 
         expected = dedent(
             """\
-        Left and right DataTree objects are not equal
+            Left and right DataTree objects are not identical
 
+            Differing names:
+                None != 'foo'
 
-        Data in nodes at position '/a' do not match:
+            Data at node 'a' does not match:
+                Data variables only on the left object:
+                    v        int64 8B 1
 
-        Data variables only on the left object:
-            v        int64 8B 1
-
-        Data in nodes at position '/a/b' do not match:
-
-        Differing data variables:
-        L   w        int64 8B 5
-        R   w        int64 8B 6"""
+            Data at node 'a/b' does not match:
+                Differing data variables:
+                L   w        int64 8B 5
+                R   w        int64 8B 6"""
         )
-        actual = formatting.diff_datatree_repr(dt_1, dt_2, "equals")
+        actual = formatting.diff_datatree_repr(dt_1, dt_2, "identical")
         assert actual == expected
 
 
@@ -943,7 +940,9 @@ def test_lazy_array_wont_compute() -> None:
     from xarray.core.indexing import LazilyIndexedArray
 
     class LazilyIndexedArrayNotComputable(LazilyIndexedArray):
-        def __array__(self, dtype=None, copy=None):
+        def __array__(
+            self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        ) -> np.ndarray:
             raise NotImplementedError("Computing this array is not possible.")
 
     arr = LazilyIndexedArrayNotComputable(np.array([1, 2]))
@@ -1033,7 +1032,6 @@ Coordinates:
 
 
 def test_array_repr_dtypes():
-
     # These dtypes are expected to be represented similarly
     # on Ubuntu, macOS and Windows environments of the CI.
     # Unsigned integer could be used as easy replacements
@@ -1144,7 +1142,7 @@ Dimensions without coordinates: x
     actual = repr(ds)
     expected = f"""
 <xarray.DataArray (x: 1)> Size: {array.dtype.itemsize}B
-{repr(array)}
+{array!r}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
@@ -1154,7 +1152,7 @@ Dimensions without coordinates: x
     actual = repr(ds)
     expected = f"""
 <xarray.DataArray (x: 1)> Size: 4B
-{repr(array)}
+{array!r}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected
@@ -1164,7 +1162,7 @@ Dimensions without coordinates: x
     actual = repr(ds)
     expected = f"""
 <xarray.DataArray (x: 1)> Size: 8B
-{repr(array)}
+{array!r}
 Dimensions without coordinates: x
         """.strip()
     assert actual == expected

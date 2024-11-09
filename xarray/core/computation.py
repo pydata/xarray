@@ -31,7 +31,7 @@ from xarray.core.indexes import Index, filter_indexes_from_coords
 from xarray.core.merge import merge_attrs, merge_coordinates_without_align
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import Dims, T_DataArray
-from xarray.core.utils import is_dict_like, is_scalar, parse_dims
+from xarray.core.utils import is_dict_like, is_scalar, parse_dims_as_set, result_name
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
@@ -46,7 +46,6 @@ if TYPE_CHECKING:
     MissingCoreDimOptions = Literal["raise", "copy", "drop"]
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
-_DEFAULT_NAME = utils.ReprObject("<default-name>")
 _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
 
 
@@ -78,11 +77,11 @@ class _UFuncSignature:
     """
 
     __slots__ = (
-        "input_core_dims",
-        "output_core_dims",
+        "_all_core_dims",
         "_all_input_core_dims",
         "_all_output_core_dims",
-        "_all_core_dims",
+        "input_core_dims",
+        "output_core_dims",
     )
 
     def __init__(self, input_core_dims, output_core_dims=((),)):
@@ -184,18 +183,6 @@ class _UFuncSignature:
 
         alt_signature = type(self)(input_core_dims, output_core_dims)
         return str(alt_signature)
-
-
-def result_name(objects: Iterable[Any]) -> Any:
-    # use the same naming heuristics as pandas:
-    # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
-    names = {getattr(obj, "name", _DEFAULT_NAME) for obj in objects}
-    names.discard(_DEFAULT_NAME)
-    if len(names) == 1:
-        (name,) = names
-    else:
-        name = None
-    return name
 
 
 def _get_coords_list(args: Iterable[Any]) -> list[Coordinates]:
@@ -1841,16 +1828,15 @@ def dot(
     einsum_axes = "abcdefghijklmnopqrstuvwxyz"
     dim_map = {d: einsum_axes[i] for i, d in enumerate(all_dims)}
 
+    dot_dims: set[Hashable]
     if dim is None:
         # find dimensions that occur more than once
         dim_counts: Counter = Counter()
         for arr in arrays:
             dim_counts.update(arr.dims)
-        dim = tuple(d for d, c in dim_counts.items() if c > 1)
+        dot_dims = {d for d, c in dim_counts.items() if c > 1}
     else:
-        dim = parse_dims(dim, all_dims=tuple(all_dims))
-
-    dot_dims: set[Hashable] = set(dim)
+        dot_dims = parse_dims_as_set(dim, all_dims=set(all_dims))
 
     # dimensions to be parallelized
     broadcast_dims = common_dims - dot_dims
@@ -2266,7 +2252,7 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
     if not unify_chunks_args:
         return objects
 
-    chunkmanager = get_chunked_array_type(*[arg for arg in unify_chunks_args])
+    chunkmanager = get_chunked_array_type(*list(unify_chunks_args))
     _, chunked_data = chunkmanager.unify_chunks(*unify_chunks_args)
     chunked_data_iter = iter(chunked_data)
     out: list[Dataset | DataArray] = []

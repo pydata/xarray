@@ -102,10 +102,7 @@ def substring_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
     Return True if a substring is found anywhere in an axes
     """
     alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}  # type: ignore[attr-defined] # mpl error?
-    for txt in alltxt:
-        if substring in txt:
-            return True
-    return False
+    return any(substring in txt for txt in alltxt)
 
 
 def substring_not_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
@@ -125,11 +122,11 @@ def property_in_axes_text(
     has the property assigned to property_str
     """
     alltxt: list[mpl.text.Text] = ax.findobj(mpl.text.Text)  # type: ignore[assignment]
-    check = []
-    for t in alltxt:
-        if t.get_text() == target_txt:
-            check.append(plt.getp(t, property) == property_str)
-    return all(check)
+    return all(
+        plt.getp(t, property) == property_str
+        for t in alltxt
+        if t.get_text() == target_txt
+    )
 
 
 def easy_array(shape: tuple[int, ...], start: float = 0, stop: float = 1) -> np.ndarray:
@@ -1334,7 +1331,7 @@ class Common2dMixin:
         a = DataArray(easy_array((3, 2)), coords=[["a", "b", "c"], ["d", "e"]])
         if self.plotfunc.__name__ == "surface":
             # ax.plot_surface errors with nonnumerics:
-            with pytest.raises(Exception):
+            with pytest.raises(TypeError, match="not supported for the input types"):
                 self.plotfunc(a)
         else:
             self.plotfunc(a)
@@ -2161,7 +2158,7 @@ class TestSurface(Common2dMixin, PlotTestCase):
         g = self.plotfunc(d, x="x", y="y", col="z", col_wrap=2)  # type: ignore[arg-type] # https://github.com/python/mypy/issues/15015
 
         assert_array_equal(g.axs.shape, [2, 2])
-        for (y, x), ax in np.ndenumerate(g.axs):
+        for (_y, _x), ax in np.ndenumerate(g.axs):
             assert ax.has_data()
             assert "y" == ax.get_ylabel()
             assert "x" == ax.get_xlabel()
@@ -2169,7 +2166,7 @@ class TestSurface(Common2dMixin, PlotTestCase):
         # Inferring labels
         g = self.plotfunc(d, col="z", col_wrap=2)  # type: ignore[arg-type] # https://github.com/python/mypy/issues/15015
         assert_array_equal(g.axs.shape, [2, 2])
-        for (y, x), ax in np.ndenumerate(g.axs):
+        for (_y, _x), ax in np.ndenumerate(g.axs):
             assert ax.has_data()
             assert "y" == ax.get_ylabel()
             assert "x" == ax.get_xlabel()
@@ -3282,7 +3279,7 @@ def test_maybe_gca() -> None:
         existing_axes = plt.axes()
         ax = _maybe_gca(aspect=1)
 
-        # re-uses the existing axes
+        # reuses the existing axes
         assert existing_axes == ax
         # kwargs are ignored when reusing axes
         assert ax.get_aspect() == "auto"
@@ -3381,7 +3378,7 @@ def test_facetgrid_axes_raises_deprecation_warning() -> None:
         with figure_context():
             ds = xr.tutorial.scatter_example_dataset()
             g = ds.plot.scatter(x="A", y="B", col="x")
-            g.axes
+            _ = g.axes
 
 
 @requires_matplotlib

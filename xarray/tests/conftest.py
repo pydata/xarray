@@ -5,8 +5,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray import DataArray, Dataset
-from xarray.core.datatree import DataTree
+from xarray import DataArray, Dataset, DataTree
 from xarray.tests import create_test_data, requires_dask
 
 
@@ -164,7 +163,7 @@ def create_test_datatree():
     """
     Create a test datatree with this structure:
 
-    <datatree.DataTree>
+    <xarray.DataTree>
     |-- set1
     |   |-- <xarray.Dataset>
     |   |   Dimensions:  ()

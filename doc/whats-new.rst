@@ -14,6 +14,136 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2024.10.1:
+
+v.2024.10.1 (unreleased)
+------------------------
+
+New Features
+~~~~~~~~~~~~
+- Added :py:meth:`DataTree.persist` method (:issue:`9675`, :pull:`9682`).
+  By `Sam Levang <https://github.com/slevang>`_.
+- Added ``write_inherited_coords`` option to :py:meth:`DataTree.to_netcdf`
+  and :py:meth:`DataTree.to_zarr` (:pull:`9677`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Support lazy grouping by dask arrays, and allow specifying ordered groups with ``UniqueGrouper(labels=["a", "b", "c"])``
+  (:issue:`2852`, :issue:`757`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+- Grouping by a chunked array (e.g. dask or cubed) currently eagerly loads that variable in to
+  memory. This behaviour is deprecated. If eager loading was intended, please load such arrays
+  manually using ``.load()`` or ``.compute()``. Else pass ``eagerly_compute_group=False``, and
+  provide expected group labels using the ``labels`` kwarg to a grouper object such as
+  :py:class:`grouper.UniqueGrouper` or :py:class:`grouper.BinGrouper`.
+
+Bug fixes
+~~~~~~~~~
+
+- Fix inadvertent deep-copying of child data in DataTree (:issue:`9683`,
+  :pull:`9684`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Avoid including parent groups when writing DataTree subgroups to Zarr or
+  netCDF (:pull:`9682`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix regression in the interoperability of :py:meth:`DataArray.polyfit` and :py:meth:`xr.polyval` for date-time coordinates. (:pull:`9691`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Mention attribute peculiarities in docs/docstrings (:issue:`4798`, :pull:`9700`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- ``persist`` methods now route through the :py:class:`xr.core.parallelcompat.ChunkManagerEntrypoint` (:pull:`9682`).
+  By `Sam Levang <https://github.com/slevang>`_.
+
+.. _whats-new.2024.10.0:
+
+v2024.10.0 (Oct 24th, 2024)
+---------------------------
+
+This release brings official support for `xarray.DataTree`, and compatibility with zarr-python v3!
+
+Aside from these two huge features, it also improves support for vectorised interpolation and fixes various bugs.
+
+Thanks to the 31 contributors to this release:
+Alfonso Ladino, DWesl, Deepak Cherian, Eni, Etienne Schalk, Holly Mandel, Ilan Gold, Illviljan, Joe Hamman, Justus Magin, Kai Mühlbauer, Karl Krauth, Mark Harfouche, Martey Dodoo, Matt Savoie, Maximilian Roos, Patrick Hoefler, Peter Hill, Renat Sibgatulin, Ryan Abernathey, Spencer Clark, Stephan Hoyer, Tom Augspurger, Tom Nicholas, Vecko, Virgile Andreani, Yvonne Fröhlich, carschandler, joseph nowak, mgunyho and owenlittlejohns
+
+New Features
+~~~~~~~~~~~~
+- ``DataTree`` related functionality is now exposed in the main ``xarray`` public
+  API. This includes: ``xarray.DataTree``, ``xarray.open_datatree``, ``xarray.open_groups``,
+  ``xarray.map_over_datasets``, ``xarray.group_subtrees``,
+  ``xarray.register_datatree_accessor`` and ``xarray.testing.assert_isomorphic``.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_,
+  `Eni Awowale <https://github.com/eni-awowale>`_,
+  `Matt Savoie <https://github.com/flamingbear>`_,
+  `Stephan Hoyer <https://github.com/shoyer>`_,
+  `Tom Nicholas <https://github.com/TomNicholas>`_,
+  `Justus Magin <https://github.com/keewis>`_, and
+  `Alfonso Ladino <https://github.com/aladinor>`_.
+- A migration guide for users of the prototype `xarray-contrib/datatree repository <https://github.com/xarray-contrib/datatree>`_ has been added, and can be found in the `DATATREE_MIGRATION_GUIDE.md` file in the repository root.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Support for Zarr-Python 3 (:issue:`95515`, :pull:`9552`).
+  By `Tom Augspurger <https://github.com/TomAugspurger>`_,
+  `Ryan Abernathey <https://github.com/rabernat>`_ and
+  `Joe Hamman <https://github.com/jhamman>`_.
+- Added zarr backends for :py:func:`open_groups` (:issue:`9430`, :pull:`9469`).
+  By `Eni Awowale <https://github.com/eni-awowale>`_.
+- Added support for vectorized interpolation using additional interpolators
+  from the ``scipy.interpolate`` module (:issue:`9049`, :pull:`9526`).
+  By `Holly Mandel <https://github.com/hollymandel>`_.
+- Implement handling of complex numbers (netcdf4/h5netcdf) and enums (h5netcdf) (:issue:`9246`, :issue:`3297`, :pull:`9509`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix passing missing arguments to when opening hdf5 and netCDF4 datatrees
+  (:issue:`9427`, :pull: `9428`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Make illegal path-like variable names when constructing a DataTree from a Dataset
+  (:issue:`9339`, :pull:`9378`)
+  By `Etienne Schalk <https://github.com/etienneschalk>`_.
+- Work around `upstream pandas issue
+  <https://github.com/pandas-dev/pandas/issues/56996>`_ to ensure that we can
+  decode times encoded with small integer dtype values (e.g. ``np.int32``) in
+  environments with NumPy 2.0 or greater without needing to fall back to cftime
+  (:pull:`9518`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix bug when encoding times with missing values as floats in the case when
+  the non-missing times could in theory be encoded with integers
+  (:issue:`9488`, :pull:`9497`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Fix a few bugs affecting groupby reductions with `flox`. (:issue:`8090`, :issue:`9398`, :issue:`9648`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix the safe_chunks validation option on the to_zarr method
+  (:issue:`5511`, :pull:`9559`). By `Joseph Nowak
+  <https://github.com/josephnowak>`_.
+- Fix binning by multiple variables where some bins have no observations. (:issue:`9630`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix issue where polyfit wouldn't handle non-dimension coordinates. (:issue:`4375`, :pull:`9369`)
+  By `Karl Krauth <https://github.com/Karl-Krauth>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Migrate documentation for ``datatree`` into main ``xarray`` documentation (:pull:`9033`).
+  For information on previous ``datatree`` releases, please see:
+  `datatree's historical release notes <https://xarray-datatree.readthedocs.io/en/latest/>`_.
+  By `Owen Littlejohns <https://github.com/owenlittlejohns>`_, `Matt Savoie <https://github.com/flamingbear>`_, and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
 
 .. _whats-new.2024.09.0:
 
@@ -133,8 +263,8 @@ New Features
   to return an object without ``attrs``. A ``deep`` parameter controls whether
   variables' ``attrs`` are also dropped.
   By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
+- Added :py:func:`open_groups` for h5netcdf and netCDF4 backends (:issue:`9137`, :pull:`9243`).
   By `Eni Awowale <https://github.com/eni-awowale>`_.
-- Add `open_groups` method for unaligned datasets (:issue:`9137`, :pull:`9243`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

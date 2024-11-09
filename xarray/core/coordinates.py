@@ -752,7 +752,7 @@ class DatasetCoordinates(Coordinates):
         # check for inconsistent state *before* modifying anything in-place
         dims = calculate_dimensions(variables)
         new_coord_names = set(coords)
-        for dim, size in dims.items():
+        for dim in dims.keys():
             if dim in variables:
                 new_coord_names.add(dim)
 
@@ -849,14 +849,14 @@ class DataTreeCoordinates(Coordinates):
         from xarray.core.datatree import check_alignment
 
         # create updated node (`.to_dataset` makes a copy so this doesn't modify in-place)
-        node_ds = self._data.to_dataset(inherited=False)
+        node_ds = self._data.to_dataset(inherit=False)
         node_ds.coords._update_coords(coords, indexes)
 
         # check consistency *before* modifying anything in-place
         # TODO can we clean up the signature of check_alignment to make this less awkward?
         if self._data.parent is not None:
             parent_ds = self._data.parent._to_dataset_view(
-                inherited=True, rebuild_dims=False
+                inherit=True, rebuild_dims=False
             )
         else:
             parent_ds = None
@@ -1108,7 +1108,7 @@ def create_coords_with_default_indexes(
 
     # extract and merge coordinates and indexes from input DataArrays
     if dataarray_coords:
-        prioritized = {k: (v, indexes.get(k, None)) for k, v in variables.items()}
+        prioritized = {k: (v, indexes.get(k)) for k, v in variables.items()}
         variables, indexes = merge_coordinates_without_align(
             dataarray_coords + [new_coords],
             prioritized=prioritized,
@@ -1116,3 +1116,14 @@ def create_coords_with_default_indexes(
         new_coords = Coordinates._construct_direct(coords=variables, indexes=indexes)
 
     return new_coords
+
+
+def _coordinates_from_variable(variable: Variable) -> Coordinates:
+    from xarray.core.indexes import create_default_index_implicit
+
+    (name,) = variable.dims
+    new_index, index_vars = create_default_index_implicit(variable)
+    indexes = {k: new_index for k in index_vars}
+    new_vars = new_index.create_variables()
+    new_vars[name].attrs = variable.attrs
+    return Coordinates(new_vars, indexes)

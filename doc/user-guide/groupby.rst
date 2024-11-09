@@ -294,6 +294,15 @@ is identical to
     ds.resample(time=TimeResampler("ME"))
 
 
+The :py:class:`groupers.UniqueGrouper` accepts an optional ``labels`` kwarg that is not present
+in :py:meth:`DataArray.groupby` or :py:meth:`Dataset.groupby`.
+Specifying ``labels`` is required when grouping by a lazy array type (e.g. dask or cubed).
+The ``labels`` are used to construct the output coordinate (say for a reduction), and aggregations
+will only be run over the specified labels.
+You may use ``labels`` to also specify the ordering of groups to be used during iteration.
+The order will be preserved in the output.
+
+
 .. _groupby.multiple:
 
 Grouping by multiple variables

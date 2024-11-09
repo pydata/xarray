@@ -5,9 +5,6 @@ import pickle
 import pytest
 
 import xarray as xr
-
-# TODO: Remove imports in favour of xr.DataTree etc, once part of public API
-from xarray.core.datatree import DataTree
 from xarray.core.extensions import register_datatree_accessor
 from xarray.tests import assert_identical
 
@@ -37,7 +34,7 @@ class TestAccessor:
             def foo(self):
                 return "bar"
 
-        dt: DataTree = DataTree()
+        dt: xr.DataTree = xr.DataTree()
         assert dt.demo.foo == "bar"
 
         ds = xr.Dataset()
@@ -95,4 +92,4 @@ class TestAccessor:
                 raise AttributeError("broken")
 
         with pytest.raises(RuntimeError, match=r"error initializing"):
-            xr.Dataset().stupid_accessor
+            _ = xr.Dataset().stupid_accessor

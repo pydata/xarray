@@ -132,8 +132,10 @@ def as_variable(
     elif isinstance(obj, tuple):
         try:
             dims_, data_, *attrs = obj
-        except ValueError:
-            raise ValueError(f"Tuple {obj} is not in the form (dims, data[, attrs])")
+        except ValueError as err:
+            raise ValueError(
+                f"Tuple {obj} is not in the form (dims, data[, attrs])"
+            ) from err
 
         if isinstance(data_, DataArray):
             raise TypeError(
@@ -146,7 +148,7 @@ def as_variable(
             raise error.__class__(
                 f"Variable {name!r}: Could not convert tuple of form "
                 f"(dims, data[, attrs, encoding]): {obj} to Variable."
-            )
+            ) from error
     elif utils.is_scalar(obj):
         obj = Variable([], obj)
     elif isinstance(obj, pd.Index | IndexVariable) and obj.name is not None:
@@ -285,9 +287,12 @@ def as_compatible_data(
     if isinstance(data, DataArray):
         return cast("T_DuckArray", data._variable._data)
 
-    if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
+    def convert_non_numpy_type(data):
         data = _possibly_convert_datetime_or_timedelta_index(data)
         return cast("T_DuckArray", _maybe_wrap_data(data))
+
+    if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
+        return convert_non_numpy_type(data)
 
     if isinstance(data, tuple):
         data = utils.to_0d_object_array(data)
@@ -301,7 +306,11 @@ def as_compatible_data(
 
     # we don't want nested self-described arrays
     if isinstance(data, pd.Series | pd.DataFrame):
-        data = data.values  # type: ignore[assignment]
+        pandas_data = data.values
+        if isinstance(pandas_data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
+            return convert_non_numpy_type(pandas_data)
+        else:
+            data = pandas_data
 
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)
@@ -311,12 +320,14 @@ def as_compatible_data(
         else:
             data = np.asarray(data)
 
-    if not isinstance(data, np.ndarray) and (
+    # immediately return array-like types except `numpy.ndarray` subclasses and `numpy` scalars
+    if not isinstance(data, np.ndarray | np.generic) and (
         hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
     ):
         return cast("T_DuckArray", data)
 
-    # validate whether the data is valid data types.
+    # validate whether the data is valid data types. Also, explicitly cast `numpy`
+    # subclasses and `numpy` scalars to `numpy.ndarray`
     data = np.asarray(data)
 
     if data.dtype.kind in "OMm":
@@ -368,7 +379,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     they can use more complete metadata in context of coordinate labels.
     """
 
-    __slots__ = ("_dims", "_data", "_attrs", "_encoding")
+    __slots__ = ("_attrs", "_data", "_dims", "_encoding")
 
     def __init__(
         self,
@@ -390,6 +401,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         attrs : dict_like or None, optional
             Attributes to assign to the new variable. If None (default), an
             empty attribute dictionary is initialized.
+            (see FAQ, :ref:`approach to metadata`)
         encoding : dict_like or None, optional
             Dictionary specifying how to encode this array's data into a
             serialized format like netCDF4. Currently used keys (for netCDF)
@@ -538,7 +550,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return Variable(self._dims, data, attrs=self._attrs, encoding=self._encoding)
 
     @property
-    def values(self):
+    def values(self) -> np.ndarray:
         """The variable's data as a numpy.ndarray"""
         return _as_array_or_item(self._data)
 
@@ -683,7 +695,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                     if self.shape[self.get_axis_num(dim)] != len(k):
                         raise IndexError(
                             f"Boolean array size {len(k):d} is used to index array "
-                            f"with shape {str(self.shape):s}."
+                            f"with shape {self.shape}."
                         )
                     if k.ndim > 1:
                         raise IndexError(
@@ -701,7 +713,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                         raise IndexError(
                             "Boolean indexer should be unlabeled or on the "
                             "same dimension to the indexed array. Indexer is "
-                            f"on {str(k.dims):s} but the target dimension is {dim:s}."
+                            f"on {k.dims} but the target dimension is {dim}."
                         )
 
     def _broadcast_indexes_outer(self, key):
@@ -768,8 +780,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         try:
             variables = _broadcast_compat_variables(*variables)
-        except ValueError:
-            raise IndexError(f"Dimensions of indexers mismatch: {key}")
+        except ValueError as err:
+            raise IndexError(f"Dimensions of indexers mismatch: {key}") from err
 
         out_key = [variable.data for variable in variables]
         out_dims = tuple(out_dims_set)
@@ -828,7 +840,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
 
         if self.size:
-
             if is_duck_dask_array(self._data):
                 # dask's indexing is faster this way; also vindex does not
                 # support negative indices yet:
@@ -896,12 +907,13 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def encoding(self, value):
         try:
             self._encoding = dict(value)
-        except ValueError:
-            raise ValueError("encoding must be castable to a dictionary")
+        except ValueError as err:
+            raise ValueError("encoding must be castable to a dictionary") from err
 
     def reset_encoding(self) -> Self:
         warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead"
+            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
+            stacklevel=2,
         )
         return self.drop_encoding()
 
@@ -1135,10 +1147,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         if fill_with_shape:
             return [
-                (n, n) if d not in pad_option else pad_option[d]
+                pad_option.get(d, (n, n))
                 for d, n in zip(self.dims, self.data.shape, strict=True)
             ]
-        return [(0, 0) if d not in pad_option else pad_option[d] for d in self.dims]
+        return [pad_option.get(d, (0, 0)) for d in self.dims]
 
     def pad(
         self,
@@ -1535,7 +1547,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             else:
                 sizes = itertools.product(*[range(s) for s in reordered.shape[:-1]])
                 tuple_indexes = itertools.product(sizes, codes)
-                indexes = map(lambda x: list(itertools.chain(*x)), tuple_indexes)  # type: ignore[assignment]
+                indexes = (list(itertools.chain(*x)) for x in tuple_indexes)  # type: ignore[assignment]
 
             data = COO(
                 coords=np.array(list(indexes)).T,
@@ -1895,6 +1907,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             warnings.warn(
                 "The `interpolation` argument to quantile was renamed to `method`.",
                 FutureWarning,
+                stacklevel=2,
             )
 
             if method != "linear":
@@ -2310,7 +2323,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             return result
 
     def _binary_op(self, other, f, reflexive=False):
-        if isinstance(other, xr.DataArray | xr.Dataset):
+        if isinstance(other, xr.DataTree | xr.DataArray | xr.Dataset):
             return NotImplemented
         if reflexive and issubclass(type(self), type(other)):
             other_data, self_data, dims = _broadcast_compat_data(other, self)
@@ -2528,7 +2541,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def chunk(  # type: ignore[override]
         self,
-        chunks: T_Chunks = {},
+        chunks: T_Chunks = {},  # noqa: B006  # even though it's technically unsafe, it is being used intentionally here (#4667)
         name: str | None = None,
         lock: bool | None = None,
         inline_array: bool | None = None,
@@ -2663,7 +2676,7 @@ class IndexVariable(Variable):
 
     def chunk(
         self,
-        chunks={},
+        chunks={},  # noqa: B006  # even though it's unsafe, it is being used intentionally here (#4667)
         name=None,
         lock=False,
         inline_array=False,

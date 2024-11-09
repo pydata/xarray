@@ -59,6 +59,7 @@ from collections.abc import (
     MutableMapping,
     MutableSet,
     Sequence,
+    Set,
     ValuesView,
 )
 from enum import Enum
@@ -186,10 +187,7 @@ def equivalent(first: T, second: T) -> bool:
 def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    for f, s in zip(first, second, strict=True):
-        if not equivalent(f, s):
-            return False
-    return True
+    return all(equivalent(f, s) for f, s in zip(first, second, strict=True))
 
 
 def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
@@ -465,7 +463,7 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
         return super().values()
 
 
-class HybridMappingProxy(Mapping[K, V]):
+class FilteredMapping(Mapping[K, V]):
     """Implements the Mapping interface. Uses the wrapped mapping for item lookup
     and a separate wrapped keys collection for iteration.
 
@@ -473,25 +471,31 @@ class HybridMappingProxy(Mapping[K, V]):
     eagerly accessing its items or when a mapping object is expected but only
     iteration over keys is actually used.
 
-    Note: HybridMappingProxy does not validate consistency of the provided `keys`
-    and `mapping`. It is the caller's responsibility to ensure that they are
-    suitable for the task at hand.
+    Note: keys should be a subset of mapping, but FilteredMapping does not
+    validate consistency of the provided `keys` and `mapping`. It is the
+    caller's responsibility to ensure that they are suitable for the task at
+    hand.
     """
 
-    __slots__ = ("_keys", "mapping")
+    __slots__ = ("keys_", "mapping")
 
     def __init__(self, keys: Collection[K], mapping: Mapping[K, V]):
-        self._keys = keys
+        self.keys_ = keys  # .keys is already a property on Mapping
         self.mapping = mapping
 
     def __getitem__(self, key: K) -> V:
+        if key not in self.keys_:
+            raise KeyError(key)
         return self.mapping[key]
 
     def __iter__(self) -> Iterator[K]:
-        return iter(self._keys)
+        return iter(self.keys_)
 
     def __len__(self) -> int:
-        return len(self._keys)
+        return len(self.keys_)
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(keys={self.keys_!r}, mapping={self.mapping!r})"
 
 
 class OrderedSet(MutableSet[T]):
@@ -570,8 +574,8 @@ class NdimSizeLenMixin:
     def __len__(self: Any) -> int:
         try:
             return self.shape[0]
-        except IndexError:
-            raise TypeError("len() of unsized object")
+        except IndexError as err:
+            raise TypeError("len() of unsized object") from err
 
 
 class NDArrayMixin(NdimSizeLenMixin):
@@ -807,7 +811,8 @@ def drop_dims_from_indexers(
         invalid = indexers.keys() - set(dims)
         if invalid:
             warnings.warn(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}",
+                stacklevel=2,
             )
         for key in invalid:
             indexers.pop(key)
@@ -824,7 +829,7 @@ def drop_dims_from_indexers(
 
 
 @overload
-def parse_dims(
+def parse_dims_as_tuple(
     dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
@@ -834,7 +839,7 @@ def parse_dims(
 
 
 @overload
-def parse_dims(
+def parse_dims_as_tuple(
     dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
@@ -843,7 +848,7 @@ def parse_dims(
 ) -> tuple[Hashable, ...] | None | EllipsisType: ...
 
 
-def parse_dims(
+def parse_dims_as_tuple(
     dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
@@ -882,6 +887,47 @@ def parse_dims(
     if check_exists:
         _check_dims(set(dim), set(all_dims))
     return tuple(dim)
+
+
+@overload
+def parse_dims_as_set(
+    dim: Dims,
+    all_dims: set[Hashable],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[True] = True,
+) -> set[Hashable]: ...
+
+
+@overload
+def parse_dims_as_set(
+    dim: Dims,
+    all_dims: set[Hashable],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[False],
+) -> set[Hashable] | None | EllipsisType: ...
+
+
+def parse_dims_as_set(
+    dim: Dims,
+    all_dims: set[Hashable],
+    *,
+    check_exists: bool = True,
+    replace_none: bool = True,
+) -> set[Hashable] | None | EllipsisType:
+    """Like parse_dims_as_tuple, but returning a set instead of a tuple."""
+    # TODO: Consider removing parse_dims_as_tuple?
+    if dim is None or dim is ...:
+        if replace_none:
+            return all_dims
+        return dim
+    if isinstance(dim, str):
+        dim = {dim}
+    dim = set(dim)
+    if check_exists:
+        _check_dims(dim, all_dims)
+    return dim
 
 
 @overload
@@ -951,7 +997,7 @@ def parse_ordered_dims(
         return dims[:idx] + other_dims + dims[idx + 1 :]
     else:
         # mypy cannot resolve that the sequence cannot contain "..."
-        return parse_dims(  # type: ignore[call-overload]
+        return parse_dims_as_tuple(  # type: ignore[call-overload]
             dim=dim,
             all_dims=all_dims,
             check_exists=check_exists,
@@ -959,10 +1005,10 @@ def parse_ordered_dims(
         )
 
 
-def _check_dims(dim: set[Hashable], all_dims: set[Hashable]) -> None:
+def _check_dims(dim: Set[Hashable], all_dims: Set[Hashable]) -> None:
     wrong_dims = (dim - all_dims) - {...}
     if wrong_dims:
-        wrong_dims_str = ", ".join(f"'{d!s}'" for d in wrong_dims)
+        wrong_dims_str = ", ".join(f"'{d}'" for d in wrong_dims)
         raise ValueError(
             f"Dimension(s) {wrong_dims_str} do not exist. Expected one or more of {all_dims}"
         )
@@ -1016,16 +1062,16 @@ def contains_only_chunked_or_numpy(obj) -> bool:
 
     Expects obj to be Dataset or DataArray"""
     from xarray.core.dataarray import DataArray
+    from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.pycompat import is_chunked_array
 
     if isinstance(obj, DataArray):
         obj = obj._to_temp_dataset()
 
     return all(
-        [
-            isinstance(var.data, np.ndarray) or is_chunked_array(var.data)
-            for var in obj.variables.values()
-        ]
+        isinstance(var._data, ExplicitlyIndexed | np.ndarray)
+        or is_chunked_array(var._data)
+        for var in obj._variables.values()
     )
 
 
@@ -1146,3 +1192,18 @@ def _resolve_doubly_passed_kwarg(
         )
 
     return kwargs_dict
+
+
+_DEFAULT_NAME = ReprObject("<default-name>")
+
+
+def result_name(objects: Iterable[Any]) -> Any:
+    # use the same naming heuristics as pandas:
+    # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
+    names = {getattr(obj, "name", _DEFAULT_NAME) for obj in objects}
+    names.discard(_DEFAULT_NAME)
+    if len(names) == 1:
+        (name,) = names
+    else:
+        name = None
+    return name

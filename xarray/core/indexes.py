@@ -573,7 +573,7 @@ class PandasIndex(Index):
     dim: Hashable
     coord_dtype: Any
 
-    __slots__ = ("index", "dim", "coord_dtype")
+    __slots__ = ("coord_dtype", "dim", "index")
 
     def __init__(
         self,
@@ -872,7 +872,7 @@ class PandasIndex(Index):
         return self._replace(self.index[indexer])
 
     def __repr__(self):
-        return f"PandasIndex({repr(self.index)})"
+        return f"PandasIndex({self.index!r})"
 
 
 def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"):
@@ -880,7 +880,7 @@ def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"
     either share the same (single) dimension or each have a different dimension.
 
     """
-    if any([var.ndim != 1 for var in variables.values()]):
+    if any(var.ndim != 1 for var in variables.values()):
         raise ValueError("PandasMultiIndex only accepts 1-dimensional variables")
 
     dims = {var.dims for var in variables.values()}
@@ -939,7 +939,7 @@ class PandasMultiIndex(PandasIndex):
     coord_dtype: Any
     level_coords_dtype: dict[str, Any]
 
-    __slots__ = ("index", "dim", "coord_dtype", "level_coords_dtype")
+    __slots__ = ("coord_dtype", "dim", "index", "level_coords_dtype")
 
     def __init__(self, array: Any, dim: Hashable, level_coords_dtype: Any = None):
         super().__init__(array, dim)
@@ -1031,13 +1031,21 @@ class PandasMultiIndex(PandasIndex):
                     f"from variable {name!r} that wraps a multi-index"
                 )
 
-        split_labels, levels = zip(
-            *[lev.factorize() for lev in level_indexes], strict=True
-        )
-        labels_mesh = np.meshgrid(*split_labels, indexing="ij")
-        labels = [x.ravel() for x in labels_mesh]
+        # from_product sorts by default, so we can't use that always
+        # https://github.com/pydata/xarray/issues/980
+        # https://github.com/pandas-dev/pandas/issues/14672
+        if all(index.is_monotonic_increasing for index in level_indexes):
+            index = pd.MultiIndex.from_product(
+                level_indexes, sortorder=0, names=variables.keys()
+            )
+        else:
+            split_labels, levels = zip(
+                *[lev.factorize() for lev in level_indexes], strict=True
+            )
+            labels_mesh = np.meshgrid(*split_labels, indexing="ij")
+            labels = [x.ravel() for x in labels_mesh]
 
-        index = pd.MultiIndex(levels, labels, sortorder=0, names=variables.keys())
+            index = pd.MultiIndex(levels, labels, sortorder=0, names=variables.keys())
         level_coords_dtype = {k: var.dtype for k, var in variables.items()}
 
         return cls(index, dim, level_coords_dtype=level_coords_dtype)
@@ -1200,20 +1208,20 @@ class PandasMultiIndex(PandasIndex):
         indexer: int | slice | np.ndarray | Variable | DataArray
 
         # label(s) given for multi-index level(s)
-        if all([lbl in self.index.names for lbl in labels]):
+        if all(lbl in self.index.names for lbl in labels):
             label_values = {}
             for k, v in labels.items():
                 label_array = normalize_label(v, dtype=self.level_coords_dtype[k])
                 try:
                     label_values[k] = as_scalar(label_array)
-                except ValueError:
+                except ValueError as err:
                     # label should be an item not an array-like
                     raise ValueError(
                         "Vectorized selection is not "
                         f"available along coordinate {k!r} (multi-index level)"
-                    )
+                    ) from err
 
-            has_slice = any([isinstance(v, slice) for v in label_values.values()])
+            has_slice = any(isinstance(v, slice) for v in label_values.values())
 
             if len(label_values) == self.index.nlevels and not has_slice:
                 indexer = self.index.get_loc(
@@ -1260,9 +1268,7 @@ class PandasMultiIndex(PandasIndex):
                 else:
                     levels = [self.index.names[i] for i in range(len(label))]
                     indexer, new_index = self.index.get_loc_level(label, level=levels)
-                    scalar_coord_values.update(
-                        {k: v for k, v in zip(levels, label, strict=True)}
-                    )
+                    scalar_coord_values.update(dict(zip(levels, label, strict=True)))
 
             else:
                 label_array = normalize_label(label)
@@ -1363,10 +1369,9 @@ class PandasMultiIndex(PandasIndex):
         index = self.index.rename(new_names)
 
         new_dim = dims_dict.get(self.dim, self.dim)
-        new_level_coords_dtype = {
-            k: v
-            for k, v in zip(new_names, self.level_coords_dtype.values(), strict=True)
-        }
+        new_level_coords_dtype = dict(
+            zip(new_names, self.level_coords_dtype.values(), strict=True)
+        )
         return self._replace(
             index, dim=new_dim, level_coords_dtype=new_level_coords_dtype
         )
@@ -1443,13 +1448,13 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
     _variables: dict[Any, Variable]
 
     __slots__ = (
+        "__coord_name_id",
+        "__id_coord_names",
+        "__id_index",
+        "_dims",
         "_index_type",
         "_indexes",
         "_variables",
-        "_dims",
-        "__coord_name_id",
-        "__id_index",
-        "__id_coord_names",
     )
 
     def __init__(
@@ -1768,7 +1773,7 @@ def indexes_equal(
 
 
 def indexes_all_equal(
-    elements: Sequence[tuple[Index, dict[Hashable, Variable]]]
+    elements: Sequence[tuple[Index, dict[Hashable, Variable]]],
 ) -> bool:
     """Check if indexes are all equal.
 
@@ -1812,7 +1817,7 @@ def _apply_indexes_fast(indexes: Indexes[Index], args: Mapping[Any, Any], func: 
     # multi-index arrays
     indexes_fast, coords = indexes._indexes, indexes._variables
 
-    new_indexes: dict[Hashable, Index] = {k: v for k, v in indexes_fast.items()}
+    new_indexes: dict[Hashable, Index] = dict(indexes_fast.items())
     new_index_variables: dict[Hashable, Variable] = {}
     for name, index in indexes_fast.items():
         coord = coords[name]
@@ -1840,7 +1845,7 @@ def _apply_indexes(
     args: Mapping[Any, Any],
     func: str,
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-    new_indexes: dict[Hashable, Index] = {k: v for k, v in indexes.items()}
+    new_indexes: dict[Hashable, Index] = dict(indexes.items())
     new_index_variables: dict[Hashable, Variable] = {}
 
     for index, index_vars in indexes.group_by_index():

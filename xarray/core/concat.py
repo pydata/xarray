@@ -252,10 +252,10 @@ def concat(
 
     try:
         first_obj, objs = utils.peek_at(objs)
-    except StopIteration:
-        raise ValueError("must supply at least one object to concatenate")
+    except StopIteration as err:
+        raise ValueError("must supply at least one object to concatenate") from err
 
-    if compat not in _VALID_COMPAT:
+    if compat not in set(_VALID_COMPAT) - {"minimal"}:
         raise ValueError(
             f"compat={compat!r} invalid: must be 'broadcast_equals', 'equals', 'identical', 'no_conflicts' or 'override'"
         )
