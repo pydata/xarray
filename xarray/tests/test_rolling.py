@@ -607,16 +607,27 @@ class TestDatasetRolling:
         da = DataArray(
             dims=["latitute", "longitude", "time"],
             data=dask.array.random.random((400, 400, 400), chunks=(-1, -1, 1)),
+            name="foo",
         )
 
-        # Dataset now has chunks of size (400, 400, 100 100) or 11.92 GiB
-        rechunked = da.rolling(time=100, center=True).construct(
-            "window", sliding_window_kwargs=dict(automatic_rechunk=True)
-        )
-        not_rechunked = da.rolling(time=100, center=True).construct(
-            "window", sliding_window_kwargs=dict(automatic_rechunk=False)
-        )
-        assert rechunked.chunks != not_rechunked.chunks
+        for obj in [da, da.to_dataset()]:
+            # Dataset now has chunks of size (400, 400, 100 100) or 11.92 GiB
+            rechunked = obj.rolling(time=100, center=True).construct(
+                "window", sliding_window_kwargs=dict(automatic_rechunk=True)
+            )
+            not_rechunked = obj.rolling(time=100, center=True).construct(
+                "window", sliding_window_kwargs=dict(automatic_rechunk=False)
+            )
+            assert rechunked.chunksizes != not_rechunked.chunksizes
+
+            roller = obj.isel(time=slice(30)).rolling(time=10, center=True)
+            one = roller.reduce(
+                np.sum, sliding_window_kwargs=dict(automatic_rechunk=True)
+            )
+            two = roller.reduce(
+                np.sum, sliding_window_kwargs=dict(automatic_rechunk=False)
+            )
+            assert_identical(one, two)
 
     @pytest.mark.parametrize(
         "name", ("sum", "mean", "std", "var", "min", "max", "median")

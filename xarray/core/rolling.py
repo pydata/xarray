@@ -504,6 +504,11 @@ class DataArrayRolling(Rolling["DataArray"]):
         reduced : DataArray
             Array with summarized data.
 
+        See Also
+        --------
+        numpy.lib.stride_tricks.sliding_window_view
+        dask.array.lib.stride_tricks.sliding_window_view
+
         Notes
         -----
         With dask arrays, it's possible to pass the ``automatic_rechunk`` kwarg as
@@ -833,7 +838,11 @@ class DatasetRolling(Rolling["Dataset"]):
         return Dataset(reduced, coords=self.obj.coords, attrs=attrs)
 
     def reduce(
-        self, func: Callable, keep_attrs: bool | None = None, **kwargs: Any
+        self,
+        func: Callable,
+        keep_attrs: bool | None = None,
+        sliding_window_kwargs: Mapping[Any, Any] | None = None,
+        **kwargs: Any,
     ) -> DataArray:
         """Reduce the items in this group by applying `func` along some
         dimension(s).
@@ -848,6 +857,9 @@ class DatasetRolling(Rolling["Dataset"]):
             If True, the attributes (``attrs``) will be copied from the original
             object to the new one. If False, the new object will be returned
             without attributes. If None uses the global default.
+        sliding_window_kwargs : Mapping
+            Keyword arguments that should be passed to the underlying array type's
+            ``sliding_window_view`` function.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -855,10 +867,25 @@ class DatasetRolling(Rolling["Dataset"]):
         -------
         reduced : DataArray
             Array with summarized data.
+
+        See Also
+        --------
+        numpy.lib.stride_tricks.sliding_window_view
+        dask.array.lib.stride_tricks.sliding_window_view
+
+        Notes
+        -----
+        With dask arrays, it's possible to pass the ``automatic_rechunk`` kwarg as
+        ``sliding_window_kwargs={"automatic_rechunk": True}``. This controls
+        whether dask should automatically rechunk the output to avoid
+        exploding chunk sizes. Automatically rechunking is the default behaviour.
+        Importantly, each chunk will be a view of the data so large chunk sizes are
+        only safe if *no* copies are made later.
         """
         return self._dataset_implementation(
             functools.partial(DataArrayRolling.reduce, func=func),
             keep_attrs=keep_attrs,
+            sliding_window_kwargs=sliding_window_kwargs,
             **kwargs,
         )
 
