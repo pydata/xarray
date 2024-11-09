@@ -337,7 +337,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
 
         """
 
-        if kwargs.get("cbar_ax", None) is not None:
+        if kwargs.get("cbar_ax") is not None:
             raise ValueError("cbar_ax not supported by FacetGrid.")
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
@@ -363,7 +363,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             x=x,
             y=y,
             imshow=func.__name__ == "imshow",
-            rgb=kwargs.get("rgb", None),
+            rgb=kwargs.get("rgb"),
         )
 
         for d, ax in zip(self.name_dicts.flat, self.axs.flat, strict=True):
@@ -421,7 +421,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         # not sure how much that is used outside these tests.
         self.data = self.data.copy()
 
-        if kwargs.get("cbar_ax", None) is not None:
+        if kwargs.get("cbar_ax") is not None:
             raise ValueError("cbar_ax not supported by FacetGrid.")
 
         if func.__name__ == "scatter":
@@ -495,14 +495,14 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         if self._single_group:
             full = tuple(
                 {self._single_group: x}
-                for x in range(0, self.data[self._single_group].size)
+                for x in range(self.data[self._single_group].size)
             )
             empty = tuple(None for x in range(self._nrow * self._ncol - len(full)))
             name_d = full + empty
         else:
             rowcols = itertools.product(
-                range(0, self.data[self._row_var].size),
-                range(0, self.data[self._col_var].size),
+                range(self.data[self._row_var].size),
+                range(self.data[self._col_var].size),
             )
             name_d = tuple({self._row_var: r, self._col_var: c} for r, c in rowcols)
         name_dicts = np.array(name_d).reshape(self._nrow, self._ncol)
@@ -537,8 +537,8 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         add_colorbar, add_legend = _determine_guide(
             hueplt_norm,
             sizeplt_norm,
-            kwargs.get("add_colorbar", None),
-            kwargs.get("add_legend", None),
+            kwargs.get("add_colorbar"),
+            kwargs.get("add_legend"),
             # kwargs.get("add_guide", None),
             # kwargs.get("hue_style", None),
         )
@@ -622,7 +622,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
 
         kwargs["add_guide"] = False
 
-        if kwargs.get("markersize", None):
+        if kwargs.get("markersize"):
             kwargs["size_mapping"] = _parse_size(
                 self.data[kwargs["markersize"]], kwargs.pop("size_norm", None)
             )
