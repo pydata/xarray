@@ -16,7 +16,6 @@ from tlz.functoolz import curry, pipe
 from tlz.itertoolz import concat, groupby
 
 click.rich_click.SHOW_ARGUMENTS = True
-console = Console()
 
 channels = ["conda-forge"]
 platforms = ["noarch", "linux-64"]
@@ -252,6 +251,8 @@ def format_bump_table(specs, policy_versions, releases, warnings):
     nargs=-1,
 )
 def main(environment_paths):
+    console = Console()
+
     parsed_environments = {
         path.stem: parse_environment(path.read_text()) for path in environment_paths
     }
