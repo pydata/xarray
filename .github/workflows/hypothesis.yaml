@@ -76,8 +76,6 @@ jobs:
           python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
 
       # https://github.com/actions/cache/blob/main/tips-and-workarounds.md#update-a-cache

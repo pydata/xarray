@@ -380,7 +380,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     they can use more complete metadata in context of coordinate labels.
     """
 
-    __slots__ = ("_dims", "_data", "_attrs", "_encoding")
+    __slots__ = ("_attrs", "_data", "_dims", "_encoding")
 
     def __init__(
         self,
@@ -696,7 +696,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                     if self.shape[self.get_axis_num(dim)] != len(k):
                         raise IndexError(
                             f"Boolean array size {len(k):d} is used to index array "
-                            f"with shape {str(self.shape):s}."
+                            f"with shape {self.shape}."
                         )
                     if k.ndim > 1:
                         raise IndexError(
@@ -714,7 +714,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                         raise IndexError(
                             "Boolean indexer should be unlabeled or on the "
                             "same dimension to the indexed array. Indexer is "
-                            f"on {str(k.dims):s} but the target dimension is {dim:s}."
+                            f"on {k.dims} but the target dimension is {dim}."
                         )
 
     def _broadcast_indexes_outer(self, key):
@@ -1148,10 +1148,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         if fill_with_shape:
             return [
-                (n, n) if d not in pad_option else pad_option[d]
+                pad_option.get(d, (n, n))
                 for d, n in zip(self.dims, self.data.shape, strict=True)
             ]
-        return [(0, 0) if d not in pad_option else pad_option[d] for d in self.dims]
+        return [pad_option.get(d, (0, 0)) for d in self.dims]
 
     def pad(
         self,
@@ -1548,7 +1548,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             else:
                 sizes = itertools.product(*[range(s) for s in reordered.shape[:-1]])
                 tuple_indexes = itertools.product(sizes, codes)
-                indexes = map(lambda x: list(itertools.chain(*x)), tuple_indexes)  # type: ignore[assignment]
+                indexes = (list(itertools.chain(*x)) for x in tuple_indexes)  # type: ignore[assignment]
 
             data = COO(
                 coords=np.array(list(indexes)).T,

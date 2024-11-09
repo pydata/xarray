@@ -182,7 +182,7 @@ def encode_zarr_attr_value(value):
 
 
 class ZarrArrayWrapper(BackendArray):
-    __slots__ = ("dtype", "shape", "_array")
+    __slots__ = ("_array", "dtype", "shape")
 
     def __init__(self, zarr_array):
         # some callers attempt to evaluate an array if an `array` property exists on the object.
@@ -194,7 +194,7 @@ class ZarrArrayWrapper(BackendArray):
         if (
             not _zarr_v3()
             and self._array.filters is not None
-            and any([filt.codec_id == "vlen-utf8" for filt in self._array.filters])
+            and any(filt.codec_id == "vlen-utf8" for filt in self._array.filters)
         ):
             dtype = coding.strings.create_vlen_dtype(str)
         else:
@@ -250,9 +250,9 @@ def _determine_zarr_chunks(
     # if there are no chunks in encoding but there are dask chunks, we try to
     # use the same chunks in zarr
     # However, zarr chunks needs to be uniform for each array
-    # http://zarr.readthedocs.io/en/latest/spec/v1.html#chunks
+    # https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html#chunks
     # while dask chunks can be variable sized
-    # http://dask.pydata.org/en/latest/array-design.html#chunks
+    # https://dask.pydata.org/en/latest/array-design.html#chunks
     if var_chunks and not enc_chunks:
         if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
             raise ValueError(
@@ -598,18 +598,18 @@ class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr"""
 
     __slots__ = (
-        "zarr_group",
         "_append_dim",
+        "_close_store_on_close",
         "_consolidate_on_close",
         "_group",
         "_mode",
         "_read_only",
-        "_synchronizer",
-        "_write_region",
         "_safe_chunks",
-        "_write_empty",
-        "_close_store_on_close",
+        "_synchronizer",
         "_use_zarr_fill_value_as_mask",
+        "_write_empty",
+        "_write_region",
+        "zarr_group",
     )
 
     @classmethod
@@ -649,7 +649,7 @@ class ZarrStore(AbstractWritableDataStore):
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
             zarr_format=zarr_format,
         )
-        group_paths = [node for node in _iter_zarr_groups(zarr_group, parent=group)]
+        group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
         return {
             group: cls(
                 zarr_group.get(group),
@@ -1377,7 +1377,7 @@ def open_zarr(
 
     References
     ----------
-    http://zarr.readthedocs.io/
+    https://zarr.readthedocs.io/
     """
     from xarray.backends.api import open_dataset
 
@@ -1718,7 +1718,7 @@ def _get_open_params(
             # for new data, we use a better default
             use_zarr_fill_value_as_mask = False
         else:
-            # this was the default for v2 and shold apply to most existing Zarr data
+            # this was the default for v2 and should apply to most existing Zarr data
             use_zarr_fill_value_as_mask = True
     return (
         zarr_group,
