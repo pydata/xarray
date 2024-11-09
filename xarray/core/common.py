@@ -619,7 +619,7 @@ class DataWithCoords(AttrAccessMixin):
             lon             (x, y) float64 32B 260.2 260.7 260.2 260.8
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
           * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
-            reference_time  datetime64[ns] 8B 2014-09-05
+            reference_time  datetime64[s] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
             temperature     (x, y, time) float64 128B 20.0 20.8 21.6 ... 30.4 31.2 32.0
@@ -633,7 +633,7 @@ class DataWithCoords(AttrAccessMixin):
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
           * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
-            reference_time  datetime64[ns] 8B 2014-09-05
+            reference_time  datetime64[s] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
             temperature     (x, y, time) float64 128B 20.0 20.8 21.6 ... 30.4 31.2 32.0
