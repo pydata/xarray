@@ -92,6 +92,7 @@ def _dask_or_eager_func(
     eager_module=np,
     dask_module="dask.array",
     dask_only_kwargs=tuple(),
+    numpy_only_kwargs=tuple(),
 ):
     """Create a function that dispatches to dask for dask array inputs."""
 
@@ -103,6 +104,8 @@ def _dask_or_eager_func(
                 else dask_module
             )
             wrapped = getattr(mod, name)
+            for kwarg in numpy_only_kwargs:
+                kwargs.pop(kwarg, None)
         else:
             wrapped = getattr(eager_module, name)
             for kwarg in dask_only_kwargs:
@@ -137,6 +140,7 @@ sliding_window_view = _dask_or_eager_func(
     eager_module=np.lib.stride_tricks,
     dask_module=dask_array_compat,
     dask_only_kwargs=("automatic_rechunk",),
+    numpy_only_kwargs=("subok", "writeable"),
 )
 
 
