@@ -230,7 +230,8 @@ def format_bump_table(specs, policy_versions, releases, warnings):
 
     if any(warnings.values()):
         warning_table = Table(width=table.width, expand=True)
-        warning_table.add_column("Package", "Warning", style=warning_style)
+        warning_table.add_column("Package")
+        warning_table.add_column("Warning")
 
         for package, messages in warnings.items():
             if not messages:
