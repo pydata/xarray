@@ -295,11 +295,11 @@ def main(environment_paths):
         curry(filter_releases, is_suitable_release),
         curry(find_policy_versions, policy),
     )
+    status = compare_versions(environments, policy_versions)
+
     release_lookup = {
         n: {r.version: r for r in releases} for n, releases in package_releases.items()
     }
-
-    status = compare_versions(environments, policy_versions)
     grids = {
         env: format_bump_table(specs, policy_versions, release_lookup, warnings[env])
         for env, specs in environments.items()
