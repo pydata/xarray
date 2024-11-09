@@ -2019,7 +2019,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         *,
         center=False,
         fill_value=dtypes.NA,
-        automatic_rechunk: bool = True,
+        **kwargs,
     ):
         """
         Make a rolling_window along dim and add a new_dim to the last place.
@@ -2040,10 +2040,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             of the axis.
         fill_value
             value to be filled.
-        automatic_rechunk: bool, default True
-            Whether dask should automatically rechunk the output to avoid
-            exploding chunk sizes. Importantly, each chunk will be a view of the data
-            so large chunk sizes are only safe if *no* copies are made later.
+        **kwargs
+            Keyword arguments that should be passed to the underlying array type's
+            ``sliding_window_view`` function.
 
         Returns
         -------
@@ -2051,6 +2050,11 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         size w.
         The return dim: self.dims + (window_dim, )
         The return shape: self.shape + (window, )
+
+        See Also
+        --------
+        numpy.lib.stride_tricks.sliding_window_view
+        dask.array.lib.stride_tricks.sliding_window_view
 
         Examples
         --------
@@ -2132,10 +2136,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return Variable(
             new_dims,
             duck_array_ops.sliding_window_view(
-                padded.data,
-                window_shape=window,
-                axis=axis,
-                automatic_rechunk=automatic_rechunk,
+                padded.data, window_shape=window, axis=axis, **kwargs
             ),
         )
 

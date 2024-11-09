@@ -5,7 +5,7 @@ def sliding_window_view(
     x, window_shape, axis=None, *, automatic_rechunk=True, **kwargs
 ):
     # Backcompat for handling `automatic_rechunk`, delete when dask>=2024.11.0
-    # subok, writeable are unsupported by dask
+    # Note that subok, writeable are unsupported by dask, so we ignore those in kwargs
     from dask.array.lib.stride_tricks import sliding_window_view
 
     if module_available("dask", "2024.11.0"):

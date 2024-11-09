@@ -30,7 +30,6 @@ from numpy import (  # noqa: F401
     transpose,
     unravel_index,
 )
-from numpy.ma import masked_invalid  # noqa
 from packaging.version import Version
 from pandas.api.types import is_extension_array_dtype
 
@@ -107,7 +106,7 @@ def _dask_or_eager_func(
         else:
             wrapped = getattr(eager_module, name)
             for kwarg in dask_only_kwargs:
-                kwargs.pop(kwarg)
+                kwargs.pop(kwarg, None)
         return wrapped(*args, **kwargs)
 
     return f
@@ -124,6 +123,12 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
 
 # Requires special-casing because pandas won't automatically dispatch to dask.isnull via NEP-18
 pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd, dask_module="dask.array")
+
+# TODO replace with simply np.ma.masked_invalid once numpy/numpy#16022 is fixed
+# TODO: replacing breaks iris + dask tests
+masked_invalid = _dask_or_eager_func(
+    "masked_invalid", eager_module=np.ma, dask_module="dask.array.ma"
+)
 
 # sliding_window_view will not dispatch arbitrary kwargs (automatic_rechunk),
 # so we need to hand-code this.

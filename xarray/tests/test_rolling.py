@@ -611,10 +611,10 @@ class TestDatasetRolling:
 
         # Dataset now has chunks of size (400, 400, 100 100) or 11.92 GiB
         rechunked = da.rolling(time=100, center=True).construct(
-            "window", automatic_rechunk=True
+            "window", sliding_window_kwargs=dict(automatic_rechunk=True)
         )
         not_rechunked = da.rolling(time=100, center=True).construct(
-            "window", automatic_rechunk=False
+            "window", sliding_window_kwargs=dict(automatic_rechunk=False)
         )
         assert rechunked.chunks != not_rechunked.chunks
 

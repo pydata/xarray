@@ -187,7 +187,7 @@ class Rolling(Generic[T_Xarray]):
                 rolling_agg_func=rolling_agg_func,
                 keep_attrs=keep_attrs,
                 fillna=fillna,
-                automatic_rechunk=automatic_rechunk,
+                sliding_window_kwargs=dict(automatic_rechunk=automatic_rechunk),
                 **kwargs,
             )
 
@@ -329,7 +329,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         stride: int | Mapping[Any, int] = 1,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-        automatic_rechunk: bool = True,
+        sliding_window_kwargs: Mapping[Any, Any] | None = None,
         **window_dim_kwargs: Hashable,
     ) -> DataArray:
         """
@@ -348,10 +348,9 @@ class DataArrayRolling(Rolling["DataArray"]):
             If True, the attributes (``attrs``) will be copied from the original
             object to the new one. If False, the new object will be returned
             without attributes. If None uses the global default.
-        automatic_rechunk: bool, default True
-            Whether dask should automatically rechunk the output to avoid
-            exploding chunk sizes. Importantly, each chunk will be a view of the data
-            so large chunk sizes are only safe if *no* copies are made later.
+        sliding_window_kwargs : Mapping
+            Keyword arguments that should be passed to the underlying array type's
+            ``sliding_window_view`` function.
         **window_dim_kwargs : Hashable, optional
             The keyword arguments form of ``window_dim`` {dim: new_name, ...}.
 
@@ -364,6 +363,15 @@ class DataArrayRolling(Rolling["DataArray"]):
         --------
         numpy.lib.stride_tricks.sliding_window_view
         dask.array.lib.stride_tricks.sliding_window_view
+
+        Notes
+        -----
+        With dask arrays, it's possible to pass the ``automatic_rechunk`` kwarg as
+        ``sliding_window_kwargs={"automatic_rechunk": True}``. This controls
+        whether dask should automatically rechunk the output to avoid
+        exploding chunk sizes. Automatically rechunking is the default behaviour.
+        Importantly, each chunk will be a view of the data so large chunk sizes are
+        only safe if *no* copies are made later.
 
         Examples
         --------
@@ -399,13 +407,15 @@ class DataArrayRolling(Rolling["DataArray"]):
 
         """
 
+        if sliding_window_kwargs is None:
+            sliding_window_kwargs = {}
         return self._construct(
             self.obj,
             window_dim=window_dim,
             stride=stride,
             fill_value=fill_value,
             keep_attrs=keep_attrs,
-            automatic_rechunk=automatic_rechunk,
+            sliding_window_kwargs=sliding_window_kwargs,
             **window_dim_kwargs,
         )
 
@@ -417,10 +427,13 @@ class DataArrayRolling(Rolling["DataArray"]):
         stride: int | Mapping[Any, int] = 1,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-        automatic_rechunk: bool = True,
+        sliding_window_kwargs: Mapping[Any, Any] | None = None,
         **window_dim_kwargs: Hashable,
     ) -> DataArray:
         from xarray.core.dataarray import DataArray
+
+        if sliding_window_kwargs is None:
+            sliding_window_kwargs = {}
 
         keep_attrs = self._get_keep_attrs(keep_attrs)
 
@@ -442,7 +455,7 @@ class DataArrayRolling(Rolling["DataArray"]):
             window_dims,
             center=self.center,
             fill_value=fill_value,
-            automatic_rechunk=automatic_rechunk,
+            **sliding_window_kwargs,
         )
 
         attrs = obj.attrs if keep_attrs else {}
@@ -463,7 +476,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         func: Callable,
         keep_attrs: bool | None = None,
         *,
-        automatic_rechunk: bool = True,
+        sliding_window_kwargs: Mapping[Any, Any] | None = None,
         **kwargs: Any,
     ) -> DataArray:
         """Reduce each window by applying `func`.
@@ -480,10 +493,9 @@ class DataArrayRolling(Rolling["DataArray"]):
             If True, the attributes (``attrs``) will be copied from the original
             object to the new one. If False, the new object will be returned
             without attributes. If None uses the global default.
-        automatic_rechunk: bool, default True
-            Whether dask should automatically rechunk the output of ``construct`` to avoid
-            exploding chunk sizes. Importantly, each chunk will be a view of the data
-            so large chunk sizes are only safe if *no* copies are made in ``func``.
+        sliding_window_kwargs
+            Keyword arguments that should be passed to the underlying array type's
+            ``sliding_window_view`` function.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -491,6 +503,15 @@ class DataArrayRolling(Rolling["DataArray"]):
         -------
         reduced : DataArray
             Array with summarized data.
+
+        Notes
+        -----
+        With dask arrays, it's possible to pass the ``automatic_rechunk`` kwarg as
+        ``sliding_window_kwargs={"automatic_rechunk": True}``. This controls
+        whether dask should automatically rechunk the output to avoid
+        exploding chunk sizes. Automatically rechunking is the default behaviour.
+        Importantly, each chunk will be a view of the data so large chunk sizes are
+        only safe if *no* copies are made later.
 
         Examples
         --------
@@ -541,7 +562,7 @@ class DataArrayRolling(Rolling["DataArray"]):
             window_dim=rolling_dim,
             keep_attrs=keep_attrs,
             fill_value=fillna,
-            automatic_rechunk=automatic_rechunk,
+            sliding_window_kwargs=sliding_window_kwargs,
         )
 
         dim = list(rolling_dim.values())
@@ -873,7 +894,7 @@ class DatasetRolling(Rolling["Dataset"]):
         stride: int | Mapping[Any, int] = 1,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-        automatic_rechunk: bool = True,
+        sliding_window_kwargs: Mapping[Any, Any] | None = None,
         **window_dim_kwargs: Hashable,
     ) -> Dataset:
         """
@@ -889,10 +910,9 @@ class DatasetRolling(Rolling["Dataset"]):
             size of stride for the rolling window.
         fill_value : Any, default: dtypes.NA
             Filling value to match the dimension size.
-        automatic_rechunk: bool, default True
-            Whether dask should automatically rechunk the output to avoid
-            exploding chunk sizes. Importantly, each chunk will be a view of the data
-            so large chunk sizes are only safe if *no* copies are made later.
+        sliding_window_kwargs
+            Keyword arguments that should be passed to the underlying array type's
+            ``sliding_window_view`` function.
         **window_dim_kwargs : {dim: new_name, ...}, optional
             The keyword arguments form of ``window_dim``.
 
@@ -904,6 +924,15 @@ class DatasetRolling(Rolling["Dataset"]):
         --------
         numpy.lib.stride_tricks.sliding_window_view
         dask.array.lib.stride_tricks.sliding_window_view
+
+        Notes
+        -----
+        With dask arrays, it's possible to pass the ``automatic_rechunk`` kwarg as
+        ``sliding_window_kwargs={"automatic_rechunk": True}``. This controls
+        whether dask should automatically rechunk the output to avoid
+        exploding chunk sizes. Automatically rechunking is the default behaviour.
+        Importantly, each chunk will be a view of the data so large chunk sizes are
+        only safe if *no* copies are made later.
         """
 
         from xarray.core.dataset import Dataset
@@ -935,6 +964,7 @@ class DatasetRolling(Rolling["Dataset"]):
                     fill_value=fill_value,
                     stride=st,
                     keep_attrs=keep_attrs,
+                    sliding_window_kwargs=sliding_window_kwargs,
                 )
             else:
                 dataset[key] = da.copy()
