@@ -195,6 +195,14 @@ def format_bump_table(specs, policy_versions, releases, warnings):
         "Status",
     )
 
+    heading_style = "bold red1"
+    warning_style = "bold yellow1"
+    styles = {
+        ">": "bold red1",
+        "=": "bold dim green3",
+        "<": "bold orange3",
+    }
+
     for spec in specs:
         policy_release = policy_versions[spec.name]
         policy_version = policy_release.version.with_segments(0, 2)
@@ -204,16 +212,7 @@ def format_bump_table(specs, policy_versions, releases, warnings):
         required_date = lookup_spec_release(spec, releases).timestamp
 
         status = version_comparison_symbol(required_version, policy_version)
-        warning_style = "bold yellow1"
-        styles = {
-            ">": "bold red1",
-            "=": "bold dim green3",
-            "<": "bold orange3",
-        }
-        if warnings[spec.name] and status != ">":
-            style = warning_style
-        else:
-            style = styles[status]
+        style = styles[status]
 
         table.add_row(
             spec.name,
@@ -226,7 +225,7 @@ def format_bump_table(specs, policy_versions, releases, warnings):
         )
 
     grid = Table.grid(expand=True, padding=(0, 2))
-    grid.add_column(style="bold red1", vertical="middle")
+    grid.add_column(style=heading_style, vertical="middle")
     grid.add_column()
     grid.add_row("Version summary", table)
 
