@@ -293,9 +293,7 @@ def inline_sparse_repr(array):
     """Similar to sparse.COO.__repr__, but without the redundant shape/dtype."""
     sparse_array_type = array_type("sparse")
     assert isinstance(array, sparse_array_type), array
-    return (
-        f"<{type(array).__name__}: nnz={array.nnz:d}, fill_value={array.fill_value!s}>"
-    )
+    return f"<{type(array).__name__}: nnz={array.nnz:d}, fill_value={array.fill_value}>"
 
 
 def inline_variable_array_repr(var, max_width):

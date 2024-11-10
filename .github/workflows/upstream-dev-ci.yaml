@@ -68,7 +68,6 @@ jobs:
           create-args: >-
             python=${{ matrix.python-version }}
             pytest-reportlog
-            conda
       - name: Install upstream versions
         run: |
           bash ci/install-upstream-wheels.sh
@@ -77,8 +76,6 @@ jobs:
           python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
       - name: Import xarray
         run: |
@@ -127,7 +124,6 @@ jobs:
           create-args: >-
             python=${{ matrix.python-version }}
             pytest-reportlog
-            conda
       - name: Install upstream versions
         run: |
           bash ci/install-upstream-wheels.sh
@@ -136,8 +132,6 @@ jobs:
           python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
       - name: Install mypy
         run: |

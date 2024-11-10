@@ -17,8 +17,8 @@ from xarray.testing.assertions import (  # noqa: F401
 __all__ = [
     "assert_allclose",
     "assert_chunks_equal",
-    "assert_duckarray_equal",
     "assert_duckarray_allclose",
+    "assert_duckarray_equal",
     "assert_equal",
     "assert_identical",
     "assert_isomorphic",

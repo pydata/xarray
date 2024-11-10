@@ -217,10 +217,10 @@ class DatasetView(Dataset):
     __slots__ = (
         "_attrs",
         "_cache",  # used by _CachedAccessor
+        "_close",
         "_coord_names",
         "_dims",
         "_encoding",
-        "_close",
         "_indexes",
         "_variables",
     )
@@ -457,17 +457,17 @@ class DataTree(
     _close: Callable[[], None] | None
 
     __slots__ = (
-        "_name",
-        "_parent",
-        "_children",
+        "_attrs",
         "_cache",  # used by _CachedAccessor
+        "_children",
+        "_close",
         "_data_variables",
+        "_encoding",
+        "_name",
         "_node_coord_variables",
         "_node_dims",
         "_node_indexes",
-        "_attrs",
-        "_encoding",
-        "_close",
+        "_parent",
     )
 
     def __init__(
@@ -749,7 +749,7 @@ class DataTree(
 
     def _ipython_key_completions_(self) -> list[str]:
         """Provide method for the key-autocompletions in IPython.
-        See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
+        See https://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
         """
 
