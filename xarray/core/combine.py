@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import itertools
 from collections import Counter, defaultdict
-from collections.abc import Iterable, Iterator, Sequence
-from typing import TYPE_CHECKING, Callable, Iterable, Literal, TypeVar, Union, cast
+from collections.abc import Callable, Iterable, Iterator, Sequence
+from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast
 
 import pandas as pd
 
