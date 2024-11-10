@@ -303,6 +303,9 @@ jobs:
       run:
         shell: bash -l {0}
 
+    env:
+      COLUMNS: 120
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -311,20 +314,20 @@ jobs:
       - name: Setup micromamba
         uses: mamba-org/setup-micromamba@v2
         with:
-          # run with micromamba 1.5.10 together with conda
-          # conda.api is not API compatible with libmambapy
-          micromamba-version: "1.5.10-0"
           environment-name: xarray-tests
           create-args: >-
             python=3.12
             pyyaml
             python-dateutil
-            conda
+            cytoolz
+            rich
+            rich-click
+            py-rattler
 
       - name: All-deps minimum versions policy
         run: |
-          python ci/min_deps_check.py ci/requirements/min-all-deps.yml
+          python ci/minimum_versions.py ci/requirements/min-all-deps.yml
 
       - name: Bare minimum versions policy
         run: |
-          python ci/min_deps_check.py ci/requirements/bare-minimum.yml
+          python ci/minimum_versions.py ci/requirements/bare-minimum.yml
