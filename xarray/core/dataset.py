@@ -9132,34 +9132,39 @@ class Dataset(
             variables[sing.name] = sing
 
         # If we have a coordinate get its underlying dimension.
-        true_dim = self.coords[dim].dims[0]
+        (true_dim,) = self.coords[dim].dims
 
-        for name, da in self.data_vars.items():
-            if true_dim not in da.dims:
+        other_coords = {
+            dim: self._variables[dim]
+            for dim in set(self.dims) - {true_dim}
+            if dim in self._variables
+        }
+        present_dims: set[Hashable] = set()
+        for name, var in self._variables.items():
+            if name in self._coord_names or name in self.dims:
+                continue
+            if true_dim not in var.dims:
                 continue
 
-            if is_duck_dask_array(da.data) and (
+            if is_duck_dask_array(var._data) and (
                 rank != order or full or skipna is None
             ):
                 # Current algorithm with dask and skipna=False neither supports
                 # deficient ranks nor does it output the "full" info (issue dask/dask#6516)
                 skipna_da = True
             elif skipna is None:
-                skipna_da = bool(np.any(da.isnull()))
+                skipna_da = bool(np.any(var.isnull()))
 
-            dims_to_stack = [dimname for dimname in da.dims if dimname != true_dim]
-            stacked_coords: dict[Hashable, DataArray] = {}
-            if dims_to_stack:
-                stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
-                rhs = da.transpose(true_dim, *dims_to_stack).stack(
-                    {stacked_dim: dims_to_stack}
-                )
-                stacked_coords = {stacked_dim: rhs[stacked_dim]}
-                scale_da = scale[:, np.newaxis]
+            if var.ndim > 1:
+                rhs = var.transpose(true_dim, ...)
+                other_dims = rhs.dims[1:]
+                scale_da = scale.reshape(-1, *((1,) * len(other_dims)))
             else:
-                rhs = da
+                rhs = var
                 scale_da = scale
+                other_dims = ()
 
+            present_dims.update(other_dims)
             if w is not None:
                 rhs = rhs * w[:, np.newaxis]
 
@@ -9179,26 +9184,15 @@ class Dataset(
                 # Thus a ReprObject => polyfit was called on a DataArray
                 name = ""
 
-            coeffs = DataArray(
-                coeffs / scale_da,
-                dims=[degree_dim] + list(stacked_coords.keys()),
-                coords={degree_dim: np.arange(order)[::-1], **stacked_coords},
-                name=name + "polyfit_coefficients",
-            )
-            if dims_to_stack:
-                coeffs = coeffs.unstack(stacked_dim)
-            variables[coeffs.name] = coeffs
+            coeffs = Variable(data=coeffs / scale_da, dims=(degree_dim,) + other_dims)
+            variables[name + "polyfit_coefficients"] = coeffs
 
             if full or (cov is True):
-                residuals = DataArray(
-                    residuals if dims_to_stack else residuals.squeeze(),
-                    dims=list(stacked_coords.keys()),
-                    coords=stacked_coords,
-                    name=name + "polyfit_residuals",
+                residuals = Variable(
+                    data=residuals if var.ndim > 1 else residuals.squeeze(),
+                    dims=other_dims,
                 )
-                if dims_to_stack:
-                    residuals = residuals.unstack(stacked_dim)
-                variables[residuals.name] = residuals
+                variables[name + "polyfit_residuals"] = residuals
 
             if cov:
                 Vbase = np.linalg.inv(np.dot(lhs.T, lhs))
@@ -9214,7 +9208,18 @@ class Dataset(
                 covariance = DataArray(Vbase, dims=("cov_i", "cov_j")) * fac
                 variables[name + "polyfit_covariance"] = covariance
 
-        return type(self)(data_vars=variables, attrs=self.attrs.copy())
+        return type(self)(
+            data_vars=variables,
+            coords={
+                degree_dim: np.arange(order)[::-1],
+                **{
+                    name: coord
+                    for name, coord in other_coords.items()
+                    if name in present_dims
+                },
+            },
+            attrs=self.attrs.copy(),
+        )
 
     def pad(
         self,
