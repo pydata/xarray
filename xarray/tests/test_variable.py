@@ -2759,6 +2759,13 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         assert actual.foo == "bar"
         assert_array_equal(data, actual)
 
+    def test_numpy_matrix(self):
+        with pytest.warns(PendingDeprecationWarning):
+            data = np.matrix([[1, 2], [3, 4]])
+        actual = as_compatible_data(data)
+        assert isinstance(actual, np.ndarray)
+        assert_array_equal(data, actual)
+
     def test_unsupported_type(self):
         # Non indexable type
         class CustomArray(NDArrayMixin):
