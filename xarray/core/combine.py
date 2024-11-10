@@ -606,7 +606,10 @@ def vars_as_keys(ds):
     return tuple(sorted(ds))
 
 
-def groupby_defaultdict(iter, key=lambda x: x):
+T = TypeVar("T")
+K = TypeVar("K", bound=Hashable)
+
+def groupby_defaultdict(iter: list[T], key: Callable[[T], K] = lambda x: x) -> Iterator[tuple[K, Iterator[T]]]:
     """replacement for itertools.groupby"""
     idx = defaultdict(list)
     for i, obj in enumerate(iter):

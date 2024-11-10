@@ -1043,7 +1043,7 @@ class TestCombineDatasetsbyCoords:
         with pytest.raises(ValueError):
             combine_by_coords([x1, x2, x3], fill_value=None)
 
-    def test_combine_by_coords_override_order(self):
+    def test_combine_by_coords_override_order(self) -> None:
         # regression test for https://github.com/pydata/xarray/issues/8828
         x1 = Dataset({"a": (("y", "x"), [[1]])}, coords={"y": [0], "x": [0]})
         x2 = Dataset(
