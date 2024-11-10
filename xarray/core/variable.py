@@ -321,17 +321,15 @@ def as_compatible_data(
         else:
             data = np.asarray(data)
 
-    _is_array_like = isinstance(data, np.ndarray | np.generic)
-    _is_nep18 = hasattr(data, "__array_function__")
-    _has_array_api = hasattr(data, "__array_namespace__")
-    _has_unit = hasattr(data, "_unit")
+    if isinstance(data, np.matrix):
+        data = np.asarray(data)
 
-    # Allow `astropy.units.Quantity`
-    if _is_array_like and (_is_nep18 or _has_array_api) and _has_unit:
-        return cast("T_DuckArray", data)
-
-    # immediately return array-like types except `numpy.ndarray` subclasses and `numpy` scalars
-    if not _is_array_like and (_is_nep18 or _has_array_api):
+    # immediately return array-like types except `numpy.ndarray` and `numpy` scalars
+    # compare types with `is` instead of `isinstance` to allow `numpy.ndarray` subclasses
+    is_numpy = type(data) is np.ndarray or isinstance(data, np.generic)
+    if not is_numpy and (
+        hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
+    ):
         return cast("T_DuckArray", data)
 
     # validate whether the data is valid data types. Also, explicitly cast `numpy`
