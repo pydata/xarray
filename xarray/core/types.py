@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import datetime
 import sys
-from collections.abc import Collection, Hashable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Hashable, Iterator, Mapping, Sequence
+from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Literal,
     Protocol,
     SupportsIndex,
     TypeVar,
     Union,
+    overload,
 )
 
 import numpy as np
@@ -21,31 +22,45 @@ try:
     if sys.version_info >= (3, 11):
         from typing import Self, TypeAlias
     else:
-        from typing_extensions import Self, TypeAlias
+        from typing import TypeAlias
+
+        from typing_extensions import Self
 except ImportError:
     if TYPE_CHECKING:
         raise
     else:
         Self: Any = None
 
-if TYPE_CHECKING:
-    from numpy._typing import _SupportsDType
-    from numpy.typing import ArrayLike
 
+from numpy._typing import _SupportsDType
+from numpy.typing import ArrayLike
+
+if TYPE_CHECKING:
     from xarray.backends.common import BackendEntrypoint
     from xarray.core.alignment import Aligner
     from xarray.core.common import AbstractArray, DataWithCoords
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
     from xarray.core.indexes import Index, Indexes
     from xarray.core.utils import Frozen
-    from xarray.core.variable import Variable
+    from xarray.core.variable import IndexVariable, Variable
+    from xarray.groupers import Grouper, TimeResampler
+
+    GroupInput: TypeAlias = (
+        str
+        | DataArray
+        | IndexVariable
+        | Sequence[Hashable]
+        | Mapping[Any, Grouper]
+        | None
+    )
 
     try:
         from dask.array import Array as DaskArray
     except ImportError:
-        DaskArray = np.ndarray  # type: ignore
+        DaskArray = np.ndarray  # type: ignore[misc, assignment, unused-ignore]
 
     try:
         from cubed import Array as CubedArray
@@ -53,7 +68,7 @@ if TYPE_CHECKING:
         CubedArray = np.ndarray
 
     try:
-        from zarr.core import Array as ZarrArray
+        from zarr import Array as ZarrArray
     except ImportError:
         ZarrArray = np.ndarray
 
@@ -94,9 +109,9 @@ try:
 except ImportError:
     CFTimeDatetime = np.datetime64
 
-DatetimeLike: TypeAlias = Union[
-    pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime
-]
+DatetimeLike: TypeAlias = (
+    pd.Timestamp | datetime.datetime | np.datetime64 | CFTimeDatetime
+)
 
 
 class Alignable(Protocol):
@@ -177,21 +192,24 @@ T_DuckArray = TypeVar("T_DuckArray", bound=Any, covariant=True)
 T_ExtensionArray = TypeVar("T_ExtensionArray", bound=pd.api.extensions.ExtensionArray)
 
 
-ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
+ScalarOrArray = Union["ArrayLike", np.generic]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 DaCompatible = Union["DataArray", "VarCompatible"]
 DsCompatible = Union["Dataset", "DaCompatible"]
+DtCompatible = Union["DataTree", "DsCompatible"]
 GroupByCompatible = Union["Dataset", "DataArray"]
 
 # Don't change to Hashable | Collection[Hashable]
 # Read: https://github.com/pydata/xarray/issues/6142
-Dims = Union[str, Collection[Hashable], "ellipsis", None]
+Dims = Union[str, Collection[Hashable], EllipsisType, None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
-T_ChunkDim: TypeAlias = Union[str, int, Literal["auto"], None, tuple[int, ...]]
+T_ChunkDim: TypeAlias = str | int | Literal["auto"] | None | tuple[int, ...]
+T_ChunkDimFreq: TypeAlias = Union["TimeResampler", T_ChunkDim]
+T_ChunksFreq: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
-T_Chunks: TypeAlias = Union[T_ChunkDim, Mapping[Any, T_ChunkDim]]
+T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim]
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 DataVars = Mapping[Any, Any]
@@ -211,14 +229,25 @@ CombineAttrsOptions = Union[
 JoinOptions = Literal["outer", "inner", "left", "right", "exact", "override"]
 
 Interp1dOptions = Literal[
-    "linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial"
+    "linear",
+    "nearest",
+    "zero",
+    "slinear",
+    "quadratic",
+    "cubic",
+    "quintic",
+    "polynomial",
 ]
-InterpolantOptions = Literal["barycentric", "krogh", "pchip", "spline", "akima"]
-InterpOptions = Union[Interp1dOptions, InterpolantOptions]
+InterpolantOptions = Literal[
+    "barycentric", "krogh", "pchip", "spline", "akima", "makima"
+]
+InterpnOptions = Literal["linear", "nearest", "slinear", "cubic", "quintic", "pchip"]
+InterpOptions = Union[Interp1dOptions, InterpolantOptions, InterpnOptions]
 
 DatetimeUnitOptions = Literal[
     "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
 ]
+NPDatetimeUnitOptions = Literal["D", "h", "m", "s", "ms", "us", "ns"]
 
 QueryEngineOptions = Literal["python", "numexpr", None]
 QueryParserOptions = Literal["pandas", "python"]
@@ -237,6 +266,11 @@ PadModeOptions = Literal[
     "symmetric",
     "wrap",
 ]
+T_PadConstantValues = float | tuple[float, float]
+T_VarPadConstantValues = T_PadConstantValues | Mapping[Any, T_PadConstantValues]
+T_DatasetPadConstantValues = (
+    T_VarPadConstantValues | Mapping[Any, T_VarPadConstantValues]
+)
 PadReflectOptions = Literal["even", "odd", None]
 
 CFCalendar = Literal[
@@ -260,15 +294,18 @@ HueStyleOptions = Literal["continuous", "discrete", None]
 AspectOptions = Union[Literal["auto", "equal"], float, None]
 ExtendOptions = Literal["neither", "both", "min", "max", None]
 
-# TODO: Wait until mypy supports recursive objects in combination with typevars
-_T = TypeVar("_T")
-NestedSequence = Union[
-    _T,
-    Sequence[_T],
-    Sequence[Sequence[_T]],
-    Sequence[Sequence[Sequence[_T]]],
-    Sequence[Sequence[Sequence[Sequence[_T]]]],
-]
+
+_T_co = TypeVar("_T_co", covariant=True)
+
+
+class NestedSequence(Protocol[_T_co]):
+    def __len__(self, /) -> int: ...
+    @overload
+    def __getitem__(self, index: int, /) -> _T_co | NestedSequence[_T_co]: ...
+    @overload
+    def __getitem__(self, index: slice, /) -> NestedSequence[_T_co]: ...
+    def __iter__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
+    def __reversed__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
 
 
 QuantileMethods = Literal[
@@ -293,4 +330,9 @@ ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]
 
 GroupKey = Any
 GroupIndex = Union[int, slice, list[int]]
-T_GroupIndices = list[GroupIndex]
+GroupIndices = tuple[GroupIndex, ...]
+Bins = Union[
+    int, Sequence[int], Sequence[float], Sequence[pd.Timestamp], np.ndarray, pd.Index
+]
+
+ResampleCompatible: TypeAlias = str | datetime.timedelta | pd.Timedelta | pd.DateOffset

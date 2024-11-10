@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 from collections.abc import Hashable
+from types import EllipsisType
 
 import numpy as np
 import pandas as pd
 import pytest
 
 from xarray.core import duck_array_ops, utils
-from xarray.core.utils import either_dict_or_kwargs, infix_dims, iterate_nested
+from xarray.core.utils import (
+    either_dict_or_kwargs,
+    infix_dims,
+    iterate_nested,
+)
 from xarray.tests import assert_array_equal, requires_dask
 
 
@@ -133,6 +138,16 @@ class TestDictionaries:
             "Frozen({'a': 'A', 'b': 'B'})",
             "Frozen({'b': 'B', 'a': 'A'})",
         )
+
+    def test_filtered(self):
+        x = utils.FilteredMapping(keys={"a"}, mapping={"a": 1, "b": 2})
+        assert "a" in x
+        assert "b" not in x
+        assert x["a"] == 1
+        assert list(x) == ["a"]
+        assert len(x) == 1
+        assert repr(x) == "FilteredMapping(keys={'a'}, mapping={'a': 1, 'b': 2})"
+        assert dict(x) == {"a": 1}
 
 
 def test_repr_object():
@@ -268,25 +283,25 @@ def test_infix_dims_errors(supplied, all_):
         pytest.param(..., ..., id="ellipsis"),
     ],
 )
-def test_parse_dims(dim, expected) -> None:
+def test_parse_dims_as_tuple(dim, expected) -> None:
     all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
-    actual = utils.parse_dims(dim, all_dims, replace_none=False)
+    actual = utils.parse_dims_as_tuple(dim, all_dims, replace_none=False)
     assert actual == expected
 
 
 def test_parse_dims_set() -> None:
     all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
     dim = {"a", 1}
-    actual = utils.parse_dims(dim, all_dims)
+    actual = utils.parse_dims_as_tuple(dim, all_dims)
     assert set(actual) == dim
 
 
 @pytest.mark.parametrize(
     "dim", [pytest.param(None, id="None"), pytest.param(..., id="ellipsis")]
 )
-def test_parse_dims_replace_none(dim: None | ellipsis) -> None:
+def test_parse_dims_replace_none(dim: None | EllipsisType) -> None:
     all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
-    actual = utils.parse_dims(dim, all_dims, replace_none=True)
+    actual = utils.parse_dims_as_tuple(dim, all_dims, replace_none=True)
     assert actual == all_dims
 
 
@@ -301,7 +316,7 @@ def test_parse_dims_replace_none(dim: None | ellipsis) -> None:
 def test_parse_dims_raises(dim) -> None:
     all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
     with pytest.raises(ValueError, match="'x'"):
-        utils.parse_dims(dim, all_dims, check_exists=True)
+        utils.parse_dims_as_tuple(dim, all_dims, check_exists=True)
 
 
 @pytest.mark.parametrize(

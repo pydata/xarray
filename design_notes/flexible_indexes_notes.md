@@ -71,7 +71,7 @@ An `XarrayIndex` subclass must/should/may implement the following properties/met
 - a `data` property to access index's data and map it to coordinate data (see [Section 4](#4-indexvariable))
 - a `__getitem__()` implementation to propagate the index through DataArray/Dataset indexing operations
 - `equals()`, `union()` and `intersection()` methods for data alignment (see [Section 2.6](#26-using-indexes-for-data-alignment))
-- Xarray coordinate getters (see [Section 2.2.4](#224-implicit-coodinates))
+- Xarray coordinate getters (see [Section 2.2.4](#224-implicit-coordinates))
 - a method that may return a new index and that will be called when one of the corresponding coordinates is dropped from the Dataset/DataArray (multi-coordinate indexes)
 - `encode()`/`decode()` methods that would allow storage-agnostic serialization and fast-path reconstruction of the underlying index object(s) (see [Section 2.8](#28-index-encoding))
 - one or more "non-standard" methods or properties that could be leveraged in Xarray 3rd-party extensions like Dataset/DataArray accessors (see [Section 2.7](#27-using-indexes-for-other-purposes))
@@ -133,7 +133,7 @@ A possible, more explicit solution to reuse a `pandas.MultiIndex` in a DataArray
 
 New indexes may also be built from existing sets of coordinates or variables in a Dataset/DataArray using the `.set_index()` method.
 
-The [current signature](http://docs.xarray.dev/en/stable/generated/xarray.DataArray.set_index.html#xarray.DataArray.set_index) of `.set_index()` is tailored to `pandas.MultiIndex` and tied to the concept of a dimension-index. It is therefore hardly reusable as-is in the context of flexible indexes proposed here.
+The [current signature](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.set_index.html#xarray.DataArray.set_index) of `.set_index()` is tailored to `pandas.MultiIndex` and tied to the concept of a dimension-index. It is therefore hardly reusable as-is in the context of flexible indexes proposed here.
 
 The new signature may look like one of these:
 

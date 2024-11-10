@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -176,7 +176,7 @@ class NumpyVIndexAdapter:
 
 def _create_method(name, npmodule=np) -> Callable:
     def f(values, axis=None, **kwargs):
-        dtype = kwargs.get("dtype", None)
+        dtype = kwargs.get("dtype")
         bn_func = getattr(bn, name, None)
 
         if (
@@ -191,7 +191,7 @@ def _create_method(name, npmodule=np) -> Callable:
                 or kwargs.get("ddof", 0) == 1
             )
             # TODO: bool?
-            and values.dtype.kind in "uifc"
+            and values.dtype.kind in "uif"
             # and values.dtype.isnative
             and (dtype is None or np.dtype(dtype) == values.dtype)
             # numbagg.nanquantile only available after 0.8.0 and with linear method

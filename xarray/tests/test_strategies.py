@@ -73,7 +73,7 @@ class TestDimensionSizesStrategy:
 
 def check_dict_values(dictionary: dict, allowed_attrs_values_types) -> bool:
     """Helper function to assert that all values in recursive dict match one of a set of types."""
-    for key, value in dictionary.items():
+    for value in dictionary.values():
         if isinstance(value, allowed_attrs_values_types) or value is None:
             continue
         elif isinstance(value, dict):
@@ -138,7 +138,7 @@ class TestVariablesStrategy:
             return st.just(arr)
 
         dim_names = data.draw(dimension_names(min_dims=arr.ndim, max_dims=arr.ndim))
-        dim_sizes = {name: size for name, size in zip(dim_names, arr.shape)}
+        dim_sizes = dict(zip(dim_names, arr.shape, strict=True))
 
         var = data.draw(
             variables(
@@ -217,7 +217,7 @@ class TestVariablesStrategy:
                 warnings.filterwarnings(
                     "ignore", category=UserWarning, message=".+See NEP 47."
                 )
-                from numpy import (  # type: ignore[no-redef,unused-ignore]
+                from numpy import (  # type: ignore[attr-defined,no-redef,unused-ignore]
                     array_api as nxp,
                 )
 

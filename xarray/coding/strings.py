@@ -39,11 +39,11 @@ def check_vlen_dtype(dtype):
 
 
 def is_unicode_dtype(dtype):
-    return dtype.kind == "U" or check_vlen_dtype(dtype) == str
+    return dtype.kind == "U" or check_vlen_dtype(dtype) is str
 
 
 def is_bytes_dtype(dtype):
-    return dtype.kind == "S" or check_vlen_dtype(dtype) == bytes
+    return dtype.kind == "S" or check_vlen_dtype(dtype) is bytes
 
 
 class EncodedStringCoder(VariableCoder):
@@ -104,7 +104,7 @@ def encode_string_array(string_array, encoding="utf-8"):
 
 def ensure_fixed_length_bytes(var: Variable) -> Variable:
     """Ensure that a variable with vlen bytes is converted to fixed width."""
-    if check_vlen_dtype(var.dtype) == bytes:
+    if check_vlen_dtype(var.dtype) is bytes:
         dims, data, attrs, encoding = unpack_for_encoding(var)
         # TODO: figure out how to handle this with dask
         data = np.asarray(data, dtype=np.bytes_)
@@ -210,7 +210,7 @@ def _numpy_char_to_bytes(arr):
     # see https://github.com/numpy/numpy/issues/25916
     # and https://github.com/numpy/numpy/pull/25922
     copy = None if HAS_NUMPY_2_0 else False
-    # based on: http://stackoverflow.com/a/10984878/809705
+    # based on: https://stackoverflow.com/a/10984878/809705
     arr = np.array(arr, copy=copy, order="C")
     dtype = "S" + str(arr.shape[-1])
     return arr.view(dtype).reshape(arr.shape[:-1])

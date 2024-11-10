@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable, Iterable, Sequence
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from packaging.version import Version
@@ -21,13 +21,13 @@ if TYPE_CHECKING:
     try:
         from dask.array import Array as DaskArray
     except ImportError:
-        DaskArray = np.ndarray[Any, Any]  # type: ignore[assignment,  misc]
+        DaskArray = np.ndarray[Any, Any]
 
 
 dask_available = module_available("dask")
 
 
-class DaskManager(ChunkManagerEntrypoint["DaskArray"]):  # type: ignore[type-var]
+class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     array_cls: type[DaskArray]
     available: bool = dask_available
 
@@ -85,13 +85,18 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):  # type: ignore[type-var
 
         return compute(*data, **kwargs)  # type: ignore[no-untyped-call, no-any-return]
 
+    def persist(self, *data: Any, **kwargs: Any) -> tuple[DaskArray | Any, ...]:
+        from dask import persist
+
+        return persist(*data, **kwargs)  # type: ignore[no-untyped-call, no-any-return]
+
     @property
     def array_api(self) -> Any:
         from dask import array as da
 
         return da
 
-    def reduction(  # type: ignore[override]
+    def reduction(
         self,
         arr: T_ChunkedArray,
         func: Callable[..., Any],
@@ -113,7 +118,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):  # type: ignore[type-var
             keepdims=keepdims,
         )  # type: ignore[no-untyped-call]
 
-    def scan(  # type: ignore[override]
+    def scan(
         self,
         func: Callable[..., Any],
         binop: Callable[..., Any],

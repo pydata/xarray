@@ -9,7 +9,6 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray.tests import has_pandas_3
 
 pytest.importorskip("hypothesis")
 import hypothesis.extra.numpy as npst  # isort:skip
@@ -25,19 +24,31 @@ numeric_dtypes = st.one_of(
 
 numeric_series = numeric_dtypes.flatmap(lambda dt: pdst.series(dtype=dt))
 
+
+@st.composite
+def dataframe_strategy(draw):
+    tz = draw(st.timezones())
+    dtype = pd.DatetimeTZDtype(unit="ns", tz=tz)
+
+    datetimes = st.datetimes(
+        min_value=pd.Timestamp("1677-09-21T00:12:43.145224193"),
+        max_value=pd.Timestamp("2262-04-11T23:47:16.854775807"),
+        timezones=st.just(tz),
+    )
+
+    df = pdst.data_frames(
+        [
+            pdst.column("datetime_col", elements=datetimes),
+            pdst.column("other_col", elements=st.integers()),
+        ],
+        index=pdst.range_indexes(min_size=1, max_size=10),
+    )
+    return draw(df).astype({"datetime_col": dtype})
+
+
 an_array = npst.arrays(
     dtype=numeric_dtypes,
     shape=npst.array_shapes(max_dims=2),  # can only convert 1D/2D to pandas
-)
-
-
-datetime_with_tz_strategy = st.datetimes(timezones=st.timezones())
-dataframe_strategy = pdst.data_frames(
-    [
-        pdst.column("datetime_col", elements=datetime_with_tz_strategy),
-        pdst.column("other_col", elements=st.integers()),
-    ],
-    index=pdst.range_indexes(min_size=1, max_size=10),
 )
 
 
@@ -69,7 +80,7 @@ def test_roundtrip_dataarray(data, arr) -> None:
             tuple
         )
     )
-    coords = {name: np.arange(n) for (name, n) in zip(names, arr.shape)}
+    coords = {name: np.arange(n) for (name, n) in zip(names, arr.shape, strict=True)}
     original = xr.DataArray(arr, dims=names, coords=coords)
     roundtripped = xr.DataArray(original.to_pandas())
     xr.testing.assert_identical(original, roundtripped)
@@ -111,11 +122,7 @@ def test_roundtrip_pandas_dataframe(df) -> None:
     xr.testing.assert_identical(arr, roundtripped.to_xarray())
 
 
-@pytest.mark.skipif(
-    has_pandas_3,
-    reason="fails to roundtrip on pandas 3 (see https://github.com/pydata/xarray/issues/9098)",
-)
-@given(df=dataframe_strategy)
+@given(df=dataframe_strategy())
 def test_roundtrip_pandas_dataframe_datetime(df) -> None:
     # Need to name the indexes, otherwise Xarray names them 'dim_0', 'dim_1'.
     df.index.name = "rows"
@@ -125,3 +132,12 @@ def test_roundtrip_pandas_dataframe_datetime(df) -> None:
     roundtripped.columns.name = "cols"  # why?
     pd.testing.assert_frame_equal(df, roundtripped)
     xr.testing.assert_identical(dataset, roundtripped.to_xarray())
+
+
+def test_roundtrip_1d_pandas_extension_array() -> None:
+    df = pd.DataFrame({"cat": pd.Categorical(["a", "b", "c"])})
+    arr = xr.Dataset.from_dataframe(df)["cat"]
+    roundtripped = arr.to_pandas()
+    assert (df["cat"] == roundtripped).all()
+    assert df["cat"].dtype == roundtripped.dtype
+    xr.testing.assert_identical(arr, roundtripped.to_xarray())

@@ -47,17 +47,20 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.9",  "3.12"]
+        python-version: ["3.10", "3.12"]
         env: [""]
         include:
           # Minimum python version:
           - env: "bare-minimum"
-            python-version: "3.9"
+            python-version: "3.10"
             os: ubuntu-latest
           - env: "min-all-deps"
-            python-version: "3.9"
+            python-version: "3.10"
             os: ubuntu-latest
           # Latest python version:
+          - env: "all-but-numba"
+            python-version: "3.12"
+            os: ubuntu-latest
           - env: "all-but-dask"
             # Not 3.12 because of pint
             python-version: "3.11"
@@ -105,7 +108,7 @@ jobs:
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
 
       - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: ${{ env.CONDA_ENV_FILE }}
           environment-name: xarray-tests
@@ -113,7 +116,6 @@ jobs:
           cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
           create-args: >-
             python=${{matrix.python-version}}
-            conda
 
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
@@ -128,8 +130,6 @@ jobs:
 
       - name: Version info
         run: |
-          conda info -a
-          conda list
           python xarray/util/print_versions.py
 
       - name: Import xarray
@@ -159,7 +159,7 @@ jobs:
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v4.5.0
+        uses: codecov/codecov-action@v4.6.0
         with:
           file: ./coverage.xml
           flags: unittests

@@ -37,7 +37,7 @@ body:
         Please confirm that the bug report is in an excellent state, so we can understand & fix it quickly & efficiently. For more details, check out:
 
         - [Minimal Complete Verifiable Examples](https://stackoverflow.com/help/mcve)
-        - [Craft Minimal Bug Reports](http://matthewrocklin.com/blog/work/2018/02/28/minimal-bug-reports)
+        - [Craft Minimal Bug Reports](https://matthewrocklin.com/minimal-bug-reports)
 
       options:
         - label: Minimal example — the example is as focused as reasonably possible to demonstrate the underlying issue in xarray.

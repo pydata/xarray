@@ -3,10 +3,17 @@ from __future__ import annotations
 import itertools
 import textwrap
 import warnings
-from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import (
+    Callable,
+    Hashable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from datetime import date, datetime
 from inspect import getfullargspec
-from typing import TYPE_CHECKING, Any, Callable, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -38,7 +45,7 @@ if TYPE_CHECKING:
     try:
         import matplotlib.pyplot as plt
     except ImportError:
-        plt: Any = None  # type: ignore
+        plt: Any = None  # type: ignore[no-redef]
 
 ROBUST_PERCENTILE = 2.0
 
@@ -119,7 +126,7 @@ def _color_palette(cmap, n_colors):
     from matplotlib.colors import ListedColormap
 
     colors_i = np.linspace(0, 1.0, n_colors)
-    if isinstance(cmap, (list, tuple)):
+    if isinstance(cmap, list | tuple):
         # we have a list of colors
         cmap = ListedColormap(cmap, N=n_colors)
         pal = cmap(colors_i)
@@ -365,7 +372,8 @@ def _infer_xy_labels_3d(
             "Several dimensions of this array could be colors.  Xarray "
             f"will use the last possible dimension ({rgb!r}) to match "
             "matplotlib.pyplot.imshow.  You can pass names of x, y, "
-            "and/or rgb dimensions to override this guess."
+            "and/or rgb dimensions to override this guess.",
+            stacklevel=2,
         )
     assert rgb is not None
 
@@ -430,7 +438,7 @@ def _assert_valid_xy(
     valid_xy = (set(darray.dims) | set(darray.coords)) - multiindex_dims
 
     if (xy is not None) and (xy not in valid_xy):
-        valid_xy_str = "', '".join(sorted(tuple(str(v) for v in valid_xy)))
+        valid_xy_str = "', '".join(sorted(str(v) for v in valid_xy))
         raise ValueError(
             f"{name} must be one of None, '{valid_xy_str}'. Received '{xy}' instead."
         )
@@ -446,8 +454,8 @@ def get_axis(
     try:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
-    except ImportError:
-        raise ImportError("matplotlib is required for plot.utils.get_axis")
+    except ImportError as err:
+        raise ImportError("matplotlib is required for plot.utils.get_axis") from err
 
     if figsize is not None:
         if ax is not None:
@@ -570,8 +578,12 @@ def _interval_to_double_bound_points(
     xarray1 = np.array([x.left for x in xarray])
     xarray2 = np.array([x.right for x in xarray])
 
-    xarray_out = np.array(list(itertools.chain.from_iterable(zip(xarray1, xarray2))))
-    yarray_out = np.array(list(itertools.chain.from_iterable(zip(yarray, yarray))))
+    xarray_out = np.array(
+        list(itertools.chain.from_iterable(zip(xarray1, xarray2, strict=True)))
+    )
+    yarray_out = np.array(
+        list(itertools.chain.from_iterable(zip(yarray, yarray, strict=True)))
+    )
 
     return xarray_out, yarray_out
 
@@ -811,11 +823,11 @@ def _update_axes(
 def _is_monotonic(coord, axis=0):
     """
     >>> _is_monotonic(np.array([0, 1, 2]))
-    True
+    np.True_
     >>> _is_monotonic(np.array([2, 1, 0]))
-    True
+    np.True_
     >>> _is_monotonic(np.array([0, 2, 1]))
-    False
+    np.False_
     """
     if coord.shape[axis] < 3:
         return True
@@ -858,7 +870,7 @@ def _infer_interval_breaks(coord, axis=0, scale=None, check_monotonic=False):
         if (coord <= 0).any():
             raise ValueError(
                 "Found negative or zero value in coordinates. "
-                + "Coordinates must be positive on logscale plots."
+                "Coordinates must be positive on logscale plots."
             )
         coord = np.log10(coord)
 
@@ -905,7 +917,7 @@ def _process_cmap_cbar_kwargs(
         # Leave user to specify cmap settings for surface plots
         kwargs["cmap"] = cmap
         return {
-            k: kwargs.get(k, None)
+            k: kwargs.get(k)
             for k in ["vmin", "vmax", "cmap", "extend", "levels", "norm"]
         }, {}
 
@@ -925,7 +937,7 @@ def _process_cmap_cbar_kwargs(
 
     # we should not be getting a list of colors in cmap anymore
     # is there a better way to do this test?
-    if isinstance(cmap, (list, tuple)):
+    if isinstance(cmap, list | tuple):
         raise ValueError(
             "Specifying a list of colors in cmap is deprecated. "
             "Use colors keyword instead."
@@ -974,7 +986,7 @@ def legend_elements(
     This is useful for obtaining a legend for a `~.Axes.scatter` plot;
     e.g.::
 
-        scatter = plt.scatter([1, 2, 3],  [4, 5, 6],  c=[7, 2, 3])
+        scatter = plt.scatter([1, 2, 3], [4, 5, 6], c=[7, 2, 3])
         plt.legend(*scatter.legend_elements())
 
     creates three legend elements, one for each color with the numerical
@@ -1042,7 +1054,8 @@ def legend_elements(
             warnings.warn(
                 "Collection without array used. Make sure to "
                 "specify the values to be colormapped via the "
-                "`c` argument."
+                "`c` argument.",
+                stacklevel=2,
             )
             return handles, labels
         _size = kwargs.pop("size", mpl.rcParams["lines.markersize"])
@@ -1141,7 +1154,7 @@ def legend_elements(
     kw = dict(markeredgewidth=self.get_linewidths()[0], alpha=self.get_alpha())
     kw.update(kwargs)
 
-    for val, lab in zip(values, label_values):
+    for val, lab in zip(values, label_values, strict=True):
         color, size = _get_color_and_size(val)
 
         if isinstance(self, mpl.collections.PathCollection):
@@ -1163,7 +1176,7 @@ def _legend_add_subtitle(handles, labels, text):
 
     if text and len(handles) > 1:
         # Create a blank handle that's not visible, the
-        # invisibillity will be used to discern which are subtitles
+        # invisibility will be used to discern which are subtitles
         # or not:
         blank_handle = plt.Line2D([], [], label=text)
         blank_handle.set_visible(False)
@@ -1206,7 +1219,7 @@ def _adjust_legend_subtitles(legend):
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     dvars = set(ds.variables.keys())
-    error_msg = f" must be one of ({', '.join(sorted(tuple(str(v) for v in dvars)))})"
+    error_msg = f" must be one of ({', '.join(sorted(str(v) for v in dvars))})"
 
     if x not in dvars:
         raise ValueError(f"Expected 'x' {error_msg}. Received {x} instead.")
@@ -1340,7 +1353,7 @@ def _parse_size(
     widths = np.asarray(min_width + scl * (max_width - min_width))
     if scl.mask.any():
         widths[scl.mask] = 0
-    sizes = dict(zip(levels, widths))
+    sizes = dict(zip(levels, widths, strict=True))
 
     return pd.Series(sizes)
 
@@ -1370,10 +1383,10 @@ class _Normalize(Sequence):
 
     __slots__ = (
         "_data",
+        "_data_is_numeric",
         "_data_unique",
         "_data_unique_index",
         "_data_unique_inverse",
-        "_data_is_numeric",
         "_width",
     )
 
@@ -1599,7 +1612,7 @@ class _Normalize(Sequence):
         if self._values_unique is None:
             raise ValueError("self.data can't be None.")
 
-        return pd.Series(dict(zip(self._values_unique, self._data_unique)))
+        return pd.Series(dict(zip(self._values_unique, self._data_unique, strict=True)))
 
     def _lookup_arr(self, x) -> np.ndarray:
         # Use reindex to be less sensitive to float errors. reindex only
@@ -1811,9 +1824,11 @@ def _guess_coords_to_plot(
     # one of related mpl kwargs has been used. This should have similar behaviour as
     # * plt.plot(x, y) -> Multiple lines with different colors if y is 2d.
     # * plt.plot(x, y, color="red") -> Multiple red lines if y is 2d.
-    for k, dim, ign_kws in zip(default_guess, available_coords, ignore_guess_kwargs):
+    for k, dim, ign_kws in zip(
+        default_guess, available_coords, ignore_guess_kwargs, strict=False
+    ):
         if coords_to_plot.get(k, None) is None and all(
-            kwargs.get(ign_kw, None) is None for ign_kw in ign_kws
+            kwargs.get(ign_kw) is None for ign_kw in ign_kws
         ):
             coords_to_plot[k] = dim
 

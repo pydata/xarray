@@ -258,7 +258,7 @@ Questions:
    Variable.coarsen_reshape
    Variable.rolling_window
 
-   Variable.set_dims # split this into broadcas_to and expand_dims
+   Variable.set_dims # split this into broadcast_to and expand_dims
 
 
 # Reordering/Reshaping

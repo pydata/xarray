@@ -11,7 +11,7 @@ from xarray.tests import has_dask
 try:
     from dask.array import from_array as dask_from_array
 except ImportError:
-    dask_from_array = lambda x: x  # type: ignore
+    dask_from_array = lambda x: x  # type: ignore[assignment, misc]
 
 try:
     import pint
@@ -51,6 +51,11 @@ def test_allclose_regression() -> None:
             xr.Dataset({"a": ("x", [1e-17, 2]), "b": ("y", [-2e-18, 2])}),
             xr.Dataset({"a": ("x", [0, 2]), "b": ("y", [0, 1])}),
             id="Dataset",
+        ),
+        pytest.param(
+            xr.DataArray(np.array("a", dtype="|S1")),
+            xr.DataArray(np.array("b", dtype="|S1")),
+            id="DataArray_with_character_dtype",
         ),
     ),
 )
@@ -165,12 +170,14 @@ def test_ensure_warnings_not_elevated(func) -> None:
     class WarningVariable(xr.Variable):
         @property  # type: ignore[misc]
         def dims(self):
-            warnings.warn("warning in test")
+            warnings.warn("warning in test", stacklevel=2)
             return super().dims
 
-        def __array__(self, dtype=None, copy=None):
-            warnings.warn("warning in test")
-            return super().__array__()
+        def __array__(
+            self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        ) -> np.ndarray:
+            warnings.warn("warning in test", stacklevel=2)
+            return super().__array__(dtype, copy=copy)
 
     a = WarningVariable("x", [1])
     b = WarningVariable("x", [2])
@@ -185,7 +192,7 @@ def test_ensure_warnings_not_elevated(func) -> None:
 
         # ensure warnings still raise outside of assert_*
         with pytest.raises(UserWarning):
-            warnings.warn("test")
+            warnings.warn("test", stacklevel=2)
 
     # ensure warnings stay ignored in assert_*
     with warnings.catch_warnings(record=True) as w:
