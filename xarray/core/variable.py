@@ -332,8 +332,7 @@ def as_compatible_data(
     ):
         return cast("T_DuckArray", data)
 
-    # validate whether the data is valid data types. Also, explicitly cast `numpy`
-    # subclasses and `numpy` scalars to `numpy.ndarray`
+    # anything left will be converted to `numpy.ndarray`, including `numpy` scalars
     data = np.asarray(data)
 
     if data.dtype.kind in "OMm":
