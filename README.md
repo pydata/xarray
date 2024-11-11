@@ -94,7 +94,7 @@ our efforts.
 ## History
 
 Xarray is an evolution of an internal tool developed at [The Climate
-Corporation](http://climate.com/). It was originally written by Climate
+Corporation](https://climate.com/). It was originally written by Climate
 Corp researchers Stephan Hoyer, Alex Kleeman and Eugene Brevdo and was
 released as open source in May 2014. The project was renamed from
 "xray" in January 2016. Xarray became a fiscally sponsored project of
@@ -108,7 +108,7 @@ Thanks to our many contributors!
 
 ## License
 
-Copyright 2014-2023, xarray Developers
+Copyright 2014-2024, xarray Developers
 
 Licensed under the Apache License, Version 2.0 (the "License"); you
 may not use this file except in compliance with the License. You may

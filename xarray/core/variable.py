@@ -46,6 +46,7 @@ from xarray.core.utils import (
 )
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.pycompat import integer_types, is_0d_dask_array, to_duck_array
+from xarray.namedarray.utils import module_available
 from xarray.util.deprecation_helpers import deprecate_dims
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
@@ -1147,10 +1148,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         if fill_with_shape:
             return [
-                (n, n) if d not in pad_option else pad_option[d]
+                pad_option.get(d, (n, n))
                 for d, n in zip(self.dims, self.data.shape, strict=True)
             ]
-        return [(0, 0) if d not in pad_option else pad_option[d] for d in self.dims]
+        return [pad_option.get(d, (0, 0)) for d in self.dims]
 
     def pad(
         self,
@@ -1948,7 +1949,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             output_core_dims=[["quantile"]],
             output_dtypes=[np.float64],
             dask_gufunc_kwargs=dict(output_sizes={"quantile": len(q)}),
-            dask="parallelized",
+            dask="allowed" if module_available("dask", "2024.11.0") else "parallelized",
             kwargs=kwargs,
         )
 
