@@ -30,7 +30,7 @@ New Features
   (:issue:`2852`, :issue:`757`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Optimize :py:meth:`DataArray.polyfit` and :py:meth:`Dataset.polyfit` with dask, when used with
-   arrays with more than 2D dimensions.
+  arrays with more than 2D dimensions.
   (:issue:`5629`). By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
