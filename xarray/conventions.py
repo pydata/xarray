@@ -489,16 +489,16 @@ def decode_cf_variables(
                         # map the keys to list of strings
                         roles_and_names = defaultdict(list)
                         key = None
-                        for v in var_names:
-                            if ":" in v:
-                                key = v.strip(":")
+                        for vname in var_names:
+                            if ":" in vname:
+                                key = vname.strip(":")
                             else:
                                 # todo: test this
                                 if key is None:
                                     raise ValueError(
-                                        f"First element {v} of {attr_name} misses ':'"
+                                        f"First element {vname} of {attr_name} misses ':'"
                                     )
-                                roles_and_names[key].append(v)
+                                roles_and_names[key].append(vname)
                         # for grid_mapping keys are var_names
                         if attr_name == "grid_mapping":
                             var_names = list(roles_and_names.keys())
