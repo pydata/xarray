@@ -33,6 +33,14 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
 
     from xarray.core.dask_array_compat import reshape_blockwise
 
+    # The trick here is that the core dimension is axis 0.
+    # All other dimensions need to be reshaped down to one axis for `lstsq`
+    # (which only accepts 2D input)
+    # and this needs to be undone after running `lstsq`
+    # The order of values in the reshaped axes is irrelevant.
+    # There are big gains to be had by simply reshaping the blocks on a blockwise
+    # basis, and then undoing that transform.
+    # We use a specific `reshape_blockwise` method in dask for this optimization
     if rhs.ndim > 2:
         out_shape = rhs.shape
         reshape_chunks = rhs.chunks
