@@ -1023,6 +1023,124 @@ class IndexingSupport(enum.Enum):
     VECTORIZED = 3
 
 
+def _finish_indexing(
+    raw_indexing_method: Callable[..., Any],
+    *,
+    raw_key,
+    numpy_indices,
+) -> Any:
+    result = raw_indexing_method(raw_key.tuple)
+    if numpy_indices.tuple:
+        # index the loaded np.ndarray
+        result = apply_indexer(NumpyIndexingAdapter(result), numpy_indices)
+    return result
+
+
+def basic_indexing_adapter(
+    key: _IndexerKey,
+    shape: _Shape,
+    indexing_support: IndexingSupport,
+    raw_indexing_method: Callable[..., Any],
+) -> Any:
+    """Support explicit indexing by delegating to a raw indexing method.
+
+    Outer and/or vectorized indexers are supported by indexing a second time
+    with a NumPy array.
+
+    Parameters
+    ----------
+    key : ExplicitIndexer
+        Explicit indexing object.
+    shape : Tuple[int, ...]
+        Shape of the indexed array.
+    indexing_support : IndexingSupport enum
+        Form of indexing supported by raw_indexing_method.
+    raw_indexing_method : callable
+        Function (like ndarray.__getitem__) that when called with indexing key
+        in the form of a tuple returns an indexed array.
+
+    Returns
+    -------
+    Indexing result, in the form of a duck numpy-array.
+    """
+    raw_key, numpy_indices = _decompose_outer_indexer(
+        BasicIndexer(key), shape, indexing_support
+    )
+    return _finish_indexing(
+        raw_indexing_method, raw_key=raw_key, numpy_indices=numpy_indices
+    )
+
+
+def outer_indexing_adapter(
+    key: _IndexerKey,
+    shape: _Shape,
+    indexing_support: IndexingSupport,
+    raw_indexing_method: Callable[..., Any],
+) -> Any:
+    """Support explicit indexing by delegating to a raw indexing method.
+
+    Outer and/or vectorized indexers are supported by indexing a second time
+    with a NumPy array.
+
+    Parameters
+    ----------
+    key : ExplicitIndexer
+        Explicit indexing object.
+    shape : Tuple[int, ...]
+        Shape of the indexed array.
+    indexing_support : IndexingSupport enum
+        Form of indexing supported by raw_indexing_method.
+    raw_indexing_method : callable
+        Function (like ndarray.__getitem__) that when called with indexing key
+        in the form of a tuple returns an indexed array.
+
+    Returns
+    -------
+    Indexing result, in the form of a duck numpy-array.
+    """
+    raw_key, numpy_indices = _decompose_outer_indexer(
+        OuterIndexer(key), shape, indexing_support
+    )
+    return _finish_indexing(
+        raw_indexing_method, raw_key=raw_key, numpy_indices=numpy_indices
+    )
+
+
+def vectorized_indexing_adapter(
+    key: _IndexerKey,
+    shape: _Shape,
+    indexing_support: IndexingSupport,
+    raw_indexing_method: Callable[..., Any],
+) -> Any:
+    """Support explicit indexing by delegating to a raw indexing method.
+
+    Outer and/or vectorized indexers are supported by indexing a second time
+    with a NumPy array.
+
+    Parameters
+    ----------
+    key : ExplicitIndexer
+        Explicit indexing object.
+    shape : Tuple[int, ...]
+        Shape of the indexed array.
+    indexing_support : IndexingSupport enum
+        Form of indexing supported by raw_indexing_method.
+    raw_indexing_method : callable
+        Function (like ndarray.__getitem__) that when called with indexing key
+        in the form of a tuple returns an indexed array.
+
+    Returns
+    -------
+    Indexing result, in the form of a duck numpy-array.
+    """
+    raw_key, numpy_indices = _decompose_vectorized_indexer(
+        VectorizedIndexer(key), shape, indexing_support
+    )
+    return _finish_indexing(
+        raw_indexing_method, raw_key=raw_key, numpy_indices=numpy_indices
+    )
+
+
 def explicit_indexing_adapter(
     key: ExplicitIndexer,
     shape: _Shape,
@@ -1050,13 +1168,13 @@ def explicit_indexing_adapter(
     -------
     Indexing result, in the form of a duck numpy-array.
     """
-    raw_key, numpy_indices = decompose_indexer(key, shape, indexing_support)
-    result = raw_indexing_method(raw_key.tuple)
-    if numpy_indices.tuple:
-        # index the loaded np.ndarray
-        indexable = NumpyIndexingAdapter(result)
-        result = apply_indexer(indexable, numpy_indices)
-    return result
+    if isinstance(key, VectorizedIndexer):
+        return vectorized_indexing_adapter(key.tuple, shape, indexing_support)
+    elif isinstance(key, OuterIndexer):
+        return outer_indexing_adapter(key.tuple, shape, indexing_support)
+    elif isinstance(key, BasicIndexer):
+        return basic_indexing_adapter(key.tuple, shape, indexing_support)
+    raise TypeError(f"unexpected key type: {key}")
 
 
 class CompatIndexedTuple(tuple):
@@ -1085,11 +1203,16 @@ class CompatIndexedTuple(tuple):
 def apply_indexer(indexable, indexer: ExplicitIndexer) -> Any:
     """Apply an indexer to an indexable object."""
     if isinstance(indexer, VectorizedIndexer):
-        return indexable.vindex[CompatIndexedTuple(indexer.tuple, "vectorized")]
+        return indexable.vindex[indexer.tuple]
     elif isinstance(indexer, OuterIndexer):
-        return indexable.oindex[CompatIndexedTuple(indexer.tuple, "outer")]
+        return indexable.oindex[indexer.tuple]
+    elif isinstance(indexer, BasicIndexer):
+        return indexable[indexer.tuple]
     else:
-        return indexable[CompatIndexedTuple(indexer.tuple, "basic")]
+        raise TypeError(
+            f"Received indexer of type {type(indexer)!r}. "
+            "Expected BasicIndexer, OuterIndexer, or VectorizedIndexer"
+        )
 
 
 def set_with_indexer(indexable, indexer: ExplicitIndexer, value: Any) -> None:

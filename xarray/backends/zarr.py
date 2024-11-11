@@ -43,6 +43,11 @@ if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
+    from xarray.namedarray._typing import (
+        _BasicIndexerKey,
+        _OuterIndexerKey,
+        _VectorizedIndexerKey,
+    )
 
 
 def _get_mappers(*, storage_options, store, chunk_store):
@@ -182,7 +187,7 @@ def encode_zarr_attr_value(value):
 
 
 class ZarrArrayWrapper(BackendArray):
-    __slots__ = ("_array", "dtype", "shape")
+    indexing_support = indexing.IndexingSupport.VECTORIZED
 
     def __init__(self, zarr_array):
         # some callers attempt to evaluate an array if an `array` property exists on the object.
@@ -205,37 +210,28 @@ class ZarrArrayWrapper(BackendArray):
     def get_array(self):
         return self._array
 
-    def _oindex_get(self, key: indexing.OuterIndexer):
+    def _oindex_get(self, key: _OuterIndexerKey) -> Any:
         def raw_indexing_method(key):
             return self._array.oindex[key]
 
-        return indexing.explicit_indexing_adapter(
-            key,
-            self._array.shape,
-            indexing.IndexingSupport.VECTORIZED,
-            raw_indexing_method,
+        return indexing.outer_indexing_adapter(
+            key, self._array.shape, self.indexing_support, raw_indexing_method
         )
 
-    def _vindex_get(self, key: indexing.VectorizedIndexer):
+    def _vindex_get(self, key: _VectorizedIndexerKey) -> Any:
         def raw_indexing_method(key):
             return self._array.vindex[key]
 
-        return indexing.explicit_indexing_adapter(
-            key,
-            self._array.shape,
-            indexing.IndexingSupport.VECTORIZED,
-            raw_indexing_method,
+        return indexing.vectorized_indexing_adapter(
+            key, self._array.shape, self.indexing_support, raw_indexing_method
         )
 
-    def __getitem__(self, key: indexing.BasicIndexer):
+    def __getitem__(self, key: _BasicIndexerKey) -> Any:
         def raw_indexing_method(key):
             return self._array[key]
 
-        return indexing.explicit_indexing_adapter(
-            key,
-            self._array.shape,
-            indexing.IndexingSupport.VECTORIZED,
-            raw_indexing_method,
+        return indexing.basic_indexing_adapter(
+            key, self._array.shape, self.indexing_support, raw_indexing_method
         )
 
         # if self.ndim == 0:

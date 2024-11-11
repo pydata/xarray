@@ -38,6 +38,11 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
+    from xarray.namedarray._typing import (
+        _BasicIndexerKey,
+        _OuterIndexerKey,
+        _VectorizedIndexerKey,
+    )
 
 
 HAS_NUMPY_2_0 = module_available("numpy", minversion="2.0.0.dev0")
@@ -56,6 +61,8 @@ def _decode_attrs(d):
 
 
 class ScipyArrayWrapper(BackendArray):
+    indexing_support = indexing.IndexingSupport.OUTER_1VECTOR
+
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
@@ -85,25 +92,25 @@ class ScipyArrayWrapper(BackendArray):
             data = self.get_variable(needs_lock=False).data
             return data[key]
 
-    def _vindex_get(self, key: indexing.VectorizedIndexer):
-        data = indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
+    def _vindex_get(self, key: _VectorizedIndexerKey) -> Any:
+        data = indexing.vectorized_indexing_adapter(
+            key, self.shape, self.indexing_support, self._getitem
         )
         return self._finalize_result(data)
 
-    def _oindex_get(self, key: indexing.OuterIndexer):
-        data = indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
+    def _oindex_get(self, key: _OuterIndexerKey) -> Any:
+        data = indexing.outer_indexing_adapter(
+            key, self.shape, self.indexing_support, self._getitem
         )
         return self._finalize_result(data)
 
-    def __getitem__(self, key):
-        data = indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
+    def __getitem__(self, key: _BasicIndexerKey) -> Any:
+        data = indexing.basic_indexing_adapter(
+            key, self.shape, self.indexing_support, self._getitem
         )
         return self._finalize_result(data)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         with self.datastore.lock:
             data = self.get_variable(needs_lock=False)
             try:

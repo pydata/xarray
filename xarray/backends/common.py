@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
     from xarray.core.dataset import Dataset
     from xarray.core.types import NestedSequence
+    from xarray.namedarray._typing import _IndexerKey
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -219,18 +220,18 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
 
 
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
-    __slots__ = ()
+    __slots__ = ("indexing_support",)
 
     def get_duck_array(self, dtype: np.typing.DTypeLike = None):
-        key = indexing.BasicIndexer((slice(None),) * self.ndim)
+        key = (slice(None),) * self.ndim
         return self[key]  # type: ignore [index]
 
-    def _oindex_get(self, key: indexing.OuterIndexer):
+    def _oindex_get(self, key: _IndexerKey) -> Any:
         raise NotImplementedError(
             f"{self.__class__.__name__}._oindex_get method should be overridden"
         )
 
-    def _vindex_get(self, key: indexing.VectorizedIndexer):
+    def _vindex_get(self, key: _IndexerKey) -> Any:
         raise NotImplementedError(
             f"{self.__class__.__name__}._vindex_get method should be overridden"
         )

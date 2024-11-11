@@ -95,6 +95,9 @@ _IndexKey = Union[int, slice, EllipsisType]
 _IndexKeys = tuple[_IndexKey, ...]  #  tuple[Union[_IndexKey, None], ...]
 _IndexKeyLike = Union[_IndexKey, _IndexKeys]
 _IndexerKey = tuple[Any, ...]
+_BasicIndexerKey = tuple[Any, ...]
+_OuterIndexerKey = tuple[Any, ...]
+_VectorizedIndexerKey = tuple[Any, ...]
 
 _AttrsLike = Union[Mapping[Any, Any], None]
 

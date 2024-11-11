@@ -44,26 +44,33 @@ if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
+    from xarray.namedarray._typing import (
+        _BasicIndexerKey,
+        _OuterIndexerKey,
+        _VectorizedIndexerKey,
+    )
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
+    indexing_support = indexing.IndexingSupport.OUTER_1VECTOR
+
     def get_array(self, needs_lock=True):
         ds = self.datastore._acquire(needs_lock)
         return ds.variables[self.variable_name]
 
-    def _oindex_get(self, key: indexing.OuterIndexer):
-        return indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
+    def _oindex_get(self, key: _OuterIndexerKey) -> Any:
+        return indexing.outer_indexing_adapter(
+            key, self.shape, self.indexing_support, self._getitem
         )
 
-    def _vindex_get(self, key: indexing.VectorizedIndexer):
-        return indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
+    def _vindex_get(self, key: _VectorizedIndexerKey) -> Any:
+        return indexing.vectorized_indexing_adapter(
+            key, self.shape, self.indexing_support, self._getitem
         )
 
-    def __getitem__(self, key: indexing.BasicIndexer):
-        return indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
+    def __getitem__(self, key: _BasicIndexerKey) -> Any:
+        return indexing.basic_indexing_adapter(
+            key, self.shape, self.indexing_support, self._getitem
         )
 
     def _getitem(self, key):
