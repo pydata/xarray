@@ -2,7 +2,7 @@ name: xarray-tests
 channels:
   - conda-forge
 dependencies:
-  - array-api-strict<=2.1
+  - array-api-strict
   - boto3
   - bottleneck
   - cartopy
