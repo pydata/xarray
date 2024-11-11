@@ -9088,7 +9088,9 @@ class Dataset(
         """
         from xarray.core.dataarray import DataArray
 
-        variables = {}
+        # TODO: This can be narrowed to be Variable only if we figure out how to
+        # handle the coordinate values for singular values
+        variables: dict[Hashable, DataArray | Variable] = {}
         skipna_da = skipna
 
         x = np.asarray(_ensure_numeric(self.coords[dim]).astype(np.float64))
@@ -9120,16 +9122,16 @@ class Dataset(
         rank = np.linalg.matrix_rank(lhs)
 
         if full:
-            rank = DataArray(rank, name=xname + "matrix_rank")
-            variables[rank.name] = rank
+            rank = Variable(dims=(), data=rank)
+            variables[xname + "matrix_rank"] = rank
             _sing = np.linalg.svd(lhs, compute_uv=False)
+            # Using a DataArray here because `degree_dim` coordinate values need not
             sing = DataArray(
                 _sing,
                 dims=(degree_dim,),
                 coords={degree_dim: np.arange(rank - 1, -1, -1)},
-                name=xname + "singular_values",
             )
-            variables[sing.name] = sing
+            variables[xname + "singular_values"] = sing
 
         # If we have a coordinate get its underlying dimension.
         (true_dim,) = self.coords[dim].dims
@@ -9184,19 +9186,21 @@ class Dataset(
                 # Thus a ReprObject => polyfit was called on a DataArray
                 name = ""
 
-            coeffs = Variable(data=coeffs / scale_da, dims=(degree_dim,) + other_dims)
-            variables[name + "polyfit_coefficients"] = coeffs
+            variables[name + "polyfit_coefficients"] = Variable(
+                data=coeffs / scale_da, dims=(degree_dim,) + other_dims
+            )
 
             if full or (cov is True):
-                residuals = Variable(
+                variables[name + "polyfit_residuals"] = Variable(
                     data=residuals if var.ndim > 1 else residuals.squeeze(),
                     dims=other_dims,
                 )
-                variables[name + "polyfit_residuals"] = residuals
 
             if cov:
                 Vbase = np.linalg.inv(np.dot(lhs.T, lhs))
                 Vbase /= np.outer(scale, scale)
+                if TYPE_CHECKING:
+                    fac: int | DataArray | Variable
                 if cov == "unscaled":
                     fac = 1
                 else:
@@ -9204,9 +9208,10 @@ class Dataset(
                         raise ValueError(
                             "The number of data points must exceed order to scale the covariance matrix."
                         )
-                    fac = residuals / (x.shape[0] - order)
-                covariance = DataArray(Vbase, dims=("cov_i", "cov_j")) * fac
-                variables[name + "polyfit_covariance"] = covariance
+                    fac = variables[name + "polyfit_residuals"] / (x.shape[0] - order)
+                variables[name + "polyfit_covariance"] = (
+                    Variable(data=Vbase, dims=("cov_i", "cov_j")) * fac
+                )
 
         return type(self)(
             data_vars=variables,
