@@ -9086,17 +9086,14 @@ class Dataset(
         numpy.polyval
         xarray.polyval
         """
-        from xarray.core.dataarray import DataArray
-
-        # TODO: This can be narrowed to be Variable only if we figure out how to
-        # handle the coordinate values for singular values
-        variables: dict[Hashable, DataArray | Variable] = {}
+        variables: dict[Hashable, Variable] = {}
         skipna_da = skipna
 
         x = np.asarray(_ensure_numeric(self.coords[dim]).astype(np.float64))
 
         xname = f"{self[dim].name}_"
         order = int(deg) + 1
+        degree_coord_values = np.arange(order)[::-1]
         lhs = np.vander(x, order)
 
         if rcond is None:
@@ -9125,13 +9122,10 @@ class Dataset(
             rank = Variable(dims=(), data=rank)
             variables[xname + "matrix_rank"] = rank
             _sing = np.linalg.svd(lhs, compute_uv=False)
-            # Using a DataArray here because `degree_dim` coordinate values need not
-            sing = DataArray(
-                _sing,
+            variables[xname + "singular_values"] = Variable(
                 dims=(degree_dim,),
-                coords={degree_dim: np.arange(rank - 1, -1, -1)},
+                data=np.concatenate([np.full((order - rank.data,), np.nan), _sing]),
             )
-            variables[xname + "singular_values"] = sing
 
         # If we have a coordinate get its underlying dimension.
         (true_dim,) = self.coords[dim].dims
@@ -9200,7 +9194,7 @@ class Dataset(
                 Vbase = np.linalg.inv(np.dot(lhs.T, lhs))
                 Vbase /= np.outer(scale, scale)
                 if TYPE_CHECKING:
-                    fac: int | DataArray | Variable
+                    fac: int | Variable
                 if cov == "unscaled":
                     fac = 1
                 else:
@@ -9216,7 +9210,7 @@ class Dataset(
         return type(self)(
             data_vars=variables,
             coords={
-                degree_dim: np.arange(order)[::-1],
+                degree_dim: degree_coord_values,
                 **{
                     name: coord
                     for name, coord in other_coords.items()
