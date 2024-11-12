@@ -1156,7 +1156,7 @@ class CFEncodedBase(DatasetIOBase):
             assert actual["ln_p"].attrs["formula_terms"] == "p0: P0 lev : ln_p"
 
     def test_coordinate_decoding_warnings_and_errors(self) -> None:
-        original = self._create_cf_dataset()
+        original = self._create_cf_dataset().copy()
         original.coords["ln_p"].encoding.update({"formula_terms": "p0 P0 lev: ln_p"})
         with pytest.raises(ValueError, match="misses ':'"):
             with self.roundtrip(
@@ -1168,10 +1168,11 @@ class CFEncodedBase(DatasetIOBase):
             {"formula_terms": "p0: P0 P1 lev: ln_p"}
         )
         with pytest.warns(UserWarning, match="has malformed content"):
-            with self.roundtrip(
-                original, open_kwargs={"decode_coords": "all"}
-            ) as actual:
-                assert isinstance(actual, xr.Dataset)
+            with pytest.warns(UserWarning, match="not in variables:"):
+                with self.roundtrip(
+                    original, open_kwargs={"decode_coords": "all"}
+                ) as actual:
+                    assert isinstance(actual, xr.Dataset)
 
     def test_grid_mapping_and_bounds_are_coordinates_after_dataarray_roundtrip(
         self,
