@@ -75,7 +75,7 @@ def push(array, n, axis, method="blelloch"):
 
     def _last_one(a, keepdims, axis):
         # Find a faster way to find the last valid element of an array without ffill
-        return np.take(_push(a, axis=axis), axis=axis, indices=[-1])
+        return duck_array_ops.nanlast(a, axis=axis)
 
     def _dtype_push(a, axis, dtype=None):
         # Not sure why the blelloch algorithm force to receive a dtype
