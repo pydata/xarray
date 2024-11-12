@@ -89,12 +89,10 @@ def push(array, n, axis, method="blelloch"):
     )
 
     if n is not None and 0 < n < array.shape[axis] - 1:
+
         def _reset_cumsum(a, axis, dtype=None):
             cumsum = np.cumsum(a, axis=axis)
-            reset_points = np.maximum.accumulate(
-                np.where(a == 0, cumsum, 0),
-                axis=axis
-            )
+            reset_points = np.maximum.accumulate(np.where(a == 0, cumsum, 0), axis=axis)
             return cumsum - reset_points
 
         def _last_reset_cumsum(a, axis, keepdims=None):
@@ -118,10 +116,6 @@ def push(array, n, axis, method="blelloch"):
             method=method,
             preop=_last_reset_cumsum,
         )
-        pushed_array = da.where(
-            valid_positions <= n,
-            pushed_array,
-            np.nan
-        )
+        pushed_array = da.where(valid_positions <= n, pushed_array, np.nan)
 
     return pushed_array
