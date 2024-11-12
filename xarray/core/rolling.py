@@ -597,8 +597,8 @@ class DataArrayRolling(Rolling["DataArray"]):
             padded = padded.pad({self.dim[0]: (0, -shift)}, mode="constant")
 
         if is_duck_dask_array(padded.data):
-            values = dask_array_ops.dask_array_rolling(
-                padded, func, axis, self.window[0], min_count
+            values = dask_array_ops.dask_rolling_wrapper(
+                func, padded, axis=axis, window=self.window[0], min_count=min_count
             )
         else:
             values = func(
@@ -677,9 +677,6 @@ class DataArrayRolling(Rolling["DataArray"]):
             )
             and self.ndim == 1
         ):
-            # TODO: re-enable bottleneck with dask after the issues
-            # underlying https://github.com/pydata/xarray/issues/2940 are
-            # fixed.
             return self._bottleneck_reduce(
                 bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
             )
