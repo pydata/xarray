@@ -1020,10 +1020,7 @@ def test_push_dask(method):
         for c in range(1, 11):
             with raise_if_dask_computes():
                 actual = push(
-                    dask.array.from_array(array, chunks=c),
-                    axis=0,
-                    n=n,
-                    method=method
+                    dask.array.from_array(array, chunks=c), axis=0, n=n, method=method
                 )
             np.testing.assert_equal(actual, expected)
 
@@ -1033,7 +1030,7 @@ def test_push_dask(method):
                 dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)),
                 axis=0,
                 n=n,
-                method=method
+                method=method,
             )
         np.testing.assert_equal(actual, expected)
 

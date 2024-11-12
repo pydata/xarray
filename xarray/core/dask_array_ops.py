@@ -75,11 +75,7 @@ def push(array, n, axis, method="blelloch"):
 
     def _last_one(a, keepdims, axis):
         # Find a faster way to find the last valid element of an array without ffill
-        return np.take(
-            _push(a, axis=axis),
-            axis=axis,
-            indices=[-1]
-        )
+        return np.take(_push(a, axis=axis), axis=axis, indices=[-1])
 
     def _dtype_push(a, axis, dtype=None):
         # Not sure why the blelloch algorithm force to receive a dtype
@@ -93,40 +89,36 @@ def push(array, n, axis, method="blelloch"):
         axis=axis,
         dtype=array.dtype,
         method=method,
-        preop=_last_one
+        preop=_last_one,
     )
 
     if n is not None and 0 < n < array.shape[axis] - 1:
 
         def reset_cumsum(a, axis, dtype=None):
             cumsum = np.cumsum(a, axis=axis)
-            reset_points = np.maximum.accumulate(
-                np.where(a == 0, cumsum, 0), axis=axis
-            )
+            reset_points = np.maximum.accumulate(np.where(a == 0, cumsum, 0), axis=axis)
             return cumsum - reset_points
 
         def last_reset_cumsum(a, axis, keepdims=None):
-            return np.take(
-                reset_cumsum(a, axis=axis),
-                axis=axis,
-                indices=[-1]
-            )
+            return np.take(reset_cumsum(a, axis=axis), axis=axis, indices=[-1])
 
         def combine_reset_cumsum(a, b):
             bitmask = np.cumprod(b != 0, axis=axis)
             return np.where(bitmask, b + a, b)
 
-        valid_positions = da.reductions.cumreduction(
-            func=reset_cumsum,
-            binop=combine_reset_cumsum,
-            ident=0,
-            x=da.isnan(array, dtype=int),
-            axis=axis,
-            dtype=int,
-            method=method,
-            preop=last_reset_cumsum
-        ) <= n
+        valid_positions = (
+            da.reductions.cumreduction(
+                func=reset_cumsum,
+                binop=combine_reset_cumsum,
+                ident=0,
+                x=da.isnan(array, dtype=int),
+                axis=axis,
+                dtype=int,
+                method=method,
+                preop=last_reset_cumsum,
+            )
+            <= n
+        )
         pushed_array = da.where(valid_positions, pushed_array, np.nan)
 
     return pushed_array
-
