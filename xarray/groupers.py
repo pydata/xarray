@@ -708,6 +708,9 @@ class SeasonGrouper(Grouper):
             full_index=full_index,
         )
 
+    def reset(self) -> Self:
+        return type(self)(self.seasons)
+
 
 @dataclass
 class SeasonResampler(Resampler):
@@ -733,7 +736,7 @@ class SeasonResampler(Resampler):
     """
 
     seasons: Sequence[str]
-    drop_incomplete: bool = field(default=True)
+    drop_incomplete: bool = field(default=True, kw_only=True)
     season_inds: Sequence[Sequence[int]] = field(init=False, repr=False)
     season_tuples: Mapping[str, Sequence[int]] = field(init=False, repr=False)
 
@@ -890,3 +893,6 @@ class SeasonResampler(Resampler):
             # unique_coord=unique_coord_var,
             full_index=full_index,
         )
+
+    def reset(self) -> Self:
+        return type(self)(seasons=self.seasons, drop_incomplete=self.drop_incomplete)
