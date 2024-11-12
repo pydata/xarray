@@ -53,6 +53,8 @@ Bug fixes
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix regression in the interoperability of :py:meth:`DataArray.polyfit` and :py:meth:`xr.polyval` for date-time coordinates. (:pull:`9691`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
+- Preserve order of variables in :py:func:`xarray.combine_by_coords` (:issue:`8828`, :pull:`9070`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~

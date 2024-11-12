@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import itertools
-from collections import Counter
-from collections.abc import Iterable, Iterator, Sequence
+from collections import Counter, defaultdict
+from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
 from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast
 
 import pandas as pd
@@ -606,6 +606,21 @@ def vars_as_keys(ds):
     return tuple(sorted(ds))
 
 
+T = TypeVar("T")
+K = TypeVar("K", bound=Hashable)
+
+
+def groupby_defaultdict(
+    iter: list[T], key: Callable[[T], K] = lambda x: x
+) -> Iterator[tuple[K, Iterator[T]]]:
+    """replacement for itertools.groupby"""
+    idx = defaultdict(list)
+    for i, obj in enumerate(iter):
+        idx[key(obj)].append(i)
+    for k, ix in idx.items():
+        yield k, (iter[i] for i in ix)
+
+
 def _combine_single_variable_hypercube(
     datasets,
     fill_value=dtypes.NA,
@@ -965,8 +980,7 @@ def combine_by_coords(
         ]
 
         # Group by data vars
-        sorted_datasets = sorted(data_objects, key=vars_as_keys)
-        grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
+        grouped_by_vars = groupby_defaultdict(data_objects, key=vars_as_keys)
 
         # Perform the multidimensional combine on each group of data variables
         # before merging back together
