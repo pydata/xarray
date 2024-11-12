@@ -62,7 +62,8 @@ def push(array, n, axis, method="blelloch"):
     import dask.array as da
     import numpy as np
 
-    from xarray.core.duck_array_ops import _push, last
+    from xarray.core.duck_array_ops import _push
+    from xarray.core.nputils import nanlast
 
     # TODO: Replace all this function
     #  once https://github.com/pydata/xarray/issues/9229 is implemented
@@ -85,11 +86,10 @@ def push(array, n, axis, method="blelloch"):
         axis=axis,
         dtype=array.dtype,
         method=method,
-        preop=last,
+        preop=nanlast,
     )
 
     if n is not None and 0 < n < array.shape[axis] - 1:
-
         def _reset_cumsum(a, axis, dtype=None):
             cumsum = np.cumsum(a, axis=axis)
             reset_points = np.maximum.accumulate(np.where(a == 0, cumsum, 0), axis=axis)

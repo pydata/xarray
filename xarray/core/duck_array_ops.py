@@ -706,7 +706,7 @@ def cumsum(array, axis=None, **kwargs):
     return _nd_cum_func(cumsum_1d, array, axis, **kwargs)
 
 
-def first(values, axis, skipna=None, keepdims=False):
+def first(values, axis, skipna=None):
     """Return the first non-NA elements in this array along the given axis"""
     if (skipna or skipna is None) and not (
         dtypes.isdtype(values.dtype, "signed integer") or dtypes.is_string(values.dtype)
@@ -717,11 +717,10 @@ def first(values, axis, skipna=None, keepdims=False):
         else:
             return nputils.nanfirst(values, axis)
 
-    index = [0] if keepdims else 0
-    return take(values, index, axis=axis)
+    return take(values, 0, axis=axis)
 
 
-def last(values, axis, skipna=None, keepdims=False):
+def last(values, axis, skipna=None):
     """Return the last non-NA elements in this array along the given axis"""
     if (skipna or skipna is None) and not (
         dtypes.isdtype(values.dtype, "signed integer") or dtypes.is_string(values.dtype)
@@ -732,8 +731,7 @@ def last(values, axis, skipna=None, keepdims=False):
         else:
             return nputils.nanlast(values, axis)
 
-    index = [-1] if keepdims else -1
-    return take(values, index, axis=axis)
+    return take(values, -1, axis=axis)
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
