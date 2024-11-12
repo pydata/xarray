@@ -600,7 +600,7 @@ def map_blocks(
             # unchunked dimensions in the input have one chunk in the result
             # output can have new dimensions with exactly one chunk
             key: tuple[Any, ...] = (gname_l,) + tuple(
-                chunk_index[dim] if dim in chunk_index else 0 for dim in variable.dims
+                chunk_index.get(dim, 0) for dim in variable.dims
             )
 
             # We're adding multiple new layers to the graph:

@@ -110,6 +110,7 @@ has_dask, requires_dask = _importorskip("dask")
 has_dask_ge_2024_08_1, requires_dask_ge_2024_08_1 = _importorskip(
     "dask", minversion="2024.08.1"
 )
+has_dask_ge_2024_11_0, requires_dask_ge_2024_11_0 = _importorskip("dask", "2024.11.0")
 with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",

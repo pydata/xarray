@@ -155,7 +155,9 @@ def summarize_index(coord_names, index) -> str:
     return (
         f"<div class='xr-index-name'><div>{name}</div></div>"
         f"<div class='xr-index-preview'>{preview}</div>"
-        f"<div></div>"
+        # need empty input + label here to conform to the fixed CSS grid layout
+        f"<input type='checkbox' disabled/>"
+        f"<label></label>"
         f"<input id='{index_id}' class='xr-index-data-in' type='checkbox'/>"
         f"<label for='{index_id}' title='Show/Hide index repr'>{data_icon}</label>"
         f"<div class='xr-index-data'>{details}</div>"
