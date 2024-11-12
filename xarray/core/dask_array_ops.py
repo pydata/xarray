@@ -93,3 +93,15 @@ def push(array, n, axis):
         axis=axis,
         dtype=array.dtype,
     )
+
+
+def dask_array_rolling(padded, func, axis, window, min_count=None):
+    dtype = "f8" if not padded.dtype.kind == "f" else padded.dtype
+    return padded.data.map_overlap(
+        func,
+        depth={axis: (window - 1, 0)},
+        axis=axis,
+        dtype=dtype,
+        window=window,
+        min_count=min_count,
+    )
