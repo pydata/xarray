@@ -477,10 +477,9 @@ def decode_cf_variables(
         if decode_coords == "all":
             for attr_name in CF_RELATED_DATA:
                 if attr_name in var_attrs:
-                    attr_val = var_attrs[attr_name]
                     # fixes stray colon
-                    # todo: add test
-                    var_names = attr_val.replace(" :", ":").split()
+                    attr_val = var_attrs[attr_name].replace(" :", ":")
+                    var_names = attr_val.split()
                     # if grid_mapping is a single string, do not enter here
                     if (
                         attr_name in CF_RELATED_DATA_NEEDS_PARSING
@@ -493,10 +492,10 @@ def decode_cf_variables(
                             if ":" in vname:
                                 key = vname.strip(":")
                             else:
-                                # todo: test this
                                 if key is None:
                                     raise ValueError(
-                                        f"First element {vname} of {attr_name} misses ':'"
+                                        f"First element {vname!r} of [{attr_val!r}] misses ':', "
+                                        f"cannot decode {attr_name!r}."
                                     )
                                 roles_and_names[key].append(vname)
                         # for grid_mapping keys are var_names
@@ -504,12 +503,14 @@ def decode_cf_variables(
                             var_names = list(roles_and_names.keys())
                         else:
                             # for cell_measures and formula_terms values are var names
-                            var_names = [lst[0] for lst in roles_and_names.values()]
-                            # consistency check
-                            # todo: test this
+                            var_names = [
+                                e for lst in roles_and_names.values() for e in lst
+                            ]
+                            # consistency check (one element per key)
                             if len(var_names) != len(roles_and_names.keys()):
                                 emit_user_level_warning(
-                                    f"Attribute {attr_name} malformed"
+                                    f"Attribute {attr_name!r} has malformed content [{attr_val!r}], "
+                                    f"decoding {var_names!r} to coordinates."
                                 )
                     if all(var_name in variables for var_name in var_names):
                         new_vars[k].encoding[attr_name] = attr_val

@@ -1138,6 +1138,9 @@ class CFEncodedBase(DatasetIOBase):
         original = self._create_cf_dataset()
         with self.roundtrip(original, open_kwargs={"decode_coords": "all"}) as actual:
             assert_identical(actual, original)
+            # test for fixing stray colon
+            assert original["ln_p"].encoding["formula_terms"] == "p0: P0 lev : ln_p"
+            assert actual["ln_p"].encoding["formula_terms"] == "p0: P0 lev: ln_p"
 
         with self.roundtrip(original) as actual:
             expected = original.reset_coords(
@@ -1148,6 +1151,27 @@ class CFEncodedBase(DatasetIOBase):
             # identical would require resetting a number of attributes
             # skip that.
             assert_equal(actual, expected)
+            # test for not fixing stray colon
+            assert original["ln_p"].encoding["formula_terms"] == "p0: P0 lev : ln_p"
+            assert actual["ln_p"].attrs["formula_terms"] == "p0: P0 lev : ln_p"
+
+    def test_coordinate_decoding_warnings_and_errors(self) -> None:
+        original = self._create_cf_dataset()
+        original.coords["ln_p"].encoding.update({"formula_terms": "p0 P0 lev: ln_p"})
+        with pytest.raises(ValueError, match="misses ':'"):
+            with self.roundtrip(
+                original, open_kwargs={"decode_coords": "all"}
+            ) as actual:
+                assert isinstance(actual, xr.Dataset)
+
+        original.coords["ln_p"].encoding.update(
+            {"formula_terms": "p0: P0 P1 lev: ln_p"}
+        )
+        with pytest.warns(UserWarning, match="has malformed content"):
+            with self.roundtrip(
+                original, open_kwargs={"decode_coords": "all"}
+            ) as actual:
+                assert isinstance(actual, xr.Dataset)
 
     def test_grid_mapping_and_bounds_are_coordinates_after_dataarray_roundtrip(
         self,
