@@ -769,14 +769,14 @@ def _push(array, n: int | None = None, axis: int = -1):
     return bn.push(array, limit, axis)
 
 
-def push(array, n, axis):
+def push(array, n, axis, method="blelloch"):
     if not OPTIONS["use_bottleneck"] and not OPTIONS["use_numbagg"]:
         raise RuntimeError(
             "ffill & bfill requires bottleneck or numbagg to be enabled."
             " Call `xr.set_options(use_bottleneck=True)` or `xr.set_options(use_numbagg=True)` to enable one."
         )
     if is_duck_dask_array(array):
-        return dask_array_ops.push(array, n, axis)
+        return dask_array_ops.push(array, n, axis, method=method)
     else:
         return _push(array, n, axis)
 

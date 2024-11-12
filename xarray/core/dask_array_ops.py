@@ -55,7 +55,7 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
     return coeffs, residuals
 
 
-def push(array, n, axis):
+def push(array, n, axis, method="blelloch"):
     """
     Dask-aware bottleneck.push
     """
@@ -64,42 +64,67 @@ def push(array, n, axis):
 
     from xarray.core.duck_array_ops import _push
 
+    # TODO: Replace all this function
+    #  once https://github.com/pydata/xarray/issues/9229 is implemented
+
     def _fill_with_last_one(a, b):
         # cumreduction apply the push func over all the blocks first so,
         # the only missing part is filling the missing values using the
         # last data of the previous chunk
         return np.where(np.isnan(b), a, b)
 
-    # The method parameter makes that the tests for python 3.7 fails.
+    def _last_one(a, keepdims, axis):
+        # Find a faster way to find the last valid element of an array without ffill
+        return np.take(
+            _push(a, axis=axis),
+            axis=axis,
+            indices=[-1]
+        )
+
+    def _dtype_push(a, axis, dtype=None):
+        # Not sure why the blelloch algorithm force to receive a dtype
+        return _push(a, axis=axis)
+
     pushed_array = da.reductions.cumreduction(
-        func=_push,
+        func=_dtype_push,
         binop=_fill_with_last_one,
         ident=np.nan,
         x=array,
         axis=axis,
         dtype=array.dtype,
+        method=method,
+        preop=_last_one
     )
 
     if n is not None and 0 < n < array.shape[axis] - 1:
 
-        def reset_cumsum(x, axis):
-            cumsum = np.cumsum(x, axis=axis)
+        def reset_cumsum(a, axis, dtype=None):
+            cumsum = np.cumsum(a, axis=axis)
             reset_points = np.maximum.accumulate(
-                np.where(x == 0, cumsum, 0), axis=axis
+                np.where(a == 0, cumsum, 0), axis=axis
             )
             return cumsum - reset_points
 
-        def combine_reset_cumsum(x, y):
-            bitmask = np.cumprod(y != 0, axis=axis)
-            return np.where(bitmask, y + x, y)
+        def last_reset_cumsum(a, axis, keepdims=None):
+            return np.take(
+                reset_cumsum(a, axis=axis),
+                axis=axis,
+                indices=[-1]
+            )
+
+        def combine_reset_cumsum(a, b):
+            bitmask = np.cumprod(b != 0, axis=axis)
+            return np.where(bitmask, b + a, b)
 
         valid_positions = da.reductions.cumreduction(
             func=reset_cumsum,
             binop=combine_reset_cumsum,
             ident=0,
-            x=da.isnan(array).astype(int),
+            x=da.isnan(array, dtype=int),
             axis=axis,
             dtype=int,
+            method=method,
+            preop=last_reset_cumsum
         ) <= n
         pushed_array = da.where(valid_positions, pushed_array, np.nan)
 
