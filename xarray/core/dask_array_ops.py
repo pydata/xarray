@@ -65,27 +65,13 @@ def push(array, n, axis):
     from xarray.core.duck_array_ops import _push
 
     def _fill_with_last_one(a, b):
-        # cumreduction apply the push func over all the blocks first so, the only missing part is filling
-        # the missing values using the last data of the previous chunk
-        return np.where(~np.isnan(b), b, a)
-
-    if n is not None and 0 < n < array.shape[axis] - 1:
-        arange = da.broadcast_to(
-            da.arange(
-                array.shape[axis], chunks=array.chunks[axis], dtype=array.dtype
-            ).reshape(
-                tuple(size if i == axis else 1 for i, size in enumerate(array.shape))
-            ),
-            array.shape,
-            array.chunks,
-        )
-        valid_arange = da.where(da.notnull(array), arange, np.nan)
-        valid_limits = (arange - push(valid_arange, None, axis)) <= n
-        # omit the forward fill that violate the limit
-        return da.where(valid_limits, push(array, None, axis), np.nan)
+        # cumreduction apply the push func over all the blocks first so,
+        # the only missing part is filling the missing values using the
+        # last data of the previous chunk
+        return np.where(np.isnan(b), a, b)
 
     # The method parameter makes that the tests for python 3.7 fails.
-    return da.reductions.cumreduction(
+    pushed_array = da.reductions.cumreduction(
         func=_push,
         binop=_fill_with_last_one,
         ident=np.nan,
@@ -93,3 +79,29 @@ def push(array, n, axis):
         axis=axis,
         dtype=array.dtype,
     )
+
+    if n is not None and 0 < n < array.shape[axis] - 1:
+
+        def reset_cumsum(x, axis):
+            cumsum = np.cumsum(x, axis=axis)
+            reset_points = np.maximum.accumulate(
+                np.where(x == 0, cumsum, 0), axis=axis
+            )
+            return cumsum - reset_points
+
+        def combine_reset_cumsum(x, y):
+            bitmask = np.cumprod(y != 0, axis=axis)
+            return np.where(bitmask, y + x, y)
+
+        valid_positions = da.reductions.cumreduction(
+            func=reset_cumsum,
+            binop=combine_reset_cumsum,
+            ident=0,
+            x=da.isnan(array).astype(int),
+            axis=axis,
+            dtype=int,
+        ) <= n
+        pushed_array = da.where(valid_positions, pushed_array, np.nan)
+
+    return pushed_array
+
