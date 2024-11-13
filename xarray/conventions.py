@@ -503,9 +503,7 @@ def decode_cf_variables(
                             var_names = list(roles_and_names.keys())
                         else:
                             # for cell_measures and formula_terms values are var names
-                            var_names = [
-                                e for lst in roles_and_names.values() for e in lst
-                            ]
+                            var_names = list(itertools.chain(*roles_and_names.values()))
                             # consistency check (one element per key)
                             if len(var_names) != len(roles_and_names.keys()):
                                 emit_user_level_warning(
