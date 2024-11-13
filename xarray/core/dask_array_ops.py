@@ -5,25 +5,15 @@ from xarray.core import dtypes, nputils
 
 def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
     """Wrapper to apply bottleneck moving window funcs on dask arrays"""
-    import dask.array as da
-
-    dtype, fill_value = dtypes.maybe_promote(a.dtype)
-    a = a.astype(dtype)
-    # inputs for overlap
-    if axis < 0:
-        axis = a.ndim + axis
-    depth = {d: 0 for d in range(a.ndim)}
-    depth[axis] = (window + 1) // 2
-    boundary = {d: fill_value for d in range(a.ndim)}
-    # Create overlap array.
-    ag = da.overlap.overlap(a, depth=depth, boundary=boundary)
-    # apply rolling func
-    out = da.map_blocks(
-        moving_func, ag, window, min_count=min_count, axis=axis, dtype=a.dtype
+    dtype, _ = dtypes.maybe_promote(a.dtype)
+    return a.data.map_overlap(
+        moving_func,
+        depth={axis: (window - 1, 0)},
+        axis=axis,
+        dtype=dtype,
+        window=window,
+        min_count=min_count,
     )
-    # trim array
-    result = da.overlap.trim_internal(out, depth)
-    return result
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
