@@ -29,6 +29,8 @@ New Features
 - Support lazy grouping by dask arrays, and allow specifying ordered groups with ``UniqueGrouper(labels=["a", "b", "c"])``
   (:issue:`2852`, :issue:`757`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Optimize ffill, bfill with dask when limit is specified and use the blelloch algorithm by default for both methods
+  (:pull:`9771`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
