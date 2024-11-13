@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
+import itertools
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
 
 import numpy as np
