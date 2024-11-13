@@ -487,6 +487,8 @@ def decode_cf_variables(
                         and len(var_names) > 1
                     ):
                         # map the keys to list of strings
+                        # "A: b c d E: f g" returns
+                        # {"A": ["b", "c", "d"], "E": ["f", "g"]}
                         roles_and_names = defaultdict(list)
                         key = None
                         for vname in var_names:
