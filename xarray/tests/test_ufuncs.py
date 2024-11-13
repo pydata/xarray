@@ -7,7 +7,7 @@ import pytest
 
 import xarray as xr
 import xarray.ufuncs as xu
-from xarray.tests import assert_allclose, assert_array_equal, mock
+from xarray.tests import assert_allclose, assert_array_equal, mock, requires_dask
 from xarray.tests import assert_identical as assert_identical_
 
 
@@ -160,30 +160,23 @@ def test_gufuncs():
         xarray_obj.__array_ufunc__(fake_gufunc, "__call__", xarray_obj)
 
 
-class DuckArray:
-    # Minimal array class that implements a few of its own ufuncs, and otherwise
-    # dispatches to numpy but returns a DuckArray
-    def __init__(self, data):
-        self.data = data
-        self.shape = data.shape
-        self.ndim = data.ndim
-        self.dtype = data.dtype
+class DuckArray(np.ndarray):
+    # Minimal subclassed duck array with its own self-contained namespace,
+    # which implements a few ufuncs
+    def __new__(cls, array):
+        obj = np.asarray(array).view(cls)
+        return obj
 
     def __array_namespace__(self):
         return DuckArray
 
-    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        inputs = [i.data if isinstance(i, DuckArray) else i for i in inputs]
-        result = ufunc(*inputs, **kwargs)
-        return DuckArray(result)
-
     @staticmethod
     def sin(x):
-        return DuckArray(np.sin(x.data))
+        return np.sin(x)
 
     @staticmethod
     def add(x, y):
-        return DuckArray(x.data + y.data)
+        return x + y
 
 
 class DuckArray2(DuckArray):
@@ -194,9 +187,9 @@ class DuckArray2(DuckArray):
 class TestXarrayUfuncs:
     @pytest.fixture(autouse=True)
     def setUp(self):
-        self.x = xr.DataArray(np.array([1, 2, 3]))
-        self.xd = xr.DataArray(DuckArray(np.array([1, 2, 3])))
-        self.xd2 = xr.DataArray(DuckArray2(np.array([1, 2, 3])))
+        self.x = xr.DataArray([1, 2, 3])
+        self.xd = xr.DataArray(DuckArray([1, 2, 3]))
+        self.xd2 = xr.DataArray(DuckArray2([1, 2, 3]))
 
     @pytest.mark.filterwarnings("ignore::RuntimeWarning")
     @pytest.mark.parametrize("name", xu.__all__)
@@ -234,6 +227,14 @@ class TestXarrayUfuncs:
         ds = xr.Dataset({"a": self.xd})
         actual = xu.sin(ds)
         assert isinstance(actual.a.data, DuckArray)
+
+    @requires_dask
+    def test_ufunc_duck_dask(self):
+        import dask.array as da
+
+        x = xr.DataArray(da.from_array(DuckArray(np.array([1, 2, 3]))))
+        actual = xu.sin(x)
+        assert isinstance(actual.data._meta, DuckArray)
 
     def test_ufunc_numpy_fallback(self):
         with pytest.warns(UserWarning, match=r"Function cos not found in DuckArray"):
