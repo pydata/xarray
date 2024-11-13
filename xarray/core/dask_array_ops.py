@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 from xarray.core import dtypes, nputils
 
 
@@ -18,6 +20,23 @@ def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
     import dask.array as da
+
+    from xarray.core.dask_array_compat import reshape_blockwise
+
+    # The trick here is that the core dimension is axis 0.
+    # All other dimensions need to be reshaped down to one axis for `lstsq`
+    # (which only accepts 2D input)
+    # and this needs to be undone after running `lstsq`
+    # The order of values in the reshaped axes is irrelevant.
+    # There are big gains to be had by simply reshaping the blocks on a blockwise
+    # basis, and then undoing that transform.
+    # We use a specific `reshape_blockwise` method in dask for this optimization
+    if rhs.ndim > 2:
+        out_shape = rhs.shape
+        reshape_chunks = rhs.chunks
+        rhs = reshape_blockwise(rhs, (rhs.shape[0], math.prod(rhs.shape[1:])))
+    else:
+        out_shape = None
 
     lhs_da = da.from_array(lhs, chunks=(rhs.chunks[0], lhs.shape[1]))
     if skipna:
@@ -42,6 +61,17 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
         # Residuals here are (1, 1) but should be (K,) as rhs is (N, K)
         # See issue dask/dask#6516
         coeffs, residuals, _, _ = da.linalg.lstsq(lhs_da, rhs)
+
+    if out_shape is not None:
+        coeffs = reshape_blockwise(
+            coeffs,
+            shape=(coeffs.shape[0], *out_shape[1:]),
+            chunks=((coeffs.shape[0],), *reshape_chunks[1:]),
+        )
+        residuals = reshape_blockwise(
+            residuals, shape=out_shape[1:], chunks=reshape_chunks[1:]
+        )
+
     return coeffs, residuals
 
 
