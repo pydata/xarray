@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import pickle
+
 import numpy as np
 import pytest
 
 import xarray as xr
+import xarray.ufuncs as xu
 from xarray.tests import assert_allclose, assert_array_equal, mock
 from xarray.tests import assert_identical as assert_identical_
 
@@ -155,3 +158,92 @@ def test_gufuncs():
     fake_gufunc = mock.Mock(signature="(n)->()", autospec=np.sin)
     with pytest.raises(NotImplementedError, match=r"generalized ufuncs"):
         xarray_obj.__array_ufunc__(fake_gufunc, "__call__", xarray_obj)
+
+
+class DuckArray:
+    # Minimal array class that implements a few of its own ufuncs, and otherwise
+    # dispatches to numpy but returns a DuckArray
+    def __init__(self, data):
+        self.data = data
+        self.shape = data.shape
+        self.ndim = data.ndim
+        self.dtype = data.dtype
+
+    def __array_namespace__(self):
+        return DuckArray
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        inputs = [i.data if isinstance(i, DuckArray) else i for i in inputs]
+        result = ufunc(*inputs, **kwargs)
+        return DuckArray(result)
+
+    @staticmethod
+    def sin(x):
+        return DuckArray(np.sin(x.data))
+
+    @staticmethod
+    def add(x, y):
+        return DuckArray(x.data + y.data)
+
+
+class DuckArray2(DuckArray):
+    def __array_namespace__(self):
+        return DuckArray2
+
+
+class TestXarrayUfuncs:
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        self.x = xr.DataArray(np.array([1, 2, 3]))
+        self.xd = xr.DataArray(DuckArray(np.array([1, 2, 3])))
+        self.xd2 = xr.DataArray(DuckArray2(np.array([1, 2, 3])))
+
+    @pytest.mark.filterwarnings("ignore::RuntimeWarning")
+    @pytest.mark.parametrize("name", xu.__all__)
+    def test_ufuncs(self, name, request):
+        np_func = getattr(np, name)
+        xu_func = getattr(xu, name)
+        if hasattr(np_func, "nin") and np_func.nin == 2:
+            args = (self.x, self.x)
+        else:
+            args = (self.x,)
+
+        actual = np_func(*args)
+        expected = xu_func(*args)
+
+        assert_identical(actual, expected)
+
+    def test_ufunc_pickle(self):
+        a = 1.0
+        cos_pickled = pickle.loads(pickle.dumps(xu.cos))
+        assert_identical(cos_pickled(a), xu.cos(a))
+
+    def test_ufunc_scalar(self):
+        actual = xu.sin(1)
+        assert isinstance(actual, float)
+
+    def test_ufunc_duck_array_dataarray(self):
+        actual = xu.sin(self.xd)
+        assert isinstance(actual.data, DuckArray)
+
+    def test_ufunc_duck_array_variable(self):
+        actual = xu.sin(self.xd.variable)
+        assert isinstance(actual.data, DuckArray)
+
+    def test_ufunc_duck_array_dataset(self):
+        ds = xr.Dataset({"a": self.xd})
+        actual = xu.sin(ds)
+        assert isinstance(actual.a.data, DuckArray)
+
+    def test_ufunc_numpy_fallback(self):
+        with pytest.warns(UserWarning, match=r"Function cos not found in DuckArray"):
+            actual = xu.cos(self.xd)
+        assert isinstance(actual.data, DuckArray)
+
+    def test_ufunc_mixed_arrays_compatible(self):
+        actual = xu.add(self.xd, self.x)
+        assert isinstance(actual.data, DuckArray)
+
+    def test_ufunc_mixed_arrays_incompatible(self):
+        with pytest.raises(ValueError, match=r"Mixed array types"):
+            xu.add(self.xd, self.xd2)
