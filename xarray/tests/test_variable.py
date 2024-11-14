@@ -2746,6 +2746,26 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         assert_identical(ones_like(orig), full_like(orig, 1))
         assert_identical(ones_like(orig, dtype=int), full_like(orig, 1, dtype=int))
 
+    def test_numpy_ndarray_subclass(self):
+        class SubclassedArray(np.ndarray):
+            def __new__(cls, array, foo):
+                obj = np.asarray(array).view(cls)
+                obj.foo = foo
+                return obj
+
+        data = SubclassedArray([1, 2, 3], foo="bar")
+        actual = as_compatible_data(data)
+        assert isinstance(actual, SubclassedArray)
+        assert actual.foo == "bar"
+        assert_array_equal(data, actual)
+
+    def test_numpy_matrix(self):
+        with pytest.warns(PendingDeprecationWarning):
+            data = np.matrix([[1, 2], [3, 4]])
+        actual = as_compatible_data(data)
+        assert isinstance(actual, np.ndarray)
+        assert_array_equal(data, actual)
+
     def test_unsupported_type(self):
         # Non indexable type
         class CustomArray(NDArrayMixin):

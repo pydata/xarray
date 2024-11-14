@@ -108,12 +108,13 @@ class TestDataArrayRolling:
         ):
             da.rolling(foo=2)
 
+    @requires_dask
     @pytest.mark.parametrize(
         "name", ("sum", "mean", "std", "min", "max", "median", "argmin", "argmax")
     )
     @pytest.mark.parametrize("center", (True, False, None))
     @pytest.mark.parametrize("min_periods", (1, None))
-    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+    @pytest.mark.parametrize("backend", ["numpy", "dask"], indirect=True)
     def test_rolling_wrapped_bottleneck(
         self, da, name, center, min_periods, compute_backend
     ) -> None:

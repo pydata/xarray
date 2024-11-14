@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 import numpy as np
 from packaging.version import Version
 
-from xarray.core import dtypes, duck_array_ops, utils
+from xarray.core import dask_array_ops, dtypes, duck_array_ops, utils
 from xarray.core.arithmetic import CoarsenArithmetic
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
@@ -668,16 +668,18 @@ class DataArrayRolling(Rolling["DataArray"]):
             padded = padded.pad({self.dim[0]: (0, -shift)}, mode="constant")
 
         if is_duck_dask_array(padded.data):
-            raise AssertionError("should not be reachable")
+            values = dask_array_ops.dask_rolling_wrapper(
+                func, padded, axis=axis, window=self.window[0], min_count=min_count
+            )
         else:
             values = func(
                 padded.data, window=self.window[0], min_count=min_count, axis=axis
             )
-            # index 0 is at the rightmost edge of the window
-            # need to reverse index here
-            # see GH #8541
-            if func in [bottleneck.move_argmin, bottleneck.move_argmax]:
-                values = self.window[0] - 1 - values
+        # index 0 is at the rightmost edge of the window
+        # need to reverse index here
+        # see GH #8541
+        if func in [bottleneck.move_argmin, bottleneck.move_argmax]:
+            values = self.window[0] - 1 - values
 
         if self.center[0]:
             values = values[valid]
@@ -740,12 +742,12 @@ class DataArrayRolling(Rolling["DataArray"]):
         if (
             OPTIONS["use_bottleneck"]
             and bottleneck_move_func is not None
-            and not is_duck_dask_array(self.obj.data)
+            and (
+                not is_duck_dask_array(self.obj.data)
+                or module_available("dask", "2024.11.0")
+            )
             and self.ndim == 1
         ):
-            # TODO: re-enable bottleneck with dask after the issues
-            # underlying https://github.com/pydata/xarray/issues/2940 are
-            # fixed.
             return self._bottleneck_reduce(
                 bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
             )

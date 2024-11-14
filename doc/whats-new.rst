@@ -32,6 +32,15 @@ New Features
 - Add new ``automatic_rechunk`` kwarg to :py:meth:`DataArrayRolling.construct` and
   :py:meth:`DatasetRolling.construct`. This is only useful on ``dask>=2024.11.0``
   (:issue:`9550`). By `Deepak Cherian <https://github.com/dcherian>`_.
+- Optimize ffill, bfill with dask when limit is specified
+  (:pull:`9771`).
+  By `Joseph Nowak <https://github.com/josephnowak>`_, and
+  `Patrick Hoefler <https://github.com/phofl>`.
+- Allow wrapping ``np.ndarray`` subclasses, e.g. ``astropy.units.Quantity`` (:issue:`9704`, :pull:`9760`).
+  By `Sam Levang <https://github.com/slevang>`_ and `Tien Vo <https://github.com/tien-vo>`_.
+- Optimize :py:meth:`DataArray.polyfit` and :py:meth:`Dataset.polyfit` with dask, when used with
+  arrays with more than two dimensions.
+  (:issue:`5629`). By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -56,6 +65,8 @@ Bug fixes
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix regression in the interoperability of :py:meth:`DataArray.polyfit` and :py:meth:`xr.polyval` for date-time coordinates. (:pull:`9691`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
+- Fix CF decoding of ``grid_mapping`` to allow all possible formats, add tests (:issue:`9761`, :pull:`9765`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
