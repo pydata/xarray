@@ -3174,6 +3174,14 @@ class TestSeasonGrouperAndResampler:
         ).mean()
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("seasons", [["JJA", "MAM", "SON", "DJF"]])
+    def test_season_resampling_raises_unsorted_seasons(self, seasons):
+        calendar = "standard"
+        time = date_range("2001-01-01", "2002-12-30", freq="D", calendar=calendar)
+        da = DataArray(np.ones(time.size), dims="time", coords={"time": time})
+        with pytest.raises(ValueError, match="sort"):
+            da.resample(time=SeasonResampler(seasons))
+
     # TODO: drop_incomplete
     @requires_cftime
     @pytest.mark.parametrize("drop_incomplete", [True, False])
@@ -3186,7 +3194,6 @@ class TestSeasonGrouperAndResampler:
             pytest.param(["DJF", "MAM", "JJA", "ON"], id="skip-september"),
             pytest.param(["JJAS"], id="jjas-only"),
             pytest.param(["MAM", "JJA", "SON", "DJF"], id="different-order"),
-            pytest.param(["JJA", "MAM", "SON", "DJF"], id="out-of-order"),
         ],
     )
     def test_season_resampler(self, seasons: list[str], drop_incomplete: bool) -> None:

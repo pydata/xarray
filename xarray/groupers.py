@@ -598,6 +598,32 @@ def inds_to_string(asints: tuple[tuple[int, ...], ...]) -> tuple[str, ...]:
     return tuple("".join([inits[i_ - 1] for i_ in t]) for t in asints)
 
 
+def is_sorted_periodic(lst):
+    n = len(lst)
+
+    # Find the wraparound point where the list decreases
+    wrap_point = -1
+    for i in range(1, n):
+        if lst[i] < lst[i - 1]:
+            wrap_point = i
+            break
+
+    # If no wraparound point is found, the list is already sorted
+    if wrap_point == -1:
+        return True
+
+    # Check if both parts around the wrap point are sorted
+    for i in range(1, wrap_point):
+        if lst[i] < lst[i - 1]:
+            return False
+    for i in range(wrap_point + 1, n):
+        if lst[i] < lst[i - 1]:
+            return False
+
+    # Check wraparound condition
+    return lst[-1] <= lst[0]
+
+
 @dataclass
 class SeasonsGroup:
     seasons: tuple[str, ...]
@@ -748,6 +774,12 @@ class SeasonResampler(Resampler):
                 f"Overlapping seasons are not allowed. Received {self.seasons!r}"
             )
         self.season_tuples = dict(zip(self.seasons, self.season_inds, strict=True))
+
+        if not is_sorted_periodic(list(itertools.chain(*self.season_inds))):
+            raise ValueError(
+                "Resampling is only supported with sorted seasons. "
+                f"Provided seasons {self.seasons!r} are not sorted."
+            )
 
     def factorize(self, group: T_Group) -> EncodedGroups:
         if group.ndim != 1:
