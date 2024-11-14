@@ -1548,7 +1548,7 @@ def test_cftime_or_date_range_invalid_inclusive_value(function: Callable) -> Non
     if function == cftime_range and not has_cftime:
         pytest.skip("requires cftime")
 
-    with pytest.raises(ValueError, match="Inclusive"):
+    with pytest.raises(ValueError, match="nclusi"):
         function("2000", periods=3, inclusive="foo")
 
 
