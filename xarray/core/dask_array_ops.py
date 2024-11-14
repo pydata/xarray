@@ -65,8 +65,11 @@ def push(array, n, axis, method="blelloch"):
     from xarray.core.duck_array_ops import _push
     from xarray.core.nputils import nanlast
 
+    if n is not None and np.all(n <= np.array(array.chunks[axis])):
+        return array.map_overlap(_push, depth={axis: (n, 0)}, n=n, axis=axis)
+
     # TODO: Replace all this function
-    #  once https://github.com/pydata/xarray/issues/9229 is implemented
+    #  once https://github.com/pydata/xarray/issues/9229 being implemented
 
     def _fill_with_last_one(a, b):
         # cumreduction apply the push func over all the blocks first so,
@@ -90,7 +93,6 @@ def push(array, n, axis, method="blelloch"):
     )
 
     if n is not None and 0 < n < array.shape[axis] - 1:
-
         def _reset_cumsum(a, axis, dtype=None):
             cumsum = np.cumsum(a, axis=axis)
             reset_points = np.maximum.accumulate(np.where(a == 0, cumsum, 0), axis=axis)
