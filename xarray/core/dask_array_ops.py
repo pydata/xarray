@@ -75,7 +75,7 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
     return coeffs, residuals
 
 
-def push(array, n, axis):
+def push(array, n, axis, method="blelloch"):
     """
     Dask-aware bottleneck.push
     """
@@ -83,33 +83,63 @@ def push(array, n, axis):
     import numpy as np
 
     from xarray.core.duck_array_ops import _push
+    from xarray.core.nputils import nanlast
+
+    if n is not None and all(n <= size for size in array.chunks[axis]):
+        return array.map_overlap(_push, depth={axis: (n, 0)}, n=n, axis=axis)
+
+    # TODO: Replace all this function
+    #  once https://github.com/pydata/xarray/issues/9229 being implemented
 
     def _fill_with_last_one(a, b):
-        # cumreduction apply the push func over all the blocks first so, the only missing part is filling
-        # the missing values using the last data of the previous chunk
-        return np.where(~np.isnan(b), b, a)
+        # cumreduction apply the push func over all the blocks first so,
+        # the only missing part is filling the missing values using the
+        # last data of the previous chunk
+        return np.where(np.isnan(b), a, b)
 
-    if n is not None and 0 < n < array.shape[axis] - 1:
-        arange = da.broadcast_to(
-            da.arange(
-                array.shape[axis], chunks=array.chunks[axis], dtype=array.dtype
-            ).reshape(
-                tuple(size if i == axis else 1 for i, size in enumerate(array.shape))
-            ),
-            array.shape,
-            array.chunks,
-        )
-        valid_arange = da.where(da.notnull(array), arange, np.nan)
-        valid_limits = (arange - push(valid_arange, None, axis)) <= n
-        # omit the forward fill that violate the limit
-        return da.where(valid_limits, push(array, None, axis), np.nan)
+    def _dtype_push(a, axis, dtype=None):
+        # Not sure why the blelloch algorithm force to receive a dtype
+        return _push(a, axis=axis)
 
-    # The method parameter makes that the tests for python 3.7 fails.
-    return da.reductions.cumreduction(
-        func=_push,
+    pushed_array = da.reductions.cumreduction(
+        func=_dtype_push,
         binop=_fill_with_last_one,
         ident=np.nan,
         x=array,
         axis=axis,
         dtype=array.dtype,
+        method=method,
+        preop=nanlast,
     )
+
+    if n is not None and 0 < n < array.shape[axis] - 1:
+
+        def _reset_cumsum(a, axis, dtype=None):
+            cumsum = np.cumsum(a, axis=axis)
+            reset_points = np.maximum.accumulate(np.where(a == 0, cumsum, 0), axis=axis)
+            return cumsum - reset_points
+
+        def _last_reset_cumsum(a, axis, keepdims=None):
+            # Take the last cumulative sum taking into account the reset
+            # This is useful for blelloch method
+            return np.take(_reset_cumsum(a, axis=axis), axis=axis, indices=[-1])
+
+        def _combine_reset_cumsum(a, b):
+            # It is going to sum the previous result until the first
+            # non nan value
+            bitmask = np.cumprod(b != 0, axis=axis)
+            return np.where(bitmask, b + a, b)
+
+        valid_positions = da.reductions.cumreduction(
+            func=_reset_cumsum,
+            binop=_combine_reset_cumsum,
+            ident=0,
+            x=da.isnan(array, dtype=int),
+            axis=axis,
+            dtype=int,
+            method=method,
+            preop=_last_reset_cumsum,
+        )
+        pushed_array = da.where(valid_positions <= n, pushed_array, np.nan)
+
+    return pushed_array
