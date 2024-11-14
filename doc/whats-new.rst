@@ -29,6 +29,10 @@ New Features
 - Support lazy grouping by dask arrays, and allow specifying ordered groups with ``UniqueGrouper(labels=["a", "b", "c"])``
   (:issue:`2852`, :issue:`757`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Optimize ffill, bfill with dask when limit is specified
+  (:pull:`9771`).
+  By `Joseph Nowak <https://github.com/josephnowak>`_, and
+  `Patrick Hoefler <https://github.com/phofl>`.
 - Allow wrapping ``np.ndarray`` subclasses, e.g. ``astropy.units.Quantity`` (:issue:`9704`, :pull:`9760`).
   By `Sam Levang <https://github.com/slevang>`_ and `Tien Vo <https://github.com/tien-vo>`_.
 - Optimize :py:meth:`DataArray.polyfit` and :py:meth:`Dataset.polyfit` with dask, when used with
