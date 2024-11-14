@@ -65,7 +65,7 @@ def push(array, n, axis, method="blelloch"):
     from xarray.core.duck_array_ops import _push
     from xarray.core.nputils import nanlast
 
-    if n is not None and np.all(n <= np.array(array.chunks[axis])):
+    if n is not None and all(n <= size for size in array.chunks[axis]):
         return array.map_overlap(_push, depth={axis: (n, 0)}, n=n, axis=axis)
 
     # TODO: Replace all this function
