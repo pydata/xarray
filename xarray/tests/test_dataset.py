@@ -4930,8 +4930,8 @@ class TestDataset:
                 categories=pd.Index(["foo", "bar", "baz"], dtype="string"),
             )
         )
-        ser = pd.Series(1, index=cat)
-        ds = ser.to_xarray()
+        series = pd.Series(1, index=cat)
+        ds = series.to_xarray()
         assert ds.coords.dtypes["index"] == np.dtype("O")
 
     @requires_sparse

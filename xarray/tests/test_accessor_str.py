@@ -130,7 +130,7 @@ def test_contains(dtype) -> None:
     assert_equal(result, expected)
 
     # case sensitive without regex
-    result = values.str.contains("fO", regex=False, case=True)
+    result = values.str.contains("fO", regex=False, case=True)  # codespell:ignore
     expected = xr.DataArray([False, False, True, False])
     assert result.dtype == expected.dtype
     assert_equal(result, expected)

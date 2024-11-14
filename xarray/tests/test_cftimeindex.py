@@ -1102,8 +1102,8 @@ def test_cftimeindex_repr_formatting_width(periods, display_width):
     len_intro_str = len("CFTimeIndex(")
     with xr.set_options(display_width=display_width):
         repr_str = index.__repr__()
-        splitted = repr_str.split("\n")
-        for i, s in enumerate(splitted):
+        split = repr_str.split("\n")
+        for i, s in enumerate(split):
             # check that lines not longer than OPTIONS['display_width']
             assert len(s) <= display_width, f"{len(s)} {s} {display_width}"
             if i > 0:

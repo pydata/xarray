@@ -1250,12 +1250,12 @@ class CFEncodedBase(DatasetIOBase):
                     pass
 
     def test_invalid_dataarray_names_raise(self) -> None:
-        te = (TypeError, "string or None")
-        ve = (ValueError, "string must be length 1 or")
+        terr = (TypeError, "string or None")
+        verr = (ValueError, "string must be length 1 or")
         data = np.random.random((2, 2))
         da = xr.DataArray(data)
         for name, (error, msg) in zip(
-            [0, (4, 5), True, ""], [te, te, te, ve], strict=True
+            [0, (4, 5), True, ""], [terr, terr, terr, verr], strict=True
         ):
             ds = Dataset({name: da})
             with pytest.raises(error) as excinfo:
@@ -3314,7 +3314,7 @@ class TestInstrumentedZarrStore:
 
         with self.create_zarr_target() as store:
             if has_zarr_v3:
-                # TOOD: verify these
+                # TODO: verify these
                 expected = {
                     "set": 17,
                     "get": 12,

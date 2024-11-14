@@ -95,12 +95,12 @@ def test_roundtrip_dataset(dataset) -> None:
 
 
 @given(numeric_series, st.text())
-def test_roundtrip_pandas_series(ser, ix_name) -> None:
+def test_roundtrip_pandas_series(ser, ix_name) -> None:  # codespell:ignore ser
     # Need to name the index, otherwise Xarray calls it 'dim_0'.
-    ser.index.name = ix_name
-    arr = xr.DataArray(ser)
+    ser.index.name = ix_name  # codespell:ignore ser
+    arr = xr.DataArray(ser)  # codespell:ignore ser
     roundtripped = arr.to_pandas()
-    pd.testing.assert_series_equal(ser, roundtripped)
+    pd.testing.assert_series_equal(ser, roundtripped)  # codespell:ignore ser
     xr.testing.assert_identical(arr, roundtripped.to_xarray())
 
 

@@ -262,7 +262,7 @@ class TestCoarsenConstruct:
     def test_coarsen_construct(self, dask: bool) -> None:
         ds = Dataset(
             {
-                "vart": ("time", np.arange(48), {"a": "b"}),
+                "vart": ("time", np.arange(48), {"a": "b"}),  # codespell:ignore vart
                 "varx": ("x", np.arange(10), {"a": "b"}),
                 "vartx": (("x", "time"), np.arange(480).reshape(10, 48), {"a": "b"}),
                 "vary": ("y", np.arange(12)),
@@ -275,9 +275,9 @@ class TestCoarsenConstruct:
             ds = ds.chunk({"x": 4, "time": 10})
 
         expected = xr.Dataset(attrs={"foo": "bar"})
-        expected["vart"] = (
+        expected["vart"] = (  # codespell:ignore vart
             ("year", "month"),
-            duck_array_ops.reshape(ds.vart.data, (-1, 12)),
+            duck_array_ops.reshape(ds.vart.data, (-1, 12)),  # codespell:ignore vart
             {"a": "b"},
         )
         expected["varx"] = (
