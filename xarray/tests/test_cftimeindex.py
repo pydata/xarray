@@ -18,15 +18,13 @@ from xarray.coding.cftimeindex import (
     parse_iso8601_like,
 )
 from xarray.tests import (
+    _ALL_CALENDARS,
+    _NON_STANDARD_CALENDAR_NAMES,
+    _all_cftime_date_types,
     assert_array_equal,
     assert_identical,
     has_cftime,
     requires_cftime,
-)
-from xarray.tests.test_coding_times import (
-    _ALL_CALENDARS,
-    _NON_STANDARD_CALENDARS,
-    _all_cftime_date_types,
 )
 
 # cftime 1.5.2 renames "gregorian" to "standard"
@@ -1161,7 +1159,7 @@ def test_to_datetimeindex(calendar, unsafe):
     index = xr.cftime_range("2000", periods=5, calendar=calendar)
     expected = pd.date_range("2000", periods=5)
 
-    if calendar in _NON_STANDARD_CALENDARS and not unsafe:
+    if calendar in _NON_STANDARD_CALENDAR_NAMES and not unsafe:
         with pytest.warns(RuntimeWarning, match="non-standard"):
             result = index.to_datetimeindex()
     else:
