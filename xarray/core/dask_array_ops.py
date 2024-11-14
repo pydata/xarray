@@ -113,6 +113,7 @@ def push(array, n, axis, method="blelloch"):
     )
 
     if n is not None and 0 < n < array.shape[axis] - 1:
+
         def _reset_cumsum(a, axis, dtype=None):
             cumsum = np.cumsum(a, axis=axis)
             reset_points = np.maximum.accumulate(np.where(a == 0, cumsum, 0), axis=axis)
