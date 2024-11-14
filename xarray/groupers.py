@@ -15,7 +15,7 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from itertools import chain, pairwise
-from typing import TYPE_CHECKING, Any, Literal, Self, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -42,6 +42,7 @@ from xarray.core.types import (
     DatetimeLike,
     GroupIndices,
     ResampleCompatible,
+    Self,
     SideOptions,
 )
 from xarray.core.variable import Variable
