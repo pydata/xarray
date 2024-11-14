@@ -374,7 +374,7 @@ def test_find_stack_level():
     assert f() == 3
 
 
-def test_attempt_import():
+def test_attempt_import() -> None:
     """Test optional dependency handling."""
     np = attempt_import("numpy")
     assert np.__name__ == "numpy"
