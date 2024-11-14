@@ -28,6 +28,7 @@ from xarray.groupers import (
 )
 from xarray.namedarray.pycompat import is_chunked_array
 from xarray.tests import (
+    _ALL_CALENDARS,
     InaccessibleArray,
     assert_allclose,
     assert_equal,
@@ -45,7 +46,6 @@ from xarray.tests import (
     requires_pandas_ge_2_2,
     requires_scipy,
 )
-from xarray.tests.test_coding_times import _ALL_CALENDARS
 
 
 @pytest.fixture
