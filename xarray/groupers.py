@@ -15,7 +15,7 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from itertools import chain, pairwise
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 import numpy as np
 import pandas as pd
@@ -847,11 +847,11 @@ class SeasonResampler(Resampler):
             return f"{year}-{month}-01"
 
         unique_codes = np.arange(len(unique_coord))
-        first_valid_season = season_label[0]
-        last_valid_season = season_label[-1]
+        valid_season_mask = season_label != ""
+        first_valid_season, last_valid_season = season_label[valid_season_mask][[0, -1]]
         first_year, last_year = year.data[[0, -1]]
         if self.drop_incomplete:
-            if month.data[0] != season_tuples[first_valid_season][0]:
+            if month.data[valid_season_mask][0] != season_tuples[first_valid_season][0]:
                 if "DJ" in first_valid_season:
                     first_year += 1
                 first_valid_season = seasons[
@@ -860,7 +860,10 @@ class SeasonResampler(Resampler):
                 # group_indices = group_indices[slice(1, None)]
                 unique_codes -= 1
 
-            if month.data[-1] != season_tuples[last_valid_season][-1]:
+            if (
+                month.data[valid_season_mask][-1]
+                != season_tuples[last_valid_season][-1]
+            ):
                 last_valid_season = seasons[seasons.index(last_valid_season) - 1]
                 if "DJ" in last_valid_season:
                     last_year -= 1

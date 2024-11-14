@@ -3210,11 +3210,14 @@ class TestSeasonGrouperAndResampler:
 
         expected_vals = []
         expected_time = []
-        for year in [2001, 2002]:
+        for year in [2001, 2002, 2003]:
             for season, as_ints in zip(seasons, seasons_as_ints, strict=True):
                 out_year = year
                 if "DJ" in season:
                     out_year = year - 1
+                if out_year == 2003:
+                    # this is a dummy year added to make sure we cover 2002-DJF
+                    continue
                 available = [
                     counts.sel(time=f"{out_year}-{month:02d}").data for month in as_ints
                 ]
@@ -3225,9 +3228,14 @@ class TestSeasonGrouperAndResampler:
                 # use concatenate to handle empty array when dec value does not exist
                 expected_vals.append(np.concatenate(available).sum())
 
-        expected = xr.DataArray(
-            expected_vals, dims="time", coords={"time": expected_time}
-        ).convert_calendar(calendar, align_on="date")
+        expected = (
+            # we construct expected in the standard calendar
+            xr.DataArray(expected_vals, dims="time", coords={"time": expected_time})
+            # and then convert to the expected calendar,
+            .convert_calendar(calendar, align_on="date")
+            # and finally sort since DJF will be out-of-order
+            .sortby("time")
+        )
         rs = SeasonResampler(seasons, drop_incomplete=drop_incomplete)
         # through resample
         actual = da.resample(time=rs).sum()
