@@ -351,6 +351,5 @@ ignore = [
 
 [tool.codespell]
 enable-color = true
-ignore-words-list = "nd,coo,COO,nin,Marge,Commun"
+ignore-words-list = "nd,coo,COO,nin,Marge,Commun,Claus,Soler,Tung,Celles,slowy"
 quiet-level = 3
-skip = "./doc/whats-new.rst"
