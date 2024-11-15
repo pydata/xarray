@@ -64,6 +64,8 @@ Bug fixes
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Fix CF decoding of ``grid_mapping`` to allow all possible formats, add tests (:issue:`9761`, :pull:`9765`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Add `User-Agent` to request-headers when retrieving tutorial data (:issue:`9774`, :pull:`9782`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
