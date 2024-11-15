@@ -136,14 +136,15 @@ def _find_absolute_paths(
     def _normalize_path_list(
         lpaths: NestedSequence[str | os.PathLike],
     ) -> NestedSequence[str]:
-        return [
-            (
-                _normalize_path(p)
-                if isinstance(p, str | os.PathLike)
-                else _normalize_path_list(p)
-            )
-            for p in lpaths
-        ]
+        paths = []
+        for p in lpaths:
+            if isinstance(p, str | os.PathLike):
+                paths.append(_normalize_path(p))
+            elif isinstance(p, list):
+                paths.append(_normalize_path_list(p))  # type: ignore[arg-type]
+            else:
+                paths.append(p)  # type: ignore[arg-type]
+        return paths
 
     return _normalize_path_list(paths)
 
