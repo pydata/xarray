@@ -13,13 +13,14 @@ import numpy as np
 from xarray.conventions import cf_encoder
 from xarray.core import indexing
 from xarray.core.datatree import DataTree
+from xarray.core.types import ReadBuffer
 from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
-    from xarray.core.types import NestedSequence, ReadBuffer
+    from xarray.core.types import NestedSequence
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
