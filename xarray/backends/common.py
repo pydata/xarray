@@ -71,18 +71,18 @@ def _normalize_path(path: str | os.PathLike | T) -> str | T:
 @overload
 def _find_absolute_paths(
     paths: str | os.PathLike | Sequence[str | os.PathLike], **kwargs
-) -> list[str]: ...
+) -> list[str | os.PathLike]: ...
 
 
 @overload
 def _find_absolute_paths(
     paths: NestedSequence[str | os.PathLike], **kwargs
-) -> NestedSequence[str]: ...
+) -> NestedSequence[str | os.PathLike]: ...
 
 
 def _find_absolute_paths(
     paths: str | os.PathLike | NestedSequence[str | os.PathLike], **kwargs
-) -> NestedSequence[str]:
+) -> NestedSequence[str | os.PathLike]:
     """
     Find absolute paths from the pattern.
 
@@ -136,16 +136,15 @@ def _find_absolute_paths(
     def _normalize_path_list(
         lpaths: NestedSequence[str | os.PathLike],
     ) -> NestedSequence[str]:
-        return [
-            (
-                _normalize_path(p)
-                if isinstance(p, str | os.PathLike)
-                else _normalize_path_list(p)
-                if isinstance(p, list)
-                else p
-            )
-            for p in lpaths
-        ]
+        paths = []
+        for p in lpaths:
+            if isinstance(p, str | os.PathLike):
+                paths.append(_normalize_path(p))
+            elif isinstance(p, list):
+                paths.append(_normalize_path_list(p))  # type: ignore[arg-type]
+            else:
+                paths.append(p)  # type: ignore[arg-type]
+        return paths
 
     return _normalize_path_list(paths)
 
