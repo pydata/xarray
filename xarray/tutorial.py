@@ -158,15 +158,13 @@ def open_dataset(
 
         url = f"{base_url}/raw/{version}/{path.name}"
 
-    def _xarray_downloader(url, output_file, xrpooch):
-        """Create Downloader which adds request-headers"""
-        headers = {"User-Agent": f"xarray {sys.modules['xarray'].__version__}"}
-        https = pooch.HTTPDownloader(headers=headers)
-        https(url, output_file, xrpooch)
+    
+    headers = {"User-Agent": f"xarray {sys.modules['xarray'].__version__}"}
+    downloader = pooch.HTTPDownloader(headers=headers)
 
     # retrieve the file
     filepath = pooch.retrieve(
-        url=url, known_hash=None, path=cache_dir, downloader=_xarray_downloader
+        url=url, known_hash=None, path=cache_dir, downloader=downloader
     )
     ds = _open_dataset(filepath, engine=engine, **kws)
     if not cache:
