@@ -876,8 +876,8 @@ class SeasonResampler(Resampler):
 
         # all years and seasons
         def get_label(year, season):
-            month = season_tuples[season][0]
-            return f"{year}-{month}-01"
+            month, *_ = season_tuples[season]
+            return f"{year}-{month:02d}-01"
 
         unique_codes = np.arange(len(unique_coord))
         valid_season_mask = season_label != ""

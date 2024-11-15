@@ -3182,13 +3182,21 @@ class TestSeasonGrouperAndResampler:
         with pytest.raises(ValueError, match="sort"):
             da.resample(time=SeasonResampler(seasons))
 
-    # TODO: drop_incomplete
-    @requires_cftime
+    @pytest.mark.parametrize(
+        "use_cftime",
+        [
+            pytest.param(
+                True, marks=pytest.mark.skipif(not has_cftime, reason="no cftime")
+            ),
+            False,
+        ],
+    )
     @pytest.mark.parametrize("drop_incomplete", [True, False])
     @pytest.mark.parametrize(
         "seasons",
         [
             pytest.param(["DJF", "MAM", "JJA", "SON"], id="standard"),
+            pytest.param(["NDJ", "FMA", "MJJ", "ASO"], id="nov-first"),
             pytest.param(["MAM", "JJA", "SON", "DJF"], id="standard-diff-order"),
             pytest.param(["JFM", "AMJ", "JAS", "OND"], id="december-same-year"),
             pytest.param(["DJF", "MAM", "JJA", "ON"], id="skip-september"),
@@ -3196,9 +3204,17 @@ class TestSeasonGrouperAndResampler:
             pytest.param(["MAM", "JJA", "SON", "DJF"], id="different-order"),
         ],
     )
-    def test_season_resampler(self, seasons: list[str], drop_incomplete: bool) -> None:
+    def test_season_resampler(
+        self, seasons: list[str], drop_incomplete: bool, use_cftime: bool
+    ) -> None:
         calendar = "standard"
-        time = date_range("2001-01-01", "2002-12-30", freq="D", calendar=calendar)
+        time = date_range(
+            "2001-01-01",
+            "2002-12-30",
+            freq="D",
+            calendar=calendar,
+            use_cftime=use_cftime,
+        )
         da = DataArray(np.ones(time.size), dims="time", coords={"time": time})
         counts = da.resample(time="ME").count()
 
@@ -3239,7 +3255,7 @@ class TestSeasonGrouperAndResampler:
             # we construct expected in the standard calendar
             xr.DataArray(expected_vals, dims="time", coords={"time": expected_time})
             # and then convert to the expected calendar,
-            .convert_calendar(calendar, align_on="date")
+            .convert_calendar(calendar, align_on="date", use_cftime=use_cftime)
             # and finally sort since DJF will be out-of-order
             .sortby("time")
         )
