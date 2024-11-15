@@ -141,6 +141,8 @@ def _find_absolute_paths(
                 _normalize_path(p)
                 if isinstance(p, str | os.PathLike)
                 else _normalize_path_list(p)
+                if isinstance(p, list)
+                else p
             )
             for p in lpaths
         ]
