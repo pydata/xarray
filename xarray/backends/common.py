@@ -71,18 +71,18 @@ def _normalize_path(path: str | os.PathLike | T) -> str | T:
 @overload
 def _find_absolute_paths(
     paths: str | os.PathLike | Sequence[str | os.PathLike], **kwargs
-) -> list[str | os.PathLike]: ...
+) -> list[str]: ...
 
 
 @overload
 def _find_absolute_paths(
     paths: NestedSequence[str | os.PathLike], **kwargs
-) -> NestedSequence[str | os.PathLike]: ...
+) -> NestedSequence[str]: ...
 
 
 def _find_absolute_paths(
     paths: str | os.PathLike | NestedSequence[str | os.PathLike], **kwargs
-) -> NestedSequence[str | os.PathLike]:
+) -> NestedSequence[str]:
     """
     Find absolute paths from the pattern.
 
