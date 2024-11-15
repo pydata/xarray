@@ -577,7 +577,6 @@ class BackendEntrypoint:
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
-        **kwargs: Any,
     ) -> Dataset:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -598,7 +597,8 @@ class BackendEntrypoint:
     def open_datatree(
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
-        **kwargs: Any,
+        *,
+        drop_variables: str | Iterable[str] | None = None,
     ) -> DataTree:
         """
         Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
@@ -609,7 +609,8 @@ class BackendEntrypoint:
     def open_groups_as_dict(
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
-        **kwargs: Any,
+        *,
+        drop_variables: str | Iterable[str] | None = None,
     ) -> dict[str, Dataset]:
         """
         Opens a dictionary mapping from group names to Datasets.

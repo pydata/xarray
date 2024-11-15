@@ -1455,7 +1455,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
         return False
 
-    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
+    def open_dataset(
         self,
         filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
@@ -1527,7 +1527,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         zarr_version=None,
         zarr_format=None,
-        **kwargs,
     ) -> DataTree:
         filename_or_obj = _normalize_path(filename_or_obj)
         groups_dict = self.open_groups_as_dict(
@@ -1547,7 +1546,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             storage_options=storage_options,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
-            **kwargs,
         )
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
@@ -1571,7 +1569,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         zarr_version=None,
         zarr_format=None,
-        **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.core.treenode import NodePath
 
