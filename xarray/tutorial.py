@@ -10,11 +10,11 @@ from __future__ import annotations
 
 import os
 import pathlib
+import sys
 from typing import TYPE_CHECKING
 
 import numpy as np
 
-from xarray import __version__
 from xarray.backends.api import open_dataset as _open_dataset
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
@@ -160,7 +160,7 @@ def open_dataset(
 
     def _xarray_downloader(url, output_file, xrpooch):
         """Create Downloader which adds request-headers"""
-        headers = {"User-Agent": f"xarray {__version__}"}
+        headers = {"User-Agent": f"xarray {sys.modules['xarray'].__version__}"}
         https = pooch.HTTPDownloader(headers=headers)
         https(url, output_file, xrpooch)
 
