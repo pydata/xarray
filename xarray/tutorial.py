@@ -158,7 +158,6 @@ def open_dataset(
 
         url = f"{base_url}/raw/{version}/{path.name}"
 
-    
     headers = {"User-Agent": f"xarray {sys.modules['xarray'].__version__}"}
     downloader = pooch.HTTPDownloader(headers=headers)
 
