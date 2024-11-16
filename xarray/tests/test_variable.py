@@ -37,7 +37,6 @@ from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     has_dask_ge_2024_11_0,
-    has_pandas_3,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
