@@ -836,6 +836,7 @@ class SeasonResampler(Resampler):
         first_items = agged["first"]
         counts = agged["count"]
 
+        index_class: CFTimeIndex | pd.DatetimeIndex
         if _contains_cftime_datetimes(group.data):
             index_class = CFTimeIndex
             datetime_class = type(first_n_items(group.data, 1).item())
