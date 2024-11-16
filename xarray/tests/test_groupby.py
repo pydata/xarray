@@ -3163,7 +3163,7 @@ class TestSeasonGrouperAndResampler:
 
     @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
     def test_season_grouper_simple(self, calendar) -> None:
-        time = cftime_range("2001-01-01", "2002-12-30", freq="D", calendar=calendar)
+        time = date_range("2001-01-01", "2002-12-30", freq="D", calendar=calendar)
         da = DataArray(np.ones(time.size), dims="time", coords={"time": time})
         expected = da.groupby("time.season").mean()
         # note season order matches expected
@@ -3229,7 +3229,8 @@ class TestSeasonGrouperAndResampler:
             "time",
             [pd.Timestamp(f"{y}-{m}-01") for y, m in zip(year, month, strict=True)],
         )
-        counts = counts.convert_calendar(calendar, "time", align_on="date")
+        if has_cftime:
+            counts = counts.convert_calendar(calendar, "time", align_on="date")
 
         expected_vals = []
         expected_time = []
@@ -3254,16 +3255,21 @@ class TestSeasonGrouperAndResampler:
         expected = (
             # we construct expected in the standard calendar
             xr.DataArray(expected_vals, dims="time", coords={"time": expected_time})
-            # and then convert to the expected calendar,
-            .convert_calendar(calendar, align_on="date", use_cftime=use_cftime)
-            # and finally sort since DJF will be out-of-order
-            .sortby("time")
         )
+        if has_cftime:
+            # and then convert to the expected calendar,
+            expected = expected.convert_calendar(
+                calendar, align_on="date", use_cftime=use_cftime
+            )
+        # and finally sort since DJF will be out-of-order
+        expected = expected.sortby("time")
+
         rs = SeasonResampler(seasons, drop_incomplete=drop_incomplete)
         # through resample
         actual = da.resample(time=rs).sum()
         assert_identical(actual, expected)
 
+    @requires_cftime
     def test_season_resampler_errors(self):
         time = cftime_range("2001-01-01", "2002-12-30", freq="D", calendar="360_day")
         da = DataArray(np.ones(time.size), dims="time", coords={"time": time})
