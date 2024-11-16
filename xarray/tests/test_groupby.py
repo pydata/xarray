@@ -190,7 +190,7 @@ def test_groupby_da_datetime() -> None:
 
 
 def test_groupby_duplicate_coordinate_labels() -> None:
-    # fix for http://stackoverflow.com/questions/38065129
+    # fix for https://stackoverflow.com/questions/38065129
     array = xr.DataArray([1, 2, 3], [("x", [1, 1, 2])])
     expected = xr.DataArray([3, 3], [("x", [1, 2])])
     actual = array.groupby("x").sum()
@@ -1632,7 +1632,7 @@ class TestDataArrayGroupBy:
         # the first value should not be part of any group ("right" binning)
         array[0] = 99
         # bins follow conventions for pandas.cut
-        # http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
+        # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.cut.html
         bins = [0, 1.5, 5]
 
         df = array.to_dataframe()
@@ -1923,7 +1923,7 @@ class TestDataArrayResample:
         expected = DataArray([np.nan, 4, 8], [("time", times[::4])])
         assert_identical(expected, actual)
 
-        # regression test for http://stackoverflow.com/questions/33158558/
+        # regression test for https://stackoverflow.com/questions/33158558/
         array = Dataset({"time": times})["time"]
         actual = array.resample(time="1D").last()
         expected_times = pd.to_datetime(

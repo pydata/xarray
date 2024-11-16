@@ -6703,7 +6703,7 @@ class TestDataset:
 
         out = ds.polyfit("numbers", 2, full=False)
         assert "var3_polyfit_coefficients" in out
-        assert "dim1" in out
+        assert "dim1" in out.dims
         assert "dim2" not in out
         assert "dim3" not in out
 

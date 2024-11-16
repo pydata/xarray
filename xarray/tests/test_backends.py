@@ -5519,6 +5519,8 @@ def test_source_encoding_always_present_with_fsspec() -> None:
         fs = fsspec.filesystem("file")
         with fs.open(tmp) as f, open_dataset(f) as ds:
             assert ds.encoding["source"] == tmp
+        with fs.open(tmp) as f, open_mfdataset([f]) as ds:
+            assert "foo" in ds
 
 
 def _assert_no_dates_out_of_range_warning(record):

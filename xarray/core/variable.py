@@ -46,6 +46,7 @@ from xarray.core.utils import (
 )
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.pycompat import integer_types, is_0d_dask_array, to_duck_array
+from xarray.namedarray.utils import module_available
 from xarray.util.deprecation_helpers import deprecate_dims
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
@@ -269,14 +270,18 @@ def as_compatible_data(
         else:
             data = np.asarray(data)
 
-    # immediately return array-like types except `numpy.ndarray` subclasses and `numpy` scalars
-    if not isinstance(data, np.ndarray | np.generic) and (
+    if isinstance(data, np.matrix):
+        data = np.asarray(data)
+
+    # immediately return array-like types except `numpy.ndarray` and `numpy` scalars
+    # compare types with `is` instead of `isinstance` to allow `numpy.ndarray` subclasses
+    is_numpy = type(data) is np.ndarray or isinstance(data, np.generic)
+    if not is_numpy and (
         hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
     ):
         return cast("T_DuckArray", data)
 
-    # validate whether the data is valid data types. Also, explicitly cast `numpy`
-    # subclasses and `numpy` scalars to `numpy.ndarray`
+    # anything left will be converted to `numpy.ndarray`, including `numpy` scalars
     data = np.asarray(data)
 
     if data.dtype.kind in "OMm":
@@ -1900,7 +1905,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             output_core_dims=[["quantile"]],
             output_dtypes=[np.float64],
             dask_gufunc_kwargs=dict(output_sizes={"quantile": len(q)}),
-            dask="parallelized",
+            dask="allowed" if module_available("dask", "2024.11.0") else "parallelized",
             kwargs=kwargs,
         )
 
