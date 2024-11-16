@@ -23,8 +23,7 @@ Creating datetime64 data
 
 Xarray uses the numpy dtypes ``datetime64[unit]`` and ``timedelta64[unit]``
 (where unit is anything of "s", "ms", "us" and "ns") to represent datetime
-data, which offer vectorized (if sometimes buggy) operations with numpy and
-smooth integration with pandas.
+data, which offer vectorized operations with numpy and smooth integration with pandas.
 
 To convert to or create regular arrays of ``datetime64`` data, we recommend
 using :py:func:`pandas.to_datetime` and :py:func:`pandas.date_range`:
