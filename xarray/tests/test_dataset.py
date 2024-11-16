@@ -39,7 +39,6 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.options import _get_datetime_resolution
 from xarray.core.types import ArrayLike
 from xarray.core.utils import is_scalar
 from xarray.groupers import TimeResampler
@@ -301,7 +300,7 @@ class TestDataset:
             Attributes:
                 foo:      bar""".format(
                 data["dim3"].dtype,
-                _get_datetime_resolution(),
+                "s",
             )
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
@@ -444,8 +443,8 @@ class TestDataset:
         ds.info(buf=buf)
 
         expected = dedent(
-            f"""\
-        xarray.Dataset {{
+            """\
+        xarray.Dataset {
         dimensions:
         \tdim2 = 9 ;
         \ttime = 20 ;
@@ -454,7 +453,7 @@ class TestDataset:
 
         variables:
         \tfloat64 dim2(dim2) ;
-        \tdatetime64[{_get_datetime_resolution()}] time(time) ;
+        \tdatetime64[s] time(time) ;
         \tfloat64 var1(dim1, dim2) ;
         \t\tvar1:foo = variable ;
         \tfloat64 var2(dim1, dim2) ;
@@ -466,7 +465,7 @@ class TestDataset:
         // global attributes:
         \t:unicode_attr = ba® ;
         \t:string_attr = bar ;
-        }}"""
+        }"""
         )
         actual = buf.getvalue()
         assert expected == actual

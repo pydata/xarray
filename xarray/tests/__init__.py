@@ -18,7 +18,7 @@ import xarray.testing
 from xarray import Dataset
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.extension_array import PandasExtensionArray
-from xarray.core.options import _get_datetime_resolution, set_options
+from xarray.core.options import set_options
 from xarray.core.variable import IndexVariable
 from xarray.testing import (  # noqa: F401
     assert_chunks_equal,
@@ -331,7 +331,7 @@ def create_test_data(
         pd.date_range(
             "2000-01-01",
             periods=20,
-            unit=_get_datetime_resolution(),
+            unit="s",
         ),
     )
     for v, dims in sorted(_vars.items()):

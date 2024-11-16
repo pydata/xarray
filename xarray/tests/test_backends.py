@@ -53,7 +53,7 @@ from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
-from xarray.core.options import _get_datetime_resolution, set_options
+from xarray.core.options import set_options
 from xarray.core.utils import module_available
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
@@ -1618,9 +1618,7 @@ class NetCDF4Base(NetCDFBase):
                 ds.variables["time"][:] = np.arange(10) + 4
 
             expected = Dataset()
-            time = pd.date_range(
-                "1999-01-05", periods=10, unit=_get_datetime_resolution()
-            )
+            time = pd.date_range("1999-01-05", periods=10, unit="s")
             encoding = {"units": units, "dtype": np.dtype("int32")}
             expected["time"] = ("time", time, {}, encoding)
 

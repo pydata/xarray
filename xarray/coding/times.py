@@ -24,7 +24,6 @@ from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
 from xarray.core.duck_array_ops import asarray, ravel, reshape
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
-from xarray.core.options import _get_datetime_resolution
 from xarray.core.pdcompat import _timestamp_as_unit, default_precision_timestamp
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
@@ -326,7 +325,7 @@ def _decode_datetime_with_pandas(
     try:
         time_unit, ref_date = _unpack_time_unit_and_ref_date(units)
         ref_date = _align_reference_date_and_unit(ref_date, time_unit)
-        ref_date = _align_reference_date_and_unit(ref_date, _get_datetime_resolution())
+        ref_date = _align_reference_date_and_unit(ref_date, "s")
     except ValueError as err:
         # ValueError is raised by pd.Timestamp for non-ISO timestamp
         # strings, in which case we fall back to using cftime
