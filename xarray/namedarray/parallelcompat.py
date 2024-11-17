@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
+from xarray.core.options import OPTIONS
 from xarray.core.utils import emit_user_level_warning
 from xarray.namedarray._typing import _chunkedarrayfunction_or_api
 
@@ -58,7 +59,6 @@ def load_chunkmanagers(
             emit_user_level_warning(
                 f"Failed to load chunk manager entrypoint {entrypoint.name} due to {e}. Skipping.",
             )
-            pass
 
     available_chunkmanagers = {
         name: chunkmanager()
@@ -85,8 +85,8 @@ def guess_chunkmanager(
             # use the only option available
             manager = next(iter(chunkmanagers.keys()))
         else:
-            # default to trying to use dask
-            manager = "dask"
+            # use the one in options (default dask)
+            manager = OPTIONS["chunk_manager"]
 
     if isinstance(manager, str):
         if manager not in chunkmanagers:
@@ -338,6 +338,29 @@ class ChunkManagerEntrypoint(ABC):
         --------
         dask.compute
         cubed.compute
+        """
+        raise NotImplementedError()
+
+    def persist(
+        self, *data: T_ChunkedArray | Any, **kwargs: Any
+    ) -> tuple[T_ChunkedArray | Any, ...]:
+        """
+        Persist one or more chunked arrays in memory.
+
+        Parameters
+        ----------
+        *data : object
+            Any number of objects. If an object is an instance of the chunked array type, it is persisted
+            as a chunked array in memory. All other types should be passed through unchanged.
+
+        Returns
+        -------
+        objs
+            The input, but with all chunked arrays now persisted in memory.
+
+        See Also
+        --------
+        dask.persist
         """
         raise NotImplementedError()
 

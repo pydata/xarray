@@ -12,8 +12,6 @@ fi
 $conda remove -y numba numbagg sparse
 # temporarily remove numexpr
 $conda remove -y numexpr
-# temporarily remove backends
-$conda remove -y pydap
 # forcibly remove packages to avoid artifacts
 $conda remove -y --force \
     numpy \
@@ -47,15 +45,15 @@ python -m pip install \
     --pre \
     --upgrade \
     pyarrow
-# manually install `pint` to pull in new dependencies
-python -m pip install --upgrade pint
+# manually install `pint`, `donfig`, and `crc32c` to pull in new dependencies
+python -m pip install --upgrade pint donfig crc32c
 python -m pip install \
     --no-deps \
     --upgrade \
     git+https://github.com/dask/dask \
     git+https://github.com/dask/dask-expr \
     git+https://github.com/dask/distributed \
-    git+https://github.com/zarr-developers/zarr.git@main \
+    git+https://github.com/zarr-developers/zarr \
     git+https://github.com/Unidata/cftime \
     git+https://github.com/pypa/packaging \
     git+https://github.com/hgrecco/pint \

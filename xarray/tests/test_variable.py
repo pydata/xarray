@@ -36,6 +36,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    has_dask_ge_2024_11_0,
     has_pandas_3,
     raise_if_dask_computes,
     requires_bottleneck,
@@ -576,7 +577,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         # lets just ensure that deep copy works without RecursionError
         v.copy(deep=True)
 
-        # indirect recusrion
+        # indirect recursion
         v2 = self.cls("y", [2, 3])
         v.attrs["other"] = v2
         v2.attrs["other"] = v
@@ -654,7 +655,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         expected = Variable((), 0.5 + 1j)
         assert_allclose(v.mean(), expected)
 
-    def test_pandas_cateogrical_dtype(self):
+    def test_pandas_categorical_dtype(self):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         v = self.cls("x", data)
         print(v)  # should not error
@@ -1017,7 +1018,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             fill_value=np.nan,
         )
         expected = x
-        for dim, win, cent in zip(dims, window, center):
+        for dim, win, cent in zip(dims, window, center, strict=True):
             expected = expected.rolling_window(
                 dim=dim,
                 window=win,
@@ -1071,7 +1072,7 @@ class TestVariable(VariableSubclassobjects):
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
         assert v.item() == 0
-        assert type(v.item()) is float  # noqa: E721
+        assert type(v.item()) is float
 
         v = IndexVariable("x", np.arange(5))
         assert 2 == v.searchsorted(2)
@@ -1268,38 +1269,38 @@ class TestVariable(VariableSubclassobjects):
         v = Variable(["x", "y"], data)
 
         _, ind, _ = v._broadcast_indexes((0, 1))
-        assert type(ind) == indexing.BasicIndexer
+        assert type(ind) is indexing.BasicIndexer
 
         _, ind, _ = v._broadcast_indexes((0, slice(0, 8, 2)))
-        assert type(ind) == indexing.BasicIndexer
+        assert type(ind) is indexing.BasicIndexer
 
         _, ind, _ = v._broadcast_indexes((0, [0, 1]))
-        assert type(ind) == indexing.OuterIndexer
+        assert type(ind) is indexing.OuterIndexer
 
         _, ind, _ = v._broadcast_indexes(([0, 1], 1))
-        assert type(ind) == indexing.OuterIndexer
+        assert type(ind) is indexing.OuterIndexer
 
         _, ind, _ = v._broadcast_indexes(([0, 1], [1, 2]))
-        assert type(ind) == indexing.OuterIndexer
+        assert type(ind) is indexing.OuterIndexer
 
         _, ind, _ = v._broadcast_indexes(([0, 1], slice(0, 8, 2)))
-        assert type(ind) == indexing.OuterIndexer
+        assert type(ind) is indexing.OuterIndexer
 
         vind = Variable(("a",), [0, 1])
         _, ind, _ = v._broadcast_indexes((vind, slice(0, 8, 2)))
-        assert type(ind) == indexing.OuterIndexer
+        assert type(ind) is indexing.OuterIndexer
 
         vind = Variable(("y",), [0, 1])
         _, ind, _ = v._broadcast_indexes((vind, 3))
-        assert type(ind) == indexing.OuterIndexer
+        assert type(ind) is indexing.OuterIndexer
 
         vind = Variable(("a",), [0, 1])
         _, ind, _ = v._broadcast_indexes((vind, vind))
-        assert type(ind) == indexing.VectorizedIndexer
+        assert type(ind) is indexing.VectorizedIndexer
 
         vind = Variable(("a", "b"), [[0, 2], [1, 3]])
         _, ind, _ = v._broadcast_indexes((vind, 3))
-        assert type(ind) == indexing.VectorizedIndexer
+        assert type(ind) is indexing.VectorizedIndexer
 
     def test_indexer_type(self):
         # GH:issue:1688. Wrong indexer type induces NotImplementedError
@@ -1575,13 +1576,13 @@ class TestVariable(VariableSubclassobjects):
             actual = variable.transpose()
             assert_identical(actual, variable)
 
-    def test_pandas_cateogrical_dtype(self):
+    def test_pandas_categorical_dtype(self):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         v = self.cls("x", data)
         print(v)  # should not error
         assert pd.api.types.is_extension_array_dtype(v.dtype)
 
-    def test_pandas_cateogrical_no_chunk(self):
+    def test_pandas_categorical_no_chunk(self):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         v = self.cls("x", data)
         with pytest.raises(
@@ -1806,7 +1807,8 @@ class TestVariable(VariableSubclassobjects):
     @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
-        "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
+        "axis, dim",
+        zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]], strict=True),
     )
     def test_quantile(self, q, axis, dim, skipna):
         d = self.d.copy()
@@ -1870,9 +1872,16 @@ class TestVariable(VariableSubclassobjects):
     def test_quantile_chunked_dim_error(self):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
 
-        # this checks for ValueError in dask.array.apply_gufunc
-        with pytest.raises(ValueError, match=r"consists of multiple chunks"):
-            v.quantile(0.5, dim="x")
+        if has_dask_ge_2024_11_0:
+            # Dask rechunks
+            np.testing.assert_allclose(
+                v.compute().quantile(0.5, dim="x"), v.quantile(0.5, dim="x")
+            )
+
+        else:
+            # this checks for ValueError in dask.array.apply_gufunc
+            with pytest.raises(ValueError, match=r"consists of multiple chunks"):
+                v.quantile(0.5, dim="x")
 
     @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
@@ -2386,7 +2395,7 @@ class TestVariableWithDask(VariableSubclassobjects):
     def test_pad(self, mode, xr_arg, np_arg):
         super().test_pad(mode, xr_arg, np_arg)
 
-    def test_pandas_cateogrical_dtype(self):
+    def test_pandas_categorical_dtype(self):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         with pytest.raises(ValueError, match="was found to be a Pandas ExtensionArray"):
             self.cls("x", data)
@@ -2584,10 +2593,15 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
                 assert source_ndarray(x) is source_ndarray(as_compatible_data(x))
 
     def test_converted_types(self):
-        for input_array in [[[0, 1, 2]], pd.DataFrame([[0, 1, 2]])]:
+        for input_array in [
+            [[0, 1, 2]],
+            pd.DataFrame([[0, 1, 2]]),
+            np.float64(1.4),
+            np.str_("abc"),
+        ]:
             actual = as_compatible_data(input_array)
             assert_array_equal(np.asarray(input_array), actual)
-            assert np.ndarray == type(actual)
+            assert np.ndarray is type(actual)
             assert np.asarray(input_array).dtype == actual.dtype
 
     def test_masked_array(self):
@@ -2622,26 +2636,26 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         expected = np.datetime64("2000-01-01")
         actual = as_compatible_data(expected)
         assert expected == actual
-        assert np.ndarray == type(actual)
+        assert np.ndarray is type(actual)
         assert np.dtype("datetime64[ns]") == actual.dtype
 
         expected = np.array([np.datetime64("2000-01-01")])
         actual = as_compatible_data(expected)
         assert np.asarray(expected) == actual
-        assert np.ndarray == type(actual)
+        assert np.ndarray is type(actual)
         assert np.dtype("datetime64[ns]") == actual.dtype
 
         expected = np.array([np.datetime64("2000-01-01", "ns")])
         actual = as_compatible_data(expected)
         assert np.asarray(expected) == actual
-        assert np.ndarray == type(actual)
+        assert np.ndarray is type(actual)
         assert np.dtype("datetime64[ns]") == actual.dtype
         assert expected is source_ndarray(np.asarray(actual))
 
         expected = np.datetime64("2000-01-01", "ns")
         actual = as_compatible_data(datetime(2000, 1, 1))
         assert np.asarray(expected) == actual
-        assert np.ndarray == type(actual)
+        assert np.ndarray is type(actual)
         assert np.dtype("datetime64[ns]") == actual.dtype
 
     def test_tz_datetime(self) -> None:
@@ -2670,11 +2684,12 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         )
 
         expect = orig.copy(deep=True)
-        expect.values = [[2.0, 2.0], [2.0, 2.0]]
+        # see https://github.com/python/mypy/issues/3004 for why we need to ignore type
+        expect.values = [[2.0, 2.0], [2.0, 2.0]]  # type: ignore[assignment]
         assert_identical(expect, full_like(orig, 2))
 
         # override dtype
-        expect.values = [[True, True], [True, True]]
+        expect.values = [[True, True], [True, True]]  # type: ignore[assignment]
         assert expect.dtype == bool
         assert_identical(expect, full_like(orig, True, dtype=bool))
 
@@ -2731,6 +2746,26 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         assert_identical(ones_like(orig), full_like(orig, 1))
         assert_identical(ones_like(orig, dtype=int), full_like(orig, 1, dtype=int))
 
+    def test_numpy_ndarray_subclass(self):
+        class SubclassedArray(np.ndarray):
+            def __new__(cls, array, foo):
+                obj = np.asarray(array).view(cls)
+                obj.foo = foo
+                return obj
+
+        data = SubclassedArray([1, 2, 3], foo="bar")
+        actual = as_compatible_data(data)
+        assert isinstance(actual, SubclassedArray)
+        assert actual.foo == "bar"
+        assert_array_equal(data, actual)
+
+    def test_numpy_matrix(self):
+        with pytest.warns(PendingDeprecationWarning):
+            data = np.matrix([[1, 2], [3, 4]])
+        actual = as_compatible_data(data)
+        assert isinstance(actual, np.ndarray)
+        assert_array_equal(data, actual)
+
     def test_unsupported_type(self):
         # Non indexable type
         class CustomArray(NDArrayMixin):
@@ -2760,7 +2795,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
 
 def test_raise_no_warning_for_nan_in_binary_ops():
     with assert_no_warnings():
-        Variable("x", [1, 2, np.nan]) > 0
+        _ = Variable("x", [1, 2, np.nan]) > 0
 
 
 class TestBackendIndexing:

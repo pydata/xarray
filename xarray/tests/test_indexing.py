@@ -350,7 +350,6 @@ class TestLazyArray:
             ([0, 3, 5], arr[:2]),
         ]
         for i, j in indexers:
-
             expected_b = v[i][j]
             actual = v_lazy[i][j]
             assert expected_b.shape == actual.shape
@@ -416,7 +415,6 @@ class TestLazyArray:
         check_indexing(v_eager, v_lazy, indexers)
 
     def test_lazily_indexed_array_vindex_setitem(self) -> None:
-
         lazy = indexing.LazilyIndexedArray(np.random.rand(10, 20, 30))
 
         # vectorized indexing
@@ -892,6 +890,74 @@ def test_create_mask_error() -> None:
 def test_posify_mask_subindexer(indices, expected) -> None:
     actual = indexing._posify_mask_subindexer(indices)
     np.testing.assert_array_equal(expected, actual)
+
+
+class ArrayWithNamespace:
+    def __array_namespace__(self, version=None):
+        pass
+
+
+class ArrayWithArrayFunction:
+    def __array_function__(self, func, types, args, kwargs):
+        pass
+
+
+class ArrayWithNamespaceAndArrayFunction:
+    def __array_namespace__(self, version=None):
+        pass
+
+    def __array_function__(self, func, types, args, kwargs):
+        pass
+
+
+def as_dask_array(arr, chunks):
+    try:
+        import dask.array as da
+    except ImportError:
+        return None
+
+    return da.from_array(arr, chunks=chunks)
+
+
+@pytest.mark.parametrize(
+    ["array", "expected_type"],
+    (
+        pytest.param(
+            indexing.CopyOnWriteArray(np.array([1, 2])),
+            indexing.CopyOnWriteArray,
+            id="ExplicitlyIndexed",
+        ),
+        pytest.param(
+            np.array([1, 2]), indexing.NumpyIndexingAdapter, id="numpy.ndarray"
+        ),
+        pytest.param(
+            pd.Index([1, 2]), indexing.PandasIndexingAdapter, id="pandas.Index"
+        ),
+        pytest.param(
+            as_dask_array(np.array([1, 2]), chunks=(1,)),
+            indexing.DaskIndexingAdapter,
+            id="dask.array",
+            marks=requires_dask,
+        ),
+        pytest.param(
+            ArrayWithNamespace(), indexing.ArrayApiIndexingAdapter, id="array_api"
+        ),
+        pytest.param(
+            ArrayWithArrayFunction(),
+            indexing.NdArrayLikeIndexingAdapter,
+            id="array_like",
+        ),
+        pytest.param(
+            ArrayWithNamespaceAndArrayFunction(),
+            indexing.ArrayApiIndexingAdapter,
+            id="array_api_with_fallback",
+        ),
+    ),
+)
+def test_as_indexable(array, expected_type):
+    actual = indexing.as_indexable(array)
+
+    assert isinstance(actual, expected_type)
 
 
 def test_indexing_1d_object_array() -> None:

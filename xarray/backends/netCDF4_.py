@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import os
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
@@ -16,6 +16,7 @@ from xarray.backends.common import (
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
+    datatree_from_dict_with_io_cleanup,
     find_root_and_group,
     robust_getitem,
 )
@@ -41,6 +42,9 @@ from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
+
+    from h5netcdf.core import EnumType as h5EnumType
+    from netCDF4 import EnumType as ncEnumType
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
@@ -111,7 +115,7 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
             with self.datastore.lock:
                 original_array = self.get_array(needs_lock=False)
                 array = getitem(original_array, key)
-        except IndexError:
+        except IndexError as err:
             # Catch IndexError in netCDF4 and return a more informative
             # error message.  This is most often called when an unsorted
             # indexer is used before the data is loaded from disk.
@@ -120,7 +124,7 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
                 "is not valid on netCDF4.Variable object. Try loading "
                 "your data into memory first by calling .load()."
             )
-            raise IndexError(msg)
+            raise IndexError(msg) from err
         return array
 
 
@@ -192,7 +196,7 @@ def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
                     ds = create_group(ds, key)
                 else:
                     # wrap error to provide slightly more helpful message
-                    raise OSError(f"group not found: {key}", e)
+                    raise OSError(f"group not found: {key}", e) from e
         return ds
 
 
@@ -278,7 +282,9 @@ def _extract_nc4_variable_encoding(
         chunksizes = encoding["chunksizes"]
         chunks_too_big = any(
             c > d and dim not in unlimited_dims
-            for c, d, dim in zip(chunksizes, variable.shape, variable.dims)
+            for c, d, dim in zip(
+                chunksizes, variable.shape, variable.dims, strict=False
+            )
         )
         has_original_shape = "original_shape" in encoding
         changed_shape = (
@@ -315,6 +321,39 @@ def _is_list_of_strings(value) -> bool:
     return arr.dtype.kind in ["U", "S"] and arr.size > 1
 
 
+def _build_and_get_enum(
+    store, var_name: str, dtype: np.dtype, enum_name: str, enum_dict: dict[str, int]
+) -> ncEnumType | h5EnumType:
+    """
+    Add or get the netCDF4 Enum based on the dtype in encoding.
+    The return type should be ``netCDF4.EnumType``,
+    but we avoid importing netCDF4 globally for performances.
+    """
+    if enum_name not in store.ds.enumtypes:
+        create_func = (
+            store.ds.createEnumType
+            if isinstance(store, NetCDF4DataStore)
+            else store.ds.create_enumtype
+        )
+        return create_func(
+            dtype,
+            enum_name,
+            enum_dict,
+        )
+    datatype = store.ds.enumtypes[enum_name]
+    if datatype.enum_dict != enum_dict:
+        error_msg = (
+            f"Cannot save variable `{var_name}` because an enum"
+            f" `{enum_name}` already exists in the Dataset but has"
+            " a different definition. To fix this error, make sure"
+            " all variables have a uniquely named enum in their"
+            " `encoding['dtype'].metadata` or, if they should share"
+            " the same enum type, make sure the enums are identical."
+        )
+        raise ValueError(error_msg)
+    return datatype
+
+
 class NetCDF4DataStore(WritableCFDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
@@ -322,14 +361,14 @@ class NetCDF4DataStore(WritableCFDataStore):
     """
 
     __slots__ = (
-        "autoclose",
-        "format",
-        "is_remote",
-        "lock",
         "_filename",
         "_group",
         "_manager",
         "_mode",
+        "autoclose",
+        "format",
+        "is_remote",
+        "lock",
     )
 
     def __init__(
@@ -368,6 +407,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         clobber=True,
         diskless=False,
         persist=False,
+        auto_complex=None,
         lock=None,
         lock_maker=None,
         autoclose=False,
@@ -400,8 +440,13 @@ class NetCDF4DataStore(WritableCFDataStore):
                 lock = combine_locks([base_lock, get_write_lock(filename)])
 
         kwargs = dict(
-            clobber=clobber, diskless=diskless, persist=persist, format=format
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            format=format,
         )
+        if auto_complex is not None:
+            kwargs["auto_complex"] = auto_complex
         manager = CachingFileManager(
             netCDF4.Dataset, filename, mode=mode, kwargs=kwargs
         )
@@ -446,7 +491,9 @@ class NetCDF4DataStore(WritableCFDataStore):
             else:
                 encoding["contiguous"] = False
                 encoding["chunksizes"] = tuple(chunking)
-                encoding["preferred_chunks"] = dict(zip(var.dimensions, chunking))
+                encoding["preferred_chunks"] = dict(
+                    zip(var.dimensions, chunking, strict=True)
+                )
         # TODO: figure out how to round-trip "endian-ness" without raising
         # warnings from netCDF4
         # encoding['endian'] = var.endian()
@@ -503,6 +550,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         _ensure_no_forward_slash_in_name(name)
         attrs = variable.attrs.copy()
         fill_value = attrs.pop("_FillValue", None)
+        datatype: np.dtype | ncEnumType | h5EnumType
         datatype = _get_datatype(
             variable, self.format, raise_on_invalid_encoding=check_encoding
         )
@@ -512,7 +560,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             and (e_name := meta.get("enum_name"))
             and (e_dict := meta.get("enum"))
         ):
-            datatype = self._build_and_get_enum(name, datatype, e_name, e_dict)
+            datatype = _build_and_get_enum(self, name, datatype, e_name, e_dict)
         encoding = _extract_nc4_variable_encoding(
             variable, raise_on_invalid=check_encoding, unlimited_dims=unlimited_dims
         )
@@ -542,33 +590,6 @@ class NetCDF4DataStore(WritableCFDataStore):
         target = NetCDF4ArrayWrapper(name, self)
 
         return target, variable.data
-
-    def _build_and_get_enum(
-        self, var_name: str, dtype: np.dtype, enum_name: str, enum_dict: dict[str, int]
-    ) -> Any:
-        """
-        Add or get the netCDF4 Enum based on the dtype in encoding.
-        The return type should be ``netCDF4.EnumType``,
-        but we avoid importing netCDF4 globally for performances.
-        """
-        if enum_name not in self.ds.enumtypes:
-            return self.ds.createEnumType(
-                dtype,
-                enum_name,
-                enum_dict,
-            )
-        datatype = self.ds.enumtypes[enum_name]
-        if datatype.enum_dict != enum_dict:
-            error_msg = (
-                f"Cannot save variable `{var_name}` because an enum"
-                f" `{enum_name}` already exists in the Dataset but have"
-                " a different definition. To fix this error, make sure"
-                " each variable have a uniquely named enum in their"
-                " `encoding['dtype'].metadata` or, if they should share"
-                " the same enum type, make sure the enums are identical."
-            )
-            raise ValueError(error_msg)
-        return datatype
 
     def sync(self):
         self.ds.sync()
@@ -638,6 +659,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         clobber=True,
         diskless=False,
         persist=False,
+        auto_complex=None,
         lock=None,
         autoclose=False,
     ) -> Dataset:
@@ -650,6 +672,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             clobber=clobber,
             diskless=diskless,
             persist=persist,
+            auto_complex=auto_complex,
             lock=lock,
             autoclose=autoclose,
         )
@@ -679,21 +702,36 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        group: str | Iterable[str] | Callable | None = None,
+        group: str | None = None,
         format="NETCDF4",
         clobber=True,
         diskless=False,
         persist=False,
+        auto_complex=None,
         lock=None,
         autoclose=False,
         **kwargs,
     ) -> DataTree:
+        groups_dict = self.open_groups_as_dict(
+            filename_or_obj,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+            group=group,
+            format=format,
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            lock=lock,
+            autoclose=autoclose,
+            **kwargs,
+        )
 
-        from xarray.core.datatree import DataTree
-
-        groups_dict = self.open_groups_as_dict(filename_or_obj, **kwargs)
-
-        return DataTree.from_dict(groups_dict)
+        return datatree_from_dict_with_io_cleanup(groups_dict)
 
     def open_groups_as_dict(
         self,
@@ -706,11 +744,12 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        group: str | Iterable[str] | Callable | None = None,
+        group: str | None = None,
         format="NETCDF4",
         clobber=True,
         diskless=False,
         persist=False,
+        auto_complex=None,
         lock=None,
         autoclose=False,
         **kwargs,
@@ -752,7 +791,10 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-            group_name = str(NodePath(path_group))
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
 
         return groups_dict

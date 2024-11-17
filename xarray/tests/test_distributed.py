@@ -1,4 +1,4 @@
-""" isort:skip_file """
+"""isort:skip_file"""
 
 from __future__ import annotations
 
@@ -295,4 +295,4 @@ async def test_serializable_locks(c, s, a, b) -> None:
         await c.gather(futures)
 
         lock2 = pickle.loads(pickle.dumps(lock))
-        assert type(lock) == type(lock2)
+        assert type(lock) is type(lock2)

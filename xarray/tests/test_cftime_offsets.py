@@ -425,7 +425,9 @@ _EQ_TESTS_B_COPY = [
 ]
 
 
-@pytest.mark.parametrize(("a", "b"), zip(_EQ_TESTS_B, _EQ_TESTS_B_COPY), ids=_id_func)
+@pytest.mark.parametrize(
+    ("a", "b"), zip(_EQ_TESTS_B, _EQ_TESTS_B_COPY, strict=True), ids=_id_func
+)
 def test_eq(a, b):
     assert a == b
 
@@ -572,7 +574,9 @@ def test_sub_error(offset, calendar):
         offset - initial
 
 
-@pytest.mark.parametrize(("a", "b"), zip(_EQ_TESTS_A, _EQ_TESTS_B), ids=_id_func)
+@pytest.mark.parametrize(
+    ("a", "b"), zip(_EQ_TESTS_A, _EQ_TESTS_B, strict=True), ids=_id_func
+)
 def test_minus_offset(a, b):
     result = b - a
     expected = a
@@ -581,7 +585,7 @@ def test_minus_offset(a, b):
 
 @pytest.mark.parametrize(
     ("a", "b"),
-    list(zip(np.roll(_EQ_TESTS_A, 1), _EQ_TESTS_B))  # type: ignore[arg-type]
+    list(zip(np.roll(_EQ_TESTS_A, 1), _EQ_TESTS_B, strict=True))  # type: ignore[arg-type]
     + [(YearEnd(month=1), YearEnd(month=2))],
     ids=_id_func,
 )
@@ -1669,7 +1673,6 @@ def test_new_to_legacy_freq_anchored(year_alias, n):
     ),
 )
 def test_legacy_to_new_freq_pd_freq_passthrough(freq, expected):
-
     result = _legacy_to_new_freq(freq)
     assert result == expected
 
@@ -1695,7 +1698,6 @@ def test_legacy_to_new_freq_pd_freq_passthrough(freq, expected):
     ),
 )
 def test_new_to_legacy_freq_pd_freq_passthrough(freq, expected):
-
     result = _new_to_legacy_freq(freq)
     assert result == expected
 
@@ -1782,7 +1784,6 @@ def test_date_range_no_freq(start, end, periods):
 )
 @pytest.mark.parametrize("has_year_zero", [False, True])
 def test_offset_addition_preserves_has_year_zero(offset, has_year_zero):
-
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message="this date/calendar/year zero")
         datetime = cftime.DatetimeGregorian(-1, 12, 31, has_year_zero=has_year_zero)

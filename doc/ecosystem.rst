@@ -26,7 +26,7 @@ Geosciences
 - `OGGM <https://oggm.org/>`_: Open Global Glacier Model
 - `Oocgcm <https://oocgcm.readthedocs.io/>`_: Analysis of large gridded geophysical datasets
 - `Open Data Cube <https://www.opendatacube.org/>`_: Analysis toolkit of continental scale Earth Observation data from satellites.
-- `Pangaea: <https://pangaea.readthedocs.io/en/latest/>`_: xarray extension for gridded land surface & weather model output).
+- `Pangaea <https://pangaea.readthedocs.io/en/latest/>`_: xarray extension for gridded land surface & weather model output).
 - `Pangeo <https://pangeo.io>`_: A community effort for big data geoscience in the cloud.
 - `PyGDX <https://pygdx.readthedocs.io/en/latest/>`_: Python 3 package for
   accessing data stored in GAMS Data eXchange (GDX) files. Also uses a custom
@@ -52,7 +52,7 @@ Geosciences
 - `xclim <https://xclim.readthedocs.io/>`_: A library for calculating climate science indices with unit handling built from xarray and dask.
 - `xESMF <https://pangeo-xesmf.readthedocs.io/>`_: Universal regridder for geospatial data.
 - `xgcm <https://xgcm.readthedocs.io/>`_: Extends the xarray data model to understand finite volume grid cells (common in General Circulation Models) and provides interpolation and difference operations for such grids.
-- `xmitgcm <http://xmitgcm.readthedocs.io/>`_: a python package for reading `MITgcm <https://mitgcm.org/>`_ binary MDS files into xarray data structures.
+- `xmitgcm <https://xmitgcm.readthedocs.io/>`_: a python package for reading `MITgcm <https://mitgcm.org/>`_ binary MDS files into xarray data structures.
 - `xnemogcm <https://github.com/rcaneill/xnemogcm/>`_: a package to read `NEMO <https://nemo-ocean.eu/>`_ output files and add attributes to interface with xgcm.
 
 Machine Learning
@@ -87,11 +87,11 @@ Extend xarray capabilities
 - `xr-scipy <https://xr-scipy.readthedocs.io>`_: A lightweight scipy wrapper for xarray.
 - `X-regression <https://github.com/kuchaale/X-regression>`_: Multiple linear regression from Statsmodels library coupled with Xarray library.
 - `xskillscore <https://github.com/xarray-contrib/xskillscore>`_: Metrics for verifying forecasts.
-- `xyzpy <http://xyzpy.readthedocs.io>`_: Easily generate high dimensional data, including parallelization.
+- `xyzpy <https://xyzpy.readthedocs.io>`_: Easily generate high dimensional data, including parallelization.
 
 Visualization
 ~~~~~~~~~~~~~
-- `datashader <https://datashader.org>`_, `geoviews <http://geoviews.org>`_, `holoviews <http://holoviews.org/>`_, : visualization packages for large data.
+- `datashader <https://datashader.org>`_, `geoviews <https://geoviews.org>`_, `holoviews <https://holoviews.org/>`_, : visualization packages for large data.
 - `hvplot <https://hvplot.pyviz.org/>`_ : A high-level plotting API for the PyData ecosystem built on HoloViews.
 - `psyplot <https://psyplot.readthedocs.io>`_: Interactive data visualization with python.
 - `xarray-leaflet <https://github.com/davidbrochart/xarray_leaflet>`_: An xarray extension for tiled map plotting based on ipyleaflet.

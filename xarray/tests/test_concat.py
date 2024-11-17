@@ -74,40 +74,38 @@ def create_typed_datasets(
     num_datasets: int = 2, seed: int | None = None
 ) -> list[Dataset]:
     var_strings = ["a", "b", "c", "d", "e", "f", "g", "h"]
-    result = []
     rng = np.random.default_rng(seed)
     lat = rng.standard_normal(size=(1, 4))
     lon = rng.standard_normal(size=(1, 4))
-    for i in range(num_datasets):
-        result.append(
-            Dataset(
-                data_vars={
-                    "float": (["x", "y", "day"], rng.standard_normal(size=(1, 4, 2))),
-                    "float2": (["x", "y", "day"], rng.standard_normal(size=(1, 4, 2))),
-                    "string": (
-                        ["x", "y", "day"],
-                        rng.choice(var_strings, size=(1, 4, 2)),
-                    ),
-                    "int": (["x", "y", "day"], rng.integers(0, 10, size=(1, 4, 2))),
-                    "datetime64": (
-                        ["x", "y", "day"],
-                        np.arange(
-                            np.datetime64("2017-01-01"), np.datetime64("2017-01-09")
-                        ).reshape(1, 4, 2),
-                    ),
-                    "timedelta64": (
-                        ["x", "y", "day"],
-                        np.reshape([pd.Timedelta(days=i) for i in range(8)], [1, 4, 2]),
-                    ),
-                },
-                coords={
-                    "lat": (["x", "y"], lat),
-                    "lon": (["x", "y"], lon),
-                    "day": ["day" + str(i * 2 + 1), "day" + str(i * 2 + 2)],
-                },
-            )
+    return [
+        Dataset(
+            data_vars={
+                "float": (["x", "y", "day"], rng.standard_normal(size=(1, 4, 2))),
+                "float2": (["x", "y", "day"], rng.standard_normal(size=(1, 4, 2))),
+                "string": (
+                    ["x", "y", "day"],
+                    rng.choice(var_strings, size=(1, 4, 2)),
+                ),
+                "int": (["x", "y", "day"], rng.integers(0, 10, size=(1, 4, 2))),
+                "datetime64": (
+                    ["x", "y", "day"],
+                    np.arange(
+                        np.datetime64("2017-01-01"), np.datetime64("2017-01-09")
+                    ).reshape(1, 4, 2),
+                ),
+                "timedelta64": (
+                    ["x", "y", "day"],
+                    np.reshape([pd.Timedelta(days=i) for i in range(8)], [1, 4, 2]),
+                ),
+            },
+            coords={
+                "lat": (["x", "y"], lat),
+                "lon": (["x", "y"], lon),
+                "day": ["day" + str(i * 2 + 1), "day" + str(i * 2 + 2)],
+            },
         )
-    return result
+        for i in range(num_datasets)
+    ]
 
 
 def test_concat_compat() -> None:
@@ -276,7 +274,10 @@ def test_concat_multiple_datasets_missing_vars(include_day: bool) -> None:
             expected[name][i : i + 1, ...] = np.nan
 
     # set up the test data
-    datasets = [ds.drop_vars(varname) for ds, varname in zip(datasets, vars_to_drop)]
+    datasets = [
+        ds.drop_vars(varname)
+        for ds, varname in zip(datasets, vars_to_drop, strict=True)
+    ]
 
     actual = concat(datasets, dim="day")
 
@@ -393,7 +394,7 @@ def concat_var_names() -> Callable:
     def get_varnames(var_cnt: int = 10, list_cnt: int = 10) -> list[list[str]]:
         orig = [f"d{i:02d}" for i in range(var_cnt)]
         var_names = []
-        for i in range(0, list_cnt):
+        for _i in range(list_cnt):
             l1 = orig.copy()
             var_names.append(l1)
         return var_names
@@ -659,6 +660,9 @@ class TestConcatDataset:
 
         with pytest.raises(ValueError, match=r"compat.* invalid"):
             concat(split_data, "dim1", compat="foobar")
+
+        with pytest.raises(ValueError, match=r"compat.* invalid"):
+            concat(split_data, "dim1", compat="minimal")
 
         with pytest.raises(ValueError, match=r"unexpected value for"):
             concat([data, data], "new_dim", coords="foobar")
@@ -1326,12 +1330,12 @@ def test_concat_preserve_coordinate_order() -> None:
     actual = concat([ds1, ds2], dim="time")
 
     # check dimension order
-    for act, exp in zip(actual.dims, expected.dims):
+    for act, exp in zip(actual.dims, expected.dims, strict=True):
         assert act == exp
         assert actual.sizes[act] == expected.sizes[exp]
 
     # check coordinate order
-    for act, exp in zip(actual.coords, expected.coords):
+    for act, exp in zip(actual.coords, expected.coords, strict=True):
         assert act == exp
         assert_identical(actual.coords[act], expected.coords[exp])
 
@@ -1345,12 +1349,12 @@ def test_concat_typing_check() -> None:
         TypeError,
         match="The elements in the input list need to be either all 'Dataset's or all 'DataArray's",
     ):
-        concat([ds, da], dim="foo")  # type: ignore
+        concat([ds, da], dim="foo")  # type: ignore[type-var]
     with pytest.raises(
         TypeError,
         match="The elements in the input list need to be either all 'Dataset's or all 'DataArray's",
     ):
-        concat([da, ds], dim="foo")  # type: ignore
+        concat([da, ds], dim="foo")  # type: ignore[type-var]
 
 
 def test_concat_not_all_indexes() -> None:

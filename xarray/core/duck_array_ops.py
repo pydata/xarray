@@ -16,10 +16,10 @@ from importlib import import_module
 
 import numpy as np
 import pandas as pd
-from numpy import all as array_all  # noqa
-from numpy import any as array_any  # noqa
+from numpy import all as array_all  # noqa: F401
+from numpy import any as array_any  # noqa: F401
 from numpy import concatenate as _concatenate
-from numpy import (  # noqa
+from numpy import (  # noqa: F401
     full_like,
     gradient,
     isclose,
@@ -30,7 +30,7 @@ from numpy import (  # noqa
     transpose,
     unravel_index,
 )
-from numpy.lib.stride_tricks import sliding_window_view  # noqa
+from numpy.lib.stride_tricks import sliding_window_view  # noqa: F401
 from packaging.version import Version
 from pandas.api.types import is_extension_array_dtype
 
@@ -451,10 +451,10 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
             try:  # dask/dask#3133 dask sometimes needs dtype argument
                 # if func does not accept dtype, then raises TypeError
                 return func(values, axis=axis, dtype=values.dtype, **kwargs)
-            except (AttributeError, TypeError):
+            except (AttributeError, TypeError) as err:
                 raise NotImplementedError(
                     f"{name} is not yet implemented on dask arrays"
-                )
+                ) from err
 
     f.__name__ = name
     return f
@@ -592,10 +592,10 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
     elif isinstance(value, str):
         try:
             a = pd.to_timedelta(value)
-        except ValueError:
+        except ValueError as err:
             raise ValueError(
                 f"Could not convert {value!r} to timedelta64 using pandas.to_timedelta"
-            )
+            ) from err
         return py_timedelta_to_float(a, datetime_unit)
     else:
         raise TypeError(
@@ -716,6 +716,7 @@ def first(values, axis, skipna=None):
             return chunked_nanfirst(values, axis)
         else:
             return nputils.nanfirst(values, axis)
+
     return take(values, 0, axis=axis)
 
 
@@ -729,6 +730,7 @@ def last(values, axis, skipna=None):
             return chunked_nanlast(values, axis)
         else:
             return nputils.nanlast(values, axis)
+
     return take(values, -1, axis=axis)
 
 
@@ -755,7 +757,8 @@ def _push(array, n: int | None = None, axis: int = -1):
 
         if pycompat.mod_version("numbagg") < Version("0.6.2"):
             warnings.warn(
-                f"numbagg >= 0.6.2 is required for bfill & ffill; {pycompat.mod_version('numbagg')} is installed. We'll attempt with bottleneck instead."
+                f"numbagg >= 0.6.2 is required for bfill & ffill; {pycompat.mod_version('numbagg')} is installed. We'll attempt with bottleneck instead.",
+                stacklevel=2,
             )
         else:
             return numbagg.ffill(array, limit=n, axis=axis)
@@ -768,14 +771,14 @@ def _push(array, n: int | None = None, axis: int = -1):
     return bn.push(array, limit, axis)
 
 
-def push(array, n, axis):
+def push(array, n, axis, method="blelloch"):
     if not OPTIONS["use_bottleneck"] and not OPTIONS["use_numbagg"]:
         raise RuntimeError(
             "ffill & bfill requires bottleneck or numbagg to be enabled."
             " Call `xr.set_options(use_bottleneck=True)` or `xr.set_options(use_numbagg=True)` to enable one."
         )
     if is_duck_dask_array(array):
-        return dask_array_ops.push(array, n, axis)
+        return dask_array_ops.push(array, n, axis, method=method)
     else:
         return _push(array, n, axis)
 

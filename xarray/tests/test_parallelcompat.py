@@ -14,6 +14,7 @@ from xarray.namedarray._typing import (
     chunkedduckarray,
     duckarray,
 )
+from xarray import set_options
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import (
     ChunkManagerEntrypoint,
@@ -161,6 +162,11 @@ class TestGetChunkManager:
     def test_get_chunkmanger(self, register_dummy_chunkmanager) -> None:
         chunkmanager = guess_chunkmanager("dummy")
         assert isinstance(chunkmanager, DummyChunkManager)
+
+    def test_get_chunkmanger_via_set_options(self, register_dummy_chunkmanager) -> None:
+        with set_options(chunk_manager="dummy"):
+            chunkmanager = guess_chunkmanager(None)
+            assert isinstance(chunkmanager, DummyChunkManager)
 
     def test_fail_on_nonexistent_chunkmanager(self) -> None:
         with pytest.raises(ValueError, match="unrecognized chunk manager foo"):
