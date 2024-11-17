@@ -98,7 +98,7 @@ def matrix_norm(
     *,
     keepdims: bool = False,
     ord: int | float | Literal["fro", "nuc"] | None = "fro",
-) -> NamedArray[Any, Any]:  # noqa: F821
+) -> NamedArray[Any, Any]:
     xp = _get_data_namespace(x)
     _data = xp.linalg.matrix_norm(x._data, keepdims=keepdims, ord=ord)  # ckeck xp.mean
     _dims = _infer_dims(_data.shape)  # TODO: Fix dims

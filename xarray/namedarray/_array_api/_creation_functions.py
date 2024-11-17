@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, overload
 
 from xarray.namedarray._array_api._utils import (
-    _atleast1d_dims,
     _broadcast_dims,
     _get_data_namespace,
     _get_namespace,
