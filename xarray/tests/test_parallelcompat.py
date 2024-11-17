@@ -6,6 +6,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+from xarray import set_options
 from xarray.namedarray._typing import (
     _Chunks,
     _ChunksLike,
@@ -14,7 +15,6 @@ from xarray.namedarray._typing import (
     chunkedduckarray,
     duckarray,
 )
-from xarray import set_options
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import (
     ChunkManagerEntrypoint,
