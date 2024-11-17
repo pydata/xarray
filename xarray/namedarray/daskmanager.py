@@ -90,7 +90,9 @@ class DaskManager(ChunkManagerEntrypoint):
         out = compute(*data, **kwargs)  # type: ignore[no-untyped-call]
         return out
 
-    def persist(self, *data: Any, **kwargs: Any) -> tuple[DaskArray | Any, ...]:
+    def persist(
+        self, *data: chunkedduckarray[Any, _DType] | Any, **kwargs: Any
+    ) -> tuple[chunkedduckarray[Any, _DType] | Any, ...]:
         from dask import persist
 
         return persist(*data, **kwargs)  # type: ignore[no-untyped-call, no-any-return]
