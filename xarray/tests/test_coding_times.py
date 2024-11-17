@@ -217,7 +217,7 @@ def test_decode_standard_calendar_inside_timestamp_range(calendar, unit) -> None
     import cftime
 
     units = "days since 0001-01-01"
-    times = pd.date_range("2001-04-01-00", end="2001-04-30-23", unit="us", freq="h")  # type: ignore[arg-type]
+    times = pd.date_range("2001-04-01-00", end="2001-04-30-23", unit="us", freq="h")
     # to_pydatetime() will return microsecond
     time = cftime.date2num(times.to_pydatetime(), units, calendar=calendar)
     expected = times.values

@@ -444,7 +444,8 @@ class TestDecodeCF:
         assert_identical(expected, decode_cf(ds, decode_times=decode_times))
 
     @requires_cftime
-    def test_dataset_repr_with_netcdf4_datetimes(self) -> None:
+    @pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
+    def test_dataset_repr_with_netcdf4_datetimes(self, time_unit) -> None:
         # regression test for #347
         attrs = {"units": "days since 0001-01-01", "calendar": "noleap"}
         with warnings.catch_warnings():
@@ -453,8 +454,8 @@ class TestDecodeCF:
             assert "(time) object" in repr(ds)
 
         attrs = {"units": "days since 1900-01-01"}
-        ds = decode_cf(Dataset({"time": ("time", [0, 1], attrs)}))
-        assert "(time) datetime64[s]" in repr(ds)
+        ds = decode_cf(Dataset({"time": ("time", [0, 1], attrs)}), time_unit=time_unit)
+        assert f"(time) datetime64[{time_unit}]" in repr(ds)
 
     @requires_cftime
     def test_decode_cf_datetime_transition_to_invalid(self) -> None:
@@ -513,7 +514,8 @@ class TestDecodeCF:
             conventions.decode_cf(original).chunk(),
         )
 
-    def test_decode_cf_time_kwargs(self) -> None:
+    @pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
+    def test_decode_cf_time_kwargs(self, time_unit) -> None:
         ds = Dataset.from_dict(
             {
                 "coords": {
@@ -535,15 +537,17 @@ class TestDecodeCF:
             }
         )
 
-        dsc = conventions.decode_cf(ds)
+        dsc = conventions.decode_cf(ds, time_unit=time_unit)
         assert dsc.timedelta.dtype == np.dtype("m8[ns]")
-        assert dsc.time.dtype == np.dtype("M8[s]")
+        assert dsc.time.dtype == np.dtype(f"M8[{time_unit}]")
         dsc = conventions.decode_cf(ds, decode_times=False)
         assert dsc.timedelta.dtype == np.dtype("int64")
         assert dsc.time.dtype == np.dtype("int64")
-        dsc = conventions.decode_cf(ds, decode_times=True, decode_timedelta=False)
+        dsc = conventions.decode_cf(
+            ds, decode_times=True, time_unit=time_unit, decode_timedelta=False
+        )
         assert dsc.timedelta.dtype == np.dtype("int64")
-        assert dsc.time.dtype == np.dtype("M8[s]")
+        assert dsc.time.dtype == np.dtype(f"M8[{time_unit}]")
         dsc = conventions.decode_cf(ds, decode_times=False, decode_timedelta=True)
         assert dsc.timedelta.dtype == np.dtype("m8[ns]")
         assert dsc.time.dtype == np.dtype("int64")

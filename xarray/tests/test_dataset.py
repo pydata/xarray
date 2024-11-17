@@ -300,7 +300,7 @@ class TestDataset:
             Attributes:
                 foo:      bar""".format(
                 data["dim3"].dtype,
-                "s",
+                "ns",
             )
         )
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
@@ -453,7 +453,7 @@ class TestDataset:
 
         variables:
         \tfloat64 dim2(dim2) ;
-        \tdatetime64[s] time(time) ;
+        \tdatetime64[ns] time(time) ;
         \tfloat64 var1(dim1, dim2) ;
         \t\tvar1:foo = variable ;
         \tfloat64 var2(dim1, dim2) ;
