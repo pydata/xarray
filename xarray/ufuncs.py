@@ -107,7 +107,7 @@ def _create_op(name):
 
 # Auto generate from the public numpy ufuncs
 np_ufuncs = {name for name in dir(np) if isinstance(getattr(np, name), np.ufunc)}
-excluded_ufuncs = {"divmod", "frexp", "isnat", "matmul", "modf", "vecdot"}
+excluded_ufuncs = {"divmod", "frexp", "matmul", "modf", "vecdot"}
 additional_ufuncs = {"isreal"}  # "angle", "iscomplex"
 __all__ = sorted(np_ufuncs - excluded_ufuncs | additional_ufuncs)
 

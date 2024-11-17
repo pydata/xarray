@@ -191,13 +191,17 @@ class TestXarrayUfuncs:
         self.x = xr.DataArray([1, 2, 3])
         self.xd = xr.DataArray(DuckArray([1, 2, 3]))
         self.xd2 = xr.DataArray(DuckArray2([1, 2, 3]))
+        self.xt = xr.DataArray(np.datetime64("2021-01-01", "ns"))
 
     @pytest.mark.filterwarnings("ignore::RuntimeWarning")
     @pytest.mark.parametrize("name", xu.__all__)
     def test_ufuncs(self, name, request):
         np_func = getattr(np, name)
         xu_func = getattr(xu, name)
-        if hasattr(np_func, "nin") and np_func.nin == 2:
+
+        if name == "isnat":
+            args = (self.xt,)
+        elif hasattr(np_func, "nin") and np_func.nin == 2:
             args = (self.x, self.x)
         else:
             args = (self.x,)
