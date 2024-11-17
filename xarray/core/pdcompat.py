@@ -90,9 +90,7 @@ def _timestamp_as_unit(date: pd.Timestamp, unit: str) -> pd.Timestamp:
 def default_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
     """Return a Timestamp object with the default precision.
 
-    Xarray default is "ns". This can be overridden by setting
-    set_options(time_resolution="us") or any other resolution
-    of {"s", "ms", "us", "ns"}.
+    Xarray default is "ns".
     """
     dt = pd.Timestamp(*args, **kwargs)
     if dt.unit != "ns":
