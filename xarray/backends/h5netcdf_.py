@@ -13,6 +13,7 @@ from xarray.backends.common import (
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
+    datatree_from_dict_with_io_cleanup,
     find_root_and_group,
 )
 from xarray.backends.file_manager import CachingFileManager, DummyFileManager
@@ -99,14 +100,14 @@ class H5NetCDFStore(WritableCFDataStore):
     """Store for reading and writing data via h5netcdf"""
 
     __slots__ = (
-        "autoclose",
-        "format",
-        "is_remote",
-        "lock",
         "_filename",
         "_group",
         "_manager",
         "_mode",
+        "autoclose",
+        "format",
+        "is_remote",
+        "lock",
     )
 
     def __init__(self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False):
@@ -474,8 +475,6 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         driver_kwds=None,
         **kwargs,
     ) -> DataTree:
-        from xarray.core.datatree import DataTree
-
         groups_dict = self.open_groups_as_dict(
             filename_or_obj,
             mask_and_scale=mask_and_scale,
@@ -496,7 +495,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             **kwargs,
         )
 
-        return DataTree.from_dict(groups_dict)
+        return datatree_from_dict_with_io_cleanup(groups_dict)
 
     def open_groups_as_dict(
         self,
@@ -558,7 +557,10 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
                     decode_timedelta=decode_timedelta,
                 )
 
-            group_name = str(NodePath(path_group))
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
 
         return groups_dict

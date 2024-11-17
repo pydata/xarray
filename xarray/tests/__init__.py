@@ -107,6 +107,7 @@ with warnings.catch_warnings():
     has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
+has_dask_ge_2024_11_0, requires_dask_ge_2024_11_0 = _importorskip("dask", "2024.11.0")
 with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
@@ -117,6 +118,8 @@ with warnings.catch_warnings():
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
+# TODO: switch to "3" once Zarr V3 is released
+has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "2.99")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg", "0.4.0")
@@ -135,7 +138,7 @@ has_cartopy, requires_cartopy = _importorskip("cartopy")
 has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
-has_pandas_ge_2_2, __ = _importorskip("pandas", "2.2")
+has_pandas_ge_2_2, requires_pandas_ge_2_2 = _importorskip("pandas", "2.2")
 has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0.dev0")
 
 

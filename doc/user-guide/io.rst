@@ -275,7 +275,7 @@ to automatically decode the values in the netCDF objects according to
 has an invalid "units" or "calendar" attribute. For these cases, you can
 turn this decoding off manually.
 
-.. _CF conventions: http://cfconventions.org/
+.. _CF conventions: https://cfconventions.org/
 
 You can view this encoding information (among others) in the
 :py:attr:`DataArray.encoding` and
@@ -343,8 +343,8 @@ See its docstring for more details.
     (``compat='override'``).
 
 
-.. _dask: http://dask.org
-.. _blog post: http://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
+.. _dask: https://www.dask.org
+.. _blog post: https://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 
 Sometimes multi-file datasets are not conveniently organized for easy use of :py:func:`open_mfdataset`.
 One can use the ``preprocess`` argument to provide a function that takes a dataset
@@ -496,7 +496,7 @@ If character arrays are used:
   Technically, you can use
   `any string encoding recognized by Python <https://docs.python.org/3/library/codecs.html#standard-encodings>`_ if you feel the need to deviate from UTF-8,
   by setting the ``_Encoding`` field in ``encoding``. But
-  `we don't recommend it <http://utf8everywhere.org/>`_.
+  `we don't recommend it <https://utf8everywhere.org/>`_.
 - The character dimension name can be specified by the ``char_dim_name`` field of a variable's
   ``encoding``. If the name of the character dimension is not specified, the default is
   ``f'string{data.shape[-1]}'``. When decoding character arrays from existing files, the
@@ -823,8 +823,9 @@ For example:
 .. ipython:: python
 
     import zarr
+    from numcodecs.blosc import Blosc
 
-    compressor = zarr.Blosc(cname="zstd", clevel=3, shuffle=2)
+    compressor = Blosc(cname="zstd", clevel=3, shuffle=2)
     ds.to_zarr("foo.zarr", encoding={"foo": {"compressor": compressor}})
 
 .. note::
@@ -1394,7 +1395,7 @@ For CSV files, one might also consider `xarray_extras`_.
 
 .. _xarray_extras: https://xarray-extras.readthedocs.io/en/latest/api/csv.html
 
-.. _IO tools: http://pandas.pydata.org/pandas-docs/stable/io.html
+.. _IO tools: https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html
 
 
 Third party libraries

@@ -28,7 +28,7 @@ Examples of data which one might want organise in a grouped or hierarchical mann
 - Observational data about the same system but from multiple different types of sensors,
 - Mixed experimental and theoretical data,
 - A systematic study recording the same experiment but with different parameters,
-- Heterogenous data, such as demographic and metereological data,
+- Heterogeneous data, such as demographic and metereological data,
 
 or even any combination of the above.
 
@@ -177,7 +177,7 @@ Let's use a different example of a tree to discuss more complex relationships be
         "/Bony Skeleton/Four Limbs/Amniotic Egg/Two Fenestrae/Dinosaurs"
     ]
 
-We have used the :py:meth:`~xarray.DataTree.from_dict` constructor method as a prefered way to quickly create a whole tree,
+We have used the :py:meth:`~xarray.DataTree.from_dict` constructor method as a preferred way to quickly create a whole tree,
 and :ref:`filesystem paths` (to be explained shortly) to select two nodes of interest.
 
 .. ipython:: python
@@ -362,21 +362,26 @@ This returns an iterable of nodes, which yields them in depth-first order.
     for node in vertebrates.subtree:
         print(node.path)
 
-A very useful pattern is to use :py:class:`~xarray.DataTree.subtree` conjunction with the :py:class:`~xarray.DataTree.path` property to manipulate the nodes however you wish,
-then rebuild a new tree using :py:meth:`xarray.DataTree.from_dict()`.
+Similarly, :py:class:`~xarray.DataTree.subtree_with_keys` returns an iterable of
+relative paths and corresponding nodes.
 
+A very useful pattern is to iterate over :py:class:`~xarray.DataTree.subtree_with_keys`
+to manipulate nodes however you wish, then rebuild a new tree using
+:py:meth:`xarray.DataTree.from_dict()`.
 For example, we could keep only the nodes containing data by looping over all nodes,
 checking if they contain any data using :py:class:`~xarray.DataTree.has_data`,
 then rebuilding a new tree using only the paths of those nodes:
 
 .. ipython:: python
 
-    non_empty_nodes = {node.path: node.dataset for node in dt.subtree if node.has_data}
+    non_empty_nodes = {
+        path: node.dataset for path, node in dt.subtree_with_keys if node.has_data
+    }
     xr.DataTree.from_dict(non_empty_nodes)
 
 You can see this tree is similar to the ``dt`` object above, except that it is missing the empty nodes ``a/c`` and ``a/c/d``.
 
-(If you want to keep the name of the root node, you will need to add the ``name`` kwarg to :py:class:`~xarray.DataTree.from_dict`, i.e. ``DataTree.from_dict(non_empty_nodes, name=dt.root.name)``.)
+(If you want to keep the name of the root node, you will need to add the ``name`` kwarg to :py:class:`~xarray.DataTree.from_dict`, i.e. ``DataTree.from_dict(non_empty_nodes, name=dt.name)``.)
 
 .. _manipulating trees:
 
@@ -573,8 +578,8 @@ Then calculate the RMS value of these signals:
 
 .. _multiple trees:
 
-We can also use the :py:meth:`~xarray.map_over_datasets` decorator to promote a function which accepts datasets into one which
-accepts datatrees.
+We can also use :py:func:`~xarray.map_over_datasets` to apply a function over
+the data in multiple trees, by passing the trees as positional arguments.
 
 Operating on Multiple Trees
 ---------------------------
@@ -582,29 +587,69 @@ Operating on Multiple Trees
 The examples so far have involved mapping functions or methods over the nodes of a single tree,
 but we can generalize this to mapping functions over multiple trees at once.
 
+Iterating Over Multiple Trees
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To iterate over the corresponding nodes in multiple trees, use
+:py:func:`~xarray.group_subtrees` instead of
+:py:class:`~xarray.DataTree.subtree_with_keys`. This combines well with
+:py:meth:`xarray.DataTree.from_dict()` to build a new tree:
+
+.. ipython:: python
+
+    dt1 = xr.DataTree.from_dict({"a": xr.Dataset({"x": 1}), "b": xr.Dataset({"x": 2})})
+    dt2 = xr.DataTree.from_dict(
+        {"a": xr.Dataset({"x": 10}), "b": xr.Dataset({"x": 20})}
+    )
+    result = {}
+    for path, (node1, node2) in xr.group_subtrees(dt1, dt2):
+        result[path] = node1.dataset + node2.dataset
+    xr.DataTree.from_dict(result)
+
+Alternatively, you apply a function directly to paired datasets at every node
+using :py:func:`xarray.map_over_datasets`:
+
+.. ipython:: python
+
+    xr.map_over_datasets(lambda x, y: x + y, dt1, dt2)
+
 Comparing Trees for Isomorphism
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For it to make sense to map a single non-unary function over the nodes of multiple trees at once,
-each tree needs to have the same structure. Specifically two trees can only be considered similar, or "isomorphic",
-if they have the same number of nodes, and each corresponding node has the same number of children.
-We can check if any two trees are isomorphic using the :py:meth:`~xarray.DataTree.isomorphic` method.
+each tree needs to have the same structure. Specifically two trees can only be considered similar,
+or "isomorphic", if the full paths to all of their descendent nodes are the same.
+
+Applying :py:func:`~xarray.group_subtrees` to trees with different structures
+raises :py:class:`~xarray.TreeIsomorphismError`:
 
 .. ipython:: python
     :okexcept:
 
-    dt1 = xr.DataTree.from_dict({"a": None, "a/b": None})
-    dt2 = xr.DataTree.from_dict({"a": None})
-    dt1.isomorphic(dt2)
+    tree = xr.DataTree.from_dict({"a": None, "a/b": None, "a/c": None})
+    simple_tree = xr.DataTree.from_dict({"a": None})
+    for _ in xr.group_subtrees(tree, simple_tree):
+        ...
 
-    dt3 = xr.DataTree.from_dict({"a": None, "b": None})
-    dt1.isomorphic(dt3)
+We can explicitly also check if any two trees are isomorphic using the :py:meth:`~xarray.DataTree.isomorphic` method:
 
-    dt4 = xr.DataTree.from_dict({"A": None, "A/B": xr.Dataset({"foo": 1})})
-    dt1.isomorphic(dt4)
+.. ipython:: python
 
-If the trees are not isomorphic a :py:class:`~xarray.TreeIsomorphismError` will be raised.
-Notice that corresponding tree nodes do not need to have the same name or contain the same data in order to be considered isomorphic.
+    tree.isomorphic(simple_tree)
+
+Corresponding tree nodes do not need to have the same data in order to be considered isomorphic:
+
+.. ipython:: python
+
+    tree_with_data = xr.DataTree.from_dict({"a": xr.Dataset({"foo": 1})})
+    simple_tree.isomorphic(tree_with_data)
+
+They also do not need to define child nodes in the same order:
+
+.. ipython:: python
+
+    reordered_tree = xr.DataTree.from_dict({"a": None, "a/c": None, "a/b": None})
+    tree.isomorphic(reordered_tree)
 
 Arithmetic Between Multiple Trees
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -658,7 +703,7 @@ Data Alignment
 ~~~~~~~~~~~~~~
 
 The data in different datatree nodes are not totally independent. In particular dimensions (and indexes) in child nodes must be exactly aligned with those in their parent nodes.
-Exact aligment means that shared dimensions must be the same length, and indexes along those dimensions must be equal.
+Exact alignment means that shared dimensions must be the same length, and indexes along those dimensions must be equal.
 
 .. note::
     If you were a previous user of the prototype `xarray-contrib/datatree <https://github.com/xarray-contrib/datatree>`_ package, this is different from what you're used to!

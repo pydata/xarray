@@ -684,7 +684,7 @@ class TestDataset:
         assert isinstance(ds.dims, utils.Frozen)
         # TODO change after deprecation cycle in GH #8500 is complete
         assert isinstance(ds.dims.mapping, dict)
-        assert type(ds.dims.mapping) is dict  # noqa: E721
+        assert type(ds.dims.mapping) is dict
         with pytest.warns(
             FutureWarning,
             match=" To access a mapping from dimension names to lengths, please use `Dataset.sizes`",
@@ -720,13 +720,13 @@ class TestDataset:
         assert set(ds.xindexes) == {"dim2", "dim3", "time"}
         assert len(ds.xindexes) == 3
         assert "dim2" in repr(ds.xindexes)
-        assert all([isinstance(idx, Index) for idx in ds.xindexes.values()])
+        assert all(isinstance(idx, Index) for idx in ds.xindexes.values())
 
         # indexes
         assert set(ds.indexes) == {"dim2", "dim3", "time"}
         assert len(ds.indexes) == 3
         assert "dim2" in repr(ds.indexes)
-        assert all([isinstance(idx, pd.Index) for idx in ds.indexes.values()])
+        assert all(isinstance(idx, pd.Index) for idx in ds.indexes.values())
 
         # coords
         assert list(ds.coords) == ["dim2", "dim3", "time", "numbers"]
@@ -3036,12 +3036,12 @@ class TestDataset:
         vencoding = {"scale_factor": 10}
         orig.encoding = {"foo": "bar"}
 
-        for k, _v in orig.variables.items():
+        for k in orig.variables.keys():
             orig[k].encoding = vencoding
 
         actual = orig.drop_encoding()
         assert actual.encoding == {}
-        for _k, v in actual.variables.items():
+        for v in actual.variables.values():
             assert v.encoding == {}
 
         assert_equal(actual, orig)
@@ -3069,7 +3069,7 @@ class TestDataset:
                 renamed[k].variable.to_base_variable(),
             )
             assert v.encoding == renamed[k].encoding
-            assert type(v) is type(renamed.variables[k])  # noqa: E721
+            assert type(v) is type(renamed.variables[k])
 
         assert "var1" not in renamed
         assert "dim2" not in renamed
@@ -6698,7 +6698,7 @@ class TestDataset:
 
         out = ds.polyfit("numbers", 2, full=False)
         assert "var3_polyfit_coefficients" in out
-        assert "dim1" in out
+        assert "dim1" in out.dims
         assert "dim2" not in out
         assert "dim3" not in out
 
@@ -6719,6 +6719,34 @@ class TestDataset:
             assert ws[0].category == RankWarning
             ds.var1.polyfit("dim2", 10, full=True)
             assert len(ws) == 1
+
+    def test_polyfit_polyval(self) -> None:
+        da = xr.DataArray(
+            np.arange(1, 10).astype(np.float64), dims=["x"], coords=dict(x=np.arange(9))
+        )
+
+        out = da.polyfit("x", 3, full=False)
+        da_fitval = xr.polyval(da.x, out.polyfit_coefficients)
+        # polyval introduces very small errors (1e-16 here)
+        xr.testing.assert_allclose(da_fitval, da)
+
+        da = da.assign_coords(x=xr.date_range("2001-01-01", periods=9, freq="YS"))
+        out = da.polyfit("x", 3, full=False)
+        da_fitval = xr.polyval(da.x, out.polyfit_coefficients)
+        xr.testing.assert_allclose(da_fitval, da, rtol=1e-3)
+
+    @requires_cftime
+    def test_polyfit_polyval_cftime(self) -> None:
+        da = xr.DataArray(
+            np.arange(1, 10).astype(np.float64),
+            dims=["x"],
+            coords=dict(
+                x=xr.date_range("2001-01-01", periods=9, freq="YS", calendar="noleap")
+            ),
+        )
+        out = da.polyfit("x", 3, full=False)
+        da_fitval = xr.polyval(da.x, out.polyfit_coefficients)
+        np.testing.assert_allclose(da_fitval, da)
 
     @staticmethod
     def _test_data_var_interior(
@@ -7230,7 +7258,7 @@ def test_differentiate_datetime(dask) -> None:
     assert np.allclose(actual, 1.0)
 
 
-@pytest.mark.skipif(not has_cftime, reason="Test requires cftime.")
+@requires_cftime
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_cftime(dask) -> None:
     rs = np.random.RandomState(42)

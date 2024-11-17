@@ -352,7 +352,7 @@ class AttrAccessMixin:
 
     def _ipython_key_completions_(self) -> list[str]:
         """Provide method for the key-autocompletions in IPython.
-        See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
+        See https://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
         """
         items = {
@@ -1094,7 +1094,7 @@ class DataWithCoords(AttrAccessMixin):
                 f"Received {type(freq)} instead."
             )
 
-        rgrouper = ResolvedGrouper(grouper, group, self)
+        rgrouper = ResolvedGrouper(grouper, group, self, eagerly_compute_group=False)
 
         return resample_cls(
             self,

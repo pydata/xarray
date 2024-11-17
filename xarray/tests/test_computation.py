@@ -1561,7 +1561,7 @@ def arrays():
     )
 
     return [
-        da.isel(time=range(0, 18)),
+        da.isel(time=range(18)),
         da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(),
         xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"]),
         xr.DataArray([[1, 2], [np.nan, np.nan]], dims=["x", "time"]),
