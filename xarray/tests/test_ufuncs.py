@@ -209,7 +209,10 @@ class TestXarrayUfuncs:
         expected = np_func(*args)
         actual = xu_func(*args)
 
-        assert_identical(actual, expected)
+        if name in ["angle", "iscomplex"]:
+            np.testing.assert_equal(expected, actual.values)
+        else:
+            assert_identical(actual, expected)
 
     def test_ufunc_pickle(self):
         a = 1.0
