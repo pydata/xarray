@@ -171,7 +171,7 @@ if TYPE_CHECKING:
     )
     from xarray.core.weighted import DatasetWeighted
     from xarray.groupers import Grouper, Resampler
-    from xarray.namedarray._typing import duckarray, chunkedduckarray
+    from xarray.namedarray._typing import chunkedduckarray, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
