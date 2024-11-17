@@ -214,6 +214,7 @@ def decode_cf_variable(
     stack_char_dim: bool = True,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
+    time_unit: Literal["s", "ms", "us", "ns"] = "ns",
 ) -> Variable:
     """
     Decodes a variable which may hold CF encoded information.
@@ -254,6 +255,9 @@ def decode_cf_variable(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+    time_unit : Literal["s", "ms", "us", "ns], optional
+        Time unit to which resolution cf times should at least be decoded.
+        Defaults to "ns".
 
     Returns
     -------
@@ -291,7 +295,9 @@ def decode_cf_variable(
     if decode_timedelta:
         var = times.CFTimedeltaCoder().decode(var, name=name)
     if decode_times:
-        var = times.CFDatetimeCoder(use_cftime=use_cftime).decode(var, name=name)
+        var = times.CFDatetimeCoder(use_cftime=use_cftime, time_unit=time_unit).decode(
+            var, name=name
+        )
 
     if decode_endianness and not var.dtype.isnative:
         var = variables.EndianCoder().decode(var)
@@ -407,6 +413,7 @@ def decode_cf_variables(
     drop_variables: T_DropVariables = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     decode_timedelta: bool | Mapping[str, bool] | None = None,
+    time_unit: Literal["s", "ms", "us", "ns"] = "ns",
 ) -> tuple[T_Variables, T_Attrs, set[Hashable]]:
     """
     Decode several CF encoded variables.
@@ -459,6 +466,7 @@ def decode_cf_variables(
                 stack_char_dim=stack_char_dim,
                 use_cftime=_item_or_default(use_cftime, k, None),
                 decode_timedelta=_item_or_default(decode_timedelta, k, None),
+                time_unit=time_unit,
             )
         except Exception as e:
             raise type(e)(f"Failed to decode variable {k!r}: {e}") from e
@@ -544,6 +552,7 @@ def decode_cf(
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
+    time_unit: Literal["s", "ms", "us", "ns"] = "ns",
 ) -> Dataset:
     """Decode the given Dataset or Datastore according to CF conventions into
     a new Dataset.
@@ -588,6 +597,9 @@ def decode_cf(
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
         If None (default), assume the same value of decode_time.
+    time_unit : Literal["s", "ms", "us", "ns], optional
+        Time unit to which resolution cf times should at least be decoded.
+        Defaults to "ns".
 
     Returns
     -------
@@ -622,6 +634,7 @@ def decode_cf(
         drop_variables=drop_variables,
         use_cftime=use_cftime,
         decode_timedelta=decode_timedelta,
+        time_unit=time_unit,
     )
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
