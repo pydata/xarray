@@ -343,7 +343,7 @@ class ChunkManagerEntrypoint(ABC):
 
     def persist(
         self, *data: chunkedduckarray[Any, _DType] | Any, **kwargs: Any
-    ) -> tuple[chunkedduckarray[Any, _DType] | Any, ...]:
+    ) -> tuple[chunkedduckarray[Any, _DType], ...]:
         """
         Persist one or more chunked arrays in memory.
 

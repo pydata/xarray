@@ -171,7 +171,7 @@ if TYPE_CHECKING:
     )
     from xarray.core.weighted import DatasetWeighted
     from xarray.groupers import Grouper, Resampler
-    from xarray.namedarray._typing import duckarray
+    from xarray.namedarray._typing import duckarray, chunkedduckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
@@ -1056,6 +1056,7 @@ class Dataset(
             chunkmanager = get_chunked_array_type(*lazy_data.values())
 
             # evaluate all the dask arrays simultaneously
+            evaluated_data: tuple[chunkedduckarray, ...]
             evaluated_data = chunkmanager.persist(*lazy_data.values(), **kwargs)
 
             for k, data in zip(lazy_data, evaluated_data, strict=False):
