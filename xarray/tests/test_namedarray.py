@@ -118,6 +118,12 @@ def check_duck_array_typevar(a: duckarray[Any, _DType]) -> duckarray[Any, _DType
         )
 
 
+def test_duckarray___array__() -> None:
+    x: duckarray[Any, Any] = np.array([1, 2, 3], dtype=np.int64)
+    y = np.array(x)
+    np.testing.assert_array_equal(y, x)
+
+
 class NamedArraySubclassobjects:
     @pytest.fixture
     def target(self, data: np.ndarray[Any, Any]) -> Any:
