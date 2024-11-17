@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pickle
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -201,8 +202,8 @@ class TestXarrayUfuncs:
         else:
             args = (self.x,)
 
-        actual = np_func(*args)
-        expected = xu_func(*args)
+        expected = np_func(*args)
+        actual = xu_func(*args)
 
         assert_identical(actual, expected)
 
@@ -236,10 +237,16 @@ class TestXarrayUfuncs:
         actual = xu.sin(x)
         assert isinstance(actual.data._meta, DuckArray)
 
-    def test_ufunc_numpy_fallback(self):
-        with pytest.warns(UserWarning, match=r"Function cos not found in DuckArray"):
-            actual = xu.cos(self.xd)
-        assert isinstance(actual.data, DuckArray)
+    @requires_dask
+    @pytest.mark.xfail(reason="dask ufuncs currently dispatch to numpy")
+    def test_ufunc_duck_dask_no_array_ufunc(self):
+        import dask.array as da
+
+        # dask ufuncs currently only preserve duck arrays that implement __array_ufunc__
+        with patch.object(DuckArray, "__array_ufunc__", new=None, create=True):
+            x = xr.DataArray(da.from_array(DuckArray(np.array([1, 2, 3]))))
+            actual = xu.sin(x)
+            assert isinstance(actual.data._meta, DuckArray)
 
     def test_ufunc_mixed_arrays_compatible(self):
         actual = xu.add(self.xd, self.x)

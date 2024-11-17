@@ -1,17 +1,16 @@
 """xarray specific universal functions."""
 
 import textwrap
-import warnings
 
 import numpy as np
 
 import xarray as xr
 from xarray.core.groupby import GroupBy
-from xarray.namedarray.pycompat import array_type
 
 
 def _walk_array_namespaces(obj, namespaces):
     if isinstance(obj, xr.DataTree):
+        # TODO: DataTree doesn't actually support ufuncs yet
         for node in obj.subtree:
             _walk_array_namespaces(node.dataset, namespaces)
     elif isinstance(obj, xr.Dataset):
@@ -21,14 +20,25 @@ def _walk_array_namespaces(obj, namespaces):
         _walk_array_namespaces(next(iter(obj))[1], namespaces)
     elif isinstance(obj, xr.DataArray | xr.Variable):
         _walk_array_namespaces(obj.data, namespaces)
-    elif isinstance(obj, array_type("dask")):
-        _walk_array_namespaces(obj._meta, namespaces)
     else:
         namespace = getattr(obj, "__array_namespace__", None)
         if namespace is not None:
             namespaces.add(namespace())
 
     return namespaces
+
+
+def get_array_namespace(*args):
+    xps = set()
+    for arg in args:
+        _walk_array_namespaces(arg, xps)
+
+    xps.discard(np)
+    if len(xps) > 1:
+        names = [module.__name__ for module in xps]
+        raise ValueError(f"Mixed array types {names} are not supported.")
+
+    return next(iter(xps)) if len(xps) else np
 
 
 class _UFuncDispatcher:
@@ -38,28 +48,9 @@ class _UFuncDispatcher:
         self._name = name
 
     def __call__(self, *args, **kwargs):
-        xps = set()
-        for arg in args:
-            _walk_array_namespaces(arg, xps)
-
-        xps.discard(np)
-        if len(xps) > 1:
-            names = [module.__name__ for module in xps]
-            raise ValueError(
-                f"Mixed array types {names} are not supported by xarray.ufuncs"
-            )
-
-        xp = next(iter(xps)) if len(xps) else np
-        func = getattr(xp, self._name, None)
-
-        if func is None:
-            warnings.warn(
-                f"Function {self._name} not found in {xp.__name__}, falling back to numpy",
-                stacklevel=2,
-            )
-            func = getattr(np, self._name)
-
-        return xr.apply_ufunc(func, *args, dask="parallelized", **kwargs)
+        xp = get_array_namespace(*args)
+        func = getattr(xp, self._name)
+        return xr.apply_ufunc(func, *args, dask="allowed", **kwargs)
 
 
 def _skip_signature(doc, name):
