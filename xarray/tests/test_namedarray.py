@@ -395,6 +395,7 @@ class TestNamedArray(NamedArraySubclassobjects):
         arrayapi_a = nxp.asarray([2.1, 4], dtype=nxp.int64)
         check_duck_array_typevar(arrayapi_a)
 
+    @pytest.mark.xfail(reason="pd.Index does not include an __array_function__")
     def test_pd_index_duckarray(self) -> None:
         import pandas as pd
 
