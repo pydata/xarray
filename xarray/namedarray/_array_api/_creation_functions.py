@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, overload
 
 from xarray.namedarray._array_api._utils import (
+    _atleast1d_dims,
     _broadcast_dims,
     _get_data_namespace,
     _get_namespace,
@@ -412,6 +413,8 @@ def meshgrid(
     """
     Returns coordinate matrices from coordinate vectors.
 
+    Note: broadcast_arrays might be a better option for namedarrays.
+
     Parameters
     ----------
     *arrays : NamedArray[Any, Any]
@@ -460,12 +463,46 @@ def meshgrid(
     array([[0., 1.],
            [0., 1.],
            [0., 1.]])
+
+    Empty arrays:
+
+    >>> x0, x1, x2 = ones(()), ones((2,), dims=("x",)), ones((3,), dims=("y",))
+    >>> meshgrid()
+    []
+    >>> meshgrid(x0)
+    [<xarray.NamedArray (dim_0: 1)> Size: 8B
+    array([1.])]
+    >>> meshgrid(x0, x1)
+    [<xarray.NamedArray (x: 2, dim_0: 1)> Size: 16B
+    array([[1.],
+           [1.]]), <xarray.NamedArray (x: 2, dim_0: 1)> Size: 16B
+    array([[1.],
+           [1.]])]
+    >>> meshgrid(x0, x1, x2, indexing="ij")
+    [<xarray.NamedArray (dim_0: 1, x: 2, y: 3)> Size: 48B
+    array([[[1., 1., 1.],
+            [1., 1., 1.]]]), <xarray.NamedArray (dim_0: 1, x: 2, y: 3)> Size: 48B
+    array([[[1., 1., 1.],
+            [1., 1., 1.]]]), <xarray.NamedArray (dim_0: 1, x: 2, y: 3)> Size: 48B
+    array([[[1., 1., 1.],
+            [1., 1., 1.]]])]
+
+    TODO: Problems with meshgrid:
+
+    >>> # Adds another dimension even though only 2 distinct dims are used:
+    >>> x212 = meshgrid(x2, x1, x2, indexing="ij")
+    >>> x212[0].shape, x212[0].dims
+    ((3, 2, 3), ('dim_0', 'x', 'y'))
     """
+    if len(arrays) == 0:
+        return []
+
     arr = arrays[0]
     xp = _get_data_namespace(arr)
     _datas = xp.meshgrid(*[a._data for a in arrays], indexing=indexing)
     _dims, _ = _broadcast_dims(*arrays)
-    if indexing == "xy" and len(arrays) > 1:
+    _dims = _infer_dims(_datas[0].shape, _dims)
+    if indexing == "xy" and len(_dims) > 1:
         _dims = _move_dims(_dims, 0, 1)
     return [arr._new(_dims, _data) for _data in _datas]
 
