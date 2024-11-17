@@ -196,8 +196,11 @@ class TestXarrayUfuncs:
     @pytest.mark.filterwarnings("ignore::RuntimeWarning")
     @pytest.mark.parametrize("name", xu.__all__)
     def test_ufuncs(self, name, request):
-        np_func = getattr(np, name)
         xu_func = getattr(xu, name)
+        if isinstance(xu_func, xu._UnavailableUfunc):
+            pytest.xfail(f"Ufunc {name} is not available in numpy {np.__version__}.")
+
+        np_func = getattr(np, name)
 
         if name == "isnat":
             args = (self.xt,)
