@@ -1618,7 +1618,7 @@ class NetCDF4Base(NetCDFBase):
                 ds.variables["time"][:] = np.arange(10) + 4
 
             expected = Dataset()
-            time = pd.date_range("1999-01-05", periods=10, unit="s")
+            time = pd.date_range("1999-01-05", periods=10, unit="ns")
             encoding = {"units": units, "dtype": np.dtype("int32")}
             expected["time"] = ("time", time, {}, encoding)
 

@@ -671,13 +671,12 @@ def test_cf_timedelta_2d() -> None:
     ["deltas", "expected"],
     [
         (pd.to_timedelta(["1 day", "2 days"]), "days"),
-        (pd.to_timedelta(["1 day", "2 days"]), "days"),
-        (pd.to_timedelta(["1 day", "2 days"]), "days"),
-        (pd.to_timedelta(["1 day", "2 days"]), "days"),
+        (pd.to_timedelta(["1h", "1 day 1 hour"]), "hours"),
+        (pd.to_timedelta(["1m", "2m", np.nan]), "minutes"),
+        (pd.to_timedelta(["1m3s", "1m4s"]), "seconds"),
     ],
 )
 def test_infer_timedelta_units(deltas, expected) -> None:
-    # todo: why testing, the same thing four times?
     assert expected == infer_timedelta_units(deltas)
 
 

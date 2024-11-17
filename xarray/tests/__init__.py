@@ -331,7 +331,7 @@ def create_test_data(
         pd.date_range(
             "2000-01-01",
             periods=20,
-            unit="s",
+            unit="ns",
         ),
     )
     for v, dims in sorted(_vars.items()):
