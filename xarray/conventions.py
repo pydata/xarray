@@ -255,7 +255,7 @@ def decode_cf_variable(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
-    time_unit : Literal["s", "ms", "us", "ns], optional
+    time_unit : Literal["s", "ms", "us", "ns"], optional
         Time unit to which resolution cf times should at least be decoded.
         Defaults to "ns".
 
@@ -597,7 +597,7 @@ def decode_cf(
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
         If None (default), assume the same value of decode_time.
-    time_unit : Literal["s", "ms", "us", "ns], optional
+    time_unit : Literal["s", "ms", "us", "ns"], optional
         Time unit to which resolution cf times should at least be decoded.
         Defaults to "ns".
 
