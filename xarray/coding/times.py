@@ -40,10 +40,9 @@ try:
 except ImportError:
     cftime = None
 
-from xarray.core.types import CFCalendar, NPDatetimeUnitOptions
+from xarray.core.types import CFCalendar, NPDatetimeUnitOptions, DatetimeLike
 
 T_Name = Union[Hashable, None]
-PandasTypes = Union[pd.Index, pd.DatetimeIndex, pd.timedelta64]
 
 
 # standard calendars recognized by cftime
@@ -727,17 +726,17 @@ def encode_cf_datetime(
 ) -> tuple[chunkedduckarray, str, str]: ...
 @overload
 def encode_cf_datetime(
-    dates: duckarray | PandasTypes,
+    dates: duckarray | DatetimeLike,
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
 ) -> tuple[duckarray, str, str]: ...
 def encode_cf_datetime(
-    dates: duckarray | PandasTypes | chunkedduckarray,
+    dates: duckarray | DatetimeLike | chunkedduckarray,
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
-) -> tuple[duckarray | PandasTypes | chunkedduckarray, str, str]:
+) -> tuple[duckarray | DatetimeLike | chunkedduckarray, str, str]:
     """Given an array of datetime objects, returns the tuple `(num, units,
     calendar)` suitable for a CF compliant time variable.
 
@@ -755,12 +754,12 @@ def encode_cf_datetime(
 
 
 def _eagerly_encode_cf_datetime(
-    dates: duckarray | PandasTypes,
+    dates: duckarray | DatetimeLike,
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
     allow_units_modification: bool = True,
-) -> tuple[duckarray | PandasTypes, str, str]:
+) -> tuple[duckarray | DatetimeLike, str, str]:
     dates = asarray(dates)
 
     data_units = infer_datetime_units(dates)
@@ -842,7 +841,7 @@ def _encode_cf_datetime_within_map_blocks(
     units: str,
     calendar: str,
     dtype: np.dtype,
-) -> duckarray | PandasTypes:
+) -> duckarray | DatetimeLike:
     num, *_ = _eagerly_encode_cf_datetime(
         dates, units, calendar, dtype, allow_units_modification=False
     )
@@ -895,12 +894,12 @@ def encode_cf_timedelta(
 ) -> tuple[chunkedduckarray, str]: ...
 @overload
 def encode_cf_timedelta(
-    timedeltas: duckarray | PandasTypes,
+    timedeltas: duckarray | DatetimeLike,
     units: str | None = None,
     dtype: np.dtype | None = None,
 ) -> tuple[duckarray, str]: ...
 def encode_cf_timedelta(
-    timedeltas: chunkedduckarray | duckarray | PandasTypes,
+    timedeltas: chunkedduckarray | duckarray | DatetimeLike,
     units: str | None = None,
     dtype: np.dtype | None = None,
 ) -> tuple[chunkedduckarray | duckarray, str]:
