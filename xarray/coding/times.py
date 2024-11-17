@@ -725,17 +725,17 @@ def encode_cf_datetime(
 ) -> tuple[chunkedduckarray, str, str]: ...
 @overload
 def encode_cf_datetime(
-    dates: duckarray,
+    dates: duckarray | pd.Index | pd.DatetimeIndex,
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
 ) -> tuple[duckarray, str, str]: ...
 def encode_cf_datetime(
-    dates: duckarray | chunkedduckarray,
+    dates: duckarray | pd.Index | pd.DatetimeIndex | chunkedduckarray,
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
-) -> tuple[duckarray | chunkedduckarray, str, str]:
+) -> tuple[duckarray | pd.Index | pd.DatetimeIndex | chunkedduckarray, str, str]:
     """Given an array of datetime objects, returns the tuple `(num, units,
     calendar)` suitable for a CF compliant time variable.
 
@@ -753,12 +753,12 @@ def encode_cf_datetime(
 
 
 def _eagerly_encode_cf_datetime(
-    dates: duckarray,
+    dates: duckarray | pd.Index | pd.DatetimeIndex,
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
     allow_units_modification: bool = True,
-) -> tuple[duckarray, str, str]:
+) -> tuple[duckarray | pd.Index | pd.DatetimeIndex, str, str]:
     dates = asarray(dates)
 
     data_units = infer_datetime_units(dates)
@@ -840,7 +840,7 @@ def _encode_cf_datetime_within_map_blocks(
     units: str,
     calendar: str,
     dtype: np.dtype,
-) -> duckarray:
+) -> duckarray | pd.Index | pd.DatetimeIndex:
     num, *_ = _eagerly_encode_cf_datetime(
         dates, units, calendar, dtype, allow_units_modification=False
     )
