@@ -342,8 +342,8 @@ class ChunkManagerEntrypoint(ABC):
         raise NotImplementedError()
 
     def persist(
-        self, *data: T_ChunkedArray | Any, **kwargs: Any
-    ) -> tuple[T_ChunkedArray | Any, ...]:
+        self, *data: chunkedduckarray[Any, _DType] | Any, **kwargs: Any
+    ) -> tuple[chunkedduckarray[Any, _DType] | Any, ...]:
         """
         Persist one or more chunked arrays in memory.
 
