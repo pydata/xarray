@@ -579,15 +579,11 @@ def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
     dt: pd.Timestamp | Literal["NaT"]
     for _i, t in np.ndenumerate(times):
         try:
-            # todo: decide how to work with this
-            #  as initialized by string pd.Timestamp is defined only from year -9999-01-01 to 9999-12-31
-            # Use pandas.Timestamp in place of datetime.datetime, because
-            # NumPy casts it safely it np.datetime64[ns] for dates outside
-            # 1678 to 2262 (this is not currently the case for
-            # datetime.datetime).
-            dt = pd.Timestamp(
-                t.year, t.month, t.day, t.hour, t.minute, t.second, t.microsecond
-            )
+            # When initialized by string pd.Timestamp is defined only
+            # from year -9999-01-01 to 9999-12-31. Therefore we wrap
+            # the times by np.datetime64 before. This works as long we do
+            # not overflow (eg. for dates outside 1678 to 2262).
+            dt = pd.Timestamp(np.datetime64(t))
         except ValueError as e:
             if raise_on_invalid:
                 raise ValueError(
