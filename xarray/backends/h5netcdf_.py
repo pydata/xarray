@@ -13,7 +13,6 @@ from xarray.backends.common import (
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
-    _open_file,
     datatree_from_dict_with_io_cleanup,
     find_root_and_group,
 )
@@ -156,7 +155,9 @@ class H5NetCDFStore(WritableCFDataStore):
 
         if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
             mode_ = "rb" if mode == "r" else mode
-            filename = _open_remote_file(filename, mode=mode_, storage_options=storage_options)
+            filename = _open_remote_file(
+                filename, mode=mode_, storage_options=storage_options
+            )
 
         if isinstance(filename, bytes):
             raise ValueError(
