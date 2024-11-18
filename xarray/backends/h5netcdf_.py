@@ -156,7 +156,7 @@ class H5NetCDFStore(WritableCFDataStore):
 
         if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
             mode_ = "rb" if mode == "r" else mode
-            filename = _open_file(filename, mode=mode_, storage_options=storage_options)
+            filename = _open_remote_file(filename, mode=mode_, storage_options=storage_options)
 
         if isinstance(filename, bytes):
             raise ValueError(

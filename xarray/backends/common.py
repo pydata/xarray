@@ -178,7 +178,7 @@ def _find_absolute_paths(
     return _normalize_path_list(paths)
 
 
-def _open_file(file, mode, storage_options=None):
+def _open_remote_file(file, mode, storage_options=None):
     import fsspec
 
     fs, _, paths = fsspec.get_fs_token_paths(
