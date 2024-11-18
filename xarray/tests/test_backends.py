@@ -1174,6 +1174,7 @@ class CFEncodedBase(DatasetIOBase):
                 assert_identical(actual, original["variable"].to_dataset())
 
     @requires_iris
+    @requires_netcdf
     def test_coordinate_variables_after_iris_roundtrip(self) -> None:
         original = self._create_cf_dataset()
         iris_cube = original["variable"].to_iris()
@@ -3394,7 +3395,7 @@ class TestInstrumentedZarrStore:
                     "set": 5,
                     "get": 10,
                     "list_dir": 3,
-                    "list_prefix": 0,
+                    "list_prefix": 4,
                 }
             else:
                 expected = {
