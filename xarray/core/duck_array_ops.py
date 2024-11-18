@@ -122,21 +122,20 @@ masked_invalid = _dask_or_eager_func(
     "masked_invalid", eager_module=np.ma, dask_module="dask.array.ma"
 )
 
-# sliding_window_view will not dispatch arbitrary kwargs (automatic_rechunk),
-# so we need to hand-code this.
-sliding_window_view = _dask_or_eager_func(
-    "sliding_window_view",
-    eager_module=np.lib.stride_tricks,
-    dask_module=dask_array_compat,
-    dask_only_kwargs=("automatic_rechunk",),
-    numpy_only_kwargs=("subok", "writeable"),
-)
 
-
-# def sliding_window_view(array, window_shape, axis=None):
-#     # TODO: some array libraries don't support this, implement an alternative?
-#     xp = get_array_namespace(array)
-#     return xp.lib.stride_tricks.sliding_window_view(array, window_shape, axis=axis)
+def sliding_window_view(array, window_shape, axis=None, **kwargs):
+    # TODO: some libraries (e.g. jax) don't have this, implement an alternative?
+    xp = get_array_namespace(array)
+    # sliding_window_view will not dispatch arbitrary kwargs (automatic_rechunk),
+    # so we need to hand-code this.
+    func = _dask_or_eager_func(
+        "sliding_window_view",
+        eager_module=xp.lib.stride_tricks,
+        dask_module=dask_array_compat,
+        dask_only_kwargs=("automatic_rechunk",),
+        numpy_only_kwargs=("subok", "writeable"),
+    )
+    return func(array, window_shape, axis=axis, **kwargs)
 
 
 def round(array):
