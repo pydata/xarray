@@ -14,7 +14,6 @@ concurrency:
 
 env:
   FORCE_COLOR: 3
-  micromamba_version: 2
 
 jobs:
   detect-ci-trigger:
@@ -111,7 +110,6 @@ jobs:
       - name: Setup micromamba
         uses: mamba-org/setup-micromamba@v2
         with:
-          micromamba-version: '2.0.2-2'
           environment-file: ${{ env.CONDA_ENV_FILE }}
           environment-name: xarray-tests
           cache-environment: true
@@ -161,7 +159,7 @@ jobs:
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v4.6.0
+        uses: codecov/codecov-action@v5.0.2
         with:
           file: ./coverage.xml
           flags: unittests

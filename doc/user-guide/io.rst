@@ -19,14 +19,14 @@ format (recommended).
 
     np.random.seed(123456)
 
-You can read different types of files in `xr.open_dataset` by specifying the engine to be used:
+You can read different types of files in ``xr.open_dataset`` by specifying the engine to be used:
 
 .. code:: python
 
     xr.open_dataset("example.nc", engine="netcdf4")
 
 The "engine" provides a set of instructions that tells xarray how
-to read the data and pack them into a `dataset` (or `dataarray`).
+to read the data and pack them into a ``Dataset`` (or ``Dataarray``).
 These instructions are stored in an underlying "backend".
 
 Xarray comes with several backends that cover many common data formats.
@@ -275,7 +275,7 @@ to automatically decode the values in the netCDF objects according to
 has an invalid "units" or "calendar" attribute. For these cases, you can
 turn this decoding off manually.
 
-.. _CF conventions: http://cfconventions.org/
+.. _CF conventions: https://cfconventions.org/
 
 You can view this encoding information (among others) in the
 :py:attr:`DataArray.encoding` and
@@ -343,8 +343,8 @@ See its docstring for more details.
     (``compat='override'``).
 
 
-.. _dask: http://dask.org
-.. _blog post: http://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
+.. _dask: https://www.dask.org
+.. _blog post: https://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 
 Sometimes multi-file datasets are not conveniently organized for easy use of :py:func:`open_mfdataset`.
 One can use the ``preprocess`` argument to provide a function that takes a dataset
@@ -496,7 +496,7 @@ If character arrays are used:
   Technically, you can use
   `any string encoding recognized by Python <https://docs.python.org/3/library/codecs.html#standard-encodings>`_ if you feel the need to deviate from UTF-8,
   by setting the ``_Encoding`` field in ``encoding``. But
-  `we don't recommend it <http://utf8everywhere.org/>`_.
+  `we don't recommend it <https://utf8everywhere.org/>`_.
 - The character dimension name can be specified by the ``char_dim_name`` field of a variable's
   ``encoding``. If the name of the character dimension is not specified, the default is
   ``f'string{data.shape[-1]}'``. When decoding character arrays from existing files, the
@@ -677,7 +677,7 @@ from being overwritten. To override this behavior and overwrite an existing
 store, add ``mode='w'`` when invoking :py:meth:`~Dataset.to_zarr`.
 
 DataArrays can also be saved to disk using the :py:meth:`DataArray.to_zarr` method,
-and loaded from disk using the :py:func:`open_dataarray` function with `engine='zarr'`.
+and loaded from disk using the :py:func:`open_dataarray` function with ``engine='zarr'``.
 Similar to :py:meth:`DataArray.to_netcdf`, :py:meth:`DataArray.to_zarr` will
 convert the ``DataArray`` to a ``Dataset`` before saving, and then convert back
 when loading, ensuring that the ``DataArray`` that is loaded is always exactly
@@ -910,7 +910,7 @@ supersede the default chunking heuristics in zarr.
 Importantly, this logic applies to every array in the zarr store individually,
 including coordinate arrays. Therefore, if a dataset contains one or more dask
 arrays, it may still be desirable to specify a chunk size for the coordinate arrays
-(for example, with a chunk size of `-1` to include the full coordinate).
+(for example, with a chunk size of ``-1`` to include the full coordinate).
 
 To specify chunks manually using the ``encoding`` argument, provide a nested
 dictionary with the structure ``{'variable_or_coord_name': {'chunks': chunks_tuple}}``.
@@ -1026,7 +1026,7 @@ Instead of creating a new copy of the dataset in the Zarr spec/format or
 downloading the files locally, Kerchunk reads through the data archive and extracts the
 byte range and compression information of each chunk and saves as a ``reference``.
 These references are then saved as ``json`` files or ``parquet`` (more efficient)
-for later use. You can view some of these stored in the `references`
+for later use. You can view some of these stored in the ``references``
 directory `here <https://github.com/pydata/xarray-data>`_.
 
 
@@ -1039,7 +1039,7 @@ directory `here <https://github.com/pydata/xarray-data>`_.
 Reading these data archives becomes really easy with ``kerchunk`` in combination
 with ``xarray``, especially when these archives are large in size. A single combined
 reference can refer to thousands of the original data files present in these archives.
-You can view the whole dataset with from this `combined reference` using the above packages.
+You can view the whole dataset with from this combined reference using the above packages.
 
 The following example shows opening a combined references generated from a ``.hdf`` file stored locally.
 
@@ -1395,7 +1395,7 @@ For CSV files, one might also consider `xarray_extras`_.
 
 .. _xarray_extras: https://xarray-extras.readthedocs.io/en/latest/api/csv.html
 
-.. _IO tools: http://pandas.pydata.org/pandas-docs/stable/io.html
+.. _IO tools: https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html
 
 
 Third party libraries
