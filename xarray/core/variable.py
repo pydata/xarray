@@ -1638,7 +1638,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         from xarray.core.computation import apply_ufunc
 
         xp = duck_array_ops.get_array_namespace(self.data)
-        return apply_ufunc(xp.clip, self, min, max, dask="parallelized")
+        return apply_ufunc(xp.clip, self, min, max, dask="allowed")
 
     def reduce(  # type: ignore[override]
         self,
