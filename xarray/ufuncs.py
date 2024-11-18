@@ -1,6 +1,7 @@
 """xarray specific universal functions."""
 
 import textwrap
+from abc import ABC, abstractmethod
 
 import numpy as np
 
@@ -41,40 +42,55 @@ def get_array_namespace(*args):
     return next(iter(xps)) if len(xps) else np
 
 
-class _UnaryUfunc:
+class _ufunc_wrapper(ABC):
+    def __init__(self, name):
+        self.__name__ = name
+        self._setup()
+
+    @abstractmethod
+    def __call__(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def _setup(self):
+        if hasattr(np, self.__name__):
+            self._available = True
+            self._create_doc()
+        else:
+            # some aliases are missing in older numpy versions
+            if np.lib.NumpyVersion(np.__version__) < "2.0.0":
+                self._available = False
+            else:
+                raise ValueError(f"'{self.__name__}' is not a valid numpy function")
+
+    def _create_doc(self):
+        doc = getattr(np, self.__name__).__doc__
+        doc = _remove_unused_reference_labels(
+            _skip_signature(_dedent(doc), self.__name__)
+        )
+        self.__doc__ = (
+            f"xarray specific variant of numpy.{__name__}. Handles "
+            "xarray objects by dispatching to the appropriate "
+            "function for the underlying array type.\n\n"
+            f"Documentation from numpy:\n\n{doc}"
+        )
+
+
+class _unary_ufunc(_ufunc_wrapper):
     """Wrapper for dispatching unary ufuncs."""
 
-    def __init__(self, name):
-        self._name = name
-
-    def __call__(self, x, **kwargs):
+    def __call__(self, x, /, **kwargs):
         xp = get_array_namespace(x)
-        func = getattr(xp, self._name)
+        func = getattr(xp, self.__name__)
         return xr.apply_ufunc(func, x, dask="allowed", **kwargs)
 
 
-class _BinaryUfunc:
+class _binary_ufunc(_ufunc_wrapper):
     """Wrapper for dispatching binary ufuncs."""
 
-    def __init__(self, name):
-        self._name = name
-
-    def __call__(self, x, y, **kwargs):
+    def __call__(self, x, y, /, **kwargs):
         xp = get_array_namespace(x, y)
-        func = getattr(xp, self._name)
+        func = getattr(xp, self.__name__)
         return xr.apply_ufunc(func, x, y, dask="allowed", **kwargs)
-
-
-class _UnavailableUfunc:
-    """Wrapper for unimplemented ufuncs in older numpy versions."""
-
-    def __init__(self, name):
-        self._name = name
-
-    def __call__(self, *args, **kwargs):
-        raise NotImplementedError(
-            f"Ufunc {self._name} is not available in numpy {np.__version__}."
-        )
 
 
 def _skip_signature(doc, name):
@@ -113,151 +129,124 @@ def _dedent(doc):
     return textwrap.dedent(doc)
 
 
-def _create_op(name):
-    if not hasattr(np, name):
-        # handle older numpy versions with missing array api standard aliases
-        if np.lib.NumpyVersion(np.__version__) < "2.0.0":
-            return _UnavailableUfunc(name)
-        raise ValueError(f"'{name}' is not a valid numpy function")
-
-    np_func = getattr(np, name)
-    if hasattr(np_func, "nin") and np_func.nin == 2:
-        func = _BinaryUfunc(name)
-    else:
-        func = _UnaryUfunc(name)
-
-    func.__name__ = name
-    doc = getattr(np, name).__doc__
-
-    doc = _remove_unused_reference_labels(_skip_signature(_dedent(doc), name))
-
-    func.__doc__ = (
-        f"xarray specific variant of numpy.{name}. Handles "
-        "xarray objects by dispatching to the appropriate "
-        "function for the underlying array type.\n\n"
-        f"Documentation from numpy:\n\n{doc}"
-    )
-    return func
-
-
 # These can be auto-generated from the public numpy ufuncs:
 # {name for name in dir(np) if isinstance(getattr(np, name), np.ufunc)}
 
 # Ufuncs that use core dimensions or product multiple output arrays are
-# not currently supported, and left commented below.
+# not currently supported, and left commented out below.
 
 # UNARY
-abs = _create_op("abs")
-absolute = _create_op("absolute")
-acos = _create_op("acos")
-acosh = _create_op("acosh")
-arccos = _create_op("arccos")
-arccosh = _create_op("arccosh")
-arcsin = _create_op("arcsin")
-arcsinh = _create_op("arcsinh")
-arctan = _create_op("arctan")
-arctanh = _create_op("arctanh")
-asin = _create_op("asin")
-asinh = _create_op("asinh")
-atan = _create_op("atan")
-atanh = _create_op("atanh")
-bitwise_count = _create_op("bitwise_count")
-bitwise_invert = _create_op("bitwise_invert")
-bitwise_not = _create_op("bitwise_not")
-cbrt = _create_op("cbrt")
-ceil = _create_op("ceil")
-conj = _create_op("conj")
-conjugate = _create_op("conjugate")
-cos = _create_op("cos")
-cosh = _create_op("cosh")
-deg2rad = _create_op("deg2rad")
-degrees = _create_op("degrees")
-exp = _create_op("exp")
-exp2 = _create_op("exp2")
-expm1 = _create_op("expm1")
-fabs = _create_op("fabs")
-floor = _create_op("floor")
-# frexp = _create_op("frexp")
-invert = _create_op("invert")
-isfinite = _create_op("isfinite")
-isinf = _create_op("isinf")
-isnan = _create_op("isnan")
-isnat = _create_op("isnat")
-log = _create_op("log")
-log10 = _create_op("log10")
-log1p = _create_op("log1p")
-log2 = _create_op("log2")
-logical_not = _create_op("logical_not")
-# modf = _create_op("modf")
-negative = _create_op("negative")
-positive = _create_op("positive")
-rad2deg = _create_op("rad2deg")
-radians = _create_op("radians")
-reciprocal = _create_op("reciprocal")
-rint = _create_op("rint")
-sign = _create_op("sign")
-signbit = _create_op("signbit")
-sin = _create_op("sin")
-sinh = _create_op("sinh")
-spacing = _create_op("spacing")
-sqrt = _create_op("sqrt")
-square = _create_op("square")
-tan = _create_op("tan")
-tanh = _create_op("tanh")
-trunc = _create_op("trunc")
+abs = _unary_ufunc("abs")
+absolute = _unary_ufunc("absolute")
+acos = _unary_ufunc("acos")
+acosh = _unary_ufunc("acosh")
+arccos = _unary_ufunc("arccos")
+arccosh = _unary_ufunc("arccosh")
+arcsin = _unary_ufunc("arcsin")
+arcsinh = _unary_ufunc("arcsinh")
+arctan = _unary_ufunc("arctan")
+arctanh = _unary_ufunc("arctanh")
+asin = _unary_ufunc("asin")
+asinh = _unary_ufunc("asinh")
+atan = _unary_ufunc("atan")
+atanh = _unary_ufunc("atanh")
+bitwise_count = _unary_ufunc("bitwise_count")
+bitwise_invert = _unary_ufunc("bitwise_invert")
+bitwise_not = _unary_ufunc("bitwise_not")
+cbrt = _unary_ufunc("cbrt")
+ceil = _unary_ufunc("ceil")
+conj = _unary_ufunc("conj")
+conjugate = _unary_ufunc("conjugate")
+cos = _unary_ufunc("cos")
+cosh = _unary_ufunc("cosh")
+deg2rad = _unary_ufunc("deg2rad")
+degrees = _unary_ufunc("degrees")
+exp = _unary_ufunc("exp")
+exp2 = _unary_ufunc("exp2")
+expm1 = _unary_ufunc("expm1")
+fabs = _unary_ufunc("fabs")
+floor = _unary_ufunc("floor")
+# frexp = _unary_ufunc("frexp")
+invert = _unary_ufunc("invert")
+isfinite = _unary_ufunc("isfinite")
+isinf = _unary_ufunc("isinf")
+isnan = _unary_ufunc("isnan")
+isnat = _unary_ufunc("isnat")
+log = _unary_ufunc("log")
+log10 = _unary_ufunc("log10")
+log1p = _unary_ufunc("log1p")
+log2 = _unary_ufunc("log2")
+logical_not = _unary_ufunc("logical_not")
+# modf = _unary_ufunc("modf")
+negative = _unary_ufunc("negative")
+positive = _unary_ufunc("positive")
+rad2deg = _unary_ufunc("rad2deg")
+radians = _unary_ufunc("radians")
+reciprocal = _unary_ufunc("reciprocal")
+rint = _unary_ufunc("rint")
+sign = _unary_ufunc("sign")
+signbit = _unary_ufunc("signbit")
+sin = _unary_ufunc("sin")
+sinh = _unary_ufunc("sinh")
+spacing = _unary_ufunc("spacing")
+sqrt = _unary_ufunc("sqrt")
+square = _unary_ufunc("square")
+tan = _unary_ufunc("tan")
+tanh = _unary_ufunc("tanh")
+trunc = _unary_ufunc("trunc")
 
 # BINARY
-add = _create_op("add")
-arctan2 = _create_op("arctan2")
-atan2 = _create_op("atan2")
-bitwise_and = _create_op("bitwise_and")
-bitwise_left_shift = _create_op("bitwise_left_shift")
-bitwise_or = _create_op("bitwise_or")
-bitwise_right_shift = _create_op("bitwise_right_shift")
-bitwise_xor = _create_op("bitwise_xor")
-copysign = _create_op("copysign")
-divide = _create_op("divide")
-# divmod = _create_op("divmod")
-equal = _create_op("equal")
-float_power = _create_op("float_power")
-floor_divide = _create_op("floor_divide")
-fmax = _create_op("fmax")
-fmin = _create_op("fmin")
-fmod = _create_op("fmod")
-gcd = _create_op("gcd")
-greater = _create_op("greater")
-greater_equal = _create_op("greater_equal")
-heaviside = _create_op("heaviside")
-hypot = _create_op("hypot")
-lcm = _create_op("lcm")
-ldexp = _create_op("ldexp")
-left_shift = _create_op("left_shift")
-less = _create_op("less")
-less_equal = _create_op("less_equal")
-logaddexp = _create_op("logaddexp")
-logaddexp2 = _create_op("logaddexp2")
-logical_and = _create_op("logical_and")
-logical_or = _create_op("logical_or")
-logical_xor = _create_op("logical_xor")
-# matmul = _create_op("matmul")
-maximum = _create_op("maximum")
-minimum = _create_op("minimum")
-mod = _create_op("mod")
-multiply = _create_op("multiply")
-nextafter = _create_op("nextafter")
-not_equal = _create_op("not_equal")
-pow = _create_op("pow")
-power = _create_op("power")
-remainder = _create_op("remainder")
-right_shift = _create_op("right_shift")
-subtract = _create_op("subtract")
-true_divide = _create_op("true_divide")
-# vecdot = _create_op("vecdot")
+add = _binary_ufunc("add")
+arctan2 = _binary_ufunc("arctan2")
+atan2 = _binary_ufunc("atan2")
+bitwise_and = _binary_ufunc("bitwise_and")
+bitwise_left_shift = _binary_ufunc("bitwise_left_shift")
+bitwise_or = _binary_ufunc("bitwise_or")
+bitwise_right_shift = _binary_ufunc("bitwise_right_shift")
+bitwise_xor = _binary_ufunc("bitwise_xor")
+copysign = _binary_ufunc("copysign")
+divide = _binary_ufunc("divide")
+# divmod = _binary_ufunc("divmod")
+equal = _binary_ufunc("equal")
+float_power = _binary_ufunc("float_power")
+floor_divide = _binary_ufunc("floor_divide")
+fmax = _binary_ufunc("fmax")
+fmin = _binary_ufunc("fmin")
+fmod = _binary_ufunc("fmod")
+gcd = _binary_ufunc("gcd")
+greater = _binary_ufunc("greater")
+greater_equal = _binary_ufunc("greater_equal")
+heaviside = _binary_ufunc("heaviside")
+hypot = _binary_ufunc("hypot")
+lcm = _binary_ufunc("lcm")
+ldexp = _binary_ufunc("ldexp")
+left_shift = _binary_ufunc("left_shift")
+less = _binary_ufunc("less")
+less_equal = _binary_ufunc("less_equal")
+logaddexp = _binary_ufunc("logaddexp")
+logaddexp2 = _binary_ufunc("logaddexp2")
+logical_and = _binary_ufunc("logical_and")
+logical_or = _binary_ufunc("logical_or")
+logical_xor = _binary_ufunc("logical_xor")
+# matmul = _binary_ufunc("matmul")
+maximum = _binary_ufunc("maximum")
+minimum = _binary_ufunc("minimum")
+mod = _binary_ufunc("mod")
+multiply = _binary_ufunc("multiply")
+nextafter = _binary_ufunc("nextafter")
+not_equal = _binary_ufunc("not_equal")
+pow = _binary_ufunc("pow")
+power = _binary_ufunc("power")
+remainder = _binary_ufunc("remainder")
+right_shift = _binary_ufunc("right_shift")
+subtract = _binary_ufunc("subtract")
+true_divide = _binary_ufunc("true_divide")
+# vecdot = _binary_ufunc("vecdot")
 
 # elementwise non-ufunc
-angle = _create_op("angle")
-isreal = _create_op("isreal")
-iscomplex = _create_op("iscomplex")
+angle = _unary_ufunc("angle")
+isreal = _unary_ufunc("isreal")
+iscomplex = _unary_ufunc("iscomplex")
 
 
 __all__ = [
