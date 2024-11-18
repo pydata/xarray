@@ -377,32 +377,26 @@ def _decode_datetime_with_pandas(
         flat_num_dates *= np.int64(ns_time_unit / ns_ref_date_unit)
         time_unit = ref_date.unit
 
+    res = {"s": "ms", "ms": "us", "us": "ns"}
+
     def _check_higher_resolution(
-        flat_num_dates: np.ndarray, time_unit="s"
-    ) -> np.ndarray:
-        res = ["s", "ms", "us", "ns"]
-        fract = np.unique(flat_num_dates % 1)
-        old_time_unit = time_unit
-        if (fract > 0).any() and time_unit != "ns":
-            idx = res.index(time_unit)
-            time_unit = res[idx + 1]
-            flat_num_dates *= 1000
-            fract = np.unique(flat_num_dates % 1)
-            # If the elements can evenly divide the 'units'
-            # we can stop after this iteration.
-            # Otherwise we continue until we reach "ns" resolution.
-            if (np.unique((1 / fract[fract > 0]) % 1) > 0).any():
-                flat_num_dates, time_unit = _check_higher_resolution(
-                    flat_num_dates, time_unit
-                )
-        if old_time_unit != time_unit:
+        flat_num_dates: np.ndarray,
+        new_time_unit: str,
+    ) -> tuple[np.ndarray, str]:
+        if (np.unique(flat_num_dates % 1) > 0).any() and new_time_unit != "ns":
+            flat_num_dates, new_time_unit = _check_higher_resolution(
+                flat_num_dates * 1000,
+                new_time_unit=res[new_time_unit],
+            )
+        if time_unit != new_time_unit:
             msg = (
-                f"Can't decode floating point datetime to {old_time_unit!r} without precision loss,"
-                f"decoding to {time_unit!r} instead. To silence this warning use "
-                f"time_unit={time_unit!r} in call to decoding function."
+                f"Can't decode floating point datetime to {time_unit!r} without "
+                f"precision loss, decoding to {new_time_unit!r} instead. "
+                f"To silence this warning use time_unit={new_time_unit!r} in call to "
+                f"decoding function."
             )
             emit_user_level_warning(msg, SerializationWarning)
-        return flat_num_dates, time_unit
+        return flat_num_dates, new_time_unit
 
     # estimate fitting resolution for floating point values
     if flat_num_dates.dtype.kind == "f":

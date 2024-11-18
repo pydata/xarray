@@ -1255,22 +1255,26 @@ def test_decode_float_datetime():
 
 def test_decode_float_datetime_with_decimals():
     # test resolution enhancement for floats
-    values = np.array([0, 0.25, 1 / 3.0, 0.75, 1.0], dtype="float64")
+    values = np.array([0, 0.125, 0.25, 0.375, 0.75, 1.0], dtype="float64")
     expected = np.array(
         [
-            "2000-01-01T00:00:00.000000000",
-            "2000-01-01T00:00:00.250000000",
-            "2000-01-01T00:00:00.333333333",
-            "2000-01-01T00:00:00.750000000",
-            "2000-01-01T00:00:01.000000000",
+            "2000-01-01T00:00:00.000",
+            "2000-01-01T00:00:00.125",
+            "2000-01-01T00:00:00.250",
+            "2000-01-01T00:00:00.375",
+            "2000-01-01T00:00:00.750",
+            "2000-01-01T00:00:01.000",
         ],
-        dtype="=M8[ns]",
+        dtype="=M8[ms]",
     )
 
     units = "seconds since 2000-01-01"
     calendar = "standard"
     with pytest.warns(SerializationWarning):
         actual = decode_cf_datetime(values, units, calendar, time_unit="s")
+    assert actual.dtype == expected.dtype
+    np.testing.assert_equal(actual, expected)
+    actual = decode_cf_datetime(values, units, calendar, time_unit="ms")
     assert actual.dtype == expected.dtype
     np.testing.assert_equal(actual, expected)
 
