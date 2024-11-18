@@ -23,7 +23,7 @@ dependencies:
   - netcdf4>=1.5
   - numba
   - numpy>=2
-  - packaging>=21.3
+  - packaging>=23.2
   - pandas>=1.4,!=2.1.0
   - pooch
   - pip

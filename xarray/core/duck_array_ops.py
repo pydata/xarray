@@ -30,13 +30,11 @@ from numpy import (  # noqa: F401
     transpose,
     unravel_index,
 )
-from packaging.version import Version
 from pandas.api.types import is_extension_array_dtype
 
 from xarray.core import dask_array_compat, dask_array_ops, dtypes, nputils
 from xarray.core.options import OPTIONS
 from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
-from xarray.namedarray import pycompat
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import array_type, is_chunked_array
 
@@ -770,13 +768,7 @@ def _push(array, n: int | None = None, axis: int = -1):
     if OPTIONS["use_numbagg"] and module_available("numbagg"):
         import numbagg
 
-        if pycompat.mod_version("numbagg") < Version("0.6.2"):
-            warnings.warn(
-                f"numbagg >= 0.6.2 is required for bfill & ffill; {pycompat.mod_version('numbagg')} is installed. We'll attempt with bottleneck instead.",
-                stacklevel=2,
-            )
-        else:
-            return numbagg.ffill(array, limit=n, axis=axis)
+        return numbagg.ffill(array, limit=n, axis=axis)
 
     # work around for bottleneck 178
     limit = n if n is not None else array.shape[axis]
