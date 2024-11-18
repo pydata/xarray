@@ -1029,7 +1029,6 @@ class ZarrStore(AbstractWritableDataStore):
             shape=shape,
             dtype=dtype,
             fill_value=fill_value,
-            exists_ok=True if self._mode == "w" else False,
             **encoding,
         )
         zarr_array = _put_attrs(zarr_array, attrs)
@@ -1126,8 +1125,11 @@ class ZarrStore(AbstractWritableDataStore):
                 # the magic for storing the hidden dimension data
                 if is_zarr_v3_format:
                     encoding["dimension_names"] = dims
+                    encoding["exists_ok"] = (True if self._mode == "w" else False,)
                 else:
                     encoded_attrs[DIMENSION_KEY] = dims
+                    encoding["overwrite"] = (True if self._mode == "w" else False,)
+
                 zarr_array = self._create_new_array(
                     name=name,
                     dtype=dtype,
