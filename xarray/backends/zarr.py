@@ -443,7 +443,7 @@ def extract_zarr_variable_encoding(
     shape = shape if shape else variable.shape
     encoding = variable.encoding.copy()
 
-    safe_to_drop = {"source", "original_shape"}
+    safe_to_drop = {"source", "original_shape", "preferred_chunks"}
     valid_encodings = {
         "codecs",
         "chunks",
