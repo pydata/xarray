@@ -40,6 +40,7 @@ repos:
     rev: v3.3.3
     hooks:
       - id: prettier
+        args: [--cache-location=.prettier_cache/cache]
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.13.0
     hooks:
