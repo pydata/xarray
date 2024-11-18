@@ -5,7 +5,7 @@ _15th October 2024_
 This guide is for previous users of the prototype `datatree.DataTree` class in the `xarray-contrib/datatree repository`. That repository has now been archived, and will not be maintained. This guide is intended to help smooth your transition to using the new, updated `xarray.DataTree` class.
 
 > [!IMPORTANT]
-> There are breaking changes! You should not expect that code written with `xarray-contrib/datatree` will work without any modifications.  At the absolute minimum you will need to change the top-level import statement, but there are other changes too.
+> There are breaking changes! You should not expect that code written with `xarray-contrib/datatree` will work without any modifications. At the absolute minimum you will need to change the top-level import statement, but there are other changes too.
 
 We have made various changes compared to the prototype version. These can be split into three categories: data model changes, which affect the hierarchal structure itself; integration with xarray's IO backends; and minor API changes, which mostly consist of renaming methods to be more self-consistent.
 
@@ -28,6 +28,7 @@ Now xarray's backend entrypoint system has been generalized to include `open_dat
 This means we can now extend other xarray backends to support `open_datatree`! If you are the maintainer of an xarray backend we encourage you to add support for `open_datatree` and `open_groups`!
 
 Additionally:
+
 - A `group` kwarg has been added to `open_datatree` for choosing which group in the file should become the root group of the created tree.
 - Various performance improvements have been made, which should help when opening netCDF files and Zarr stores with large numbers of groups.
 - We anticipate further performance improvements being possible for datatree IO.
@@ -35,6 +36,7 @@ Additionally:
 ### API changes
 
 A number of other API changes have been made, which should only require minor modifications to your code:
+
 - The top-level import has changed, from `from datatree import DataTree, open_datatree` to `from xarray import DataTree, open_datatree`. Alternatively you can now just use the `import xarray as xr` namespace convention for everything datatree-related.
 - The `DataTree.ds` property has been changed to `DataTree.dataset`, though `DataTree.ds` remains as an alias for `DataTree.dataset`.
 - Similarly the `ds` kwarg in the `DataTree.__init__` constructor has been replaced by `dataset`, i.e. use `DataTree(dataset=)` instead of `DataTree(ds=...)`.

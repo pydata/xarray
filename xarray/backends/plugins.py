@@ -14,9 +14,9 @@ from xarray.core.utils import module_available
 if TYPE_CHECKING:
     import os
     from importlib.metadata import EntryPoint, EntryPoints
-    from io import BufferedIOBase
 
     from xarray.backends.common import AbstractDataStore
+    from xarray.core.types import ReadBuffer
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
@@ -138,7 +138,7 @@ def refresh_engines() -> None:
 
 
 def guess_engine(
-    store_spec: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    store_spec: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
 ) -> str | type[BackendEntrypoint]:
     engines = list_engines()
 
