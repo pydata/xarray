@@ -54,7 +54,6 @@ if TYPE_CHECKING:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None  # type: ignore[assignment, misc]
-    from io import BufferedIOBase
 
     from xarray.backends.common import BackendEntrypoint
     from xarray.core.types import (
@@ -62,6 +61,7 @@ if TYPE_CHECKING:
         CompatOptions,
         JoinOptions,
         NestedSequence,
+        ReadBuffer,
         T_Chunks,
     )
 
@@ -474,7 +474,7 @@ def _datatree_from_backend_datatree(
 
 
 def open_dataset(
-    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -691,7 +691,7 @@ def open_dataset(
 
 
 def open_dataarray(
-    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     *,
     engine: T_Engine | None = None,
     chunks: T_Chunks | None = None,
@@ -896,7 +896,7 @@ def open_dataarray(
 
 
 def open_datatree(
-    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -1111,7 +1111,7 @@ def open_datatree(
 
 
 def open_groups(
-    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -1137,10 +1137,6 @@ def open_groups(
     and cannot be opened directly with ``open_datatree``. It is encouraged to use this function to inspect your data,
     then make the necessary changes to make the structure coercible to a `DataTree` object before calling `DataTree.from_dict()` and proceeding with your analysis.
 
-    Parameters
-    ----------
-    filename_or_obj : str, Path, file-like, or DataStore
-        Strings and Path objects are interpreted as a path to a netCDF file.
     Parameters
     ----------
     filename_or_obj : str, Path, file-like, or DataStore
@@ -1338,7 +1334,10 @@ def open_groups(
 
 
 def open_mfdataset(
-    paths: str | os.PathLike | NestedSequence[str | os.PathLike],
+    paths: str
+    | os.PathLike
+    | ReadBuffer
+    | NestedSequence[str | os.PathLike | ReadBuffer],
     chunks: T_Chunks | None = None,
     concat_dim: (
         str
@@ -1541,7 +1540,7 @@ def open_mfdataset(
     if not paths:
         raise OSError("no files to open")
 
-    paths1d: list[str]
+    paths1d: list[str | ReadBuffer]
     if combine == "nested":
         if isinstance(concat_dim, str | DataArray) or concat_dim is None:
             concat_dim = [concat_dim]  # type: ignore[assignment]
