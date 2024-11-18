@@ -1159,7 +1159,7 @@ def test_strftime_of_cftime_array(calendar):
 @pytest.mark.parametrize("unsafe", [False, True])
 def test_to_datetimeindex(calendar, unsafe):
     index = xr.cftime_range("2000", periods=5, calendar=calendar)
-    expected = pd.date_range("2000", periods=5, unit="us")
+    expected = pd.date_range("2000", periods=5, unit="s")
 
     if calendar in _NON_STANDARD_CALENDARS and not unsafe:
         with pytest.warns(RuntimeWarning, match="non-standard"):
@@ -1204,7 +1204,7 @@ def test_multiindex():
 @pytest.mark.parametrize("method", ["floor", "ceil", "round"])
 def test_rounding_methods_against_datetimeindex(freq, method):
     # todo: check, if setting to "us" is enough
-    expected = pd.date_range("2000-01-02T01:03:51", periods=10, freq="1777s", unit="us")
+    expected = pd.date_range("2000-01-02T01:03:51", periods=10, freq="1777s", unit="s")
     expected = getattr(expected, method)(freq)
     result = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777s")
     result = getattr(result, method)(freq).to_datetimeindex()

@@ -576,14 +576,12 @@ def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
     Otherwise, the invalid element is replaced by np.NaT."""
     times = np.asarray(times)
     new = []
-    dt: pd.Timestamp | Literal["NaT"]
+    dt: np.datetime64
     for _i, t in np.ndenumerate(times):
         try:
-            # When initialized by string pd.Timestamp is defined only
-            # from year -9999-01-01 to 9999-12-31. Therefore we wrap
-            # the times by np.datetime64 before. This works as long we do
-            # not overflow (eg. for dates outside 1678 to 2262).
-            dt = pd.Timestamp(np.datetime64(t))
+            # We expect either "us" resolution or "s" resolution depending on
+            # whether 'microseconds' are defined for the input or not.
+            dt = np.datetime64(t.isoformat())
         except ValueError as e:
             if raise_on_invalid:
                 raise ValueError(
@@ -591,8 +589,8 @@ def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
                     f"standard calendar.  Reason: {e}."
                 ) from e
             else:
-                dt = "NaT"
-        new.append(np.datetime64(dt))
+                dt = np.datetime64("NaT")
+        new.append(dt)
     return np.asarray(new).reshape(times.shape)
 
 

@@ -295,7 +295,7 @@ def test_decode_standard_calendar_single_element_inside_timestamp_range(
     calendar, time_unit
 ) -> None:
     units = "days since 0001-01-01"
-    unit = "us"
+    unit = "s"
     if calendar == "proleptic_gregorian" and time_unit != "ns":
         unit = time_unit
     for num_time in [735368, [735368], [[735368]]]:
@@ -349,7 +349,7 @@ def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
     import cftime
 
     units = "days since 0001-01-01"
-    unit = "us"
+    unit = "s"
     if calendar == "proleptic_gregorian" and time_unit != "ns":
         unit = time_unit
     times1 = pd.date_range("2001-04-01", end="2001-04-05", freq="D")
