@@ -3341,7 +3341,7 @@ class TestInstrumentedZarrStore:
                     "set": 4,
                     "get": 16,  # TODO: fixme upstream (should be 8)
                     "list_dir": 3,  # TODO: fixme upstream (should be 2)
-                    "list_prefix": 1,
+                    "list_prefix": 0,
                 }
             else:
                 expected = {
@@ -3361,10 +3361,10 @@ class TestInstrumentedZarrStore:
 
             if has_zarr_v3:
                 expected = {
-                    "set": 10,
+                    "set": 4,
                     "get": 16,  # TODO: fixme upstream (should be 8)
                     "list_dir": 3,  # TODO: fixme upstream (should be 2)
-                    "list_prefix": 2,
+                    "list_prefix": 0,
                 }
             else:
                 expected = {
