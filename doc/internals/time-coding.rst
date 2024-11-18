@@ -341,36 +341,36 @@ Decoding of ``values`` with time unit specification like ``seconds since 1992-10
     calendar = "proleptic_gregorian"
     values = np.array([-1000 * 365, 0, 1000 * 365], dtype="int64")
     units = "days since 2000-01-01 00:00:00.000001"
-    dt = xr.coding.times.decode_cf_datetime(values, units, calendar)
+    dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
     print(dt)
     assert dt.dtype == "datetime64[us]"
 
     units = "microseconds since 2000-01-01 00:00:00"
-    dt = xr.coding.times.decode_cf_datetime(values, units, calendar)
+    dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
     print(dt)
     assert dt.dtype == "datetime64[us]"
 
     values = np.array([0, 0.25, 0.5, 0.75, 1.0], dtype="float64")
     units = "days since 2000-01-01 00:00:00.001"
-    dt = xr.coding.times.decode_cf_datetime(values, units, calendar)
+    dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
     print(dt)
     assert dt.dtype == "datetime64[ms]"
 
     values = np.array([0, 0.25, 0.5, 0.75, 1.0], dtype="float64")
     units = "hours since 2000-01-01"
-    dt = xr.coding.times.decode_cf_datetime(values, units, calendar)
+    dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
     print(dt)
     assert dt.dtype == "datetime64[s]"
 
     values = np.array([0, 0.25, 0.5, 0.75, 1.0], dtype="float64")
     units = "hours since 2000-01-01 00:00:00 03:30"
-    dt = xr.coding.times.decode_cf_datetime(values, units, calendar)
+    dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
     print(dt)
     assert dt.dtype == "datetime64[s]"
 
     values = np.array([-2002 * 365 - 121, -366, 365, 2000 * 365 + 119], dtype="int64")
     units = "days since 0001-01-01 00:00:00"
-    dt = xr.coding.times.decode_cf_datetime(values, units, calendar)
+    dt = xr.coding.times.decode_cf_datetime(values, units, calendar, time_unit="s")
     print(dt)
     assert dt.dtype == "datetime64[s]"
 
