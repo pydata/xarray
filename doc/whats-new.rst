@@ -19,6 +19,21 @@ What's New
 v.2024.10.1 (unreleased)
 ------------------------
 
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- The minimum versions of some dependencies were changed
+
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+    boto3                    1.28     1.29
+    dask-core             2023.9   2023.11
+    distributed           2023.9   2023.11
+    h5netcdf                 1.2      1.3
+    numbagg                0.2.1      0.6
+    typing_extensions       4.7       4.8
+  ===================== =========  =======
 New Features
 ~~~~~~~~~~~~
 - Added :py:meth:`DataTree.persist` method (:issue:`9675`, :pull:`9682`).
