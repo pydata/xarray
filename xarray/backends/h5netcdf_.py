@@ -13,6 +13,7 @@ from xarray.backends.common import (
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
+    _open_remote_file,
     datatree_from_dict_with_io_cleanup,
     find_root_and_group,
 )
