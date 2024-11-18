@@ -1,5 +1,7 @@
 import numpy as np
 
+from xarray.namedarray.pycompat import array_type
+
 
 def is_weak_scalar_type(t):
     return isinstance(t, bool | int | float | complex | str | bytes)
@@ -42,3 +44,29 @@ def result_type(*arrays_and_dtypes, xp) -> np.dtype:
         return xp.result_type(*arrays_and_dtypes)
     else:
         return _future_array_api_result_type(*arrays_and_dtypes, xp=xp)
+
+
+def get_array_namespace(*values):
+    def _get_single_namespace(x):
+        if hasattr(x, "__array_namespace__"):
+            return x.__array_namespace__()
+        elif isinstance(x, array_type("cupy")):
+            # special case cupy for now
+            import cupy as cp
+
+            return cp
+        else:
+            return np
+
+    namespaces = {_get_single_namespace(t) for t in values}
+    non_numpy = namespaces - {np}
+
+    if len(non_numpy) > 1:
+        names = [module.__name__ for module in non_numpy]
+        raise TypeError(f"Mixed array types {names} are not supported.")
+    elif non_numpy:
+        [xp] = non_numpy
+    else:
+        xp = np
+
+    return xp

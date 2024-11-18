@@ -822,7 +822,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         data = indexing.apply_indexer(indexable, indexer)
 
         if new_order:
-            data = np.moveaxis(data, range(len(new_order)), new_order)
+            data = duck_array_ops.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
     def _finalize_indexing_result(self, dims, data) -> Self:
@@ -860,12 +860,17 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             # we need to invert the mask in order to pass data first. This helps
             # pint to choose the correct unit
             # TODO: revert after https://github.com/hgrecco/pint/issues/1019 is fixed
-            data = duck_array_ops.where(np.logical_not(mask), data, fill_value)
+            # cast mask to any duck array type
+            if not is_duck_dask_array(mask):
+                mask = duck_array_ops.get_array_namespace(data).asarray(mask)
+            data = duck_array_ops.where(
+                duck_array_ops.logical_not(mask), data, fill_value
+            )
         else:
             # array cannot be indexed along dimensions of size 0, so just
             # build the mask directly instead.
             mask = indexing.create_mask(indexer, self.shape)
-            data = np.broadcast_to(fill_value, getattr(mask, "shape", ()))
+            data = duck_array_ops.broadcast_to(fill_value, getattr(mask, "shape", ()))
 
         if new_order:
             data = duck_array_ops.moveaxis(data, range(len(new_order)), new_order)
@@ -896,7 +901,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if new_order:
             value = duck_array_ops.asarray(value)
             value = value[(len(dims) - value.ndim) * (np.newaxis,) + (Ellipsis,)]
-            value = np.moveaxis(value, new_order, range(len(new_order)))
+            value = duck_array_ops.moveaxis(value, new_order, range(len(new_order)))
 
         indexable = as_indexable(self._data)
         indexing.set_with_indexer(indexable, index_tuple, value)
@@ -1098,7 +1103,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         dim_pad = (width, 0) if count >= 0 else (0, width)
         pads = [(0, 0) if d != dim else dim_pad for d in self.dims]
 
-        data = np.pad(
+        data = duck_array_ops.pad(
             duck_array_ops.astype(trimmed_data, dtype),
             pads,
             mode="constant",
@@ -1244,7 +1249,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if reflect_type is not None:
             pad_option_kwargs["reflect_type"] = reflect_type
 
-        array = np.pad(
+        array = duck_array_ops.pad(
             duck_array_ops.astype(self.data, dtype, copy=False),
             pad_width_by_index,
             mode=mode,
@@ -1533,14 +1538,16 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             if is_missing_values:
                 dtype, fill_value = dtypes.maybe_promote(self.dtype)
 
-                create_template = partial(np.full_like, fill_value=fill_value)
+                create_template = partial(
+                    duck_array_ops.full_like, fill_value=fill_value
+                )
             else:
                 dtype = self.dtype
                 fill_value = dtypes.get_fill_value(dtype)
-                create_template = np.empty_like
+                create_template = duck_array_ops.empty_like
         else:
             dtype = self.dtype
-            create_template = partial(np.full_like, fill_value=fill_value)
+            create_template = partial(duck_array_ops.full_like, fill_value=fill_value)
 
         if sparse:
             # unstacking a dense multitindexed array to a sparse array
@@ -1630,7 +1637,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         from xarray.core.computation import apply_ufunc
 
-        return apply_ufunc(np.clip, self, min, max, dask="allowed")
+        xp = duck_array_ops.get_array_namespace(self.data)
+        return apply_ufunc(xp.clip, self, min, max, dask="parallelized")
 
     def reduce(  # type: ignore[override]
         self,
@@ -1923,13 +1931,15 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if skipna or (skipna is None and self.dtype.kind in "cfO"):
             _quantile_func = nputils.nanquantile
         else:
-            _quantile_func = np.quantile
+            _quantile_func = duck_array_ops.quantile
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
+        xp = duck_array_ops.get_array_namespace(self.data)
+
         scalar = utils.is_scalar(q)
-        q = np.atleast_1d(np.asarray(q, dtype=np.float64))
+        q = xp.atleast_1d(xp.asarray(q, dtype=float))
 
         if dim is None:
             dim = self.dims
@@ -1939,9 +1949,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         def _wrapper(npa, **kwargs):
             # move quantile axis to end. required for apply_ufunc
-            return np.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
+            return xp.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
 
-        axis = np.arange(-1, -1 * len(dim) - 1, -1)
+        # jax requires hashable
+        axis = tuple(range(-1, -1 * len(dim) - 1, -1))
 
         kwargs = {"q": q, "axis": axis, "method": method}
 

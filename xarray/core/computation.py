@@ -34,7 +34,7 @@ from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import is_dict_like, is_scalar, parse_dims_as_set, result_name
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import is_chunked_array
+from xarray.namedarray.pycompat import is_chunked_array, to_numpy
 from xarray.util.deprecation_helpers import deprecate_dims
 
 if TYPE_CHECKING:
@@ -1702,7 +1702,7 @@ def cross(
             )
 
     c = apply_ufunc(
-        np.cross,
+        duck_array_ops.cross,
         a,
         b,
         input_core_dims=[[dim], [dim]],
@@ -2174,9 +2174,13 @@ def _calc_idxminmax(
         # we need to attach back the dim name
         res.name = dim
     else:
+        indx.data = to_numpy(indx.data)
         res = array[dim][(indx,)]
         # The dim is gone but we need to remove the corresponding coordinate.
         del res.coords[dim]
+        # Cast to array namespace
+        xp = duck_array_ops.get_array_namespace(array.data)
+        res.data = xp.asarray(res.data)
 
     if skipna or (skipna is None and array.dtype.kind in na_dtypes):
         # Put the NaN values back in after removing them
