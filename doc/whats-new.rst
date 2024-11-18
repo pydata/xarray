@@ -41,6 +41,10 @@ New Features
 - Optimize :py:meth:`DataArray.polyfit` and :py:meth:`Dataset.polyfit` with dask, when used with
   arrays with more than two dimensions.
   (:issue:`5629`). By `Deepak Cherian <https://github.com/dcherian>`_.
+- Re-implement the :py:mod:`ufuncs` module, which now dynamically dispatches to the
+  underlying array's backend. Provides better support for certain wrapped array types
+  like ``jax.numpy.ndarray``. (:issue:`7848`, :pull:`9776`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
