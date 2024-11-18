@@ -377,6 +377,23 @@ def _decode_datetime_with_pandas(
         flat_num_dates *= np.int64(ns_time_unit / ns_ref_date_unit)
         time_unit = ref_date.unit
 
+    # estimate fitting resolution for floating point values
+    if flat_num_dates.dtype.kind == "f":
+        res = ["s", "ms", "us", "ns"]
+        has_decimal = lambda x: ((x % 1) > 0).any()
+        while has_decimal(flat_num_dates) and time_unit != "ns":
+            idx = res.index(time_unit)
+            new_time_unit = res[idx + 1]
+            msg = (
+                f"Can't decode floating point datetime to {time_unit} without precision loss,"
+                f"decoding to {new_time_unit} instead."
+            )
+            emit_user_level_warning(msg, SerializationWarning)
+            flat_num_dates *= np.int64(
+                _NS_PER_TIME_DELTA[time_unit] / _NS_PER_TIME_DELTA[new_time_unit]
+            )
+            time_unit = new_time_unit
+
     # Cast input ordinals to integers and properly handle NaN/NaT
     # to prevent casting NaN to int
     flat_num_dates_int = np.zeros_like(flat_num_dates, dtype=np.int64)
@@ -419,6 +436,7 @@ def decode_cf_datetime(
                 flat_num_dates, units, calendar, time_unit
             )
         except (KeyError, OutOfBoundsDatetime, OutOfBoundsTimedelta, OverflowError):
+            print("decoding with cftime:", flat_num_dates.dtype)
             dates = _decode_datetime_with_cftime(
                 flat_num_dates.astype(float), units, calendar
             )
@@ -446,7 +464,7 @@ def decode_cf_datetime(
     elif use_cftime:
         dates = _decode_datetime_with_cftime(flat_num_dates, units, calendar)
     else:
-        dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar)
+        dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar, time_unit)
 
     return reshape(dates, num_dates.shape)
 
