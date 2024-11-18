@@ -87,8 +87,10 @@ def _skip_signature(doc, name):
     if not isinstance(doc, str):
         return doc
 
-    # TODO: this fails to remove the signature for aliased functions
-    if doc.startswith(name):
+    # numpy creates some functions as aliases and copies the docstring exactly,
+    # so check the actual name to handle this case
+    np_name = getattr(np, name).__name__
+    if doc.startswith(np_name):
         signature_end = doc.find("\n\n")
         doc = doc[signature_end + 2 :]
 
