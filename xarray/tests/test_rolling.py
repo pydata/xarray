@@ -615,20 +615,24 @@ class TestDatasetRolling:
             # Dataset now has chunks of size (400, 400, 100 100) or 11.92 GiB
             rechunked = obj.rolling(time=100, center=True).construct(
                 "window",
-                sliding_window_kwargs=dict(automatic_rechunk=True, writeable=False),
+                sliding_window_view_kwargs=dict(
+                    automatic_rechunk=True, writeable=False
+                ),
             )
             not_rechunked = obj.rolling(time=100, center=True).construct(
                 "window",
-                sliding_window_kwargs=dict(automatic_rechunk=False, writeable=True),
+                sliding_window_view_kwargs=dict(
+                    automatic_rechunk=False, writeable=True
+                ),
             )
             assert rechunked.chunksizes != not_rechunked.chunksizes
 
             roller = obj.isel(time=slice(30)).rolling(time=10, center=True)
             one = roller.reduce(
-                np.sum, sliding_window_kwargs=dict(automatic_rechunk=True)
+                np.sum, sliding_window_view_kwargs=dict(automatic_rechunk=True)
             )
             two = roller.reduce(
-                np.sum, sliding_window_kwargs=dict(automatic_rechunk=False)
+                np.sum, sliding_window_view_kwargs=dict(automatic_rechunk=False)
             )
             assert_identical(one, two)
 
