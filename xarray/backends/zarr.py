@@ -892,15 +892,20 @@ class ZarrStore(AbstractWritableDataStore):
                     f"dataset dimensions {existing_dims}"
                 )
 
-        existing_variable_names = {
-            vn for vn in variables if _encode_variable_name(vn) in existing_keys
-        }
-        new_variable_names = set(variables) - existing_variable_names
+        if self._mode == "w":
+            # always overwrite
+            new_variable_names = set(variables)
+        else:
+            existing_variable_names = {
+                vn for vn in variables if _encode_variable_name(vn) in existing_keys
+            }
+            new_variable_names = set(variables) - existing_variable_names
+
         variables_encoded, attributes = self.encode(
             {vn: variables[vn] for vn in new_variable_names}, attributes
         )
 
-        if existing_variable_names:
+        if self._mode in ["a", "a-", "r+"] and existing_variable_names:
             # We make sure that values to be appended are encoded *exactly*
             # as the current values in the store.
             # To do so, we decode variables directly to access the proper encoding,
@@ -917,10 +922,9 @@ class ZarrStore(AbstractWritableDataStore):
             # Modified variables must use the same encoding as the store.
             vars_with_encoding = {}
             for vn in existing_variable_names:
-                if self._mode in ["a", "a-", "r+"]:
-                    _validate_datatypes_for_zarr_append(
-                        vn, existing_vars[vn], variables[vn]
-                    )
+                _validate_datatypes_for_zarr_append(
+                    vn, existing_vars[vn], variables[vn]
+                )
                 vars_with_encoding[vn] = variables[vn].copy(deep=False)
                 vars_with_encoding[vn].encoding = existing_vars[vn].encoding
             vars_with_encoding, _ = self.encode(vars_with_encoding, {})
@@ -1018,7 +1022,7 @@ class ZarrStore(AbstractWritableDataStore):
             write_region = self._write_region if self._write_region is not None else {}
             write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
 
-            if name in existing_keys:
+            if self._mode != "w" and name in existing_keys:
                 # existing variable
                 # TODO: if mode="a", consider overriding the existing variable
                 # metadata. This would need some case work properly with region
@@ -1086,16 +1090,14 @@ class ZarrStore(AbstractWritableDataStore):
                 shape=zarr_shape,
             )
 
-            if name not in existing_keys:
+            if self._mode == "w" or name not in existing_keys:
                 # new variable
-                encoded_attrs = {}
+                encoded_attrs = {k: self.encode_attribute(v) for k, v in attrs.items()}
                 # the magic for storing the hidden dimension data
                 if is_zarr_v3_format:
                     encoding["dimension_names"] = dims
                 else:
                     encoded_attrs[DIMENSION_KEY] = dims
-                for k2, v2 in attrs.items():
-                    encoded_attrs[k2] = self.encode_attribute(v2)
 
                 if coding.strings.check_vlen_dtype(dtype) is str:
                     dtype = str
@@ -1117,6 +1119,7 @@ class ZarrStore(AbstractWritableDataStore):
                     shape=shape,
                     dtype=dtype,
                     fill_value=fill_value,
+                    exists_ok=True if self._mode == "w" else False,
                     **encoding,
                 )
                 zarr_array = _put_attrs(zarr_array, encoded_attrs)
