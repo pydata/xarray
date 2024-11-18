@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+import xarray.ufuncs as xu
 from xarray import DataArray, Variable
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import assert_equal, assert_identical, requires_dask
@@ -293,6 +294,13 @@ class TestSparseVariable:
     def test_bivariate_ufunc(self):
         assert_sparse_equal(np.maximum(self.data, 0), np.maximum(self.var, 0).data)
         assert_sparse_equal(np.maximum(self.data, 0), np.maximum(0, self.var).data)
+
+    def test_univariate_xufunc(self):
+        assert_sparse_equal(xu.sin(self.var).data, np.sin(self.data))
+
+    def test_bivariate_xufunc(self):
+        assert_sparse_equal(xu.multiply(self.var, 0).data, np.multiply(self.data, 0))
+        assert_sparse_equal(xu.multiply(0, self.var).data, np.multiply(0, self.data))
 
     def test_repr(self):
         expected = dedent(

@@ -1,6 +1,6 @@
 from importlib.metadata import version as _version
 
-from xarray import groupers, testing, tutorial
+from xarray import groupers, testing, tutorial, ufuncs
 from xarray.backends.api import (
     load_dataarray,
     load_dataset,
@@ -69,6 +69,7 @@ __all__ = (
     "groupers",
     "testing",
     "tutorial",
+    "ufuncs",
     # Top-level functions
     "align",
     "apply_ufunc",

@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
 from xarray.core import duck_array_ops
 from xarray.core.duck_array_ops import lazy_array_equiv
@@ -273,6 +274,17 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         self.assertLazyAndAllClose(np.maximum(u, 0), np.maximum(v, 0))
         self.assertLazyAndAllClose(np.maximum(u, 0), np.maximum(0, v))
+
+    def test_univariate_xufunc(self):
+        u = self.eager_var
+        v = self.lazy_var
+        self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
+
+    def test_bivariate_xufunc(self):
+        u = self.eager_var
+        v = self.lazy_var
+        self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(v, 0))
+        self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
 
     def test_compute(self):
         u = self.eager_var
