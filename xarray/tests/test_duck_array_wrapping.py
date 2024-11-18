@@ -8,6 +8,8 @@ import xarray as xr
 jnp = pytest.importorskip("jax.numpy")
 cp = pytest.importorskip("cupy")
 
+NAMESPACES = [cp, jnp]
+
 
 def get_test_dataarray(xp):
     return xr.DataArray(
@@ -18,7 +20,7 @@ def get_test_dataarray(xp):
     )
 
 
-@pytest.mark.parametrize("xp", [cp, jnp])
+@pytest.mark.parametrize("xp", NAMESPACES)
 class TestTopLevelMethods:
     @pytest.fixture(autouse=True)
     def setUp(self, xp):
@@ -81,7 +83,7 @@ class TestTopLevelMethods:
         assert isinstance(result.data, self.Array)
 
 
-@pytest.mark.parametrize("xp", [cp, jnp])
+@pytest.mark.parametrize("xp", NAMESPACES)
 class TestDataArrayMethods:
     @pytest.fixture(autouse=True)
     def setUp(self, xp):
