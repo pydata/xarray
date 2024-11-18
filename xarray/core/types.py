@@ -13,6 +13,7 @@ from typing import (
     TypeVar,
     Union,
     overload,
+    runtime_checkable,
 )
 
 import numpy as np
@@ -307,6 +308,38 @@ class NestedSequence(Protocol[_T_co]):
     def __getitem__(self, index: slice, /) -> NestedSequence[_T_co]: ...
     def __iter__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
     def __reversed__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
+
+
+AnyStr_co = TypeVar("AnyStr_co", str, bytes, covariant=True)
+
+
+# this is shamelessly stolen from pandas._typing
+@runtime_checkable
+class BaseBuffer(Protocol):
+    @property
+    def mode(self) -> str:
+        # for _get_filepath_or_buffer
+        ...
+
+    def seek(self, __offset: int, __whence: int = ...) -> int:
+        # with one argument: gzip.GzipFile, bz2.BZ2File
+        # with two arguments: zip.ZipFile, read_sas
+        ...
+
+    def seekable(self) -> bool:
+        # for bz2.BZ2File
+        ...
+
+    def tell(self) -> int:
+        # for zip.ZipFile, read_stata, to_stata
+        ...
+
+
+@runtime_checkable
+class ReadBuffer(BaseBuffer, Protocol[AnyStr_co]):
+    def read(self, __n: int = ...) -> AnyStr_co:
+        # for BytesIOWrapper, gzip.GzipFile, bz2.BZ2File
+        ...
 
 
 QuantileMethods = Literal[

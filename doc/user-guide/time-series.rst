@@ -89,8 +89,8 @@ Datetime indexing
 Xarray borrows powerful indexing machinery from pandas (see :ref:`indexing`).
 
 This allows for several useful and succinct forms of indexing, particularly for
-`datetime64` data. For example, we support indexing with strings for single
-items and with the `slice` object:
+``datetime64`` data. For example, we support indexing with strings for single
+items and with the ``slice`` object:
 
 .. ipython:: python
 
@@ -231,7 +231,7 @@ resampling group:
     ds.resample(time="6h").reduce(np.mean)
 
 You can also resample on the time dimension while applying reducing along other dimensions at the same time
-by specifying the `dim` keyword argument
+by specifying the ``dim`` keyword argument
 
 .. code-block:: python
 

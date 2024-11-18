@@ -3320,7 +3320,7 @@ class TestInstrumentedZarrStore:
 
         with self.create_zarr_target() as store:
             if has_zarr_v3:
-                # TOOD: verify these
+                # TODO: verify these
                 expected = {
                     "set": 17,
                     "get": 12,
