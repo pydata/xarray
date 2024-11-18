@@ -34,6 +34,7 @@ Breaking Changes
     numbagg                0.2.1      0.6
     typing_extensions       4.7       4.8
   ===================== =========  =======
+
 New Features
 ~~~~~~~~~~~~
 - Added :py:meth:`DataTree.persist` method (:issue:`9675`, :pull:`9682`).
