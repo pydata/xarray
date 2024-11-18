@@ -26,7 +26,7 @@ You can read different types of files in ``xr.open_dataset`` by specifying the e
     xr.open_dataset("example.nc", engine="netcdf4")
 
 The "engine" provides a set of instructions that tells xarray how
-to read the data and pack them into a ``dataset`` (or ``dataarray``).
+to read the data and pack them into a ``Dataset`` (or ``Dataarray``).
 These instructions are stored in an underlying "backend".
 
 Xarray comes with several backends that cover many common data formats.
@@ -1039,7 +1039,7 @@ directory `here <https://github.com/pydata/xarray-data>`_.
 Reading these data archives becomes really easy with ``kerchunk`` in combination
 with ``xarray``, especially when these archives are large in size. A single combined
 reference can refer to thousands of the original data files present in these archives.
-You can view the whole dataset with from this ``combined reference`` using the above packages.
+You can view the whole dataset with from this combined reference using the above packages.
 
 The following example shows opening a combined references generated from a ``.hdf`` file stored locally.
 

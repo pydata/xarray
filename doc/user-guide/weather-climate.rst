@@ -148,7 +148,7 @@ use ``pandas`` when possible, i.e. when the calendar is standard and dates are w
 The data is unchanged, only the timestamps are modified. Further options are implemented
 for the special ``"360_day"`` calendar and for handling missing dates. There is also
 :py:meth:`xarray.Dataset.interp_calendar` (and :py:meth:`xarray.DataArray.interp_calendar`)
-for ``interpolating`` data between calendars.
+for interpolating data between calendars.
 
 For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
