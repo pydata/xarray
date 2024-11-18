@@ -166,7 +166,7 @@ something interesting:
 
     var._data
 
-You're looking at one of xarray's internal `Lazy Indexing Classes`. These powerful classes are hidden from the user,
+You're looking at one of xarray's internal Lazy Indexing Classes. These powerful classes are hidden from the user,
 but provide important functionality.
 
 Calling the public :py:attr:`~xarray.Variable.data` property loads the underlying array into memory.

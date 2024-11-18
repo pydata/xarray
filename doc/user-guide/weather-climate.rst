@@ -49,7 +49,7 @@ variable with the attribute, rather than with the dimensions.
 CF-compliant coordinate variables
 ---------------------------------
 
-`MetPy`_ adds a	``metpy`` accessor that allows accessing coordinates with appropriate CF metadata using generic names ``x``, ``y``, ``vertical`` and ``time``. There is also a `cartopy_crs` attribute that provides projection information, parsed from the appropriate CF metadata, as a `Cartopy`_ projection object. See the `metpy documentation`_ for more information.
+`MetPy`_ adds a ``metpy`` accessor that allows accessing coordinates with appropriate CF metadata using generic names ``x``, ``y``, ``vertical`` and ``time``. There is also a ``cartopy_crs`` attribute that provides projection information, parsed from the appropriate CF metadata, as a `Cartopy`_ projection object. See the `metpy documentation`_ for more information.
 
 .. _`MetPy`: https://unidata.github.io/MetPy/dev/index.html
 .. _`metpy documentation`:	https://unidata.github.io/MetPy/dev/tutorials/xarray_tutorial.html#coordinates
@@ -137,7 +137,7 @@ Conversion between non-standard calendar and to/from pandas DatetimeIndexes is
 facilitated with the :py:meth:`xarray.Dataset.convert_calendar` method (also available as
 :py:meth:`xarray.DataArray.convert_calendar`). Here, like elsewhere in xarray, the ``use_cftime``
 argument controls which datetime backend is used in the output. The default (``None``) is to
-use `pandas` when possible, i.e. when the calendar is standard and dates are within 1678 and 2262.
+use ``pandas`` when possible, i.e. when the calendar is standard and dates are within 1678 and 2262.
 
 .. ipython:: python
 
@@ -148,7 +148,7 @@ use `pandas` when possible, i.e. when the calendar is standard and dates are wit
 The data is unchanged, only the timestamps are modified. Further options are implemented
 for the special ``"360_day"`` calendar and for handling missing dates. There is also
 :py:meth:`xarray.Dataset.interp_calendar` (and :py:meth:`xarray.DataArray.interp_calendar`)
-for `interpolating` data between calendars.
+for interpolating data between calendars.
 
 For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 

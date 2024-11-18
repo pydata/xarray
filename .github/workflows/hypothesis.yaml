@@ -37,12 +37,12 @@ jobs:
     runs-on: "ubuntu-latest"
     needs: detect-ci-trigger
     if: |
-        always()
-        && (
-            needs.detect-ci-trigger.outputs.triggered == 'false'
-            && ( (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-                || contains( github.event.pull_request.labels.*.name, 'run-slow-hypothesis'))
-        )
+      always()
+      && (
+          needs.detect-ci-trigger.outputs.triggered == 'false'
+          && ( (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+              || contains( github.event.pull_request.labels.*.name, 'run-slow-hypothesis'))
+      )
     defaults:
       run:
         shell: bash -l {0}
@@ -92,8 +92,8 @@ jobs:
         if: success()
         id: status
         run: |
-           python -m pytest --hypothesis-show-statistics --run-slow-hypothesis properties/*.py \
-             --report-log output-${{ matrix.python-version }}-log.jsonl
+          python -m pytest --hypothesis-show-statistics --run-slow-hypothesis properties/*.py \
+            --report-log output-${{ matrix.python-version }}-log.jsonl
 
       # explicitly save the cache so it gets updated, also do this even if it fails.
       - name: Save cached hypothesis directory

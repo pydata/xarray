@@ -19,14 +19,14 @@ format (recommended).
 
     np.random.seed(123456)
 
-You can read different types of files in `xr.open_dataset` by specifying the engine to be used:
+You can read different types of files in ``xr.open_dataset`` by specifying the engine to be used:
 
 .. code:: python
 
     xr.open_dataset("example.nc", engine="netcdf4")
 
 The "engine" provides a set of instructions that tells xarray how
-to read the data and pack them into a `dataset` (or `dataarray`).
+to read the data and pack them into a ``Dataset`` (or ``Dataarray``).
 These instructions are stored in an underlying "backend".
 
 Xarray comes with several backends that cover many common data formats.
@@ -677,7 +677,7 @@ from being overwritten. To override this behavior and overwrite an existing
 store, add ``mode='w'`` when invoking :py:meth:`~Dataset.to_zarr`.
 
 DataArrays can also be saved to disk using the :py:meth:`DataArray.to_zarr` method,
-and loaded from disk using the :py:func:`open_dataarray` function with `engine='zarr'`.
+and loaded from disk using the :py:func:`open_dataarray` function with ``engine='zarr'``.
 Similar to :py:meth:`DataArray.to_netcdf`, :py:meth:`DataArray.to_zarr` will
 convert the ``DataArray`` to a ``Dataset`` before saving, and then convert back
 when loading, ensuring that the ``DataArray`` that is loaded is always exactly
@@ -910,7 +910,7 @@ supersede the default chunking heuristics in zarr.
 Importantly, this logic applies to every array in the zarr store individually,
 including coordinate arrays. Therefore, if a dataset contains one or more dask
 arrays, it may still be desirable to specify a chunk size for the coordinate arrays
-(for example, with a chunk size of `-1` to include the full coordinate).
+(for example, with a chunk size of ``-1`` to include the full coordinate).
 
 To specify chunks manually using the ``encoding`` argument, provide a nested
 dictionary with the structure ``{'variable_or_coord_name': {'chunks': chunks_tuple}}``.
@@ -1026,7 +1026,7 @@ Instead of creating a new copy of the dataset in the Zarr spec/format or
 downloading the files locally, Kerchunk reads through the data archive and extracts the
 byte range and compression information of each chunk and saves as a ``reference``.
 These references are then saved as ``json`` files or ``parquet`` (more efficient)
-for later use. You can view some of these stored in the `references`
+for later use. You can view some of these stored in the ``references``
 directory `here <https://github.com/pydata/xarray-data>`_.
 
 
@@ -1039,7 +1039,7 @@ directory `here <https://github.com/pydata/xarray-data>`_.
 Reading these data archives becomes really easy with ``kerchunk`` in combination
 with ``xarray``, especially when these archives are large in size. A single combined
 reference can refer to thousands of the original data files present in these archives.
-You can view the whole dataset with from this `combined reference` using the above packages.
+You can view the whole dataset with from this combined reference using the above packages.
 
 The following example shows opening a combined references generated from a ``.hdf`` file stored locally.
 

@@ -14,7 +14,7 @@ dependencies:
   - hypothesis>=6.75.8
   - h5netcdf>=0.13
   - ipykernel
-  - ipywidgets  # silence nbsphinx warning
+  - ipywidgets # silence nbsphinx warning
   - ipython
   - iris>=2.3
   - jupyter_client

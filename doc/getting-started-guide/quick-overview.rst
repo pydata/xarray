@@ -46,7 +46,7 @@ Here are the key properties for a ``DataArray``:
 Indexing
 --------
 
-Xarray supports four kinds of indexing. Since we have assigned coordinate labels to the x dimension we can use label-based indexing along that dimension just like pandas. The four examples below all yield the same result (the value at `x=10`) but at varying levels of convenience and intuitiveness.
+Xarray supports four kinds of indexing. Since we have assigned coordinate labels to the x dimension we can use label-based indexing along that dimension just like pandas. The four examples below all yield the same result (the value at ``x=10``) but at varying levels of convenience and intuitiveness.
 
 .. ipython:: python
 

@@ -1628,7 +1628,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         return index_coords
 
     def to_pandas_indexes(self) -> Indexes[pd.Index]:
-        """Returns an immutable proxy for Dataset or DataArrary pandas indexes.
+        """Returns an immutable proxy for Dataset or DataArray pandas indexes.
 
         Raises an error if this proxy contains indexes that cannot be coerced to
         pandas.Index objects.

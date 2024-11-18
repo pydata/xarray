@@ -43,7 +43,7 @@ Coordinates:
   * y        (y) float64 ...
 ```
 
-This refactoring would allow creating a geographic index for `lat` and `lon` and two simple indexes for `x` and `y` such that we could select data with either `da.sel(lon=..., lat=...)` or  `da.sel(x=..., y=...)`.
+This refactoring would allow creating a geographic index for `lat` and `lon` and two simple indexes for `x` and `y` such that we could select data with either `da.sel(lon=..., lat=...)` or `da.sel(x=..., y=...)`.
 
 Refactoring the dimension -> index one-to-one relationship into many-to-many would also introduce some issues that we'll need to address, e.g., ambiguous cases like `da.sel(chi=..., drainage_area=...)` where multiple indexes may potentially return inconsistent positional indexers along a dimension.
 
@@ -305,16 +305,16 @@ Xarray also provides a number of Dataset/DataArray methods where indexes are use
 - `resample` (`CFTimeIndex` and a `DatetimeIntervalIndex`)
 - `DatetimeAccessor` & `TimedeltaAccessor` properties (`CFTimeIndex` and a `DatetimeIntervalIndex`)
 - `interp` & `interpolate_na`,
-   - with `IntervalIndex`, these become regridding operations. Should we support hooks for these operations?
+  - with `IntervalIndex`, these become regridding operations. Should we support hooks for these operations?
 - `differentiate`, `integrate`, `polyfit`
-   - raise an error if not a "simple" 1D index?
+  - raise an error if not a "simple" 1D index?
 - `pad`
 - `coarsen` has to make choices about output index labels.
 - `sortby`
 - `stack`/`unstack`
 - plotting
-    - `plot.pcolormesh` "infers" interval breaks along axes, which are really inferred `bounds` for the appropriate indexes.
-    - `plot.step` again uses `bounds`. In fact, we may even want `step` to be the default 1D plotting function if the axis has `bounds` attached.
+  - `plot.pcolormesh` "infers" interval breaks along axes, which are really inferred `bounds` for the appropriate indexes.
+  - `plot.step` again uses `bounds`. In fact, we may even want `step` to be the default 1D plotting function if the axis has `bounds` attached.
 
 It would be reasonable to first restrict those methods to the indexes that are currently available in Xarray, and maybe extend the `XarrayIndex` API later upon request when the opportunity arises.
 
@@ -379,7 +379,7 @@ Option A may be more reasonable for now.
 
 ## 6. Coordinate duck arrays
 
-Another opportunity of this refactoring is support for duck arrays as index coordinates. Decoupling coordinates and indexes would *de-facto* enable it.
+Another opportunity of this refactoring is support for duck arrays as index coordinates. Decoupling coordinates and indexes would _de-facto_ enable it.
 
 However, support for duck arrays in index-based operations such as data selection or alignment would probably require some protocol extension, e.g.,
 
