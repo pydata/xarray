@@ -652,7 +652,8 @@ class CFTimeIndex(pd.Index):
         if not self._data.size:
             return pd.DatetimeIndex([])
 
-        nptimes = cftime_to_nptime(self)
+        # transform to us-resolution is needed for DatetimeIndex
+        nptimes = cftime_to_nptime(self).astype("=M8[us]")
         calendar = infer_calendar_name(self)
         if calendar not in _STANDARD_CALENDARS and not unsafe:
             warnings.warn(
