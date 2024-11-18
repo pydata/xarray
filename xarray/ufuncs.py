@@ -45,22 +45,12 @@ def get_array_namespace(*args):
 class _ufunc_wrapper(ABC):
     def __init__(self, name):
         self.__name__ = name
-        self._setup()
+        if hasattr(np, name):
+            self._create_doc()
 
     @abstractmethod
     def __call__(self, *args, **kwargs):
         raise NotImplementedError
-
-    def _setup(self):
-        if hasattr(np, self.__name__):
-            self._available = True
-            self._create_doc()
-        else:
-            # some aliases are missing in older numpy versions
-            if np.lib.NumpyVersion(np.__version__) < "2.0.0":
-                self._available = False
-            else:
-                raise ValueError(f"'{self.__name__}' is not a valid numpy function")
 
     def _create_doc(self):
         doc = getattr(np, self.__name__).__doc__

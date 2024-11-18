@@ -197,10 +197,9 @@ class TestXarrayUfuncs:
     @pytest.mark.parametrize("name", xu.__all__)
     def test_ufuncs(self, name, request):
         xu_func = getattr(xu, name)
-        if not xu_func._available:
-            pytest.xfail(f"Ufunc {name} is not available in numpy {np.__version__}.")
-
-        np_func = getattr(np, name)
+        np_func = getattr(np, name, None)
+        if np_func is None and np.lib.NumpyVersion(np.__version__) < "2.0.0":
+            pytest.skip(f"Ufunc {name} is not available in numpy {np.__version__}.")
 
         if name == "isnat":
             args = (self.xt,)
