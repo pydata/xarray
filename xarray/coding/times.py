@@ -377,22 +377,36 @@ def _decode_datetime_with_pandas(
         flat_num_dates *= np.int64(ns_time_unit / ns_ref_date_unit)
         time_unit = ref_date.unit
 
-    # estimate fitting resolution for floating point values
-    if flat_num_dates.dtype.kind == "f":
+    def _check_higher_resolution(
+        flat_num_dates: np.ndarray, time_unit="s"
+    ) -> np.ndarray:
         res = ["s", "ms", "us", "ns"]
-        has_decimal = lambda x: ((x % 1) > 0).any()
-        while has_decimal(flat_num_dates) and time_unit != "ns":
+        fract = np.unique(flat_num_dates % 1)
+        old_time_unit = time_unit
+        if (fract > 0).any() and time_unit != "ns":
             idx = res.index(time_unit)
-            new_time_unit = res[idx + 1]
+            time_unit = res[idx + 1]
+            flat_num_dates *= 1000
+            fract = np.unique(flat_num_dates % 1)
+            # If the elements can evenly divide the 'units'
+            # we can stop after this iteration.
+            # Otherwise we continue until we reach "ns" resolution.
+            if (np.unique((1 / fract[fract > 0]) % 1) > 0).any():
+                flat_num_dates, time_unit = _check_higher_resolution(
+                    flat_num_dates, time_unit
+                )
+        if old_time_unit != time_unit:
             msg = (
-                f"Can't decode floating point datetime to {time_unit} without precision loss,"
-                f"decoding to {new_time_unit} instead."
+                f"Can't decode floating point datetime to {old_time_unit!r} without precision loss,"
+                f"decoding to {time_unit!r} instead. To silence this warning use "
+                f"time_unit={time_unit!r} in call to decoding function."
             )
             emit_user_level_warning(msg, SerializationWarning)
-            flat_num_dates *= np.int64(
-                _NS_PER_TIME_DELTA[time_unit] / _NS_PER_TIME_DELTA[new_time_unit]
-            )
-            time_unit = new_time_unit
+        return flat_num_dates, time_unit
+
+    # estimate fitting resolution for floating point values
+    if flat_num_dates.dtype.kind == "f":
+        flat_num_dates, time_unit = _check_higher_resolution(flat_num_dates, time_unit)
 
     # Cast input ordinals to integers and properly handle NaN/NaT
     # to prevent casting NaN to int
