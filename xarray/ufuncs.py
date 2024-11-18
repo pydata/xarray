@@ -68,8 +68,8 @@ class _ufunc_wrapper(ABC):
             _skip_signature(_dedent(doc), self.__name__)
         )
         self.__doc__ = (
-            f"xarray specific variant of numpy.{__name__}. Handles "
-            "xarray objects by dispatching to the appropriate "
+            f"xarray specific variant of :py:func:`numpy.{self.__name__}`. "
+            "Handles xarray objects by dispatching to the appropriate "
             "function for the underlying array type.\n\n"
             f"Documentation from numpy:\n\n{doc}"
         )
@@ -97,6 +97,7 @@ def _skip_signature(doc, name):
     if not isinstance(doc, str):
         return doc
 
+    # TODO: this fails to remove the signature for aliased functions
     if doc.startswith(name):
         signature_end = doc.find("\n\n")
         doc = doc[signature_end + 2 :]
@@ -132,8 +133,8 @@ def _dedent(doc):
 # These can be auto-generated from the public numpy ufuncs:
 # {name for name in dir(np) if isinstance(getattr(np, name), np.ufunc)}
 
-# Ufuncs that use core dimensions or product multiple output arrays are
-# not currently supported, and left commented out below.
+# Generalized ufuncs that use core dimensions or produce multiple output
+# arrays are not currently supported, and left commented out below.
 
 # UNARY
 abs = _unary_ufunc("abs")
