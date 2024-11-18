@@ -178,6 +178,15 @@ def _find_absolute_paths(
     return _normalize_path_list(paths)
 
 
+def _open_file(file, mode, storage_options=None):
+    import fsspec
+
+    fs, _, paths = fsspec.get_fs_token_paths(
+        file, mode=mode, storage_options=storage_options
+    )
+    return fs.open(paths[0], mode=mode)
+
+
 def _encode_variable_name(name):
     if name is None:
         name = NONE_VAR_NAME

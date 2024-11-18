@@ -13,6 +13,7 @@ from xarray.backends.common import (
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
+    _open_file,
     datatree_from_dict_with_io_cleanup,
     find_root_and_group,
 )
@@ -149,8 +150,13 @@ class H5NetCDFStore(WritableCFDataStore):
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
+        storage_options=None,
     ):
         import h5netcdf
+
+        if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
+            mode_ = "rb" if mode == "r" else mode
+            filename = _open_file(filename, mode=mode_, storage_options=storage_options)
 
         if isinstance(filename, bytes):
             raise ValueError(
@@ -425,6 +431,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
+        storage_options=None,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
@@ -450,6 +457,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             drop_variables=drop_variables,
             use_cftime=use_cftime,
             decode_timedelta=decode_timedelta,
+            storage_options=None,
         )
         return ds
 
