@@ -633,7 +633,7 @@ class Test_vectorized_indexer:
         np.testing.assert_array_equal(b, np.arange(5)[:, np.newaxis])
 
 
-def get_indexers(shape, mode):
+def get_indexers(shape: tuple[int, ...], mode) -> indexing.ExplicitIndexer:
     if mode == "vectorized":
         indexed_shape = (3, 4)
         indexer = tuple(np.random.randint(0, s, size=indexed_shape) for s in shape)
@@ -662,7 +662,7 @@ def get_indexers(shape, mode):
         return indexing.BasicIndexer(tuple(indexer))
 
     elif mode == "basic1":  # basic indexer
-        return indexing.BasicIndexer((3,))
+        return indexing.BasicIndexer((2,) * len(shape))
 
     elif mode == "basic2":  # basic indexer
         indexer = [0, 2, 4]
@@ -821,14 +821,14 @@ def test_create_mask_outer_indexer() -> None:
 def test_create_mask_vectorized_indexer() -> None:
     indexer = indexing.VectorizedIndexer((np.array([0, -1, 2]), np.array([0, 1, -1])))
     expected = np.array([False, True, True])
-    actual = indexing.create_mask(indexer, (5,))
+    actual = indexing.create_mask(indexer, (5, 5))
     np.testing.assert_array_equal(expected, actual)
 
     indexer = indexing.VectorizedIndexer(
         (np.array([0, -1, 2]), slice(None), np.array([0, 1, -1]))
     )
     expected = np.array([[False, True, True]] * 2).T
-    actual = indexing.create_mask(indexer, (5, 2))
+    actual = indexing.create_mask(indexer, (5, 2, 5))
     np.testing.assert_array_equal(expected, actual)
 
 
