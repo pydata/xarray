@@ -41,14 +41,13 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
-    from io import BufferedIOBase
-
     from h5netcdf.core import EnumType as h5EnumType
     from netCDF4 import EnumType as ncEnumType
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
+    from xarray.core.types import ReadBuffer
     from xarray.namedarray._typing import (
         _BasicIndexerKey,
         _OuterIndexerKey,
@@ -642,7 +641,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     ) -> bool:
         if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
             return True
@@ -657,9 +656,9 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         return False
 
-    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
+    def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -708,7 +707,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -750,7 +749,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,

@@ -34,10 +34,9 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
-    from io import BufferedIOBase
-
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
+    from xarray.core.types import ReadBuffer
     from xarray.namedarray._typing import (
         _BasicIndexerKey,
         _OuterIndexerKey,
@@ -314,7 +313,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     ) -> bool:
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None and magic_number.startswith(b"\x1f\x8b"):
@@ -329,9 +328,9 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
 
         return False
 
-    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
+    def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,

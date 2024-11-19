@@ -26,9 +26,9 @@ from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
     import os
-    from io import BufferedIOBase
 
     from xarray.core.dataset import Dataset
+    from xarray.core.types import ReadBuffer
     from xarray.namedarray._typing import (
         _BasicIndexerKey,
         _OuterIndexerKey,
@@ -183,13 +183,13 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     ) -> bool:
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
-    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
+    def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,

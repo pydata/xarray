@@ -181,7 +181,6 @@ def _create_method(name, npmodule=np) -> Callable:
 
         if (
             module_available("numbagg")
-            and pycompat.mod_version("numbagg") >= Version("0.5.0")
             and OPTIONS["use_numbagg"]
             and isinstance(values, np.ndarray)
             # numbagg<0.7.0 uses ddof=1 only, but numpy uses ddof=0 by default
@@ -255,6 +254,12 @@ def warn_on_deficient_rank(rank, order):
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
+    if rhs.ndim > 2:
+        out_shape = rhs.shape
+        rhs = rhs.reshape(rhs.shape[0], -1)
+    else:
+        out_shape = None
+
     if skipna:
         added_dim = rhs.ndim == 1
         if added_dim:
@@ -281,6 +286,10 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
         if residuals.size == 0:
             residuals = coeffs[0] * np.nan
         warn_on_deficient_rank(rank, lhs.shape[1])
+
+    if out_shape is not None:
+        coeffs = coeffs.reshape(-1, *out_shape[1:])
+        residuals = residuals.reshape(*out_shape[1:])
     return coeffs, residuals
 
 

@@ -3206,7 +3206,7 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"'b' conflicts"):
             original.rename({"a": "b"})
 
-    def test_rename_perserve_attrs_encoding(self) -> None:
+    def test_rename_preserve_attrs_encoding(self) -> None:
         # test propagate attrs/encoding to new variable(s) created from Index object
         original = Dataset(coords={"x": ("x", [0, 1, 2])})
         expected = Dataset(coords={"y": ("y", [0, 1, 2])})
@@ -6697,7 +6697,7 @@ class TestDataset:
 
         out = ds.polyfit("numbers", 2, full=False)
         assert "var3_polyfit_coefficients" in out
-        assert "dim1" in out
+        assert "dim1" in out.dims
         assert "dim2" not in out
         assert "dim3" not in out
 
