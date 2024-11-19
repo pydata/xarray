@@ -796,7 +796,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         key = VectorizedIndexer(tuple(k.transpose(order) for k in self.key.tuple))
         return type(self)(self.array, key)
 
-    def __setitem__(self, indexer: _IndexerKey, value: Any) -> None:
+    def __setitem__(self, indexer: _BasicIndexerKey, value: Any) -> None:
         raise NotImplementedError(
             "Lazy item assignment with the vectorized indexer is not yet "
             "implemented. Load your data first by .load() or compute()."
@@ -1694,7 +1694,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         )
         return array[key]
 
-    def _safe_setitem(self, array, key: _IndexerKey, value: Any) -> None:
+    def _safe_setitem(self, array, key: _BasicIndexerKey, value: Any) -> None:
         try:
             array[key] = value
         except ValueError as exc:
