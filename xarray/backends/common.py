@@ -21,7 +21,7 @@ from xarray.namedarray.pycompat import is_chunked_array
 if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.types import NestedSequence
-    from xarray.namedarray._typing import _IndexerKey
+    from xarray.namedarray._typing import _OuterIndexerKey, _VectorizedIndexerKey
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -256,12 +256,12 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
         key = (slice(None),) * self.ndim
         return self[key]  # type: ignore [index]
 
-    def _oindex_get(self, key: _IndexerKey) -> Any:
+    def _oindex_get(self, key: _OuterIndexerKey) -> Any:
         raise NotImplementedError(
             f"{self.__class__.__name__}._oindex_get method should be overridden"
         )
 
-    def _vindex_get(self, key: _IndexerKey) -> Any:
+    def _vindex_get(self, key: _VectorizedIndexerKey) -> Any:
         raise NotImplementedError(
             f"{self.__class__.__name__}._vindex_get method should be overridden"
         )
