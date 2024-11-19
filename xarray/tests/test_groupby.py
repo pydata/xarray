@@ -1891,10 +1891,10 @@ class TestDataArrayResample:
 
         rs = array.resample(time="24h", closed="right")
         actual = rs.mean()
-        shuffled = rs.distributed_shuffle().resample(time="24h", closed="right").mean()
+        shuffled = rs.distributed_shuffle().resample(time="24h", closed="right")
         expected = resample_as_pandas(array, "24h", closed="right")
         assert_identical(expected, actual)
-        assert_identical(expected, shuffled)
+        assert_identical(expected, shuffled.mean())
 
         with pytest.raises(ValueError, match=r"Index must be monotonic"):
             array[[2, 0, 1]].resample(time=resample_freq)
@@ -2883,9 +2883,10 @@ def test_multiple_groupers(use_flox: bool, shuffle: bool) -> None:
         coords={"xy": (("x", "y"), [["a", "b", "c"], ["b", "c", "c"]], {"foo": "bar"})},
         dims=["x", "y", "z"],
     )
-    gb = b.groupby(x=UniqueGrouper(), y=UniqueGrouper())
+    groupers = dict(x=UniqueGrouper(), y=UniqueGrouper())
+    gb = b.groupby(groupers)
     if shuffle:
-        gb = gb.distributed_shuffle()
+        gb = gb.distributed_shuffle().groupby(groupers)
     repr(gb)
     with xr.set_options(use_flox=use_flox):
         assert_identical(gb.mean("z"), b.mean("z"))

@@ -704,14 +704,14 @@ class GroupBy(Generic[T_Xarray]):
 
         Examples
         --------
-        >>> import dask
+        >>> import dask.array
         >>> da = xr.DataArray(
         ...     dims="x",
         ...     data=dask.array.arange(10, chunks=3),
         ...     coords={"x": [1, 2, 3, 1, 2, 3, 1, 2, 3, 0]},
         ...     name="a",
         ... )
-        >>> shuffled = da.groupby("x")
+        >>> shuffled = da.groupby("x").distributed_shuffle()
         >>> shuffled.groupby("x").quantile(q=0.5).compute()
         <xarray.DataArray 'a' (x: 4)> Size: 32B
         array([9., 3., 4., 5.])
@@ -740,9 +740,11 @@ class GroupBy(Generic[T_Xarray]):
         shuffled = as_dataset._shuffle(
             dim=self._group_dim, indices=self.encoded.group_indices, chunks=chunks
         )
-        shuffled = self._maybe_unstack(shuffled)
-        new_obj = self._obj._from_temp_dataset(shuffled) if was_array else shuffled
-        return new_obj
+        unstacked: Dataset = self._maybe_unstack(shuffled)
+        if was_array:
+            return self._obj._from_temp_dataset(unstacked)
+        else:
+            return unstacked  # type: ignore[return-value]
 
     def map(
         self,
