@@ -10,7 +10,7 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, overload
 
 import numpy as np
 import pandas as pd
@@ -1177,29 +1177,6 @@ def explicit_indexing_adapter(
     raise TypeError(f"unexpected key type: {key}")
 
 
-class CompatIndexedTuple(tuple):
-    """
-    A tuple subclass used to transition existing backend implementations towards the use of raw tuples
-    for indexing by carrying additional metadata about the type of indexing being
-    performed ('basic', 'vectorized', or 'outer'). This class serves as a bridge, allowing
-    backend arrays that currently expect this metadata to function correctly while
-    maintaining the outward behavior of a regular tuple.
-
-    This class is particularly useful during the phase where the backend implementations are
-    not yet capable of directly accepting raw tuples without additional context about
-    the indexing type. It ensures that these backends can still correctly interpret and
-    process indexing operations by providing them with the necessary contextual information.
-    """
-
-    def __new__(cls, iterable, indexer_type: Literal["basic", "vectorized", "outer"]):
-        obj = super().__new__(cls, iterable)
-        obj.indexer_type = indexer_type  # type: ignore[attr-defined]
-        return obj
-
-    def __repr__(self):
-        return f"CompatIndexedTuple({super().__repr__()}, indexer_type='{self.indexer_type}')"
-
-
 def apply_indexer(indexable, indexer: ExplicitIndexer) -> Any:
     """Apply an indexer to an indexable object."""
     if isinstance(indexer, VectorizedIndexer):
@@ -1226,19 +1203,8 @@ def set_with_indexer(indexable, indexer: ExplicitIndexer, value: Any) -> None:
 
 
 def decompose_indexer(
-    indexer: ExplicitIndexer | CompatIndexedTuple,
-    shape: _Shape,
-    indexing_support: IndexingSupport,
+    indexer: ExplicitIndexer, shape: _Shape, indexing_support: IndexingSupport
 ) -> tuple[ExplicitIndexer, ExplicitIndexer]:
-    if isinstance(indexer, CompatIndexedTuple):
-        # recreate the indexer object from the tuple and the type of indexing.
-        # This is necessary to ensure that the backend array can correctly interpret the indexing operation.
-        if indexer.indexer_type == "vectorized":  # type: ignore[attr-defined]
-            indexer = VectorizedIndexer(indexer)
-        elif indexer.indexer_type == "outer":  # type: ignore[attr-defined]
-            indexer = OuterIndexer(indexer)
-        else:
-            indexer = BasicIndexer(indexer)
     if isinstance(indexer, VectorizedIndexer):
         return _decompose_vectorized_indexer(indexer, shape, indexing_support)
     if isinstance(indexer, BasicIndexer | OuterIndexer):
