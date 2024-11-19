@@ -32,7 +32,13 @@ from xarray.core.indexes import Index, filter_indexes_from_coords
 from xarray.core.merge import merge_attrs, merge_coordinates_without_align
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import Dims, T_DataArray
-from xarray.core.utils import is_dict_like, is_scalar, parse_dims_as_set, result_name
+from xarray.core.utils import (
+    is_dict_like,
+    is_duck_dask_array,
+    is_scalar,
+    parse_dims_as_set,
+    result_name,
+)
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
@@ -2168,9 +2174,19 @@ def _calc_idxminmax(
     # Handle chunked arrays (e.g. dask).
     if is_chunked_array(array.data):
         chunkmanager = get_chunked_array_type(array.data)
-        chunks = dict(zip(array.dims, array.chunks, strict=True))
-        dask_coord = chunkmanager.from_array(array[dim].data, chunks=chunks[dim])
-        data = dask_coord[duck_array_ops.ravel(indx.data)]
+        chunked_coord = chunkmanager.from_array(array[dim].data, chunks=-1)
+        if is_duck_dask_array(array.data) and indx.ndim > 1:
+            from xarray.core.dask_array_compat import reshape_blockwise
+
+            linearized = reshape_blockwise(indx.data, shape=(indx.size,))
+            data = chunked_coord[linearized]
+            out = reshape_blockwise(data, indx.shape, chunks=indx.chunks)
+        else:
+            data = chunked_coord[duck_array_ops.ravel(indx.data)]
+            out = duck_array_ops.reshape(data, indx.shape)
+        res = indx.copy(data=out)
+        # we need to attach back the dim name
+        res.name = dim
     else:
         arr_coord = to_like_array(array[dim].data, array.data)
         data = arr_coord[duck_array_ops.ravel(indx.data)]
