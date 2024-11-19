@@ -946,7 +946,7 @@ def _outer_to_vectorized_indexer(
     n_dim = len([k for k in key if not isinstance(k, integer_types)])
     i_dim = 0
     new_key: tuple[slice | np.ndarray[Any, np.dtype[np.integer]], ...] = ()
-    for k, size in zip(key, shape, strict=True):
+    for k, size in zip(key, shape, strict=False):
         if isinstance(k, integer_types):
             new_key += (np.array(k).reshape((1,) * n_dim),)
         else:  # np.ndarray or slice
@@ -1498,12 +1498,12 @@ def _chunked_array_with_chunks_hint(
 ):
     """Create a chunked array using the chunks hint for dimensions of size > 1."""
 
-    if len(chunks) != array.ndim:
+    if len(chunks) < array.ndim:
         raise ValueError("not enough chunks in hint")
 
     new_chunks: _Chunks = tuple(
         chunk if size > 1 else 1
-        for chunk, size in zip(chunks, array.shape, strict=True)
+        for chunk, size in zip(chunks, array.shape, strict=False)
     )
 
     return chunkmanager.from_array(array, new_chunks)

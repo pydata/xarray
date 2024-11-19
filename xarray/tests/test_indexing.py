@@ -842,13 +842,14 @@ def test_create_mask_basic_indexer() -> None:
     np.testing.assert_array_equal(False, actual)
 
 
+@requires_dask
 def test_create_mask_dask() -> None:
-    da = pytest.importorskip("dask.array")
+    import dask.array as da
 
     indexer = indexing.OuterIndexer((1, slice(2), np.array([0, -1, 2])))
     expected = np.array(2 * [[False, True, False]])
     actual = indexing.create_mask(
-        indexer, (5, 5, 5), da.empty((2, 3), chunks=((1, 1), (2, 1)))
+        indexer, (5, 5, 5), da.empty((2, 3, 3), chunks=((1, 1), (2, 1), (3,)))
     )
     assert actual.chunks == ((1, 1), (2, 1))
     np.testing.assert_array_equal(expected, actual)
