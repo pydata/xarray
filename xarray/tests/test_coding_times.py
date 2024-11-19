@@ -124,8 +124,9 @@ def _all_cftime_date_types():
 @pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
 @pytest.mark.filterwarnings("ignore:Times can't be serialized faithfully")
 @pytest.mark.parametrize(["num_dates", "units", "calendar"], _CF_DATETIME_TESTS)
-@pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
-def test_cf_datetime(num_dates, units, calendar, time_unit) -> None:
+def test_cf_datetime(
+    num_dates, units, calendar, time_unit: PDDatetimeUnitOptions
+) -> None:
     import cftime
 
     expected = cftime.num2date(
@@ -261,8 +262,9 @@ def test_decode_non_standard_calendar_inside_timestamp_range(calendar) -> None:
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
-@pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
-def test_decode_dates_outside_timestamp_range(calendar, time_unit) -> None:
+def test_decode_dates_outside_timestamp_range(
+    calendar, time_unit: PDDatetimeUnitOptions
+) -> None:
     from datetime import datetime
 
     import cftime
@@ -291,9 +293,8 @@ def test_decode_dates_outside_timestamp_range(calendar, time_unit) -> None:
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
-@pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
 def test_decode_standard_calendar_single_element_inside_timestamp_range(
-    calendar, time_unit
+    calendar, time_unit: PDDatetimeUnitOptions
 ) -> None:
     units = "days since 0001-01-01"
     unit = "s"
@@ -342,10 +343,9 @@ def test_decode_single_element_outside_timestamp_range(calendar) -> None:
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
-@pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
 def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
     calendar,
-    time_unit,
+    time_unit: PDDatetimeUnitOptions,
 ) -> None:
     import cftime
 
@@ -421,8 +421,9 @@ def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
-@pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
-def test_decode_multidim_time_outside_timestamp_range(calendar, time_unit) -> None:
+def test_decode_multidim_time_outside_timestamp_range(
+    calendar, time_unit: PDDatetimeUnitOptions
+) -> None:
     from datetime import datetime
 
     import cftime
@@ -543,8 +544,7 @@ def test_cf_datetime_nan(num_dates, units, expected_list) -> None:
 
 
 @requires_cftime
-@pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
-def test_decoded_cf_datetime_array_2d(time_unit) -> None:
+def test_decoded_cf_datetime_array_2d(time_unit: PDDatetimeUnitOptions) -> None:
     # regression test for GH1229
     variable = Variable(
         ("x", "y"), np.array([[0, 1], [2, 3]]), {"units": "days since 2000-01-01"}
@@ -699,8 +699,7 @@ def test_format_cftime_datetime(date_args, expected) -> None:
 
 
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
-@pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
-def test_decode_cf(calendar, time_unit) -> None:
+def test_decode_cf(calendar, time_unit: PDDatetimeUnitOptions) -> None:
     days = [1.0, 2.0, 3.0]
     # TODO: GH5690 — do we want to allow this type for `coords`?
     da = DataArray(days, coords=[days], dims=["time"], name="test")
@@ -722,8 +721,7 @@ def test_decode_cf(calendar, time_unit) -> None:
             assert ds.test.dtype == np.dtype(f"M8[{time_unit}]")
 
 
-@pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
-def test_decode_cf_time_bounds(time_unit) -> None:
+def test_decode_cf_time_bounds(time_unit: PDDatetimeUnitOptions) -> None:
     da = DataArray(
         np.arange(6, dtype="int64").reshape((3, 2)),
         coords={"time": [1, 2, 3]},
@@ -1097,14 +1095,16 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(
 
 
 @pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
-def test_encode_decode_roundtrip_datetime64(freq) -> None:
+def test_encode_decode_roundtrip_datetime64(
+    freq, time_unit: PDDatetimeUnitOptions
+) -> None:
     # See GH 4045. Prior to GH 4684 this test would fail for frequencies of
     # "s", "ms", "us", and "ns".
     initial_time = pd.date_range("1678-01-01", periods=1)
     times = initial_time.append(pd.date_range("1968", periods=2, freq=freq))
     variable = Variable(["time"], times)
     encoded = conventions.encode_cf_variable(variable)
-    decoded = conventions.decode_cf_variable("time", encoded)
+    decoded = conventions.decode_cf_variable("time", encoded, time_unit=time_unit)
     assert_equal(variable, decoded)
 
 
@@ -1144,13 +1144,15 @@ def test__encode_datetime_with_cftime() -> None:
 
 
 @pytest.mark.parametrize("calendar", ["gregorian", "Gregorian", "GREGORIAN"])
-def test_decode_encode_roundtrip_with_non_lowercase_letters(calendar) -> None:
+def test_decode_encode_roundtrip_with_non_lowercase_letters(
+    calendar, time_unit: PDDatetimeUnitOptions
+) -> None:
     # See GH 5093.
     times = [0, 1]
     units = "days since 2000-01-01"
     attrs = {"calendar": calendar, "units": units}
     variable = Variable(["time"], times, attrs)
-    decoded = conventions.decode_cf_variable("time", variable)
+    decoded = conventions.decode_cf_variable("time", variable, time_unit=time_unit)
     encoded = conventions.encode_cf_variable(decoded)
 
     # Previously this would erroneously be an array of cftime.datetime
@@ -1256,7 +1258,7 @@ def test_decode_float_datetime():
 
 @pytest.mark.parametrize("time_unit", ["ms", "us", "ns"])
 def test_decode_float_datetime_with_decimals(
-    time_unit: Literal["ms", "us", "ns"],
+    time_unit: PDDatetimeUnitOptions,
 ) -> None:
     # test resolution enhancement for floats
     values = np.array([0, 0.125, 0.25, 0.375, 0.75, 1.0], dtype="float32")
@@ -1335,14 +1337,13 @@ def test_contains_cftime_lazy() -> None:
         ("1677-09-21T00:21:52.901038080", "ns", np.float32, 20.0, True),
     ],
 )
-@pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
 def test_roundtrip_datetime64_nanosecond_precision(
     timestr: str,
     timeunit: Literal["ns", "us"],
     dtype: np.typing.DTypeLike,
     fill_value: int | float | None,
     use_encoding: bool,
-    time_unit: Literal["s", "ms", "us", "ns"],
+    time_unit: PDDatetimeUnitOptions,
 ) -> None:
     # test for GH7817
     time = np.datetime64(timestr, timeunit)
@@ -1382,7 +1383,9 @@ def test_roundtrip_datetime64_nanosecond_precision(
     assert_identical(var, decoded_var)
 
 
-def test_roundtrip_datetime64_nanosecond_precision_warning() -> None:
+def test_roundtrip_datetime64_nanosecond_precision_warning(
+    time_unit: PDDatetimeUnitOptions,
+) -> None:
     # test warning if times can't be serialized faithfully
     times = [
         np.datetime64("1970-01-01T00:01:00", "ns"),
@@ -1414,7 +1417,9 @@ def test_roundtrip_datetime64_nanosecond_precision_warning() -> None:
     assert encoded_var.attrs["units"] == new_units
     assert encoded_var.attrs["_FillValue"] == 20
 
-    decoded_var = conventions.decode_cf_variable("foo", encoded_var)
+    decoded_var = conventions.decode_cf_variable(
+        "foo", encoded_var, time_unit=time_unit
+    )
     assert_identical(var, decoded_var)
 
     encoding = dict(dtype="float64", _FillValue=20, units=units)
@@ -1426,7 +1431,9 @@ def test_roundtrip_datetime64_nanosecond_precision_warning() -> None:
     assert encoded_var.attrs["units"] == units
     assert encoded_var.attrs["_FillValue"] == 20.0
 
-    decoded_var = conventions.decode_cf_variable("foo", encoded_var)
+    decoded_var = conventions.decode_cf_variable(
+        "foo", encoded_var, time_unit=time_unit
+    )
     assert_identical(var, decoded_var)
 
     encoding = dict(dtype="int64", _FillValue=20, units=new_units)
@@ -1438,7 +1445,9 @@ def test_roundtrip_datetime64_nanosecond_precision_warning() -> None:
     assert encoded_var.attrs["units"] == new_units
     assert encoded_var.attrs["_FillValue"] == 20
 
-    decoded_var = conventions.decode_cf_variable("foo", encoded_var)
+    decoded_var = conventions.decode_cf_variable(
+        "foo", encoded_var, time_unit=time_unit
+    )
     assert_identical(var, decoded_var)
 
 
@@ -1447,7 +1456,9 @@ def test_roundtrip_datetime64_nanosecond_precision_warning() -> None:
     [(np.int64, 20), (np.int64, np.iinfo(np.int64).min), (np.float64, 1e30)],
 )
 def test_roundtrip_timedelta64_nanosecond_precision(
-    dtype: np.typing.DTypeLike, fill_value: int | float
+    dtype: np.typing.DTypeLike,
+    fill_value: int | float,
+    time_unit: PDDatetimeUnitOptions,
 ) -> None:
     # test for GH7942
     one_day = np.timedelta64(1, "ns")
@@ -1460,7 +1471,9 @@ def test_roundtrip_timedelta64_nanosecond_precision(
     var = Variable(["time"], timedelta_values, encoding=encoding)
 
     encoded_var = conventions.encode_cf_variable(var)
-    decoded_var = conventions.decode_cf_variable("foo", encoded_var)
+    decoded_var = conventions.decode_cf_variable(
+        "foo", encoded_var, time_unit=time_unit
+    )
 
     assert_identical(var, decoded_var)
 
@@ -1655,7 +1668,9 @@ def test_encode_cf_datetime_casting_value_error(use_cftime, use_dask) -> None:
         with pytest.warns(UserWarning, match="Times can't be serialized"):
             encoded = conventions.encode_cf_variable(variable)
         assert encoded.attrs["units"] == "hours since 2000-01-01"
+
         decoded = conventions.decode_cf_variable("name", encoded)
+        print(decoded.load())
         assert_equal(variable, decoded)
     else:
         with pytest.raises(ValueError, match="Not possible"):

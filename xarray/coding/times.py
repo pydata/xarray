@@ -397,7 +397,7 @@ def _decode_datetime_with_pandas(
         time_unit = ref_date.unit
 
     # estimate fitting resolution for floating point values
-    # this iterates until all floats are fraction less or time_unit == "ns"
+    # this iterates until all floats are fractionless or time_unit == "ns"
     if flat_num_dates.dtype.kind == "f" and time_unit != "ns":
         res: list[PDDatetimeUnitOptions] = ["s", "ms", "us", "ns"]
         iter_unit = iter(res[res.index(time_unit) :])
