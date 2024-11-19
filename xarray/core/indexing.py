@@ -22,7 +22,6 @@ from xarray.core.types import T_Xarray
 from xarray.core.utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
-    emit_user_level_warning,
     get_valid_numpy_dtype,
     is_duck_array,
     is_duck_dask_array,
@@ -1142,10 +1141,10 @@ def explicit_indexing_adapter(
 
     # If the array is not an ExplicitlyIndexedNDArrayMixin,
     # it may wrap a BackendArray subclass that doesn't implement .oindex and .vindex. so use its __getitem__
-    emit_user_level_warning(
-        BackendArray_fallback_warning_message.format(""),
-        category=PendingDeprecationWarning,
-    )
+    # emit_user_level_warning(
+    #     BackendArray_fallback_warning_message.format(""),
+    #     category=PendingDeprecationWarning,
+    # )
     raw_key, numpy_indices = decompose_indexer(key, shape, indexing_support)
     result = raw_indexing_method(raw_key.tuple)
     if numpy_indices.tuple:
@@ -1160,13 +1159,13 @@ def apply_indexer(
     """Apply an indexer to an indexable object."""
     if not hasattr(indexable, "vindex") and not hasattr(indexable, "oindex"):
         # This path is used by Lazily*IndexedArray.get_duck_array()
-        classname = type(indexable).__name__
+        # classname = type(indexable).__name__
         # If the array is not an ExplicitlyIndexedNDArrayMixin,
         # it may wrap a BackendArray subclass that doesn't implement .oindex and .vindex. so use its __getitem__
-        emit_user_level_warning(
-            BackendArray_fallback_warning_message.format(classname),
-            category=PendingDeprecationWarning,
-        )
+        # emit_user_level_warning(
+        #     BackendArray_fallback_warning_message.format(classname),
+        #     category=PendingDeprecationWarning,
+        # )
         return indexable[indexer]
 
     if isinstance(indexer, VectorizedIndexer):

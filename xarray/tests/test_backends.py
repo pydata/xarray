@@ -6534,25 +6534,25 @@ def indexing_tests(*, indexing_support: IndexingSupport):
                     )
                 return ds
 
-            def test_vectorized_indexing_negative_step(self) -> None:
-                with pytest.warns(PendingDeprecationWarning):
-                    super().test_vectorized_indexing_negative_step()
+            # def test_vectorized_indexing_negative_step(self) -> None:
+            #     with pytest.warns(PendingDeprecationWarning):
+            #         super().test_vectorized_indexing_negative_step()
 
-            def test_isel_dataarray(self) -> None:
-                with pytest.warns(PendingDeprecationWarning):
-                    super().test_isel_dataarray()
+            # def test_isel_dataarray(self) -> None:
+            #     with pytest.warns(PendingDeprecationWarning):
+            #         super().test_isel_dataarray()
 
-            def test_vectorized_indexing(self) -> None:
-                with pytest.warns(PendingDeprecationWarning):
-                    super().test_vectorized_indexing()
+            # def test_vectorized_indexing(self) -> None:
+            #     with pytest.warns(PendingDeprecationWarning):
+            #         super().test_vectorized_indexing()
 
-            def test_orthogonal_indexing(self) -> None:
-                with pytest.warns(PendingDeprecationWarning):
-                    super().test_orthogonal_indexing()
+            # def test_orthogonal_indexing(self) -> None:
+            #     with pytest.warns(PendingDeprecationWarning):
+            #         super().test_orthogonal_indexing()
 
-            def test_outer_indexing_reversed(self) -> None:
-                with pytest.warns(PendingDeprecationWarning):
-                    super().test_outer_indexing_reversed()
+            # def test_outer_indexing_reversed(self) -> None:
+            #     with pytest.warns(PendingDeprecationWarning):
+            #         super().test_outer_indexing_reversed()
 
         return NewClass
 
