@@ -222,9 +222,11 @@ def test_decode_standard_calendar_inside_timestamp_range(calendar, time_unit) ->
     # to_pydatetime() will return microsecond
     time = cftime.date2num(times.to_pydatetime(), units, calendar=calendar)
     expected = times.values
+    print(expected)
     # for cftime we get "us" resolution
     # ns resolution is handled by cftime, too (OutOfBounds)
     actual = decode_cf_datetime(time, units, calendar=calendar, time_unit=time_unit)
+    print(actual, actual.dtype)
     if calendar != "proleptic_gregorian" or time_unit == "ns":
         unit = "us"
     else:
