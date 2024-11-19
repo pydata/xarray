@@ -1503,7 +1503,7 @@ def _chunked_array_with_chunks_hint(
 
     new_chunks: _Chunks = tuple(
         chunk if size > 1 else 1
-        for chunk, size in zip(chunks, array.shape, strict=True)
+        for chunk, size in zip(chunks, array.shape, strict=False)
     )
 
     return chunkmanager.from_array(array, new_chunks)
