@@ -682,7 +682,7 @@ class GroupBy(Generic[T_Xarray]):
             self._sizes = self._obj.isel({self._group_dim: index}).sizes
         return self._sizes
 
-    def shuffle(self, chunks: T_Chunks = None):
+    def distributed_shuffle(self, chunks: T_Chunks = None):
         """
         Sort or "shuffle" the underlying object.
 
