@@ -53,7 +53,7 @@ from xarray.namedarray.pycompat import (
     to_duck_array,
 )
 from xarray.namedarray.utils import module_available
-from xarray.util.deprecation_helpers import deprecate_dims
+from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -327,14 +327,18 @@ def as_compatible_data(
         else:
             data = np.asarray(data)
 
-    # immediately return array-like types except `numpy.ndarray` subclasses and `numpy` scalars
-    if not isinstance(data, np.ndarray | np.generic) and (
+    if isinstance(data, np.matrix):
+        data = np.asarray(data)
+
+    # immediately return array-like types except `numpy.ndarray` and `numpy` scalars
+    # compare types with `is` instead of `isinstance` to allow `numpy.ndarray` subclasses
+    is_numpy = type(data) is np.ndarray or isinstance(data, np.generic)
+    if not is_numpy and (
         hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
     ):
         return cast("T_DuckArray", data)
 
-    # validate whether the data is valid data types. Also, explicitly cast `numpy`
-    # subclasses and `numpy` scalars to `numpy.ndarray`
+    # anything left will be converted to `numpy.ndarray`, including `numpy` scalars
     data = np.asarray(data)
 
     if data.dtype.kind in "OMm":
@@ -2035,8 +2039,16 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             ranked /= count
         return ranked
 
+    @_deprecate_positional_args("v2024.11.0")
     def rolling_window(
-        self, dim, window, window_dim, center=False, fill_value=dtypes.NA
+        self,
+        dim,
+        window,
+        window_dim,
+        *,
+        center=False,
+        fill_value=dtypes.NA,
+        **kwargs,
     ):
         """
         Make a rolling_window along dim and add a new_dim to the last place.
@@ -2057,6 +2069,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             of the axis.
         fill_value
             value to be filled.
+        **kwargs
+            Keyword arguments that should be passed to the underlying array type's
+            ``sliding_window_view`` function.
 
         Returns
         -------
@@ -2064,6 +2079,11 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         size w.
         The return dim: self.dims + (window_dim, )
         The return shape: self.shape + (window, )
+
+        See Also
+        --------
+        numpy.lib.stride_tricks.sliding_window_view
+        dask.array.lib.stride_tricks.sliding_window_view
 
         Examples
         --------
@@ -2145,7 +2165,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return Variable(
             new_dims,
             duck_array_ops.sliding_window_view(
-                padded.data, window_shape=window, axis=axis
+                padded.data, window_shape=window, axis=axis, **kwargs
             ),
         )
 

@@ -125,7 +125,7 @@ has_zarr, requires_zarr = _importorskip("zarr")
 has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "2.99")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
-has_numbagg, requires_numbagg = _importorskip("numbagg", "0.4.0")
+has_numbagg, requires_numbagg = _importorskip("numbagg")
 has_pyarrow, requires_pyarrow = _importorskip("pyarrow")
 with warnings.catch_warnings():
     warnings.filterwarnings(
@@ -160,34 +160,23 @@ has_flox_0_9_12, requires_flox_0_9_12 = _importorskip("flox", "0.9.12")
 has_array_api_strict, requires_array_api_strict = _importorskip("array_api_strict")
 
 
-def _importorskip_h5netcdf_ros3():
-    try:
-        import h5netcdf
-
-        has_h5netcdf = True
-    except ImportError:
-        has_h5netcdf = False
-
+def _importorskip_h5netcdf_ros3(has_h5netcdf: bool):
     if not has_h5netcdf:
         return has_h5netcdf, pytest.mark.skipif(
             not has_h5netcdf, reason="requires h5netcdf"
         )
 
-    h5netcdf_with_ros3 = Version(h5netcdf.__version__) >= Version("1.3.0")
-
     import h5py
 
     h5py_with_ros3 = h5py.get_config().ros3
 
-    has_h5netcdf_ros3 = h5netcdf_with_ros3 and h5py_with_ros3
-
-    return has_h5netcdf_ros3, pytest.mark.skipif(
-        not has_h5netcdf_ros3,
+    return h5py_with_ros3, pytest.mark.skipif(
+        not h5py_with_ros3,
         reason="requires h5netcdf>=1.3.0 and h5py with ros3 support",
     )
 
 
-has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip_h5netcdf_ros3()
+has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip_h5netcdf_ros3(has_h5netcdf)
 has_netCDF4_1_6_2_or_above, requires_netCDF4_1_6_2_or_above = _importorskip(
     "netCDF4", "1.6.2"
 )
