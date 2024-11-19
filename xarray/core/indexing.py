@@ -3,7 +3,6 @@ from __future__ import annotations
 import enum
 import functools
 import operator
-import warnings
 from collections import Counter, defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
@@ -23,6 +22,7 @@ from xarray.core.types import T_Xarray
 from xarray.core.utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
+    emit_user_level_warning,
     get_valid_numpy_dtype,
     is_duck_array,
     is_duck_dask_array,
@@ -609,7 +609,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
 BackendArray_fallback_warning_message = (
     "The array `{0}` does not support indexing using the .vindex and .oindex properties. "
     "The __getitem__ method is being used instead. This fallback behavior will be "
-    "removed in a future version. Please ensure that the backend array `{1}` implements "
+    "removed in a future version. Please ensure that the backend array `{0}` implements "
     "support for the .vindex and .oindex properties to avoid potential issues."
 )
 
@@ -671,21 +671,8 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return self._shape
 
     def get_duck_array(self) -> Any:
-        try:
-            array = apply_indexer(self.array, self.key)
-        except NotImplementedError as _:
-            # If the array is not an ExplicitlyIndexedNDArrayMixin,
-            # it may wrap a BackendArray subclass that doesn't implement .oindex and .vindex. so use its __getitem__
-            warnings.warn(
-                BackendArray_fallback_warning_message.format(
-                    self.array.__class__.__name__, self.array.__class__.__name__
-                ),
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-            array = self.array[self.key]
-
-        # self.array[self.key] is now a numpy array when
+        array = apply_indexer(self.array, self.key)
+        # array[self.key] is now a numpy array when
         # self.array is a BackendArray subclass
         # and self.key is BasicIndexer((slice(None, None, None),))
         # so we need the explicit check for ExplicitlyIndexed
@@ -752,21 +739,9 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return np.broadcast(*self.key.tuple).shape
 
     def get_duck_array(self) -> Any:
-        try:
-            array = apply_indexer(self.array, self.key)
-        except NotImplementedError as _:
-            # If the array is not an ExplicitlyIndexedNDArrayMixin,
-            # it may wrap a BackendArray subclass that doesn't implement .oindex and .vindex. so use its __getitem__
-            warnings.warn(
-                BackendArray_fallback_warning_message.format(
-                    self.array.__class__.__name__, self.array.__class__.__name__
-                ),
-                category=PendingDeprecationWarning,
-                stacklevel=2,
-            )
-            array = self.array[self.key]
+        array = apply_indexer(self.array, self.key)
 
-        # self.array[self.key] is now a numpy array when
+        # array is now a numpy array when
         # self.array is a BackendArray subclass
         # and self.key is BasicIndexer((slice(None, None, None),))
         # so we need the explicit check for ExplicitlyIndexed
@@ -1136,6 +1111,7 @@ def vectorized_indexing_adapter(
     )
 
 
+# TODO: deprecate and delete this method once it is no longer used externally
 def explicit_indexing_adapter(
     key: ExplicitIndexer,
     shape: _Shape,
@@ -1163,26 +1139,36 @@ def explicit_indexing_adapter(
     -------
     Indexing result, in the form of a duck numpy-array.
     """
-    # TODO: raise PendingDeprecationWarning here.
-    if isinstance(key, VectorizedIndexer):
-        return vectorized_indexing_adapter(
-            key.tuple, shape, indexing_support, raw_indexing_method
-        )
-    elif isinstance(key, OuterIndexer):
-        return outer_indexing_adapter(
-            key.tuple, shape, indexing_support, raw_indexing_method
-        )
-    elif isinstance(key, BasicIndexer):
-        return basic_indexing_adapter(
-            key.tuple, shape, indexing_support, raw_indexing_method
-        )
-    raise TypeError(f"unexpected key type: {key}")
+
+    # If the array is not an ExplicitlyIndexedNDArrayMixin,
+    # it may wrap a BackendArray subclass that doesn't implement .oindex and .vindex. so use its __getitem__
+    emit_user_level_warning(
+        BackendArray_fallback_warning_message.format(""),
+        category=PendingDeprecationWarning,
+    )
+    raw_key, numpy_indices = decompose_indexer(key, shape, indexing_support)
+    result = raw_indexing_method(raw_key.tuple)
+    if numpy_indices.tuple:
+        indexable = NumpyIndexingAdapter(result)
+        result = apply_indexer(indexable, numpy_indices)
+    return result
 
 
 def apply_indexer(
     indexable: ExplicitlyIndexedNDArrayMixin, indexer: ExplicitIndexer
 ) -> Any:
     """Apply an indexer to an indexable object."""
+    if not hasattr(indexable, "vindex") and not hasattr(indexable, "oindex"):
+        # This path is used by Lazily*IndexedArray.get_duck_array()
+        classname = type(indexable).__name__
+        # If the array is not an ExplicitlyIndexedNDArrayMixin,
+        # it may wrap a BackendArray subclass that doesn't implement .oindex and .vindex. so use its __getitem__
+        emit_user_level_warning(
+            BackendArray_fallback_warning_message.format(classname),
+            category=PendingDeprecationWarning,
+        )
+        return indexable[indexer]
+
     if isinstance(indexer, VectorizedIndexer):
         return indexable.vindex[indexer.tuple]
     elif isinstance(indexer, OuterIndexer):
@@ -1206,6 +1192,7 @@ def set_with_indexer(indexable, indexer: ExplicitIndexer, value: Any) -> None:
         indexable[indexer.tuple] = value
 
 
+# TODO: delete this method once explicit_indexing_adapter is no longer used externally
 def decompose_indexer(
     indexer: ExplicitIndexer, shape: _Shape, indexing_support: IndexingSupport
 ) -> tuple[ExplicitIndexer, ExplicitIndexer]:

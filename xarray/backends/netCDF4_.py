@@ -12,8 +12,8 @@ import numpy as np
 from xarray import coding
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
-    BackendArray,
     BackendEntrypoint,
+    NewBackendArray,
     WritableCFDataStore,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
@@ -61,7 +61,7 @@ _endian_lookup = {"=": "native", ">": "big", "<": "little", "|": "native"}
 NETCDF4_PYTHON_LOCK = combine_locks([NETCDFC_LOCK, HDF5_LOCK])
 
 
-class BaseNetCDF4Array(BackendArray):
+class BaseNetCDF4Array(NewBackendArray):
     __slots__ = ("datastore", "dtype", "shape", "variable_name")
 
     def __init__(self, variable_name, datastore):

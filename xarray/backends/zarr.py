@@ -14,8 +14,8 @@ from xarray import coding, conventions
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractWritableDataStore,
-    BackendArray,
     BackendEntrypoint,
+    NewBackendArray,
     _encode_variable_name,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
@@ -185,7 +185,7 @@ def encode_zarr_attr_value(value):
     return encoded
 
 
-class ZarrArrayWrapper(BackendArray):
+class ZarrArrayWrapper(NewBackendArray):
     indexing_support = indexing.IndexingSupport.VECTORIZED
 
     def __init__(self, zarr_array):

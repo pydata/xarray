@@ -8,8 +8,8 @@ import numpy as np
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
-    BackendArray,
     BackendEntrypoint,
+    NewBackendArray,
     robust_getitem,
 )
 from xarray.backends.store import StoreBackendEntrypoint
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     )
 
 
-class PydapArrayWrapper(BackendArray):
+class PydapArrayWrapper(NewBackendArray):
     indexing_support = indexing.IndexingSupport.BASIC
 
     def __init__(self, array) -> None:

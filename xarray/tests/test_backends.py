@@ -39,6 +39,7 @@ from xarray import (
     open_mfdataset,
     save_mfdataset,
 )
+from xarray.backends.common import BackendArray as LegacyBackendArray
 from xarray.backends.common import robust_getitem
 from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
@@ -53,6 +54,7 @@ from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
+from xarray.core.indexing import IndexingSupport
 from xarray.core.options import set_options
 from xarray.core.utils import module_available
 from xarray.namedarray.pycompat import array_type
@@ -352,6 +354,9 @@ class NetCDF3Only:
 
 
 class BackendIndexingTestsMixin:
+    def roundtrip(self, ds: Dataset, open_kwargs=None) -> Dataset:
+        raise NotImplementedError
+
     def test_orthogonal_indexing(self) -> None:
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
@@ -6491,3 +6496,83 @@ def test_zarr_safe_chunk_region(tmp_path):
     chunk = ds.isel(region)
     chunk = chunk.chunk()
     chunk.chunk().to_zarr(store, region=region)
+
+
+class LegacyBackendArrayWrapper(LegacyBackendArray):
+    def __init__(self, array: np.ndarray, indexing_support: IndexingSupport):
+        self.shape = array.shape
+        self.dtype = array.dtype
+        self.array = array
+        self.indexing_support = indexing_support
+
+    def __getitem__(self, key: indexing.ExplicitIndexer):
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, self.indexing_support, self._getitem
+        )
+
+    def _getitem(self, key: tuple[Any, ...]) -> np.ndarray:
+        return self.array[key]
+
+
+def indexing_tests(*, indexing_support: IndexingSupport):
+    def wrapper(cls):
+        class NewClass(cls):
+            cls.indexing_support = indexing_support
+
+            def roundtrip(self, ds: Dataset, *, open_kwargs=None) -> Dataset:
+                ds = ds.copy(deep=True)
+                for name in list(ds.data_vars) + list(
+                    set(ds.coords) - set(ds.xindexes)
+                ):
+                    var = ds._variables[name]
+                    ds._variables[name] = var.copy(
+                        # These tests assume that indexing is lazy (checks ._in_memory),
+                        # so wrapping by LazilyIndexedArray is required.
+                        data=indexing.LazilyIndexedArray(
+                            LegacyBackendArrayWrapper(var.data, self.indexing_support)
+                        )
+                    )
+                return ds
+
+            def test_vectorized_indexing_negative_step(self) -> None:
+                with pytest.warns(PendingDeprecationWarning):
+                    super().test_vectorized_indexing_negative_step()
+
+            def test_isel_dataarray(self) -> None:
+                with pytest.warns(PendingDeprecationWarning):
+                    super().test_isel_dataarray()
+
+            def test_vectorized_indexing(self) -> None:
+                with pytest.warns(PendingDeprecationWarning):
+                    super().test_vectorized_indexing()
+
+            def test_orthogonal_indexing(self) -> None:
+                with pytest.warns(PendingDeprecationWarning):
+                    super().test_orthogonal_indexing()
+
+            def test_outer_indexing_reversed(self) -> None:
+                with pytest.warns(PendingDeprecationWarning):
+                    super().test_outer_indexing_reversed()
+
+        return NewClass
+
+    return wrapper
+
+
+@indexing_tests(indexing_support=IndexingSupport.BASIC)
+class TestBasicIndexingLegacyBackend(BackendIndexingTestsMixin):
+    pass
+
+
+@indexing_tests(indexing_support=IndexingSupport.OUTER_1VECTOR)
+class TestOuter1VectorIndexingLegacyBackend(BackendIndexingTestsMixin):
+    pass
+
+
+# @indexing_tests(indexing_support=IndexingSupport.OUTER)
+# class TestOuterIndexingLegacyBackend(BackendIndexingTestsMixin):
+#     pass
+
+# @indexing_tests(indexing_support=IndexingSupport.VECTORIZED)
+# class TestVectorizedIndexingLegacyBackend(BackendIndexingTestsMixin):
+#     pass

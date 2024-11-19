@@ -10,8 +10,8 @@ import numpy as np
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
-    BackendArray,
     BackendEntrypoint,
+    NewBackendArray,
     WritableCFDataStore,
     _normalize_path,
 )
@@ -59,7 +59,7 @@ def _decode_attrs(d):
     return {k: v if k == "_FillValue" else _decode_string(v) for (k, v) in d.items()}
 
 
-class ScipyArrayWrapper(BackendArray):
+class ScipyArrayWrapper(NewBackendArray):
     indexing_support = indexing.IndexingSupport.OUTER_1VECTOR
 
     def __init__(self, variable_name, datastore):
