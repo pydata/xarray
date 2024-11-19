@@ -1221,6 +1221,16 @@ def attempt_import(module: str) -> ModuleType:
     Static type checkers will not be able to infer the type of the returned module,
     so it is recommended to precede this function with a direct import of the module,
     guarded by an ``if TYPE_CHECKING`` block, to preserve type checker functionality.
+    See the examples section below for a demonstration.
+
+    Examples
+    --------
+    >>> from xarray.core.utils import attempt_import
+    >>> if TYPE_CHECKING:
+    ...     import zarr
+    ... else:
+    ...     zarr = attempt_import("zarr")
+    ...
     """
     install_mapping = dict(nc_time_axis="nc-time-axis")
     package_purpose = dict(
