@@ -62,10 +62,10 @@ repos:
   - repo: https://github.com/citation-file-format/cff-converter-python
     rev: ebf0b5e44d67f8beaa1cd13a0d0393ea04c6058d
     hooks:
-    - id: validate-cff
+      - id: validate-cff
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
     hooks:
-    - id: codespell
-      additional_dependencies:
-        - tomli
+      - id: codespell
+        additional_dependencies:
+          - tomli
