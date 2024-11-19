@@ -351,7 +351,144 @@ class NetCDF3Only:
                     ds.to_netcdf(path, format=format)
 
 
-class DatasetIOBase:
+class BackendIndexingTestsMixin:
+    def test_orthogonal_indexing(self) -> None:
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            indexers = {"dim1": [1, 2, 0], "dim2": [3, 2, 0, 3], "dim3": np.arange(5)}
+            expected = in_memory.isel(indexers)
+            actual = on_disk.isel(**indexers)
+            # make sure the array is not yet loaded into memory
+            assert not actual["var1"].variable._in_memory
+            assert_identical(expected, actual)
+            # do it twice, to make sure we're switched from orthogonal -> numpy
+            # when we cached the values
+            actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual)
+
+    def test_vectorized_indexing(self) -> None:
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            indexers = {
+                "dim1": DataArray([0, 2, 0], dims="a"),
+                "dim2": DataArray([0, 2, 3], dims="a"),
+            }
+            expected = in_memory.isel(indexers)
+            actual = on_disk.isel(**indexers)
+            # make sure the array is not yet loaded into memory
+            assert not actual["var1"].variable._in_memory
+            assert_identical(expected, actual.load())
+            # do it twice, to make sure we're switched from
+            # vectorized -> numpy when we cached the values
+            actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual)
+
+        def multiple_indexing(indexers):
+            # make sure a sequence of lazy indexings certainly works.
+            with self.roundtrip(in_memory) as on_disk:
+                actual = on_disk["var3"]
+                expected = in_memory["var3"]
+                for ind in indexers:
+                    actual = actual.isel(ind)
+                    expected = expected.isel(ind)
+                    # make sure the array is not yet loaded into memory
+                    assert not actual.variable._in_memory
+                assert_identical(expected, actual.load())
+
+        # two-staged vectorized-indexing
+        indexers2 = [
+            {
+                "dim1": DataArray([[0, 7], [2, 6], [3, 5]], dims=["a", "b"]),
+                "dim3": DataArray([[0, 4], [1, 3], [2, 2]], dims=["a", "b"]),
+            },
+            {"a": DataArray([0, 1], dims=["c"]), "b": DataArray([0, 1], dims=["c"])},
+        ]
+        multiple_indexing(indexers2)
+
+        # vectorized-slice mixed
+        indexers3 = [
+            {
+                "dim1": DataArray([[0, 7], [2, 6], [3, 5]], dims=["a", "b"]),
+                "dim3": slice(None, 10),
+            }
+        ]
+        multiple_indexing(indexers3)
+
+        # vectorized-integer mixed
+        indexers4 = [
+            {"dim3": 0},
+            {"dim1": DataArray([[0, 7], [2, 6], [3, 5]], dims=["a", "b"])},
+            {"a": slice(None, None, 2)},
+        ]
+        multiple_indexing(indexers4)
+
+        # vectorized-integer mixed
+        indexers5 = [
+            {"dim3": 0},
+            {"dim1": DataArray([[0, 7], [2, 6], [3, 5]], dims=["a", "b"])},
+            {"a": 1, "b": 0},
+        ]
+        multiple_indexing(indexers5)
+
+    def test_vectorized_indexing_negative_step(self) -> None:
+        # use dask explicitly when present
+        open_kwargs: dict[str, Any] | None
+        if has_dask:
+            open_kwargs = {"chunks": {}}
+        else:
+            open_kwargs = None
+        in_memory = create_test_data()
+
+        def multiple_indexing(indexers):
+            # make sure a sequence of lazy indexings certainly works.
+            with self.roundtrip(in_memory, open_kwargs=open_kwargs) as on_disk:
+                actual = on_disk["var3"]
+                expected = in_memory["var3"]
+                for ind in indexers:
+                    actual = actual.isel(ind)
+                    expected = expected.isel(ind)
+                    # make sure the array is not yet loaded into memory
+                    assert not actual.variable._in_memory
+                assert_identical(expected, actual.load())
+
+        # with negative step slice.
+        indexers = [
+            {
+                "dim1": DataArray([[0, 7], [2, 6], [3, 5]], dims=["a", "b"]),
+                "dim3": slice(-1, 1, -1),
+            }
+        ]
+        multiple_indexing(indexers)
+
+        # with negative step slice.
+        indexers = [
+            {
+                "dim1": DataArray([[0, 7], [2, 6], [3, 5]], dims=["a", "b"]),
+                "dim3": slice(-1, 1, -2),
+            }
+        ]
+        multiple_indexing(indexers)
+
+    def test_outer_indexing_reversed(self) -> None:
+        # regression test for GH6560
+        ds = xr.Dataset(
+            {"z": (("t", "p", "y", "x"), np.ones((1, 1, 31, 40)))},
+        )
+
+        with self.roundtrip(ds) as on_disk:
+            subset = on_disk.isel(t=[0], p=0).z[:, ::10, ::10][:, ::-1, :]
+            assert subset.sizes == subset.load().sizes
+
+    def test_isel_dataarray(self) -> None:
+        # Make sure isel works lazily. GH:issue:1688
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            expected = in_memory.isel(dim2=in_memory["dim2"] < 3)
+            actual = on_disk.isel(dim2=on_disk["dim2"] < 3)
+            assert_identical(expected, actual)
+
+
+class DatasetIOBase(BackendIndexingTestsMixin):
     engine: T_NetcdfEngine | None = None
     file_format: T_NetcdfTypes | None = None
 
@@ -694,141 +831,6 @@ class DatasetIOBase:
             with self.roundtrip(actual) as actual2:
                 assert_identical(original, actual2)
                 assert actual2["x"].dtype == "bool"
-
-    def test_orthogonal_indexing(self) -> None:
-        in_memory = create_test_data()
-        with self.roundtrip(in_memory) as on_disk:
-            indexers = {"dim1": [1, 2, 0], "dim2": [3, 2, 0, 3], "dim3": np.arange(5)}
-            expected = in_memory.isel(indexers)
-            actual = on_disk.isel(**indexers)
-            # make sure the array is not yet loaded into memory
-            assert not actual["var1"].variable._in_memory
-            assert_identical(expected, actual)
-            # do it twice, to make sure we're switched from orthogonal -> numpy
-            # when we cached the values
-            actual = on_disk.isel(**indexers)
-            assert_identical(expected, actual)
-
-    def test_vectorized_indexing(self) -> None:
-        in_memory = create_test_data()
-        with self.roundtrip(in_memory) as on_disk:
-            indexers = {
-                "dim1": DataArray([0, 2, 0], dims="a"),
-                "dim2": DataArray([0, 2, 3], dims="a"),
-            }
-            expected = in_memory.isel(indexers)
-            actual = on_disk.isel(**indexers)
-            # make sure the array is not yet loaded into memory
-            assert not actual["var1"].variable._in_memory
-            assert_identical(expected, actual.load())
-            # do it twice, to make sure we're switched from
-            # vectorized -> numpy when we cached the values
-            actual = on_disk.isel(**indexers)
-            assert_identical(expected, actual)
-
-        def multiple_indexing(indexers):
-            # make sure a sequence of lazy indexings certainly works.
-            with self.roundtrip(in_memory) as on_disk:
-                actual = on_disk["var3"]
-                expected = in_memory["var3"]
-                for ind in indexers:
-                    actual = actual.isel(ind)
-                    expected = expected.isel(ind)
-                    # make sure the array is not yet loaded into memory
-                    assert not actual.variable._in_memory
-                assert_identical(expected, actual.load())
-
-        # two-staged vectorized-indexing
-        indexers2 = [
-            {
-                "dim1": DataArray([[0, 7], [2, 6], [3, 5]], dims=["a", "b"]),
-                "dim3": DataArray([[0, 4], [1, 3], [2, 2]], dims=["a", "b"]),
-            },
-            {"a": DataArray([0, 1], dims=["c"]), "b": DataArray([0, 1], dims=["c"])},
-        ]
-        multiple_indexing(indexers2)
-
-        # vectorized-slice mixed
-        indexers3 = [
-            {
-                "dim1": DataArray([[0, 7], [2, 6], [3, 5]], dims=["a", "b"]),
-                "dim3": slice(None, 10),
-            }
-        ]
-        multiple_indexing(indexers3)
-
-        # vectorized-integer mixed
-        indexers4 = [
-            {"dim3": 0},
-            {"dim1": DataArray([[0, 7], [2, 6], [3, 5]], dims=["a", "b"])},
-            {"a": slice(None, None, 2)},
-        ]
-        multiple_indexing(indexers4)
-
-        # vectorized-integer mixed
-        indexers5 = [
-            {"dim3": 0},
-            {"dim1": DataArray([[0, 7], [2, 6], [3, 5]], dims=["a", "b"])},
-            {"a": 1, "b": 0},
-        ]
-        multiple_indexing(indexers5)
-
-    def test_vectorized_indexing_negative_step(self) -> None:
-        # use dask explicitly when present
-        open_kwargs: dict[str, Any] | None
-        if has_dask:
-            open_kwargs = {"chunks": {}}
-        else:
-            open_kwargs = None
-        in_memory = create_test_data()
-
-        def multiple_indexing(indexers):
-            # make sure a sequence of lazy indexings certainly works.
-            with self.roundtrip(in_memory, open_kwargs=open_kwargs) as on_disk:
-                actual = on_disk["var3"]
-                expected = in_memory["var3"]
-                for ind in indexers:
-                    actual = actual.isel(ind)
-                    expected = expected.isel(ind)
-                    # make sure the array is not yet loaded into memory
-                    assert not actual.variable._in_memory
-                assert_identical(expected, actual.load())
-
-        # with negative step slice.
-        indexers = [
-            {
-                "dim1": DataArray([[0, 7], [2, 6], [3, 5]], dims=["a", "b"]),
-                "dim3": slice(-1, 1, -1),
-            }
-        ]
-        multiple_indexing(indexers)
-
-        # with negative step slice.
-        indexers = [
-            {
-                "dim1": DataArray([[0, 7], [2, 6], [3, 5]], dims=["a", "b"]),
-                "dim3": slice(-1, 1, -2),
-            }
-        ]
-        multiple_indexing(indexers)
-
-    def test_outer_indexing_reversed(self) -> None:
-        # regression test for GH6560
-        ds = xr.Dataset(
-            {"z": (("t", "p", "y", "x"), np.ones((1, 1, 31, 40)))},
-        )
-
-        with self.roundtrip(ds) as on_disk:
-            subset = on_disk.isel(t=[0], p=0).z[:, ::10, ::10][:, ::-1, :]
-            assert subset.sizes == subset.load().sizes
-
-    def test_isel_dataarray(self) -> None:
-        # Make sure isel works lazily. GH:issue:1688
-        in_memory = create_test_data()
-        with self.roundtrip(in_memory) as on_disk:
-            expected = in_memory.isel(dim2=in_memory["dim2"] < 3)
-            actual = on_disk.isel(dim2=on_disk["dim2"] < 3)
-            assert_identical(expected, actual)
 
     def validate_array_type(self, ds):
         # Make sure that only NumpyIndexingAdapter stores a bare np.ndarray.
