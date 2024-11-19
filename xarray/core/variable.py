@@ -861,7 +861,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             # pint to choose the correct unit
             # TODO: revert after https://github.com/hgrecco/pint/issues/1019 is fixed
             # cast mask to any duck array type
-            if not is_duck_dask_array(mask):
+            if type(mask) is not type(data):
                 mask = duck_array_ops.get_array_namespace(data).asarray(mask)
             data = duck_array_ops.where(
                 duck_array_ops.logical_not(mask), data, fill_value
