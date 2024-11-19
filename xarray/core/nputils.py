@@ -236,6 +236,9 @@ def _create_method(name, npmodule=np) -> Callable:
             # bottleneck does not take care dtype, min_count
             kwargs.pop("dtype", None)
             result = bn_func(values, axis=axis, **kwargs)
+            # bottleneck returns python scalars for reduction over all axes
+            if isinstance(result, float):
+                result = np.float64(result)
         else:
             result = getattr(npmodule, name)(values, axis=axis, **kwargs)
 

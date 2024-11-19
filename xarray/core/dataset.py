@@ -8679,9 +8679,12 @@ class Dataset(
             else:
                 if k in self.data_vars and dim in v.dims:
                     # cast coord data to duck array if needed
-                    coord_data = duck_array_ops.get_array_namespace(v.data).asarray(
-                        coord_var.data
-                    )
+                    if isinstance(v.data, array_type("cupy")):
+                        coord_data = duck_array_ops.get_array_namespace(v.data).asarray(
+                            coord_var.data
+                        )
+                    else:
+                        coord_data = coord_var.data
                     if _contains_datetime_like_objects(v):
                         v = datetime_to_numeric(v, datetime_unit=datetime_unit)
                     if cumulative:

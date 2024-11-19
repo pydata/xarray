@@ -168,7 +168,8 @@ def isnull(data):
         )
     ):
         # these types cannot represent missing values
-        return full_like(data, dtype=xp.bool, fill_value=False)
+        dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
+        return full_like(data, dtype=dtype, fill_value=False)
     else:
         # at this point, array should have dtype=object
         if isinstance(data, np.ndarray) or is_extension_array_dtype(data):

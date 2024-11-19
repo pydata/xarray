@@ -1936,16 +1936,16 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
-        xp = duck_array_ops.get_array_namespace(self.data)
-
         scalar = utils.is_scalar(q)
-        q = xp.atleast_1d(xp.asarray(q, dtype=float))
+        q = np.atleast_1d(np.asarray(q, dtype=np.float64))
 
         if dim is None:
             dim = self.dims
 
         if utils.is_scalar(dim):
             dim = [dim]
+
+        xp = duck_array_ops.get_array_namespace(self.data)
 
         def _wrapper(npa, **kwargs):
             # move quantile axis to end. required for apply_ufunc
