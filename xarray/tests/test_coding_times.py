@@ -214,8 +214,7 @@ def test_decode_cf_datetime_non_iso_strings() -> None:
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
-@pytest.mark.parametrize("unit", ["s", "ms", "us", "ns"])
-def test_decode_standard_calendar_inside_timestamp_range(calendar, unit) -> None:
+def test_decode_standard_calendar_inside_timestamp_range(calendar, time_unit) -> None:
     import cftime
 
     units = "days since 0001-01-01"
@@ -225,9 +224,11 @@ def test_decode_standard_calendar_inside_timestamp_range(calendar, unit) -> None
     expected = times.values
     # for cftime we get "us" resolution
     # ns resolution is handled by cftime, too (OutOfBounds)
-    actual = decode_cf_datetime(time, units, calendar=calendar, time_unit=unit)
-    if calendar != "proleptic_gregorian" or unit == "ns":
+    actual = decode_cf_datetime(time, units, calendar=calendar, time_unit=time_unit)
+    if calendar != "proleptic_gregorian" or time_unit == "ns":
         unit = "us"
+    else:
+        unit = time_unit
     expected_dtype = np.dtype(f"M8[{unit}]")
     assert actual.dtype == expected_dtype
     abs_diff = abs(actual - expected)
@@ -1670,7 +1671,6 @@ def test_encode_cf_datetime_casting_value_error(use_cftime, use_dask) -> None:
         assert encoded.attrs["units"] == "hours since 2000-01-01"
 
         decoded = conventions.decode_cf_variable("name", encoded)
-        print(decoded.load())
         assert_equal(variable, decoded)
     else:
         with pytest.raises(ValueError, match="Not possible"):

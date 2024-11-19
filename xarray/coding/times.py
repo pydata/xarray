@@ -456,7 +456,6 @@ def decode_cf_datetime(
                 flat_num_dates, units, calendar, time_unit
             )
         except (KeyError, OutOfBoundsDatetime, OutOfBoundsTimedelta, OverflowError):
-            print("decoding with cftime:", flat_num_dates.dtype)
             dates = _decode_datetime_with_cftime(
                 flat_num_dates.astype(float), units, calendar
             )
