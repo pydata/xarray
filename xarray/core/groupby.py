@@ -712,6 +712,12 @@ class GroupBy(Generic[T_Xarray]):
         ...     name="a",
         ... )
         >>> shuffled = da.groupby("x").distributed_shuffle()
+        >>> shuffled
+        <xarray.DataArray 'a' (x: 10)> Size: 80B
+        dask.array<shuffle, shape=(10,), dtype=int64, chunksize=(3,), chunktype=numpy.ndarray>
+        Coordinates:
+          * x        (x) int64 80B 0 1 1 1 2 2 2 3 3 3
+
         >>> shuffled.groupby("x").quantile(q=0.5).compute()
         <xarray.DataArray 'a' (x: 4)> Size: 32B
         array([9., 3., 4., 5.])
