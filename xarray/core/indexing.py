@@ -478,7 +478,7 @@ class VectorizedIndexer(ExplicitIndexer):
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
-        new_key: tuple[slice | np.ndarray[Any, np.dtype[np.generic]], ...] = ()
+        new_key: tuple[slice | np.ndarray[Any, np.dtype[np.integer]], ...] = ()
         ndim = None
         for k in key:
             if isinstance(k, slice):
@@ -1573,7 +1573,7 @@ def create_mask(
         base_mask = _masked_result_drop_slice(key, data)
         slice_shape = tuple(
             np.arange(*k.indices(size)).size
-            for k, size in zip(key, shape, strict=True)
+            for k, size in zip(key, shape, strict=False)
             if isinstance(k, slice)
         )
         expanded_mask = base_mask[(Ellipsis,) + (np.newaxis,) * len(slice_shape)]

@@ -634,6 +634,7 @@ class Test_vectorized_indexer:
 
 
 def get_indexers(shape: tuple[int, ...], mode) -> indexing.ExplicitIndexer:
+    indexer: tuple[Any, ...]
     if mode == "vectorized":
         indexed_shape = (3, 4)
         indexer = tuple(np.random.randint(0, s, size=indexed_shape) for s in shape)
@@ -859,7 +860,7 @@ def test_create_mask_dask() -> None:
     )
     expected = np.array([[False, True, True]] * 2).T
     actual = indexing.create_mask(
-        indexer_vec, (5, 2), da.empty((3, 2), chunks=((3,), (2,)))
+        indexer_vec, (3, 2), da.empty((3, 2, 3), chunks=((3,), (2,), (3,)))
     )
     assert isinstance(actual, da.Array)
     np.testing.assert_array_equal(expected, actual)
