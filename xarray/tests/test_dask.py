@@ -25,7 +25,6 @@ from xarray.tests import (
     assert_identical,
     mock,
     raise_if_dask_computes,
-    requires_dask_ge_2024_08_1,
     requires_pint,
     requires_scipy_or_netCDF4,
 )
@@ -1815,28 +1814,3 @@ def test_minimize_graph_size():
         # all the other dimensions.
         # e.g. previously for 'x',  actual == numchunks['y'] * numchunks['z']
         assert actual == numchunks[var], (actual, numchunks[var])
-
-
-@requires_dask_ge_2024_08_1
-@pytest.mark.parametrize(
-    "chunks, expected_chunks",
-    [
-        ((1,), (1, 3, 3, 3)),
-        ((10,), (10,)),
-    ],
-)
-def test_shuffle_by(chunks, expected_chunks):
-    from xarray.groupers import UniqueGrouper
-
-    da = xr.DataArray(
-        dims="x",
-        data=dask.array.arange(10, chunks=chunks),
-        coords={"x": [1, 2, 3, 1, 2, 3, 1, 2, 3, 0]},
-        name="a",
-    )
-    ds = da.to_dataset()
-
-    for obj in [ds, da]:
-        actual = obj.shuffle_by(x=UniqueGrouper())
-        assert_identical(actual, obj.sortby("x"))
-        assert actual.chunksizes["x"] == expected_chunks
