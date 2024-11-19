@@ -682,7 +682,7 @@ class GroupBy(Generic[T_Xarray]):
             self._sizes = self._obj.isel({self._group_dim: index}).sizes
         return self._sizes
 
-    def distributed_shuffle(self, chunks: T_Chunks = None):
+    def distributed_shuffle(self, chunks: T_Chunks = None) -> T_Xarray:
         """
         Sort or "shuffle" the underlying object.
 
@@ -711,8 +711,8 @@ class GroupBy(Generic[T_Xarray]):
         ...     coords={"x": [1, 2, 3, 1, 2, 3, 1, 2, 3, 0]},
         ...     name="a",
         ... )
-        >>> shuffled = da.groupby("x").shuffle()
-        >>> shuffled.quantile(q=0.5).compute()
+        >>> shuffled = da.groupby("x")
+        >>> shuffled.groupby("x").quantile(q=0.5).compute()
         <xarray.DataArray 'a' (x: 4)> Size: 32B
         array([9., 3., 4., 5.])
         Coordinates:
@@ -725,17 +725,7 @@ class GroupBy(Generic[T_Xarray]):
         dask.array.shuffle
         """
         self._raise_if_by_is_chunked()
-        new_groupers = {
-            # Using group.name handles the BinGrouper case
-            # It does *not* handle the TimeResampler case,
-            # so we just override this method in Resample
-            grouper.group.name: grouper.grouper.reset()
-            for grouper in self.groupers
-        }
-        return self._shuffle_obj(chunks).groupby(
-            new_groupers,
-            restore_coord_dims=self._restore_coord_dims,
-        )
+        return self._shuffle_obj(chunks)
 
     def _shuffle_obj(self, chunks: T_Chunks) -> T_Xarray:
         from xarray.core.dataarray import DataArray
