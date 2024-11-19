@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import partial
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -17,11 +18,17 @@ from xarray.coding.variables import (
 from xarray.core import indexing
 from xarray.core.utils import module_available
 from xarray.core.variable import Variable
-from xarray.namedarray._typing import _IndexerKey
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 
 HAS_NUMPY_2_0 = module_available("numpy", minversion="2.0.0.dev0")
+
+if TYPE_CHECKING:
+    from xarray.namedarray._typing import (
+        _BasicIndexerKey,
+        _OuterIndexerKey,
+        _VectorizedIndexerKey,
+    )
 
 
 def create_vlen_dtype(element_type):
@@ -249,13 +256,13 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def __repr__(self):
         return f"{type(self).__name__}({self.array!r})"
 
-    def _vindex_get(self, key: _IndexerKey):
+    def _vindex_get(self, key: _VectorizedIndexerKey):
         return _numpy_char_to_bytes(self.array.vindex[key])
 
-    def _oindex_get(self, key: indexing.OuterIndexer):
+    def _oindex_get(self, key: _OuterIndexerKey):
         return _numpy_char_to_bytes(self.array.oindex[key])
 
-    def __getitem__(self, key: _IndexerKey):
+    def __getitem__(self, key: _BasicIndexerKey):
         # require slicing the last dimension completely
         indexer = indexing.expanded_indexer(key, self.array.ndim)
         if indexer[-1] != slice(None):
