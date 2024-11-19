@@ -229,7 +229,7 @@ def test_decode_standard_calendar_inside_timestamp_range(calendar, time_unit) ->
         unit = "us"
     else:
         unit = time_unit
-    expected_dtype = np.dtype(f"M8[{unit}]")
+    expected_dtype = np.dtype(f"=M8[{unit}]")
     assert actual.dtype == expected_dtype
     abs_diff = abs(actual - expected)
     # once we no longer support versions of netCDF4 older than 1.1.5,
@@ -308,7 +308,7 @@ def test_decode_standard_calendar_single_element_inside_timestamp_range(
                 num_time, units, calendar=calendar, time_unit=time_unit
             )
 
-        assert actual.dtype == np.dtype(f"M8[{unit}]")
+        assert actual.dtype == np.dtype(f"=M8[{unit}]")
 
 
 @requires_cftime
@@ -368,7 +368,7 @@ def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
     actual = decode_cf_datetime(
         mdim_time, units, calendar=calendar, time_unit=time_unit
     )
-    assert actual.dtype == np.dtype(f"M8[{unit}]")
+    assert actual.dtype == np.dtype(f"=M8[{unit}]")
 
     abs_diff1 = abs(actual[:, 0] - expected1)
     abs_diff2 = abs(actual[:, 1] - expected2)
@@ -454,7 +454,7 @@ def test_decode_multidim_time_outside_timestamp_range(
     dtype: np.dtype
     dtype = np.dtype("O")
     if calendar == "proleptic_gregorian" and time_unit != "ns":
-        dtype = np.dtype(f"M8[{time_unit}]")
+        dtype = np.dtype(f"=M8[{time_unit}]")
 
     assert actual.dtype == dtype
 
@@ -719,7 +719,7 @@ def test_decode_cf(calendar, time_unit: PDDatetimeUnitOptions) -> None:
         if calendar not in _STANDARD_CALENDARS:
             assert ds.test.dtype == np.dtype("O")
         else:
-            assert ds.test.dtype == np.dtype(f"M8[{time_unit}]")
+            assert ds.test.dtype == np.dtype(f"=M8[{time_unit}]")
 
 
 def test_decode_cf_time_bounds(time_unit: PDDatetimeUnitOptions) -> None:
@@ -744,7 +744,7 @@ def test_decode_cf_time_bounds(time_unit: PDDatetimeUnitOptions) -> None:
         "calendar": "standard",
     }
     dsc = decode_cf(ds, time_unit=time_unit)
-    assert dsc.time_bnds.dtype == np.dtype(f"M8[{time_unit}]")
+    assert dsc.time_bnds.dtype == np.dtype(f"=M8[{time_unit}]")
     dsc = decode_cf(ds, decode_times=False)
     assert dsc.time_bnds.dtype == np.dtype("int64")
 
@@ -1230,7 +1230,7 @@ def test_decode_0size_datetime(use_cftime):
     if use_cftime and not has_cftime:
         pytest.skip()
 
-    dtype = object if use_cftime else "M8[ns]"
+    dtype = object if use_cftime else "=M8[ns]"
     expected = np.array([], dtype=dtype)
     actual = decode_cf_datetime(
         np.zeros(shape=0, dtype=np.int64),
