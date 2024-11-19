@@ -1038,7 +1038,7 @@ def _finish_indexing(
 
 
 def basic_indexing_adapter(
-    key: _IndexerKey,
+    key: _BasicIndexerKey,
     shape: _Shape,
     indexing_support: IndexingSupport,
     raw_indexing_method: Callable[..., Any],
@@ -1073,7 +1073,7 @@ def basic_indexing_adapter(
 
 
 def outer_indexing_adapter(
-    key: _IndexerKey,
+    key: _OuterIndexerKey,
     shape: _Shape,
     indexing_support: IndexingSupport,
     raw_indexing_method: Callable[..., Any],
@@ -1105,7 +1105,7 @@ def outer_indexing_adapter(
 
 
 def vectorized_indexing_adapter(
-    key: _IndexerKey,
+    key: _VectorizedIndexerKey,
     shape: _Shape,
     indexing_support: IndexingSupport,
     raw_indexing_method: Callable[..., Any],
@@ -1674,15 +1674,15 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def transpose(self, order) -> Any:
         return self.array.transpose(order)
 
-    def _oindex_get(self, indexer: _IndexerKey) -> Any:
+    def _oindex_get(self, indexer: _OuterIndexerKey) -> np.ndarray:
         key = _outer_to_numpy_indexer(OuterIndexer(indexer), self.array.shape)
         return self.array[key]
 
-    def _vindex_get(self, indexer: _IndexerKey) -> Any:
+    def _vindex_get(self, indexer: _VectorizedIndexerKey) -> np.ndarray:
         array = NumpyVIndexAdapter(self.array)
         return array[indexer]
 
-    def __getitem__(self, indexer: _IndexerKey | ExplicitIndexer) -> Any:
+    def __getitem__(self, indexer: _BasicIndexerKey) -> np.ndarray:
         array = self.array
         # We want 0d slices rather than scalars. This is achieved by
         # appending an ellipsis (see
@@ -1707,15 +1707,15 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             else:
                 raise exc
 
-    def _oindex_set(self, indexer: _IndexerKey, value: Any) -> None:
+    def _oindex_set(self, indexer: _OuterIndexerKey, value: Any) -> None:
         key = _outer_to_numpy_indexer(OuterIndexer(indexer), self.array.shape)
         self._safe_setitem(self.array, key, value)
 
-    def _vindex_set(self, indexer: _IndexerKey, value: Any) -> None:
+    def _vindex_set(self, indexer: _VectorizedIndexerKey, value: Any) -> None:
         array = NumpyVIndexAdapter(self.array)
         self._safe_setitem(array, indexer, value)
 
-    def __setitem__(self, indexer: _IndexerKey | ExplicitIndexer, value: Any) -> None:
+    def __setitem__(self, indexer: _BasicIndexerKey, value: Any) -> None:
         array = self.array
         # We want 0d slices rather than scalars. This is achieved by
         # appending an ellipsis (see
@@ -1753,7 +1753,7 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             )
         self.array = array
 
-    def _oindex_get(self, indexer: _IndexerKey) -> Any:
+    def _oindex_get(self, indexer: _OuterIndexerKey) -> Any:
         # manual orthogonal indexing (implemented like DaskIndexingAdapter)
         value = self.array
         subkey: Any
@@ -1761,19 +1761,19 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             value = value[(slice(None),) * axis + (subkey, Ellipsis)]
         return value
 
-    def _vindex_get(self, indexer: _IndexerKey) -> Any:
+    def _vindex_get(self, indexer: _VectorizedIndexerKey) -> Any:
         raise TypeError("Vectorized indexing is not supported")
 
-    def __getitem__(self, indexer: _IndexerKey) -> Any:
+    def __getitem__(self, indexer: _BasicIndexerKey) -> Any:
         return self.array[indexer]
 
-    def _oindex_set(self, indexer: _IndexerKey, value: Any) -> None:
+    def _oindex_set(self, indexer: _OuterIndexerKey, value: Any) -> None:
         self.array[indexer] = value
 
-    def _vindex_set(self, indexer: _IndexerKey, value: Any) -> None:
+    def _vindex_set(self, indexer: _VectorizedIndexerKey, value: Any) -> None:
         raise TypeError("Vectorized indexing is not supported")
 
-    def __setitem__(self, indexer: _IndexerKey, value: Any) -> None:
+    def __setitem__(self, indexer: _BasicIndexerKey, value: Any) -> None:
         self.array[indexer] = value
 
     def transpose(self, order):
@@ -1916,7 +1916,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             return self._convert_scalar(result)
 
     def _oindex_get(
-        self, indexer: _IndexerKey
+        self, indexer: _OuterIndexerKey
     ) -> (
         PandasIndexingAdapter
         | NumpyIndexingAdapter
@@ -1935,7 +1935,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return self._handle_result(result)
 
     def _vindex_get(
-        self, indexer: _IndexerKey
+        self, indexer: _VectorizedIndexerKey
     ) -> (
         PandasIndexingAdapter
         | NumpyIndexingAdapter
@@ -1954,7 +1954,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return self._handle_result(result)
 
     def __getitem__(
-        self, indexer: _IndexerKey
+        self, indexer: _BasicIndexerKey
     ) -> (
         PandasIndexingAdapter
         | NumpyIndexingAdapter
