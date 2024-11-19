@@ -39,6 +39,7 @@ from xarray.coding.times import (
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import _update_bounds_attributes, cf_encoder
 from xarray.core.common import contains_cftime_datetimes
+from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import is_duck_dask_array
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
@@ -1253,9 +1254,12 @@ def test_decode_float_datetime():
     np.testing.assert_equal(actual, expected)
 
 
-def test_decode_float_datetime_with_decimals():
+@pytest.mark.parametrize("time_unit", ["ms", "us", "ns"])
+def test_decode_float_datetime_with_decimals(
+    time_unit: Literal["ms", "us", "ns"],
+) -> None:
     # test resolution enhancement for floats
-    values = np.array([0, 0.125, 0.25, 0.375, 0.75, 1.0], dtype="float64")
+    values = np.array([0, 0.125, 0.25, 0.375, 0.75, 1.0], dtype="float32")
     expected = np.array(
         [
             "2000-01-01T00:00:00.000",
@@ -1265,18 +1269,30 @@ def test_decode_float_datetime_with_decimals():
             "2000-01-01T00:00:00.750",
             "2000-01-01T00:00:01.000",
         ],
-        dtype="=M8[ms]",
+        dtype=f"=M8[{time_unit}]",
     )
 
     units = "seconds since 2000-01-01"
     calendar = "standard"
-    with pytest.warns(SerializationWarning):
-        actual = decode_cf_datetime(values, units, calendar, time_unit="s")
+    actual = decode_cf_datetime(values, units, calendar, time_unit=time_unit)
     assert actual.dtype == expected.dtype
     np.testing.assert_equal(actual, expected)
-    actual = decode_cf_datetime(values, units, calendar, time_unit="ms")
-    assert actual.dtype == expected.dtype
-    np.testing.assert_equal(actual, expected)
+
+
+@pytest.mark.parametrize(
+    "time_unit, num", [("s", 0.123), ("ms", 0.1234), ("us", 0.1234567)]
+)
+def test_coding_float_datetime_warning(
+    time_unit: PDDatetimeUnitOptions, num: float
+) -> None:
+    units = "seconds since 2000-01-01"
+    calendar = "standard"
+    values = np.array([num], dtype="float32")
+    with pytest.warns(
+        SerializationWarning,
+        match=f"Can't decode floating point datetime to {time_unit!r}",
+    ):
+        decode_cf_datetime(values, units, calendar, time_unit=time_unit)
 
 
 @requires_cftime

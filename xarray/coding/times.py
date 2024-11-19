@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import warnings
-from collections.abc import Callable, Hashable
+from collections.abc import Callable, Hashable, Iterator
 from datetime import datetime, timedelta
 from functools import partial
 from typing import Literal, Union, cast
@@ -36,7 +36,12 @@ try:
 except ImportError:
     cftime = None
 
-from xarray.core.types import CFCalendar, NPDatetimeUnitOptions, T_DuckArray
+from xarray.core.types import (
+    CFCalendar,
+    NPDatetimeUnitOptions,
+    PDDatetimeUnitOptions,
+    T_DuckArray,
+)
 
 T_Name = Union[Hashable, None]
 
@@ -310,11 +315,25 @@ def _check_date_is_after_shift(date: pd.Timestamp, calendar: str) -> None:
             )
 
 
+def _check_higher_resolution(
+    flat_num_dates: np.ndarray,
+    iter_unit: Iterator[PDDatetimeUnitOptions],
+) -> tuple[np.ndarray, PDDatetimeUnitOptions]:
+    """Iterate until fitting resolution found."""
+    new_time_unit: PDDatetimeUnitOptions = next(iter_unit)
+    if (np.unique(flat_num_dates % 1) > 0).any() and new_time_unit != "ns":
+        flat_num_dates, new_time_unit = _check_higher_resolution(
+            flat_num_dates * 1000,
+            iter_unit=iter_unit,
+        )
+    return flat_num_dates, new_time_unit
+
+
 def _decode_datetime_with_pandas(
     flat_num_dates: np.ndarray,
     units: str,
     calendar: str,
-    time_resolution: Literal["s", "ms", "us", "ns"] = "ns",
+    time_resolution: PDDatetimeUnitOptions = "ns",
 ) -> np.ndarray:
     if not _is_standard_calendar(calendar):
         raise OutOfBoundsDatetime(
@@ -377,17 +396,14 @@ def _decode_datetime_with_pandas(
         flat_num_dates *= np.int64(ns_time_unit / ns_ref_date_unit)
         time_unit = ref_date.unit
 
-    res = {"s": "ms", "ms": "us", "us": "ns"}
-
-    def _check_higher_resolution(
-        flat_num_dates: np.ndarray,
-        new_time_unit: str,
-    ) -> tuple[np.ndarray, str]:
-        if (np.unique(flat_num_dates % 1) > 0).any() and new_time_unit != "ns":
-            flat_num_dates, new_time_unit = _check_higher_resolution(
-                flat_num_dates * 1000,
-                new_time_unit=res[new_time_unit],
-            )
+    # estimate fitting resolution for floating point values
+    # this iterates until all floats are fraction less or time_unit == "ns"
+    if flat_num_dates.dtype.kind == "f" and time_unit != "ns":
+        res: list[PDDatetimeUnitOptions] = ["s", "ms", "us", "ns"]
+        iter_unit = iter(res[res.index(time_unit) :])
+        flat_num_dates, new_time_unit = _check_higher_resolution(
+            flat_num_dates, iter_unit
+        )
         if time_unit != new_time_unit:
             msg = (
                 f"Can't decode floating point datetime to {time_unit!r} without "
@@ -396,11 +412,7 @@ def _decode_datetime_with_pandas(
                 f"decoding function."
             )
             emit_user_level_warning(msg, SerializationWarning)
-        return flat_num_dates, new_time_unit
-
-    # estimate fitting resolution for floating point values
-    if flat_num_dates.dtype.kind == "f":
-        flat_num_dates, time_unit = _check_higher_resolution(flat_num_dates, time_unit)
+            time_unit = new_time_unit
 
     # Cast input ordinals to integers and properly handle NaN/NaT
     # to prevent casting NaN to int
