@@ -34,7 +34,6 @@ from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import (
     is_dict_like,
-    is_duck_dask_array,
     is_scalar,
     parse_dims_as_set,
     result_name,
@@ -2128,6 +2127,18 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
         return to_floatable(data)
 
 
+def _apply_vectorized_indexer(indices, coord):
+    from xarray.core.indexing import (
+        VectorizedIndexer,
+        apply_indexer,
+        as_indexable,
+    )
+
+    return apply_indexer(
+        as_indexable(coord), VectorizedIndexer((indices.squeeze(axis=-1),))
+    )
+
+
 def _calc_idxminmax(
     *,
     array,
@@ -2175,15 +2186,18 @@ def _calc_idxminmax(
     if is_chunked_array(array.data):
         chunkmanager = get_chunked_array_type(array.data)
         chunked_coord = chunkmanager.from_array(array[dim].data, chunks=-1)
-        if is_duck_dask_array(array.data) and indx.ndim > 1:
-            from xarray.core.dask_array_compat import reshape_blockwise
 
-            linearized = reshape_blockwise(indx.data, shape=(indx.size,))
-            data = chunked_coord[linearized]
-            out = reshape_blockwise(data, indx.shape, chunks=indx.chunks)
+        if indx.ndim == 0:
+            out = chunked_coord[indx.data]
         else:
-            data = chunked_coord[duck_array_ops.ravel(indx.data)]
-            out = duck_array_ops.reshape(data, indx.shape)
+            out = chunkmanager.map_blocks(
+                _apply_vectorized_indexer,
+                indx.data[..., np.newaxis],
+                chunked_coord,
+                chunks=indx.data.chunks,
+                drop_axis=-1,
+                dtype=chunked_coord.dtype,
+            )
         res = indx.copy(data=out)
         # we need to attach back the dim name
         res.name = dim
