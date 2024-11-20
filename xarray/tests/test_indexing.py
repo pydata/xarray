@@ -12,15 +12,12 @@ from xarray.core import indexing, nputils
 from xarray.core.indexes import PandasIndex, PandasMultiIndex
 from xarray.core.types import T_Xarray
 from xarray.tests import (
-    IndexerMaker,
     ReturnItem,
     assert_array_equal,
     assert_identical,
     raise_if_dask_computes,
     requires_dask,
 )
-
-B = IndexerMaker(indexing.BasicIndexer)
 
 
 class TestIndexCallable:
@@ -425,7 +422,7 @@ class TestLazyArray:
             NotImplementedError,
             match=r"Lazy item assignment with the vectorized indexer is not yet",
         ):
-            lazy.vindex[indexer] = 0
+            lazy.vindex[indexer.tuple] = 0
 
     @pytest.mark.parametrize(
         "indexer_class, key, value",
@@ -441,10 +438,10 @@ class TestLazyArray:
 
         if indexer_class is indexing.BasicIndexer:
             indexer = indexer_class(key)
-            lazy[indexer] = value
+            lazy[indexer.tuple] = value
         elif indexer_class is indexing.OuterIndexer:
             indexer = indexer_class(key)
-            lazy.oindex[indexer] = value
+            lazy.oindex[indexer.tuple] = value
 
         assert_array_equal(original[key], value)
 
@@ -453,16 +450,16 @@ class TestCopyOnWriteArray:
     def test_setitem(self) -> None:
         original = np.arange(10)
         wrapped = indexing.CopyOnWriteArray(original)
-        wrapped[B[:]] = 0
+        wrapped[(slice(None),)] = 0
         assert_array_equal(original, np.arange(10))
         assert_array_equal(wrapped, np.zeros(10))
 
     def test_sub_array(self) -> None:
         original = np.arange(10)
         wrapped = indexing.CopyOnWriteArray(original)
-        child = wrapped[B[:5]]
+        child = wrapped[(slice(5),)]
         assert isinstance(child, indexing.CopyOnWriteArray)
-        child[B[:]] = 0
+        child[(slice(None),)] = 0
         assert_array_equal(original, np.arange(10))
         assert_array_equal(wrapped, np.arange(10))
         assert_array_equal(child, np.zeros(5))
@@ -470,7 +467,7 @@ class TestCopyOnWriteArray:
     def test_index_scalar(self) -> None:
         # regression test for GH1374
         x = indexing.CopyOnWriteArray(np.array(["foo", "bar"]))
-        assert np.array(x[B[0]][B[()]]) == "foo"
+        assert np.array(x[(0,)][()]) == "foo"
 
 
 class TestMemoryCachedArray:
@@ -483,7 +480,7 @@ class TestMemoryCachedArray:
     def test_sub_array(self) -> None:
         original = indexing.LazilyIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
-        child = wrapped[B[:5]]
+        child = wrapped[(slice(5),)]
         assert isinstance(child, indexing.MemoryCachedArray)
         assert_array_equal(child, np.arange(5))
         assert isinstance(child.array, indexing.NumpyIndexingAdapter)
@@ -492,13 +489,13 @@ class TestMemoryCachedArray:
     def test_setitem(self) -> None:
         original = np.arange(10)
         wrapped = indexing.MemoryCachedArray(original)
-        wrapped[B[:]] = 0
+        wrapped[(slice(None),)] = 0
         assert_array_equal(original, np.zeros(10))
 
     def test_index_scalar(self) -> None:
         # regression test for GH1374
         x = indexing.MemoryCachedArray(np.array(["foo", "bar"]))
-        assert np.array(x[B[0]][B[()]]) == "foo"
+        assert np.array(x[(0,)][()]) == "foo"
 
 
 def test_base_explicit_indexer() -> None:
@@ -607,7 +604,7 @@ class Test_vectorized_indexer:
                 vindex, self.data.shape
             )
             np.testing.assert_array_equal(
-                self.data.vindex[vindex], self.data.vindex[vindex_array]
+                self.data.vindex[vindex.tuple], self.data.vindex[vindex_array.tuple]
             )
 
         actual = indexing._arrayize_vectorized_indexer(
@@ -636,7 +633,8 @@ class Test_vectorized_indexer:
         np.testing.assert_array_equal(b, np.arange(5)[:, np.newaxis])
 
 
-def get_indexers(shape, mode):
+def get_indexers(shape: tuple[int, ...], mode) -> indexing.ExplicitIndexer:
+    indexer: tuple[Any, ...]
     if mode == "vectorized":
         indexed_shape = (3, 4)
         indexer = tuple(np.random.randint(0, s, size=indexed_shape) for s in shape)
@@ -665,7 +663,7 @@ def get_indexers(shape, mode):
         return indexing.BasicIndexer(tuple(indexer))
 
     elif mode == "basic1":  # basic indexer
-        return indexing.BasicIndexer((3,))
+        return indexing.BasicIndexer((2,) * len(shape))
 
     elif mode == "basic2":  # basic indexer
         indexer = [0, 2, 4]
@@ -723,35 +721,35 @@ def test_decompose_indexers(shape, indexer_mode, indexing_support) -> None:
 
     # Dispatch to appropriate indexing method
     if indexer_mode.startswith("vectorized"):
-        expected = indexing_adapter.vindex[indexer]
+        expected = indexing_adapter.vindex[indexer.tuple]
 
     elif indexer_mode.startswith("outer"):
-        expected = indexing_adapter.oindex[indexer]
+        expected = indexing_adapter.oindex[indexer.tuple]
 
     else:
-        expected = indexing_adapter[indexer]  # Basic indexing
+        expected = indexing_adapter[indexer.tuple]  # Basic indexing
 
     if isinstance(backend_ind, indexing.VectorizedIndexer):
-        array = indexing_adapter.vindex[backend_ind]
+        array = indexing_adapter.vindex[backend_ind.tuple]
     elif isinstance(backend_ind, indexing.OuterIndexer):
-        array = indexing_adapter.oindex[backend_ind]
+        array = indexing_adapter.oindex[backend_ind.tuple]
     else:
-        array = indexing_adapter[backend_ind]
+        array = indexing_adapter[backend_ind.tuple]
 
     if len(np_ind.tuple) > 0:
         array_indexing_adapter = indexing.NumpyIndexingAdapter(array)
         if isinstance(np_ind, indexing.VectorizedIndexer):
-            array = array_indexing_adapter.vindex[np_ind]
+            array = array_indexing_adapter.vindex[np_ind.tuple]
         elif isinstance(np_ind, indexing.OuterIndexer):
-            array = array_indexing_adapter.oindex[np_ind]
+            array = array_indexing_adapter.oindex[np_ind.tuple]
         else:
-            array = array_indexing_adapter[np_ind]
+            array = array_indexing_adapter[np_ind.tuple]
     np.testing.assert_array_equal(expected, array)
 
     if not all(isinstance(k, indexing.integer_types) for k in np_ind.tuple):
         combined_ind = indexing._combine_indexers(backend_ind, shape, np_ind)
         assert isinstance(combined_ind, indexing.VectorizedIndexer)
-        array = indexing_adapter.vindex[combined_ind]
+        array = indexing_adapter.vindex[combined_ind.tuple]
         np.testing.assert_array_equal(expected, array)
 
 
@@ -824,14 +822,14 @@ def test_create_mask_outer_indexer() -> None:
 def test_create_mask_vectorized_indexer() -> None:
     indexer = indexing.VectorizedIndexer((np.array([0, -1, 2]), np.array([0, 1, -1])))
     expected = np.array([False, True, True])
-    actual = indexing.create_mask(indexer, (5,))
+    actual = indexing.create_mask(indexer, (5, 5))
     np.testing.assert_array_equal(expected, actual)
 
     indexer = indexing.VectorizedIndexer(
         (np.array([0, -1, 2]), slice(None), np.array([0, 1, -1]))
     )
     expected = np.array([[False, True, True]] * 2).T
-    actual = indexing.create_mask(indexer, (5, 2))
+    actual = indexing.create_mask(indexer, (5, 2, 5))
     np.testing.assert_array_equal(expected, actual)
 
 
@@ -845,13 +843,14 @@ def test_create_mask_basic_indexer() -> None:
     np.testing.assert_array_equal(False, actual)
 
 
+@requires_dask
 def test_create_mask_dask() -> None:
-    da = pytest.importorskip("dask.array")
+    import dask.array as da
 
     indexer = indexing.OuterIndexer((1, slice(2), np.array([0, -1, 2])))
     expected = np.array(2 * [[False, True, False]])
     actual = indexing.create_mask(
-        indexer, (5, 5, 5), da.empty((2, 3), chunks=((1, 1), (2, 1)))
+        indexer, (5, 5, 5), da.empty((2, 3, 3), chunks=((1, 1), (2, 1), (3,)))
     )
     assert actual.chunks == ((1, 1), (2, 1))
     np.testing.assert_array_equal(expected, actual)
@@ -861,7 +860,7 @@ def test_create_mask_dask() -> None:
     )
     expected = np.array([[False, True, True]] * 2).T
     actual = indexing.create_mask(
-        indexer_vec, (5, 2), da.empty((3, 2), chunks=((3,), (2,)))
+        indexer_vec, (3, 2), da.empty((3, 2, 3), chunks=((3,), (2,), (3,)))
     )
     assert isinstance(actual, da.Array)
     np.testing.assert_array_equal(expected, actual)
