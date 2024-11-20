@@ -3801,7 +3801,7 @@ class TestDataArray:
 
         array = DataArray([1, 2, 3], coords=[("x", dates)], attrs={"a": 1})
 
-        # convert to dateset and back again
+        # convert to dataset and back again
         result = array.to_dataset("x").to_dataarray(dim="x")
 
         assert_equal(array, result)
@@ -4307,6 +4307,18 @@ class TestDataArray:
             warnings.simplefilter("ignore", RankWarning)
             out = da.polyfit("x", 8, full=True)
             np.testing.assert_array_equal(out.polyfit_residuals.isnull(), [True, False])
+
+    @requires_dask
+    def test_polyfit_nd_dask(self) -> None:
+        da = (
+            DataArray(np.arange(120), dims="time", coords={"time": np.arange(120)})
+            .chunk({"time": 20})
+            .expand_dims(lat=5, lon=5)
+            .chunk({"lat": 2, "lon": 2})
+        )
+        actual = da.polyfit("time", 1, skipna=False)
+        expected = da.compute().polyfit("time", 1, skipna=False)
+        assert_allclose(actual, expected)
 
     def test_pad_constant(self) -> None:
         ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))

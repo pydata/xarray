@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import sys
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -38,7 +39,7 @@ def _construct_cache_dir(path):
     return path
 
 
-external_urls = {}  # type: dict
+external_urls: dict = {}
 file_formats = {
     "air_temperature": 3,
     "air_temperature_gradient": 4,
@@ -157,8 +158,13 @@ def open_dataset(
 
         url = f"{base_url}/raw/{version}/{path.name}"
 
+    headers = {"User-Agent": f"xarray {sys.modules['xarray'].__version__}"}
+    downloader = pooch.HTTPDownloader(headers=headers)
+
     # retrieve the file
-    filepath = pooch.retrieve(url=url, known_hash=None, path=cache_dir)
+    filepath = pooch.retrieve(
+        url=url, known_hash=None, path=cache_dir, downloader=downloader
+    )
     ds = _open_dataset(filepath, engine=engine, **kws)
     if not cache:
         ds = ds.load()

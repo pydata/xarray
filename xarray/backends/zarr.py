@@ -36,13 +36,12 @@ from xarray.namedarray.pycompat import integer_types
 from xarray.namedarray.utils import module_available
 
 if TYPE_CHECKING:
-    from io import BufferedIOBase
-
     from zarr import Group as ZarrGroup
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
+    from xarray.core.types import ReadBuffer
 
 
 def _get_mappers(*, storage_options, store, chunk_store):
@@ -250,9 +249,9 @@ def _determine_zarr_chunks(
     # if there are no chunks in encoding but there are dask chunks, we try to
     # use the same chunks in zarr
     # However, zarr chunks needs to be uniform for each array
-    # http://zarr.readthedocs.io/en/latest/spec/v1.html#chunks
+    # https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html#chunks
     # while dask chunks can be variable sized
-    # http://dask.pydata.org/en/latest/array-design.html#chunks
+    # https://dask.pydata.org/en/latest/array-design.html#chunks
     if var_chunks and not enc_chunks:
         if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
             raise ValueError(
@@ -1377,7 +1376,7 @@ def open_zarr(
 
     References
     ----------
-    http://zarr.readthedocs.io/
+    https://zarr.readthedocs.io/
     """
     from xarray.backends.api import open_dataset
 
@@ -1448,7 +1447,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     ) -> bool:
         if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
@@ -1456,9 +1455,9 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
         return False
 
-    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
+    def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -1511,7 +1510,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -1528,7 +1527,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         zarr_version=None,
         zarr_format=None,
-        **kwargs,
     ) -> DataTree:
         filename_or_obj = _normalize_path(filename_or_obj)
         groups_dict = self.open_groups_as_dict(
@@ -1548,14 +1546,13 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             storage_options=storage_options,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
-            **kwargs,
         )
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -1572,7 +1569,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         zarr_version=None,
         zarr_format=None,
-        **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.core.treenode import NodePath
 
