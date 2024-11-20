@@ -1242,7 +1242,7 @@ def attempt_import(module: str) -> ModuleType:
     try:
         return importlib.import_module(module)
     except (ImportError, ModuleNotFoundError) as e:
-        raise RuntimeError(
+        raise ImportError(
             f"The {install_name} package is required {reason}"
             " but could not be imported."
             " Please install it with your package manager (e.g. conda or pip)."

@@ -379,6 +379,7 @@ def test_attempt_import() -> None:
     np = attempt_import("numpy")
     assert np.__name__ == "numpy"
 
-    with pytest.raises(RuntimeError, match="The foo package is required"):
+    with pytest.raises(ImportError, match="The foo package is required"):
         attempt_import(module="foo")
+    with pytest.raises(ImportError, match="The foo package is required"):
         attempt_import(module="foo.bar")
