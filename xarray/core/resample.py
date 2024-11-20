@@ -59,7 +59,7 @@ class Resample(GroupBy[T_Xarray]):
         result = result.rename({RESAMPLE_DIM: self._group_dim})
         return result
 
-    def distributed_shuffle(self, chunks: T_Chunks = None):
+    def shuffle_to_chunks(self, chunks: T_Chunks = None):
         """
         Sort or "shuffle" the underlying object.
 
@@ -88,7 +88,7 @@ class Resample(GroupBy[T_Xarray]):
         ...     coords={"time": xr.date_range("2001-01-01", freq="12h", periods=10)},
         ...     name="a",
         ... )
-        >>> shuffled = da.resample(time="2D").distributed_shuffle()
+        >>> shuffled = da.resample(time="2D").shuffle_to_chunks()
         >>> shuffled
         <xarray.DataArray 'a' (time: 10)> Size: 80B
         dask.array<shuffle, shape=(10,), dtype=int64, chunksize=(4,), chunktype=numpy.ndarray>

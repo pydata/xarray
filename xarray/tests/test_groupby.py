@@ -672,7 +672,7 @@ def test_groupby_drops_nans(shuffle: bool, chunk: Literal[False] | dict) -> None
         ds["variable"] = ds["variable"].chunk(chunk)
     grouped = ds.groupby(ds.id)
     if shuffle:
-        grouped = grouped.distributed_shuffle().groupby(ds.id)
+        grouped = grouped.shuffle_to_chunks().groupby(ds.id)
 
     # non reduction operation
     expected1 = ds.copy()
@@ -1418,7 +1418,7 @@ class TestDataArrayGroupBy:
         with raise_if_dask_computes():
             grouped = array.groupby("abc")
             if shuffle:
-                grouped = grouped.distributed_shuffle().groupby("abc")
+                grouped = grouped.shuffle_to_chunks().groupby("abc")
 
             with xr.set_options(use_flox=use_flox):
                 actual = getattr(grouped, method)(dim="y")
@@ -1687,7 +1687,7 @@ class TestDataArrayGroupBy:
 
         with xr.set_options(use_flox=use_flox):
             gb = array.groupby_bins("dim_0", bins=bins, **cut_kwargs)
-            shuffled = gb.distributed_shuffle().groupby_bins(
+            shuffled = gb.shuffle_to_chunks().groupby_bins(
                 "dim_0", bins=bins, **cut_kwargs
             )
             actual = gb.sum()
@@ -1880,7 +1880,7 @@ class TestDataArrayResample:
         array = DataArray(np.arange(10), [("time", times)])
 
         rs = array.resample(time=resample_freq)
-        shuffled = rs.distributed_shuffle().resample(time=resample_freq)
+        shuffled = rs.shuffle_to_chunks().resample(time=resample_freq)
         actual = rs.mean()
         expected = resample_as_pandas(array, resample_freq)
         assert_identical(expected, actual)
@@ -1891,7 +1891,7 @@ class TestDataArrayResample:
 
         rs = array.resample(time="24h", closed="right")
         actual = rs.mean()
-        shuffled = rs.distributed_shuffle().resample(time="24h", closed="right")
+        shuffled = rs.shuffle_to_chunks().resample(time="24h", closed="right")
         expected = resample_as_pandas(array, "24h", closed="right")
         assert_identical(expected, actual)
         assert_identical(expected, shuffled.mean())
@@ -2838,7 +2838,7 @@ def test_multiple_groupers(use_flox: bool, shuffle: bool) -> None:
     groupers = dict(labels1=UniqueGrouper(), labels2=UniqueGrouper())
     gb = da.groupby(groupers)
     if shuffle:
-        gb = gb.distributed_shuffle().groupby(groupers)
+        gb = gb.shuffle_to_chunks().groupby(groupers)
     repr(gb)
 
     expected = DataArray(
@@ -2860,7 +2860,7 @@ def test_multiple_groupers(use_flox: bool, shuffle: bool) -> None:
     groupers = dict(a=UniqueGrouper(), b=UniqueGrouper())
     gb = square.groupby(groupers)
     if shuffle:
-        gb = gb.distributed_shuffle().groupby(groupers)
+        gb = gb.shuffle_to_chunks().groupby(groupers)
     repr(gb)
     with xr.set_options(use_flox=use_flox):
         actual = gb.mean()
@@ -2886,7 +2886,7 @@ def test_multiple_groupers(use_flox: bool, shuffle: bool) -> None:
     groupers = dict(x=UniqueGrouper(), y=UniqueGrouper())
     gb = b.groupby(groupers)
     if shuffle:
-        gb = gb.distributed_shuffle().groupby(groupers)
+        gb = gb.shuffle_to_chunks().groupby(groupers)
     repr(gb)
     with xr.set_options(use_flox=use_flox):
         assert_identical(gb.mean("z"), b.mean("z"))
@@ -2894,7 +2894,7 @@ def test_multiple_groupers(use_flox: bool, shuffle: bool) -> None:
     groupers = dict(x=UniqueGrouper(), xy=UniqueGrouper())
     gb = b.groupby(groupers)
     if shuffle:
-        gb = gb.distributed_shuffle().groupby(groupers)
+        gb = gb.shuffle_to_chunks().groupby(groupers)
     repr(gb)
     with xr.set_options(use_flox=use_flox):
         actual = gb.mean()
@@ -2951,7 +2951,7 @@ def test_multiple_groupers_mixed(use_flox: bool, shuffle: bool) -> None:
     )
     gb = ds.groupby(groupers)
     if shuffle:
-        gb = gb.distributed_shuffle().groupby(groupers)
+        gb = gb.shuffle_to_chunks().groupby(groupers)
     expected_data = np.array(
         [
             [[0.0, np.nan], [np.nan, 3.0]],
@@ -3188,12 +3188,12 @@ def test_shuffle_simple() -> None:
         data=dask.array.from_array([1, 2, 3, 4, 5, 6], chunks=2),
         coords={"label": ("x", "a b c a b c".split(" "))},
     )
-    actual = da.groupby(label=UniqueGrouper()).distributed_shuffle()
+    actual = da.groupby(label=UniqueGrouper()).shuffle_to_chunks()
     expected = da.isel(x=[0, 3, 1, 4, 2, 5])
     assert_identical(actual, expected)
 
     with pytest.raises(ValueError):
-        da.chunk(x=2, eagerly_load_group=False).groupby("label").distributed_shuffle()
+        da.chunk(x=2, eagerly_load_group=False).groupby("label").shuffle_to_chunks()
 
 
 @requires_dask_ge_2024_08_1
@@ -3218,7 +3218,7 @@ def test_shuffle_by(chunks, expected_chunks):
     ds = da.to_dataset()
 
     for obj in [ds, da]:
-        actual = obj.groupby(x=UniqueGrouper()).distributed_shuffle()
+        actual = obj.groupby(x=UniqueGrouper()).shuffle_to_chunks()
         assert_identical(actual, obj.sortby("x"))
         assert actual.chunksizes["x"] == expected_chunks
 

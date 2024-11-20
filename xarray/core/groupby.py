@@ -682,7 +682,7 @@ class GroupBy(Generic[T_Xarray]):
             self._sizes = self._obj.isel({self._group_dim: index}).sizes
         return self._sizes
 
-    def distributed_shuffle(self, chunks: T_Chunks = None) -> T_Xarray:
+    def shuffle_to_chunks(self, chunks: T_Chunks = None) -> T_Xarray:
         """
         Sort or "shuffle" the underlying object.
 
@@ -711,7 +711,7 @@ class GroupBy(Generic[T_Xarray]):
         ...     coords={"x": [1, 2, 3, 1, 2, 3, 1, 2, 3, 0]},
         ...     name="a",
         ... )
-        >>> shuffled = da.groupby("x").distributed_shuffle()
+        >>> shuffled = da.groupby("x").shuffle_to_chunks()
         >>> shuffled
         <xarray.DataArray 'a' (x: 10)> Size: 80B
         dask.array<shuffle, shape=(10,), dtype=int64, chunksize=(3,), chunktype=numpy.ndarray>
