@@ -100,7 +100,7 @@ The binning is implemented via :func:`pandas.cut`, whose documentation details h
 the bins are assigned. As seen in the example above, by default, the bins are
 labeled with strings using set notation to precisely identify the bin limits. To
 override this behavior, you can specify the bin labels explicitly. Here we
-choose `float` labels which identify the bin centers:
+choose ``float`` labels which identify the bin centers:
 
 .. ipython:: python
 
@@ -213,7 +213,7 @@ may be desirable:
 
     da.groupby_bins("lon", [0, 45, 50]).sum()
 
-These methods group by `lon` values. It is also possible to groupby each
+These methods group by ``lon`` values. It is also possible to groupby each
 cell in a grid, regardless of value, by stacking multiple dimensions,
 applying your function, and then unstacking the result:
 
@@ -222,7 +222,7 @@ applying your function, and then unstacking the result:
     stacked = da.stack(gridcell=["ny", "nx"])
     stacked.groupby("gridcell").sum(...).unstack("gridcell")
 
-Alternatively, you can groupby both `lat` and `lon` at the :ref:`same time <groupby.multiple>`.
+Alternatively, you can groupby both ``lat`` and ``lon`` at the :ref:`same time <groupby.multiple>`.
 
 .. _groupby.groupers:
 
@@ -292,6 +292,15 @@ is identical to
     from xarray.groupers import TimeResampler
 
     ds.resample(time=TimeResampler("ME"))
+
+
+The :py:class:`groupers.UniqueGrouper` accepts an optional ``labels`` kwarg that is not present
+in :py:meth:`DataArray.groupby` or :py:meth:`Dataset.groupby`.
+Specifying ``labels`` is required when grouping by a lazy array type (e.g. dask or cubed).
+The ``labels`` are used to construct the output coordinate (say for a reduction), and aggregations
+will only be run over the specified labels.
+You may use ``labels`` to also specify the ordering of groups to be used during iteration.
+The order will be preserved in the output.
 
 
 .. _groupby.multiple:

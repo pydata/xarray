@@ -582,7 +582,7 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
             except ValueError as e:
                 raise MergeError(
                     "combine_attrs='no_conflicts', but some values are not "
-                    f"the same. Merging {str(result)} with {str(attrs)}"
+                    f"the same. Merging {result} with {attrs}"
                 ) from e
         return result
     elif combine_attrs == "drop_conflicts":
@@ -608,8 +608,8 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
         for attrs in variable_attrs[1:]:
             if not dict_equiv(result, attrs):
                 raise MergeError(
-                    f"combine_attrs='identical', but attrs differ. First is {str(result)} "
-                    f", other is {str(attrs)}."
+                    f"combine_attrs='identical', but attrs differ. First is {result} "
+                    f", other is {attrs}."
                 )
         return result
     else:
@@ -710,7 +710,7 @@ def merge_core(
         coord_names.intersection_update(variables)
     if explicit_coords is not None:
         coord_names.update(explicit_coords)
-    for dim, _size in dims.items():
+    for dim in dims.keys():
         if dim in variables:
             coord_names.add(dim)
     ambiguous_coords = coord_names.intersection(noncoord_names)

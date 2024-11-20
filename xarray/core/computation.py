@@ -77,11 +77,11 @@ class _UFuncSignature:
     """
 
     __slots__ = (
-        "input_core_dims",
-        "output_core_dims",
+        "_all_core_dims",
         "_all_input_core_dims",
         "_all_output_core_dims",
-        "_all_core_dims",
+        "input_core_dims",
+        "output_core_dims",
     )
 
     def __init__(self, input_core_dims, output_core_dims=((),)):
@@ -2252,7 +2252,7 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
     if not unify_chunks_args:
         return objects
 
-    chunkmanager = get_chunked_array_type(*[arg for arg in unify_chunks_args])
+    chunkmanager = get_chunked_array_type(*list(unify_chunks_args))
     _, chunked_data = chunkmanager.unify_chunks(*unify_chunks_args)
     chunked_data_iter = iter(chunked_data)
     out: list[Dataset | DataArray] = []

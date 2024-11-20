@@ -1,6 +1,6 @@
 from importlib.metadata import version as _version
 
-from xarray import groupers, testing, tutorial
+from xarray import groupers, testing, tutorial, ufuncs
 from xarray.backends.api import (
     load_dataarray,
     load_dataset,
@@ -69,6 +69,7 @@ __all__ = (
     "groupers",
     "testing",
     "tutorial",
+    "ufuncs",
     # Top-level functions
     "align",
     "apply_ufunc",
@@ -78,13 +79,13 @@ __all__ = (
     "combine_by_coords",
     "combine_nested",
     "concat",
+    "corr",
+    "cov",
+    "cross",
     "date_range",
     "date_range_like",
     "decode_cf",
     "dot",
-    "cov",
-    "corr",
-    "cross",
     "full_like",
     "get_options",
     "group_subtrees",
@@ -121,8 +122,8 @@ __all__ = (
     "Index",
     "IndexSelResult",
     "IndexVariable",
-    "Variable",
     "NamedArray",
+    "Variable",
     # Exceptions
     "InvalidTreeError",
     "MergeError",

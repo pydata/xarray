@@ -4,15 +4,16 @@ import logging
 import os
 import time
 import traceback
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from glob import glob
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, overload
 
 import numpy as np
 
 from xarray.conventions import cf_encoder
 from xarray.core import indexing
 from xarray.core.datatree import DataTree
+from xarray.core.types import ReadBuffer
 from xarray.core.utils import (
     FrozenDict,
     NdimSizeLenMixin,
@@ -23,8 +24,6 @@ from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
-    from io import BufferedIOBase
-
     from xarray.core.dataset import Dataset
     from xarray.core.types import NestedSequence
 
@@ -34,8 +33,18 @@ logger = logging.getLogger(__name__)
 
 NONE_VAR_NAME = "__values__"
 
+T = TypeVar("T")
 
-def _normalize_path(path):
+
+@overload
+def _normalize_path(path: str | os.PathLike) -> str: ...
+
+
+@overload
+def _normalize_path(path: T) -> T: ...
+
+
+def _normalize_path(path: str | os.PathLike | T) -> str | T:
     """
     Normalize pathlikes to string.
 
@@ -60,12 +69,52 @@ def _normalize_path(path):
     if isinstance(path, str) and not is_remote_uri(path):
         path = os.path.abspath(os.path.expanduser(path))
 
-    return path
+    return path  # type:ignore [return-value]
+
+
+@overload
+def _find_absolute_paths(
+    paths: str | os.PathLike | Sequence[str | os.PathLike],
+    **kwargs,
+) -> list[str]: ...
+
+
+@overload
+def _find_absolute_paths(
+    paths: ReadBuffer | Sequence[ReadBuffer],
+    **kwargs,
+) -> list[ReadBuffer]: ...
+
+
+@overload
+def _find_absolute_paths(
+    paths: NestedSequence[str | os.PathLike], **kwargs
+) -> NestedSequence[str]: ...
+
+
+@overload
+def _find_absolute_paths(
+    paths: NestedSequence[ReadBuffer], **kwargs
+) -> NestedSequence[ReadBuffer]: ...
+
+
+@overload
+def _find_absolute_paths(
+    paths: str
+    | os.PathLike
+    | ReadBuffer
+    | NestedSequence[str | os.PathLike | ReadBuffer],
+    **kwargs,
+) -> NestedSequence[str | ReadBuffer]: ...
 
 
 def _find_absolute_paths(
-    paths: str | os.PathLike | NestedSequence[str | os.PathLike], **kwargs
-) -> list[str]:
+    paths: str
+    | os.PathLike
+    | ReadBuffer
+    | NestedSequence[str | os.PathLike | ReadBuffer],
+    **kwargs,
+) -> NestedSequence[str | ReadBuffer]:
     """
     Find absolute paths from the pattern.
 
@@ -87,7 +136,7 @@ def _find_absolute_paths(
     ['common.py']
     """
     if isinstance(paths, str):
-        if is_remote_uri(paths) and kwargs.get("engine", None) == "zarr":
+        if is_remote_uri(paths) and kwargs.get("engine") == "zarr":
             if TYPE_CHECKING:
                 import fsspec
             else:
@@ -102,7 +151,7 @@ def _find_absolute_paths(
                 expand=False,
             )
             tmp_paths = fs.glob(fs._strip_protocol(paths))  # finds directories
-            paths = [fs.get_mapper(path) for path in tmp_paths]
+            return [fs.get_mapper(path) for path in tmp_paths]
         elif is_remote_uri(paths):
             raise ValueError(
                 "cannot do wild-card matching for paths that are remote URLs "
@@ -110,13 +159,26 @@ def _find_absolute_paths(
                 "Instead, supply paths as an explicit list of strings."
             )
         else:
-            paths = sorted(glob(_normalize_path(paths)))
+            return sorted(glob(_normalize_path(paths)))
     elif isinstance(paths, os.PathLike):
-        paths = [os.fspath(paths)]
-    else:
-        paths = [os.fspath(p) if isinstance(p, os.PathLike) else p for p in paths]
+        return [_normalize_path(paths)]
+    elif isinstance(paths, ReadBuffer):
+        return [paths]
 
-    return paths
+    def _normalize_path_list(
+        lpaths: NestedSequence[str | os.PathLike | ReadBuffer],
+    ) -> NestedSequence[str | ReadBuffer]:
+        paths = []
+        for p in lpaths:
+            if isinstance(p, str | os.PathLike):
+                paths.append(_normalize_path(p))
+            elif isinstance(p, list):
+                paths.append(_normalize_path_list(p))  # type: ignore[arg-type]
+            else:
+                paths.append(p)  # type: ignore[arg-type]
+        return paths
+
+    return _normalize_path_list(paths)
 
 
 def _encode_variable_name(name):
@@ -194,7 +256,7 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 
     def get_duck_array(self, dtype: np.typing.DTypeLike = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
-        return self[key]  # type: ignore [index]
+        return self[key]  # type: ignore[index]
 
 
 class AbstractDataStore:
@@ -247,7 +309,7 @@ class AbstractDataStore:
 
 
 class ArrayWriter:
-    __slots__ = ("sources", "targets", "regions", "lock")
+    __slots__ = ("lock", "regions", "sources", "targets")
 
     def __init__(self, lock=None):
         self.sources = []
@@ -516,10 +578,9 @@ class BackendEntrypoint:
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
-        **kwargs: Any,
     ) -> Dataset:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -529,7 +590,7 @@ class BackendEntrypoint:
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     ) -> bool:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -539,8 +600,9 @@ class BackendEntrypoint:
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-        **kwargs: Any,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        *,
+        drop_variables: str | Iterable[str] | None = None,
     ) -> DataTree:
         """
         Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
@@ -550,8 +612,9 @@ class BackendEntrypoint:
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-        **kwargs: Any,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        *,
+        drop_variables: str | Iterable[str] | None = None,
     ) -> dict[str, Dataset]:
         """
         Opens a dictionary mapping from group names to Datasets.
