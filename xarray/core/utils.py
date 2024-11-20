@@ -1236,16 +1236,17 @@ def attempt_import(module: str) -> ModuleType:
         matplotlib="for plotting",
         hypothesis="for the `xarray.testing.strategies` submodule",
     )
-    package_name = module.split(".")[0]  # if submod, get the top-level package name
-
-    if module_available(package_name):
-        return importlib.import_module(module)
+    package_name = module.split(".")[0]  # e.g. "zarr" from "zarr.storage"
     install_name = install_mapping.get(package_name, package_name)
     reason = package_purpose.get(package_name, "")
-    raise ImportError(
-        f"The {install_name} package is required {reason} but could not be imported."
-        " Please install it with your package manager (e.g. conda or pip)."
-    )
+    try:
+        return importlib.import_module(module)
+    except (ImportError, ModuleNotFoundError) as e:
+        raise RuntimeError(
+            f"The {install_name} package is required {reason}"
+            " but could not be imported."
+            " Please install it with your package manager (e.g. conda or pip)."
+        ) from e
 
 
 _DEFAULT_NAME = ReprObject("<default-name>")
