@@ -39,7 +39,7 @@ def _construct_cache_dir(path):
     return path
 
 
-external_urls = {}  # type: dict
+external_urls: dict = {}
 file_formats = {
     "air_temperature": 3,
     "air_temperature_gradient": 4,
