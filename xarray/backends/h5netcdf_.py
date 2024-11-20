@@ -150,7 +150,7 @@ class H5NetCDFStore(WritableCFDataStore):
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
-        storage_options=None,
+        storage_options: dict[str, Any] | None = None,
     ):
         import h5netcdf
 
@@ -433,7 +433,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
-        storage_options=None,
+        storage_options: dict[str, Any] | None = None,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
@@ -446,6 +446,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             decode_vlen_strings=decode_vlen_strings,
             driver=driver,
             driver_kwds=driver_kwds,
+            storage_options=storage_options,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
@@ -459,7 +460,6 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             drop_variables=drop_variables,
             use_cftime=use_cftime,
             decode_timedelta=decode_timedelta,
-            storage_options=None,
         )
         return ds
 
