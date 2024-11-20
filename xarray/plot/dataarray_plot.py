@@ -10,6 +10,7 @@ import pandas as pd
 
 from xarray.core.alignment import broadcast
 from xarray.core.concat import concat
+from xarray.core.utils import attempt_import
 from xarray.plot.facetgrid import _easy_facetgrid
 from xarray.plot.utils import (
     _LINEWIDTH_RANGE,
@@ -873,7 +874,10 @@ def _plot1d(plotfunc):
         # All 1d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
-        import matplotlib.pyplot as plt
+        if TYPE_CHECKING:
+            import matplotlib.pyplot as plt
+        else:
+            plt = attempt_import("matplotlib.pyplot")
 
         if subplot_kws is None:
             subplot_kws = dict()

@@ -20,7 +20,11 @@ import pandas as pd
 
 from xarray.core.indexes import PandasMultiIndex
 from xarray.core.options import OPTIONS
-from xarray.core.utils import is_scalar, module_available
+from xarray.core.utils import (
+    attempt_import,
+    is_scalar,
+    module_available,
+)
 from xarray.namedarray.pycompat import DuckArrayModule
 
 nc_time_axis_available = module_available("nc_time_axis")
@@ -138,11 +142,14 @@ def _color_palette(cmap, n_colors):
             pal = cmap(colors_i)
         except ValueError:
             # ValueError happens when mpl doesn't like a colormap, try seaborn
-            try:
-                from seaborn import color_palette
+            if TYPE_CHECKING:
+                import seaborn as sns
+            else:
+                sns = attempt_import("seaborn")
 
-                pal = color_palette(cmap, n_colors=n_colors)
-            except (ValueError, ImportError):
+            try:
+                pal = sns.color_palette(cmap, n_colors=n_colors)
+            except ValueError:
                 # or maybe we just got a single color as a string
                 cmap = ListedColormap([cmap], N=n_colors)
                 pal = cmap(colors_i)
@@ -451,11 +458,14 @@ def get_axis(
     ax: Axes | None = None,
     **subplot_kws: Any,
 ) -> Axes:
-    try:
+    from xarray.core.utils import attempt_import
+
+    if TYPE_CHECKING:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
-    except ImportError as err:
-        raise ImportError("matplotlib is required for plot.utils.get_axis") from err
+    else:
+        mpl = attempt_import("matplotlib")
+        plt = attempt_import("matplotlib.pyplot")
 
     if figsize is not None:
         if ax is not None:

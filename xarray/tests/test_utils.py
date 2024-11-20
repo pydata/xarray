@@ -9,6 +9,7 @@ import pytest
 
 from xarray.core import duck_array_ops, utils
 from xarray.core.utils import (
+    attempt_import,
     either_dict_or_kwargs,
     infix_dims,
     iterate_nested,
@@ -371,3 +372,14 @@ def test_find_stack_level():
         return utils.find_stack_level(test_mode=True)
 
     assert f() == 3
+
+
+def test_attempt_import() -> None:
+    """Test optional dependency handling."""
+    np = attempt_import("numpy")
+    assert np.__name__ == "numpy"
+
+    with pytest.raises(ImportError, match="The foo package is required"):
+        attempt_import(module="foo")
+    with pytest.raises(ImportError, match="The foo package is required"):
+        attempt_import(module="foo.bar")
