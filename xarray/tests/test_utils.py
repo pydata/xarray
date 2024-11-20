@@ -381,3 +381,4 @@ def test_attempt_import() -> None:
 
     with pytest.raises(RuntimeError, match="The foo package is required"):
         attempt_import(module="foo")
+        attempt_import(module="foo.bar")
