@@ -169,7 +169,7 @@ class H5NetCDFStore(WritableCFDataStore):
             magic_number = read_magic_number_from_file(filename)
             if not magic_number.startswith(b"\211HDF\r\n\032\n"):
                 raise ValueError(
-                    f"{magic_number} is not the signature of a valid netCDF4 file"
+                    f"{magic_number!r} is not the signature of a valid netCDF4 file"
                 )
 
         if format not in [None, "NETCDF4"]:
