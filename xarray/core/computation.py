@@ -2185,7 +2185,7 @@ def _calc_idxminmax(
     # Handle chunked arrays (e.g. dask).
     if is_chunked_array(array.data):
         chunkmanager = get_chunked_array_type(array.data)
-        chunked_coord = chunkmanager.from_array(array[dim].data, chunks=-1)
+        chunked_coord = chunkmanager.from_array(array[dim].data, chunks=(-1,))
 
         if indx.ndim == 0:
             out = chunked_coord[indx.data]
