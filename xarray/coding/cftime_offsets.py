@@ -85,7 +85,7 @@ def get_date_type(calendar, use_cftime=True):
         cftime = attempt_import("cftime")
 
     if _is_standard_calendar(calendar) and not use_cftime:
-        return _nanosecond_precision_timestamp
+        return default_precision_timestamp
 
     calendars = {
         "noleap": cftime.DatetimeNoLeap,
