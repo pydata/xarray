@@ -117,6 +117,8 @@ Dataset contents
    Dataset.convert_calendar
    Dataset.interp_calendar
    Dataset.get_index
+   Dataset.as_array_type
+   Dataset.is_array_type
 
 Comparisons
 -----------
@@ -315,6 +317,8 @@ DataArray contents
    DataArray.get_index
    DataArray.astype
    DataArray.item
+   DataArray.as_array_type
+   DataArray.is_array_type
 
 Indexing
 --------
