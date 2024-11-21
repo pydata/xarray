@@ -75,4 +75,7 @@ def get_array_namespace(*values):
 def to_like_array(array, like):
     # Mostly for cupy compatibility, because cupy binary ops require all cupy arrays
     xp = get_array_namespace(like)
-    return xp.asarray(array)
+    if xp is not np:
+        return xp.asarray(array)
+    # avoid casting things like pint quantities to numpy arrays
+    return array
