@@ -187,7 +187,6 @@ def _create_method(name, npmodule=np) -> Callable:
                 return func(values, axis=axis, **kwargs)
         if (
             module_available("numbagg")
-            and pycompat.mod_version("numbagg") >= Version("0.5.0")
             and OPTIONS["use_numbagg"]
             and isinstance(values, np.ndarray)
             # numbagg<0.7.0 uses ddof=1 only, but numpy uses ddof=0 by default

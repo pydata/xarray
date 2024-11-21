@@ -8,7 +8,6 @@ from collections.abc import Callable, Hashable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import numpy as np
-from packaging.version import Version
 
 from xarray.core import dask_array_ops, dtypes, duck_array_ops, utils
 from xarray.core.arithmetic import CoarsenArithmetic
@@ -19,7 +18,6 @@ from xarray.core.utils import (
     is_duck_dask_array,
     module_available,
 )
-from xarray.namedarray import pycompat
 from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 try:
@@ -714,7 +712,6 @@ class DataArrayRolling(Rolling["DataArray"]):
         if (
             OPTIONS["use_numbagg"]
             and module_available("numbagg")
-            and pycompat.mod_version("numbagg") >= Version("0.6.3")
             and numbagg_move_func is not None
             # TODO: we could at least allow this for the equivalent of `apply_ufunc`'s
             # "parallelized". `rolling_exp` does this, as an example (but rolling_exp is

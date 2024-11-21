@@ -3314,7 +3314,7 @@ class TestInstrumentedZarrStore:
 
         with self.create_zarr_target() as store:
             if has_zarr_v3:
-                # TOOD: verify these
+                # TODO: verify these
                 expected = {
                     "set": 17,
                     "get": 12,
@@ -6489,3 +6489,24 @@ def test_zarr_safe_chunk_region(tmp_path):
     chunk = ds.isel(region)
     chunk = chunk.chunk()
     chunk.chunk().to_zarr(store, region=region)
+
+
+@requires_h5netcdf
+@requires_fsspec
+def test_h5netcdf_storage_options() -> None:
+    with create_tmp_files(2, allow_cleanup_failure=ON_WINDOWS) as (f1, f2):
+        ds1 = create_test_data()
+        ds1.to_netcdf(f1, engine="h5netcdf")
+
+        ds2 = create_test_data()
+        ds2.to_netcdf(f2, engine="h5netcdf")
+
+        files = [f"file://{f}" for f in [f1, f2]]
+        ds = xr.open_mfdataset(
+            files,
+            engine="h5netcdf",
+            concat_dim="time",
+            combine="nested",
+            storage_options={"skip_instance_cache": False},
+        )
+        assert_identical(xr.concat([ds1, ds2], dim="time"), ds)

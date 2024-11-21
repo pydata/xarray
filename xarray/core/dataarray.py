@@ -1129,7 +1129,7 @@ class DataArray(
             return self._replace(coords=dataset._variables)
         if self.name is None:
             raise ValueError(
-                "cannot reset_coords with drop=False on an unnamed DataArrray"
+                "cannot reset_coords with drop=False on an unnamed DataArray"
             )
         dataset[self.name] = self.variable
         return dataset

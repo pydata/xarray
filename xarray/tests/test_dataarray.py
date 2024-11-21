@@ -3802,7 +3802,7 @@ class TestDataArray:
 
         array = DataArray([1, 2, 3], coords=[("x", dates)], attrs={"a": 1})
 
-        # convert to dateset and back again
+        # convert to dataset and back again
         result = array.to_dataset("x").to_dataarray(dim="x")
 
         assert_equal(array, result)

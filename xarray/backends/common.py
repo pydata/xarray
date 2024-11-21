@@ -14,7 +14,12 @@ from xarray.conventions import cf_encoder
 from xarray.core import indexing
 from xarray.core.datatree import DataTree
 from xarray.core.types import ReadBuffer
-from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
+from xarray.core.utils import (
+    FrozenDict,
+    NdimSizeLenMixin,
+    attempt_import,
+    is_remote_uri,
+)
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 
@@ -132,14 +137,12 @@ def _find_absolute_paths(
     """
     if isinstance(paths, str):
         if is_remote_uri(paths) and kwargs.get("engine") == "zarr":
-            try:
-                from fsspec.core import get_fs_token_paths
-            except ImportError as e:
-                raise ImportError(
-                    "The use of remote URLs for opening zarr requires the package fsspec"
-                ) from e
+            if TYPE_CHECKING:
+                import fsspec
+            else:
+                fsspec = attempt_import("fsspec")
 
-            fs, _, _ = get_fs_token_paths(
+            fs, _, _ = fsspec.core.get_fs_token_paths(
                 paths,
                 mode="rb",
                 storage_options=kwargs.get("backend_kwargs", {}).get(
@@ -176,6 +179,15 @@ def _find_absolute_paths(
         return paths
 
     return _normalize_path_list(paths)
+
+
+def _open_remote_file(file, mode, storage_options=None):
+    import fsspec
+
+    fs, _, paths = fsspec.get_fs_token_paths(
+        file, mode=mode, storage_options=storage_options
+    )
+    return fs.open(paths[0], mode=mode)
 
 
 def _encode_variable_name(name):
@@ -253,7 +265,7 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 
     def get_duck_array(self, dtype: np.typing.DTypeLike = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
-        return self[key]  # type: ignore [index]
+        return self[key]  # type: ignore[index]
 
 
 class AbstractDataStore:

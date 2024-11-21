@@ -146,7 +146,7 @@ maintainers to see what you've done, and why you did it, we recommend you to fol
     cd xarray
     git remote add upstream https://github.com/pydata/xarray.git
 
-   This creates the directory `xarray` and connects your repository to
+   This creates the directory ``xarray`` and connects your repository to
    the upstream (main project) *xarray* repository.
 
 Creating a development environment
@@ -934,7 +934,7 @@ Doing 'git status' again should give something like::
 
 The following defines how a commit message should ideally be structured:
 
-* A subject line with `< 72` chars.
+* A subject line with ``< 72`` chars.
 * One blank line.
 * Optionally, a commit message body.
 
