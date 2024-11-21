@@ -3179,34 +3179,15 @@ class TestSeasonGrouperAndResampler:
         self, calendar
     ):
         time = cftime_range("2001-01-01", "2002-12-30", freq="MS", calendar=calendar)
+        # fmt: off
         data = np.array(
             [
-                1.0,
-                1.25,
-                1.5,
-                1.75,
-                2.0,
-                1.1,
-                1.35,
-                1.6,
-                1.85,
-                1.2,
-                1.45,
-                1.7,
-                1.95,
-                1.05,
-                1.3,
-                1.55,
-                1.8,
-                1.15,
-                1.4,
-                1.65,
-                1.9,
-                1.25,
-                1.5,
-                1.75,
+                1.0, 1.25, 1.5, 1.75, 2.0, 1.1, 1.35, 1.6, 1.85, 1.2, 1.45, 1.7,
+                1.95, 1.05, 1.3, 1.55, 1.8, 1.15, 1.4, 1.65, 1.9, 1.25, 1.5, 1.75,
             ]
+
         )
+        # fmt: on
         da = DataArray(data, dims="time", coords={"time": time})
         da["year"] = da.time.dt.year
 
@@ -3337,7 +3318,6 @@ class TestSeasonGrouperAndResampler:
 
         assert_allclose(expected, actual)
 
-    @pytest.mark.xfail
     @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
     def test_season_grouper_with_months_spanning_calendar_year_using_previous_year(
         self, calendar
@@ -3345,46 +3325,25 @@ class TestSeasonGrouperAndResampler:
         # NOTE: This feature is not implemented yet. Maybe it can be a
         # parameter to the `SeasonGrouper` API (e.g. `use_previous_year=True`).
         time = cftime_range("2001-01-01", "2002-12-30", freq="MS", calendar=calendar)
+        # fmt: off
         data = np.array(
             [
-                1.0,
-                1.25,
-                1.5,
-                1.75,
-                2.0,
-                1.1,
-                1.35,
-                1.6,
-                1.85,
-                1.2,
-                1.45,
-                1.7,
-                1.95,
-                1.05,
-                1.3,
-                1.55,
-                1.8,
-                1.15,
-                1.4,
-                1.65,
-                1.9,
-                1.25,
-                1.5,
-                1.75,
+                1.0, 1.25, 1.5, 1.75, 2.0, 1.1, 1.35, 1.6, 1.85, 1.2, 1.45, 1.7,
+                1.95, 1.05, 1.3, 1.55, 1.8, 1.15, 1.4, 1.65, 1.9, 1.25, 1.5, 1.75,
             ]
         )
+        # fmt: on
         da = DataArray(data, dims="time", coords={"time": time})
         da["year"] = da.time.dt.year
 
-        actual = da.groupby(
-            year=UniqueGrouper(), time=SeasonGrouper(["NDJFM", "AMJ"])
-        ).mean()
+        gb = da.groupby(year=UniqueGrouper(), time=SeasonGrouper(["NDJFM", "AMJ"]))
+        actual = gb.mean()
 
         # Expected if the previous "ND" is used for seasonal grouping
         expected = xr.DataArray(
-            data=np.array([[1.25, 1.616667], [1.49, 1.5], [1.625]]),
+            data=np.array([[1.25, 1.616667], [1.49, 1.5], [1.625, np.nan]]),
             dims=["year", "season"],
-            coords={"year": [2001, 2002, 2003], "season": ["NDJFM", "AMJ"]},
+            coords={"year": [2000, 2001, 2002], "season": ["NDJFM", "AMJ"]},
         )
 
         assert_allclose(expected, actual)
