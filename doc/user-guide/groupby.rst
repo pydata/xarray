@@ -337,6 +337,7 @@ Shuffling
 
 Shuffling is a generalization of sorting a DataArray or Dataset by another DataArray, named ``label`` for example, that follows from the idea of grouping by ``label``.
 Shuffling reorders the DataArray or the DataArrays in a Dataset such that all members of a group occur sequentially. For example,
+Shuffle the object using either :py:class:`DatasetGroupBy` or :py:class:`DataArrayGroupBy` as appropriate.
 
 .. ipython:: python
 
@@ -345,25 +346,7 @@ Shuffling reorders the DataArray or the DataArrays in a Dataset such that all me
         data=[1, 2, 3, 4, 5, 6],
         coords={"label": ("x", "a b c a b c".split(" "))},
     )
-    da.shuffle_by("label")
-
-
-:py:meth:`Dataset.shuffle_by` and :py:meth:`DataArray.shuffle_by` can also take Grouper objects:
-
-.. ipython:: python
-
-    from xarray.groupers import UniqueGrouper
-
-    da.shuffle_by(label=UniqueGrouper())
-
-
-Shuffling can also be performed on :py:class:`DatasetGroupBy` and :py:class:`DataArrayGroupBy` objects.
-The :py:meth:`DatasetGroupBy.shuffle` and :py:meth:`DataArrayGroupBy.shuffle` methods return new :py:class:`DatasetGroupBy` and :py:class:`DataArrayGroupBy` objects that operate on the shuffled Dataset or DataArray respectively.
-
-
-.. ipython:: python
-
-    da.groupby(label=UniqueGrouper()).shuffle()
+    da.groupby("label").shuffle_to_chunks()
 
 
 For chunked array types (e.g. dask or cubed), shuffle may result in a more optimized communication pattern when compared to direct indexing by the appropriate indexer.
