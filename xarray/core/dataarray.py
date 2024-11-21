@@ -844,7 +844,7 @@ class DataArray(
         coords = {k: v.as_numpy() for k, v in self._coords.items()}
         return self._replace(self.variable.as_numpy(), coords, indexes=self._indexes)
 
-    def as_array(self, asarray: Callable, **kwargs) -> Self:
+    def as_array_type(self, asarray: Callable, **kwargs) -> Self:
         """
         Coerces wrapped data into a specific array type.
 
@@ -856,7 +856,8 @@ class DataArray(
         ----------
         asarray : Callable
             Function that converts an array-like object to the desired array type.
-            For example, `cupy.asarray`, `jax.numpy.asarray`, or `sparse.COO.from_numpy`.
+            For example, `cupy.asarray`, `jax.numpy.asarray`, `sparse.COO.from_numpy`,
+            or any `from_dlpack` method.
         **kwargs : dict
             Additional keyword arguments passed to the `asarray` function.
 
@@ -864,7 +865,22 @@ class DataArray(
         -------
         DataArray
         """
-        return self._replace(self.variable.as_array(asarray, **kwargs))
+        return self._replace(self.variable.as_array_type(asarray, **kwargs))
+
+    def is_array_type(self, array_type: type) -> bool:
+        """
+        Check if the wrapped data is of a specific array type.
+
+        Parameters
+        ----------
+        array_type : type
+            The array type to check for.
+
+        Returns
+        -------
+        bool
+        """
+        return self.variable.is_array_type(array_type)
 
     @property
     def _in_memory(self) -> bool:

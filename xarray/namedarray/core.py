@@ -860,13 +860,40 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """Coerces wrapped data into a numpy array, returning a Variable."""
         return self._replace(data=self.to_numpy())
 
-    def as_array(
+    def as_array_type(
         self,
         asarray: Callable[[duckarray[Any, _DType_co]], duckarray[Any, _DType_co]],
         **kwargs: Any,
     ) -> Self:
-        """Coerces wrapped data into a specific array type, returning a Variable."""
+        """Converts wrapped data into a specific array type.
+
+        Parameters
+        ----------
+        asarray : callable
+            Function that converts the data into a specific array type.
+        **kwargs : dict
+            Additional keyword arguments passed on to `asarray`.
+
+        Returns
+        -------
+        array : NamedArray
+            Array with the same data, but converted into a specific array type
+        """
         return self._replace(data=asarray(self._data, **kwargs))
+
+    def is_array_type(self, array_type: type) -> bool:
+        """Check if the data is an instance of a specific array type.
+
+        Parameters
+        ----------
+        array_type : type
+            Array type to check against.
+
+        Returns
+        -------
+        is_array_type : bool
+        """
+        return isinstance(self._data, array_type)
 
     def reduce(
         self,

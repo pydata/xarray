@@ -7639,19 +7639,22 @@ class TestNumpyCoercion:
         assert_identical(result, expected)
 
 
-def test_as_array() -> None:
+def test_as_array_type_is_array_type() -> None:
     ds = xr.Dataset(
         {"a": ("x", [1, 2, 3])}, coords={"lat": ("x", [4, 5, 6]), "x": [7, 8, 9]}
     )
+    # lat is a PandasIndex here
+    assert ds.drop_vars("lat").is_array_type(np.ndarray)
 
     def as_duck_array(arr):
         return DuckArrayWrapper(arr)
 
-    result = ds.as_array(as_duck_array)
+    result = ds.as_array_type(as_duck_array)
 
     assert isinstance(result.a.data, DuckArrayWrapper)
     assert isinstance(result.lat.data, DuckArrayWrapper)
     assert isinstance(result.x.data, np.ndarray)
+    assert result.is_array_type(DuckArrayWrapper)
 
 
 def test_string_keys_typing() -> None:
