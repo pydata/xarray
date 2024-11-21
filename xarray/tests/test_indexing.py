@@ -1010,8 +1010,7 @@ def test_vectorized_indexing_dask_array():
         coords={"y": range(4), "x": range(2)},
         dims=("y", "x"),
     )
-    with pytest.raises(ValueError, match="Vectorized indexing with Dask arrays"):
-        darr[indexer.chunk({"y": 2})]
+    darr[indexer.chunk({"y": 2})]
 
 
 @requires_dask

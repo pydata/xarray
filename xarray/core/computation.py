@@ -2127,18 +2127,6 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
         return to_floatable(data)
 
 
-def _apply_vectorized_indexer(indices, coord):
-    from xarray.core.indexing import (
-        VectorizedIndexer,
-        apply_indexer,
-        as_indexable,
-    )
-
-    return apply_indexer(
-        as_indexable(coord), VectorizedIndexer((indices.squeeze(axis=-1),))
-    )
-
-
 def _calc_idxminmax(
     *,
     array,
@@ -2183,32 +2171,14 @@ def _calc_idxminmax(
     indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
 
     # Handle chunked arrays (e.g. dask).
+    coord = array[dim]._variable.to_base_variable()
     if is_chunked_array(array.data):
         chunkmanager = get_chunked_array_type(array.data)
-        chunked_coord = chunkmanager.from_array(array[dim].data, chunks=((-1,),))
-
-        if indx.ndim == 0:
-            out = chunked_coord[indx.data]
-        else:
-            out = chunkmanager.map_blocks(
-                _apply_vectorized_indexer,
-                indx.data[..., np.newaxis],
-                chunked_coord,
-                chunks=indx.data.chunks,
-                drop_axis=-1,
-                dtype=chunked_coord.dtype,
-            )
-        res = indx.copy(data=out)
-        # we need to attach back the dim name
-        res.name = dim
-    else:
-        arr_coord = to_like_array(array[dim].data, array.data)
-        data = arr_coord[duck_array_ops.ravel(indx.data)]
-
-    # rebuild like the argmin/max output, and rename as the dim name
-    data = duck_array_ops.reshape(data, indx.shape)
-    res = indx.copy(data=data)
-    res.name = dim
+        coord_array = chunkmanager.from_array(
+            array[dim].data, chunks=((array.sizes[dim],),)
+        )
+        coord = coord.copy(data=coord_array)
+    res = indx._replace(coord[(indx.variable,)]).rename(dim)
 
     if skipna or (skipna is None and array.dtype.kind in na_dtypes):
         # Put the NaN values back in after removing them
