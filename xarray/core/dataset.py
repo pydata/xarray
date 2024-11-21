@@ -1460,7 +1460,7 @@ class Dataset(
         numpy_variables = {k: v.as_numpy() for k, v in self.variables.items()}
         return self._replace(variables=numpy_variables)
 
-    def as_array(self, asarray: Callable[[ArrayLike, ...], Any], **kwargs) -> Self:
+    def as_array(self, asarray: Callable, **kwargs) -> Self:
         """
         Converts wrapped data into a specific array type.
 
