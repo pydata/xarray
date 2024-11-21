@@ -1214,6 +1214,7 @@ Dataset
    DatasetGroupBy.var
    DatasetGroupBy.dims
    DatasetGroupBy.groups
+   DatasetGroupBy.shuffle_to_chunks
 
 DataArray
 ---------
@@ -1245,6 +1246,7 @@ DataArray
    DataArrayGroupBy.var
    DataArrayGroupBy.dims
    DataArrayGroupBy.groups
+   DataArrayGroupBy.shuffle_to_chunks
 
 Grouper Objects
 ---------------
