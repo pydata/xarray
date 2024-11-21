@@ -24,6 +24,7 @@ import numpy as np
 
 from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.alignment import align, deep_align
+from xarray.core.array_api_compat import to_like_array
 from xarray.core.common import zeros_like
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.formatting import limit_lines
@@ -2178,9 +2179,7 @@ def _calc_idxminmax(
         res = array[dim][(indx,)]
         # The dim is gone but we need to remove the corresponding coordinate.
         del res.coords[dim]
-        # Cast to array namespace
-        xp = duck_array_ops.get_array_namespace(array.data)
-        res.data = xp.asarray(res.data)
+        res.data = to_like_array(res.data, array.data)
 
     if skipna or (skipna is None and array.dtype.kind in na_dtypes):
         # Put the NaN values back in after removing them

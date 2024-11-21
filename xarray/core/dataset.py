@@ -55,6 +55,7 @@ from xarray.core.alignment import (
     align,
 )
 from xarray.core.arithmetic import DatasetArithmetic
+from xarray.core.array_api_compat import to_like_array
 from xarray.core.common import (
     DataWithCoords,
     _contains_datetime_like_objects,
@@ -8704,13 +8705,7 @@ class Dataset(
                     coord_names.add(k)
             else:
                 if k in self.data_vars and dim in v.dims:
-                    # cast coord data to duck array if needed
-                    if isinstance(v.data, array_type("cupy")):
-                        coord_data = duck_array_ops.get_array_namespace(v.data).asarray(
-                            coord_var.data
-                        )
-                    else:
-                        coord_data = coord_var.data
+                    coord_data = to_like_array(coord_var.data, like=v.data)
                     if _contains_datetime_like_objects(v):
                         v = datetime_to_numeric(v, datetime_unit=datetime_unit)
                     if cumulative:

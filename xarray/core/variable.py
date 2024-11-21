@@ -19,6 +19,7 @@ from pandas.api.types import is_extension_array_dtype
 import xarray as xr  # only for Dataset and DataArray
 from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
 from xarray.core.arithmetic import VariableArithmetic
+from xarray.core.array_api_compat import to_like_array
 from xarray.core.common import AbstractArray
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
@@ -860,9 +861,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             # we need to invert the mask in order to pass data first. This helps
             # pint to choose the correct unit
             # TODO: revert after https://github.com/hgrecco/pint/issues/1019 is fixed
-            # cast mask to any duck array type
-            if type(mask) is not type(data):
-                mask = duck_array_ops.get_array_namespace(data).asarray(mask)
+            mask = to_like_array(mask, data)
             data = duck_array_ops.where(
                 duck_array_ops.logical_not(mask), data, fill_value
             )

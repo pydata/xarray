@@ -70,3 +70,9 @@ def get_array_namespace(*values):
         xp = np
 
     return xp
+
+
+def to_like_array(array, like):
+    # Mostly for cupy compatibility, because cupy binary ops require all cupy arrays
+    xp = get_array_namespace(like)
+    return xp.asarray(array)
