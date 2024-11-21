@@ -860,6 +860,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """Coerces wrapped data into a numpy array, returning a Variable."""
         return self._replace(data=self.to_numpy())
 
+    def as_array(self, asarray: Callable[[ArrayLike, ...], Any], **kwargs) -> Self:
+        """Coerces wrapped data into a specific array type, returning a Variable."""
+        return self._replace(data=asarray(self._data, **kwargs))
+
     def reduce(
         self,
         func: Callable[..., Any],

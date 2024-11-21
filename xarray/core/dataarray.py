@@ -842,6 +842,28 @@ class DataArray(
         coords = {k: v.as_numpy() for k, v in self._coords.items()}
         return self._replace(self.variable.as_numpy(), coords, indexes=self._indexes)
 
+    def as_array(self, asarray: Callable[[ArrayLike, ...], Any], **kwargs) -> Self:
+        """
+        Coerces wrapped data into a specific array type.
+
+        `asarray` should output an object that supports the Array API Standard.
+        This method does not convert index coordinates, which can't generally be
+        represented as arbitrary array types.
+
+        Parameters
+        ----------
+        asarray : Callable
+            Function that converts an array-like object to the desired array type.
+            For example, `cupy.asarray`, `jax.numpy.asarray`, or `sparse.COO.from_numpy`.
+        **kwargs : dict
+            Additional keyword arguments passed to the `asarray` function.
+
+        Returns
+        -------
+        DataArray
+        """
+        return self._replace(self.variable.as_array(asarray, **kwargs))
+
     @property
     def _in_memory(self) -> bool:
         return self.variable._in_memory
