@@ -844,7 +844,7 @@ class DataArray(
 
     def as_array_type(self, asarray: Callable, **kwargs) -> Self:
         """
-        Coerces wrapped data into a specific array type.
+        Converts wrapped data into a specific array type.
 
         `asarray` should output an object that supports the Array API Standard.
         This method does not convert index coordinates, which can't generally be

@@ -51,7 +51,8 @@ def get_array_namespace(*values):
         if hasattr(x, "__array_namespace__"):
             return x.__array_namespace__()
         elif isinstance(x, array_type("cupy")):
-            # special case cupy for now
+            # cupy is fully compliant from xarray's perspective, but will not expose
+            # __array_namespace__ until at least v14. Special case it for now
             import cupy as cp
 
             return cp

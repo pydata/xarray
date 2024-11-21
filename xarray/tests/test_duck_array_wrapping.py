@@ -107,8 +107,9 @@ class TestDataArrayMethods:
         result = self.x.squeeze("y")
         assert isinstance(result.data, self.Array)
 
-    @pytest.mark.xfail(reason="interp is not namespace aware")
+    @pytest.mark.xfail(reason="interp uses numpy and scipy")
     def test_interp(self):
+        # TODO: some cases could be made to work
         result = self.x.interp(x=2.5)
         assert isinstance(result.data, self.Array)
 
@@ -132,17 +133,17 @@ class TestDataArrayMethods:
         result = self.x.fillna(0)
         assert isinstance(result.data, self.Array)
 
-    @pytest.mark.xfail(reason="ffill is not namespace aware")
+    @pytest.mark.xfail(reason="ffill uses bottleneck or numbagg")
     def test_ffill(self):
         result = self.x.ffill()
         assert isinstance(result.data, self.Array)
 
-    @pytest.mark.xfail(reason="bfill is not namespace aware")
+    @pytest.mark.xfail(reason="bfill uses bottleneck or numbagg")
     def test_bfill(self):
         result = self.x.bfill()
         assert isinstance(result.data, self.Array)
 
-    @pytest.mark.xfail(reason="interpolate_na is not namespace aware")
+    @pytest.mark.xfail(reason="interpolate_na uses numpy and scipy")
     def test_interpolate_na(self):
         result = self.x.interpolate_na()
         assert isinstance(result.data, self.Array)
@@ -165,7 +166,7 @@ class TestDataArrayMethods:
         result = self.x.rolling(x=3).mean()
         assert isinstance(result.data, self.Array)
 
-    @pytest.mark.xfail(reason="rolling_exp is not namespace aware")
+    @pytest.mark.xfail(reason="rolling_exp uses numbagg")
     def test_rolling_exp(self):
         result = self.x.rolling_exp(x=3).mean()
         assert isinstance(result.data, self.Array)
@@ -199,17 +200,18 @@ class TestDataArrayMethods:
         assert isinstance(result.data, self.Array)
 
     def test_differentiate(self):
-        if self.xp is jnp:
-            pytest.xfail("edge_order kwarg")
-        result = self.x.differentiate("x")
+        # edge_order is not implemented in jax, and only supports passing None
+        edge_order = None if self.xp is jnp else 1
+        result = self.x.differentiate("x", edge_order=edge_order)
         assert isinstance(result.data, self.Array)
 
     def test_integrate(self):
         result = self.x.integrate("x")
         assert isinstance(result.data, self.Array)
 
-    @pytest.mark.xfail(reason="polyfit is not namespace aware")
+    @pytest.mark.xfail(reason="polyfit uses numpy linalg")
     def test_polyfit(self):
+        # TODO: this could work, there are just a lot of different linalg calls
         result = self.x.polyfit("x", 1)
         assert isinstance(result.polyfit_coefficients.data, self.Array)
 
@@ -277,15 +279,11 @@ class TestDataArrayMethods:
 
     @pytest.mark.parametrize("skipna", [True, False])
     def test_std(self, skipna):
-        if self.xp is cp and not skipna:
-            pytest.xfail("ddof/correction kwarg mismatch")
         result = self.x.std(dim="x", skipna=skipna)
         assert isinstance(result.data, self.Array)
 
     @pytest.mark.parametrize("skipna", [True, False])
     def test_var(self, skipna):
-        if self.xp is cp and not skipna:
-            pytest.xfail("ddof/correction kwarg mismatch")
         result = self.x.var(dim="x", skipna=skipna)
         assert isinstance(result.data, self.Array)
 
@@ -335,8 +333,9 @@ class TestDataArrayMethods:
         result = self.x.T
         assert isinstance(result.data, self.Array)
 
-    @pytest.mark.xfail(reason="rank is not namespace aware")
+    @pytest.mark.xfail(reason="rank uses bottleneck")
     def test_rank(self):
+        # TODO: scipy has rankdata, as does jax, so this can work
         result = self.x.rank()
         assert isinstance(result.data, self.Array)
 
