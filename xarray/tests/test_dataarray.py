@@ -7166,16 +7166,19 @@ class TestNumpyCoercion:
         np.testing.assert_equal(da.to_numpy(), arr)
 
 
-def test_as_array() -> None:
+def test_as_array_type_is_array_type() -> None:
     da = xr.DataArray([1, 2, 3], dims=["x"], coords={"x": [4, 5, 6]})
+
+    assert da.is_array_type(np.ndarray)
 
     def as_duck_array(arr):
         return DuckArrayWrapper(arr)
 
-    result = da.as_array(as_duck_array)
+    result = da.as_array_type(as_duck_array)
 
     assert isinstance(result.data, DuckArrayWrapper)
     assert isinstance(result.x.data, np.ndarray)
+    assert result.is_array_type(DuckArrayWrapper)
 
 
 class TestStackEllipsis:
