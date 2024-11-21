@@ -7639,6 +7639,21 @@ class TestNumpyCoercion:
         assert_identical(result, expected)
 
 
+def test_as_array() -> None:
+    ds = xr.Dataset(
+        {"a": ("x", [1, 2, 3])}, coords={"lat": ("x", [4, 5, 6]), "x": [7, 8, 9]}
+    )
+
+    def as_duck_array(arr):
+        return DuckArrayWrapper(arr)
+
+    result = ds.as_array(as_duck_array)
+
+    assert isinstance(result.a.data, DuckArrayWrapper)
+    assert isinstance(result.lat.data, DuckArrayWrapper)
+    assert isinstance(result.x.data, np.ndarray)
+
+
 def test_string_keys_typing() -> None:
     """Tests that string keys to `variables` are permitted by mypy"""
 

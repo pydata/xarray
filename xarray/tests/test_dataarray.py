@@ -39,6 +39,7 @@ from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
+    DuckArrayWrapper,
     InaccessibleArray,
     ReturnItem,
     assert_allclose,
@@ -7163,6 +7164,18 @@ class TestNumpyCoercion:
         expected = xr.DataArray(arr, dims="x", coords={"lat": ("x", arr * 2)})
         assert_identical(result, expected)
         np.testing.assert_equal(da.to_numpy(), arr)
+
+
+def test_as_array() -> None:
+    da = xr.DataArray([1, 2, 3], dims=["x"], coords={"x": [4, 5, 6]})
+
+    def as_duck_array(arr):
+        return DuckArrayWrapper(arr)
+
+    result = da.as_array(as_duck_array)
+
+    assert isinstance(result.data, DuckArrayWrapper)
+    assert isinstance(result.x.data, np.ndarray)
 
 
 class TestStackEllipsis:

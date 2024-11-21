@@ -1460,6 +1460,32 @@ class Dataset(
         numpy_variables = {k: v.as_numpy() for k, v in self.variables.items()}
         return self._replace(variables=numpy_variables)
 
+    def as_array(self, asarray: Callable[[ArrayLike, ...], Any], **kwargs) -> Self:
+        """
+        Converts wrapped data into a specific array type.
+
+        `asarray` should output an object that supports the Array API Standard.
+        This method does not convert index coordinates, which can't generally be
+        represented as arbitrary array types.
+
+        Parameters
+        ----------
+        asarray : Callable
+            Function that converts an array-like object to the desired array type.
+            For example, `cupy.asarray`, `jax.numpy.asarray`, or `sparse.COO.from_numpy`.
+        **kwargs : dict
+            Additional keyword arguments passed to the `asarray` function.
+
+        Returns
+        -------
+        Dataset
+        """
+        array_variables = {
+            k: v.as_array(asarray, **kwargs) if k not in self._indexes else v
+            for k, v in self.variables.items()
+        }
+        return self._replace(variables=array_variables)
+
     def _copy_listed(self, names: Iterable[Hashable]) -> Self:
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
