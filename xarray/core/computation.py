@@ -35,7 +35,7 @@ from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import is_dict_like, is_scalar, parse_dims_as_set, result_name
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import is_chunked_array, to_numpy
+from xarray.namedarray.pycompat import is_chunked_array
 from xarray.util.deprecation_helpers import deprecate_dims
 
 if TYPE_CHECKING:
@@ -2171,15 +2171,14 @@ def _calc_idxminmax(
         chunks = dict(zip(array.dims, array.chunks, strict=True))
         dask_coord = chunkmanager.from_array(array[dim].data, chunks=chunks[dim])
         data = dask_coord[duck_array_ops.ravel(indx.data)]
-        res = indx.copy(data=duck_array_ops.reshape(data, indx.shape))
-        # we need to attach back the dim name
-        res.name = dim
     else:
-        indx.data = to_numpy(indx.data)
-        res = array[dim][(indx,)]
-        # The dim is gone but we need to remove the corresponding coordinate.
-        del res.coords[dim]
-        res.data = to_like_array(res.data, array.data)
+        arr_coord = to_like_array(array[dim].data, array.data)
+        data = arr_coord[duck_array_ops.ravel(indx.data)]
+
+    # rebuild like the argmin/max output, and rename as the dim name
+    data = duck_array_ops.reshape(data, indx.shape)
+    res = indx.copy(data=data)
+    res.name = dim
 
     if skipna or (skipna is None and array.dtype.kind in na_dtypes):
         # Put the NaN values back in after removing them
