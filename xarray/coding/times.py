@@ -463,6 +463,11 @@ def decode_cf_datetime(
             cftype = type(dates[np.nanargmin(num_dates)])
             # create first day of gregorian calendar in current cf calendar type
             border = cftype(1582, 10, 15)
+            # "ns" boarders
+            # between ['1677-09-21T00:12:43.145224193', '2262-04-11T23:47:16.854775807']
+            lower = cftype(1677, 9, 21, 0, 12, 43, 145224)
+            upper = cftype(2262, 4, 11, 23, 47, 16, 854775)
+
             # todo: check if test for minimum date is enough
             if (
                 dates[np.nanargmin(num_dates)] < border
@@ -477,9 +482,27 @@ def decode_cf_datetime(
                         SerializationWarning,
                         stacklevel=3,
                     )
+            elif time_unit == "ns" and (
+                (
+                    dates[np.nanargmin(num_dates)] < lower
+                    or dates[np.nanargmin(num_dates)] > upper
+                )
+                or (
+                    dates[np.nanargmax(num_dates)] < lower
+                    or dates[np.nanargmax(num_dates)] > upper
+                )
+            ):
+                warnings.warn(
+                    "Unable to decode time axis into full "
+                    "numpy.datetime64 objects, continuing using "
+                    "cftime.datetime objects instead, reason: dates out "
+                    "of range",
+                    SerializationWarning,
+                    stacklevel=3,
+                )
             else:
                 if _is_standard_calendar(calendar):
-                    dates = cftime_to_nptime(dates)
+                    dates = cftime_to_nptime(dates, time_unit=time_unit)
     elif use_cftime:
         dates = _decode_datetime_with_cftime(flat_num_dates, units, calendar)
     else:
@@ -605,7 +628,9 @@ def infer_timedelta_units(deltas) -> str:
     return _infer_time_units_from_diff(unique_timedeltas)
 
 
-def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
+def cftime_to_nptime(
+    times, raise_on_invalid: bool = True, time_unit: PDDatetimeUnitOptions = "ns"
+) -> np.ndarray:
     """Given an array of cftime.datetime objects, return an array of
     numpy.datetime64 objects of the same size
 
@@ -618,7 +643,7 @@ def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
         try:
             # We expect either "us" resolution or "s" resolution depending on
             # whether 'microseconds' are defined for the input or not.
-            dt = np.datetime64(t.isoformat())
+            dt = np.datetime64(t.isoformat()).astype(f"=M8[{time_unit}]")
         except ValueError as e:
             if raise_on_invalid:
                 raise ValueError(

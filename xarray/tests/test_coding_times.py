@@ -133,17 +133,13 @@ def test_cf_datetime(
         num_dates, units, calendar, only_use_cftime_datetimes=True
     )
 
-    min_y = np.ravel(np.atleast_1d(expected))[np.nanargmin(num_dates)]  # .year
-    max_y = np.ravel(np.atleast_1d(expected))[np.nanargmax(num_dates)]  # .year
-    typ = type(min_y)
-    border = typ(1582, 10, 15)
-    if (calendar == "proleptic_gregorian" and time_unit != "ns") or (
-        calendar in _STANDARD_CALENDARS and (min_y >= border and max_y >= border)
-    ):
-        expected = cftime_to_nptime(expected)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "Unable to decode time axis")
         actual = decode_cf_datetime(num_dates, units, calendar, time_unit=time_unit)
+
+    if actual.dtype.kind != "O":
+        expected = cftime_to_nptime(expected)
+
     abs_diff = np.asarray(abs(actual - expected)).ravel()
     abs_diff = pd.to_timedelta(abs_diff.tolist()).to_numpy()
 
@@ -164,7 +160,7 @@ def test_cf_datetime(
 
 
 @requires_cftime
-def test_decode_cf_datetime_overflow() -> None:
+def test_decode_cf_datetime_overflow(time_unit: PDDatetimeUnitOptions) -> None:
     # checks for
     # https://github.com/pydata/pandas/issues/14068
     # https://github.com/pydata/xarray/issues/975
@@ -174,13 +170,13 @@ def test_decode_cf_datetime_overflow() -> None:
     units = "days since 2000-01-01 00:00:00"
 
     # date after 2262 and before 1678
-    days = (-117608, 95795)
-    expected = (datetime(1677, 12, 31), datetime(2262, 4, 12))
+    days = (-117710, 95795)
+    expected = (datetime(1677, 9, 20), datetime(2262, 4, 12))
 
     for i, day in enumerate(days):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "Unable to decode time axis")
-            result = decode_cf_datetime(day, units)
+            result = decode_cf_datetime(day, units, time_unit=time_unit)
         assert result == expected[i]
 
 
@@ -214,25 +210,22 @@ def test_decode_cf_datetime_non_iso_strings() -> None:
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
-def test_decode_standard_calendar_inside_timestamp_range(calendar, time_unit) -> None:
+def test_decode_standard_calendar_inside_timestamp_range(
+    calendar, time_unit: PDDatetimeUnitOptions
+) -> None:
     import cftime
 
     units = "days since 0001-01-01"
-    times = pd.date_range("2001-04-01-00", end="2001-04-30-23", unit="us", freq="h")
+    times = pd.date_range(
+        "2001-04-01-00", end="2001-04-30-23", unit=time_unit, freq="h"
+    )
     # to_pydatetime() will return microsecond
     time = cftime.date2num(times.to_pydatetime(), units, calendar=calendar)
     expected = times.values
-    print(expected)
     # for cftime we get "us" resolution
     # ns resolution is handled by cftime, too (OutOfBounds)
     actual = decode_cf_datetime(time, units, calendar=calendar, time_unit=time_unit)
-    print(actual, actual.dtype)
-    if calendar != "proleptic_gregorian" or time_unit == "ns":
-        unit = "us"
-    else:
-        unit = time_unit
-    expected_dtype = np.dtype(f"=M8[{unit}]")
-    assert actual.dtype == expected_dtype
+    assert actual.dtype == np.dtype(f"=M8[{time_unit}]")
     abs_diff = abs(actual - expected)
     # once we no longer support versions of netCDF4 older than 1.1.5,
     # we could do this check with near microsecond accuracy:
@@ -296,21 +289,20 @@ def test_decode_dates_outside_timestamp_range(
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
+@pytest.mark.parametrize("num_time", [735368, [735368], [[735368]]])
 def test_decode_standard_calendar_single_element_inside_timestamp_range(
-    calendar, time_unit: PDDatetimeUnitOptions
+    calendar,
+    time_unit: PDDatetimeUnitOptions,
+    num_time,
 ) -> None:
     units = "days since 0001-01-01"
-    unit = "s"
-    if calendar == "proleptic_gregorian" and time_unit != "ns":
-        unit = time_unit
-    for num_time in [735368, [735368], [[735368]]]:
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "Unable to decode time axis")
-            actual = decode_cf_datetime(
-                num_time, units, calendar=calendar, time_unit=time_unit
-            )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "Unable to decode time axis")
+        actual = decode_cf_datetime(
+            num_time, units, calendar=calendar, time_unit=time_unit
+        )
 
-        assert actual.dtype == np.dtype(f"=M8[{unit}]")
+        assert actual.dtype == np.dtype(f"=M8[{time_unit}]")
 
 
 @requires_cftime
@@ -353,9 +345,6 @@ def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
     import cftime
 
     units = "days since 0001-01-01"
-    unit = "s"
-    if calendar == "proleptic_gregorian" and time_unit != "ns":
-        unit = time_unit
     times1 = pd.date_range("2001-04-01", end="2001-04-05", freq="D")
     times2 = pd.date_range("2001-05-01", end="2001-05-05", freq="D")
     time1 = cftime.date2num(times1.to_pydatetime(), units, calendar=calendar)
@@ -370,7 +359,7 @@ def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
     actual = decode_cf_datetime(
         mdim_time, units, calendar=calendar, time_unit=time_unit
     )
-    assert actual.dtype == np.dtype(f"=M8[{unit}]")
+    assert actual.dtype == np.dtype(f"=M8[{time_unit}]")
 
     abs_diff1 = abs(actual[:, 0] - expected1)
     abs_diff2 = abs(actual[:, 1] - expected2)
@@ -984,7 +973,9 @@ def test_use_cftime_default_standard_calendar_out_of_range(
 @requires_cftime
 @pytest.mark.parametrize("calendar", _NON_STANDARD_CALENDARS)
 @pytest.mark.parametrize("units_year", [1500, 2000, 2500])
-def test_use_cftime_default_non_standard_calendar(calendar, units_year) -> None:
+def test_use_cftime_default_non_standard_calendar(
+    calendar, units_year, time_unit
+) -> None:
     from cftime import num2date
 
     numerical_dates = [0, 1]
@@ -993,9 +984,18 @@ def test_use_cftime_default_non_standard_calendar(calendar, units_year) -> None:
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
 
-    with assert_no_warnings():
-        result = decode_cf_datetime(numerical_dates, units, calendar)
-        np.testing.assert_array_equal(result, expected)
+    if time_unit == "ns" and units_year == 2500:
+        with pytest.warns(SerializationWarning, match="Unable to decode time axis"):
+            result = decode_cf_datetime(
+                numerical_dates, units, calendar, time_unit=time_unit
+            )
+    else:
+        with assert_no_warnings():
+            result = decode_cf_datetime(
+                numerical_dates, units, calendar, time_unit=time_unit
+            )
+
+    np.testing.assert_array_equal(result, expected)
 
 
 @requires_cftime
