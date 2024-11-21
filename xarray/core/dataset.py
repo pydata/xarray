@@ -18,7 +18,7 @@ from collections.abc import (
     MutableMapping,
     Sequence,
 )
-from functools import cache, partial
+from functools import lru_cache, partial
 from html import escape
 from numbers import Number
 from operator import methodcaller
@@ -280,7 +280,7 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
     return dict(zip(dims, chunk_shape, strict=True))
 
 
-@cache
+@lru_cache(maxsize=512)
 def _get_breaks_cached(
     *,
     size: int,
