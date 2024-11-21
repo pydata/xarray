@@ -1464,6 +1464,8 @@ class Dataset(
         """
         Converts wrapped data into a specific array type.
 
+        If the data is a chunked array, the conversion is applied to each block.
+
         `asarray` should output an object that supports the Array API Standard.
         This method does not convert index coordinates, which can't generally be
         represented as arbitrary array types.
