@@ -57,6 +57,9 @@ New Features
 - Optimize :py:meth:`DataArray.polyfit` and :py:meth:`Dataset.polyfit` with dask, when used with
   arrays with more than two dimensions.
   (:issue:`5629`). By `Deepak Cherian <https://github.com/dcherian>`_.
+- Support for directly opening remote files as string paths (for example, ``s3://bucket/data.nc``)
+  with ``fsspec`` when using the ``h5netcdf`` engine (:issue:`9723`, :pull:`9797`).
+  By `James Bourbeau <https://github.com/jrbourbeau>`_.
 - Re-implement the :py:mod:`ufuncs` module, which now dynamically dispatches to the
   underlying array's backend. Provides better support for certain wrapped array types
   like ``jax.numpy.ndarray``. (:issue:`7848`, :pull:`9776`).
