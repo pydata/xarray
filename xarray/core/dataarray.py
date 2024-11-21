@@ -842,7 +842,7 @@ class DataArray(
         coords = {k: v.as_numpy() for k, v in self._coords.items()}
         return self._replace(self.variable.as_numpy(), coords, indexes=self._indexes)
 
-    def as_array(self, asarray: Callable[[ArrayLike, ...], Any], **kwargs) -> Self:
+    def as_array(self, asarray: Callable, **kwargs) -> Self:
         """
         Coerces wrapped data into a specific array type.
 
