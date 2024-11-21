@@ -330,3 +330,24 @@ Different groupers can be combined to construct sophisticated GroupBy operations
     from xarray.groupers import BinGrouper
 
     ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper()).sum()
+
+
+Shuffling
+~~~~~~~~~
+
+Shuffling is a generalization of sorting a DataArray or Dataset by another DataArray, named ``label`` for example, that follows from the idea of grouping by ``label``.
+Shuffling reorders the DataArray or the DataArrays in a Dataset such that all members of a group occur sequentially. For example,
+Shuffle the object using either :py:class:`DatasetGroupBy` or :py:class:`DataArrayGroupBy` as appropriate.
+
+.. ipython:: python
+
+    da = xr.DataArray(
+        dims="x",
+        data=[1, 2, 3, 4, 5, 6],
+        coords={"label": ("x", "a b c a b c".split(" "))},
+    )
+    da.groupby("label").shuffle_to_chunks()
+
+
+For chunked array types (e.g. dask or cubed), shuffle may result in a more optimized communication pattern when compared to direct indexing by the appropriate indexer.
+Shuffling also makes GroupBy operations on chunked arrays an embarrassingly parallel problem, and may significantly improve workloads that use :py:meth:`DatasetGroupBy.map` or :py:meth:`DataArrayGroupBy.map`.

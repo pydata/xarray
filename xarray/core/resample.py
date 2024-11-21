@@ -14,6 +14,7 @@ from xarray.core.types import Dims, InterpOptions, T_Xarray
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.types import T_Chunks
 
 from xarray.groupers import RESAMPLE_DIM
 
@@ -57,6 +58,50 @@ class Resample(GroupBy[T_Xarray]):
         result = super()._flox_reduce(dim=dim, keep_attrs=keep_attrs, **kwargs)
         result = result.rename({RESAMPLE_DIM: self._group_dim})
         return result
+
+    def shuffle_to_chunks(self, chunks: T_Chunks = None):
+        """
+        Sort or "shuffle" the underlying object.
+
+        "Shuffle" means the object is sorted so that all group members occur sequentially,
+        in the same chunk. Multiple groups may occur in the same chunk.
+        This method is particularly useful for chunked arrays (e.g. dask, cubed).
+        particularly when you need to map a function that requires all members of a group
+        to be present in a single chunk. For chunked array types, the order of appearance
+        is not guaranteed, but will depend on the input chunking.
+
+        Parameters
+        ----------
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or tuple of int, optional
+            How to adjust chunks along dimensions not present in the array being grouped by.
+
+        Returns
+        -------
+        DataArrayGroupBy or DatasetGroupBy
+
+        Examples
+        --------
+        >>> import dask.array
+        >>> da = xr.DataArray(
+        ...     dims="time",
+        ...     data=dask.array.arange(10, chunks=1),
+        ...     coords={"time": xr.date_range("2001-01-01", freq="12h", periods=10)},
+        ...     name="a",
+        ... )
+        >>> shuffled = da.resample(time="2D").shuffle_to_chunks()
+        >>> shuffled
+        <xarray.DataArray 'a' (time: 10)> Size: 80B
+        dask.array<shuffle, shape=(10,), dtype=int64, chunksize=(4,), chunktype=numpy.ndarray>
+        Coordinates:
+          * time     (time) datetime64[ns] 80B 2001-01-01 ... 2001-01-05T12:00:00
+
+        See Also
+        --------
+        dask.dataframe.DataFrame.shuffle
+        dask.array.shuffle
+        """
+        (grouper,) = self.groupers
+        return self._shuffle_obj(chunks).drop_vars(RESAMPLE_DIM)
 
     def _drop_coords(self) -> T_Xarray:
         """Drop non-dimension coordinates along the resampled dimension."""
