@@ -7171,14 +7171,25 @@ def test_as_array_type_is_array_type() -> None:
 
     assert da.is_array_type(np.ndarray)
 
-    def as_duck_array(arr):
-        return DuckArrayWrapper(arr)
-
-    result = da.as_array_type(as_duck_array)
+    result = da.as_array_type(lambda x: DuckArrayWrapper(x))
 
     assert isinstance(result.data, DuckArrayWrapper)
     assert isinstance(result.x.data, np.ndarray)
     assert result.is_array_type(DuckArrayWrapper)
+
+
+@requires_dask
+def test_as_array_type_dask() -> None:
+    import dask.array
+
+    da = xr.DataArray([1, 2, 3], dims=["x"], coords={"x": [4, 5, 6]}).chunk()
+
+    result = da.as_array_type(lambda x: DuckArrayWrapper(x))
+
+    assert isinstance(result.data, dask.array.Array)
+    assert isinstance(result.data._meta, DuckArrayWrapper)
+    assert isinstance(result.x.data, np.ndarray)
+    assert result.is_array_type(dask.array.Array)
 
 
 class TestStackEllipsis:

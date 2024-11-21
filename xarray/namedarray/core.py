@@ -40,8 +40,8 @@ from xarray.namedarray._typing import (
     _SupportsImag,
     _SupportsReal,
 )
-from xarray.namedarray.parallelcompat import guess_chunkmanager
-from xarray.namedarray.pycompat import to_numpy
+from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
+from xarray.namedarray.pycompat import is_chunked_array, to_numpy
 from xarray.namedarray.utils import (
     either_dict_or_kwargs,
     infix_dims,
@@ -867,6 +867,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     ) -> Self:
         """Converts wrapped data into a specific array type.
 
+        If the data is a chunked array, the conversion is applied to each block.
+
         Parameters
         ----------
         asarray : callable
@@ -879,7 +881,13 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         array : NamedArray
             Array with the same data, but converted into a specific array type
         """
-        return self._replace(data=asarray(self._data, **kwargs))
+        if is_chunked_array(self._data):
+            chunkmanager = get_chunked_array_type(self._data)
+            new_data = chunkmanager.map_blocks(asarray, self._data, **kwargs)
+        else:
+            new_data = asarray(self._data, **kwargs)
+
+        return self._replace(data=new_data)
 
     def is_array_type(self, array_type: type) -> bool:
         """Check if the data is an instance of a specific array type.
