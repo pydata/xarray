@@ -78,6 +78,7 @@ from xarray.tests import (
     requires_h5netcdf_1_4_0_or_above,
     requires_h5netcdf_ros3,
     requires_iris,
+    requires_netcdf,
     requires_netCDF4,
     requires_netCDF4_1_6_2_or_above,
     requires_netCDF4_1_7_0_or_above,
@@ -634,6 +635,7 @@ class DatasetIOBase:
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
+    @requires_netcdf
     def test_roundtrip_example_1_netcdf(self) -> None:
         with open_example_dataset("example_1.nc") as expected:
             with self.roundtrip(expected) as actual:
@@ -1126,13 +1128,11 @@ class CFEncodedBase(DatasetIOBase):
 
     def test_grid_mapping_and_bounds_are_not_coordinates_in_file(self) -> None:
         original = self._create_cf_dataset()
-        with create_tmp_file() as tmp_file:
-            original.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, decode_coords=False) as ds:
-                assert ds.coords["latitude"].attrs["bounds"] == "latitude_bnds"
-                assert ds.coords["longitude"].attrs["bounds"] == "longitude_bnds"
-                assert "coordinates" not in ds["variable"].attrs
-                assert "coordinates" not in ds.attrs
+        with self.roundtrip(original, open_kwargs={"decode_coords": False}) as ds:
+            assert ds.coords["latitude"].attrs["bounds"] == "latitude_bnds"
+            assert ds.coords["longitude"].attrs["bounds"] == "longitude_bnds"
+            assert "coordinates" not in ds["variable"].attrs
+            assert "coordinates" not in ds.attrs
 
     def test_coordinate_variables_after_dataset_roundtrip(self) -> None:
         original = self._create_cf_dataset()
@@ -1174,6 +1174,7 @@ class CFEncodedBase(DatasetIOBase):
                 assert_identical(actual, original["variable"].to_dataset())
 
     @requires_iris
+    @requires_netcdf
     def test_coordinate_variables_after_iris_roundtrip(self) -> None:
         original = self._create_cf_dataset()
         iris_cube = original["variable"].to_iris()
@@ -1194,36 +1195,30 @@ class CFEncodedBase(DatasetIOBase):
         )
         with self.roundtrip(original) as actual:
             assert_identical(actual, original)
-        with create_tmp_file() as tmp_file:
-            original.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, decode_coords=False) as ds:
-                assert equals_latlon(ds["temp"].attrs["coordinates"])
-                assert equals_latlon(ds["precip"].attrs["coordinates"])
-                assert "coordinates" not in ds.attrs
-                assert "coordinates" not in ds["lat"].attrs
-                assert "coordinates" not in ds["lon"].attrs
+        with self.roundtrip(original, open_kwargs=dict(decode_coords=False)) as ds:
+            assert equals_latlon(ds["temp"].attrs["coordinates"])
+            assert equals_latlon(ds["precip"].attrs["coordinates"])
+            assert "coordinates" not in ds.attrs
+            assert "coordinates" not in ds["lat"].attrs
+            assert "coordinates" not in ds["lon"].attrs
 
         modified = original.drop_vars(["temp", "precip"])
         with self.roundtrip(modified) as actual:
             assert_identical(actual, modified)
-        with create_tmp_file() as tmp_file:
-            modified.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, decode_coords=False) as ds:
-                assert equals_latlon(ds.attrs["coordinates"])
-                assert "coordinates" not in ds["lat"].attrs
-                assert "coordinates" not in ds["lon"].attrs
+        with self.roundtrip(modified, open_kwargs=dict(decode_coords=False)) as ds:
+            assert equals_latlon(ds.attrs["coordinates"])
+            assert "coordinates" not in ds["lat"].attrs
+            assert "coordinates" not in ds["lon"].attrs
 
         original["temp"].encoding["coordinates"] = "lat"
         with self.roundtrip(original) as actual:
             assert_identical(actual, original)
         original["precip"].encoding["coordinates"] = "lat"
-        with create_tmp_file() as tmp_file:
-            original.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, decode_coords=True) as ds:
-                assert "lon" not in ds["temp"].encoding["coordinates"]
-                assert "lon" not in ds["precip"].encoding["coordinates"]
-                assert "coordinates" not in ds["lat"].encoding
-                assert "coordinates" not in ds["lon"].encoding
+        with self.roundtrip(original, open_kwargs=dict(decode_coords=True)) as ds:
+            assert "lon" not in ds["temp"].encoding["coordinates"]
+            assert "lon" not in ds["precip"].encoding["coordinates"]
+            assert "coordinates" not in ds["lat"].encoding
+            assert "coordinates" not in ds["lon"].encoding
 
     def test_roundtrip_endian(self) -> None:
         skip_if_zarr_format_3("zarr v3 has not implemented endian support yet")
@@ -2322,7 +2317,9 @@ class ZarrBase(CFEncodedBase):
                     assert_identical(ds, expected)
 
     def test_non_existent_store(self) -> None:
-        with pytest.raises(FileNotFoundError, match="No such file or directory"):
+        with pytest.raises(
+            FileNotFoundError, match="(No such file or directory|Unable to find group)"
+        ):
             xr.open_zarr(f"{uuid.uuid4()}")
 
     @pytest.mark.skipif(has_zarr_v3, reason="chunk_store not implemented in zarr v3")
@@ -2552,6 +2549,7 @@ class ZarrBase(CFEncodedBase):
             # don't actually check equality because the data could be corrupted
             pass
 
+    @requires_netcdf
     def test_drop_encoding(self):
         with open_example_dataset("example_1.nc") as ds:
             encodings = {v: {**ds[v].encoding} for v in ds.data_vars}
@@ -3274,7 +3272,7 @@ class TestInstrumentedZarrStore:
             pytest.skip("Instrumented tests only work on latest Zarr.")
 
         if has_zarr_v3:
-            kwargs = {"mode": "a"}
+            kwargs = {"read_only": False}
         else:
             kwargs = {}  # type: ignore[arg-type,unused-ignore]
 
@@ -3316,10 +3314,10 @@ class TestInstrumentedZarrStore:
             if has_zarr_v3:
                 # TODO: verify these
                 expected = {
-                    "set": 17,
-                    "get": 12,
+                    "set": 5,
+                    "get": 7,
                     "list_dir": 3,
-                    "list_prefix": 0,
+                    "list_prefix": 1,
                 }
             else:
                 expected = {
@@ -3341,7 +3339,7 @@ class TestInstrumentedZarrStore:
             # 6057128b: {'iter': 5, 'contains': 2, 'setitem': 5, 'getitem': 10, "listdir": 5, "list_prefix": 0}
             if has_zarr_v3:
                 expected = {
-                    "set": 10,
+                    "set": 4,
                     "get": 16,  # TODO: fixme upstream (should be 8)
                     "list_dir": 3,  # TODO: fixme upstream (should be 2)
                     "list_prefix": 0,
@@ -3364,7 +3362,7 @@ class TestInstrumentedZarrStore:
 
             if has_zarr_v3:
                 expected = {
-                    "set": 10,
+                    "set": 4,
                     "get": 16,  # TODO: fixme upstream (should be 8)
                     "list_dir": 3,  # TODO: fixme upstream (should be 2)
                     "list_prefix": 0,
@@ -3397,7 +3395,7 @@ class TestInstrumentedZarrStore:
                     "set": 5,
                     "get": 10,
                     "list_dir": 3,
-                    "list_prefix": 0,
+                    "list_prefix": 4,
                 }
             else:
                 expected = {
@@ -3491,7 +3489,7 @@ class TestZarrDictStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
         if has_zarr_v3:
-            yield zarr.storage.MemoryStore({}, mode="a")
+            yield zarr.storage.MemoryStore({}, read_only=False)
         else:
             yield {}
 
