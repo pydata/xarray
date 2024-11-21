@@ -293,10 +293,10 @@ def _get_breaks_cached(
     # Determine the stop indices of the preferred chunks, but omit the last stop
     # (equal to the dim size).  In particular, assume that when a sequence
     # expresses the preferred chunks, the sequence sums to the size.
-    preferred_stops = set(
+    preferred_stops = (
         range(preferred_chunk_sizes, size, preferred_chunk_sizes)
         if isinstance(preferred_chunk_sizes, int)
-        else itertools.accumulate(preferred_chunk_sizes[:-1])
+        else set(itertools.accumulate(preferred_chunk_sizes[:-1]))
     )
 
     # Gather any stop indices of the specified chunks that are not a stop index
@@ -307,8 +307,7 @@ def _get_breaks_cached(
     actual_stops_2 = itertools.accumulate(chunk_sizes[:-1])
 
     disagrees = itertools.compress(
-        actual_stops_2,
-        (a not in preferred_stops for a in actual_stops),
+        actual_stops_2, (a not in preferred_stops for a in actual_stops)
     )
     try:
         return next(disagrees)
