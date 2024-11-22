@@ -45,6 +45,7 @@ A number of other API changes have been made, which should only require minor mo
 - The `DataTree.parent` property is now read-only. To assign a ancestral relationships directly you must instead use the `.children` property on the parent node, which remains settable.
 - Similarly the `parent` kwarg has been removed from the `DataTree.__init__` constructor.
 - DataTree objects passed to the `children` kwarg in `DataTree.__init__` are now shallow-copied.
+- `DataTree.map_over_subtree` has been renamed to `DataTree.map_over_datasets`, and changed to no longer work like a decorator. Instead you use it to apply the function and arguments directly, more like how `xarray.apply_ufunc` works.
 - `DataTree.as_array` has been replaced by `DataTree.to_dataarray`.
 - A number of methods which were not well tested have been (temporarily) disabled. In general we have tried to only keep things that are known to work, with the plan to increase API surface incrementally after release.
 
