@@ -14,6 +14,7 @@ from xarray.namedarray.parallelcompat import (
     ChunkManagerEntrypoint,
     get_chunked_array_type,
     guess_chunkmanager,
+    known_chunkmanagers,
     list_chunkmanagers,
     load_chunkmanagers,
 )
@@ -158,10 +159,19 @@ class TestGetChunkManager:
             chunkmanager = guess_chunkmanager(None)
             assert isinstance(chunkmanager, DummyChunkManager)
 
+    def test_fail_on_known_but_missing_chunkmanager(
+        self, register_dummy_chunkmanager, monkeypatch
+    ) -> None:
+        monkeypatch.setitem(known_chunkmanagers, "test", "test-package")
+        with pytest.raises(
+            ImportError, match="chunk manager 'test' is not available.+test-package"
+        ):
+            guess_chunkmanager("test")
+
     def test_fail_on_nonexistent_chunkmanager(
         self, register_dummy_chunkmanager
     ) -> None:
-        with pytest.raises(ImportError, match="unrecognized chunk manager foo"):
+        with pytest.raises(ValueError, match="unrecognized chunk manager foo"):
             guess_chunkmanager("foo")
 
     @requires_dask
