@@ -182,6 +182,13 @@ class TestGetChunkManager:
     def test_no_chunk_manager_available(self, monkeypatch) -> None:
         monkeypatch.setattr("xarray.namedarray.parallelcompat.list_chunkmanagers", dict)
         with pytest.raises(ImportError, match="no chunk managers available"):
+            guess_chunkmanager("foo")
+
+    def test_no_chunk_manager_available_but_known_manager_requested(
+        self, monkeypatch
+    ) -> None:
+        monkeypatch.setattr("xarray.namedarray.parallelcompat.list_chunkmanagers", dict)
+        with pytest.raises(ImportError, match="chunk manager 'dask' is not available"):
             guess_chunkmanager("dask")
 
     @requires_dask
