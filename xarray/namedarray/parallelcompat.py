@@ -102,10 +102,6 @@ def guess_chunkmanager(
     """
 
     chunkmanagers = list_chunkmanagers()
-    if len(chunkmanagers) == 0:
-        raise ImportError(
-            "no chunk managers available. Try installing `dask` or another package that provides a chunk manager."
-        )
 
     if manager is None:
         if len(chunkmanagers) == 1:
@@ -120,6 +116,10 @@ def guess_chunkmanager(
             raise ImportError(
                 f"chunk manager {manager!r} is not available."
                 f" Please make sure {known_chunkmanagers[manager]} is installed and importable."
+            )
+        elif len(chunkmanagers) == 0:
+            raise ImportError(
+                "no chunk managers available. Try installing `dask` or another package that provides a chunk manager."
             )
         elif manager not in chunkmanagers:
             raise ValueError(
