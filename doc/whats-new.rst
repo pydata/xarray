@@ -64,11 +64,11 @@ New Features
   underlying array's backend. Provides better support for certain wrapped array types
   like ``jax.numpy.ndarray``. (:issue:`7848`, :pull:`9776`).
   By `Sam Levang <https://github.com/slevang>`_.
+- Speed up loading of large zarr stores using dask arrays. (:issue:`8902`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
   duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
   By `Sam Levang <https://github.com/slevang>`_.
-- Speed up loading of large zarr stores using dask arrays. (:issue:`8902`)
-  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
