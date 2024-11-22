@@ -209,12 +209,11 @@ def decode_cf_variable(
     var: Variable,
     concat_characters: bool = True,
     mask_and_scale: bool = True,
-    decode_times: bool = True,
+    decode_times: bool | times.CFDatetimeCoder = True,
     decode_endianness: bool = True,
     stack_char_dim: bool = True,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
-    time_unit: Literal["s", "ms", "us", "ns"] = "ns",
 ) -> Variable:
     """
     Decodes a variable which may hold CF encoded information.
@@ -237,7 +236,7 @@ def decode_cf_variable(
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue). If the _Unsigned attribute is present
         treat integer arrays as unsigned.
-    decode_times : bool
+    decode_times : bool | xarray.times.CFDatetimeCoder
         Decode cf times ("hours since 2000-01-01") to np.datetime64.
     decode_endianness : bool
         Decode arrays from non-native to native endianness.
@@ -255,9 +254,6 @@ def decode_cf_variable(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
-    time_unit : Literal["s", "ms", "us", "ns"], optional
-        Time unit to which resolution cf times should at least be decoded.
-        Defaults to "ns".
 
     Returns
     -------
@@ -295,7 +291,9 @@ def decode_cf_variable(
     if decode_timedelta:
         var = times.CFTimedeltaCoder().decode(var, name=name)
     if decode_times:
-        var = times.CFDatetimeCoder(use_cftime=use_cftime, time_unit=time_unit).decode(
+        if not isinstance(decode_times, times.CFDatetimeCoder):
+            decode_times = times.CFDatetimeCoder(use_cftime=use_cftime)
+        var = decode_times.decode(
             var, name=name
         )
 
@@ -413,7 +411,6 @@ def decode_cf_variables(
     drop_variables: T_DropVariables = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     decode_timedelta: bool | Mapping[str, bool] | None = None,
-    time_unit: Literal["s", "ms", "us", "ns"] = "ns",
 ) -> tuple[T_Variables, T_Attrs, set[Hashable]]:
     """
     Decode several CF encoded variables.
@@ -466,7 +463,6 @@ def decode_cf_variables(
                 stack_char_dim=stack_char_dim,
                 use_cftime=_item_or_default(use_cftime, k, None),
                 decode_timedelta=_item_or_default(decode_timedelta, k, None),
-                time_unit=time_unit,
             )
         except Exception as e:
             raise type(e)(f"Failed to decode variable {k!r}: {e}") from e
@@ -547,12 +543,11 @@ def decode_cf(
     obj: T_DatasetOrAbstractstore,
     concat_characters: bool = True,
     mask_and_scale: bool = True,
-    decode_times: bool = True,
+    decode_times: bool | times.CFDatetimeCoder = True,
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
-    time_unit: Literal["s", "ms", "us", "ns"] = "ns",
 ) -> Dataset:
     """Decode the given Dataset or Datastore according to CF conventions into
     a new Dataset.
@@ -567,7 +562,7 @@ def decode_cf(
     mask_and_scale : bool, optional
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
-    decode_times : bool, optional
+    decode_times : bool | xr.times.times.CFDatetimeCoder, optional
         Decode cf times (e.g., integers since "hours since 2000-01-01") to
         np.datetime64.
     decode_coords : bool or {"coordinates", "all"}, optional
@@ -597,9 +592,6 @@ def decode_cf(
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
         If None (default), assume the same value of decode_time.
-    time_unit : Literal["s", "ms", "us", "ns"], optional
-        Time unit to which resolution cf times should at least be decoded.
-        Defaults to "ns".
 
     Returns
     -------
@@ -634,7 +626,6 @@ def decode_cf(
         drop_variables=drop_variables,
         use_cftime=use_cftime,
         decode_timedelta=decode_timedelta,
-        time_unit=time_unit,
     )
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
@@ -649,7 +640,7 @@ def cf_decoder(
     attributes: T_Attrs,
     concat_characters: bool = True,
     mask_and_scale: bool = True,
-    decode_times: bool = True,
+    decode_times: bool | times.CFDatetimeCoder = True,
 ) -> tuple[T_Variables, T_Attrs]:
     """
     Decode a set of CF encoded variables and attributes.
@@ -666,7 +657,7 @@ def cf_decoder(
     mask_and_scale : bool
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
-    decode_times : bool
+    decode_times : bool | xr.times.times.CFDatetimeCoder
         Decode cf times ("hours since 2000-01-01") to np.datetime64.
 
     Returns

@@ -46,6 +46,7 @@ from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 from xarray.core.utils import is_remote_uri
+from xarray.coding.times import CFDatetimeCoder
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
 
@@ -481,7 +482,7 @@ def open_dataset(
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool | Mapping[str, bool] | None = None,
+    decode_times: bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None = None,
     decode_timedelta: bool | Mapping[str, bool] | None = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
@@ -543,9 +544,9 @@ def open_dataset(
         be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-    decode_times : bool or dict-like, optional
+    decode_times : bool or CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, leave them encoded as numbers.
+        into datetime objects. Otherwise, use CFDatetimeCoder or leave them encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.

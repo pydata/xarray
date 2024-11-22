@@ -1139,7 +1139,7 @@ class CFDatetimeCoder(VariableCoder):
     def __init__(
         self,
         use_cftime: bool | None = None,
-        time_unit: Literal["s", "ms", "us", "ns"] = "ns",
+        time_unit: PDDatetimeUnitOptions = "ns",
     ) -> None:
         self.use_cftime = use_cftime
         self.time_unit = time_unit

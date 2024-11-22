@@ -454,7 +454,7 @@ class TestDecodeCF:
             assert "(time) object" in repr(ds)
 
         attrs = {"units": "days since 1900-01-01"}
-        ds = decode_cf(Dataset({"time": ("time", [0, 1], attrs)}), time_unit=time_unit)
+        ds = decode_cf(Dataset({"time": ("time", [0, 1], attrs)}), decode_times=coding.times.CFDatetimeCoder(time_unit=time_unit))
         assert f"(time) datetime64[{time_unit}]" in repr(ds)
 
     @requires_cftime
@@ -537,14 +537,14 @@ class TestDecodeCF:
             }
         )
 
-        dsc = conventions.decode_cf(ds, time_unit=time_unit)
+        dsc = conventions.decode_cf(ds, decode_times=coding.times.CFDatetimeCoder(time_unit=time_unit))
         assert dsc.timedelta.dtype == np.dtype("m8[ns]")
         assert dsc.time.dtype == np.dtype(f"M8[{time_unit}]")
         dsc = conventions.decode_cf(ds, decode_times=False)
         assert dsc.timedelta.dtype == np.dtype("int64")
         assert dsc.time.dtype == np.dtype("int64")
         dsc = conventions.decode_cf(
-            ds, decode_times=True, time_unit=time_unit, decode_timedelta=False
+            ds, decode_times=coding.times.CFDatetimeCoder(time_unit=time_unit), decode_timedelta=False
         )
         assert dsc.timedelta.dtype == np.dtype("int64")
         assert dsc.time.dtype == np.dtype(f"M8[{time_unit}]")

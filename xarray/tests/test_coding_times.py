@@ -705,7 +705,7 @@ def test_decode_cf(calendar, time_unit: PDDatetimeUnitOptions) -> None:
         with pytest.raises(ValueError):
             ds = decode_cf(ds)
     else:
-        ds = decode_cf(ds, time_unit=time_unit)
+        ds = decode_cf(ds, decode_times=CFDatetimeCoder(time_unit=time_unit))
 
         if calendar not in _STANDARD_CALENDARS:
             assert ds.test.dtype == np.dtype("O")
@@ -734,7 +734,7 @@ def test_decode_cf_time_bounds(time_unit: PDDatetimeUnitOptions) -> None:
         "units": "days since 2001-01",
         "calendar": "standard",
     }
-    dsc = decode_cf(ds, time_unit=time_unit)
+    dsc = decode_cf(ds, decode_times=CFDatetimeCoder(time_unit=time_unit))
     assert dsc.time_bnds.dtype == np.dtype(f"=M8[{time_unit}]")
     dsc = decode_cf(ds, decode_times=False)
     assert dsc.time_bnds.dtype == np.dtype("int64")
@@ -1107,7 +1107,7 @@ def test_encode_decode_roundtrip_datetime64(
     times = initial_time.append(pd.date_range("1968", periods=2, freq=freq))
     variable = Variable(["time"], times)
     encoded = conventions.encode_cf_variable(variable)
-    decoded = conventions.decode_cf_variable("time", encoded, time_unit=time_unit)
+    decoded = conventions.decode_cf_variable("time", encoded, decode_times=CFDatetimeCoder(time_unit=time_unit))
     assert_equal(variable, decoded)
 
 
@@ -1155,7 +1155,7 @@ def test_decode_encode_roundtrip_with_non_lowercase_letters(
     units = "days since 2000-01-01"
     attrs = {"calendar": calendar, "units": units}
     variable = Variable(["time"], times, attrs)
-    decoded = conventions.decode_cf_variable("time", variable, time_unit=time_unit)
+    decoded = conventions.decode_cf_variable("time", variable, decode_times=CFDatetimeCoder(time_unit=time_unit))
     encoded = conventions.encode_cf_variable(decoded)
 
     # Previously this would erroneously be an array of cftime.datetime
@@ -1368,7 +1368,7 @@ def test_roundtrip_datetime64_nanosecond_precision(
     assert encoded_var.attrs["calendar"] == "proleptic_gregorian"
     assert encoded_var.data.dtype == dtype
     decoded_var = conventions.decode_cf_variable(
-        "foo", encoded_var, time_unit=time_unit
+        "foo", encoded_var, decode_times=CFDatetimeCoder(time_unit=time_unit)
     )
 
     result_unit = (
@@ -1421,7 +1421,7 @@ def test_roundtrip_datetime64_nanosecond_precision_warning(
     assert encoded_var.attrs["_FillValue"] == 20
 
     decoded_var = conventions.decode_cf_variable(
-        "foo", encoded_var, time_unit=time_unit
+        "foo", encoded_var, decode_times=CFDatetimeCoder(time_unit=time_unit)
     )
     assert_identical(var, decoded_var)
 
@@ -1435,7 +1435,7 @@ def test_roundtrip_datetime64_nanosecond_precision_warning(
     assert encoded_var.attrs["_FillValue"] == 20.0
 
     decoded_var = conventions.decode_cf_variable(
-        "foo", encoded_var, time_unit=time_unit
+        "foo", encoded_var, decode_times=CFDatetimeCoder(time_unit=time_unit)
     )
     assert_identical(var, decoded_var)
 
@@ -1449,7 +1449,7 @@ def test_roundtrip_datetime64_nanosecond_precision_warning(
     assert encoded_var.attrs["_FillValue"] == 20
 
     decoded_var = conventions.decode_cf_variable(
-        "foo", encoded_var, time_unit=time_unit
+        "foo", encoded_var, decode_times=CFDatetimeCoder(time_unit=time_unit)
     )
     assert_identical(var, decoded_var)
 
@@ -1475,7 +1475,7 @@ def test_roundtrip_timedelta64_nanosecond_precision(
 
     encoded_var = conventions.encode_cf_variable(var)
     decoded_var = conventions.decode_cf_variable(
-        "foo", encoded_var, time_unit=time_unit
+        "foo", encoded_var, decode_times=CFDatetimeCoder(time_unit=time_unit)
     )
 
     assert_identical(var, decoded_var)
