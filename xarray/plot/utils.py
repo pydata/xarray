@@ -132,7 +132,7 @@ def _color_palette(cmap, n_colors):
     colors_i = np.linspace(0, 1.0, n_colors)
     if isinstance(cmap, list | tuple):
         # we have a list of colors
-        cmap = ListedColormap(cmap, N=n_colors)
+        cmap = ListedColormap(cmap)
         pal = cmap(colors_i)
     elif isinstance(cmap, str):
         # we have some sort of named palette
@@ -151,7 +151,7 @@ def _color_palette(cmap, n_colors):
                 pal = sns.color_palette(cmap, n_colors=n_colors)
             except ValueError:
                 # or maybe we just got a single color as a string
-                cmap = ListedColormap([cmap], N=n_colors)
+                cmap = ListedColormap([cmap] * n_colors)
                 pal = cmap(colors_i)
     else:
         # cmap better be a LinearSegmentedColormap (e.g. viridis)
