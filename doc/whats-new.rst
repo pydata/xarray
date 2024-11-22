@@ -64,9 +64,8 @@ New Features
   underlying array's backend. Provides better support for certain wrapped array types
   like ``jax.numpy.ndarray``. (:issue:`7848`, :pull:`9776`).
   By `Sam Levang <https://github.com/slevang>`_.
-- Make more xarray methods fully compatible with duck array types, and introduce new
-  ``as_array_type`` and ``is_array_type`` methods for converting wrapped data to other
-  duck array types. (:issue:`7848`, :pull:`9798`).
+- Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
+  duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
   By `Sam Levang <https://github.com/slevang>`_.
 
 Breaking changes
