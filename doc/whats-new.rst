@@ -42,6 +42,9 @@ Deprecations
 - Finalize deprecation of ``closed`` parameters of :py:func:`cftime_range` and
   :py:func:`date_range` (:pull:`9882`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Time decoding related kwarg ``use_cftime`` is deprecated. Use keyword argument
+  ``decode_times=CFDatetimeCoder(use_cftime=True)`` in the respective functions
+  instead.
 
 Bug fixes
 ~~~~~~~~~
