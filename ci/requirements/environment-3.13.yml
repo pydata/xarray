@@ -9,9 +9,9 @@ dependencies:
   - bottleneck
   - cartopy
   - cftime
-  # - dask-core
-  # - dask-expr
-  # - distributed
+  - dask-core
+  - dask-expr
+  - distributed
   - flox
   - fsspec
   - h5netcdf
