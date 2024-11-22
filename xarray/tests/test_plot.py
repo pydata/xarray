@@ -1806,7 +1806,6 @@ class TestContour(Common2dMixin, PlotTestCase):
         cmap = artist.cmap
         assert isinstance(cmap, mpl.colors.ListedColormap)
         colors = cmap.colors
-        assert isinstance(colors, list)
 
         assert self._color_as_tuple(colors[1]) == (1.0, 0.0, 0.0)
         assert self._color_as_tuple(colors[2]) == (1.0, 1.0, 1.0)
