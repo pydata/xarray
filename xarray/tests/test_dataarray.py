@@ -20,6 +20,7 @@ except ImportError:
     from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
 
 import xarray as xr
+import xarray.core.missing
 from xarray import (
     DataArray,
     Dataset,
@@ -179,8 +180,8 @@ class TestDataArray:
         }
         assert array.xindexes.keys() == expected_xindexes.keys()
         assert array.indexes.keys() == expected_indexes.keys()
-        assert all([isinstance(idx, pd.Index) for idx in array.indexes.values()])
-        assert all([isinstance(idx, Index) for idx in array.xindexes.values()])
+        assert all(isinstance(idx, pd.Index) for idx in array.indexes.values())
+        assert all(isinstance(idx, Index) for idx in array.xindexes.values())
         for k in expected_indexes:
             assert array.xindexes[k].equals(expected_xindexes[k])
             assert array.indexes[k].equals(expected_indexes[k])
@@ -896,6 +897,9 @@ class TestDataArray:
             blocked = unblocked.chunk(chunks=(3, 3))
             assert blocked.chunks == ((3,), (3, 1))
             assert blocked.data.name != first_dask_name
+
+            with pytest.raises(ValueError):
+                blocked.chunk(chunks=(3, 3, 3))
 
         # name doesn't change when rechunking by same amount
         # this fails if ReprObject doesn't have __dask_tokenize__ defined
@@ -3797,7 +3801,7 @@ class TestDataArray:
 
         array = DataArray([1, 2, 3], coords=[("x", dates)], attrs={"a": 1})
 
-        # convert to dateset and back again
+        # convert to dataset and back again
         result = array.to_dataset("x").to_dataarray(dim="x")
 
         assert_equal(array, result)
@@ -4303,6 +4307,18 @@ class TestDataArray:
             warnings.simplefilter("ignore", RankWarning)
             out = da.polyfit("x", 8, full=True)
             np.testing.assert_array_equal(out.polyfit_residuals.isnull(), [True, False])
+
+    @requires_dask
+    def test_polyfit_nd_dask(self) -> None:
+        da = (
+            DataArray(np.arange(120), dims="time", coords={"time": np.arange(120)})
+            .chunk({"time": 20})
+            .expand_dims(lat=5, lon=5)
+            .chunk({"lat": 2, "lon": 2})
+        )
+        actual = da.polyfit("time", 1, skipna=False)
+        expected = da.compute().polyfit("time", 1, skipna=False)
+        assert_allclose(actual, expected)
 
     def test_pad_constant(self) -> None:
         ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
@@ -6141,7 +6157,7 @@ class TestReduce3D(TestReduce):
         ]:
             if np.array([np.isnan(i) for i in inds.values()]).any():
                 with pytest.raises(ValueError):
-                    ar.argmin(dim=[d for d in inds])
+                    ar.argmin(dim=list(inds))
                 return
 
         result0 = ar.argmin(dim=["x"])
@@ -6368,7 +6384,7 @@ class TestReduce3D(TestReduce):
         ]:
             if np.array([np.isnan(i) for i in inds.values()]).any():
                 with pytest.raises(ValueError):
-                    ar.argmax(dim=[d for d in inds])
+                    ar.argmax(dim=list(inds))
                 return
 
         result0 = ar.argmax(dim=["x"])
@@ -6558,7 +6574,7 @@ class TestReduceND(TestReduce):
 
         ar0_raw = xr.DataArray(
             np.random.random_sample(size=[10] * ndim),
-            dims=[i for i in "abcdefghij"[: ndim - 1]] + ["x"],
+            dims=list("abcdefghij"[: ndim - 1]) + ["x"],
             coords={"x": np.arange(10)},
             attrs=self.attrs,
         )

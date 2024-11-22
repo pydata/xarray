@@ -20,7 +20,11 @@ import pandas as pd
 
 from xarray.core.indexes import PandasMultiIndex
 from xarray.core.options import OPTIONS
-from xarray.core.utils import is_scalar, module_available
+from xarray.core.utils import (
+    attempt_import,
+    is_scalar,
+    module_available,
+)
 from xarray.namedarray.pycompat import DuckArrayModule
 
 nc_time_axis_available = module_available("nc_time_axis")
@@ -127,8 +131,9 @@ def _color_palette(cmap, n_colors):
 
     colors_i = np.linspace(0, 1.0, n_colors)
     if isinstance(cmap, list | tuple):
-        # we have a list of colors
-        cmap = ListedColormap(cmap, N=n_colors)
+        # expand or truncate the list of colors to n_colors
+        cmap = list(itertools.islice(itertools.cycle(cmap), n_colors))
+        cmap = ListedColormap(cmap)
         pal = cmap(colors_i)
     elif isinstance(cmap, str):
         # we have some sort of named palette
@@ -138,13 +143,16 @@ def _color_palette(cmap, n_colors):
             pal = cmap(colors_i)
         except ValueError:
             # ValueError happens when mpl doesn't like a colormap, try seaborn
-            try:
-                from seaborn import color_palette
+            if TYPE_CHECKING:
+                import seaborn as sns
+            else:
+                sns = attempt_import("seaborn")
 
-                pal = color_palette(cmap, n_colors=n_colors)
-            except (ValueError, ImportError):
+            try:
+                pal = sns.color_palette(cmap, n_colors=n_colors)
+            except ValueError:
                 # or maybe we just got a single color as a string
-                cmap = ListedColormap([cmap], N=n_colors)
+                cmap = ListedColormap([cmap] * n_colors)
                 pal = cmap(colors_i)
     else:
         # cmap better be a LinearSegmentedColormap (e.g. viridis)
@@ -438,7 +446,7 @@ def _assert_valid_xy(
     valid_xy = (set(darray.dims) | set(darray.coords)) - multiindex_dims
 
     if (xy is not None) and (xy not in valid_xy):
-        valid_xy_str = "', '".join(sorted(tuple(str(v) for v in valid_xy)))
+        valid_xy_str = "', '".join(sorted(str(v) for v in valid_xy))
         raise ValueError(
             f"{name} must be one of None, '{valid_xy_str}'. Received '{xy}' instead."
         )
@@ -451,11 +459,14 @@ def get_axis(
     ax: Axes | None = None,
     **subplot_kws: Any,
 ) -> Axes:
-    try:
+    from xarray.core.utils import attempt_import
+
+    if TYPE_CHECKING:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
-    except ImportError as err:
-        raise ImportError("matplotlib is required for plot.utils.get_axis") from err
+    else:
+        mpl = attempt_import("matplotlib")
+        plt = attempt_import("matplotlib.pyplot")
 
     if figsize is not None:
         if ax is not None:
@@ -870,7 +881,7 @@ def _infer_interval_breaks(coord, axis=0, scale=None, check_monotonic=False):
         if (coord <= 0).any():
             raise ValueError(
                 "Found negative or zero value in coordinates. "
-                + "Coordinates must be positive on logscale plots."
+                "Coordinates must be positive on logscale plots."
             )
         coord = np.log10(coord)
 
@@ -917,7 +928,7 @@ def _process_cmap_cbar_kwargs(
         # Leave user to specify cmap settings for surface plots
         kwargs["cmap"] = cmap
         return {
-            k: kwargs.get(k, None)
+            k: kwargs.get(k)
             for k in ["vmin", "vmax", "cmap", "extend", "levels", "norm"]
         }, {}
 
@@ -1219,7 +1230,7 @@ def _adjust_legend_subtitles(legend):
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     dvars = set(ds.variables.keys())
-    error_msg = f" must be one of ({', '.join(sorted(tuple(str(v) for v in dvars)))})"
+    error_msg = f" must be one of ({', '.join(sorted(str(v) for v in dvars))})"
 
     if x not in dvars:
         raise ValueError(f"Expected 'x' {error_msg}. Received {x} instead.")
@@ -1383,10 +1394,10 @@ class _Normalize(Sequence):
 
     __slots__ = (
         "_data",
+        "_data_is_numeric",
         "_data_unique",
         "_data_unique_index",
         "_data_unique_inverse",
-        "_data_is_numeric",
         "_width",
     )
 
@@ -1828,7 +1839,7 @@ def _guess_coords_to_plot(
         default_guess, available_coords, ignore_guess_kwargs, strict=False
     ):
         if coords_to_plot.get(k, None) is None and all(
-            kwargs.get(ign_kw, None) is None for ign_kw in ign_kws
+            kwargs.get(ign_kw) is None for ign_kw in ign_kws
         ):
             coords_to_plot[k] = dim
 

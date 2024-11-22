@@ -16,10 +16,10 @@ from importlib import import_module
 
 import numpy as np
 import pandas as pd
-from numpy import all as array_all  # noqa
-from numpy import any as array_any  # noqa
+from numpy import all as array_all  # noqa: F401
+from numpy import any as array_any  # noqa: F401
 from numpy import concatenate as _concatenate
-from numpy import (  # noqa
+from numpy import (  # noqa: F401
     full_like,
     gradient,
     isclose,
@@ -30,14 +30,11 @@ from numpy import (  # noqa
     transpose,
     unravel_index,
 )
-from numpy.lib.stride_tricks import sliding_window_view  # noqa
-from packaging.version import Version
 from pandas.api.types import is_extension_array_dtype
 
-from xarray.core import dask_array_ops, dtypes, nputils
+from xarray.core import dask_array_compat, dask_array_ops, dtypes, nputils
 from xarray.core.options import OPTIONS
 from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
-from xarray.namedarray import pycompat
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import array_type, is_chunked_array
 
@@ -92,19 +89,25 @@ def _dask_or_eager_func(
     name,
     eager_module=np,
     dask_module="dask.array",
+    dask_only_kwargs=tuple(),
+    numpy_only_kwargs=tuple(),
 ):
     """Create a function that dispatches to dask for dask array inputs."""
 
     def f(*args, **kwargs):
-        if any(is_duck_dask_array(a) for a in args):
+        if dask_available and any(is_duck_dask_array(a) for a in args):
             mod = (
                 import_module(dask_module)
                 if isinstance(dask_module, str)
                 else dask_module
             )
             wrapped = getattr(mod, name)
+            for kwarg in numpy_only_kwargs:
+                kwargs.pop(kwarg, None)
         else:
             wrapped = getattr(eager_module, name)
+            for kwarg in dask_only_kwargs:
+                kwargs.pop(kwarg, None)
         return wrapped(*args, **kwargs)
 
     return f
@@ -121,6 +124,22 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
 
 # Requires special-casing because pandas won't automatically dispatch to dask.isnull via NEP-18
 pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd, dask_module="dask.array")
+
+# TODO replace with simply np.ma.masked_invalid once numpy/numpy#16022 is fixed
+# TODO: replacing breaks iris + dask tests
+masked_invalid = _dask_or_eager_func(
+    "masked_invalid", eager_module=np.ma, dask_module="dask.array.ma"
+)
+
+# sliding_window_view will not dispatch arbitrary kwargs (automatic_rechunk),
+# so we need to hand-code this.
+sliding_window_view = _dask_or_eager_func(
+    "sliding_window_view",
+    eager_module=np.lib.stride_tricks,
+    dask_module=dask_array_compat,
+    dask_only_kwargs=("automatic_rechunk",),
+    numpy_only_kwargs=("subok", "writeable"),
+)
 
 
 def round(array):
@@ -168,12 +187,6 @@ def isnull(data):
 
 def notnull(data):
     return ~isnull(data)
-
-
-# TODO replace with simply np.ma.masked_invalid once numpy/numpy#16022 is fixed
-masked_invalid = _dask_or_eager_func(
-    "masked_invalid", eager_module=np.ma, dask_module="dask.array.ma"
-)
 
 
 def trapz(y, x, axis):
@@ -716,6 +729,7 @@ def first(values, axis, skipna=None):
             return chunked_nanfirst(values, axis)
         else:
             return nputils.nanfirst(values, axis)
+
     return take(values, 0, axis=axis)
 
 
@@ -729,6 +743,7 @@ def last(values, axis, skipna=None):
             return chunked_nanlast(values, axis)
         else:
             return nputils.nanlast(values, axis)
+
     return take(values, -1, axis=axis)
 
 
@@ -753,13 +768,7 @@ def _push(array, n: int | None = None, axis: int = -1):
     if OPTIONS["use_numbagg"] and module_available("numbagg"):
         import numbagg
 
-        if pycompat.mod_version("numbagg") < Version("0.6.2"):
-            warnings.warn(
-                f"numbagg >= 0.6.2 is required for bfill & ffill; {pycompat.mod_version('numbagg')} is installed. We'll attempt with bottleneck instead.",
-                stacklevel=2,
-            )
-        else:
-            return numbagg.ffill(array, limit=n, axis=axis)
+        return numbagg.ffill(array, limit=n, axis=axis)
 
     # work around for bottleneck 178
     limit = n if n is not None else array.shape[axis]
@@ -769,14 +778,14 @@ def _push(array, n: int | None = None, axis: int = -1):
     return bn.push(array, limit, axis)
 
 
-def push(array, n, axis):
+def push(array, n, axis, method="blelloch"):
     if not OPTIONS["use_bottleneck"] and not OPTIONS["use_numbagg"]:
         raise RuntimeError(
             "ffill & bfill requires bottleneck or numbagg to be enabled."
             " Call `xr.set_options(use_bottleneck=True)` or `xr.set_options(use_numbagg=True)` to enable one."
         )
     if is_duck_dask_array(array):
-        return dask_array_ops.push(array, n, axis)
+        return dask_array_ops.push(array, n, axis, method=method)
     else:
         return _push(array, n, axis)
 
