@@ -19,6 +19,22 @@ What's New
 v.2024.10.1 (unreleased)
 ------------------------
 
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- The minimum versions of some dependencies were changed
+
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+    boto3                    1.28     1.29
+    dask-core             2023.9   2023.11
+    distributed           2023.9   2023.11
+    h5netcdf                 1.2      1.3
+    numbagg                0.2.1      0.6
+    typing_extensions       4.7       4.8
+  ===================== =========  =======
+
 New Features
 ~~~~~~~~~~~~
 - Added :py:meth:`DataTree.persist` method (:issue:`9675`, :pull:`9682`).
@@ -41,6 +57,13 @@ New Features
 - Optimize :py:meth:`DataArray.polyfit` and :py:meth:`Dataset.polyfit` with dask, when used with
   arrays with more than two dimensions.
   (:issue:`5629`). By `Deepak Cherian <https://github.com/dcherian>`_.
+- Support for directly opening remote files as string paths (for example, ``s3://bucket/data.nc``)
+  with ``fsspec`` when using the ``h5netcdf`` engine (:issue:`9723`, :pull:`9797`).
+  By `James Bourbeau <https://github.com/jrbourbeau>`_.
+- Re-implement the :py:mod:`ufuncs` module, which now dynamically dispatches to the
+  underlying array's backend. Provides better support for certain wrapped array types
+  like ``jax.numpy.ndarray``. (:issue:`7848`, :pull:`9776`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
