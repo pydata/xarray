@@ -166,6 +166,7 @@ def isnull(data):
         )
     ):
         # these types cannot represent missing values
+        # bool_ is for backwards compat with numpy<2, and cupy
         dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
         return full_like(data, dtype=dtype, fill_value=False)
     else:
