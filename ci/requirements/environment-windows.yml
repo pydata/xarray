@@ -42,5 +42,3 @@ dependencies:
   - toolz
   - typing_extensions
   - zarr
-  - pip:
-      - jax # no way to get cpu-only jaxlib from conda if gpu is present
