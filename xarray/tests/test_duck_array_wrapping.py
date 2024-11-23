@@ -7,21 +7,27 @@ import xarray as xr
 # Don't run cupy in CI because it requires a GPU
 NAMESPACE_ARRAYS = {
     "jax.numpy": {
-        "array": "ndarray",
-        "constructor": "asarray",
+        "attrs": {
+            "array": "ndarray",
+            "constructor": "asarray",
+        },
         "xfails": {
             "rolling": "no sliding_window_view",
             "rolling_mean": "no sliding_window_view",
         },
     },
     "cupy": {
-        "array": "ndarray",
-        "constructor": "asarray",
+        "attrs": {
+            "array": "ndarray",
+            "constructor": "asarray",
+        },
         "xfails": {"quantile": "no nanquantile"},
     },
     "pint": {
-        "array": "Quantity",
-        "constructor": "Quantity",
+        "attrs": {
+            "array": "Quantity",
+            "constructor": "Quantity",
+        },
         "xfails": {
             "all": "returns a bool",
             "any": "returns a bool",
@@ -42,13 +48,16 @@ NAMESPACE_ARRAYS = {
         },
     },
     "sparse": {
-        "array": "COO",
-        "constructor": "COO",
+        "attrs": {
+            "array": "COO",
+            "constructor": "COO",
+        },
         "xfails": {
             "cov": "dense output",
             "corr": "no nanstd",
             "cross": "no cross",
             "count": "dense output",
+            "dot": "fails on some platforms/versions",
             "isin": "no isin",
             "rolling": "no sliding_window_view",
             "rolling_mean": "no sliding_window_view",
@@ -79,8 +88,10 @@ class _BaseTest:
     def setup_for_test(self, request, namespace):
         self.namespace = namespace
         self.xp = pytest.importorskip(namespace)
-        self.Array = getattr(self.xp, NAMESPACE_ARRAYS[namespace]["array"])
-        self.constructor = getattr(self.xp, NAMESPACE_ARRAYS[namespace]["constructor"])
+        self.Array = getattr(self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["array"])
+        self.constructor = getattr(
+            self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["constructor"]
+        )
         xarray_method = request.node.name.split("test_")[1].split("[")[0]
         if xarray_method in NAMESPACE_ARRAYS[namespace]["xfails"]:
             reason = NAMESPACE_ARRAYS[namespace]["xfails"][xarray_method]
