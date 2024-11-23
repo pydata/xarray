@@ -1760,8 +1760,7 @@ def _full_like_variable(
             **from_array_kwargs,
         )
     else:
-        xp = duck_array_ops.get_array_namespace(other.data)
-        data = xp.full_like(other.data, fill_value, dtype=dtype)
+        data = duck_array_ops.full_like(other.data, fill_value, dtype=dtype)
 
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 

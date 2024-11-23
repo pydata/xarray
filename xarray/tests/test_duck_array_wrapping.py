@@ -4,30 +4,107 @@ import pytest
 
 import xarray as xr
 
-# TODO: how to test these in CI?
-jnp = pytest.importorskip("jax.numpy")
-cp = pytest.importorskip("cupy")
+# Don't run cupy in CI because it requires a GPU
+NAMESPACE_ARRAYS = {
+    "jax.numpy": {
+        "array": "ndarray",
+        "constructor": "asarray",
+        "xfails": {
+            "rolling": "no sliding_window_view",
+            "rolling_mean": "no sliding_window_view",
+        },
+    },
+    "cupy": {
+        "array": "ndarray",
+        "constructor": "asarray",
+        "xfails": {"quantile": "no nanquantile"},
+    },
+    "pint": {
+        "array": "Quantity",
+        "constructor": "Quantity",
+        "xfails": {
+            "all": "returns a bool",
+            "any": "returns a bool",
+            "argmax": "returns an int",
+            "argmin": "returns an int",
+            "argsort": "returns an int",
+            "count": "returns an int",
+            "dot": "no tensordot",
+            "full_like": "should work, see: https://github.com/hgrecco/pint/pull/1669",
+            "idxmax": "returns the coordinate",
+            "idxmin": "returns the coordinate",
+            "isin": "returns a bool",
+            "isnull": "returns a bool",
+            "notnull": "returns a bool",
+            "rolling_mean": "no dispatch for numbagg/bottleneck",
+            "searchsorted": "returns an int",
+            "weighted": "no tensordot",
+        },
+    },
+    "sparse": {
+        "array": "COO",
+        "constructor": "COO",
+        "xfails": {
+            "cov": "dense output",
+            "corr": "no nanstd",
+            "cross": "no cross",
+            "count": "dense output",
+            "isin": "no isin",
+            "rolling": "no sliding_window_view",
+            "rolling_mean": "no sliding_window_view",
+            "weighted": "fill_value error",
+            "coarsen": "pad constant_values must be fill_value",
+            "quantile": "no non skipping version",
+            "differentiate": "no gradient",
+            "argmax": "no nan skipping version",
+            "argmin": "no nan skipping version",
+            "idxmax": "no nan skipping version",
+            "idxmin": "no nan skipping version",
+            "median": "no nan skipping version",
+            "std": "no nan skipping version",
+            "var": "no nan skipping version",
+            "cumsum": "no cumsum",
+            "cumprod": "no cumprod",
+            "argsort": "no argsort",
+            "conjugate": "no conjugate",
+            "searchsorted": "no searchsorted",
+            "shift": "pad constant_values must be fill_value",
+            "pad": "pad constant_values must be fill_value",
+        },
+    },
+}
 
-NAMESPACES = [cp, jnp]
+
+class _BaseTest:
+    def setup_for_test(self, request, namespace):
+        self.namespace = namespace
+        self.xp = pytest.importorskip(namespace)
+        self.Array = getattr(self.xp, NAMESPACE_ARRAYS[namespace]["array"])
+        self.constructor = getattr(self.xp, NAMESPACE_ARRAYS[namespace]["constructor"])
+        xarray_method = request.node.name.split("test_")[1].split("[")[0]
+        if xarray_method in NAMESPACE_ARRAYS[namespace]["xfails"]:
+            reason = NAMESPACE_ARRAYS[namespace]["xfails"][xarray_method]
+            pytest.xfail(f"xfail for {self.namespace}: {reason}")
+
+    def get_test_dataarray(self):
+        data = np.asarray([[1, 2, 3, np.nan, 5]])
+        x = np.arange(5)
+        data = self.constructor(data)
+        return xr.DataArray(
+            data,
+            dims=["y", "x"],
+            coords={"y": [1], "x": x},
+            name="foo",
+        )
 
 
-def get_test_dataarray(xp):
-    return xr.DataArray(
-        xp.asarray([[1, 2, 3, np.nan, 5]]),
-        dims=["y", "x"],
-        coords={"y": [1], "x": np.arange(5)},
-        name="foo",
-    )
-
-
-@pytest.mark.parametrize("xp", NAMESPACES)
-class TestTopLevelMethods:
+@pytest.mark.parametrize("namespace", NAMESPACE_ARRAYS)
+class TestTopLevelMethods(_BaseTest):
     @pytest.fixture(autouse=True)
-    def setUp(self, xp):
-        self.xp = xp
-        self.Array = xp.ndarray
-        self.x1 = get_test_dataarray(xp)
-        self.x2 = get_test_dataarray(xp).assign_coords(x=np.arange(2, 7))
+    def setUp(self, request, namespace):
+        self.setup_for_test(request, namespace)
+        self.x1 = self.get_test_dataarray()
+        self.x2 = self.get_test_dataarray().assign_coords(x=np.arange(2, 7))
 
     def test_apply_ufunc(self):
         func = lambda x: x + 1
@@ -83,13 +160,12 @@ class TestTopLevelMethods:
         assert isinstance(result.data, self.Array)
 
 
-@pytest.mark.parametrize("xp", NAMESPACES)
-class TestDataArrayMethods:
+@pytest.mark.parametrize("namespace", NAMESPACE_ARRAYS)
+class TestDataArrayMethods(_BaseTest):
     @pytest.fixture(autouse=True)
-    def setUp(self, xp):
-        self.xp = xp
-        self.Array = xp.ndarray
-        self.x = get_test_dataarray(xp)
+    def setUp(self, request, namespace):
+        self.setup_for_test(request, namespace)
+        self.x = self.get_test_dataarray()
 
     def test_loc(self):
         result = self.x.loc[{"x": slice(1, 3)}]
@@ -153,7 +229,8 @@ class TestDataArrayMethods:
         assert isinstance(result.data, self.Array)
 
     def test_isin(self):
-        result = self.x.isin(self.xp.asarray([1]))
+        test_elements = self.constructor(np.asarray([1]))
+        result = self.x.isin(test_elements)
         assert isinstance(result.data, self.Array)
 
     def test_groupby(self):
@@ -161,9 +238,13 @@ class TestDataArrayMethods:
         assert isinstance(result.data, self.Array)
 
     def test_rolling(self):
-        if self.xp is jnp:
-            pytest.xfail("no sliding_window_view in jax")
-        result = self.x.rolling(x=3).mean()
+        result = self.x.rolling(x=3)
+        elem = next(iter(result))[1]
+        assert isinstance(elem.data, self.Array)
+
+    @pytest.mark.parametrize("skipna", [True, False])
+    def test_rolling_mean(self, skipna):
+        result = self.x.rolling(x=3).mean(skipna=skipna)
         assert isinstance(result.data, self.Array)
 
     @pytest.mark.xfail(reason="rolling_exp uses numbagg")
@@ -194,14 +275,12 @@ class TestDataArrayMethods:
 
     @pytest.mark.parametrize("skipna", [True, False])
     def test_quantile(self, skipna):
-        if self.xp is cp and skipna:
-            pytest.xfail("no nanquantile in cupy")
         result = self.x.quantile(0.5, skipna=skipna)
         assert isinstance(result.data, self.Array)
 
     def test_differentiate(self):
         # edge_order is not implemented in jax, and only supports passing None
-        edge_order = None if self.xp is jnp else 1
+        edge_order = None if self.namespace == "jax.numpy" else 1
         result = self.x.differentiate("x", edge_order=edge_order)
         assert isinstance(result.data, self.Array)
 
@@ -318,7 +397,8 @@ class TestDataArrayMethods:
         assert isinstance(result.data, self.Array)
 
     def test_searchsorted(self):
-        result = self.x.squeeze().searchsorted(self.xp.asarray(3))
+        v = self.constructor(np.asarray([3]))
+        result = self.x.squeeze().searchsorted(v)
         assert isinstance(result, self.Array)
 
     def test_round(self):
