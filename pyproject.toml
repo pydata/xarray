@@ -256,7 +256,6 @@ ignore = [
   "E501",    # line too long - let the formatter worry about that
   "E731",    # do not assign a lambda expression, use a def
   "UP007",   # use X | Y for type annotations
-  "UP027",   # deprecated
   "C40",     # unnecessary generator, comprehension, or literal
   "PIE790",  # unnecessary pass statement
   "PERF203", # try-except within a loop incurs performance overhead
