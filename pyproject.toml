@@ -45,7 +45,7 @@ dev = [
   "pytest-env",
   "pytest-xdist",
   "pytest-timeout",
-  "ruff",
+  "ruff>=0.8.0",
   "sphinx",
   "sphinx_autosummary_accessors",
   "xarray[complete]",
