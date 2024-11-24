@@ -1708,8 +1708,7 @@ def _determine_guide(
         if (
             not add_colorbar
             and (hueplt_norm.data is not None and hueplt_norm.data_is_numeric is False)
-            or sizeplt_norm.data is not None
-        ):
+        ) or sizeplt_norm.data is not None:
             add_legend = True
         else:
             add_legend = False

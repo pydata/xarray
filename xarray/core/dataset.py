@@ -5401,11 +5401,9 @@ class Dataset(
                 and var.dims[0] == dim
                 and (
                     # stack: must be a single coordinate index
-                    not multi
-                    and not self.xindexes.is_multi(name)
+                    (not multi and not self.xindexes.is_multi(name))
                     # unstack: must be an index that implements .unstack
-                    or multi
-                    and type(index).unstack is not Index.unstack
+                    or (multi and type(index).unstack is not Index.unstack)
                 )
             ):
                 if stack_index is not None and index is not stack_index:
