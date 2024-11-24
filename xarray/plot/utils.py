@@ -869,11 +869,11 @@ def _infer_interval_breaks(coord, axis=0, scale=None, check_monotonic=False):
     if check_monotonic and not _is_monotonic(coord, axis=axis):
         raise ValueError(
             "The input coordinate is not sorted in increasing "
-            "order along axis %d. This can lead to unexpected "
+            f"order along axis {axis}. This can lead to unexpected "
             "results. Consider calling the `sortby` method on "
             "the input DataArray. To plot data with categorical "
             "axes, consider using the `heatmap` function from "
-            "the `seaborn` statistical plotting library." % axis
+            "the `seaborn` statistical plotting library."
         )
 
     # If logscale, compute the intervals in the logarithmic space
