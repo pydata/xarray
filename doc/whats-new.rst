@@ -33,7 +33,7 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-- Fix unintended load on dataset when calling scatter (  :pull:`XXXX`).
+- Fix unintended load on datasets when calling :py:meth:`DataArray.plot.scatter` (:pull:`9818`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Documentation
