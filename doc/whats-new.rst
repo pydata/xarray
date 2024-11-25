@@ -14,26 +14,45 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2024.10.1:
+.. _whats-new.2024.11.1:
 
-v.2024.10.1 (unreleased)
+v.2024.11.1 (unreleased)
 ------------------------
 
+New Features
+~~~~~~~~~~~~
 
-Breaking Changes
+
+Breaking changes
 ~~~~~~~~~~~~~~~~
-- The minimum versions of some dependencies were changed
 
-  ===================== =========  =======
-   Package                    Old      New
-  ===================== =========  =======
-    boto3                    1.28     1.29
-    dask-core             2023.9   2023.11
-    distributed           2023.9   2023.11
-    h5netcdf                 1.2      1.3
-    numbagg                0.2.1      0.6
-    typing_extensions       4.7       4.8
-  ===================== =========  =======
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+
+.. _whats-new.2024.11.0:
+
+v.2024.11.0 (Nov 22, 2024)
+--------------------------
+
+This release brings better support for wrapping JAX arrays and Astropy Quantity objects, :py:meth:`DataTree.persist`, algorithmic improvements
+to many methods with dask (:py:meth:`Dataset.polyfit`, :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill`, rolling reductions), and bug fixes.
+Thanks to the 22 contributors to this release:
+Benoit Bovy, Deepak Cherian, Dimitri Papadopoulos Orfanos, Holly Mandel, James Bourbeau, Joe Hamman, Justus Magin, Kai Mühlbauer, Lukas Trippe, Mathias Hauser, Maximilian Roos, Michael Niklas, Pascal Bourgault, Patrick Hoefler, Sam Levang, Sarah Charlotte Johnson, Scott Huberty, Stephan Hoyer, Tom Nicholas, Virgile Andreani, joseph nowak and tvo
 
 New Features
 ~~~~~~~~~~~~
@@ -64,10 +83,23 @@ New Features
   underlying array's backend. Provides better support for certain wrapped array types
   like ``jax.numpy.ndarray``. (:issue:`7848`, :pull:`9776`).
   By `Sam Levang <https://github.com/slevang>`_.
+- Speed up loading of large zarr stores using dask arrays. (:issue:`8902`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
-Breaking changes
+Breaking Changes
 ~~~~~~~~~~~~~~~~
+- The minimum versions of some dependencies were changed
 
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+    boto3                    1.28     1.29
+    dask-core             2023.9   2023.11
+    distributed           2023.9   2023.11
+    h5netcdf                 1.2      1.3
+    numbagg                0.2.1      0.6
+    typing_extensions       4.7       4.8
+  ===================== =========  =======
 
 Deprecations
 ~~~~~~~~~~~~
