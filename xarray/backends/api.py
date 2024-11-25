@@ -33,6 +33,7 @@ from xarray.backends.common import (
     _normalize_path,
 )
 from xarray.backends.locks import _get_scheduler
+from xarray.coding.times import CFDatetimeCoder
 from xarray.core import indexing
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
@@ -46,7 +47,6 @@ from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
 from xarray.core.types import NetcdfWriteModes, ZarrWriteModes
 from xarray.core.utils import is_remote_uri
-from xarray.coding.times import CFDatetimeCoder
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager
 
@@ -482,7 +482,10 @@ def open_dataset(
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None = None,
+    decode_times: bool
+    | CFDatetimeCoder
+    | Mapping[str, bool | CFDatetimeCoder]
+    | None = None,
     decode_timedelta: bool | Mapping[str, bool] | None = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
@@ -544,7 +547,7 @@ def open_dataset(
         be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-    decode_times : bool or CFDatetimeCoder or dict-like, optional
+    decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, use CFDatetimeCoder or leave them encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
@@ -570,6 +573,8 @@ def open_dataset(
         raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
+        Usage of 'use_cftime' as kwarg is deprecated. Please initialize it
+        with xarray.times.CFDatetimeCoder and 'decode_times' kwarg.
     concat_characters : bool or dict-like, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -699,7 +704,10 @@ def open_dataarray(
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
-    decode_times: bool | None = None,
+    decode_times: bool
+    | CFDatetimeCoder
+    | Mapping[str, bool | CFDatetimeCoder]
+    | None = None,
     decode_timedelta: bool | None = None,
     use_cftime: bool | None = None,
     concat_characters: bool | None = None,
@@ -762,9 +770,11 @@ def open_dataarray(
         `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
         be replaced by NA. This keyword may not be supported by all the backends.
-    decode_times : bool, optional
+    decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, leave them encoded as numbers.
+        into datetime objects. Otherwise, use CFDatetimeCoder or leave them encoded as numbers.
+        Pass a mapping, e.g. ``{"my_variable": False}``,
+        to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
     decode_timedelta : bool, optional
         If True, decode variables and coordinates with time units in
@@ -782,6 +792,8 @@ def open_dataarray(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error. This keyword may not be supported by all the backends.
+        Usage of 'use_cftime' as kwarg is deprecated. Please initialize it
+        with xarray.times.CFDatetimeCoder and 'decode_times' kwarg.
     concat_characters : bool, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -904,7 +916,10 @@ def open_datatree(
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool | Mapping[str, bool] | None = None,
+    decode_times: bool
+    | CFDatetimeCoder
+    | Mapping[str, bool | CFDatetimeCoder]
+    | None = None,
     decode_timedelta: bool | Mapping[str, bool] | None = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
@@ -962,9 +977,9 @@ def open_datatree(
         be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-    decode_times : bool or dict-like, optional
+    decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, leave them encoded as numbers.
+        into datetime objects. Otherwise, use CFDatetimeCoder or leave them encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -988,6 +1003,8 @@ def open_datatree(
         raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
+        Usage of 'use_cftime' as kwarg is deprecated. Please initialize it
+        with xarray.times.CFDatetimeCoder and 'decode_times' kwarg.
     concat_characters : bool or dict-like, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -1119,7 +1136,10 @@ def open_groups(
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
-    decode_times: bool | Mapping[str, bool] | None = None,
+    decode_times: bool
+    | CFDatetimeCoder
+    | Mapping[str, bool | CFDatetimeCoder]
+    | None = None,
     decode_timedelta: bool | Mapping[str, bool] | None = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
     concat_characters: bool | Mapping[str, bool] | None = None,
@@ -1181,9 +1201,9 @@ def open_groups(
         be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-    decode_times : bool or dict-like, optional
+    decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, leave them encoded as numbers.
+        into datetime objects. Otherwise, use CFDatetimeCoder or leave them encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -1207,6 +1227,8 @@ def open_groups(
         raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
+        Usage of 'use_cftime' as kwarg is deprecated. Please initialize it
+        with xarray.times.CFDatetimeCoder and 'decode_times' kwarg.
     concat_characters : bool or dict-like, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and

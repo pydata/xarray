@@ -236,7 +236,7 @@ def decode_cf_variable(
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue). If the _Unsigned attribute is present
         treat integer arrays as unsigned.
-    decode_times : bool | xarray.times.CFDatetimeCoder
+    decode_times : bool or xarray.times.CFDatetimeCoder
         Decode cf times ("hours since 2000-01-01") to np.datetime64.
     decode_endianness : bool
         Decode arrays from non-native to native endianness.
@@ -254,6 +254,8 @@ def decode_cf_variable(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+        Usage of use_cftime as kwarg is deprecated, please initialize it with
+        xarray.times.CFDatetimeCoder and ``decode_times``.
 
     Returns
     -------
@@ -291,11 +293,28 @@ def decode_cf_variable(
     if decode_timedelta:
         var = times.CFTimedeltaCoder().decode(var, name=name)
     if decode_times:
+        # remove checks after end of deprecation cycle
         if not isinstance(decode_times, times.CFDatetimeCoder):
+            if use_cftime is not None:
+                from warnings import warn
+
+                warn(
+                    "Usage of 'use_cftime' as kwarg is deprecated. "
+                    "Please initialize it with xarray.times.CFDatetimeCoder and "
+                    "'decode_times' kwarg.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
             decode_times = times.CFDatetimeCoder(use_cftime=use_cftime)
-        var = decode_times.decode(
-            var, name=name
-        )
+        else:
+            if use_cftime is not None:
+                raise TypeError(
+                    "Usage of 'use_cftime' as kwarg is not allowed, "
+                    "if 'decode_times' is initialized with "
+                    "xarray.times.CFDatetimeCoder. Please add 'use_cftime' "
+                    "when initializing xarray.times.CFDatetimeCoder."
+                )
+        var = decode_times.decode(var, name=name)
 
     if decode_endianness and not var.dtype.isnative:
         var = variables.EndianCoder().decode(var)
@@ -406,7 +425,10 @@ def decode_cf_variables(
     attributes: T_Attrs,
     concat_characters: bool | Mapping[str, bool] = True,
     mask_and_scale: bool | Mapping[str, bool] = True,
-    decode_times: bool | Mapping[str, bool] = True,
+    decode_times: bool
+    | times.CFDatetimeCoder
+    | Mapping[str, bool | times.CFDatetimeCoder]
+    | None = True,
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
@@ -562,7 +584,7 @@ def decode_cf(
     mask_and_scale : bool, optional
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
-    decode_times : bool | xr.times.times.CFDatetimeCoder, optional
+    decode_times : bool or xr.times.times.CFDatetimeCoder, optional
         Decode cf times (e.g., integers since "hours since 2000-01-01") to
         np.datetime64.
     decode_coords : bool or {"coordinates", "all"}, optional
@@ -587,6 +609,8 @@ def decode_cf(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+        Usage of use_cftime as kwarg is deprecated, please initialize it with
+        xarray.times.CFDatetimeCoder and ``decode_times``.
     decode_timedelta : bool, optional
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}

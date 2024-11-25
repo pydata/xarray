@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Callable, Hashable, Iterator
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Literal, Union, cast
+from typing import TYPE_CHECKING, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -226,7 +226,7 @@ def _decode_cf_datetime_dtype(
     units: str,
     calendar: str | None,
     use_cftime: bool | None,
-    time_unit: Literal["s", "ms", "us", "ns"] = "ns",
+    time_unit: PDDatetimeUnitOptions = "ns",
 ) -> np.dtype:
     # Verify that at least the first and last date can be decoded
     # successfully. Otherwise, tracebacks end up swallowed by
@@ -431,7 +431,7 @@ def decode_cf_datetime(
     units: str,
     calendar: str | None = None,
     use_cftime: bool | None = None,
-    time_unit: Literal["s", "ms", "us", "ns"] = "ns",
+    time_unit: PDDatetimeUnitOptions = "ns",
 ) -> np.ndarray:
     """Given an array of numeric dates in netCDF format, convert it into a
     numpy array of date time objects.

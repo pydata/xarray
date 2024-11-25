@@ -15,6 +15,7 @@ from xarray.backends.zarr import open_zarr
 from xarray.coding.cftime_offsets import cftime_range, date_range, date_range_like
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.frequencies import infer_freq
+from xarray.coding.times import CFDatetimeCoder
 from xarray.conventions import SerializationWarning, decode_cf
 from xarray.core.alignment import align, broadcast
 from xarray.core.combine import combine_by_coords, combine_nested
@@ -113,6 +114,7 @@ __all__ = (
     "where",
     "zeros_like",
     # Classes
+    "CFDatetimeCoder",
     "CFTimeIndex",
     "Context",
     "Coordinates",

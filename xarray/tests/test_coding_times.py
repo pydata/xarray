@@ -1107,7 +1107,9 @@ def test_encode_decode_roundtrip_datetime64(
     times = initial_time.append(pd.date_range("1968", periods=2, freq=freq))
     variable = Variable(["time"], times)
     encoded = conventions.encode_cf_variable(variable)
-    decoded = conventions.decode_cf_variable("time", encoded, decode_times=CFDatetimeCoder(time_unit=time_unit))
+    decoded = conventions.decode_cf_variable(
+        "time", encoded, decode_times=CFDatetimeCoder(time_unit=time_unit)
+    )
     assert_equal(variable, decoded)
 
 
@@ -1120,7 +1122,8 @@ def test_encode_decode_roundtrip_cftime(freq) -> None:
     )
     variable = Variable(["time"], times)
     encoded = conventions.encode_cf_variable(variable)
-    decoded = conventions.decode_cf_variable("time", encoded, use_cftime=True)
+    decoder = CFDatetimeCoder(use_cftime=True)
+    decoded = conventions.decode_cf_variable("time", encoded, decode_times=decoder)
     assert_equal(variable, decoded)
 
 
@@ -1155,7 +1158,9 @@ def test_decode_encode_roundtrip_with_non_lowercase_letters(
     units = "days since 2000-01-01"
     attrs = {"calendar": calendar, "units": units}
     variable = Variable(["time"], times, attrs)
-    decoded = conventions.decode_cf_variable("time", variable, decode_times=CFDatetimeCoder(time_unit=time_unit))
+    decoded = conventions.decode_cf_variable(
+        "time", variable, decode_times=CFDatetimeCoder(time_unit=time_unit)
+    )
     encoded = conventions.encode_cf_variable(decoded)
 
     # Previously this would erroneously be an array of cftime.datetime

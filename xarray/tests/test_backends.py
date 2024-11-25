@@ -29,6 +29,7 @@ from pandas.errors import OutOfBoundsDatetime
 
 import xarray as xr
 from xarray import (
+    CFDatetimeCoder,
     DataArray,
     Dataset,
     backends,
@@ -3196,7 +3197,10 @@ class ZarrBase(CFEncodedBase):
             ds.to_zarr(store_target, **self.version_kwargs)
             ds_a = xr.open_zarr(store_target, **self.version_kwargs)
             assert_identical(ds, ds_a)
-            ds_b = xr.open_zarr(store_target, use_cftime=True, **self.version_kwargs)
+            decoder = CFDatetimeCoder(use_cftime=True)
+            ds_b = xr.open_zarr(
+                store_target, decode_times=decoder, **self.version_kwargs
+            )
             assert xr.coding.times.contains_cftime_datetimes(ds_b.time.variable)
 
     def test_write_read_select_write(self) -> None:
@@ -5613,7 +5617,8 @@ def test_use_cftime_true(calendar, units_year) -> None:
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
         with warnings.catch_warnings(record=True) as record:
-            with open_dataset(tmp_file, use_cftime=True) as ds:
+            decoder = CFDatetimeCoder(use_cftime=True)
+            with open_dataset(tmp_file, decode_times=decoder) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)
             _assert_no_dates_out_of_range_warning(record)
@@ -5666,7 +5671,8 @@ def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year) -
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
         with pytest.raises((OutOfBoundsDatetime, ValueError)):
-            open_dataset(tmp_file, use_cftime=False)
+            decoder = CFDatetimeCoder(use_cftime=False)
+            open_dataset(tmp_file, decode_times=decoder)
 
 
 @requires_scipy_or_netCDF4
@@ -5684,7 +5690,8 @@ def test_use_cftime_false_nonstandard_calendar(calendar, units_year) -> None:
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
         with pytest.raises((OutOfBoundsDatetime, ValueError)):
-            open_dataset(tmp_file, use_cftime=False)
+            decoder = CFDatetimeCoder(use_cftime=False)
+            open_dataset(tmp_file, decode_times=decoder)
 
 
 @pytest.mark.parametrize("engine", ["netcdf4", "scipy"])
