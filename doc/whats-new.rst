@@ -21,6 +21,8 @@ v.2024.11.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- support python 3.13 (no free-threading) (:issue:`9664`, :pull:`9681`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 Breaking changes
@@ -56,8 +58,6 @@ Benoit Bovy, Deepak Cherian, Dimitri Papadopoulos Orfanos, Holly Mandel, James B
 
 New Features
 ~~~~~~~~~~~~
-- support python 3.13 (no free-threading) (:issue:`9664`, :pull:`9681`)
-  By `Justus Magin <https://github.com/keewis>`_.
 - Added :py:meth:`DataTree.persist` method (:issue:`9675`, :pull:`9682`).
   By `Sam Levang <https://github.com/slevang>`_.
 - Added ``write_inherited_coords`` option to :py:meth:`DataTree.to_netcdf`
