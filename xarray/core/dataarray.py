@@ -7081,7 +7081,7 @@ class DataArray(
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
         center : bool or Mapping to int, default: False
-            Set the labels at the center of the window. The default, False, 
+            Set the labels at the center of the window. The default, False,
             sets the labels at the right edge of the window.
         **window_kwargs : optional
             The keyword arguments form of ``dim``.
