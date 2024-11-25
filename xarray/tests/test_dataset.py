@@ -388,16 +388,15 @@ class TestDataset:
 
         byteorder = "<" if sys.byteorder == "little" else ">"
         expected = dedent(
-            """\
+            f"""\
             <xarray.Dataset> Size: 12B
             Dimensions:  (foø: 1)
             Coordinates:
-              * foø      (foø) %cU3 12B %r
+              * foø      (foø) {byteorder}U3 12B {'ba®'!r}
             Data variables:
                 *empty*
             Attributes:
                 å:        ∑"""
-            % (byteorder, "ba®")
         )
         actual = str(data)
         assert expected == actual

@@ -726,11 +726,8 @@ def _encode_coordinates(
             )
 
         # if coordinates set to None, don't write coordinates attribute
-        if (
-            "coordinates" in attrs
-            and attrs.get("coordinates") is None
-            or "coordinates" in encoding
-            and encoding.get("coordinates") is None
+        if ("coordinates" in attrs and attrs.get("coordinates") is None) or (
+            "coordinates" in encoding and encoding.get("coordinates") is None
         ):
             # make sure "coordinates" is removed from attrs/encoding
             attrs.pop("coordinates", None)
