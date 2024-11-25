@@ -6,22 +6,35 @@ import xarray as xr
 
 # Don't run cupy in CI because it requires a GPU
 NAMESPACE_ARRAYS = {
-    "jax.numpy": {
-        "attrs": {
-            "array": "ndarray",
-            "constructor": "asarray",
-        },
-        "xfails": {
-            "rolling": "no sliding_window_view",
-            "rolling_mean": "no sliding_window_view",
-        },
-    },
     "cupy": {
         "attrs": {
             "array": "ndarray",
             "constructor": "asarray",
         },
         "xfails": {"quantile": "no nanquantile"},
+    },
+    "dask.array": {
+        "attrs": {
+            "array": "Array",
+            "constructor": "from_array",
+        },
+        "xfails": {
+            "argsort": "no argsort",
+            "conjugate": "conj but no conjugate",
+            "searchsorted": "dask.array.searchsorted but no Array.searchsorted",
+        },
+    },
+    "jax.numpy": {
+        "attrs": {
+            "array": "ndarray",
+            "constructor": "asarray",
+        },
+        "xfails": {
+            "rolling_construct": "no sliding_window_view",
+            "rolling_reduce": "no sliding_window_view",
+            "cumulative_construct": "no sliding_window_view",
+            "cumulative_reduce": "no sliding_window_view",
+        },
     },
     "pint": {
         "attrs": {
@@ -42,7 +55,8 @@ NAMESPACE_ARRAYS = {
             "isin": "returns a bool",
             "isnull": "returns a bool",
             "notnull": "returns a bool",
-            "rolling_mean": "no dispatch for numbagg/bottleneck",
+            "rolling_reduce": "no dispatch for numbagg/bottleneck",
+            "cumulative_reduce": "no dispatch for numbagg/bottleneck",
             "searchsorted": "returns an int",
             "weighted": "no tensordot",
         },
@@ -59,8 +73,12 @@ NAMESPACE_ARRAYS = {
             "count": "dense output",
             "dot": "fails on some platforms/versions",
             "isin": "no isin",
-            "rolling": "no sliding_window_view",
-            "rolling_mean": "no sliding_window_view",
+            "rolling_construct": "no sliding_window_view",
+            "rolling_reduce": "no sliding_window_view",
+            "cumulative_construct": "no sliding_window_view",
+            "cumulative_reduce": "no sliding_window_view",
+            "coarsen_construct": "pad constant_values must be fill_value",
+            "coarsen_reduce": "pad constant_values must be fill_value",
             "weighted": "fill_value error",
             "coarsen": "pad constant_values must be fill_value",
             "quantile": "no non skipping version",
@@ -119,7 +137,7 @@ class TestTopLevelMethods(_BaseTest):
 
     def test_apply_ufunc(self):
         func = lambda x: x + 1
-        result = xr.apply_ufunc(func, self.x1)
+        result = xr.apply_ufunc(func, self.x1, dask="parallelized")
         assert isinstance(result.data, self.Array)
 
     def test_align(self):
@@ -248,26 +266,51 @@ class TestDataArrayMethods(_BaseTest):
         result = self.x.groupby("x").mean()
         assert isinstance(result.data, self.Array)
 
-    def test_rolling(self):
+    def test_groupby_bins(self):
+        result = self.x.groupby_bins("x", bins=[0, 2, 4, 6]).mean()
+        assert isinstance(result.data, self.Array)
+
+    def test_rolling_iter(self):
         result = self.x.rolling(x=3)
         elem = next(iter(result))[1]
         assert isinstance(elem.data, self.Array)
 
+    def test_rolling_construct(self):
+        result = self.x.rolling(x=3).construct(x="window")
+        assert isinstance(result.data, self.Array)
+
     @pytest.mark.parametrize("skipna", [True, False])
-    def test_rolling_mean(self, skipna):
+    def test_rolling_reduce(self, skipna):
         result = self.x.rolling(x=3).mean(skipna=skipna)
         assert isinstance(result.data, self.Array)
 
     @pytest.mark.xfail(reason="rolling_exp uses numbagg")
-    def test_rolling_exp(self):
+    def test_rolling_exp_reduce(self):
         result = self.x.rolling_exp(x=3).mean()
+        assert isinstance(result.data, self.Array)
+
+    def test_cumulative_iter(self):
+        result = self.x.cumulative("x")
+        elem = next(iter(result))[1]
+        assert isinstance(elem.data, self.Array)
+
+    def test_cumulative_construct(self):
+        result = self.x.cumulative("x").construct(x="window")
+        assert isinstance(result.data, self.Array)
+
+    def test_cumulative_reduce(self):
+        result = self.x.cumulative("x").sum()
         assert isinstance(result.data, self.Array)
 
     def test_weighted(self):
         result = self.x.weighted(self.x.fillna(0)).mean()
         assert isinstance(result.data, self.Array)
 
-    def test_coarsen(self):
+    def test_coarsen_construct(self):
+        result = self.x.coarsen(x=2, boundary="pad").construct(x=["a", "b"])
+        assert isinstance(result.data, self.Array)
+
+    def test_coarsen_reduce(self):
         result = self.x.coarsen(x=2, boundary="pad").mean()
         assert isinstance(result.data, self.Array)
 
@@ -389,6 +432,10 @@ class TestDataArrayMethods(_BaseTest):
 
     def test_argsort(self):
         result = self.x.argsort()
+        assert isinstance(result.data, self.Array)
+
+    def test_astype(self):
+        result = self.x.astype(int)
         assert isinstance(result.data, self.Array)
 
     def test_clip(self):
