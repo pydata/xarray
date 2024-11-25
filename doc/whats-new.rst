@@ -21,6 +21,9 @@ v.2024.11.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
+  duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 
 Breaking changes
@@ -85,9 +88,6 @@ New Features
   By `Sam Levang <https://github.com/slevang>`_.
 - Speed up loading of large zarr stores using dask arrays. (:issue:`8902`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
-  duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
-  By `Sam Levang <https://github.com/slevang>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
