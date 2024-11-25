@@ -305,7 +305,7 @@ class IOMultipleNetCDF:
             ds.attrs = {"history": "created for xarray benchmarking"}
 
             self.ds_list.append(ds)
-            self.filenames_list.append("test_netcdf_%i.nc" % i)
+            self.filenames_list.append(f"test_netcdf_{i}.nc")
 
 
 class IOWriteMultipleNetCDF3(IOMultipleNetCDF):
