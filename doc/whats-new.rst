@@ -45,8 +45,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
-
+- Move non-CF related ``ensure_dtype_not_object`` from conventions to backends (:pull:`9828`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 .. _whats-new.2024.11.0:
 
