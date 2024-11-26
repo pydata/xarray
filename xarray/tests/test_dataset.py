@@ -388,16 +388,15 @@ class TestDataset:
 
         byteorder = "<" if sys.byteorder == "little" else ">"
         expected = dedent(
-            """\
+            f"""\
             <xarray.Dataset> Size: 12B
             Dimensions:  (foø: 1)
             Coordinates:
-              * foø      (foø) %cU3 12B %r
+              * foø      (foø) {byteorder}U3 12B {'ba®'!r}
             Data variables:
                 *empty*
             Attributes:
                 å:        ∑"""
-            % (byteorder, "ba®")
         )
         actual = str(data)
         assert expected == actual
@@ -3206,7 +3205,7 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"'b' conflicts"):
             original.rename({"a": "b"})
 
-    def test_rename_perserve_attrs_encoding(self) -> None:
+    def test_rename_preserve_attrs_encoding(self) -> None:
         # test propagate attrs/encoding to new variable(s) created from Index object
         original = Dataset(coords={"x": ("x", [0, 1, 2])})
         expected = Dataset(coords={"y": ("y", [0, 1, 2])})

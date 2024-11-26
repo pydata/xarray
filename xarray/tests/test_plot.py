@@ -33,6 +33,7 @@ from xarray.tests import (
     assert_no_warnings,
     requires_cartopy,
     requires_cftime,
+    requires_dask,
     requires_matplotlib,
     requires_seaborn,
 )
@@ -1805,8 +1806,9 @@ class TestContour(Common2dMixin, PlotTestCase):
         artist = self.darray.plot.contour(levels=levels, colors=["k", "r", "w", "b"])
         cmap = artist.cmap
         assert isinstance(cmap, mpl.colors.ListedColormap)
-        colors = cmap.colors
-        assert isinstance(colors, list)
+        # non-optimal typing in matplotlib (ArrayLike)
+        # https://github.com/matplotlib/matplotlib/blob/84464dd085210fb57cc2419f0d4c0235391d97e6/lib/matplotlib/colors.pyi#L133
+        colors = cast(np.ndarray, cmap.colors)
 
         assert self._color_as_tuple(colors[1]) == (1.0, 0.0, 0.0)
         assert self._color_as_tuple(colors[2]) == (1.0, 1.0, 1.0)
@@ -3323,6 +3325,24 @@ def test_datarray_scatter(
             add_legend=add_legend,
             add_colorbar=add_colorbar,
         )
+
+
+@requires_dask
+@requires_matplotlib
+@pytest.mark.parametrize(
+    "plotfunc",
+    ["scatter"],
+)
+def test_dataarray_not_loading_inplace(plotfunc: str) -> None:
+    ds = xr.tutorial.scatter_example_dataset()
+    ds = ds.chunk()
+
+    with figure_context():
+        getattr(ds.A.plot, plotfunc)(x="x")
+
+    from dask.array import Array
+
+    assert isinstance(ds.A.data, Array)
 
 
 @requires_matplotlib

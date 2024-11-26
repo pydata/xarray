@@ -5,7 +5,6 @@ from types import ModuleType
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from packaging.version import Version
 
 from xarray.core.indexing import ImplicitToExplicitIndexingAdapter
 from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
@@ -196,13 +195,7 @@ class DaskManager(ChunkManagerEntrypoint):
         new_axis: int | Sequence[int] | None = None,
         **kwargs: Any,
     ) -> chunkedduckarray[Any, _DType]:
-        import dask
-        from dask.array.core import map_blocks
-
-        if drop_axis is None and Version(dask.__version__) < Version("2022.9.1"):
-            # See https://github.com/pydata/xarray/pull/7019#discussion_r1196729489
-            # TODO remove once dask minimum version >= 2022.9.1
-            drop_axis = []
+        from dask.array import map_blocks
 
         # pass through name, meta, token as kwargs
         out: chunkedduckarray[Any, _DType]
@@ -275,3 +268,18 @@ class DaskManager(ChunkManagerEntrypoint):
             targets=targets,
             **kwargs,
         )
+
+    def shuffle(
+        self, x: DaskArray, indexer: list[list[int]], axis: int, chunks: T_Chunks
+    ) -> DaskArray:
+        import dask.array
+
+        if not module_available("dask", minversion="2024.08.1"):
+            raise ValueError(
+                "This method is very inefficient on dask<2024.08.1. Please upgrade."
+            )
+        if chunks is None:
+            chunks = "auto"
+        if chunks != "auto":
+            raise NotImplementedError("Only chunks='auto' is supported at present.")
+        return dask.array.shuffle(x, indexer, axis, chunks="auto")

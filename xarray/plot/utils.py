@@ -20,7 +20,11 @@ import pandas as pd
 
 from xarray.core.indexes import PandasMultiIndex
 from xarray.core.options import OPTIONS
-from xarray.core.utils import is_scalar, module_available
+from xarray.core.utils import (
+    attempt_import,
+    is_scalar,
+    module_available,
+)
 from xarray.namedarray.pycompat import DuckArrayModule
 
 nc_time_axis_available = module_available("nc_time_axis")
@@ -127,8 +131,9 @@ def _color_palette(cmap, n_colors):
 
     colors_i = np.linspace(0, 1.0, n_colors)
     if isinstance(cmap, list | tuple):
-        # we have a list of colors
-        cmap = ListedColormap(cmap, N=n_colors)
+        # expand or truncate the list of colors to n_colors
+        cmap = list(itertools.islice(itertools.cycle(cmap), n_colors))
+        cmap = ListedColormap(cmap)
         pal = cmap(colors_i)
     elif isinstance(cmap, str):
         # we have some sort of named palette
@@ -138,13 +143,16 @@ def _color_palette(cmap, n_colors):
             pal = cmap(colors_i)
         except ValueError:
             # ValueError happens when mpl doesn't like a colormap, try seaborn
-            try:
-                from seaborn import color_palette
+            if TYPE_CHECKING:
+                import seaborn as sns
+            else:
+                sns = attempt_import("seaborn")
 
-                pal = color_palette(cmap, n_colors=n_colors)
-            except (ValueError, ImportError):
+            try:
+                pal = sns.color_palette(cmap, n_colors=n_colors)
+            except ValueError:
                 # or maybe we just got a single color as a string
-                cmap = ListedColormap([cmap], N=n_colors)
+                cmap = ListedColormap([cmap] * n_colors)
                 pal = cmap(colors_i)
     else:
         # cmap better be a LinearSegmentedColormap (e.g. viridis)
@@ -451,11 +459,14 @@ def get_axis(
     ax: Axes | None = None,
     **subplot_kws: Any,
 ) -> Axes:
-    try:
+    from xarray.core.utils import attempt_import
+
+    if TYPE_CHECKING:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
-    except ImportError as err:
-        raise ImportError("matplotlib is required for plot.utils.get_axis") from err
+    else:
+        mpl = attempt_import("matplotlib")
+        plt = attempt_import("matplotlib.pyplot")
 
     if figsize is not None:
         if ax is not None:
@@ -858,11 +869,11 @@ def _infer_interval_breaks(coord, axis=0, scale=None, check_monotonic=False):
     if check_monotonic and not _is_monotonic(coord, axis=axis):
         raise ValueError(
             "The input coordinate is not sorted in increasing "
-            "order along axis %d. This can lead to unexpected "
+            f"order along axis {axis}. This can lead to unexpected "
             "results. Consider calling the `sortby` method on "
             "the input DataArray. To plot data with categorical "
             "axes, consider using the `heatmap` function from "
-            "the `seaborn` statistical plotting library." % axis
+            "the `seaborn` statistical plotting library."
         )
 
     # If logscale, compute the intervals in the logarithmic space
@@ -1697,8 +1708,7 @@ def _determine_guide(
         if (
             not add_colorbar
             and (hueplt_norm.data is not None and hueplt_norm.data_is_numeric is False)
-            or sizeplt_norm.data is not None
-        ):
+        ) or sizeplt_norm.data is not None:
             add_legend = True
         else:
             add_legend = False

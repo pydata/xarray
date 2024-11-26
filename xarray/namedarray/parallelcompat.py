@@ -21,6 +21,7 @@ from xarray.namedarray._typing import _chunkedarrayfunction_or_api
 
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
+        T_Chunks,
         _Chunks,
         _ChunksLike,
         _DType,
@@ -339,6 +340,11 @@ class ChunkManagerEntrypoint(ABC):
         dask.compute
         cubed.compute
         """
+        raise NotImplementedError()
+
+    def shuffle(
+        self, x: T_ChunkedArray, indexer: list[list[int]], axis: int, chunks: T_Chunks
+    ) -> T_ChunkedArray:
         raise NotImplementedError()
 
     def persist(
