@@ -946,7 +946,7 @@ def _plot1d(plotfunc):
             # Remove any nulls, .where(m, drop=True) doesn't work when m is
             # a dask array, so load the array to memory.
             # It will have to be loaded to memory at some point anyway:
-            darray = darray.load()
+            darray = darray.compute()
             darray = darray.where(darray.notnull(), drop=True)
         else:
             size_ = kwargs.pop("_size", linewidth)

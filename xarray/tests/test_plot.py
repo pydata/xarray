@@ -33,6 +33,7 @@ from xarray.tests import (
     assert_no_warnings,
     requires_cartopy,
     requires_cftime,
+    requires_dask,
     requires_matplotlib,
     requires_seaborn,
 )
@@ -3324,6 +3325,24 @@ def test_datarray_scatter(
             add_legend=add_legend,
             add_colorbar=add_colorbar,
         )
+
+
+@requires_dask
+@requires_matplotlib
+@pytest.mark.parametrize(
+    "plotfunc",
+    ["scatter"],
+)
+def test_dataarray_not_loading_inplace(plotfunc: str) -> None:
+    ds = xr.tutorial.scatter_example_dataset()
+    ds = ds.chunk()
+
+    with figure_context():
+        getattr(ds.A.plot, plotfunc)(x="x")
+
+    from dask.array import Array
+
+    assert isinstance(ds.A.data, Array)
 
 
 @requires_matplotlib
