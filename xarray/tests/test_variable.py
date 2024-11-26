@@ -1993,26 +1993,27 @@ class TestVariable(VariableSubclassobjects):
     def test_reduce_keepdims(self):
         v = Variable(["x", "y"], self.d)
 
-        assert_identical(
-            v.mean(keepdims=True), Variable(v.dims, np.mean(self.d, keepdims=True))
-        )
-        assert_identical(
-            v.mean(dim="x", keepdims=True),
-            Variable(v.dims, np.mean(self.d, axis=0, keepdims=True)),
-        )
-        assert_identical(
-            v.mean(dim="y", keepdims=True),
-            Variable(v.dims, np.mean(self.d, axis=1, keepdims=True)),
-        )
-        assert_identical(
-            v.mean(dim=["y", "x"], keepdims=True),
-            Variable(v.dims, np.mean(self.d, axis=(1, 0), keepdims=True)),
-        )
+        with set_options(use_numbagg=False):
+            assert_identical(
+                v.mean(keepdims=True), Variable(v.dims, np.mean(self.d, keepdims=True))
+            )
+            assert_identical(
+                v.mean(dim="x", keepdims=True),
+                Variable(v.dims, np.mean(self.d, axis=0, keepdims=True)),
+            )
+            assert_identical(
+                v.mean(dim="y", keepdims=True),
+                Variable(v.dims, np.mean(self.d, axis=1, keepdims=True)),
+            )
+            assert_identical(
+                v.mean(dim=["y", "x"], keepdims=True),
+                Variable(v.dims, np.mean(self.d, axis=(1, 0), keepdims=True)),
+            )
 
-        v = Variable([], 1.0)
-        assert_identical(
-            v.mean(keepdims=True), Variable([], np.mean(v.data, keepdims=True))
-        )
+            v = Variable([], 1.0)
+            assert_identical(
+                v.mean(keepdims=True), Variable([], np.mean(v.data, keepdims=True))
+            )
 
     @requires_dask
     def test_reduce_keepdims_dask(self):

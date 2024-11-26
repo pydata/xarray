@@ -1443,8 +1443,7 @@ def date_range_like(source, calendar, use_cftime=None):
     from xarray.core.dataarray import DataArray
 
     if not isinstance(source, pd.DatetimeIndex | CFTimeIndex) and (
-        isinstance(source, DataArray)
-        and (source.ndim != 1)
+        (isinstance(source, DataArray) and (source.ndim != 1))
         or not _contains_datetime_like_objects(source.variable)
     ):
         raise ValueError(

@@ -971,8 +971,7 @@ class CFEncodedBase(DatasetIOBase):
         decoded = decoded_fn(dtype)
         encoded = encoded_fn(dtype)
         if decoded["x"].encoding["dtype"] == "u1" and not (
-            self.engine == "netcdf4"
-            and self.file_format is None
+            (self.engine == "netcdf4" and self.file_format is None)
             or self.file_format == "NETCDF4"
         ):
             pytest.skip("uint8 data can't be written to non-NetCDF4 data")
