@@ -269,7 +269,7 @@ def decode_cf_variable(
     original_dtype = var.dtype
 
     if decode_timedelta is None:
-        decode_timedelta = decode_times
+        decode_timedelta = True if decode_times else False
 
     if concat_characters:
         if stack_char_dim:
@@ -300,7 +300,7 @@ def decode_cf_variable(
 
                 warn(
                     "Usage of 'use_cftime' as kwarg is deprecated. "
-                    "Please initialize it with xarray.times.CFDatetimeCoder and "
+                    "Please initialize it with xarray.CFDatetimeCoder and "
                     "'decode_times' kwarg.",
                     DeprecationWarning,
                     stacklevel=2,
@@ -311,8 +311,8 @@ def decode_cf_variable(
                 raise TypeError(
                     "Usage of 'use_cftime' as kwarg is not allowed, "
                     "if 'decode_times' is initialized with "
-                    "xarray.times.CFDatetimeCoder. Please add 'use_cftime' "
-                    "when initializing xarray.times.CFDatetimeCoder."
+                    "xarray.CFDatetimeCoder. Please add 'use_cftime' "
+                    "when initializing xarray.CFDatetimeCoder."
                 )
         var = decode_times.decode(var, name=name)
 
@@ -427,8 +427,7 @@ def decode_cf_variables(
     mask_and_scale: bool | Mapping[str, bool] = True,
     decode_times: bool
     | times.CFDatetimeCoder
-    | Mapping[str, bool | times.CFDatetimeCoder]
-    | None = True,
+    | Mapping[str, bool | times.CFDatetimeCoder] = True,
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
