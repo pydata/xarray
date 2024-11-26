@@ -128,7 +128,7 @@ def nanmean(a, axis=None, dtype=None, out=None):
             "ignore", r"Mean of empty slice", category=RuntimeWarning
         )
 
-        return np.nanmean(a, axis=axis, dtype=dtype)
+        return nputils.nanmean(a, axis=axis, dtype=dtype)
 
 
 def nanmedian(a, axis=None, out=None):

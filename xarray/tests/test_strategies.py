@@ -13,6 +13,7 @@ import hypothesis.strategies as st
 from hypothesis import given
 from hypothesis.extra.array_api import make_strategies_namespace
 
+from xarray.core.options import set_options
 from xarray.core.variable import Variable
 from xarray.testing.strategies import (
     attrs,
@@ -267,14 +268,14 @@ class TestReduction:
         Test that given a Variable of at least one dimension,
         the mean of the Variable is always equal to the mean of the underlying array.
         """
+        with set_options(use_numbagg=False):
+            # specify arbitrary reduction along at least one dimension
+            reduction_dims = data.draw(unique_subset_of(var.dims, min_size=1))
 
-        # specify arbitrary reduction along at least one dimension
-        reduction_dims = data.draw(unique_subset_of(var.dims, min_size=1))
+            # create expected result (using nanmean because arrays with Nans will be generated)
+            reduction_axes = tuple(var.get_axis_num(dim) for dim in reduction_dims)
+            expected = np.nanmean(var.data, axis=reduction_axes)
 
-        # create expected result (using nanmean because arrays with Nans will be generated)
-        reduction_axes = tuple(var.get_axis_num(dim) for dim in reduction_dims)
-        expected = np.nanmean(var.data, axis=reduction_axes)
-
-        # assert property is always satisfied
-        result = var.mean(dim=reduction_dims).data
-        npt.assert_equal(expected, result)
+            # assert property is always satisfied
+            result = var.mean(dim=reduction_dims).data
+            npt.assert_equal(expected, result)

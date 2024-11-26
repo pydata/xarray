@@ -708,6 +708,7 @@ class DataArrayRolling(Rolling["DataArray"]):
             )
             del kwargs["dim"]
 
+        xp = duck_array_ops.get_array_namespace(self.obj.data)
         if (
             OPTIONS["use_numbagg"]
             and module_available("numbagg")
@@ -722,6 +723,7 @@ class DataArrayRolling(Rolling["DataArray"]):
             # TODO: we could also allow this, probably as part of a refactoring of this
             # module, so we can use the machinery in `self.reduce`.
             and self.ndim == 1
+            and xp is np
         ):
             import numbagg
 
@@ -744,6 +746,7 @@ class DataArrayRolling(Rolling["DataArray"]):
                 or module_available("dask", "2024.11.0")
             )
             and self.ndim == 1
+            and xp is np
         ):
             return self._bottleneck_reduce(
                 bottleneck_move_func, keep_attrs=keep_attrs, **kwargs

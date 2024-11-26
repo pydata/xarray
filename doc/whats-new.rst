@@ -21,6 +21,9 @@ v.2024.11.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
+  duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 
 Breaking changes

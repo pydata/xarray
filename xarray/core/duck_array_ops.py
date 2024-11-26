@@ -18,21 +18,16 @@ import numpy as np
 import pandas as pd
 from numpy import all as array_all  # noqa: F401
 from numpy import any as array_any  # noqa: F401
-from numpy import concatenate as _concatenate
 from numpy import (  # noqa: F401
-    full_like,
-    gradient,
     isclose,
-    isin,
     isnat,
     take,
-    tensordot,
-    transpose,
     unravel_index,
 )
 from pandas.api.types import is_extension_array_dtype
 
 from xarray.core import dask_array_compat, dask_array_ops, dtypes, nputils
+from xarray.core.array_api_compat import get_array_namespace
 from xarray.core.options import OPTIONS
 from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
 from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -52,28 +47,6 @@ else:
 dask_available = module_available("dask")
 
 
-def get_array_namespace(*values):
-    def _get_array_namespace(x):
-        if hasattr(x, "__array_namespace__"):
-            return x.__array_namespace__()
-        else:
-            return np
-
-    namespaces = {_get_array_namespace(t) for t in values}
-    non_numpy = namespaces - {np}
-
-    if len(non_numpy) > 1:
-        raise TypeError(
-            "cannot deal with more than one type supporting the array API at the same time"
-        )
-    elif non_numpy:
-        [xp] = non_numpy
-    else:
-        xp = np
-
-    return xp
-
-
 def einsum(*args, **kwargs):
     from xarray.core.options import OPTIONS
 
@@ -82,7 +55,23 @@ def einsum(*args, **kwargs):
 
         return opt_einsum.contract(*args, **kwargs)
     else:
-        return np.einsum(*args, **kwargs)
+        xp = get_array_namespace(*args)
+        return xp.einsum(*args, **kwargs)
+
+
+def tensordot(*args, **kwargs):
+    xp = get_array_namespace(*args)
+    return xp.tensordot(*args, **kwargs)
+
+
+def cross(*args, **kwargs):
+    xp = get_array_namespace(*args)
+    return xp.cross(*args, **kwargs)
+
+
+def gradient(f, *varargs, axis=None, edge_order=1):
+    xp = get_array_namespace(f)
+    return xp.gradient(f, *varargs, axis=axis, edge_order=edge_order)
 
 
 def _dask_or_eager_func(
@@ -131,15 +120,20 @@ masked_invalid = _dask_or_eager_func(
     "masked_invalid", eager_module=np.ma, dask_module="dask.array.ma"
 )
 
-# sliding_window_view will not dispatch arbitrary kwargs (automatic_rechunk),
-# so we need to hand-code this.
-sliding_window_view = _dask_or_eager_func(
-    "sliding_window_view",
-    eager_module=np.lib.stride_tricks,
-    dask_module=dask_array_compat,
-    dask_only_kwargs=("automatic_rechunk",),
-    numpy_only_kwargs=("subok", "writeable"),
-)
+
+def sliding_window_view(array, window_shape, axis=None, **kwargs):
+    # TODO: some libraries (e.g. jax) don't have this, implement an alternative?
+    xp = get_array_namespace(array)
+    # sliding_window_view will not dispatch arbitrary kwargs (automatic_rechunk),
+    # so we need to hand-code this.
+    func = _dask_or_eager_func(
+        "sliding_window_view",
+        eager_module=xp.lib.stride_tricks,
+        dask_module=dask_array_compat,
+        dask_only_kwargs=("automatic_rechunk",),
+        numpy_only_kwargs=("subok", "writeable"),
+    )
+    return func(array, window_shape, axis=axis, **kwargs)
 
 
 def round(array):
@@ -172,7 +166,9 @@ def isnull(data):
         )
     ):
         # these types cannot represent missing values
-        return full_like(data, dtype=bool, fill_value=False)
+        # bool_ is for backwards compat with numpy<2, and cupy
+        dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
+        return full_like(data, dtype=dtype, fill_value=False)
     else:
         # at this point, array should have dtype=object
         if isinstance(data, np.ndarray) or is_extension_array_dtype(data):
@@ -213,9 +209,21 @@ def cumulative_trapezoid(y, x, axis):
 
     # Pad so that 'axis' has same length in result as it did in y
     pads = [(1, 0) if i == axis else (0, 0) for i in range(y.ndim)]
-    integrand = np.pad(integrand, pads, mode="constant", constant_values=0.0)
+
+    xp = get_array_namespace(y, x)
+    integrand = xp.pad(integrand, pads, mode="constant", constant_values=0.0)
 
     return cumsum(integrand, axis=axis, skipna=False)
+
+
+def full_like(a, fill_value, **kwargs):
+    xp = get_array_namespace(a)
+    return xp.full_like(a, fill_value, **kwargs)
+
+
+def empty_like(a, **kwargs):
+    xp = get_array_namespace(a)
+    return xp.empty_like(a, **kwargs)
 
 
 def astype(data, dtype, **kwargs):
@@ -348,7 +356,8 @@ def array_notnull_equiv(arr1, arr2):
 
 def count(data, axis=None):
     """Count the number of non-NA in this array along the given axis or axes"""
-    return np.sum(np.logical_not(isnull(data)), axis=axis)
+    xp = get_array_namespace(data)
+    return xp.sum(xp.logical_not(isnull(data)), axis=axis)
 
 
 def sum_where(data, axis=None, dtype=None, where=None):
@@ -363,7 +372,7 @@ def sum_where(data, axis=None, dtype=None, where=None):
 
 def where(condition, x, y):
     """Three argument where() with better dtype promotion rules."""
-    xp = get_array_namespace(condition)
+    xp = get_array_namespace(condition, x, y)
     return xp.where(condition, *as_shared_dtype([x, y], xp=xp))
 
 
@@ -380,15 +389,25 @@ def fillna(data, other):
     return where(notnull(data), data, other)
 
 
+def logical_not(data):
+    xp = get_array_namespace(data)
+    return xp.logical_not(data)
+
+
+def clip(data, min=None, max=None):
+    xp = get_array_namespace(data)
+    return xp.clip(data, min, max)
+
+
 def concatenate(arrays, axis=0):
     """concatenate() with better dtype promotion rules."""
-    # TODO: remove the additional check once `numpy` adds `concat` to its array namespace
-    if hasattr(arrays[0], "__array_namespace__") and not isinstance(
-        arrays[0], np.ndarray
-    ):
-        xp = get_array_namespace(arrays[0])
+    # TODO: `concat` is the xp compliant name, but fallback to concatenate for
+    # older numpy and for cupy
+    xp = get_array_namespace(*arrays)
+    if hasattr(xp, "concat"):
         return xp.concat(as_shared_dtype(arrays, xp=xp), axis=axis)
-    return _concatenate(as_shared_dtype(arrays), axis=axis)
+    else:
+        return xp.concatenate(as_shared_dtype(arrays, xp=xp), axis=axis)
 
 
 def stack(arrays, axis=0):
@@ -404,6 +423,26 @@ def reshape(array, shape):
 
 def ravel(array):
     return reshape(array, (-1,))
+
+
+def transpose(array, axes=None):
+    xp = get_array_namespace(array)
+    return xp.transpose(array, axes)
+
+
+def moveaxis(array, source, destination):
+    xp = get_array_namespace(array)
+    return xp.moveaxis(array, source, destination)
+
+
+def pad(array, pad_width, **kwargs):
+    xp = get_array_namespace(array)
+    return xp.pad(array, pad_width, **kwargs)
+
+
+def quantile(array, q, axis=None, **kwargs):
+    xp = get_array_namespace(array)
+    return xp.quantile(array, q, axis=axis, **kwargs)
 
 
 @contextlib.contextmanager
@@ -745,6 +784,11 @@ def last(values, axis, skipna=None):
             return nputils.nanlast(values, axis)
 
     return take(values, -1, axis=axis)
+
+
+def isin(element, test_elements, **kwargs):
+    xp = get_array_namespace(element, test_elements)
+    return xp.isin(element, test_elements, **kwargs)
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):

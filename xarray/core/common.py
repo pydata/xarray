@@ -496,7 +496,7 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
-            np.clip, self, min, max, keep_attrs=keep_attrs, dask="allowed"
+            duck_array_ops.clip, self, min, max, keep_attrs=keep_attrs, dask="allowed"
         )
 
     def get_index(self, key: Hashable) -> pd.Index:
@@ -1760,7 +1760,7 @@ def _full_like_variable(
             **from_array_kwargs,
         )
     else:
-        data = np.full_like(other.data, fill_value, dtype=dtype)
+        data = duck_array_ops.full_like(other.data, fill_value, dtype=dtype)
 
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 
