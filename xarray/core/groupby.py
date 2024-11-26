@@ -57,7 +57,13 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.types import GroupIndex, GroupIndices, GroupInput, GroupKey
+    from xarray.core.types import (
+        GroupIndex,
+        GroupIndices,
+        GroupInput,
+        GroupKey,
+        T_Chunks,
+    )
     from xarray.core.utils import Frozen
     from xarray.groupers import EncodedGroups, Grouper
 
@@ -676,6 +682,76 @@ class GroupBy(Generic[T_Xarray]):
             self._sizes = self._obj.isel({self._group_dim: index}).sizes
         return self._sizes
 
+    def shuffle_to_chunks(self, chunks: T_Chunks = None) -> T_Xarray:
+        """
+        Sort or "shuffle" the underlying object.
+
+        "Shuffle" means the object is sorted so that all group members occur sequentially,
+        in the same chunk. Multiple groups may occur in the same chunk.
+        This method is particularly useful for chunked arrays (e.g. dask, cubed).
+        particularly when you need to map a function that requires all members of a group
+        to be present in a single chunk. For chunked array types, the order of appearance
+        is not guaranteed, but will depend on the input chunking.
+
+        Parameters
+        ----------
+        chunks : int, tuple of int, "auto" or mapping of hashable to int or tuple of int, optional
+            How to adjust chunks along dimensions not present in the array being grouped by.
+
+        Returns
+        -------
+        DataArrayGroupBy or DatasetGroupBy
+
+        Examples
+        --------
+        >>> import dask.array
+        >>> da = xr.DataArray(
+        ...     dims="x",
+        ...     data=dask.array.arange(10, chunks=3),
+        ...     coords={"x": [1, 2, 3, 1, 2, 3, 1, 2, 3, 0]},
+        ...     name="a",
+        ... )
+        >>> shuffled = da.groupby("x").shuffle_to_chunks()
+        >>> shuffled
+        <xarray.DataArray 'a' (x: 10)> Size: 80B
+        dask.array<shuffle, shape=(10,), dtype=int64, chunksize=(3,), chunktype=numpy.ndarray>
+        Coordinates:
+          * x        (x) int64 80B 0 1 1 1 2 2 2 3 3 3
+
+        >>> shuffled.groupby("x").quantile(q=0.5).compute()
+        <xarray.DataArray 'a' (x: 4)> Size: 32B
+        array([9., 3., 4., 5.])
+        Coordinates:
+            quantile  float64 8B 0.5
+          * x         (x) int64 32B 0 1 2 3
+
+        See Also
+        --------
+        dask.dataframe.DataFrame.shuffle
+        dask.array.shuffle
+        """
+        self._raise_if_by_is_chunked()
+        return self._shuffle_obj(chunks)
+
+    def _shuffle_obj(self, chunks: T_Chunks) -> T_Xarray:
+        from xarray.core.dataarray import DataArray
+
+        was_array = isinstance(self._obj, DataArray)
+        as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
+
+        for grouper in self.groupers:
+            if grouper.name not in as_dataset._variables:
+                as_dataset.coords[grouper.name] = grouper.group
+
+        shuffled = as_dataset._shuffle(
+            dim=self._group_dim, indices=self.encoded.group_indices, chunks=chunks
+        )
+        unstacked: Dataset = self._maybe_unstack(shuffled)
+        if was_array:
+            return self._obj._from_temp_dataset(unstacked)
+        else:
+            return unstacked  # type: ignore[return-value]
+
     def map(
         self,
         func: Callable,
@@ -896,7 +972,9 @@ class GroupBy(Generic[T_Xarray]):
             #       and `inserted_dims`
             # if multiple groupers all share the same single dimension, then
             # we don't stack/unstack. Do that manually now.
-            obj = obj.unstack(*self.encoded.unique_coord.dims)
+            dims_to_unstack = self.encoded.unique_coord.dims
+            if all(dim in obj.dims for dim in dims_to_unstack):
+                obj = obj.unstack(*dims_to_unstack)
             to_drop = [
                 grouper.name
                 for grouper in self.groupers

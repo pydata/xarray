@@ -27,6 +27,7 @@ from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
     HiddenKeyDict,
+    attempt_import,
     close_on_error,
     emit_user_level_warning,
 )
@@ -36,13 +37,13 @@ from xarray.namedarray.pycompat import integer_types
 from xarray.namedarray.utils import module_available
 
 if TYPE_CHECKING:
-    from io import BufferedIOBase
-
+    from zarr import Array as ZarrArray
     from zarr import Group as ZarrGroup
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
+    from xarray.core.types import ReadBuffer
 
 
 def _get_mappers(*, storage_options, store, chunk_store):
@@ -443,7 +444,7 @@ def extract_zarr_variable_encoding(
     shape = shape if shape else variable.shape
     encoding = variable.encoding.copy()
 
-    safe_to_drop = {"source", "original_shape"}
+    safe_to_drop = {"source", "original_shape", "preferred_chunks"}
     valid_encodings = {
         "codecs",
         "chunks",
@@ -866,18 +867,32 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
-        import zarr
+        if TYPE_CHECKING:
+            import zarr
+        else:
+            zarr = attempt_import("zarr")
 
-        existing_keys = tuple(self.zarr_group.array_keys())
+        if self._mode == "w":
+            # always overwrite, so we don't care about existing names,
+            # and consistency of encoding
+            new_variable_names = set(variables)
+            existing_keys = {}
+            existing_variable_names = {}
+        else:
+            existing_keys = tuple(self.zarr_group.array_keys())
+            existing_variable_names = {
+                vn for vn in variables if _encode_variable_name(vn) in existing_keys
+            }
+            new_variable_names = set(variables) - existing_variable_names
 
-        if self._mode == "r+":
-            new_names = [k for k in variables if k not in existing_keys]
-            if new_names:
-                raise ValueError(
-                    f"dataset contains non-pre-existing variables {new_names}, "
-                    "which is not allowed in ``xarray.Dataset.to_zarr()`` with "
-                    "``mode='r+'``. To allow writing new variables, set ``mode='a'``."
-                )
+        if self._mode == "r+" and (
+            new_names := [k for k in variables if k not in existing_keys]
+        ):
+            raise ValueError(
+                f"dataset contains non-pre-existing variables {new_names!r}, "
+                "which is not allowed in ``xarray.Dataset.to_zarr()`` with "
+                "``mode='r+'``. To allow writing new variables, set ``mode='a'``."
+            )
 
         if self._append_dim is not None and self._append_dim not in existing_keys:
             # For dimensions without coordinate values, we must parse
@@ -892,10 +907,6 @@ class ZarrStore(AbstractWritableDataStore):
                     f"dataset dimensions {existing_dims}"
                 )
 
-        existing_variable_names = {
-            vn for vn in variables if _encode_variable_name(vn) in existing_keys
-        }
-        new_variable_names = set(variables) - existing_variable_names
         variables_encoded, attributes = self.encode(
             {vn: variables[vn] for vn in new_variable_names}, attributes
         )
@@ -917,10 +928,9 @@ class ZarrStore(AbstractWritableDataStore):
             # Modified variables must use the same encoding as the store.
             vars_with_encoding = {}
             for vn in existing_variable_names:
-                if self._mode in ["a", "a-", "r+"]:
-                    _validate_datatypes_for_zarr_append(
-                        vn, existing_vars[vn], variables[vn]
-                    )
+                _validate_datatypes_for_zarr_append(
+                    vn, existing_vars[vn], variables[vn]
+                )
                 vars_with_encoding[vn] = variables[vn].copy(deep=False)
                 vars_with_encoding[vn].encoding = existing_vars[vn].encoding
             vars_with_encoding, _ = self.encode(vars_with_encoding, {})
@@ -965,6 +975,69 @@ class ZarrStore(AbstractWritableDataStore):
     def sync(self):
         pass
 
+    def _open_existing_array(self, *, name) -> ZarrArray:
+        import zarr
+
+        # TODO: if mode="a", consider overriding the existing variable
+        # metadata. This would need some case work properly with region
+        # and append_dim.
+        if self._write_empty is not None:
+            # Write to zarr_group.chunk_store instead of zarr_group.store
+            # See https://github.com/pydata/xarray/pull/8326#discussion_r1365311316 for a longer explanation
+            #    The open_consolidated() enforces a mode of r or r+
+            #    (and to_zarr with region provided enforces a read mode of r+),
+            #    and this function makes sure the resulting Group has a store of type ConsolidatedMetadataStore
+            #    and a 'normal Store subtype for chunk_store.
+            #    The exact type depends on if a local path was used, or a URL of some sort,
+            #    but the point is that it's not a read-only ConsolidatedMetadataStore.
+            #    It is safe to write chunk data to the chunk_store because no metadata would be changed by
+            #    to_zarr with the region parameter:
+            #     - Because the write mode is enforced to be r+, no new variables can be added to the store
+            #       (this is also checked and enforced in xarray.backends.api.py::to_zarr()).
+            #     - Existing variables already have their attrs included in the consolidated metadata file.
+            #     - The size of dimensions can not be expanded, that would require a call using `append_dim`
+            #        which is mutually exclusive with `region`
+            zarr_array = zarr.open(
+                store=(
+                    self.zarr_group.store if _zarr_v3() else self.zarr_group.chunk_store
+                ),
+                # TODO: see if zarr should normalize these strings.
+                path="/".join([self.zarr_group.name.rstrip("/"), name]).lstrip("/"),
+                write_empty_chunks=self._write_empty,
+            )
+        else:
+            zarr_array = self.zarr_group[name]
+
+        return zarr_array
+
+    def _create_new_array(
+        self, *, name, shape, dtype, fill_value, encoding, attrs
+    ) -> ZarrArray:
+        if coding.strings.check_vlen_dtype(dtype) is str:
+            dtype = str
+
+        if self._write_empty is not None:
+            if (
+                "write_empty_chunks" in encoding
+                and encoding["write_empty_chunks"] != self._write_empty
+            ):
+                raise ValueError(
+                    'Differing "write_empty_chunks" values in encoding and parameters'
+                    f'Got {encoding["write_empty_chunks"] = } and {self._write_empty = }'
+                )
+            else:
+                encoding["write_empty_chunks"] = self._write_empty
+
+        zarr_array = self.zarr_group.create(
+            name,
+            shape=shape,
+            dtype=dtype,
+            fill_value=fill_value,
+            **encoding,
+        )
+        zarr_array = _put_attrs(zarr_array, attrs)
+        return zarr_array
+
     def set_variables(self, variables, check_encoding_set, writer, unlimited_dims=None):
         """
         This provides a centralized method to set the variables on the data
@@ -982,8 +1055,6 @@ class ZarrStore(AbstractWritableDataStore):
             List of dimension names that should be treated as unlimited
             dimensions.
         """
-
-        import zarr
 
         existing_keys = tuple(self.zarr_group.array_keys())
         is_zarr_v3_format = _zarr_v3() and self.zarr_group.metadata.zarr_format == 3
@@ -1013,47 +1084,13 @@ class ZarrStore(AbstractWritableDataStore):
                 else:
                     del v.encoding["_FillValue"]
 
-            zarr_array = None
             zarr_shape = None
             write_region = self._write_region if self._write_region is not None else {}
             write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
 
-            if name in existing_keys:
+            if self._mode != "w" and name in existing_keys:
                 # existing variable
-                # TODO: if mode="a", consider overriding the existing variable
-                # metadata. This would need some case work properly with region
-                # and append_dim.
-                if self._write_empty is not None:
-                    # Write to zarr_group.chunk_store instead of zarr_group.store
-                    # See https://github.com/pydata/xarray/pull/8326#discussion_r1365311316 for a longer explanation
-                    #    The open_consolidated() enforces a mode of r or r+
-                    #    (and to_zarr with region provided enforces a read mode of r+),
-                    #    and this function makes sure the resulting Group has a store of type ConsolidatedMetadataStore
-                    #    and a 'normal Store subtype for chunk_store.
-                    #    The exact type depends on if a local path was used, or a URL of some sort,
-                    #    but the point is that it's not a read-only ConsolidatedMetadataStore.
-                    #    It is safe to write chunk data to the chunk_store because no metadata would be changed by
-                    #    to_zarr with the region parameter:
-                    #     - Because the write mode is enforced to be r+, no new variables can be added to the store
-                    #       (this is also checked and enforced in xarray.backends.api.py::to_zarr()).
-                    #     - Existing variables already have their attrs included in the consolidated metadata file.
-                    #     - The size of dimensions can not be expanded, that would require a call using `append_dim`
-                    #        which is mutually exclusive with `region`
-                    zarr_array = zarr.open(
-                        store=(
-                            self.zarr_group.store
-                            if _zarr_v3()
-                            else self.zarr_group.chunk_store
-                        ),
-                        # TODO: see if zarr should normalize these strings.
-                        path="/".join([self.zarr_group.name.rstrip("/"), name]).lstrip(
-                            "/"
-                        ),
-                        write_empty_chunks=self._write_empty,
-                    )
-                else:
-                    zarr_array = self.zarr_group[name]
-
+                zarr_array = self._open_existing_array(name=name)
                 if self._append_dim is not None and self._append_dim in dims:
                     # resize existing variable
                     append_axis = dims.index(self._append_dim)
@@ -1086,40 +1123,27 @@ class ZarrStore(AbstractWritableDataStore):
                 shape=zarr_shape,
             )
 
-            if name not in existing_keys:
+            if self._mode == "w" or name not in existing_keys:
                 # new variable
-                encoded_attrs = {}
+                encoded_attrs = {k: self.encode_attribute(v) for k, v in attrs.items()}
                 # the magic for storing the hidden dimension data
                 if is_zarr_v3_format:
                     encoding["dimension_names"] = dims
                 else:
                     encoded_attrs[DIMENSION_KEY] = dims
-                for k2, v2 in attrs.items():
-                    encoded_attrs[k2] = self.encode_attribute(v2)
 
-                if coding.strings.check_vlen_dtype(dtype) is str:
-                    dtype = str
-
-                if self._write_empty is not None:
-                    if (
-                        "write_empty_chunks" in encoding
-                        and encoding["write_empty_chunks"] != self._write_empty
-                    ):
-                        raise ValueError(
-                            'Differing "write_empty_chunks" values in encoding and parameters'
-                            f'Got {encoding["write_empty_chunks"] = } and {self._write_empty = }'
-                        )
-                    else:
-                        encoding["write_empty_chunks"] = self._write_empty
-
-                zarr_array = self.zarr_group.create(
-                    name,
-                    shape=shape,
-                    dtype=dtype,
-                    fill_value=fill_value,
-                    **encoding,
+                encoding["exists_ok" if _zarr_v3() else "overwrite"] = (
+                    True if self._mode == "w" else False
                 )
-                zarr_array = _put_attrs(zarr_array, encoded_attrs)
+
+                zarr_array = self._create_new_array(
+                    name=name,
+                    dtype=dtype,
+                    shape=shape,
+                    fill_value=fill_value,
+                    encoding=encoding,
+                    attrs=encoded_attrs,
+                )
 
             writer.add(v.data, zarr_array, region)
 
@@ -1448,7 +1472,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     ) -> bool:
         if isinstance(filename_or_obj, str | os.PathLike):
             _, ext = os.path.splitext(filename_or_obj)
@@ -1456,9 +1480,9 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
         return False
 
-    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
+    def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -1511,7 +1535,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -1528,7 +1552,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         zarr_version=None,
         zarr_format=None,
-        **kwargs,
     ) -> DataTree:
         filename_or_obj = _normalize_path(filename_or_obj)
         groups_dict = self.open_groups_as_dict(
@@ -1548,14 +1571,13 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             storage_options=storage_options,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
-            **kwargs,
         )
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -1572,7 +1594,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         zarr_version=None,
         zarr_format=None,
-        **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.core.treenode import NodePath
 
@@ -1642,7 +1663,10 @@ def _get_open_params(
     use_zarr_fill_value_as_mask,
     zarr_format,
 ):
-    import zarr
+    if TYPE_CHECKING:
+        import zarr
+    else:
+        zarr = attempt_import("zarr")
 
     # zarr doesn't support pathlib.Path objects yet. zarr-python#601
     if isinstance(store, os.PathLike):

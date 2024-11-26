@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
+from xarray.core.array_api_compat import get_array_namespace
 from xarray.core.utils import is_duck_array, module_available
 from xarray.namedarray import pycompat
 
@@ -179,9 +180,13 @@ def _create_method(name, npmodule=np) -> Callable:
         dtype = kwargs.get("dtype")
         bn_func = getattr(bn, name, None)
 
+        xp = get_array_namespace(values)
+        if xp is not np:
+            func = getattr(xp, name, None)
+            if func is not None:
+                return func(values, axis=axis, **kwargs)
         if (
             module_available("numbagg")
-            and pycompat.mod_version("numbagg") >= Version("0.5.0")
             and OPTIONS["use_numbagg"]
             and isinstance(values, np.ndarray)
             # numbagg<0.7.0 uses ddof=1 only, but numpy uses ddof=0 by default
@@ -230,6 +235,9 @@ def _create_method(name, npmodule=np) -> Callable:
             # bottleneck does not take care dtype, min_count
             kwargs.pop("dtype", None)
             result = bn_func(values, axis=axis, **kwargs)
+            # bottleneck returns python scalars for reduction over all axes
+            if isinstance(result, float):
+                result = np.float64(result)
         else:
             result = getattr(npmodule, name)(values, axis=axis, **kwargs)
 

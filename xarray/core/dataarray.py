@@ -63,6 +63,7 @@ from xarray.core.types import (
     Bins,
     DaCompatible,
     NetcdfWriteModes,
+    T_Chunks,
     T_DataArray,
     T_DataArrayOrSet,
     ZarrWriteModes,
@@ -105,6 +106,7 @@ if TYPE_CHECKING:
         Dims,
         ErrorOptions,
         ErrorOptionsWithWarn,
+        GroupIndices,
         GroupInput,
         InterpOptions,
         PadModeOptions,
@@ -1107,7 +1109,7 @@ class DataArray(
             return self._replace(coords=dataset._variables)
         if self.name is None:
             raise ValueError(
-                "cannot reset_coords with drop=False on an unnamed DataArrray"
+                "cannot reset_coords with drop=False on an unnamed DataArray"
             )
         dataset[self.name] = self.variable
         return dataset
@@ -1685,6 +1687,12 @@ class DataArray(
             tolerance=tolerance,
             **indexers_kwargs,
         )
+        return self._from_temp_dataset(ds)
+
+    def _shuffle(
+        self, dim: Hashable, *, indices: GroupIndices, chunks: T_Chunks
+    ) -> Self:
+        ds = self._to_temp_dataset()._shuffle(dim=dim, indices=indices, chunks=chunks)
         return self._from_temp_dataset(ds)
 
     def head(

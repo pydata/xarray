@@ -6,20 +6,24 @@ import time
 import traceback
 from collections.abc import Iterable, Mapping, Sequence
 from glob import glob
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, overload
 
 import numpy as np
 
 from xarray.conventions import cf_encoder
 from xarray.core import indexing
 from xarray.core.datatree import DataTree
-from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
+from xarray.core.types import ReadBuffer
+from xarray.core.utils import (
+    FrozenDict,
+    NdimSizeLenMixin,
+    attempt_import,
+    is_remote_uri,
+)
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
-    from io import BufferedIOBase
-
     from xarray.core.dataset import Dataset
     from xarray.core.types import NestedSequence
 
@@ -65,13 +69,21 @@ def _normalize_path(path: str | os.PathLike | T) -> str | T:
     if isinstance(path, str) and not is_remote_uri(path):
         path = os.path.abspath(os.path.expanduser(path))
 
-    return cast(str, path)
+    return path  # type:ignore [return-value]
 
 
 @overload
 def _find_absolute_paths(
-    paths: str | os.PathLike | Sequence[str | os.PathLike], **kwargs
+    paths: str | os.PathLike | Sequence[str | os.PathLike],
+    **kwargs,
 ) -> list[str]: ...
+
+
+@overload
+def _find_absolute_paths(
+    paths: ReadBuffer | Sequence[ReadBuffer],
+    **kwargs,
+) -> list[ReadBuffer]: ...
 
 
 @overload
@@ -80,9 +92,29 @@ def _find_absolute_paths(
 ) -> NestedSequence[str]: ...
 
 
+@overload
 def _find_absolute_paths(
-    paths: str | os.PathLike | NestedSequence[str | os.PathLike], **kwargs
-) -> NestedSequence[str]:
+    paths: NestedSequence[ReadBuffer], **kwargs
+) -> NestedSequence[ReadBuffer]: ...
+
+
+@overload
+def _find_absolute_paths(
+    paths: str
+    | os.PathLike
+    | ReadBuffer
+    | NestedSequence[str | os.PathLike | ReadBuffer],
+    **kwargs,
+) -> NestedSequence[str | ReadBuffer]: ...
+
+
+def _find_absolute_paths(
+    paths: str
+    | os.PathLike
+    | ReadBuffer
+    | NestedSequence[str | os.PathLike | ReadBuffer],
+    **kwargs,
+) -> NestedSequence[str | ReadBuffer]:
     """
     Find absolute paths from the pattern.
 
@@ -105,14 +137,12 @@ def _find_absolute_paths(
     """
     if isinstance(paths, str):
         if is_remote_uri(paths) and kwargs.get("engine") == "zarr":
-            try:
-                from fsspec.core import get_fs_token_paths
-            except ImportError as e:
-                raise ImportError(
-                    "The use of remote URLs for opening zarr requires the package fsspec"
-                ) from e
+            if TYPE_CHECKING:
+                import fsspec
+            else:
+                fsspec = attempt_import("fsspec")
 
-            fs, _, _ = get_fs_token_paths(
+            fs, _, _ = fsspec.core.get_fs_token_paths(
                 paths,
                 mode="rb",
                 storage_options=kwargs.get("backend_kwargs", {}).get(
@@ -132,10 +162,12 @@ def _find_absolute_paths(
             return sorted(glob(_normalize_path(paths)))
     elif isinstance(paths, os.PathLike):
         return [_normalize_path(paths)]
+    elif isinstance(paths, ReadBuffer):
+        return [paths]
 
     def _normalize_path_list(
-        lpaths: NestedSequence[str | os.PathLike],
-    ) -> NestedSequence[str]:
+        lpaths: NestedSequence[str | os.PathLike | ReadBuffer],
+    ) -> NestedSequence[str | ReadBuffer]:
         paths = []
         for p in lpaths:
             if isinstance(p, str | os.PathLike):
@@ -147,6 +179,15 @@ def _find_absolute_paths(
         return paths
 
     return _normalize_path_list(paths)
+
+
+def _open_remote_file(file, mode, storage_options=None):
+    import fsspec
+
+    fs, _, paths = fsspec.get_fs_token_paths(
+        file, mode=mode, storage_options=storage_options
+    )
+    return fs.open(paths[0], mode=mode)
 
 
 def _encode_variable_name(name):
@@ -224,7 +265,7 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 
     def get_duck_array(self, dtype: np.typing.DTypeLike = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
-        return self[key]  # type: ignore [index]
+        return self[key]  # type: ignore[index]
 
 
 class AbstractDataStore:
@@ -546,10 +587,9 @@ class BackendEntrypoint:
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
-        **kwargs: Any,
     ) -> Dataset:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -559,7 +599,7 @@ class BackendEntrypoint:
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
     ) -> bool:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -569,8 +609,9 @@ class BackendEntrypoint:
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-        **kwargs: Any,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        *,
+        drop_variables: str | Iterable[str] | None = None,
     ) -> DataTree:
         """
         Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
@@ -580,8 +621,9 @@ class BackendEntrypoint:
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-        **kwargs: Any,
+        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        *,
+        drop_variables: str | Iterable[str] | None = None,
     ) -> dict[str, Dataset]:
         """
         Opens a dictionary mapping from group names to Datasets.
