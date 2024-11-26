@@ -133,7 +133,6 @@ facilitated with the :py:meth:`xarray.Dataset.convert_calendar` method (also ava
 :py:meth:`xarray.DataArray.convert_calendar`). Here, like elsewhere in xarray, the ``use_cftime``
 argument controls which datetime backend is used in the output. The default (``None``) is to
 use ``pandas`` when possible, i.e. when the calendar is standard and dates starting with 1582-10-15.
-use ``pandas`` when possible, i.e. when the calendar is standard and dates are within 1678 and 2262.
 
 .. ipython:: python
 

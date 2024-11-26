@@ -574,7 +574,7 @@ def open_dataset(
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
         Usage of 'use_cftime' as kwarg is deprecated. Please initialize it
-        with xarray.times.CFDatetimeCoder and 'decode_times' kwarg.
+        with CFDatetimeCoder and 'decode_times' kwarg.
     concat_characters : bool or dict-like, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -793,7 +793,7 @@ def open_dataarray(
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error. This keyword may not be supported by all the backends.
         Usage of 'use_cftime' as kwarg is deprecated. Please initialize it
-        with xarray.times.CFDatetimeCoder and 'decode_times' kwarg.
+        with CFDatetimeCoder and 'decode_times' kwarg.
     concat_characters : bool, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -1004,7 +1004,7 @@ def open_datatree(
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
         Usage of 'use_cftime' as kwarg is deprecated. Please initialize it
-        with xarray.times.CFDatetimeCoder and 'decode_times' kwarg.
+        with CFDatetimeCoder and 'decode_times' kwarg.
     concat_characters : bool or dict-like, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -1228,7 +1228,7 @@ def open_groups(
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
         Usage of 'use_cftime' as kwarg is deprecated. Please initialize it
-        with xarray.times.CFDatetimeCoder and 'decode_times' kwarg.
+        with CFDatetimeCoder and 'decode_times' kwarg.
     concat_characters : bool or dict-like, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and

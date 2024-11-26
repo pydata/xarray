@@ -77,9 +77,11 @@ You can manual decode arrays in this form by passing a dataset to
 
     attrs = {"units": "hours since 2000-01-01"}
     ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
-    xr.decode_cf(ds)
+    print("Default decoding to 'ns'-resolution:", xr.decode_cf(ds))
+    coder = xr.CFDatetimeCoder(time_unit="s")
+    print("Decoding to 's'-resolution:", xr.decode_cf(ds, decode_times=coder))
 
-From xarray 2024.11 the resolution of the dates can be tuned between "s", "ms", "us" and "ns". One limitation of using ``datetime64[ns]`` is that it limits the native representation of dates to those that fall between the years 1678 and 2262, which gets increased significantly with lower resolutions. When a netCDF file contains dates outside of these bounds (or dates < 1582-10-15), dates will be returned as arrays of :py:class:`cftime.datetime` objects and a :py:class:`~xarray.CFTimeIndex` will be used for indexing.
+From xarray TODO: version the resolution of the dates can be tuned between "s", "ms", "us" and "ns". One limitation of using ``datetime64[ns]`` is that it limits the native representation of dates to those that fall between the years 1678 and 2262, which gets increased significantly with lower resolutions. When a netCDF file contains dates outside of these bounds (or dates < 1582-10-15), dates will be returned as arrays of :py:class:`cftime.datetime` objects and a :py:class:`~xarray.CFTimeIndex` will be used for indexing.
 :py:class:`~xarray.CFTimeIndex` enables a subset of the indexing functionality of a :py:class:`pandas.DatetimeIndex`.
 See :ref:`CFTimeIndex` for more information.
 

@@ -236,7 +236,7 @@ def decode_cf_variable(
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue). If the _Unsigned attribute is present
         treat integer arrays as unsigned.
-    decode_times : bool or xarray.times.CFDatetimeCoder
+    decode_times : bool or CFDatetimeCoder
         Decode cf times ("hours since 2000-01-01") to np.datetime64.
     decode_endianness : bool
         Decode arrays from non-native to native endianness.
@@ -255,7 +255,7 @@ def decode_cf_variable(
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
         Usage of use_cftime as kwarg is deprecated, please initialize it with
-        xarray.times.CFDatetimeCoder and ``decode_times``.
+        CFDatetimeCoder and ``decode_times``.
 
     Returns
     -------
@@ -609,7 +609,7 @@ def decode_cf(
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
         Usage of use_cftime as kwarg is deprecated, please initialize it with
-        xarray.times.CFDatetimeCoder and ``decode_times``.
+        CFDatetimeCoder and ``decode_times``.
     decode_timedelta : bool, optional
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
