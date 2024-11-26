@@ -38,6 +38,8 @@ Bug fixes
 ~~~~~~~~~
 - Fix type annotations for ``get_axis_num``. (:issue:`9822`).
   By `Bruce Merry <https://github.com/bmerry>`_.
+- Fix unintended load on datasets when calling :py:meth:`DataArray.plot.scatter` (:pull:`9818`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Documentation
 ~~~~~~~~~~~~~
