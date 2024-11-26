@@ -670,7 +670,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return type(self)(self._dims, data, attrs=self._attrs)
 
     @overload
-    def get_axis_num(self, dim: str) -> int: ...
+    def get_axis_num(self, dim: str) -> int: ...  # type: ignore [overload-overlap]
 
     @overload
     def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...
