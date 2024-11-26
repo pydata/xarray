@@ -36,7 +36,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix type annotations for ``get_axis_num``. (:issue:`9822`).
+  By `Bruce Merry <https://github.com/bmerry>`_.
 
 Documentation
 ~~~~~~~~~~~~~
