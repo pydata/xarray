@@ -35,7 +35,7 @@ Deprecations
 ~~~~~~~~~~~~
 - Time decoding related kwarg ``use_cftime`` is deprecated. Use keyword argument
   ``decode_times=CFDatetimeCoder(use_cftime=True)`` in the respective functions
-instead.
+  instead.
 
 Bug fixes
 ~~~~~~~~~
