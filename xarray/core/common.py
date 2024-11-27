@@ -214,6 +214,9 @@ class AbstractArray:
         return self._iter()
 
     @overload
+    def get_axis_num(self, dim: str) -> int: ...  # type: ignore [overload-overlap]
+
+    @overload
     def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...
 
     @overload
