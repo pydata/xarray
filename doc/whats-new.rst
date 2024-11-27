@@ -24,7 +24,8 @@ New Features
 - Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
   duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
   By `Sam Levang <https://github.com/slevang>`_.
-
+- Relax nanosecond datetime restriction in CF time decoding (:issue:`7493`, :pull:`9618`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -32,7 +33,9 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+- Time decoding related kwarg ``use_cftime`` is deprecated. Use keyword argument
+  ``decode_times=CFDatetimeCoder(use_cftime=True)`` in the respective functions
+instead.
 
 Bug fixes
 ~~~~~~~~~
