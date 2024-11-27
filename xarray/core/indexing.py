@@ -9,7 +9,7 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -1661,7 +1661,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("_dtype", "array")
 
     array: pd.Index
-    _dtype: np.dtype
+    _dtype: np.dtype | pd.api.extensions.ExtensionDtype
 
     def __init__(self, array: pd.Index, dtype: DTypeLike = None):
         from xarray.core.indexes import safe_cast_to_index
@@ -1669,7 +1669,14 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         self.array = safe_cast_to_index(array)
 
         if dtype is None:
-            self._dtype = get_valid_numpy_dtype(array)
+            if pd.api.types.is_extension_array_dtype(array.dtype):
+                cast(pd.api.extensions.ExtensionDtype, array.dtype)
+                self._dtype = array.dtype
+            else:
+                self._dtype = get_valid_numpy_dtype(array)
+        elif pd.api.types.is_extension_array_dtype(dtype):
+            cast(pd.api.extensions.ExtensionDtype, dtype)
+            self._dtype = dtype
         else:
             self._dtype = np.dtype(dtype)
 
@@ -1682,6 +1689,8 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     ) -> np.ndarray:
         if dtype is None:
             dtype = self.dtype
+        if pd.api.types.is_extension_array_dtype(dtype):
+            dtype = get_valid_numpy_dtype(self.array)
         array = self.array
         if isinstance(array, pd.PeriodIndex):
             with suppress(AttributeError):
@@ -1700,7 +1709,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def shape(self) -> _Shape:
         return (len(self.array),)
 
-    def _convert_scalar(self, item):
+    def _convert_scalar(self, item) -> np.ndarray:
         if item is pd.NaT:
             # work around the impossibility of casting NaT with asarray
             # note: it probably would be better in general to return
@@ -1714,7 +1723,10 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             # numpy fails to convert pd.Timestamp to np.datetime64[ns]
             item = np.asarray(item.to_datetime64())
         elif self.dtype != object:
-            item = np.asarray(item, dtype=self.dtype)
+            dtype = self.dtype
+            if pd.api.types.is_extension_array_dtype(dtype):
+                dtype = get_valid_numpy_dtype(self.array)
+            item = np.asarray(item, dtype=dtype)
 
         # as for numpy.ndarray indexing, we always want the result to be
         # a NumPy array.
@@ -1828,7 +1840,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
     __slots__ = ("_dtype", "adapter", "array", "level")
 
     array: pd.MultiIndex
-    _dtype: np.dtype
+    _dtype: np.dtype | pd.api.extensions.ExtensionDtype
     level: str | None
 
     def __init__(
@@ -1845,6 +1857,8 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
     ) -> np.ndarray:
         if dtype is None:
             dtype = self.dtype
+        if pd.api.types.is_extension_array_dtype(dtype):
+            dtype = get_valid_numpy_dtype(self.array)
         if self.level is not None:
             return np.asarray(
                 self.array.get_level_values(self.level).values, dtype=dtype

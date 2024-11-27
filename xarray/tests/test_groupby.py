@@ -1117,7 +1117,8 @@ def test_groupby_math_nD_group() -> None:
     expected = da.isel(x=slice(30)) - expanded_mean
     expected["labels"] = expected.labels.broadcast_like(expected.labels2d)
     expected["num"] = expected.num.broadcast_like(expected.num2d)
-    expected["num2d_bins"] = (("x", "y"), mean.num2d_bins.data[idxr])
+    # mean.num2d_bins.data is a pandas IntervalArray so needs to be put in `numpy` to allow indexing
+    expected["num2d_bins"] = (("x", "y"), mean.num2d_bins.data.to_numpy()[idxr])
     actual = g - mean
     assert_identical(expected, actual)
 

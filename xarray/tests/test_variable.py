@@ -663,7 +663,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         v = self.cls("x", data)
         print(v)  # should not error
-        assert v.dtype == "int64"
+        assert v.dtype == data.dtype
 
     def test_pandas_datetime64_with_tz(self):
         data = pd.date_range(
@@ -674,9 +674,12 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         )
         v = self.cls("x", data)
         print(v)  # should not error
-        if "America/New_York" in str(data.dtype):
-            # pandas is new enough that it has datetime64 with timezone dtype
-            assert v.dtype == "object"
+        if v.dtype == np.dtype("O"):
+            import dask.array as da
+
+            assert isinstance(v.data, da.Array)
+        else:
+            assert v.dtype == data.dtype
 
     def test_multiindex(self):
         idx = pd.MultiIndex.from_product([list("abc"), [0, 1]])
@@ -1597,14 +1600,6 @@ class TestVariable(VariableSubclassobjects):
         print(v)  # should not error
         assert pd.api.types.is_extension_array_dtype(v.dtype)
 
-    def test_pandas_categorical_no_chunk(self):
-        data = pd.Categorical(np.arange(10, dtype="int64"))
-        v = self.cls("x", data)
-        with pytest.raises(
-            ValueError, match=r".*was found to be a Pandas ExtensionArray.*"
-        ):
-            v.chunk((5,))
-
     def test_squeeze(self):
         v = Variable(["x", "y"], [[1]])
         assert_identical(Variable([], 1), v.squeeze())
@@ -2413,8 +2408,8 @@ class TestVariableWithDask(VariableSubclassobjects):
 
     def test_pandas_categorical_dtype(self):
         data = pd.Categorical(np.arange(10, dtype="int64"))
-        with pytest.raises(ValueError, match="was found to be a Pandas ExtensionArray"):
-            self.cls("x", data)
+        v = self.cls("x", data)
+        assert (v.data.compute() == data.to_numpy()).all()
 
 
 @requires_sparse
@@ -2989,32 +2984,35 @@ class TestNumpyCoercion:
 
 
 @pytest.mark.parametrize(
-    ("values", "unit"),
+    "values",
     [
-        (np.datetime64("2000-01-01", "ns"), "ns"),
-        (np.datetime64("2000-01-01", "s"), "s"),
-        (np.array([np.datetime64("2000-01-01", "ns")]), "ns"),
-        (np.array([np.datetime64("2000-01-01", "s")]), "s"),
-        (pd.date_range("2000", periods=1), "ns"),
-        (datetime(2000, 1, 1), "us"),
-        (np.array([datetime(2000, 1, 1)]), "ns"),
-        (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), "ns"),
-        (
-            pd.Series(
-                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
-            ),
-            "ns",
+        np.datetime64("2000-01-01", "ns"),
+        np.datetime64("2000-01-01", "s"),
+        np.array([np.datetime64("2000-01-01", "ns")]),
+        np.array([np.datetime64("2000-01-01", "s")]),
+        pd.date_range("2000", periods=1),
+        datetime(2000, 1, 1),
+        np.array([datetime(2000, 1, 1)]),
+        pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")),
+        pd.Series(
+            pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
         ),
     ],
     ids=lambda x: f"{x}",
 )
-def test_datetime_conversion_warning(values, unit) -> None:
+def test_datetime_conversion_warning(values) -> None:
     # todo: needs discussion
     # todo: check, if this test is OK
     dims = ["time"] if isinstance(values, np.ndarray | pd.Index | pd.Series) else []
     var = Variable(dims, values)
     if var.dtype.kind == "M":
-        assert var.dtype == np.dtype(f"datetime64[{unit}]")
+        if not hasattr(values, "dtype"):
+            assert var.dtype == np.dtype("datetime64[us]")
+        elif values.dtype == np.dtype("O") or isinstance(values, pd.Series):
+            # We assign a nicer dtype here
+            assert var.dtype == np.dtype("datetime64[ns]")
+        else:
+            assert var.dtype == values.dtype
     else:
         # The only case where a non-datetime64 dtype can occur currently is in
         # the case that the variable is backed by a timezone-aware
@@ -3055,8 +3053,12 @@ def test_pandas_two_only_datetime_conversion_warnings(
     # todo: check, if this test is OK
     var = Variable(["time"], data.astype(dtype))  # type: ignore[arg-type]
 
-    if var.dtype.kind == "M":
+    # we internally convert series to numpy representations to avoid too much nastiness with extension arrays
+    # when calling data.array e.g., with NumpyExtensionArrays
+    if isinstance(data, pd.Series):
         assert var.dtype == np.dtype("datetime64[s]")
+    elif var.dtype.kind == "M":
+        assert var.dtype == dtype
     else:
         # The only case where a non-datetime64 dtype can occur currently is in
         # the case that the variable is backed by a timezone-aware
