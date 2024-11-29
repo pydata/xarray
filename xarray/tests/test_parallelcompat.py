@@ -11,10 +11,10 @@ from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
 from xarray.namedarray._typing import _Chunks
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import (
+    KNOWN_CHUNKMANAGERS,
     ChunkManagerEntrypoint,
     get_chunked_array_type,
     guess_chunkmanager,
-    KNOWN_CHUNKMANAGERS,
     list_chunkmanagers,
     load_chunkmanagers,
 )
