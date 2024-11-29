@@ -22,7 +22,10 @@ v.2024.11.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 - Improve the error message raised when using chunked-array methods if no chunk manager is available or if the requested chunk manager is missing (:pull:`9676`)
-  By `Justus Magin <https://github.com/keewis>`_.
+  By `Justus Magin <https://github.com/keewis>`_. (:pull:`9676`)
+- Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
+  duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 
 Breaking changes
@@ -35,7 +38,10 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix type annotations for ``get_axis_num``. (:issue:`9822`, :pull:`9827`).
+  By `Bruce Merry <https://github.com/bmerry>`_.
+- Fix unintended load on datasets when calling :py:meth:`DataArray.plot.scatter` (:pull:`9818`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Documentation
 ~~~~~~~~~~~~~
