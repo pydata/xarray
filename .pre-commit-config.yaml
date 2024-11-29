@@ -63,3 +63,8 @@ repos:
     rev: ebf0b5e44d67f8beaa1cd13a0d0393ea04c6058d
     hooks:
       - id: validate-cff
+  - repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
+    hooks:
+      - id: taplo-format
+        args: ["--option", "array_auto_collapse=false"]
