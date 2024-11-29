@@ -336,7 +336,9 @@ filterwarnings = [
   "default:the `pandas.MultiIndex` object:FutureWarning:xarray.tests.test_variable",
   "default:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
   "default:Duplicate dimension names present:UserWarning:xarray.namedarray.core",
-  "default:::xarray.tests.test_strategies",                                                                                                      # TODO: remove once we know how to deal with a changed signature in protocols
+
+  # TODO: remove once we know how to deal with a changed signature in protocols
+  "default:::xarray.tests.test_strategies",
 ]
 
 log_cli_level = "INFO"
