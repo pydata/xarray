@@ -295,7 +295,7 @@ class TestFormatting:
 
         byteorder = "<" if sys.byteorder == "little" else ">"
         expected = dedent(
-            """\
+            f"""\
         Left and right DataArray objects are not identical
         Differing dimensions:
             (x: 2, y: 3) != (x: 2)
@@ -306,8 +306,8 @@ class TestFormatting:
         R
             array([1, 2], dtype=int64)
         Differing coordinates:
-        L * x        (x) %cU1 8B 'a' 'b'
-        R * x        (x) %cU1 8B 'a' 'c'
+        L * x        (x) {byteorder}U1 8B 'a' 'b'
+        R * x        (x) {byteorder}U1 8B 'a' 'c'
         Coordinates only on the left object:
           * y        (y) int64 24B 1 2 3
         Coordinates only on the right object:
@@ -317,7 +317,6 @@ class TestFormatting:
         R   units: kg
         Attributes only on the left object:
             description: desc"""
-            % (byteorder, byteorder)
         )
 
         actual = formatting.diff_array_repr(da_a, da_b, "identical")
@@ -496,15 +495,15 @@ class TestFormatting:
 
         byteorder = "<" if sys.byteorder == "little" else ">"
         expected = dedent(
-            """\
+            f"""\
         Left and right Dataset objects are not identical
         Differing dimensions:
             (x: 2, y: 3) != (x: 2)
         Differing coordinates:
-        L * x        (x) %cU1 8B 'a' 'b'
+        L * x        (x) {byteorder}U1 8B 'a' 'b'
             Differing variable attributes:
                 foo: bar
-        R * x        (x) %cU1 8B 'a' 'c'
+        R * x        (x) {byteorder}U1 8B 'a' 'c'
             Differing variable attributes:
                 source: 0
                 foo: baz
@@ -522,7 +521,6 @@ class TestFormatting:
         R   title: newtitle
         Attributes only on the left object:
             description: desc"""
-            % (byteorder, byteorder)
         )
 
         actual = formatting.diff_dataset_repr(ds_a, ds_b, "identical")

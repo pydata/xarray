@@ -14,7 +14,43 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2024.10.1:
+.. _whats-new.2024.11.1:
+
+v.2024.11.1 (unreleased)
+------------------------
+
+New Features
+~~~~~~~~~~~~
+- Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
+  duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
+  By `Sam Levang <https://github.com/slevang>`_.
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+- Fix type annotations for ``get_axis_num``. (:issue:`9822`, :pull:`9827`).
+  By `Bruce Merry <https://github.com/bmerry>`_.
+- Fix unintended load on datasets when calling :py:meth:`DataArray.plot.scatter` (:pull:`9818`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+
+.. _whats-new.2024.11.0:
 
 v.2024.11.0 (Nov 22, 2024)
 --------------------------
