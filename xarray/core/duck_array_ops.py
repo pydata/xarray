@@ -43,6 +43,13 @@ else:
         normalize_axis_index,
     )
 
+try:
+    from nested_duck_arrays import first_layer
+except ImportError:
+
+    def first_layer(x):
+        return type(x)
+
 
 dask_available = module_available("dask")
 
@@ -263,9 +270,9 @@ def as_shared_dtype(scalars_or_arrays, xp=None):
             f" array types {[x.dtype for x in scalars_or_arrays]}"
         )
 
-    # Avoid calling array_type("cupy") repeatidely in the any check
+    # Avoid calling array_type("cupy") repeatedly in the any check
     array_type_cupy = array_type("cupy")
-    if any(isinstance(x, array_type_cupy) for x in scalars_or_arrays):
+    if any(issubclass(first_layer(x), array_type_cupy) for x in scalars_or_arrays):
         import cupy as cp
 
         xp = cp
