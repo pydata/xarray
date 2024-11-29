@@ -46,7 +46,7 @@ class ChunkedArrayMixinProtocol(Protocol):
 
 T_ChunkedArray = TypeVar("T_ChunkedArray", bound=ChunkedArrayMixinProtocol)
 
-known_chunkmanagers = {
+KNOWN_CHUNKMANAGERS = {
     "dask": "dask",
     "cubed": "cubed-xarray",
     "arkouda": "arkouda-xarray",
@@ -112,10 +112,10 @@ def guess_chunkmanager(
             manager = OPTIONS["chunk_manager"]
 
     if isinstance(manager, str):
-        if manager not in chunkmanagers and manager in known_chunkmanagers:
+        if manager not in chunkmanagers and manager in KNOWN_CHUNKMANAGERS:
             raise ImportError(
                 f"chunk manager {manager!r} is not available."
-                f" Please make sure {known_chunkmanagers[manager]} is installed and importable."
+                f" Please make sure {KNOWN_CHUNKMANAGERS[manager]} is installed and importable."
             )
         elif len(chunkmanagers) == 0:
             raise ImportError(
