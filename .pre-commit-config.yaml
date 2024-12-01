@@ -68,3 +68,8 @@ repos:
     hooks:
       - id: taplo-format
         args: ["--option", "array_auto_collapse=false"]
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: v0.23
+    hooks:
+      - id: validate-pyproject
+        additional_dependencies: ["validate-pyproject-schema-store[all]"]
