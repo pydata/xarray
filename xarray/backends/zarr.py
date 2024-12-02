@@ -19,6 +19,7 @@ from xarray.backends.common import (
     _encode_variable_name,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
+    ensure_dtype_not_object,
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
@@ -507,6 +508,7 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     """
 
     var = conventions.encode_cf_variable(var, name=name)
+    var = ensure_dtype_not_object(var, name=name)
 
     # zarr allows unicode, but not variable-length strings, so it's both
     # simpler and more compact to always encode as UTF-8 explicitly.
