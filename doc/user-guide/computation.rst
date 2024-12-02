@@ -30,7 +30,7 @@ numpy) over all array values:
 .. ipython:: python
 
     arr = xr.DataArray(
-        np.random.RandomState(0).randn(2, 3), [("x", ["a", "b"]), ("y", [10, 20, 30])]
+        np.random.default_rng(0).randn(2, 3), [("x", ["a", "b"]), ("y", [10, 20, 30])]
     )
     arr - 3
     abs(arr)

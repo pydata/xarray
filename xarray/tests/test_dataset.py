@@ -99,7 +99,7 @@ pytestmark = [
 
 
 def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
-    rs = np.random.RandomState(seed)
+    rs = np.random.default_rng(seed)
 
     lat = [2, 1, 0]
     lon = [0, 1, 2]
@@ -7161,7 +7161,7 @@ def test_raise_no_warning_assert_close(ds) -> None:
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("edge_order", [1, 2])
 def test_differentiate(dask, edge_order) -> None:
-    rs = np.random.RandomState(42)
+    rs = np.random.default_rng(42)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
     da = xr.DataArray(
@@ -7210,7 +7210,7 @@ def test_differentiate(dask, edge_order) -> None:
 @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_datetime(dask) -> None:
-    rs = np.random.RandomState(42)
+    rs = np.random.default_rng(42)
     coord = np.array(
         [
             "2004-07-13",
@@ -7260,7 +7260,7 @@ def test_differentiate_datetime(dask) -> None:
 @requires_cftime
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_cftime(dask) -> None:
-    rs = np.random.RandomState(42)
+    rs = np.random.default_rng(42)
     coord = xr.cftime_range("2000", periods=8, freq="2ME")
 
     da = xr.DataArray(
@@ -7289,7 +7289,7 @@ def test_differentiate_cftime(dask) -> None:
 
 @pytest.mark.parametrize("dask", [True, False])
 def test_integrate(dask) -> None:
-    rs = np.random.RandomState(42)
+    rs = np.random.default_rng(42)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
     da = xr.DataArray(
@@ -7343,7 +7343,7 @@ def test_integrate(dask) -> None:
 @requires_scipy
 @pytest.mark.parametrize("dask", [True, False])
 def test_cumulative_integrate(dask) -> None:
-    rs = np.random.RandomState(43)
+    rs = np.random.default_rng(43)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
     da = xr.DataArray(
@@ -7406,7 +7406,7 @@ def test_cumulative_integrate(dask) -> None:
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("which_datetime", ["np", "cftime"])
 def test_trapezoid_datetime(dask, which_datetime) -> None:
-    rs = np.random.RandomState(42)
+    rs = np.random.default_rng(42)
     coord: ArrayLike
     if which_datetime == "np":
         coord = np.array(

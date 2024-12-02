@@ -2284,7 +2284,7 @@ class TestDataArray:
         assert isinstance(converted_subok.data, NdArraySubclass)
 
     def test_is_null(self) -> None:
-        x = np.random.RandomState(42).randn(5, 6)
+        x = np.random.default_rng(42).randn(5, 6)
         x[x < 0] = np.nan
         original = DataArray(x, [-np.arange(5), np.arange(6)], ["x", "y"])
         expected = DataArray(pd.isnull(x), [-np.arange(5), np.arange(6)], ["x", "y"])
@@ -3528,7 +3528,7 @@ class TestDataArray:
 
         idx = pd.MultiIndex.from_product([np.arange(3), np.arange(5)], names=["a", "b"])
         series: pd.Series = pd.Series(
-            np.random.RandomState(0).random(len(idx)), index=idx
+            np.random.default_rng(0).random(len(idx)), index=idx
         ).sample(n=5, random_state=3)
 
         dense = DataArray.from_series(series, sparse=False)
@@ -3703,7 +3703,7 @@ class TestDataArray:
         assert expected_attrs == actual["attrs"]
 
     def test_to_masked_array(self) -> None:
-        rs = np.random.RandomState(44)
+        rs = np.random.default_rng(44)
         x = rs.random_sample(size=(10, 20))
         x_masked = np.ma.masked_where(x < 0.5, x)
         da = DataArray(x_masked)

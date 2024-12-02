@@ -298,12 +298,12 @@ _DEFAULT_TEST_DIM_SIZES = (8, 9, 10)
 
 
 def create_test_data(
-    seed: int | None = None,
+    seed: int = 12345,
     add_attrs: bool = True,
     dim_sizes: tuple[int, int, int] = _DEFAULT_TEST_DIM_SIZES,
     use_extension_array: bool = False,
 ) -> Dataset:
-    rs = np.random.RandomState(seed)
+    rs = np.random.default_rng(seed)
     _vars = {
         "var1": ["dim1", "dim2"],
         "var2": ["dim1", "dim2"],

@@ -341,7 +341,7 @@ class TestArrayNotNullEquiv:
 
 def construct_dataarray(dim_num, dtype, contains_nan, dask):
     # dimnum <= 3
-    rng = np.random.RandomState(0)
+    rng = np.random.default_rng(0)
     shapes = [16, 8, 4][:dim_num]
     dims = ("x", "y", "z")[:dim_num]
 

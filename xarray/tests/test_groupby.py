@@ -2879,7 +2879,7 @@ def test_multiple_groupers(use_flox: bool, shuffle: bool) -> None:
         )
 
     b = xr.DataArray(
-        np.random.RandomState(0).randn(2, 3, 4),
+        np.random.default_rng(0).randn(2, 3, 4),
         coords={"xy": (("x", "y"), [["a", "b", "c"], ["b", "c", "c"]], {"foo": "bar"})},
         dims=["x", "y", "z"],
     )
