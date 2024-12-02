@@ -2852,8 +2852,11 @@ class ZarrBase(CFEncodedBase):
 
         # check append mode for new variable
         with self.create_zarr_target() as store_target:
-            xr.concat([ds, ds_to_append], dim="time").to_zarr(
-                store_target, mode="w", **self.version_kwargs
+            combined = xr.concat([ds, ds_to_append], dim="time")
+            combined.to_zarr(store_target, mode="w", **self.version_kwargs)
+            assert_identical(
+                combined,
+                xr.open_dataset(store_target, engine="zarr", **self.version_kwargs),
             )
             ds_with_new_var.to_zarr(store_target, mode="a", **self.version_kwargs)
             combined = xr.concat([ds, ds_to_append], dim="time")

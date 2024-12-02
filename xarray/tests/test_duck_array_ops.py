@@ -346,11 +346,11 @@ def construct_dataarray(dim_num, dtype, contains_nan, dask):
     dims = ("x", "y", "z")[:dim_num]
 
     if np.issubdtype(dtype, np.floating):
-        array = rng.randn(*shapes).astype(dtype)
+        array = rng.random(shapes).astype(dtype)
     elif np.issubdtype(dtype, np.integer):
-        array = rng.randint(0, 10, size=shapes).astype(dtype)
+        array = rng.integers(0, 10, size=shapes).astype(dtype)
     elif np.issubdtype(dtype, np.bool_):
-        array = rng.randint(0, 1, size=shapes).astype(dtype)
+        array = rng.integers(0, 1, size=shapes).astype(dtype)
     elif dtype is str:
         array = rng.choice(["a", "b", "c", "d"], size=shapes)
     else:

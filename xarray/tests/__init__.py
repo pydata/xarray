@@ -329,7 +329,7 @@ def create_test_data(
             "dim1",
             pd.Categorical(
                 rs.choice(
-                    list(string.ascii_lowercase[: rs.randint(1, 5)]),
+                    list(string.ascii_lowercase[: rs.integers(1, 5)]),
                     size=dim_sizes[0],
                 )
             ),
@@ -337,7 +337,7 @@ def create_test_data(
     if dim_sizes == _DEFAULT_TEST_DIM_SIZES:
         numbers_values = np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64")
     else:
-        numbers_values = rs.randint(0, 3, _dims["dim3"], dtype="int64")
+        numbers_values = rs.integers(0, 3, _dims["dim3"], dtype="int64")
     obj.coords["numbers"] = ("dim3", numbers_values)
     obj.encoding = {"foo": "bar"}
     assert_writeable(obj)
