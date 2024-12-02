@@ -2284,7 +2284,7 @@ class TestDataArray:
         assert isinstance(converted_subok.data, NdArraySubclass)
 
     def test_is_null(self) -> None:
-        x = np.random.default_rng(42).randn(5, 6)
+        x = np.random.default_rng(42).random((5, 6))
         x[x < 0] = np.nan
         original = DataArray(x, [-np.arange(5), np.arange(6)], ["x", "y"])
         expected = DataArray(pd.isnull(x), [-np.arange(5), np.arange(6)], ["x", "y"])
@@ -3704,7 +3704,7 @@ class TestDataArray:
 
     def test_to_masked_array(self) -> None:
         rs = np.random.default_rng(44)
-        x = rs.random_sample(size=(10, 20))
+        x = rs.random(size=(10, 20))
         x_masked = np.ma.masked_where(x < 0.5, x)
         da = DataArray(x_masked)
 
