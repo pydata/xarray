@@ -1604,7 +1604,7 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(ValueError, match=r"cannot select a dimension"):
             v.squeeze("y")
 
-    def test_get_axis_num(self):
+    def test_get_axis_num(self) -> None:
         v = Variable(["x", "y", "z"], np.random.randn(2, 3, 4))
         assert v.get_axis_num("x") == 0
         assert v.get_axis_num(["x"]) == (0,)
@@ -1612,6 +1612,11 @@ class TestVariable(VariableSubclassobjects):
         assert v.get_axis_num(["z", "y", "x"]) == (2, 1, 0)
         with pytest.raises(ValueError, match=r"not found in array dim"):
             v.get_axis_num("foobar")
+        # Test the type annotations: mypy will complain if the inferred
+        # type is wrong
+        v.get_axis_num("x") + 0
+        v.get_axis_num(["x"]) + ()
+        v.get_axis_num(("x", "y")) + ()
 
     def test_set_dims(self):
         v = Variable(["x"], [0, 1])
