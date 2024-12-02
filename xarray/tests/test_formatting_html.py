@@ -11,7 +11,7 @@ from xarray.core.coordinates import Coordinates
 
 @pytest.fixture
 def dataarray() -> xr.DataArray:
-    return xr.DataArray(np.random.default_rng(0).randn(4, 6))
+    return xr.DataArray(np.random.default_rng(0).random((4, 6)))
 
 
 @pytest.fixture
