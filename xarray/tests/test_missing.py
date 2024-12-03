@@ -62,7 +62,7 @@ def ds():
 
 
 def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False):
-    rs = np.random.RandomState(seed)
+    rs = np.random.default_rng(seed)
     vals = rs.normal(size=shape)
     if frac_nan == 1:
         vals[:] = np.nan

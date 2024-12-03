@@ -202,7 +202,7 @@ Let's take a look:
 
 .. ipython:: python
 
-    data = np.random.RandomState(0).rand(2, 3, 4)
+    data = np.random.default_rng(0).rand(2, 3, 4)
     items = list("ab")
     major_axis = list("mno")
     minor_axis = pd.date_range(start="2000", periods=4, name="date")
