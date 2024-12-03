@@ -2178,6 +2178,9 @@ def _calc_idxminmax(
             array[dim].data, chunks=((array.sizes[dim],),)
         )
         coord = coord.copy(data=coord_array)
+    else:
+        coord = coord.copy(data=to_like_array(array[dim].data, array.data))
+
     res = indx._replace(coord[(indx.variable,)]).rename(dim)
 
     if skipna or (skipna is None and array.dtype.kind in na_dtypes):
