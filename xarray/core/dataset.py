@@ -6,6 +6,7 @@ import inspect
 import itertools
 import math
 import sys
+import uuid
 import warnings
 from collections import defaultdict
 from collections.abc import (
@@ -257,7 +258,6 @@ def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
     chunk_shape = chunkmanager.normalize_chunks(
         chunk_shape, shape=shape, dtype=var.dtype, previous_chunks=preferred_chunk_shape
     )
-
     # Warn where requested chunks break preferred chunks, provided that the variable
     # contains data.
     if var.size:
@@ -344,7 +344,8 @@ def _maybe_chunk(
             # by providing chunks as an input to tokenize.
             # subtle bugs result otherwise. see GH3350
             # we use str() for speed, and use the name for the final array name on the next line
-            token2 = tokenize(token if token else var._data, str(chunks))
+            mixin = uuid.uuid4()
+            token2 = tokenize(token if token else var._data, mixin)
             name2 = f"{name_prefix}{name}-{token2}"
 
             from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
