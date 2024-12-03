@@ -13,6 +13,8 @@ format (recommended).
 
     import os
 
+    import iris
+    import ncdata.iris_xarray
     import numpy as np
     import pandas as pd
     import xarray as xr
@@ -1072,8 +1074,11 @@ Iris
 
 The Iris_ tool allows easy reading of common meteorological and climate model formats
 (including GRIB and UK MetOffice PP files) into ``Cube`` objects which are in many ways very
-similar to ``DataArray`` objects, while enforcing a CF-compliant data model. If iris is
-installed, xarray can convert a ``DataArray`` into a ``Cube`` using
+similar to ``DataArray`` objects, while enforcing a CF-compliant data model.
+
+DataArray ``to_iris`` and ``from_iris``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If iris is installed, xarray can convert a ``DataArray`` into a ``Cube`` using
 :py:meth:`DataArray.to_iris`:
 
 .. ipython:: python
@@ -1095,9 +1100,36 @@ Conversely, we can create a new ``DataArray`` object from a ``Cube`` using
     da_cube = xr.DataArray.from_iris(cube)
     da_cube
 
+Ncdata
+~~~~~~
+Ncdata_ provides more sophisticated means of transferring data, including entire
+datasets.  It uses the file saving and loading functions in both projects to provide a
+more "correct" translation between them, but still with very low overhead and not
+using actual disk files.
+
+For example:
+
+.. ipython:: python
+    :okwarning:
+
+    ds = xr.tutorial.open_dataset("air_temperature_gradient")
+    cubes = ncdata.iris_xarray.cubes_from_xarray(ds)
+    print(cubes)
+    print(cubes[1])
+
+.. ipython:: python
+    :okwarning:
+
+    ds = ncdata.iris_xarray.cubes_to_xarray(cubes)
+    print(ds)
+
+Ncdata can also adjust file data within load and save operations, to fix data loading
+problems or provide exact save formatting without needing to modify files on disk.
+See for example : `ncdata usage examples`_
 
 .. _Iris: https://scitools.org.uk/iris
-
+.. _Ncdata: https://ncdata.readthedocs.io/en/latest/index.html
+.. _ncdata usage examples: https://github.com/pp-mo/ncdata/tree/v0.1.2?tab=readme-ov-file#correct-a-miscoded-attribute-in-iris-input
 
 OPeNDAP
 -------

@@ -173,9 +173,9 @@ integration with Cartopy_.
 
 We think the design decisions we have made for xarray (namely, basing it on
 pandas) make it a faster and more flexible data analysis tool. That said, Iris
-has some great domain specific functionality, and xarray includes
-methods for converting back and forth between xarray and Iris. See
-:py:meth:`~xarray.DataArray.to_iris` for more details.
+has some great domain specific functionality, and there are dedicated methods for
+converting back and forth between xarray and Iris. See
+:ref:`Reading and Writing Iris data <io.iris>` for more details.
 
 What other projects leverage xarray?
 ------------------------------------
