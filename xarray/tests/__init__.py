@@ -210,8 +210,7 @@ class CountingScheduler:
         self.total_computes += 1
         if self.total_computes > self.max_computes:
             raise RuntimeError(
-                "Too many computes. Total: %d > max: %d."
-                % (self.total_computes, self.max_computes)
+                f"Too many computes. Total: {self.total_computes} > max: {self.max_computes}."
             )
         return dask.get(dsk, keys, **kwargs)
 
@@ -299,12 +298,12 @@ _DEFAULT_TEST_DIM_SIZES = (8, 9, 10)
 
 
 def create_test_data(
-    seed: int | None = None,
+    seed: int = 12345,
     add_attrs: bool = True,
     dim_sizes: tuple[int, int, int] = _DEFAULT_TEST_DIM_SIZES,
     use_extension_array: bool = False,
 ) -> Dataset:
-    rs = np.random.RandomState(seed)
+    rs = np.random.default_rng(seed)
     _vars = {
         "var1": ["dim1", "dim2"],
         "var2": ["dim1", "dim2"],
@@ -330,7 +329,7 @@ def create_test_data(
             "dim1",
             pd.Categorical(
                 rs.choice(
-                    list(string.ascii_lowercase[: rs.randint(1, 5)]),
+                    list(string.ascii_lowercase[: rs.integers(1, 5)]),
                     size=dim_sizes[0],
                 )
             ),
@@ -338,7 +337,7 @@ def create_test_data(
     if dim_sizes == _DEFAULT_TEST_DIM_SIZES:
         numbers_values = np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64")
     else:
-        numbers_values = rs.randint(0, 3, _dims["dim3"], dtype="int64")
+        numbers_values = rs.integers(0, 3, _dims["dim3"], dtype="int64")
     obj.coords["numbers"] = ("dim3", numbers_values)
     obj.encoding = {"foo": "bar"}
     assert_writeable(obj)

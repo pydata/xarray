@@ -1504,8 +1504,8 @@ class DataArray(
 
         See Also
         --------
-        Dataset.isel
-        DataArray.sel
+        :func:`Dataset.isel <Dataset.isel>`
+        :func:`DataArray.sel <DataArray.sel>`
 
         :doc:`xarray-tutorial:intermediate/indexing/indexing`
             Tutorial material on indexing with Xarray objects
@@ -1642,8 +1642,8 @@ class DataArray(
 
         See Also
         --------
-        Dataset.sel
-        DataArray.isel
+        :func:`Dataset.sel <Dataset.sel>`
+        :func:`DataArray.isel <DataArray.isel>`
 
         :doc:`xarray-tutorial:intermediate/indexing/indexing`
             Tutorial material on indexing with Xarray objects
@@ -5612,8 +5612,9 @@ class DataArray(
 
         See Also
         --------
-        dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
-        xarray.DataArray.map_blocks
+        :func:`dask.array.map_blocks <dask.array.map_blocks>`
+        :func:`xarray.apply_ufunc <xarray.apply_ufunc>`
+        :func:`xarray.Dataset.map_blocks <xarray.Dataset.map_blocks>`
 
         :doc:`xarray-tutorial:advanced/map_blocks/map_blocks`
             Advanced Tutorial on map_blocks with dask
@@ -6905,13 +6906,13 @@ class DataArray(
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
             Tutorial on :py:func:`~xarray.DataArray.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.DataArray.resample`
 
-        DataArray.groupby_bins
-        Dataset.groupby
-        core.groupby.DataArrayGroupBy
-        DataArray.coarsen
-        pandas.DataFrame.groupby
-        Dataset.resample
-        DataArray.resample
+        :external:py:meth:`pandas.DataFrame.groupby <pandas.DataFrame.groupby>`
+        :func:`DataArray.groupby_bins <DataArray.groupby_bins>`
+        :func:`Dataset.groupby <Dataset.groupby>`
+        :func:`core.groupby.DataArrayGroupBy <core.groupby.DataArrayGroupBy>`
+        :func:`DataArray.coarsen <DataArray.coarsen>`
+        :func:`Dataset.resample <Dataset.resample>`
+        :func:`DataArray.resample <DataArray.resample>`
         """
         from xarray.core.groupby import (
             DataArrayGroupBy,
@@ -7048,7 +7049,7 @@ class DataArray(
 
         See Also
         --------
-        Dataset.weighted
+        :func:`Dataset.weighted <Dataset.weighted>`
 
         :ref:`comput.weighted`
             User guide on weighted array reduction using :py:func:`~xarray.DataArray.weighted`
@@ -7081,7 +7082,8 @@ class DataArray(
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
         center : bool or Mapping to int, default: False
-            Set the labels at the center of the window.
+            Set the labels at the center of the window. The default, False,
+            sets the labels at the right edge of the window.
         **window_kwargs : optional
             The keyword arguments form of ``dim``.
             One of dim or window_kwargs must be provided.
@@ -7331,8 +7333,8 @@ class DataArray(
 
         See Also
         --------
-        core.rolling.DataArrayCoarsen
-        Dataset.coarsen
+        :class:`core.rolling.DataArrayCoarsen <core.rolling.DataArrayCoarsen>`
+        :func:`Dataset.coarsen <Dataset.coarsen>`
 
         :ref:`reshape.coarsen`
             User guide describing :py:func:`~xarray.DataArray.coarsen`

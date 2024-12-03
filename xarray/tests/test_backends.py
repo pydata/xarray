@@ -963,8 +963,7 @@ class CFEncodedBase(DatasetIOBase):
         decoded = decoded_fn(dtype)
         encoded = encoded_fn(dtype)
         if decoded["x"].encoding["dtype"] == "u1" and not (
-            self.engine == "netcdf4"
-            and self.file_format is None
+            (self.engine == "netcdf4" and self.file_format is None)
             or self.file_format == "NETCDF4"
         ):
             pytest.skip("uint8 data can't be written to non-NetCDF4 data")
@@ -1400,6 +1399,22 @@ class CFEncodedBase(DatasetIOBase):
         ds_reset = ds.reset_index("x")
         with self.roundtrip(ds_reset) as actual:
             assert_identical(actual, ds_reset)
+
+    @requires_dask
+    def test_string_object_warning(self) -> None:
+        original = Dataset(
+            {
+                "x": (
+                    [
+                        "y",
+                    ],
+                    np.array(["foo", "bar"], dtype=object),
+                )
+            }
+        ).chunk()
+        with pytest.warns(SerializationWarning, match="dask array with dtype=object"):
+            with self.roundtrip(original) as actual:
+                assert_identical(original, actual)
 
 
 class NetCDFBase(CFEncodedBase):
@@ -2853,8 +2868,11 @@ class ZarrBase(CFEncodedBase):
 
         # check append mode for new variable
         with self.create_zarr_target() as store_target:
-            xr.concat([ds, ds_to_append], dim="time").to_zarr(
-                store_target, mode="w", **self.version_kwargs
+            combined = xr.concat([ds, ds_to_append], dim="time")
+            combined.to_zarr(store_target, mode="w", **self.version_kwargs)
+            assert_identical(
+                combined,
+                xr.open_dataset(store_target, engine="zarr", **self.version_kwargs),
             )
             ds_with_new_var.to_zarr(store_target, mode="a", **self.version_kwargs)
             combined = xr.concat([ds, ds_to_append], dim="time")
@@ -6479,7 +6497,7 @@ def test_zarr_safe_chunk_region(tmp_path):
         arr.isel(a=slice(5, -1)).chunk(a=5).to_zarr(store, region="auto", mode="r+")
 
     # Test if the code is detecting the last chunk correctly
-    data = np.random.RandomState(0).randn(2920, 25, 53)
+    data = np.random.default_rng(0).random((2920, 25, 53))
     ds = xr.Dataset({"temperature": (("time", "lat", "lon"), data)})
     chunks = {"time": 1000, "lat": 25, "lon": 53}
     ds.chunk(chunks).to_zarr(store, compute=False, mode="w")

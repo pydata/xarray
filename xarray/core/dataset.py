@@ -55,6 +55,7 @@ from xarray.core.alignment import (
     align,
 )
 from xarray.core.arithmetic import DatasetArithmetic
+from xarray.core.array_api_compat import to_like_array
 from xarray.core.common import (
     DataWithCoords,
     _contains_datetime_like_objects,
@@ -127,7 +128,7 @@ from xarray.core.variable import (
     calculate_dimensions,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
-from xarray.namedarray.pycompat import array_type, is_chunked_array
+from xarray.namedarray.pycompat import array_type, is_chunked_array, to_numpy
 from xarray.plot.accessor import DatasetPlotAccessor
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
@@ -3081,8 +3082,8 @@ class Dataset(
 
         See Also
         --------
-        Dataset.sel
-        DataArray.isel
+        :func:`Dataset.sel <Dataset.sel>`
+        :func:`DataArray.isel <DataArray.isel>`
 
         :doc:`xarray-tutorial:intermediate/indexing/indexing`
             Tutorial material on indexing with Xarray objects
@@ -3235,8 +3236,8 @@ class Dataset(
 
         See Also
         --------
-        Dataset.isel
-        DataArray.sel
+        :func:`Dataset.isel <Dataset.isel>`
+        :func:`DataArray.sel <DataArray.sel>`
 
         :doc:`xarray-tutorial:intermediate/indexing/indexing`
             Tutorial material on indexing with Xarray objects
@@ -5401,11 +5402,9 @@ class Dataset(
                 and var.dims[0] == dim
                 and (
                     # stack: must be a single coordinate index
-                    not multi
-                    and not self.xindexes.is_multi(name)
+                    (not multi and not self.xindexes.is_multi(name))
                     # unstack: must be an index that implements .unstack
-                    or multi
-                    and type(index).unstack is not Index.unstack
+                    or (multi and type(index).unstack is not Index.unstack)
                 )
             ):
                 if stack_index is not None and index is not stack_index:
@@ -6622,7 +6621,7 @@ class Dataset(
             array = self._variables[k]
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
-                count += np.asarray(array.count(dims))
+                count += to_numpy(array.count(dims).data)
                 size += math.prod([self.sizes[d] for d in dims])
 
         if thresh is not None:
@@ -7617,7 +7616,7 @@ class Dataset(
 
         if isinstance(idx, pd.MultiIndex):
             dims = tuple(
-                name if name is not None else "level_%i" % n  # type: ignore[redundant-expr]
+                name if name is not None else f"level_{n}"  # type: ignore[redundant-expr]
                 for n, name in enumerate(idx.names)
             )
             for dim, lev in zip(dims, idx.levels, strict=True):
@@ -8736,16 +8735,17 @@ class Dataset(
                     coord_names.add(k)
             else:
                 if k in self.data_vars and dim in v.dims:
+                    coord_data = to_like_array(coord_var.data, like=v.data)
                     if _contains_datetime_like_objects(v):
                         v = datetime_to_numeric(v, datetime_unit=datetime_unit)
                     if cumulative:
                         integ = duck_array_ops.cumulative_trapezoid(
-                            v.data, coord_var.data, axis=v.get_axis_num(dim)
+                            v.data, coord_data, axis=v.get_axis_num(dim)
                         )
                         v_dims = v.dims
                     else:
                         integ = duck_array_ops.trapz(
-                            v.data, coord_var.data, axis=v.get_axis_num(dim)
+                            v.data, coord_data, axis=v.get_axis_num(dim)
                         )
                         v_dims = list(v.dims)
                         v_dims.remove(dim)
@@ -9020,8 +9020,9 @@ class Dataset(
 
         See Also
         --------
-        dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
-        xarray.DataArray.map_blocks
+        :func:`dask.array.map_blocks <dask.array.map_blocks>`
+        :func:`xarray.apply_ufunc <apply_ufunc>`
+        :func:`xarray.DataArray.map_blocks <xarray.DataArray.map_blocks>`
 
         :doc:`xarray-tutorial:advanced/map_blocks/map_blocks`
             Advanced Tutorial on map_blocks with dask
@@ -10551,13 +10552,13 @@ class Dataset(
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
             Tutorial on :py:func:`~xarray.Dataset.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.Dataset.resample`.
 
-        Dataset.groupby_bins
-        DataArray.groupby
-        core.groupby.DatasetGroupBy
-        pandas.DataFrame.groupby
-        Dataset.coarsen
-        Dataset.resample
-        DataArray.resample
+        :external:py:meth:`pandas.DataFrame.groupby <pandas.DataFrame.groupby>`
+        :func:`Dataset.groupby_bins <Dataset.groupby_bins>`
+        :func:`DataArray.groupby <DataArray.groupby>`
+        :class:`core.groupby.DatasetGroupBy`
+        :func:`Dataset.coarsen <Dataset.coarsen>`
+        :func:`Dataset.resample <Dataset.resample>`
+        :func:`DataArray.resample <DataArray.resample>`
         """
         from xarray.core.groupby import (
             DatasetGroupBy,
@@ -10695,7 +10696,7 @@ class Dataset(
 
         See Also
         --------
-        DataArray.weighted
+        :func:`DataArray.weighted <DataArray.weighted>`
 
         :ref:`comput.weighted`
             User guide on weighted array reduction using :py:func:`~xarray.Dataset.weighted`
@@ -10728,7 +10729,8 @@ class Dataset(
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
         center : bool or Mapping to int, default: False
-            Set the labels at the center of the window.
+            Set the labels at the center of the window. The default, False,
+            sets the labels at the right edge of the window.
         **window_kwargs : optional
             The keyword arguments form of ``dim``.
             One of dim or window_kwargs must be provided.
@@ -10823,8 +10825,8 @@ class Dataset(
 
         See Also
         --------
-        core.rolling.DatasetCoarsen
-        DataArray.coarsen
+        :class:`core.rolling.DatasetCoarsen`
+        :func:`DataArray.coarsen <DataArray.coarsen>`
 
         :ref:`reshape.coarsen`
             User guide describing :py:func:`~xarray.Dataset.coarsen`
