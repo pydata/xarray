@@ -11,7 +11,7 @@ ny = 50
 
 class Reindex:
     def setup(self):
-        data = np.random.RandomState(0).randn(ntime, nx, ny)
+        data = np.random.default_rng(0).random((ntime, nx, ny))
         self.ds = xr.Dataset(
             {"temperature": (("time", "x", "y"), data)},
             coords={"time": np.arange(ntime), "x": np.arange(nx), "y": np.arange(ny)},
