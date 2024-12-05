@@ -123,7 +123,7 @@ def _all_cftime_date_types():
 @pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
 @pytest.mark.filterwarnings("ignore:Times can't be serialized faithfully")
 @pytest.mark.parametrize(["num_dates", "units", "calendar"], _CF_DATETIME_TESTS)
-def test_cf_datetime(num_dates, units, calendar) -> None:
+def test_cf_datetime(num_dates, units: str, calendar: str) -> None:
     import cftime
 
     expected = cftime.num2date(
