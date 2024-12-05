@@ -22,6 +22,7 @@ from xarray.tests import (
     has_dask,
     has_scipy,
     has_scipy_ge_1_13,
+    raise_if_dask_computes,
     requires_cftime,
     requires_dask,
     requires_scipy,
@@ -64,6 +65,7 @@ def get_example_data(case: int) -> xr.DataArray:
         )
     elif case == 4:
         # 3D chunked single dim
+        # chunksize=5 lets us check whether we rechunk to 1 with quintic
         return get_example_data(3).chunk({"z": 5})
     else:
         raise ValueError("case must be 1-4")
@@ -310,6 +312,7 @@ def test_interpolate_nd(case: int, method: InterpnOptions, nd_interp_coords) -> 
     grid_grid_points = nd_interp_coords["grid_grid_points"]
     # the presence/absence of z coordinate may affect nd interpolants, even when the
     # coordinate is unchanged
+    # TODO: test this?
     actual = da.interp(x=xdestnp, y=ydestnp, z=zdestnp, method=method)
     expected_data = scipy.interpolate.interpn(
         points=(da.x, da.y, da.z),
@@ -896,6 +899,7 @@ def test_decompose(method: InterpOptions) -> None:
         for nscalar in range(interp_ndim + 1)
     ],
 )
+@pytest.mark.filterwarnings("ignore::dask.array.core.PerformanceWarning")
 def test_interpolate_chunk_1d(
     method: InterpOptions, data_ndim, interp_ndim, nscalar, chunked: bool
 ) -> None:
@@ -1059,3 +1063,34 @@ def test_interp1d_complex_out_of_bounds() -> None:
     expected = da.interp(time=3.5, kwargs=dict(fill_value=np.nan + np.nan * 1j))
     actual = da.interp(time=3.5)
     assert_identical(actual, expected)
+
+
+@requires_dask
+@requires_scipy
+def test_interp_vectorized_dask():
+    # Synthetic dataset chunked in the two interpolation dimensions
+    import dask.array as da
+
+    nt = 30
+    nlat = 20
+    nlon = 10
+    nq = 101
+    ds = xr.Dataset(
+        data_vars={
+            "foo": (
+                ("lat", "lon", "dayofyear", "q"),
+                da.ones((nlat, nlon, nt, nq), chunks=(10, 10, 10, -1)),
+            ),  # FIXME
+            "bar": (("lat", "lon"), da.zeros((nlat, nlon), chunks=(10, 10))),
+        },  # FIXME
+        coords={
+            "lat": np.linspace(-89.5, 89.6, nlat),
+            "lon": np.linspace(-179.5, 179.6, nlon),
+            "dayofyear": np.arange(0, nt),
+            "q": np.linspace(0, 1, nq),
+        },
+    )
+
+    # Interpolate along non-chunked dimension
+    with raise_if_dask_computes():
+        interp = ds.interp(q=ds["bar"], kwargs={"fill_value": None})  # FIXME
