@@ -41,6 +41,7 @@ dev = [
   "mypy",
   "pre-commit",
   "pytest",
+  "pytest-beartype",
   "pytest-cov",
   "pytest-env",
   "pytest-xdist",
