@@ -145,7 +145,6 @@ def push(array, n, axis, method="blelloch"):
     )
 
     if n is not None and 0 < n < array.shape[axis] - 1:
-
         valid_positions = da.reductions.cumreduction(
             func=_reset_cumsum,
             binop=partial(_combine_reset_cumsum, axis=axis),
