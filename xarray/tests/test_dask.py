@@ -791,6 +791,7 @@ class TestDataArrayAndDataset(DaskTestCase):
 
 
 class TestToDaskDataFrame:
+    @pytest.mark.xfail(reason="https://github.com/dask/dask/issues/11584")
     def test_to_dask_dataframe(self):
         # Test conversion of Datasets to dask DataFrames
         x = np.random.randn(10)

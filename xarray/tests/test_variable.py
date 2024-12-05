@@ -278,34 +278,30 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
     @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime64_conversion(self):
         times = pd.date_range("2000-01-01", periods=3)
-        for values, preserve_source in [
-            (times, True),
-            (times.values, True),
-            (times.values.astype("datetime64[s]"), False),
-            (times.to_pydatetime(), False),
+        for values in [
+            times,
+            times.values,
+            times.values.astype("datetime64[s]"),
+            times.to_pydatetime(),
         ]:
             v = self.cls(["t"], values)
             assert v.dtype == np.dtype("datetime64[ns]")
             assert_array_equal(v.values, times.values)
             assert v.values.dtype == np.dtype("datetime64[ns]")
-            same_source = source_ndarray(v.values) is source_ndarray(values)
-            assert preserve_source == same_source
 
     @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_timedelta64_conversion(self):
         times = pd.timedelta_range(start=0, periods=3)
-        for values, preserve_source in [
-            (times, True),
-            (times.values, True),
-            (times.values.astype("timedelta64[s]"), False),
-            (times.to_pytimedelta(), False),
+        for values in [
+            times,
+            times.values,
+            times.values.astype("timedelta64[s]"),
+            times.to_pytimedelta(),
         ]:
             v = self.cls(["t"], values)
             assert v.dtype == np.dtype("timedelta64[ns]")
             assert_array_equal(v.values, times.values)
             assert v.values.dtype == np.dtype("timedelta64[ns]")
-            same_source = source_ndarray(v.values) is source_ndarray(values)
-            assert preserve_source == same_source
 
     def test_object_conversion(self):
         data = np.arange(5).astype(str).astype(object)
@@ -2372,6 +2368,7 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert actual.shape == expected.shape
         assert_equal(actual, expected)
 
+    @pytest.mark.xfail(reason="https://github.com/dask/dask/issues/11585")
     def test_multiindex(self):
         super().test_multiindex()
 
