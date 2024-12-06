@@ -1655,7 +1655,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             has_dask = any(is_duck_dask_array(i) for i in indexer.tuple)
             # this only works for "small" 1d coordinate arrays with one chunk
             # it is intended for idxmin, idxmax, and allows indexing with
-            # the output of argmin, argmax
+            # the nD array output of argmin, argmax
             if (
                 not has_dask
                 or len(indexer.tuple) > 1

@@ -995,6 +995,7 @@ def test_indexing_dask_array_scalar() -> None:
     a = dask.array.from_array(np.linspace(0.0, 1.0))
     da = DataArray(a, dims="x")
     x_selector = da.argmax(dim=...)
+    assert not isinstance(x_selector, DataArray)
     with raise_if_dask_computes():
         actual = da.isel(x_selector)
     expected = da.isel(x=-1)
@@ -1012,12 +1013,13 @@ def test_vectorized_indexing_dask_array() -> None:
     )
     expected = darr[indexer]
 
-    # fails because we can't index pd.Index lazily (yet)
+    # fails because we can't index pd.Index lazily (yet).
+    # We could make this succeed by auto-chunking the values
+    # and constructing a lazy index variable, and not automatically
+    # create an index for it.
     with pytest.raises(ValueError, match="Cannot index with"):
         with raise_if_dask_computes():
             darr.chunk()[indexer.chunk({"y": 2})]
-
-    # fails because we can't index pd.Index lazily (yet)
     with pytest.raises(ValueError, match="Cannot index with"):
         with raise_if_dask_computes():
             actual = darr[indexer.chunk({"y": 2})]
@@ -1027,8 +1029,8 @@ def test_vectorized_indexing_dask_array() -> None:
     assert_identical(actual, expected.drop_vars("z"))
 
     with raise_if_dask_computes():
-        actual = darr.variable.chunk()[indexer.variable.chunk({"y": 2})]
-    assert_identical(actual, expected.variable)
+        actual_variable = darr.variable.chunk()[indexer.variable.chunk({"y": 2})]
+    assert_identical(actual_variable, expected.variable)
 
 
 @requires_dask
