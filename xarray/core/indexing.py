@@ -473,12 +473,6 @@ class VectorizedIndexer(ExplicitIndexer):
         for k in key:
             if isinstance(k, slice):
                 k = as_integer_slice(k)
-            # elif is_duck_dask_array(k):
-            #     raise ValueError(
-            #         "Vectorized indexing with Dask arrays is not supported. "
-            #         "Please pass a numpy array by calling ``.compute``. "
-            #         "See https://github.com/dask/dask/issues/8958."
-            #     )
             elif is_duck_array(k):
                 if not np.issubdtype(k.dtype, np.integer):
                     raise TypeError(
@@ -1509,6 +1503,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return self.array[key]
 
     def _vindex_get(self, indexer: VectorizedIndexer):
+        _assert_not_chunked_indexer(indexer.tuple)
         array = NumpyVIndexAdapter(self.array)
         return array[indexer.tuple]
 
@@ -1618,6 +1613,16 @@ def _apply_vectorized_indexer_dask_wrapper(indices, coord):
     return apply_indexer(
         as_indexable(coord), VectorizedIndexer((indices.squeeze(axis=-1),))
     )
+
+
+def _assert_not_chunked_indexer(idxr: tuple[Any, ...]) -> None:
+    if any(is_chunked_array(i) for i in idxr):
+        raise ValueError(
+            "Cannot index with a chunked array indexer. "
+            "Please chunk the array you are indexing first, "
+            "and drop any indexed dimension coordinate variables. "
+            "Alternatively, call `.compute()` on any chunked arrays in the indexer."
+        )
 
 
 class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
@@ -1811,6 +1816,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         | np.datetime64
         | np.timedelta64
     ):
+        _assert_not_chunked_indexer(indexer.tuple)
         key = self._prepare_key(indexer.tuple)
 
         if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional

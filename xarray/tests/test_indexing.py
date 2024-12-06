@@ -974,7 +974,7 @@ def test_indexing_1d_object_array() -> None:
 
 
 @requires_dask
-def test_indexing_dask_array():
+def test_indexing_dask_array() -> None:
     import dask.array
 
     da = DataArray(
@@ -988,7 +988,7 @@ def test_indexing_dask_array():
 
 
 @requires_dask
-def test_indexing_dask_array_scalar():
+def test_indexing_dask_array_scalar() -> None:
     # GH4276
     import dask.array
 
@@ -1002,7 +1002,7 @@ def test_indexing_dask_array_scalar():
 
 
 @requires_dask
-def test_vectorized_indexing_dask_array():
+def test_vectorized_indexing_dask_array() -> None:
     # https://github.com/pydata/xarray/issues/2511#issuecomment-563330352
     darr = DataArray(data=[0.2, 0.4, 0.6], coords={"z": range(3)}, dims=("z",))
     indexer = DataArray(
@@ -1010,11 +1010,29 @@ def test_vectorized_indexing_dask_array():
         coords={"y": range(4), "x": range(2)},
         dims=("y", "x"),
     )
-    darr[indexer.chunk({"y": 2})]
+    expected = darr[indexer]
+
+    # fails because we can't index pd.Index lazily (yet)
+    with pytest.raises(ValueError, match="Cannot index with"):
+        with raise_if_dask_computes():
+            darr.chunk()[indexer.chunk({"y": 2})]
+
+    # fails because we can't index pd.Index lazily (yet)
+    with pytest.raises(ValueError, match="Cannot index with"):
+        with raise_if_dask_computes():
+            actual = darr[indexer.chunk({"y": 2})]
+
+    with raise_if_dask_computes():
+        actual = darr.drop_vars("z").chunk()[indexer.chunk({"y": 2})]
+    assert_identical(actual, expected.drop_vars("z"))
+
+    with raise_if_dask_computes():
+        actual = darr.variable.chunk()[indexer.variable.chunk({"y": 2})]
+    assert_identical(actual, expected.variable)
 
 
 @requires_dask
-def test_advanced_indexing_dask_array():
+def test_advanced_indexing_dask_array() -> None:
     # GH4663
     import dask.array as da
 
