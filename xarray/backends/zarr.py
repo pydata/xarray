@@ -814,15 +814,15 @@ class ZarrStore(AbstractWritableDataStore):
         )
 
     def get_array_keys(self) -> tuple[str, ...]:
-        _key = 'array_keys'
-        if _key not in self._cache:
-            result = self.zarr_group.array_keys()
-        elif self._cache[_key] is None:
-            result = self.zarr_group.array_keys()
-            self._cache[_key] = result
+        key = 'array_keys'
+        if key not in self._cache:
+            result = tuple(self.zarr_group.array_keys())
+        elif self._cache[key] is None:
+            result = tuple(self.zarr_group.array_keys())
+            self._cache[key] = result
         else:
-            result = self._cache[_key]
-        return tuple(result)
+            result = self._cache[key]
+        return result
 
     def get_attrs(self):
         return {
@@ -1303,6 +1303,7 @@ def open_zarr(
     use_zarr_fill_value_as_mask=None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
+    cache_array_keys: bool = False,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -1456,6 +1457,7 @@ def open_zarr(
         "storage_options": storage_options,
         "zarr_version": zarr_version,
         "zarr_format": zarr_format,
+        "cache_array_keys": cache_array_keys,
     }
 
     ds = open_dataset(
@@ -1527,6 +1529,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         store=None,
         engine=None,
         use_zarr_fill_value_as_mask=None,
+        cache_array_keys: bool = True
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         if not store:
@@ -1542,6 +1545,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 zarr_version=zarr_version,
                 use_zarr_fill_value_as_mask=None,
                 zarr_format=zarr_format,
+                cache_array_keys=cache_array_keys,
             )
 
         store_entrypoint = StoreBackendEntrypoint()
