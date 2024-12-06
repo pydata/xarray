@@ -750,7 +750,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._close_store_on_close = close_store_on_close
         self._use_zarr_fill_value_as_mask = use_zarr_fill_value_as_mask
 
-        self._cache: dict[str,] = {}
+        self._cache: dict[str, Any] = {}
         if cache_array_keys:
             self._cache["array_keys"] = None
 
