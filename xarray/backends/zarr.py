@@ -602,6 +602,8 @@ class ZarrStore(AbstractWritableDataStore):
 
     __slots__ = (
         "_append_dim",
+        "_cache",
+        "_cache_array_keys",
         "_close_store_on_close",
         "_consolidate_on_close",
         "_group",
@@ -633,6 +635,7 @@ class ZarrStore(AbstractWritableDataStore):
         zarr_format=None,
         use_zarr_fill_value_as_mask=None,
         write_empty: bool | None = None,
+        cache_array_keys: bool = True,
     ):
         (
             zarr_group,
@@ -664,6 +667,7 @@ class ZarrStore(AbstractWritableDataStore):
                 write_empty,
                 close_store_on_close,
                 use_zarr_fill_value_as_mask,
+                cache_array_keys=cache_array_keys,
             )
             for group in group_paths
         }
@@ -686,6 +690,7 @@ class ZarrStore(AbstractWritableDataStore):
         zarr_format=None,
         use_zarr_fill_value_as_mask=None,
         write_empty: bool | None = None,
+        cache_array_keys: bool = True,
     ):
         (
             zarr_group,
@@ -716,6 +721,7 @@ class ZarrStore(AbstractWritableDataStore):
             write_empty,
             close_store_on_close,
             use_zarr_fill_value_as_mask,
+            cache_array_keys,
         )
 
     def __init__(
@@ -729,6 +735,7 @@ class ZarrStore(AbstractWritableDataStore):
         write_empty: bool | None = None,
         close_store_on_close: bool = False,
         use_zarr_fill_value_as_mask=None,
+        cache_array_keys: bool = True,
     ):
         self.zarr_group = zarr_group
         self._read_only = self.zarr_group.read_only
@@ -742,6 +749,10 @@ class ZarrStore(AbstractWritableDataStore):
         self._write_empty = write_empty
         self._close_store_on_close = close_store_on_close
         self._use_zarr_fill_value_as_mask = use_zarr_fill_value_as_mask
+
+        self._cache: dict[str, Any] = {}
+        if cache_array_keys:
+            self._cache["array_keys"] = None
 
     @property
     def ds(self):
@@ -801,6 +812,17 @@ class ZarrStore(AbstractWritableDataStore):
         return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.zarr_group.arrays()
         )
+
+    def get_array_keys(self) -> tuple[str, ...]:
+        key = "array_keys"
+        if key not in self._cache:
+            result = tuple(self.zarr_group.array_keys())
+        elif self._cache[key] is None:
+            result = tuple(self.zarr_group.array_keys())
+            self._cache[key] = result
+        else:
+            result = self._cache[key]
+        return result
 
     def get_attrs(self):
         return {
@@ -881,7 +903,7 @@ class ZarrStore(AbstractWritableDataStore):
             existing_keys = {}
             existing_variable_names = {}
         else:
-            existing_keys = tuple(self.zarr_group.array_keys())
+            existing_keys = self.get_array_keys()
             existing_variable_names = {
                 vn for vn in variables if _encode_variable_name(vn) in existing_keys
             }
@@ -1059,7 +1081,7 @@ class ZarrStore(AbstractWritableDataStore):
             dimensions.
         """
 
-        existing_keys = tuple(self.zarr_group.array_keys())
+        existing_keys = self.get_array_keys()
         is_zarr_v3_format = _zarr_v3() and self.zarr_group.metadata.zarr_format == 3
 
         for vn, v in variables.items():
@@ -1251,7 +1273,7 @@ class ZarrStore(AbstractWritableDataStore):
 
     def _validate_encoding(self, encoding) -> None:
         if encoding and self._mode in ["a", "a-", "r+"]:
-            existing_var_names = set(self.zarr_group.array_keys())
+            existing_var_names = self.get_array_keys()
             for var_name in existing_var_names:
                 if var_name in encoding:
                     raise ValueError(
@@ -1281,6 +1303,7 @@ def open_zarr(
     use_zarr_fill_value_as_mask=None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
+    cache_array_keys: bool = False,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -1434,6 +1457,7 @@ def open_zarr(
         "storage_options": storage_options,
         "zarr_version": zarr_version,
         "zarr_format": zarr_format,
+        "cache_array_keys": cache_array_keys,
     }
 
     ds = open_dataset(
@@ -1505,6 +1529,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         store=None,
         engine=None,
         use_zarr_fill_value_as_mask=None,
+        cache_array_keys: bool = True,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         if not store:
@@ -1520,6 +1545,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 zarr_version=zarr_version,
                 use_zarr_fill_value_as_mask=None,
                 zarr_format=zarr_format,
+                cache_array_keys=cache_array_keys,
             )
 
         store_entrypoint = StoreBackendEntrypoint()
