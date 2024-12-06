@@ -602,6 +602,8 @@ class ZarrStore(AbstractWritableDataStore):
 
     __slots__ = (
         "_append_dim",
+        "_cache",
+        "_cache_array_keys",
         "_close_store_on_close",
         "_consolidate_on_close",
         "_group",
@@ -612,8 +614,6 @@ class ZarrStore(AbstractWritableDataStore):
         "_use_zarr_fill_value_as_mask",
         "_write_empty",
         "_write_region",
-        "_cache_array_keys",
-        "_cache",
         "zarr_group",
     )
 
@@ -721,7 +721,7 @@ class ZarrStore(AbstractWritableDataStore):
             write_empty,
             close_store_on_close,
             use_zarr_fill_value_as_mask,
-            cache_array_keys
+            cache_array_keys,
         )
 
     def __init__(
@@ -735,7 +735,7 @@ class ZarrStore(AbstractWritableDataStore):
         write_empty: bool | None = None,
         close_store_on_close: bool = False,
         use_zarr_fill_value_as_mask=None,
-        cache_array_keys: bool = True
+        cache_array_keys: bool = True,
     ):
         self.zarr_group = zarr_group
         self._read_only = self.zarr_group.read_only
@@ -752,7 +752,7 @@ class ZarrStore(AbstractWritableDataStore):
 
         self._cache = {}
         if cache_array_keys:
-            self._cache['array_keys'] = None
+            self._cache["array_keys"] = None
 
     @property
     def ds(self):
@@ -814,7 +814,7 @@ class ZarrStore(AbstractWritableDataStore):
         )
 
     def get_array_keys(self) -> tuple[str, ...]:
-        key = 'array_keys'
+        key = "array_keys"
         if key not in self._cache:
             result = tuple(self.zarr_group.array_keys())
         elif self._cache[key] is None:
@@ -1529,7 +1529,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         store=None,
         engine=None,
         use_zarr_fill_value_as_mask=None,
-        cache_array_keys: bool = True
+        cache_array_keys: bool = True,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         if not store:

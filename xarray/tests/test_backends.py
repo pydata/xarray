@@ -3262,11 +3262,11 @@ class ZarrBase(CFEncodedBase):
                 assert original[name].chunks == actual_var.chunks
             assert original.chunks == actual.chunks
 
-    @pytest.mark.parametrize('cache_array_keys', [True, False])
+    @pytest.mark.parametrize("cache_array_keys", [True, False])
     def test_get_array_keys(self, cache_array_keys: bool) -> None:
         """
-        Ensure that if `ZarrStore` is created with `cache_array_keys` set to `True`, 
-        a `ZarrStore.get_array_keys` only invokes the `array_keys` function on the 
+        Ensure that if `ZarrStore` is created with `cache_array_keys` set to `True`,
+        a `ZarrStore.get_array_keys` only invokes the `array_keys` function on the
         `ZarrStore.zarr_group` instance once, and that the results of that call are cached.
 
         Otherwise, `ZarrStore.get_array_keys` instance should invoke the `array_keys`
@@ -3274,29 +3274,29 @@ class ZarrBase(CFEncodedBase):
         """
         with self.create_zarr_target() as store_target:
             zstore = backends.ZarrStore.open_group(
-                store_target,
-                mode='w',
-                cache_array_keys=cache_array_keys)        
+                store_target, mode="w", cache_array_keys=cache_array_keys
+            )
 
             # ensure that the keys are sorted
-            array_keys = sorted(('foo', 'bar'))
+            array_keys = sorted(("foo", "bar"))
 
             # create some arrays
             for ak in array_keys:
-                zstore.zarr_group.create(name=ak, shape=(1,), dtype='uint8')
+                zstore.zarr_group.create(name=ak, shape=(1,), dtype="uint8")
 
             observed_keys_0 = sorted(zstore.get_array_keys())
             assert observed_keys_0 == array_keys
 
             # create a new array
-            new_key = 'baz'
-            zstore.zarr_group.create(name=new_key, shape=(1,), dtype='uint8')
+            new_key = "baz"
+            zstore.zarr_group.create(name=new_key, shape=(1,), dtype="uint8")
             observed_keys_1 = sorted(zstore.get_array_keys())
 
             if cache_array_keys:
                 assert observed_keys_1 == array_keys
             else:
                 assert observed_keys_1 == sorted(array_keys + [new_key])
+
 
 @requires_zarr
 @pytest.mark.skipif(
@@ -6194,7 +6194,6 @@ class TestZarrRegionAuto:
             ds_region.to_zarr(tmp_path / "test.zarr", region={"x": "auto", "y": "auto"})
 
     def test_zarr_region_index_write(self, tmp_path):
-        from xarray.backends.zarr import ZarrStore
 
         x = np.arange(0, 50, 10)
         y = np.arange(0, 20, 2)
@@ -6562,4 +6561,3 @@ def test_h5netcdf_storage_options() -> None:
             storage_options={"skip_instance_cache": False},
         )
         assert_identical(xr.concat([ds1, ds2], dim="time"), ds)
-
