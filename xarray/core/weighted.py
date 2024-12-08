@@ -11,7 +11,6 @@ from xarray.core.alignment import align, broadcast
 from xarray.core.computation import apply_ufunc, dot
 from xarray.core.types import Dims, T_DataArray, T_Xarray
 from xarray.namedarray.utils import is_duck_dask_array
-from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 # Weighted quantile methods are a subset of the numpy supported quantile methods.
 QUANTILE_METHODS = Literal[
