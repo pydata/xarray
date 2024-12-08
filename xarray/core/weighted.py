@@ -454,7 +454,6 @@ class Weighted(Generic[T_Xarray]):
     def _implementation(self, func, dim, **kwargs):
         raise NotImplementedError("Use `Dataset.weighted` or `DataArray.weighted`")
 
-    @_deprecate_positional_args("v2023.10.0")
     def sum_of_weights(
         self,
         dim: Dims = None,
@@ -465,7 +464,6 @@ class Weighted(Generic[T_Xarray]):
             self._sum_of_weights, dim=dim, keep_attrs=keep_attrs
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def sum_of_squares(
         self,
         dim: Dims = None,
@@ -477,7 +475,6 @@ class Weighted(Generic[T_Xarray]):
             self._sum_of_squares, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def sum(
         self,
         dim: Dims = None,
@@ -489,7 +486,6 @@ class Weighted(Generic[T_Xarray]):
             self._weighted_sum, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def mean(
         self,
         dim: Dims = None,
@@ -501,7 +497,6 @@ class Weighted(Generic[T_Xarray]):
             self._weighted_mean, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def var(
         self,
         dim: Dims = None,
@@ -513,7 +508,6 @@ class Weighted(Generic[T_Xarray]):
             self._weighted_var, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
-    @_deprecate_positional_args("v2023.10.0")
     def std(
         self,
         dim: Dims = None,
