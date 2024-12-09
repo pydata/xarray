@@ -1418,7 +1418,7 @@ def open_zarr(
             )  # attempt to import that parallel backend
 
             chunks = {}
-        except ValueError:
+        except (ValueError, ImportError):
             chunks = None
 
     if kwargs:
