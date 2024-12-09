@@ -172,6 +172,62 @@ def _inverse_permutation_indices(positions, N: int | None = None) -> np.ndarray 
     return newpositions[newpositions != -1]
 
 
+def _vindex_like(
+    da: DataArray, dim: Hashable, indexer: DataArray, like_ds: Dataset | None
+) -> Variable:
+    """
+    Apply a vectorized indexer, optionally matching the chunks of a datarray
+    of the same name in `like_ds`. This is useful for GroupBy binary ops.
+    This function is intended to be used with Dataset.map.
+    """
+    # we want to use the fact that we know the chunksizes for the output (matches obj)
+    # so we can't just use Variable's indexing directly
+    array = da._variable._data
+    like_da = like_ds.get(da.name)
+    if not is_duck_dask_array(array):
+        if like_da is None or not is_duck_dask_array(like_da._variable._data):
+            # TODO: we should instead check of `shuffle` and `reshape_blockwise`
+            return da.isel({dim: indexer})
+        else:
+            da = da.chunk("auto")
+
+    like = like_da._variable._data
+    array = da._variable._data
+
+    import dask.array
+    from dask.array.core import slices_from_chunks
+    from dask.graph_manipulation import clone
+
+    from xarray.core.dask_array_compat import reshape_blockwise
+
+    array = clone(array)  # FIXME: add to dask
+
+    assert array.ndim == 1
+    dims = indexer.dims
+    axes = tuple(like_da.get_axis_num(dim) for dim in dims)
+    to_shape = tuple(size for ax, size in enumerate(like.shape) if ax in axes)
+    to_chunks = tuple(
+        chunksize for ax, chunksize in enumerate(like.chunks) if ax in axes
+    )
+    idxr = indexer._variable._data
+
+    # dimensions for indexed result
+    out_dims = tuple(
+        itertools.chain(*(indexer.dims if this == dim else (this,) for this in da.dims))
+    )
+
+    # shuffle indices that can be reshaped blockwise to desired shape
+    flat_indices = [
+        idxr[slicer].ravel().tolist() for slicer in slices_from_chunks(to_chunks)
+    ]
+    shuffled = dask.array.shuffle(
+        array, flat_indices, axis=da.get_axis_num(dim), chunks="auto"
+    )
+    if shuffled.shape != to_shape:
+        shuffled = reshape_blockwise(shuffled, shape=to_shape, chunks=to_chunks)
+    return Variable(dims=out_dims, data=shuffled, attrs=da.attrs)
+
+
 class _DummyGroup(Generic[T_Xarray]):
     """Class for keeping track of grouped dimensions without coordinates.
 
@@ -899,49 +955,6 @@ class GroupBy(Generic[T_Xarray]):
             group = group.where(~mask, drop=True)
             codes = codes.where(~mask, drop=True).astype(int)
 
-        def _vindex_like(da: DataArray, dim, indexer: DataArray):
-            # we want to use the fact that we know the chunksizes for the output (matches obj)
-            # so we can't just use Variable's indexing
-
-            array = da._variable._data
-            like_da = obj_as_dataset.get(da.name)
-            if not is_duck_dask_array(array):
-                if like_da is None or not is_duck_dask_array(like_da._variable._data):
-                    return da.isel({dim: indexer})
-                else:
-                    da = da.chunk("auto")
-            like = like_da._variable._data
-            array = da._variable._data
-
-            import dask
-            from dask.array.core import slices_from_chunks
-            from dask.graph_manipulation import clone
-
-            array = clone(array)  # FIXME: add to dask
-
-            assert array.ndim == 1
-            dims = indexer.dims
-            axes = tuple(like_da.get_axis_num(dim) for dim in dims)
-            to_shape = tuple(size for ax, size in enumerate(like.shape) if ax in axes)
-            to_chunks = tuple(
-                chunksize for ax, chunksize in enumerate(like.chunks) if ax in axes
-            )
-            idxr = indexer._variable._data
-
-            # shuffle indices that can be reshaped blockwise to desired shape
-            flat_indices = [
-                idxr[slicer].ravel().tolist()
-                for slicer in slices_from_chunks(to_chunks)
-            ]
-            shuffled = dask.array.shuffle(
-                array, flat_indices, axis=da.get_axis_num(dim), chunks="auto"
-            )
-            if shuffled.shape != to_shape:
-                shuffled = dask.array.reshape_blockwise(
-                    shuffled, shape=to_shape, chunks=to_chunks
-                )
-            return DataArray(dims=like_da.dims[-1:], data=shuffled, attrs=da.attrs)
-
         # codes are defined for coord, so we align `other` with `coord`
         # before indexing
         other, _ = align(other, coord, join="right", copy=False)
@@ -950,7 +963,9 @@ class GroupBy(Generic[T_Xarray]):
             other._to_temp_dataset() if isinstance(other, DataArray) else other
         )
         obj_as_dataset = obj._to_temp_dataset() if isinstance(obj, DataArray) else obj
-        expanded = other_as_dataset.map(_vindex_like, dim=name, indexer=codes)
+        expanded = other_as_dataset.map(
+            _vindex_like, dim=name, indexer=codes, like_ds=obj_as_dataset
+        )
         if isinstance(other, DataArray):
             expanded = other._from_temp_dataset(expanded)
 
