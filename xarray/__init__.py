@@ -30,6 +30,7 @@ from xarray.core.computation import (
     where,
 )
 from xarray.core.concat import concat
+from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
@@ -116,6 +117,7 @@ __all__ = (  # noqa: RUF022
     "CFTimeIndex",
     "Context",
     "Coordinates",
+    "CoordinateTransform",
     "DataArray",
     "DataTree",
     "Dataset",
