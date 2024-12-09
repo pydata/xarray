@@ -48,6 +48,7 @@ from xarray.backends.netCDF4_ import (
 )
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
+from xarray.backends.zarr import ZarrStore
 from xarray.coding.cftime_offsets import cftime_range
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
@@ -3261,6 +3262,41 @@ class ZarrBase(CFEncodedBase):
                 assert original[name].chunks == actual_var.chunks
             assert original.chunks == actual.chunks
 
+    @pytest.mark.parametrize("cache_array_keys", [True, False])
+    def test_get_array_keys(self, cache_array_keys: bool) -> None:
+        """
+        Ensure that if `ZarrStore` is created with `cache_array_keys` set to `True`,
+        a `ZarrStore.get_array_keys` only invokes the `array_keys` function on the
+        `ZarrStore.zarr_group` instance once, and that the results of that call are cached.
+
+        Otherwise, `ZarrStore.get_array_keys` instance should invoke the `array_keys`
+        each time it is called.
+        """
+        with self.create_zarr_target() as store_target:
+            zstore = backends.ZarrStore.open_group(
+                store_target, mode="w", cache_array_keys=cache_array_keys
+            )
+
+            # ensure that the keys are sorted
+            array_keys = sorted(("foo", "bar"))
+
+            # create some arrays
+            for ak in array_keys:
+                zstore.zarr_group.create(name=ak, shape=(1,), dtype="uint8")
+
+            observed_keys_0 = sorted(zstore.get_array_keys())
+            assert observed_keys_0 == array_keys
+
+            # create a new array
+            new_key = "baz"
+            zstore.zarr_group.create(name=new_key, shape=(1,), dtype="uint8")
+            observed_keys_1 = sorted(zstore.get_array_keys())
+
+            if cache_array_keys:
+                assert observed_keys_1 == array_keys
+            else:
+                assert observed_keys_1 == sorted(array_keys + [new_key])
+
 
 @requires_zarr
 @pytest.mark.skipif(
@@ -6158,8 +6194,6 @@ class TestZarrRegionAuto:
             ds_region.to_zarr(tmp_path / "test.zarr", region={"x": "auto", "y": "auto"})
 
     def test_zarr_region_index_write(self, tmp_path):
-        from xarray.backends.zarr import ZarrStore
-
         x = np.arange(0, 50, 10)
         y = np.arange(0, 20, 2)
         data = np.ones((5, 10))
