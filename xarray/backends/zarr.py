@@ -635,7 +635,7 @@ class ZarrStore(AbstractWritableDataStore):
         zarr_format=None,
         use_zarr_fill_value_as_mask=None,
         write_empty: bool | None = None,
-        cache_array_keys: bool = True,
+        cache_array_keys: bool = False,
     ):
         (
             zarr_group,
