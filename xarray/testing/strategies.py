@@ -136,6 +136,60 @@ def dimension_names(
     )
 
 
+calendars = st.sampled_from(
+    [
+        "standard",
+        "gregorian",
+        "proleptic_gregorian",
+        "noleap",
+        "365_day",
+        "360_day",
+        "julian",
+        "all_leap",
+        "366_day",
+    ]
+)
+
+
+@st.composite
+def cftime_units(draw: st.DrawFn, *, calendar: str) -> str:
+    choices = ["days", "hours", "minutes", "seconds", "milliseconds", "microseconds"]
+    if calendar == "360_day":
+        choices += ["months"]
+    elif calendar == "noleap":
+        choices += ["common_years"]
+    time_units = draw(st.sampled_from(choices))
+
+    dt = draw(st.datetimes())
+    year, month, day = dt.year, dt.month, dt.day
+    if calendar == "360_day":
+        day = min(day, 30)
+    if calendar in ["360_day", "365_day", "noleap"] and month == 2 and day == 29:
+        day = 28
+
+    return f"{time_units} since {year}-{month}-{day}"
+
+
+@st.composite
+def cftime_arrays(
+    draw: st.DrawFn,
+    *,
+    shapes: st.SearchStrategy[tuple[int, ...]] = npst.array_shapes(),
+    calendars: st.SearchStrategy[str] = calendars,
+    elements: dict[str, Any] | None = None,
+) -> np.ndarray[Any, Any]:
+    import cftime
+
+    if elements is None:
+        elements = {}
+    elements.setdefault("min_value", 0)
+    elements.setdefault("max_value", 10_000)
+    cal = draw(calendars)
+    values = draw(npst.arrays(dtype=np.int64, shape=shapes, elements=elements))
+    unit = draw(cftime_units(calendar=cal))
+    return cftime.num2date(values, units=unit, calendar=cal)
+
+
 def dimension_sizes(
     *,
     dim_names: st.SearchStrategy[Hashable] = names(),  # noqa: B008
