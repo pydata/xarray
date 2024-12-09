@@ -160,6 +160,8 @@ jobs:
 
       - name: Upload code coverage to Codecov
         uses: codecov/codecov-action@v5.0.7
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           file: ./coverage.xml
           flags: unittests
