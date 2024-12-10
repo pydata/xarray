@@ -21,6 +21,8 @@ v.2024.12.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Improve the error message raised when using chunked-array methods if no chunk manager is available or if the requested chunk manager is missing (:pull:`9676`)
+  By `Justus Magin <https://github.com/keewis>`_. (:pull:`9676`)
 - Better support wrapping additional array types (e.g. ``cupy`` or ``jax``) by calling generalized
   duck array operations throughout more xarray methods. (:issue:`7848`, :pull:`9798`).
   By `Sam Levang <https://github.com/slevang>`_.
