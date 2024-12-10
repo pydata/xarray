@@ -38,12 +38,14 @@ from xarray.namedarray.pycompat import integer_types
 from xarray.namedarray.utils import module_available
 
 if TYPE_CHECKING:
+    from zarr import Array as ZarrArray
+    from zarr import Group as ZarrGroup
+
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
     from xarray.core.types import ReadBuffer
-    from zarr import Array as ZarrArray
-    from zarr import Group as ZarrGroup
+
 
 def _get_mappers(*, storage_options, store, chunk_store):
     # expand str and path-like arguments
@@ -735,7 +737,6 @@ class ZarrStore(AbstractWritableDataStore):
         use_zarr_fill_value_as_mask=None,
         cache_members: bool = True,
     ):
-        
         self.zarr_group = zarr_group
         self._read_only = self.zarr_group.read_only
         self._synchronizer = self.zarr_group.synchronizer
@@ -753,10 +754,10 @@ class ZarrStore(AbstractWritableDataStore):
 
         if self._cache_members:
             # initialize the cache
-            # this cache is created here and never updated. 
+            # this cache is created here and never updated.
             # If the `ZarrStore` instance creates a new zarr array, or if an external process
             # removes an existing zarr array, then the cache will be invalid.
-            # create a new ZarrStore instance if you want to 
+            # create a new ZarrStore instance if you want to
             # capture the current state of the zarr group, or create a ZarrStore with
             # `cache_members` set to `False` to disable this cache and instead fetch members
             # on demand.
@@ -778,6 +779,7 @@ class ZarrStore(AbstractWritableDataStore):
         Get the arrays and groups defined in the zarr group modelled by this Store
         """
         import zarr
+
         if zarr.__version__ >= "3":
             return dict(self.zarr_group.members())
         else:
@@ -785,12 +787,14 @@ class ZarrStore(AbstractWritableDataStore):
 
     def array_keys(self) -> tuple[str, ...]:
         from zarr import Array as ZarrArray
+
         return tuple(
             key for (key, node) in self.members.items() if isinstance(node, ZarrArray)
         )
 
     def arrays(self) -> tuple[tuple[str, ZarrArray], ...]:
         from zarr import Array as ZarrArray
+
         return tuple(
             (key, node)
             for (key, node) in self.members.items()
