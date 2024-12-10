@@ -3274,7 +3274,7 @@ class ZarrBase(CFEncodedBase):
         """
         with self.create_zarr_target() as store_target:
             zstore = backends.ZarrStore.open_group(
-                store_target, mode="w", cache_array_keys=cache_array_keys
+                store_target, mode="w", cache_members=cache_array_keys
             )
 
             # ensure that the keys are sorted
@@ -3284,13 +3284,13 @@ class ZarrBase(CFEncodedBase):
             for ak in array_keys:
                 zstore.zarr_group.create(name=ak, shape=(1,), dtype="uint8")
 
-            observed_keys_0 = sorted(zstore.get_array_keys())
+            observed_keys_0 = sorted(zstore.array_keys())
             assert observed_keys_0 == array_keys
 
             # create a new array
             new_key = "baz"
             zstore.zarr_group.create(name=new_key, shape=(1,), dtype="uint8")
-            observed_keys_1 = sorted(zstore.get_array_keys())
+            observed_keys_1 = sorted(zstore.array_keys())
 
             if cache_array_keys:
                 assert observed_keys_1 == array_keys
@@ -3375,11 +3375,11 @@ class TestInstrumentedZarrStore:
                 }
             else:
                 expected = {
-                    "iter": 3,
+                    "iter": 2,
                     "contains": 18,
                     "setitem": 10,
                     "getitem": 13,
-                    "listdir": 2,
+                    "listdir": 1,
                     "list_prefix": 2,
                 }
 
@@ -3477,11 +3477,11 @@ class TestInstrumentedZarrStore:
                 }
             else:
                 expected = {
-                    "iter": 2,
+                    "iter": 1,
                     "contains": 4,
                     "setitem": 1,
-                    "getitem": 4,
-                    "listdir": 2,
+                    "getitem": 5,
+                    "listdir": 1,
                     "list_prefix": 0,
                 }
 
