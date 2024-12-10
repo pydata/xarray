@@ -14,9 +14,9 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2024.11.1:
+.. _whats-new.2024.12.0:
 
-v.2024.11.1 (unreleased)
+v.2024.12.0 (unreleased)
 ------------------------
 
 New Features
@@ -28,7 +28,12 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- Methods including ``dropna``, ``rank``, ``idxmax``, ``idxmin`` require
+  non-dimension arguments to be passed as keyword arguments. The previous
+  behavior, which allowed ``.idxmax('foo', 'all')`` was too easily confused with
+  ``'all'`` being a dimension. The updated equivalent is ``.idxmax('foo',
+  how='all')``. The previous behavior was deprecated in v2023.10.0.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -36,6 +41,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Fix type annotations for ``get_axis_num``. (:issue:`9822`, :pull:`9827`).
+  By `Bruce Merry <https://github.com/bmerry>`_.
 - Fix unintended load on datasets when calling :py:meth:`DataArray.plot.scatter` (:pull:`9818`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
@@ -45,8 +52,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
-
+- Move non-CF related ``ensure_dtype_not_object`` from conventions to backends (:pull:`9828`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 .. _whats-new.2024.11.0:
 
